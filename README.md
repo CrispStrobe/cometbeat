@@ -15,7 +15,7 @@ See [docs/PLAN.md](docs/PLAN.md) for the full curriculum map and roadmap.
 | id | Topic | Games |
 |---|---|---|
 | `note_values` | Notenwerte & Pausen | Symbol Quiz • Duration Duel |
-| `note_reading` | Noten lesen (Violin/Bass) | Reading Quiz ×2 • Place the Note ×2 |
+| `note_reading` | Noten lesen (Violin/Bass) | Reading Quiz ×2 • Place the Note ×2 (SRI review runners) |
 | `measures` | Takte & Taktarten | Measure Filler |
 | `scales` | Tonleitern, Dur/Moll | Scale Detective |
 | `chords` | Akkorde & Intervalle | Chord Quiz |
