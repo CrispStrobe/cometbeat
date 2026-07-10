@@ -18,8 +18,9 @@ class LearningModule {
   final IconData icon;
   final Color color;
 
-  /// Modules unlock in order as earlier ones reach mastery; the first
-  /// [kInitiallyUnlocked] are always available.
+  /// Whether the module is available from the start. All modules with games
+  /// are currently unlocked (testing phase); planned gating: unlock when the
+  /// previous module reaches >=50% SRI mastery — see docs/PLAN.md.
   final bool initiallyUnlocked;
 
   final String Function(AppLocalizations) title;
@@ -54,6 +55,7 @@ final List<LearningModule> kLearningModules = [
   ),
   LearningModule(
     id: 'measures',
+    initiallyUnlocked: true,
     icon: Icons.straighten,
     color: const Color(0xFFFF6D00),
     title: (l) => l.moduleMeasures,
@@ -61,6 +63,7 @@ final List<LearningModule> kLearningModules = [
   ),
   LearningModule(
     id: 'scales',
+    initiallyUnlocked: true,
     icon: Icons.stairs,
     color: const Color(0xFF00C853),
     title: (l) => l.moduleScales,
@@ -68,6 +71,7 @@ final List<LearningModule> kLearningModules = [
   ),
   LearningModule(
     id: 'chords',
+    initiallyUnlocked: true,
     icon: Icons.library_music,
     color: const Color(0xFFD500F9),
     title: (l) => l.moduleChords,
@@ -75,6 +79,7 @@ final List<LearningModule> kLearningModules = [
   ),
   LearningModule(
     id: 'harmony',
+    initiallyUnlocked: true,
     icon: Icons.auto_awesome,
     color: const Color(0xFFFFAB00),
     title: (l) => l.moduleHarmony,

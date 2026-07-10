@@ -161,6 +161,80 @@ class AppLocalizationsDe extends AppLocalizations {
   String get noteNameB => 'H';
 
   @override
+  String get gamePlaceNoteTreble => 'Setz die Note (Violinschlüssel)';
+
+  @override
+  String get gamePlaceNoteBass => 'Setz die Note (Bassschlüssel)';
+
+  @override
+  String get gamePlaceNoteSubtitle =>
+      'Tippe auf die richtige Linie oder den Zwischenraum';
+
+  @override
+  String placeNotePrompt(String name) {
+    return 'Setze die Note $name!';
+  }
+
+  @override
+  String get gameMeasureFill => 'Takt-Füller';
+
+  @override
+  String get gameMeasureFillSubtitle => 'Fülle den Takt, bis alles aufgeht';
+
+  @override
+  String get measureFillPrompt => 'Welche Note macht den Takt voll?';
+
+  @override
+  String get gameScaleDetective => 'Tonleiter-Detektiv';
+
+  @override
+  String get gameScaleDetectiveSubtitle => 'Finde den Ton, der nicht passt';
+
+  @override
+  String scaleDetectivePrompt(String name) {
+    return 'Tippe auf den falschen Ton in der $name-Dur-Tonleiter!';
+  }
+
+  @override
+  String get gameChordQuiz => 'Akkord-Quiz';
+
+  @override
+  String get gameChordQuizSubtitle => 'Wie heißt der Akkord auf den Linien?';
+
+  @override
+  String get chordQuizPrompt => 'Welcher Akkord ist das?';
+
+  @override
+  String majorChordName(String name) {
+    return '$name-Dur';
+  }
+
+  @override
+  String get gameHarmonyQuiz => 'Funktions-Quiz';
+
+  @override
+  String get gameHarmonyQuizSubtitle => 'Tonika, Subdominante oder Dominante?';
+
+  @override
+  String harmonyPrompt(String key) {
+    return 'Welche Funktion hat dieser Akkord in $key?';
+  }
+
+  @override
+  String keyMajorName(String name) {
+    return '$name-Dur';
+  }
+
+  @override
+  String get harmonicTonic => 'Tonika';
+
+  @override
+  String get harmonicSubdominant => 'Subdominante';
+
+  @override
+  String get harmonicDominant => 'Dominante';
+
+  @override
   String get whatIsThisSymbol => 'Wie heißt dieses Zeichen?';
 
   @override

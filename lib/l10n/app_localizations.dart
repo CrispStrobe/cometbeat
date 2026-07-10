@@ -374,6 +374,132 @@ abstract class AppLocalizations {
   /// **'B'**
   String get noteNameB;
 
+  /// No description provided for @gamePlaceNoteTreble.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the Note (Treble)'**
+  String get gamePlaceNoteTreble;
+
+  /// No description provided for @gamePlaceNoteBass.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the Note (Bass)'**
+  String get gamePlaceNoteBass;
+
+  /// No description provided for @gamePlaceNoteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the right line or space'**
+  String get gamePlaceNoteSubtitle;
+
+  /// No description provided for @placeNotePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Place the note {name}!'**
+  String placeNotePrompt(String name);
+
+  /// No description provided for @gameMeasureFill.
+  ///
+  /// In en, this message translates to:
+  /// **'Measure Filler'**
+  String get gameMeasureFill;
+
+  /// No description provided for @gameMeasureFillSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the measure so it adds up'**
+  String get gameMeasureFillSubtitle;
+
+  /// No description provided for @measureFillPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Which note completes the measure?'**
+  String get measureFillPrompt;
+
+  /// No description provided for @gameScaleDetective.
+  ///
+  /// In en, this message translates to:
+  /// **'Scale Detective'**
+  String get gameScaleDetective;
+
+  /// No description provided for @gameScaleDetectiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the note that doesn\'t belong'**
+  String get gameScaleDetectiveSubtitle;
+
+  /// No description provided for @scaleDetectivePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the wrong note in the {name} major scale!'**
+  String scaleDetectivePrompt(String name);
+
+  /// No description provided for @gameChordQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord Quiz'**
+  String get gameChordQuiz;
+
+  /// No description provided for @gameChordQuizSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name the chord on the staff'**
+  String get gameChordQuizSubtitle;
+
+  /// No description provided for @chordQuizPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'What chord is this?'**
+  String get chordQuizPrompt;
+
+  /// No description provided for @majorChordName.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} major'**
+  String majorChordName(String name);
+
+  /// No description provided for @gameHarmonyQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Function Quiz'**
+  String get gameHarmonyQuiz;
+
+  /// No description provided for @gameHarmonyQuizSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tonic, subdominant or dominant?'**
+  String get gameHarmonyQuizSubtitle;
+
+  /// No description provided for @harmonyPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'What is this chord\'s function in {key}?'**
+  String harmonyPrompt(String key);
+
+  /// No description provided for @keyMajorName.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} major'**
+  String keyMajorName(String name);
+
+  /// No description provided for @harmonicTonic.
+  ///
+  /// In en, this message translates to:
+  /// **'Tonic'**
+  String get harmonicTonic;
+
+  /// No description provided for @harmonicSubdominant.
+  ///
+  /// In en, this message translates to:
+  /// **'Subdominant'**
+  String get harmonicSubdominant;
+
+  /// No description provided for @harmonicDominant.
+  ///
+  /// In en, this message translates to:
+  /// **'Dominant'**
+  String get harmonicDominant;
+
   /// No description provided for @whatIsThisSymbol.
   ///
   /// In en, this message translates to:

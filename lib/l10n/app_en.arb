@@ -63,6 +63,62 @@
   "noteNameG": "G",
   "noteNameA": "A",
   "noteNameB": "B",
+  "gamePlaceNoteTreble": "Place the Note (Treble)",
+  "gamePlaceNoteBass": "Place the Note (Bass)",
+  "gamePlaceNoteSubtitle": "Tap the right line or space",
+  "placeNotePrompt": "Place the note {name}!",
+  "@placeNotePrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gameMeasureFill": "Measure Filler",
+  "gameMeasureFillSubtitle": "Complete the measure so it adds up",
+  "measureFillPrompt": "Which note completes the measure?",
+  "gameScaleDetective": "Scale Detective",
+  "gameScaleDetectiveSubtitle": "Find the note that doesn't belong",
+  "scaleDetectivePrompt": "Tap the wrong note in the {name} major scale!",
+  "@scaleDetectivePrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gameChordQuiz": "Chord Quiz",
+  "gameChordQuizSubtitle": "Name the chord on the staff",
+  "chordQuizPrompt": "What chord is this?",
+  "majorChordName": "{name} major",
+  "@majorChordName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gameHarmonyQuiz": "Function Quiz",
+  "gameHarmonyQuizSubtitle": "Tonic, subdominant or dominant?",
+  "harmonyPrompt": "What is this chord's function in {key}?",
+  "@harmonyPrompt": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "keyMajorName": "{name} major",
+  "@keyMajorName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "harmonicTonic": "Tonic",
+  "harmonicSubdominant": "Subdominant",
+  "harmonicDominant": "Dominant",
   "whatIsThisSymbol": "What is this symbol called?",
   "roundOf": "Round {current} of {total}",
   "@roundOf": {

@@ -160,6 +160,79 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noteNameB => 'B';
 
   @override
+  String get gamePlaceNoteTreble => 'Place the Note (Treble)';
+
+  @override
+  String get gamePlaceNoteBass => 'Place the Note (Bass)';
+
+  @override
+  String get gamePlaceNoteSubtitle => 'Tap the right line or space';
+
+  @override
+  String placeNotePrompt(String name) {
+    return 'Place the note $name!';
+  }
+
+  @override
+  String get gameMeasureFill => 'Measure Filler';
+
+  @override
+  String get gameMeasureFillSubtitle => 'Complete the measure so it adds up';
+
+  @override
+  String get measureFillPrompt => 'Which note completes the measure?';
+
+  @override
+  String get gameScaleDetective => 'Scale Detective';
+
+  @override
+  String get gameScaleDetectiveSubtitle => 'Find the note that doesn\'t belong';
+
+  @override
+  String scaleDetectivePrompt(String name) {
+    return 'Tap the wrong note in the $name major scale!';
+  }
+
+  @override
+  String get gameChordQuiz => 'Chord Quiz';
+
+  @override
+  String get gameChordQuizSubtitle => 'Name the chord on the staff';
+
+  @override
+  String get chordQuizPrompt => 'What chord is this?';
+
+  @override
+  String majorChordName(String name) {
+    return '$name major';
+  }
+
+  @override
+  String get gameHarmonyQuiz => 'Function Quiz';
+
+  @override
+  String get gameHarmonyQuizSubtitle => 'Tonic, subdominant or dominant?';
+
+  @override
+  String harmonyPrompt(String key) {
+    return 'What is this chord\'s function in $key?';
+  }
+
+  @override
+  String keyMajorName(String name) {
+    return '$name major';
+  }
+
+  @override
+  String get harmonicTonic => 'Tonic';
+
+  @override
+  String get harmonicSubdominant => 'Subdominant';
+
+  @override
+  String get harmonicDominant => 'Dominant';
+
+  @override
   String get whatIsThisSymbol => 'What is this symbol called?';
 
   @override
