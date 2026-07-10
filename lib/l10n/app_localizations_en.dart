@@ -138,7 +138,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameNoteReadingBass => 'Bass Clef';
 
   @override
+  String get gameNoteReadingTenor => 'Tenor Clef';
+
+  @override
+  String get gameNoteReadingAlto => 'Alto Clef';
+
+  @override
   String get gameNoteReadingSubtitle => 'Name the note on the staff';
+
+  @override
+  String get moduleCello => 'Cello Corner';
+
+  @override
+  String get moduleCelloSubtitle =>
+      'Strings, fingers and clefs for young cellists';
+
+  @override
+  String get gameCelloStringQuiz => 'Which String?';
+
+  @override
+  String get gameCelloStringQuizSubtitle => 'Find the right cello string';
+
+  @override
+  String get celloStringPrompt => 'Which string plays this note?';
+
+  @override
+  String get gameCelloFingerQuiz => 'Finger Quiz';
+
+  @override
+  String get gameCelloFingerQuizSubtitle => 'First position: which finger?';
+
+  @override
+  String celloFingerPrompt(String string) {
+    return 'Which finger plays it on the $string string?';
+  }
 
   @override
   String get whatIsThisNote => 'What is this note called?';
@@ -320,6 +353,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tapHere => 'Tap here!';
+
+  @override
+  String get gameBeatCount => 'Count the Beats';
+
+  @override
+  String get gameBeatCountSubtitle => 'Dots and ties add up — how long is it?';
+
+  @override
+  String get beatCountPrompt => 'How many beats does this last? (♩ = 1)';
+
+  @override
+  String get gameMeterDetective => 'Meter Detective';
+
+  @override
+  String get gameMeterDetectiveSubtitle => 'March or waltz? Feel the beat';
+
+  @override
+  String get meterDetectivePrompt => 'Listen! How many beats per measure?';
+
+  @override
+  String get gameMelodyEcho => 'Melody Echo';
+
+  @override
+  String get gameMelodyEchoSubtitle => 'Find the melody you heard';
+
+  @override
+  String get melodyEchoPrompt => 'Listen! Which melody did you hear?';
 
   @override
   String get whatIsThisSymbol => 'What is this symbol called?';

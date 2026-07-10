@@ -62,7 +62,24 @@
   "whichLastsLonger": "Which one lasts longer?",
   "gameNoteReadingTreble": "Treble Clef",
   "gameNoteReadingBass": "Bass Clef",
+  "gameNoteReadingTenor": "Tenor Clef",
+  "gameNoteReadingAlto": "Alto Clef",
   "gameNoteReadingSubtitle": "Name the note on the staff",
+  "moduleCello": "Cello Corner",
+  "moduleCelloSubtitle": "Strings, fingers and clefs for young cellists",
+  "gameCelloStringQuiz": "Which String?",
+  "gameCelloStringQuizSubtitle": "Find the right cello string",
+  "celloStringPrompt": "Which string plays this note?",
+  "gameCelloFingerQuiz": "Finger Quiz",
+  "gameCelloFingerQuizSubtitle": "First position: which finger?",
+  "celloFingerPrompt": "Which finger plays it on the {string} string?",
+  "@celloFingerPrompt": {
+    "placeholders": {
+      "string": {
+        "type": "String"
+      }
+    }
+  },
   "whatIsThisNote": "What is this note called?",
   "noteNameC": "C",
   "noteNameD": "D",
@@ -177,6 +194,15 @@
   "gameRhythmTapSubtitle": "Listen and tap it back",
   "rhythmTapPrompt": "Listen, then tap the rhythm!",
   "tapHere": "Tap here!",
+  "gameBeatCount": "Count the Beats",
+  "gameBeatCountSubtitle": "Dots and ties add up — how long is it?",
+  "beatCountPrompt": "How many beats does this last? (♩ = 1)",
+  "gameMeterDetective": "Meter Detective",
+  "gameMeterDetectiveSubtitle": "March or waltz? Feel the beat",
+  "meterDetectivePrompt": "Listen! How many beats per measure?",
+  "gameMelodyEcho": "Melody Echo",
+  "gameMelodyEchoSubtitle": "Find the melody you heard",
+  "melodyEchoPrompt": "Listen! Which melody did you hear?",
   "whatIsThisSymbol": "What is this symbol called?",
   "roundOf": "Round {current} of {total}",
   "@roundOf": {

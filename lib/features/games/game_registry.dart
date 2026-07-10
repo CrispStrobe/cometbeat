@@ -8,13 +8,18 @@ import 'package:flutter/material.dart';
 import 'package:partitura/partitura.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'cello/cello_finger_quiz_screen.dart';
+import 'cello/cello_string_quiz_screen.dart';
 import 'chords/chord_quiz_screen.dart';
 import 'chords/interval_ear_screen.dart';
 import 'chords/triad_builder_screen.dart';
 import 'harmony/harmony_quiz_screen.dart';
 import 'measures/measure_fill_screen.dart';
+import 'measures/meter_detective_screen.dart';
+import 'note_reading/melody_echo_screen.dart';
 import 'note_reading/note_reading_quiz_screen.dart';
 import 'note_reading/place_note_screen.dart';
+import 'note_values/beat_count_screen.dart';
 import 'note_values/duration_duel_screen.dart';
 import 'note_values/note_value_quiz_screen.dart';
 import 'note_values/rhythm_tap_screen.dart';
@@ -63,6 +68,13 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameRhythmTapSubtitle,
       builder: (_) => const RhythmTapScreen(),
     ),
+    GameInfo(
+      id: 'beat_count',
+      icon: Icons.filter_4,
+      title: (l) => l.gameBeatCount,
+      subtitle: (l) => l.gameBeatCountSubtitle,
+      builder: (_) => const BeatCountScreen(),
+    ),
   ],
   'note_reading': [
     GameInfo(
@@ -93,6 +105,13 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gamePlaceNoteSubtitle,
       builder: (_) => const PlaceNoteScreen(clef: Clef.bass),
     ),
+    GameInfo(
+      id: 'melody_echo',
+      icon: Icons.graphic_eq,
+      title: (l) => l.gameMelodyEcho,
+      subtitle: (l) => l.gameMelodyEchoSubtitle,
+      builder: (_) => const MelodyEchoScreen(),
+    ),
   ],
   'measures': [
     GameInfo(
@@ -101,6 +120,13 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameMeasureFill,
       subtitle: (l) => l.gameMeasureFillSubtitle,
       builder: (_) => const MeasureFillScreen(),
+    ),
+    GameInfo(
+      id: 'meter_detective',
+      icon: Icons.hearing,
+      title: (l) => l.gameMeterDetective,
+      subtitle: (l) => l.gameMeterDetectiveSubtitle,
+      builder: (_) => const MeterDetectiveScreen(),
     ),
   ],
   'scales': [
@@ -163,6 +189,29 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameCadenceWorkshop,
       subtitle: (l) => l.gameCadenceWorkshopSubtitle,
       builder: (_) => const CadenceWorkshopScreen(),
+    ),
+  ],
+  'cello': [
+    GameInfo(
+      id: 'cello_string_quiz',
+      icon: Icons.linear_scale,
+      title: (l) => l.gameCelloStringQuiz,
+      subtitle: (l) => l.gameCelloStringQuizSubtitle,
+      builder: (_) => const CelloStringQuizScreen(),
+    ),
+    GameInfo(
+      id: 'cello_finger_quiz',
+      icon: Icons.back_hand,
+      title: (l) => l.gameCelloFingerQuiz,
+      subtitle: (l) => l.gameCelloFingerQuizSubtitle,
+      builder: (_) => const CelloFingerQuizScreen(),
+    ),
+    GameInfo(
+      id: 'note_reading_tenor',
+      icon: Icons.music_note,
+      title: (l) => l.gameNoteReadingTenor,
+      subtitle: (l) => l.gameNoteReadingSubtitle,
+      builder: (_) => const NoteReadingQuizScreen(clef: Clef.tenor),
     ),
   ],
 };

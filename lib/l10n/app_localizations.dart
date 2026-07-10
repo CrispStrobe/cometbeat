@@ -326,11 +326,71 @@ abstract class AppLocalizations {
   /// **'Bass Clef'**
   String get gameNoteReadingBass;
 
+  /// No description provided for @gameNoteReadingTenor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tenor Clef'**
+  String get gameNoteReadingTenor;
+
+  /// No description provided for @gameNoteReadingAlto.
+  ///
+  /// In en, this message translates to:
+  /// **'Alto Clef'**
+  String get gameNoteReadingAlto;
+
   /// No description provided for @gameNoteReadingSubtitle.
   ///
   /// In en, this message translates to:
   /// **'Name the note on the staff'**
   String get gameNoteReadingSubtitle;
+
+  /// No description provided for @moduleCello.
+  ///
+  /// In en, this message translates to:
+  /// **'Cello Corner'**
+  String get moduleCello;
+
+  /// No description provided for @moduleCelloSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Strings, fingers and clefs for young cellists'**
+  String get moduleCelloSubtitle;
+
+  /// No description provided for @gameCelloStringQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Which String?'**
+  String get gameCelloStringQuiz;
+
+  /// No description provided for @gameCelloStringQuizSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the right cello string'**
+  String get gameCelloStringQuizSubtitle;
+
+  /// No description provided for @celloStringPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Which string plays this note?'**
+  String get celloStringPrompt;
+
+  /// No description provided for @gameCelloFingerQuiz.
+  ///
+  /// In en, this message translates to:
+  /// **'Finger Quiz'**
+  String get gameCelloFingerQuiz;
+
+  /// No description provided for @gameCelloFingerQuizSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'First position: which finger?'**
+  String get gameCelloFingerQuizSubtitle;
+
+  /// No description provided for @celloFingerPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Which finger plays it on the {string} string?'**
+  String celloFingerPrompt(String string);
 
   /// No description provided for @whatIsThisNote.
   ///
@@ -661,6 +721,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap here!'**
   String get tapHere;
+
+  /// No description provided for @gameBeatCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Count the Beats'**
+  String get gameBeatCount;
+
+  /// No description provided for @gameBeatCountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dots and ties add up — how long is it?'**
+  String get gameBeatCountSubtitle;
+
+  /// No description provided for @beatCountPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'How many beats does this last? (♩ = 1)'**
+  String get beatCountPrompt;
+
+  /// No description provided for @gameMeterDetective.
+  ///
+  /// In en, this message translates to:
+  /// **'Meter Detective'**
+  String get gameMeterDetective;
+
+  /// No description provided for @gameMeterDetectiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'March or waltz? Feel the beat'**
+  String get gameMeterDetectiveSubtitle;
+
+  /// No description provided for @meterDetectivePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen! How many beats per measure?'**
+  String get meterDetectivePrompt;
+
+  /// No description provided for @gameMelodyEcho.
+  ///
+  /// In en, this message translates to:
+  /// **'Melody Echo'**
+  String get gameMelodyEcho;
+
+  /// No description provided for @gameMelodyEchoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the melody you heard'**
+  String get gameMelodyEchoSubtitle;
+
+  /// No description provided for @melodyEchoPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen! Which melody did you hear?'**
+  String get melodyEchoPrompt;
 
   /// No description provided for @whatIsThisSymbol.
   ///

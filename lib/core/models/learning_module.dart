@@ -81,4 +81,14 @@ final List<LearningModule> kLearningModules = [
     title: (l) => l.moduleHarmony,
     subtitle: (l) => l.moduleHarmonySubtitle,
   ),
+  // Instrument corner — unlocked from the start (special interest beats
+  // curriculum order; see docs/PLAN.md).
+  LearningModule(
+    id: 'cello',
+    icon: Icons.audiotrack,
+    color: const Color(0xFF8D6E63),
+    initiallyUnlocked: true,
+    title: (l) => l.moduleCello,
+    subtitle: (l) => l.moduleCelloSubtitle,
+  ),
 ];

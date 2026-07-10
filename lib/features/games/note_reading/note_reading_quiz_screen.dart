@@ -157,9 +157,12 @@ class _NoteReadingQuizScreenState extends State<NoteReadingQuizScreen> {
     final l10n = AppLocalizations.of(context)!;
     final title = _isReview
         ? l10n.reviewTitle
-        : widget.clef == Clef.treble
-            ? l10n.gameNoteReadingTreble
-            : l10n.gameNoteReadingBass;
+        : switch (widget.clef) {
+            Clef.treble => l10n.gameNoteReadingTreble,
+            Clef.bass => l10n.gameNoteReadingBass,
+            Clef.tenor => l10n.gameNoteReadingTenor,
+            Clef.alto => l10n.gameNoteReadingAlto,
+          };
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),

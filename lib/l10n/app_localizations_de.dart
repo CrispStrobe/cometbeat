@@ -139,7 +139,40 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gameNoteReadingBass => 'Bassschlüssel';
 
   @override
+  String get gameNoteReadingTenor => 'Tenorschlüssel';
+
+  @override
+  String get gameNoteReadingAlto => 'Altschlüssel';
+
+  @override
   String get gameNoteReadingSubtitle => 'Wie heißt die Note auf den Linien?';
+
+  @override
+  String get moduleCello => 'Cello-Ecke';
+
+  @override
+  String get moduleCelloSubtitle =>
+      'Saiten, Finger und Schlüssel für junge Cellisten';
+
+  @override
+  String get gameCelloStringQuiz => 'Welche Saite?';
+
+  @override
+  String get gameCelloStringQuizSubtitle => 'Finde die richtige Cello-Saite';
+
+  @override
+  String get celloStringPrompt => 'Auf welcher Saite spielst du diese Note?';
+
+  @override
+  String get gameCelloFingerQuiz => 'Finger-Quiz';
+
+  @override
+  String get gameCelloFingerQuizSubtitle => 'Erste Lage: welcher Finger?';
+
+  @override
+  String celloFingerPrompt(String string) {
+    return 'Welcher Finger spielt sie auf der $string-Saite?';
+  }
 
   @override
   String get whatIsThisNote => 'Wie heißt diese Note?';
@@ -324,6 +357,35 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get tapHere => 'Klopf hier!';
+
+  @override
+  String get gameBeatCount => 'Schläge zählen';
+
+  @override
+  String get gameBeatCountSubtitle =>
+      'Punkte und Bögen zählen mit — wie lang ist das?';
+
+  @override
+  String get beatCountPrompt => 'Wie viele Schläge dauert das? (♩ = 1)';
+
+  @override
+  String get gameMeterDetective => 'Takt-Detektiv';
+
+  @override
+  String get gameMeterDetectiveSubtitle => 'Marsch oder Walzer? Spür den Takt';
+
+  @override
+  String get meterDetectivePrompt =>
+      'Hör zu! Wie viele Schläge hat jeder Takt?';
+
+  @override
+  String get gameMelodyEcho => 'Melodie-Echo';
+
+  @override
+  String get gameMelodyEchoSubtitle => 'Finde die Melodie, die du gehört hast';
+
+  @override
+  String get melodyEchoPrompt => 'Hör zu! Welche Melodie war das?';
 
   @override
   String get whatIsThisSymbol => 'Wie heißt dieses Zeichen?';

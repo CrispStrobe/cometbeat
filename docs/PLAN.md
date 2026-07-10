@@ -31,7 +31,14 @@ iOS/Android/Web/Windows/macOS/Linux. Notation rendering via the MIT
 | 4 | **Tonleitern** (scales, Dur/Moll) | `scales.spot`, later `scales.build`, `scales.hear` | **Scale Detective** (tap the wrong note in a rendered scale) • *Scale Builder (drag notes to build one, next phase)* • *Major-or-minor by ear (audio, later)* | 1 this phase |
 | 5 | **Akkorde & Intervalle** | `chords.triad`, later `chords.quality`, `chords.interval` | **Chord Quiz** (name a rendered triad) • *Triad Builder (drag, next phase)* • *Interval ear training (audio, later)* | 1 this phase |
 | 6 | **Harmonik** (T/S/D) | `harmony.function`, later `harmony.cadence` | **Function Quiz** (a triad in a labeled key — Tonika, Subdominante or Dominante?) • *Cadence Builder (order T–S–D–T, next phase)* | 1 this phase |
-| 7 | *Komposition (later)* | `composition.*` | Melody completion (finish the phrase), question–answer phrases, cadence-based accompaniment | design only |
+| 7 | **Cello-Ecke** (instrument corner) | `cello.string`, `cello.finger`, `note_reading.tenor` | Which String? (bass-clef note → C/G/D/A) • Finger Quiz (first position, 0–4) • Tenor Clef reading • *later: shifting/positions, string+finger combined ("play this note"), open-string ear tuning* | 3 built |
+| 8 | *Komposition (later)* | `composition.*` | Melody completion (finish the phrase), question–answer phrases, cadence-based accompaniment | design only |
+
+**Instrument corners** are the modular-extension pattern proven by the
+cello module: a data table (string/finger map), instrument-specific games
+reusing the shared machinery, and the right clefs (tenor for cello — the
+library supports all four). A violin/viola corner is the same recipe
+(violin: G/D/A/E strings, treble clef; viola: alto clef).
 
 ## Difficulty progression (within each game)
 

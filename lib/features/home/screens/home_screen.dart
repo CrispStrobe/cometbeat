@@ -49,21 +49,30 @@ class HomeScreen extends StatelessWidget {
     final bass = readingIds
         .where((id) => id.startsWith('note_reading.bass.'))
         .toList();
+    final tenor = readingIds
+        .where((id) => id.startsWith('note_reading.tenor.'))
+        .toList();
 
-    final Widget? runner;
-    if (symbolIds.length >= treble.length &&
-        symbolIds.length >= bass.length &&
-        symbolIds.isNotEmpty) {
-      runner = NoteValueQuizScreen(reviewItemIds: symbolIds);
-    } else if (treble.length >= bass.length && treble.isNotEmpty) {
-      runner = NoteReadingQuizScreen(
-          clef: Clef.treble, reviewItemIds: treble.take(10).toList());
-    } else if (bass.isNotEmpty) {
-      runner = NoteReadingQuizScreen(
-          clef: Clef.bass, reviewItemIds: bass.take(10).toList());
-    } else {
-      runner = null;
-    }
+    // Pick the biggest due bucket.
+    final buckets = <(int, Widget Function())>[
+      (symbolIds.length, () => NoteValueQuizScreen(reviewItemIds: symbolIds)),
+      (
+        treble.length,
+        () => NoteReadingQuizScreen(
+            clef: Clef.treble, reviewItemIds: treble.take(10).toList())
+      ),
+      (
+        bass.length,
+        () => NoteReadingQuizScreen(
+            clef: Clef.bass, reviewItemIds: bass.take(10).toList())
+      ),
+      (
+        tenor.length,
+        () => NoteReadingQuizScreen(
+            clef: Clef.tenor, reviewItemIds: tenor.take(10).toList())
+      ),
+    ]..sort((a, b) => b.$1.compareTo(a.$1));
+    final runner = buckets.first.$1 > 0 ? buckets.first.$2() : null;
 
     if (runner == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,7 +85,7 @@ class HomeScreen extends StatelessWidget {
     }
 
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => runner!));
+        .push(MaterialPageRoute(builder: (_) => runner));
   }
 
   @override
