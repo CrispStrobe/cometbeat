@@ -1,0 +1,100 @@
+{
+  "@@locale": "en",
+  "appTitle": "KlangUniversum",
+  "homeTagline": "Discover the universe of music!",
+  "moduleNoteValues": "Note Values",
+  "moduleNoteValuesSubtitle": "Whole, half, quarter — how long does a note last?",
+  "moduleNoteReading": "Reading Notes",
+  "moduleNoteReadingSubtitle": "Treble and bass clef — which note is that?",
+  "moduleMeasures": "Measures & Meter",
+  "moduleMeasuresSubtitle": "Fill the measure so everything adds up",
+  "moduleScales": "Scales",
+  "moduleScalesSubtitle": "Major and minor, step by step",
+  "moduleChords": "Chords & Intervals",
+  "moduleChordsSubtitle": "Build triads and train your ears",
+  "moduleHarmony": "Harmony",
+  "moduleHarmonySubtitle": "Tonic, subdominant, dominant",
+  "comingSoon": "Coming soon!",
+  "locked": "Locked",
+  "reviewTitle": "Review",
+  "dueForReview": "{count, plural, =0{Nothing to review} =1{1 item to review} other{{count} items to review}}",
+  "@dueForReview": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsTitle": "Settings",
+  "progressTitle": "Progress",
+  "karteikastenTitle": "Flashcard boxes",
+  "moduleProgressTitle": "Modules",
+  "boxNew": "New",
+  "boxMastered": "Mastered",
+  "masteredOfTracked": "{mastered} of {tracked} mastered",
+  "@masteredOfTracked": {
+    "placeholders": {
+      "mastered": {
+        "type": "int"
+      },
+      "tracked": {
+        "type": "int"
+      }
+    }
+  },
+  "languageLabel": "Language",
+  "systemDefault": "System default",
+  "statsTitle": "Learning statistics",
+  "statsTracked": "Tracked items",
+  "statsLearning": "Still learning",
+  "gameNoteValueQuiz": "Symbol Quiz",
+  "gameNoteValueQuizSubtitle": "Which note or rest is this?",
+  "gameDurationDuel": "Duration Duel",
+  "gameDurationDuelSubtitle": "Tap the symbol that lasts longer",
+  "whichLastsLonger": "Which one lasts longer?",
+  "gameNoteReadingTreble": "Treble Clef",
+  "gameNoteReadingBass": "Bass Clef",
+  "gameNoteReadingSubtitle": "Name the note on the staff",
+  "whatIsThisNote": "What is this note called?",
+  "noteNameC": "C",
+  "noteNameD": "D",
+  "noteNameE": "E",
+  "noteNameF": "F",
+  "noteNameG": "G",
+  "noteNameA": "A",
+  "noteNameB": "B",
+  "whatIsThisSymbol": "What is this symbol called?",
+  "roundOf": "Round {current} of {total}",
+  "@roundOf": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "feedbackCorrect": "Correct!",
+  "feedbackTryAgain": "Oops — try again!",
+  "resultScore": "Score: {score}",
+  "@resultScore": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "playAgain": "Play again",
+  "backButton": "Back",
+  "wholeNote": "Whole note",
+  "halfNote": "Half note",
+  "quarterNote": "Quarter note",
+  "eighthNote": "Eighth note",
+  "sixteenthNote": "Sixteenth note",
+  "wholeRest": "Whole rest",
+  "halfRest": "Half rest",
+  "quarterRest": "Quarter rest",
+  "eighthRest": "Eighth rest",
+  "sixteenthRest": "Sixteenth rest"
+}

@@ -1,0 +1,6 @@
+{
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": "build/web",
+  "ignoreCommand": "exit 0"
+}

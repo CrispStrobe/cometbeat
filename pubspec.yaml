@@ -1,0 +1,55 @@
+name: klang_universum
+description: A music notation and harmony learning app, from primary school kids onwards. Working title KlangUniversum.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.1
+
+  # UI
+  cupertino_icons: ^1.0.6
+
+  # Storage & Data
+  shared_preferences: ^2.2.2
+
+  # Audio
+  audioplayers: ^6.1.0
+
+  # Utils
+  intl: any
+  equatable: ^2.0.5
+  package_info_plus: ^8.0.0
+
+  # Notation rendering — path dep on the local library workspace
+  # (see ../partitura/HANDOVER.md + HANDOVER_PARTITURA.md).
+  partitura:
+    path: ../partitura/packages/partitura
+
+# partitura_core is not on pub.dev yet; resolve it from the workspace too.
+# Remove this override once the partitura packages are published.
+dependency_overrides:
+  partitura_core:
+    path: ../partitura/packages/partitura_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true # ARB-based i18n, see l10n.yaml
+
+  assets:
+    - assets/images/
+    - assets/sounds/
