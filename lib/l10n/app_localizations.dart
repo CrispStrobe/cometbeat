@@ -1364,6 +1364,30 @@ abstract class AppLocalizations {
   /// **'Memory game: match notes to their names'**
   String get gameNoteMemorySubtitle;
 
+  /// No description provided for @gameNoteOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Note Order'**
+  String get gameNoteOrder;
+
+  /// No description provided for @gameNoteOrderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the notes from lowest to highest'**
+  String get gameNoteOrderSubtitle;
+
+  /// No description provided for @noteOrderPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the notes from lowest to highest!'**
+  String get noteOrderPrompt;
+
+  /// No description provided for @noteOrderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Each note plays when you tap it.'**
+  String get noteOrderHint;
+
   /// No description provided for @noteMemoryPrompt.
   ///
   /// In en, this message translates to:

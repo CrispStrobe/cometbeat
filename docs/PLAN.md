@@ -26,7 +26,7 @@ iOS/Android/Web/Windows/macOS/Linux. Notation rendering via the MIT
 | # | Module | Skills (SRI namespace) | Games | Status |
 |---|--------|------------------------|-------|--------|
 | 1 | **Notenwerte** (note values & lengths) | `note_values.symbol`, `.rhythm`, `.beats` | Symbol Quiz • Duration Duel • Rhythm Echo (tap-back) • Count the Beats (dots + ties) | 4 built |
-| 2 | **Noten lesen** (treble & bass clef) | `note_reading.treble`, `.bass`, `.place_*`, `.melody`, `.dictation` | Reading Quiz ×2 (with fading landmark hints) • Place the Note ×2 • Melody Echo (ear↔staff) • Melody Dictation (ear→write on staff) • Note Match (memory pairs: note ↔ name) | 7 built |
+| 2 | **Noten lesen** (treble & bass clef) | `note_reading.treble`, `.bass`, `.place_*`, `.melody`, `.dictation` | Reading Quiz ×2 (with fading landmark hints) • Place the Note ×2 • Melody Echo (ear↔staff) • Melody Dictation (ear→write on staff) • Note Match (memory pairs: note ↔ name) • Note Order (tap low→high) | 8 built |
 | 3 | **Takte** (measures & meter) | `measures.fill`, `.meter` | Measure Filler • Meter Detective (accented downbeats by ear) | 2 built |
 | 4 | **Tonleitern** (scales, Dur/Moll) | `scales.spot`, `.build`, `.hear` | Scale Detective • Scale Builder • Dur oder Moll? (ear) | 3 built |
 | 5 | **Akkorde & Intervalle** | `chords.triad`, `.build`, `.interval` | Chord Quiz • Triad Builder • Interval Detective (ear) | 3 built |
@@ -223,8 +223,11 @@ of them. Ordered by value ÷ effort.
   **Shipped**: **Note Match** — flip a grid of cards to pair a note-on-staff with
   its letter; each flip plays the pitch; fewer moves → more stars. SRI records a
   correct read on each match. *S–M.*
-- [ ] **Sequence / ordering** (`ReorderableListView`): order notes low→high, note
-  values longest→shortest, or tap-back a heard melody in order. *S. Near-free.*
+- [x] **Sequence / ordering.** *(voc / SMA `Launch Sequence`.)* **Shipped**: **Note
+  Order** — tap four shuffled note cards from lowest pitch to highest; each
+  correct tap plays the note and locks with a number badge, a wrong tap buzzes.
+  SRI `note_reading.order.len4`. *(Still open: note-values longest→shortest, and
+  a melody-recall ear variant.)*
 - [ ] **Sort into buckets** (Draggable→DragTarget): major/minor, high/low,
   long/short, sharp/natural/flat; play each card on drag. *S–M.*
 - [ ] **Swipe left/right** (binary drill): line-or-space, in-the-scale?, major or

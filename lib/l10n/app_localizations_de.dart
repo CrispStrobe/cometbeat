@@ -724,6 +724,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gameNoteMemorySubtitle => 'Memory: Noten und ihre Namen zuordnen';
 
   @override
+  String get gameNoteOrder => 'Der Reihe nach';
+
+  @override
+  String get gameNoteOrderSubtitle => 'Tippe die Noten von tief nach hoch';
+
+  @override
+  String get noteOrderPrompt => 'Tippe die Noten von tief nach hoch!';
+
+  @override
+  String get noteOrderHint => 'Jede Note klingt, wenn du sie antippst.';
+
+  @override
   String get noteMemoryPrompt => 'Finde die Paare: eine Note und ihr Name!';
 
   @override

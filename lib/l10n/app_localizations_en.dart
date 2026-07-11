@@ -718,6 +718,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Memory game: match notes to their names';
 
   @override
+  String get gameNoteOrder => 'Note Order';
+
+  @override
+  String get gameNoteOrderSubtitle => 'Tap the notes from lowest to highest';
+
+  @override
+  String get noteOrderPrompt => 'Tap the notes from lowest to highest!';
+
+  @override
+  String get noteOrderHint => 'Each note plays when you tap it.';
+
+  @override
   String get noteMemoryPrompt => 'Find the pairs: a note and its name!';
 
   @override

@@ -365,6 +365,10 @@
   "gameMelodyDictationSubtitle": "Hear it, then write it on the staff",
   "gameNoteMemory": "Note Match",
   "gameNoteMemorySubtitle": "Memory game: match notes to their names",
+  "gameNoteOrder": "Note Order",
+  "gameNoteOrderSubtitle": "Tap the notes from lowest to highest",
+  "noteOrderPrompt": "Tap the notes from lowest to highest!",
+  "noteOrderHint": "Each note plays when you tap it.",
   "noteMemoryPrompt": "Find the pairs: a note and its name!",
   "noteMemoryMoves": "{count, plural, =1{1 move} other{{count} moves}}",
   "@noteMemoryMoves": {
