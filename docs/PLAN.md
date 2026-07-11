@@ -98,3 +98,80 @@ Interval Detective, Meter Detective; option to graduate to `flutter_soloud`
   brotli (main.dart.js ~924 KB, canvaskit.wasm ~2.85 MB, fonts tree-shaken).
 - pub.dev publication of partitura: deliberately **not yet** (maintainer
   decision); everything is consumed via path/git.
+
+## Competitive analysis & opportunity roadmap
+
+Benchmarked against 30+ music-learning apps (July 2026, four parallel research
+sweeps: gamified-instrument, theory/ear-training, kids-focused, and
+sight-reading/composition + DACH). Full teardown artifact archived separately.
+
+### The strategic read
+
+- **Our real competition is not Yousician / flowkey / Simply Piano.** Those are
+  adult-first, treat notation as a display mode, and have zero German-curriculum
+  tie-in. In the DACH market we compete with free incumbents **ANTON** (German
+  Education Award 2022, the one rival that claims Lehrplan alignment) and **WDR
+  Klangkiste**, plus a thin cluster of theory tools (Theoriesteine, TunyStones,
+  Classplash Cornelius, Mussila).
+- **The children's notation-literacy niche is genuinely thin.** A German
+  publisher notes note-reading is required in every Bundesland yet "praktisch
+  kein kindgerechtes Unterrichtsmaterial zum Notenlernen gibt."
+- **Two open moats:** explicit **Lehrplan alignment** (only ANTON claims it) and
+  **genuinely bilingual EN/DE pedagogy** (every rival is German-only or an
+  English app with translated strings — only Opera Maker is truly bilingual).
+- **Where we already lead** (rare among kids' apps): SM-2 spaced repetition,
+  real four-clef notation, theory/harmony depth (T/S/D, cadences), a composition
+  sandbox with MusicXML export, and bilingual EN/DE.
+- **The one structural gap every strong rival has and we don't:** live
+  real-instrument input (mic pitch-detection / MIDI).
+
+### Opportunity backlog (implement top-to-bottom)
+
+Effort S/M/L; fit ♪–♪♪♪ (mission fit for a kids' notation/theory app). Tick as
+shipped.
+
+**Quick wins — low effort, ship first**
+- [ ] Note-naming toggle: German H/B, English, solfège, scale-degree — one
+  setting, every drill. *musictheory.net / Music Crab. S · ♪♪♪.* Reinforces EN/DE.
+- [ ] Daily streak + practice calendar. *Yousician / Duolingo. S · ♪♪.* Retention loop.
+- [ ] "Wait mode" pacing — advance only on the correct answer, no timed fail for
+  slow readers. *Flowkey. S · ♪♪♪.*
+- [ ] Reacting mascot — eats correct notes, comically pops on wrong (our biggest
+  kid-engagement gap). *NoteWorks "Munchy" / Blob Chorus. M · ♪♪.*
+- [ ] Hideable timer + beat-your-time replay — voluntary reps feed SM-2. *Note Rush. S · ♪♪.*
+- [ ] Foreground the bilingual EN/DE pedagogy (positioning, not translated
+  strings). *White space — no rival owns it. S · ♪♪♪.*
+
+**Strategic bets — extend the SM-2 / notation core**
+- [ ] Weak-spot ear engine + "your tricky notes" stats — auto-detect and re-drill
+  missed intervals/chords. *EarMaster (category's best idea). M · ♪♪♪.*
+- [ ] Functional cadence → scale-degree ear mode (hear I–IV–V–I, name the degree).
+  *Functional Ear Trainer. M · ♪♪♪.* Grows "Dur oder Moll?".
+- [ ] Landmark / intervallic reading hints (fading). *Note Rush / Music Crab. M · ♪♪♪.*
+- [ ] Written rhythm & melodic dictation — tap the rhythm / place noteheads,
+  reusing the MusicXML sandbox. *Teoria / EarMaster. M · ♪♪.*
+- [ ] Removable color scaffold for pre-readers (color + solfège + number +
+  hand-sign, peeled away as they learn the staff). *Prodigies "Chromanotes". M · ♪♪.*
+- [ ] Play-in-time-to-music lane (tap-along rhythm / falling-note). *Rhythm Cat /
+  Piano Maestro. M · ♪♪.*
+- [ ] Parent view + multi-child profiles. *Piano Maestro / NoteWorks. M · ♪♪.*
+
+**German-market moat — the thin-market opening**
+- [ ] Lehrplan alignment + German framing (map minigames to Bundesland curricula;
+  German terminology). *ANTON. M · ♪♪♪.* Strongest available moat.
+- [ ] Sound-toy creative modes that feed notation (grid composer + geometric
+  rhythm toy for pre-readers). *Chrome Music Lab / Groove Pizza. M · ♪♪.*
+- [ ] Color-coded kids' notation editor with MusicXML/MIDI export. *Classplash
+  Cornelius / TunyStones. M · ♪♪.* Closest to our existing sandbox.
+- [ ] Teacher / LMS layer for school licensing (roster, assign-and-track, Google
+  Classroom). *Flat.io / Soundtrap / ANTON. L · ♪♪.* Schools buy per-seat.
+
+**Big swings — category table-stakes, heavy lift**
+- [ ] Real-instrument input (mic / MIDI) — grade what the child actually plays;
+  scope as opt-in cello & piano corners. *Yousician / Note Rush / TunyStones. L · ♪♪.*
+- [ ] Generative sight-reading + performance grading — endless non-repeating
+  exercises scored for pitch & rhythm. *Sight Reading Factory. L · ♪♪♪.* Answers
+  the teacher-reported material shortage directly.
+
+Caveats: competitor prices/age-ratings drift; some DACH adoption/award figures
+are self-reported — verify before external citation.
