@@ -488,6 +488,30 @@ abstract class AppLocalizations {
   /// **'Clear'**
   String get myMelodyClear;
 
+  /// No description provided for @myMelodySave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get myMelodySave;
+
+  /// No description provided for @myMelodySaveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name your melody'**
+  String get myMelodySaveTitle;
+
+  /// No description provided for @myMelodyDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'My melody'**
+  String get myMelodyDefaultName;
+
+  /// No description provided for @myMelodySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to the Song Book!'**
+  String get myMelodySaved;
+
   /// No description provided for @moduleSongs.
   ///
   /// In en, this message translates to:

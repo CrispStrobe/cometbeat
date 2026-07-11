@@ -225,6 +225,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get myMelodyClear => 'Löschen';
 
   @override
+  String get myMelodySave => 'Speichern';
+
+  @override
+  String get myMelodySaveTitle => 'Benenne deine Melodie';
+
+  @override
+  String get myMelodyDefaultName => 'Meine Melodie';
+
+  @override
+  String get myMelodySaved => 'Im Liederbuch gespeichert!';
+
+  @override
   String get moduleSongs => 'Liederbuch';
 
   @override

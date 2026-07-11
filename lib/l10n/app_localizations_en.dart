@@ -223,6 +223,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myMelodyClear => 'Clear';
 
   @override
+  String get myMelodySave => 'Save';
+
+  @override
+  String get myMelodySaveTitle => 'Name your melody';
+
+  @override
+  String get myMelodyDefaultName => 'My melody';
+
+  @override
+  String get myMelodySaved => 'Saved to the Song Book!';
+
+  @override
   String get moduleSongs => 'Song Book';
 
   @override

@@ -5,7 +5,12 @@
 // stars, no wrong answers — free creation is the point (and the child is
 // reading and writing real notation the whole time).
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:klang_universum/core/services/audio_service.dart';
+import 'package:klang_universum/features/games/songs/user_songs_service.dart';
+import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:partitura/partitura.dart'
     show
         Clef,
@@ -17,11 +22,9 @@ import 'package:partitura/partitura.dart'
         PartituraTheme,
         RestElement,
         Score,
-        StaffTarget;
+        StaffTarget,
+        scoreToMusicXml;
 import 'package:provider/provider.dart';
-
-import '../../../core/services/audio_service.dart';
-import '../../../l10n/app_localizations.dart';
 
 class MyMelodyScreen extends StatefulWidget {
   const MyMelodyScreen({super.key});
@@ -42,7 +45,7 @@ class _MyMelodyScreenState extends State<MyMelodyScreen> {
           Measure(List.of(_notes)),
           // Whole-rest measure keeps the tappable staff wide.
           if (_notes.length < 6)
-            Measure(const [RestElement(NoteDuration(DurationBase.whole))]),
+            const Measure([RestElement(NoteDuration(DurationBase.whole))]),
         ],
       );
 
@@ -51,11 +54,13 @@ class _MyMelodyScreenState extends State<MyMelodyScreen> {
     final pitch = target.pitchFor(Clef.treble);
     context.read<AudioService>().playMidiNote(pitch.midiNumber, ms: 400);
     setState(() {
-      _notes.add(NoteElement.note(
-        pitch,
-        const NoteDuration(DurationBase.quarter),
-        id: 'm${_nextId++}',
-      ));
+      _notes.add(
+        NoteElement.note(
+          pitch,
+          const NoteDuration(DurationBase.quarter),
+          id: 'm${_nextId++}',
+        ),
+      );
     });
   }
 
@@ -64,6 +69,59 @@ class _MyMelodyScreenState extends State<MyMelodyScreen> {
     context.read<AudioService>().playSequence([
       for (final note in _notes) (note.pitches.first.midiNumber, 400),
     ]);
+  }
+
+  /// A clean 4/4-barred score for export, so it opens tidily in MuseScore &
+  /// co. (The on-screen [_score] keeps everything in one wide measure.)
+  Score _exportScore() {
+    const perMeasure = 4; // quarter notes per 4/4 measure
+    final measures = <Measure>[
+      for (var i = 0; i < _notes.length; i += perMeasure)
+        Measure(_notes.sublist(i, min(i + perMeasure, _notes.length))),
+    ];
+    return Score(clef: Clef.treble, measures: measures);
+  }
+
+  Future<void> _saveToSongBook() async {
+    if (_notes.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final songs = context.read<UserSongsService>();
+
+    final controller = TextEditingController(text: l10n.myMelodyDefaultName);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.myMelodySaveTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (v) => Navigator.of(ctx).pop(v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: Text(l10n.myMelodySave),
+          ),
+        ],
+      ),
+    );
+    if (title == null) return; // cancelled
+
+    final name = title.trim().isEmpty ? l10n.myMelodyDefaultName : title.trim();
+    songs.addSong(
+      ImportedSong(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: name,
+        musicXml: scoreToMusicXml(_exportScore()),
+      ),
+    );
+    messenger.showSnackBar(SnackBar(content: Text(l10n.myMelodySaved)));
   }
 
   @override
@@ -94,8 +152,6 @@ class _MyMelodyScreenState extends State<MyMelodyScreen> {
                         score: _score,
                         theme: PartituraTheme.kids,
                         staffSpace: 14,
-                        ghostDuration:
-                            const NoteDuration(DurationBase.quarter),
                         onStaffTap: _onStaffTap,
                       ),
                     ),
@@ -103,27 +159,31 @@ class _MyMelodyScreenState extends State<MyMelodyScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   FilledButton.icon(
                     onPressed: _notes.isEmpty ? null : _play,
                     icon: const Icon(Icons.play_arrow),
                     label: Text(l10n.myMelodyPlay),
                   ),
-                  const SizedBox(width: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: _notes.isEmpty ? null : _saveToSongBook,
+                    icon: const Icon(Icons.bookmark_add_outlined),
+                    label: Text(l10n.myMelodySave),
+                  ),
                   FilledButton.tonalIcon(
                     onPressed: _notes.isEmpty
                         ? null
-                        : () => setState(() => _notes.removeLast()),
+                        : () => setState(_notes.removeLast),
                     icon: const Icon(Icons.undo),
                     label: Text(l10n.myMelodyUndo),
                   ),
-                  const SizedBox(width: 12),
                   TextButton.icon(
-                    onPressed: _notes.isEmpty
-                        ? null
-                        : () => setState(_notes.clear),
+                    onPressed:
+                        _notes.isEmpty ? null : () => setState(_notes.clear),
                     icon: const Icon(Icons.delete_outline),
                     label: Text(l10n.myMelodyClear),
                   ),

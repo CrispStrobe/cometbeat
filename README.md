@@ -20,7 +20,7 @@ See [docs/PLAN.md](docs/PLAN.md) for the full curriculum map and roadmap.
 | `scales` | Tonleitern, Dur/Moll | Scale Detective • Dur oder Moll? (ear) • Scale Builder |
 | `chords` | Akkorde & Intervalle | Chord Quiz • Triad Builder • Interval Detective (ear) |
 | `harmony` | Harmonik (T/S/D) | Function Quiz • Cadence Workshop |
-| `composition` | Komponieren (Kompositionstechnik) | Ending Detective (closure) • Question & Answer (phrases) • My Melody (free composing sandbox) |
+| `composition` | Komponieren (Kompositionstechnik) | Ending Detective (closure) • Question & Answer (phrases) • My Melody (free composing sandbox, saves to the Song Book as MusicXML) |
 | `cello` | Cello-Ecke (instrument corner) | Which String? • Finger Quiz (1st position) • Tenor Clef reading |
 | `songs` | Liederbuch (real songs) | Song Book (play-along cursor + lyrics) • Name That Tune (ear) • **Import**: MusicXML, ChordPro chord sheets (playable chips), simple monophonic MIDI |
 | `keyboard` | Tasten-Ecke (piano corner) | Find the Key (staff→key) • Key Quiz (key→name) • Echo Keys (ear→key) • Play the Melody (sight-playing) • Chord Grip |
