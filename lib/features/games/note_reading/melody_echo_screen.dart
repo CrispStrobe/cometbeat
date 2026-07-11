@@ -42,6 +42,13 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
   // Tracks the current playback so the next melody never cuts it off.
   final Stopwatch _playbackClock = Stopwatch();
   int _lastPlayedNotes = MelodyEchoScreen.melodyLength;
+  Timer? _nextMelodyTimer;
+
+  @override
+  void dispose() {
+    _nextMelodyTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   int get totalRounds => 8;
@@ -129,11 +136,12 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
   /// Plays the round's melody, but waits for any in-flight playback to finish
   /// so one round's melody never cuts off the previous one.
   void _playMelodyAfterCurrent() {
+    _nextMelodyTimer?.cancel();
     final remaining = _playbackRemainingMs;
     if (remaining <= 0) {
       _playMelody();
     } else {
-      Future.delayed(Duration(milliseconds: remaining), () {
+      _nextMelodyTimer = Timer(Duration(milliseconds: remaining), () {
         if (mounted) _playMelody();
       });
     }
