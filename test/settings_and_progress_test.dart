@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:klang_universum/core/services/settings_service.dart';
 import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:klang_universum/features/progress/screens/progress_screen.dart';
+import 'package:klang_universum/features/settings/screens/settings_screen.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,5 +60,48 @@ void main() {
     // (the lazy ListView may not mount all six cards in the test viewport).
     expect(find.text('0 of 2 mastered'), findsOneWidget);
     expect(find.text('0 of 0 mastered'), findsWidgets);
+  });
+
+  testWidgets('settings screen: language options + stats, switch to German',
+      (tester) async {
+    PackageInfo.setMockInitialValues(
+      appName: 'KlangUniversum',
+      packageName: 'de.example.klang',
+      version: '0.1.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+    final settings = SettingsService();
+    await settings.load();
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11))
+      ..recordResponse('note_values.symbol.whole_note', true);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<SriService>.value(value: sri),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('en'), Locale('de')],
+          home: SettingsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('Deutsch'), findsOneWidget);
+    expect(find.text('1'), findsWidgets); // tracked/learning stats
+
+    await tester.tap(find.text('Deutsch'));
+    await tester.pump();
+    expect(settings.locale, const Locale('de'));
   });
 }
