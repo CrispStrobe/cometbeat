@@ -1,0 +1,79 @@
+name: Deploy
+
+# Auto-redeploy the web build to Vercel after CI passes on main. Runs only when
+# the "CI" workflow completes successfully (so we never publish a red commit),
+# and can also be triggered by hand. Mirrors ci.yml's sibling layout so the
+# ../partitura path dependency resolves, then builds web and ships it.
+#
+# Requires one repository secret: VERCEL_TOKEN (Account Settings → Tokens).
+# The org/project IDs are not secret and are set below.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: team_uvAE8yHK3Zi7pXobhJmwckcQ
+  VERCEL_PROJECT_ID: prj_USZwxfzmeGCORbJbiWwvddwWMaqX
+
+jobs:
+  deploy:
+    # Manual runs always deploy; automatic runs only on a green CI.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout klang-universum
+        uses: actions/checkout@v5
+        with:
+          path: klang-universum
+          # For an automatic run, deploy the exact commit CI validated.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      # partitura + partitura_core are resolved via ../partitura/... path deps.
+      - name: Checkout partitura (sibling path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/partitura
+          ref: main
+          path: partitura
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: klang-universum
+        run: flutter pub get
+
+      - name: Build web
+        working-directory: klang-universum
+        run: flutter build web --release
+
+      # Vercel's outputDirectory is deploy_web (vercel.json). Drop the debug
+      # symbolication maps the runtime never fetches (~8 MB) — same as the
+      # local deploy flow.
+      - name: Stage deploy_web
+        working-directory: klang-universum
+        run: |
+          rm -rf deploy_web
+          mkdir -p deploy_web
+          rsync -a --exclude='*.symbols' build/web/ deploy_web/
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy to production
+        working-directory: klang-universum
+        run: vercel deploy --prod --yes --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
