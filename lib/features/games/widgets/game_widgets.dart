@@ -88,6 +88,32 @@ class FeedbackLine extends StatelessWidget {
   }
 }
 
+/// A capped two-column grid of answer buttons: centered and no wider than
+/// 480 px, with flat (aspect 3.2) cells — so the choices stay compact and never
+/// take up more than the lower part of the screen, even on wide/web layouts.
+class AnswerGrid extends StatelessWidget {
+  final List<Widget> children;
+
+  const AnswerGrid({super.key, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 3.2,
+          children: children,
+        ),
+      ),
+    );
+  }
+}
+
 class GameResultView extends StatelessWidget {
   /// Game type key into [kStarThresholds].
   final String gameType;

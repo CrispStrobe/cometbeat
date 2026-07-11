@@ -141,12 +141,7 @@ class _GuitarTabReadScreenState extends State<GuitarTabReadScreen>
                     const SizedBox(height: 16),
                     FeedbackLine(correct: _lastAnswer),
                     const SizedBox(height: 16),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 3.2,
+                    AnswerGrid(
                       children: [
                         for (final option in _options)
                           FilledButton(

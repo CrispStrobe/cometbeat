@@ -123,12 +123,7 @@ class _KeyNameScreenState extends State<KeyNameScreen> with QuizRoundMixin {
                     const SizedBox(height: 8),
                     FeedbackLine(correct: _lastAnswer),
                     const SizedBox(height: 8),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 3.2,
+                    AnswerGrid(
                       children: [
                         for (final option in _options)
                           FilledButton(
