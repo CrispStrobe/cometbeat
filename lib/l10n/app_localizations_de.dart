@@ -778,6 +778,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get connectLinePrompt => 'Verbinde jede Note mit ihrem Namen!';
 
   @override
+  String get gameLedgerLeap => 'Hilfslinien zählen';
+
+  @override
+  String get gameLedgerLeapSubtitle =>
+      'Zähle die kleinen Hilfslinien über oder unter dem Notensystem';
+
+  @override
+  String get ledgerLeapPrompt => 'Wie viele Hilfslinien?';
+
+  @override
   String get gameFallingKeys => 'Fallende Tasten';
 
   @override

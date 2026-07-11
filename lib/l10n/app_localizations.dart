@@ -1466,6 +1466,24 @@ abstract class AppLocalizations {
   /// **'Connect each note to its name!'**
   String get connectLinePrompt;
 
+  /// No description provided for @gameLedgerLeap.
+  ///
+  /// In en, this message translates to:
+  /// **'Ledger Leap'**
+  String get gameLedgerLeap;
+
+  /// No description provided for @gameLedgerLeapSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Count the little helper lines above or below the staff'**
+  String get gameLedgerLeapSubtitle;
+
+  /// No description provided for @ledgerLeapPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'How many ledger lines?'**
+  String get ledgerLeapPrompt;
+
   /// No description provided for @gameFallingKeys.
   ///
   /// In en, this message translates to:

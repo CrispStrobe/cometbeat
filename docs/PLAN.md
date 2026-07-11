@@ -26,7 +26,7 @@ iOS/Android/Web/Windows/macOS/Linux. Notation rendering via the MIT
 | # | Module | Skills (SRI namespace) | Games | Status |
 |---|--------|------------------------|-------|--------|
 | 1 | **Notenwerte** (note values & lengths) | `note_values.symbol`, `.rhythm`, `.beats` | Symbol Quiz • Duration Duel • Rhythm Echo (tap-back) • Count the Beats (dots + ties) • Sort the Beats (drag into buckets) • Connect the Symbols (drag glyph↔name) | 6 built |
-| 2 | **Noten lesen** (treble & bass clef) | `note_reading.treble`, `.bass`, `.place_*`, `.melody`, `.dictation` | Reading Quiz ×2 (with fading landmark hints) • Place the Note ×2 • Melody Echo (ear↔staff) • Melody Dictation (ear→write on staff) • Note Match (memory pairs: note ↔ name) • Note Order (tap low→high) • Line or Space? (swipe) • Falling Notes (arcade: name before it lands) • Connect the Notes (drag note↔name) | 11 built |
+| 2 | **Noten lesen** (treble & bass clef) | `note_reading.treble`, `.bass`, `.place_*`, `.melody`, `.dictation` | Reading Quiz ×2 (with fading landmark hints) • Place the Note ×2 • Melody Echo (ear↔staff) • Melody Dictation (ear→write on staff) • Note Match (memory pairs: note ↔ name) • Note Order (tap low→high) • Line or Space? (swipe) • Falling Notes (arcade: name before it lands) • Connect the Notes (drag note↔name) • Ledger Leap (count ledger lines) | 12 built |
 | 3 | **Takte** (measures & meter) | `measures.fill`, `.meter` | Measure Filler • Meter Detective (accented downbeats by ear) • Beat Runner (tap-along rhythm lane) | 3 built |
 | 4 | **Tonleitern** (scales, Dur/Moll) | `scales.spot`, `.build`, `.hear` | Scale Detective • Scale Builder • Dur oder Moll? (ear) • Sound Echo (memory-sequence toy) • Follow the Conductor (reaction toy) | 5 built |
 | 5 | **Akkorde & Intervalle** | `chords.triad`, `.build`, `.interval` | Chord Quiz • Triad Builder • Interval Detective (ear) | 3 built |
@@ -303,9 +303,15 @@ Fresh ideas that fit the machinery we already have (partitura notation, pure-Dar
 audio, the SM-2 engine, the falling/connect/reaction engines) and target skills
 the curriculum doesn't yet drill. Ordered by value ÷ effort; effort S/M/L, fit ♪–♪♪♪.
 
-- [ ] **Ledger Leap** — the ledger-line drill kids trip on: a note sits above/below
+- [x] **Ledger Leap** — the ledger-line drill kids trip on: a note sits above/below
   the staff; tap how many ledger lines (or its letter). Isolates the middle-C /
   high-A neighbourhood that reading games only brush. SRI `note_reading.*`. *S · ♪♪♪.*
+  **Shipped** (note reading): a note sits exactly on the Nth ledger line (never a
+  ledger space, so the count is unambiguous); tap 1 / 2 / 3. Star-gated —
+  beginners get treble below the staff (the middle-C region), 1–2 lines; two
+  stars adds bass, above, and 3 lines. A correct count plays the pitch. SRI
+  `note_reading.ledger.<clef>.<below|above><n>`. *(Extends to naming the ledger
+  note as a second step.)*
 - [ ] **Key Signature Detective** — how many sharps/flats, and which key? Read a key
   signature and name it, with a fading circle-of-fifths hint. New skill
   `key_sig.read` — nothing covers signatures yet. *S · ♪♪♪.*

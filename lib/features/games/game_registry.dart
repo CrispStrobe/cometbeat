@@ -29,6 +29,7 @@ import 'package:klang_universum/features/games/measures/measure_fill_screen.dart
 import 'package:klang_universum/features/games/measures/meter_detective_screen.dart';
 import 'package:klang_universum/features/games/note_reading/connect_line_screen.dart';
 import 'package:klang_universum/features/games/note_reading/falling_notes_screen.dart';
+import 'package:klang_universum/features/games/note_reading/ledger_leap_screen.dart';
 import 'package:klang_universum/features/games/note_reading/line_space_screen.dart';
 import 'package:klang_universum/features/games/note_reading/melody_dictation_screen.dart';
 import 'package:klang_universum/features/games/note_reading/melody_echo_screen.dart';
@@ -190,6 +191,13 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameConnectLine,
       subtitle: (l) => l.gameConnectLineSubtitle,
       builder: (_) => const ConnectLineScreen(),
+    ),
+    GameInfo(
+      id: 'ledger_leap',
+      icon: Icons.stacked_line_chart,
+      title: (l) => l.gameLedgerLeap,
+      subtitle: (l) => l.gameLedgerLeapSubtitle,
+      builder: (_) => const LedgerLeapScreen(),
     ),
   ],
   'measures': [

@@ -85,6 +85,8 @@ const Map<String, List<int>> kStarThresholds = {
   'falling_keys': [50, 250, 400],
   // Connect the Notes: 6 rounds x 100, max 600.
   'connect_line': [100, 400, 550],
+  // Ledger Leap: 10 rounds x 100.
+  'ledger_leap': [100, 600, 900],
   // Echo Sequence: score = 100 × longest sequence echoed.
   'echo_sequence': [100, 400, 700],
   // Follow the Conductor: 15 cues, points = 10 × combo multiplier (1..5).

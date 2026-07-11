@@ -773,6 +773,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectLinePrompt => 'Connect each note to its name!';
 
   @override
+  String get gameLedgerLeap => 'Ledger Leap';
+
+  @override
+  String get gameLedgerLeapSubtitle =>
+      'Count the little helper lines above or below the staff';
+
+  @override
+  String get ledgerLeapPrompt => 'How many ledger lines?';
+
+  @override
   String get gameFallingKeys => 'Falling Keys';
 
   @override
