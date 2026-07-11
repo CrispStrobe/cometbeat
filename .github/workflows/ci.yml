@@ -18,13 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout klang-universum
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: klang-universum
 
       # partitura + partitura_core are resolved via ../partitura/... path deps.
       - name: Checkout partitura (sibling path dependency)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: CrispStrobe/partitura
           ref: main
@@ -54,7 +54,7 @@ jobs:
         run: flutter test --coverage
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: lcov
