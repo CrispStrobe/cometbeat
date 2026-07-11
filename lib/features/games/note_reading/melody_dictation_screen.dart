@@ -36,8 +36,9 @@ class _MelodyDictationScreenState extends State<MelodyDictationScreen>
   final _random = Random();
 
   late List<int> _melody; // target staff positions
-  final List<int> _placed = []; // the child's answer so far
+  final List<int> _placed = []; // the child's answer so far (index 0 = anchor)
   bool? _lastAnswer;
+  bool _recorded = false; // SRI recorded for this round?
 
   @override
   int get totalRounds => 8;
@@ -72,8 +73,13 @@ class _MelodyDictationScreenState extends State<MelodyDictationScreen>
   @override
   void prepareRound() {
     _melody = _randomMelody();
-    _placed.clear();
+    // The first note is given as an anchor — standard dictation practice, and
+    // it makes the task achievable for a beginner.
+    _placed
+      ..clear()
+      ..add(_melody.first);
     _lastAnswer = null;
+    _recorded = false;
     if (round > 0) _playMelody();
   }
 
@@ -112,7 +118,7 @@ class _MelodyDictationScreenState extends State<MelodyDictationScreen>
   }
 
   void _onStaffTap(StaffTarget target) {
-    if (_lastAnswer != null) return; // resolved / evaluating
+    if (_lastAnswer == true) return; // already solved
     if (_placed.length >= MelodyDictationScreen.melodyLength) return;
 
     final pitch = target.pitchFor(MelodyDictationScreen._clef);
@@ -124,9 +130,14 @@ class _MelodyDictationScreenState extends State<MelodyDictationScreen>
     if (_placed.length == MelodyDictationScreen.melodyLength) _evaluate();
   }
 
+  /// Remove the last note the child placed (never the given anchor). Clears any
+  /// red marks so they can re-try that slot — this is the self-correction.
   void _undo() {
-    if (_lastAnswer != null || _placed.isEmpty) return;
-    setState(_placed.removeLast);
+    if (_lastAnswer == true || _placed.length <= 1) return;
+    setState(() {
+      _placed.removeLast();
+      _lastAnswer = null;
+    });
   }
 
   void _evaluate() {
@@ -138,36 +149,34 @@ class _MelodyDictationScreenState extends State<MelodyDictationScreen>
       }
     }
 
-    context
-        .read<SriService>()
-        .recordResponse('note_reading.dictation.len${_melody.length}', correct);
+    // Record only the first full attempt of the round.
+    if (!_recorded) {
+      context.read<SriService>().recordResponse(
+            'note_reading.dictation.len${_melody.length}',
+            correct,
+          );
+      _recorded = true;
+    }
     final audio = context.read<AudioService>();
     correct ? audio.playCorrect() : audio.playWrong();
 
     setState(() => _lastAnswer = correct);
     resolveAnswer(correct: correct);
-
-    if (!correct) {
-      // Show the miss, then clear for another listen + attempt.
-      Future.delayed(const Duration(milliseconds: 1100), () {
-        if (!mounted || _lastAnswer == true) return;
-        setState(() {
-          _placed.clear();
-          _lastAnswer = null;
-        });
-        _playMelody();
-      });
-    }
+    // On a miss we keep the notes on the staff (wrong ones marked red) so the
+    // child can undo and fix them, rather than wiping the whole attempt.
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    // Colour placed notes on evaluation: green if right, red if wrong.
+    // The given anchor (n0) is tinted so the child knows it's the starting
+    // note; on evaluation, placed notes turn green if right, red if wrong.
     final theme = PartituraTheme.kids.copyWith(
       elementColors: {
-        if (_lastAnswer != null)
+        if (_lastAnswer == null)
+          'n0': Theme.of(context).colorScheme.primary
+        else
           for (var i = 0; i < _placed.length; i++)
             'n$i': (i < _melody.length && _placed[i] == _melody[i])
                 ? Colors.green
@@ -238,7 +247,7 @@ class _MelodyDictationScreenState extends State<MelodyDictationScreen>
                           ),
                         const SizedBox(width: 16),
                         TextButton.icon(
-                          onPressed: _placed.isEmpty || _lastAnswer != null
+                          onPressed: _placed.length <= 1 || _lastAnswer == true
                               ? null
                               : _undo,
                           icon: const Icon(Icons.undo),

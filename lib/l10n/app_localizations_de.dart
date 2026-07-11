@@ -704,7 +704,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get melodyDictationPrompt =>
-      'Hör zu und tippe die Noten, die du gehört hast';
+      'Die erste Note ist da — ergänze die, die du hörst';
 
   @override
   String get dictationUndo => 'Zurück';

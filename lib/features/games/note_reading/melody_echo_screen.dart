@@ -7,6 +7,7 @@
 //
 // SRI: 'note_reading.melody.len4'.
 
+import 'dart:async';
 import 'dart:math';
 
 // Material's Stepper also exports a `Step`; partitura's wins here.
@@ -36,6 +37,11 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
   late int _correctCard;
   int? _tapped;
   bool? _lastAnswer;
+
+  static const _noteMs = 450;
+  // Tracks the current playback so the next melody never cuts it off.
+  final Stopwatch _playbackClock = Stopwatch();
+  int _lastPlayedNotes = MelodyEchoScreen.melodyLength;
 
   @override
   int get totalRounds => 8;
@@ -93,7 +99,7 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
     _correctCard = _cards.indexWhere((c) => _listEq(c, _melody));
     _tapped = null;
     _lastAnswer = null;
-    if (round > 0) _playMelody();
+    if (round > 0) _playMelodyAfterCurrent();
   }
 
   static bool _listEq(List<int> a, List<int> b) {
@@ -104,11 +110,33 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
     return true;
   }
 
-  void _playMelody() {
+  void _playMelody() => _playPositions(_melody);
+
+  void _playPositions(List<int> positions) {
+    _playbackClock
+      ..reset()
+      ..start();
+    _lastPlayedNotes = positions.length;
     context.read<AudioService>().playSequence([
-      for (final position in _melody)
-        (Clef.treble.pitchAt(position).midiNumber, 450),
+      for (final position in positions)
+        (Clef.treble.pitchAt(position).midiNumber, _noteMs),
     ]);
+  }
+
+  int get _playbackRemainingMs =>
+      (_lastPlayedNotes * _noteMs) - _playbackClock.elapsedMilliseconds;
+
+  /// Plays the round's melody, but waits for any in-flight playback to finish
+  /// so one round's melody never cuts off the previous one.
+  void _playMelodyAfterCurrent() {
+    final remaining = _playbackRemainingMs;
+    if (remaining <= 0) {
+      _playMelody();
+    } else {
+      Future.delayed(Duration(milliseconds: remaining), () {
+        if (mounted) _playMelody();
+      });
+    }
   }
 
   Score _cardScore(List<int> positions) => Score.simple(
@@ -128,15 +156,12 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
           .recordResponse('note_reading.melody.len4', correct);
     }
 
-    final audio = context.read<AudioService>();
     if (correct) {
-      _playMelody(); // hear it again while seeing the right card
+      // Don't replay on correct: the next round's melody would cut it off.
+      // The child just heard it — advance cleanly instead.
     } else {
       // Hear what the tapped card actually sounds like — that's the lesson.
-      audio.playSequence([
-        for (final position in _cards[index])
-          (Clef.treble.pitchAt(position).midiNumber, 450),
-      ]);
+      _playPositions(_cards[index]);
     }
 
     setState(() {

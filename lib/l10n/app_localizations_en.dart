@@ -695,7 +695,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Hear it, then write it on the staff';
 
   @override
-  String get melodyDictationPrompt => 'Listen, then tap the notes you heard';
+  String get melodyDictationPrompt =>
+      'The first note is given — add the ones you hear';
 
   @override
   String get dictationUndo => 'Undo';

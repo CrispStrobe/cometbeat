@@ -358,7 +358,7 @@
   "melodyEchoPrompt": "Listen! Which melody did you hear?",
   "gameMelodyDictation": "Melody Dictation",
   "gameMelodyDictationSubtitle": "Hear it, then write it on the staff",
-  "melodyDictationPrompt": "Listen, then tap the notes you heard",
+  "melodyDictationPrompt": "The first note is given — add the ones you hear",
   "dictationUndo": "Undo",
   "whatIsThisSymbol": "What is this symbol called?",
   "roundOf": "Round {current} of {total}",

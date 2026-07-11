@@ -1325,7 +1325,7 @@ abstract class AppLocalizations {
   /// No description provided for @melodyDictationPrompt.
   ///
   /// In en, this message translates to:
-  /// **'Listen, then tap the notes you heard'**
+  /// **'The first note is given — add the ones you hear'**
   String get melodyDictationPrompt;
 
   /// No description provided for @dictationUndo.

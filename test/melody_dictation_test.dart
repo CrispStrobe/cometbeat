@@ -42,12 +42,12 @@ void main() {
     await tester.pump();
 
     expect(find.byType(InteractiveStaff), findsOneWidget);
-    expect(find.textContaining('tap the notes'), findsOneWidget);
+    expect(find.textContaining('add the ones you hear'), findsOneWidget);
     expect(find.text('Undo'), findsOneWidget);
-    // Three empty progress dots for a 3-note melody.
+    // The first note is given (one filled dot); the rest are empty.
     expect(
       find.byIcon(Icons.circle_outlined),
-      findsNWidgets(MelodyDictationScreen.melodyLength),
+      findsNWidgets(MelodyDictationScreen.melodyLength - 1),
     );
   });
 
@@ -57,9 +57,9 @@ void main() {
     await tester.pumpWidget(_wrap(const MelodyDictationScreen(), sri));
     await tester.pump();
 
-    // Tap the staff once per note in the melody; the last tap triggers the
-    // note-for-note check, which records the round's SRI response.
-    for (var i = 0; i < MelodyDictationScreen.melodyLength; i++) {
+    // The first note is given, so place the remaining ones; the final tap
+    // triggers the note-for-note check that records the round's SRI response.
+    for (var i = 0; i < MelodyDictationScreen.melodyLength - 1; i++) {
       await tester.tap(find.byType(InteractiveStaff));
       await tester.pump(const Duration(milliseconds: 50));
     }

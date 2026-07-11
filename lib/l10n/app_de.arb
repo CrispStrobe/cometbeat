@@ -210,7 +210,7 @@
   "melodyEchoPrompt": "Hör zu! Welche Melodie war das?",
   "gameMelodyDictation": "Melodie-Diktat",
   "gameMelodyDictationSubtitle": "Hören, dann ins Notensystem schreiben",
-  "melodyDictationPrompt": "Hör zu und tippe die Noten, die du gehört hast",
+  "melodyDictationPrompt": "Die erste Note ist da — ergänze die, die du hörst",
   "dictationUndo": "Zurück",
   "whatIsThisSymbol": "Wie heißt dieses Zeichen?",
   "roundOf": "Runde {current} von {total}",
