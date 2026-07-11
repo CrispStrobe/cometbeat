@@ -167,6 +167,50 @@
     }
   },
   "whatIsThisNote": "What is this note called?",
+  "readingHintSame": "It's {name} — a landmark note!",
+  "@readingHintSame": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "readingHintStepUp": "One step up from {name}",
+  "@readingHintStepUp": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "readingHintStepDown": "One step down from {name}",
+  "@readingHintStepDown": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "readingHintSkipUp": "A skip up from {name}",
+  "@readingHintSkipUp": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "readingHintSkipDown": "A skip down from {name}",
+  "@readingHintSkipDown": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "readingHintFarUp": "{count} steps up from {name}",
+  "@readingHintFarUp": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "name": { "type": "String" }
+    }
+  },
+  "readingHintFarDown": "{count} steps down from {name}",
+  "@readingHintFarDown": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "name": { "type": "String" }
+    }
+  },
   "noteNameC": "C",
   "noteNameD": "D",
   "noteNameE": "E",
@@ -230,6 +274,18 @@
   "harmonicTonic": "Tonic",
   "harmonicSubdominant": "Subdominant",
   "harmonicDominant": "Dominant",
+  "gameFunctionEar": "Hear the Function",
+  "gameFunctionEarSubtitle": "Listen for tonic, subdominant or dominant",
+  "functionEarPrompt": "Listen to the home chords in {key}, then name the last one",
+  "@functionEarPrompt": {
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "functionEarReplayHint": "Hear the key, then the chord again",
+  "functionEarTargetAgain": "Just the chord",
   "gameMajorMinorEar": "Major or Minor?",
   "gameMajorMinorEarSubtitle": "Listen closely and decide",
   "listenMajorMinorPrompt": "Listen! Does it sound major or minor?",

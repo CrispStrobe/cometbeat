@@ -37,6 +37,18 @@ String describeSriItem(AppLocalizations l10n, String id) {
         return '$root $quality'.trim();
       }
       return _prettify(detail.isEmpty ? skill : detail);
+    case 'harmony':
+      // skill = function | hear, detail = "<tonic>_<function>".
+      final seg = detail.split('_');
+      final root = seg.isNotEmpty ? seg.first.toUpperCase() : '';
+      final fn = seg.length > 1 ? seg[1] : '';
+      final fnLabel = switch (fn) {
+        'tonic' => l10n.harmonicTonic,
+        'subdominant' => l10n.harmonicSubdominant,
+        'dominant' => l10n.harmonicDominant,
+        _ => _prettify(fn),
+      };
+      return '$root · $fnLabel'.trim();
     default:
       return _prettify(detail.isEmpty ? skill : detail);
   }

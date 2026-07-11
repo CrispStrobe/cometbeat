@@ -10,6 +10,7 @@ import 'package:klang_universum/core/services/progress_service.dart';
 import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:klang_universum/core/tuning.dart';
 import 'package:klang_universum/features/games/chords/chord_quiz_screen.dart';
+import 'package:klang_universum/features/games/harmony/function_ear_screen.dart';
 import 'package:klang_universum/features/games/harmony/harmony_quiz_screen.dart';
 import 'package:klang_universum/features/games/note_reading/note_reading_quiz_screen.dart';
 import 'package:klang_universum/features/games/note_values/note_value_quiz_screen.dart';
@@ -64,6 +65,7 @@ class HomeScreen extends StatelessWidget {
     final scaleSpots = dueOf('scales', 'scales.spot.');
     final triads = dueOf('chords', 'chords.triad.');
     final functions = dueOf('harmony', 'harmony.function.');
+    final hearFunctions = dueOf('harmony', 'harmony.hear.');
 
     // Pick the biggest due bucket.
     final buckets = <(int, Widget Function())>[
@@ -95,6 +97,10 @@ class HomeScreen extends StatelessWidget {
       ),
       (triads.length, () => ChordQuizScreen(reviewItemIds: triads)),
       (functions.length, () => HarmonyQuizScreen(reviewItemIds: functions)),
+      (
+        hearFunctions.length,
+        () => FunctionEarScreen(reviewItemIds: hearFunctions)
+      ),
     ]..sort((a, b) => b.$1.compareTo(a.$1));
     final runner = buckets.first.$1 > 0 ? buckets.first.$2() : null;
 

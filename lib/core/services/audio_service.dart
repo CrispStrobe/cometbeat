@@ -69,6 +69,25 @@ class AudioService {
         ]),
       );
 
+  /// Functional ear training: play a context cadence (e.g. I–IV–V–I), a short
+  /// silent gap, then the target chord held longer so it stands out. An empty
+  /// [Segment] renders as silence, which separates the target audibly.
+  Future<void> playCadenceThenTarget(
+    List<List<int>> cadence,
+    List<int> target, {
+    int cadenceMs = 620,
+    int gapMs = 420,
+    int targetMs = 1300,
+  }) =>
+      _play(
+        renderWav([
+          for (final midis in cadence)
+            (freqs: midis.map(midiToFrequency).toList(), ms: cadenceMs),
+          (freqs: const <double>[], ms: gapMs),
+          (freqs: target.map(midiToFrequency).toList(), ms: targetMs),
+        ]),
+      );
+
   // Retro feedback SFX, rendered once and cached.
   static Uint8List? _correctWav;
   static Uint8List? _wrongWav;

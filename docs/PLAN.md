@@ -30,7 +30,7 @@ iOS/Android/Web/Windows/macOS/Linux. Notation rendering via the MIT
 | 3 | **Takte** (measures & meter) | `measures.fill`, `.meter` | Measure Filler • Meter Detective (accented downbeats by ear) | 2 built |
 | 4 | **Tonleitern** (scales, Dur/Moll) | `scales.spot`, `.build`, `.hear` | Scale Detective • Scale Builder • Dur oder Moll? (ear) | 3 built |
 | 5 | **Akkorde & Intervalle** | `chords.triad`, `.build`, `.interval` | Chord Quiz • Triad Builder • Interval Detective (ear) | 3 built |
-| 6 | **Harmonik** (T/S/D) | `harmony.function`, `.cadence` | Function Quiz • Cadence Workshop (build T–S–D–T) | 2 built |
+| 6 | **Harmonik** (T/S/D) | `harmony.function`, `.cadence`, `.hear` | Function Quiz • Cadence Workshop (build T–S–D–T) • Hear the Function (I–IV–V–I context, name the target by ear) | 3 built |
 | 7 | **Cello-Ecke** (instrument corner) | `cello.string`, `cello.finger`, `note_reading.tenor` | Which String? (bass-clef note → C/G/D/A) • Finger Quiz (first position, 0–4) • Tenor Clef reading • *later: shifting/positions, string+finger combined ("play this note"), open-string ear tuning* | 3 built |
 | 8 | **Tasten-Ecke** (piano corner) | `keyboard.find`, `.name`, `.ear`, `.melody`, `.chord` | Find the Key (staff→key, labels fade at 2★, black keys at 3★) • Key Quiz (key→name) • Echo Keys (ear→key, C anchor) • Play the Melody (sight-playing) • Chord Grip | 5 built |
 | 9 | **Liederbuch** (real songs) | `songs.tune` | Song Book — public-domain children's songs (5: Alle meine Entchen, Hänschen klein, Twinkle, Mary Had a Little Lamb, Old MacDonald) as real notation with lyrics (partitura v0.4 MultiSystemView + lyrics), synth playback with a karaoke cursor, tap any note to hear it • Name That Tune (ear) • **Import**: MusicXML (paste **or file pick**, via partitura v0.5), ChordPro chord sheets (own parser; tappable chord chips play triads), simple monophonic MIDI (own SMF parser + sixteenth quantization; persisted as MusicXML) • *out of scope: polyphonic MIDI (transcription problem), guitar tablature (excluded from the notation library)* | 2 built + import |
@@ -157,9 +157,18 @@ the app category the idea comes from. Tick as shipped.
   missed intervals/chords. *(leading ear-training apps.) M · ♪♪♪.* **Shipped**:
   `SriService.weakestItems` + a "tricky notes" card on the Progress screen with
   readable labels; SM-2 already re-drills these in review.
-- [ ] Functional cadence → scale-degree ear mode (hear I–IV–V–I, name the degree).
-  *(functional ear-training apps.) M · ♪♪♪.* Grows "Dur oder Moll?".
-- [ ] Landmark / intervallic reading hints (fading). *(flashcard reading apps.) M · ♪♪♪.*
+- [x] Functional cadence → scale-degree ear mode (hear I–IV–V–I, name the degree).
+  *(functional ear-training apps.) M · ♪♪♪.* Grows "Dur oder Moll?". **Shipped**:
+  "Hear the Function" in the harmony module — a I–IV–V–I cadence establishes the
+  key by ear, then a target chord is named T/S/D. SRI `harmony.hear.*` (distinct
+  from the notation `harmony.function.*`), review-routed on the home screen, and
+  labeled in the "tricky notes" list.
+- [x] Landmark / intervallic reading hints (fading). *(flashcard reading apps.) M · ♪♪♪.*
+  **Shipped**: the Reading Quiz (all clefs) shows a landmark chip — "a skip up
+  from E", "one step up from C" — anchoring on the memorized staff lines + middle
+  C via diatonic arithmetic. It **fades with mastery**: always for beginners,
+  only after a wrong attempt at 2★, gone at 3★ and in review tests. Pure hint
+  engine in `reading_hint.dart`, unit-tested across clefs.
 - [ ] Written rhythm & melodic dictation — tap the rhythm / place noteheads,
   reusing the MusicXML sandbox. *(theory/ear-training apps.) M · ♪♪.*
 - [ ] Removable color scaffold for pre-readers (color + solfège + number +

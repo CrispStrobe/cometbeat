@@ -14,6 +14,7 @@ import 'package:klang_universum/core/services/audio_service.dart';
 import 'package:klang_universum/core/services/progress_service.dart';
 import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
+import 'package:klang_universum/features/games/note_reading/reading_hint.dart';
 import 'package:klang_universum/features/games/widgets/game_widgets.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:partitura/partitura.dart';
@@ -131,6 +132,17 @@ class _NoteReadingQuizScreenState extends State<NoteReadingQuizScreen>
     resolveAnswer(correct: correct);
   }
 
+  /// Landmark reading hint, faded by mastery: shown always for beginners
+  /// (< 2 stars), only after a wrong attempt at 2 stars (a nudge when stuck),
+  /// and never at 3 stars or in a review test.
+  bool get _showHint {
+    if (_isReview) return false;
+    final stars = context.read<ProgressService>().starsFor(progressId);
+    if (stars >= 3) return false;
+    if (stars >= 2) return answeredWrong;
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -184,6 +196,12 @@ class _NoteReadingQuizScreenState extends State<NoteReadingQuizScreen>
                         ),
                       ),
                     ),
+                    if (_showHint) ...[
+                      const SizedBox(height: 12),
+                      _ReadingHintChip(
+                        text: readingHintText(context, widget.clef, _target),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     FeedbackLine(
                       correct: _tapped == null ? null : _tapped == _target.step,
@@ -224,5 +242,42 @@ class _NoteReadingQuizScreenState extends State<NoteReadingQuizScreen>
     }
     if (option == _tapped && option != _target.step) return Colors.redAccent;
     return null;
+  }
+}
+
+/// A muted "reading strategy" chip: a lightbulb + the landmark/interval hint.
+class _ReadingHintChip extends StatelessWidget {
+  final String text;
+
+  const _ReadingHintChip({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.lightbulb_outline,
+              size: 18, color: scheme.onSecondaryContainer),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

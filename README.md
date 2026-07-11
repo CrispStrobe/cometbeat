@@ -12,14 +12,14 @@ Targets: iOS, Android, Web, Windows, macOS, Linux.
 
 See [docs/PLAN.md](docs/PLAN.md) for the full curriculum map and roadmap.
 
-| id | Topic | Games (31) + Song Book |
+| id | Topic | Games (32) + Song Book |
 |---|---|---|
 | `note_values` | Notenwerte & Pausen | Symbol Quiz • Duration Duel • Rhythm Echo • Count the Beats (ties!) |
 | `note_reading` | Noten lesen (Violin/Bass) | Reading Quiz ×2 • Place the Note ×2 • Melody Echo (ear↔staff) |
 | `measures` | Takte & Taktarten | Measure Filler • Meter Detective (ear) |
 | `scales` | Tonleitern, Dur/Moll | Scale Detective • Dur oder Moll? (ear) • Scale Builder |
 | `chords` | Akkorde & Intervalle | Chord Quiz • Triad Builder • Interval Detective (ear) |
-| `harmony` | Harmonik (T/S/D) | Function Quiz • Cadence Workshop |
+| `harmony` | Harmonik (T/S/D) | Function Quiz • Cadence Workshop • Hear the Function (ear) |
 | `composition` | Komponieren (Kompositionstechnik) | Ending Detective (closure) • Question & Answer (phrases) • My Melody (free composing sandbox, saves to the Song Book as MusicXML) |
 | `cello` | Cello-Ecke (instrument corner) | Which String? • Finger Quiz (1st position) • Tenor Clef reading |
 | `songs` | Liederbuch (real songs) | Song Book (5 songs, play-along cursor + lyrics) • Name That Tune (ear) • **Import**: MusicXML (paste or file), ChordPro chord sheets (playable chips), simple monophonic MIDI |
@@ -57,5 +57,5 @@ flutter run -d chrome    # or macos, etc.
 CI (`.github/workflows/ci.yml`) runs format + analyze + test on every push and
 PR, checking out the sibling `partitura` repo alongside so the path dependency
 resolves. The `build/` symlink (a dev-only SSD path) is intentionally untracked.
-The test suite (85 tests) covers ~85% of `lib/`, including the services, the
+The test suite (117 tests) covers ~85% of `lib/`, including the services, the
 import round-trips, and a render smoke test per game screen.

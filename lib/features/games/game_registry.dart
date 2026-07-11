@@ -14,6 +14,7 @@ import 'package:klang_universum/features/games/composition/ending_detective_scre
 import 'package:klang_universum/features/games/composition/my_melody_screen.dart';
 import 'package:klang_universum/features/games/composition/question_answer_screen.dart';
 import 'package:klang_universum/features/games/harmony/cadence_workshop_screen.dart';
+import 'package:klang_universum/features/games/harmony/function_ear_screen.dart';
 import 'package:klang_universum/features/games/harmony/harmony_quiz_screen.dart';
 import 'package:klang_universum/features/games/keyboard/key_chord_screen.dart';
 import 'package:klang_universum/features/games/keyboard/key_ear_screen.dart';
@@ -198,6 +199,13 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameCadenceWorkshop,
       subtitle: (l) => l.gameCadenceWorkshopSubtitle,
       builder: (_) => const CadenceWorkshopScreen(),
+    ),
+    GameInfo(
+      id: 'function_ear',
+      icon: Icons.hearing,
+      title: (l) => l.gameFunctionEar,
+      subtitle: (l) => l.gameFunctionEarSubtitle,
+      builder: (_) => const FunctionEarScreen(),
     ),
   ],
   'composition': [

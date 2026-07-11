@@ -794,6 +794,48 @@ abstract class AppLocalizations {
   /// **'What is this note called?'**
   String get whatIsThisNote;
 
+  /// No description provided for @readingHintSame.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s {name} — a landmark note!'**
+  String readingHintSame(String name);
+
+  /// No description provided for @readingHintStepUp.
+  ///
+  /// In en, this message translates to:
+  /// **'One step up from {name}'**
+  String readingHintStepUp(String name);
+
+  /// No description provided for @readingHintStepDown.
+  ///
+  /// In en, this message translates to:
+  /// **'One step down from {name}'**
+  String readingHintStepDown(String name);
+
+  /// No description provided for @readingHintSkipUp.
+  ///
+  /// In en, this message translates to:
+  /// **'A skip up from {name}'**
+  String readingHintSkipUp(String name);
+
+  /// No description provided for @readingHintSkipDown.
+  ///
+  /// In en, this message translates to:
+  /// **'A skip down from {name}'**
+  String readingHintSkipDown(String name);
+
+  /// No description provided for @readingHintFarUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} steps up from {name}'**
+  String readingHintFarUp(int count, String name);
+
+  /// No description provided for @readingHintFarDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} steps down from {name}'**
+  String readingHintFarDown(int count, String name);
+
   /// No description provided for @noteNameC.
   ///
   /// In en, this message translates to:
@@ -961,6 +1003,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dominant'**
   String get harmonicDominant;
+
+  /// No description provided for @gameFunctionEar.
+  ///
+  /// In en, this message translates to:
+  /// **'Hear the Function'**
+  String get gameFunctionEar;
+
+  /// No description provided for @gameFunctionEarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen for tonic, subdominant or dominant'**
+  String get gameFunctionEarSubtitle;
+
+  /// No description provided for @functionEarPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen to the home chords in {key}, then name the last one'**
+  String functionEarPrompt(String key);
+
+  /// No description provided for @functionEarReplayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hear the key, then the chord again'**
+  String get functionEarReplayHint;
+
+  /// No description provided for @functionEarTargetAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Just the chord'**
+  String get functionEarTargetAgain;
 
   /// No description provided for @gameMajorMinorEar.
   ///

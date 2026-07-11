@@ -398,6 +398,41 @@ class AppLocalizationsDe extends AppLocalizations {
   String get whatIsThisNote => 'Wie heißt diese Note?';
 
   @override
+  String readingHintSame(String name) {
+    return 'Das ist $name — eine Merknote!';
+  }
+
+  @override
+  String readingHintStepUp(String name) {
+    return 'Einen Schritt über $name';
+  }
+
+  @override
+  String readingHintStepDown(String name) {
+    return 'Einen Schritt unter $name';
+  }
+
+  @override
+  String readingHintSkipUp(String name) {
+    return 'Einen Sprung über $name';
+  }
+
+  @override
+  String readingHintSkipDown(String name) {
+    return 'Einen Sprung unter $name';
+  }
+
+  @override
+  String readingHintFarUp(int count, String name) {
+    return '$count Schritte über $name';
+  }
+
+  @override
+  String readingHintFarDown(int count, String name) {
+    return '$count Schritte unter $name';
+  }
+
+  @override
   String get noteNameC => 'C';
 
   @override
@@ -491,6 +526,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get harmonicDominant => 'Dominante';
+
+  @override
+  String get gameFunctionEar => 'Funktion hören';
+
+  @override
+  String get gameFunctionEarSubtitle =>
+      'Tonika, Subdominante oder Dominante heraushören';
+
+  @override
+  String functionEarPrompt(String key) {
+    return 'Höre die Grundakkorde in $key, dann benenne den letzten';
+  }
+
+  @override
+  String get functionEarReplayHint =>
+      'Erst die Tonart, dann den Akkord nochmal hören';
+
+  @override
+  String get functionEarTargetAgain => 'Nur der Akkord';
 
   @override
   String get gameMajorMinorEar => 'Dur oder Moll?';

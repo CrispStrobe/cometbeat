@@ -59,6 +59,7 @@ const Map<String, List<int>> kStarThresholds = {
   'chord_quiz': [100, 600, 900],
   'harmony_quiz': [100, 600, 900],
   'major_minor_ear': [100, 600, 900],
+  'function_ear': [100, 600, 900],
   'interval_ear': [100, 600, 900],
   // 8 rounds: max 800.
   'triad_builder': [100, 500, 750],
