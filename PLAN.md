@@ -49,15 +49,24 @@ Names the chord you strum/play with runner-up guesses + a chroma bar chart.
   cancellation for pitch accuracy). v1 play/sing-along therefore scrolls the
   score without audible backing, with a "preview" listen before you start; real
   backing needs headphones or an AEC path. Documented, not solved.
-- **Localization:** DONE for the four modes (Tuner, Play along, Sing along,
-  Chord listener) — tiles + screens have de/en `AppLocalizations` keys. Chart
-  names and the technical Hz/clarity readout stay language-neutral.
-- **Progress/stars:** play/sing-along report a score but don't yet write to
-  `ProgressService` or define `kStarThresholds` brackets. Wire once the scoring
-  feel is tuned on-device.
-- **Real-instrument tuning:** `scoreThreshold`/`energyGate`/`centsTolerance`
-  are set against synth tones; retune against real mic input (use the CLI
-  `--stdin`/`--wav`).
+- **Localization:** DONE — the four modes have de/en `AppLocalizations` keys,
+  and the tuner/chord/play-along note readouts respect the note-naming setting
+  (German H, solfège) via `spelledMidiName`. Chart names + the Hz/clarity
+  readout stay language-neutral.
+- **Progress/stars:** DONE — play/sing/guitar/keyboard play-along record to
+  `ProgressService` (score = notes hit) with `kStarThresholds` brackets and a
+  `GameResultView` (stars + Play again) on finish.
+- **Real-instrument tuning:** validated end-to-end through the real macOS audio
+  stack via a **BlackHole loopback** self-test (sox plays a scale to the
+  BlackHole *output* device; ffmpeg captures the BlackHole *input*; the CLI
+  detects it). Recovered a full C-major scale within a few cents — thresholds
+  held on real captured audio, no retune needed. Reproduce:
+  ```bash
+  ffmpeg -f avfoundation -i ":<BlackHole idx>" -t 8 -ar 44100 -ac 1 bh.wav &
+  sox scale.wav -t coreaudio "BlackHole 2ch"          # non-intrusive; default device untouched
+  dart run bin/listen.dart --wav bh.wav
+  ```
+  Still worth a pass with a *real acoustic instrument* into a physical mic.
 - **Phase 3 (full polyphonic transcription):** still out of scope; would layer
   on the same chromagram.
 
