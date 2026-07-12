@@ -1727,68 +1727,50 @@ abstract class AppLocalizations {
   /// No description provided for @curriculumTitle.
   ///
   /// In en, this message translates to:
-  /// **'Badges & Curriculum'**
+  /// **'Curriculum'**
   String get curriculumTitle;
 
   /// No description provided for @curriculumTooltip.
   ///
   /// In en, this message translates to:
-  /// **'Badges & curriculum'**
+  /// **'Curriculum by school year'**
   String get curriculumTooltip;
 
-  /// No description provided for @curLeistungsabzeichen.
+  /// No description provided for @curSchoolYears.
   ///
   /// In en, this message translates to:
-  /// **'Music Badges (D0–D3)'**
-  String get curLeistungsabzeichen;
+  /// **'By school year'**
+  String get curSchoolYears;
 
-  /// No description provided for @curSchoolGeneral.
+  /// No description provided for @curLevelGrades12.
   ///
   /// In en, this message translates to:
-  /// **'School Music (general)'**
-  String get curSchoolGeneral;
+  /// **'Grades 1–2'**
+  String get curLevelGrades12;
 
-  /// No description provided for @curLevelD0.
+  /// No description provided for @curLevelGrades34.
   ///
   /// In en, this message translates to:
-  /// **'D0 · Junior'**
-  String get curLevelD0;
+  /// **'Grades 3–4'**
+  String get curLevelGrades34;
 
-  /// No description provided for @curLevelD1.
+  /// No description provided for @curLevelGrades56.
   ///
   /// In en, this message translates to:
-  /// **'D1 · Bronze'**
-  String get curLevelD1;
+  /// **'Grades 5–6'**
+  String get curLevelGrades56;
 
-  /// No description provided for @curLevelD2.
+  /// No description provided for @curLevelGrades78.
   ///
   /// In en, this message translates to:
-  /// **'D2 · Silver'**
-  String get curLevelD2;
+  /// **'Grades 7–8'**
+  String get curLevelGrades78;
 
-  /// No description provided for @curLevelD3.
+  /// No description provided for @curLevelGrades910.
   ///
   /// In en, this message translates to:
-  /// **'D3 · Gold'**
-  String get curLevelD3;
-
-  /// No description provided for @curLevelPrimary.
-  ///
-  /// In en, this message translates to:
-  /// **'Primary school'**
-  String get curLevelPrimary;
-
-  /// No description provided for @curLevelLowerSecondary.
-  ///
-  /// In en, this message translates to:
-  /// **'Lower secondary'**
-  String get curLevelLowerSecondary;
-
-  /// No description provided for @curLevelUpperSecondary.
-  ///
-  /// In en, this message translates to:
-  /// **'Upper secondary'**
-  String get curLevelUpperSecondary;
+  /// **'Grades 9–10'**
+  String get curLevelGrades910;
 
   /// No description provided for @curTopicNoteReading.
   ///
@@ -1868,6 +1850,18 @@ abstract class AppLocalizations {
   /// **'Practise this level'**
   String get curPracticeLevel;
 
+  /// No description provided for @curContinueHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue here'**
+  String get curContinueHere;
+
+  /// No description provided for @curPractiseWeakest.
+  ///
+  /// In en, this message translates to:
+  /// **'Practise your weakest topic'**
+  String get curPractiseWeakest;
+
   /// No description provided for @curTopicsHeader.
   ///
   /// In en, this message translates to:
@@ -1877,7 +1871,7 @@ abstract class AppLocalizations {
   /// No description provided for @curGuideNote.
   ///
   /// In en, this message translates to:
-  /// **'A practice guide, not an official alignment — verify against your association\'s catalogue.'**
+  /// **'A practice guide — topics arranged by school year, distilled from public school curricula.'**
   String get curGuideNote;
 
   /// No description provided for @curNoGames.

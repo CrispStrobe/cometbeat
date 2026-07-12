@@ -918,37 +918,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nameThatChordPrompt => 'Which chord is this?';
 
   @override
-  String get curriculumTitle => 'Badges & Curriculum';
+  String get curriculumTitle => 'Curriculum';
 
   @override
-  String get curriculumTooltip => 'Badges & curriculum';
+  String get curriculumTooltip => 'Curriculum by school year';
 
   @override
-  String get curLeistungsabzeichen => 'Music Badges (D0–D3)';
+  String get curSchoolYears => 'By school year';
 
   @override
-  String get curSchoolGeneral => 'School Music (general)';
+  String get curLevelGrades12 => 'Grades 1–2';
 
   @override
-  String get curLevelD0 => 'D0 · Junior';
+  String get curLevelGrades34 => 'Grades 3–4';
 
   @override
-  String get curLevelD1 => 'D1 · Bronze';
+  String get curLevelGrades56 => 'Grades 5–6';
 
   @override
-  String get curLevelD2 => 'D2 · Silver';
+  String get curLevelGrades78 => 'Grades 7–8';
 
   @override
-  String get curLevelD3 => 'D3 · Gold';
-
-  @override
-  String get curLevelPrimary => 'Primary school';
-
-  @override
-  String get curLevelLowerSecondary => 'Lower secondary';
-
-  @override
-  String get curLevelUpperSecondary => 'Upper secondary';
+  String get curLevelGrades910 => 'Grades 9–10';
 
   @override
   String get curTopicNoteReading => 'Note reading';
@@ -992,11 +983,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curPracticeLevel => 'Practise this level';
 
   @override
+  String get curContinueHere => 'Continue here';
+
+  @override
+  String get curPractiseWeakest => 'Practise your weakest topic';
+
+  @override
   String get curTopicsHeader => 'Topics';
 
   @override
   String get curGuideNote =>
-      'A practice guide, not an official alignment — verify against your association\'s catalogue.';
+      'A practice guide — topics arranged by school year, distilled from public school curricula.';
 
   @override
   String get curNoGames => 'No games for this topic yet';

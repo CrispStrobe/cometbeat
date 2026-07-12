@@ -1,22 +1,23 @@
 // lib/core/curriculum/curriculum.dart
 //
-// Curriculum alignment: a data model that maps external syllabi onto the games
-// the app already has. Both the German wind/percussion proficiency badges
-// (Leistungsabzeichen D0–D3) and school Lehrpläne are just different groupings
-// over the same atomic skills, so they share one model:
+// Curriculum alignment: a data model that maps a syllabus onto the games the app
+// already has. It's generic — progress levels (tied to school years) are just a
+// grouping over the same atomic skills:
 //
 //   Curriculum → Level → Topic → [gameIds]
 //
 // "Readiness" for a level/topic is derived from the child's best stars in the
-// mapped games (0..1). Adding a framework or a Bundesland is pure data.
+// mapped games (0..1). Adding a level or a region is pure data.
 //
-// NOTE: the mappings are a practice guide, not an official alignment — the exact
-// D1–D3 catalogue varies by Verband, and per-Bundesland Lehrpläne need real
-// sourcing. See docs/PLAN.md.
+// NOTE: the topic scope is a practice guide distilled (in our own words) from
+// public school curricula — no badge/association branding, no verbatim text.
+// See docs/PLAN.md.
 
 import 'package:klang_universum/l10n/app_localizations.dart';
 
-enum CurriculumFramework { leistungsabzeichen, lehrplan }
+/// How a curriculum is framed. Only school Lehrpläne for now; the enum keeps the
+/// model open to other framings without touching consumers.
+enum CurriculumFramework { lehrplan }
 
 /// A syllabus topic and the games that drill it.
 class CurriculumTopic {
@@ -84,6 +85,34 @@ double levelReadiness(CurriculumLevel level, int Function(String) starsFor) {
   return total / level.topics.length;
 }
 
+/// A level counts as "reached" once the child is [_reachedAt] ready.
+const _reachedAt = 0.66;
+
+/// The level to point the child at next: the first not yet [_reachedAt] ready,
+/// or the last level once everything is solid.
+CurriculumLevel recommendedLevel(
+  Curriculum curriculum,
+  int Function(String) starsFor,
+) {
+  for (final level in curriculum.levels) {
+    if (levelReadiness(level, starsFor) < _reachedAt) return level;
+  }
+  return curriculum.levels.last;
+}
+
+/// The topic within [level] with the lowest readiness (the best thing to drill
+/// next). Null if the level has no topics.
+CurriculumTopic? weakestTopic(
+  CurriculumLevel level,
+  int Function(String) starsFor,
+) {
+  if (level.topics.isEmpty) return null;
+  return level.topics.reduce(
+    (a, b) =>
+        topicReadiness(a, starsFor) <= topicReadiness(b, starsFor) ? a : b,
+  );
+}
+
 // --- Shared topic labels (reused across levels) ------------------------------
 
 CurriculumTopic _reading(List<String> ids) =>
@@ -109,128 +138,94 @@ CurriculumTopic _ear(List<String> ids) =>
 CurriculumTopic _sight(List<String> ids) =>
     CurriculumTopic((l) => l.curTopicSightReading, ids);
 
-// --- The Leistungsabzeichen (D0–D3) ------------------------------------------
+// --- Levels by school year (Klassenstufen) -----------------------------------
+//
+// Generic, un-branded progress levels tied to German school years. The topic
+// scope per band is distilled (in our own words) from public state music
+// curricula (e.g. NRW Grundschule — notation kept deliberately light — and
+// Schleswig-Holstein Sek I, which itemises theory per grade band). No badge
+// system, no association marks. The model still carries `region`, so a specific
+// Bundesland's curriculum is a drop-in variant later.
 
-final _leistungsabzeichen = Curriculum(
-  id: 'leistungsabzeichen',
-  framework: CurriculumFramework.leistungsabzeichen,
-  name: (l) => l.curLeistungsabzeichen,
+final _bySchoolYear = Curriculum(
+  id: 'school_years',
+  framework: CurriculumFramework.lehrplan,
+  name: (l) => l.curSchoolYears,
   levels: [
+    // Grundschule, early: notation as a listening aid; pulse; loud/soft, fast/
+    // slow, high/low.
     CurriculumLevel(
-      id: 'd0',
-      name: (l) => l.curLevelD0,
-      badge: '🌱',
+      id: 'g12',
+      name: (l) => l.curLevelGrades12,
+      badge: '🎒',
       topics: [
-        _reading(['note_reading_treble', 'note_memory', 'note_order']),
-        _values(['note_value_quiz', 'beat_sort', 'beat_count']),
+        _reading(['note_memory', 'note_order']),
+        _values(['note_value_quiz', 'beat_sort']),
+        _meter(['beat_runner', 'rhythm_tap']),
+        _dynamics(['charades']),
         _ear(['major_minor_ear', 'echo_sequence']),
       ],
     ),
+    // Grundschule, later: read simple treble notation; note values; simple
+    // metre; dynamics/tempo.
     CurriculumLevel(
-      id: 'd1',
-      name: (l) => l.curLevelD1,
-      badge: '🥉',
+      id: 'g34',
+      name: (l) => l.curLevelGrades34,
+      badge: '📗',
       topics: [
-        _reading([
-          'note_reading_treble',
-          'note_reading_bass',
-          'line_space',
-          'ledger_leap',
-        ]),
-        _values([
-          'note_value_quiz',
-          'duration_duel',
-          'beat_count',
-          'rhythm_tap',
-        ]),
-        _meter(['time_signature', 'measure_fill', 'beat_runner']),
+        _reading(['note_reading_treble', 'line_space', 'ledger_leap']),
+        _values(['note_value_quiz', 'duration_duel', 'beat_count']),
+        _meter(['measure_fill', 'which_beat', 'time_signature']),
         _dynamics(['charades']),
-        _scales(['scale_detective', 'key_sig']),
-        _intervals(['interval_ladder', 'interval_ear']),
         _ear(['major_minor_ear', 'melody_echo']),
       ],
     ),
+    // Sek I 5/6: both clefs; metre; C/F/G major + accidentals; thirds; I/IV/V
+    // triads.
     CurriculumLevel(
-      id: 'd2',
-      name: (l) => l.curLevelD2,
-      badge: '🥈',
-      topics: [
-        _scales(['scale_detective', 'scale_builder', 'key_sig']),
-        _intervals(['interval_ladder', 'interval_ear']),
-        _chords([
-          'chord_quiz',
-          'triad_builder',
-          'name_that_chord',
-          'chord_builder',
-        ]),
-        _meter(['time_signature', 'meter_detective', 'which_beat']),
-        _transposition(['concert_pitch']),
-        _values(['beat_runner', 'drum_read']),
-        _ear(['melody_dictation', 'major_minor_ear']),
-      ],
-    ),
-    CurriculumLevel(
-      id: 'd3',
-      name: (l) => l.curLevelD3,
-      badge: '🥇',
-      topics: [
-        _chords(['chord_builder', 'name_that_chord', 'chord_grip_hero']),
-        _harmony(['harmony_quiz', 'cadence_workshop', 'function_ear']),
-        _intervals(['interval_ear', 'interval_ladder']),
-        _reading(['note_reading_tenor', 'note_reading_bass', 'duet']),
-        _sight(['staff_runner', 'falling_notes', 'grand_staff_read']),
-        _ear(['melody_dictation', 'function_ear']),
-      ],
-    ),
-  ],
-);
-
-// --- A general school-music guide (Lehrplan-shaped, not a state's official
-//     document) — proves the Bundesland-capable model; fill in per state later.
-
-final _schoolGuide = Curriculum(
-  id: 'school_general',
-  framework: CurriculumFramework.lehrplan,
-  name: (l) => l.curSchoolGeneral,
-  levels: [
-    CurriculumLevel(
-      id: 'gs',
-      name: (l) => l.curLevelPrimary,
-      badge: '🎒',
-      topics: [
-        _reading(['note_reading_treble', 'note_memory', 'note_order']),
-        _values(['note_value_quiz', 'beat_sort', 'rhythm_tap']),
-        _meter(['measure_fill', 'beat_runner']),
-        _ear(['major_minor_ear', 'echo_sequence']),
-      ],
-    ),
-    CurriculumLevel(
-      id: 'sek1',
-      name: (l) => l.curLevelLowerSecondary,
-      badge: '🏫',
+      id: 'g56',
+      name: (l) => l.curLevelGrades56,
+      badge: '🎼',
       topics: [
         _reading(['note_reading_treble', 'note_reading_bass', 'ledger_leap']),
-        _meter(['time_signature', 'meter_detective']),
+        _meter(['time_signature', 'measure_fill', 'meter_detective']),
         _scales(['scale_detective', 'key_sig']),
         _intervals(['interval_ladder', 'interval_ear']),
-        _chords(['chord_quiz', 'name_that_chord']),
+        _chords(['chord_quiz', 'triad_builder']),
         _dynamics(['charades']),
       ],
     ),
+    // Sek I 7/8: major/minor + circle of fifths; chord qualities; cadences;
+    // syncopation.
     CurriculumLevel(
-      id: 'sek2',
-      name: (l) => l.curLevelUpperSecondary,
+      id: 'g78',
+      name: (l) => l.curLevelGrades78,
+      badge: '🎵',
+      topics: [
+        _scales(['scale_detective', 'scale_builder', 'key_sig']),
+        _intervals(['interval_ear', 'interval_ladder']),
+        _chords(['chord_quiz', 'name_that_chord', 'chord_builder']),
+        _harmony(['harmony_quiz', 'cadence_workshop', 'function_ear']),
+        _values(['beat_runner', 'drum_read']),
+        _ear(['melody_dictation']),
+      ],
+    ),
+    // Sek I 9/10: inversions & 7ths; functions; transposition; score reading.
+    CurriculumLevel(
+      id: 'g910',
+      name: (l) => l.curLevelGrades910,
       badge: '🎓',
       topics: [
-        _scales(['scale_detective', 'scale_builder']),
-        _chords(['chord_builder', 'name_that_chord']),
-        _harmony(['harmony_quiz', 'cadence_workshop', 'function_ear']),
-        _sight(['staff_runner', 'duet', 'grand_staff_read']),
+        _chords(['chord_builder', 'name_that_chord', 'chord_grip_hero']),
+        _harmony(['harmony_quiz', 'function_ear', 'cadence_workshop']),
         _transposition(['concert_pitch']),
+        _sight(['staff_runner', 'duet', 'grand_staff_read']),
+        _reading(['note_reading_tenor', 'duet']),
       ],
     ),
   ],
 );
 
-/// All curricula, badge systems first.
-final List<Curriculum> kCurricula = [_leistungsabzeichen, _schoolGuide];
+/// All curricula. One general school-year progression for now; the model holds
+/// more (e.g. per-Bundesland variants) as pure data.
+final List<Curriculum> kCurricula = [_bySchoolYear];

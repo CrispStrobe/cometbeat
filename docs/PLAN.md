@@ -158,16 +158,13 @@ the app category the idea comes from. Shipped items live in
 **Strategic bets — extend the SM-2 / notation core**
 - [ ] Parent view + multi-child profiles. *(kids' practice apps.) M · ♪♪.*
 
-**German-market moat — the thin-market opening**
-- [x] Lehrplan alignment + German framing. **First cut shipped**: a
-  curriculum-mapping engine (`Curriculum → Level → Topic → gameIds`) with a
-  **Badges & Curriculum** screen. Seeded with the **Leistungsabzeichen D0–D3**
-  (topics → the games that drill them, with a *readiness* meter from the child's
-  stars) and a general **school-music** guide; both frameworks share the model,
-  so per-**Bundesland** Lehrpläne are drop-in data. Labelled in-app as a practice
-  guide, not an official alignment. *Still open: authoritative per-Verband D1–D3
-  catalogues and real per-state Lehrplan data (need sourcing/expert review), and
-  SM-2-based (not just star-based) readiness.*
+- [x] Lehrplan alignment + German framing. **Shipped**: a **Curriculum** screen —
+  generic progress levels tied to **school years** (Klasse 1–2 … 9–10), each
+  topic mapped to the games that drill it, with a *readiness* meter from the
+  child's stars, a "continue here" marker on the recommended level, and
+  per-level / weakest-topic practice runs. The engine (`Curriculum → Level →
+  Topic → gameIds`) keeps per-region variants as drop-in data. *Open: SM-2-based
+  readiness; optional per-Bundesland variants (rough matching is fine).*
 - [ ] Sound-toy creative modes that feed notation (grid composer + geometric
   rhythm toy for pre-readers). *(browser music sound-toys.) M · ♪♪.*
 - [ ] Color-coded kids' notation editor with MusicXML/MIDI export. *(kids'

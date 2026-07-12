@@ -49,3 +49,6 @@ app.*.map.json
 
 # Vercel staging copy (build/web lives on the SSD via symlink)
 /deploy_web/
+
+# Local dev notes (never shared)
+CLAUDE.md
