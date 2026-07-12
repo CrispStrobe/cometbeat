@@ -674,6 +674,8 @@
   "gameTunerSubtitle": "Live intonation — play or sing a note",
   "gamePlayAlong": "Play along",
   "gamePlayAlongSubtitle": "Follow the moving score in first position",
+  "gamePlayAlongGuitarSubtitle": "Follow the moving score on the guitar",
+  "gamePlayAlongKeyboardSubtitle": "Play the moving score on the keys",
   "gameSingAlong": "Sing along",
   "gameSingAlongSubtitle": "Match the moving score with your voice",
   "gameChordListener": "Chord listener",

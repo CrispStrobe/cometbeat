@@ -576,6 +576,18 @@ final Map<String, List<GameInfo>> kGamesByModule = {
     ),
   ],
   'guitar': [
+    // Play-along riff with a moving score.
+    GameInfo(
+      id: 'guitar_play_along',
+      icon: Icons.moving,
+      title: (l) => l.gamePlayAlong,
+      subtitle: (l) => l.gamePlayAlongGuitarSubtitle,
+      builder: (ctx) => PlayAlongScreen(
+        chart: PlayAlongCharts.guitarRiff,
+        title: AppLocalizations.of(ctx)!.gamePlayAlong,
+        gameId: 'guitar_play_along',
+      ),
+    ),
     GameInfo(
       id: 'guitar_string_quiz',
       icon: Icons.music_note,
@@ -627,6 +639,18 @@ final Map<String, List<GameInfo>> kGamesByModule = {
     ),
   ],
   'keyboard': [
+    // Play-along scale with a moving score.
+    GameInfo(
+      id: 'keyboard_play_along',
+      icon: Icons.moving,
+      title: (l) => l.gamePlayAlong,
+      subtitle: (l) => l.gamePlayAlongKeyboardSubtitle,
+      builder: (ctx) => PlayAlongScreen(
+        chart: PlayAlongCharts.keyboardScale,
+        title: AppLocalizations.of(ctx)!.gamePlayAlong,
+        gameId: 'keyboard_play_along',
+      ),
+    ),
     GameInfo(
       id: 'key_find',
       icon: Icons.piano,

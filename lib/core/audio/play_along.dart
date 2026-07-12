@@ -177,6 +177,46 @@ class PlayAlongCharts {
     ],
   );
 
+  /// Guitar riff in first position (E-minor pentatonic shape), medium tempo.
+  static const guitarRiff = PlayAlongChart(
+    name: 'Guitar: pentatonic riff',
+    bpm: 80,
+    notes: [
+      TargetNote(midi: 52, startBeat: 0, beats: 1), // E3
+      TargetNote(midi: 55, startBeat: 1, beats: 1), // G3
+      TargetNote(midi: 57, startBeat: 2, beats: 1), // A3
+      TargetNote(midi: 59, startBeat: 3, beats: 1), // B3
+      TargetNote(midi: 62, startBeat: 4, beats: 2), // D4 (hold)
+      TargetNote(midi: 59, startBeat: 6, beats: 1), // B3
+      TargetNote(midi: 57, startBeat: 7, beats: 1), // A3
+      TargetNote(midi: 55, startBeat: 8, beats: 2), // G3
+      TargetNote(midi: 52, startBeat: 10, beats: 2), // E3 (hold)
+    ],
+  );
+
+  /// C-major scale up and down — one note per beat, for keyboard practice.
+  static const keyboardScale = PlayAlongChart(
+    name: 'Keyboard: C major scale',
+    bpm: 100,
+    notes: [
+      TargetNote(midi: 60, startBeat: 0, beats: 1), // C4
+      TargetNote(midi: 62, startBeat: 1, beats: 1), // D4
+      TargetNote(midi: 64, startBeat: 2, beats: 1), // E4
+      TargetNote(midi: 65, startBeat: 3, beats: 1), // F4
+      TargetNote(midi: 67, startBeat: 4, beats: 1), // G4
+      TargetNote(midi: 69, startBeat: 5, beats: 1), // A4
+      TargetNote(midi: 71, startBeat: 6, beats: 1), // B4
+      TargetNote(midi: 72, startBeat: 7, beats: 1), // C5
+      TargetNote(midi: 71, startBeat: 8, beats: 1), // B4
+      TargetNote(midi: 69, startBeat: 9, beats: 1), // A4
+      TargetNote(midi: 67, startBeat: 10, beats: 1), // G4
+      TargetNote(midi: 65, startBeat: 11, beats: 1), // F4
+      TargetNote(midi: 64, startBeat: 12, beats: 1), // E4
+      TargetNote(midi: 62, startBeat: 13, beats: 1), // D4
+      TargetNote(midi: 60, startBeat: 14, beats: 2), // C4 (hold)
+    ],
+  );
+
   /// "Twinkle, Twinkle" for singing — octave-agnostic, comfortable range.
   static const twinkleSing = PlayAlongChart(
     name: 'Sing: Twinkle, Twinkle',

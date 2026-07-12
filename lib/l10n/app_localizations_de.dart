@@ -1424,6 +1424,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Folge der laufenden Partitur in der ersten Lage';
 
   @override
+  String get gamePlayAlongGuitarSubtitle =>
+      'Folge der laufenden Partitur auf der Gitarre';
+
+  @override
+  String get gamePlayAlongKeyboardSubtitle =>
+      'Spiele die laufende Partitur auf den Tasten';
+
+  @override
   String get gameSingAlong => 'Mitsingen';
 
   @override

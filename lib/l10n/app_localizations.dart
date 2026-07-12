@@ -2612,6 +2612,18 @@ abstract class AppLocalizations {
   /// **'Follow the moving score in first position'**
   String get gamePlayAlongSubtitle;
 
+  /// No description provided for @gamePlayAlongGuitarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the moving score on the guitar'**
+  String get gamePlayAlongGuitarSubtitle;
+
+  /// No description provided for @gamePlayAlongKeyboardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the moving score on the keys'**
+  String get gamePlayAlongKeyboardSubtitle;
+
   /// No description provided for @gameSingAlong.
   ///
   /// In en, this message translates to:

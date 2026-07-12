@@ -468,6 +468,8 @@
   "gameTunerSubtitle": "Live-Intonation – spiele oder singe einen Ton",
   "gamePlayAlong": "Mitspielen",
   "gamePlayAlongSubtitle": "Folge der laufenden Partitur in der ersten Lage",
+  "gamePlayAlongGuitarSubtitle": "Folge der laufenden Partitur auf der Gitarre",
+  "gamePlayAlongKeyboardSubtitle": "Spiele die laufende Partitur auf den Tasten",
   "gameSingAlong": "Mitsingen",
   "gameSingAlongSubtitle": "Triff die laufende Partitur mit deiner Stimme",
   "gameChordListener": "Akkord-Erkennung",

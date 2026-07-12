@@ -1419,6 +1419,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Follow the moving score in first position';
 
   @override
+  String get gamePlayAlongGuitarSubtitle =>
+      'Follow the moving score on the guitar';
+
+  @override
+  String get gamePlayAlongKeyboardSubtitle =>
+      'Play the moving score on the keys';
+
+  @override
   String get gameSingAlong => 'Sing along';
 
   @override
