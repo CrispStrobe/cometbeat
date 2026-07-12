@@ -819,6 +819,20 @@ class AppLocalizationsDe extends AppLocalizations {
       'Zwei Noten haben denselben Notennamen. Tippe die andere!';
 
   @override
+  String get gameNoteWhack => 'Noten klopfen';
+
+  @override
+  String get gameNoteWhackSubtitle =>
+      'Klopfe die Noten mit dem genannten Namen';
+
+  @override
+  String get noteWhackPrompt => 'Klopfe:';
+
+  @override
+  String get noteWhackHint =>
+      'Tippe jede passende Note — ein falscher Schlag kostet ein Herz!';
+
+  @override
   String get clefBass => 'Bassschlüssel';
 
   @override

@@ -813,6 +813,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Two notes have the same letter name. Tap the different one!';
 
   @override
+  String get gameNoteWhack => 'Note Whack';
+
+  @override
+  String get gameNoteWhackSubtitle => 'Whack the notes with the called name';
+
+  @override
+  String get noteWhackPrompt => 'Whack:';
+
+  @override
+  String get noteWhackHint =>
+      'Tap every note that matches — a wrong whack costs a heart!';
+
+  @override
   String get clefBass => 'Bass clef';
 
   @override

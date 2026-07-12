@@ -175,9 +175,6 @@ the curriculum doesn't yet drill. Ordered by value ÷ effort; effort S/M/L, fit 
 Shipped: Ledger Leap, Key Detective
 ([HISTORY.md](HISTORY.md#original-concepts--shipped)).
 
-- [ ] **Note Whack** — whack-a-mole: noteheads pop up around the staff, a target
-  name is called, tap the matching one before it ducks. Reading under gentle
-  reaction pressure; reuses the reading pools. SRI `note_reading.*`. *S–M · ♪♪♪.*
 - [ ] **Interval Ladder** — climb a ladder: from the current note, pick the note a
   called interval above/below (on the staff or by ear). Interval *construction*, not
   just recognition. SRI `chords.interval.build`. *S–M · ♪♪.*

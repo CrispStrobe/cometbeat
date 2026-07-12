@@ -1532,6 +1532,30 @@ abstract class AppLocalizations {
   /// **'Two notes have the same letter name. Tap the different one!'**
   String get oddOneOutHint;
 
+  /// No description provided for @gameNoteWhack.
+  ///
+  /// In en, this message translates to:
+  /// **'Note Whack'**
+  String get gameNoteWhack;
+
+  /// No description provided for @gameNoteWhackSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Whack the notes with the called name'**
+  String get gameNoteWhackSubtitle;
+
+  /// No description provided for @noteWhackPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Whack:'**
+  String get noteWhackPrompt;
+
+  /// No description provided for @noteWhackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap every note that matches — a wrong whack costs a heart!'**
+  String get noteWhackHint;
+
   /// No description provided for @clefBass.
   ///
   /// In en, this message translates to:

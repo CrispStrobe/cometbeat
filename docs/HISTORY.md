@@ -151,6 +151,14 @@ per-game `unlockedWhen` gate on `GameInfo`).
 
 ## Original concepts — shipped
 
+- **Note Whack** (note reading) — whack-a-mole under gentle reaction pressure:
+  noteheads pop up in a 3×2 grid of holes, a target letter is called ("Whack:
+  A") and the child taps the matching notes before they duck. Correct whacks
+  grow a ×1–×5 combo; a wrong whack costs a heart (3 lives); a fixed 12-whack
+  run keeps the score/1–3★ loop, with the hole lifespan shrinking as it goes.
+  Ticker-driven, star-gated octave range, colour-scaffold aware, letter-key
+  control, reacting mascot; treble + bass. Feeds `note_reading.<clef>.*`.
+  *(Extends to a "wrong-note" spot-the-error mode.)*
 - **Odd One Out** (note reading) — three note cards; two share the same letter
   name at different octaves, one is a different letter. Tap the odd one out — a
   discrimination drill that trains rapid name-reading, not just notehead
