@@ -20,6 +20,7 @@ import 'dart:math';
 // Material's Stepper also exports a `Step`; partitura's wins here.
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:klang_universum/core/services/audio_service.dart';
 import 'package:klang_universum/core/services/progress_service.dart';
 import 'package:klang_universum/core/services/settings_service.dart';
@@ -328,6 +329,27 @@ class _FallingNotesScreenState extends State<FallingNotesScreen>
     }
   }
 
+  // Name mode is keyboard-steerable: the C..B letter keys name the active note.
+  static final _letterKeys = <LogicalKeyboardKey, Step>{
+    LogicalKeyboardKey.keyC: Step.c,
+    LogicalKeyboardKey.keyD: Step.d,
+    LogicalKeyboardKey.keyE: Step.e,
+    LogicalKeyboardKey.keyF: Step.f,
+    LogicalKeyboardKey.keyG: Step.g,
+    LogicalKeyboardKey.keyA: Step.a,
+    LogicalKeyboardKey.keyB: Step.b,
+  };
+
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent || widget.mode != FallingMode.name) {
+      return KeyEventResult.ignored;
+    }
+    final step = _letterKeys[event.logicalKey];
+    if (step == null) return KeyEventResult.ignored;
+    _onLetter(step);
+    return KeyEventResult.handled;
+  }
+
   void _onKey(int midi) {
     if (_finished) return;
     final target = activeNote();
@@ -499,42 +521,46 @@ class _FallingNotesScreenState extends State<FallingNotesScreen>
                 score: _score,
                 onRestart: _restart,
               )
-            : Column(
-                children: [
-                  _Hud(
-                    score: _score,
-                    multiplier: _multiplier,
-                    combo: _combo,
-                    lives: _lives,
-                    maxLives: FallingNotesScreen._kMaxLives,
-                    mascot: _mascot,
-                  ),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        _laneSize = constraints.biggest;
-                        return _buildLane(context, l10n);
-                      },
+            : Focus(
+                autofocus: true,
+                onKeyEvent: _onKeyEvent,
+                child: Column(
+                  children: [
+                    _Hud(
+                      score: _score,
+                      multiplier: _multiplier,
+                      combo: _combo,
+                      lives: _lives,
+                      maxLives: FallingNotesScreen._kMaxLives,
+                      mascot: _mascot,
                     ),
-                  ),
-                  if (isPlay)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 12),
-                      child: SizedBox(
-                        height: 150,
-                        // C4..G5 covers the natural falling notes (E4..F5).
-                        child: PianoKeyboard(
-                          showLabels: true,
-                          onKeyTap: _onKey,
-                        ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          _laneSize = constraints.biggest;
+                          return _buildLane(context, l10n);
+                        },
                       ),
-                    )
-                  else
-                    _LetterPad(
-                      steps: FallingNotesScreen._kSteps,
-                      onTap: _onLetter,
                     ),
-                ],
+                    if (isPlay)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 6, 8, 12),
+                        child: SizedBox(
+                          height: 150,
+                          // C4..G5 covers the natural falling notes (E4..F5).
+                          child: PianoKeyboard(
+                            showLabels: true,
+                            onKeyTap: _onKey,
+                          ),
+                        ),
+                      )
+                    else
+                      _LetterPad(
+                        steps: FallingNotesScreen._kSteps,
+                        onTap: _onLetter,
+                      ),
+                  ],
+                ),
               ),
       ),
     );

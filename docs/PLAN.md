@@ -5,6 +5,9 @@ decomposed into exciting minigames. EN/DE, modularly extendable, running on
 iOS/Android/Web/Windows/macOS/Linux. Notation rendering via the MIT
 [partitura](https://github.com/CrispStrobe/partitura) library (our own).
 
+This file tracks **what is pending and planned**. What's already built and live
+is recorded in [HISTORY.md](HISTORY.md).
+
 ## Principles
 
 1. **Minigames, not lessons.** Every skill is drilled through a game with
@@ -23,35 +26,30 @@ iOS/Android/Web/Windows/macOS/Linux. Notation rendering via the MIT
 
 ## Curriculum map
 
-| # | Module | Skills (SRI namespace) | Games | Status |
-|---|--------|------------------------|-------|--------|
-| 1 | **Notenwerte** (note values & lengths) | `note_values.symbol`, `.rhythm`, `.beats` | Symbol Quiz • Duration Duel • Rhythm Echo (tap-back) • Count the Beats (dots + ties) • Sort the Beats (drag into buckets) • Connect the Symbols (drag glyph↔name) | 6 built |
-| 2 | **Noten lesen** (treble & bass clef) | `note_reading.treble`, `.bass`, `.place_*`, `.melody`, `.dictation` | Reading Quiz ×2 (with fading landmark hints) • Place the Note ×2 • Melody Echo (ear↔staff) • Melody Dictation (ear→write on staff) • Note Match (memory pairs: note ↔ name) • Note Order (tap low→high) • Line or Space? (swipe) • Falling Notes (arcade: name before it lands) • Connect the Notes (drag note↔name) • Ledger Leap (count ledger lines) | 12 built |
-| 3 | **Takte** (measures & meter) | `measures.fill`, `.meter` | Measure Filler • Meter Detective (accented downbeats by ear) • Beat Runner (tap-along rhythm lane) | 3 built |
-| 4 | **Tonleitern** (scales, Dur/Moll) | `scales.spot`, `.build`, `.hear` | Scale Detective • Scale Builder • Dur oder Moll? (ear) • Sound Echo (memory-sequence toy) • Follow the Conductor (reaction toy) | 5 built |
-| 5 | **Akkorde & Intervalle** | `chords.triad`, `.build`, `.interval` | Chord Quiz • Triad Builder • Interval Detective (ear) | 3 built |
-| 6 | **Harmonik** (T/S/D) | `harmony.function`, `.cadence`, `.hear` | Function Quiz • Cadence Workshop (build T–S–D–T) • Hear the Function (I–IV–V–I context, name the target by ear) | 3 built |
-| 7 | **Cello-Ecke** (instrument corner) | `cello.string`, `cello.finger`, `note_reading.tenor` | Which String? (bass-clef note → C/G/D/A) • Finger Quiz (first position, 0–4) • Tenor Clef reading • *later: shifting/positions, string+finger combined ("play this note"), open-string ear tuning* | 3 built |
-| 8 | **Tasten-Ecke** (piano corner) | `keyboard.find`, `.name`, `.ear`, `.melody`, `.chord`, `.grand` | Find the Key (staff→key, labels fade at 2★, black keys at 3★) • Key Quiz (key→name) • Echo Keys (ear→key, C anchor) • Play the Melody (sight-playing) • Chord Grip • Grand Staff (read both clefs at once, 2★ widens into the middle-C ledger region — partitura `GrandStaffView`) • Falling Keys (arcade: play it before it lands) | 7 built |
-| 8b | **Gitarren-Ecke** (guitar corner) | `guitar.string`, `guitar.fret` | Open Strings (read an open string on tab → name it, E A D G B E) • Read the Tab (fretted first-position note → name it) • *later: bass tuning, fretboard-tap "find the fret", techniques (bends/slides/HO-PO), chord-grip diagrams* | 2 built |
-| 9 | **Liederbuch** (real songs) | `songs.tune` | Song Book — public-domain children's songs (5: Alle meine Entchen, Hänschen klein, Twinkle, Mary Had a Little Lamb, Old MacDonald) as real notation with lyrics (partitura v0.4 MultiSystemView + lyrics), synth playback with a karaoke cursor, tap any note to hear it • Name That Tune (ear) • **Import**: MusicXML (paste **or file pick**, via partitura v0.5), ChordPro chord sheets (own parser; tappable chord chips play triads), simple monophonic MIDI (own SMF parser + sixteenth quantization; persisted as MusicXML) • *out of scope: polyphonic MIDI (transcription problem)* | 2 built + import |
-| 10 | **Komponieren** | `composition.closure`, `composition.answer` | Ending Detective (does it sound finished?) • Question & Answer (antecedent/consequent) • My Melody (free-composition sandbox, no scoring; enter notes by tapping the **staff, a piano, a guitar fretboard, or a cello fingerboard**; **saves to the Song Book as MusicXML** via partitura's writer — opens in MuseScore & co.) • *later: melody completion with choices, cadence-based accompaniment* | 3 built |
+The module/skill structure and the games that fill it. Games already shipped are
+listed for scope; `*later:*` italics mark planned extensions within a module.
 
-**Workshop** (a section *outside* the minigames, reached from the home bar): the
-**Composition Workshop** — a small real score editor. Pick a time signature
-(2/4 · 3/4 · 4/4, bar-lines drawn automatically), pick a note value
-(whole/half/quarter/eighth), tap the staff to write, tap a note to select it and
-re-pitch or delete it, hear it back with real durations, and save to the Song
-Book as MusicXML. The Capella-like grown-up sibling of the My Melody sandbox.
+| # | Module | Skills (SRI namespace) | Games |
+|---|--------|------------------------|-------|
+| 1 | **Notenwerte** (note values & lengths) | `note_values.symbol`, `.rhythm`, `.beats` | Symbol Quiz • Duration Duel • Rhythm Echo • Count the Beats • Sort the Beats • Connect the Symbols |
+| 2 | **Noten lesen** (treble & bass clef) | `note_reading.treble`, `.bass`, `.place_*`, `.melody`, `.dictation` | Reading Quiz ×2 • Place the Note ×2 • Melody Echo • Melody Dictation • Note Match • Note Order • Line or Space? • Falling Notes • Connect the Notes • Ledger Leap |
+| 3 | **Takte** (measures & meter) | `measures.fill`, `.meter` | Measure Filler • Meter Detective • Beat Runner • *later: percussion-backed meter, tempo ramps, syncopation* |
+| 4 | **Tonleitern** (scales, Dur/Moll) | `scales.spot`, `.build`, `.hear` | Scale Detective • Scale Builder • Dur oder Moll? • Sound Echo • Follow the Conductor • Key Detective |
+| 5 | **Akkorde & Intervalle** | `chords.triad`, `.build`, `.interval` | Chord Quiz • Triad Builder • Interval Detective |
+| 6 | **Harmonik** (T/S/D) | `harmony.function`, `.cadence`, `.hear` | Function Quiz • Cadence Workshop • Hear the Function |
+| 7 | **Cello-Ecke** (instrument corner) | `cello.string`, `cello.finger`, `note_reading.tenor` | Which String? • Finger Quiz (first position, 0–4) • Tenor Clef reading • *later: shifting/positions, string+finger combined ("play this note"), open-string ear tuning* |
+| 8 | **Tasten-Ecke** (piano corner) | `keyboard.find`, `.name`, `.ear`, `.melody`, `.chord`, `.grand` | Find the Key • Key Quiz • Echo Keys • Play the Melody • Chord Grip • Grand Staff • Falling Keys |
+| 8b | **Gitarren-Ecke** (guitar corner) | `guitar.string`, `guitar.fret` | Open Strings • Read the Tab • *later: bass tuning, fretboard-tap "find the fret", techniques (bends/slides/HO-PO), chord-grip diagrams* |
+| 9 | **Liederbuch** (real songs) | `songs.tune` | Song Book (public-domain children's songs, real notation + lyrics, karaoke cursor) • Name That Tune • **Import**: MusicXML (paste or file pick), ChordPro, monophonic MIDI • *out of scope: polyphonic MIDI (transcription problem)* |
+| 10 | **Komponieren** | `composition.closure`, `composition.answer` | Ending Detective • Question & Answer • My Melody (free-composition sandbox → saves to Song Book as MusicXML) • *later: melody completion with choices, cadence-based accompaniment* |
 
-**Instrument corners** are the modular-extension pattern proven by the
-cello module: a data table (string/finger map), instrument-specific games
-reusing the shared machinery, and the right clefs (tenor for cello — the
-library supports all four). The **guitar corner** is the same recipe on
-**tablature** (partitura v0.8 `TabStaffView` + `Tuning`, once the library
-shipped tab). A violin/viola corner is the same recipe again (violin: G/D/A/E
-strings, treble clef; viola: alto clef); a bass corner reuses the guitar
-recipe with `Tuning.standardBass`.
+**Instrument corners** are the modular-extension pattern proven by the cello
+module: a data table (string/finger map), instrument-specific games reusing the
+shared machinery, and the right clefs (the library supports all four). The
+**guitar corner** is the same recipe on **tablature** (partitura `TabStaffView` +
+`Tuning`). A violin/viola corner is the same recipe again (violin: G/D/A/E
+strings, treble clef; viola: alto clef); a bass corner reuses the guitar recipe
+with `Tuning.standardBass`.
 
 ## Difficulty progression (within each game)
 
@@ -67,33 +65,11 @@ stars + `kWinsRequiredForLevelUp`, tuning.dart):
 - Function Quiz: C/F/G major → all keys → minor keys (with harmonic-minor
   dominant) → hear the function (audio).
 
-## Progression (shipped)
+## Open decisions
 
-- **Stars persist** (`ProgressService`): best stars/score and play count per
-  game, shown on every game tile.
-- **Star-driven difficulty**: 2+ stars widen a game's material (reading
-  games gain the ledger range incl. middle C; Scale Detective gains D and A
-  major; Measure Filler gains sixteenths). More expansions per game over
-  time — SM-2 mastery stays the long-term signal, stars the session signal.
-- **Soft unlock gating**: a module unlocks once the *previous* one has
-  ≥ `kModuleUnlockTracked` SRI-tracked items (the child genuinely played
-  there). Engagement gate, not a mastery gate — mastery gating proved too
-  slow for a 6-year-old's first week. Locked cards explain what to play
-  first.
-
-## Audio (v1 shipped)
-
-`core/audio/synth.dart` synthesizes everything in pure Dart — no assets, no
-licensing: piano-ish additive tones (pitches, chords, arpeggios, sequences)
-rendered to WAV and played via `audioplayers` (data-URI source on web), plus
-CrispFXR-style retro square-wave SFX (correct blip, wrong buzz, fanfare —
-same procedural approach as the maintainer's
-[CrispFXR](https://github.com/CrispStrobe/CrispFXR-web) /
-[crispaudio](https://github.com/CrispStrobe/crispaudio) projects, in Dart).
-`AudioService` wires it app-wide; feedback sounds run centrally through
-`QuizRoundMixin`. Shipped ear game: Major-or-Minor. Next: Rhythm Tap-Back,
-Interval Detective, Meter Detective; option to graduate to `flutter_soloud`
-(zlib) if latency demands it.
+- **Cello tenor-clef game** — tenor clef is unusual for a young cellist; decide
+  whether to keep the Tenor Clef reading game, remove it, or gate it as an
+  advanced (3★) unlock. Awaiting a call.
 
 ## Delivery
 
@@ -141,70 +117,10 @@ this repo; the notes below describe capability *categories*, not products.
 ### Opportunity backlog (implement top-to-bottom)
 
 Effort S/M/L; fit ♪–♪♪♪ (mission fit for a kids' notation/theory app). Source =
-the app category the idea comes from. Tick as shipped.
-
-**Quick wins — low effort, ship first**
-- [x] Note-naming toggle: German H/B, English, solfège — one setting, every
-  drill. *(web theory trainers.) S · ♪♪♪.* Reinforces EN/DE. **Shipped.**
-- [x] Daily streak + practice calendar (flame + count + 7-day dots on home;
-  finishing a game marks the day). *(habit-loop learning apps.) S · ♪♪.* **Shipped.**
-- [x] "Wait mode" pacing — advance only on the correct answer, no timed fail for
-  slow readers. *(interactive sheet-music apps.) S · ♪♪♪.* **Already the design**
-  (`QuizRoundMixin` retries until correct, no timers/lives anywhere); now
-  guarded by a contract test.
-- [x] Reacting mascot — a pure-Dart quarter-note character in the shared
-  feedback line: hops + grins on correct, damped wobble + "oops" mouth on wrong;
-  reduced-motion aware. *(note-eating mascot games.) M · ♪♪.* **Shipped.**
-- [x] Opt-in timer + beat-your-time — off by default; when on, the result
-  screen shows your completion time + personal best + "new best!" (no live
-  clock, to keep the no-pressure default). *(flashcard reading apps.) S · ♪♪.*
-  **Shipped.**
-- [x] Foreground the bilingual EN/DE pedagogy (positioning, not translated
-  strings). *(white space — nobody owns it.) S · ♪♪♪.* **Done by proxy** — the
-  note-naming toggle advances this in-app; the rest is marketing, not code.
+the app category the idea comes from. Shipped items live in
+[HISTORY.md](HISTORY.md#opportunity-backlog--shipped).
 
 **Strategic bets — extend the SM-2 / notation core**
-- [x] Weak-spot ear engine + "your tricky notes" stats — auto-detect and re-drill
-  missed intervals/chords. *(leading ear-training apps.) M · ♪♪♪.* **Shipped**:
-  `SriService.weakestItems` + a "tricky notes" card on the Progress screen with
-  readable labels; SM-2 already re-drills these in review.
-- [x] Functional cadence → scale-degree ear mode (hear I–IV–V–I, name the degree).
-  *(functional ear-training apps.) M · ♪♪♪.* Grows "Dur oder Moll?". **Shipped**:
-  "Hear the Function" in the harmony module — a I–IV–V–I cadence establishes the
-  key by ear, then a target chord is named T/S/D. SRI `harmony.hear.*` (distinct
-  from the notation `harmony.function.*`), review-routed on the home screen, and
-  labeled in the "tricky notes" list.
-- [x] Landmark / intervallic reading hints (fading). *(flashcard reading apps.) M · ♪♪♪.*
-  **Shipped**: the Reading Quiz (all clefs) shows a landmark chip — "a skip up
-  from E", "one step up from C" — anchoring on the memorized staff lines + middle
-  C via diatonic arithmetic. It **fades with mastery**: always for beginners,
-  only after a wrong attempt at 2★, gone at 3★ and in review tests. Pure hint
-  engine in `reading_hint.dart`, unit-tested across clefs.
-- [x] Written rhythm & melodic dictation — tap the rhythm / place noteheads,
-  reusing the MusicXML sandbox. *(theory/ear-training apps.) M · ♪♪.* **Shipped**:
-  **Melody Dictation** (note_reading) — a melody plays (audio only, nothing
-  shown) and the child *writes* it by tapping noteheads onto partitura's
-  InteractiveStaff (the composing-sandbox input), with per-note pitch feedback,
-  undo, and a note-for-note check; SRI `note_reading.dictation.len3`. The
-  production sibling of the multiple-choice Melody Echo. (Rhythm dictation is
-  already served by Rhythm Echo's hear-then-tap-back loop.)
-- [x] Removable color scaffold for pre-readers (color + solfège + number +
-  hand-sign, peeled away as they learn the staff). *(color-coded early-years methods.) M · ♪♪.*
-  **Shipped**: a Settings toggle "Colour helper for beginners" (off by default,
-  parent-removable) tints noteheads and answer choices by pitch class
-  (Boomwhacker-style, shared `note_colors.dart`) in the Reading Quiz and Place
-  the Note, with a colour legend in Settings. Composes with the existing
-  note-naming toggle for the solfège layer. *(Number + Curwen hand-sign layers
-  remain as future extensions of the same scaffold.)*
-- [x] Play-in-time-to-music lane (tap-along rhythm / falling-note). *(tap-along rhythm games.) M · ♪♪.*
-  **Shipped**: **Beat Runner** (Takte) — a rhythm-reading lane. Note-value
-  markers (whole/half/quarter/eighth) fall spaced by their REAL durations — a
-  half note takes twice as long to arrive as a quarter — and the child taps each
-  as it crosses the hit-line, over a steady click (accented on the downbeat). So
-  a good run means the child has read and performed a real rhythm, not just
-  tapped a pulse. Ticker master clock (no drift), space bar/tap, Perfect/Good by
-  accuracy; a no-fail toy. *(Reworked from the original flat-metronome version,
-  which taught nothing. Extends to tempo ramps and syncopation.)*
 - [ ] Parent view + multi-child profiles. *(kids' practice apps.) M · ♪♪.*
 
 **German-market moat — the thin-market opening**
@@ -229,77 +145,24 @@ are self-reported — verify before external citation.
 
 ## Gamified formats (from the sibling-app survey)
 
-New *interaction mechanics* (beyond our existing multiple-choice / tap-onto-staff
-/ ear→pick / rhythm-tap-back / builder / sandbox), surveyed across `../voc` and
-`../space_math_academy`. A small shared **note/rhythm card widget** unblocks most
-of them. Ordered by value ÷ effort.
+New *interaction mechanics* surveyed across `../voc` and `../space_math_academy`.
+Shipped formats (memory pairs, sequence, sort-into-buckets, swipe, falling-notes,
+connect-a-line) live in [HISTORY.md](HISTORY.md#gamified-formats--shipped).
+Remaining open sub-variants:
 
-- [x] **Memory / concentration pairs.** *(voc `word_memory_game`; SMA has none.)*
-  **Shipped**: **Note Match** — flip a grid of cards to pair a note-on-staff with
-  its letter; each flip plays the pitch; fewer moves → more stars. SRI records a
-  correct read on each match. *S–M.*
-- [x] **Sequence / ordering.** *(voc / SMA `Launch Sequence`.)* **Shipped**: **Note
-  Order** — tap four shuffled note cards from lowest pitch to highest; each
-  correct tap plays the note and locks with a number badge, a wrong tap buzzes.
-  SRI `note_reading.order.len4`. *(Still open: note-values longest→shortest, and
-  a melody-recall ear variant.)*
-- [x] **Sort into buckets** (Draggable→DragTarget). **Shipped**: **Sort the
-  Beats** — drag note-value symbols into their 1 / 2 / 4-beat bucket; a card
-  only drops into the right one, a wrong drop bounces back and buzzes. SRI
-  `note_values.symbol.*`. *(Extends to major/minor, high/low, sharp/flat sorts.)*
-- [x] **Swipe left/right** (binary drill). **Shipped**: **Line or Space?** — a
-  note on a swipe card; swipe left = line, right = space; a wrong swipe bounces
-  back to retry. SRI `note_reading.line_space.*`. *(Extends to in-the-scale? and
-  major-or-minor-by-ear swipes.)*
-- [x] **Falling notes** (arcade): notes fall to a staff/keyboard, name or play
-  them before they land; combo + speed-up. Highest kid-appeal. *M–L.*
-  **Shipped**: **Falling Notes** — the app's first arcade format. Notes rain
-  down a starlit lane on real partitura staves; the child names the most urgent
-  (glowing) one on a 7-letter pad before it crosses the neon hit-line. Catches
-  throw pitch-coloured sparks and grow a ×1–×5 combo multiplier; the fall speed
-  ramps every four catches ("Speed up!"). Three hearts, a fixed 15-note run so
-  it keeps the rounds/score/1–3★ loop, star-driven range (naturals → middle-C
-  ledger at 2★+), colour-scaffold pad, reduced-motion aware. Feeds the shared
-  `note_reading.treble.*` SM-2 engine on every catch/miss. The **"play it"
-  variant** ships too: **Falling Keys** (keyboard corner) drops the same notes
-  onto a **piano keyboard** — tap the matching key before it lands (SRI
-  `keyboard.find.*`), one engine, two input modes. *(Still open: a note-values
-  "catch the longest" mode.)*
-- [x] **Connect-a-line matching** (two columns + CustomPaint): note↔name,
-  symbol↔meaning, interval↔number. *M — needs a line-drawing overlay.*
-  **Shipped**: **Connect the Notes** — notes on staves down the left, their
-  names (shuffled) down the right; drag a line from each note to its name. A
-  correct link locks in colour and plays the pitch, a wrong drop buzzes and
-  snaps back; clear all four to advance. A `CustomPaint` draws the wires +
-  ports; distinct step letters keep every name unambiguous. Star-driven range,
-  colour-scaffold aware, SRI `note_reading.treble.*`. The **symbol↔meaning**
-  column ships too: **Connect the Symbols** (Notenwerte) matches note-value
-  glyphs to their names (SRI `note_values.symbol.*`) — same engine, a `mode`
-  flag. *(Still open: an interval↔number column.)*
+- [ ] Note-values longest→shortest ordering, and a melody-recall ear variant of
+  the sequence format.
+- [ ] Further sort dimensions (major/minor, high/low, sharp/flat).
+- [ ] Swipe variants: in-the-scale?, major-or-minor-by-ear.
+- [ ] Falling-notes "catch the longest" (note-values) mode.
+- [ ] Connect an interval↔number column.
 
 ### Toy-inspired mechanics (electronic-toy lineage)
 
 Classic hand-held electronic music/reaction toys, reimagined for notation & ear
-training. *(Generic names only — no product names in code or docs.)*
+training. Shipped: Sound Echo, Follow the Conductor
+([HISTORY.md](HISTORY.md#toy-inspired-mechanics--shipped)).
 
-- [x] **Sound Echo** — memory-sequence toy: four coloured pads each play a
-  pentatonic pitch; the app lights & plays a growing sequence, the child echoes
-  it; one miss ends the run, score = longest sequence. **Shipped** in the scales
-  module, then made educative: the four pads carry **noteheads on a mini-staff**
-  (C-major pentatonic), and the **cues fade as the sequence grows** — colour +
-  sound + notation at first, then the colour drops, then the sound, until the
-  longest runs are read from the noteheads alone (a cue bar shows what's active).
-  So it trains ear↔staff, not just colour memory. *(Extends to a rhythm-timed
-  variant.)*
-- [x] **Command caller** — rapid voice/text commands ("tap!", "hold!", "swipe
-  up!", "clap the beat!"); do the matching gesture before the timer. Reaction +
-  gesture vocabulary. *M.* **Shipped** as **Follow the Conductor** (scales),
-  reworked from a bare reaction toy into a **metre lesson**: the baton traces the
-  real conducting figure for the current time signature (2/4 down·up, 3/4
-  down·right·up, 4/4 down·left·right·up); the target zone lights on each beat
-  (a tick, accented on the downbeat) and the child follows it — taps or arrow
-  keys. A no-fail run through 2/4, 3/4 and 4/4, scored by timing accuracy. The
-  learning is kinaesthetic: you feel the downbeat and internalise each metre.
 - [ ] **Strum toy** — swipe/strum across the screen to sound a chord or arpeggio;
   a free "air-instrument" jam built on the existing fretboard/keyboard widgets. *S–M.*
 - [ ] **Loop mixer** — tap/place cards that each trigger a synced musical loop
@@ -315,24 +178,9 @@ training. *(Generic names only — no product names in code or docs.)*
 Fresh ideas that fit the machinery we already have (partitura notation, pure-Dart
 audio, the SM-2 engine, the falling/connect/reaction engines) and target skills
 the curriculum doesn't yet drill. Ordered by value ÷ effort; effort S/M/L, fit ♪–♪♪♪.
+Shipped: Ledger Leap, Key Detective
+([HISTORY.md](HISTORY.md#original-concepts--shipped)).
 
-- [x] **Ledger Leap** — the ledger-line drill kids trip on: a note sits above/below
-  the staff; tap how many ledger lines (or its letter). Isolates the middle-C /
-  high-A neighbourhood that reading games only brush. SRI `note_reading.*`. *S · ♪♪♪.*
-  **Shipped** (note reading): a note sits exactly on the Nth ledger line (never a
-  ledger space, so the count is unambiguous); tap 1 / 2 / 3. Star-gated —
-  beginners get treble below the staff (the middle-C region), 1–2 lines; two
-  stars adds bass, above, and 3 lines. A correct count plays the pitch. SRI
-  `note_reading.ledger.<clef>.<below|above><n>`. *(Extends to naming the ledger
-  note as a second step.)*
-- [x] **Key Signature Detective** — how many sharps/flats, and which key? Read a key
-  signature and name it, with a fading circle-of-fifths hint. New skill
-  `key_sig.read` — nothing covers signatures yet. *S · ♪♪♪.* **Shipped** as **Key
-  Detective** (scales): partitura renders the signature (`KeySignature(fifths)`);
-  name the major key. Scoped to natural-letter tonics (C G D A E B F) so buttons
-  never need an accidental and German B = H is handled by the naming toggle.
-  Star-gated (C/F/G/D → +A/E/B); a correct answer plays the tonic triad. SRI
-  `key_sig.<tonic>`.
 - [ ] **Note Whack** — whack-a-mole: noteheads pop up around the staff, a target
   name is called, tap the matching one before it ducks. Reading under gentle
   reaction pressure; reuses the reading pools. SRI `note_reading.*`. *S–M · ♪♪♪.*

@@ -4,6 +4,7 @@
 // the whole run finishes with a result screen.
 
 import 'package:flutter/material.dart' hide Step;
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:klang_universum/core/services/audio_service.dart';
@@ -64,6 +65,31 @@ void main() {
     expect(game.caughtCount, 1);
     expect(game.score, greaterThan(0));
     expect(game.lives, FallingNotesScreen.maxLives);
+  });
+
+  testWidgets('the letter keys catch the active note (keyboard control)',
+      (tester) async {
+    await tester.pumpWidget(_app());
+    final game = _game(tester);
+
+    await tester.pump(const Duration(milliseconds: 800));
+    final active = game.activeTargetPitch();
+    expect(active, isNotNull);
+
+    const keys = {
+      'c': LogicalKeyboardKey.keyC,
+      'd': LogicalKeyboardKey.keyD,
+      'e': LogicalKeyboardKey.keyE,
+      'f': LogicalKeyboardKey.keyF,
+      'g': LogicalKeyboardKey.keyG,
+      'a': LogicalKeyboardKey.keyA,
+      'b': LogicalKeyboardKey.keyB,
+    };
+    await tester.sendKeyEvent(keys[active!.step.name]!);
+    await tester.pump();
+
+    expect(game.caughtCount, 1);
+    expect(game.score, greaterThan(0));
   });
 
   testWidgets('letting a note cross the line costs a life', (tester) async {
