@@ -44,10 +44,40 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
   int _lastPlayedNotes = MelodyEchoScreen.melodyLength;
   Timer? _nextMelodyTimer;
 
+  // Karaoke highlight while a card previews: which card, and which note in it.
+  int? _playCard;
+  int _playIndex = -1;
+  int _previewToken = 0;
+
   @override
   void dispose() {
     _nextMelodyTimer?.cancel();
+    _previewToken++; // stop any running preview loop
     super.dispose();
+  }
+
+  /// Play card [i]'s melody and light its notes left-to-right in time, so the
+  /// ear connects to the notation. Scheduled against an absolute clock so the
+  /// highlight can't drift behind the audio.
+  Future<void> _previewCard(int i) async {
+    final token = ++_previewToken;
+    _playPositions(_cards[i]);
+    final clock = Stopwatch()..start();
+    for (var k = 0; k < _cards[i].length; k++) {
+      final wait = k * _noteMs - clock.elapsedMilliseconds;
+      if (wait > 0) await Future<void>.delayed(Duration(milliseconds: wait));
+      if (!mounted || token != _previewToken) return;
+      setState(() {
+        _playCard = i;
+        _playIndex = k;
+      });
+    }
+    await Future<void>.delayed(const Duration(milliseconds: _noteMs));
+    if (!mounted || token != _previewToken) return;
+    setState(() {
+      _playCard = null;
+      _playIndex = -1;
+    });
   }
 
   @override
@@ -106,6 +136,9 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
     _correctCard = _cards.indexWhere((c) => _listEq(c, _melody));
     _tapped = null;
     _lastAnswer = null;
+    _previewToken++; // cancel any in-flight highlight
+    _playCard = null;
+    _playIndex = -1;
     if (round > 0) _playMelodyAfterCurrent();
   }
 
@@ -168,8 +201,9 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
       // Don't replay on correct: the next round's melody would cut it off.
       // The child just heard it — advance cleanly instead.
     } else {
-      // Hear what the tapped card actually sounds like — that's the lesson.
-      _playPositions(_cards[index]);
+      // Hear what the tapped card actually sounds like — and see its notes
+      // light up — that's the lesson.
+      unawaited(_previewCard(index));
     }
 
     setState(() {
@@ -241,14 +275,38 @@ class _MelodyEchoScreenState extends State<MelodyEchoScreen>
                                                   )
                                                 : BorderSide.none,
                                   ),
-                                  child: InkWell(
-                                    onTap: () => _onCardTap(i),
-                                    child: Center(
-                                      child: StaffView(
-                                        score: _cardScore(_cards[i]),
-                                        staffSpace: 8,
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: InkWell(
+                                          onTap: () => _onCardTap(i),
+                                          child: Center(
+                                            child: StaffView(
+                                              score: _cardScore(_cards[i]),
+                                              staffSpace: 8,
+                                              theme: PartituraTheme.kids,
+                                              highlightedIds: _playCard == i &&
+                                                      _playIndex >= 0
+                                                  ? {'e$_playIndex'}
+                                                  : const {},
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      // Hear this melody and watch its notes
+                                      // light up left-to-right.
+                                      Positioned(
+                                        top: 2,
+                                        right: 2,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.volume_up),
+                                          iconSize: 20,
+                                          tooltip: l10n.listenAgain,
+                                          onPressed: () =>
+                                              unawaited(_previewCard(i)),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
