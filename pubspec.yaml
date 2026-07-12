@@ -37,6 +37,7 @@ dependencies:
   # (see ../partitura/HANDOVER.md + HANDOVER_PARTITURA.md).
   partitura:
     path: ../partitura/packages/partitura
+  record: ^7.1.1
 
 # partitura_core is not on pub.dev yet; resolve it from the workspace too.
 # Remove this override once the partitura packages are published.

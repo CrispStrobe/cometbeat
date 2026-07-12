@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:klang_universum/core/services/progress_service.dart';
 import 'package:klang_universum/features/games/cello/cello_finger_quiz_screen.dart';
 import 'package:klang_universum/features/games/cello/cello_string_quiz_screen.dart';
+import 'package:klang_universum/features/games/cello/tuner_spike_screen.dart';
 import 'package:klang_universum/features/games/chords/chord_quiz_screen.dart';
 import 'package:klang_universum/features/games/chords/interval_ear_screen.dart';
 import 'package:klang_universum/features/games/chords/interval_ladder_screen.dart';
@@ -465,6 +466,16 @@ final Map<String, List<GameInfo>> kGamesByModule = {
     ),
   ],
   'cello': [
+    // SPIKE (temporary, not localized): live-mic tuner proving the play-along
+    // capture layer. Remove this tile once the approach is confirmed and a
+    // real play-along game replaces it.
+    GameInfo(
+      id: 'cello_tuner_spike',
+      icon: Icons.graphic_eq,
+      title: (_) => 'Tuner (spike)',
+      subtitle: (_) => 'Live intonation — play or sing a note',
+      builder: (_) => const TunerSpikeScreen(),
+    ),
     GameInfo(
       id: 'cello_string_quiz',
       icon: Icons.linear_scale,
