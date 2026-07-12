@@ -34,11 +34,11 @@ void main() {
   });
 
   test('readiness is 0 with no stars and 1 when everything is mastered', () {
-    final d1 = kCurricula.first.levels.firstWhere((l) => l.id == 'd1');
-    expect(levelReadiness(d1, (_) => 0), 0);
-    expect(levelReadiness(d1, (_) => 3), 1.0);
+    final level = kCurricula.first.levels.firstWhere((l) => l.id == 'g56');
+    expect(levelReadiness(level, (_) => 0), 0);
+    expect(levelReadiness(level, (_) => 3), 1.0);
     // Partial mastery lands strictly between.
-    final mid = levelReadiness(d1, (_) => 2);
+    final mid = levelReadiness(level, (_) => 2);
     expect(mid, greaterThan(0));
     expect(mid, lessThan(1));
   });
@@ -70,8 +70,8 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('D1 · Bronze'), findsOneWidget);
-    expect(find.text('D3 · Gold'), findsOneWidget);
+    expect(find.text('Grades 1–2'), findsOneWidget);
+    expect(find.text('Grades 9–10'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsWidgets);
   });
 }

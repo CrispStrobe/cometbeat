@@ -152,7 +152,7 @@ class HomeScreen extends StatelessWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.workspace_premium),
+            icon: const Icon(Icons.school),
             tooltip: l10n.curriculumTooltip,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const CurriculumScreen()),

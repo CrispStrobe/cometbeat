@@ -126,7 +126,9 @@ void main() {
     expect(find.textContaining('Advanced'), findsOneWidget);
     expect(find.byIcon(Icons.lock), findsWidgets);
 
-    // Tapping the locked tile only flashes the hint, never navigates.
+    // Tapping the locked tile only flashes the hint, never navigates. (Scroll
+    // it into view — the cello module list can be longer than the viewport.)
+    await tester.ensureVisible(find.text('Tenor Clef'));
     await tester.tap(find.text('Tenor Clef'));
     await tester.pump();
     expect(find.byType(NoteReadingQuizScreen), findsNothing);
@@ -140,6 +142,7 @@ void main() {
     expect(find.byIcon(Icons.lock), findsNothing);
 
     // Now the tile opens the tenor-clef reading game.
+    await tester.ensureVisible(find.text('Tenor Clef'));
     await tester.tap(find.text('Tenor Clef'));
     await tester.pumpAndSettle();
     expect(find.byType(NoteReadingQuizScreen), findsOneWidget);

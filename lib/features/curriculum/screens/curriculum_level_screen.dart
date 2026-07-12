@@ -40,6 +40,15 @@ class CurriculumLevelScreen extends StatelessWidget {
     int stars(String id) => progress.starsFor(id);
     final program = _program();
 
+    // The lowest-readiness topic — the best thing to drill next.
+    final weakest = weakestTopic(level, stars);
+    final weakestGames = weakest == null
+        ? <GameInfo>[]
+        : [
+            for (final id in weakest.gameIds)
+              if (gameInfoById(id) case final game?) game,
+          ];
+
     return Scaffold(
       appBar: AppBar(title: Text('${level.badge}  ${level.name(l10n)}')),
       body: SafeArea(
@@ -56,6 +65,18 @@ class CurriculumLevelScreen extends StatelessWidget {
                 icon: const Icon(Icons.play_arrow),
                 label: Text(l10n.curPracticeLevel),
               ),
+            if (weakestGames.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => RecitalScreen(program: weakestGames),
+                  ),
+                ),
+                icon: const Icon(Icons.trending_up),
+                label: Text(l10n.curPractiseWeakest),
+              ),
+            ],
             const SizedBox(height: 16),
             Text(
               l10n.curTopicsHeader,
