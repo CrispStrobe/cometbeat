@@ -1724,6 +1724,42 @@ abstract class AppLocalizations {
   /// **'Which chord is this?'**
   String get nameThatChordPrompt;
 
+  /// No description provided for @gameChordBuilder.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord Builder'**
+  String get gameChordBuilder;
+
+  /// No description provided for @gameChordBuilderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build the named chord — any voicing counts'**
+  String get gameChordBuilderSubtitle;
+
+  /// No description provided for @chordBuilderPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a {chord} chord'**
+  String chordBuilderPrompt(String chord);
+
+  /// No description provided for @chordBuilderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap three notes onto the staff. Any octave or inversion works.'**
+  String get chordBuilderHint;
+
+  /// No description provided for @chordBuilderClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get chordBuilderClear;
+
+  /// No description provided for @chordBuilderCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check'**
+  String get chordBuilderCheck;
+
   /// No description provided for @moduleTranspose.
   ///
   /// In en, this message translates to:

@@ -918,6 +918,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nameThatChordPrompt => 'Which chord is this?';
 
   @override
+  String get gameChordBuilder => 'Chord Builder';
+
+  @override
+  String get gameChordBuilderSubtitle =>
+      'Build the named chord — any voicing counts';
+
+  @override
+  String chordBuilderPrompt(String chord) {
+    return 'Build a $chord chord';
+  }
+
+  @override
+  String get chordBuilderHint =>
+      'Tap three notes onto the staff. Any octave or inversion works.';
+
+  @override
+  String get chordBuilderClear => 'Clear';
+
+  @override
+  String get chordBuilderCheck => 'Check';
+
+  @override
   String get moduleTranspose => 'Transposing';
 
   @override

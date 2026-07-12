@@ -450,6 +450,17 @@
   "gameNameThatChord": "Name That Chord",
   "gameNameThatChordSubtitle": "Read or hear a chord, pick its symbol",
   "nameThatChordPrompt": "Which chord is this?",
+  "gameChordBuilder": "Chord Builder",
+  "gameChordBuilderSubtitle": "Build the named chord — any voicing counts",
+  "chordBuilderPrompt": "Build a {chord} chord",
+  "@chordBuilderPrompt": {
+    "placeholders": {
+      "chord": { "type": "String" }
+    }
+  },
+  "chordBuilderHint": "Tap three notes onto the staff. Any octave or inversion works.",
+  "chordBuilderClear": "Clear",
+  "chordBuilderCheck": "Check",
   "moduleTranspose": "Transposing",
   "moduleTransposeSubtitle": "Written vs concert pitch",
   "gameConcertPitch": "Concert Pitch",

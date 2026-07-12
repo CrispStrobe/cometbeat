@@ -924,6 +924,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get nameThatChordPrompt => 'Welcher Akkord ist das?';
 
   @override
+  String get gameChordBuilder => 'Akkord bauen';
+
+  @override
+  String get gameChordBuilderSubtitle => 'Baue den Akkord — jede Lage zählt';
+
+  @override
+  String chordBuilderPrompt(String chord) {
+    return 'Baue einen $chord-Akkord';
+  }
+
+  @override
+  String get chordBuilderHint =>
+      'Tippe drei Noten auf das System. Jede Oktave oder Umkehrung zählt.';
+
+  @override
+  String get chordBuilderClear => 'Löschen';
+
+  @override
+  String get chordBuilderCheck => 'Prüfen';
+
+  @override
   String get moduleTranspose => 'Transponieren';
 
   @override

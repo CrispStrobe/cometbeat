@@ -68,11 +68,11 @@ capabilities and what they unlock:
   Composition Workshop (`scoreToAbc` → copy to clipboard). Still open: a
   "type-a-tune" mode.
 - **Chord identification** (`identifyChord`, `chordSymbolFor`). **Name That
-  Chord** is shipped ([HISTORY.md](HISTORY.md#partitura-powered--shipped)) —
-  auto-graded via `identifyChord`, root position for beginners and dim/aug +
-  slash-chord inversions at 2★. Still open: auto-grade any built chord in Triad
-  Builder / Chord Grip Hero (not just root position), and chord symbols over the
-  Song Book.
+  Chord** and **Chord Builder** are shipped
+  ([HISTORY.md](HISTORY.md#partitura-powered--shipped)) — the builder grades
+  **any voicing** (root position or inversion, any octave) via `identifyChord`.
+  Still open: chord symbols over the Song Book (low value — the built-in songs
+  are monophonic).
 - **`StaffSystemView`** (N-staff systems). **Duet** is shipped — read the
   highlighted part of a two-staff system (lower staff switches to bass clef at
   2★). Still open: SATB chorale reading, a richer Grand Staff.

@@ -283,6 +283,17 @@
   "gameNameThatChord": "Akkord benennen",
   "gameNameThatChordSubtitle": "Lies oder höre einen Akkord, wähle sein Symbol",
   "nameThatChordPrompt": "Welcher Akkord ist das?",
+  "gameChordBuilder": "Akkord bauen",
+  "gameChordBuilderSubtitle": "Baue den Akkord — jede Lage zählt",
+  "chordBuilderPrompt": "Baue einen {chord}-Akkord",
+  "@chordBuilderPrompt": {
+    "placeholders": {
+      "chord": { "type": "String" }
+    }
+  },
+  "chordBuilderHint": "Tippe drei Noten auf das System. Jede Oktave oder Umkehrung zählt.",
+  "chordBuilderClear": "Löschen",
+  "chordBuilderCheck": "Prüfen",
   "moduleTranspose": "Transponieren",
   "moduleTransposeSubtitle": "Notiert vs. klingend",
   "gameConcertPitch": "Klingende Note",

@@ -147,6 +147,11 @@ Games built on partitura capabilities the app didn't use before.
   for beginners, diminished/augmented and slash-chord inversions (C/E) at 2★.
   Renders the chord as a block on the staff, replay button, keyboard 1–4. SRI
   `chords.name.<root>_<type>`.
+- **Chord Builder** (chords) — build the named chord by tapping three notes onto
+  the staff; partitura's `identifyChord` grades what you built, so **any voicing
+  counts** — root position or an inversion, in any octave. The interactive
+  counterpart to Name That Chord; major/minor for beginners, dim/aug at 2★. SRI
+  `chords.build.<root>_<quality>`.
 - **ABC import** (Song Book) — the importer takes pasted **ABC notation**
   (`scoreFromAbc`) alongside MusicXML / ChordPro / MIDI, stored as MusicXML like
   the rest. Opens the large public-domain ABC folk-tune libraries; the tune's
