@@ -37,8 +37,23 @@
   6. ✅ *Chord mode* — place multiple notes at one timeslot. `EditorElement` is
      now multi-pitch (low→high `List<Pitch>`); a ⧉ toggle stacks the next
      pitch onto the selected note. Transpose/accidental/move/copy all chord-aware.
-  7. ⏳ *More:* start off beat 1 (pickup / mid-measure), **slurs** (Bindebögen),
-     **lyrics** typing, caret, marquee-select, drag-reorder, hairpins, page/print.
+  7. ✅ *Slurs* — select ≥2 notes → ⌒ toggle (or `S`) draws a phrase slur from
+     first to last; stored as partitura `Slur`s, pruned on delete, kept through
+     MusicXML.
+  8. ✅ *Lyrics* — a single-note selection reveals an inline syllable field
+     (commits on Enter/blur; rides paste + MusicXML). Verse 1 for now.
+  9. ✅ *Fixed note entry* — a blank-staff click now places a new note (advances)
+     like a piano key instead of re-pitching the selection; chord-mode staff
+     clicks stack at the clicked pitch. Re-pitch = drag / ↑↓.
+  10. ✅ *Live drag* — the dragged note is hidden and a duration-matched ghost
+      follows the pointer (partitura paints no live drag of its own).
+  11. ✅ *(i) shortcuts sheet* + *exit guard* (keep / discard / save) + *width
+      bound to viewport* so systems break on-screen.
+  12. ⏳ *Still open:* start off beat 1 (pickup / mid-measure), verse 2+ lyrics,
+      caret, marquee-select, drag horizontal-reorder, hairpins, page/print;
+      adopt `kidsScoreTheme` for the Handwritten-notes toggle. A true
+      move-the-note live drag would need a partitura render change (today we fake
+      it with hide-original + ghost).
 - **Git note:** after every main push, `feature/score-workshop` is reset to
   `origin/main` (keep them equal) to avoid hash divergence.
 
