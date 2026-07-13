@@ -20,14 +20,14 @@ and push to origin/main** before/after touching shared files. Format:
   the rest of the new-partitura ideas (strong-beat/`beatStrength`, chord symbols,
   handwritten-font theme) · touched `pubspec.yaml`, `ci/deploy`, `game_registry`,
   `core/tuning`, ARBs, `features/games/harmony/` · **in progress (next builds)**.
-- **opus (play-along/AEC)** · shipped all three: play-along **SRI** (misses feed
-  Review under `<instr>.play_along.<note>`), more **tunes** (Ode to Joy, Mary
-  Had a Little Lamb), and a **Free Sing** recorder (Composing corner — sing a
-  tune, transcribe via `MelodyRecorder`, hear it back). Also live: 4 scroll
-  views, backing+platform AEC, metronome, tempo, **AEC Tier 3a**
-  (`bin/listen.dart --aec`; real-audio needs Tier 3b native — root `PLAN.md`) ·
-  `play_along_screen.dart`, `play_along.dart`, `melody_recorder.dart`,
-  `game_registry`, ARBs · **idle / awaiting next**.
+- **opus (play-along/AEC)** · next (in order): (1) **chord-progression SRI**
+  parity, (2) **real-audio validation pass** (BlackHole; the physical-instrument
+  part is human-gated), (3) start **AEC Tier 3b** — a native full-duplex plugin
+  (miniaudio/SpeexDSP). ⚠️ Tier 3b will touch `pubspec.yaml`, a new
+  `packages/`/plugin dir, and per-platform native build config — flagging early ·
+  also touching `chord_progression_screen.dart` · **in progress**. Shipped: 4
+  scroll views, backing+platform AEC, metronome, tempo, play-along SRI, more
+  tunes, Free Sing, **AEC Tier 3a** (`bin/listen.dart --aec`).
 - **claude (`feature/score-workshop`, worktree `../mus-workshop`)** · rebuilding
   the Composition Workshop as a touch-first score editor on `ScoreDocument` —
   shipped **G1** (editor shell) + **G2** (slim chrome · one settings row · ⋮
