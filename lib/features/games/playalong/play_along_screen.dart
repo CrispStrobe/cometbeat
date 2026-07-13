@@ -693,9 +693,13 @@ class _NotationView extends StatelessWidget {
       child: SingleChildScrollView(
         child: MultiSystemView(
           score: score,
-          theme: PartituraTheme.kids,
+          // Hit/miss note colours ride on theme.elementColors, which the shared
+          // LayoutPainter honours on both StaffView and MultiSystemView (a
+          // highlightedId still wins). This avoids depending on the newer
+          // MultiSystemView(elementColors:) constructor param, which isn't on
+          // partitura@main yet — keeps CI (which builds against it) green.
+          theme: PartituraTheme.kids.copyWith(elementColors: colors),
           highlightedIds: {if (ai >= 0) 'n$ai'},
-          elementColors: colors,
         ),
       ),
     );
