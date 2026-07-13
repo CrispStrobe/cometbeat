@@ -14,12 +14,18 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (this agent)** · aligned mus to partitura-public (pubspec + ci/deploy
-  resolve `partitura-public`) and **shipped Roman Numerals** (Harmonik) —
-  diatonic triads named by partitura's `romanNumeralOf`. 281 tests green. Next:
-  the rest of the new-partitura ideas (strong-beat/`beatStrength`, chord symbols,
-  handwritten-font theme) · touched `pubspec.yaml`, `ci/deploy`, `game_registry`,
-  `core/tuning`, ARBs, `features/games/harmony/` · **in progress (next builds)**.
+- **opus (this agent)** · aligned mus to partitura-public + shipped **Roman
+  Numerals**; now building **Strong Beat** (Takte, `beatStrength`) · touching
+  `game_registry`, `core/tuning`, ARBs, `features/games/measures/`. Also
+  **stabilising a CI-only test class** (`getCenter` throws on CI's 800×600 Linux
+  surface when a game stacks staves taller than the viewport — passes locally):
+  fixed `line_space_test`, fixing `composition_test` · **in progress**.
+  ⚠️ **Heads-up for all agents:** mus CI checks out `partitura@main` **fresh each
+  run**, so partitura-public's live rendering changes (e.g. beam subdivision,
+  voices 3–4) can push tap/drag targets off-screen and red *your* CI even with no
+  mus change. If your CI reds on a `getCenter`/`_getElementPoint` throw, it's this
+  — enlarge the test surface or `ensureVisible` the target. Consider pinning the
+  partitura ref for stability (raising with the maintainer).
 - **opus (play-along/AEC)** · next (in order): (1) **chord-progression SRI**
   parity, (2) **real-audio validation pass** (BlackHole; the physical-instrument
   part is human-gated), (3) start **AEC Tier 3b** — a native full-duplex plugin
