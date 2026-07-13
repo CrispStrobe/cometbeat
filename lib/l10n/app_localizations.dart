@@ -842,6 +842,36 @@ abstract class AppLocalizations {
   /// **'Flat'**
   String get accidentalFlatLabel;
 
+  /// No description provided for @gameDirectionEar.
+  ///
+  /// In en, this message translates to:
+  /// **'Higher or Lower?'**
+  String get gameDirectionEar;
+
+  /// No description provided for @gameDirectionEarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen: does the second note go up or down?'**
+  String get gameDirectionEarSubtitle;
+
+  /// No description provided for @directionEarPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Two notes play. Is the second one higher or lower?'**
+  String get directionEarPrompt;
+
+  /// No description provided for @directionUpLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Higher'**
+  String get directionUpLabel;
+
+  /// No description provided for @directionDownLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lower'**
+  String get directionDownLabel;
+
   /// No description provided for @moduleGuitar.
   ///
   /// In en, this message translates to:

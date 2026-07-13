@@ -422,6 +422,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accidentalFlatLabel => 'Flat';
 
   @override
+  String get gameDirectionEar => 'Higher or Lower?';
+
+  @override
+  String get gameDirectionEarSubtitle =>
+      'Listen: does the second note go up or down?';
+
+  @override
+  String get directionEarPrompt =>
+      'Two notes play. Is the second one higher or lower?';
+
+  @override
+  String get directionUpLabel => 'Higher';
+
+  @override
+  String get directionDownLabel => 'Lower';
+
+  @override
   String get moduleGuitar => 'Guitar Corner';
 
   @override

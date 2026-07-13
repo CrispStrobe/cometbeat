@@ -424,6 +424,23 @@ class AppLocalizationsDe extends AppLocalizations {
   String get accidentalFlatLabel => 'B';
 
   @override
+  String get gameDirectionEar => 'Höher oder tiefer?';
+
+  @override
+  String get gameDirectionEarSubtitle =>
+      'Hör hin: geht die zweite Note hoch oder runter?';
+
+  @override
+  String get directionEarPrompt =>
+      'Zwei Töne erklingen. Ist der zweite höher oder tiefer?';
+
+  @override
+  String get directionUpLabel => 'Höher';
+
+  @override
+  String get directionDownLabel => 'Tiefer';
+
+  @override
   String get moduleGuitar => 'Gitarren-Ecke';
 
   @override

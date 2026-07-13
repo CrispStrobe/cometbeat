@@ -77,6 +77,7 @@ import 'package:klang_universum/features/games/note_values/rhythm_tap_screen.dar
 import 'package:klang_universum/features/games/note_values/value_order_screen.dart';
 import 'package:klang_universum/features/games/playalong/play_along_screen.dart';
 import 'package:klang_universum/features/games/scales/command_caller_screen.dart';
+import 'package:klang_universum/features/games/scales/direction_ear_screen.dart';
 import 'package:klang_universum/features/games/scales/echo_sequence_screen.dart';
 import 'package:klang_universum/features/games/scales/in_scale_screen.dart';
 import 'package:klang_universum/features/games/scales/key_signature_screen.dart';
@@ -484,6 +485,14 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameMajorMinorEar,
       subtitle: (l) => l.gameMajorMinorEarSubtitle,
       builder: (_) => const MajorMinorEarScreen(),
+    ),
+    // Melodic-direction ear game (aural twin of the High or Low? sort).
+    GameInfo(
+      id: 'direction_ear',
+      icon: Icons.swap_vert,
+      title: (l) => l.gameDirectionEar,
+      subtitle: (l) => l.gameDirectionEarSubtitle,
+      builder: (_) => const DirectionEarScreen(),
     ),
     GameInfo(
       id: 'sing_back',
