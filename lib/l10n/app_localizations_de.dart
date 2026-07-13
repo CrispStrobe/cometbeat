@@ -180,6 +180,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopScoreSettings => 'Noteneinstellungen';
 
   @override
+  String get workshopClef => 'Schlüssel';
+
+  @override
+  String get workshopZoomIn => 'Vergrößern';
+
+  @override
+  String get workshopZoomOut => 'Verkleinern';
+
+  @override
+  String get workshopExportXml => 'MusicXML exportieren';
+
+  @override
   String get instrumentLabel => 'Instrumentenklang';
 
   @override

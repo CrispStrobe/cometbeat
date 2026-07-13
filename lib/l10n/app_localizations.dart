@@ -398,6 +398,30 @@ abstract class AppLocalizations {
   /// **'Score settings'**
   String get workshopScoreSettings;
 
+  /// No description provided for @workshopClef.
+  ///
+  /// In en, this message translates to:
+  /// **'Clef'**
+  String get workshopClef;
+
+  /// No description provided for @workshopZoomIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get workshopZoomIn;
+
+  /// No description provided for @workshopZoomOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get workshopZoomOut;
+
+  /// No description provided for @workshopExportXml.
+  ///
+  /// In en, this message translates to:
+  /// **'Export MusicXML'**
+  String get workshopExportXml;
+
   /// No description provided for @instrumentLabel.
   ///
   /// In en, this message translates to:

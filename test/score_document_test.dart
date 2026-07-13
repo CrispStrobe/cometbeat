@@ -84,11 +84,15 @@ void main() {
     );
   });
 
-  test('low material switches the clef to bass', () {
+  test('clef is an explicit setting (no auto-flip) and is undoable', () {
     final doc = ScoreDocument();
     expect(doc.clef, Clef.treble);
-    doc.insertNote(_p(Step.c, octave: 2), _quarter); // C2, below G3
+    doc.insertNote(_p(Step.c, octave: 2), _quarter); // low C — no auto-flip
+    expect(doc.clef, Clef.treble);
+    doc.setClef(Clef.bass);
     expect(doc.clef, Clef.bass);
+    doc.undo();
+    expect(doc.clef, Clef.treble);
   });
 
   test('empty document renders a single whole-rest bar', () {

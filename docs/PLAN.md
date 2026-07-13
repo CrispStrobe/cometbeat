@@ -28,8 +28,9 @@ and push to origin/main** before/after touching shared files. Format:
   real-audio needs Tier 3b native — root `PLAN.md`).
 - **claude (`feature/score-workshop`, worktree `../mus-workshop`)** · rebuilding
   the Composition Workshop as a touch-first score editor on `ScoreDocument` —
-  shipped **G1** (new editor shell: zoom/pan canvas + ghost preview + bottom
-  input dock + piano); now **G2** (palettes + contextual inspector) · touching
+  shipped **G1** (editor shell) + **G2** (slim chrome · one settings row · ⋮
+  menu · multiline `MultiSystemView` canvas · piano placement · manual clef);
+  now **G3** (drag-to-move · range select + copy/paste · grand staff) · touching
   `lib/features/workshop/**` only · **in progress** · detail:
   [WORKSHOP_PLAN.md](WORKSHOP_PLAN.md).
 - _last shipped_: **Cello Play It** (mic grading in the Cello Corner) +

@@ -1,12 +1,14 @@
 // lib/features/workshop/screens/composition_workshop_screen.dart
 //
 // "Kompositions-Werkstatt" / "Composition Workshop" — a touch-first score
-// editor (see docs/WORKSHOP_PLAN.md). The layout: a full-bleed, zoomable score
-// canvas on top, and a bottom input dock — a duration/accidental glyph strip
-// above a swappable pitch surface (on-screen piano or tap-the-staff). Entry is
-// "pick a value, then a pitch". A status line always shows the armed value and
-// the current selection, so there is never a hidden mode. Everything runs
-// through [ScoreDocument] (editable model + multi-level undo/redo).
+// editor (see docs/WORKSHOP_PLAN.md). Layout, top→bottom: a slim action bar
+// (undo/redo/play + a ⋮ menu of import/export/etc.), one compact settings row
+// (clef · time · key · zoom), a multi-line score canvas that wraps cleanly and
+// scrolls vertically, a status line (armed value + selection), a contextual
+// selection bar, and a bottom input dock (duration/accidental strip + on-screen
+// piano). Notes are placed from the piano at the caret — the staff is for
+// viewing and selecting, so panning/zooming never drops a stray note. Every
+// edit runs through [ScoreDocument] (editable model + multi-level undo/redo).
 
 // Material's Stepper also exports a `Step`; partitura's pitch Step wins here.
 import 'package:flutter/material.dart' hide Step;
@@ -33,10 +35,7 @@ const _values = <_Value>[
   (glyph: Smufl.sixteenthNote, base: DurationBase.sixteenth),
 ];
 
-/// Where pitches are entered from.
-enum _PitchSurface { piano, staff }
-
-/// The accidental the next placed note gets (or the selected note is set to).
+/// The accidental the selected note is set to.
 enum _Accidental { natural, sharp, flat }
 
 int _alterOf(_Accidental a) => switch (a) {
@@ -57,7 +56,6 @@ const _accidentalGlyph = {
   _Accidental.flat: '♭',
 };
 
-/// Key-signature choices offered in the settings sheet (circle-of-fifths).
 const _keyChoices = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
 
 String _keyLabel(int fifths) =>
@@ -66,7 +64,7 @@ String _keyLabel(int fifths) =>
 class CompositionWorkshopScreen extends StatefulWidget {
   const CompositionWorkshopScreen({super.key});
 
-  static const maxNotes = 64;
+  static const maxNotes = 128;
 
   @override
   State<CompositionWorkshopScreen> createState() =>
@@ -87,7 +85,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   DurationBase _pendingBase = DurationBase.quarter;
   bool _dotted = false;
   _Accidental _accidental = _Accidental.natural;
-  _PitchSurface _surface = _PitchSurface.piano;
+  double _zoom = 16; // staff space (px)
 
   @override
   int get noteCount => _doc.length;
@@ -111,17 +109,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   // ---- entry -------------------------------------------------------------
 
-  void _placePitch(Pitch pitch) {
+  void _onPianoKey(int midi) {
     if (_doc.length >= CompositionWorkshopScreen.maxNotes) return;
-    _audio.playMidiNote(pitch.midiNumber, ms: 400);
-    setState(() => _doc.insertNote(pitch, _pendingDuration));
+    _audio.playMidiNote(midi, ms: 400);
+    setState(() => _doc.insertNote(pitchFromMidi(midi), _pendingDuration));
   }
-
-  void _onStaffTap(StaffTarget target) => _placePitch(
-        target.pitchFor(_doc.clef, preferredAlter: _alterOf(_accidental)),
-      );
-
-  void _onPianoKey(int midi) => _placePitch(pitchFromMidi(midi));
 
   void _onElementTap(String id) => setState(() {
         _doc.toggleSelected(id);
@@ -176,6 +168,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     if (now != null && now != before) _audio.playMidiNote(now, ms: 300);
   }
 
+  void _zoomBy(double delta) =>
+      setState(() => _zoom = (_zoom + delta).clamp(10.0, 30.0));
+
   void _play() {
     if (_doc.isEmpty) return;
     _audio.playSequence([
@@ -188,98 +183,16 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     ]);
   }
 
-  // ---- sheets / dialogs --------------------------------------------------
+  // ---- menu actions ------------------------------------------------------
 
-  void _openScoreSettings() {
-    final l10n = AppLocalizations.of(context)!;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.workshopScoreSettings,
-                  style: Theme.of(ctx).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Text(
-                      l10n.workshopTimeSignature,
-                      style: Theme.of(ctx).textTheme.labelLarge,
-                    ),
-                    const SizedBox(width: 12),
-                    SegmentedButton<TimeSignature>(
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(
-                          value: TimeSignature.twoFour,
-                          label: Text('2/4'),
-                        ),
-                        ButtonSegment(
-                          value: TimeSignature.threeFour,
-                          label: Text('3/4'),
-                        ),
-                        ButtonSegment(
-                          value: TimeSignature.fourFour,
-                          label: Text('4/4'),
-                        ),
-                      ],
-                      selected: {_doc.timeSignature},
-                      onSelectionChanged: (s) {
-                        setState(() => _doc.setTimeSignature(s.first));
-                        setSheet(() {});
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(
-                      l10n.workshopKey,
-                      style: Theme.of(ctx).textTheme.labelLarge,
-                    ),
-                    const SizedBox(width: 12),
-                    DropdownButton<int>(
-                      value: _doc.keySignature.fifths,
-                      items: [
-                        for (final f in _keyChoices)
-                          DropdownMenuItem(value: f, child: Text(_keyLabel(f))),
-                      ],
-                      onChanged: (f) {
-                        setState(
-                          () => _doc.setKeySignature(KeySignature(f ?? 0)),
-                        );
-                        setSheet(() {});
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _exportAbc() async {
-    if (_doc.isEmpty) return;
+  Future<void> _exportText(String title, String text) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final abc = scoreToAbc(_doc.buildScore());
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.workshopExportAbc),
-        content: SingleChildScrollView(child: SelectableText(abc)),
+        title: Text(title),
+        content: SingleChildScrollView(child: SelectableText(text)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -287,7 +200,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           ),
           FilledButton.icon(
             onPressed: () {
-              Clipboard.setData(ClipboardData(text: abc));
+              Clipboard.setData(ClipboardData(text: text));
               Navigator.of(ctx).pop();
               messenger.showSnackBar(
                 SnackBar(content: Text(l10n.workshopCopied)),
@@ -349,13 +262,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final l10n = AppLocalizations.of(context)!;
     final selectedId = _doc.selectedId;
     final hasSelection = selectedId != null;
-    final theme = PartituraTheme.kids.copyWith(
-      elementColors: {if (hasSelection) selectedId: Colors.amber},
-    );
+    const theme = PartituraTheme.kids;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.workshopComposeTitle),
+        toolbarHeight: 48,
+        titleSpacing: 8,
+        title: const SizedBox.shrink(),
         actions: [
           IconButton(
             icon: const Icon(Icons.undo),
@@ -372,18 +285,22 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             tooltip: l10n.myMelodyPlay,
             onPressed: _doc.isEmpty ? null : _play,
           ),
-          IconButton(
-            icon: const Icon(Icons.tune),
-            tooltip: l10n.workshopScoreSettings,
-            onPressed: _openScoreSettings,
-          ),
           PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               switch (v) {
                 case 'save':
                   _save();
+                case 'xml':
+                  _exportText(
+                    l10n.workshopExportXml,
+                    scoreToMusicXml(_doc.buildScore()),
+                  );
                 case 'abc':
-                  _exportAbc();
+                  _exportText(
+                    l10n.workshopExportAbc,
+                    scoreToAbc(_doc.buildScore()),
+                  );
                 case 'clear':
                   setState(_doc.clearAll);
               }
@@ -392,17 +309,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               PopupMenuItem(
                 value: 'save',
                 enabled: !_doc.isEmpty,
-                child: Text(l10n.myMelodySave),
+                child: _menuRow(Icons.bookmark_add_outlined, l10n.myMelodySave),
+              ),
+              PopupMenuItem(
+                value: 'xml',
+                enabled: !_doc.isEmpty,
+                child: _menuRow(Icons.code, l10n.workshopExportXml),
               ),
               PopupMenuItem(
                 value: 'abc',
                 enabled: !_doc.isEmpty,
-                child: Text(l10n.workshopExportAbc),
+                child: _menuRow(Icons.abc, l10n.workshopExportAbc),
               ),
               PopupMenuItem(
                 value: 'clear',
                 enabled: !_doc.isEmpty,
-                child: Text(l10n.myMelodyClear),
+                child:
+                    _menuRow(Icons.delete_sweep_outlined, l10n.myMelodyClear),
               ),
             ],
           ),
@@ -410,32 +333,33 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       ),
       body: Column(
         children: [
-          // Full-bleed, zoomable score canvas.
+          _SettingsRow(
+            clef: _doc.clef,
+            timeSignature: _doc.timeSignature,
+            fifths: _doc.keySignature.fifths,
+            onClef: (c) => setState(() => _doc.setClef(c)),
+            onTime: (t) => setState(() => _doc.setTimeSignature(t)),
+            onKey: (f) => setState(() => _doc.setKeySignature(KeySignature(f))),
+            onZoomIn: () => _zoomBy(3),
+            onZoomOut: () => _zoomBy(-3),
+          ),
+          const Divider(height: 1),
+          // Multi-line, vertically scrolling score canvas.
           Expanded(
             child: ColoredBox(
               color: Theme.of(context).colorScheme.surfaceContainerLowest,
-              child: InteractiveViewer(
-                constrained: false,
-                minScale: 0.4,
-                maxScale: 5,
-                boundaryMargin: const EdgeInsets.all(300),
-                child: Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: InteractiveStaff(
-                    score: _doc.buildScore(),
-                    theme: theme,
-                    staffSpace: 16,
-                    // showGhostNote defaults on — the ghost previews where a
-                    // tap/drag will land; match it to the armed value.
-                    ghostDuration: _pendingDuration,
-                    onStaffTap: _onStaffTap,
-                    onElementTap: _onElementTap,
-                  ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: MultiSystemView(
+                  score: _doc.buildScore(),
+                  theme: theme,
+                  staffSpace: _zoom,
+                  elementColors: {if (hasSelection) selectedId: Colors.amber},
+                  onElementTap: _onElementTap,
                 ),
               ),
             ),
           ),
-          // Contextual selection controls.
           if (hasSelection)
             _SelectionBar(
               canTranspose: _doc.selected?.isRest == false,
@@ -454,18 +378,24 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             pendingBase: _pendingBase,
             dotted: _dotted,
             accidental: _accidental,
-            surface: _surface,
             onPickValue: _pickValue,
             onToggleDot: _toggleDot,
             onPickAccidental: _pickAccidental,
             onRest: _addRest,
-            onSurface: (s) => setState(() => _surface = s),
             onPianoKey: _onPianoKey,
           ),
         ],
       ),
     );
   }
+
+  Widget _menuRow(IconData icon, String label) => Row(
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 12),
+          Text(label),
+        ],
+      );
 
   String _selectionText(BuildContext context, AppLocalizations l10n) {
     final e = _doc.selected;
@@ -475,6 +405,89 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final acc = p.alter > 0 ? '♯' : (p.alter < 0 ? '♭' : '');
     return '${noteNameFor(context, p.step)}$acc${p.octave}';
   }
+}
+
+/// One compact row: clef · time · key · zoom.
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({
+    required this.clef,
+    required this.timeSignature,
+    required this.fifths,
+    required this.onClef,
+    required this.onTime,
+    required this.onKey,
+    required this.onZoomIn,
+    required this.onZoomOut,
+  });
+
+  final Clef clef;
+  final TimeSignature timeSignature;
+  final int fifths;
+  final ValueChanged<Clef> onClef;
+  final ValueChanged<TimeSignature> onTime;
+  final ValueChanged<int> onKey;
+  final VoidCallback onZoomIn, onZoomOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        children: [
+          _label(context, l10n.workshopClef),
+          SegmentedButton<Clef>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: Clef.treble, label: Text('𝄞')),
+              ButtonSegment(value: Clef.bass, label: Text('𝄢')),
+            ],
+            selected: {clef == Clef.bass ? Clef.bass : Clef.treble},
+            onSelectionChanged: (s) => onClef(s.first),
+          ),
+          const SizedBox(width: 16),
+          _label(context, l10n.workshopTimeSignature),
+          SegmentedButton<TimeSignature>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: TimeSignature.twoFour, label: Text('2/4')),
+              ButtonSegment(value: TimeSignature.threeFour, label: Text('3/4')),
+              ButtonSegment(value: TimeSignature.fourFour, label: Text('4/4')),
+            ],
+            selected: {timeSignature},
+            onSelectionChanged: (s) => onTime(s.first),
+          ),
+          const SizedBox(width: 16),
+          _label(context, l10n.workshopKey),
+          DropdownButton<int>(
+            value: fifths,
+            items: [
+              for (final f in _keyChoices)
+                DropdownMenuItem(value: f, child: Text(_keyLabel(f))),
+            ],
+            onChanged: (f) => onKey(f ?? 0),
+          ),
+          const SizedBox(width: 16),
+          IconButton(
+            onPressed: onZoomOut,
+            icon: const Icon(Icons.zoom_out),
+            tooltip: l10n.workshopZoomOut,
+          ),
+          IconButton(
+            onPressed: onZoomIn,
+            icon: const Icon(Icons.zoom_in),
+            tooltip: l10n.workshopZoomIn,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _label(BuildContext context, String text) => Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Text(text, style: Theme.of(context).textTheme.labelMedium),
+      );
 }
 
 /// Armed value glyph + a line of text (selection / prompt).
@@ -565,31 +578,26 @@ class _SelectionBar extends StatelessWidget {
   }
 }
 
-/// The bottom input dock: a duration/accidental glyph strip above a swappable
-/// pitch surface.
+/// The bottom input dock: a duration/accidental glyph strip above the piano.
 class _InputDock extends StatelessWidget {
   const _InputDock({
     required this.pendingBase,
     required this.dotted,
     required this.accidental,
-    required this.surface,
     required this.onPickValue,
     required this.onToggleDot,
     required this.onPickAccidental,
     required this.onRest,
-    required this.onSurface,
     required this.onPianoKey,
   });
 
   final DurationBase pendingBase;
   final bool dotted;
   final _Accidental accidental;
-  final _PitchSurface surface;
   final ValueChanged<DurationBase> onPickValue;
   final VoidCallback onToggleDot;
   final ValueChanged<_Accidental> onPickAccidental;
   final VoidCallback onRest;
-  final ValueChanged<_PitchSurface> onSurface;
   final ValueChanged<int> onPianoKey;
 
   @override
@@ -604,7 +612,6 @@ class _InputDock extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Duration + modifiers strip.
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -649,50 +656,18 @@ class _InputDock extends StatelessWidget {
               ),
             ),
             const Divider(height: 1),
-            // Pitch surface selector.
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: SegmentedButton<_PitchSurface>(
-                showSelectedIcon: false,
-                segments: [
-                  ButtonSegment(
-                    value: _PitchSurface.piano,
-                    icon: const Icon(Icons.piano),
-                    label: Text(l10n.inputPiano),
-                  ),
-                  ButtonSegment(
-                    value: _PitchSurface.staff,
-                    icon: const Icon(Icons.music_note),
-                    label: Text(l10n.inputStaff),
-                  ),
-                ],
-                selected: {surface},
-                onSelectionChanged: (s) => onSurface(s.first),
+            SizedBox(
+              height: 132,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                child: PianoKeyboard(
+                  startMidi: 48, // C3
+                  whiteKeyCount: 15,
+                  showLabels: true,
+                  onKeyTap: onPianoKey,
+                ),
               ),
             ),
-            // The surface itself.
-            if (surface == _PitchSurface.piano)
-              SizedBox(
-                height: 128,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  child: PianoKeyboard(
-                    startMidi: 48, // C3
-                    whiteKeyCount: 15,
-                    showLabels: true,
-                    onKeyTap: onPianoKey,
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Text(
-                  l10n.workshopTapStaff,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              ),
           ],
         ),
       ),
@@ -730,11 +705,7 @@ class _GlyphButton extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
-          child: SizedBox(
-            width: 48,
-            height: 44,
-            child: Center(child: child),
-          ),
+          child: SizedBox(width: 48, height: 44, child: Center(child: child)),
         ),
       ),
     );

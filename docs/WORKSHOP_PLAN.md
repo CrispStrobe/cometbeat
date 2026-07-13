@@ -130,6 +130,23 @@ previewed. No touch-only gestures without a mouse/keyboard equivalent.
   undo/redo/play/settings on the top bar. Cross-platform (web build verified).
 - **G2 — Palettes & inspector**: bottom-sheet palettes + a contextual inspector;
   the model gains dynamics, articulations, ties.
+
+  **Direct UX feedback:**
+  1. ✅ *Cleaner chrome* — slim action bar (no big title), one compact settings
+     row (clef · time · key · zoom), ⋮ menu (save / export MusicXML / export ABC
+     / clear; import to come).
+  2. ✅ *Gesture fix* — placement is now from the piano at the caret; the staff
+     is view + select only, so pan/zoom can never drop a stray note.
+  3. ⏳ *Drag placed notes* (G3) — needs a drag-move hook (partitura-side or an
+     app-side custom canvas).
+  4. ⏳ *Select ranges + move/copy/cut/paste* (G3) — single-select + edit works
+     now (select → value/accidental/▲▼/delete); ranges/clipboard next.
+  5. ◐ *Both clefs / grand staff* — auto-flip removed; clef is now a manual
+     treble/bass control (no surprise flip). True simultaneous **grand staff**
+     with multiline is not in the public renderer yet → G3+ (needs partitura
+     work; `GrandStaffView` is single-system only).
+  6. ✅ *Multiline* — canvas is now `MultiSystemView`; the score wraps into
+     systems and scrolls vertically.
 - **G3 — Gestures & views (all platforms)**: mouse hover-preview of the landing
   note; drag a note on the staff to re-pitch (mouse + touch); drag-select /
   long-press range-select; page vs continuous toggle; zoom control (pinch +
@@ -153,4 +170,7 @@ model to the local partitura — build multi-instrument on the public
 `StaffSystem`/multi-`Score` layout, or port the model to public partitura first
 (applies to **G6**). See memory `partitura-public-vs-private-ci`.
 
-## Status: P0 ✅ · P1 ✅ · P2a ✅ · G1 ✅ · G2 (palettes + inspector) next.
+## Status: P0 ✅ · P1 ✅ · P2a ✅ · G1 ✅ · G2 ✅ (slim chrome · one settings
+row · ⋮ menu · multiline `MultiSystemView` canvas · piano placement · manual
+clef) · G3 next (drag-to-move · range select + copy/paste · grand staff ·
+palettes/inspector).

@@ -44,10 +44,16 @@ class EditorElement {
 
 /// An undo/redo snapshot of the document's mutable state.
 class _Snapshot {
-  const _Snapshot(this.elements, this.timeSignature, this.keySignature);
+  const _Snapshot(
+    this.elements,
+    this.timeSignature,
+    this.keySignature,
+    this.clef,
+  );
   final List<EditorElement> elements;
   final TimeSignature timeSignature;
   final KeySignature keySignature;
+  final Clef clef;
 }
 
 /// The editable Workshop document: an ordered element stream plus the
@@ -56,11 +62,15 @@ class ScoreDocument {
   ScoreDocument({
     this.timeSignature = TimeSignature.fourFour,
     this.keySignature = const KeySignature(0),
+    this.clef = Clef.treble,
   });
 
   final List<EditorElement> _elements = [];
   TimeSignature timeSignature;
   KeySignature keySignature;
+
+  /// The staff clef — chosen by the user; no automatic mid-score flipping.
+  Clef clef;
 
   String? _selectedId;
   var _nextId = 0;
@@ -87,18 +97,12 @@ class ScoreDocument {
   bool get canUndo => _undo.isNotEmpty;
   bool get canRedo => _redo.isNotEmpty;
 
-  /// Show low material (a cello's low C) in the bass clef instead of a tower of
-  /// ledger lines under a treble staff.
-  Clef get clef => _elements.any((e) => !e.isRest && e.pitch!.midiNumber < 55)
-      ? Clef.bass
-      : Clef.treble;
-
   String _newId() => 'w${_nextId++}';
 
   // ---- history -----------------------------------------------------------
 
   void _snapshot() {
-    _undo.add(_Snapshot(List.of(_elements), timeSignature, keySignature));
+    _undo.add(_Snapshot(List.of(_elements), timeSignature, keySignature, clef));
     _redo.clear();
   }
 
@@ -108,18 +112,19 @@ class ScoreDocument {
       ..addAll(s.elements);
     timeSignature = s.timeSignature;
     keySignature = s.keySignature;
+    clef = s.clef;
     if (!_elements.any((e) => e.id == _selectedId)) _selectedId = null;
   }
 
   void undo() {
     if (_undo.isEmpty) return;
-    _redo.add(_Snapshot(List.of(_elements), timeSignature, keySignature));
+    _redo.add(_Snapshot(List.of(_elements), timeSignature, keySignature, clef));
     _restore(_undo.removeLast());
   }
 
   void redo() {
     if (_redo.isEmpty) return;
-    _undo.add(_Snapshot(List.of(_elements), timeSignature, keySignature));
+    _undo.add(_Snapshot(List.of(_elements), timeSignature, keySignature, clef));
     _restore(_redo.removeLast());
   }
 
@@ -238,6 +243,12 @@ class ScoreDocument {
     if (value == keySignature) return;
     _snapshot();
     keySignature = value;
+  }
+
+  void setClef(Clef value) {
+    if (value == clef) return;
+    _snapshot();
+    clef = value;
   }
 
   /// Toggle selection of [id] (tapping the selected element clears it).
