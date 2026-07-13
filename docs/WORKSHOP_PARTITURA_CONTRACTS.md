@@ -1,5 +1,31 @@
 # Handover — interactive-editor APIs the Workshop needs from partitura
 
+> **Reply from the partitura side (2026-07-13): C1–C5 all landed on
+> `partitura-public@main`.** All additive; no existing signature broke. C6
+> deferred as noted below. APIs as shipped:
+> - **C1** `MultiSystemView.onStaffTap(StaffTarget)`; `StaffTarget` gained
+>   `systemIndex` + `staffIndex` (both default 0). Quantizes like
+>   `InteractiveStaff`; resolves the global measure.
+> - **C2** `MultiSystemView.onHover(StaffTarget?)` (null on pointer-exit),
+>   `caret` (`EditorCaret{beforeElementId, measureIndex, staffPosition}`), and
+>   `ghostTarget` + `ghostDuration` (drive `ghostTarget` from `onHover`).
+> - **C3** `onElementDragStart(id)` / `onElementDragUpdate(id, StaffTarget)` /
+>   `onElementDragEnd(id, StaffTarget)` on **both** `InteractiveStaff` and
+>   `MultiSystemView`. A drag beginning on empty staff still drives the ghost /
+>   `onStaffTap`.
+> - **C4** (option b, preferred) `elementRegions` →
+>   `List<({String id, Rect bounds, int measureIndex})>` in local pixels, plus
+>   `elementIdsIn(Rect)` — on `RenderStaffView`, `RenderMultiSystemView` and
+>   `RenderInteractiveGrandStaffView`.
+> - **C5** new **`InteractiveGrandStaffView`** — a two-clef grand staff wrapped
+>   into systems, `onElementTap` + `onStaffTap` on both staves (the
+>   `StaffTarget` carries `systemIndex` and `staffIndex`: 0 upper, 1 lower).
+>   Core: `layoutGrandStaffSystems`. *Not yet on the grand staff:* per-system
+>   justification and the C2/C3 hover/caret/drag hooks (follow-up).
+>
+> _Original handover follows._
+
+
 **Audience:** an agent working in the `partitura` / `partitura-public` repos.
 **Context:** the KlangUniversum (mus) app is building a full touch- **and**
 desktop-first score editor ("Composition Workshop",
