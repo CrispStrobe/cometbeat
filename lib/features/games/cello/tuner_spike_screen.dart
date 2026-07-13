@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:klang_universum/core/audio/microphone_pitch_service.dart';
 import 'package:klang_universum/core/audio/pitch_analysis.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
+import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 
 /// Instruments with a fixed set of open strings the tuner can guide you
@@ -163,8 +164,8 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
     final labelMidi = _targetMidi ?? (r.hasPitch ? _adjMidi(r) : -1);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l.gameTuner),
+      appBar: GameAppBar(
+        title: l.gameTuner,
         actions: [
           PopupMenuButton<double>(
             icon: const Icon(Icons.tune),

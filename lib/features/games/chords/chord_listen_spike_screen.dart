@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:klang_universum/core/audio/chroma_analysis.dart';
 import 'package:klang_universum/core/audio/microphone_pitch_service.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
+import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 
 /// A chord candidate named in the learner's convention, e.g. "Am", "G7", or
@@ -96,7 +97,7 @@ class _ChordListenSpikeScreenState extends State<ChordListenSpikeScreen> {
     final best = r.best;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.gameChordListener)),
+      appBar: GameAppBar(title: l.gameChordListener),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),

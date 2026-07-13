@@ -30,6 +30,7 @@ import 'package:klang_universum/core/services/settings_service.dart';
 import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:klang_universum/core/tuning.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
+import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/features/games/widgets/game_widgets.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:klang_universum/shared/midi_pitch.dart';
@@ -303,8 +304,8 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
             : _latest.nearestMidi == active.note.midi);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
+      appBar: GameAppBar(
+        title: widget.title,
         actions: [
           if (!_finished)
             PopupMenuButton<double>(

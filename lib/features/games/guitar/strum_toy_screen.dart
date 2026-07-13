@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:klang_universum/core/services/audio_service.dart';
 import 'package:klang_universum/features/games/note_reading/note_colors.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
+import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:partitura/partitura.dart';
 import 'package:provider/provider.dart';
@@ -143,7 +144,7 @@ class _StrumToyScreenState extends State<StrumToyScreen>
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.gameStrumToy)),
+      appBar: GameAppBar(title: l10n.gameStrumToy),
       body: SafeArea(
         child: Focus(
           autofocus: true,

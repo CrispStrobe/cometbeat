@@ -14,6 +14,7 @@ import 'package:klang_universum/core/audio/pitch_analysis.dart';
 import 'package:klang_universum/core/services/audio_service.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
 import 'package:klang_universum/features/games/songs/user_songs_service.dart';
+import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:klang_universum/shared/midi_pitch.dart';
 import 'package:partitura/partitura.dart'
@@ -200,7 +201,7 @@ class _FreeSingScreenState extends State<FreeSingScreen> {
     final captured = _recorder.notes.length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.gameFreeSing)),
+      appBar: GameAppBar(title: l.gameFreeSing),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),

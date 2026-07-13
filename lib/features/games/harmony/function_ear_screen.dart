@@ -17,6 +17,7 @@ import 'package:flutter/material.dart' hide Step, Key;
 import 'package:klang_universum/core/services/audio_service.dart';
 import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
+import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/features/games/widgets/game_widgets.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:partitura/partitura.dart';
@@ -145,8 +146,8 @@ class _FunctionEarScreenState extends State<FunctionEarScreen>
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isReview ? l10n.reviewTitle : l10n.gameFunctionEar),
+      appBar: GameAppBar(
+        title: _isReview ? l10n.reviewTitle : l10n.gameFunctionEar,
       ),
       body: SafeArea(
         child: finished
