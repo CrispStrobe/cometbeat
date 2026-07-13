@@ -25,13 +25,18 @@ and push to origin/main** before/after touching shared files. Format:
   prompt; `showMascot:false` falls back for tight layouts (`read_voice` opts
   out). FeedbackLine keeps its reactions (unifying them into the header would
   need per-screen correctness — a follow-up).
-  **#2 `GameAppBar` roll-out** (`a04498f`) — converted the **57** screens with
-  the simple `AppBar(title: Text(x))` form to `GameAppBar`, so the **sound
-  toggle is now in every such game's bar**. Custom-app-bar (21) + songs-infra
-  (7) screens left as-is; fixed one over-broad test finder (`new_games_test`
-  measure filler → count `MusicGlyph`, not `InkWell`). **Section now clear** bar
-  the documented follow-ups (broader GameAppBar coverage of the custom bars; a
-  unified single reacting mascot).
+  **#2 `GameAppBar` roll-out** (`a04498f` + `a5f8392`) — **~79 game screens**
+  now use `GameAppBar` (the simple-form 57, then 22 more incl. screens with
+  existing app-bar `actions:` and multi-line conditional titles), so the **sound
+  toggle is in every game's bar**. Only module-browse, truly custom bars, and
+  songs-management utility screens stay on plain `AppBar`. Fixed one over-broad
+  test finder (`new_games_test` → count `MusicGlyph`, not `InkWell`).
+  **#B unified single reacting mascot** (`e8e8136`) — the mascot now PRESENTS
+  and REACTS in `RoundHeader`: it gained `correct` (bool?) driving
+  `MascotPrompt`'s mood, and `FeedbackLine.showMascot` now defaults **false**
+  (text-only feedback, no duplicate mascot). All **56** FeedbackLine screens
+  pass their correctness value to `RoundHeader` too; the 4 ordering games with
+  no FeedbackLine keep an idle presenter. **Learnability & UX section: complete.**
   ✅ FYI all agents: the earlier `../partitura-public` `suppressIds` WIP that
   broke local mus compiles is now **landed** (partitura `74fa972`, incl.
   `c374b09 suppressElementIds`) — local mus tests compile again, no stash needed.
