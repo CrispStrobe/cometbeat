@@ -272,6 +272,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopLyricHint => 'Silbe…';
 
   @override
+  String get workshopLyricVerse => 'Strophe';
+
+  @override
   String get workshopShortcuts => 'Tastenkürzel';
 
   @override

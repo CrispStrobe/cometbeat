@@ -318,6 +318,29 @@ void main() {
       expect(d.lyricOf(id), 'la');
     });
 
+    test('verses are independent and both render', () {
+      final d = threeNotes();
+      final id = d.elements.first.id;
+      d.setLyricFor(id, 'first', verse: 1);
+      d.setLyricFor(id, 'second', verse: 2);
+      expect(d.lyricOf(id, verse: 1), 'first');
+      expect(d.lyricOf(id, verse: 2), 'second');
+      expect(d.maxVerse, 2);
+      final rendered = d.buildScore().lyrics.where((l) => l.elementId == id);
+      expect(rendered.map((l) => l.verse).toSet(), {1, 2});
+    });
+
+    test('clearing verse 2 leaves verse 1 intact', () {
+      final d = threeNotes();
+      final id = d.elements.first.id;
+      d.setLyricFor(id, 'a', verse: 1);
+      d.setLyricFor(id, 'b', verse: 2);
+      d.setLyricFor(id, '', verse: 2);
+      expect(d.lyricOf(id, verse: 1), 'a');
+      expect(d.lyricOf(id, verse: 2), isNull);
+      expect(d.maxVerse, 1);
+    });
+
     test('a lyric cannot attach to a rest', () {
       final d = ScoreDocument();
       final id = d.insertRest(_q);
@@ -349,6 +372,22 @@ void main() {
       final withLyric =
           reloaded.elements.where((e) => reloaded.lyricOf(e.id) == 'ah');
       expect(withLyric.length, 1);
+    });
+  });
+
+  group('caret', () {
+    test('sits before the element after the selection', () {
+      final d = ScoreDocument();
+      d.insertNote(_p(Step.c), _q);
+      d.insertNote(_p(Step.d), _q);
+      d.insertNote(_p(Step.e), _q); // e selected (last) → caret at end
+      expect(d.caretBeforeId, isNull);
+      d.selectIndex(0); // select c → caret before d
+      expect(d.caretBeforeId, d.elements[1].id);
+    });
+
+    test('is null on an empty document', () {
+      expect(ScoreDocument().caretBeforeId, isNull);
     });
   });
 

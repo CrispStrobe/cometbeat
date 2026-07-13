@@ -164,6 +164,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   bool _chordMode = false; // placed pitches stack onto the selected note
   StaffTarget? _hover; // where a click/tap would land (desktop hover preview)
   String? _dragId; // the note being dragged (hidden so its ghost stands in)
+  int _verse = 1; // which lyric verse the inline field edits
 
   // Start the sweepable piano scrolled to around C3 (24 = C1, 7 white/octave).
   final _pianoScroll =
@@ -555,16 +556,41 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     );
   }
 
-  /// An inline lyric field — shown when a single note is selected. Keyed by the
-  /// note id so it resets to that note's syllable as the selection moves.
+  /// An inline lyric field — shown when a single note is selected. A small verse
+  /// selector precedes it. The field is keyed by (note id, verse) so it resets
+  /// to that note+verse's syllable as either changes.
   Widget? _lyricField(AppLocalizations l10n) {
     final e = _doc.selected;
     if (e == null || e.isRest || _doc.selectedIds.length != 1) return null;
-    return _LyricField(
-      key: ValueKey('lyric-${e.id}'),
-      initial: _doc.lyricOf(e.id) ?? '',
-      hint: l10n.workshopLyricHint,
-      onCommit: (t) => setState(() => _doc.setLyricFor(e.id, t)),
+    // Offer every existing verse plus the next empty one (cap at a sane max).
+    final verses = [
+      for (var v = 1; v <= (_doc.maxVerse + 1).clamp(1, 8); v++) v,
+    ];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Tooltip(
+          message: l10n.workshopLyricVerse,
+          child: DropdownButton<int>(
+            value: _verse.clamp(1, verses.last),
+            isDense: true,
+            underline: const SizedBox.shrink(),
+            items: [
+              for (final v in verses)
+                DropdownMenuItem(value: v, child: Text('$v')),
+            ],
+            onChanged: (v) => setState(() => _verse = v ?? 1),
+          ),
+        ),
+        const SizedBox(width: 4),
+        _LyricField(
+          key: ValueKey('lyric-${e.id}-v$_verse'),
+          initial: _doc.lyricOf(e.id, verse: _verse) ?? '',
+          hint: l10n.workshopLyricHint,
+          onCommit: (t) =>
+              setState(() => _doc.setLyricFor(e.id, t, verse: _verse)),
+        ),
+      ],
     );
   }
 
@@ -711,6 +737,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       for (final id in selectedIds) id: Colors.amber,
       if (_dragId != null) _dragId!: canvasBg,
     };
+    // A visible insertion caret before the element the next note would precede.
+    final caretId = _doc.caretBeforeId;
+    final caret =
+        caretId != null ? EditorCaret(beforeElementId: caretId) : null;
 
     return PopScope(
       // When there's content, intercept the back gesture to ask keep/discard/save.
@@ -865,6 +895,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                 onHover: (t) => setState(() => _hover = t),
                                 ghostTarget: _hover,
                                 ghostDuration: _ghostDuration,
+                                caret: caret,
                                 onElementDragStart: (id) =>
                                     setState(() => _dragId = id),
                                 onElementDragUpdate: (id, t) =>
@@ -881,6 +912,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                 onHover: (t) => setState(() => _hover = t),
                                 ghostTarget: _hover,
                                 ghostDuration: _ghostDuration,
+                                caret: caret,
                                 onElementDragStart: (id) =>
                                     setState(() => _dragId = id),
                                 onElementDragUpdate: (id, t) =>

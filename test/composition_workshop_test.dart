@@ -228,6 +228,14 @@ void main() {
     expect(editor.slurCount, 1);
   });
 
+  testWidgets('the lyric field carries a verse selector', (tester) async {
+    await pump(tester);
+    await tester.tap(_pianoKey()); // one note selected
+    await tester.pump();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    expect(find.byTooltip(l10n.workshopLyricVerse), findsOneWidget);
+  });
+
   testWidgets('a crescendo over a two-note range records a hairpin',
       (tester) async {
     await pump(tester);

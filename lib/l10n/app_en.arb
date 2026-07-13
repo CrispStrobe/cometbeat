@@ -112,6 +112,7 @@
   "workshopPickupNone": "No pickup",
   "workshopLyric": "Lyric",
   "workshopLyricHint": "Syllable…",
+  "workshopLyricVerse": "Verse",
   "workshopShortcuts": "Keyboard shortcuts",
   "workshopShortcutPlaceNote": "Place a note (its pitch)",
   "workshopShortcutNoteValue": "Note value (whole … sixteenth)",

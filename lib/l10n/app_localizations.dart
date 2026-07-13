@@ -566,6 +566,12 @@ abstract class AppLocalizations {
   /// **'Syllable…'**
   String get workshopLyricHint;
 
+  /// No description provided for @workshopLyricVerse.
+  ///
+  /// In en, this message translates to:
+  /// **'Verse'**
+  String get workshopLyricVerse;
+
   /// No description provided for @workshopShortcuts.
   ///
   /// In en, this message translates to:

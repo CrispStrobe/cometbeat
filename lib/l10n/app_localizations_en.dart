@@ -272,6 +272,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopLyricHint => 'Syllable…';
 
   @override
+  String get workshopLyricVerse => 'Verse';
+
+  @override
   String get workshopShortcuts => 'Keyboard shortcuts';
 
   @override

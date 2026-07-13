@@ -152,11 +152,12 @@ class _Snapshot {
   final KeySignature keySignature;
   final Clef clef;
 
-  /// Phrase slurs / hairpins (start→end note ids) and per-note lyric syllables —
-  /// spans/attachments that live alongside the element stream, keyed by id.
+  /// Phrase slurs / hairpins (start→end note ids) and per-note lyric syllables
+  /// (id → verse → syllable) — spans/attachments that live alongside the
+  /// element stream, keyed by id.
   final List<Slur> slurs;
   final List<Hairpin> hairpins;
-  final Map<String, String> lyrics;
+  final Map<String, Map<int, String>> lyrics;
 
   /// The anacrusis length (null = the piece starts on beat 1).
   final NoteDuration? pickup;
@@ -191,7 +192,9 @@ class ScoreDocument {
   // syllables. All attach to element ids, so structural edits prune danglers.
   final List<Slur> _slurs = [];
   final List<Hairpin> _hairpins = [];
-  final Map<String, String> _lyrics = {};
+
+  // Per-note lyric syllables: element id → verse number (1-based) → syllable.
+  final Map<String, Map<int, String>> _lyrics = {};
 
   /// The anacrusis: when set, the first bar holds only this much music before
   /// the downbeat (the piece "starts before beat 1"). Null = no pickup.
@@ -238,8 +241,20 @@ class ScoreDocument {
   /// The phrase slurs currently on the score.
   List<Slur> get slurs => List.unmodifiable(_slurs);
 
-  /// The verse-1 lyric syllable under element [id] (null = none).
-  String? lyricOf(String id) => _lyrics[id];
+  /// The lyric syllable under element [id] for [verse] (null = none).
+  String? lyricOf(String id, {int verse = 1}) => _lyrics[id]?[verse];
+
+  /// The highest verse number carrying any lyric (0 = none). Lets the UI offer
+  /// the next empty verse.
+  int get maxVerse {
+    var max = 0;
+    for (final byVerse in _lyrics.values) {
+      for (final v in byVerse.keys) {
+        if (v > max) max = v;
+      }
+    }
+    return max;
+  }
 
   /// A slur/hairpin needs at least two selected notes to span.
   bool get canSlur => _selectedNoteIndices.length >= 2;
@@ -280,7 +295,7 @@ class ScoreDocument {
         clef,
         List.of(_slurs),
         List.of(_hairpins),
-        Map.of(_lyrics),
+        {for (final e in _lyrics.entries) e.key: Map.of(e.value)},
         pickup,
       );
 
@@ -303,9 +318,10 @@ class ScoreDocument {
     _hairpins
       ..clear()
       ..addAll(s.hairpins);
-    _lyrics
-      ..clear()
-      ..addAll(s.lyrics);
+    _lyrics.clear();
+    for (final e in s.lyrics.entries) {
+      _lyrics[e.key] = Map.of(e.value);
+    }
     pickup = s.pickup;
     _invalidate();
     // Keep the selection valid against the restored length.
@@ -378,6 +394,14 @@ class ScoreDocument {
 
   /// Insert position: just after the selection, or at the end.
   int _caretIndex() => hasSelection ? _hi + 1 : _elements.length;
+
+  /// The id the insertion caret sits *before* (the element that would follow a
+  /// newly placed note), or null when the caret is at the very end of the
+  /// stream. Drives the visible editor caret.
+  String? get caretBeforeId {
+    final at = _caretIndex();
+    return at < _elements.length ? _elements[at].id : null;
+  }
 
   /// Insert a note at the caret and select it. Returns the new element's id.
   String insertNote(Pitch pitch, NoteDuration duration) {
@@ -514,18 +538,20 @@ class ScoreDocument {
     if (!wasSameType) _hairpins.add(Hairpin(start, end, type));
   }
 
-  /// Set (or clear, with empty/null) the verse-1 lyric syllable under note [id].
-  /// No-op on a rest or when unchanged (so it doesn't clutter undo). Undoable.
-  void setLyricFor(String id, String? text) {
+  /// Set (or clear, with empty/null) the lyric syllable under note [id] for
+  /// [verse]. No-op on a rest or when unchanged (so it doesn't clutter undo).
+  /// Undoable.
+  void setLyricFor(String id, String? text, {int verse = 1}) {
     final i = _indexOf(id);
     if (i < 0 || _elements[i].isRest) return;
     final t = (text ?? '').trim();
-    if ((_lyrics[id] ?? '') == t) return;
+    if ((_lyrics[id]?[verse] ?? '') == t) return;
     _snapshot();
     if (t.isEmpty) {
-      _lyrics.remove(id);
+      _lyrics[id]?.remove(verse);
+      if (_lyrics[id]?.isEmpty ?? false) _lyrics.remove(id);
     } else {
-      _lyrics[id] = t;
+      (_lyrics[id] ??= {})[verse] = t;
     }
   }
 
@@ -630,8 +656,8 @@ class ScoreDocument {
     for (final c in _clipboard) {
       final e = c.withId(_newId());
       fresh.add(e);
-      final syllable = _lyrics[c.id];
-      if (syllable != null) _lyrics[e.id] = syllable;
+      final syllables = _lyrics[c.id];
+      if (syllables != null) _lyrics[e.id] = Map.of(syllables);
     }
     _elements.insertAll(at, fresh);
     _anchor = at;
@@ -689,8 +715,8 @@ class ScoreDocument {
     }
     for (final ly in score.lyrics) {
       final id = remap[ly.elementId];
-      if (id != null && ly.verse == 1 && ly.text.isNotEmpty) {
-        _lyrics[id] = ly.text;
+      if (id != null && ly.text.isNotEmpty) {
+        (_lyrics[id] ??= {})[ly.verse] = ly.text;
       }
     }
     clearSelection();
@@ -733,7 +759,9 @@ class ScoreDocument {
       hairpins: List.of(_hairpins),
       lyrics: [
         for (final e in _elements)
-          if (_lyrics[e.id] != null) Lyric(e.id, _lyrics[e.id]!),
+          if (_lyrics[e.id] != null)
+            for (final v in _lyrics[e.id]!.entries)
+              Lyric(e.id, v.value, verse: v.key),
       ],
     );
   }

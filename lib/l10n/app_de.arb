@@ -81,6 +81,7 @@
   "workshopPickupNone": "Kein Auftakt",
   "workshopLyric": "Liedtext",
   "workshopLyricHint": "Silbe…",
+  "workshopLyricVerse": "Strophe",
   "workshopShortcuts": "Tastenkürzel",
   "workshopShortcutPlaceNote": "Note setzen (ihre Tonhöhe)",
   "workshopShortcutNoteValue": "Notenwert (ganze … Sechzehntel)",
