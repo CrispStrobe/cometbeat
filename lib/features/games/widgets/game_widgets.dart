@@ -18,9 +18,10 @@ class RoundHeader extends StatelessWidget {
   final int totalRounds;
   final String prompt;
 
-  /// Whether the mascot presents the question beside the round counter. It sits
-  /// inline (no extra header height) and greets with a one-shot bob on each new
-  /// [prompt]. Screens that place their own prominent mascot can pass false.
+  /// Whether the mascot presents the question in a speech bubble (a
+  /// [MascotPrompt]). It greets with a one-shot bob on each new [prompt].
+  /// Screens with a very tight vertical layout (or their own prominent mascot)
+  /// pass false to fall back to the plain centered prompt.
   final bool showMascot;
 
   const RoundHeader({
@@ -36,31 +37,54 @@ class RoundHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (showMascot) ...[
-              // Keyed by prompt so a fresh mascot greets each new question.
-              // Kept small so the inline row never grows the header height
-              // enough to tip a tight game layout into an overflow.
-              NoteMascot(
-                key: ValueKey(prompt),
-                mood: NoteMascotMood.idle,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              l10n.roundOf(round, totalRounds),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ],
+        Text(
+          l10n.roundOf(round, totalRounds),
+          style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
-        Text(
-          prompt,
-          style: Theme.of(context).textTheme.titleLarge,
-          textAlign: TextAlign.center,
+        if (showMascot)
+          MascotPrompt(prompt: prompt)
+        else
+          Text(
+            prompt,
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+      ],
+    );
+  }
+}
+
+/// The mascot presenting the question: a [NoteMascot] beside a speech bubble
+/// reading the [prompt]. Keyed by prompt so a fresh mascot greets (one-shot
+/// bob) on each new question. Compact so it fits the shared round header.
+class MascotPrompt extends StatelessWidget {
+  const MascotPrompt({super.key, required this.prompt});
+
+  final String prompt;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        NoteMascot(key: ValueKey(prompt), mood: NoteMascotMood.idle, size: 26),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: scheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              prompt,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: scheme.onSecondaryContainer,
+                  ),
+            ),
+          ),
         ),
       ],
     );

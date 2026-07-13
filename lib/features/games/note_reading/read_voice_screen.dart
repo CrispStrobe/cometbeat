@@ -133,6 +133,9 @@ class _ReadVoiceScreenState extends State<ReadVoiceScreen>
                       round: round + 1,
                       totalRounds: totalRounds,
                       prompt: l10n.readVoicePrompt(_target.voice.label(l10n)),
+                      // Stave-heavy SATB layout is too tight for the mascot
+                      // speech bubble — fall back to the plain prompt.
+                      showMascot: false,
                     ),
                     const SizedBox(height: 12),
                     Expanded(
