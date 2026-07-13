@@ -100,4 +100,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Reading notes'), findsOneWidget);
   });
+
+  group('helpPrimerFor — module-primer fallback', () {
+    test('every registered game offers help (own primer or module fallback)',
+        () {
+      for (final game in kGamesById.values) {
+        expect(
+          helpPrimerFor(game),
+          isNotNull,
+          reason: '${game.id} should have a "?" primer',
+        );
+      }
+    });
+
+    test('a game with its own primer uses it', () {
+      final g = gameInfoById('note_reading_bass')!;
+      expect(helpPrimerFor(g), same(readingBassPrimer));
+    });
+
+    test('a game without its own primer falls back to its module primer', () {
+      final g = gameInfoById('rhythm_tap')!; // note_values, no own tutorial
+      expect(g.tutorial, isNull);
+      expect(helpPrimerFor(g), same(noteValuesPrimer));
+    });
+  });
 }

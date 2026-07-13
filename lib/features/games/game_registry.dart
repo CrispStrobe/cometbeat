@@ -103,6 +103,39 @@ final Map<String, GameInfo> kGamesById = {
 /// The [GameInfo] for [id], or null if no such game is registered.
 GameInfo? gameInfoById(String id) => kGamesById[id];
 
+/// The module key for each game id — the inverse of [kGamesByModule].
+final Map<String, String> kModuleByGameId = {
+  for (final entry in kGamesByModule.entries)
+    for (final game in entry.value) game.id: entry.key,
+};
+
+/// The general "how this corner works" primer for each module (its entry
+/// game's), keyed like [kGamesByModule]. Used as the **fallback** help for any
+/// game that has no primer of its own, so every game can offer a "?".
+const Map<String, Tutorial Function(AppLocalizations)> kModulePrimers = {
+  'note_values': noteValuesPrimer,
+  'note_reading': readingPrimer,
+  'measures': measuresPrimer,
+  'scales': scalesPrimer,
+  'chords': chordsPrimer,
+  'harmony': harmonyPrimer,
+  'composition': compositionPrimer,
+  'cello': celloPrimer,
+  'guitar': guitarPrimer,
+  'songs': songsPrimer,
+  'keyboard': keyboardPrimer,
+  'transpose': transposePrimer,
+  'drums': drumsPrimer,
+};
+
+/// The tutorial to open from a game's "?" help button: its own [GameInfo.tutorial]
+/// if it has one, else its module's general primer. The first-run **auto-show**
+/// deliberately uses only [GameInfo.tutorial] (curated to entry/★ games) so a
+/// module intro doesn't re-pop on every game — but the on-demand "?" should be
+/// available everywhere, which this fallback provides.
+Tutorial Function(AppLocalizations)? helpPrimerFor(GameInfo game) =>
+    game.tutorial ?? kModulePrimers[kModuleByGameId[game.id]];
+
 class GameInfo {
   /// Stable ID, used for star thresholds and analytics.
   final String id;

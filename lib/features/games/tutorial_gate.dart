@@ -45,13 +45,14 @@ class _TutorialGateState extends State<TutorialGate> {
 
   @override
   Widget build(BuildContext context) {
-    final tutorial = widget.game.tutorial;
     final child = widget.game.builder(context);
-    // No primer → transparent passthrough (unchanged).
-    if (tutorial == null) return child;
-    // A primer exists: overlay a small "?" so the child can reopen it any time,
-    // without every screen having to wire up its own button. No game screen
-    // uses a FloatingActionButton, so this never collides with one.
+    // The "?" opens the game's own primer, or its module's general one as a
+    // fallback, so every game offers help (auto-show above stays curated).
+    final help = helpPrimerFor(widget.game);
+    if (help == null) return child;
+    // Overlay a small "?" so the child can (re)open it any time, without every
+    // screen wiring up its own button. No game screen uses a
+    // FloatingActionButton, so this never collides with one.
     final l10n = AppLocalizations.of(context)!;
     return Stack(
       children: [
@@ -63,7 +64,7 @@ class _TutorialGateState extends State<TutorialGate> {
             child: FloatingActionButton.small(
               heroTag: null, // avoid hero collisions with the child
               tooltip: l10n.howToPlayTooltip,
-              onPressed: () => showTutorial(context, tutorial(l10n)),
+              onPressed: () => showTutorial(context, help(l10n)),
               child: const Icon(Icons.help_outline_rounded),
             ),
           ),
