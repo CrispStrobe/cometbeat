@@ -14,6 +14,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:klang_universum/core/audio/aec_engine.dart';
 import 'package:klang_universum/core/audio/chroma_analysis.dart';
 import 'package:klang_universum/core/audio/pitch_analysis.dart';
 import 'package:klang_universum/core/audio/streaming_analyzer.dart';
@@ -41,11 +42,22 @@ class MicrophonePitchService {
   MicrophonePitchService({
     PitchDetector? detector,
     this.chordDetector,
+    this.aec,
     this.sampleRate = 44100,
     double a4 = kDefaultA4,
   }) : detector = detector ?? PitchDetector(sampleRate: sampleRate, a4: a4);
 
   final PitchDetector detector;
+
+  /// Optional AEC Tier-3b full-duplex engine. When supplied, capture comes from
+  /// the engine's echo-cancelled [AecEngine.cleaned] stream instead of the raw
+  /// `record` mic, and the caller feeds the backing PCM via [pushReference] so
+  /// the speaker is cancelled out of the analysis. When null (the default, and
+  /// the case whenever the native plugin isn't available), everything below is
+  /// unchanged and capture uses `record` (AEC tiers 0/1). See docs/AEC_TIER3B.md.
+  final AecEngine? aec;
+
+  bool get usesAec => aec != null;
 
   /// Optional phase-2 chord recognizer. When set, each analysed window is also
   /// matched for chords and emitted on [chords]; when null there is no extra
@@ -61,7 +73,8 @@ class MicrophonePitchService {
   /// [start]; toggle before (re)starting. See docs on AEC tiers.
   bool echoCancel = false;
 
-  final AudioRecorder _recorder = AudioRecorder();
+  // Lazy so AEC mode (and its headless tests) never touch the `record` plugin.
+  late final AudioRecorder _recorder = AudioRecorder();
   final StreamController<PitchReading> _readings =
       StreamController<PitchReading>.broadcast();
   final StreamController<ChordReading> _chords =
@@ -94,6 +107,14 @@ class MicrophonePitchService {
   /// permission denial or unsupported platform.
   Future<void> start() async {
     if (_running) throw PitchCaptureException(PitchCaptureError.alreadyRunning);
+
+    // AEC Tier 3b: when a full-duplex engine is attached, capture comes from its
+    // echo-cancelled stream and the `record` plugin is bypassed entirely.
+    final engine = aec;
+    if (engine != null) {
+      await _startAec(engine);
+      return;
+    }
 
     final granted = await _recorder.hasPermission();
     if (!granted) {
@@ -132,6 +153,29 @@ class MicrophonePitchService {
     );
   }
 
+  /// Start capture from the AEC engine's cleaned near-end stream. The cleaned
+  /// PCM16 has the same shape as the `record` stream, so it flows through the
+  /// identical [_onChunk] → analyzer path.
+  Future<void> _startAec(AecEngine engine) async {
+    try {
+      await engine.start(sampleRate: sampleRate);
+    } catch (e) {
+      throw PitchCaptureException(PitchCaptureError.unknown, '$e');
+    }
+    _analyzer.reset();
+    _running = true;
+    _chunkSub = engine.cleaned.listen(
+      _onChunk,
+      onError: _readings.addError,
+      cancelOnError: false,
+    );
+  }
+
+  /// Feed backing PCM16 that is about to be played so the AEC can cancel it out
+  /// of the mic. No-op when no [aec] is attached (the caller can push
+  /// unconditionally). Mono, little-endian, at [sampleRate].
+  void pushReference(Uint8List pcm16) => aec?.reference(pcm16);
+
   void _onChunk(Uint8List bytes) {
     for (final frame in _analyzer.addPcm16(bytes)) {
       if (!_readings.isClosed) _readings.add(frame.pitch);
@@ -146,6 +190,11 @@ class MicrophonePitchService {
     await _chunkSub?.cancel();
     _chunkSub = null;
     _analyzer.clearBuffer();
+    final engine = aec;
+    if (engine != null) {
+      await engine.stop();
+      return; // AEC mode never touches the (lazy) recorder
+    }
     if (await _recorder.isRecording()) {
       await _recorder.stop();
     }
@@ -154,7 +203,7 @@ class MicrophonePitchService {
   /// Release the recorder and close the stream. The service is unusable after.
   Future<void> dispose() async {
     await stop();
-    await _recorder.dispose();
+    if (aec == null) await _recorder.dispose();
     await _readings.close();
     await _chords.close();
   }
