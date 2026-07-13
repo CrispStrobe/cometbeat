@@ -20,8 +20,10 @@ and push to origin/main** before/after touching shared files. Format:
   harness** (`useGameSurface`/`pumpGame`), and 6 games/features on partitura's new
   APIs — **Roman Numerals**, **Strong Beat**, **Chord Chart**, **Handwritten-notes
   (Petaluma) theme**, and all 3 **SATB reading games** (Read / Which / Hear the
-  Voice, shared `note_reading/satb_voicing.dart`). Open follow-ups: widen SATB
-  beyond C major; OMR big-swing. No file locks held.
+  Voice, shared `note_reading/satb_voicing.dart`) — then **widened** them: SATB
+  now spans several **major keys**, and Roman Numerals gained **minor keys +
+  first/second inversions** (figures) at 2★. Open follow-ups: 7th chords (needs a
+  partitura seventh-chord builder); OMR big-swing. No file locks held.
   ⚠️ **For all agents — notation theme migration (just landed):** every
   `PartituraTheme.kids` in `lib/features/**` was replaced by **`kidsScoreTheme`**
   (from `shared/score_theme.dart`), so the Settings "Handwritten notes" toggle
@@ -182,9 +184,11 @@ Fresh capabilities now resolvable in mus, ranked by fit:
   "ii°"). **Shipped: Roman Numerals** (Harmonik,
   [HISTORY.md](HISTORY.md#partitura-powered--shipped)) — read/hear a diatonic
   triad in a key, pick its numeral; the chord is built with `Triad` and named by
-  `romanNumeralOf(pitches, key)`. SRI `harmony.roman.<symbol>`; widens I/IV/V in C
-  → all diatonic triads → all major keys. Still open: **7ths & inversions**
-  (the analyser already returns `V6/5`, `vii°7` etc.) and **minor keys**.
+  `romanNumeralOf(pitches, key)`. SRI `harmony.roman.<symbol>`. Widens I/IV/V in
+  C → all diatonic triads → **all major + minor keys** (harmonic-minor V/vii°)
+  **and first/second inversions** (figures `V6`, `ii6/4`) at 2★. Still open:
+  **7th chords** (`V7`, `viiø7`) — needs a partitura seventh-chord builder (the
+  library has only `Triad`), a clean handoff.
 - [x] **Metrical-accent hierarchy** (`beatStrength(Fraction) → double`).
   **Shipped: Strong Beat?** (Takte,
   [HISTORY.md](HISTORY.md#partitura-powered--shipped)) — a measure with beat
@@ -204,8 +208,10 @@ Fresh capabilities now resolvable in mus, ranked by fit:
   shared `satb_voicing.dart`, [HISTORY.md](HISTORY.md#partitura-powered--shipped)):
   **Read the Voice** (name the note a voice sings), **Which Voice?** (highlight →
   pick S/A/T/B), **Hear the Voice** (aural: chord then one voice → which?). All 2
-  voices (S+A) → full SATB, C major. **Remaining:** widen beyond C major (keys /
-  inversions / 7ths). (`beam subdivision` / `appoggiatura` grace notes are
+  voices (S+A) → full SATB, and now **several major keys at 2★** (correctly
+  spelled, no voice crossing — unit-tested over 400 draws). Remaining: chorale
+  inversions/7ths (root position for now). (`beam subdivision` / `appoggiatura`
+  grace notes are
   separate rendering-quality wins, still open.)
 - [ ] **Import breadth**: MEI, Humdrum **kern/ekern**, LilyPond, GP3/4/5,
   compressed `.mxl` — plus an **OMR transformer** (image → score). **→

@@ -752,7 +752,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String romanNumeralPrompt(String key) {
-    return 'In $key major — which chord is this?';
+    return 'In $key — which chord is this?';
   }
 
   @override

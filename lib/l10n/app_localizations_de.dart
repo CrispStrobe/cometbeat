@@ -755,7 +755,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String romanNumeralPrompt(String key) {
-    return 'In $key-Dur — welcher Akkord ist das?';
+    return 'In $key — welcher Akkord ist das?';
   }
 
   @override

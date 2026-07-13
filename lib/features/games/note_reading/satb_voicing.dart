@@ -1,10 +1,11 @@
 // lib/features/games/note_reading/satb_voicing.dart
 //
 // Shared voicing + rendering for the SATB reading games (Read the Voice, Which
-// Voice?, and the ear variant). A random diatonic triad in C major is voiced
-// into 2 (Soprano + Alto) or 4 (SATB) parts and laid out on a one- or two-staff
-// system, using partitura's `Measure.voice2` (two voices per staff, stems
-// up/down) — no voice crossing, Soprano/Alto on treble, Tenor/Bass on bass.
+// Voice?, and the ear variant). A random diatonic triad (C major, or several
+// major keys when `wide`) is voiced into 2 (Soprano + Alto) or 4 (SATB) parts
+// and laid out on a one- or two-staff system, using partitura's `Measure.voice2`
+// (two voices per staff, stems up/down) — no voice crossing, Soprano/Alto on
+// treble, Tenor/Bass on bass.
 
 import 'dart:math';
 
@@ -46,16 +47,28 @@ class SatbPart {
   String get id => voice.id;
 }
 
-// Major-key diatonic triads by degree (C major): (root Step, quality). The
-// first three are the primary triads (used at the 2-voice level).
-const _degrees = <(Step, ChordQuality)>[
-  (Step.c, ChordQuality.major), // I
-  (Step.f, ChordQuality.major), // IV
-  (Step.g, ChordQuality.major), // V
-  (Step.d, ChordQuality.minor), // ii
-  (Step.e, ChordQuality.minor), // iii
-  (Step.a, ChordQuality.minor), // vi
-  (Step.b, ChordQuality.diminished), // vii°
+// Major-key diatonic triads by degree: (interval above the tonic, quality).
+// null interval = the tonic itself. The first three are the primary triads
+// (I / IV / V), used at the 2-voice level.
+const _degreeSpec = <(Interval?, ChordQuality)>[
+  (null, ChordQuality.major), // I
+  (Interval.perfectFourth, ChordQuality.major), // IV
+  (Interval.perfectFifth, ChordQuality.major), // V
+  (Interval.majorSecond, ChordQuality.minor), // ii
+  (Interval.majorThird, ChordQuality.minor), // iii
+  (Interval.majorSixth, ChordQuality.minor), // vi
+  (Interval.majorSeventh, ChordQuality.diminished), // vii°
+];
+
+/// Major keys used at the widened level (C plus a few near ones on the circle
+/// of fifths). Triads are spelled correctly per key via the [Triad] pitches.
+const _easyKeys = [Pitch(Step.c)];
+const _wideKeys = [
+  Pitch(Step.c),
+  Pitch(Step.g),
+  Pitch(Step.f),
+  Pitch(Step.d),
+  Pitch(Step.b, alter: -1), // B♭
 ];
 
 int _nextTone(int floor, Set<int> pcs) {
@@ -66,38 +79,40 @@ int _nextTone(int floor, Set<int> pcs) {
   return m;
 }
 
-// Pitch class → natural Step (C major only, so natural spellings are correct).
-const _naturalSteps = <int, Step>{
-  0: Step.c,
-  2: Step.d,
-  4: Step.e,
-  5: Step.f,
-  7: Step.g,
-  9: Step.a,
-  11: Step.b,
-};
+/// Voice a random diatonic triad into 2 (Soprano + Alto) or, when [satb], 4
+/// parts. [wide] draws from several major keys instead of just C. Bass sits in
+/// octave 3 and each upper voice is the next chord tone above, with Alto pushed
+/// to middle C so S/A land on the treble staff and T/B on the bass — no voice
+/// crossing. Accidentals (in non-C keys) are spelled correctly and drawn inline.
+List<SatbPart> voiceRandomChord(
+  Random random, {
+  required bool satb,
+  bool wide = false,
+}) {
+  final keys = wide ? _wideKeys : _easyKeys;
+  final tonic = keys[random.nextInt(keys.length)];
+  final (interval, quality) = _degreeSpec[random.nextInt(satb ? 7 : 3)];
+  final root = interval == null ? tonic : tonic.transposeBy(interval);
 
-Pitch _pitch(int midi) =>
-    Pitch(_naturalSteps[midi % 12]!, octave: midi ~/ 12 - 1);
+  // pitch class → correctly-spelled chord tone (from the triad).
+  final spelled = {
+    for (final p in Triad(root, quality).pitches) p.midiNumber % 12: p,
+  };
+  Pitch at(int midi) {
+    final p = spelled[midi % 12]!;
+    return Pitch(p.step, alter: p.alter, octave: midi ~/ 12 - 1);
+  }
 
-/// Voice a random C-major diatonic triad into 2 (Soprano + Alto) or, when
-/// [satb], 4 parts. Bass sits in octave 3 and each upper voice is the next
-/// chord tone above, with Alto pushed to middle C so S/A land on the treble
-/// staff and T/B on the bass staff — guaranteeing no voice crossing.
-List<SatbPart> voiceRandomChord(Random random, {required bool satb}) {
-  final (root, quality) = _degrees[random.nextInt(satb ? 7 : 3)];
-  final pcs =
-      Triad(Pitch(root), quality).pitches.map((p) => p.midiNumber % 12).toSet();
-  final rootPc = Pitch(root).midiNumber % 12;
-  final bass = 48 + rootPc;
+  final pcs = spelled.keys.toSet();
+  final bass = 48 + root.midiNumber % 12;
   final tenor = _nextTone(bass + 3, pcs);
   final alto = _nextTone(max(60, tenor + 1), pcs);
   final soprano = _nextTone(alto + 3, pcs);
   return [
-    SatbPart(SatbVoice.soprano, _pitch(soprano)),
-    SatbPart(SatbVoice.alto, _pitch(alto)),
-    if (satb) SatbPart(SatbVoice.tenor, _pitch(tenor)),
-    if (satb) SatbPart(SatbVoice.bass, _pitch(bass)),
+    SatbPart(SatbVoice.soprano, at(soprano)),
+    SatbPart(SatbVoice.alto, at(alto)),
+    if (satb) SatbPart(SatbVoice.tenor, at(tenor)),
+    if (satb) SatbPart(SatbVoice.bass, at(bass)),
   ];
 }
 

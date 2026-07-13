@@ -349,7 +349,7 @@
   },
   "gameRomanNumeral": "Roman Numerals",
   "gameRomanNumeralSubtitle": "Which scale-degree chord is this? (I, IV, V …)",
-  "romanNumeralPrompt": "In {key} major — which chord is this?",
+  "romanNumeralPrompt": "In {key} — which chord is this?",
   "@romanNumeralPrompt": {
     "placeholders": {
       "key": {

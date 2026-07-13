@@ -39,8 +39,54 @@ RomanNumeralTester _game(WidgetTester tester) =>
     tester.state<State<RomanNumeralScreen>>(find.byType(RomanNumeralScreen))
         as RomanNumeralTester;
 
+// Same tree but with a ProgressService pre-seeded to a mastery level, so the
+// game runs its widened pool (minor keys + inversions).
+Widget _wrapMastered(SriService sri, ProgressService progress) => MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SettingsService()),
+        ChangeNotifierProvider<SriService>.value(value: sri),
+        Provider<AudioService>(create: (_) => AudioService()),
+        ChangeNotifierProvider<ProgressService>.value(value: progress),
+      ],
+      child: const MaterialApp(
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: [Locale('en'), Locale('de')],
+        home: RomanNumeralScreen(),
+      ),
+    );
+
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('at mastery, minor keys + inversions stay answerable',
+      (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    final progress = ProgressService();
+    progress.recordResult('roman_numeral', score: 900, stars: 3); // wide pool
+    await useGameSurface(tester);
+    await tester.pumpWidget(_wrapMastered(sri, progress));
+    await tester.pump();
+
+    // Every round's target — which may now be a minor numeral or carry a
+    // figure (V6, ii6/4) — is present as a button and clears the round.
+    for (var i = 0; i < 10 && !_game(tester).isFinished; i++) {
+      expect(
+        find.widgetWithText(FilledButton, _game(tester).targetSymbol),
+        findsWidgets,
+      );
+      await tester.tap(
+        find.widgetWithText(FilledButton, _game(tester).targetSymbol).first,
+      );
+      await tester.pump(const Duration(milliseconds: 900));
+    }
+    expect(_game(tester).isFinished, isTrue);
+    await tester.pump(const Duration(seconds: 1));
+  });
 
   testWidgets('offers four numeral choices incl. the target and a replay',
       (tester) async {

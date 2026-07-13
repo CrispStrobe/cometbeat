@@ -232,7 +232,7 @@
   "majorChordName": "{name}-Dur",
   "gameRomanNumeral": "Stufen-Quiz",
   "gameRomanNumeralSubtitle": "Welche Akkordstufe ist das? (I, IV, V …)",
-  "romanNumeralPrompt": "In {key}-Dur — welcher Akkord ist das?",
+  "romanNumeralPrompt": "In {key} — welcher Akkord ist das?",
   "romanNumeralReplay": "Akkord nochmal hören",
   "gameHarmonyQuiz": "Funktions-Quiz",
   "gameHarmonyQuizSubtitle": "Tonika, Subdominante oder Dominante?",

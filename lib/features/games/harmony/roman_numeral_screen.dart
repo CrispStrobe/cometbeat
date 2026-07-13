@@ -50,16 +50,55 @@ class _RomanNumeralScreenState extends State<RomanNumeralScreen>
   final _random = Random();
 
   // Widen with mastery, like the other quizzes.
-  static const _easyKeys = [Step.c];
-  static const _midKeys = [Step.c, Step.f, Step.g];
-  static const _allKeys = [Step.c, Step.g, Step.d, Step.f, Step.b, Step.a];
+  static const _easyKeys = [Key.major(Pitch(Step.c))];
+  static const _midKeys = [
+    Key.major(Pitch(Step.c)),
+    Key.major(Pitch(Step.f)),
+    Key.major(Pitch(Step.g)),
+  ];
+  // Natural-tonic keys only, so the key name renders without a missing
+  // accidental (noteNameFor spells the letter, not the tonic's alteration).
+  static const _majorKeys = [
+    Key.major(Pitch(Step.c)),
+    Key.major(Pitch(Step.g)),
+    Key.major(Pitch(Step.d)),
+    Key.major(Pitch(Step.f)),
+    Key.major(Pitch(Step.a)),
+  ];
+  static const _minorKeys = [
+    Key.minor(Pitch(Step.a)),
+    Key.minor(Pitch(Step.e)),
+    Key.minor(Pitch(Step.d)),
+  ];
   static const _easyDegrees = [1, 4, 5]; // the primary triads (T/S/D)
   static const _allDegrees = [1, 2, 3, 4, 5, 6, 7];
+
+  // (interval above the tonic, quality) per scale degree. Minor uses the
+  // harmonic-minor dominant (V) and leading-tone vii°.
+  static const _majorSpec = <int, (Interval?, ChordQuality)>{
+    1: (null, ChordQuality.major),
+    2: (Interval.majorSecond, ChordQuality.minor),
+    3: (Interval.majorThird, ChordQuality.minor),
+    4: (Interval.perfectFourth, ChordQuality.major),
+    5: (Interval.perfectFifth, ChordQuality.major),
+    6: (Interval.majorSixth, ChordQuality.minor),
+    7: (Interval.majorSeventh, ChordQuality.diminished),
+  };
+  static const _minorSpec = <int, (Interval?, ChordQuality)>{
+    1: (null, ChordQuality.minor),
+    2: (Interval.majorSecond, ChordQuality.diminished),
+    3: (Interval.minorThird, ChordQuality.major),
+    4: (Interval.perfectFourth, ChordQuality.minor),
+    5: (Interval.perfectFifth, ChordQuality.major),
+    6: (Interval.minorSixth, ChordQuality.major),
+    7: (Interval.majorSeventh, ChordQuality.diminished),
+  };
 
   int _stars = 0;
 
   late Key _key;
   late int _degree;
+  int _inversion = 0;
   late Triad _triad;
   late RomanNumeral _target;
   late List<String> _options; // Roman-numeral choices for this round
@@ -76,8 +115,9 @@ class _RomanNumeralScreenState extends State<RomanNumeralScreen>
   @override
   String get gameType => 'roman_numeral';
 
-  List<Step> get _keyPool => _stars >= 2
-      ? _allKeys
+  // At mastery (2★) the pool adds the far major keys AND the minor keys.
+  List<Key> get _keyPool => _stars >= 2
+      ? const [..._majorKeys, ..._minorKeys]
       : _stars >= 1
           ? _midKeys
           : _easyKeys;
@@ -99,22 +139,17 @@ class _RomanNumeralScreenState extends State<RomanNumeralScreen>
         ChordQuality.augmented => ChordType.augmented,
       };
 
-  /// The diatonic triad on [degree] of a major [key] (major-key qualities).
-  Triad _diatonicTriad(Key key, int degree) {
-    final t = key.tonic;
-    return switch (degree) {
-      1 => Triad(t, ChordQuality.major),
-      2 => Triad(t.transposeBy(Interval.majorSecond), ChordQuality.minor),
-      3 => Triad(t.transposeBy(Interval.majorThird), ChordQuality.minor),
-      4 => Triad(t.transposeBy(Interval.perfectFourth), ChordQuality.major),
-      5 => Triad(t.transposeBy(Interval.perfectFifth), ChordQuality.major),
-      6 => Triad(t.transposeBy(Interval.majorSixth), ChordQuality.minor),
-      _ => Triad(t.transposeBy(Interval.majorSeventh), ChordQuality.diminished),
-    };
+  /// The diatonic triad on [degree] of [key] (major or minor qualities), in the
+  /// given [inversion] (0 root position, 1 first, 2 second).
+  Triad _diatonicTriad(Key key, int degree, {int inversion = 0}) {
+    final (interval, quality) =
+        (key.isMajor ? _majorSpec : _minorSpec)[degree]!;
+    final root = interval == null ? key.tonic : key.tonic.transposeBy(interval);
+    return Triad(root, quality, inversion: inversion);
   }
 
   /// Let the library name the numeral (falls back to a direct build if the
-  /// analyser ever declines a chord).
+  /// analyser ever declines a chord). Root position — used for distractors.
   String _symbolFor(Key key, int degree) {
     final triad = _diatonicTriad(key, degree);
     return romanNumeralOf(triad.pitches, key)?.symbol ??
@@ -123,11 +158,15 @@ class _RomanNumeralScreenState extends State<RomanNumeralScreen>
 
   @override
   void prepareRound() {
-    _key = Key.major(Pitch(_keyPool[_random.nextInt(_keyPool.length)]));
+    _key = _keyPool[_random.nextInt(_keyPool.length)];
     _degree = _degreePool[_random.nextInt(_degreePool.length)];
-    _triad = _diatonicTriad(_key, _degree);
+    // At mastery, ~40% of chords are inverted (first or second), so the numeral
+    // carries a figured-bass figure (e.g. V6, ii6/4).
+    _inversion =
+        (_stars >= 2 && _random.nextInt(10) < 4) ? 1 + _random.nextInt(2) : 0;
+    _triad = _diatonicTriad(_key, _degree, inversion: _inversion);
     _target = romanNumeralOf(_triad.pitches, _key) ??
-        RomanNumeral(_degree, _chordType(_triad.quality), 0);
+        RomanNumeral(_degree, _chordType(_triad.quality), _inversion);
 
     // Options: the answer plus distractors drawn from the other diatonic
     // degrees of this key (unique symbols), four buttons total.
@@ -195,7 +234,8 @@ class _RomanNumeralScreenState extends State<RomanNumeralScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final keyName = noteNameFor(context, _key.tonic.step);
+    final keyName = '${noteNameFor(context, _key.tonic.step)} '
+        '${_key.isMajor ? l10n.majorLabel : l10n.minorLabel}';
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.gameRomanNumeral)),

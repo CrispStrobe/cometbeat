@@ -1415,7 +1415,7 @@ abstract class AppLocalizations {
   /// No description provided for @romanNumeralPrompt.
   ///
   /// In en, this message translates to:
-  /// **'In {key} major — which chord is this?'**
+  /// **'In {key} — which chord is this?'**
   String romanNumeralPrompt(String key);
 
   /// No description provided for @romanNumeralReplay.

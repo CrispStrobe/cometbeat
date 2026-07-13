@@ -76,7 +76,7 @@ class _ReadVoiceScreenState extends State<ReadVoiceScreen>
 
   @override
   void prepareRound() {
-    _parts = voiceRandomChord(_random, satb: _satb);
+    _parts = voiceRandomChord(_random, satb: _satb, wide: _stars >= 2);
     _target = _parts[_random.nextInt(_parts.length)];
 
     final distractors = [...Step.values]
