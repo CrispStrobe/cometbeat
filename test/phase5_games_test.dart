@@ -73,6 +73,11 @@ void main() {
   });
 
   testWidgets('melody echo shows three distinct melody cards', (tester) async {
+    // Three stacked melody staves overflow CI's 800×600 Linux surface, so the
+    // cards render off-screen and untappable (getElementPoint throws). Give room.
+    await tester.binding.setSurfaceSize(const Size(1400, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     await tester.pumpWidget(_wrap(const MelodyEchoScreen(), sri));
     await tester.pump();
 
