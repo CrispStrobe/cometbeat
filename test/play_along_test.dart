@@ -124,7 +124,7 @@ void main() {
   });
 
   test('slowing the tempo lengthens the chart but keeps the notes/hits', () {
-    final base = PlayAlongCharts.celloFirstPosition;
+    const base = PlayAlongCharts.celloFirstPosition;
     final slow = base.copyWith(bpm: (base.bpm * 0.5).round());
     expect(slow.notes, same(base.notes));
     expect(slow.totalMs, closeTo(base.totalMs * 2, base.totalMs * 0.02));
