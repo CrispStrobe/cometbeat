@@ -140,11 +140,13 @@ the mic grading the speaker. Two corrections shape the design:
   core of Speex MDF / WebRTC AEC3), reusing the FFT. Testable headlessly with a
   perfectly-aligned digital mix (ERLE assertion). Deployment still needs Tier 3b
   to feed it aligned ref+mic.
-- **Tier 3b — native full-duplex plugin (FUTURE).** One native audio engine that
-  owns playback+capture on a shared clock and runs a real AEC. This is the
-  production fix. Build host: **miniaudio** (public-domain/MIT-0) or **Oboe**
-  (Android, Apache-2.0) / **AVAudioEngine** (Apple). AEC: **SpeexDSP MDF** (BSD)
-  or **WebRTC AEC3** / `webrtc-audio-processing` (BSD). Days–weeks.
+- **Tier 3b — native full-duplex plugin (DESIGNED, not started in code).** One
+  native audio engine that owns playback+capture on a shared clock and runs a
+  real AEC. This is the production fix. Full architecture, Dart API, per-platform
+  build, CI-safety rules and verification plan: **[AEC_TIER3B.md](AEC_TIER3B.md)**.
+  Stack: **miniaudio** (MIT-0, full-duplex host) + **SpeexDSP** (BSD, the AEC).
+  Days–weeks; must be built in an isolated branch and kept out of the app's
+  pubspec until it compiles green on all 5 CI platforms.
 - **Tier 4 — neural (IF NEEDED).** `DTLN-aec` (MIT, TFLite, tiny, on-device) or
   `DeepFilterNet` (MIT/Apache). Watch: speech-trained nets may not preserve a
   sung/played note's *pitch*.
