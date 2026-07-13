@@ -22,8 +22,11 @@ and push to origin/main** before/after touching shared files. Format:
   (Petaluma) theme**, and all 3 **SATB reading games** (Read / Which / Hear the
   Voice, shared `note_reading/satb_voicing.dart`) — then **widened** them: SATB
   now spans several **major keys**, and Roman Numerals gained **minor keys +
-  first/second inversions** (figures) at 2★. Open follow-ups: 7th chords (needs a
-  partitura seventh-chord builder); OMR big-swing. No file locks held.
+  first/second inversions** (figures) at 2★. Checked OMR on partitura@main (v0.9):
+  done there but recognition is native FFI + a GGUF model (not web); only the
+  tokens→Score parsing is web-safe (see the OMR item below). **Now building a
+  batch of quick web-safe wins** (gamified sub-variants first) · touching
+  `game_registry`, `core/tuning`, ARBs, `features/games/**` · **in progress**.
   ⚠️ **For all agents — notation theme migration (just landed):** every
   `PartituraTheme.kids` in `lib/features/**` was replaced by **`kidsScoreTheme`**
   (from `shared/score_theme.dart`), so the Settings "Handwritten notes" toggle
@@ -214,10 +217,24 @@ Fresh capabilities now resolvable in mus, ranked by fit:
   grace notes are
   separate rendering-quality wins, still open.)
 - [ ] **Import breadth**: MEI, Humdrum **kern/ekern**, LilyPond, GP3/4/5,
-  compressed `.mxl` — plus an **OMR transformer** (image → score). **→
-  "Photograph your sheet music"** into the Song Book / play-along (big swing;
-  the OMR path needs the transformer wired for web). Extends the existing
-  MusicXML/ABC/ChordPro/MIDI import.
+  compressed `.mxl`. All parseable in `partitura_core` today → wire into the
+  Song Book import screen (web-safe, additive). Extends MusicXML/ABC/ChordPro/MIDI.
+- [ ] **OMR ("photograph your sheet music")** — checked partitura@main
+  (v0.9, 2026-07-13): OMR is **substantially built there**, but split by
+  platform, which gates how mus can use it:
+  - **Recognition (image → tokens)** = CrispEmbed **Sheet Music Transformer** in
+    `partitura_cli/crispembed_omr.dart`: `dart:ffi` + `dart:io` + native
+    `libcrispembed` + a **GGUF model**. **NOT web-compatible, not a mus dep,
+    needs a ~100 MB+ model artifact.**
+  - **Parsing (tokens → Score)** = `partitura_core/src/omr/` (bekern · semantic ·
+    lilynotes → Score/GrandStaff/StaffSystem). **Pure Dart, web-safe, already a
+    mus dependency** (0 ffi/io refs).
+  - So a client-side photo→score in the **deployed web app is not a quick win**.
+    Realistic paths: **(a)** web-safe **"import OMR tokens"** in the Song Book
+    (reuse the core parsers; cheap; niche without on-device recognition);
+    **(b)** a **native-only** photo flow (Android/iOS/desktop) on the AEC agent's
+    pattern (native plugin + web-safe conditional-export stub) + camera + the
+    GGUF model — a big swing; **(c)** server-side recognition (no infra yet).
 - [x] **Alternate SMuFL fonts** (Petaluma / Leland / Leipzig descriptors).
   **Shipped: "Handwritten notes" theme** (Settings toggle,
   [HISTORY.md](HISTORY.md#partitura-powered--shipped)) — renders all notation in
