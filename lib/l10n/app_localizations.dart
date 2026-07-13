@@ -2882,6 +2882,24 @@ abstract class AppLocalizations {
   /// **'Connect each symbol to its name!'**
   String get connectSymbolsPrompt;
 
+  /// No description provided for @gameConnectIntervals.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect the Steps'**
+  String get gameConnectIntervals;
+
+  /// No description provided for @gameConnectIntervalsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Count the note-names in each interval and match it to its number'**
+  String get gameConnectIntervalsSubtitle;
+
+  /// No description provided for @connectIntervalsPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'How far apart? Connect each interval to its number!'**
+  String get connectIntervalsPrompt;
+
   /// No description provided for @gameCommandCaller.
   ///
   /// In en, this message translates to:

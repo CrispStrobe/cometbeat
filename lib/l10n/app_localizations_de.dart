@@ -1566,6 +1566,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get connectSymbolsPrompt => 'Verbinde jedes Symbol mit seinem Namen!';
 
   @override
+  String get gameConnectIntervals => 'Schritte verbinden';
+
+  @override
+  String get gameConnectIntervalsSubtitle =>
+      'Zähle die Notennamen in jedem Intervall und verbinde es mit seiner Zahl';
+
+  @override
+  String get connectIntervalsPrompt =>
+      'Wie weit? Verbinde jedes Intervall mit seiner Zahl!';
+
+  @override
   String get gameCommandCaller => 'Der Dirigent';
 
   @override

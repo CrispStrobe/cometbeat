@@ -24,9 +24,11 @@ and push to origin/main** before/after touching shared files. Format:
   now spans several **major keys**, and Roman Numerals gained **minor keys +
   first/second inversions** (figures) at 2★. Checked OMR on partitura@main (v0.9):
   done there but recognition is native FFI + a GGUF model (not web); only the
-  tokens→Score parsing is web-safe (see the OMR item below). **Now building a
-  batch of quick web-safe wins** (gamified sub-variants first) · touching
-  `game_registry`, `core/tuning`, ARBs, `features/games/**` · **in progress**.
+  tokens→Score parsing is web-safe (see the OMR item below). **Building a batch of
+  quick web-safe wins** (gamified sub-variants) · touching `game_registry`,
+  `core/tuning`, ARBs, `features/games/**` · **in progress**. Shipped so far:
+  **Longest First** (note-value ordering), **In the Scale?** (C-major membership
+  swipe), **Connect the Steps** (interval↔number, 3rd Connect-the-Notes mode).
   ⚠️ **For all agents — notation theme migration (just landed):** every
   `PartituraTheme.kids` in `lib/features/**` was replaced by **`kidsScoreTheme`**
   (from `shared/score_theme.dart`), so the Settings "Handwritten notes" toggle
@@ -378,9 +380,13 @@ Remaining open sub-variants:
   — the ordering format on note values; tap longest→shortest, each plays its
   length). Still open: a melody-recall ear variant of the sequence format.
 - [ ] Further sort dimensions (major/minor, high/low, sharp/flat).
-- [ ] Swipe variants: in-the-scale?, major-or-minor-by-ear.
+- [~] Swipe variants: **shipped In the Scale?** (C-major membership swipe/tap
+  drill — natural = in, sharpened = out). Still open: major-or-minor-by-ear.
 - [ ] Falling-notes "catch the longest" (note-values) mode.
-- [ ] Connect an interval↔number column.
+- [x] Connect an interval↔number column: **shipped Connect the Steps** — a third
+  mode on the Connect the Notes board (`ConnectMode.intervals`): an interval on a
+  staff (two half-notes) ↔ its number; count the note-names. SRI
+  `intervals.size.*`; 6th/7th join at 2★.
 
 ### Toy-inspired mechanics (electronic-toy lineage)
 

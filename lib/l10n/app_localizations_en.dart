@@ -1559,6 +1559,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectSymbolsPrompt => 'Connect each symbol to its name!';
 
   @override
+  String get gameConnectIntervals => 'Connect the Steps';
+
+  @override
+  String get gameConnectIntervalsSubtitle =>
+      'Count the note-names in each interval and match it to its number';
+
+  @override
+  String get connectIntervalsPrompt =>
+      'How far apart? Connect each interval to its number!';
+
+  @override
   String get gameCommandCaller => 'Follow the Conductor';
 
   @override

@@ -97,4 +97,19 @@ void main() {
     expect(game.round, 1);
     expect(game.score, greaterThan(0));
   });
+
+  testWidgets('intervals mode: matching each interval to its number clears it',
+      (tester) async {
+    await tester.pumpWidget(_app(mode: ConnectMode.intervals));
+    final game = _game(tester);
+
+    for (var i = 0; i < ConnectLineScreen.pairs; i++) {
+      await _drag(tester, i, game.matchingRight(i));
+    }
+    expect(game.matchedCount, ConnectLineScreen.pairs);
+
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(game.round, 1);
+    expect(game.score, greaterThan(0));
+  });
 }

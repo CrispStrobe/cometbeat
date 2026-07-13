@@ -497,14 +497,14 @@ packages:
       path: "../partitura-public/packages/partitura"
       relative: true
     source: path
-    version: "0.4.0-dev.1"
+    version: "0.4.0"
   partitura_core:
     dependency: "direct overridden"
     description:
       path: "../partitura-public/packages/partitura_core"
       relative: true
     source: path
-    version: "0.4.0-dev.1"
+    version: "0.4.0"
   path:
     dependency: transitive
     description:

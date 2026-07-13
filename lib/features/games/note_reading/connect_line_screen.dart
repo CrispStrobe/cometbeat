@@ -8,9 +8,11 @@
 // (and plays the pitch, when there is one), a wrong drop buzzes and snaps back
 // (the app's no-fail loop). Match all four to clear the round.
 //
-// One screen, two modes (like the reading quiz serves several clefs):
-//   • notes   — pitch ↔ letter name        → SRI 'note_reading.treble.*'
-//   • symbols — note-value glyph ↔ its name → SRI 'note_values.symbol.*'
+// One screen, three modes (like the reading quiz serves several clefs):
+//   • notes     — pitch ↔ letter name         → SRI 'note_reading.treble.*'
+//   • symbols   — note-value glyph ↔ its name  → SRI 'note_values.symbol.*'
+//   • intervals — interval on a staff ↔ its number (count the note-names,
+//                 e.g. C→G spans 5) → SRI 'intervals.size.*'
 
 import 'dart:math';
 
@@ -31,7 +33,7 @@ import 'package:partitura/partitura.dart';
 import 'package:provider/provider.dart';
 
 /// What the two columns hold.
-enum ConnectMode { notes, symbols }
+enum ConnectMode { notes, symbols, intervals }
 
 /// One matchable item: a left visual, a (unique) right name, a match key, the
 /// colour of its wire, the pitch to sound on a correct link (if any), and the
@@ -123,6 +125,7 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
   @override
   String get progressId => switch (widget.mode) {
         ConnectMode.symbols => 'connect_symbols',
+        ConnectMode.intervals => 'connect_intervals',
         ConnectMode.notes =>
           widget.clef == Clef.bass ? 'connect_line_bass' : 'connect_line',
       };
@@ -139,8 +142,11 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
 
   @override
   void prepareRound() {
-    final items =
-        widget.mode == ConnectMode.symbols ? _symbolItems() : _noteItems();
+    final items = switch (widget.mode) {
+      ConnectMode.symbols => _symbolItems(),
+      ConnectMode.intervals => _intervalItems(),
+      ConnectMode.notes => _noteItems(),
+    };
     _lefts = items;
     _rights = [...items]..shuffle(_random);
     _matched.clear();
@@ -210,6 +216,49 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
           color: (_, __) => _symbolPalette[i % _symbolPalette.length],
         ),
     ];
+  }
+
+  List<_ConnectItem> _intervalItems() {
+    // Four distinct interval *numbers*: a 2nd spans two note-names, a 5th spans
+    // five, an octave eight. The child counts note-names bottom→top and matches
+    // the interval to its number. Quality (major/minor/perfect) is ignored —
+    // this is the "how far?" skill: diatonic steps on the staff. Two half-notes
+    // side by side read left→right, low then high. Sixths/sevenths join at 2★.
+    final wide = context.read<ProgressService>().starsFor(progressId) >= 2;
+    final pool = (wide ? const [2, 3, 4, 5, 6, 7, 8] : const [2, 3, 4, 5])
+        .toList()
+      ..shuffle(_random);
+    final picked = pool.take(ConnectLineScreen.pairs).toList();
+
+    return [
+      for (var k = 0; k < picked.length; k++)
+        _intervalItem(picked[k], _symbolPalette[k % _symbolPalette.length]),
+    ];
+  }
+
+  _ConnectItem _intervalItem(int ordinal, Color color) {
+    final steps = ordinal - 1; // diatonic staff positions between the two notes
+    // Keep the bottom low enough that the top stays on/just above the staff.
+    final maxBottom = 9 - steps;
+    final bottomPos = -1 + _random.nextInt(maxBottom + 2);
+    final bottom = widget.clef.pitchAt(bottomPos);
+    final top = widget.clef.pitchAt(bottomPos + steps);
+    return _ConnectItem(
+      card: StaffView(
+        score: Score.simple(
+          clef: widget.clef,
+          notes: '${bottom.step.name}${bottom.octave}:h '
+              '${top.step.name}${top.octave}:h',
+        ),
+        staffSpace: 7,
+        theme: kidsScoreTheme,
+      ),
+      matchKey: '$ordinal',
+      sriId: 'intervals.size.$ordinal',
+      playMidi: top.midiNumber,
+      label: (_) => '$ordinal',
+      color: (_, __) => color,
+    );
   }
 
   static const _symbolPalette = [
@@ -287,11 +336,20 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colorScaffold = context.watch<SettingsService>().colorScaffold;
-    final isSymbols = widget.mode == ConnectMode.symbols;
+    final title = switch (widget.mode) {
+      ConnectMode.symbols => l10n.gameConnectSymbols,
+      ConnectMode.intervals => l10n.gameConnectIntervals,
+      ConnectMode.notes => l10n.gameConnectLine,
+    };
+    final prompt = switch (widget.mode) {
+      ConnectMode.symbols => l10n.connectSymbolsPrompt,
+      ConnectMode.intervals => l10n.connectIntervalsPrompt,
+      ConnectMode.notes => l10n.connectLinePrompt,
+    };
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isSymbols ? l10n.gameConnectSymbols : l10n.gameConnectLine),
+        title: Text(title),
       ),
       body: SafeArea(
         child: finished
@@ -307,9 +365,7 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
                     RoundHeader(
                       round: round + 1,
                       totalRounds: totalRounds,
-                      prompt: isSymbols
-                          ? l10n.connectSymbolsPrompt
-                          : l10n.connectLinePrompt,
+                      prompt: prompt,
                     ),
                     const SizedBox(height: 12),
                     Expanded(

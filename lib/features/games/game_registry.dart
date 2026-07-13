@@ -552,6 +552,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameIntervalLadderSubtitle,
       builder: (_) => const IntervalLadderScreen(),
     ),
+    // Count-the-note-names interval drill, connect-a-line format (reuses the
+    // Connect the Notes board with a third mode).
+    GameInfo(
+      id: 'connect_intervals',
+      icon: Icons.straighten,
+      title: (l) => l.gameConnectIntervals,
+      subtitle: (l) => l.gameConnectIntervalsSubtitle,
+      builder: (_) => const ConnectLineScreen(mode: ConnectMode.intervals),
+    ),
     GameInfo(
       id: 'name_that_chord',
       icon: Icons.abc,
