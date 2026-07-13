@@ -43,6 +43,9 @@ class EchoCanceller {
     this.mu = 0.7,
     this.powerSmoothing = 0.9,
     this.eps = 1e-6,
+    this.farEndFloor = 1e-5,
+    this.regFactor = 1.0,
+    this.leak = 1e-3,
   })  : _n = 2 * blockSize,
         _wRe = Float64List(2 * blockSize),
         _wIm = Float64List(2 * blockSize),
@@ -51,14 +54,34 @@ class EchoCanceller {
 
   final int blockSize;
   final double mu;
+
+  /// Per-bin reference-power smoothing (gentler adaptation → less near-end
+  /// damage during double-talk).
   final double powerSmoothing;
+
   final double eps;
+
+  /// Don't adapt the filter when the reference block's mean-square is below this
+  /// — dividing by (near-)zero reference power is what makes NLMS diverge over
+  /// the silent gaps in real audio. Filtering still happens; only learning
+  /// pauses (a crude far-end voice-activity gate).
+  final double farEndFloor;
+
+  /// Denominator floor as a multiple of the block's mean spectral power. At
+  /// ~1.0 it both bounds the step in spectral nulls AND stops the from-zero
+  /// power estimate from blowing up on the first blocks of real audio.
+  final double regFactor;
+
+  /// Leakage: shrink the filter slightly each block so it can't drift to
+  /// unbounded values under a loud, imperfectly-aligned reference (a standard
+  /// robust-NLMS stabilizer).
+  final double leak;
 
   final int _n; // FFT size = 2 * blockSize (overlap-save)
   final Float64List _wRe; // frequency-domain filter
   final Float64List _wIm;
   final Float64List _xPrev; // previous reference block (overlap)
-  final Float64List _power; // per-bin reference power estimate
+  final Float64List _power; // smoothed per-bin reference power
 
   /// Cancel the echo of [reference] from [mic]. Both must be [blockSize] long
   /// and time-aligned (same block index). Returns the near-end estimate.
@@ -91,6 +114,18 @@ class EchoCanceller {
       out[i] = mic[i] - yRe[b + i];
     }
 
+    // Far-end VAD: pause learning when the reference is (near) silent.
+    var refMs = 0.0;
+    for (var i = 0; i < b; i++) {
+      refMs += reference[i] * reference[i];
+    }
+    if (refMs / b < farEndFloor) {
+      for (var i = 0; i < b; i++) {
+        _xPrev[i] = reference[i];
+      }
+      return out;
+    }
+
     // E = FFT of [0 ; e]  (gradient uses the constrained error frame).
     final eRe = Float64List(n);
     final eIm = Float64List(n);
@@ -99,13 +134,22 @@ class EchoCanceller {
     }
     fft(eRe, eIm);
 
-    // NLMS gradient  G = conj(X) . E / power, per bin.
+    // A denominator floor tied to this block's mean spectral power: bounds the
+    // step in spectral nulls and, crucially, stops the from-zero smoothed power
+    // from producing an enormous step on the first blocks of real audio.
+    var meanBinPow = 0.0;
+    for (var k = 0; k < n; k++) {
+      meanBinPow += xRe[k] * xRe[k] + xIm[k] * xIm[k];
+    }
+    final reg = regFactor * (meanBinPow / n) + eps;
+
+    // NLMS gradient  G = mu . conj(X) . E / (smoothedPower + reg), per bin.
     final gRe = Float64List(n);
     final gIm = Float64List(n);
     for (var k = 0; k < n; k++) {
       final p = xRe[k] * xRe[k] + xIm[k] * xIm[k];
       _power[k] = powerSmoothing * _power[k] + (1 - powerSmoothing) * p;
-      final norm = mu / (_power[k] + eps);
+      final norm = mu / (_power[k] + reg);
       // conj(X) * E
       gRe[k] = (xRe[k] * eRe[k] + xIm[k] * eIm[k]) * norm;
       gIm[k] = (xRe[k] * eIm[k] - xIm[k] * eRe[k]) * norm;
@@ -121,9 +165,10 @@ class EchoCanceller {
     }
     fft(gRe, gIm);
 
+    final keep = 1 - leak;
     for (var k = 0; k < n; k++) {
-      _wRe[k] += gRe[k];
-      _wIm[k] += gIm[k];
+      _wRe[k] = keep * _wRe[k] + gRe[k];
+      _wIm[k] = keep * _wIm[k] + gIm[k];
     }
 
     for (var i = 0; i < b; i++) {

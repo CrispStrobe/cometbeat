@@ -20,9 +20,11 @@
 // over files for CI, and truly live over stdin for hands-on validation.
 
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:klang_universum/core/audio/chroma_analysis.dart';
+import 'package:klang_universum/core/audio/echo_canceller.dart';
 import 'package:klang_universum/core/audio/pitch_analysis.dart';
 import 'package:klang_universum/core/audio/streaming_analyzer.dart';
 import 'package:klang_universum/core/audio/synth.dart';
@@ -40,6 +42,9 @@ Options:
   --wav <file>    Analyze a PCM16 WAV recording.
   --stdin         Read raw PCM16 little-endian mono from stdin (live).
   --selftest      Synthesize test tones/chords and analyze them.
+  --aec           Echo-cancel: --mic <captured.wav> --ref <played.wav>,
+                  reports the delay + ERLE and (with --out) writes the cleaned
+                  WAV. Coarse-aligns via cross-correlation, then runs the AEC.
   --rate <hz>     Sample rate for --stdin (default 44100).
   --a4 <hz>       Tuning reference (default 440).
   --chords        Also run chord recognition.
@@ -67,6 +72,11 @@ void main(List<String> argv) async {
 
   if (args.flag('selftest')) {
     _selftest(analyzerFor, withChords);
+    return;
+  }
+
+  if (args.flag('aec')) {
+    _runAec(args);
     return;
   }
 
@@ -155,6 +165,110 @@ void _selftest(
 }
 
 double _midi(int m) => midiToFrequency(m);
+
+/// Echo-cancel a captured mic recording using the reference that was played.
+void _runAec(_Args args) {
+  final micPath = args.value('mic');
+  final refPath = args.value('ref');
+  if (micPath == null || refPath == null) {
+    stderr.writeln('--aec needs --mic <captured.wav> and --ref <played.wav>');
+    exitCode = 2;
+    return;
+  }
+  final micWav = readWavPcm16(File(micPath).readAsBytesSync());
+  final refWav = readWavPcm16(File(refPath).readAsBytesSync());
+  if (micWav.sampleRate != refWav.sampleRate) {
+    stderr.writeln('mic and ref sample rates differ '
+        '(${micWav.sampleRate} vs ${refWav.sampleRate})');
+    exitCode = 2;
+    return;
+  }
+  final sr = micWav.sampleRate;
+  final mic = wavToMonoFloat(micWav);
+  final ref = wavToMonoFloat(refWav);
+
+  // 1. Coarse delay of the captured echo relative to the reference. This is the
+  //    alignment step that a real-time AEC must do continuously and that a Dart
+  //    AEC over separate plugins cannot — offline we have the whole signal.
+  final delay = _estimateDelay(mic, ref);
+  stderr.writeln('estimated delay: $delay samples '
+      '(${(delay * 1000 / sr).toStringAsFixed(1)} ms)');
+
+  // 2. Align the reference to the mic, then cancel block by block.
+  final aligned = Float64List(mic.length);
+  for (var i = 0; i < mic.length; i++) {
+    final j = i - delay;
+    aligned[i] = (j >= 0 && j < ref.length) ? ref[j] : 0;
+  }
+  const b = 1024;
+  final aec = EchoCanceller();
+  final out = Float64List(mic.length);
+  final blocks = mic.length ~/ b;
+  for (var bi = 0; bi < blocks; bi++) {
+    final cleaned = aec.process(
+      Float64List.sublistView(aligned, bi * b, bi * b + b),
+      Float64List.sublistView(mic, bi * b, bi * b + b),
+    );
+    for (var i = 0; i < b; i++) {
+      out[bi * b + i] = cleaned[i];
+    }
+  }
+
+  // 3. ERLE over the whole signal (echo energy in vs residual out).
+  var micE = 0.0, outE = 0.0;
+  for (var i = 0; i < blocks * b; i++) {
+    micE += mic[i] * mic[i];
+    outE += out[i] * out[i];
+  }
+  final erle = 10 * (log((micE + 1e-12) / (outE + 1e-12)) / ln10);
+  stderr.writeln('mic energy ${micE.toStringAsFixed(1)}, '
+      'residual ${outE.toStringAsFixed(1)}  →  '
+      'ERLE ${erle.toStringAsFixed(1)} dB');
+
+  final outPath = args.value('out');
+  if (outPath != null) {
+    final pcm = Int16List(out.length);
+    for (var i = 0; i < out.length; i++) {
+      pcm[i] = (out[i].clamp(-1.0, 1.0) * 32767).round();
+    }
+    File(outPath).writeAsBytesSync(wavBytes(pcm, sampleRate: sr));
+    stderr.writeln('wrote cleaned WAV: $outPath');
+  }
+}
+
+/// FFT cross-correlation: the lag (samples) at which [mic] best matches [ref].
+int _estimateDelay(Float64List mic, Float64List ref) {
+  final seg = min(mic.length, min(ref.length, 1 << 17));
+  var n = 1;
+  while (n < seg) {
+    n <<= 1;
+  }
+  final mre = Float64List(n), mim = Float64List(n);
+  final rre = Float64List(n), rim = Float64List(n);
+  for (var i = 0; i < seg; i++) {
+    mre[i] = mic[i];
+    rre[i] = ref[i];
+  }
+  fft(mre, mim);
+  fft(rre, rim);
+  // MIC * conj(REF)
+  final xre = Float64List(n), xim = Float64List(n);
+  for (var k = 0; k < n; k++) {
+    xre[k] = mre[k] * rre[k] + mim[k] * rim[k];
+    xim[k] = mim[k] * rre[k] - mre[k] * rim[k];
+    xim[k] = -xim[k]; // conjugate for the inverse transform
+  }
+  fft(xre, xim); // inverse (scale irrelevant for argmax)
+  var best = 0;
+  var bestVal = -double.infinity;
+  for (var lag = 0; lag < n ~/ 2; lag++) {
+    if (xre[lag] > bestVal) {
+      bestVal = xre[lag];
+      best = lag;
+    }
+  }
+  return best;
+}
 
 void _printFrame(AnalyzerFrame f, bool printAll) {
   final p = f.pitch;
