@@ -10,6 +10,7 @@
 // a second voice, dynamics and more as new fields/commands here, without the
 // screen having to know how a Score is assembled.
 
+import 'package:klang_universum/shared/midi_pitch.dart';
 import 'package:partitura/partitura.dart';
 
 /// One editable event in the flat stream: a note (single pitch for now; chords
@@ -124,20 +125,31 @@ class ScoreDocument {
 
   // ---- commands ----------------------------------------------------------
 
-  /// Append a note. Returns the new element's id. Does not change the
-  /// selection, so repeated staff taps place a run of notes fluently.
+  /// The caret: new elements are inserted here — just after the selection, or
+  /// at the end when nothing is selected.
+  int _caretIndex() {
+    final i = _indexOfSelected();
+    return i < 0 ? _elements.length : i + 1;
+  }
+
+  /// Insert a note at the caret and select it. Returns the new element's id.
   String insertNote(Pitch pitch, NoteDuration duration) {
     _snapshot();
     final id = _newId();
-    _elements.add(EditorElement.note(pitch, duration, id: id));
+    _elements.insert(
+      _caretIndex(),
+      EditorElement.note(pitch, duration, id: id),
+    );
+    _selectedId = id;
     return id;
   }
 
-  /// Append a rest. Returns the new element's id.
+  /// Insert a rest at the caret and select it. Returns the new element's id.
   String insertRest(NoteDuration duration) {
     _snapshot();
     final id = _newId();
-    _elements.add(EditorElement.rest(duration, id: id));
+    _elements.insert(_caretIndex(), EditorElement.rest(duration, id: id));
+    _selectedId = id;
     return id;
   }
 
@@ -149,10 +161,33 @@ class ScoreDocument {
     _elements[i] = _elements[i].withPitch(pitch);
   }
 
+  /// Nudge the selected note up/down by [semitones], respelling as needed.
+  /// Clamped to a sensible instrument range.
+  void transposeSelected(int semitones) {
+    final i = _indexOfSelected();
+    if (i < 0 || _elements[i].isRest) return;
+    final midi = _elements[i].pitch!.midiNumber + semitones;
+    if (midi < 21 || midi > 108) return; // A0..C8
+    _snapshot();
+    _elements[i] = _elements[i].withPitch(pitchFromMidi(midi));
+  }
+
+  /// Set the selected note's accidental ([alter]: -1 flat, 0 natural, 1 sharp),
+  /// keeping its letter and octave.
+  void setAccidentalOfSelected(int alter) {
+    final i = _indexOfSelected();
+    if (i < 0 || _elements[i].isRest) return;
+    final p = _elements[i].pitch!;
+    if (p.alter == alter) return;
+    _snapshot();
+    _elements[i] =
+        _elements[i].withPitch(Pitch(p.step, alter: alter, octave: p.octave));
+  }
+
   /// Change the selected element's duration (note or rest).
   void setDurationOfSelected(NoteDuration duration) {
     final i = _indexOfSelected();
-    if (i < 0) return;
+    if (i < 0 || _elements[i].duration == duration) return;
     _snapshot();
     _elements[i] = _elements[i].withDuration(duration);
   }
@@ -162,7 +197,28 @@ class ScoreDocument {
     if (i < 0) return;
     _snapshot();
     _elements.removeAt(i);
-    _selectedId = null;
+    // Select the element that slid into this slot (the former next), or the
+    // new last one, so editing can continue fluently.
+    _selectedId = _elements.isEmpty
+        ? null
+        : _elements[i.clamp(0, _elements.length - 1)].id;
+  }
+
+  /// Move the selection to the next / previous element (navigation only — not
+  /// undoable). With nothing selected, selects the first / last.
+  void selectNext() {
+    if (_elements.isEmpty) return;
+    final i = _indexOfSelected();
+    final next = i < 0 ? 0 : (i + 1).clamp(0, _elements.length - 1);
+    _selectedId = _elements[next].id;
+  }
+
+  void selectPrev() {
+    if (_elements.isEmpty) return;
+    final i = _indexOfSelected();
+    final prev =
+        i < 0 ? _elements.length - 1 : (i - 1).clamp(0, _elements.length - 1);
+    _selectedId = _elements[prev].id;
   }
 
   void clearAll() {

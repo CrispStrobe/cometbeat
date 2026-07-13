@@ -156,6 +156,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopAccidental => 'Accidental';
 
   @override
+  String get workshopKey => 'Key';
+
+  @override
+  String get workshopSelectPrev => 'Select previous';
+
+  @override
+  String get workshopSelectNext => 'Select next';
+
+  @override
+  String get workshopUp => 'Up a semitone';
+
+  @override
+  String get workshopDown => 'Down a semitone';
+
+  @override
   String get instrumentLabel => 'Instrument sound';
 
   @override

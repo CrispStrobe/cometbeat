@@ -1,4 +1,15 @@
-# Score Workshop → pro-notation parity — plan
+# Score Workshop → full score editor — plan
+
+## 🔨 Active now (update + push to origin/main at every checkpoint)
+
+- **Doing:** P2a editor model + UX (caret insert, selection nav, transpose,
+  accidental/dot editing, key signature) — merging.
+- **Next:** a full touch-first editor GUI redesign, rebuilt on top of
+  `ScoreDocument` (full-bleed score canvas + a bottom input dock).
+- **Status:** P0 ✅ · P1 ✅ · P2a ✅(merging) · GUI redesign ⏳ planning.
+
+---
+
 
 Branch `feature/score-workshop`, worktree `../mus-workshop` (sibling of `mus/`
 so the `../partitura` path dep resolves). Merge to `origin/main` at each phase's
@@ -7,10 +18,11 @@ stopping point. **Beware parallel agents** (`../mus-playalong` on
 `main`) — rebase before each merge, keep l10n edits additive.
 
 Goal: evolve the Composition Workshop **in place** into a single editor that is
-simple by default (progressive disclosure) yet scales toward the depth of
-professional score-writing software. Keep the kid "My Melody" sandbox as-is.
-(Convention: do **not** name competing products in code or docs — refer to
-open interchange **formats** by their standard name / file extension only.)
+simple by default (progressive disclosure) yet scales into a full-featured score
+editor. Keep the kid "My Melody" sandbox as-is. (Convention: do **not** name or
+allude to other products in code or docs, and don't frame the design as matching
+anyone else — describe only our own design. Interchange **formats** are referred
+to by their standard name / file extension only.)
 
 ## Reality check — partitura already does ~70% of a notation program
 
@@ -80,4 +92,14 @@ are permanent non-goals ("consumers build editing on top of the model").
   model, then multi-staff editor, instrument picker, score/part views,
   transposing instruments. **MERGE(s).**
 
-## First increment (now): P0 + P1 kickoff.
+## CI constraint (important)
+
+mus CI/deploy resolve the `../partitura` path-dep against the **public**
+`CrispStrobe/partitura@main`, which lags the local private partitura. So every
+partitura API used must exist on public partitura or CI reds even though it
+compiles locally. Consequence for **P4**: do NOT add a private-only `Part`
+model to the local partitura — build multi-instrument on the public
+`StaffSystem`/multi-`Score` layout, or port the model to public partitura first.
+See memory `partitura-public-vs-private-ci`.
+
+## Status: P0 ✅ · P1 ✅ · P2 in progress.

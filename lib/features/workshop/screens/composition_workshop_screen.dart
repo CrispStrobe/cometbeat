@@ -3,14 +3,12 @@
 // "Kompositions-Werkstatt" / "Composition Workshop" — the score editor that
 // grows toward professional score-writing depth (see docs/WORKSHOP_PLAN.md).
 // It is intentionally simple by default: pick a note value (and, when wanted, a
-// dot or an accidental), tap the staff to write, tap a note to select it and
-// re-pitch or delete it. Under the hood everything runs through [ScoreDocument]
-// — an editable model with multi-level undo/redo — so new notation features
-// slot in without the screen assembling a Score by hand.
-//
-// Compared with the "My Melody" sandbox this adds bar-lines per time signature,
-// rests, dotted rhythms, sharps/flats, and real undo/redo, and saves to the
-// Song Book as MusicXML / exports ABC.
+// dot or an accidental) and tap an empty spot on the staff to write there.
+// Tap a note to select it; the value / dot / accidental controls then edit the
+// selected note, the ◀ ▶ arrows walk the selection, and ▲ ▼ nudge its pitch.
+// Everything runs through [ScoreDocument] — an editable model with multi-level
+// undo/redo — so new notation features slot in without the screen assembling a
+// Score by hand.
 
 // Material's Stepper also exports a `Step`; partitura's pitch Step wins here.
 import 'package:flutter/material.dart' hide Step;
@@ -34,7 +32,7 @@ const _values = <_Value>[
   (glyph: Smufl.sixteenthNote, base: DurationBase.sixteenth),
 ];
 
-/// The accidental the next placed / re-pitched note gets.
+/// The accidental the next placed note gets (or the selected note is set to).
 enum _Accidental { natural, sharp, flat }
 
 int _alterOf(_Accidental a) => switch (a) {
@@ -42,6 +40,18 @@ int _alterOf(_Accidental a) => switch (a) {
       _Accidental.sharp => 1,
       _Accidental.flat => -1,
     };
+
+_Accidental _accidentalOf(int alter) => alter > 0
+    ? _Accidental.sharp
+    : alter < 0
+        ? _Accidental.flat
+        : _Accidental.natural;
+
+/// Key-signature choices offered in the picker (circle-of-fifths position).
+const _keyChoices = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
+
+String _keyLabel(int fifths) =>
+    fifths == 0 ? '♮' : (fifths > 0 ? '$fifths♯' : '${-fifths}♭');
 
 class CompositionWorkshopScreen extends StatefulWidget {
   const CompositionWorkshopScreen({super.key});
@@ -77,22 +87,72 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   NoteDuration get _pendingDuration =>
       NoteDuration(_pendingBase, dots: _dotted ? 1 : 0);
 
+  /// Mirror the toolbar controls onto whatever is currently selected, so they
+  /// read as "this note's value / accidental" while a note is selected.
+  void _syncControlsToSelection() {
+    final e = _doc.selected;
+    if (e == null) return;
+    _pendingBase = e.duration.base;
+    _dotted = e.duration.dots > 0;
+    _accidental =
+        e.isRest ? _Accidental.natural : _accidentalOf(e.pitch!.alter);
+  }
+
   void _onStaffTap(StaffTarget target) {
+    if (_doc.length >= CompositionWorkshopScreen.maxNotes) return;
     final pitch =
         target.pitchFor(_doc.clef, preferredAlter: _alterOf(_accidental));
     context.read<AudioService>().playMidiNote(pitch.midiNumber, ms: 400);
-    setState(() {
-      final selected = _doc.selected;
-      if (selected != null && !selected.isRest) {
-        _doc.repitchSelected(pitch);
-        _doc.clearSelection();
-      } else if (_doc.length < CompositionWorkshopScreen.maxNotes) {
-        _doc.insertNote(pitch, _pendingDuration);
-      }
-    });
+    setState(() => _doc.insertNote(pitch, _pendingDuration));
   }
 
-  void _onElementTap(String id) => setState(() => _doc.toggleSelected(id));
+  void _onElementTap(String id) => setState(() {
+        _doc.toggleSelected(id);
+        _syncControlsToSelection();
+      });
+
+  void _pickValue(DurationBase base) => setState(() {
+        _pendingBase = base;
+        if (_doc.selected != null) {
+          _doc.setDurationOfSelected(NoteDuration(base, dots: _dotted ? 1 : 0));
+        }
+      });
+
+  void _toggleDot(bool value) => setState(() {
+        _dotted = value;
+        if (_doc.selected != null) {
+          _doc.setDurationOfSelected(
+            NoteDuration(_pendingBase, dots: value ? 1 : 0),
+          );
+        }
+      });
+
+  void _pickAccidental(_Accidental a) => setState(() {
+        _accidental = a;
+        if (_doc.selected != null) _doc.setAccidentalOfSelected(_alterOf(a));
+      });
+
+  void _selectPrev() => setState(() {
+        _doc.selectPrev();
+        _syncControlsToSelection();
+      });
+
+  void _selectNext() => setState(() {
+        _doc.selectNext();
+        _syncControlsToSelection();
+      });
+
+  void _transpose(int semitones) {
+    final before = _doc.selected?.pitch?.midiNumber;
+    setState(() {
+      _doc.transposeSelected(semitones);
+      _syncControlsToSelection();
+    });
+    final now = _doc.selected?.pitch?.midiNumber;
+    if (now != null && now != before) {
+      context.read<AudioService>().playMidiNote(now, ms: 300);
+    }
+  }
 
   void _addRest() {
     if (_doc.length >= CompositionWorkshopScreen.maxNotes) return;
@@ -189,8 +249,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final selectedId = _doc.selectedId;
+    final hasSelection = selectedId != null;
     final theme = PartituraTheme.kids.copyWith(
-      elementColors: {if (selectedId != null) selectedId: Colors.amber},
+      elementColors: {if (hasSelection) selectedId: Colors.amber},
     );
 
     return Scaffold(
@@ -209,12 +270,37 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              _TimeSignaturePicker(
-                value: _doc.timeSignature,
-                label: l10n.workshopTimeSignature,
-                onChanged: (t) => setState(() => _doc.setTimeSignature(t)),
+              // Time + key signature.
+              Row(
+                children: [
+                  Text(
+                    l10n.workshopTimeSignature,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(width: 8),
+                  _TimeSignaturePicker(
+                    value: _doc.timeSignature,
+                    onChanged: (t) => setState(() => _doc.setTimeSignature(t)),
+                  ),
+                  const Spacer(),
+                  Text(
+                    l10n.workshopKey,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(width: 8),
+                  DropdownButton<int>(
+                    value: _doc.keySignature.fifths,
+                    items: [
+                      for (final f in _keyChoices)
+                        DropdownMenuItem(value: f, child: Text(_keyLabel(f))),
+                    ],
+                    onChanged: (f) => setState(
+                      () => _doc.setKeySignature(KeySignature(f ?? 0)),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               // Note value.
               Wrap(
                 spacing: 8,
@@ -225,7 +311,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       avatar: MusicGlyph(v.glyph, size: 22),
                       label: Text(_beatsLabel(l10n, v.base)),
                       selected: _pendingBase == v.base,
-                      onSelected: (_) => setState(() => _pendingBase = v.base),
+                      onSelected: (_) => _pickValue(v.base),
                     ),
                 ],
               ),
@@ -241,7 +327,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     avatar: const Text('.', style: TextStyle(fontSize: 20)),
                     label: Text(l10n.workshopDot),
                     selected: _dotted,
-                    onSelected: (v) => setState(() => _dotted = v),
+                    onSelected: _toggleDot,
                   ),
                   SegmentedButton<_Accidental>(
                     showSelectedIcon: false,
@@ -254,8 +340,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       ButtonSegment(value: _Accidental.flat, label: Text('♭')),
                     ],
                     selected: {_accidental},
-                    onSelectionChanged: (s) =>
-                        setState(() => _accidental = s.first),
+                    onSelectionChanged: (s) => _pickAccidental(s.first),
                   ),
                 ],
               ),
@@ -279,22 +364,32 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                selectedId == null ? l10n.workshopHint : l10n.workshopEditHint,
+                hasSelection ? l10n.workshopEditHint : l10n.workshopHint,
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
+              // Cursor: walk the selection and nudge pitch.
+              _CursorBar(
+                enabled: !_doc.isEmpty,
+                canTranspose: hasSelection && _doc.selected?.isRest == false,
+                onPrev: _selectPrev,
+                onNext: _selectNext,
+                onUp: () => _transpose(1),
+                onDown: () => _transpose(-1),
+                canDelete: hasSelection,
+                onDelete: () => setState(_doc.deleteSelected),
+              ),
+              const SizedBox(height: 6),
               _Toolbar(
                 canPlay: !_doc.isEmpty,
                 canSave: !_doc.isEmpty,
-                canDelete: _doc.selectedId != null,
                 canUndo: _doc.canUndo,
                 canRedo: _doc.canRedo,
                 canClear: !_doc.isEmpty,
                 onPlay: _play,
                 onSave: _save,
                 onRest: _addRest,
-                onDelete: () => setState(_doc.deleteSelected),
                 onUndo: () => setState(_doc.undo),
                 onRedo: () => setState(_doc.redo),
                 onClear: () => setState(_doc.clearAll),
@@ -315,33 +410,78 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   }
 }
 
-/// The 2/4 · 3/4 · 4/4 chooser (with its inline label).
+/// The 2/4 · 3/4 · 4/4 chooser.
 class _TimeSignaturePicker extends StatelessWidget {
-  const _TimeSignaturePicker({
-    required this.value,
-    required this.label,
-    required this.onChanged,
-  });
+  const _TimeSignaturePicker({required this.value, required this.onChanged});
 
   final TimeSignature value;
-  final String label;
   final ValueChanged<TimeSignature> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return SegmentedButton<TimeSignature>(
+      showSelectedIcon: false,
+      segments: const [
+        ButtonSegment(value: TimeSignature.twoFour, label: Text('2/4')),
+        ButtonSegment(value: TimeSignature.threeFour, label: Text('3/4')),
+        ButtonSegment(value: TimeSignature.fourFour, label: Text('4/4')),
+      ],
+      selected: {value},
+      onSelectionChanged: (s) => onChanged(s.first),
+    );
+  }
+}
+
+/// Selection cursor: previous/next, pitch up/down, delete.
+class _CursorBar extends StatelessWidget {
+  const _CursorBar({
+    required this.enabled,
+    required this.canTranspose,
+    required this.onPrev,
+    required this.onNext,
+    required this.onUp,
+    required this.onDown,
+    required this.canDelete,
+    required this.onDelete,
+  });
+
+  final bool enabled, canTranspose, canDelete;
+  final VoidCallback onPrev, onNext, onUp, onDown, onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        IconButton.filledTonal(
+          onPressed: enabled ? onPrev : null,
+          icon: const Icon(Icons.chevron_left),
+          tooltip: l10n.workshopSelectPrev,
+        ),
+        IconButton.filledTonal(
+          onPressed: enabled ? onNext : null,
+          icon: const Icon(Icons.chevron_right),
+          tooltip: l10n.workshopSelectNext,
+        ),
         const SizedBox(width: 8),
-        SegmentedButton<TimeSignature>(
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: TimeSignature.twoFour, label: Text('2/4')),
-            ButtonSegment(value: TimeSignature.threeFour, label: Text('3/4')),
-            ButtonSegment(value: TimeSignature.fourFour, label: Text('4/4')),
-          ],
-          selected: {value},
-          onSelectionChanged: (s) => onChanged(s.first),
+        IconButton.filledTonal(
+          onPressed: canTranspose ? onUp : null,
+          icon: const Icon(Icons.arrow_upward),
+          tooltip: l10n.workshopUp,
+        ),
+        IconButton.filledTonal(
+          onPressed: canTranspose ? onDown : null,
+          icon: const Icon(Icons.arrow_downward),
+          tooltip: l10n.workshopDown,
+        ),
+        const SizedBox(width: 8),
+        IconButton.filledTonal(
+          onPressed: canDelete ? onDelete : null,
+          icon: const Icon(Icons.delete_outline),
+          tooltip: l10n.workshopDelete,
         ),
       ],
     );
@@ -353,21 +493,19 @@ class _Toolbar extends StatelessWidget {
   const _Toolbar({
     required this.canPlay,
     required this.canSave,
-    required this.canDelete,
     required this.canUndo,
     required this.canRedo,
     required this.canClear,
     required this.onPlay,
     required this.onSave,
     required this.onRest,
-    required this.onDelete,
     required this.onUndo,
     required this.onRedo,
     required this.onClear,
   });
 
-  final bool canPlay, canSave, canDelete, canUndo, canRedo, canClear;
-  final VoidCallback onPlay, onSave, onRest, onDelete, onUndo, onRedo, onClear;
+  final bool canPlay, canSave, canUndo, canRedo, canClear;
+  final VoidCallback onPlay, onSave, onRest, onUndo, onRedo, onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -391,11 +529,6 @@ class _Toolbar extends StatelessWidget {
           onPressed: onRest,
           icon: const Icon(Icons.music_off_outlined),
           label: Text(l10n.workshopRest),
-        ),
-        FilledButton.tonalIcon(
-          onPressed: canDelete ? onDelete : null,
-          icon: const Icon(Icons.delete_outline),
-          label: Text(l10n.workshopDelete),
         ),
         IconButton.filledTonal(
           onPressed: canUndo ? onUndo : null,

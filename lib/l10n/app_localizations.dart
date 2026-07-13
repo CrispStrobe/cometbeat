@@ -350,6 +350,36 @@ abstract class AppLocalizations {
   /// **'Accidental'**
   String get workshopAccidental;
 
+  /// No description provided for @workshopKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Key'**
+  String get workshopKey;
+
+  /// No description provided for @workshopSelectPrev.
+  ///
+  /// In en, this message translates to:
+  /// **'Select previous'**
+  String get workshopSelectPrev;
+
+  /// No description provided for @workshopSelectNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Select next'**
+  String get workshopSelectNext;
+
+  /// No description provided for @workshopUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Up a semitone'**
+  String get workshopUp;
+
+  /// No description provided for @workshopDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Down a semitone'**
+  String get workshopDown;
+
   /// No description provided for @instrumentLabel.
   ///
   /// In en, this message translates to:

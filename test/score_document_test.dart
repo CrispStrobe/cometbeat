@@ -58,10 +58,9 @@ void main() {
     expect(doc.length, 1);
   });
 
-  test('repitch only affects a selected note, and is undoable', () {
+  test('repitch affects the selected note, and is undoable', () {
     final doc = ScoreDocument();
-    final id = doc.insertNote(_p(Step.c), _quarter);
-    doc.toggleSelected(id);
+    doc.insertNote(_p(Step.c), _quarter); // inserted note is auto-selected
     doc.repitchSelected(_p(Step.g));
     expect(doc.elements.single.pitch!.step, Step.g);
     doc.undo();
@@ -98,5 +97,61 @@ void main() {
     final score = doc.buildScore();
     expect(score.measures, hasLength(1));
     expect(score.measures.first.elements.first, isA<RestElement>());
+  });
+
+  test('insertion goes after the selection (caret), not the end', () {
+    final doc = ScoreDocument();
+    final a = doc.insertNote(_p(Step.c), _quarter); // [c]
+    doc.insertNote(_p(Step.e), _quarter); // [c, e], e selected
+    doc.toggleSelected(a); // select c
+    doc.insertNote(_p(Step.d), _quarter); // insert after c → [c, d, e]
+    expect(
+      doc.elements.map((e) => e.pitch!.step).toList(),
+      [Step.c, Step.d, Step.e],
+    );
+  });
+
+  test('selectNext / selectPrev walk the element stream', () {
+    final doc = ScoreDocument();
+    doc.insertNote(_p(Step.c), _quarter);
+    doc.insertNote(_p(Step.d), _quarter); // d selected (just inserted)
+    doc.selectPrev();
+    expect(doc.selected!.pitch!.step, Step.c);
+    doc.selectNext();
+    expect(doc.selected!.pitch!.step, Step.d);
+    doc.selectNext(); // clamps at the end
+    expect(doc.selected!.pitch!.step, Step.d);
+  });
+
+  test('transposeSelected nudges pitch, is undoable, and clamps', () {
+    final doc = ScoreDocument();
+    doc.insertNote(_p(Step.c), _quarter); // C4 = midi 60
+    doc.transposeSelected(2); // D4
+    expect(doc.selected!.pitch!.midiNumber, 62);
+    doc.undo();
+    expect(doc.selected!.pitch!.midiNumber, 60);
+    // Way out of range is refused (no change, no snapshot).
+    doc.transposeSelected(1000);
+    expect(doc.selected!.pitch!.midiNumber, 60);
+  });
+
+  test('setAccidentalOfSelected keeps letter/octave, changes alter', () {
+    final doc = ScoreDocument();
+    doc.insertNote(_p(Step.f), _quarter);
+    doc.setAccidentalOfSelected(1); // F#4
+    expect(doc.selected!.pitch!.step, Step.f);
+    expect(doc.selected!.pitch!.octave, 4);
+    expect(doc.selected!.pitch!.alter, 1);
+  });
+
+  test('deleting selects the neighbour so editing continues', () {
+    final doc = ScoreDocument();
+    doc.insertNote(_p(Step.c), _quarter);
+    final b = doc.insertNote(_p(Step.d), _quarter);
+    doc.insertNote(_p(Step.e), _quarter); // [c, d, e]
+    doc.toggleSelected(b); // select d
+    doc.deleteSelected(); // → [c, e], e (former next) selected
+    expect(doc.elements.map((e) => e.pitch!.step), [Step.c, Step.e]);
+    expect(doc.selected!.pitch!.step, Step.e);
   });
 }

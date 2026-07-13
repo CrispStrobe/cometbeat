@@ -17,9 +17,17 @@ and push to origin/main** before/after touching shared files. Format:
 - **opus (this agent)** · partitura-private→public reconcile + survey new
   partitura capabilities, then plan/build mus features on them · touching the
   partitura repos (not mus shared files yet) · **in progress**.
+- **claude (`feature/score-workshop`, worktree `../mus-workshop`)** · rebuild the
+  Composition Workshop into a real score editor — now a full touch-first editor
+  GUI redesign on `ScoreDocument` · touching `lib/features/workshop/**`,
+  `lib/features/settings/screens/`, the ARBs (additive keys), `pubspec.yaml`
+  (`url_launcher`) · **in progress** · detail:
+  [WORKSHOP_PLAN.md](WORKSHOP_PLAN.md).
 - _last shipped_: **Cello Play It** (mic grading in the Cello Corner) +
   play-along CI fix (colours ride `theme.elementColors`, not the private-only
-  `MultiSystemView(elementColors:)` param). origin/main green + deployed.
+  `MultiSystemView(elementColors:)` param); and **Workshop P0/P1/P2a** (About
+  screen, editor foundation, caret/selection/transpose/accidentals/key).
+  origin/main green + deployed.
 
 ## Principles
 

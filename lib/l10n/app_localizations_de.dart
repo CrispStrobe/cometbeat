@@ -156,6 +156,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopAccidental => 'Vorzeichen';
 
   @override
+  String get workshopKey => 'Tonart';
+
+  @override
+  String get workshopSelectPrev => 'Vorherige auswählen';
+
+  @override
+  String get workshopSelectNext => 'Nächste auswählen';
+
+  @override
+  String get workshopUp => 'Einen Halbton höher';
+
+  @override
+  String get workshopDown => 'Einen Halbton tiefer';
+
+  @override
   String get instrumentLabel => 'Instrumentenklang';
 
   @override
