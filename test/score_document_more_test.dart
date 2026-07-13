@@ -265,7 +265,8 @@ void main() {
       expect(d.buildScore().slurs.length, 1);
     });
 
-    test('slurring the same range again removes it (toggle); undo restores', () {
+    test('slurring the same range again removes it (toggle); undo restores',
+        () {
       final d = threeNotes();
       d.selectIndex(0);
       d.extendRight();
