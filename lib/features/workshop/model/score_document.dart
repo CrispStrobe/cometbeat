@@ -365,6 +365,20 @@ class ScoreDocument {
     _elements[_focus!] = _elements[_focus!].withPitch(pitch);
   }
 
+  /// Re-pitch the note [id] to the staff position of a dragged [target]
+  /// (keeps its accidental). Used by drag-to-move. Returns the new pitch, or
+  /// null if nothing changed. Undoable.
+  Pitch? moveById(String id, StaffTarget target) {
+    final i = _indexOf(id);
+    if (i < 0 || _elements[i].isRest) return null;
+    final current = _elements[i].pitch!;
+    final moved = target.pitchFor(clef, preferredAlter: current.alter);
+    if (moved.midiNumber == current.midiNumber) return null;
+    _snapshot();
+    _elements[i] = _elements[i].withPitch(moved);
+    return moved;
+  }
+
   void deleteSelected() {
     if (!hasSelection) return;
     _snapshot();

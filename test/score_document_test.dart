@@ -130,6 +130,21 @@ void main() {
     expect(note.articulations, contains(Articulation.accent));
   });
 
+  test('moveById drags a note to a new pitch, keeping its accidental', () {
+    final doc = ScoreDocument();
+    final id = doc.insertNote(_p(Step.c, alter: 1), _quarter); // C#4
+    final target = StaffTarget(
+      staffPosition: _p(Step.e).staffPosition(Clef.treble),
+      measureIndex: 0,
+    );
+    final moved = doc.moveById(id, target);
+    expect(moved, isNotNull);
+    expect(doc.elements.single.pitch!.step, Step.e);
+    expect(doc.elements.single.pitch!.alter, 1); // accidental preserved
+    doc.undo();
+    expect(doc.elements.single.pitch!.step, Step.c);
+  });
+
   test('a dynamic on a note emits a Score dynamic marking (undoable)', () {
     final doc = ScoreDocument();
     final id = doc.insertNote(_p(Step.c), _quarter);

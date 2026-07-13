@@ -116,6 +116,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   bool _dotted = false;
   _Accidental _accidental = _Accidental.natural;
   double _zoom = 16;
+  StaffTarget? _hover; // where a click/tap would land (desktop hover preview)
 
   @override
   int get noteCount => _doc.length;
@@ -141,16 +142,34 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   // ---- entry -------------------------------------------------------------
 
-  void _onPianoKey(int midi) {
+  /// Insert a note of [pitch] at the caret (shared by the piano and staff-tap).
+  void _placePitch(Pitch pitch) {
     if (_doc.length >= CompositionWorkshopScreen.maxNotes) return;
-    _audio.playMidiNote(midi, ms: 400);
-    setState(() => _doc.insertNote(pitchFromMidi(midi), _pendingDuration));
+    _audio.playMidiNote(pitch.midiNumber, ms: 400);
+    setState(() => _doc.insertNote(pitch, _pendingDuration));
   }
+
+  void _onPianoKey(int midi) => _placePitch(pitchFromMidi(midi));
+
+  /// Tap on empty staff → place a note at that pitch.
+  void _onStaffTap(StaffTarget target) => _placePitch(
+        target.pitchFor(_doc.clef, preferredAlter: _alterOf(_accidental)),
+      );
 
   void _onElementTap(String id) => setState(() {
         _doc.toggleSelected(id);
         _syncControlsToSelection();
       });
+
+  /// Drag a note on the staff to re-pitch it (vertical drag → new pitch).
+  void _onElementDragEnd(String id, StaffTarget target) {
+    Pitch? moved;
+    setState(() {
+      moved = _doc.moveById(id, target);
+      _hover = null;
+    });
+    if (moved != null) _audio.playMidiNote(moved!.midiNumber, ms: 300);
+  }
 
   // ---- value / accidental controls ---------------------------------------
 
@@ -488,6 +507,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     for (final id in selectedIds) id: Colors.amber,
                   },
                   onElementTap: _onElementTap,
+                  onStaffTap: _onStaffTap,
+                  onHover: (t) => setState(() => _hover = t),
+                  ghostTarget: _hover,
+                  ghostDuration: _pendingDuration,
+                  onElementDragUpdate: (id, t) => setState(() => _hover = t),
+                  onElementDragEnd: _onElementDragEnd,
                 ),
               ),
             ),
