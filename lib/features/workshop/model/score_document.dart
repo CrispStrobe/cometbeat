@@ -587,6 +587,41 @@ class ScoreDocument {
   /// Re-pitch the note [id] to the staff position of a dragged [target]
   /// (keeps its accidental). Used by drag-to-move. Returns the new pitch, or
   /// null if nothing changed. Undoable.
+  /// The measure (bar) index the element [id] currently lays out in, or -1.
+  int measureIndexOf(String id) {
+    final measures = buildScore().measures;
+    for (var m = 0; m < measures.length; m++) {
+      for (final el in measures[m].elements) {
+        if (el.id == id) return m;
+      }
+    }
+    return -1;
+  }
+
+  /// Horizontal drag-reorder: move element [id] so it lands at the start of bar
+  /// [measureIndex] (clamped). Element order is preserved elsewhere, so this is
+  /// a coarse (bar-level) reorder — dragging a note into another bar. Returns
+  /// true if it moved. Undoable.
+  bool moveByIdToMeasure(String id, int measureIndex) {
+    final from = _indexOf(id);
+    if (from < 0) return false;
+    final measures = buildScore().measures;
+    var target = 0;
+    for (var m = 0; m < measureIndex && m < measures.length; m++) {
+      target += measures[m].elements.length;
+    }
+    target = target.clamp(0, _elements.length);
+    // No-op if it would land in the same slot.
+    if (target == from || target == from + 1) return false;
+    _snapshot();
+    final el = _elements.removeAt(from);
+    final insertAt =
+        (target > from ? target - 1 : target).clamp(0, _elements.length);
+    _elements.insert(insertAt, el);
+    selectIndex(insertAt.clamp(0, _elements.length - 1));
+    return true;
+  }
+
   Pitch? moveById(String id, StaffTarget target, {Clef? clef}) {
     final i = _indexOf(id);
     if (i < 0 || _elements[i].isRest) return null;

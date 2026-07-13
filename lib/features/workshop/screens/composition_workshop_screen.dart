@@ -273,6 +273,18 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// pointer (see [_dragId] / [_hover] in the canvas), so it reads as the note
   /// moving with the cursor.
   void _onElementDragEnd(String id, StaffTarget target) {
+    // Dragging into a different bar reorders (horizontal move); dragging within
+    // the same bar re-pitches (vertical move). Grand staff re-pitches only (its
+    // bars are split across two staves).
+    final fromMeasure = _doc.measureIndexOf(id);
+    if (!_grand && target.measureIndex != fromMeasure && fromMeasure >= 0) {
+      setState(() {
+        _doc.moveByIdToMeasure(id, target.measureIndex);
+        _hover = null;
+        _dragId = null;
+      });
+      return;
+    }
     Pitch? moved;
     setState(() {
       moved = _doc.moveById(id, target, clef: _clefForTarget(target));

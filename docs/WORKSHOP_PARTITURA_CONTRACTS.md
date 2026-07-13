@@ -155,3 +155,54 @@ staff multiline) → C4 (marquee ranges). The app ships button-based range/copy/
 paste/move and manual clef **without** these; they upgrade it from "works" to
 "feels native". Please reply with which of C1–C5 are feasible and any signature
 tweaks, and land them on `partitura-public@main`.
+
+---
+
+## C7–C9 — new asks (2026-07, blocking the editor's last three UX items)
+
+The app already uses `EditorCaret`, `Slur`, `Hairpin`, `Lyric(verse:)`,
+`Measure.pickup` (all landed — thanks). These three remain blocked purely
+because the enabling API lives on the **private render object**, not the public
+widget, and mus CI builds against **public `partitura@main`** — so the app
+cannot call it until it ships publicly.
+
+### C7 — expose element hit-regions on the *widget* (unblocks marquee + drag-reorder)
+`RenderMultiSystemView` / `RenderInteractiveGrandStaffView` already compute
+`List<({String id, Rect bounds, int measureIndex})> get elementRegions` and
+`List<String> elementIdsIn(Rect localRect)` (great — exactly what we need). But
+they're on the private `RenderBox`, unreachable from app code. Please expose them
+on the **public widget**, e.g. a lightweight controller:
+
+```dart
+class MultiSystemViewController {
+  List<({String id, Rect bounds, int measureIndex})> get elementRegions;
+  List<String> elementIdsIn(Rect localRect);
+}
+// MultiSystemView(controller: myController, …) attaches it post-layout.
+```
+
+(A `GlobalKey`-accessible public State method with the same two members is
+equally fine.) With this the app can:
+- **marquee-select** — draw a rubber-band rect over the canvas → `elementIdsIn`
+  → select that id range;
+- **drag horizontal-reorder** — hit-test the drag's x against `elementRegions`
+  to compute the target insertion index (the model already has
+  `moveSelection*`; today it's button/key only for lack of geometry).
+
+### C8 — `Score → PNG/SVG` convenience that owns layout + font
+`renderLayoutToPng(ScoreLayout, …)` and `scoreToSvg(ScoreLayout, …)` exist, but
+both need a `ScoreLayout` (via `LayoutEngine().layout(score, LayoutSettings(
+metadata: …))`) and, for SVG, a `fontFaceDataUri`. That plumbing (metadata
+lookup, font bytes → data URI) is partitura-internal. Please add a
+Flutter-side one-call export that takes a `Score` (+ theme + staffSpace) and
+returns PNG bytes / an SVG string with the engraving font embedded, so the app's
+**print / page-export** action is a single call (no viewport-capture hacks, no
+re-deriving `LayoutSettings`). A `GrandStaff` overload too.
+
+### C9 — (nice-to-have) hint for pickup rendering
+`Measure.pickup` renders as expected. If a helper exists to number bars with the
+pickup uncounted, expose it; otherwise no action.
+
+Please land C7 + C8 on `partitura-public@main` and reply here; the app code for
+all three UX items is written against these signatures and will flip on as soon
+as they're public.

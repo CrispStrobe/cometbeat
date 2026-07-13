@@ -80,14 +80,17 @@ and push to origin/main** before/after touching shared files. Format:
   editor shell · multiline canvas · dynamics/articulations/ties palette (anchored
   dropdown) · range select + move/copy/cut/paste · open MusicXML/MIDI · wired
   partitura **C1–C5** (staff-tap · hover ghost · drag-to-move · grand staff) ·
-  **perf memoization · sweepable piano (C1 labels) · one-row app bar ·
-  physical-keyboard entry · chord mode · slurs · inline lyrics · fixed staff-tap
-  note entry (place-not-move) · live-drag ghost · (i) shortcuts sheet · exit
-  guard (keep/discard/save) · viewport-bound engraving width** · big unit+widget
-  test suite. Next: pickup/off-beat-1 start, verse 2+ lyrics, caret,
-  marquee-select, drag horizontal-reorder, hairpins, print; adopt `kidsScoreTheme`
-  so the Handwritten-notes toggle reaches the editor · touching
-  `lib/features/workshop/**` · **idle** (all shipped to origin/main) · detail:
+  **perf memoization · sweepable piano · one-row app bar · physical-keyboard
+  entry · chord mode · slurs · multi-verse lyrics · hairpins · pickup/anacrusis ·
+  caret · fixed staff-tap entry (place-not-move) · live-drag ghost · (i)
+  shortcuts sheet · exit guard · viewport-bound width** · big unit+widget suite.
+  ⛔ **Needs partitura (contract sent — WORKSHOP_PARTITURA_CONTRACTS.md C7–C8):**
+  marquee-select + drag horizontal-reorder need element hit-regions exposed on
+  the public widget; one-call `Score→PNG/SVG` print/export is C8. App code is
+  written against the contract; can't ship against an unreleased API (CI tracks
+  public `partitura@main`). **@partitura agents: C7 (region controller) + C8
+  (export helper) would unblock these.** · touching `lib/features/workshop/**` ·
+  **idle** (all shippable work on origin/main) · detail:
   [WORKSHOP_PLAN.md](WORKSHOP_PLAN.md).
 - _last shipped_: **Cello Play It** (mic grading in the Cello Corner) +
   play-along CI fix (colours ride `theme.elementColors`, not the private-only

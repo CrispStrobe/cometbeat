@@ -375,6 +375,29 @@ void main() {
     });
   });
 
+  group('drag reorder (bar level)', () {
+    test('moving a note into a later bar reorders the stream', () {
+      final d = ScoreDocument(); // 4/4
+      for (final s in [Step.c, Step.d, Step.e, Step.f]) {
+        d.insertNote(_p(s), _q); // bar 0: C D E F
+      }
+      d.insertNote(_p(Step.g), _q); // bar 1: G
+      expect(d.measureIndexOf(d.elements.first.id), 0);
+      // Drag C (index 0) into bar 1.
+      final moved = d.moveByIdToMeasure(d.elements.first.id, 1);
+      expect(moved, isTrue);
+      // C now sits at the boundary of bar 1 (after D E F).
+      expect(_steps(d), [Step.d, Step.e, Step.f, Step.c, Step.g]);
+    });
+
+    test('dropping a note back in its own bar is a no-op', () {
+      final d = ScoreDocument();
+      d.insertNote(_p(Step.c), _q);
+      d.insertNote(_p(Step.d), _q);
+      expect(d.moveByIdToMeasure(d.elements.first.id, 0), isFalse);
+    });
+  });
+
   group('caret', () {
     test('sits before the element after the selection', () {
       final d = ScoreDocument();

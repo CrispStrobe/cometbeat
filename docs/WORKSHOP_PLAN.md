@@ -41,7 +41,8 @@
      first to last; stored as partitura `Slur`s, pruned on delete, kept through
      MusicXML.
   8. ✅ *Lyrics* — a single-note selection reveals an inline syllable field
-     (commits on Enter/blur; rides paste + MusicXML). Verse 1 for now.
+     (commits on Enter/blur; rides paste + MusicXML). **Multi-verse:** a verse
+     selector edits verse 1..n+1; each renders independently.
   9. ✅ *Fixed note entry* — a blank-staff click now places a new note (advances)
      like a piano key instead of re-pitching the selection; chord-mode staff
      clicks stack at the clicked pitch. Re-pitch = drag / ↑↓.
@@ -49,11 +50,24 @@
       follows the pointer (partitura paints no live drag of its own).
   11. ✅ *(i) shortcuts sheet* + *exit guard* (keep / discard / save) + *width
       bound to viewport* so systems break on-screen.
-  12. ⏳ *Still open:* start off beat 1 (pickup / mid-measure), verse 2+ lyrics,
-      caret, marquee-select, drag horizontal-reorder, hairpins, page/print;
-      adopt `kidsScoreTheme` for the Handwritten-notes toggle. A true
-      move-the-note live drag would need a partitura render change (today we fake
-      it with hide-original + ghost).
+  12. ✅ *Pickup (anacrusis)* — a top-bar dropdown (♪/♩/♩./𝅗𝅥) shortens the opening
+      bar before the downbeat and flags `Measure.pickup`; later bars stay full.
+  13. ✅ *Hairpins* — select ≥2 notes → `<` / `>` toggles a crescendo/diminuendo
+      wedge (partitura `Hairpin`, pruned on delete, MusicXML round-trip).
+  14. ✅ *Caret* — a visible insertion caret (partitura `EditorCaret`) sits before
+      the element the next placed note would precede.
+  15. ◑ *Drag horizontal-reorder — bar level ships now.* Dragging a note into a
+      **different bar** reorders the stream (the drag's `StaffTarget.measureIndex`
+      is enough); dragging within a bar still re-pitches. **Fine (intra-bar)
+      reorder** + **marquee-select** need element hit-regions on the public
+      widget (they live on the private render object → [WORKSHOP_PARTITURA_
+      CONTRACTS.md] C7). A one-call **print / page-export** (`Score → PNG/SVG`
+      owning layout + font) is C8. mus CI tracks public `partitura@main`, so the
+      app can't call an unreleased API without redding CI — the app code for the
+      fine version is written against the contract and flips on when it ships.
+  16. ⏳ *Later:* adopt `kidsScoreTheme` for the Handwritten-notes toggle; a true
+      move-the-note live drag (partitura render change; today faked with
+      hide-original + ghost).
 - **Git note:** after every main push, `feature/score-workshop` is reset to
   `origin/main` (keep them equal) to avoid hash divergence.
 
