@@ -2804,6 +2804,36 @@ abstract class AppLocalizations {
   /// **'Mary\'s Lamb'**
   String get gameMaryLamb;
 
+  /// No description provided for @gameFreeSing.
+  ///
+  /// In en, this message translates to:
+  /// **'Free Sing'**
+  String get gameFreeSing;
+
+  /// No description provided for @gameFreeSingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sing a tune and hear it back'**
+  String get gameFreeSingSubtitle;
+
+  /// No description provided for @freeSingPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Sing a tune…'**
+  String get freeSingPrompt;
+
+  /// No description provided for @freeSingRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get freeSingRecord;
+
+  /// No description provided for @freeSingCaptured.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} notes captured'**
+  String freeSingCaptured(int count);
+
   /// No description provided for @gameChordListener.
   ///
   /// In en, this message translates to:

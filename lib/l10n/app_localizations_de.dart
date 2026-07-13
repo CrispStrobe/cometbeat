@@ -1529,6 +1529,23 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gameMaryLamb => 'Marys Lämmchen';
 
   @override
+  String get gameFreeSing => 'Frei singen';
+
+  @override
+  String get gameFreeSingSubtitle => 'Sing eine Melodie und hör sie zurück';
+
+  @override
+  String get freeSingPrompt => 'Sing eine Melodie…';
+
+  @override
+  String get freeSingRecord => 'Aufnehmen';
+
+  @override
+  String freeSingCaptured(int count) {
+    return '$count Noten aufgenommen';
+  }
+
+  @override
   String get gameChordListener => 'Akkord-Erkennung';
 
   @override

@@ -500,6 +500,18 @@
   "gameSingAlongSubtitle": "Triff die laufende Partitur mit deiner Stimme",
   "gameOdeToJoy": "An die Freude",
   "gameMaryLamb": "Marys Lämmchen",
+  "gameFreeSing": "Frei singen",
+  "gameFreeSingSubtitle": "Sing eine Melodie und hör sie zurück",
+  "freeSingPrompt": "Sing eine Melodie…",
+  "freeSingRecord": "Aufnehmen",
+  "freeSingCaptured": "{count} Noten aufgenommen",
+  "@freeSingCaptured": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "gameChordListener": "Akkord-Erkennung",
   "gameChordListenerSubtitle": "Erkenne den Akkord, den du spielst",
   "gameChordProgression": "Akkorde mitspielen",

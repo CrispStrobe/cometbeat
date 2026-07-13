@@ -723,6 +723,18 @@
   "gameSingAlongSubtitle": "Match the moving score with your voice",
   "gameOdeToJoy": "Ode to Joy",
   "gameMaryLamb": "Mary's Lamb",
+  "gameFreeSing": "Free Sing",
+  "gameFreeSingSubtitle": "Sing a tune and hear it back",
+  "freeSingPrompt": "Sing a tune…",
+  "freeSingRecord": "Record",
+  "freeSingCaptured": "{count} notes captured",
+  "@freeSingCaptured": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "gameChordListener": "Chord listener",
   "gameChordListenerSubtitle": "Name the chord you strum or play",
   "gameChordProgression": "Chord play-along",

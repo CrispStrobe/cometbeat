@@ -22,6 +22,7 @@ import 'package:klang_universum/features/games/chords/interval_ladder_screen.dar
 import 'package:klang_universum/features/games/chords/name_that_chord_screen.dart';
 import 'package:klang_universum/features/games/chords/triad_builder_screen.dart';
 import 'package:klang_universum/features/games/composition/ending_detective_screen.dart';
+import 'package:klang_universum/features/games/composition/free_sing_screen.dart';
 import 'package:klang_universum/features/games/composition/my_melody_screen.dart';
 import 'package:klang_universum/features/games/composition/question_answer_screen.dart';
 import 'package:klang_universum/features/games/drums/drum_read_screen.dart';
@@ -528,6 +529,14 @@ final Map<String, List<GameInfo>> kGamesByModule = {
     ),
   ],
   'composition': [
+    // Free Sing — sing any tune, hear it back on the synth (a creative toy).
+    GameInfo(
+      id: 'free_sing',
+      icon: Icons.graphic_eq,
+      title: (l) => l.gameFreeSing,
+      subtitle: (l) => l.gameFreeSingSubtitle,
+      builder: (_) => const FreeSingScreen(),
+    ),
     GameInfo(
       id: 'ending_detective',
       icon: Icons.hearing,
