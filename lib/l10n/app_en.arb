@@ -102,6 +102,8 @@
   "workshopMarcato": "Marcato",
   "workshopFermata": "Fermata",
   "workshopTie": "Tie",
+  "workshopDynamics": "Dynamics",
+  "workshopDynamicNone": "None",
   "instrumentLabel": "Instrument sound",
   "instrumentPiano": "Piano",
   "instrumentCello": "Cello",

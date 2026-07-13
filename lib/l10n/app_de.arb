@@ -71,6 +71,8 @@
   "workshopMarcato": "Marcato",
   "workshopFermata": "Fermate",
   "workshopTie": "Bindebogen",
+  "workshopDynamics": "Dynamik",
+  "workshopDynamicNone": "Keine",
   "instrumentLabel": "Instrumentenklang",
   "instrumentPiano": "Klavier",
   "instrumentCello": "Cello",

@@ -242,6 +242,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopTie => 'Bindebogen';
 
   @override
+  String get workshopDynamics => 'Dynamik';
+
+  @override
+  String get workshopDynamicNone => 'Keine';
+
+  @override
   String get instrumentLabel => 'Instrumentenklang';
 
   @override

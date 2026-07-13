@@ -130,6 +130,24 @@ void main() {
     expect(note.articulations, contains(Articulation.accent));
   });
 
+  test('a dynamic on a note emits a Score dynamic marking (undoable)', () {
+    final doc = ScoreDocument();
+    final id = doc.insertNote(_p(Step.c), _quarter);
+    doc.setDynamicOfSelected(DynamicLevel.mf);
+    expect(doc.elements.single.dynamic, DynamicLevel.mf);
+    final score = doc.buildScore();
+    expect(score.dynamics, hasLength(1));
+    expect(score.dynamics.first.elementId, id);
+    expect(score.dynamics.first.level, DynamicLevel.mf);
+    // Clearing removes the marking.
+    doc.setDynamicOfSelected(null);
+    expect(doc.elements.single.dynamic, isNull);
+    expect(doc.buildScore().dynamics, isEmpty);
+    // Undo brings the marking back.
+    doc.undo();
+    expect(doc.elements.single.dynamic, DynamicLevel.mf);
+  });
+
   test('loadScore imports a parsed Score and is undoable', () {
     final src = ScoreDocument();
     src.insertNote(_p(Step.c), _quarter);

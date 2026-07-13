@@ -24,13 +24,15 @@ class EditorElement {
     required this.id,
     this.articulations = const {},
     this.tieToNext = false,
+    this.dynamic,
   }) : isRest = false;
 
   const EditorElement.rest(this.duration, {required this.id})
       : pitch = null,
         isRest = true,
         articulations = const {},
-        tieToNext = false;
+        tieToNext = false,
+        dynamic = null;
 
   /// The pitch, or null for a rest.
   final Pitch? pitch;
@@ -41,6 +43,9 @@ class EditorElement {
   /// Note-only ornaments (rests ignore these).
   final Set<Articulation> articulations;
   final bool tieToNext;
+
+  /// A dynamic marking anchored on this note (null = none).
+  final DynamicLevel? dynamic;
 
   /// This event as an immutable partitura element.
   MusicElement toElement() => isRest
@@ -65,6 +70,7 @@ class EditorElement {
         id: id,
         articulations: articulations ?? this.articulations,
         tieToNext: tieToNext ?? this.tieToNext,
+        dynamic: dynamic,
       );
 
   EditorElement withPitch(Pitch pitch) => _note(pitch, duration);
@@ -80,12 +86,22 @@ class EditorElement {
           id: id,
           articulations: articulations,
           tieToNext: tieToNext,
+          dynamic: dynamic,
         );
 
   EditorElement withArticulations(Set<Articulation> a) =>
       _note(pitch!, duration, articulations: a);
 
   EditorElement withTie(bool tie) => _note(pitch!, duration, tieToNext: tie);
+
+  EditorElement withDynamic(DynamicLevel? d) => EditorElement.note(
+        pitch!,
+        duration,
+        id: id,
+        articulations: articulations,
+        tieToNext: tieToNext,
+        dynamic: d,
+      );
 }
 
 /// An undo/redo snapshot of the document's mutable state.
@@ -323,6 +339,14 @@ class ScoreDocument {
     }
   }
 
+  /// Set (or clear, with null) the dynamic marking on the first selected note.
+  void setDynamicOfSelected(DynamicLevel? level) {
+    final notes = _selectedNoteIndices;
+    if (notes.isEmpty) return;
+    _snapshot();
+    _elements[notes.first] = _elements[notes.first].withDynamic(level);
+  }
+
   /// Tie every selected note to the next (or untie, if all are already tied).
   void toggleTieOfSelected() {
     final notes = _selectedNoteIndices;
@@ -488,6 +512,10 @@ class ScoreDocument {
       keySignature: keySignature,
       timeSignature: timeSignature,
       measures: bars,
+      dynamics: [
+        for (final e in _elements)
+          if (!e.isRest && e.dynamic != null) DynamicMarking(e.id, e.dynamic!),
+      ],
     );
   }
 

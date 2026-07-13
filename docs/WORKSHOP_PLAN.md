@@ -2,11 +2,13 @@
 
 ## 🔨 Active now (update + push to origin/main at every checkpoint)
 
-- **Doing:** P2a editor model + UX (caret insert, selection nav, transpose,
-  accidental/dot editing, key signature) — merging.
-- **Next:** a full touch-first editor GUI redesign, rebuilt on top of
-  `ScoreDocument` (full-bleed score canvas + a bottom input dock).
-- **Status:** P0 ✅ · P1 ✅ · P2a ✅(merging) · GUI redesign ⏳ planning.
+- **Shipped & merged:** P0 About · P1 model+undo · P2a cursor editing · G1 editor
+  shell · G2 multiline canvas + piano · G3a two-row chrome + range/copy/paste/
+  move · G5a open MusicXML/MIDI · G2-palette articulations+ties+dynamics.
+- **Doing next (app-side):** hairpins (cresc/dim over a range) + a fuller
+  contextual inspector; then more import formats + page/print.
+- **Handed to a partitura agent** (`WORKSHOP_PARTITURA_CONTRACTS.md`): drag-move,
+  hover/caret, interactive multiline grand staff, multi-instrument.
 
 ---
 
@@ -128,10 +130,14 @@ previewed. No touch-only gestures without a mouse/keyboard equivalent.
   ghost-note placement preview + bottom input dock (duration/accidental glyph
   strip + piano / staff-tap surface) + status line + contextual selection bar;
   undo/redo/play/settings on the top bar. Cross-platform (web build verified).
-- **G2 — Palettes & inspector** ◐: bottom-sheet **articulations palette**
-  (staccato/tenuto/accent/marcato/fermata) + **ties**, applied over the
-  selection (model: `EditorElement.articulations`/`tieToNext`). Still to do:
-  dynamics + a fuller contextual inspector.
+- **G2 — Palettes & inspector** ◐: a note-property **dropdown anchored at its
+  button** (never a bottom sheet) — **articulations** (staccato/tenuto/accent/
+  marcato/fermata), **ties**, and **dynamics** (pp…ff) as checked items (model:
+  `EditorElement.articulations`/`tieToNext`/`dynamic` → `Score.dynamics`). Still
+  to do: hairpins (cresc/dim over a range) + a fuller inspector.
+
+  **UX rule:** settings/menus must open **at their control** (inline dropdowns
+  like a word-processor's font/size selectors), **not as bottom sheets**.
 
   **Direct UX feedback:**
   1. ✅ *Cleaner chrome* — consolidated to **two slim rows** (Row A: compact
@@ -180,7 +186,7 @@ model to the local partitura — build multi-instrument on the public
 ## Status
 P0 ✅ · P1 ✅ · P2a ✅ · G1 ✅ · G2 ✅ (multiline canvas · piano placement) ·
 G3a ✅ (two-row chrome · range selection + move/copy/cut/paste) · G5a ✅ (open
-MusicXML/MIDI files into the editor) · G2 articulations+ties palette ✅.
+MusicXML/MIDI files into the editor) · G2 articulations+ties+dynamics palette ✅.
 **Pending
 partitura** (see [WORKSHOP_PARTITURA_CONTRACTS.md](WORKSHOP_PARTITURA_CONTRACTS.md)):
 staff-tap on multiline (C1), hover/caret (C2), **drag-to-move (C3)**, marquee

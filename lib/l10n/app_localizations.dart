@@ -506,6 +506,18 @@ abstract class AppLocalizations {
   /// **'Tie'**
   String get workshopTie;
 
+  /// No description provided for @workshopDynamics.
+  ///
+  /// In en, this message translates to:
+  /// **'Dynamics'**
+  String get workshopDynamics;
+
+  /// No description provided for @workshopDynamicNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get workshopDynamicNone;
+
   /// No description provided for @instrumentLabel.
   ///
   /// In en, this message translates to:

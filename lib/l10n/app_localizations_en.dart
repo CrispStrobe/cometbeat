@@ -242,6 +242,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopTie => 'Tie';
 
   @override
+  String get workshopDynamics => 'Dynamics';
+
+  @override
+  String get workshopDynamicNone => 'None';
+
+  @override
   String get instrumentLabel => 'Instrument sound';
 
   @override

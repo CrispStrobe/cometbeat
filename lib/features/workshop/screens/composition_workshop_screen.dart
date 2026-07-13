@@ -82,6 +82,15 @@ String _articulationLabel(AppLocalizations l, Articulation a) => switch (a) {
       _ => a.name,
     };
 
+const _dynamicOptions = <DynamicLevel>[
+  DynamicLevel.pp,
+  DynamicLevel.p,
+  DynamicLevel.mp,
+  DynamicLevel.mf,
+  DynamicLevel.f,
+  DynamicLevel.ff,
+];
+
 class CompositionWorkshopScreen extends StatefulWidget {
   const CompositionWorkshopScreen({super.key});
 
@@ -253,57 +262,53 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     }
   }
 
-  void _openArticulations() {
-    final l10n = AppLocalizations.of(context)!;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) {
-          final note = _doc.selected;
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.workshopArticulations,
-                    style: Theme.of(ctx).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      for (final a in _articulationOptions)
-                        FilterChip(
-                          label: Text(_articulationLabel(l10n, a)),
-                          selected: note?.articulations.contains(a) ?? false,
-                          onSelected: (_) {
-                            setState(
-                              () => _doc.toggleArticulationOfSelected(a),
-                            );
-                            setSheet(() {});
-                          },
-                        ),
-                      FilterChip(
-                        label: Text(l10n.workshopTie),
-                        selected: note?.tieToNext ?? false,
-                        onSelected: (_) {
-                          setState(_doc.toggleTieOfSelected);
-                          setSheet(() {});
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+  /// The note-property dropdown (articulations · tie · dynamics), anchored at
+  /// its own button. Returns null unless a single editable note is selected.
+  Widget? _paletteButton(AppLocalizations l10n) {
+    final note = _doc.selected;
+    if (note == null || note.isRest) return null;
+    return PopupMenuButton<(String, Object?)>(
+      icon: const Icon(Icons.expand_less),
+      tooltip: l10n.workshopArticulations,
+      onSelected: (a) => setState(() {
+        switch (a.$1) {
+          case 'art':
+            _doc.toggleArticulationOfSelected(a.$2! as Articulation);
+          case 'tie':
+            _doc.toggleTieOfSelected();
+          case 'dyn':
+            _doc.setDynamicOfSelected(a.$2 as DynamicLevel?);
+        }
+      }),
+      itemBuilder: (ctx) {
+        final n = _doc.selected;
+        return [
+          for (final art in _articulationOptions)
+            CheckedPopupMenuItem<(String, Object?)>(
+              value: ('art', art),
+              checked: n?.articulations.contains(art) ?? false,
+              child: Text(_articulationLabel(l10n, art)),
             ),
-          );
-        },
-      ),
+          CheckedPopupMenuItem<(String, Object?)>(
+            value: const ('tie', null),
+            checked: n?.tieToNext ?? false,
+            child: Text(l10n.workshopTie),
+          ),
+          const PopupMenuDivider(),
+          CheckedPopupMenuItem<(String, Object?)>(
+            value: const ('dyn', null),
+            checked: n?.dynamic == null,
+            child:
+                Text('${l10n.workshopDynamics}: ${l10n.workshopDynamicNone}'),
+          ),
+          for (final d in _dynamicOptions)
+            CheckedPopupMenuItem<(String, Object?)>(
+              value: ('dyn', d),
+              checked: n?.dynamic == d,
+              child: Text('${l10n.workshopDynamics}: ${d.name}'),
+            ),
+        ];
+      },
     );
   }
 
@@ -510,7 +515,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             onCopy: () => _run(_doc.copySelection),
             onCut: () => _run(_doc.cutSelection),
             onPaste: () => _run(_doc.paste),
-            onPalette: _openArticulations,
+            palette: _paletteButton(l10n),
             onDelete: () => _run(_doc.deleteSelected),
           ),
           // Piano — places notes at the caret.
@@ -705,7 +710,7 @@ class _InputBar extends StatelessWidget {
     required this.onCopy,
     required this.onCut,
     required this.onPaste,
-    required this.onPalette,
+    required this.palette,
     required this.onDelete,
   });
 
@@ -718,7 +723,8 @@ class _InputBar extends StatelessWidget {
   final ValueChanged<_Accidental> onPickAccidental;
   final VoidCallback onSelectPrev, onSelectNext, onExtendLeft, onExtendRight;
   final VoidCallback onUp, onDown, onMoveLeft, onMoveRight;
-  final VoidCallback onCopy, onCut, onPaste, onPalette, onDelete;
+  final VoidCallback onCopy, onCut, onPaste, onDelete;
+  final Widget? palette;
 
   @override
   Widget build(BuildContext context) {
@@ -797,11 +803,7 @@ class _InputBar extends StatelessWidget {
                   l10n.workshopPaste,
                   canPaste ? onPaste : null,
                 ),
-                _act(
-                  Icons.expand_less,
-                  l10n.workshopArticulations,
-                  canTranspose ? onPalette : null,
-                ),
+                if (palette != null) palette!,
                 _act(Icons.delete_outline, l10n.workshopDelete, onDelete),
               ] else if (canPaste)
                 _act(Icons.content_paste, l10n.workshopPaste, onPaste),
