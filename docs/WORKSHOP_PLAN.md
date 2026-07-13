@@ -82,15 +82,55 @@ are permanent non-goals ("consumers build editing on top of the model").
   on it with rests, dotted notes, accidentals (♯/♭/♮), and redo. Model unit-
   tested (`test/score_document_test.dart`). Next: insert-at-caret (not just
   append), change-duration-of-selected UI (command already in the model).
-- **P2 — Full single-staff**: ties/slurs, triplets, key sig, tempo, dynamics +
-  articulations, barlines/repeats, 2nd voice, pickup, lyrics; wire every
-  partitura export; playback w/ moving cursor. **MERGE.**
-- **P3 — Open existing scores** (chosen next priority): import MusicXML/MIDI/
-  container formats into the editor and edit them; robust file open/save; page &
-  print/PDF view; layout options. **MERGE(s).**
-- **P4 — Multi-instrument**: extend `partitura_core` with a `Part`/multi-staff
-  model, then multi-staff editor, instrument picker, score/part views,
-  transposing instruments. **MERGE(s).**
+- **P2a — Cursor editing** ✅ merged: caret insert, ◀ ▶ selection nav, ▲ ▼
+  transpose, edit-selected value/dot/accidental, key-signature picker.
+
+## Editor GUI — target design (touch-first)
+
+The stacked-chips + button-rows layout doesn't scale. Target a touch-first
+score-editor shell on top of `ScoreDocument`:
+
+- **Full-bleed score canvas** (center): continuous horizontal scroll by default
+  (page view later), pinch-zoom, drag-pan. Tap a note to select; drag a note
+  vertically to re-pitch (later); long-press to range-select (later).
+- **Bottom input dock** (thumb zone), two rows:
+  - *Duration / modifier strip* — Bravura glyph buttons for note values
+    (whole…32nd), dot, tie, rest, accidental (♮ ♯ ♭); ≥ 44 px; a "hold duration"
+    lock so repeated taps place the same value. Entry is **duration-first, then
+    pitch**.
+  - *Swappable pitch surface* — tabs: on-screen **piano** (reuse the existing
+    `PianoKeyboard`), **fretboard** / **cello** for those instruments, and
+    **staff-tap**. Tapping a key/fret inserts a note at the caret with the armed
+    value.
+- **Status line** — always shows the armed value + current selection ("Quarter ·
+  Beat 3 · G4" / "Pick a value, then a note"), so the mode is never ambiguous.
+- **Thin top bar** — undo / redo, a single Play (expands to Stop while playing),
+  and an overflow for save / export / import / time + key.
+- **Element palettes as bottom sheets** — a palette button opens categorized
+  sheets (dynamics, articulations, clef, key/time, text/lyrics) applied to the
+  selection; long lists get a search field + progressive "More".
+- **Contextual inspector** — when one element is selected, a compact sheet with
+  graphical pickers (accidental, dot, tie, transpose, delete).
+
+Keep a **simple default** (glyph strip + piano) and reveal depth progressively —
+one surface serves both the kid-sandbox feel and the full editor.
+
+### Rebuild phases (each mergeable)
+
+- **G1 — New editor shell**: full-bleed canvas (continuous scroll + pinch-zoom)
+  + bottom input dock (duration strip + piano/staff pitch tabs) + status line;
+  undo/redo/play on the top bar. Replaces the chip layout at ≥ current parity.
+- **G2 — Palettes & inspector**: bottom-sheet palettes + a contextual inspector;
+  the model gains dynamics, articulations, ties.
+- **G3 — Gestures & views**: long-press range-select, drag-to-re-pitch, page vs
+  continuous toggle, zoom control.
+- **G4 — Notation depth**: tuplets, 2nd voice, tempo, barlines/repeats, lyrics;
+  wire every partitura export; playback moving cursor.
+- **G5 — Open existing scores**: import MusicXML/MIDI/container formats into the
+  editor; robust file open/save; page/print/PDF.
+- **G6 — Multi-instrument**: multiple staves via the public `StaffSystem` /
+  multi-`Score` layout (no private-only model), instrument picker, part views,
+  transposing instruments.
 
 ## CI constraint (important)
 
@@ -99,7 +139,7 @@ mus CI/deploy resolve the `../partitura` path-dep against the **public**
 partitura API used must exist on public partitura or CI reds even though it
 compiles locally. Consequence for **P4**: do NOT add a private-only `Part`
 model to the local partitura — build multi-instrument on the public
-`StaffSystem`/multi-`Score` layout, or port the model to public partitura first.
-See memory `partitura-public-vs-private-ci`.
+`StaffSystem`/multi-`Score` layout, or port the model to public partitura first
+(applies to **G6**). See memory `partitura-public-vs-private-ci`.
 
-## Status: P0 ✅ · P1 ✅ · P2 in progress.
+## Status: P0 ✅ · P1 ✅ · P2a ✅ · GUI rebuild G1 next.
