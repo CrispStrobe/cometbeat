@@ -14,6 +14,14 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (workshop→games)** · **🚧 ACTIVE — new minigame "Which Clef?"** (binary:
+  show a clef, tap Treble/Bass; +alto/tenor at 2★). Will touch hot shared files
+  `game_registry.dart`, `core/tuning.dart` (`kStarThresholds`), ARBs
+  (`app_en.arb`/`app_de.arb`) **additively** + a new
+  `features/games/note_reading/which_clef_screen.dart` + a widget test. Pulling
+  --rebase before each commit; keeping edits additive to avoid collisions. ·
+  _also this session: shipped **partitura C10a+C10b** (live drag) + the Workshop
+  **live drop caret** — all on origin/main, CI-green._
 - **opus (primers)** · **idle / SHIPPED (round 3)** — Learnability & UX #1–#3
   all on `origin/main`, full suite (429) green:
   **#1 module-primer fallback** (`04dc09a`) — `kModulePrimers` +
