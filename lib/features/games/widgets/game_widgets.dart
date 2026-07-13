@@ -18,11 +18,17 @@ class RoundHeader extends StatelessWidget {
   final int totalRounds;
   final String prompt;
 
+  /// Whether the mascot presents the question beside the round counter. It sits
+  /// inline (no extra header height) and greets with a one-shot bob on each new
+  /// [prompt]. Screens that place their own prominent mascot can pass false.
+  final bool showMascot;
+
   const RoundHeader({
     super.key,
     required this.round,
     required this.totalRounds,
     required this.prompt,
+    this.showMascot = true,
   });
 
   @override
@@ -30,9 +36,25 @@ class RoundHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-        Text(
-          l10n.roundOf(round, totalRounds),
-          style: Theme.of(context).textTheme.titleSmall,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (showMascot) ...[
+              // Keyed by prompt so a fresh mascot greets each new question.
+              // Kept small so the inline row never grows the header height
+              // enough to tip a tight game layout into an overflow.
+              NoteMascot(
+                key: ValueKey(prompt),
+                mood: NoteMascotMood.idle,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              l10n.roundOf(round, totalRounds),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(
