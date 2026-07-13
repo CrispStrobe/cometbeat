@@ -14,6 +14,13 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (primers)** · **ACTIVE (round 2)** — the handover follow-ups:
+  ★ **per-game primers** (bass-clef reading, ledger lines, accidentals,
+  step/skip, intervals, key sig, time sig, chord charts), an app-wide **"?"
+  reopen** (in `tutorial_gate.dart`, no per-screen edits), a shared
+  **`GameAppBar`**, and a **mascot presenter** in `RoundHeader`. Touching hot
+  shared files: `game_registry.dart` (more `tutorial:` hooks), the ARBs,
+  `game_widgets.dart` (RoundHeader). Small/additive; rebasing often.
 - **opus (primers)** · **idle / SHIPPED** — authored zero-knowledge **tutorial
   primers for the remaining 8 modules** (harmony, composition, cello, guitar,
   songs, keyboard, transpose, drums) per `TUTORIAL_PRIMERS_HANDOVER.md`, on
