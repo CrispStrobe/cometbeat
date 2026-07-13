@@ -94,7 +94,21 @@ into named collections (browse / search / reorder / export).
   sox scale.wav -t coreaudio "BlackHole 2ch"          # non-intrusive; default device untouched
   dart run bin/listen.dart --wav bh.wav
   ```
-  Still worth a pass with a *real acoustic instrument* into a physical mic.
+  **Robustness characterized** headlessly (`test/pitch_robustness_test.dart`):
+  the detector holds pitch through ±20-cent 5-6 Hz **vibrato** (within 25¢), never
+  reports a WRONG note as **noise** rises (it gives up gracefully, surviving to
+  ≥0.25 noise amplitude), detects soft (pp) dynamics while gating out silence,
+  and stays on the fundamental for **rich/bright timbres** (no octave errors).
+
+  **The real-acoustic-instrument-into-a-physical-mic pass is human-gated** (needs
+  someone to actually play). On-device protocol:
+  1. Cello/guitar/voice → open the **Tuner**; sustain each open string / a sung
+     note. Expect the right note, needle steady, cents within a few of a
+     reference tuner.
+  2. **Play along** a slow chart (½× tempo); confirm hits register and the live
+     dot tracks. 3. **Chord listener**: strum open chords; confirm the top guess.
+  4. Note failure modes (bow noise, breath, room reverb, low SNR) for tuning
+     `clarityThreshold`/`energyGate` against real signal.
 - **Phase 3 (full polyphonic transcription):** still out of scope; would layer
   on the same chromagram.
 
