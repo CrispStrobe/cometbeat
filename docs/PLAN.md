@@ -105,13 +105,15 @@ and push to origin/main** before/after touching shared files. Format:
   entry · chord mode · slurs · multi-verse lyrics · hairpins · pickup/anacrusis ·
   caret · fixed staff-tap entry (place-not-move) · live-drag ghost · (i)
   shortcuts sheet · exit guard · viewport-bound width** · big unit+widget suite.
-  ✅ **partitura C7 + C8 landed** (`2342565`) and are now **used**: **marquee-
-  select** (⛶ toggle → `ElementRegionController.elementIdsIn`) and **SVG/PNG
-  print-export** (`exportScoreToSvg`/`Png`) ship; drag-reorder is bar-level
-  (fine intra-bar is a follow-up on the same region geometry). Synced local
-  partitura-public to public `main`. · touching `lib/features/workshop/**` ·
-  **idle** (all shippable work on origin/main) · detail:
-  [WORKSHOP_PLAN.md](WORKSHOP_PLAN.md).
+  ✅ **partitura C7 + C8 landed** (`2342565`) and are **used**: **marquee-select**
+  (⛶ → `ElementRegionController.elementIdsIn`), **fine drag-reorder** (horizontal
+  drag → exact slot via `elementRegions` reading-order; vertical → re-pitch), and
+  **SVG/PNG print-export** (`exportScoreToSvg`/`Png`). Synced local partitura-
+  public to public `main`. Workshop feature-complete for the planned scope.
+  **Now:** adopting partitura's **`ScoreEditorController`** (loop band · marks ·
+  highlight · scroll-to-note) in **Play Along** for a smoother follow-cursor ·
+  touching `lib/features/games/playalong/play_along_screen.dart` (HOT) ·
+  **in progress** · detail: [WORKSHOP_PLAN.md](WORKSHOP_PLAN.md).
 - _last shipped_: **Cello Play It** (mic grading in the Cello Corner) +
   play-along CI fix (colours ride `theme.elementColors`, not the private-only
   `MultiSystemView(elementColors:)` param); and **Workshop P0/P1/P2a** (About

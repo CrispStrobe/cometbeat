@@ -158,13 +158,13 @@ tweaks, and land them on `partitura-public@main`.
 
 ---
 
-## C7–C9 — new asks (2026-07, blocking the editor's last three UX items)
+## C7–C9 — ✅ LANDED (partitura `2342565`) and now used by the app
 
-The app already uses `EditorCaret`, `Slur`, `Hairpin`, `Lyric(verse:)`,
-`Measure.pickup` (all landed — thanks). These three remain blocked purely
-because the enabling API lives on the **private render object**, not the public
-widget, and mus CI builds against **public `partitura@main`** — so the app
-cannot call it until it ships publicly.
+`EditorCaret`, `Slur`, `Hairpin`, `Lyric(verse:)`, `Measure.pickup`, **C7**
+(`ElementRegionController`) and **C8** (`exportScoreToPng`/`Svg`) have all
+shipped on public `partitura@main` and are wired into the Workshop: marquee-
+select + fine drag-reorder use C7's `elementRegions`/`elementIdsIn`; the print /
+page-export menu uses C8. Kept below as the original ask for reference.
 
 ### C7 — expose element hit-regions on the *widget* (unblocks marquee + drag-reorder)
 `RenderMultiSystemView` / `RenderInteractiveGrandStaffView` already compute

@@ -39,12 +39,35 @@ all pitched playback app-wide (retro SFX unchanged).
 
 ## Composition Workshop
 
-A section *outside* the minigames (home-bar piano button) — a small real score
-editor. Pick a time signature (2/4 · 3/4 · 4/4, bar-lines drawn automatically),
-pick a note value (whole/half/quarter/eighth), tap the staff to write, tap a
-note to select it and re-pitch or delete it, hear it back with real durations,
-and save to the Song Book as MusicXML. The Capella-like grown-up sibling of the
-My Melody sandbox.
+A section *outside* the minigames (home-bar piano button) — a full touch- and
+desktop-first score editor built on an editable `ScoreDocument` (a flat element
+stream packed into bar-lined measures, with multi-level undo/redo). The grown-up
+sibling of the My Melody sandbox. What it does now:
+
+- **Entry** — pick a note value (whole…sixteenth, dotted) + accidental; write by
+  tapping the staff, tapping the on-screen **sweepable piano** (C1…, octave
+  labels), or the **computer keyboard** (A–G pitches, 1–5 values, R rest, arrows,
+  `.` dot, `S` slur, Del, ⌘/Ctrl Z·Y·C·X·V). A blank-staff click *places* a new
+  note (like a piano key); an existing note is re-pitched by dragging it up/down.
+- **Chords** — a ⧉ toggle stacks pitches at one timeslot; the model is multi-pitch.
+- **Selection & editing** — tap to select, **marquee** (⛶ rubber-band) to select
+  a range; move/copy/cut/paste, transpose (↑/↓), set duration/accidental, delete.
+  **Fine drag-reorder**: a horizontal note drag moves it to the exact drop slot
+  (across bars and wrapped lines); a vertical drag re-pitches.
+- **Notation** — dynamics · articulations · ties (anchored palette) · **slurs** ·
+  **crescendo/diminuendo hairpins** · **multi-verse lyrics** (inline field +
+  verse selector) · **pickup / anacrusis** (top-bar dropdown) · a visible
+  insertion **caret** · single staff or **grand staff** (auto-split by pitch).
+- **Chrome** — clef/time/key/zoom/pickup fold into one top row; an (i) sheet
+  lists the keyboard shortcuts; leaving with unsaved work asks keep/discard/save;
+  the engraving width is bound to the viewport so systems break on-screen.
+- **I/O** — open MusicXML/MIDI; export MusicXML · ABC · **SVG** (font embedded,
+  print-ready) · **PNG** (system save dialog); save to the Song Book.
+
+Editing extras that lean on partitura's editor contracts: caret (C2), drag-move
+(C3), grand staff (C5), element hit-regions for marquee + fine reorder
+(**C7** `ElementRegionController`), and one-call `Score→PNG/SVG` export
+(**C8**). Detail + roadmap: `docs/WORKSHOP_PLAN.md`.
 
 ## Live microphone & pitch detection
 
