@@ -3026,6 +3026,60 @@ abstract class AppLocalizations {
   /// **'{cents} cents'**
   String tunerCents(String cents);
 
+  /// No description provided for @tunerReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference pitch'**
+  String get tunerReference;
+
+  /// No description provided for @tunerInstrument.
+  ///
+  /// In en, this message translates to:
+  /// **'Instrument'**
+  String get tunerInstrument;
+
+  /// No description provided for @tunerInstrumentChromatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Chromatic'**
+  String get tunerInstrumentChromatic;
+
+  /// No description provided for @tunerInstrumentCello.
+  ///
+  /// In en, this message translates to:
+  /// **'Cello'**
+  String get tunerInstrumentCello;
+
+  /// No description provided for @tunerInstrumentGuitar.
+  ///
+  /// In en, this message translates to:
+  /// **'Guitar'**
+  String get tunerInstrumentGuitar;
+
+  /// No description provided for @tunerInstrumentViolin.
+  ///
+  /// In en, this message translates to:
+  /// **'Violin'**
+  String get tunerInstrumentViolin;
+
+  /// No description provided for @tunerPickString.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a string to tune it'**
+  String get tunerPickString;
+
+  /// No description provided for @tunerTuneString.
+  ///
+  /// In en, this message translates to:
+  /// **'Tune the {string} string'**
+  String tunerTuneString(String string);
+
+  /// No description provided for @tunerStringInTune.
+  ///
+  /// In en, this message translates to:
+  /// **'In tune!'**
+  String get tunerStringInTune;
+
   /// No description provided for @playAlongScore.
   ///
   /// In en, this message translates to:

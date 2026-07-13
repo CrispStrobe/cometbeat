@@ -802,6 +802,22 @@
       }
     }
   },
+  "tunerReference": "Reference pitch",
+  "tunerInstrument": "Instrument",
+  "tunerInstrumentChromatic": "Chromatic",
+  "tunerInstrumentCello": "Cello",
+  "tunerInstrumentGuitar": "Guitar",
+  "tunerInstrumentViolin": "Violin",
+  "tunerPickString": "Tap a string to tune it",
+  "tunerTuneString": "Tune the {string} string",
+  "@tunerTuneString": {
+    "placeholders": {
+      "string": {
+        "type": "String"
+      }
+    }
+  },
+  "tunerStringInTune": "In tune!",
   "playAlongScore": "Score",
   "playAlongNow": "Now",
   "playAlongYou": "You",

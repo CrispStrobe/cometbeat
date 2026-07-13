@@ -6,6 +6,7 @@
 // real, localized tuner tile in the cello corner.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:klang_universum/core/audio/microphone_pitch_service.dart';
@@ -13,13 +14,20 @@ import 'package:klang_universum/core/audio/pitch_analysis.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 
-/// The cello's four open strings, low → high, as intonation reference chips.
-const _celloStrings = <({String name, int midi})>[
-  (name: 'C2', midi: 36),
-  (name: 'G2', midi: 43),
-  (name: 'D3', midi: 50),
-  (name: 'A3', midi: 57),
-];
+/// Instruments with a fixed set of open strings the tuner can guide you
+/// through, plus a free chromatic mode.
+enum TunerInstrument { chromatic, cello, guitar, violin }
+
+/// Open strings per instrument, low → high (MIDI note numbers).
+const _instrumentStrings = <TunerInstrument, List<int>>{
+  TunerInstrument.chromatic: [],
+  TunerInstrument.cello: [36, 43, 50, 57], // C2 G2 D3 A3
+  TunerInstrument.guitar: [40, 45, 50, 55, 59, 64], // E2 A2 D3 G3 B3 E4
+  TunerInstrument.violin: [55, 62, 69, 76], // G3 D4 A4 E5
+};
+
+/// Selectable reference pitches (A4 in Hz): baroque, standard, orchestral.
+const _referencePitches = <double>[415, 440, 442];
 
 class TunerSpikeScreen extends StatefulWidget {
   const TunerSpikeScreen({super.key});
@@ -37,6 +45,35 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
   double? _smoothedCents;
   ({PitchCaptureError reason, String? detail})? _error;
   bool _listening = false;
+
+  // The reference the *detector* runs at is fixed; A4 and the target string
+  // only reshape the note/cents readout, which is pure math on the raw Hz —
+  // so switching them needs no plugin restart.
+  double _a4 = kDefaultA4;
+  TunerInstrument _instrument = TunerInstrument.chromatic;
+  int? _targetMidi; // the open string being guided-tuned; null = free/nearest
+
+  List<int> get _strings => _instrumentStrings[_instrument]!;
+
+  /// Note the readout snaps to, re-scored against the chosen A4.
+  int _adjMidi(PitchReading r) => PitchReading(
+        frequency: r.frequency,
+        clarity: r.clarity,
+        a4: _a4,
+      ).nearestMidi;
+
+  /// Cents to display: signed deviation from the target string when guiding,
+  /// otherwise from the nearest note — both against the chosen A4. Can exceed
+  /// ±50 for a target string (the meter clamps).
+  double _rawCents(PitchReading r) {
+    if (!r.hasPitch) return double.nan;
+    if (_targetMidi != null) {
+      final targetHz = _a4 * pow(2, (_targetMidi! - 69) / 12.0);
+      return 1200.0 * (log(r.frequency / targetHz) / ln2);
+    }
+    return PitchReading(frequency: r.frequency, clarity: r.clarity, a4: _a4)
+        .cents;
+  }
 
   @override
   void dispose() {
@@ -85,6 +122,13 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
     }
   }
 
+  String _instrumentName(AppLocalizations l, TunerInstrument i) => switch (i) {
+        TunerInstrument.chromatic => l.tunerInstrumentChromatic,
+        TunerInstrument.cello => l.tunerInstrumentCello,
+        TunerInstrument.guitar => l.tunerInstrumentGuitar,
+        TunerInstrument.violin => l.tunerInstrumentViolin,
+      };
+
   String _errorText(AppLocalizations l) => switch (_error!.reason) {
         PitchCaptureError.permissionDenied => l.micPermissionDenied,
         PitchCaptureError.unsupported => l.micUnsupported,
@@ -96,9 +140,9 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
     setState(() {
       _reading = r;
       if (r.hasPitch) {
-        _smoothedCents = _smoothedCents == null
-            ? r.cents
-            : _smoothedCents! * 0.6 + r.cents * 0.4;
+        final c = _rawCents(r);
+        _smoothedCents =
+            _smoothedCents == null ? c : _smoothedCents! * 0.6 + c * 0.4;
       } else {
         _smoothedCents = null;
       }
@@ -110,10 +154,47 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
     final scheme = Theme.of(context).colorScheme;
     final l = AppLocalizations.of(context)!;
     final r = _reading;
-    final inTune = r.hasPitch && r.cents.abs() <= 5;
+    // Everything the readout shows is A4- and target-adjusted, not the raw
+    // 440-scored reading.
+    final displayCents = _smoothedCents;
+    final inTune =
+        r.hasPitch && displayCents != null && displayCents.abs() <= 5;
+    // The big note: the target string when guiding, else the nearest note.
+    final labelMidi = _targetMidi ?? (r.hasPitch ? _adjMidi(r) : -1);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.gameTuner)),
+      appBar: AppBar(
+        title: Text(l.gameTuner),
+        actions: [
+          PopupMenuButton<double>(
+            icon: const Icon(Icons.tune),
+            tooltip: l.tunerReference,
+            initialValue: _a4,
+            onSelected: (a) => setState(() {
+              _a4 = a;
+              _smoothedCents = null;
+            }),
+            itemBuilder: (context) => [
+              for (final a in _referencePitches)
+                PopupMenuItem(value: a, child: Text('A4 = ${a.round()} Hz')),
+            ],
+          ),
+          PopupMenuButton<TunerInstrument>(
+            icon: const Icon(Icons.music_note),
+            tooltip: l.tunerInstrument,
+            initialValue: _instrument,
+            onSelected: (i) => setState(() {
+              _instrument = i;
+              _targetMidi = null;
+              _smoothedCents = null;
+            }),
+            itemBuilder: (context) => [
+              for (final i in TunerInstrument.values)
+                PopupMenuItem(value: i, child: Text(_instrumentName(l, i))),
+            ],
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -122,7 +203,7 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
             children: [
               const SizedBox(height: 8),
               Text(
-                r.hasPitch ? spelledMidiName(context, r.nearestMidi) : '—',
+                labelMidi >= 0 ? spelledMidiName(context, labelMidi) : '—',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -132,7 +213,11 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
               Text(
                 r.hasPitch
                     ? '${r.frequency.toStringAsFixed(1)} Hz  ·  clarity ${r.clarity.toStringAsFixed(2)}'
-                    : l.tunerPrompt,
+                    : (_targetMidi != null
+                        ? l.tunerTuneString(
+                            spelledMidiName(context, _targetMidi!),
+                          )
+                        : l.tunerPrompt),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: scheme.onSurfaceVariant,
@@ -143,7 +228,7 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
                 height: 120,
                 child: CustomPaint(
                   painter: _CentsMeterPainter(
-                    cents: _smoothedCents,
+                    cents: displayCents,
                     color: scheme.primary,
                     trackColor: scheme.surfaceContainerHighest,
                     inTuneColor: Colors.green,
@@ -154,30 +239,53 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                r.hasPitch
-                    ? l.tunerCents(
-                        '${r.cents >= 0 ? '+' : ''}${r.cents.toStringAsFixed(0)}',
-                      )
-                    : ' ',
+                inTune
+                    ? l.tunerStringInTune
+                    : (displayCents != null
+                        ? l.tunerCents(
+                            '${displayCents >= 0 ? '+' : ''}${displayCents.toStringAsFixed(0)}',
+                          )
+                        : ' '),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: inTune ? Colors.green : scheme.onSurface,
                     ),
               ),
               const SizedBox(height: 24),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                children: [
-                  for (final s in _celloStrings)
-                    Chip(
-                      label: Text(spelledMidiName(context, s.midi)),
-                      backgroundColor: r.nearestMidi == s.midi
-                          ? scheme.primaryContainer
-                          : null,
-                    ),
-                ],
-              ),
+              if (_strings.isNotEmpty)
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  children: [
+                    for (final midi in _strings)
+                      ChoiceChip(
+                        label: Text(spelledMidiName(context, midi)),
+                        selected: _targetMidi == midi,
+                        // A played string that isn't the target still lights up
+                        // faintly so you can see what the tuner hears.
+                        backgroundColor: _targetMidi == null &&
+                                r.hasPitch &&
+                                _adjMidi(r) == midi
+                            ? scheme.primaryContainer
+                            : null,
+                        onSelected: (sel) => setState(() {
+                          _targetMidi = sel ? midi : null;
+                          _smoothedCents = null;
+                        }),
+                      ),
+                  ],
+                ),
+              if (_strings.isNotEmpty && _targetMidi == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    l.tunerPickString,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
               const Spacer(),
               if (_error != null)
                 Padding(

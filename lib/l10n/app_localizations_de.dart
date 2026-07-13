@@ -1663,6 +1663,35 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get tunerReference => 'Referenzton';
+
+  @override
+  String get tunerInstrument => 'Instrument';
+
+  @override
+  String get tunerInstrumentChromatic => 'Chromatisch';
+
+  @override
+  String get tunerInstrumentCello => 'Cello';
+
+  @override
+  String get tunerInstrumentGuitar => 'Gitarre';
+
+  @override
+  String get tunerInstrumentViolin => 'Geige';
+
+  @override
+  String get tunerPickString => 'Tippe eine Saite zum Stimmen an';
+
+  @override
+  String tunerTuneString(String string) {
+    return 'Stimme die $string-Saite';
+  }
+
+  @override
+  String get tunerStringInTune => 'Sauber gestimmt!';
+
+  @override
   String get playAlongScore => 'Punkte';
 
   @override

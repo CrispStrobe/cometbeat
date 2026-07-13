@@ -1654,6 +1654,35 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get tunerReference => 'Reference pitch';
+
+  @override
+  String get tunerInstrument => 'Instrument';
+
+  @override
+  String get tunerInstrumentChromatic => 'Chromatic';
+
+  @override
+  String get tunerInstrumentCello => 'Cello';
+
+  @override
+  String get tunerInstrumentGuitar => 'Guitar';
+
+  @override
+  String get tunerInstrumentViolin => 'Violin';
+
+  @override
+  String get tunerPickString => 'Tap a string to tune it';
+
+  @override
+  String tunerTuneString(String string) {
+    return 'Tune the $string string';
+  }
+
+  @override
+  String get tunerStringInTune => 'In tune!';
+
+  @override
   String get playAlongScore => 'Score';
 
   @override

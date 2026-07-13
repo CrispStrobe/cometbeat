@@ -558,6 +558,22 @@
       }
     }
   },
+  "tunerReference": "Referenzton",
+  "tunerInstrument": "Instrument",
+  "tunerInstrumentChromatic": "Chromatisch",
+  "tunerInstrumentCello": "Cello",
+  "tunerInstrumentGuitar": "Gitarre",
+  "tunerInstrumentViolin": "Geige",
+  "tunerPickString": "Tippe eine Saite zum Stimmen an",
+  "tunerTuneString": "Stimme die {string}-Saite",
+  "@tunerTuneString": {
+    "placeholders": {
+      "string": {
+        "type": "String"
+      }
+    }
+  },
+  "tunerStringInTune": "Sauber gestimmt!",
   "playAlongScore": "Punkte",
   "playAlongNow": "Jetzt",
   "playAlongYou": "Du",
