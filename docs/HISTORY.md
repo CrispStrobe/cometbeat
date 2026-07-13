@@ -198,6 +198,12 @@ per-game `unlockedWhen` gate on `GameInfo`).
 
 Games built on partitura capabilities the app didn't use before.
 
+- **Chord Chart** (Chords) — lead-sheet literacy: a chord *symbol* is shown
+  (G, Dm, D7…) and the child taps the matching *notation* among four little
+  staves. The inverse of Name That Chord (notation→symbol); symbols come from
+  `chordSymbolFor` so they're spelled as the library names them. Correct tap
+  plays the chord; widens major/minor triads (roots C/F/G) → all roots → +
+  diminished. SRI `chords.symbol.<symbol>`. Uses the shared game-test harness.
 - **Strong Beat?** (Takte) — metric-accent training on partitura-public's
   `beatStrength`. A measure is shown with its beat numbers (partitura's
   `showBeatNumbers`), one beat highlighted; the child says whether it's a strong

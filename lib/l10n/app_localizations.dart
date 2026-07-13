@@ -2006,6 +2006,24 @@ abstract class AppLocalizations {
   /// **'Which chord is this?'**
   String get nameThatChordPrompt;
 
+  /// No description provided for @gameChordChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord Chart'**
+  String get gameChordChart;
+
+  /// No description provided for @gameChordChartSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the chord symbol, find its notation'**
+  String get gameChordChartSubtitle;
+
+  /// No description provided for @chordChartPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Which notation is this chord symbol?'**
+  String get chordChartPrompt;
+
   /// No description provided for @curriculumTitle.
   ///
   /// In en, this message translates to:

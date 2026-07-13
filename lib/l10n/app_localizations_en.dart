@@ -1080,6 +1080,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nameThatChordPrompt => 'Which chord is this?';
 
   @override
+  String get gameChordChart => 'Chord Chart';
+
+  @override
+  String get gameChordChartSubtitle =>
+      'Read the chord symbol, find its notation';
+
+  @override
+  String get chordChartPrompt => 'Which notation is this chord symbol?';
+
+  @override
   String get curriculumTitle => 'Curriculum';
 
   @override

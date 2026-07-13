@@ -14,6 +14,7 @@ import 'package:klang_universum/features/games/cello/cello_play_it_screen.dart';
 import 'package:klang_universum/features/games/cello/cello_string_quiz_screen.dart';
 import 'package:klang_universum/features/games/cello/tuner_spike_screen.dart';
 import 'package:klang_universum/features/games/chords/chord_builder_screen.dart';
+import 'package:klang_universum/features/games/chords/chord_chart_screen.dart';
 import 'package:klang_universum/features/games/chords/chord_listen_spike_screen.dart';
 import 'package:klang_universum/features/games/chords/chord_progression_screen.dart';
 import 'package:klang_universum/features/games/chords/chord_quiz_screen.dart';
@@ -506,6 +507,14 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameNameThatChord,
       subtitle: (l) => l.gameNameThatChordSubtitle,
       builder: (_) => const NameThatChordScreen(),
+    ),
+    // Lead-sheet reading: symbol → notation (inverse of Name That Chord).
+    GameInfo(
+      id: 'chord_chart',
+      icon: Icons.grid_view,
+      title: (l) => l.gameChordChart,
+      subtitle: (l) => l.gameChordChartSubtitle,
+      builder: (_) => const ChordChartScreen(),
     ),
     GameInfo(
       id: 'chord_builder',

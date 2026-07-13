@@ -14,13 +14,13 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (this agent)** · shipped **Roman Numerals** + **Strong Beat** on the
-  partitura-public alignment (CI green on `aa39b27`; deploy waiting on the Vercel
-  daily cap). Fixed the alignment's hardcoded `../partitura/` test paths, and
-  **added a shared game-test harness** so this class stops recurring · touching
-  `test/support/game_test_support.dart` (new), several `test/*_test.dart` ·
-  **idle / awaiting next** (next ideas: chord-symbol match, handwritten-font
-  theme).
+- **opus (this agent)** · shipped **Roman Numerals**, **Strong Beat** + **Chord
+  Chart** (Chords — symbol→notation lead-sheet reading via `chordSymbolFor`) on
+  the partitura-public alignment. Added a shared game-test harness
+  (`useGameSurface`/`pumpGame`) + fixed the alignment's hardcoded `../partitura/`
+  test paths. 315 tests green · touching `game_registry`, `core/tuning`, ARBs,
+  `features/games/chords/`, `test/` · **idle / awaiting next** (remaining ideas:
+  handwritten-font theme [needs bundled OTF+OFL], voices/SATB, OMR big-swing).
   ✅ **For all agents — staff-based game tests:** mus CI tracks `partitura@main`,
   so its live rendering (caret/drag/beaming/voices…) can push tap/drag targets
   off CI's small surface and throw `getCenter`/`_getElementPoint` — green locally,
@@ -162,9 +162,13 @@ Fresh capabilities now resolvable in mus, ranked by fit:
   hard-coded, so correct for 4/4, 3/4, 6/8…). Metric click accents the strong
   beats. SRI `measures.accent.<ts>_<beat>`; widens 4/4 → +3/4,2/4 → +6/8. Still
   open: a "conduct the metre" / tap-all-strong-beats variant.
-- [ ] **Structured chord symbols** (`ChordSymbol` model, read by the MusicXML/ABC
-  readers). → render/parse "Cmaj7" over the Song Book chord sheets; a
-  symbol↔notation matching game.
+- [~] **Structured chord symbols** (`chordSymbolFor`, `ChordSymbol` model).
+  **Shipped: Chord Chart** (Chords,
+  [HISTORY.md](HISTORY.md#partitura-powered--shipped)) — the symbol→notation
+  matching game: read a chord symbol (G, Dm, D7…), tap its notation among four
+  little staves. Lead-sheet literacy; the inverse of Name That Chord. SRI
+  `chords.symbol.<symbol>`. Still open: chord symbols rendered over the Song Book
+  chord sheets (in the play-along agent's songbook area).
 - [ ] **Voices 3–4 per staff** (SATB representability) + **beam subdivision** +
   **appoggiatura grace notes**. → SATB chorale reading, richer Grand Staff,
   grace-note reading. Rendering-quality wins across existing staves.

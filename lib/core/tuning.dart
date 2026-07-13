@@ -96,6 +96,8 @@ const Map<String, List<int>> kStarThresholds = {
   'note_snake': [3, 8, 15],
   // Name That Chord: 10 rounds x 100.
   'name_that_chord': [100, 600, 900],
+  // Chord Chart (symbol → notation): 10 rounds x 100.
+  'chord_chart': [100, 600, 900],
   // Chord Builder: 8 rounds x 100, max 800.
   'chord_builder': [100, 500, 800],
   // Concert Pitch (transposing instruments): 10 rounds x 100.

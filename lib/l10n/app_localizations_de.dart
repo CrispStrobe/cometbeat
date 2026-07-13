@@ -1087,6 +1087,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get nameThatChordPrompt => 'Welcher Akkord ist das?';
 
   @override
+  String get gameChordChart => 'Akkord-Symbole';
+
+  @override
+  String get gameChordChartSubtitle => 'Lies das Akkordsymbol, finde die Noten';
+
+  @override
+  String get chordChartPrompt => 'Welche Noten gehören zu diesem Akkordsymbol?';
+
+  @override
   String get curriculumTitle => 'Lehrplan';
 
   @override
