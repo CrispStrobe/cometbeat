@@ -157,8 +157,10 @@ previewed. No touch-only gestures without a mouse/keyboard equivalent.
   value.
 - **G4 — Notation depth**: tuplets, 2nd voice, tempo, barlines/repeats, lyrics;
   wire every partitura export; playback moving cursor.
-- **G5 — Open existing scores**: import MusicXML/MIDI/container formats into the
-  editor; robust file open/save; page/print/PDF.
+- **G5 — Open existing scores** ◐: ⋮ menu now opens **MusicXML / MIDI** files
+  into the editor (`ScoreDocument.loadScore` flattens voice 1 → editable
+  elements; undoable). Still to do: `.mxl`/`.mscz`/ABC, chords/2nd-voice import
+  fidelity, page/print/PDF.
 - **G6 — Multi-instrument**: multiple staves via the public `StaffSystem` /
   multi-`Score` layout (no private-only model), instrument picker, part views,
   transposing instruments.
@@ -175,7 +177,8 @@ model to the local partitura — build multi-instrument on the public
 
 ## Status
 P0 ✅ · P1 ✅ · P2a ✅ · G1 ✅ · G2 ✅ (multiline canvas · piano placement) ·
-G3a ✅ (two-row chrome · range selection + move/copy/cut/paste). **Pending
+G3a ✅ (two-row chrome · range selection + move/copy/cut/paste) · G5a ✅ (open
+MusicXML/MIDI files into the editor). **Pending
 partitura** (see [WORKSHOP_PARTITURA_CONTRACTS.md](WORKSHOP_PARTITURA_CONTRACTS.md)):
 staff-tap on multiline (C1), hover/caret (C2), **drag-to-move (C3)**, marquee
 select (C4), **interactive multiline grand staff (C5)**. App-side next while

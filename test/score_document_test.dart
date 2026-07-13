@@ -95,6 +95,23 @@ void main() {
     expect(doc.clef, Clef.treble);
   });
 
+  test('loadScore imports a parsed Score and is undoable', () {
+    final src = ScoreDocument();
+    src.insertNote(_p(Step.c), _quarter);
+    src.insertNote(_p(Step.e), const NoteDuration(DurationBase.half));
+    // Round-trip through MusicXML, as the "open file" flow does.
+    final parsed = scoreFromMusicXml(scoreToMusicXml(src.buildScore()));
+
+    final doc = ScoreDocument();
+    doc.loadScore(parsed);
+    expect(doc.length, 2);
+    expect(doc.elements.map((e) => e.pitch!.step), [Step.c, Step.e]);
+    expect(doc.elements[1].duration.base, DurationBase.half);
+
+    doc.undo();
+    expect(doc.isEmpty, isTrue);
+  });
+
   test('empty document renders a single whole-rest bar', () {
     final doc = ScoreDocument();
     expect(doc.isEmpty, isTrue);

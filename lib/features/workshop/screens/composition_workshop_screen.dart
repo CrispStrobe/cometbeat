@@ -12,6 +12,7 @@
 // Every edit runs through [ScoreDocument] (editable model + multi-level undo).
 
 // Material's Stepper also exports a `Step`; partitura's pitch Step wins here.
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:klang_universum/core/services/audio_service.dart';
@@ -213,6 +214,28 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     );
   }
 
+  Future<void> _openFile({
+    required List<String> extensions,
+    required String label,
+    required Future<Score> Function(XFile file) parse,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final file = await openFile(
+        acceptedTypeGroups: [XTypeGroup(label: label, extensions: extensions)],
+      );
+      if (file == null) return;
+      final score = await parse(file);
+      if (!mounted) return;
+      setState(() => _doc.loadScore(score));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.importFailed(e.toString()))),
+      );
+    }
+  }
+
   Future<void> _save() async {
     if (_doc.isEmpty) return;
     final l10n = AppLocalizations.of(context)!;
@@ -287,6 +310,19 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               switch (v) {
+                case 'openxml':
+                  _openFile(
+                    extensions: const ['musicxml', 'xml'],
+                    label: 'MusicXML',
+                    parse: (f) async =>
+                        scoreFromMusicXml(await f.readAsString()),
+                  );
+                case 'openmidi':
+                  _openFile(
+                    extensions: const ['mid', 'midi'],
+                    label: 'MIDI',
+                    parse: (f) async => scoreFromMidi(await f.readAsBytes()),
+                  );
                 case 'save':
                   _save();
                 case 'xml':
@@ -304,6 +340,19 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               }
             },
             itemBuilder: (ctx) => [
+              _menuItem(
+                'openxml',
+                Icons.file_open_outlined,
+                l10n.importMusicXmlFile,
+                true,
+              ),
+              _menuItem(
+                'openmidi',
+                Icons.file_open_outlined,
+                l10n.importMidiFile,
+                true,
+              ),
+              const PopupMenuDivider(),
               _menuItem(
                 'save',
                 Icons.bookmark_add_outlined,

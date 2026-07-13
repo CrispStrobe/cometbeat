@@ -335,6 +335,29 @@ class ScoreDocument {
     clearSelection();
   }
 
+  /// Replace the whole document with the contents of [score] (undoable). Imports
+  /// voice 1 only; a chord keeps its first pitch; ties/articulations are dropped
+  /// (the editor is single-voice/single-note for now).
+  void loadScore(Score score) {
+    _snapshot();
+    _elements.clear();
+    clef = score.clef;
+    keySignature = score.keySignature;
+    timeSignature = score.timeSignature ?? TimeSignature.fourFour;
+    for (final measure in score.measures) {
+      for (final el in measure.elements) {
+        final id = _newId();
+        if (el is NoteElement) {
+          _elements
+              .add(EditorElement.note(el.pitches.first, el.duration, id: id));
+        } else if (el is RestElement) {
+          _elements.add(EditorElement.rest(el.duration, id: id));
+        }
+      }
+    }
+    clearSelection();
+  }
+
   void setTimeSignature(TimeSignature value) {
     if (value == timeSignature) return;
     _snapshot();

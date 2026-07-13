@@ -37,10 +37,11 @@ and push to origin/main** before/after touching shared files. Format:
 - **claude (`feature/score-workshop`, worktree `../mus-workshop`)** · rebuilding
   the Composition Workshop as a touch-first score editor on `ScoreDocument` —
   shipped **G1/G2** (editor shell · multiline canvas · piano) + **G3a**
-  (two-row chrome · range select + move/copy/cut/paste). Wrote a partitura
-  **contract handover** ([WORKSHOP_PARTITURA_CONTRACTS.md](WORKSHOP_PARTITURA_CONTRACTS.md))
-  for drag-move / hover-caret / interactive multiline grand-staff (needs a
-  partitura agent). Next app-side: palettes/inspector, open score files ·
+  (two-row chrome · range select + move/copy/cut/paste) + **G5a** (open
+  MusicXML/MIDI files into the editor). Wrote a partitura **contract handover**
+  ([WORKSHOP_PARTITURA_CONTRACTS.md](WORKSHOP_PARTITURA_CONTRACTS.md)) for
+  drag-move / hover-caret / interactive multiline grand-staff (needs a partitura
+  agent). Next app-side: palettes/inspector (dynamics/articulations/ties) ·
   touching `lib/features/workshop/**` only · **in progress** · detail:
   [WORKSHOP_PLAN.md](WORKSHOP_PLAN.md).
 - _last shipped_: **Cello Play It** (mic grading in the Cello Corner) +
