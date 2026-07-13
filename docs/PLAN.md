@@ -28,7 +28,9 @@ and push to origin/main** before/after touching shared files. Format:
   quick web-safe wins** (gamified sub-variants) · touching `game_registry`,
   `core/tuning`, ARBs, `features/games/**` · **in progress**. Shipped so far:
   **Longest First** (note-value ordering), **In the Scale?** (C-major membership
-  swipe), **Connect the Steps** (interval↔number, 3rd Connect-the-Notes mode).
+  swipe), **Connect the Steps** (interval↔number, 3rd Connect-the-Notes mode),
+  **High or Low?** (pitch-direction sort). Also unblocked shared main twice
+  (formatted the workshop agent's test files that were failing CI's lint/format).
   ⚠️ **For all agents — notation theme migration (just landed):** every
   `PartituraTheme.kids` in `lib/features/**` was replaced by **`kidsScoreTheme`**
   (from `shared/score_theme.dart`), so the Settings "Handwritten notes" toggle
@@ -443,7 +445,10 @@ Remaining open sub-variants:
 - [~] Note-values longest→shortest ordering: **shipped Longest First** (Notenwerte
   — the ordering format on note values; tap longest→shortest, each plays its
   length). Still open: a melody-recall ear variant of the sequence format.
-- [ ] Further sort dimensions (major/minor, high/low, sharp/flat).
+- [~] Further sort dimensions: **shipped High or Low?** (pitch-direction sort —
+  treble notes above/below the middle line drag into HIGH / LOW baskets, reusing
+  the Sort-the-Beats bucket format; SRI `pitch.height.*`). Still open: major/minor
+  and sharp/flat sorts.
 - [~] Swipe variants: **shipped In the Scale?** (C-major membership swipe/tap
   drill — natural = in, sharpened = out). Still open: major-or-minor-by-ear.
 - [ ] Falling-notes "catch the longest" (note-values) mode.
