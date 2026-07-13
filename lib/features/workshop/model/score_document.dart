@@ -15,93 +15,124 @@ import 'dart:math' as math;
 import 'package:klang_universum/shared/midi_pitch.dart';
 import 'package:partitura/partitura.dart';
 
-/// One editable event in the flat stream: a note (single pitch for now; chords
-/// come later) or a rest, with a stable [id] so it can be selected and edited.
+/// One editable event in the flat stream: a note, a chord (several simultaneous
+/// pitches), or a rest, with a stable [id] so it can be selected and edited.
 class EditorElement {
-  const EditorElement.note(
-    Pitch this.pitch,
+  /// A single note.
+  EditorElement.note(
+    Pitch pitch,
     this.duration, {
     required this.id,
     this.articulations = const {},
     this.tieToNext = false,
     this.dynamic,
-  }) : isRest = false;
+  }) : pitches = [pitch];
+
+  /// A chord: two or more simultaneous pitches (kept low → high).
+  const EditorElement.chord(
+    this.pitches,
+    this.duration, {
+    required this.id,
+    this.articulations = const {},
+    this.tieToNext = false,
+    this.dynamic,
+  });
 
   const EditorElement.rest(this.duration, {required this.id})
-      : pitch = null,
-        isRest = true,
+      : pitches = const [],
         articulations = const {},
         tieToNext = false,
         dynamic = null;
 
-  /// The pitch, or null for a rest.
-  final Pitch? pitch;
+  /// The simultaneous pitches, low → high; empty for a rest.
+  final List<Pitch> pitches;
   final NoteDuration duration;
   final String id;
-  final bool isRest;
 
   /// Note-only ornaments (rests ignore these).
   final Set<Articulation> articulations;
   final bool tieToNext;
 
-  /// A dynamic marking anchored on this note (null = none).
+  /// A dynamic marking anchored on this element (null = none).
   final DynamicLevel? dynamic;
+
+  bool get isRest => pitches.isEmpty;
+
+  /// The lowest pitch (for single-note logic), or null for a rest.
+  Pitch? get pitch => pitches.isEmpty ? null : pitches.first;
+
+  bool get isChord => pitches.length > 1;
 
   /// This event as an immutable partitura element.
   MusicElement toElement() => isRest
       ? RestElement(duration, id: id)
-      : NoteElement.note(
-          pitch!,
-          duration,
+      : NoteElement(
+          pitches: pitches,
+          duration: duration,
           id: id,
           articulations: articulations,
           tieToNext: tieToNext,
         );
 
-  EditorElement _note(
-    Pitch pitch,
-    NoteDuration duration, {
+  EditorElement _copyWith({
+    List<Pitch>? pitches,
+    NoteDuration? duration,
     Set<Articulation>? articulations,
     bool? tieToNext,
+    DynamicLevel? dyn,
+    bool clearDynamic = false,
   }) =>
-      EditorElement.note(
-        pitch,
-        duration,
+      EditorElement.chord(
+        pitches ?? this.pitches,
+        duration ?? this.duration,
         id: id,
         articulations: articulations ?? this.articulations,
         tieToNext: tieToNext ?? this.tieToNext,
+        dynamic: clearDynamic ? null : (dyn ?? dynamic),
+      );
+
+  /// Replace with a single pitch (collapses a chord).
+  EditorElement withPitch(Pitch pitch) => _copyWith(pitches: [pitch]);
+
+  EditorElement withPitches(List<Pitch> pitches) => _copyWith(pitches: pitches);
+
+  EditorElement withDuration(NoteDuration duration) =>
+      _copyWith(duration: duration);
+
+  EditorElement withId(String newId) => EditorElement.chord(
+        pitches,
+        duration,
+        id: newId,
+        articulations: articulations,
+        tieToNext: tieToNext,
         dynamic: dynamic,
       );
 
-  EditorElement withPitch(Pitch pitch) => _note(pitch, duration);
-
-  EditorElement withDuration(NoteDuration duration) =>
-      isRest ? EditorElement.rest(duration, id: id) : _note(pitch!, duration);
-
-  EditorElement withId(String id) => isRest
-      ? EditorElement.rest(duration, id: id)
-      : EditorElement.note(
-          pitch!,
-          duration,
-          id: id,
-          articulations: articulations,
-          tieToNext: tieToNext,
-          dynamic: dynamic,
-        );
-
   EditorElement withArticulations(Set<Articulation> a) =>
-      _note(pitch!, duration, articulations: a);
+      _copyWith(articulations: a);
 
-  EditorElement withTie(bool tie) => _note(pitch!, duration, tieToNext: tie);
+  EditorElement withTie(bool tie) => _copyWith(tieToNext: tie);
 
-  EditorElement withDynamic(DynamicLevel? d) => EditorElement.note(
-        pitch!,
-        duration,
-        id: id,
-        articulations: articulations,
-        tieToNext: tieToNext,
-        dynamic: d,
-      );
+  EditorElement withDynamic(DynamicLevel? d) =>
+      _copyWith(dyn: d, clearDynamic: d == null);
+
+  /// Add [p] to the chord (kept low → high, deduped by pitch).
+  EditorElement addPitch(Pitch p) {
+    if (pitches.any((e) => e.midiNumber == p.midiNumber)) return this;
+    final next = [...pitches, p]
+      ..sort((a, b) => a.midiNumber.compareTo(b.midiNumber));
+    return _copyWith(pitches: next);
+  }
+
+  /// Move so the lowest note lands on [target] — a single note re-pitches
+  /// exactly; a chord transposes as a block.
+  EditorElement moveTo(Pitch target) {
+    if (pitches.length <= 1) return withPitch(target);
+    final delta = target.midiNumber - pitches.first.midiNumber;
+    return _copyWith(
+      pitches: [for (final p in pitches) pitchFromMidi(p.midiNumber + delta)],
+    );
+  }
 }
 
 /// An undo/redo snapshot of the document's mutable state.
@@ -303,10 +334,20 @@ class ScoreDocument {
     for (var i = _lo; i <= _hi; i++) {
       final e = _elements[i];
       if (e.isRest) continue;
-      final midi = e.pitch!.midiNumber + semitones;
-      if (midi < 21 || midi > 108) continue;
-      _elements[i] = e.withPitch(pitchFromMidi(midi));
+      _elements[i] = e.withPitches([
+        for (final p in e.pitches)
+          (p.midiNumber + semitones >= 21 && p.midiNumber + semitones <= 108)
+              ? pitchFromMidi(p.midiNumber + semitones)
+              : p,
+      ]);
     }
+  }
+
+  /// Add [pitch] to the focus element, turning a note into a chord. Undoable.
+  void addPitchToSelected(Pitch pitch) {
+    if (!hasSelection || _elements[_focus!].isRest) return;
+    _snapshot();
+    _elements[_focus!] = _elements[_focus!].addPitch(pitch);
   }
 
   /// Set the accidental of every selected note (rests skipped). Undoable.
@@ -316,8 +357,10 @@ class ScoreDocument {
     for (var i = _lo; i <= _hi; i++) {
       final e = _elements[i];
       if (e.isRest) continue;
-      final p = e.pitch!;
-      _elements[i] = e.withPitch(Pitch(p.step, alter: alter, octave: p.octave));
+      _elements[i] = e.withPitches([
+        for (final p in e.pitches)
+          Pitch(p.step, alter: alter, octave: p.octave),
+      ]);
     }
   }
 
@@ -370,11 +413,12 @@ class ScoreDocument {
     }
   }
 
-  /// Re-pitch the focus element (single note; no-op on a rest). Undoable.
+  /// Move the focus element so its lowest note lands on [pitch] (a chord moves
+  /// as a block). No-op on a rest. Undoable.
   void repitchSelected(Pitch pitch) {
     if (!hasSelection || _elements[_focus!].isRest) return;
     _snapshot();
-    _elements[_focus!] = _elements[_focus!].withPitch(pitch);
+    _elements[_focus!] = _elements[_focus!].moveTo(pitch);
   }
 
   /// Re-pitch the note [id] to the staff position of a dragged [target]
@@ -388,7 +432,7 @@ class ScoreDocument {
         target.pitchFor(clef ?? this.clef, preferredAlter: current.alter);
     if (moved.midiNumber == current.midiNumber) return null;
     _snapshot();
-    _elements[i] = _elements[i].withPitch(moved);
+    _elements[i] = _elements[i].moveTo(moved);
     return moved;
   }
 

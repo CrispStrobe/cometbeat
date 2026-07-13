@@ -248,6 +248,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopDynamicNone => 'Keine';
 
   @override
+  String get workshopChord => 'Akkord (Töne stapeln)';
+
+  @override
   String get instrumentLabel => 'Instrumentenklang';
 
   @override

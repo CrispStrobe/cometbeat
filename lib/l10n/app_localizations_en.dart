@@ -248,6 +248,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopDynamicNone => 'None';
 
   @override
+  String get workshopChord => 'Chord (stack notes)';
+
+  @override
   String get instrumentLabel => 'Instrument sound';
 
   @override

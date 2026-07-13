@@ -104,6 +104,7 @@
   "workshopTie": "Tie",
   "workshopDynamics": "Dynamics",
   "workshopDynamicNone": "None",
+  "workshopChord": "Chord (stack notes)",
   "instrumentLabel": "Instrument sound",
   "instrumentPiano": "Piano",
   "instrumentCello": "Cello",

@@ -518,6 +518,12 @@ abstract class AppLocalizations {
   /// **'None'**
   String get workshopDynamicNone;
 
+  /// No description provided for @workshopChord.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord (stack notes)'**
+  String get workshopChord;
+
   /// No description provided for @instrumentLabel.
   ///
   /// In en, this message translates to:

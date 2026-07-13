@@ -43,12 +43,14 @@ CompositionWorkshopTester _editor(WidgetTester tester) =>
 
 // The piano is a wide, horizontally-scrollable keyboard; its widget centre is
 // off-screen, so tap a specific visible white-key GestureDetector instead.
-Finder _pianoKey() => find
+Finder _pianoKeyAt(int i) => find
     .descendant(
       of: find.byType(PianoKeyboard),
       matching: find.byType(GestureDetector),
     )
-    .at(16);
+    .at(i);
+
+Finder _pianoKey() => _pianoKeyAt(16);
 
 void main() {
   setUp(() {
@@ -137,7 +139,11 @@ void main() {
     await pump(tester);
     await tester.tap(_pianoKey()); // places + selects a note
     await tester.pump();
-    await tester.tap(find.byIcon(Icons.expand_less)); // the palette button
+    // The action row is scrollable; reveal the palette button before tapping.
+    final palette = find.byIcon(Icons.expand_less);
+    await tester.ensureVisible(palette);
+    await tester.pumpAndSettle();
+    await tester.tap(palette);
     await tester.pumpAndSettle();
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     expect(find.text(l10n.workshopStaccato), findsOneWidget);
@@ -157,6 +163,20 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.delete);
     await tester.pump();
     expect(editor.noteCount, 1);
+  });
+
+  testWidgets('chord mode stacks a second note onto the first', (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    await tester.tap(_pianoKeyAt(16)); // first note, auto-selected
+    await tester.pump();
+    expect(editor.noteCount, 1);
+
+    await tester.tap(find.byIcon(Icons.layers)); // enable chord mode
+    await tester.pump();
+    await tester.tap(_pianoKeyAt(18)); // a different key → stacks
+    await tester.pump();
+    expect(editor.noteCount, 1, reason: 'the pitch stacks, not a new element');
   });
 
   testWidgets('switching to grand-staff mode shows both clefs', (tester) async {

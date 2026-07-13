@@ -150,6 +150,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   _Accidental _accidental = _Accidental.natural;
   double _zoom = 16;
   _StaffMode _mode = _StaffMode.treble;
+  bool _chordMode = false; // placed pitches stack onto the selected note
   StaffTarget? _hover; // where a click/tap would land (desktop hover preview)
 
   // Start the sweepable piano scrolled to around C3 (24 = C1, 7 white/octave).
@@ -205,11 +206,16 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   // ---- entry -------------------------------------------------------------
 
-  /// Insert a note of [pitch] at the caret (shared by the piano and staff-tap).
+  /// Place a pitch: in chord mode it stacks onto the selected note; otherwise it
+  /// inserts a new note at the caret. Shared by the piano, staff-tap and keys.
   void _placePitch(Pitch pitch) {
-    if (_doc.length >= CompositionWorkshopScreen.maxNotes) return;
     _audio.playMidiNote(pitch.midiNumber, ms: 400);
-    setState(() => _doc.insertNote(pitch, _pendingDuration));
+    final selected = _doc.selected;
+    if (_chordMode && selected != null && !selected.isRest) {
+      setState(() => _doc.addPitchToSelected(pitch));
+    } else if (_doc.length < CompositionWorkshopScreen.maxNotes) {
+      setState(() => _doc.insertNote(pitch, _pendingDuration));
+    }
   }
 
   void _onPianoKey(int midi) => _placePitch(pitchFromMidi(midi));
@@ -681,6 +687,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               onToggleDot: _toggleDot,
               onPickAccidental: _pickAccidental,
               onRest: _addRest,
+              chordMode: _chordMode,
+              onChord: () => setState(() => _chordMode = !_chordMode),
               onSelectPrev: () => _run(_doc.selectPrev),
               onSelectNext: () => _run(_doc.selectNext),
               onExtendLeft: () => _run(_doc.extendLeft),
@@ -885,6 +893,8 @@ class _InputBar extends StatelessWidget {
     required this.onToggleDot,
     required this.onPickAccidental,
     required this.onRest,
+    required this.chordMode,
+    required this.onChord,
     required this.onSelectPrev,
     required this.onSelectNext,
     required this.onExtendLeft,
@@ -905,7 +915,8 @@ class _InputBar extends StatelessWidget {
   final _Accidental accidental;
   final bool hasSelection, canTranspose, canPaste;
   final ValueChanged<DurationBase> onPickValue;
-  final VoidCallback onToggleDot, onRest;
+  final VoidCallback onToggleDot, onRest, onChord;
+  final bool chordMode;
   final ValueChanged<_Accidental> onPickAccidental;
   final VoidCallback onSelectPrev, onSelectNext, onExtendLeft, onExtendRight;
   final VoidCallback onUp, onDown, onMoveLeft, onMoveRight;
@@ -952,6 +963,12 @@ class _InputBar extends StatelessWidget {
                 ),
               const _Sep(),
               _act(Icons.music_off_outlined, l10n.workshopRest, onRest),
+              _GlyphButton(
+                selected: chordMode,
+                onTap: onChord,
+                tooltip: l10n.workshopChord,
+                child: const Icon(Icons.layers, size: 22),
+              ),
               if (hasSelection) ...[
                 const _Sep(),
                 _act(Icons.chevron_left, l10n.workshopSelectPrev, onSelectPrev),

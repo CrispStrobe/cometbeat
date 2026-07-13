@@ -190,6 +190,58 @@ void main() {
     });
   });
 
+  group('chords', () {
+    test('addPitchToSelected stacks pitches into one chord element', () {
+      final doc = ScoreDocument();
+      doc.insertNote(_p(Step.c), _q); // C, auto-selected
+      doc.addPitchToSelected(_p(Step.e));
+      doc.addPitchToSelected(_p(Step.g));
+      final el = doc.elements.single;
+      expect(el.isChord, isTrue);
+      expect(el.pitches.map((p) => p.step), [Step.c, Step.e, Step.g]);
+      // Renders as a single NoteElement carrying all three pitches.
+      final note =
+          doc.buildScore().measures.first.elements.first as NoteElement;
+      expect(note.pitches.length, 3);
+    });
+
+    test('addPitch keeps low→high order and dedupes', () {
+      final doc = ScoreDocument();
+      doc.insertNote(_p(Step.g), _q); // G4
+      doc.addPitchToSelected(_p(Step.c)); // C4 sorts below
+      doc.addPitchToSelected(_p(Step.g)); // duplicate → ignored
+      expect(doc.elements.single.pitches.map((p) => p.step), [Step.c, Step.g]);
+    });
+
+    test('transposing a chord moves every note; undo restores it', () {
+      final doc = ScoreDocument();
+      doc.insertNote(_p(Step.c), _q);
+      doc.addPitchToSelected(_p(Step.e));
+      final before =
+          doc.elements.single.pitches.map((p) => p.midiNumber).toList();
+      doc.transposeSelected(2);
+      final after =
+          doc.elements.single.pitches.map((p) => p.midiNumber).toList();
+      expect(after, [before[0] + 2, before[1] + 2]);
+      doc.undo();
+      expect(
+        doc.elements.single.pitches.map((p) => p.midiNumber).toList(),
+        before,
+      );
+    });
+
+    test('moving a chord transposes it as a block', () {
+      final doc = ScoreDocument();
+      doc.insertNote(_p(Step.c), _q); // C4
+      doc.addPitchToSelected(_p(Step.e)); // → chord C4·E4
+      doc.repitchSelected(_p(Step.d)); // lowest → D4 (block +2)
+      final midis =
+          doc.elements.single.pitches.map((p) => p.midiNumber).toList();
+      expect(midis[0], _p(Step.d).midiNumber); // D4
+      expect(midis[1], _p(Step.e).midiNumber + 2); // E4 + 2
+    });
+  });
+
   group('round-trips', () {
     test('MusicXML preserves pitches and durations', () {
       final src = ScoreDocument();

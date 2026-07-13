@@ -73,6 +73,7 @@
   "workshopTie": "Bindebogen",
   "workshopDynamics": "Dynamik",
   "workshopDynamicNone": "Keine",
+  "workshopChord": "Akkord (Töne stapeln)",
   "instrumentLabel": "Instrumentenklang",
   "instrumentPiano": "Klavier",
   "instrumentCello": "Cello",
