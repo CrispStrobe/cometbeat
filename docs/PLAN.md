@@ -14,11 +14,6 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (workshop→games)** · **🚧 ACTIVE — "Ascending or Descending?"** (binary
-  ear: a 3–4 note run plays → climbs up or steps down; 4 notes at 2★). Touching
-  `game_registry.dart`, `core/tuning.dart`, ARBs **additively** + new
-  `scales/run_direction_screen.dart` + test. --rebase per commit. SRI
-  `pitch.hear.<asc|desc>`.
 - **opus (primers)** · **docs only** — **Workshop→partitura parity assessment**
   (2026-07-14, in `WORKSHOP_PLAN.md`): verified partitura advanced ~40 commits;
   **mus fully compatible** (429 green against `@main`, local ff'd). Finding:
@@ -33,18 +28,19 @@ and push to origin/main** before/after touching shared files. Format:
   (real ScoreDocument + MultiPartScore/MultiPartView API signatures, the two-view
   `MultiPartDocument = List<ScoreDocument>` architecture, phased P4a–e plan, all
   the gotchas) so a fresh agent can take G6 in its own worktree without colliding.
-- **opus (workshop→games)** · **idle / SHIPPED — live drag + 4 new minigames** (all
+- **opus (workshop→games)** · **idle / SHIPPED — live drag + 5 new minigames** (all
   on origin/main, each its own commit + CI-green). **partitura C10a+C10b** (the
   live drag: `suppressElementIds` clean hide + `dragPreviewOpacity` view-painted
-  drag) + the Workshop **live drop caret** (`computeDropSlot`). Then 4 tap-robust
+  drag) + the Workshop **live drop caret** (`computeDropSlot`). Then 5 tap-robust
   minigames, each = one `GameInfo` + a `kStarThresholds` bracket + EN/DE ARB +
   screen + widget test (consistency + whole-project analyze green):
   **Which Clef?** (`reading.clef.*`, bare clef → T/B, +A/T at 2★),
   **Whole or Half Step?** (`reading.tone.*`, tone vs semitone on the staff + heard,
   +bass at 2★), **Same or Different?** (`pitch.hear.*`, ear discrimination, subtler
   at 2★), **Dotted or Not?** (`note_values.dot.*`, two-basket sort on the
-  augmentation dot). Next agent: more of the backlog (bass-clef variants,
-  Ascending/Descending?, Louder/Softer?).
+  augmentation dot), **Ascending or Descending?** (`pitch.hear.*`, a 3–4 note run's
+  direction, 4 notes at 2★). Next agent: more of the backlog (bass-clef variants,
+  Louder/Softer?, Count the Notes).
 - **opus (primers)** · **idle / SHIPPED (round 3)** — Learnability & UX #1–#3
   all on `origin/main`, full suite (429) green:
   **#1 module-primer fallback** (`04dc09a`) — `kModulePrimers` +
@@ -745,8 +741,10 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   glyphs into Dotted/Plain baskets by reading the augmentation dot (value varies
   so shape alone doesn't give it away). SRI `note_values.dot.<dotted|plain>`. See
   [HISTORY.md](HISTORY.md#gamified-formats--shipped).
-- [ ] **Ascending or Descending?** (binary ear) — play a 3–4 note run; is it going
-  up or down overall? A step past Higher or Lower? (more than two notes).
+- [x] **Ascending or Descending?** (binary ear) — **shipped** (Tonleitern): a 3–4
+  note run plays → climbs up or steps down; 4 notes at 2★. A step past Higher or
+  Lower?. SRI `pitch.hear.<asc|desc>`. See
+  [HISTORY.md](HISTORY.md#gamified-formats--shipped).
 - [ ] **Count the Notes** (ear) — how many notes did you just hear (2/3/4)? Builds
   aural attention; playable via `playPhrase`.
 

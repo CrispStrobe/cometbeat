@@ -538,6 +538,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plainLabel => 'Plain';
 
   @override
+  String get gameRunDirection => 'Ascending or Descending?';
+
+  @override
+  String get gameRunDirectionSubtitle =>
+      'A little run of notes plays — does it climb up or step down?';
+
+  @override
+  String get runDirectionPrompt => 'Does the run go up or down?';
+
+  @override
+  String get ascendingLabel => 'Ascending';
+
+  @override
+  String get descendingLabel => 'Descending';
+
+  @override
   String get moduleGuitar => 'Guitar Corner';
 
   @override

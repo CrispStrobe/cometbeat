@@ -245,6 +245,10 @@ per-game `unlockedWhen` gate on `GameInfo`).
   (Kodály): two notes play; tap whether they are the same pitch or different. A
   clear leap for beginners, subtler gaps (down to a semitone) at 2★. Replay
   button, no staff. SRI `pitch.hear.<same|diff>`.
+- **Ascending or Descending?** (ear, binary) — a short run of notes plays; tap
+  whether it climbs up or steps down. A step past Higher or Lower? — a whole
+  phrase moves one way, not just two notes. Three notes for beginners, four at
+  2★. Replay button, no staff. SRI `pitch.hear.<asc|desc>`.
 - **Step or Skip?** (staff reading, binary) — two notes on the staff; read
   whether the move is a step (the next line/space, a 2nd) or a skip (a bigger
   leap). The motion vocabulary that precedes naming exact intervals. Correct

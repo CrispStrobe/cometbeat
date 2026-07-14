@@ -1058,6 +1058,36 @@ abstract class AppLocalizations {
   /// **'Plain'**
   String get plainLabel;
 
+  /// No description provided for @gameRunDirection.
+  ///
+  /// In en, this message translates to:
+  /// **'Ascending or Descending?'**
+  String get gameRunDirection;
+
+  /// No description provided for @gameRunDirectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A little run of notes plays — does it climb up or step down?'**
+  String get gameRunDirectionSubtitle;
+
+  /// No description provided for @runDirectionPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Does the run go up or down?'**
+  String get runDirectionPrompt;
+
+  /// No description provided for @ascendingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ascending'**
+  String get ascendingLabel;
+
+  /// No description provided for @descendingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Descending'**
+  String get descendingLabel;
+
   /// No description provided for @moduleGuitar.
   ///
   /// In en, this message translates to:

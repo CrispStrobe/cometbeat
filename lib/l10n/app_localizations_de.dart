@@ -540,6 +540,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get plainLabel => 'Ohne Punkt';
 
   @override
+  String get gameRunDirection => 'Aufsteigend oder absteigend?';
+
+  @override
+  String get gameRunDirectionSubtitle =>
+      'Eine kleine Tonfolge erklingt — steigt sie auf oder ab?';
+
+  @override
+  String get runDirectionPrompt => 'Geht die Tonfolge aufwärts oder abwärts?';
+
+  @override
+  String get ascendingLabel => 'Aufsteigend';
+
+  @override
+  String get descendingLabel => 'Absteigend';
+
+  @override
   String get moduleGuitar => 'Gitarren-Ecke';
 
   @override

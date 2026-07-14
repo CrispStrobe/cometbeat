@@ -86,6 +86,7 @@ import 'package:klang_universum/features/games/scales/echo_sequence_screen.dart'
 import 'package:klang_universum/features/games/scales/in_scale_screen.dart';
 import 'package:klang_universum/features/games/scales/key_signature_screen.dart';
 import 'package:klang_universum/features/games/scales/major_minor_ear_screen.dart';
+import 'package:klang_universum/features/games/scales/run_direction_screen.dart';
 import 'package:klang_universum/features/games/scales/same_diff_screen.dart';
 import 'package:klang_universum/features/games/scales/scale_builder_screen.dart';
 import 'package:klang_universum/features/games/scales/scale_detective_screen.dart';
@@ -589,6 +590,14 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameSameDiff,
       subtitle: (l) => l.gameSameDiffSubtitle,
       builder: (_) => const SameDiffScreen(),
+    ),
+    // Direction of a short run — a step past Higher or Lower? (more notes).
+    GameInfo(
+      id: 'run_direction',
+      icon: Icons.show_chart,
+      title: (l) => l.gameRunDirection,
+      subtitle: (l) => l.gameRunDirectionSubtitle,
+      builder: (_) => const RunDirectionScreen(),
     ),
     GameInfo(
       id: 'sing_back',

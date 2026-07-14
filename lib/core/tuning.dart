@@ -66,6 +66,7 @@ const Map<String, List<int>> kStarThresholds = {
   // Higher or Lower? (melodic-direction ear): 10 rounds x 100.
   'direction_ear': [100, 600, 900],
   'same_diff': [100, 600, 900],
+  'run_direction': [100, 600, 900],
   'function_ear': [100, 600, 900],
   'interval_ear': [100, 600, 900],
   // 8 rounds: max 800.
