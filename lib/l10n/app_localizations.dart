@@ -1028,6 +1028,36 @@ abstract class AppLocalizations {
   /// **'Different'**
   String get differentLabel;
 
+  /// No description provided for @gameDottedSort.
+  ///
+  /// In en, this message translates to:
+  /// **'Dotted or Not?'**
+  String get gameDottedSort;
+
+  /// No description provided for @gameDottedSortSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort the notes — does it carry a dot (half again as long)?'**
+  String get gameDottedSortSubtitle;
+
+  /// No description provided for @dottedSortPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag each note: does it have a dot?'**
+  String get dottedSortPrompt;
+
+  /// No description provided for @dottedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dotted'**
+  String get dottedLabel;
+
+  /// No description provided for @plainLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Plain'**
+  String get plainLabel;
+
   /// No description provided for @moduleGuitar.
   ///
   /// In en, this message translates to:

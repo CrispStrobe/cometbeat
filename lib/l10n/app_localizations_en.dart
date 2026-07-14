@@ -522,6 +522,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get differentLabel => 'Different';
 
   @override
+  String get gameDottedSort => 'Dotted or Not?';
+
+  @override
+  String get gameDottedSortSubtitle =>
+      'Sort the notes — does it carry a dot (half again as long)?';
+
+  @override
+  String get dottedSortPrompt => 'Drag each note: does it have a dot?';
+
+  @override
+  String get dottedLabel => 'Dotted';
+
+  @override
+  String get plainLabel => 'Plain';
+
+  @override
   String get moduleGuitar => 'Guitar Corner';
 
   @override

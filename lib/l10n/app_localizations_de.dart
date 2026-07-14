@@ -524,6 +524,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get differentLabel => 'Anders';
 
   @override
+  String get gameDottedSort => 'Mit oder ohne Punkt?';
+
+  @override
+  String get gameDottedSortSubtitle =>
+      'Sortiere die Noten — trägt sie einen Punkt (halb so lang dazu)?';
+
+  @override
+  String get dottedSortPrompt => 'Zieh jede Note: hat sie einen Punkt?';
+
+  @override
+  String get dottedLabel => 'Punktiert';
+
+  @override
+  String get plainLabel => 'Ohne Punkt';
+
+  @override
   String get moduleGuitar => 'Gitarren-Ecke';
 
   @override

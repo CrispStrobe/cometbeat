@@ -74,6 +74,7 @@ import 'package:klang_universum/features/games/note_reading/which_voice_screen.d
 import 'package:klang_universum/features/games/note_reading/whole_half_screen.dart';
 import 'package:klang_universum/features/games/note_values/beat_count_screen.dart';
 import 'package:klang_universum/features/games/note_values/beat_sort_screen.dart';
+import 'package:klang_universum/features/games/note_values/dotted_sort_screen.dart';
 import 'package:klang_universum/features/games/note_values/duration_duel_screen.dart';
 import 'package:klang_universum/features/games/note_values/note_value_quiz_screen.dart';
 import 'package:klang_universum/features/games/note_values/rhythm_tap_screen.dart';
@@ -182,6 +183,14 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameNoteValueQuizSubtitle,
       builder: (_) => const NoteValueQuizScreen(),
       tutorial: noteValuesPrimer,
+    ),
+    // Read the augmentation dot — sort notes into Dotted vs Plain baskets.
+    GameInfo(
+      id: 'dotted_sort',
+      icon: Icons.fiber_manual_record,
+      title: (l) => l.gameDottedSort,
+      subtitle: (l) => l.gameDottedSortSubtitle,
+      builder: (_) => const DottedSortScreen(),
     ),
     GameInfo(
       id: 'duration_duel',

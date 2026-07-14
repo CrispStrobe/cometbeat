@@ -14,36 +14,18 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (workshop→games)** · **🚧 ACTIVE — new minigame "Dotted or Not?"** (two-
-  basket sort, Notenwerte: drag note glyphs into Dotted/Plain baskets; reads the
-  augmentation dot). Touching `game_registry.dart`, `core/tuning.dart`, ARBs
-  **additively** + new `note_values/dotted_sort_screen.dart` + test. --rebase per
-  commit. SRI `note_values.dot.<dotted|plain>`.
-- **opus (workshop→games)** · **idle / SHIPPED — "Same or Different?"** (Tonleitern,
-  ear). Two notes play → tap same pitch or different, replayable; a clear leap
-  for beginners, subtler gaps (down to a semitone) at 2★. Cloned the
-  `direction_ear` scaffold; SRI `pitch.hear.<same|diff>`. One `GameInfo`, a
-  `[100,600,900]` bracket, EN+DE ARB keys, `scales/same_diff_screen.dart` + test;
-  consistency + whole-project analyze green; on origin/main. **3rd new minigame
-  this run** (after Which Clef? + Whole or Half Step?).
-- **opus (workshop→games)** · **idle / SHIPPED — 2 new minigames.** (2) **Whole
-  or Half Step?** (Noten lesen) — two neighbour notes (a 2nd); tap whole step
-  (tone) vs half step (semitone), and *hear* the interval. Half steps hide at
-  E–F/B–C, so a plain 2nd isn't enough — you read the letters. Balanced
-  generation from `Clef.pitchAt`; treble at 1★, +bass at 2★. SRI
-  `reading.tone.<whole|half>`. (1) **Which Clef?** — a bare clef, tap Treble/Bass
-  (+Alto/Tenor at 2★), SRI `reading.clef.<name>`. Each: one `GameInfo`, a
-  `[100,600,900]` bracket, EN+DE ARB keys, a screen + a widget test; consistency
-  suite + whole-project analyze green; on origin/main. · _earlier this session:
-  partitura **C10a+C10b** live drag + Workshop **live drop caret** (all CI-green)._
-  (Noten lesen). A bare clef on an empty staff (`StaffView` + `Measure([])`);
-  tap **Treble/Bass**, widening to **Alto/Tenor at 2★** (`starsFor>=2`). Binary
-  `AnswerGrid`, no-fail `QuizRoundMixin`; SRI `reading.clef.<name>`. Added one
-  `GameInfo` (`game_registry.dart`), a `[100,600,900]` bracket (`core/tuning.dart`),
-  EN+DE ARB keys, `which_clef_screen.dart` + `which_clef_test.dart`. Consistency
-  suite + whole-project analyze green; on origin/main. ·
-  _also this session: shipped **partitura C10a+C10b** (live drag) + the Workshop
-  **live drop caret** — all on origin/main, CI-green._
+- **opus (workshop→games)** · **idle / SHIPPED — live drag + 4 new minigames** (all
+  on origin/main, each its own commit + CI-green). **partitura C10a+C10b** (the
+  live drag: `suppressElementIds` clean hide + `dragPreviewOpacity` view-painted
+  drag) + the Workshop **live drop caret** (`computeDropSlot`). Then 4 tap-robust
+  minigames, each = one `GameInfo` + a `kStarThresholds` bracket + EN/DE ARB +
+  screen + widget test (consistency + whole-project analyze green):
+  **Which Clef?** (`reading.clef.*`, bare clef → T/B, +A/T at 2★),
+  **Whole or Half Step?** (`reading.tone.*`, tone vs semitone on the staff + heard,
+  +bass at 2★), **Same or Different?** (`pitch.hear.*`, ear discrimination, subtler
+  at 2★), **Dotted or Not?** (`note_values.dot.*`, two-basket sort on the
+  augmentation dot). Next agent: more of the backlog (bass-clef variants,
+  Ascending/Descending?, Louder/Softer?).
 - **opus (primers)** · **idle / SHIPPED (round 3)** — Learnability & UX #1–#3
   all on `origin/main`, full suite (429) green:
   **#1 module-primer fallback** (`04dc09a`) — `kModulePrimers` +
@@ -685,8 +667,10 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
 - [x] **Which Clef?** (binary) — **shipped** (Noten lesen): a bare clef on an
   empty staff; tap Treble or Bass, widening to Alto/Tenor at 2★. SRI
   `reading.clef.<name>`. See [HISTORY.md](HISTORY.md#partitura-powered--shipped).
-- [ ] **Dotted or Not?** (two-basket sort) — sort note glyphs by whether they
-  carry a dot (½-again longer). Teaches the dot; reuses the sort scaffold.
+- [x] **Dotted or Not?** (two-basket sort) — **shipped** (Notenwerte): drag note
+  glyphs into Dotted/Plain baskets by reading the augmentation dot (value varies
+  so shape alone doesn't give it away). SRI `note_values.dot.<dotted|plain>`. See
+  [HISTORY.md](HISTORY.md#gamified-formats--shipped).
 - [ ] **Ascending or Descending?** (binary ear) — play a 3–4 note run; is it going
   up or down overall? A step past Higher or Lower? (more than two notes).
 - [ ] **Count the Notes** (ear) — how many notes did you just hear (2/3/4)? Builds

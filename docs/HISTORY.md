@@ -233,6 +233,11 @@ per-game `unlockedWhen` gate on `GameInfo`).
 - **Sharp or Flat?** (sort into two baskets) — each note carries a sharp or a
   flat; drag it into the matching basket. Reading the accidental sign is the
   skill. SRI `accidentals.sign.*`.
+- **Dotted or Not?** (sort into two baskets) — drag note glyphs into Dotted /
+  Plain baskets by reading the **augmentation dot** (which makes a note half
+  again as long). The note value varies (half/quarter/eighth) so the shape alone
+  doesn't give it away. Reuses the Sharp-or-Flat? sort scaffold. SRI
+  `note_values.dot.<dotted|plain>`.
 - **Higher or Lower?** (ear, binary) — two notes play in sequence; tap whether
   the second is higher or lower. No staff — the aural twin of High or Low?. Big
   replay button. SRI `pitch.hear.<up|down>`.
