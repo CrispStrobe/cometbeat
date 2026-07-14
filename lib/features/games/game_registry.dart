@@ -85,6 +85,7 @@ import 'package:klang_universum/features/games/scales/echo_sequence_screen.dart'
 import 'package:klang_universum/features/games/scales/in_scale_screen.dart';
 import 'package:klang_universum/features/games/scales/key_signature_screen.dart';
 import 'package:klang_universum/features/games/scales/major_minor_ear_screen.dart';
+import 'package:klang_universum/features/games/scales/same_diff_screen.dart';
 import 'package:klang_universum/features/games/scales/scale_builder_screen.dart';
 import 'package:klang_universum/features/games/scales/scale_detective_screen.dart';
 import 'package:klang_universum/features/games/scales/sing_back_screen.dart';
@@ -571,6 +572,14 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameDirectionEar,
       subtitle: (l) => l.gameDirectionEarSubtitle,
       builder: (_) => const DirectionEarScreen(),
+    ),
+    // Same-or-different pitch discrimination — the youngest ear skill.
+    GameInfo(
+      id: 'same_diff',
+      icon: Icons.compare_arrows,
+      title: (l) => l.gameSameDiff,
+      subtitle: (l) => l.gameSameDiffSubtitle,
+      builder: (_) => const SameDiffScreen(),
     ),
     GameInfo(
       id: 'sing_back',

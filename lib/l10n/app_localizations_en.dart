@@ -506,6 +506,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get halfStepLabel => 'Half step';
 
   @override
+  String get gameSameDiff => 'Same or Different?';
+
+  @override
+  String get gameSameDiffSubtitle =>
+      'Two notes play — are they the same pitch or different?';
+
+  @override
+  String get sameDiffPrompt => 'Are the two notes the same, or different?';
+
+  @override
+  String get sameLabel => 'Same';
+
+  @override
+  String get differentLabel => 'Different';
+
+  @override
   String get moduleGuitar => 'Guitar Corner';
 
   @override

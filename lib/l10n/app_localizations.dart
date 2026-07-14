@@ -998,6 +998,36 @@ abstract class AppLocalizations {
   /// **'Half step'**
   String get halfStepLabel;
 
+  /// No description provided for @gameSameDiff.
+  ///
+  /// In en, this message translates to:
+  /// **'Same or Different?'**
+  String get gameSameDiff;
+
+  /// No description provided for @gameSameDiffSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Two notes play — are they the same pitch or different?'**
+  String get gameSameDiffSubtitle;
+
+  /// No description provided for @sameDiffPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Are the two notes the same, or different?'**
+  String get sameDiffPrompt;
+
+  /// No description provided for @sameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Same'**
+  String get sameLabel;
+
+  /// No description provided for @differentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Different'**
+  String get differentLabel;
+
   /// No description provided for @moduleGuitar.
   ///
   /// In en, this message translates to:

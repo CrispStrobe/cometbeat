@@ -508,6 +508,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get halfStepLabel => 'Halbton';
 
   @override
+  String get gameSameDiff => 'Gleich oder anders?';
+
+  @override
+  String get gameSameDiffSubtitle =>
+      'Zwei Töne erklingen — gleicher Ton oder verschieden?';
+
+  @override
+  String get sameDiffPrompt => 'Sind die zwei Töne gleich oder verschieden?';
+
+  @override
+  String get sameLabel => 'Gleich';
+
+  @override
+  String get differentLabel => 'Anders';
+
+  @override
   String get moduleGuitar => 'Gitarren-Ecke';
 
   @override

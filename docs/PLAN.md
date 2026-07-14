@@ -14,11 +14,13 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (workshop→games)** · **🚧 ACTIVE — new minigame "Same or Different?"**
-  (binary ear on the `direction_ear` scaffold: two notes play → same pitch or
-  different; subtler gaps at 2★). Touching `game_registry.dart`, `core/tuning.dart`,
-  ARBs **additively** + new `scales/same_diff_screen.dart` + test. --rebase per
-  commit. SRI `pitch.hear.<same|diff>`.
+- **opus (workshop→games)** · **idle / SHIPPED — "Same or Different?"** (Tonleitern,
+  ear). Two notes play → tap same pitch or different, replayable; a clear leap
+  for beginners, subtler gaps (down to a semitone) at 2★. Cloned the
+  `direction_ear` scaffold; SRI `pitch.hear.<same|diff>`. One `GameInfo`, a
+  `[100,600,900]` bracket, EN+DE ARB keys, `scales/same_diff_screen.dart` + test;
+  consistency + whole-project analyze green; on origin/main. **3rd new minigame
+  this run** (after Which Clef? + Whole or Half Step?).
 - **opus (workshop→games)** · **idle / SHIPPED — 2 new minigames.** (2) **Whole
   or Half Step?** (Noten lesen) — two neighbour notes (a 2nd); tap whole step
   (tone) vs half step (semitone), and *hear* the interval. Half steps hide at
@@ -672,9 +674,9 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   staff and tap tone vs semitone (half steps hide at E–F/B–C), and hear the
   interval; treble at 1★, +bass at 2★. SRI `reading.tone.<whole|half>`. See
   [HISTORY.md](HISTORY.md#partitura-powered--shipped).
-- [ ] **Same or Different?** (binary ear) — two notes (or two 2-note cells); are
-  they the same or different? The youngest-child discrimination skill (Kodály).
-  Trivial to build on the `direction_ear` scaffold.
+- [x] **Same or Different?** (binary ear) — **shipped** (Tonleitern): two notes
+  play → same pitch or different; clear leap → subtler gaps at 2★. SRI
+  `pitch.hear.<same|diff>`. See [HISTORY.md](HISTORY.md#partitura-powered--shipped).
 - [x] **Which Clef?** (binary) — **shipped** (Noten lesen): a bare clef on an
   empty staff; tap Treble or Bass, widening to Alto/Tenor at 2★. SRI
   `reading.clef.<name>`. See [HISTORY.md](HISTORY.md#partitura-powered--shipped).

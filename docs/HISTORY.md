@@ -236,6 +236,10 @@ per-game `unlockedWhen` gate on `GameInfo`).
 - **Higher or Lower?** (ear, binary) — two notes play in sequence; tap whether
   the second is higher or lower. No staff — the aural twin of High or Low?. Big
   replay button. SRI `pitch.hear.<up|down>`.
+- **Same or Different?** (ear, binary) — the youngest pitch-discrimination skill
+  (Kodály): two notes play; tap whether they are the same pitch or different. A
+  clear leap for beginners, subtler gaps (down to a semitone) at 2★. Replay
+  button, no staff. SRI `pitch.hear.<same|diff>`.
 - **Step or Skip?** (staff reading, binary) — two notes on the staff; read
   whether the move is a step (the next line/space, a 2nd) or a skip (a bigger
   leap). The motion vocabulary that precedes naming exact intervals. Correct
