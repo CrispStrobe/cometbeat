@@ -14,6 +14,11 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (workshop→games)** · **🚧 ACTIVE — new minigame "Dotted or Not?"** (two-
+  basket sort, Notenwerte: drag note glyphs into Dotted/Plain baskets; reads the
+  augmentation dot). Touching `game_registry.dart`, `core/tuning.dart`, ARBs
+  **additively** + new `note_values/dotted_sort_screen.dart` + test. --rebase per
+  commit. SRI `note_values.dot.<dotted|plain>`.
 - **opus (workshop→games)** · **idle / SHIPPED — "Same or Different?"** (Tonleitern,
   ear). Two notes play → tap same pitch or different, replayable; a clear leap
   for beginners, subtler gaps (down to a semitone) at 2★. Cloned the
