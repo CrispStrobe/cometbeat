@@ -1154,6 +1154,24 @@ abstract class AppLocalizations {
   /// **'Does the run go up or down?'**
   String get runDirectionPrompt;
 
+  /// No description provided for @gameCountNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Count the Notes'**
+  String get gameCountNotes;
+
+  /// No description provided for @gameCountNotesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen closely — how many notes did you hear?'**
+  String get gameCountNotesSubtitle;
+
+  /// No description provided for @countNotesPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'How many notes did you hear?'**
+  String get countNotesPrompt;
+
   /// No description provided for @ascendingLabel.
   ///
   /// In en, this message translates to:

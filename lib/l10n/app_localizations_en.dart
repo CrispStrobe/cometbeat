@@ -590,6 +590,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get runDirectionPrompt => 'Does the run go up or down?';
 
   @override
+  String get gameCountNotes => 'Count the Notes';
+
+  @override
+  String get gameCountNotesSubtitle =>
+      'Listen closely — how many notes did you hear?';
+
+  @override
+  String get countNotesPrompt => 'How many notes did you hear?';
+
+  @override
   String get ascendingLabel => 'Ascending';
 
   @override

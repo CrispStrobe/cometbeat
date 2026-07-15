@@ -592,6 +592,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get runDirectionPrompt => 'Geht die Tonfolge aufwärts oder abwärts?';
 
   @override
+  String get gameCountNotes => 'Töne zählen';
+
+  @override
+  String get gameCountNotesSubtitle =>
+      'Hör genau hin — wie viele Töne hast du gehört?';
+
+  @override
+  String get countNotesPrompt => 'Wie viele Töne hast du gehört?';
+
+  @override
   String get ascendingLabel => 'Aufsteigend';
 
   @override

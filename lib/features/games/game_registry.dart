@@ -82,6 +82,7 @@ import 'package:klang_universum/features/games/note_values/rhythm_tap_screen.dar
 import 'package:klang_universum/features/games/note_values/value_order_screen.dart';
 import 'package:klang_universum/features/games/playalong/play_along_screen.dart';
 import 'package:klang_universum/features/games/scales/command_caller_screen.dart';
+import 'package:klang_universum/features/games/scales/count_notes_screen.dart';
 import 'package:klang_universum/features/games/scales/direction_ear_screen.dart';
 import 'package:klang_universum/features/games/scales/echo_sequence_screen.dart';
 import 'package:klang_universum/features/games/scales/in_scale_screen.dart';
@@ -598,6 +599,14 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameRunDirection,
       subtitle: (l) => l.gameRunDirectionSubtitle,
       builder: (_) => const RunDirectionScreen(),
+    ),
+    // Count the notes — aural attention: how many notes did you just hear?
+    GameInfo(
+      id: 'count_notes',
+      icon: Icons.filter_2,
+      title: (l) => l.gameCountNotes,
+      subtitle: (l) => l.gameCountNotesSubtitle,
+      builder: (_) => const CountNotesScreen(),
     ),
     GameInfo(
       id: 'sing_back',

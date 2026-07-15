@@ -67,6 +67,7 @@ const Map<String, List<int>> kStarThresholds = {
   'direction_ear': [100, 600, 900],
   'same_diff': [100, 600, 900],
   'run_direction': [100, 600, 900],
+  'count_notes': [100, 600, 900],
   'function_ear': [100, 600, 900],
   'interval_ear': [100, 600, 900],
   // 8 rounds: max 800.
