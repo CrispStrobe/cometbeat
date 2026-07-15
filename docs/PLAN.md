@@ -532,11 +532,10 @@ staff-tap-to-place, hover ghost, cross-part select, drag repitch). See
   opt-in `showMeasureNumbers` (system-start numbering off `SystemLayout.
   firstMeasure`, paint-only, defaults off — ported from `png_export`'s
   convention; it previously existed only on `StaffView`). Wired a **"Bar
-  numbers"** toggle in the Workshop ⋮ menu, wired to **both** the single-staff
-  canvas AND the multi-part full-score canvas (`InteractiveMultiPartView` gained
-  the same system-start numbering). *Remaining:* only the grand-staff canvas
-  (`InteractiveGrandStaffView`) doesn't expose the flag yet — the same small
-  paint port on that view is the last follow-up.
+  numbers"** toggle in the Workshop ⋮ menu, wired to **all three** editor
+  canvases — single-staff (`MultiSystemView`), grand-staff
+  (`InteractiveGrandStaffView`) and multi-part (`InteractiveMultiPartView`) all
+  gained the same opt-in system-start numbering. **Feature complete.**
 - ✅ **Metric-aware beaming** — already automatic: the layout engine
   (`_computeBeamGroups`) derives beam windows from the meter during layout, so
   the editor needs no opt-in. Nothing to wire.
