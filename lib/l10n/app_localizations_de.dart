@@ -265,6 +265,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopFermata => 'Fermate';
 
   @override
+  String get workshopPasteTokens => 'Noten-Tokens einfügen…';
+
+  @override
+  String get workshopPasteTokensHint =>
+      'bekern-/kern-Tokens einfügen (z. B. **kern <b> 4 c <b> *-)';
+
+  @override
+  String get workshopPasteTokensLoad => 'Laden';
+
+  @override
   String get workshopAddInstrument => 'Instrument hinzufügen';
 
   @override

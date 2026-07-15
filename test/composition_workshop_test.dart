@@ -410,4 +410,30 @@ void main() {
     expect(find.byType(InteractiveMultiPartView), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  // ---- Paste notation tokens (bekern import bridge) ------------------------
+
+  testWidgets('pasting bekern tokens loads a playable score', (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    expect(editor.noteCount, 0);
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.text(l10n.workshopPasteTokens));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ),
+      '**kern <b> 4 c <b> 4 d <b> 4 e <b> *-',
+    );
+    await tester.tap(find.text(l10n.workshopPasteTokensLoad));
+    await tester.pumpAndSettle();
+
+    expect(editor.noteCount, greaterThan(0), reason: 'tokens became notes');
+  });
 }

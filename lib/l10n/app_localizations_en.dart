@@ -265,6 +265,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopFermata => 'Fermata';
 
   @override
+  String get workshopPasteTokens => 'Paste notation tokens…';
+
+  @override
+  String get workshopPasteTokensHint =>
+      'Paste bekern / kern tokens (e.g. **kern <b> 4 c <b> *-)';
+
+  @override
+  String get workshopPasteTokensLoad => 'Load';
+
+  @override
   String get workshopAddInstrument => 'Add instrument';
 
   @override

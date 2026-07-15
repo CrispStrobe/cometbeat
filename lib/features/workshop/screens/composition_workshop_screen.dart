@@ -198,6 +198,14 @@ MultiPartScore importMultiPart(String fileName, Uint8List bytes) {
   };
 }
 
+/// Parses pasted **bekern** ("basic extended kern") tokens — the flat text the
+/// OMR model emits (`<s>`/`<t>`/`<b>` markers) — into a [MultiPartScore], one
+/// part per spine. Pure (no picker), so it is unit-testable. Reuses
+/// crisp_notation's pure-Dart `bekernToStaffSystem`; throws on malformed input.
+@visibleForTesting
+MultiPartScore importBekern(String text) =>
+    MultiPartScore.fromStaffSystem(bekernToStaffSystem(text.trim()));
+
 /// One export target: display [label], file [ext], and MIME type. [binary]
 /// formats are raw bytes; the rest are UTF-8 text (and so can fall back to the
 /// copyable dialog where the platform has no save picker).
@@ -986,6 +994,58 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     }
   }
 
+  /// Paste **bekern** tokens (the OMR model's text output) and load them as a
+  /// playable score — a no-file, web-safe "text → notation" path. Multi-spine
+  /// bekern seeds one instrument part per spine (reusing the G6 multi-part
+  /// document); a single spine loads into the active part.
+  Future<void> _pasteTokens() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    var value = '';
+    final text = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.workshopPasteTokens),
+        content: TextField(
+          autofocus: true,
+          minLines: 3,
+          maxLines: 6,
+          onChanged: (v) => value = v,
+          decoration: InputDecoration(
+            hintText: l10n.workshopPasteTokensHint,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(value),
+            child: Text(l10n.workshopPasteTokensLoad),
+          ),
+        ],
+      ),
+    );
+    if (text == null || text.trim().isEmpty || !mounted) return;
+    try {
+      final score = importBekern(text);
+      setState(() {
+        if (score.parts.length > 1) {
+          _mpd.loadMultiPart(score);
+        } else {
+          _doc.loadScore(score.parts.first);
+        }
+      });
+      messenger.showSnackBar(SnackBar(content: Text(l10n.importDone)));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.importFailed(e.toString()))),
+      );
+    }
+  }
+
   /// The note-property dropdown (articulations · tie · dynamics), anchored at
   /// its own button. Returns null unless a single editable note is selected.
   Widget? _paletteButton(AppLocalizations l10n) {
@@ -1466,6 +1526,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                   switch (v) {
                     case 'open':
                       _open();
+                    case 'paste':
+                      _pasteTokens();
                     case 'save':
                       _save();
                     case 'export':
@@ -1479,6 +1541,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     'open',
                     Icons.file_open_outlined,
                     l10n.workshopOpen,
+                    true,
+                  ),
+                  _menuItem(
+                    'paste',
+                    Icons.content_paste_go_outlined,
+                    l10n.workshopPasteTokens,
                     true,
                   ),
                   const PopupMenuDivider(),

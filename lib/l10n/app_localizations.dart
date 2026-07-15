@@ -548,6 +548,24 @@ abstract class AppLocalizations {
   /// **'Fermata'**
   String get workshopFermata;
 
+  /// No description provided for @workshopPasteTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste notation tokens…'**
+  String get workshopPasteTokens;
+
+  /// No description provided for @workshopPasteTokensHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste bekern / kern tokens (e.g. **kern <b> 4 c <b> *-)'**
+  String get workshopPasteTokensHint;
+
+  /// No description provided for @workshopPasteTokensLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Load'**
+  String get workshopPasteTokensLoad;
+
   /// No description provided for @workshopAddInstrument.
   ///
   /// In en, this message translates to:

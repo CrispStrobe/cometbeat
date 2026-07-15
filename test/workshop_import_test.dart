@@ -67,4 +67,32 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  // ---- importBekern (paste OMR tokens → playable score) -------------------
+
+  test('importBekern parses single-spine tokens into one part', () {
+    final mps = importBekern('**kern <b> 4 c <b> 4 d <b> *-');
+    expect(mps.parts, hasLength(1));
+    expect(mps.parts.first.measures, isNotEmpty);
+    final notes = mps.parts.first.measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>();
+    expect(notes, isNotEmpty);
+  });
+
+  test('importBekern parses a two-spine system into two parts', () {
+    const bekern = '**kern <t> **kern <b> '
+        '*clefF4 <t> *clefG2 <b> '
+        '*M4/4 <t> *M4/4 <b> '
+        '4 C <t> 4 c <b> '
+        '4 D <t> 4 d <b> '
+        '*- <t> *-';
+    final mps = importBekern(bekern);
+    expect(mps.parts.length, 2, reason: 'one part per **kern spine');
+  });
+
+  test('importBekern trims surrounding whitespace', () {
+    final mps = importBekern('\n  **kern <b> 4 c <b> *-  \n');
+    expect(mps.parts, hasLength(1));
+  });
 }
