@@ -4,7 +4,11 @@
 // ScoreDocument model tests.
 
 import 'package:crisp_notation/crisp_notation.dart'
-    show InteractiveGrandStaffView, InteractiveMultiPartView, MultiSystemView;
+    show
+        InteractiveGrandStaffView,
+        InteractiveMultiPartView,
+        MultiSystemView,
+        NoteNameStyle;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -470,6 +474,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(view().showMeasureNumbers, isTrue);
+  });
+
+  testWidgets('the Note names toggle flips showNoteNames on the canvas',
+      (tester) async {
+    await pump(tester);
+    MultiSystemView view() =>
+        tester.widget<MultiSystemView>(find.byType(MultiSystemView));
+    expect(view().showNoteNames, isFalse);
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.text(l10n.workshopNoteNames));
+    await tester.pumpAndSettle();
+
+    expect(view().showNoteNames, isTrue);
+    // EN locale + auto naming → English letters.
+    expect(view().noteNameStyle, NoteNameStyle.letter);
   });
 
   testWidgets('Bar numbers also apply in grand-staff mode', (tester) async {

@@ -18,7 +18,9 @@ import 'package:crisp_notation/crisp_notation.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
+import 'package:klang_universum/core/note_naming.dart';
 import 'package:klang_universum/core/services/audio_service.dart';
+import 'package:klang_universum/core/services/settings_service.dart';
 import 'package:klang_universum/features/games/note_reading/note_names.dart';
 import 'package:klang_universum/features/games/songs/user_songs_service.dart';
 import 'package:klang_universum/features/workshop/model/multi_part_document.dart';
@@ -307,6 +309,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   _StaffMode _mode = _StaffMode.treble;
   bool _chordMode = false; // placed pitches stack onto the selected note
   bool _barNumbers = false; // label each wrapped system with its bar number
+  bool _noteNames = false; // draw each note's name below the staff
   StaffTarget? _hover; // where a click/tap would land (desktop hover preview)
   String? _dragId; // the note being dragged (the view re-paints it live, C10b)
   String? _dropCaretId; // live drop slot during a horizontal reorder drag
@@ -349,6 +352,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   }
 
   bool get _grand => _mode == _StaffMode.grand;
+
+  /// The engraving note-name spelling for the note-names overlay, mapped from
+  /// the app's note-naming setting (auto follows the locale — German = H).
+  NoteNameStyle get _noteNameStyle {
+    switch (context.read<SettingsService>().noteNaming) {
+      case NoteNaming.english:
+        return NoteNameStyle.letter;
+      case NoteNaming.germanH:
+        return NoteNameStyle.german;
+      case NoteNaming.solfege:
+        return NoteNameStyle.solfege;
+      case NoteNaming.auto:
+        return Localizations.localeOf(context).languageCode == 'de'
+            ? NoteNameStyle.german
+            : NoteNameStyle.letter;
+    }
+  }
 
   /// The clef to interpret a staff position under: in grand mode it depends on
   /// which staff was hit (0 = treble, 1 = bass); otherwise the document clef.
@@ -1531,6 +1551,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       _pasteTokens();
                     case 'barnums':
                       setState(() => _barNumbers = !_barNumbers);
+                    case 'notenames':
+                      setState(() => _noteNames = !_noteNames);
                     case 'save':
                       _save();
                     case 'export':
@@ -1556,6 +1578,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     value: 'barnums',
                     checked: _barNumbers,
                     child: Text(l10n.workshopBarNumbers),
+                  ),
+                  CheckedPopupMenuItem<String>(
+                    value: 'notenames',
+                    checked: _noteNames,
+                    child: Text(l10n.workshopNoteNames),
                   ),
                   const PopupMenuDivider(),
                   _menuItem(
@@ -1673,6 +1700,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                               theme: theme,
                                               staffSpace: _zoom,
                                               showMeasureNumbers: _barNumbers,
+                                              showNoteNames: _noteNames,
+                                              noteNameStyle: _noteNameStyle,
                                               controller: _regions,
                                               elementColors: elementColors,
                                               dragPreviewOpacity:

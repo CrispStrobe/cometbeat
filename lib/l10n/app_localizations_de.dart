@@ -268,6 +268,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopBarNumbers => 'Taktzahlen';
 
   @override
+  String get workshopNoteNames => 'Notennamen';
+
+  @override
   String get workshopPasteTokens => 'Noten-Tokens einfügen…';
 
   @override

@@ -86,6 +86,7 @@
   "workshopMarcato": "Marcato",
   "workshopFermata": "Fermate",
   "workshopBarNumbers": "Taktzahlen",
+  "workshopNoteNames": "Notennamen",
   "workshopPasteTokens": "Noten-Tokens einfügen…",
   "workshopPasteTokensHint": "bekern-/kern-Tokens einfügen (z. B. **kern <b> 4 c <b> *-)",
   "workshopPasteTokensLoad": "Laden",

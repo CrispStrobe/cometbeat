@@ -554,6 +554,12 @@ abstract class AppLocalizations {
   /// **'Bar numbers'**
   String get workshopBarNumbers;
 
+  /// No description provided for @workshopNoteNames.
+  ///
+  /// In en, this message translates to:
+  /// **'Note names'**
+  String get workshopNoteNames;
+
   /// No description provided for @workshopPasteTokens.
   ///
   /// In en, this message translates to:

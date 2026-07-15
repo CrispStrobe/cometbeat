@@ -268,6 +268,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopBarNumbers => 'Bar numbers';
 
   @override
+  String get workshopNoteNames => 'Note names';
+
+  @override
   String get workshopPasteTokens => 'Paste notation tokens…';
 
   @override
