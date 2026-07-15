@@ -841,8 +841,10 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   note run plays → climbs up or steps down; 4 notes at 2★. A step past Higher or
   Lower?. SRI `pitch.hear.<asc|desc>`. See
   [HISTORY.md](HISTORY.md#gamified-formats--shipped).
-- [ ] **Count the Notes** (ear) — how many notes did you just hear (2/3/4)? Builds
-  aural attention; playable via `playPhrase`.
+- [x] **Count the Notes** (ear) — **shipped** (Tonleitern): a phrase of 2/3/4
+  distinct notes plays → tap how many you heard. Aural attention, no staff, three
+  answer buttons, `playPhrase`. SRI `pitch.hear.count<n>`. See
+  [HISTORY.md](HISTORY.md).
 
 ### B. Cheap depth — widen games that already exist (S effort each)
 - [ ] **Bass-clef variants** of the new sorts/readers — `High or Low?`,
