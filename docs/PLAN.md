@@ -543,9 +543,14 @@ staff-tap-to-place, hover ghost, cross-part select, drag repitch). See
   irregular-bar lengths (`Measure.actualDuration` + `effectiveDuration`), and the
   editor already handles the pickup case; exposing arbitrary irregular bars is a
   niche editor feature, deferred until asked.
-- ⏸️ **`showNoteNames` overlay** / per-group barlines in the chrome — still need
-  crisp_notation to surface the option on `MultiSystemView` / the interactive
-  views (like `showMeasureNumbers` now is) before wiring.
+- ✅ **`showNoteNames` overlay** — shipped. crisp_notation gained a
+  **`NoteNameStyle`** (letter / German-H / solfège) threaded through the layout
+  engine's note-name overlay (was fixed English) + `showNoteNames` on
+  `MultiSystemView`; the Workshop **"Note names"** ⋮ toggle overlays each note's
+  name on the single-staff canvas, **spelled per the app's note-naming setting**
+  (germanH → H for B, auto → locale). *Remaining:* grand-staff/multi-part
+  canvases (need the same engine-forward on those layout paths); per-group
+  barlines in the chrome still open.
 Details + the running contract log: `docs/WORKSHOP_PLAN.md` +
 `docs/WORKSHOP_CRISP_NOTATION_CONTRACTS.md`.
 
