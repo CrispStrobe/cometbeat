@@ -548,6 +548,12 @@ abstract class AppLocalizations {
   /// **'Fermata'**
   String get workshopFermata;
 
+  /// No description provided for @workshopBarNumbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Bar numbers'**
+  String get workshopBarNumbers;
+
   /// No description provided for @workshopPasteTokens.
   ///
   /// In en, this message translates to:

@@ -436,4 +436,20 @@ void main() {
 
     expect(editor.noteCount, greaterThan(0), reason: 'tokens became notes');
   });
+
+  testWidgets('the Bar numbers toggle flips showMeasureNumbers on the canvas',
+      (tester) async {
+    await pump(tester);
+    MultiSystemView view() =>
+        tester.widget<MultiSystemView>(find.byType(MultiSystemView));
+    expect(view().showMeasureNumbers, isFalse);
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.text(l10n.workshopBarNumbers));
+    await tester.pumpAndSettle();
+
+    expect(view().showMeasureNumbers, isTrue);
+  });
 }

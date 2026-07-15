@@ -306,6 +306,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   double _zoom = 13;
   _StaffMode _mode = _StaffMode.treble;
   bool _chordMode = false; // placed pitches stack onto the selected note
+  bool _barNumbers = false; // label each wrapped system with its bar number
   StaffTarget? _hover; // where a click/tap would land (desktop hover preview)
   String? _dragId; // the note being dragged (the view re-paints it live, C10b)
   String? _dropCaretId; // live drop slot during a horizontal reorder drag
@@ -1528,6 +1529,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       _open();
                     case 'paste':
                       _pasteTokens();
+                    case 'barnums':
+                      setState(() => _barNumbers = !_barNumbers);
                     case 'save':
                       _save();
                     case 'export':
@@ -1548,6 +1551,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     Icons.content_paste_go_outlined,
                     l10n.workshopPasteTokens,
                     true,
+                  ),
+                  CheckedPopupMenuItem<String>(
+                    value: 'barnums',
+                    checked: _barNumbers,
+                    child: Text(l10n.workshopBarNumbers),
                   ),
                   const PopupMenuDivider(),
                   _menuItem(
@@ -1662,6 +1670,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                               score: _doc.buildScore(),
                                               theme: theme,
                                               staffSpace: _zoom,
+                                              showMeasureNumbers: _barNumbers,
                                               controller: _regions,
                                               elementColors: elementColors,
                                               dragPreviewOpacity:

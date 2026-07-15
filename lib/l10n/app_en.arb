@@ -116,6 +116,7 @@
   "workshopAccent": "Accent",
   "workshopMarcato": "Marcato",
   "workshopFermata": "Fermata",
+  "workshopBarNumbers": "Bar numbers",
   "workshopPasteTokens": "Paste notation tokens…",
   "workshopPasteTokensHint": "Paste bekern / kern tokens (e.g. **kern <b> 4 c <b> *-)",
   "workshopPasteTokensLoad": "Load",
