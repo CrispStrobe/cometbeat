@@ -1019,8 +1019,13 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
 - [x] **Step, Skip, or Leap?** — **shipped**: `step_skip` (and its bass variant)
   becomes a 3-way at 2★ — Step (2nd) / Skip (3rd–4th) / Leap (5th+), a third
   answer button + `reading.motion.leap`; below 2★ it stays the binary drill.
-- [ ] **3-basket sorts** — the two-basket format extends to 3 (e.g. sharp / natural
-  / flat once crisp_notation can render an explicit natural glyph — verify the API).
+- [x] **3-basket sorts** — **shipped**: *Sharp or Flat?* (`accidental_sort`, +bass)
+  widens to a **Sharp / Natural / Flat** 3-basket sort at 2★; below 2★ it stays
+  the binary ♯/♭ drill (mirrors Step→Skip→Leap). The natural glyph (♮) is real —
+  crisp_notation renders it via `NoteElement.showAccidental` on an unaltered
+  pitch (`alter:0 + showAccidental:true → accidentalNatural`, verified at the
+  layout level). Card sign refactored bool→`int alter` (+1/0/-1). SRI gains
+  `accidentals.sign.natural`.
 - [~] **More Connect modes** — note↔piano-key, rest↔note-value, Italian-term↔
   meaning, dynamic-mark↔meaning, instrument↔clef. Each is one `ConnectMode` case.
   **Shipped:** ✅ *Connect the Dynamics* (`connect_dynamics`, note_values) — match
