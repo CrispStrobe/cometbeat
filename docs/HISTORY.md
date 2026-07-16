@@ -106,6 +106,13 @@ plugins beyond capture.
   briefly). A "hear it again" button, the answer reveals on a correct sing, skip
   + mic-permission handling. Trains pitch memory and matching with no instrument;
   feeds the ear pool `scales.hear.sing_<step>`.
+- **Sing the Interval** (Chords) — ear→voice on the *interval*: two notes play,
+  low then high, its name is shown ("a fifth"), and the child **sings the top
+  note back** (mic checks the pitch class, octave-agnostic). The sung twin of
+  Interval Ear — builds interval vocabulary *and* the voice to reproduce it.
+  Reuses the Sing Back capture harness + crisp_notation's `Interval` /
+  `Pitch.transposeBy`; third/fourth/fifth for beginners, second + sixth at 2★.
+  SRI `intervals.sing.<name>`.
 - **Cello Play It** (Cello Corner) — mic grading on the *real instrument*: a
   first-position note is shown on the bass staff with a string + finger hint;
   the child bows it on their cello and the mic verifies the pitch
@@ -265,6 +272,36 @@ per-game `unlockedWhen` gate on `GameInfo`).
 
 Games built on crisp_notation capabilities the app didn't use before.
 
+- **Tie or Slur?** (Noten lesen) — reads the two curved marks that look alike but
+  mean different things: a **tie** joins the *same* pitch (`NoteElement.tieToNext`),
+  a **slur** joins *different* pitches (`Score.slurs`). A binary staff-read like
+  Step or Skip?; the card engraves the two-note figure, two buttons, audio on
+  correct. SRI `reading.curve.<tie|slur>`.
+- **Beam or Flag?** (Noten lesen) — the two looks of eighth notes: joined by a
+  **beam** (two eighths on one beat) vs each keeping its **flag** (eighths split
+  by an eighth rest). The engraver has no beam-suppression API, so the cards
+  exploit the real rule; the beam/flag contrast was verified at the crisp_notation
+  layout level (same-beat eighths → 1 `BeamPrimitive`, eighth-rest between → 0).
+  SRI `reading.beam.<beamed|flagged>`.
+- **Connect the Notes — four new modes** (Notenwerte) — the connect-a-line board
+  grew from 3 to 7 modes, each one `ConnectMode` case reusing an existing catalog
+  so nothing drifts: **Dynamics** (mark glyph ↔ meaning, `connect_dynamics`,
+  shares `reading.dynamics.*` with Louder or Softer?), **Rests** (rest glyph ↔ the
+  note it equals in length, `connect_rests`, `note_values.rest.*`), **Tempo Words**
+  (Italian term ↔ meaning, `connect_tempo`, shares `reading.tempo.*` with Faster
+  or Slower?), **Beats** (note value ↔ how many beats in 4/4, `connect_beats`,
+  `note_values.beats.*`).
+- **Sharp / Natural / Flat — 3-basket sort** (Noten lesen) — *Sharp or Flat?*
+  (`accidental_sort`, +bass) widens at 2★ to a three-basket sort adding the
+  **natural** sign, rendered as a real ♮ via `NoteElement.showAccidental` on an
+  unaltered pitch; below 2★ it stays the binary ♯/♭ drill. Card sign refactored
+  bool→`int alter`. SRI gains `accidentals.sign.natural`.
+- **Triad or Seventh?** (Chords) — an ear game on the added seventh: a major
+  triad (3 notes) vs a dominant-7 (triad + a minor 7th, 4 notes), tap which. The
+  dom7 is built app-side from the major `Triad`'s pitches +
+  `root.transposeBy(Interval.minorSeventh)` — no 7th-chord *builder* needed from
+  crisp_notation. Completes the chord-quality-by-ear widening. SRI
+  `chords.hear.<triad|seventh>`.
 - **Read the Voice** (Noten lesen, gated behind Duet 2★) — reading one line out
   of a multi-voice texture, on crisp_notation's `Measure.voice2` (two voices per
   staff, stems up/down). A chord is shown with one voice highlighted; the child
@@ -394,6 +431,19 @@ Games built on crisp_notation capabilities the app didn't use before.
 
 ## Original concepts — shipped
 
+- **Colour Melody** (composition) — a composing grid for **pre-readers**: five
+  coloured rows (a C-major pentatonic, so every combination is consonant) × eight
+  beats. Tapping a cell places a note (and sounds it), and the grid renders live
+  to a **real crisp_notation `Score`** shown underneath — so a non-reader is
+  quietly writing notation. Play the tune back (rests preserved via
+  `playChordSequence`, empty beats = silence) or clear. A sandbox like My Melody —
+  no stars, no wrong answers; the bridge to notation for those who can't read yet.
+- **Find the Key (bass)** (keyboard) — the staff→piano bridge in bass clef: the
+  reusable `PianoKeyboard` shifts two octaves down (C2..B3) so the low staff
+  naturals (G2..A3) and the 3★ black-key targets land on real keys. Own
+  `progressId`; the SRI token carries the octave so bass items never collide with
+  the treble Find the Key. Completed the bass-clef sweep of the reading/keyboard
+  games.
 - **Recital Mode** (progression meta) — a home-bar "recital" strings a 3–5 piece
   programme (favouring games the child has already practised) into one set; play
   each in turn and the run ends on a **curtain call** that tallies the stars

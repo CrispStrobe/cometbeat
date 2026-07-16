@@ -22,6 +22,24 @@ and push to origin/main** before/after touching shared files. Format:
   sets + `_withMidScoreChanges`) then **`composition_workshop_screen.dart`**
   (the `_paletteButton` palette — repeats are booleans so they're toggle items,
   not the change dialog) **+ EN/DE ARBs**. Ping before editing those. Model first.
+- **opus (games)** · ✅ **idle / SHIPPED — new-minigame + creative-mode sweep.**
+  Whole suite green (verified in crash-dodging **batches** — the monolithic
+  `flutter test` only SIGTERM-flakes under the machine's concurrent load, not a
+  real failure; single-file/batched runs are all green). 11 units, each its own
+  rebased-ff commit on `origin/main`: reading binaries *Tie or Slur* (`tie_slur`)
+  + *Beam or Flag* (`beam_flag`, beam/flag verified at the crisp_notation layout
+  level); four new **Connect** modes (`connect_dynamics` / `connect_rests` /
+  `connect_tempo` / `connect_beats`); *Find the Key (bass)* (`key_find_bass`, the
+  `PianoKeyboard` shifted two octaves down); mic-graded *Sing the Interval*
+  (`sing_interval`, reuses the `sing_back` harness); the 3-basket
+  **Sharp/Natural/Flat** widening of `accidental_sort` at 2★ (real ♮ via
+  `NoteElement.showAccidental`); *Triad or Seventh?* (`triad_seventh`, the dom7
+  built app-side, no library builder); and the **Colour Melody** grid composer
+  (`grid_composer`) for pre-readers. **Hot shared files touched (all settled):**
+  `game_registry.dart`, `core/tuning.dart`, the ARBs, `connect_line_screen.dart`,
+  `accidental_sort_screen.dart`, `key_find_screen.dart`. **Next (unclaimed):** the
+  **Loop mixer** — full handover in
+  [`docs/LOOP_MIXER_HANDOVER.md`](LOOP_MIXER_HANDOVER.md).
 - **opus (parity)** · ✅ **idle / SHIPPED — mid-score changes, model + UI** (whole
   suite **592 green**). The full clef/key/time mid-score-change family now works
   end-to-end on the flat model via **element-id anchors** (no bar-spine flip):
