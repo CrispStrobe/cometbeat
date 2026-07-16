@@ -35,11 +35,14 @@ and push to origin/main** before/after touching shared files. Format:
   plugin `VoiceClipRecorder` (mic → Float64), a runtime-swappable `voice` channel,
   and a record/effect bottom-sheet in the tracker (EN/DE). ⚠️ **Mic path is
   device-only** — verified via the tester seam (inject a synthetic clip); real
-  mic needs an on-device run. 🚧 **Next (unclaimed / open order):** Slice 3 (Studio
-  instrument picker over the sfxr palette) · **Slice 5 (notation bridge:
-  Tracker→Score reusing grid_composer's Score-build, then partial Score→Tracker
-  import)** · arrangement/order-list · percussion instrument. Handover:
-  [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
+  mic needs an on-device run. ✅ **Slice 5a SHIPPED (notation bridge,
+  Tracker→Score):** `tracker_notation.dart` `trackerChannelToScore` (held runs →
+  tied notes decomposed to standard values, split at 4/4 bar lines) + a StaffView
+  "score view" panel toggled from the app bar (the selected channel as notation).
+  🚧 **Next (unclaimed / open order):** Slice 5b (partial Score→Tracker import:
+  quantize + monophonic-per-channel + scale-snap) · Slice 3 (Studio instrument
+  picker over the sfxr palette) · arrangement/order-list · percussion instrument.
+  Handover: [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
 - **opus (parity)** · 🚧 **ACTIVE — notation-depth batch (one at a time).**
   Working through the tracked roadmap in
   [`WORKSHOP_PARITY.md`](WORKSHOP_PARITY.md) §"Notation-depth roadmap": **(1)

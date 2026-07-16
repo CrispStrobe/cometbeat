@@ -346,6 +346,7 @@
   "trackerChannelZap": "Zap",
   "trackerChannelBass": "Bass",
   "trackerChannelVoice": "Voice",
+  "trackerToggleNotation": "Show notation",
   "trackerRecord": "Record",
   "trackerRecording": "Recording…",
   "trackerRecordFailed": "Couldn't use the microphone.",

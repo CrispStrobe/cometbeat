@@ -17,7 +17,7 @@
 // full note·instrument·volume·fx cell, keyboard entry, sfxr/sampled instruments)
 // hangs off the same TrackerEngine document later — see docs/TRACKER_HANDOVER.md.
 
-import 'package:crisp_notation/crisp_notation.dart' show Step;
+import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/foundation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
@@ -27,9 +27,11 @@ import 'package:klang_universum/core/audio/tracker_engine.dart';
 import 'package:klang_universum/core/audio/voice_clip_recorder.dart';
 import 'package:klang_universum/core/services/audio_service.dart';
 import 'package:klang_universum/core/services/loop_player_service.dart';
+import 'package:klang_universum/features/games/composition/tracker_notation.dart';
 import 'package:klang_universum/features/games/note_reading/note_colors.dart';
 import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
+import 'package:klang_universum/shared/score_theme.dart';
 import 'package:provider/provider.dart';
 
 class TrackerScreen extends StatefulWidget {
@@ -85,6 +87,9 @@ abstract interface class TrackerTester {
   /// Test seam for the mic-less binding: assign [raw] (+ [fx]) to the voice
   /// channel as if it had just been recorded.
   void injectRecording(Float64List raw, VoiceEffect fx);
+
+  bool get notationVisible;
+  void toggleNotation();
 }
 
 class _TrackerScreenState extends State<TrackerScreen>
@@ -108,8 +113,19 @@ class _TrackerScreenState extends State<TrackerScreen>
 
   int _selected = 0;
   bool _isRecording = false;
+  bool _showNotation = false;
 
   int get _voiceIndex => _engine.channels.indexWhere((c) => c.id == 'voice');
+
+  /// The selected channel's pattern as staff notation (the "score view").
+  Score get _selectedScore {
+    final ch = _engine.channels[_selected];
+    return trackerChannelToScore(
+      ch,
+      _engine.timing,
+      clef: ch.id == 'bass' ? Clef.bass : Clef.treble,
+    );
+  }
 
   @override
   void initState() {
@@ -164,6 +180,10 @@ class _TrackerScreenState extends State<TrackerScreen>
   @override
   void injectRecording(Float64List raw, VoiceEffect fx) =>
       _assignVoice(raw, fx);
+  @override
+  bool get notationVisible => _showNotation;
+  @override
+  void toggleNotation() => setState(() => _showNotation = !_showNotation);
 
   /// Voices the recorded [raw] (+ [fx]) onto the voice channel and switches to
   /// it. Shared by the real mic path and the test seam.
@@ -337,7 +357,16 @@ class _TrackerScreenState extends State<TrackerScreen>
     ];
 
     return Scaffold(
-      appBar: GameAppBar(title: l10n.gameTracker),
+      appBar: GameAppBar(
+        title: l10n.gameTracker,
+        actions: [
+          IconButton(
+            icon: Icon(_showNotation ? Icons.grid_view : Icons.music_note),
+            tooltip: l10n.trackerToggleNotation,
+            onPressed: () => setState(() => _showNotation = !_showNotation),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -402,6 +431,25 @@ class _TrackerScreenState extends State<TrackerScreen>
                   ],
                 ),
               ),
+              // The "score view": the selected channel's pattern as notation.
+              if (_showNotation) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 92,
+                  child: Card(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: StaffView(
+                          score: _selectedScore,
+                          staffSpace: 8,
+                          theme: kidsScoreTheme,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               Row(
                 children: [

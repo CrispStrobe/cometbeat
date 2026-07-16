@@ -315,6 +315,7 @@
   "trackerChannelZap": "Zap",
   "trackerChannelBass": "Bass",
   "trackerChannelVoice": "Stimme",
+  "trackerToggleNotation": "Noten zeigen",
   "trackerRecord": "Aufnehmen",
   "trackerRecording": "Nimmt auf…",
   "trackerRecordFailed": "Mikrofon nicht verfügbar.",

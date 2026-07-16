@@ -1814,6 +1814,12 @@ abstract class AppLocalizations {
   /// **'Voice'**
   String get trackerChannelVoice;
 
+  /// No description provided for @trackerToggleNotation.
+  ///
+  /// In en, this message translates to:
+  /// **'Show notation'**
+  String get trackerToggleNotation;
+
   /// No description provided for @trackerRecord.
   ///
   /// In en, this message translates to:

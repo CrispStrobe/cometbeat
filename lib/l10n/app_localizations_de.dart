@@ -942,6 +942,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerChannelVoice => 'Stimme';
 
   @override
+  String get trackerToggleNotation => 'Noten zeigen';
+
+  @override
   String get trackerRecord => 'Aufnehmen';
 
   @override

@@ -108,4 +108,19 @@ void main() {
     expect(game.noteCount, 1);
     expect(game.isPlaying, isTrue);
   });
+
+  testWidgets('the notation panel renders the pattern as a score',
+      (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+    final game = _game(tester);
+    expect(game.notationVisible, isFalse);
+
+    game.tapCell(0, 0);
+    game.tapCell(2, 4);
+    game.toggleNotation();
+    await tester.pump();
+
+    expect(game.notationVisible, isTrue);
+    expect(tester.takeException(), isNull); // StaffView built cleanly
+  });
 }
