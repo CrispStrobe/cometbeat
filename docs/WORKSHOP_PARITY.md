@@ -182,7 +182,9 @@ the notation-depth gaps one at a time:
 - [x] **Slice 3 — discontiguous id-set selection** — `ca52d58`. `_anchor`/
       `_focus` → `Set<String>` + focus id; `selectByIds` is now exact (marquee no
       longer widens); edits iterate the set, block-move refuses discontiguous.
-- [ ] **Slice 7 — `RhythmPolicy.split`** ← *in progress* (Studio): an overflowing note splits
+- [x] **Slice 7 — `RhythmPolicy.split`** — `7ffe193` (model) + `5fda285` (UI).
+      An over-long note ties across the barline (`notate()` decomposition);
+      spill stays the default + byte-identical. ⋮-menu toggle. (Studio): an overflowing note splits
       into tied notes across the barline instead of short-filling. Needs
       `notate(Fraction)` (no public one in crisp_notation) + explicit tie groups.
       The largest; where a first-class `Bar` finally earns its keep.

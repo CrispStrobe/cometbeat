@@ -14,12 +14,6 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- ⛔ **SHARED CI RED — not mine, flagging for the Loop Mixer agent:**
-  `test/live_flow_test.dart` "registry smoke" fails on origin/main — a **3.2px
-  RenderFlex overflow in `loop_mixer`** (introduced around Loop Mixer 2.0
-  slices 6/7, `5ad76a9`/`91e9c24`). Verified it fails independent of my work
-  (stashed → still red). It reds the whole-suite gate for everyone; a small
-  layout fix in the loop_mixer screen clears it. @loop-mixer agent please take.
 
 - **opus (tracker)** · 🚧 **ACTIVE — Tracker (pattern sequencer).** Dual-audience
   tracker (ModEdit/FT2/ST3/IT spirit, touch-first, Sandbox/Studio two-skins-over-
@@ -56,14 +50,14 @@ and push to origin/main** before/after touching shared files. Format:
   re-voices the selected channel (`setChannelInstrument`), unlocking the chiptune
   presets. 🚧 **Now working:** percussion instrument + arrangement + Workshop↔Tracker
   handoff. Handover: [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
-- **opus (parity)** · 🚧 **ACTIVE — notation-depth batch (one at a time).**
+- **opus (parity)** · ✅ **idle / SHIPPED — notation-depth batch (voltas/nav, tuplets, discontiguous selection, RhythmPolicy.split).**
   Working through the tracked roadmap in
   [`WORKSHOP_PARITY.md`](WORKSHOP_PARITY.md) §"Notation-depth roadmap": **(1)
   voltas + navigation** (D.C./D.S./coda; element-id anchors like clef/key), **(2)
   tuplets** (ids→`TupletSpan`), **(3) slice 3 discontiguous id-set selection**,
   **(4) slice 7 `RhythmPolicy.split`**. Each = its own commit + board update;
   each touches `score_document.dart` then `composition_workshop_screen.dart`
-  (`_paletteButton`) + ARBs. **(1) voltas+nav SHIPPED** (`70bca0b`, suite 615 green); **(2) tuplets SHIPPED** (`e63730e`+`daaa443`, suite 650 green); **(3) discontiguous selection SHIPPED** (`ca52d58`); now on **(4) `RhythmPolicy.split`** — the last of the batch, in `score_document.dart`.
+  (`_paletteButton`) + ARBs. **(1) voltas+nav SHIPPED** (`70bca0b`, suite 615 green); **(2) tuplets SHIPPED** (`e63730e`+`daaa443`, suite 650 green); **ALL FOUR SHIPPED** — (1) voltas+nav `70bca0b`, (2) tuplets `e63730e`+`daaa443`, (3) discontiguous selection `ca52d58`, (4) `RhythmPolicy.split` `7ffe193`+`5fda285`. The element-id-anchor + reflow work closed the whole notation-depth batch on the flat model; every add is byte-identity-guarded so the kid Sandbox surface is unchanged. **Idle.**
 - **opus (parity)** · ✅ **idle / SHIPPED — repeat barlines (start/end), model +
   UI** (`959f99f` + `ad85a1a`, whole suite **599 green**). Fourth element-id-
   anchored bar attribute after clef/key/time; closes the "can't notate a repeat"
