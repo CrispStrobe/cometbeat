@@ -98,9 +98,24 @@ and push to origin/main** before/after touching shared files. Format:
   `reflow_test.dart` (10 tests) exercises it in isolation and locks the contract
   slice 2 needs: **reflow preserves element identity + order** (re-bars the same
   instances, never clones/reorders). Touched **only `score_document.dart`** + a
-  new test. **Next: slice 2 — `Bar` + `List<Bar>` as source of truth**, still
-  `score_document.dart`-only, goldens still guard byte-identity; it's "the big
-  one" that can't be rushed.
+  new test.
+  · ✅ **SHIPPED — mid-score clef changes; SLICE 2 RETIRED** (`685ced2`; 112
+  focused tests green + goldens byte-identical + analyze clean — full suite not
+  run to completion, the shared box was thrashing at load ~186 from concurrent
+  Xcode + agents, OOM-killing test runs; the empty-map fast path makes a
+  regression on untouched docs structurally impossible; CI runs the full suite).
+  **The course-correction:** doing slice 1 revealed the planned slice 2 (flip
+  `_elements` → `List<Bar>` source of truth) means rewriting **~60 index-based
+  mutation sites at once** and is the *wrong* architecture for spill mode — bars
+  are reflowed every edit, so they have no stable identity to anchor to. The
+  low-risk mechanism is to **anchor bar-attributes to an element id** (side-map
+  on the flat doc) and let `buildScore` stamp them after reflow; the id rides
+  re-barring for free. Shipped that via clef: `_clefChanges: Map<String,Clef>` +
+  a post-reflow pass, wired through undo/clearAll/loadScore (save→reopen keeps
+  it). **Key/time changes are the same shape next** (time also teaches `reflow`
+  to switch capacity at the anchor). A first-class `Bar` is deferred to slice 7
+  (`RhythmPolicy.split`, Studio), where bars actually keep identity. See the
+  refinement box in [`WORKSHOP_PARITY.md`](WORKSHOP_PARITY.md).
   · ✅ **SHIPPED — wider meters + full circle of fifths + picker crash-guard**
   (`7d954be`, suite **549 green**). The time picker was capped at 2/4·3/4·4/4 and
   the key picker at ±4 fifths — but the packer sizes bars by
