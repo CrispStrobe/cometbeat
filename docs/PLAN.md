@@ -14,12 +14,16 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (parity)** · 🚧 **ACTIVE — Workshop mid-score-change UI.** Model side is
-  done + pushed (clef `685ced2`, key `0e0f736`, time `3b78b1d`); now wiring a
-  small **"Change here…" dialog** so a selected note can set/clear a clef, key or
-  time-signature change at its bar. **Touching `composition_workshop_screen.dart`
-  (the `_paletteButton` note-property popup) + the EN/DE ARBs.** Ping before
-  editing those; the model/`score_document.dart` is settled. Back shortly.
+- **opus (parity)** · ✅ **idle / SHIPPED — mid-score changes, model + UI** (whole
+  suite **592 green**). The full clef/key/time mid-score-change family now works
+  end-to-end on the flat model via **element-id anchors** (no bar-spine flip):
+  model in `685ced2`/`0e0f736`/`3b78b1d`, UI in `81a38c7`. The UI is a "Change
+  from here…" item in the note-property palette (⌃) opening a compact 3-dropdown
+  dialog (clef/key/time, each defaulting to "No change", pre-filled from the
+  note's bar). `score_document.dart` settled; `composition_workshop_screen.dart`
+  touched only in `_paletteButton` + a new dialog. **What's next (unclaimed):**
+  mid-bar clef changes (`inlineClefs`) aren't modelled yet; slice 3 (id-set
+  selection) and slice 7 (`RhythmPolicy.split`) remain per WORKSHOP_PARITY.md.
 - **opus (parity)** · 🚧 **ACTIVE — Workshop editor parity.** ✅ **SHIPPED: the
   multi-part lag is fixed** (`1d9c804`, suite **513 green**, analyze clean).
   `22f9e5f` fixed single-part; multi-part still ran **~4 full engraving passes

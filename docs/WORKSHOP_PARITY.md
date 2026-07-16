@@ -131,7 +131,7 @@ other agents edit it; keep each under ~300 lines, rebase daily):
 | 3 | Id-set selection internally; `selectByIds` becomes exact | no |
 | 4 | `ScoreAddress` + bar-addressing API; caret as address | 2 lines |
 | 5 | Global bounded undo + `_transact` | 2 lines |
-| 6 | Mid-score changes → `buildScore` mapping (clef + key ✅ **DONE**; time next) | no |
+| 6 | Mid-score changes → `buildScore` mapping (clef + key + time ✅ **DONE** + UI) | no |
 | 7 | `RhythmPolicy.split` + `notate(Fraction)` + tie groups (default off) | no |
 | 8 | Voice 2 → `Measure.voice2` | no |
 
