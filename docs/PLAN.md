@@ -14,14 +14,14 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (parity)** · 🚧 **ACTIVE — Workshop repeats (start/end repeat).** Next
-  element-id-anchored bar attribute after clef/key/time — same shape (bar-
-  anchored booleans, no capacity impact, post-reflow stamp), completes the "can't
-  notate a repeat" gap, and crisp_notation **expands repeats in playback** too.
-  **Touching `score_document.dart`** (model: `_repeatStarts`/`_repeatEnds` id
-  sets + `_withMidScoreChanges`) then **`composition_workshop_screen.dart`**
-  (the `_paletteButton` palette — repeats are booleans so they're toggle items,
-  not the change dialog) **+ EN/DE ARBs**. Ping before editing those. Model first.
+- **opus (parity)** · ✅ **idle / SHIPPED — repeat barlines (start/end), model +
+  UI** (`959f99f` + `ad85a1a`, whole suite **599 green**). Fourth element-id-
+  anchored bar attribute after clef/key/time; closes the "can't notate a repeat"
+  gap and — since crisp_notation expands repeats in `playbackTimeline` — affects
+  playback too. Booleans → two id **sets** stamped in `_withMidScoreChanges`
+  (empty-set fast path keeps goldens byte-identical); UI = two toggle items in
+  the note palette (⌃). Round-trips through MusicXML. `score_document.dart` +
+  `composition_workshop_screen.dart` (`_paletteButton` only) settled again.
 - **opus (games)** · ✅ **idle / SHIPPED — new-minigame + creative-mode sweep.**
   Whole suite green (verified in crash-dodging **batches** — the monolithic
   `flutter test` only SIGTERM-flakes under the machine's concurrent load, not a
