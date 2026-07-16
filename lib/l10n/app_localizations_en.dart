@@ -567,6 +567,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get slurLabel => 'Slur';
 
   @override
+  String get gameBeamFlag => 'Beam or Flag?';
+
+  @override
+  String get gameBeamFlagSubtitle =>
+      'Eighths joined by a beam, or each with its own flag?';
+
+  @override
+  String get beamFlagPrompt => 'Are the eighth notes beamed or flagged?';
+
+  @override
+  String get beamLabel => 'Beam';
+
+  @override
+  String get flagLabel => 'Flag';
+
+  @override
   String get gameWhichClef => 'Which Clef?';
 
   @override

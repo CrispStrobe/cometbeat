@@ -50,6 +50,7 @@ import 'package:klang_universum/features/games/measures/strong_beat_screen.dart'
 import 'package:klang_universum/features/games/measures/time_signature_screen.dart';
 import 'package:klang_universum/features/games/measures/which_beat_screen.dart';
 import 'package:klang_universum/features/games/note_reading/accidental_sort_screen.dart';
+import 'package:klang_universum/features/games/note_reading/beam_flag_screen.dart';
 import 'package:klang_universum/features/games/note_reading/connect_line_screen.dart';
 import 'package:klang_universum/features/games/note_reading/duet_screen.dart';
 import 'package:klang_universum/features/games/note_reading/falling_notes_screen.dart';
@@ -333,6 +334,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameTieSlur,
       subtitle: (l) => l.gameTieSlurSubtitle,
       builder: (_) => const TieSlurScreen(),
+    ),
+    // Beam or Flag? — the two looks of eighth notes: joined by a beam vs each
+    // keeping its flag. Same rhythm, different engraving.
+    GameInfo(
+      id: 'beam_flag',
+      icon: Icons.horizontal_rule,
+      title: (l) => l.gameBeamFlag,
+      subtitle: (l) => l.gameBeamFlagSubtitle,
+      builder: (_) => const BeamFlagScreen(),
     ),
     // Read the clef sign itself — Treble vs Bass (Alto/Tenor at 2★).
     GameInfo(

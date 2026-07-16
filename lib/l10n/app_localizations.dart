@@ -1112,6 +1112,36 @@ abstract class AppLocalizations {
   /// **'Slur'**
   String get slurLabel;
 
+  /// No description provided for @gameBeamFlag.
+  ///
+  /// In en, this message translates to:
+  /// **'Beam or Flag?'**
+  String get gameBeamFlag;
+
+  /// No description provided for @gameBeamFlagSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Eighths joined by a beam, or each with its own flag?'**
+  String get gameBeamFlagSubtitle;
+
+  /// No description provided for @beamFlagPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Are the eighth notes beamed or flagged?'**
+  String get beamFlagPrompt;
+
+  /// No description provided for @beamLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Beam'**
+  String get beamLabel;
+
+  /// No description provided for @flagLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Flag'**
+  String get flagLabel;
+
   /// No description provided for @gameWhichClef.
   ///
   /// In en, this message translates to:

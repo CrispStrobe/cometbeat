@@ -146,6 +146,8 @@ const Map<String, List<int>> kStarThresholds = {
   // Step or Skip? (melodic-motion reading): 10 rounds x 100.
   'step_skip': [100, 600, 900],
   'tie_slur': [100, 600, 900],
+  // Beam or Flag? (beamed vs flagged eighths): 10 rounds x 100.
+  'beam_flag': [100, 600, 900],
   'which_clef': [100, 600, 900],
   'whole_half': [100, 600, 900],
   // Falling Notes: 15 notes, points = 10 x combo multiplier (1..5). A flawless

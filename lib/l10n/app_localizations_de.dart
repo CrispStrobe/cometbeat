@@ -569,6 +569,23 @@ class AppLocalizationsDe extends AppLocalizations {
   String get slurLabel => 'Bindebogen';
 
   @override
+  String get gameBeamFlag => 'Balken oder Fähnchen?';
+
+  @override
+  String get gameBeamFlagSubtitle =>
+      'Achtel mit Balken verbunden oder jede mit eigenem Fähnchen?';
+
+  @override
+  String get beamFlagPrompt =>
+      'Sind die Achtel mit Balken verbunden oder haben sie Fähnchen?';
+
+  @override
+  String get beamLabel => 'Balken';
+
+  @override
+  String get flagLabel => 'Fähnchen';
+
+  @override
   String get gameWhichClef => 'Welcher Schlüssel?';
 
   @override
