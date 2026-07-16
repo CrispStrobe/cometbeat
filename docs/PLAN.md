@@ -1088,10 +1088,13 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   absolute start doesn't matter). SRI `note_values.rhythm.p<index>`. (Kept the
   onset-diff grader rather than the `beat_runner` falling-lane clock — for a
   call-and-response echo, comparing relative onsets is the right model.)
-- [~] **Chord-quality-by-ear widening** — **started**: `major_minor_ear` widens
-  from major/minor to a 4-way (adds **diminished + augmented** as a 2×2 grid) at
-  2★; below 2★ it stays the binary drill. Remaining: a dominant-7 tier (needs a
-  7th-chord builder, not just triads).
+- [x] **Chord-quality-by-ear widening** — **done**: `major_minor_ear` widens from
+  major/minor to a 4-way (adds **diminished + augmented** as a 2×2 grid) at 2★;
+  below 2★ it stays the binary drill. The **dominant-7 tier** shipped as its own
+  binary ear game — *Triad or Seventh?* (`triad_seventh`, chords): a major triad
+  vs a dominant-7 (triad + a minor 7th), tap which. No 7th-chord *builder* was
+  needed — the dom7 is built app-side from the major `Triad`'s pitches +
+  `root.transposeBy(Interval.minorSeventh)`. SRI `chords.hear.<triad|seventh>`.
 
 ### E. Creative / toy modes (higher ceiling, higher effort)
 - [ ] **Loop mixer** — tap cards that trigger synced loops (bass/chords/melody/
