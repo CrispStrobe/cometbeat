@@ -1073,6 +1073,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameKeyFindSubtitle,
       builder: (_) => const KeyFindScreen(),
     ),
+    // Same bridge, bass clef: the keyboard drops two octaves so the low staff
+    // notes (G2..A3) land on real keys. Own progress id.
+    GameInfo(
+      id: 'key_find_bass',
+      icon: Icons.piano,
+      title: (l) => l.gameKeyFindBass,
+      subtitle: (l) => l.gameKeyFindSubtitle,
+      builder: (_) => const KeyFindScreen(clef: Clef.bass),
+    ),
     GameInfo(
       id: 'key_name',
       icon: Icons.quiz,

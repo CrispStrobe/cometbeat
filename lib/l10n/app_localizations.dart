@@ -1778,6 +1778,12 @@ abstract class AppLocalizations {
   /// **'Find the Key'**
   String get gameKeyFind;
 
+  /// No description provided for @gameKeyFindBass.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the Key (Bass)'**
+  String get gameKeyFindBass;
+
   /// No description provided for @gameKeyFindSubtitle.
   ///
   /// In en, this message translates to:

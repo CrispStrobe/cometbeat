@@ -935,6 +935,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gameKeyFind => 'Taste finden';
 
   @override
+  String get gameKeyFindBass => 'Taste finden (Bass)';
+
+  @override
   String get gameKeyFindSubtitle => 'Von der Note zur Taste';
 
   @override

@@ -354,6 +354,7 @@
   "moduleKeyboard": "Piano Corner",
   "moduleKeyboardSubtitle": "Find your way around the piano keys",
   "gameKeyFind": "Find the Key",
+  "gameKeyFindBass": "Find the Key (Bass)",
   "gameKeyFindSubtitle": "From the staff note to the piano key",
   "keyFindPrompt": "Tap the key for this note!",
   "gameKeyName": "Key Quiz",

@@ -931,6 +931,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameKeyFind => 'Find the Key';
 
   @override
+  String get gameKeyFindBass => 'Find the Key (Bass)';
+
+  @override
   String get gameKeyFindSubtitle => 'From the staff note to the piano key';
 
   @override

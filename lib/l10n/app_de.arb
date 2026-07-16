@@ -316,6 +316,7 @@
   "moduleKeyboard": "Tasten-Ecke",
   "moduleKeyboardSubtitle": "Finde dich auf den Klaviertasten zurecht",
   "gameKeyFind": "Taste finden",
+  "gameKeyFindBass": "Taste finden (Bass)",
   "gameKeyFindSubtitle": "Von der Note zur Taste",
   "keyFindPrompt": "Tippe auf die Taste für diese Note!",
   "gameKeyName": "Tasten-Quiz",
