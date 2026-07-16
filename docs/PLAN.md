@@ -969,8 +969,11 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   `place_note` ship treble + bass). **Shipped:** ✅ *Step or Skip? (bass)*
   (`step_skip_bass`) · ✅ *High or Low? (bass)* (`pitch_sort_bass`) — each with
   its own `progressId` so treble progress is untouched. · ✅ *Sharp or Flat?
-  (bass)* (`accidental_sort_bass`). (`Connect the Notes` already ships a bass
-  variant, `connect_line_bass` — the bass-clef sweep is done.)
+  (bass)* (`accidental_sort_bass`). · ✅ *Find the Key (bass)* (`key_find_bass`,
+  keyboard) — the staff→piano bridge, bass clef: the `PianoKeyboard` shifts two
+  octaves down (C2..B3) so the low staff naturals (G2..A3) land on real keys;
+  own `progressId`, and the SRI token carries the octave so bass items never
+  collide with treble. (`Connect the Notes` already ships `connect_line_bass`.)
 - [x] **Step, Skip, or Leap?** — **shipped**: `step_skip` (and its bass variant)
   becomes a 3-way at 2★ — Step (2nd) / Skip (3rd–4th) / Leap (5th+), a third
   answer button + `reading.motion.leap`; below 2★ it stays the binary drill.
@@ -992,9 +995,12 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   (`connect_beats`, note_values) — match each note-value glyph to how many beats
   it lasts in 4/4 (whole 4 / half 2 / quarter 1 / eighth ½; sixteenth ¼ at 2★).
   SRI `note_values.beats.*` — the duration-in-beats twin of the symbols mode
-  (which teaches the *name*). Remaining modes (instrument↔clef — awkward
-  cardinality, few clefs/many instruments; note↔piano-key — needs a key widget)
-  are each one more `ConnectMode` case.
+  (which teaches the *name*). Remaining Connect idea worth doing: instrument↔clef
+  — but awkward cardinality (few clefs, many instruments) makes a weak 4-pair
+  round; parked. NB the **note↔piano-key** bridge is already its own game, not a
+  Connect mode: `key_find` (staff note → tap the key) now ships treble **and**
+  bass, both on the reusable `lib/shared/widgets/piano_keyboard.dart`
+  (`PianoKeyboard`, already used across ~7 games).
 
 ### C. Reading vocabulary the curriculum wants but we don't drill
 - [x] **Louder or Softer?** — **shipped** (`dynamics_duel`, note_values): two
