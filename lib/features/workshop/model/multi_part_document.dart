@@ -172,6 +172,7 @@ class MultiPartDocument extends ChangeNotifier {
   /// concert-pitch toggle ([MultiPartScore.atConcertPitch]) can un-transpose it.
   MultiPartScore buildMultiPart() {
     final built = [for (final p in _parts) p.buildScore()];
+    if (_cache != null && _cacheMatches(built)) return _cache!;
     final maxMeasures = built.fold<int>(
       1,
       (m, s) => s.measures.length > m ? s.measures.length : m,
@@ -180,11 +181,50 @@ class MultiPartDocument extends ChangeNotifier {
       for (var i = 0; i < built.length; i++)
         _reindex(built[i], prefixFor(i), maxMeasures, _transpositions[i]),
     ];
-    return MultiPartScore(
+    _cache = MultiPartScore(
       assembled,
       brackets: brackets,
       barlineGroups: barlineGroups,
     );
+    _cacheParts = built;
+    _cacheBrackets = brackets;
+    _cacheBarlineGroups = barlineGroups;
+    _cacheTranspositions = List.of(_transpositions);
+    return _cache!;
+  }
+
+  // Memoized assembly, mirroring [ScoreDocument]'s own `_scoreCache`.
+  // [buildMultiPart] is called from `build()`, so without this every hover or
+  // selection rebuild re-allocated every Measure and element (via [_reindex])
+  // and handed the render object a new-but-equal document — defeating its
+  // `document ==` fast path and forcing a full re-layout of every part.
+  //
+  // The key is derived entirely from state rather than from `_invalidate()`
+  // calls, so a mutator can't forget to clear it: each part's `buildScore()` is
+  // itself memoized (an unchanged part returns an *identical* Score), and every
+  // brackets/barlineGroups mutator reassigns its list rather than mutating in
+  // place, so identity is sound for those too. Transpositions do mutate in
+  // place, hence the copy.
+  MultiPartScore? _cache;
+  List<Score> _cacheParts = const [];
+  List<StaffBracket> _cacheBrackets = const [];
+  List<BarlineGroup> _cacheBarlineGroups = const [];
+  List<Transposition?> _cacheTranspositions = const [];
+
+  bool _cacheMatches(List<Score> built) {
+    if (!identical(brackets, _cacheBrackets) ||
+        !identical(barlineGroups, _cacheBarlineGroups) ||
+        built.length != _cacheParts.length ||
+        _transpositions.length != _cacheTranspositions.length) {
+      return false;
+    }
+    for (var i = 0; i < built.length; i++) {
+      if (!identical(built[i], _cacheParts[i])) return false;
+    }
+    for (var i = 0; i < _transpositions.length; i++) {
+      if (_transpositions[i] != _cacheTranspositions[i]) return false;
+    }
+    return true;
   }
 
   /// One padding bar: a full-measure whole rest with no id (never selectable).

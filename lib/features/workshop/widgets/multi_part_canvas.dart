@@ -16,7 +16,7 @@ import 'package:flutter/material.dart' hide PageMetrics;
 import 'package:klang_universum/features/workshop/model/multi_part_document.dart';
 import 'package:klang_universum/shared/score_theme.dart';
 
-class MultiPartCanvas extends StatelessWidget {
+class MultiPartCanvas extends StatefulWidget {
   const MultiPartCanvas({
     super.key,
     required this.document,
@@ -90,6 +90,11 @@ class MultiPartCanvas extends StatelessWidget {
   /// Pixels per staff space (zoom).
   final double staffSpace;
 
+  @override
+  State<MultiPartCanvas> createState() => _MultiPartCanvasState();
+}
+
+class _MultiPartCanvasState extends State<MultiPartCanvas> {
   // Small margins — this is an editor canvas, not a print page.
   static const double _margin = 2;
 
@@ -97,6 +102,59 @@ class MultiPartCanvas extends StatelessWidget {
   // with [MultiPartView]'s defaults so the height probe matches the render.
   static const double _staffGap = 4;
   static const double _systemGap = 10;
+
+  // The SMuFL load, held for the widget's lifetime. It MUST NOT be created in
+  // build(): once loaded, MusicFonts.load returns `Future.value(cached)` — a
+  // new instance every call — so an inline future made FutureBuilder
+  // unsubscribe/resubscribe and rebuild a second time on every build, doubling
+  // all the layout work below and adding a frame of latency per hover tick.
+  late final Future<void> _fontLoad = MusicFonts.load(kidsScoreTheme.musicFont);
+
+  // Memoized page geometry, keyed on everything it depends on. Two reasons:
+  //  1. [_pageHeightSpaces] is a *full* engraving pass whose result is thrown
+  //     away except for one height (measured at ~150-250ms for a 4-part score)
+  //     — far too costly to redo on every build.
+  //  2. [PageMetrics] declares no `operator ==`, so RenderMultiPartView's
+  //     `if (value == _metrics) return;` guard is an identity check. A
+  //     fresh-but-equal instance forced markNeedsLayout() on *every* build,
+  //     even a pure hover where nothing moved — which also made its deep
+  //     `document ==` check pure waste. Reusing the instance lets both guards
+  //     fire, so hover costs zero layouts.
+  MultiPartScore? _geomDoc;
+  double? _geomWidthSpaces;
+  SmuflMetadata? _geomMetadata;
+  PageMetrics? _geomMetrics;
+  double _geomHeightSpaces = 0;
+
+  ({PageMetrics metrics, double heightSpaces}) _geometry(
+    MultiPartScore doc,
+    SmuflMetadata? metadata,
+    double widthSpaces,
+  ) {
+    if (_geomMetrics != null &&
+        identical(doc, _geomDoc) &&
+        identical(metadata, _geomMetadata) &&
+        widthSpaces == _geomWidthSpaces) {
+      return (metrics: _geomMetrics!, heightSpaces: _geomHeightSpaces);
+    }
+    final heightSpaces = metadata != null
+        ? _pageHeightSpaces(doc, metadata, widthSpaces)
+        : _estimateHeightSpaces(doc);
+    final metrics = PageMetrics(
+      width: widthSpaces,
+      height: heightSpaces,
+      marginLeft: _margin,
+      marginRight: _margin,
+      marginTop: _margin,
+      marginBottom: _margin,
+    );
+    _geomDoc = doc;
+    _geomMetadata = metadata;
+    _geomWidthSpaces = widthSpaces;
+    _geomHeightSpaces = heightSpaces;
+    _geomMetrics = metrics;
+    return (metrics: metrics, heightSpaces: heightSpaces);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,54 +164,48 @@ class MultiPartCanvas extends StatelessWidget {
     // from an estimate to the exact probed value. The view widget is always
     // present (never gated on the font) so it renders as soon as fonts load.
     return FutureBuilder<void>(
-      future: MusicFonts.load(theme.musicFont),
+      future: _fontLoad,
       builder: (context, _) {
         return LayoutBuilder(
           builder: (context, constraints) {
             final maxWidth =
                 constraints.maxWidth.isFinite ? constraints.maxWidth : 1000.0;
             final widthSpaces =
-                (maxWidth / staffSpace).clamp(40.0, 400.0).toDouble();
-            final doc = document.buildMultiPart();
+                (maxWidth / widget.staffSpace).clamp(40.0, 400.0).toDouble();
+            // Memoized in MultiPartDocument, so an unchanged score returns an
+            // identical instance — which both keys the cache below and lets the
+            // render object's own `document ==` fast path early-return.
+            final doc = widget.document.buildMultiPart();
             final metadata = MusicFonts.metadataOrNull(theme.musicFont);
-            final heightSpaces = metadata != null
-                ? _pageHeightSpaces(doc, metadata, widthSpaces)
-                : _estimateHeightSpaces(doc);
-            final metrics = PageMetrics(
-              width: widthSpaces,
-              height: heightSpaces,
-              marginLeft: _margin,
-              marginRight: _margin,
-              marginTop: _margin,
-              marginBottom: _margin,
-            );
+            final geom = _geometry(doc, metadata, widthSpaces);
+            final heightSpaces = geom.heightSpaces;
             return SingleChildScrollView(
               child: SizedBox(
-                width: widthSpaces * staffSpace,
-                height: heightSpaces * staffSpace,
+                width: widthSpaces * widget.staffSpace,
+                height: heightSpaces * widget.staffSpace,
                 child: InteractiveMultiPartView(
                   document: doc,
-                  metrics: metrics,
+                  metrics: geom.metrics,
                   theme: theme,
-                  staffSpace: staffSpace,
+                  staffSpace: widget.staffSpace,
                   // staffGap (4) / systemGap (10) match the view's own defaults;
                   // the probe below mirrors them so heights agree.
-                  highlightedIds: highlightedIds,
-                  suppressElementIds: suppressElementIds,
-                  ghostPart: ghostPart,
-                  ghostTarget: ghostTarget,
-                  ghostDuration: ghostDuration,
-                  onElementTap: onElementTap,
-                  onStaffTap: onStaffTap,
-                  onHover: onHover,
-                  onElementDragStart: onElementDragStart,
-                  onElementDragUpdate: onElementDragUpdate,
-                  onElementDragEnd: onElementDragEnd,
-                  controller: controller,
-                  caret: caret,
-                  showMeasureNumbers: showMeasureNumbers,
-                  showNoteNames: showNoteNames,
-                  noteNameStyle: noteNameStyle,
+                  highlightedIds: widget.highlightedIds,
+                  suppressElementIds: widget.suppressElementIds,
+                  ghostPart: widget.ghostPart,
+                  ghostTarget: widget.ghostTarget,
+                  ghostDuration: widget.ghostDuration,
+                  onElementTap: widget.onElementTap,
+                  onStaffTap: widget.onStaffTap,
+                  onHover: widget.onHover,
+                  onElementDragStart: widget.onElementDragStart,
+                  onElementDragUpdate: widget.onElementDragUpdate,
+                  onElementDragEnd: widget.onElementDragEnd,
+                  controller: widget.controller,
+                  caret: widget.caret,
+                  showMeasureNumbers: widget.showMeasureNumbers,
+                  showNoteNames: widget.showNoteNames,
+                  noteNameStyle: widget.noteNameStyle,
                 ),
               ),
             );

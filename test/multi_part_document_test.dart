@@ -318,4 +318,98 @@ void main() {
     expect(notes, greaterThan(0));
     expect(doc.parts[0].isEmpty, isFalse);
   });
+
+  // buildMultiPart is called from build(), so it is memoized: an unchanged
+  // document must return an *identical* MultiPartScore, or the render object's
+  // `document ==` fast path can never fire and every hover re-lays-out every
+  // part. These lock both halves — the hit (identical) and, more importantly,
+  // every way the cache must miss. A stale hit here renders the wrong score.
+  group('buildMultiPart memoization', () {
+    test('an unchanged document returns the identical score', () {
+      final doc = MultiPartDocument()..addPart();
+      doc.activePart.insertNote(_p(Step.g), _quarter);
+
+      expect(identical(doc.buildMultiPart(), doc.buildMultiPart()), isTrue);
+    });
+
+    test('editing a part invalidates it', () {
+      final doc = MultiPartDocument()..addPart();
+      final before = doc.buildMultiPart();
+
+      doc.activePart.insertNote(_p(Step.g), _quarter);
+
+      expect(identical(doc.buildMultiPart(), before), isFalse);
+    });
+
+    test('editing a NON-active part invalidates it too', () {
+      final doc = MultiPartDocument()..addPart();
+      final before = doc.buildMultiPart();
+
+      // Part 0 is not active (addPart made part 1 active) — the cache key is
+      // per-part built-score identity, so this must still miss.
+      doc.parts[0].insertNote(_p(Step.c), _quarter);
+
+      expect(identical(doc.buildMultiPart(), before), isFalse);
+    });
+
+    test('adding and removing a part invalidates it', () {
+      final doc = MultiPartDocument()..addPart();
+      final before = doc.buildMultiPart();
+
+      doc.addPart();
+      final added = doc.buildMultiPart();
+      expect(identical(added, before), isFalse);
+      expect(added.parts.length, 3);
+
+      doc.removePart(2);
+      final removed = doc.buildMultiPart();
+      expect(identical(removed, added), isFalse);
+      expect(removed.parts.length, 2);
+    });
+
+    test('changing a transposition invalidates it', () {
+      final doc = MultiPartDocument()..addPart();
+      final before = doc.buildMultiPart();
+
+      doc.setTransposition(0, Transposition.bFlat);
+
+      expect(identical(doc.buildMultiPart(), before), isFalse);
+    });
+
+    test('changing brackets or barline groups invalidates it', () {
+      final doc = MultiPartDocument()
+        ..addPart()
+        ..addPart();
+      final before = doc.buildMultiPart();
+
+      doc.addBracket(0, 1, kind: StaffBracketKind.brace);
+      final braced = doc.buildMultiPart();
+      expect(identical(braced, before), isFalse);
+      expect(braced.brackets, hasLength(1));
+
+      doc.setBarlineGroups([const BarlineGroup(0, 1)]);
+      final grouped = doc.buildMultiPart();
+      expect(identical(grouped, braced), isFalse);
+      expect(grouped.barlineGroups, hasLength(1));
+    });
+
+    test('undo in a part invalidates it', () {
+      final doc = MultiPartDocument();
+      doc.activePart.insertNote(_p(Step.g), _quarter);
+      final withNote = doc.buildMultiPart();
+
+      doc.activePart.undo();
+
+      expect(identical(doc.buildMultiPart(), withNote), isFalse);
+    });
+
+    test('a cache hit still reflects the real music', () {
+      final doc = MultiPartDocument();
+      doc.activePart.insertNote(_p(Step.g), _quarter);
+      doc.buildMultiPart(); // prime
+
+      final again = doc.buildMultiPart();
+      expect(again.parts.first.measures.first.elements, isNotEmpty);
+    });
+  });
 }

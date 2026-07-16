@@ -508,11 +508,18 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// While dragging, the source note is suppressed (see [_mpSuppressed]) and the
   /// placement ghost follows the pointer — a live drag preview built from the
   /// existing suppress + ghost APIs (no dedicated `dragPreviewOpacity` needed).
-  void _onMpDragUpdate(String globalId, int partIndex, StaffTarget target) =>
-      setState(() {
-        _hoverPart = partIndex;
-        _hover = target;
-      });
+  ///
+  /// Guarded on the quantized target exactly like [_onMpHover] and the
+  /// single-part [_onElementDragUpdate]: onPanUpdate fires per pointer-move
+  /// pixel, and the ghost snaps to lines/spaces anyway, so an unguarded
+  /// setState here rebuilt the whole editor per pixel for no visible change.
+  void _onMpDragUpdate(String globalId, int partIndex, StaffTarget target) {
+    if (partIndex == _hoverPart && target == _hover) return;
+    setState(() {
+      _hoverPart = partIndex;
+      _hover = target;
+    });
+  }
 
   /// Drop a dragged element: switch to its part and re-pitch it to the drop
   /// staff position (vertical move).
