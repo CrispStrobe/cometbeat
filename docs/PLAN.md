@@ -929,8 +929,10 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   matches it (extends the existing `perform_it` / `sing_back` mic grading).
 - [ ] **Rhythm echo by tap** — hear a rhythm, tap it back in time (reuse the
   `beat_runner` timing engine). Grades against the pattern.
-- [ ] **Chord-quality-by-ear widening** — major/minor exists; add
-  augmented/diminished and dominant-7 at higher tiers.
+- [~] **Chord-quality-by-ear widening** — **started**: `major_minor_ear` widens
+  from major/minor to a 4-way (adds **diminished + augmented** as a 2×2 grid) at
+  2★; below 2★ it stays the binary drill. Remaining: a dominant-7 tier (needs a
+  7th-chord builder, not just triads).
 
 ### E. Creative / toy modes (higher ceiling, higher effort)
 - [ ] **Loop mixer** — tap cards that trigger synced loops (bass/chords/melody/
