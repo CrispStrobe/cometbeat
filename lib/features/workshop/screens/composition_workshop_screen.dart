@@ -211,26 +211,99 @@ MultiPartScore importBekern(String text) =>
 /// One export target: display [label], file [ext], and MIME type. [binary]
 /// formats are raw bytes; the rest are UTF-8 text (and so can fall back to the
 /// copyable dialog where the platform has no save picker).
-typedef ExportFormat = ({String label, String ext, String mime, bool binary});
+/// [multiPart] marks the formats that write **every** instrument part. The rest
+/// can only carry the active one — crisp_notation has a `multiPartTo…` writer
+/// for MusicXML only (every text format has a multi-part *reader*, so this is an
+/// asymmetry in the library, not here). Exporting a 4-part score to MIDI or
+/// LilyPond therefore silently dropped 3 parts; the export sheet now says so
+/// rather than letting the user find out later. See docs/WORKSHOP_PARITY.md.
+typedef ExportFormat = ({
+  String label,
+  String ext,
+  String mime,
+  bool binary,
+  bool multiPart,
+});
 
 /// Everything the Workshop can write out (one "Export…" menu → this list).
 const kExportFormats = <ExportFormat>[
-  (label: 'MusicXML', ext: 'musicxml', mime: 'application/xml', binary: false),
+  (
+    label: 'MusicXML',
+    ext: 'musicxml',
+    mime: 'application/xml',
+    binary: false,
+    multiPart: true,
+  ),
   (
     label: 'MusicXML (compressed)',
     ext: 'mxl',
     mime: 'application/vnd.recordare.musicxml',
     binary: true,
+    multiPart: true,
   ),
-  (label: 'MIDI', ext: 'mid', mime: 'audio/midi', binary: true),
-  (label: 'ABC', ext: 'abc', mime: 'text/plain', binary: false),
-  (label: 'MEI', ext: 'mei', mime: 'application/xml', binary: false),
-  (label: 'Humdrum **kern', ext: 'krn', mime: 'text/plain', binary: false),
-  (label: 'MuseScore', ext: 'mscx', mime: 'application/xml', binary: false),
-  (label: 'LilyPond', ext: 'ly', mime: 'text/plain', binary: false),
-  (label: 'Braille music', ext: 'brf', mime: 'text/plain', binary: false),
-  (label: 'SVG (vector)', ext: 'svg', mime: 'image/svg+xml', binary: false),
-  (label: 'PNG (image)', ext: 'png', mime: 'image/png', binary: true),
+  (
+    label: 'MIDI',
+    ext: 'mid',
+    mime: 'audio/midi',
+    binary: true,
+    multiPart: false,
+  ),
+  (
+    label: 'ABC',
+    ext: 'abc',
+    mime: 'text/plain',
+    binary: false,
+    multiPart: false,
+  ),
+  (
+    label: 'MEI',
+    ext: 'mei',
+    mime: 'application/xml',
+    binary: false,
+    multiPart: false,
+  ),
+  (
+    label: 'Humdrum **kern',
+    ext: 'krn',
+    mime: 'text/plain',
+    binary: false,
+    multiPart: false,
+  ),
+  (
+    label: 'MuseScore',
+    ext: 'mscx',
+    mime: 'application/xml',
+    binary: false,
+    multiPart: false,
+  ),
+  (
+    label: 'LilyPond',
+    ext: 'ly',
+    mime: 'text/plain',
+    binary: false,
+    multiPart: false,
+  ),
+  (
+    label: 'Braille music',
+    ext: 'brf',
+    mime: 'text/plain',
+    binary: false,
+    multiPart: false,
+  ),
+  (
+    label: 'SVG (vector)',
+    ext: 'svg',
+    mime: 'image/svg+xml',
+    binary: false,
+    multiPart: false,
+  ),
+  (
+    label: 'PNG (image)',
+    ext: 'png',
+    mime: 'image/png',
+    binary: true,
+    multiPart: false,
+  ),
 ];
 
 class CompositionWorkshopScreen extends StatefulWidget {
@@ -1135,6 +1208,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// formats fall back to the copyable dialog. Replaces the per-format menu.
   Future<void> _showExportSheet() async {
     final l10n = AppLocalizations.of(context)!;
+    // With more than one part on the desk, most formats can only carry the
+    // active one (see [ExportFormat.multiPart]) — say which, up front, instead
+    // of silently writing a fraction of the user's score.
+    final multi = _mpd.partCount > 1;
+    final activeName = _mpd.nameOf(_mpd.active);
     final fmt = await showDialog<ExportFormat>(
       context: context,
       builder: (ctx) => SimpleDialog(
@@ -1143,7 +1221,24 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           for (final f in kExportFormats)
             SimpleDialogOption(
               onPressed: () => Navigator.of(ctx).pop(f),
-              child: Text('${f.label}  ·  .${f.ext}'),
+              child: multi
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${f.label}  ·  .${f.ext}'),
+                        Text(
+                          f.multiPart
+                              ? l10n.workshopExportAllParts(_mpd.partCount)
+                              : l10n.workshopExportActivePartOnly(activeName),
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                color: f.multiPart
+                                    ? null
+                                    : Theme.of(ctx).colorScheme.error,
+                              ),
+                        ),
+                      ],
+                    )
+                  : Text('${f.label}  ·  .${f.ext}'),
             ),
         ],
       ),

@@ -292,6 +292,58 @@ void main() {
     expect(find.textContaining('PNG'), findsOneWidget);
   });
 
+  // Only MusicXML/.mxl can carry every part (crisp_notation ships no other
+  // multiPartTo… writer), so exporting a multi-part score to MIDI/LilyPond/etc
+  // silently dropped every part but the active one. The sheet must say so.
+  testWidgets('the export sheet is silent about parts for a single-part score',
+      (tester) async {
+    await pump(tester);
+    await tester.tap(_pianoKey());
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.text(l10n.workshopExport));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Only'),
+      findsNothing,
+      reason: 'nothing is lost with one part, so do not nag',
+    );
+  });
+
+  testWidgets('the export sheet warns which formats drop the other parts',
+      (tester) async {
+    await pump(tester);
+    await tester.tap(find.byKey(const ValueKey('workshop-add-instrument')));
+    await tester.pump();
+    await tester.tap(_pianoKey());
+    await tester.pump();
+    expect(_editor(tester).partCount, 2);
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.text(l10n.workshopExport));
+    await tester.pumpAndSettle();
+
+    // MusicXML + .mxl say they carry everything; the other nine warn.
+    expect(find.text(l10n.workshopExportAllParts(2)), findsNWidgets(2));
+    expect(
+      find.text(l10n.workshopExportActivePartOnly('Part 2')),
+      findsNWidgets(kExportFormats.length - 2),
+      reason: 'every non-MusicXML format must admit it drops the other parts',
+    );
+  });
+
+  test('exactly the MusicXML formats claim multi-part support', () {
+    // Guards the flag against a new format being added without deciding.
+    expect(
+      kExportFormats.where((f) => f.multiPart).map((f) => f.ext),
+      ['musicxml', 'mxl'],
+    );
+  });
+
   testWidgets('enabling marquee mode shows the selection overlay',
       (tester) async {
     await pump(tester);

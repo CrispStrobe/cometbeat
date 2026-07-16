@@ -83,6 +83,24 @@
   "workshopOpen": "Open a file…",
   "workshopExport": "Export…",
   "workshopExportChoose": "Choose a format",
+  "workshopExportAllParts": "All {count} parts",
+  "@workshopExportAllParts": {
+    "description": "Export sheet: this format writes every instrument part.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workshopExportActivePartOnly": "Only “{part}” — this format cannot hold several parts",
+  "@workshopExportActivePartOnly": {
+    "description": "Export sheet: warns that the format drops all but the active part.",
+    "placeholders": {
+      "part": {
+        "type": "String"
+      }
+    }
+  },
   "workshopSavedTo": "Saved: {path}",
   "@workshopSavedTo": {
     "placeholders": {

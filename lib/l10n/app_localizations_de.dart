@@ -198,6 +198,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopExportChoose => 'Format wählen';
 
   @override
+  String workshopExportAllParts(int count) {
+    return 'Alle $count Stimmen';
+  }
+
+  @override
+  String workshopExportActivePartOnly(String part) {
+    return 'Nur „$part“ — dieses Format kann nicht mehrere Stimmen speichern';
+  }
+
+  @override
   String workshopSavedTo(String path) {
     return 'Gespeichert: $path';
   }

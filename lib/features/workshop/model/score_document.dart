@@ -742,19 +742,32 @@ class ScoreDocument {
     clearSelection();
   }
 
-  /// Replace the whole document with the contents of [score] (undoable). Imports
-  /// voice 1 only; a chord keeps its first pitch; ties/articulations are dropped
-  /// (the editor is single-voice/single-note for now).
+  /// Replace the whole document with the contents of [score] (undoable).
+  ///
+  /// This is the exact inverse of [buildScore] for everything an
+  /// [EditorElement] can hold — chords, articulations, ties, dynamics, slurs,
+  /// hairpins, lyrics and the pickup all survive, so **save → reopen is
+  /// lossless**. (It used to keep only `pitches.first` and drop ties,
+  /// articulations, dynamics and the pickup, which silently destroyed the
+  /// user's work on reopen.)
+  ///
+  /// Still dropped, because the flat element stream cannot represent them:
+  /// voices 2–4, tuplets, grace notes, ornaments and mid-score key/time/clef
+  /// changes. Those are unblocked by the measure-spine work, not here — see
+  /// docs/WORKSHOP_PARITY.md.
   void loadScore(Score score) {
     _snapshot();
     _elements.clear();
     _slurs.clear();
     _hairpins.clear();
     _lyrics.clear();
-    pickup = null;
     clef = score.clef;
     keySignature = score.keySignature;
     timeSignature = score.timeSignature ?? TimeSignature.fourFour;
+    pickup = _pickupOf(score);
+    // Dynamics live in a side list keyed by element id, so they have to be
+    // re-anchored onto the elements as we rebuild them.
+    final dynamics = {for (final d in score.dynamics) d.elementId: d.level};
     // Old element id → the fresh id we assign, so imported slurs/lyrics re-anchor.
     final remap = <String, String>{};
     for (final measure in score.measures) {
@@ -762,8 +775,16 @@ class ScoreDocument {
         final id = _newId();
         if (el.id != null) remap[el.id!] = id;
         if (el is NoteElement) {
-          _elements
-              .add(EditorElement.note(el.pitches.first, el.duration, id: id));
+          _elements.add(
+            EditorElement.chord(
+              List.of(el.pitches),
+              el.duration,
+              id: id,
+              articulations: Set.of(el.articulations),
+              tieToNext: el.tieToNext,
+              dynamic: el.id == null ? null : dynamics[el.id!],
+            ),
+          );
         } else if (el is RestElement) {
           _elements.add(EditorElement.rest(el.duration, id: id));
         }
@@ -786,6 +807,28 @@ class ScoreDocument {
       }
     }
     clearSelection();
+  }
+
+  /// The anacrusis of [score], recovered from its flagged opening bar.
+  ///
+  /// [buildScore] writes the pickup as `Measure(pickup: true)` and lets the bar
+  /// hold whatever music fits, so reading it back means re-measuring that bar's
+  /// contents. Returns null unless the total lands exactly on a duration the
+  /// editor can represent — an unrepresentable anacrusis re-packs as a normal
+  /// bar rather than silently rounding the music to the wrong length.
+  static NoteDuration? _pickupOf(Score score) {
+    if (score.measures.isEmpty || !score.measures.first.pickup) return null;
+    var total = Fraction(0, 1);
+    for (final el in score.measures.first.elements) {
+      total = total + el.duration.toFraction();
+    }
+    for (final base in DurationBase.values) {
+      for (var dots = 0; dots <= 2; dots++) {
+        final candidate = NoteDuration(base, dots: dots);
+        if (candidate.toFraction() == total) return candidate;
+      }
+    }
+    return null;
   }
 
   void setTimeSignature(TimeSignature value) {

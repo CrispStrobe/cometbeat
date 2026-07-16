@@ -434,6 +434,18 @@ abstract class AppLocalizations {
   /// **'Choose a format'**
   String get workshopExportChoose;
 
+  /// Export sheet: this format writes every instrument part.
+  ///
+  /// In en, this message translates to:
+  /// **'All {count} parts'**
+  String workshopExportAllParts(int count);
+
+  /// Export sheet: warns that the format drops all but the active part.
+  ///
+  /// In en, this message translates to:
+  /// **'Only “{part}” — this format cannot hold several parts'**
+  String workshopExportActivePartOnly(String part);
+
   /// No description provided for @workshopSavedTo.
   ///
   /// In en, this message translates to:

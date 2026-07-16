@@ -198,6 +198,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopExportChoose => 'Choose a format';
 
   @override
+  String workshopExportAllParts(int count) {
+    return 'All $count parts';
+  }
+
+  @override
+  String workshopExportActivePartOnly(String part) {
+    return 'Only “$part” — this format cannot hold several parts';
+  }
+
+  @override
   String workshopSavedTo(String path) {
     return 'Saved: $path';
   }

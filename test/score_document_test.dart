@@ -333,4 +333,130 @@ void main() {
     expect(doc.elements.map((e) => e.pitch!.step), [Step.c, Step.e]);
     expect(doc.selected!.pitch!.step, Step.e);
   });
+
+  // Save writes the document out and Open reads it back, so loadScore must be
+  // the inverse of buildScore for everything an EditorElement can hold. It
+  // wasn't: it kept only pitches.first and dropped ties, articulations,
+  // dynamics and the pickup — i.e. save → reopen silently destroyed work.
+  group('save → reopen is lossless', () {
+    // A document exercising every feature the flat element stream can carry.
+    ScoreDocument rich() {
+      final doc = ScoreDocument()
+        ..setTimeSignature(const TimeSignature(3, 4))
+        ..setKeySignature(const KeySignature(-2))
+        ..setClef(Clef.bass)
+        ..insertNote(_p(Step.c, octave: 3), _quarter)
+        ..insertNote(_p(Step.e, alter: -1, octave: 3), _quarter)
+        ..insertRest(_quarter)
+        ..insertNote(
+          _p(Step.g, octave: 3),
+          const NoteDuration(DurationBase.half),
+        );
+      // A chord on element 0, plus a tie, an articulation and a dynamic.
+      doc.selectIndex(0);
+      doc.addPitchToSelected(_p(Step.e, octave: 3));
+      doc.addPitchToSelected(_p(Step.g, octave: 3));
+      doc.toggleArticulationOfSelected(Articulation.staccato);
+      doc.setDynamicOfSelected(DynamicLevel.pp);
+      doc.selectIndex(1);
+      doc.toggleTieOfSelected();
+      return doc;
+    }
+
+    void expectSame(ScoreDocument a, ScoreDocument b) {
+      expect(b.length, a.length, reason: 'element count');
+      expect(b.clef, a.clef);
+      expect(b.keySignature, a.keySignature);
+      expect(b.timeSignature, a.timeSignature);
+      for (var i = 0; i < a.length; i++) {
+        final x = a.elements[i], y = b.elements[i];
+        expect(
+          y.pitches.map((p) => p.midiNumber),
+          x.pitches.map((p) => p.midiNumber),
+          reason: 'element $i pitches (chords must survive)',
+        );
+        expect(
+          y.duration.toFraction(),
+          x.duration.toFraction(),
+          reason: 'element $i duration',
+        );
+        expect(y.articulations, x.articulations, reason: 'element $i artic');
+        expect(y.tieToNext, x.tieToNext, reason: 'element $i tie');
+        expect(y.dynamic, x.dynamic, reason: 'element $i dynamic');
+      }
+    }
+
+    test('buildScore → loadScore preserves chords, ties, artics, dynamics', () {
+      final src = rich();
+      final reopened = ScoreDocument()..loadScore(src.buildScore());
+      expectSame(src, reopened);
+    });
+
+    test('a chord survives (it used to collapse to its first pitch)', () {
+      final src = ScoreDocument()..insertNote(_p(Step.c), _quarter);
+      src.selectIndex(0);
+      src.addPitchToSelected(_p(Step.e));
+      src.addPitchToSelected(_p(Step.g));
+      expect(src.elements.single.pitches, hasLength(3));
+
+      final reopened = ScoreDocument()..loadScore(src.buildScore());
+      expect(
+        reopened.elements.single.pitches,
+        hasLength(3),
+        reason: 'a chord must not collapse on reopen',
+      );
+    });
+
+    test('the pickup survives', () {
+      final src = ScoreDocument()
+        ..setPickup(const NoteDuration(DurationBase.quarter))
+        ..insertNote(_p(Step.g), _quarter)
+        ..insertNote(_p(Step.c), _quarter)
+        ..insertNote(_p(Step.d), _quarter)
+        ..insertNote(_p(Step.e), _quarter);
+      expect(src.buildScore().measures.first.pickup, isTrue);
+
+      final reopened = ScoreDocument()..loadScore(src.buildScore());
+      expect(reopened.pickup?.toFraction(), src.pickup?.toFraction());
+      expect(
+        reopened.buildScore().measures.first.pickup,
+        isTrue,
+        reason: 'the anacrusis must still engrave as a short opening bar',
+      );
+    });
+
+    test('a score with no pickup does not gain one', () {
+      final src = ScoreDocument()..insertNote(_p(Step.g), _quarter);
+      final reopened = ScoreDocument()..loadScore(src.buildScore());
+      expect(reopened.pickup, isNull);
+    });
+
+    test('slurs, hairpins and lyrics still re-anchor', () {
+      final src = ScoreDocument()
+        ..insertNote(_p(Step.c), _quarter)
+        ..insertNote(_p(Step.e), _quarter);
+      src.selectIndex(0);
+      src.extendRight();
+      src.slurSelected();
+      src.hairpinSelected(HairpinType.crescendo);
+      src.selectIndex(0);
+      src.setLyricFor(src.elements.first.id, 'la');
+
+      final reopened = ScoreDocument()..loadScore(src.buildScore());
+      final out = reopened.buildScore();
+      expect(out.slurs, hasLength(1));
+      expect(out.hairpins, hasLength(1));
+      expect(out.lyrics.map((l) => l.text), ['la']);
+    });
+
+    // The path the app actually uses: Save writes MusicXML into the Song Book,
+    // Open parses it back. Anything the interchange drops is lost for real,
+    // regardless of how faithful loadScore is.
+    test('through MusicXML — the real Save → Open path', () {
+      final src = rich();
+      final parsed = scoreFromMusicXml(scoreToMusicXml(src.buildScore()));
+      final reopened = ScoreDocument()..loadScore(parsed);
+      expectSame(src, reopened);
+    });
+  });
 }

@@ -59,6 +59,24 @@
   "workshopOpen": "Datei öffnen…",
   "workshopExport": "Exportieren…",
   "workshopExportChoose": "Format wählen",
+  "workshopExportAllParts": "Alle {count} Stimmen",
+  "@workshopExportAllParts": {
+    "description": "Export sheet: this format writes every instrument part.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "workshopExportActivePartOnly": "Nur „{part}“ — dieses Format kann nicht mehrere Stimmen speichern",
+  "@workshopExportActivePartOnly": {
+    "description": "Export sheet: warns that the format drops all but the active part.",
+    "placeholders": {
+      "part": {
+        "type": "String"
+      }
+    }
+  },
   "workshopSavedTo": "Gespeichert: {path}",
   "@workshopSavedTo": {
     "placeholders": {
