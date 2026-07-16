@@ -10,6 +10,8 @@ import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/game_test_support.dart';
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -50,6 +52,32 @@ void main() {
 
     expect(sri.totalTrackedItems, 1);
     expect(sri.getDetailedBreakdown()['scales']!.keys, ['hear']);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('at 2 stars it widens to Diminished + Augmented', (tester) async {
+    final progress = ProgressService();
+    await progress.load();
+    progress.recordResult('major_minor_ear', score: 700, stars: 2);
+
+    await pumpGame(
+      tester,
+      const MajorMinorEarScreen(),
+      extraProviders: [
+        ChangeNotifierProvider<ProgressService>.value(value: progress),
+      ],
+    );
+
+    expect(find.text('Major'), findsOneWidget);
+    expect(find.text('Minor'), findsOneWidget);
+    expect(find.text('Diminished'), findsOneWidget);
+    expect(find.text('Augmented'), findsOneWidget);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('below 2 stars it stays Major / Minor', (tester) async {
+    await pumpGame(tester, const MajorMinorEarScreen());
+    expect(find.text('Diminished'), findsNothing);
     await tester.pumpAndSettle();
   });
 }

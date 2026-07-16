@@ -12,6 +12,7 @@ import 'package:crisp_notation/crisp_notation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
 import 'package:klang_universum/core/services/audio_service.dart';
+import 'package:klang_universum/core/services/progress_service.dart';
 import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/features/games/widgets/game_widgets.dart';
@@ -31,10 +32,22 @@ class _MajorMinorEarScreenState extends State<MajorMinorEarScreen>
 
   static const _roots = [Step.c, Step.d, Step.e, Step.f, Step.g, Step.a];
 
+  // From 2★ the game widens from major/minor to all four triad qualities.
+  static const _binaryQualities = [ChordQuality.major, ChordQuality.minor];
+  static const _allQualities = [
+    ChordQuality.major,
+    ChordQuality.minor,
+    ChordQuality.diminished,
+    ChordQuality.augmented,
+  ];
+
   late Step _root;
   late ChordQuality _quality;
+  bool _wide = false;
   ChordQuality? _tapped;
   bool? _lastAnswer;
+
+  List<ChordQuality> get _qualities => _wide ? _allQualities : _binaryQualities;
 
   @override
   int get totalRounds => 10;
@@ -52,12 +65,20 @@ class _MajorMinorEarScreenState extends State<MajorMinorEarScreen>
 
   @override
   void prepareRound() {
+    _wide = context.read<ProgressService>().starsFor(gameType) >= 2;
     _root = _roots[_random.nextInt(_roots.length)];
-    _quality = _random.nextBool() ? ChordQuality.major : ChordQuality.minor;
+    _quality = _qualities[_random.nextInt(_qualities.length)];
     _tapped = null;
     _lastAnswer = null;
     if (round > 0) _playChord();
   }
+
+  String _labelFor(AppLocalizations l, ChordQuality q) => switch (q) {
+        ChordQuality.major => l.majorLabel,
+        ChordQuality.minor => l.minorLabel,
+        ChordQuality.diminished => l.diminishedLabel,
+        ChordQuality.augmented => l.augmentedLabel,
+      };
 
   void _playChord() {
     final midis =
@@ -104,7 +125,9 @@ class _MajorMinorEarScreenState extends State<MajorMinorEarScreen>
                       correct: _lastAnswer,
                       round: round + 1,
                       totalRounds: totalRounds,
-                      prompt: l10n.listenMajorMinorPrompt,
+                      prompt: _wide
+                          ? l10n.listenChordQualityPrompt
+                          : l10n.listenMajorMinorPrompt,
                     ),
                     const SizedBox(height: 16),
                     Expanded(
@@ -125,48 +148,46 @@ class _MajorMinorEarScreenState extends State<MajorMinorEarScreen>
                     const SizedBox(height: 16),
                     FeedbackLine(correct: _lastAnswer),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        for (final option in const [
-                          ChordQuality.major,
-                          ChordQuality.minor,
-                        ])
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
-                              child: FilledButton(
-                                style: FilledButton.styleFrom(
+                    // 1 row (major/minor) at the base tier; a 2×2 grid at 2★.
+                    for (var i = 0; i < _qualities.length; i += 2)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            for (final option in _qualities.skip(i).take(2))
+                              Expanded(
+                                child: Padding(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 20,
+                                    horizontal: 8,
                                   ),
-                                  backgroundColor: _tapped == null
-                                      ? null
-                                      : option == _quality &&
-                                              _tapped == _quality
-                                          ? Colors.green
-                                          : option == _tapped
-                                              ? Colors.redAccent
-                                              : null,
-                                  textStyle: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
+                                  child: FilledButton(
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 20,
                                       ),
-                                ),
-                                onPressed: () => _onAnswer(option),
-                                child: Text(
-                                  option == ChordQuality.major
-                                      ? l10n.majorLabel
-                                      : l10n.minorLabel,
+                                      backgroundColor: _tapped == null
+                                          ? null
+                                          : option == _quality &&
+                                                  _tapped == _quality
+                                              ? Colors.green
+                                              : option == _tapped
+                                                  ? Colors.redAccent
+                                                  : null,
+                                      textStyle: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    onPressed: () => _onAnswer(option),
+                                    child: Text(_labelFor(l10n, option)),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                      ],
-                    ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),

@@ -1169,6 +1169,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get minorLabel => 'Minor';
 
   @override
+  String get diminishedLabel => 'Diminished';
+
+  @override
+  String get augmentedLabel => 'Augmented';
+
+  @override
+  String get listenChordQualityPrompt => 'Listen! Which chord quality is it?';
+
+  @override
   String get gameIntervalEar => 'Interval Detective';
 
   @override

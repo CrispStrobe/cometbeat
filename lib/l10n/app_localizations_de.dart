@@ -1174,6 +1174,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get minorLabel => 'Moll';
 
   @override
+  String get diminishedLabel => 'Vermindert';
+
+  @override
+  String get augmentedLabel => 'Übermäßig';
+
+  @override
+  String get listenChordQualityPrompt => 'Hör zu! Welche Akkordart ist das?';
+
+  @override
   String get gameIntervalEar => 'Intervall-Detektiv';
 
   @override

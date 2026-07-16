@@ -2186,6 +2186,24 @@ abstract class AppLocalizations {
   /// **'Minor'**
   String get minorLabel;
 
+  /// No description provided for @diminishedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Diminished'**
+  String get diminishedLabel;
+
+  /// No description provided for @augmentedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Augmented'**
+  String get augmentedLabel;
+
+  /// No description provided for @listenChordQualityPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen! Which chord quality is it?'**
+  String get listenChordQualityPrompt;
+
   /// No description provided for @gameIntervalEar.
   ///
   /// In en, this message translates to:
