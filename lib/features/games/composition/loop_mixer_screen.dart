@@ -49,6 +49,7 @@ abstract interface class LoopMixerTester {
   bool get isPlaying;
   int get tempoBpm;
   double get swing;
+  String? get progressionId;
   int get loopIteration;
   int variantOf(String id);
   double levelOf(String id);
@@ -57,6 +58,7 @@ abstract interface class LoopMixerTester {
   void setTrackLevel(String id, double level);
   void setSwing(double value);
   void setTempo(int bpm);
+  void setProgression(String? id);
   void stopAll();
 
   /// Forces the seam handler (normally driven by the real-time clock, which
@@ -96,7 +98,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       final phase = _clock.elapsedMilliseconds % t.totalMs;
       if (phase < _lastPhaseMs) _onLoopWrap();
       _lastPhaseMs = phase;
-      _step.value = phase ~/ t.stepMs;
+      _step.value = phase ~/ t.beatMs;
     })
       ..start();
   }
@@ -119,6 +121,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   double get swing => _engine.swing;
   @override
+  String? get progressionId => _engine.progression?.id;
+  @override
   int get loopIteration => _iteration;
   @override
   int variantOf(String id) => _engine.variants[id] ?? 0;
@@ -134,6 +138,15 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void setSwing(double value) => _setSwing(value);
   @override
   void setTempo(int bpm) => _setTempo(bpm);
+  @override
+  void setProgression(String? id) {
+    Progression? found;
+    for (final p in kProgressions) {
+      if (p.id == id) found = p;
+    }
+    _setProgression(found);
+  }
+
   @override
   void stopAll() => _stopAll();
   @override
@@ -183,7 +196,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void _setTempo(int bpm) {
     if (bpm == _engine.tempoBpm) return;
     setState(() => _engine.tempoBpm = bpm);
-    // A new tempo means a new grid — restart the groove from the top.
+    _restartGroove();
+  }
+
+  void _setProgression(Progression? progression) {
+    if (progression?.id == _engine.progression?.id) return;
+    setState(() => _engine.progression = progression);
+    _restartGroove();
+  }
+
+  /// A new grid (tempo or bar count changed) — restart from the top.
+  void _restartGroove() {
     _clock
       ..stop()
       ..reset();
@@ -277,7 +300,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              _Playhead(step: _step),
+              _Playhead(
+                beat: _step,
+                beats: _engine.timing.bars * LoopTiming.beatsPerBar,
+              ),
               const SizedBox(height: 8),
               Expanded(
                 child: Column(
@@ -304,6 +330,36 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 ),
               ),
               const SizedBox(height: 8),
+              // The harmony lane: free vamp, or a 4-chord song progression.
+              Row(
+                children: [
+                  Text(
+                    l10n.loopMixerHarmony,
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 6,
+                      children: [
+                        ChoiceChip(
+                          label: Text(l10n.loopMixerHarmonyOff),
+                          selected: _engine.progression == null,
+                          onSelected: (_) => _setProgression(null),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        for (final p in kProgressions)
+                          ChoiceChip(
+                            label: Text(p.label),
+                            selected: _engine.progression?.id == p.id,
+                            onSelected: (_) => _setProgression(p),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               Row(
                 children: [
                   Text(
@@ -350,34 +406,37 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   }
 }
 
-/// A row of step dots (2 bars × 8 eighths) with the sounding step lit. Only
-/// this leaf listens to the ticker's step notifier, so the per-frame update
+/// A row of beat dots (grouped per bar) with the sounding beat lit. Only
+/// this leaf listens to the ticker's beat notifier, so the per-frame update
 /// never rebuilds the cards.
 class _Playhead extends StatelessWidget {
-  const _Playhead({required this.step});
+  const _Playhead({required this.beat, required this.beats});
 
-  final ValueListenable<int> step;
+  final ValueListenable<int> beat;
+  final int beats;
 
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context).colorScheme.primary;
     return ValueListenableBuilder<int>(
-      valueListenable: step,
+      valueListenable: beat,
       builder: (context, current, _) => Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          for (var i = 0; i < LoopTiming.totalSteps; i++)
+          for (var i = 0; i < beats; i++)
             Container(
               width: 12,
               height: 12,
               margin: EdgeInsets.only(
-                left: i == 0 ? 0 : (i % 4 == 0 ? 10 : 4),
+                left: i == 0 ? 0 : (i % LoopTiming.beatsPerBar == 0 ? 12 : 5),
               ),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: i == current
                     ? base
-                    : base.withValues(alpha: i.isEven ? 0.25 : 0.12),
+                    : base.withValues(
+                        alpha: i % LoopTiming.beatsPerBar == 0 ? 0.3 : 0.14,
+                      ),
               ),
             ),
         ],

@@ -95,6 +95,25 @@ void main() {
     expect(game.isPlaying, isTrue);
   });
 
+  testWidgets('harmony chips switch between the vamp and a progression',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.progressionId, isNull);
+
+    game.toggleTrack('bass');
+    await tester.pump();
+
+    await tester.tap(find.text('I–V–vi–IV'));
+    await tester.pump();
+    expect(game.progressionId, 'axis');
+    expect(game.isPlaying, isTrue, reason: 'groove restarts on the song loop');
+
+    await tester.tap(find.text('Free'));
+    await tester.pump();
+    expect(game.progressionId, isNull);
+  });
+
   testWidgets('every 4th loop schedules the drum fill at the seam',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

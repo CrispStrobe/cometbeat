@@ -311,6 +311,8 @@
   "loopMixerPrompt": "Tap the cards to start your band!",
   "loopMixerStop": "Stop",
   "loopMixerSwing": "Swing",
+  "loopMixerHarmony": "Harmony",
+  "loopMixerHarmonyOff": "Free",
   "loopMixerTempoChill": "Chill",
   "loopMixerTempoGroove": "Groove",
   "loopMixerTempoFast": "Fast",

@@ -22,25 +22,27 @@ import 'dart:typed_data';
 
 import 'package:klang_universum/core/audio/synth.dart';
 
-/// The musical clock the patterns render against: 2 bars of 4/4 on an
-/// eighth-note step grid. Supported tempos keep the step length an integral
-/// number of ms (and of samples at 44.1 kHz), so every track's segments sum to
-/// exactly the same sample count and the loop seam stays click-free.
+/// The musical clock the patterns render against: [bars] bars of 4/4 on an
+/// eighth-note step grid (2 bars for the free vamp, 4 with a progression).
+/// Supported tempos keep the step length an integral number of ms (and of
+/// samples at 44.1 kHz), so every track's segments sum to exactly the same
+/// sample count and the loop seam stays click-free.
 ///
 /// [swing] (0..0.6) delays every off-eighth by that fraction of a step —
 /// even steps lengthen, odd steps shorten, the loop length is unchanged.
 class LoopTiming {
-  const LoopTiming({required this.tempoBpm, this.swing = 0});
+  const LoopTiming({required this.tempoBpm, this.swing = 0, this.bars = 2});
 
   final int tempoBpm;
   final double swing;
+  final int bars;
 
   static const beatsPerBar = 4;
-  static const bars = 2;
 
-  /// Steps are eighths: 16 per 2-bar loop.
-  static const totalSteps = beatsPerBar * bars * 2;
+  /// Steps are eighths: 8 per bar.
+  static const stepsPerBar = beatsPerBar * 2;
 
+  int get totalSteps => stepsPerBar * bars;
   int get beatMs => 60000 ~/ tempoBpm;
   int get stepMs => beatMs ~/ 2;
   int get totalMs => stepMs * totalSteps;
@@ -54,6 +56,9 @@ class LoopTiming {
   /// differences always sum back to [totalMs].
   int boundaryMs(int step) => step * stepMs + (step.isOdd ? _swingMs : 0);
 }
+
+/// The step length every authored [LoopPattern] fills: the 2-bar vamp grid.
+const kPatternSteps = LoopTiming.stepsPerBar * 2;
 
 /// One melodic pattern cell: [midis] sounding for [steps] eighth-steps
 /// (null or empty = rest).
@@ -78,31 +83,42 @@ class MelodicPattern extends LoopPattern {
   @override
   Float64List render(LoopTiming timing) {
     assert(
-      cells.fold<int>(0, (sum, c) => sum + c.steps) == LoopTiming.totalSteps,
-      'pattern must fill the loop exactly',
+      cells.fold<int>(0, (sum, c) => sum + c.steps) == kPatternSteps,
+      'pattern must fill the 2-bar grid exactly',
     );
-    var step = 0;
-    final segments = <Segment>[];
-    for (final cell in cells) {
-      segments.add(
-        (
-          freqs: [
-            for (final m in cell.midis ?? const <int>[]) midiToFrequency(m),
-          ],
-          ms: timing.boundaryMs(step + cell.steps) - timing.boundaryMs(step),
-        ),
-      );
-      step += cell.steps;
-    }
-    return renderSegmentsRaw(segments, timbre: timbreFor(instrument));
+    return renderCells(cells, instrument, timing);
   }
+}
+
+/// Renders pitched [cells] back-to-back on [timing]'s step grid (any length —
+/// the progression path renders 4 bars, authored patterns 2). Cell durations
+/// come from boundary differences, so swing is applied and totals stay exact.
+Float64List renderCells(
+  List<PatternCell> cells,
+  Instrument instrument,
+  LoopTiming timing,
+) {
+  var step = 0;
+  final segments = <Segment>[];
+  for (final cell in cells) {
+    segments.add(
+      (
+        freqs: [
+          for (final m in cell.midis ?? const <int>[]) midiToFrequency(m),
+        ],
+        ms: timing.boundaryMs(step + cell.steps) - timing.boundaryMs(step),
+      ),
+    );
+    step += cell.steps;
+  }
+  return renderSegmentsRaw(segments, timbre: timbreFor(instrument));
 }
 
 /// An unpitched pattern: one boolean hit row per drum voice.
 class DrumRowsPattern extends LoopPattern {
   const DrumRowsPattern(this.rows);
 
-  /// Each row has [LoopTiming.totalSteps] entries.
+  /// Each row has [kPatternSteps] entries.
   final Map<Drum, List<bool>> rows;
 
   @override
@@ -130,13 +146,115 @@ List<bool> euclid(int hits, int steps, {int rotation = 0}) => [
 List<bool> stepRow(String pattern) =>
     [for (final ch in pattern.split('')) ch == 'x'];
 
+// --- Harmony: the chord-progression lane ---
+
+/// A harmonic degree of C major the groove can sit on.
+enum ChordDegree {
+  i(0, [0, 4, 7], 'I'),
+  iv(5, [0, 4, 7], 'IV'),
+  v(7, [0, 4, 7], 'V'),
+  vi(9, [0, 3, 7], 'vi');
+
+  const ChordDegree(this.rootOffset, this.triad, this.label);
+
+  /// Semitones of the chord root above C.
+  final int rootOffset;
+
+  /// Chord-tone intervals above the root (major or minor triad).
+  final List<int> triad;
+
+  final String label;
+}
+
+/// A 4-chord progression: one bar per chord → a 4-bar loop. The labels are
+/// roman numerals — language-neutral, no l10n needed.
+class Progression {
+  const Progression(this.id, this.degrees);
+
+  final String id;
+  final List<ChordDegree> degrees;
+
+  String get label => degrees.map((d) => d.label).join('–');
+}
+
+/// The offered progressions (the axis family — C pentatonic melodies work
+/// over all of them).
+const kProgressions = [
+  Progression(
+    'axis',
+    [ChordDegree.i, ChordDegree.v, ChordDegree.vi, ChordDegree.iv],
+  ),
+  Progression(
+    'classic',
+    [ChordDegree.i, ChordDegree.iv, ChordDegree.v, ChordDegree.i],
+  ),
+  Progression(
+    'ballad',
+    [ChordDegree.vi, ChordDegree.iv, ChordDegree.i, ChordDegree.v],
+  ),
+];
+
+/// One bar of chord-relative cells: each cell's [tones] are chord-tone
+/// indices (0 = root, 1 = third, 2 = fifth, 3 = root an octave up), resolved
+/// per progression chord at render time. Step counts sum to one bar (8).
+class ChordBar {
+  const ChordBar(this.cells);
+
+  final List<({List<int>? tones, int steps})> cells;
+
+  /// Resolves this bar onto [degree] as absolute midi cells. [baseMidi] is
+  /// the C the roots build on; roots that would land above [foldAbove] fold
+  /// down an octave (keeps the vi chord voiced low, like the authored vamp).
+  List<PatternCell> resolve(
+    ChordDegree degree, {
+    required int baseMidi,
+    required int foldAbove,
+  }) {
+    var root = baseMidi + degree.rootOffset;
+    if (root > foldAbove) root -= 12;
+    return [
+      for (final cell in cells)
+        (
+          midis: cell.tones == null
+              ? null
+              : [
+                  for (final t in cell.tones!)
+                    root + (t == 3 ? 12 : degree.triad[t]),
+                ],
+          steps: cell.steps,
+        ),
+    ];
+  }
+}
+
+/// How a track plays in progression mode: chord-relative bar shapes (one per
+/// variant) with its voicing register.
+class ChordFollower {
+  const ChordFollower({
+    required this.instrument,
+    required this.baseMidi,
+    required this.foldAbove,
+    required this.bars,
+  });
+
+  final Instrument instrument;
+  final int baseMidi;
+  final int foldAbove;
+
+  /// One [ChordBar] per pattern variant (parallel to [LoopTrack.variants]).
+  final List<ChordBar> bars;
+}
+
 /// One toggleable loop layer: an id (stable — used by l10n, tests and the
 /// share token), an authored mix level, and its A/B/C pattern variants.
+/// Tracks with a [chordFollower] re-voice per progression chord; the rest
+/// tile their 2-bar pattern across the progression.
 class LoopTrack {
   const LoopTrack({
     required this.id,
     required this.gain,
     required this.variants,
+    this.chordFollower,
   });
 
   final String id;
@@ -144,6 +262,8 @@ class LoopTrack {
 
   /// At least one pattern; the card cycles through them (A → B → C → A).
   final List<LoopPattern> variants;
+
+  final ChordFollower? chordFollower;
 }
 
 /// The whole groove as one small serializable value: what's enabled, which
@@ -157,6 +277,7 @@ class GrooveSpec {
     this.levels = const {},
     this.tempoBpm = 100,
     this.swing = 0,
+    this.progressionId,
   });
 
   final Set<String> enabled;
@@ -164,6 +285,9 @@ class GrooveSpec {
   final Map<String, double> levels;
   final int tempoBpm;
   final double swing;
+
+  /// A [kProgressions] id, or null for the free 2-bar vamp.
+  final String? progressionId;
 
   factory GrooveSpec.fromJson(Map<String, dynamic> json) => GrooveSpec(
         enabled: {...(json['e'] as List? ?? const []).cast<String>()},
@@ -179,6 +303,7 @@ class GrooveSpec {
         },
         tempoBpm: (json['t'] as num? ?? 100).toInt(),
         swing: (json['s'] as num? ?? 0).toDouble(),
+        progressionId: json['p'] as String?,
       );
 
   /// Compact json (defaults omitted) — the share token payload.
@@ -197,6 +322,7 @@ class GrooveSpec {
           },
         't': tempoBpm,
         if (swing != 0) 's': double.parse(swing.toStringAsFixed(2)),
+        if (progressionId != null) 'p': progressionId,
       };
 
   /// Canonical identity — the render-cache key.
@@ -244,6 +370,37 @@ final List<LoopTrack> kLoopMixerTracks = [
   const LoopTrack(
     id: 'bass',
     gain: 0.55,
+    // In progression mode the bass re-voices per chord: root motion (A),
+    // octave pump (B), syncopated root+fifth (C) — mirrors the vamp variants.
+    chordFollower: ChordFollower(
+      instrument: Instrument.cello,
+      baseMidi: 36, // C2 register
+      foldAbove: 45, // keep every root at or below A2
+      bars: [
+        ChordBar([
+          (tones: [0], steps: 2),
+          (tones: [0], steps: 2),
+          (tones: [2], steps: 2),
+          (tones: [0], steps: 2),
+        ]),
+        ChordBar([
+          (tones: [0], steps: 1),
+          (tones: [3], steps: 1),
+          (tones: [0], steps: 1),
+          (tones: [3], steps: 1),
+          (tones: [0], steps: 1),
+          (tones: [3], steps: 1),
+          (tones: [0], steps: 1),
+          (tones: [3], steps: 1),
+        ]),
+        ChordBar([
+          (tones: [0], steps: 3),
+          (tones: null, steps: 1),
+          (tones: [2], steps: 2),
+          (tones: [0], steps: 2),
+        ]),
+      ],
+    ),
     variants: [
       // A — root-motion quarters.
       MelodicPattern(Instrument.cello, [
@@ -291,6 +448,34 @@ final List<LoopTrack> kLoopMixerTracks = [
   const LoopTrack(
     id: 'chords',
     gain: 0.30,
+    // Progression mode: the pad/stabs/arpeggio re-voice on each chord.
+    chordFollower: ChordFollower(
+      instrument: Instrument.flute,
+      baseMidi: 60, // C4 register
+      foldAbove: 67, // vi folds down to A3, like the authored vamp voicing
+      bars: [
+        ChordBar([
+          (tones: [0, 1, 2], steps: 8),
+        ]),
+        ChordBar([
+          (tones: null, steps: 1),
+          (tones: [0, 1, 2], steps: 1),
+          (tones: null, steps: 2),
+          (tones: [0, 1, 2], steps: 1),
+          (tones: null, steps: 3),
+        ]),
+        ChordBar([
+          (tones: [0], steps: 1),
+          (tones: [1], steps: 1),
+          (tones: [2], steps: 1),
+          (tones: [1], steps: 1),
+          (tones: [0], steps: 1),
+          (tones: [1], steps: 1),
+          (tones: [2], steps: 1),
+          (tones: [1], steps: 1),
+        ]),
+      ],
+    ),
     variants: [
       // A — held pads: C major, then A minor.
       MelodicPattern(Instrument.flute, [
@@ -455,7 +640,29 @@ class LoopEngine {
     _clearRenderCaches();
   }
 
-  LoopTiming get timing => LoopTiming(tempoBpm: _tempoBpm, swing: _swing);
+  Progression? _progression;
+  Progression? get progression => _progression;
+
+  /// null = the free 2-bar vamp; a [kProgressions] entry = a 4-bar song loop
+  /// where chord-following tracks re-voice per bar.
+  set progression(Progression? value) {
+    if (value?.id == _progression?.id) return;
+    assert(
+      value == null || value.degrees.length == 4,
+      'progressions are one bar per chord × 4',
+    );
+    _progression = value;
+    _clearRenderCaches();
+  }
+
+  LoopTiming get timing => LoopTiming(
+        tempoBpm: _tempoBpm,
+        swing: _swing,
+        bars: _progression == null ? 2 : _progression!.degrees.length,
+      );
+
+  /// The 2-bar grid authored patterns render on (tiled in progression mode).
+  LoopTiming get _vampTiming => LoopTiming(tempoBpm: _tempoBpm, swing: _swing);
 
   /// Snapshot of the whole groove (serializable — share token, save slots).
   GrooveSpec get spec => GrooveSpec(
@@ -464,6 +671,7 @@ class LoopEngine {
         levels: {...levels},
         tempoBpm: _tempoBpm,
         swing: _swing,
+        progressionId: _progression?.id,
       );
 
   /// Restores a snapshot (unknown track ids are dropped defensively).
@@ -486,6 +694,11 @@ class LoopEngine {
       });
     tempoBpm = next.tempoBpm;
     swing = next.swing;
+    Progression? found;
+    for (final p in kProgressions) {
+      if (p.id == next.progressionId) found = p;
+    }
+    progression = found;
   }
 
   // Rendered stems per (track, variant) at the current tempo/swing, and
@@ -519,11 +732,46 @@ class LoopEngine {
     return next;
   }
 
+  int _variantOf(LoopTrack track) =>
+      (variants[track.id] ?? 0).clamp(0, track.variants.length - 1);
+
   Float64List _stemFor(LoopTrack track) {
-    final variant =
-        (variants[track.id] ?? 0).clamp(0, track.variants.length - 1);
-    return _stemCache['${track.id}#$variant'] ??=
-        track.variants[variant].render(timing);
+    final variant = _variantOf(track);
+    final key = '${track.id}#$variant#${_progression?.id ?? 'vamp'}';
+    return _stemCache[key] ??= _renderStem(track, variant);
+  }
+
+  Float64List _renderStem(LoopTrack track, int variant) {
+    final prog = _progression;
+    if (prog == null) return track.variants[variant].render(timing);
+
+    final follower = track.chordFollower;
+    if (follower != null) {
+      // Re-voice the bar shape on each progression chord.
+      final bar = follower.bars[variant.clamp(0, follower.bars.length - 1)];
+      return renderCells(
+        [
+          for (final degree in prog.degrees)
+            ...bar.resolve(
+              degree,
+              baseMidi: follower.baseMidi,
+              foldAbove: follower.foldAbove,
+            ),
+        ],
+        follower.instrument,
+        timing,
+      );
+    }
+
+    // Everything else tiles its 2-bar pattern across the progression —
+    // exact, because the swung step grid is periodic per bar.
+    final twoBars = track.variants[variant].render(_vampTiming);
+    final reps = prog.degrees.length ~/ 2;
+    final out = Float64List(twoBars.length * reps);
+    for (var r = 0; r < reps; r++) {
+      out.setAll(r * twoBars.length, twoBars);
+    }
+    return out;
   }
 
   /// The current groove as one loop-ready WAV (an empty enabled set renders
@@ -540,7 +788,7 @@ class LoopEngine {
             if (enabled.contains(track.id))
               (
                 samples: filling && track.id == 'drums'
-                    ? _fillStem
+                    ? _fillStemFor(track)
                     : _stemFor(track),
                 gain: track.gain * (levels[track.id] ?? 1.0).clamp(0.0, 1.0),
               ),
@@ -550,6 +798,23 @@ class LoopEngine {
     );
   }
 
-  Float64List get _fillStem =>
-      _stemCache['drums#fill'] ??= kDrumFillPattern.render(timing);
+  /// The drum stem for a fill iteration. Vamp mode: the 2-bar fill pattern.
+  /// Progression mode: bars 1–2 keep the groove, bars 3–4 play the fill —
+  /// a real mini-arrangement instead of filling every other bar.
+  Float64List _fillStemFor(LoopTrack track) {
+    final prog = _progression;
+    if (prog == null) {
+      return _stemCache['drums#fill#vamp'] ??= kDrumFillPattern.render(timing);
+    }
+    final variant = _variantOf(track);
+    return _stemCache['drums#fill#$variant#${prog.id}'] ??= () {
+      final groove = track.variants[variant].render(_vampTiming);
+      final fill = kDrumFillPattern.render(_vampTiming);
+      final out = Float64List(groove.length + fill.length);
+      out
+        ..setAll(0, groove)
+        ..setAll(groove.length, fill);
+      return out;
+    }();
+  }
 }

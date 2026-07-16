@@ -31,7 +31,7 @@ void main() {
         0,
         reason: '$bpm bpm step is a whole sample count',
       );
-      expect(t.totalMs, t.stepMs * LoopTiming.totalSteps);
+      expect(t.totalMs, t.stepMs * t.totalSteps);
     }
   });
 
@@ -44,7 +44,7 @@ void main() {
     expect(swung.boundaryMs(0), 0);
     expect(swung.boundaryMs(2), straight.boundaryMs(2));
     expect(swung.boundaryMs(1), straight.boundaryMs(1) + 150);
-    expect(swung.boundaryMs(LoopTiming.totalSteps), swung.totalMs);
+    expect(swung.boundaryMs(swung.totalSteps), swung.totalMs);
     // A swung melodic stem still fills the loop exactly.
     final track = kLoopMixerTracks.firstWhere((t) => t.id == 'melody');
     expect(track.variants.first.render(swung).length, swung.totalSamples);
@@ -209,6 +209,50 @@ void main() {
     });
     final safe = LoopEngine()..applySpec(foreign);
     expect(safe.enabled, {'drums'});
+  });
+
+  test('a progression makes a 4-bar loop; followers re-voice, others tile', () {
+    final engine = LoopEngine();
+    engine.enabled.addAll({'bass', 'melody'});
+    final vampSamples = engine.timing.totalSamples;
+
+    engine.progression = kProgressions.first; // I–V–vi–IV
+    expect(engine.timing.bars, 4);
+    expect(engine.timing.totalSamples, vampSamples * 2);
+    final wav = engine.renderLoop();
+    expect(wav.length, 44 + vampSamples * 2 * 2);
+
+    final pcm = _pcm(wav);
+    final barSamples = engine.timing.totalSamples ~/ 4;
+    // The melody tiles: bar 3 repeats bar 1 exactly. The bass follows the
+    // chords: bar 2 (V) differs from bar 1 (I) — so the combined signal must
+    // repeat where only tiling happens and differ where the harmony moves.
+    var tiledDiff = 0;
+    for (var i = 0; i < barSamples * 2; i++) {
+      if (pcm[i] != pcm[i + barSamples * 2]) tiledDiff++;
+    }
+    expect(
+      tiledDiff,
+      greaterThan(0),
+      reason: 'bass re-voices, halves differ',
+    );
+
+    engine.enabled.remove('bass');
+    final melodyOnly = _pcm(engine.renderLoop());
+    for (var i = 0; i < barSamples * 2; i++) {
+      expect(
+        melodyOnly[i],
+        melodyOnly[i + barSamples * 2],
+        reason: 'melody tiles exactly @$i',
+      );
+      if (i > 100) break; // spot-check the head, full scan is slow
+    }
+
+    // Spec carries the progression; roundtrip restores it.
+    final restored = LoopEngine()
+      ..applySpec(GrooveSpec.fromJson(engine.spec.toJson()));
+    expect(restored.progression?.id, 'axis');
+    expect(restored.timing.bars, 4);
   });
 
   test('fill swaps only the drum stem, only when drums are enabled', () {

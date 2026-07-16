@@ -1604,6 +1604,18 @@ abstract class AppLocalizations {
   /// **'Swing'**
   String get loopMixerSwing;
 
+  /// No description provided for @loopMixerHarmony.
+  ///
+  /// In en, this message translates to:
+  /// **'Harmony'**
+  String get loopMixerHarmony;
+
+  /// No description provided for @loopMixerHarmonyOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get loopMixerHarmonyOff;
+
   /// No description provided for @loopMixerTempoChill.
   ///
   /// In en, this message translates to:
