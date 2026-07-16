@@ -7,7 +7,12 @@
 // no-fail loop). The sort-into-buckets format (like Sort the Beats / High or
 // Low?), on the sharp/flat dimension (docs/PLAN.md sort backlog).
 //
-// SRI: 'accidentals.sign.<sharp|flat>'.
+// At 2★ it widens to THREE baskets — Sharp / Natural / Flat — adding the natural
+// sign (♮, rendered via NoteElement.showAccidental on an unaltered pitch); below
+// 2★ it stays the binary ♯/♭ drill. Mirrors how Step or Skip? grows a third
+// option.
+//
+// SRI: 'accidentals.sign.<sharp|natural|flat>'.
 
 import 'dart:math';
 
@@ -15,6 +20,7 @@ import 'package:crisp_notation/crisp_notation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
 import 'package:klang_universum/core/services/audio_service.dart';
+import 'package:klang_universum/core/services/progress_service.dart';
 import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/features/games/widgets/game_widgets.dart';
@@ -33,7 +39,6 @@ class AccidentalSortScreen extends StatefulWidget {
   final Clef clef;
 
   static const cardCount = 4;
-  static const _buckets = [true, false]; // true = sharp, false = flat
 
   @override
   State<AccidentalSortScreen> createState() => _AccidentalSortScreenState();
@@ -44,9 +49,10 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
   final _random = Random();
 
   late List<Pitch> _cards; // one note per card, each with an accidental
-  late List<bool> _sharp; // card index → carries a sharp (else a flat)
+  late List<int> _alter; // card index → +1 sharp / 0 natural / -1 flat
+  late List<int> _buckets; // the baskets in play this round (2 or 3 signs)
   late List<bool> _placed;
-  final Map<bool, List<Pitch>> _binned = {true: [], false: []};
+  late Map<int, List<Pitch>> _binned;
   final Set<int> _recorded = {};
   bool? _lastDropOk;
 
@@ -66,6 +72,14 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
   @override
   bool get playFeedbackSounds => false;
 
+  static String _signName(int alter) =>
+      alter > 0 ? 'sharp' : (alter < 0 ? 'flat' : 'natural');
+  static String _signGlyph(int alter) =>
+      alter > 0 ? '♯' : (alter < 0 ? '♭' : '♮');
+  String _signLabel(AppLocalizations l, int alter) => alter > 0
+      ? l.accidentalSharpLabel
+      : (alter < 0 ? l.accidentalFlatLabel : l.accidentalNaturalLabel);
+
   @override
   void initState() {
     super.initState();
@@ -74,35 +88,36 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
 
   @override
   void prepareRound() {
-    // Notes sit comfortably on the treble staff; each gets a sharp or a flat.
-    // Guarantee at least one of each sign so both baskets are always in play.
-    final signs = <bool>[true, false];
+    // At 2★ the natural sign joins as a third basket. Guarantee at least one of
+    // each active sign so every basket is always in play.
+    final wide = context.read<ProgressService>().starsFor(progressId) >= 2;
+    _buckets = wide ? const [1, 0, -1] : const [1, -1];
+
+    final signs = [..._buckets];
     while (signs.length < AccidentalSortScreen.cardCount) {
-      signs.add(_random.nextBool());
+      signs.add(_buckets[_random.nextInt(_buckets.length)]);
     }
     signs.shuffle(_random);
 
     _cards = [
-      for (final sharp in signs)
+      for (final alter in signs)
         () {
           final base = widget.clef.pitchAt(1 + _random.nextInt(7));
-          return Pitch(base.step, alter: sharp ? 1 : -1, octave: base.octave);
+          return Pitch(base.step, alter: alter, octave: base.octave);
         }(),
     ];
-    _sharp = signs;
+    _alter = signs;
     _placed = List.filled(AccidentalSortScreen.cardCount, false);
-    _binned
-      ..[true]!.clear()
-      ..[false]!.clear();
+    _binned = {for (final b in _buckets) b: <Pitch>[]};
     _recorded.clear();
     _lastDropOk = null;
   }
 
-  void _onAccept(int cardIndex, bool bucketSharp) {
+  void _onAccept(int cardIndex, int alter) {
     // Only ever called for the correct basket (see onWillAccept).
     if (_recorded.add(cardIndex)) {
       context.read<SriService>().recordResponse(
-            'accidentals.sign.${bucketSharp ? 'sharp' : 'flat'}',
+            'accidentals.sign.${_signName(alter)}',
             true,
           );
     }
@@ -111,7 +126,7 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
         .playMidiNote(_cards[cardIndex].midiNumber, ms: 400);
     setState(() {
       _placed[cardIndex] = true;
-      _binned[bucketSharp]!.add(_cards[cardIndex]);
+      _binned[alter]!.add(_cards[cardIndex]);
       _lastDropOk = true;
     });
     if (_placed.every((p) => p)) resolveAnswer(correct: true);
@@ -121,7 +136,7 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
     context.read<AudioService>().playWrong();
     if (_recorded.add(cardIndex)) {
       context.read<SriService>().recordResponse(
-            'accidentals.sign.${_sharp[cardIndex] ? 'sharp' : 'flat'}',
+            'accidentals.sign.${_signName(_alter[cardIndex])}',
             false,
           );
     }
@@ -131,10 +146,19 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
     });
   }
 
+  // A natural (unaltered) pitch needs its ♮ forced; sharps/flats show on their
+  // own because they deviate from the (keyless) staff.
   Score _score(Pitch p) => Score(
         clef: widget.clef,
         measures: [
-          Measure([NoteElement.note(p, _whole, id: 'n')]),
+          Measure([
+            NoteElement.note(
+              p,
+              _whole,
+              id: 'n',
+              showAccidental: p.alter == 0 ? true : null,
+            ),
+          ]),
         ],
       );
 
@@ -197,23 +221,21 @@ class _AccidentalSortScreenState extends State<AccidentalSortScreen>
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        for (final sharp in AccidentalSortScreen._buckets)
+                        for (final alter in _buckets)
                           Expanded(
                             child: Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 6),
                               child: DragTarget<int>(
                                 onWillAcceptWithDetails: (d) =>
-                                    _sharp[d.data] == sharp,
+                                    _alter[d.data] == alter,
                                 onAcceptWithDetails: (d) =>
-                                    _onAccept(d.data, sharp),
+                                    _onAccept(d.data, alter),
                                 builder: (context, candidate, __) => _Bucket(
-                                  sharp: sharp,
-                                  label: sharp
-                                      ? l10n.accidentalSharpLabel
-                                      : l10n.accidentalFlatLabel,
+                                  glyph: _signGlyph(alter),
+                                  label: _signLabel(l10n, alter),
                                   hovering: candidate.isNotEmpty,
-                                  contents: _binned[sharp] ?? const [],
+                                  contents: _binned[alter] ?? const [],
                                   scoreOf: _score,
                                 ),
                               ),
@@ -262,14 +284,14 @@ class _NoteCard extends StatelessWidget {
 }
 
 class _Bucket extends StatelessWidget {
-  final bool sharp;
+  final String glyph;
   final String label;
   final bool hovering;
   final List<Pitch> contents;
   final Score Function(Pitch) scoreOf;
 
   const _Bucket({
-    required this.sharp,
+    required this.glyph,
     required this.label,
     required this.hovering,
     required this.contents,
@@ -295,7 +317,7 @@ class _Bucket extends StatelessWidget {
         children: [
           Text(
             // The SMuFL-free glyph is fine for a big basket label.
-            '$label  ${sharp ? '♯' : '♭'}',
+            '$label  $glyph',
             style: Theme.of(context)
                 .textTheme
                 .titleMedium

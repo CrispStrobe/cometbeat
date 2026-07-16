@@ -1022,6 +1022,12 @@ abstract class AppLocalizations {
   /// **'Flat'**
   String get accidentalFlatLabel;
 
+  /// No description provided for @accidentalNaturalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural'**
+  String get accidentalNaturalLabel;
+
   /// No description provided for @gameDirectionEar.
   ///
   /// In en, this message translates to:

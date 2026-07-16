@@ -523,6 +523,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get accidentalFlatLabel => 'B';
 
   @override
+  String get accidentalNaturalLabel => 'Auflösung';
+
+  @override
   String get gameDirectionEar => 'Höher oder tiefer?';
 
   @override

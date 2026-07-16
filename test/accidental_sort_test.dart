@@ -5,8 +5,10 @@
 import 'package:crisp_notation/crisp_notation.dart' show Clef, StaffView;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:klang_universum/core/services/progress_service.dart';
 import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:klang_universum/features/games/note_reading/accidental_sort_screen.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';
@@ -31,8 +33,9 @@ Future<void> _sortAllCards(WidgetTester tester) async {
     return _cards().evaluate().length < before;
   }
 
+  final bucketCount = _buckets().evaluate().length;
   for (var placed = 0; placed < AccidentalSortScreen.cardCount; placed++) {
-    for (var b = 0; b < 2; b++) {
+    for (var b = 0; b < bucketCount; b++) {
       if (_cards().evaluate().isEmpty || await tryDrop(b)) break;
     }
   }
@@ -79,5 +82,31 @@ void main() {
     await tester.pump(const Duration(milliseconds: 800));
     expect(find.text('Round 2 of 6'), findsOneWidget);
     expect(sri.getDetailedBreakdown()['accidentals']!.keys, ['sign']);
+  });
+
+  testWidgets('at 2 stars it widens to three baskets incl. Natural',
+      (tester) async {
+    final progress = ProgressService();
+    await progress.load();
+    progress.recordResult('accidental_sort', score: 550, stars: 2);
+
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    await pumpGame(
+      tester,
+      const AccidentalSortScreen(),
+      sri: sri,
+      extraProviders: [
+        ChangeNotifierProvider<ProgressService>.value(value: progress),
+      ],
+    );
+
+    // Three baskets now, one of them Natural (♮ is guaranteed in play).
+    expect(_buckets(), findsNWidgets(3));
+    expect(find.textContaining('♮'), findsOneWidget);
+
+    await _sortAllCards(tester);
+    expect(_cards().evaluate().length, 0, reason: 'all cards should be placed');
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(find.text('Round 2 of 6'), findsOneWidget);
   });
 }

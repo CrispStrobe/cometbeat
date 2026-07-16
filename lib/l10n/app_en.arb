@@ -214,6 +214,7 @@
   "accidentalSortPrompt": "Does the note have a sharp or a flat? Drop it in the right basket!",
   "accidentalSharpLabel": "Sharp",
   "accidentalFlatLabel": "Flat",
+  "accidentalNaturalLabel": "Natural",
   "gameDirectionEar": "Higher or Lower?",
   "gameDirectionEarSubtitle": "Listen: does the second note go up or down?",
   "directionEarPrompt": "Two notes play. Is the second one higher or lower?",

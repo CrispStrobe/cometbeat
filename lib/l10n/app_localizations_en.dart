@@ -521,6 +521,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accidentalFlatLabel => 'Flat';
 
   @override
+  String get accidentalNaturalLabel => 'Natural';
+
+  @override
   String get gameDirectionEar => 'Higher or Lower?';
 
   @override
