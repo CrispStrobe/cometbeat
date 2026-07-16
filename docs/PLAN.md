@@ -881,8 +881,9 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   its own `progressId` so treble progress is untouched. · ✅ *Sharp or Flat?
   (bass)* (`accidental_sort_bass`). (`Connect the Notes` already ships a bass
   variant, `connect_line_bass` — the bass-clef sweep is done.)
-- [ ] **Step, Skip, or Leap?** — make Step or Skip? a 3-way (2nd / 3rd–4th / 5th+)
-  at 2★ for a harder tier.
+- [x] **Step, Skip, or Leap?** — **shipped**: `step_skip` (and its bass variant)
+  becomes a 3-way at 2★ — Step (2nd) / Skip (3rd–4th) / Leap (5th+), a third
+  answer button + `reading.motion.leap`; below 2★ it stays the binary drill.
 - [ ] **3-basket sorts** — the two-basket format extends to 3 (e.g. sharp / natural
   / flat once crisp_notation can render an explicit natural glyph — verify the API).
 - [ ] **More Connect modes** — note↔piano-key, rest↔note-value, Italian-term↔
