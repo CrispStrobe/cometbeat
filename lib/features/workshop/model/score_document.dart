@@ -149,6 +149,8 @@ class _Snapshot {
     this.clefChanges,
     this.keyChanges,
     this.timeChanges,
+    this.repeatStarts,
+    this.repeatEnds,
   );
   final List<EditorElement> elements;
   final TimeSignature timeSignature;
@@ -159,6 +161,10 @@ class _Snapshot {
   final Map<String, Clef> clefChanges;
   final Map<String, KeySignature> keyChanges;
   final Map<String, TimeSignature> timeChanges;
+
+  /// Repeat-barline anchors (element ids), captured for undo.
+  final Set<String> repeatStarts;
+  final Set<String> repeatEnds;
 
   /// Phrase slurs / hairpins (start→end note ids) and per-note lyric syllables
   /// (id → verse → syllable) — spans/attachments that live alongside the
@@ -219,6 +225,12 @@ class ScoreDocument {
   // clef/key these change bar *capacity*, so they're applied inside [reflow]
   // (which re-bars from the anchor), not as a post-reflow stamp.
   final Map<String, TimeSignature> _timeChanges = {};
+
+  // Repeat barlines, anchored to an element id (same rationale): the bar
+  // containing the element starts / ends a repeat. Booleans per bar, so a set
+  // of anchored ids rather than a value map.
+  final Set<String> _repeatStarts = {};
+  final Set<String> _repeatEnds = {};
 
   /// The anacrusis: when set, the first bar holds only this much music before
   /// the downbeat (the piece "starts before beat 1"). Null = no pickup.
@@ -324,6 +336,8 @@ class ScoreDocument {
         Map.of(_clefChanges),
         Map.of(_keyChanges),
         Map.of(_timeChanges),
+        Set.of(_repeatStarts),
+        Set.of(_repeatEnds),
       );
 
   void _snapshot() {
@@ -359,6 +373,12 @@ class ScoreDocument {
     _timeChanges
       ..clear()
       ..addAll(s.timeChanges);
+    _repeatStarts
+      ..clear()
+      ..addAll(s.repeatStarts);
+    _repeatEnds
+      ..clear()
+      ..addAll(s.repeatEnds);
     _invalidate();
     // Keep the selection valid against the restored length.
     if (_elements.isEmpty) {
@@ -778,6 +798,8 @@ class ScoreDocument {
     _clefChanges.clear();
     _keyChanges.clear();
     _timeChanges.clear();
+    _repeatStarts.clear();
+    _repeatEnds.clear();
     clearSelection();
   }
 
@@ -790,10 +812,12 @@ class ScoreDocument {
   /// articulations, dynamics and the pickup, which silently destroyed the
   /// user's work on reopen.)
   ///
+  /// Bar-anchored attributes are recovered too: mid-score clef/key/time changes
+  /// and repeat barlines re-anchor onto their bar's first element.
+  ///
   /// Still dropped, because the flat element stream cannot represent them:
-  /// voices 2–4, tuplets, grace notes, ornaments and mid-score key/time/clef
-  /// changes. Those are unblocked by the measure-spine work, not here — see
-  /// docs/WORKSHOP_PARITY.md.
+  /// voices 2–4, tuplets, grace notes and ornaments. Those are unblocked by the
+  /// measure-spine work, not here — see docs/WORKSHOP_PARITY.md.
   void loadScore(Score score) {
     _snapshot();
     _elements.clear();
@@ -803,6 +827,8 @@ class ScoreDocument {
     _clefChanges.clear();
     _keyChanges.clear();
     _timeChanges.clear();
+    _repeatStarts.clear();
+    _repeatEnds.clear();
     clef = score.clef;
     keySignature = score.keySignature;
     timeSignature = score.timeSignature ?? TimeSignature.fourFour;
@@ -844,6 +870,8 @@ class ScoreDocument {
         if (kc != null) _keyChanges[firstIdInBar] = kc;
         final tc = measure.timeChange;
         if (tc != null) _timeChanges[firstIdInBar] = tc;
+        if (measure.startRepeat) _repeatStarts.add(firstIdInBar);
+        if (measure.endRepeat) _repeatEnds.add(firstIdInBar);
       }
     }
     for (final s in score.slurs) {
@@ -957,6 +985,24 @@ class ScoreDocument {
     }
   }
 
+  /// Whether the bar containing element [id] starts / ends a repeat.
+  bool repeatStartsAt(String id) => _repeatStarts.contains(id);
+  bool repeatEndsAt(String id) => _repeatEnds.contains(id);
+
+  /// Toggle a repeat barline at the bar containing element [id]. Undoable;
+  /// element-anchored like the mid-score changes, so it rides re-barring. A
+  /// start repeat draws `‖:` at that bar's left; an end repeat draws `:‖` at its
+  /// right — both are booleans on the [crisp_notation] `Measure`, and playback
+  /// expands them (`playbackTimeline`).
+  void toggleRepeatStartAt(String id) => _toggleRepeat(_repeatStarts, id);
+  void toggleRepeatEndAt(String id) => _toggleRepeat(_repeatEnds, id);
+
+  void _toggleRepeat(Set<String> set, String id) {
+    if (_indexOf(id) < 0) return;
+    _snapshot();
+    if (!set.add(id)) set.remove(id);
+  }
+
   // ---- rendering ---------------------------------------------------------
 
   /// Pack the flat element stream into bar-lined [Measure]s. A note that would
@@ -1036,11 +1082,19 @@ class ScoreDocument {
   /// draws twice, and a bar with several anchors of a kind takes the last one in
   /// reading order.
   ///
-  /// The empty-maps fast path returns [bars] untouched, so a document with no
+  /// Repeat barlines are stamped here too (booleans, so `copyWith` only ever
+  /// sets them true — an unanchored bar is left untouched at false).
+  ///
+  /// The all-empty fast path returns [bars] untouched, so a document with no
   /// mid-score changes renders byte-for-byte as before — every existing golden
   /// holds.
   List<Measure> _withMidScoreChanges(List<Measure> bars) {
-    if (_clefChanges.isEmpty && _keyChanges.isEmpty) return bars;
+    if (_clefChanges.isEmpty &&
+        _keyChanges.isEmpty &&
+        _repeatStarts.isEmpty &&
+        _repeatEnds.isEmpty) {
+      return bars;
+    }
     var runningClef = clef;
     var runningKey = keySignature;
     final out = <Measure>[];
@@ -1056,10 +1110,20 @@ class ScoreDocument {
         next = next.copyWith(keyChange: keyHere);
         runningKey = keyHere;
       }
+      if (_anchoredInSet(m, _repeatStarts)) {
+        next = next.copyWith(startRepeat: true);
+      }
+      if (_anchoredInSet(m, _repeatEnds)) {
+        next = next.copyWith(endRepeat: true);
+      }
       out.add(next);
     }
     return out;
   }
+
+  /// Whether any element of [m] carries an anchor in [ids].
+  bool _anchoredInSet(Measure m, Set<String> ids) =>
+      m.elements.any((e) => e.id != null && ids.contains(e.id));
 
   /// The value anchored to an element within [m] (last anchor in reading order
   /// wins), or null if none of [m]'s elements carry an anchor in [changes].

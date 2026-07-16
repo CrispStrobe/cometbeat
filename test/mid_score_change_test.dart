@@ -274,4 +274,76 @@ void main() {
       expect([for (final m in bars) m.elements.length], [4, 3, 3]);
     });
   });
+
+  // Repeat barlines are booleans per bar, so they're a set of anchored ids
+  // rather than a value map, but otherwise the same element-id-anchor pattern.
+  group('repeat barlines', () {
+    test('a repeat start/end marks the bar of its anchor element', () {
+      final d = ScoreDocument();
+      final ids = fill(d, 12); // three bars
+      d.toggleRepeatStartAt(ids[4]); // bar 1 starts a repeat
+      d.toggleRepeatEndAt(ids[8]); // bar 2 ends it
+
+      final bars = d.buildScore().measures;
+      expect([for (final m in bars) m.startRepeat], [false, true, false]);
+      expect([for (final m in bars) m.endRepeat], [false, false, true]);
+    });
+
+    test('start and end can sit on the same bar', () {
+      final d = ScoreDocument();
+      final ids = fill(d, 8);
+      d.toggleRepeatStartAt(ids[4]);
+      d.toggleRepeatEndAt(ids[4]);
+      final bar1 = d.buildScore().measures[1];
+      expect(bar1.startRepeat, isTrue);
+      expect(bar1.endRepeat, isTrue);
+    });
+
+    test('toggling is idempotent-off and undoable', () {
+      final d = ScoreDocument();
+      final ids = fill(d, 8);
+      d.toggleRepeatEndAt(ids[4]);
+      expect(d.repeatEndsAt(ids[4]), isTrue);
+
+      d.toggleRepeatEndAt(ids[4]); // off again
+      expect(d.repeatEndsAt(ids[4]), isFalse);
+      expect(d.buildScore().measures[1].endRepeat, isFalse);
+
+      d.undo(); // back on
+      expect(d.buildScore().measures[1].endRepeat, isTrue);
+    });
+
+    test('the anchor rides re-barring', () {
+      final d = ScoreDocument();
+      final ids = fill(d, 8);
+      d.toggleRepeatStartAt(ids[4]);
+      d.selectIndex(0);
+      d.insertNote(_p(Step.d), _quarter); // shift right
+
+      final bars = d.buildScore().measures;
+      final startBar = bars.indexWhere((m) => m.startRepeat);
+      expect(bars[startBar].elements.any((e) => e.id == ids[4]), isTrue);
+      expect(bars.where((m) => m.startRepeat), hasLength(1));
+    });
+
+    test('no repeats → buildScore is untouched (goldens stay valid)', () {
+      final d = ScoreDocument();
+      fill(d, 8);
+      final bars = d.buildScore().measures;
+      expect(bars.every((m) => !m.startRepeat && !m.endRepeat), isTrue);
+    });
+
+    test('save → reopen preserves repeat barlines', () {
+      final src = ScoreDocument();
+      final ids = fill(src, 12);
+      src.toggleRepeatStartAt(ids[4]);
+      src.toggleRepeatEndAt(ids[8]);
+
+      final parsed = scoreFromMusicXml(scoreToMusicXml(src.buildScore()));
+      final reopened = ScoreDocument()..loadScore(parsed);
+      final bars = reopened.buildScore().measures;
+      expect(bars[1].startRepeat, isTrue);
+      expect(bars[2].endRepeat, isTrue);
+    });
+  });
 }
