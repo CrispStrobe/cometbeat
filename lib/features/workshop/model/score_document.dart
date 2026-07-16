@@ -148,15 +148,17 @@ class _Snapshot {
     this.pickup,
     this.clefChanges,
     this.keyChanges,
+    this.timeChanges,
   );
   final List<EditorElement> elements;
   final TimeSignature timeSignature;
   final KeySignature keySignature;
   final Clef clef;
 
-  /// Mid-score clef / key changes (element id → value), captured for undo.
+  /// Mid-score clef / key / time changes (element id → value), captured for undo.
   final Map<String, Clef> clefChanges;
   final Map<String, KeySignature> keyChanges;
+  final Map<String, TimeSignature> timeChanges;
 
   /// Phrase slurs / hairpins (start→end note ids) and per-note lyric syllables
   /// (id → verse → syllable) — spans/attachments that live alongside the
@@ -212,6 +214,11 @@ class ScoreDocument {
   // time changes (which do affect capacity) will need a reflow tweak too.
   final Map<String, Clef> _clefChanges = {};
   final Map<String, KeySignature> _keyChanges = {};
+
+  // Mid-score time-signature changes, same element-id anchor — but unlike
+  // clef/key these change bar *capacity*, so they're applied inside [reflow]
+  // (which re-bars from the anchor), not as a post-reflow stamp.
+  final Map<String, TimeSignature> _timeChanges = {};
 
   /// The anacrusis: when set, the first bar holds only this much music before
   /// the downbeat (the piece "starts before beat 1"). Null = no pickup.
@@ -316,6 +323,7 @@ class ScoreDocument {
         pickup,
         Map.of(_clefChanges),
         Map.of(_keyChanges),
+        Map.of(_timeChanges),
       );
 
   void _snapshot() {
@@ -348,6 +356,9 @@ class ScoreDocument {
     _keyChanges
       ..clear()
       ..addAll(s.keyChanges);
+    _timeChanges
+      ..clear()
+      ..addAll(s.timeChanges);
     _invalidate();
     // Keep the selection valid against the restored length.
     if (_elements.isEmpty) {
@@ -766,6 +777,7 @@ class ScoreDocument {
     _lyrics.clear();
     _clefChanges.clear();
     _keyChanges.clear();
+    _timeChanges.clear();
     clearSelection();
   }
 
@@ -790,6 +802,7 @@ class ScoreDocument {
     _lyrics.clear();
     _clefChanges.clear();
     _keyChanges.clear();
+    _timeChanges.clear();
     clef = score.clef;
     keySignature = score.keySignature;
     timeSignature = score.timeSignature ?? TimeSignature.fourFour;
@@ -829,6 +842,8 @@ class ScoreDocument {
         if (cc != null) _clefChanges[firstIdInBar] = cc;
         final kc = measure.keyChange;
         if (kc != null) _keyChanges[firstIdInBar] = kc;
+        final tc = measure.timeChange;
+        if (tc != null) _timeChanges[firstIdInBar] = tc;
       }
     }
     for (final s in score.slurs) {
@@ -890,9 +905,10 @@ class ScoreDocument {
     clef = value;
   }
 
-  /// The mid-score clef / key changes as (element id → value), read-only.
+  /// The mid-score clef / key / time changes as (element id → value), read-only.
   Map<String, Clef> get clefChanges => Map.unmodifiable(_clefChanges);
   Map<String, KeySignature> get keyChanges => Map.unmodifiable(_keyChanges);
+  Map<String, TimeSignature> get timeChanges => Map.unmodifiable(_timeChanges);
 
   /// Set (or clear, with null) a **mid-score clef change** that takes effect at
   /// the start of the bar containing element [id]. Undoable; a no-op for an
@@ -926,6 +942,21 @@ class ScoreDocument {
     }
   }
 
+  /// Set (or clear, with null) a **mid-score time-signature change** at the bar
+  /// containing element [id]. Undoable; element-anchored like the others, but
+  /// this one re-bars from the anchor onward (the new meter changes bar
+  /// capacity), so it is applied inside [reflow].
+  void setTimeChangeAt(String id, TimeSignature? time) {
+    if (_indexOf(id) < 0) return;
+    if (_timeChanges[id] == time) return;
+    _snapshot();
+    if (time == null) {
+      _timeChanges.remove(id);
+    } else {
+      _timeChanges[id] = time;
+    }
+  }
+
   // ---- rendering ---------------------------------------------------------
 
   /// Pack the flat element stream into bar-lined [Measure]s. A note that would
@@ -941,6 +972,7 @@ class ScoreDocument {
           [for (final e in _elements) e.toElement()],
           timeSignature: timeSignature,
           pickup: pickup,
+          timeChanges: _timeChanges,
         ),
       ),
       dynamics: [
@@ -1058,6 +1090,7 @@ List<Measure> reflow(
   List<MusicElement> elements, {
   required TimeSignature timeSignature,
   NoteDuration? pickup,
+  Map<String, TimeSignature> timeChanges = const {},
 }) {
   if (elements.isEmpty) {
     return const [
@@ -1065,23 +1098,47 @@ List<Measure> reflow(
     ];
   }
   final zero = Fraction(0, 1);
-  final full = timeSignature.toFraction();
   final pickupCap = pickup?.toFraction();
   final bars = <Measure>[];
   var current = <MusicElement>[];
   var filled = zero;
   var isFirst = true;
+  // Unlike clef/key, a time change alters bar *capacity*, so it can't be a
+  // post-reflow stamp — it lives here. `meter`/`full` track the running meter,
+  // and `barTimeChange` is stamped on the bar currently being accumulated (a
+  // meter change starts a fresh bar and marks it). With no timeChanges this all
+  // stays inert, so the output is byte-identical to the single-meter packer.
+  var meter = timeSignature;
+  var full = meter.toFraction();
+  TimeSignature? barTimeChange;
   // The opening bar holds only the anacrusis (when set); every later bar is
   // a full measure. The short opening bar is flagged as a pickup.
   Fraction capacity() => (isFirst && pickupCap != null) ? pickupCap : full;
   void flush() {
-    bars.add(Measure(current, pickup: isFirst && pickupCap != null));
+    bars.add(
+      Measure(
+        current,
+        pickup: isFirst && pickupCap != null,
+        timeChange: barTimeChange,
+      ),
+    );
     current = [];
     filled = zero;
     isFirst = false;
+    barTimeChange = null;
   }
 
   for (final el in elements) {
+    // A meter change must fall on a barline: close the current bar, switch
+    // capacity, and mark the new bar. Anchored to the element id (like clef/key)
+    // so it rides re-barring.
+    final change = timeChanges[el.id];
+    if (change != null && change != meter) {
+      if (current.isNotEmpty) flush();
+      meter = change;
+      full = meter.toFraction();
+      barTimeChange = change;
+    }
     final d = el.duration.toFraction();
     if (filled > zero && (filled + d) > capacity()) flush();
     current.add(el);

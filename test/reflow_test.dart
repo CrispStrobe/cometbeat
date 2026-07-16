@@ -57,6 +57,46 @@ void main() {
     expect(_shape(bars), [6, 1]);
   });
 
+  group('time changes (capacity switches at the anchor)', () {
+    const c44 = TimeSignature(4, 4);
+    const c34 = TimeSignature(3, 4);
+
+    test('the meter switches from the anchor bar onward', () {
+      // 4 quarters (one 4/4 bar), then switch to 3/4 for 6 more → two 3/4 bars.
+      final els = [
+        for (var i = 0; i < 10; i++) _n(Step.c, _quarter, id: 'n$i'),
+      ];
+      final bars = reflow(els, timeSignature: c44, timeChanges: {'n4': c34});
+      expect(_shape(bars), [4, 3, 3]);
+    });
+
+    test('the switching bar is marked with timeChange; earlier bars are not',
+        () {
+      final els = [
+        for (var i = 0; i < 10; i++) _n(Step.c, _quarter, id: 'n$i'),
+      ];
+      final bars = reflow(els, timeSignature: c44, timeChanges: {'n4': c34});
+      expect(bars[0].timeChange, isNull);
+      expect(bars[1].timeChange, c34);
+      expect(bars[2].timeChange, isNull, reason: 'the meter carries forward');
+    });
+
+    test('a change mid-bar still starts a fresh bar at the anchor', () {
+      // Anchor on n2 (3rd quarter of bar 0): bar 0 closes early with 2 beats.
+      final els = [for (var i = 0; i < 6; i++) _n(Step.c, _quarter, id: 'n$i')];
+      final bars = reflow(els, timeSignature: c44, timeChanges: {'n2': c34});
+      expect(_shape(bars), [2, 3, 1]);
+      expect(bars[1].timeChange, c34);
+    });
+
+    test('a redundant change (same meter) is inert', () {
+      final els = [for (var i = 0; i < 8; i++) _n(Step.c, _quarter, id: 'n$i')];
+      final bars = reflow(els, timeSignature: c44, timeChanges: {'n4': c44});
+      expect(_shape(bars), [4, 4]);
+      expect(bars.every((m) => m.timeChange == null), isTrue);
+    });
+  });
+
   group('pickup', () {
     test('only the first bar is short, and it is flagged', () {
       final bars = reflow(
