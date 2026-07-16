@@ -1688,11 +1688,11 @@ abstract class AppLocalizations {
   /// **'Sparkle'**
   String get trackerChannelSparkle;
 
-  /// No description provided for @trackerChannelPad.
+  /// No description provided for @trackerChannelZap.
   ///
   /// In en, this message translates to:
-  /// **'Pad'**
-  String get trackerChannelPad;
+  /// **'Zap'**
+  String get trackerChannelZap;
 
   /// No description provided for @trackerChannelBass.
   ///

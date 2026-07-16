@@ -14,21 +14,23 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (tracker)** · 🚧 **ACTIVE — Tracker (pattern sequencer), Slice 1
-  (Sandbox screen).** Dual-audience tracker (ModEdit/FT2/ST3/IT spirit, touch-
-  first, Sandbox/Studio two-skins-over-one-model) built ON the shipped Loop Mixer
-  engine (`mixStems` + `loop_engine.dart`). Full plan:
-  [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md). Worktree `../mus-tracker`,
-  branch `feature/tracker`. ✅ **Slice 0 SHIPPED** (`98cdb05`): pure-Dart
-  `TrackerEngine` (`lib/core/audio/tracker_engine.dart` +
-  `test/tracker_engine_test.dart`, 13 green, additive only). 🚧 **Slice 1 NOW:**
-  the Sandbox grid screen + looping playback + tester seam. **Hot shared files
-  I'll touch:** `game_registry.dart` (one sandbox `GameInfo` in `composition`,
-  no tuning bracket), both ARBs (`app_en.arb`/`app_de.arb`). New files:
-  `features/games/composition/tracker_screen.dart` + a small loop-player. Will
-  pull-rebase before those edits — ping if you're mid-edit there. Order after:
-  2 sfxr instruments (port `crispaudio` SynthEngine into `crisp_dsp/`) → 3 Studio
-  skin → 4 record/effects bridge + arrangement.
+- **opus (tracker)** · 🚧 **ACTIVE — Tracker (pattern sequencer).** Dual-audience
+  tracker (ModEdit/FT2/ST3/IT spirit, touch-first, Sandbox/Studio two-skins-over-
+  one-model) built ON the shipped Loop Mixer engine (`mixStems` +
+  `loop_engine.dart`). Full plan: [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
+  Worktree `../mus-tracker`, branch `feature/tracker`.
+  ✅ **Slice 0 SHIPPED** (`98cdb05`): pure-Dart `TrackerEngine` (additive), 13
+  tests. ✅ **Slice 1 SHIPPED** (`775fe03`): the Sandbox grid screen (instrument
+  tabs + pentatonic piano-roll + looping playback + playhead), registered sandbox
+  `GameInfo 'tracker'` in composition, EN/DE, 4 tests. ✅ **Slice 2 SHIPPED**:
+  sfxr chiptune instruments — focused pure-Dart port of `crispaudio`'s SynthEngine
+  into **`lib/core/audio/crisp_dsp/sfxr.dart`** (+ `test/sfxr_test.dart`), a
+  `SfxrInstrument` on the `TrackerInstrument` seam synthesized per-note at pitch,
+  and a live `zap` chiptune channel in the default band. **Settled hot files:**
+  `game_registry.dart`, both ARBs. 🚧 **Next:** Slice 3 (Studio skin: per-channel
+  instrument picker over the sfxr palette + more channels) → Slice 4 (record-your-
+  voice → effect chain: port `crispaudio` dsp/PitchShifter/FormantShifter into
+  `crisp_dsp/`, per-note pitched resampler) → arrangement.
 - **opus (parity)** · 🚧 **ACTIVE — notation-depth batch (one at a time).**
   Working through the tracked roadmap in
   [`WORKSHOP_PARITY.md`](WORKSHOP_PARITY.md) §"Notation-depth roadmap": **(1)

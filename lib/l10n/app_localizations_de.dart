@@ -876,7 +876,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerChannelSparkle => 'Glitzer';
 
   @override
-  String get trackerChannelPad => 'Fläche';
+  String get trackerChannelZap => 'Zap';
 
   @override
   String get trackerChannelBass => 'Bass';

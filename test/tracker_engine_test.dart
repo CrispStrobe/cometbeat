@@ -6,6 +6,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:klang_universum/core/audio/crisp_dsp/sfxr.dart';
 import 'package:klang_universum/core/audio/synth.dart';
 import 'package:klang_universum/core/audio/tracker_engine.dart';
 
@@ -135,6 +136,53 @@ void main() {
       final fast = e.renderLoop();
       expect(fast, isNot(equals(slow)));
       expect(fast.length, 44 + e.timing.totalSamples * 2);
+    });
+  });
+
+  group('SfxrInstrument channel', () {
+    TrackerChannel zapChannel(int rows) => TrackerChannel(
+          id: 'zap',
+          instrument: SfxrInstrument.preset('zap', sfxrZap, seed: 7),
+          rows: rows,
+        );
+
+    test('renders a full-length buffer; empty is silence', () {
+      const timing = TrackerTiming(rows: 8, stepsPerBeat: 2);
+      final ch = zapChannel(timing.rows);
+      final silent = ch.instrument.renderChannel(ch.cells, timing);
+      expect(silent.length, timing.totalSamples);
+      expect(silent.every((v) => v == 0), isTrue);
+
+      ch.cells[0] = const TrackerCell(midi: 72);
+      final sounded = ch.instrument.renderChannel(ch.cells, timing);
+      expect(sounded.length, timing.totalSamples);
+      expect(sounded.any((v) => v != 0), isTrue);
+    });
+
+    test('is deterministic (stable stem for the cache)', () {
+      const timing = TrackerTiming(rows: 8, stepsPerBeat: 2);
+      final ch = zapChannel(timing.rows)
+        ..cells[2] = const TrackerCell(midi: 67);
+      final a = ch.instrument.renderChannel(ch.cells, timing);
+      final b = ch.instrument.renderChannel(ch.cells, timing);
+      expect(a, equals(b));
+    });
+
+    test('the default band mixes additive + sfxr without clipping', () {
+      final e =
+          TrackerEngine(timing: const TrackerTiming(rows: 8, stepsPerBeat: 2));
+      expect(e.channels.map((c) => c.id), contains('zap'));
+      final zap = e.channels.indexWhere((c) => c.id == 'zap');
+      e.toggleNote(zap, 0, 72);
+      e.toggleNote(0, 0, 60); // an additive channel too
+      final wav = e.renderLoop();
+      var peak = 0;
+      for (var i = 44; i + 1 < wav.length; i += 2) {
+        final s = (wav[i] | (wav[i + 1] << 8)).toSigned(16).abs();
+        if (s > peak) peak = s;
+      }
+      expect(peak, greaterThan(0));
+      expect(peak, lessThanOrEqualTo(32767));
     });
   });
 }

@@ -13,8 +13,10 @@
 // recorded/effected sample instruments plug in later (see
 // docs/TRACKER_HANDOVER.md) without changing the engine.
 
+import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:klang_universum/core/audio/crisp_dsp/sfxr.dart';
 import 'package:klang_universum/core/audio/synth.dart';
 
 /// The musical clock a pattern renders against. [rows] steps at [stepsPerBeat]
@@ -72,12 +74,12 @@ class TrackerCell {
   int get hashCode => Object.hash(midi, volume);
 }
 
-/// Turns a channel's cells into back-to-back [Segment]s using the classic
-/// tracker rule: a non-empty cell triggers a note that rings across itself and
-/// every immediately-following empty cell (until the next trigger); leading
-/// empties are a rest. Runs sum to exactly [TrackerTiming.rows] steps.
-List<Segment> cellsToSegments(List<TrackerCell> cells, TrackerTiming timing) {
-  // Each run is (midi?, steps): midi == null is a rest / silence run.
+/// Collapses a channel's cells into runs using the classic tracker rule: a
+/// non-empty cell triggers a note that rings across itself and every
+/// immediately-following empty cell (until the next trigger); leading empties
+/// are a rest. Each run is `(midi?, steps)` — `midi == null` is a rest. Runs sum
+/// to exactly [TrackerTiming.rows] steps.
+List<(int?, int)> cellRuns(List<TrackerCell> cells) {
   final runs = <(int?, int)>[];
   for (final cell in cells) {
     if (cell.isEmpty) {
@@ -91,14 +93,18 @@ List<Segment> cellsToSegments(List<TrackerCell> cells, TrackerTiming timing) {
       runs.add((cell.midi, 1));
     }
   }
-  return [
-    for (final (midi, steps) in runs)
-      (
-        freqs: midi == null ? const <double>[] : [midiToFrequency(midi)],
-        ms: steps * timing.stepMs,
-      ),
-  ];
+  return runs;
 }
+
+/// The runs of [cells] as back-to-back [Segment]s (for the additive voices).
+List<Segment> cellsToSegments(List<TrackerCell> cells, TrackerTiming timing) =>
+    [
+      for (final (midi, steps) in cellRuns(cells))
+        (
+          freqs: midi == null ? const <double>[] : [midiToFrequency(midi)],
+          ms: steps * timing.stepMs,
+        ),
+    ];
 
 /// How a channel's cells become an un-normalized sample buffer. The seam for
 /// non-additive instruments (sfxr, recorded samples) added in later slices.
@@ -125,6 +131,46 @@ class AdditiveInstrument implements TrackerInstrument {
         cellsToSegments(cells, timing),
         timbre: timbreFor(instrument),
       );
+}
+
+/// A chiptune instrument: an sfxr preset (a frozen [SfxrParams]) synthesized at
+/// each note's pitch (sfxr's `baseFreq` is set to the note frequency ÷ 440).
+/// Every note is a one-shot that decays within its run — the classic tracker
+/// sampled-voice feel. Deterministic via [seed] so the stem cache is stable.
+class SfxrInstrument implements TrackerInstrument {
+  const SfxrInstrument(this.id, this.params, {this.seed = 0});
+
+  /// Builds an instrument from a named [SfxrPreset], freezing it with [seed].
+  factory SfxrInstrument.preset(String id, SfxrPreset preset, {int seed = 0}) =>
+      SfxrInstrument(id, preset(Random(seed)), seed: seed);
+
+  @override
+  final String id;
+  final SfxrParams params;
+  final int seed;
+
+  @override
+  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
+    final out = Float64List(timing.totalSamples);
+    final rng = Random(seed);
+    var startStep = 0;
+    for (final (midi, steps) in cellRuns(cells)) {
+      if (midi != null) {
+        final startSample = (startStep * timing.stepMs * kSampleRate) ~/ 1000;
+        final buf = sfxrGenerate(
+          params.copyWith(baseFreq: midiToFrequency(midi) / 440),
+          durationSec: steps * timing.stepMs / 1000,
+          rng: rng,
+        );
+        final n = min(buf.length, out.length - startSample);
+        for (var i = 0; i < n; i++) {
+          out[startSample + i] = buf[i];
+        }
+      }
+      startStep += steps;
+    }
+    return out;
+  }
 }
 
 /// One editable column: an [instrument], an authored mix [gain], and [rows]
@@ -156,9 +202,9 @@ class TrackerChannel {
   bool get hasAnyNote => cells.any((c) => !c.isEmpty);
 }
 
-/// Default Sandbox band: four melodic additive channels (all pentatonic-friendly
-/// so the scale-locked kid grid always grooves). Drums arrive with the
-/// percussion instrument in a later slice.
+/// Default Sandbox band: melodic additive voices plus one sfxr chiptune lead
+/// (all pentatonic-friendly so the scale-locked kid grid always grooves). Drums
+/// arrive with the percussion instrument in a later slice.
 List<TrackerChannel> defaultTrackerChannels({int rows = 16}) => [
       TrackerChannel(
         id: 'melody',
@@ -173,8 +219,8 @@ List<TrackerChannel> defaultTrackerChannels({int rows = 16}) => [
         rows: rows,
       ),
       TrackerChannel(
-        id: 'pad',
-        instrument: const AdditiveInstrument('flute', Instrument.flute),
+        id: 'zap',
+        instrument: SfxrInstrument.preset('zap', sfxrZap, seed: 7),
         gain: 0.45,
         rows: rows,
       ),

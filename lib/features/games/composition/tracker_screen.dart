@@ -51,7 +51,7 @@ class TrackerScreen extends StatefulWidget {
   static const _channelOctave = <String, int>{
     'melody': 0,
     'sparkle': 1,
-    'pad': -1,
+    'zap': 0,
     'bass': -2,
   };
 
@@ -196,14 +196,14 @@ class _TrackerScreenState extends State<TrackerScreen>
   static const _channelIcons = <String, IconData>{
     'melody': Icons.music_note,
     'sparkle': Icons.auto_awesome,
-    'pad': Icons.piano,
+    'zap': Icons.bolt,
     'bass': Icons.speaker,
   };
 
   String _channelLabel(AppLocalizations l10n, String id) => switch (id) {
         'melody' => l10n.trackerChannelMelody,
         'sparkle' => l10n.trackerChannelSparkle,
-        'pad' => l10n.trackerChannelPad,
+        'zap' => l10n.trackerChannelZap,
         _ => l10n.trackerChannelBass,
       };
 
