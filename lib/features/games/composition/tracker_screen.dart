@@ -93,6 +93,12 @@ abstract interface class TrackerTester {
 
   /// Imports the built-in demo tune into the melody channel (Score → Tracker).
   void importDemo();
+
+  /// The id of the selected channel's current instrument.
+  String get selectedInstrumentId;
+
+  /// Re-voices the selected channel to the palette option with [optionId].
+  void setInstrument(String optionId);
 }
 
 class _TrackerScreenState extends State<TrackerScreen>
@@ -189,6 +195,15 @@ class _TrackerScreenState extends State<TrackerScreen>
   void toggleNotation() => setState(() => _showNotation = !_showNotation);
   @override
   void importDemo() => _importDemo();
+  @override
+  String get selectedInstrumentId => _engine.channels[_selected].instrument.id;
+  @override
+  void setInstrument(String optionId) {
+    final option = kTrackerInstruments.firstWhere((o) => o.id == optionId);
+    _engine.setChannelInstrument(_selected, option.build());
+    setState(() {});
+    _syncPlayback();
+  }
 
   /// Fills the melody channel (index 0 — treble, so the demo's octave-4 notes
   /// land exactly on its grid) from the built-in tune, and switches to it.
@@ -317,6 +332,61 @@ class _TrackerScreenState extends State<TrackerScreen>
         VoiceEffect.robot => l10n.trackerVoiceRobot,
       };
 
+  String _instrumentLabel(AppLocalizations l10n, String id) => switch (id) {
+        'piano' => l10n.instrumentPiano,
+        'cello' => l10n.instrumentCello,
+        'flute' => l10n.instrumentFlute,
+        'musicBox' => l10n.instrumentMusicBox,
+        'zap' => l10n.trackerSfxrZap,
+        'blip' => l10n.trackerSfxrBlip,
+        'laser' => l10n.trackerSfxrLaser,
+        'coin' => l10n.trackerSfxrCoin,
+        _ => l10n.trackerSfxrExplosion,
+      };
+
+  /// The per-channel instrument picker (additive voices + chiptune presets).
+  void _showInstrumentSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext)!;
+        final currentId = _engine.channels[_selected].instrument.id;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.trackerChangeInstrument,
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final option in kTrackerInstruments)
+                      ChoiceChip(
+                        label: Text(_instrumentLabel(l10n, option.id)),
+                        selected: option.id == currentId,
+                        onSelected: (_) {
+                          Navigator.pop(sheetContext);
+                          setInstrument(option.id);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// The "pick a voice, then record" sheet.
   void _showRecordSheet() {
     showModalBottomSheet<void>(
@@ -376,6 +446,11 @@ class _TrackerScreenState extends State<TrackerScreen>
       appBar: GameAppBar(
         title: l10n.gameTracker,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: l10n.trackerChangeInstrument,
+            onPressed: _showInstrumentSheet,
+          ),
           IconButton(
             icon: const Icon(Icons.library_music),
             tooltip: l10n.trackerImportTune,

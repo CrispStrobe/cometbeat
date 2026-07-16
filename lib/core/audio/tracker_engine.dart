@@ -294,6 +294,54 @@ List<TrackerChannel> defaultTrackerChannels({int rows = 16}) => [
       ),
     ];
 
+/// A selectable voice for the instrument picker: a stable [id] (matches the
+/// built instrument's `id`, for highlighting the current choice + tests) and a
+/// factory. Additive timbres + a curated sfxr palette; the recorded `voice`
+/// instrument stays off the picker (it's set by recording).
+class InstrumentOption {
+  const InstrumentOption(this.id, this.build);
+
+  final String id;
+  final TrackerInstrument Function() build;
+}
+
+/// The picker palette: four additive voices + five chiptune presets.
+final List<InstrumentOption> kTrackerInstruments = [
+  InstrumentOption(
+    'piano',
+    () => const AdditiveInstrument('piano', Instrument.piano),
+  ),
+  InstrumentOption(
+    'cello',
+    () => const AdditiveInstrument('cello', Instrument.cello),
+  ),
+  InstrumentOption(
+    'flute',
+    () => const AdditiveInstrument('flute', Instrument.flute),
+  ),
+  InstrumentOption(
+    'musicBox',
+    () => const AdditiveInstrument('musicBox', Instrument.musicBox),
+  ),
+  InstrumentOption('zap', () => SfxrInstrument.preset('zap', sfxrZap, seed: 7)),
+  InstrumentOption(
+    'blip',
+    () => SfxrInstrument.preset('blip', sfxrBlip, seed: 3),
+  ),
+  InstrumentOption(
+    'laser',
+    () => SfxrInstrument.preset('laser', sfxrLaser, seed: 5),
+  ),
+  InstrumentOption(
+    'coin',
+    () => SfxrInstrument.preset('coin', sfxrCoin, seed: 11),
+  ),
+  InstrumentOption(
+    'explosion',
+    () => SfxrInstrument.preset('explosion', sfxrExplosion, seed: 13),
+  ),
+];
+
 /// Holds the pattern (channels × rows) + timing, edits cells, and renders the
 /// current pattern to a loop-ready WAV. Caches per-channel stems and the mixed
 /// WAV so an edit only re-synthesizes the channel that changed.

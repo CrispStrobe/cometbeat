@@ -137,4 +137,19 @@ void main() {
     expect(game.isPlaying, isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('the instrument picker re-voices the selected channel',
+      (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+    final game = _game(tester);
+    expect(game.selectedInstrumentId, 'piano'); // melody default
+
+    game.tapCell(0, 0); // give it a note so the mix changes
+    await tester.pump();
+
+    game.setInstrument('laser');
+    await tester.pump();
+    expect(game.selectedInstrumentId, 'laser');
+    expect(tester.takeException(), isNull);
+  });
 }

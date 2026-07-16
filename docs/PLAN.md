@@ -51,10 +51,11 @@ and push to origin/main** before/after touching shared files. Format:
   + `TrackerEngine.setChannelCells` + a "Load a tune" app-bar action importing a
   built-in demo melody into the melody channel. Round-trip (Tracker→Score→Tracker)
   is unit-tested — the bidirectional bridge is complete.
-  🚧 **Next (unclaimed / open order):** Slice 3 (Studio instrument picker over the
-  sfxr palette) · Workshop↔Tracker file handoff (open a real Workshop score into
-  the tracker) · arrangement/order-list · percussion instrument. Handover:
-  [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
+  ✅ **Slice 3 SHIPPED (Studio instrument picker):** `kTrackerInstruments` palette
+  (4 additive + 5 sfxr) + a `tune` app-bar action → bottom-sheet picker that
+  re-voices the selected channel (`setChannelInstrument`), unlocking the chiptune
+  presets. 🚧 **Now working:** percussion instrument + arrangement + Workshop↔Tracker
+  handoff. Handover: [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
 - **opus (parity)** · 🚧 **ACTIVE — notation-depth batch (one at a time).**
   Working through the tracked roadmap in
   [`WORKSHOP_PARITY.md`](WORKSHOP_PARITY.md) §"Notation-depth roadmap": **(1)

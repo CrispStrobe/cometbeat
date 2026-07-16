@@ -1826,6 +1826,42 @@ abstract class AppLocalizations {
   /// **'Load a tune'**
   String get trackerImportTune;
 
+  /// No description provided for @trackerChangeInstrument.
+  ///
+  /// In en, this message translates to:
+  /// **'Change instrument'**
+  String get trackerChangeInstrument;
+
+  /// No description provided for @trackerSfxrZap.
+  ///
+  /// In en, this message translates to:
+  /// **'Zap'**
+  String get trackerSfxrZap;
+
+  /// No description provided for @trackerSfxrBlip.
+  ///
+  /// In en, this message translates to:
+  /// **'Blip'**
+  String get trackerSfxrBlip;
+
+  /// No description provided for @trackerSfxrLaser.
+  ///
+  /// In en, this message translates to:
+  /// **'Laser'**
+  String get trackerSfxrLaser;
+
+  /// No description provided for @trackerSfxrCoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Coin'**
+  String get trackerSfxrCoin;
+
+  /// No description provided for @trackerSfxrExplosion.
+  ///
+  /// In en, this message translates to:
+  /// **'Boom'**
+  String get trackerSfxrExplosion;
+
   /// No description provided for @trackerRecord.
   ///
   /// In en, this message translates to:

@@ -188,6 +188,26 @@ void main() {
     });
   });
 
+  group('instrument palette', () {
+    test('every option builds an instrument with a matching id', () {
+      expect(kTrackerInstruments, isNotEmpty);
+      for (final option in kTrackerInstruments) {
+        expect(option.build().id, option.id);
+      }
+    });
+
+    test('setChannelInstrument re-voices a channel (different bytes)', () {
+      final e = TrackerEngine(
+        timing: const TrackerTiming(rows: 8, stepsPerBeat: 2),
+      )..toggleNote(0, 0, 60);
+      final before = e.renderLoop();
+      final laser = kTrackerInstruments.firstWhere((o) => o.id == 'laser');
+      e.setChannelInstrument(0, laser.build());
+      expect(e.channels[0].instrument.id, 'laser');
+      expect(e.renderLoop(), isNot(equals(before)));
+    });
+  });
+
   group('SampleInstrument channel', () {
     Float64List sine(double seconds, double hz) {
       final n = (seconds * kSampleRate).floor();

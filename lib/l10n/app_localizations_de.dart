@@ -948,6 +948,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerImportTune => 'Melodie laden';
 
   @override
+  String get trackerChangeInstrument => 'Instrument wechseln';
+
+  @override
+  String get trackerSfxrZap => 'Zap';
+
+  @override
+  String get trackerSfxrBlip => 'Blip';
+
+  @override
+  String get trackerSfxrLaser => 'Laser';
+
+  @override
+  String get trackerSfxrCoin => 'Münze';
+
+  @override
+  String get trackerSfxrExplosion => 'Bumm';
+
+  @override
   String get trackerRecord => 'Aufnehmen';
 
   @override

@@ -944,6 +944,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerImportTune => 'Load a tune';
 
   @override
+  String get trackerChangeInstrument => 'Change instrument';
+
+  @override
+  String get trackerSfxrZap => 'Zap';
+
+  @override
+  String get trackerSfxrBlip => 'Blip';
+
+  @override
+  String get trackerSfxrLaser => 'Laser';
+
+  @override
+  String get trackerSfxrCoin => 'Coin';
+
+  @override
+  String get trackerSfxrExplosion => 'Boom';
+
+  @override
   String get trackerRecord => 'Record';
 
   @override
