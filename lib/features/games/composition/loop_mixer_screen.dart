@@ -583,50 +583,43 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Spacer(),
+                  // The playhead scales down before anything can overflow.
                   Expanded(
-                    flex: 8,
-                    child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
                       child: _Playhead(
                         beat: _step,
                         beats: _engine.timing.bars * LoopTiming.beatsPerBar,
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            _showScore
-                                ? Icons.library_music
-                                : Icons.library_music_outlined,
-                          ),
-                          tooltip: l10n.loopMixerScore,
-                          onPressed: toggleScorePanel,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.all_inclusive,
-                            color: _infinite
-                                ? Theme.of(context).colorScheme.primary
-                                : null,
-                          ),
-                          isSelected: _infinite,
-                          tooltip: l10n.loopMixerInfinite,
-                          onPressed: toggleInfinite,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.ios_share),
-                          tooltip: l10n.loopMixerShare,
-                          onPressed: _openShareSheet,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ],
+                  IconButton(
+                    icon: Icon(
+                      _showScore
+                          ? Icons.library_music
+                          : Icons.library_music_outlined,
                     ),
+                    tooltip: l10n.loopMixerScore,
+                    onPressed: toggleScorePanel,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.all_inclusive,
+                      color: _infinite
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    isSelected: _infinite,
+                    tooltip: l10n.loopMixerInfinite,
+                    onPressed: toggleInfinite,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.ios_share),
+                    tooltip: l10n.loopMixerShare,
+                    onPressed: _openShareSheet,
+                    visualDensity: VisualDensity.compact,
                   ),
                 ],
               ),
