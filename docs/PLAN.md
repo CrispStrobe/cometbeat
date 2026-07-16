@@ -14,6 +14,14 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (parity)** · 🚧 **ACTIVE — Workshop repeats (start/end repeat).** Next
+  element-id-anchored bar attribute after clef/key/time — same shape (bar-
+  anchored booleans, no capacity impact, post-reflow stamp), completes the "can't
+  notate a repeat" gap, and crisp_notation **expands repeats in playback** too.
+  **Touching `score_document.dart`** (model: `_repeatStarts`/`_repeatEnds` id
+  sets + `_withMidScoreChanges`) then **`composition_workshop_screen.dart`**
+  (the `_paletteButton` palette — repeats are booleans so they're toggle items,
+  not the change dialog) **+ EN/DE ARBs**. Ping before editing those. Model first.
 - **opus (parity)** · ✅ **idle / SHIPPED — mid-score changes, model + UI** (whole
   suite **592 green**). The full clef/key/time mid-score-change family now works
   end-to-end on the flat model via **element-id anchors** (no bar-spine flip):
