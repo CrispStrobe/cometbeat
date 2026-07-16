@@ -494,6 +494,24 @@ void main() {
     expect(view().noteNameStyle, NoteNameStyle.letter);
   });
 
+  testWidgets('Note names also apply to the multi-part canvas', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byKey(const ValueKey('workshop-add-instrument')));
+    await tester.pump();
+    InteractiveMultiPartView view() => tester.widget<InteractiveMultiPartView>(
+          find.byType(InteractiveMultiPartView),
+        );
+    expect(view().showNoteNames, isFalse);
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.text(l10n.workshopNoteNames));
+    await tester.pumpAndSettle();
+
+    expect(view().showNoteNames, isTrue);
+  });
+
   testWidgets('Bar numbers also apply in grand-staff mode', (tester) async {
     await pump(tester);
     // Switch the staff-mode dropdown to grand (𝄞𝄢).

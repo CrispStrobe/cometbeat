@@ -1644,6 +1644,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                 controller: _regions,
                                 caret: _mpCaret,
                                 showMeasureNumbers: _barNumbers,
+                                showNoteNames: _noteNames,
+                                noteNameStyle: _noteNameStyle,
                               ),
                               if (_marquee)
                                 Positioned.fill(
@@ -1678,6 +1680,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                               theme: theme,
                                               staffSpace: _zoom,
                                               showMeasureNumbers: _barNumbers,
+                                              showNoteNames: _noteNames,
+                                              noteNameStyle: _noteNameStyle,
                                               controller: _regions,
                                               elementColors: elementColors,
                                               dragPreviewOpacity:

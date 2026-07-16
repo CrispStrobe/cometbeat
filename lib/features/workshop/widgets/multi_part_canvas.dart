@@ -34,6 +34,8 @@ class MultiPartCanvas extends StatelessWidget {
     this.controller,
     this.caret,
     this.showMeasureNumbers = false,
+    this.showNoteNames = false,
+    this.noteNameStyle = NoteNameStyle.letter,
     this.staffSpace = 11,
   });
 
@@ -80,6 +82,10 @@ class MultiPartCanvas extends StatelessWidget {
 
   /// Whether to label each wrapped system's first bar with its measure number.
   final bool showMeasureNumbers;
+
+  /// Whether to draw each note's name below its staff, in [noteNameStyle].
+  final bool showNoteNames;
+  final NoteNameStyle noteNameStyle;
 
   /// Pixels per staff space (zoom).
   final double staffSpace;
@@ -146,6 +152,8 @@ class MultiPartCanvas extends StatelessWidget {
                   controller: controller,
                   caret: caret,
                   showMeasureNumbers: showMeasureNumbers,
+                  showNoteNames: showNoteNames,
+                  noteNameStyle: noteNameStyle,
                 ),
               ),
             );
