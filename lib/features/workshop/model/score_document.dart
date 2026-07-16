@@ -153,6 +153,7 @@ class _Snapshot {
     this.repeatEnds,
     this.voltas,
     this.navigation,
+    this.tuplets,
   );
   final List<EditorElement> elements;
   final TimeSignature timeSignature;
@@ -171,6 +172,9 @@ class _Snapshot {
   /// Volta numbers and navigation marks (element id → value), captured for undo.
   final Map<String, int> voltas;
   final Map<String, NavigationMark> navigation;
+
+  /// Tuplet groups, captured for undo.
+  final List<Tuplet> tuplets;
 
   /// Phrase slurs / hairpins (start→end note ids) and per-note lyric syllables
   /// (id → verse → syllable) — spans/attachments that live alongside the
@@ -242,6 +246,13 @@ class ScoreDocument {
   // both bar-anchored to an element id and both pure post-reflow stamps.
   final Map<String, int> _voltas = {};
   final Map<String, NavigationMark> _navigation = {};
+
+  // Tuplets: groups of consecutive elements played [actual] in the time of
+  // [normal] (a triplet is 3:2). Not a single-id anchor and not a pure stamp:
+  // members keep their written duration but *sound* scaled, so [reflow] must
+  // pack them at their scaled duration (else the bar mis-fills), and buildScore
+  // emits a [TupletSpan] over their index range within the bar they land in.
+  final List<Tuplet> _tuplets = [];
 
   /// The anacrusis: when set, the first bar holds only this much music before
   /// the downbeat (the piece "starts before beat 1"). Null = no pickup.
@@ -351,6 +362,7 @@ class ScoreDocument {
         Set.of(_repeatEnds),
         Map.of(_voltas),
         Map.of(_navigation),
+        [for (final t in _tuplets) t.copy()],
       );
 
   void _snapshot() {
@@ -398,6 +410,9 @@ class ScoreDocument {
     _navigation
       ..clear()
       ..addAll(s.navigation);
+    _tuplets
+      ..clear()
+      ..addAll(s.tuplets);
     _invalidate();
     // Keep the selection valid against the restored length.
     if (_elements.isEmpty) {
@@ -821,6 +836,7 @@ class ScoreDocument {
     _repeatEnds.clear();
     _voltas.clear();
     _navigation.clear();
+    _tuplets.clear();
     clearSelection();
   }
 
@@ -852,6 +868,7 @@ class ScoreDocument {
     _repeatEnds.clear();
     _voltas.clear();
     _navigation.clear();
+    _tuplets.clear();
     clef = score.clef;
     keySignature = score.keySignature;
     timeSignature = score.timeSignature ?? TimeSignature.fourFour;
@@ -863,9 +880,11 @@ class ScoreDocument {
     final remap = <String, String>{};
     for (final measure in score.measures) {
       String? firstIdInBar;
+      final barNewIds = <String>[]; // new id per element, in reading order
       for (final el in measure.elements) {
         final id = _newId();
         firstIdInBar ??= id;
+        barNewIds.add(id);
         if (el.id != null) remap[el.id!] = id;
         if (el is NoteElement) {
           _elements.add(
@@ -899,6 +918,19 @@ class ScoreDocument {
         if (vol != null) _voltas[firstIdInBar] = vol;
         final nav = measure.navigation;
         if (nav != null) _navigation[firstIdInBar] = nav;
+      }
+      // Recover voice-1 tuplets: a span's [startIndex..endIndex] map onto the
+      // new ids we just assigned in reading order.
+      for (final span in measure.tuplets) {
+        if (span.voice != 0) continue; // editor is single-voice
+        if (span.endIndex >= barNewIds.length) continue;
+        _tuplets.add(
+          Tuplet(
+            barNewIds.sublist(span.startIndex, span.endIndex + 1),
+            actual: span.actual,
+            normal: span.normal,
+          ),
+        );
       }
     }
     for (final s in score.slurs) {
@@ -1063,6 +1095,39 @@ class ScoreDocument {
     }
   }
 
+  /// The tuplet group containing element [id], or null.
+  Tuplet? tupletOf(String id) {
+    for (final t in _tuplets) {
+      if (t.memberIds.contains(id)) return t;
+    }
+    return null;
+  }
+
+  /// Group the elements at [ids] into an [actual]:[normal] tuplet (default a
+  /// 3:2 triplet). No-op unless there are ≥2 ids that are **consecutive** in the
+  /// stream and none already belong to a tuplet. Undoable.
+  void addTuplet(Iterable<String> ids, {int actual = 3, int normal = 2}) {
+    final idList = ids.toList();
+    if (idList.length < 2 || actual < 2 || normal < 1) return;
+    final indices = [for (final id in idList) _indexOf(id)];
+    if (indices.any((i) => i < 0)) return;
+    indices.sort();
+    // Consecutive in the stream?
+    if (indices.last - indices.first != indices.length - 1) return;
+    final ordered = [for (final i in indices) _elements[i].id];
+    if (ordered.any((id) => tupletOf(id) != null)) return; // already tupleted
+    _snapshot();
+    _tuplets.add(Tuplet(ordered, actual: actual, normal: normal));
+  }
+
+  /// Remove the tuplet group containing element [id] (undoable; no-op if none).
+  void removeTupletAt(String id) {
+    final t = tupletOf(id);
+    if (t == null) return;
+    _snapshot();
+    _tuplets.remove(t);
+  }
+
   // ---- rendering ---------------------------------------------------------
 
   /// Pack the flat element stream into bar-lined [Measure]s. A note that would
@@ -1073,12 +1138,15 @@ class ScoreDocument {
       clef: clef,
       keySignature: keySignature,
       timeSignature: timeSignature,
-      measures: _withMidScoreChanges(
-        reflow(
-          [for (final e in _elements) e.toElement()],
-          timeSignature: timeSignature,
-          pickup: pickup,
-          timeChanges: _timeChanges,
+      measures: _withTuplets(
+        _withMidScoreChanges(
+          reflow(
+            [for (final e in _elements) e.toElement()],
+            timeSignature: timeSignature,
+            pickup: pickup,
+            timeChanges: _timeChanges,
+            durationScale: _tupletScale(),
+          ),
         ),
       ),
       dynamics: [
@@ -1191,6 +1259,54 @@ class ScoreDocument {
   bool _anchoredInSet(Measure m, Set<String> ids) =>
       m.elements.any((e) => e.id != null && ids.contains(e.id));
 
+  /// element id → sounding-duration scale, for [reflow] (built from [_tuplets]).
+  Map<String, Fraction> _tupletScale() => {
+        for (final t in _tuplets)
+          for (final id in t.memberIds) id: t.scale,
+      };
+
+  /// Emits a [TupletSpan] per group over the index range its members occupy in
+  /// the bar they landed in. A group is skipped (no bracket) when re-barring has
+  /// split its members across bars or made them non-contiguous — the group data
+  /// survives, so it reappears if a later edit makes it valid again.
+  ///
+  /// Empty-list fast path keeps repeat-free / tuplet-free scores byte-identical.
+  List<Measure> _withTuplets(List<Measure> bars) {
+    if (_tuplets.isEmpty) return bars;
+    // element id → (bar index, index within that bar).
+    final pos = <String, (int, int)>{};
+    for (var b = 0; b < bars.length; b++) {
+      final els = bars[b].elements;
+      for (var i = 0; i < els.length; i++) {
+        final id = els[i].id;
+        if (id != null) pos[id] = (b, i);
+      }
+    }
+    final perBar = <int, List<TupletSpan>>{};
+    for (final t in _tuplets) {
+      final locs = [
+        for (final id in t.memberIds)
+          if (pos[id] case final p?) p,
+      ];
+      if (locs.length != t.memberIds.length) continue; // a member vanished
+      final bar = locs.first.$1;
+      if (locs.any((l) => l.$1 != bar)) continue; // crosses a barline
+      final idxs = [for (final l in locs) l.$2]..sort();
+      if (idxs.last - idxs.first != idxs.length - 1) continue; // not contiguous
+      (perBar[bar] ??= []).add(
+        TupletSpan(idxs.first, idxs.last, actual: t.actual, normal: t.normal),
+      );
+    }
+    if (perBar.isEmpty) return bars;
+    return [
+      for (var b = 0; b < bars.length; b++)
+        if (perBar[b] case final spans?)
+          bars[b].copyWith(tuplets: [...bars[b].tuplets, ...spans])
+        else
+          bars[b],
+    ];
+  }
+
   /// The value anchored to an element within [m] (last anchor in reading order
   /// wins), or null if none of [m]'s elements carry an anchor in [changes].
   V? _anchoredIn<V>(Measure m, Map<String, V> changes) {
@@ -1216,11 +1332,30 @@ class ScoreDocument {
 /// pinned byte-for-byte by `test/score_document_packing_golden_test.dart`, so
 /// the representation change stays externally invisible. Today its only callers
 /// are [ScoreDocument.buildScore] and [ScoreDocument.buildGrandStaff].
+/// A tuplet group: the [memberIds] (consecutive notes/rests) are played [actual]
+/// in the time of [normal] of their written value — a triplet is 3:2, a
+/// quintuplet 5:4. Immutable; the document owns the list.
+class Tuplet {
+  Tuplet(List<String> memberIds, {required this.actual, required this.normal})
+      : memberIds = List.unmodifiable(memberIds);
+
+  final List<String> memberIds;
+  final int actual;
+  final int normal;
+
+  /// The factor a member's written duration is scaled by when it sounds and
+  /// when [reflow] packs it into a bar (normal/actual — 2/3 for a triplet).
+  Fraction get scale => Fraction(normal, actual);
+
+  Tuplet copy() => Tuplet(memberIds, actual: actual, normal: normal);
+}
+
 List<Measure> reflow(
   List<MusicElement> elements, {
   required TimeSignature timeSignature,
   NoteDuration? pickup,
   Map<String, TimeSignature> timeChanges = const {},
+  Map<String, Fraction> durationScale = const {},
 }) {
   if (elements.isEmpty) {
     return const [
@@ -1269,7 +1404,12 @@ List<Measure> reflow(
       full = meter.toFraction();
       barTimeChange = change;
     }
-    final d = el.duration.toFraction();
+    // A tuplet member fills the bar at its scaled (sounding) duration, not its
+    // written one — 3 written eighths of a triplet occupy 2 eighths of the bar.
+    final scale = durationScale[el.id];
+    final d = scale == null
+        ? el.duration.toFraction()
+        : el.duration.toFraction() * scale;
     if (filled > zero && (filled + d) > capacity()) flush();
     current.add(el);
     filled = filled + d;
