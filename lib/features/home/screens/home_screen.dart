@@ -22,6 +22,7 @@ import 'package:comet_beat/features/games/screens/module_screen.dart';
 import 'package:comet_beat/features/progress/screens/progress_screen.dart';
 import 'package:comet_beat/features/recital/recital_screen.dart';
 import 'package:comet_beat/features/settings/screens/settings_screen.dart';
+import 'package:comet_beat/features/textbook/textbook_screen.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/sound_toggle.dart';
@@ -153,6 +154,13 @@ class HomeScreen extends StatelessWidget {
         centerTitle: true,
         actions: [
           const SoundToggle(),
+          IconButton(
+            icon: const Icon(Icons.menu_book),
+            tooltip: l10n.textbookTitle,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TextbookScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.school),
             tooltip: l10n.curriculumTooltip,

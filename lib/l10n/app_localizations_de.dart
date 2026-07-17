@@ -3820,4 +3820,20 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get primerModeDorian =>
       'Dorisch ist wie Moll, aber die 6. Stufe ist erhöht — es klingt nach Moll mit einem helleren Schimmer. Diese eine Note ist das ganze Geheimnis!';
+
+  @override
+  String get textbookTitle => 'Lehrbuch';
+
+  @override
+  String get textbookIntro =>
+      'Arbeite dich von ganz vorne durch die Musik. Zu jedem Thema gibt es eine kurze Lektion (sehen, hören) und Spiele zum Üben.';
+
+  @override
+  String get textbookComingSoon => 'Lektion folgt bald';
+
+  @override
+  String get textbookReadLesson => 'Lektion lesen';
+
+  @override
+  String get textbookPractise => 'Üben';
 }

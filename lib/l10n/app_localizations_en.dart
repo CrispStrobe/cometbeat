@@ -3799,4 +3799,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get primerModeDorian =>
       'Dorian is like minor, but its 6th step is raised — so it sounds minor with a brighter twist. That one note is the whole secret!';
+
+  @override
+  String get textbookTitle => 'Textbook';
+
+  @override
+  String get textbookIntro =>
+      'Work through music from the very start. Each topic has a short lesson (see it, hear it) and games to practise it.';
+
+  @override
+  String get textbookComingSoon => 'Lesson coming soon';
+
+  @override
+  String get textbookReadLesson => 'Read the lesson';
+
+  @override
+  String get textbookPractise => 'Practise';
 }

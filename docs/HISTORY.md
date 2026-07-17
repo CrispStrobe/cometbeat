@@ -37,6 +37,10 @@ box** — each a distinct harmonic profile + attack/decay. Settings has an
 instrument picker (icon chips, previews on tap); the choice persists and drives
 all pitched playback app-wide (retro SFX unchanged).
 
+## Textbook (read-through curriculum)
+
+A read-through learning path over the grade-1–10 concept map (`core/curriculum/concept_map.dart`): the **Textbook** screen (📖 in the home bar) lists each grade band's concepts; a concept expands to its **lesson** (the same zero-knowledge primer the games auto-show — see it, hear it) and **practise** links straight into the games that train it. Concepts with no game yet show "coming soon", so the path stays honest against the coverage gap analysis. Built on the same concept inventory + primers as the gap-analysis tooling.
+
 ## Composition Workshop
 
 A section *outside* the minigames (home-bar piano button) — a full touch- and

@@ -6907,6 +6907,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dorian is like minor, but its 6th step is raised — so it sounds minor with a brighter twist. That one note is the whole secret!'**
   String get primerModeDorian;
+
+  /// No description provided for @textbookTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Textbook'**
+  String get textbookTitle;
+
+  /// No description provided for @textbookIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Work through music from the very start. Each topic has a short lesson (see it, hear it) and games to practise it.'**
+  String get textbookIntro;
+
+  /// No description provided for @textbookComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson coming soon'**
+  String get textbookComingSoon;
+
+  /// No description provided for @textbookReadLesson.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the lesson'**
+  String get textbookReadLesson;
+
+  /// No description provided for @textbookPractise.
+  ///
+  /// In en, this message translates to:
+  /// **'Practise'**
+  String get textbookPractise;
 }
 
 class _AppLocalizationsDelegate
