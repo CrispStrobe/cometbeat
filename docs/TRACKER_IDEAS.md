@@ -85,14 +85,17 @@ without a device. Candidates, roughly in value order:
   extension, e.g. `modconv song.s3m song.xm`) via the neutral-hub converters, and
   `--extract-samples <dir>` writes each sample to a `.wav` ("steal an instrument",
   §B, from the shell — verified PCM-exact via `wavBytes`).
-- **`bin/render.dart`** — render a Tracker song / `GrooveSpec` / imported module to
-  a `.wav` headlessly via the pure-Dart `renderSong`/`mixStems` path (the Loop
-  Mixer/Tracker already synth offline). Pairs with `listen.dart` for round-trip
-  detector acceptance tests.
-- **`bin/notaconv.dart`** — the notation/MIDI hub from the shell: module/Tracker →
-  MIDI (via the shipped Score bridge) and, where crisp_notation is Flutter-free at
-  the needed entrypoints, → MusicXML. Verify which crisp_notation calls are
-  Flutter-free first (that's why `listen.dart` sticks to the core).
+- ✅ **`bin/render.dart`** SHIPPED — renders a Loop Mixer groove (a `KU1.` share
+  token, or `--demo`) to a `.wav` via the pure-Dart `LoopEngine`; `--send reverb|
+  delay` for the master send, `--print-token`. Live-verified: token round-trips
+  byte-identical; `listen.dart` reads the groove's bass root back.
+- ✅ **`bin/notaconv.dart`** SHIPPED — module → Standard MIDI File, importing the
+  **Flutter-free `crisp_notation_core`** directly (`scoreToMidi`) — NOT the Flutter
+  `crisp_notation`. Busiest (or `--channel N`) channel's rows → a Score → MIDI;
+  1084 note-ons out of the real "terrascape" module. **Found + fixed a latent app
+  bug in passing:** `scoreToMidi` drops notes without ids, so the Tracker's own
+  "Export MIDI" was silent — `_trackerAsScore` now sets ids (`8a753e1`).
+  (MusicXML from the shell — `multiPartToMusicXml` — is a further extension.)
 - **`bin/fxproc.dart`** — apply the crisp_dsp effects/voice_fx (§C) to a `.wav`
   offline (chipmunk/robot/formant a recording without the app). All the DSP is
   already pure functions.
