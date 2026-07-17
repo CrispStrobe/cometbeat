@@ -19,6 +19,20 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
+- **opus (smufl)** · ✅ **idle / SHIPPED — Leland + Leipzig notation faces**. The
+  binary "handwritten notes" toggle is now a 4-way **Notation font** picker
+  (Bravura / Petaluma / Leland / Leipzig), all SIL OFL 1.1. New `ScoreFont` enum +
+  `musicFontFor` in `shared/score_theme.dart`; `SettingsService.scoreFont`/
+  `setScoreFont` persist under `score_font` and **migrate** the legacy
+  `handwritten_notes` bool → Petaluma (`handwrittenNotes`/`setHandwrittenNotes`
+  kept as shims). Assets vendored under `assets/smufl/` (`.otf`/`.ttf` + metadata +
+  OFL), declared in `pubspec.yaml`, OFL registered in `custom_licenses_registry`.
+  ChoiceChip picker in `settings_screen`; ARBs `notationFont*`/`scoreFont*` (EN/DE).
+  `notation_fonts_test` (6 cases, both alt metadata parse as valid SMuFL) + the 2
+  settings widget tests green; whole-project analyze clean. ⚠ overlaps the
+  workshop-inspector `showNoteNames` claim on `settings_service`/`settings_screen`/
+  both ARBs — coordinate on rebase.
+
 - **opus (aecmos)** · 🚧 **ACTIVE — AECMOS neural MOS scoring in the AEC eval CLI**.
   `onnx_runtime_dart` (pure-Dart, public sibling) now has the conv/GRU ops AECMOS
   needs, so the metric `AEC_TIER3B.md` rejected as "needs a native ORT" is doable.

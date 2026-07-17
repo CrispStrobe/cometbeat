@@ -12,6 +12,7 @@ import 'package:comet_beat/features/games/note_reading/note_colors.dart';
 import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:comet_beat/features/settings/screens/about_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/score_theme.dart' show ScoreFont;
 import 'package:crisp_notation/crisp_notation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
@@ -146,13 +147,36 @@ class SettingsScreen extends StatelessWidget {
               onChanged: settings.setShowTimer,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
+          Text(
+            l10n.notationFontLabel,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           Card(
-            child: SwitchListTile(
-              title: Text(l10n.handwrittenNotesLabel),
-              subtitle: Text(l10n.handwrittenNotesSubtitle),
-              value: settings.handwrittenNotes,
-              onChanged: settings.setHandwrittenNotes,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.notationFontSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final font in ScoreFont.values)
+                        ChoiceChip(
+                          label: Text(_scoreFontName(l10n, font)),
+                          selected: settings.scoreFont == font,
+                          onSelected: (_) => settings.setScoreFont(font),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -211,10 +235,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 20),
-          Text(
-            l10n.statsTitle,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(l10n.statsTitle, style: Theme.of(context).textTheme.titleMedium),
           Card(
             child: Column(
               children: [
@@ -237,19 +258,16 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            l10n.aboutTitle,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(l10n.aboutTitle, style: Theme.of(context).textTheme.titleMedium),
           Card(
             child: ListTile(
               leading: const Icon(Icons.info_outline),
               title: Text(l10n.appTitle),
               subtitle: Text(l10n.aboutSubtitle),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AboutScreen()),
-              ),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const AboutScreen())),
             ),
           ),
           const SizedBox(height: 16),
@@ -273,11 +291,11 @@ class SettingsScreen extends StatelessWidget {
 }
 
 IconData _instrumentIcon(Instrument instrument) => switch (instrument) {
-      Instrument.piano => Icons.piano,
-      Instrument.cello => Icons.music_note,
-      Instrument.flute => Icons.air,
-      Instrument.musicBox => Icons.toys,
-    };
+  Instrument.piano => Icons.piano,
+  Instrument.cello => Icons.music_note,
+  Instrument.flute => Icons.air,
+  Instrument.musicBox => Icons.toys,
+};
 
 String _instrumentName(AppLocalizations l10n, Instrument instrument) =>
     switch (instrument) {
@@ -286,3 +304,10 @@ String _instrumentName(AppLocalizations l10n, Instrument instrument) =>
       Instrument.flute => l10n.instrumentFlute,
       Instrument.musicBox => l10n.instrumentMusicBox,
     };
+
+String _scoreFontName(AppLocalizations l10n, ScoreFont font) => switch (font) {
+  ScoreFont.bravura => l10n.scoreFontBravura,
+  ScoreFont.petaluma => l10n.scoreFontPetaluma,
+  ScoreFont.leland => l10n.scoreFontLeland,
+  ScoreFont.leipzig => l10n.scoreFontLeipzig,
+};

@@ -6,7 +6,6 @@
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/shared/score_theme.dart';
-import 'package:crisp_notation/crisp_notation.dart' show MusicFont;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,14 +15,15 @@ class SettingsService with ChangeNotifier {
   static const _showTimerKey = 'show_timer';
   static const _colorScaffoldKey = 'color_scaffold';
   static const _instrumentKey = 'instrument';
-  static const _handwrittenKey = 'handwritten_notes';
+  static const _handwrittenKey = 'handwritten_notes'; // legacy (pre-multi-font)
+  static const _scoreFontKey = 'score_font';
   static const _soundOnKey = 'sound_on';
 
   Locale? _locale;
   NoteNaming _noteNaming = NoteNaming.auto;
   bool _showTimer = false;
   bool _colorScaffold = false;
-  bool _handwrittenNotes = false;
+  ScoreFont _scoreFont = ScoreFont.bravura;
   bool _soundOn = true;
   Instrument _instrument = Instrument.piano;
 
@@ -51,12 +51,15 @@ class SettingsService with ChangeNotifier {
   /// the staff.
   bool get colorScaffold => _colorScaffold;
 
-  /// Render notation in the handwritten Petaluma face instead of Bravura. A
-  /// cosmetic "jazz chart" look; applies to screens entered after toggling.
-  bool get handwrittenNotes => _handwrittenNotes;
+  /// The SMuFL face used for all rendered notation. Applies to screens entered
+  /// after changing it (games are pushed fresh). Bravura by default.
+  ScoreFont get scoreFont => _scoreFont;
 
-  void _applyScoreFont() =>
-      appScoreFont = _handwrittenNotes ? kPetalumaFont : MusicFont.bravura;
+  /// Back-compat: the old boolean "handwritten notes" toggle mapped onto the
+  /// Petaluma face. True iff Petaluma is selected.
+  bool get handwrittenNotes => _scoreFont == ScoreFont.petaluma;
+
+  void _applyScoreFont() => appScoreFont = musicFontFor(_scoreFont);
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -66,12 +69,19 @@ class SettingsService with ChangeNotifier {
     _noteNaming = NoteNaming.values.asNameMap()[naming] ?? NoteNaming.auto;
     _showTimer = prefs.getBool(_showTimerKey) ?? false;
     _colorScaffold = prefs.getBool(_colorScaffoldKey) ?? false;
-    _handwrittenNotes = prefs.getBool(_handwrittenKey) ?? false;
+    // New multi-font key; fall back to the legacy handwritten bool (→ Petaluma)
+    // so an upgrading user keeps their choice.
+    final fontName = prefs.getString(_scoreFontKey);
+    _scoreFont =
+        ScoreFont.values.asNameMap()[fontName] ??
+        ((prefs.getBool(_handwrittenKey) ?? false)
+            ? ScoreFont.petaluma
+            : ScoreFont.bravura);
     _soundOn = prefs.getBool(_soundOnKey) ?? true;
     _applyScoreFont();
     _instrument =
         Instrument.values.asNameMap()[prefs.getString(_instrumentKey)] ??
-            Instrument.piano;
+        Instrument.piano;
     notifyListeners();
   }
 
@@ -103,13 +113,20 @@ class SettingsService with ChangeNotifier {
     await prefs.setBool(_colorScaffoldKey, value);
   }
 
-  Future<void> setHandwrittenNotes(bool value) async {
-    _handwrittenNotes = value;
+  Future<void> setScoreFont(ScoreFont font) async {
+    _scoreFont = font;
     _applyScoreFont();
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_handwrittenKey, value);
+    await prefs.setString(_scoreFontKey, font.name);
+    // Keep the legacy key in sync so a downgrade still reads a sane value.
+    await prefs.setBool(_handwrittenKey, font == ScoreFont.petaluma);
   }
+
+  /// Back-compat shim for the old boolean toggle: true → Petaluma, false →
+  /// Bravura.
+  Future<void> setHandwrittenNotes(bool value) =>
+      setScoreFont(value ? ScoreFont.petaluma : ScoreFont.bravura);
 
   Future<void> setSoundOn(bool value) async {
     _soundOn = value;

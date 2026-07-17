@@ -92,11 +92,18 @@ flutter:
   assets:
     - assets/images/
     - assets/sounds/
-    # Petaluma (jazz/handwritten SMuFL font, SIL OFL 1.1) — its glyph metadata
-    # + license, loaded at runtime for the "Handwritten notes" theme.
+    # Selectable SMuFL faces (Petaluma, Leland, Leipzig — all SIL OFL 1.1) with
+    # their glyph metadata + license, loaded at runtime by the notation-font
+    # setting. (Bravura, the default, is bundled by crisp_notation.)
     - assets/smufl/
 
   fonts:
     - family: Petaluma
       fonts:
         - asset: assets/smufl/Petaluma.otf
+    - family: Leland
+      fonts:
+        - asset: assets/smufl/Leland.otf
+    - family: Leipzig
+      fonts:
+        - asset: assets/smufl/Leipzig.ttf

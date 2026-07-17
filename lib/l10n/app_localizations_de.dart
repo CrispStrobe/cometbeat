@@ -3029,11 +3029,23 @@ class AppLocalizationsDe extends AppLocalizations {
       'Noten nach ihrem Buchstaben einfärben — später einfach ausschalten';
 
   @override
-  String get handwrittenNotesLabel => 'Handgeschriebene Noten';
+  String get notationFontLabel => 'Notenschriftart';
 
   @override
-  String get handwrittenNotesSubtitle =>
-      'Notenschrift im handgeschriebenen Jazz-Stil (Petaluma)';
+  String get notationFontSubtitle =>
+      'Die Schrift, mit der Noten und Symbole gezeichnet werden.';
+
+  @override
+  String get scoreFontBravura => 'Bravura';
+
+  @override
+  String get scoreFontPetaluma => 'Petaluma (handgeschrieben)';
+
+  @override
+  String get scoreFontLeland => 'Leland';
+
+  @override
+  String get scoreFontLeipzig => 'Leipzig';
 
   @override
   String get debugModeEnabled => 'Debug-Einstellungen freigeschaltet!';

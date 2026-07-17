@@ -63,7 +63,7 @@ import 'app_localizations_en.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en')
+    Locale('en'),
   ];
 
   /// No description provided for @appTitle.
@@ -5516,17 +5516,41 @@ abstract class AppLocalizations {
   /// **'Tint notes by their letter — turn it off once the staff is familiar'**
   String get colorScaffoldSubtitle;
 
-  /// No description provided for @handwrittenNotesLabel.
+  /// No description provided for @notationFontLabel.
   ///
   /// In en, this message translates to:
-  /// **'Handwritten notes'**
-  String get handwrittenNotesLabel;
+  /// **'Notation font'**
+  String get notationFontLabel;
 
-  /// No description provided for @handwrittenNotesSubtitle.
+  /// No description provided for @notationFontSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Draw notation in a hand-written jazz style (Petaluma)'**
-  String get handwrittenNotesSubtitle;
+  /// **'The typeface used to draw notes and symbols.'**
+  String get notationFontSubtitle;
+
+  /// No description provided for @scoreFontBravura.
+  ///
+  /// In en, this message translates to:
+  /// **'Bravura'**
+  String get scoreFontBravura;
+
+  /// No description provided for @scoreFontPetaluma.
+  ///
+  /// In en, this message translates to:
+  /// **'Petaluma (handwritten)'**
+  String get scoreFontPetaluma;
+
+  /// No description provided for @scoreFontLeland.
+  ///
+  /// In en, this message translates to:
+  /// **'Leland'**
+  String get scoreFontLeland;
+
+  /// No description provided for @scoreFontLeipzig.
+  ///
+  /// In en, this message translates to:
+  /// **'Leipzig'**
+  String get scoreFontLeipzig;
 
   /// No description provided for @debugModeEnabled.
   ///
@@ -6096,8 +6120,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

@@ -3016,11 +3016,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tint notes by their letter — turn it off once the staff is familiar';
 
   @override
-  String get handwrittenNotesLabel => 'Handwritten notes';
+  String get notationFontLabel => 'Notation font';
 
   @override
-  String get handwrittenNotesSubtitle =>
-      'Draw notation in a hand-written jazz style (Petaluma)';
+  String get notationFontSubtitle =>
+      'The typeface used to draw notes and symbols.';
+
+  @override
+  String get scoreFontBravura => 'Bravura';
+
+  @override
+  String get scoreFontPetaluma => 'Petaluma (handwritten)';
+
+  @override
+  String get scoreFontLeland => 'Leland';
+
+  @override
+  String get scoreFontLeipzig => 'Leipzig';
 
   @override
   String get debugModeEnabled => 'Debug settings unlocked!';

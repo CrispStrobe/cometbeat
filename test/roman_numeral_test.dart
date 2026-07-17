@@ -43,8 +43,11 @@ RomanNumeralTester _game(WidgetTester tester) =>
 
 // Same tree but with a ProgressService pre-seeded to a mastery level, so the
 // game runs its widened pool (minor keys + inversions).
-Widget _wrapMastered(SriService sri, ProgressService progress,
-        {Random? random}) =>
+Widget _wrapMastered(
+  SriService sri,
+  ProgressService progress, {
+  Random? random,
+}) =>
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsService()),
