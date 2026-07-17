@@ -68,12 +68,22 @@ S3mModule parseS3m(Uint8List bytes) {
     order.add(v);
   }
 
-  // Parapointer tables follow the order list.
+  // Parapointer tables follow the order list. The pointer-table offsets use the
+  // real declared counts (that's the on-disk layout), but the build loops below
+  // are clamped: pattern and sample references in the order list and cells are
+  // single bytes (0-255), so a module can address at most 256 of each. A header
+  // declaring more (up to the u16 max, 65535) is malformed — and without this
+  // clamp a 96-byte file with patNum=65535 drives ~65535 × 64 × channelCount
+  // cell allocations, a multi-second hang / OOM decode-bomb. Clamping is
+  // lossless for every real S3M (the extra, unaddressable entries are dropped).
+  const maxAddressable = 256;
   final insPtrStart = orderStart + ordNum;
   final patPtrStart = insPtrStart + insNum * 2;
+  final insCount = insNum > maxAddressable ? maxAddressable : insNum;
+  final patCount = patNum > maxAddressable ? maxAddressable : patNum;
 
   final samples = <S3mSample>[];
-  for (var i = 0; i < insNum; i++) {
+  for (var i = 0; i < insCount; i++) {
     final ptrOff = insPtrStart + i * 2;
     if (ptrOff + 2 > bytes.length) {
       samples.add(S3mSample.empty());
@@ -84,7 +94,7 @@ S3mModule parseS3m(Uint8List bytes) {
   }
 
   final patterns = <S3mPattern>[];
-  for (var i = 0; i < patNum; i++) {
+  for (var i = 0; i < patCount; i++) {
     final ptrOff = patPtrStart + i * 2;
     if (ptrOff + 2 > bytes.length) {
       patterns.add(_emptyPattern(channelCount));

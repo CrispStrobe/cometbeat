@@ -64,9 +64,18 @@ XmModule parseXm(Uint8List bytes) {
   final headerSize = bd.getUint32(0x3C, Endian.little);
   final songLength = bd.getUint16(0x40, Endian.little);
   final restart = bd.getUint16(0x42, Endian.little);
-  final numChannels = bd.getUint16(0x44, Endian.little);
-  final numPatterns = bd.getUint16(0x46, Endian.little);
-  final numInstruments = bd.getUint16(0x48, Endian.little);
+  // XM allows at most 32 channels, 256 patterns and 128 instruments. Clamp the
+  // declared u16 counts (up to 65535) so a crafted header can't drive a
+  // decode-bomb: _unpackPattern allocates numRows × numChannels cells per
+  // pattern, so a single pattern with numChannels=65535 (× the numRows clamp)
+  // would allocate billions of cells. These caps are lossless for every real
+  // XM. numRows is clamped separately in _unpackPattern.
+  final rawChannels = bd.getUint16(0x44, Endian.little);
+  final rawPatterns = bd.getUint16(0x46, Endian.little);
+  final rawInstruments = bd.getUint16(0x48, Endian.little);
+  final numChannels = rawChannels > 64 ? 64 : rawChannels;
+  final numPatterns = rawPatterns > 256 ? 256 : rawPatterns;
+  final numInstruments = rawInstruments > 256 ? 256 : rawInstruments;
   final defaultTempo = bd.getUint16(0x4C, Endian.little);
   final defaultBpm = bd.getUint16(0x4E, Endian.little);
 
@@ -200,6 +209,10 @@ List<List<XmCell>> _unpackPattern(
   int numChannels,
   int packedSize,
 ) {
+  // XM patterns hold at most 256 rows; clamp the declared count (u16, up to
+  // 65535) so a crafted header can't drive a numRows × numChannels cell
+  // allocation decode-bomb. Lossless for every real XM.
+  if (numRows > 256) numRows = 256;
   final rows = <List<XmCell>>[];
   var cursor = start;
   for (var r = 0; r < numRows; r++) {

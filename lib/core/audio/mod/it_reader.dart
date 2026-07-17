@@ -114,13 +114,25 @@ ItModule parseIt(Uint8List bytes) {
 
   // ── offset tables: InsNum×u32, then SmpNum×u32, then PatNum×u32 ──
   // Instrument headers are not parsed here, but we must advance past their
-  // offset table to reach the sample and pattern tables.
+  // offset table to reach the sample and pattern tables. The table offsets use
+  // the real declared counts (the on-disk layout); the build loops are clamped.
   final smpBase = 0xC0 + ordNum + insNum * 4;
   final patBase = smpBase + smpNum * 4;
 
+  // Sample and pattern references (in the order list and cells) are single
+  // bytes, so a module addresses at most 256 of each. A header declaring more
+  // (up to the u16 max) is malformed — and unclamped it is a decode bomb: a
+  // ~1 KB file with patNum=256 pointing at a pattern header declaring
+  // numRows=65535 drives 256 × 65535 × 64 cell allocations (~16 s hang). See
+  // also the numRows clamp in _parsePattern and the length clamp in the sample
+  // decoders. Clamping is lossless for every real IT.
+  const maxAddressable = 256;
+  final smpCount = smpNum > maxAddressable ? maxAddressable : smpNum;
+  final patCount = patNum > maxAddressable ? maxAddressable : patNum;
+
   // ── samples ──
   final samples = <ItSample>[];
-  for (var i = 0; i < smpNum; i++) {
+  for (var i = 0; i < smpCount; i++) {
     final so = u32(smpBase + i * 4);
     samples.add(_parseSample(bytes, bd, so, it215));
   }
@@ -128,7 +140,7 @@ ItModule parseIt(Uint8List bytes) {
   // ── patterns ──
   final patterns = <ItPattern>[];
   var maxChannelCount = 0;
-  for (var i = 0; i < patNum; i++) {
+  for (var i = 0; i < patCount; i++) {
     final po = u32(patBase + i * 4);
     final pat = _parsePattern(bytes, bd, po);
     if (pat.channelCount > maxChannelCount) maxChannelCount = pat.channelCount;
@@ -244,6 +256,14 @@ Float64List _decodeUncompressed(
   final signed = (cvt & 0x01) != 0;
   final bigEndian = (cvt & 0x02) != 0;
   final delta = (cvt & 0x04) != 0;
+  // Uncompressed PCM physically occupies length × bytesPerSample bytes from
+  // dataPtr, so a declared length beyond the file is malformed. Clamp before
+  // the Float64List(length) allocation — an unbounded u32 length is otherwise
+  // a multi-gigabyte OOM decode-bomb.
+  final avail = (dataPtr >= 0 && dataPtr < len)
+      ? (len - dataPtr) ~/ (sixteenBit ? 2 : 1)
+      : 0;
+  if (length > avail) length = avail;
   final pcm = Float64List(length);
 
   if (sixteenBit) {
@@ -298,6 +318,14 @@ Float64List _decodeCompressed(
   bool it215,
 ) {
   final int len = bytes.length;
+  // Compressed data expands, so length can exceed the input byte count — but
+  // not without bound. Cap the decoded size at a generous multiple of the
+  // remaining file bytes so a declared length near the u32 max can't drive a
+  // multi-gigabyte Int32List(length) OOM allocation. Any real IT sample stays
+  // far under this bound.
+  final maxDecoded =
+      (dataPtr >= 0 && dataPtr < len) ? (len - dataPtr) * 16 + 1024 : 0;
+  if (length > maxDecoded) length = maxDecoded;
   final out = Int32List(length);
   final int quota = sixteenBit ? 0x4000 : 0x8000;
   final int maxWidth = sixteenBit ? 17 : 9;
@@ -411,8 +439,12 @@ ItPattern _parsePattern(Uint8List bytes, ByteData bd, int po) {
       (o >= 0 && o + 2 <= len) ? bd.getUint16(o, Endian.little) : 0;
 
   final packedLen = u16(po + 0);
-  final numRows = u16(po + 2);
-  if (numRows == 0) return const ItPattern([], 0);
+  // IT patterns hold at most 200 rows; clamp the declared count (u16, up to
+  // 65535) so a crafted header can't drive a numRows × 64 grid allocation
+  // decode-bomb. 256 is a lossless upper bound for every real IT.
+  final declaredRows = u16(po + 2);
+  if (declaredRows == 0) return const ItPattern([], 0);
+  final numRows = declaredRows > 256 ? 256 : declaredRows;
 
   final lastMask = List<int>.filled(64, 0);
   final lastNote = List<int>.filled(64, 0);
