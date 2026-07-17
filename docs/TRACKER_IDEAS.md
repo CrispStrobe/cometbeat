@@ -101,7 +101,8 @@ without a device. Candidates, roughly in value order:
   presets (chipmunk/robot/alien/…), params `--mix/--drive/--carrier/--factor/--kind`.
   Live-verified: `--stretch 1.5` → exactly 1.5× frames; `listen.dart` reads a
   reverbed groove back with pitch intact.
-- **The headless CLI suite is complete:** `listen` · `modinfo` · `modconv` ·
-  `render` · `notaconv` · `fxproc`. Each is a thin `main()` over the Flutter-free
-  `lib/core/audio` — the heavy logic stays in `lib/` + unit-tested. Only optional
-  polish left: a `bin/mus.dart` dispatcher (`mus info|conv|render|…`) wrapping them.
+- ✅ **The headless CLI suite is COMPLETE**, incl. **`bin/mus.dart`** — one
+  dispatcher over all six: `mus listen|info|conv|render|midi|fx …` (imports each
+  tool's `main` in-process, forwards the tail args). Each tool is a thin `main()`
+  over the Flutter-free `lib/core/audio`; the heavy logic stays in `lib/` +
+  unit-tested. **Nothing left in §H.**
