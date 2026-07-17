@@ -187,6 +187,24 @@ and push to origin/main** before/after touching shared files. Format:
   the 800×600 smoke surface). `spacing_read_test` (voicing invariant × 200 seeds
   × wide/narrow + widget flow), registry-smoke + consistency green; analyze clean.
 
+- **opus (tracker)** · ✅ **idle / SHIPPED — full converter matrix + Sampling §B**.
+  (1) **Converter matrix** (`2946016`): `convertModule(bytes, target)` /
+  `convertDocTo(doc, target)` is now the single MOD/XM/S3M/IT dispatch point
+  (`module_convert.dart`; `bin/modconv.dart` funnels through it). Full 4×4 test —
+  every golden → every target incl. S3M-as-source + identity cells the old suite
+  never hit; invariant is source-agnostic (re-parse each output, compare title +
+  note in MIDI space + sample peak). Live-verified an s3m→xm→it→mod chain.
+  (2) **Sampling §B** (`9316b1f`): `sample_edit.dart` (non-destructive trim/
+  trimSilence/normalize/fade/reverse) + `multi_sample_instrument.dart`
+  (`MultiSampleInstrument`/`SampleZone` XM/IT keymap; `.mapped()` auto-splits key
+  ranges; NEW file, tracker_engine.dart untouched). 57 tests green (matrix +
+  sample_edit + multi_sample). Also corrected the stale LOOP_MIXER_FOLLOWUPS doc
+  (both follow-ups were already shipped). Next candidate: §D multi-channel module
+  → multi-part Score (reuses grooveParts' MultiPartScore + multiPartToMusicXml).
+  Files: `lib/core/audio/mod/module_convert.dart`, `bin/modconv.dart`,
+  `lib/core/audio/crisp_dsp/sample_edit.dart`,
+  `lib/core/audio/multi_sample_instrument.dart` + tests + `docs/TRACKER_IDEAS.md`.
+
 - **opus (tracker)** · ✅ **idle / SHIPPED — FX extensions** (all four). **Bell (FM)
   instrument** in the picker; a **multi-effect per-channel chain** (`TrackerChannel.
   effects` list + `applyChannelEffects` fold + multi-select FilterChip sheet); a
