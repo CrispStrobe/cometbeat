@@ -165,9 +165,54 @@ void main() {
     await tester.pump();
     expect(game.isSongPlaying, isTrue);
 
-    game.togglePlay(); // stop
+    game.stop();
     await tester.pump();
     expect(game.isPlaying, isFalse);
     expect(game.isSongPlaying, isFalse);
+  });
+
+  testWidgets('transport: play, pause, resume, stop', (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.setNote(0, 0, 60);
+    await tester.pump();
+
+    game.togglePlay(); // play
+    await tester.pump();
+    expect(game.isPlaying, isTrue);
+    expect(game.isPaused, isFalse);
+
+    game.togglePlay(); // pause — clock stops but not a full stop
+    await tester.pump();
+    expect(game.isPaused, isTrue);
+    expect(game.isPlaying, isFalse); // clock frozen
+
+    game.togglePlay(); // resume
+    await tester.pump();
+    expect(game.isPaused, isFalse);
+    expect(game.isPlaying, isTrue);
+
+    game.stop();
+    await tester.pump();
+    expect(game.isPlaying, isFalse);
+    expect(game.isPaused, isFalse);
+  });
+
+  testWidgets('transport: Back/Forward navigate patterns when not song-playing',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.addPattern(); // p1
+    game.addPattern(); // p2 -> current 2
+    await tester.pump();
+    expect(game.currentPattern, 2);
+
+    game.forward(); // wraps 2 -> 0
+    await tester.pump();
+    expect(game.currentPattern, 0);
+
+    game.back(); // wraps 0 -> 2
+    await tester.pump();
+    expect(game.currentPattern, 2);
   });
 }

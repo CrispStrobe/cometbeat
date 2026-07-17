@@ -1320,7 +1320,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerPlay => 'Abspielen';
 
   @override
+  String get trackerPause => 'Pause';
+
+  @override
   String get trackerStop => 'Stopp';
+
+  @override
+  String get trackerBack => 'Zurück';
+
+  @override
+  String get trackerForward => 'Vor';
+
+  @override
+  String get trackerLoop => 'Schleife';
 
   @override
   String get trackerPickNote => 'Note wählen';

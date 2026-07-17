@@ -21,11 +21,12 @@
 // edit re-swaps the loop without the beat restarting; a Ticker created in
 // initState — never a lazy `late final`, see CLAUDE.md — drives the playhead).
 //
-// Slice 1 shipped the grid + endless length/tracks + Play/Stop. Slice 2 (this)
-// adds the edit cursor, keyboard + on-screen piano entry, per-track instruments
-// and per-cell volume/effect. Multi-pattern songs + order list and the full
-// transport (pause/prev/next/loop) land in later slices — all over this
-// same document.
+// Shipped over slices, all on this one document: S1 grid + endless length/
+// tracks + Play/Stop; S2 the edit cursor + keyboard/on-screen-piano entry +
+// per-track instruments + per-cell volume/effect; S3 multi-pattern songs + the
+// order list ("Play song"); S4 the full transport (Play/Pause/Stop/Back/Forward
+// + loop + a position readout). Deeper parity (import/export wiring, mute/solo,
+// the classic effect-command set) is layered next.
 
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
@@ -94,6 +95,7 @@ abstract interface class AdvancedTrackerTester {
   int get noteCount;
   bool get isPlaying;
   bool get isSongPlaying;
+  bool get isPaused;
   int get cursorChannel;
   int get cursorRow;
   int get octave;
@@ -119,6 +121,11 @@ abstract interface class AdvancedTrackerTester {
   void selectPattern(int index);
   void addToOrder(int patternIndex);
   void playSong();
+
+  /// Transport.
+  void stop();
+  void back();
+  void forward();
 }
 
 class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
@@ -144,6 +151,18 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// looping the current pattern.
   bool _songMode = false;
 
+  /// Paused (playhead + audio frozen in place, resumable).
+  bool _paused = false;
+
+  /// Whether playback loops at the end (else it stops on the first wrap).
+  bool _loopOn = true;
+
+  /// Added to the stopwatch so a seek can jump the transport position without a
+  /// settable Stopwatch. Reset on stop/play-from-top.
+  int _baseMs = 0;
+
+  int get _elapsedMs => _clock.elapsedMilliseconds + _baseMs;
+
   /// The edit cursor — keyboard and on-screen piano enter notes here.
   int _cursorChannel = 0;
   int _cursorRow = 0;
@@ -163,6 +182,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void initState() {
     super.initState();
     _ticker = createTicker((_) {
+      if (_paused) return; // freeze the playhead where it is
       if (!_clock.isRunning) {
         if (_row.value != -1) _row.value = -1;
         if (_playingOrder.value != -1) _playingOrder.value = -1;
@@ -170,13 +190,19 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       }
       final t = _song.timing;
       if (_songMode && _song.songTotalMs > 0) {
-        final pos = _clock.elapsedMilliseconds % _song.songTotalMs;
+        final elapsed = _elapsedMs;
+        // Loop off: stop at the end instead of wrapping.
+        if (!_loopOn && elapsed >= _song.songTotalMs) {
+          _stop();
+          return;
+        }
+        final pos = elapsed % _song.songTotalMs;
         _playingOrder.value = pos ~/ t.totalMs;
         final step = (pos % t.totalMs) ~/ t.stepMs;
         if (step != _row.value) _row.value = step;
       } else {
         if (_playingOrder.value != -1) _playingOrder.value = -1;
-        final step = (_clock.elapsedMilliseconds % t.totalMs) ~/ t.stepMs;
+        final step = (_elapsedMs % t.totalMs) ~/ t.stepMs;
         if (step != _row.value) {
           _row.value = step;
           _followPlayhead(step);
@@ -268,6 +294,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   bool get isSongPlaying => _clock.isRunning && _songMode;
+  @override
+  bool get isPaused => _paused;
+  @override
+  void stop() => _stop();
+  @override
+  void back() => _step(-1);
+  @override
+  void forward() => _step(1);
   @override
   int get patternCount => _song.patterns.length;
   @override
@@ -388,14 +422,30 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     return true;
   }
 
-  // --- Playback (mirrors tracker_screen.dart's phase-preserving loop swap) ---
+  // --- Transport (Play / Pause / Stop / Back / Forward — real-tracker set) ---
 
+  /// The FAB / space-bar action: play from stopped, pause when playing, resume
+  /// when paused.
   void _togglePlay() {
-    if (_clock.isRunning) {
-      _stop();
+    if (_paused) {
+      _resume();
+    } else if (_clock.isRunning) {
+      _pause();
     } else {
       _playPattern();
     }
+  }
+
+  void _pause() {
+    _clock.stop();
+    _loop.pause();
+    setState(() => _paused = true);
+  }
+
+  void _resume() {
+    _clock.start();
+    _loop.resume();
+    setState(() => _paused = false);
   }
 
   void _stop() {
@@ -403,6 +453,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       ..stop()
       ..reset();
     _loop.stop();
+    _baseMs = 0;
+    _paused = false;
     _row.value = -1;
     _playingOrder.value = -1;
     setState(() => _songMode = false);
@@ -411,6 +463,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// Loop the current pattern.
   void _playPattern() {
     _songMode = false;
+    _paused = false;
+    _baseMs = 0;
     _clock
       ..reset()
       ..start();
@@ -418,10 +472,36 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     setState(() {});
   }
 
-  /// Play the whole arrangement (the order list) back to back, looping.
+  /// Play the whole arrangement (the order list) back to back.
   void _playSong() {
     _song.syncCurrent();
     _songMode = true;
+    _paused = false;
+    _baseMs = 0;
+    _clock
+      ..reset()
+      ..start();
+    _syncPlayback();
+    setState(() {});
+  }
+
+  /// Back / Forward. While a song plays, seek to the prev/next order position;
+  /// otherwise move the edit selection to the prev/next pattern (wrapping).
+  void _step(int delta) {
+    if (_songMode && _clock.isRunning) {
+      _seekOrder(delta);
+    } else {
+      final n = _song.patterns.length;
+      selectPattern((_song.currentIndex + delta + n) % n);
+    }
+  }
+
+  void _seekOrder(int delta) {
+    if (_song.order.isEmpty) return;
+    final from = _playingOrder.value < 0 ? 0 : _playingOrder.value;
+    final target = (from + delta).clamp(0, _song.order.length - 1);
+    _baseMs = _song.patternStartMs(target);
+    _paused = false;
     _clock
       ..reset()
       ..start();
@@ -445,7 +525,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         _songMode ? _song.renderSongWav() : _song.renderCurrentPatternWav();
     final total = _songMode ? _song.songTotalMs : _song.timing.totalMs;
     final position = Duration(
-      milliseconds: total > 0 ? _clock.elapsedMilliseconds % total : 0,
+      milliseconds: total > 0 ? _elapsedMs % total : 0,
     );
     _loop.playLoop(wav, position: position);
   }
@@ -639,8 +719,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       ),
       floatingActionButton: FloatingActionButton.large(
         onPressed: _togglePlay,
-        tooltip: _clock.isRunning ? l10n.trackerStop : l10n.trackerPlay,
-        child: Icon(_clock.isRunning ? Icons.stop : Icons.play_arrow),
+        tooltip: (_clock.isRunning && !_paused)
+            ? l10n.trackerPause
+            : l10n.trackerPlay,
+        child: Icon(
+          (_clock.isRunning && !_paused) ? Icons.pause : Icons.play_arrow,
+        ),
       ),
       body: SafeArea(
         child: Focus(
@@ -658,11 +742,71 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 const Divider(height: 1),
                 Expanded(child: _grid(context)),
                 const Divider(height: 1),
+                _transportBar(l10n),
                 _pianoBar(l10n),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// The classic transport row: Back · Stop · Forward · Loop + a position
+  /// readout (the FAB is the primary Play/Pause).
+  Widget _transportBar(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      color: scheme.surfaceContainer,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.skip_previous),
+            tooltip: l10n.trackerBack,
+            onPressed:
+                _song.patterns.length > 1 || _songMode ? () => _step(-1) : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.stop),
+            tooltip: l10n.trackerStop,
+            onPressed: _clock.isRunning || _paused ? _stop : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.skip_next),
+            tooltip: l10n.trackerForward,
+            onPressed:
+                _song.patterns.length > 1 || _songMode ? () => _step(1) : null,
+          ),
+          IconButton(
+            icon: Icon(_loopOn ? Icons.repeat_on : Icons.repeat),
+            tooltip: l10n.trackerLoop,
+            color: _loopOn ? scheme.primary : null,
+            onPressed: () => setState(() => _loopOn = !_loopOn),
+          ),
+          const Spacer(),
+          AnimatedBuilder(
+            animation: Listenable.merge([_row, _playingOrder]),
+            builder: (context, _) {
+              final row = _row.value;
+              final rowStr = row < 0 ? '··' : row.toString().padLeft(2, '0');
+              final total = _song.rows.toString().padLeft(2, '0');
+              final pos = _songMode && _playingOrder.value >= 0
+                  ? '${(_playingOrder.value + 1).toString().padLeft(2, '0')}'
+                      '/${_song.order.length.toString().padLeft(2, '0')} · '
+                  : '';
+              return Text(
+                '$pos$rowStr/$total',
+                style: TextStyle(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  fontSize: 13,
+                  color: scheme.onSurfaceVariant,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
     );
   }

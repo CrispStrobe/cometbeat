@@ -1313,7 +1313,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerPlay => 'Play';
 
   @override
+  String get trackerPause => 'Pause';
+
+  @override
   String get trackerStop => 'Stop';
+
+  @override
+  String get trackerBack => 'Back';
+
+  @override
+  String get trackerForward => 'Forward';
+
+  @override
+  String get trackerLoop => 'Loop';
 
   @override
   String get trackerPickNote => 'Pick a note';

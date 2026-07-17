@@ -60,6 +60,25 @@ class GaplessLoopPlayer {
     }
   }
 
+  /// Pauses the sounding loop in place (keeps the buffer + position, so [resume]
+  /// continues from the same phase). Guarded like [stop].
+  Future<void> pause() async {
+    try {
+      await _players[_active]?.pause();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GAPLESS] pause unavailable: $e');
+    }
+  }
+
+  /// Resumes a [pause]d loop from where it stopped.
+  Future<void> resume() async {
+    try {
+      await _players[_active]?.resume();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[GAPLESS] resume unavailable: $e');
+    }
+  }
+
   void dispose() {
     for (final p in _players) {
       p?.dispose();

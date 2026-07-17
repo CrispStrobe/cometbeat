@@ -2546,11 +2546,35 @@ abstract class AppLocalizations {
   /// **'Play'**
   String get trackerPlay;
 
+  /// No description provided for @trackerPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get trackerPause;
+
   /// No description provided for @trackerStop.
   ///
   /// In en, this message translates to:
   /// **'Stop'**
   String get trackerStop;
+
+  /// No description provided for @trackerBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get trackerBack;
+
+  /// No description provided for @trackerForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward'**
+  String get trackerForward;
+
+  /// No description provided for @trackerLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop'**
+  String get trackerLoop;
 
   /// No description provided for @trackerPickNote.
   ///
