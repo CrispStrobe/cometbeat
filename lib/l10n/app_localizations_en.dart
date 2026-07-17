@@ -658,6 +658,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leapLabel => 'Leap';
 
   @override
+  String get gameArticulation => 'Read the Mark';
+
+  @override
+  String get gameArticulationSubtitle =>
+      'Match the articulation mark on the note to its name';
+
+  @override
+  String get articulationPrompt => 'Which mark is on the note?';
+
+  @override
+  String get articulationStaccato => 'Staccato';
+
+  @override
+  String get articulationTenuto => 'Tenuto';
+
+  @override
+  String get articulationAccent => 'Accent';
+
+  @override
+  String get articulationMarcato => 'Marcato';
+
+  @override
   String get gameTieSlur => 'Tie or Slur?';
 
   @override

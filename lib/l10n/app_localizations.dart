@@ -1286,6 +1286,48 @@ abstract class AppLocalizations {
   /// **'Leap'**
   String get leapLabel;
 
+  /// No description provided for @gameArticulation.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the Mark'**
+  String get gameArticulation;
+
+  /// No description provided for @gameArticulationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Match the articulation mark on the note to its name'**
+  String get gameArticulationSubtitle;
+
+  /// No description provided for @articulationPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Which mark is on the note?'**
+  String get articulationPrompt;
+
+  /// No description provided for @articulationStaccato.
+  ///
+  /// In en, this message translates to:
+  /// **'Staccato'**
+  String get articulationStaccato;
+
+  /// No description provided for @articulationTenuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Tenuto'**
+  String get articulationTenuto;
+
+  /// No description provided for @articulationAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'Accent'**
+  String get articulationAccent;
+
+  /// No description provided for @articulationMarcato.
+  ///
+  /// In en, this message translates to:
+  /// **'Marcato'**
+  String get articulationMarcato;
+
   /// No description provided for @gameTieSlur.
   ///
   /// In en, this message translates to:

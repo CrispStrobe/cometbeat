@@ -57,6 +57,7 @@ import 'package:klang_universum/features/games/measures/strong_beat_screen.dart'
 import 'package:klang_universum/features/games/measures/time_signature_screen.dart';
 import 'package:klang_universum/features/games/measures/which_beat_screen.dart';
 import 'package:klang_universum/features/games/note_reading/accidental_sort_screen.dart';
+import 'package:klang_universum/features/games/note_reading/articulation_read_screen.dart';
 import 'package:klang_universum/features/games/note_reading/beam_flag_screen.dart';
 import 'package:klang_universum/features/games/note_reading/connect_line_screen.dart';
 import 'package:klang_universum/features/games/note_reading/duet_screen.dart';
@@ -377,6 +378,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameTieSlur,
       subtitle: (l) => l.gameTieSlurSubtitle,
       builder: (_) => const TieSlurScreen(),
+    ),
+    // Read the Mark — match a note's articulation glyph (staccato / accent, and
+    // tenuto / marcato at 2★) to its name.
+    GameInfo(
+      id: 'articulation_read',
+      icon: Icons.fiber_manual_record,
+      title: (l) => l.gameArticulation,
+      subtitle: (l) => l.gameArticulationSubtitle,
+      builder: (_) => const ArticulationReadScreen(),
     ),
     // Beam or Flag? — the two looks of eighth notes: joined by a beam vs each
     // keeping its flag. Same rhythm, different engraving.

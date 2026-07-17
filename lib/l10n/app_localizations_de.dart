@@ -661,6 +661,28 @@ class AppLocalizationsDe extends AppLocalizations {
   String get leapLabel => 'Großer Sprung';
 
   @override
+  String get gameArticulation => 'Lies das Zeichen';
+
+  @override
+  String get gameArticulationSubtitle =>
+      'Ordne das Artikulationszeichen an der Note seinem Namen zu';
+
+  @override
+  String get articulationPrompt => 'Welches Zeichen steht an der Note?';
+
+  @override
+  String get articulationStaccato => 'Staccato';
+
+  @override
+  String get articulationTenuto => 'Tenuto';
+
+  @override
+  String get articulationAccent => 'Akzent';
+
+  @override
+  String get articulationMarcato => 'Marcato';
+
+  @override
   String get gameTieSlur => 'Haltebogen oder Bindebogen?';
 
   @override
