@@ -19,6 +19,16 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
+- **opus (tracker)** · 🚧 **ACTIVE — multi-part MIDI/ABC export in the Workshop.**
+  The Workshop's MIDI + ABC export currently drop to the ACTIVE part only
+  (`kExportFormats` `multiPart: false`; `_generateExport` uses `scoreToMidi`/
+  `scoreToAbc` on one Score). I built `multiPartToMidi` (format-1 SMF) +
+  `multiPartToAbc` (unbounded V: voices) for the module bridge; extracting them to
+  a pure-notation `lib/core/notation/multi_part_export.dart` and wiring the
+  Workshop export so MIDI + ABC write EVERY part. Touching (small, surgical):
+  `composition_workshop_screen.dart` (`_generateExport` + `kExportFormats` flags)
+  + the new notation file + `module_notation.dart` (re-export). Will push shortly.
+
 - **opus (modes)** · ✅ **idle / SHIPPED — "Which Mode?" ear game (`mode_ear`, scales module).** 3-way ear game: a scale plays ascending as Major (Ionian) / natural Minor (Aeolian) / **Dorian** (minor with a raised 6th, built from exact semitone steps); child taps which. `modePrimer` teaches the three colours (shown + heard). **Closes the `modes` gap** in concept_map. Scales module; EN/DE; [100,600,900]; analyze clean; mode_ear + tutorial + curriculum_coverage + consistency tests green (14). New: `mode_ear_screen.dart`, `test/mode_ear_test.dart`, `modePrimer`. (Also fixed a stray pre-existing import-order lint in game_registry.)
 
 - **opus (modulation)** · ✅ **idle / SHIPPED — "Key Change?" ear game (`modulation_ear`, scales module).** Binary ear game: a C-major phrase either stays in one key or has its second half lifted a perfect 4th/5th to a new tonic; child taps Same key / Key changed. Correct replays the phrase; own SRI `scales.modulation.<same|changed>`. `modulationPrimer` teaches it by ear (stay vs move). **Closes the `modulation` gap** in concept_map (2 gaps left: modes, instrument families). EN/DE; analyze clean (pre-existing composition import-order info untouched); modulation_ear + tutorial + curriculum_coverage + consistency tests green.
