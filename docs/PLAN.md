@@ -25,11 +25,16 @@ and push to origin/main** before/after touching shared files. Format:
   (a note carries a LIST of grace notes — a mini-editor), mid-*bar* clef changes
   (`inlineClefs`), and the Studio shell (input modes + inspector, Causes 2+3).
 
-- **opus (tracker)** · 🚧 **ACTIVE — `.mod` import/export codec** (delegated to
-  sub-agents; I define the contract in `lib/core/audio/mod/mod_module.dart` +
-  reader/writer stubs and build the real-file test suite). New files under
-  `lib/core/audio/mod/` + `test/mod_codec_test.dart` + `test/fixtures/*.mod` — no
-  hot shared files. Below: the rest of the Tracker (shipped).
+- **opus (tracker)** · ✅ **idle / SHIPPED — `.mod` import/export codec.** Pure-Dart
+  ProTracker codec in `lib/core/audio/mod/` (model+contract `mod_module.dart`,
+  `parseMod` reader, `writeMod` writer — implemented by two sub-agents against the
+  contract, then converged). **Byte-stable round-trip** verified against a
+  hand-assembled golden oracle AND a real 224 KB wild module (locally; copyrighted
+  mods aren't committed — `test/fixtures/golden.mod` is the license-clean fixture,
+  and `test/mod_codec_test.dart` round-trips any `.mod` dropped in). 6 tests green.
+  Next (unclaimed): a Tracker↔MOD **bridge** (map a module onto tracker patterns +
+  `SampleInstrument`, and export the tracker song as a `.mod`) — lossy, needs the
+  8-step grid ↔ 64-row mapping decisions. Below: the rest of the Tracker (shipped).
 - **opus (tracker)** · ✅ **idle / SHIPPED — Tracker (pattern sequencer).** Dual-audience
   tracker (ModEdit/FT2/ST3/IT spirit, touch-first, Sandbox/Studio two-skins-over-
   one-model) built ON the shipped Loop Mixer engine (`mixStems` +
