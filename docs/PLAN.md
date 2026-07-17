@@ -198,8 +198,14 @@ double-talk detector to the native C engine (verify harness now green:
   of the BlackHole rig, runnable in CI. **No app screens / ARBs / Workshop /
   native plugin touched.**
 
-- **opus (parity)** · 🚧 **ACTIVE — keyboard-first nav in Select mode** (last
-  small Cause-2 item). ✅ **PDF export SHIPPED** (`e0954bd`, bucket G's last open
+- **opus (parity)** · ✅ **idle / SHIPPED — keyboard-first nav in Select mode**
+  (`b26a6b5`, last small Cause-2 item). Select-mode A–G keys jump the selection to
+  the next note on that pitch (wrapping, accidental-insensitive) via
+  `ScoreDocument.selectNextOfStep(Step)` — Insert enters notes, Select navigates
+  them. **With this the WORKSHOP_PARITY arc + all its polish are shipped**; the
+  only open items are "if ever wanted" (categorized insertion palettes; multi-
+  select/rest inspector depth; grace-note LIST beyond one run — a library ask).
+  ✅ **PDF export SHIPPED** (`e0954bd`, bucket G's last open
   item). **No library change** — `SystemLayout.layout` *is* a `ScoreLayout` and
   `renderLayoutToPng` takes one, so `layoutPages(score, settings, metrics:)`
   line-breaks + paginates, each `PositionedSystem` rasters to a PNG (through the

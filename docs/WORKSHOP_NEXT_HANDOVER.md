@@ -207,8 +207,10 @@ of attributes now — that's the signal these are due.
   too:** `_pickAppliesToSelection` gates `_pickValue`/`_toggleDot`/
   `_pickAccidental` — Sandbox keeps the forgiving dual behaviour (unchanged),
   Studio *insert* arms without rewriting the selection, Studio *select* applies to
-  it. **Remaining:** keyboard-first *navigation* in select mode (letter keys just
-  no-op today — they could jump the caret).
+  it. ✅ **And keyboard-first *navigation*** (`b26a6b5`): in select mode the A–G
+  keys jump the selection to the next note on that pitch (`selectNextOfStep`,
+  wrapping, accidental-insensitive) instead of no-op'ing. **Cause 2 is fully
+  done.**
 - **Cause 3 — the inspector.** ✅ **FIRST SLICE SHIPPED** (`6306151`). An opt-in
   selection-driven panel (`_inspectorPanel`), docked right of the canvas
   (`Row[canvas, panel]`), toggled from the ⋮ view menu, **OFF by default** so the
