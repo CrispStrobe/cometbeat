@@ -275,8 +275,11 @@ void main() {
           0.05 * target[i] + _noise(n, seed: 11)[i] * 2.0,
       ]);
       final siBad = siSdrDb(target, bad);
-      expect(siBad, greaterThan(kSiSdrFloorDb),
-          reason: 'a noisy estimate must out-rank silence');
+      expect(
+        siBad,
+        greaterThan(kSiSdrFloorDb),
+        reason: 'a noisy estimate must out-rank silence',
+      );
     });
 
     test('segmentalErleDb skips silent segments and floors per-segment', () {
@@ -740,7 +743,6 @@ void main() {
         mic,
         ref,
         delay: 0,
-        tuning: const AecTuning(mu: 0.7),
       ).cleaned;
       for (var i = 0; i < a.length; i++) {
         expect(a[i], b[i]);
