@@ -96,9 +96,12 @@ without a device. Candidates, roughly in value order:
   bug in passing:** `scoreToMidi` drops notes without ids, so the Tracker's own
   "Export MIDI" was silent — `_trackerAsScore` now sets ids (`8a753e1`).
   (MusicXML from the shell — `multiPartToMusicXml` — is a further extension.)
-- **`bin/fxproc.dart`** — apply the crisp_dsp effects/voice_fx (§C) to a `.wav`
-  offline (chipmunk/robot/formant a recording without the app). All the DSP is
-  already pure functions.
-- Packaging note: keep each tool a thin `main()` over the library (like
-  `listen.dart`); the heavy logic stays in `lib/` and stays unit-tested. A single
-  `bin/mus.dart` dispatcher (`mus info|conv|render|…`) could wrap them later.
+- ✅ **`bin/fxproc.dart`** SHIPPED — applies a crisp_dsp effect to a `.wav` offline:
+  `--effect reverb|delay|chorus|flanger|distortion|ringmod|stretch` + the voice
+  presets (chipmunk/robot/alien/…), params `--mix/--drive/--carrier/--factor/--kind`.
+  Live-verified: `--stretch 1.5` → exactly 1.5× frames; `listen.dart` reads a
+  reverbed groove back with pitch intact.
+- **The headless CLI suite is complete:** `listen` · `modinfo` · `modconv` ·
+  `render` · `notaconv` · `fxproc`. Each is a thin `main()` over the Flutter-free
+  `lib/core/audio` — the heavy logic stays in `lib/` + unit-tested. Only optional
+  polish left: a `bin/mus.dart` dispatcher (`mus info|conv|render|…`) wrapping them.
