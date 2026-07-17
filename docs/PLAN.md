@@ -14,17 +14,22 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (aec-cli)** · 🚧 **ACTIVE — AEC streaming CLI** (test echo cancellation
-  over pipes/streams, headless). Worktree `../mus-aec-cli`, branch
-  `feature/aec-cli`. **D1:** NEW Flutter-free `lib/core/audio/aec_offline.dart`
-  (extract `estimateEchoDelay` + `cancelEcho(mic,ref)→cleaned+ERLE` + a
-  `StreamingEchoCanceller` for interleaved stereo blocks) over the existing
-  `echo_canceller.dart` core + test. **D2:** NEW pipe-first `bin/aec.dart`
-  (`--selftest`, `--mic/--ref/--out` files, `--stdin` interleaved-stereo
-  mic|ref → cleaned mono stdout, `--detect` runs MPM on the cleaned, ERLE
-  report); dedupe `bin/listen.dart`'s `--aec` onto the shared lib. Files: 2 new
-  lib/bin + test, `bin/listen.dart`, `docs/AEC_TIER3B.md`. NOT touching app
-  screens / ARBs / Workshop / native plugin.
+- **opus (aec-cli)** · ✅ **idle / SHIPPED — AEC streaming CLI** (`dafacb1` D1,
+  `afbe4ea` D2). Test echo cancellation over files/pipes headlessly — the
+  pure-Dart `EchoCanceller` the native Tier-3b core is a cleanroom port of, so
+  no device/FFI needed. **D1:** Flutter-free `lib/core/audio/aec_offline.dart`
+  (`estimateEchoDelay`, `cancelEcho(mic,ref)→cleaned+ERLE+delay`,
+  `StreamingEchoCanceller` for interleaved stereo PCM16 → cleaned mono, running
+  ERLE, buffers partial frames), 4 tests (tail ERLE >20 dB, near-end preserved
+  under double-talk, delay recovery, streaming≡batch byte-equality). **D2:**
+  pipe-first `bin/aec.dart` — `--selftest` (band+instrument+echo → PASS: ~48 dB
+  echo-only ERLE, instrument survives), `--mic/--ref/--out` files, `--stdin`
+  interleaved-stereo mic|ref → cleaned mono stdout (or `--detect` notes);
+  deduped `bin/listen.dart`'s `--aec` onto the shared core. Verified over a real
+  OS pipe (stereo gen → `aec --stdin` → `listen --stdin` reads the instrument,
+  echo gone). Docs: streaming section in `AEC_TIER3B.md`. The offline analogue
+  of the BlackHole rig, runnable in CI. **No app screens / ARBs / Workshop /
+  native plugin touched.**
 
 - **opus (parity)** · 🚧 **ACTIVE — Studio shell (Cause 3: the inspector).**
   A selection-driven properties panel (`WORKSHOP_PARITY.md` Cause 3) — the scalable
