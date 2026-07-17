@@ -89,6 +89,7 @@ class PlayAlongScreen extends StatefulWidget {
     required this.title,
     required this.gameId,
     required this.sriPrefix,
+    this.scaleStarsToLength = false,
   });
 
   final PlayAlongChart chart;
@@ -100,6 +101,11 @@ class PlayAlongScreen extends StatefulWidget {
   /// SRI namespace for the notes (e.g. 'cello.play_along'); each note's outcome
   /// is recorded under `<sriPrefix>.<note>` for spaced-repetition review.
   final String sriPrefix;
+
+  /// Grade stars by the **fraction** of the chart hit rather than a raw count —
+  /// so a chart of any length (e.g. a Song Book song) scores fairly against the
+  /// game's fixed bracket. Off by default: every built-in chart is unchanged.
+  final bool scaleStarsToLength;
 
   @override
   State<PlayAlongScreen> createState() => _PlayAlongScreenState();
@@ -213,12 +219,23 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
           (n.midi, (n.beats * _chart.beatMs).round()),
       ];
 
+  /// The value stars are graded from: the raw hit count, or — when
+  /// [PlayAlongScreen.scaleStarsToLength] — a bracket-normalized score that
+  /// reflects the fraction of the chart hit (so any-length charts grade fairly).
+  int get _starScore => widget.scaleStarsToLength
+      ? scaledStarScore(
+          _engine.hits,
+          _engine.notes.length,
+          kStarThresholds[widget.gameId] ?? const [1, 1, 1],
+        )
+      : _engine.hits;
+
   void _finish() {
     // Record the run so play/sing-along count toward stars like other games.
     context.read<ProgressService>().recordResult(
           widget.gameId,
           score: _engine.hits,
-          stars: scoreToStars(widget.gameId, _engine.hits, _engine.hits > 0),
+          stars: scoreToStars(widget.gameId, _starScore, _engine.hits > 0),
         );
     // Feed each note's outcome to spaced repetition, so notes the child keeps
     // missing come back in Review — same as every other game.
@@ -365,6 +382,7 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
             ? GameResultView(
                 gameType: widget.gameId,
                 score: _engine.hits,
+                starScore: _starScore,
                 onRestart: _start,
               )
             : Column(

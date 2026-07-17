@@ -165,6 +165,8 @@ class _SongScreenState extends State<SongScreen> {
                                   title: widget.title,
                                   gameId: 'sing_along',
                                   sriPrefix: 'voice.sing_along',
+                                  // A song is any length, so grade by fraction.
+                                  scaleStarsToLength: true,
                                 ),
                               ),
                             ),

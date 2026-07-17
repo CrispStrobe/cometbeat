@@ -58,6 +58,19 @@ class PlayAlongChart {
       );
 }
 
+/// A star-score to hand `scoreToStars` / `GameResultView.starScore` so stars
+/// reflect the **fraction** of a variable-length chart hit, not a raw count:
+/// ≥90% → 3★ (`thresholds[2]`), ≥70% → 2★ (`thresholds[1]`), any hit → 1★, none
+/// → 0. Lets one game score charts of any length fairly against its fixed
+/// `[1★,2★,3★]` [thresholds] (e.g. singing a Song Book song of arbitrary length).
+int scaledStarScore(int hits, int total, List<int> thresholds) {
+  if (hits <= 0 || total <= 0) return 0;
+  final pct = hits / total;
+  if (pct >= 0.9) return thresholds[2];
+  if (pct >= 0.7) return thresholds[1];
+  return 1;
+}
+
 enum NoteResult { pending, hit, missed }
 
 /// Mutable per-note scoring state.
