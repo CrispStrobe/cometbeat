@@ -14,17 +14,20 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (aec-res)** · 🚧 **ACTIVE — residual echo suppression** (patent-free AEC
-  roadmap item 2, the last one). Worktree `../mus-aec-res`, branch
-  `feature/aec-res`. A classic Wiener-style spectral post-filter on the linear
-  residual, in the canceller's own overlap-save framing (frame = [prev;cur],
-  gain per bin from a DTD-gated echo-leakage estimate λ·|Ŷ|²) — no COLA/window
-  bookkeeping. New `ResidualEchoSuppressor` in `aec_offline.dart`, opt-in via
-  `cancelEcho(residualSuppress:)` / `StreamingEchoCanceller` / `bin/aec.dart
-  --res`. Must show: echo-only ERLE up, double-talk SI-SDR not degraded (RES is
-  a suppressor — it can chew the voice; λ updates gate on the DTD). Files:
-  `aec_offline.dart`, `bin/aec.dart`, `test/aec_offline_test.dart`,
-  `docs/AEC_TIER3B.md`. NOT touching app / Workshop / native plugin.
+- **opus (aec-res)** · ✅ **idle / SHIPPED — residual echo suppression**
+  (`15a6d62`). **The patent-free AEC algorithm roadmap is COMPLETE (DTD + RES).**
+  `ResidualEchoSuppressor` (`aec_offline.dart`): a Wiener-style spectral
+  post-filter on what the linear filter leaves, reusing the canceller's own
+  overlap-save framing (2·blockSize `[prev;cur]` frame, spectrally gained, keep
+  the last block — no window/COLA bookkeeping). Per bin the residual echo is
+  `λ(k)·|Ŷ(k)|²` with the echo leakage **λ learned only on far-end single-talk
+  (DTD-gated)** — during double-talk the near-end inflates the residual and would
+  drive λ, and the suppression, far too high; a `gainFloor` bounds attenuation.
+  Opt in: `cancelEcho(residualSuppress:)` / `StreamingEchoCanceller` /
+  `bin/aec.dart --res` (compose with `--dtd`). **Measured: echo-only segmental
+  ERLE 39.3 → 54.6 dB (+15.3), double-talk SI-SDR unchanged (15.8 vs 15.9, −0.1)
+  — deeper echo suppression without chewing the voice.** 25 tests (5 new). No
+  app / Workshop / native plugin touched.
 
 - **opus (aec-dtd)** · ✅ **idle / SHIPPED — double-talk detector** (`a10d6bd`,
   patent-free AEC roadmap item 1). The linear core kept adapting on near-end
@@ -53,17 +56,24 @@ and push to origin/main** before/after touching shared files. Format:
   w/ refDelay, flush padding, empty-input). Docs: patent-free rationale in
   `AEC_TIER3B.md`. No app/Workshop/native-plugin touched.
 
-- **AEC algorithm roadmap (patent-free)** — item (1) **DTD is DONE** (see the
-  aec-dtd entry above). **Remaining, unclaimed: (2) residual echo suppression**
-  — a light spectral / Wiener-style post-filter on the linear residual (basic
-  short-time gain: decades old, patent-free; don't copy WebRTC AEC3's specific
-  statistical model). Lifts the tail the linear filter leaves. Spec in
-  `docs/AEC_TIER3B.md` § "Algorithm upgrades — safe (patent-free)"; verify with
-  the `bin/aec.dart` SI-SDR/ERLE harness. Same patent-free family as SpeexDSP
-  MDF / WebRTC AEC3 (read for technique, don't vendor unless licence + tree stay
-  clean). **Also open:** porting the DTD to the native C engine (`native/aec`)
-  so the app's jam mode gets double-talk protection too — today only the
-  Dart/CLI path has it.
+- **AEC — what's left (unclaimed).** The patent-free *algorithm* roadmap is done
+  (DTD `a10d6bd` + RES `15a6d62`), but **both live only in the Dart/CLI path**
+  (`aec_offline.dart`); the app's jam mode runs the native C engine, which still
+  has neither. Two open items, in value order:
+  1. **Port DTD + RES to `native/aec`** (`src/aec_dsp.c` + the shim's block
+     loop) so the app's jam mode actually gets the +7 dB double-talk protection
+     and the deeper echo suppression. The Dart `adapt` gate is additive, so the
+     C port still matches the Dart core for its existing default-`adapt` ERLE
+     cross-check — port the gate + the two detectors, then re-run
+     `native/aec/test/aec_erle_test.dart` + `build.sh`. Keep the CI-safety
+     properties (analyzer exclusion, app green without the plugin).
+  2. **(e) on-device tuning** — the real duplex path on iOS/Android hardware
+     (mic permission, AVAudioSession category, latency/ring). Needed before jam
+     AEC is real at all; see `docs/AEC_TIER3B.md`.
+
+  Verify either with the `bin/aec.dart` harness (`--selftest`, `--dtd --res`) and
+  the BlackHole rig. Same patent-free family as SpeexDSP MDF / WebRTC AEC3 (read
+  for technique, don't vendor unless licence + tree stay clean).
 
 - **opus (aec-cli)** · ✅ **idle / SHIPPED — AEC streaming CLI** (`dafacb1` D1,
   `afbe4ea` D2). Test echo cancellation over files/pipes headlessly — the
