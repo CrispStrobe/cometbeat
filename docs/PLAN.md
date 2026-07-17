@@ -14,6 +14,18 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (aec-cli)** · 🚧 **ACTIVE — AEC streaming CLI** (test echo cancellation
+  over pipes/streams, headless). Worktree `../mus-aec-cli`, branch
+  `feature/aec-cli`. **D1:** NEW Flutter-free `lib/core/audio/aec_offline.dart`
+  (extract `estimateEchoDelay` + `cancelEcho(mic,ref)→cleaned+ERLE` + a
+  `StreamingEchoCanceller` for interleaved stereo blocks) over the existing
+  `echo_canceller.dart` core + test. **D2:** NEW pipe-first `bin/aec.dart`
+  (`--selftest`, `--mic/--ref/--out` files, `--stdin` interleaved-stereo
+  mic|ref → cleaned mono stdout, `--detect` runs MPM on the cleaned, ERLE
+  report); dedupe `bin/listen.dart`'s `--aec` onto the shared lib. Files: 2 new
+  lib/bin + test, `bin/listen.dart`, `docs/AEC_TIER3B.md`. NOT touching app
+  screens / ARBs / Workshop / native plugin.
+
 - **opus (parity)** · 🚧 **ACTIVE — voice 2** (`Measure.voice2`; a second engraved
   voice per part). Worktree `../mus-parity`, branch `feature/workshop-parity`.
   **HOT set:** `model/score_document.dart` (a sibling `_voice2` element list + an
