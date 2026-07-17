@@ -1676,6 +1676,24 @@ abstract class AppLocalizations {
   /// **'Save as audio (WAV)'**
   String get loopMixerSaveAudio;
 
+  /// No description provided for @loopMixerSaveSongBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to Song Book'**
+  String get loopMixerSaveSongBook;
+
+  /// No description provided for @loopMixerExportMusicXml.
+  ///
+  /// In en, this message translates to:
+  /// **'Export sheet music (MusicXML)'**
+  String get loopMixerExportMusicXml;
+
+  /// No description provided for @loopMixerSaveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name your groove'**
+  String get loopMixerSaveTitle;
+
   /// No description provided for @loopMixerSaveFailed.
   ///
   /// In en, this message translates to:

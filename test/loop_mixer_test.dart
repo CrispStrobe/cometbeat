@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:klang_universum/core/audio/loop_engine.dart';
 import 'package:klang_universum/core/audio/synth.dart';
 import 'package:klang_universum/features/games/composition/loop_mixer_screen.dart';
+import 'package:klang_universum/features/games/songs/user_songs_service.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';
@@ -134,6 +136,60 @@ void main() {
     game.toggleTrack('melody');
     await tester.pump();
     expect(find.byType(StaffView), findsNothing);
+  });
+
+  testWidgets('Save to Song Book is offered only when a pitched track plays',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.hasPitchedTrack, isFalse);
+
+    // Drums are unpitched — still nothing to engrave.
+    game.toggleTrack('drums');
+    await tester.pump();
+    expect(game.hasPitchedTrack, isFalse);
+
+    game.toggleTrack('melody');
+    await tester.pump();
+    expect(game.hasPitchedTrack, isTrue);
+
+    // The share sheet exposes the two export entries. (The groove Ticker runs
+    // forever, so settle with a timed pump rather than pumpAndSettle.)
+    await tester.tap(find.byIcon(Icons.ios_share));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Save to Song Book'), findsOneWidget);
+    expect(find.text('Export sheet music (MusicXML)'), findsOneWidget);
+  });
+
+  testWidgets('saving a groove writes a multi-part score to the Song Book',
+      (tester) async {
+    final songs = UserSongsService();
+    await pumpGame(
+      tester,
+      const LoopMixerScreen(),
+      extraProviders: [
+        ChangeNotifierProvider<UserSongsService>.value(value: songs),
+      ],
+    );
+    final game = _game(tester);
+
+    // Nothing pitched → nothing saved.
+    expect(game.debugSaveToSongBook(songs), isNull);
+    expect(songs.songs, isEmpty);
+
+    game.toggleTrack('melody');
+    game.toggleTrack('chords');
+    await tester.pump();
+
+    final xml = game.debugSaveToSongBook(songs);
+    expect(xml, isNotNull);
+    expect(songs.songs.length, 1);
+    // Both enabled pitched tracks became named parts…
+    expect(xml, contains('Melody'));
+    expect(xml, contains('Chords'));
+    // …and the stored song re-reads as an engravable score.
+    expect(songs.songs.single.score.measures, isNotEmpty);
   });
 
   testWidgets('a captured voice layer joins the band as a real card',

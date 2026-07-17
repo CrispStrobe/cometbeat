@@ -867,6 +867,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerSaveAudio => 'Save as audio (WAV)';
 
   @override
+  String get loopMixerSaveSongBook => 'Save to Song Book';
+
+  @override
+  String get loopMixerExportMusicXml => 'Export sheet music (MusicXML)';
+
+  @override
+  String get loopMixerSaveTitle => 'Name your groove';
+
+  @override
   String get loopMixerSaveFailed => 'Saving audio isn\'t available here';
 
   @override

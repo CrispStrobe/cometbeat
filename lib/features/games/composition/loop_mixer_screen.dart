@@ -20,8 +20,10 @@
 // the step playhead and the wrap detection.
 
 import 'dart:async';
+import 'dart:convert';
 
-import 'package:crisp_notation/crisp_notation.dart' show Clef, StaffView;
+import 'package:crisp_notation/crisp_notation.dart'
+    show Clef, StaffView, multiPartToMusicXml;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +37,7 @@ import 'package:klang_universum/core/audio/pitch_analysis.dart';
 import 'package:klang_universum/core/services/audio_service.dart';
 import 'package:klang_universum/core/services/loop_player_service.dart';
 import 'package:klang_universum/features/games/composition/groove_notation.dart';
+import 'package:klang_universum/features/games/songs/user_songs_service.dart';
 import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
 import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:klang_universum/shared/score_theme.dart';
@@ -81,6 +84,15 @@ abstract interface class LoopMixerTester {
   bool get hasBeatTrack;
   bool get isJamming;
   void toggleJam();
+
+  /// True when a pitched track is enabled — the Song Book / MusicXML export
+  /// is offered (and enabled) only then.
+  bool get hasPitchedTrack;
+
+  /// Saves the current groove to the Song Book without the title dialog
+  /// (headless tests can't drive it); returns the saved multi-part MusicXML,
+  /// or null when nothing pitched is enabled.
+  String? debugSaveToSongBook(UserSongsService songs);
 
   /// Installs a sung layer without the mic (headless tests can't record).
   void debugCaptureCells(List<PatternCell> cells);
@@ -449,6 +461,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
               onTap: () => Navigator.pop(sheet, 'paste'),
             ),
             ListTile(
+              leading: const Icon(Icons.library_music),
+              title: Text(l10n.loopMixerSaveSongBook),
+              enabled: hasPitchedTrack,
+              onTap: () => Navigator.pop(sheet, 'songbook'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.music_note),
+              title: Text(l10n.loopMixerExportMusicXml),
+              enabled: hasPitchedTrack,
+              onTap: () => Navigator.pop(sheet, 'musicxml'),
+            ),
+            ListTile(
               leading: const Icon(Icons.download),
               title: Text(l10n.loopMixerSaveAudio),
               enabled: _engine.enabled.isNotEmpty,
@@ -467,10 +491,123 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         );
       case 'paste':
         await _promptForToken();
+      case 'songbook':
+        await _saveToSongBook();
+      case 'musicxml':
+        await _exportMusicXml();
       case 'wav':
         await _saveWav();
       default:
         break;
+    }
+  }
+
+  /// True when at least one *pitched* track is enabled — the only case where
+  /// there's a real score to save (drums/beat are unpitched, see [grooveParts]).
+  @override
+  bool get hasPitchedTrack => _engravedTrackId != null;
+
+  @override
+  String? debugSaveToSongBook(UserSongsService songs) {
+    final xml = _grooveMusicXml();
+    if (xml == null) return null;
+    _writeGrooveToSongBook(songs, AppLocalizations.of(context)!.gameLoopMixer);
+    return xml;
+  }
+
+  /// The current groove as a multi-part MusicXML string (one part per enabled
+  /// pitched track), or null when nothing pitched is enabled. Shared by the
+  /// Song Book save and the MusicXML export.
+  String? _grooveMusicXml() {
+    final l10n = AppLocalizations.of(context)!;
+    final parts = grooveParts(_engine, nameOf: (id) => _trackLabel(l10n, id));
+    if (parts == null) return null;
+    return multiPartToMusicXml(parts.score, partNames: parts.partNames);
+  }
+
+  /// Persists the groove into the Song Book as a real multi-part score — the
+  /// pedagogical payoff: the thing you built by tapping cards IS notation, and
+  /// the on-ramp to editing it in the Workshop.
+  Future<void> _saveToSongBook() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final songs = context.read<UserSongsService>();
+
+    final controller = TextEditingController(text: l10n.gameLoopMixer);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.loopMixerSaveTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (v) => Navigator.of(ctx).pop(v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: Text(l10n.myMelodySave),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (title == null || !mounted) return;
+
+    final name = title.trim().isEmpty ? l10n.gameLoopMixer : title.trim();
+    if (!_writeGrooveToSongBook(songs, name)) return;
+    messenger.showSnackBar(SnackBar(content: Text(l10n.myMelodySaved)));
+  }
+
+  /// Core save (no UI) — shared by [_saveToSongBook] and the test seam.
+  /// Returns false when there's no pitched track to engrave.
+  bool _writeGrooveToSongBook(UserSongsService songs, String name) {
+    final xml = _grooveMusicXml();
+    if (xml == null) return false;
+    songs.addSong(
+      ImportedSong(
+        id: 'groove-${DateTime.now().millisecondsSinceEpoch}',
+        title: name,
+        musicXml: xml,
+      ),
+    );
+    return true;
+  }
+
+  /// Desktop: a save dialog for the groove's MusicXML. Same reach as the WAV
+  /// export — platforms without a save dialog report it isn't available here;
+  /// the groove code and Song Book save still travel everywhere.
+  Future<void> _exportMusicXml() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final xml = _grooveMusicXml();
+    if (xml == null) return;
+    try {
+      final location = await getSaveLocation(
+        suggestedName: 'groove.musicxml',
+        acceptedTypeGroups: [
+          const XTypeGroup(label: 'MusicXML', extensions: ['musicxml', 'xml']),
+        ],
+      );
+      if (location == null || !mounted) return; // cancelled
+      await XFile.fromData(
+        Uint8List.fromList(utf8.encode(xml)),
+        mimeType: 'application/vnd.recordare.musicxml+xml',
+        name: 'groove.musicxml',
+      ).saveTo(location.path);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[LOOP] musicxml save unavailable: $e');
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.loopMixerSaveFailed)),
+      );
     }
   }
 
