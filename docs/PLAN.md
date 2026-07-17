@@ -70,7 +70,16 @@ and push to origin/main** before/after touching shared files. Format:
   of the BlackHole rig, runnable in CI. **No app screens / ARBs / Workshop /
   native plugin touched.**
 
-- **opus (parity)** · ✅ **idle / SHIPPED — inspector multi-select** (polish).
+- **opus (parity)** · ✅ **idle / SHIPPED — value strip un-dual-purposed**
+  (Cause 2's other grievance). The strip stays deliberately dual-purpose on
+  **Sandbox** (arm the next note *and* fix the selected one — forgiving, what kids
+  expect; unchanged, no regression). **Studio** honours the input mode instead:
+  *insert* arms without silently rewriting the selection, *select* applies the
+  pick to the selection. One `_pickAppliesToSelection` getter gates
+  `_pickValue`/`_toggleDot`/`_pickAccidental`; arming always happens so the armed
+  glyph stays in step. Widget tests pin all three behaviours (via barCount: a
+  selected quarter → whole spills a bar). **Cause 2 is now fully addressed.**
+- **opus (parity)** · ✅ **SHIPPED — inspector multi-select** (polish).
   The Studio inspector now edits a **multi-note selection**, not just a single
   note (the ⌃ palette's old Cause-3 limitation): articulation/tie chips reflect
   "all selected have it" and toggle the whole selection; dynamic/ornament

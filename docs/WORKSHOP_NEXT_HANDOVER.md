@@ -193,10 +193,12 @@ of attributes now — that's the signal these are due.
   empty-staff taps deselect instead of placing (`_onStaffTap`/`_onMpStaffTap`) and
   letter keys no-op (`_handleKey`); tapping a note still selects, and the explicit
   piano keyboard still places in either mode. An Insert⇄Select toggle (icon+label)
-  in the top bar keeps the mode visible. **Remaining:** keyboard-first *navigation*
-  in select mode (letter keys currently just no-op — could jump the caret), and
-  un-dual-purposing the value strip (picking a duration both arms the next note
-  *and* rewrites the selection — the doc's other Cause-2 grievance).
+  in the top bar keeps the mode visible. ✅ **The value strip is un-dual-purposed
+  too:** `_pickAppliesToSelection` gates `_pickValue`/`_toggleDot`/
+  `_pickAccidental` — Sandbox keeps the forgiving dual behaviour (unchanged),
+  Studio *insert* arms without rewriting the selection, Studio *select* applies to
+  it. **Remaining:** keyboard-first *navigation* in select mode (letter keys just
+  no-op today — they could jump the caret).
 - **Cause 3 — the inspector.** ✅ **FIRST SLICE SHIPPED** (`6306151`). An opt-in
   selection-driven panel (`_inspectorPanel`), docked right of the canvas
   (`Row[canvas, panel]`), toggled from the ⋮ view menu, **OFF by default** so the

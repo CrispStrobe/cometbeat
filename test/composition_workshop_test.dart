@@ -588,6 +588,56 @@ void main() {
     expect(editor.noteCount, 2);
   });
 
+  testWidgets('Sandbox: the value strip still rewrites the selection',
+      (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    // Four quarters fill one 4/4 bar; the last stays selected.
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.pump();
+    }
+    expect(editor.barCount, 1);
+
+    // Sandbox keeps the forgiving dual behaviour: picking "whole" (digit 1)
+    // also fixes the selected quarter, which then spills into a second bar.
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pump();
+    expect(editor.barCount, 2, reason: 'Sandbox rewrites the selection');
+  });
+
+  testWidgets('Studio: insert mode arms without rewriting; select mode applies',
+      (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.pump();
+    }
+    expect(editor.barCount, 1);
+
+    await _enterStudio(tester); // insert is still the default mode
+
+    // Studio + insert: picking a value arms the NEXT note and leaves the
+    // selected quarter alone — no silent rewrite (Cause 2).
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pump();
+    expect(editor.barCount, 1, reason: 'Studio insert leaves the selection');
+
+    // Studio + select: the palette applies to the selection instead.
+    await tester.ensureVisible(find.text(l10n.workshopInsertMode));
+    await tester.tap(find.text(l10n.workshopInsertMode));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pump();
+    expect(
+      editor.barCount,
+      2,
+      reason: 'Studio select applies to the selection',
+    );
+  });
+
   testWidgets('chord mode stacks a second note onto the first', (tester) async {
     await pump(tester);
     final editor = _editor(tester);

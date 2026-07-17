@@ -446,6 +446,16 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       _InputMode.insert; // Studio: insert vs select (Cause 2)
   bool get _selectMode => _inputMode == _InputMode.select;
 
+  /// Whether picking a value / dot / accidental should also rewrite the current
+  /// selection. The value strip is deliberately dual-purpose on the **Sandbox**
+  /// shelf (arm the next note *and* fix the selected one — forgiving, and what
+  /// kids expect from direct manipulation). **Studio** honours the input mode
+  /// instead (WORKSHOP_PARITY.md Cause 2, "the value strip is dual-purpose"):
+  /// *insert* arms the next note without silently rewriting what's selected,
+  /// *select* applies the pick to the selection. Arming always happens, so the
+  /// strip's armed glyph stays in step either way.
+  bool get _pickAppliesToSelection => !_studio || _selectMode;
+
   /// Switch shelf. Leaving Studio resets the depth controls so Sandbox is never
   /// left in a hidden Studio state (mid-select, editing voice 2, inspector open).
   void _setShelf(_Shelf shelf) => setState(() {
@@ -1077,14 +1087,14 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   void _pickValue(DurationBase base) => setState(() {
         _pendingBase = base;
-        if (_doc.hasSelection) {
+        if (_pickAppliesToSelection && _doc.hasSelection) {
           _doc.setDurationOfSelected(NoteDuration(base, dots: _dotted ? 1 : 0));
         }
       });
 
   void _toggleDot() => setState(() {
         _dotted = !_dotted;
-        if (_doc.hasSelection) {
+        if (_pickAppliesToSelection && _doc.hasSelection) {
           _doc.setDurationOfSelected(
             NoteDuration(_pendingBase, dots: _dotted ? 1 : 0),
           );
@@ -1093,7 +1103,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   void _pickAccidental(_Accidental a) => setState(() {
         _accidental = a;
-        if (_doc.hasSelection) _doc.setAccidentalOfSelected(_alterOf(a));
+        if (_pickAppliesToSelection && _doc.hasSelection) {
+          _doc.setAccidentalOfSelected(_alterOf(a));
+        }
       });
 
   void _addRest() {
