@@ -1215,13 +1215,11 @@ class ScoreDocument {
       // clef, which the [clefChange] recovery below already owns, so skip it.
       if (measure.inlineClefs.isNotEmpty) {
         for (final ic in measure.inlineClefs) {
-          var acc = Fraction(0, 1);
-          for (var i = 0; i < measure.elements.length; i++) {
-            if (acc == ic.onset && acc != Fraction(0, 1)) {
-              _inlineClefs[barNewIds[i]] = ic.clef;
-              break;
-            }
-            acc = acc + measure.elements[i].duration.toFraction();
+          // Anchor to a voice-1 element at this onset; failing that (the clef
+          // was anchored in voice 2, whose boundaries needn't match voice 1's),
+          // try voice 2.
+          if (!_recoverInlineClef(ic, measure.elements, barNewIds)) {
+            _recoverInlineClef(ic, measure.voice2, barV2NewIds);
           }
         }
       }
@@ -1732,24 +1730,76 @@ class ScoreDocument {
   List<Measure> _withInlineClefs(List<Measure> bars) {
     if (_inlineClefs.isEmpty) return bars;
     final scale = _tupletScale();
-    final zero = Fraction(0, 1);
+    // A mid-bar clef is a Measure-level (voice-independent) change, but it can
+    // be anchored in either voice. Voice 2 reflows on the same grid, so its
+    // per-bar onsets line up with voice 1's; collect from both and merge.
+    final v2 = _v2.isEmpty
+        ? const <Measure>[]
+        : reflow(
+            [for (final e in _v2) e.toElement()],
+            timeSignature: timeSignature,
+            pickup: pickup,
+            timeChanges: _timeChanges,
+            durationScale: scale,
+            split: _rhythmPolicy == RhythmPolicy.split,
+          );
     final out = <Measure>[];
-    for (final m in bars) {
+    for (var bi = 0; bi < bars.length; bi++) {
+      final m = bars[bi];
       final changes = <InlineClefChange>[];
-      var onset = zero;
-      for (final el in m.elements) {
-        final id = el.id;
-        if (id != null && onset != zero && _inlineClefs.containsKey(id)) {
-          changes.add(InlineClefChange(onset, _inlineClefs[id]!));
-        }
-        var dur = el.duration.toFraction();
-        final s = id == null ? null : scale[id];
-        if (s != null) dur = dur * s;
-        onset = onset + dur;
+      _collectInlineClefs(m.elements, scale, changes);
+      if (bi < v2.length) _collectInlineClefs(v2[bi].elements, scale, changes);
+      if (changes.isEmpty) {
+        out.add(m);
+        continue;
       }
-      out.add(changes.isEmpty ? m : m.copyWith(inlineClefs: changes));
+      changes.sort((a, b) => a.onset.compareTo(b.onset));
+      out.add(m.copyWith(inlineClefs: changes));
     }
     return out;
+  }
+
+  /// Appends an [InlineClefChange] for each element of [els] anchored in
+  /// [_inlineClefs], at its tuplet-scaled onset from the bar start. An anchor at
+  /// onset 0 is a bar-*start* clef ([_withMidScoreChanges] owns it), so skipped.
+  void _collectInlineClefs(
+    List<MusicElement> els,
+    Map<String, Fraction> scale,
+    List<InlineClefChange> out,
+  ) {
+    final zero = Fraction(0, 1);
+    var onset = zero;
+    for (final el in els) {
+      final id = el.id;
+      if (id != null && onset != zero && _inlineClefs.containsKey(id)) {
+        out.add(InlineClefChange(onset, _inlineClefs[id]!));
+      }
+      var dur = el.duration.toFraction();
+      final s = id == null ? null : scale[id];
+      if (s != null) dur = dur * s;
+      onset = onset + dur;
+    }
+  }
+
+  /// Anchors [ic] onto the element of [els] whose preceding-duration equals its
+  /// onset (the inverse of [_collectInlineClefs]), recording it against that
+  /// element's new id in [newIds]. Returns whether a match was found. Walks
+  /// unscaled durations, matching the original voice-1 recovery.
+  bool _recoverInlineClef(
+    InlineClefChange ic,
+    List<MusicElement> els,
+    List<String> newIds,
+  ) {
+    final zero = Fraction(0, 1);
+    var acc = zero;
+    for (var i = 0; i < els.length; i++) {
+      if (acc == ic.onset && acc != zero) {
+        _inlineClefs[newIds[i]] = ic.clef;
+        return true;
+      }
+      acc = acc + els[i].duration.toFraction();
+    }
+    return false;
   }
 
   /// Whether any element of [m] — or any voice-2 id in [extraIds] that landed in
