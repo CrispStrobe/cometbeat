@@ -54,6 +54,12 @@ and push to origin/main** before/after touching shared files. Format:
   repo (with a README + the cache-dir path) would make the CLI turnkey; today it's
   a manual Microsoft-download step.
 
+- **opus (tracker)** · 🚧 **ACTIVE — FX remainder (FX_HANDOVER §1/§4/§5)**: tempo
+  **swing** (SHIPPED), **sfxr FM/LFO** (extend `crisp_dsp/sfxr.dart`), and
+  **instrument volume envelopes** (§4). **HOT files:** `core/audio/tracker_engine.dart`,
+  `crisp_dsp/sfxr.dart`, `features/games/composition/tracker_screen.dart` + **both
+  ARBs**. Landing as 2-3 commits; rebasing before each push.
+
 - **opus (tracker)** · ✅ **idle / SHIPPED — record voice slow/fast (time-stretch)**.
   A Slow/Normal/Fast chip row in the record sheet applies the shipped `timeStretch`
   (pitch-preserving) to a clip before it becomes the voice instrument
