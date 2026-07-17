@@ -19,6 +19,15 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
+- **opus (tracker)** · 🚧 **ACTIVE — "borrow a sample from a module" UI**. The
+  pure-Dart core shipped (`mod/module_instrument_bridge.dart`, `7dd8ab2`); now a
+  "Borrow instrument…" item in the Tracker app-bar menu: pick a `.mod/.s3m/.xm/.it`,
+  choose one of its samples, and it becomes the selected channel's instrument via
+  `sampleInstrumentFromModule` + `setChannelInstrument`. **HOT files:**
+  `features/games/composition/tracker_screen.dart` (menu case + `_borrowInstrument`
+  handler + a sample-picker dialog) + **both ARBs** (`trackerBorrowSample` key).
+  Small, landing in one commit; rebasing before push.
+
 - **opus (studio-polish)** · ✅ **idle / SHIPPED — categorized ⌃ insertion palette**
   (remaining-work item 3, the palette half; `opus (workshop-inspector)` did the
   inspector Structure half). The flat property popup on the ⌃ button now reads as
