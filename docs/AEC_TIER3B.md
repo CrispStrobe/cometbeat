@@ -341,8 +341,24 @@ lower absolute SI-SDR vs the synthetic corpus (20 dB) is the honest point — re
 rooms are harder, and `rateGamma` settles to an *interior* optimum (0.36) the
 synthetic corpus never revealed (it pinned to the bound). Assets live on
 `/Volumes/backups/ai/aec_corpus/` (never checked in; research/eval-use licences,
-local tuning only). **Remaining realism gap:** speaker/mic NONLINEARITY (an RIR
-is linear) — that last step needs a real device capture.
+local tuning only).
+
+**Modelled loudspeaker nonlinearity.** An RIR is linear, so to approximate the
+one thing it misses — a driven speaker's harmonic distortion — the corpus can
+pass the reference through a memoryless nonlinearity BEFORE the echo path (a
+Hammerstein model, exactly how the AEC Challenge synthesizes its nonlinear set;
+in ~80% of its cases the far-end is hard-clipped or sigmoidally distorted). The
+AEC still sees the CLEAN reference, so the added harmonics aren't in it and a
+linear filter can't cancel them. `--nonlin clip|tanh --drive N`; the model holds
+RMS (shape changes, level constant) so the cost is distortion, not gain. It
+first reports the cost and whether a residual stage recovers it. On the real
+corpus with a hard clip (drive 4): the nonlinear echo drops note-survival
+**74% → 30%** (SI-SDR 3.4 → 0.2 dB), and the residual suppressor (`--res`)
+recovers it to **87% / 4.7 dB** — a concrete case for enabling RES once the
+speaker is driven hard. It's a MODEL, not measured; the only source of measured
+nonlinearity remains the AEC-Challenge real set (blind/AECMOS) or a real device
+capture. **Remaining realism gap:** measured speaker/mic nonlinearity — a real
+device capture (the on-device milestone).
 
 Reference algorithms in the same patent-free family: **SpeexDSP MDF** (Valin,
 BSD-3, designed to avoid patents) and **WebRTC AEC3** (BSD-3) — read for

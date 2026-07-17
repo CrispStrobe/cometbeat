@@ -152,9 +152,17 @@ and push to origin/main** before/after touching shared files. Format:
   adaptive 3.4 dB SI-SDR / 74% notes → tuned 9.0 dB / 94%** (+5.6 dB). Lower than
   synthetic (honest — real rooms are harder); rateGamma settles INTERIOR (0.36),
   not pinned. Assets on `/Volumes/backups/ai/aec_corpus/` (never checked in;
-  eval-only). CI-safe loader test (synthetic WAVs in a temp dir). **Only realism
-  gap left: speaker/mic nonlinearity → a real device capture (on-device
-  milestone (e)).**
+  eval-only). CI-safe loader test (synthetic WAVs in a temp dir).
+  **Modelled loudspeaker nonlinearity (`--nonlin clip|tanh --drive N`)**: a
+  memoryless Hammerstein distortion on the reference before the echo path (how
+  the AEC Challenge synthesizes nonlinear echo; RMS-held so the cost is
+  distortion not gain). AEC sees the clean ref → harmonics uncancellable by a
+  linear filter. The CLI reports the cost + whether RES recovers it. **On the
+  real corpus, hard-clip drive 4: note-survival 74% → 30% (SI-SDR 3.4 → 0.2 dB),
+  then +RES recovers to 87% / 4.7 dB** — a concrete case for RES under a driven
+  speaker. It's a MODEL not measured. 3 tests (passthrough, RMS-held+shape-
+  changed, distortion-costs-then-RES-recovers). **Only realism gap left: MEASURED
+  speaker/mic nonlinearity → a real device capture (on-device milestone (e)).**
   **Layer 4 (CMA-ES auto-tuner) DONE**: `bin/aec_tune.dart` + `bin/aec_tune/`
   (CLI-only, out of the app). A ground-truth corpus (`corpus.dart`, parametric
   rooms — measured-RIR swap is drop-in), a domain objective (`objective.dart` —

@@ -11,13 +11,20 @@
 // This is the whole loop the earlier tuning FLAGS made possible, closed:
 //   corpus (known ground truth) → optimizer → scored AecTuning.
 //
-//   dart run bin/aec_tune.dart                 # default budget
+//   dart run bin/aec_tune.dart                 # synthetic, default budget
 //   dart run bin/aec_tune.dart --evals 400 --rooms 4 --seed 7
+//   dart run bin/aec_tune.dart --rir-dir <dir> --cello-dir <dir>   # real acoustics
+//   dart run bin/aec_tune.dart --nonlin tanh --drive 3            # nonlinear echo
 //
-// Honesty: the corpus is synthetic parametric rooms (see corpus.dart), so the
-// numbers this prints are only as real as that. The upgrade to trustworthy
-// output is to point the corpus at measured RIRs / real captures — the tuner
-// code doesn't change. It is deliberately CLI-only (out of the app).
+// --nonlin <clip|tanh> adds a loudspeaker nonlinearity to the echo (the AEC
+// Challenge's Hammerstein model): it first reports what the distortion COSTS and
+// whether a residual-suppression stage recovers it, then tunes on the nonlinear
+// corpus. --drive sets the distortion amount.
+//
+// Honesty: a synthetic/parametric corpus (or a MODELLED nonlinearity) is only as
+// real as the model; measured RIRs + real cello (--rir-dir/--cello-dir) and, for
+// true speaker/mic nonlinearity, a real device capture are the upgrades — the
+// tuner code doesn't change. CLI-only (out of the app).
 
 import 'dart:io';
 import 'dart:math';
@@ -77,21 +84,47 @@ void main(List<String> argv) {
   final seed = args['seed'] ?? 20260717;
   final rirDir = strs['rir-dir'];
   final celloDir = strs['cello-dir'];
+  final loudspeaker = _loudspeaker(strs['nonlin']);
+  final drive = double.tryParse(strs['drive'] ?? '') ?? 2.0;
 
-  final List<AecScenario> corpus;
-  if (rirDir != null && celloDir != null) {
-    // Tier 2: real measured RIRs × real cello, with detected ground-truth notes.
-    stderr.writeln('Building REAL-acoustics corpus '
-        '(rir=$rirDir, cello=$celloDir)…');
-    corpus = buildCorpusFromAssets(
-      rirDir: rirDir,
-      celloDir: celloDir,
-      seed: seed,
-    );
-  } else {
-    stderr.writeln('Building synthetic corpus (rooms=$rooms, seed=$seed)…');
-    corpus = buildCorpus(rooms: rooms, seed: seed);
+  List<AecScenario> build(Loudspeaker ls) {
+    if (rirDir != null && celloDir != null) {
+      return buildCorpusFromAssets(
+        rirDir: rirDir,
+        celloDir: celloDir,
+        seed: seed,
+        loudspeaker: ls,
+        drive: drive,
+      );
+    }
+    return buildCorpus(rooms: rooms, seed: seed, loudspeaker: ls, drive: drive);
   }
+
+  final where = (rirDir != null && celloDir != null)
+      ? 'REAL-acoustics (rir=$rirDir, cello=$celloDir)'
+      : 'synthetic (rooms=$rooms)';
+
+  // When a loudspeaker nonlinearity is requested, first quantify what it COSTS
+  // and whether a residual-suppression stage recovers it — before tuning.
+  if (loudspeaker != Loudspeaker.linear) {
+    stderr.writeln('Nonlinearity comparison on the $where corpus '
+        '($loudspeaker, drive=$drive):');
+    final linCorpus = build(Loudspeaker.linear);
+    final nlCorpus = build(loudspeaker);
+    const adaptive = AecTuning(adaptiveRate: true);
+    final lin = scoreTuning(adaptive, linCorpus);
+    final nl = scoreTuning(adaptive, nlCorpus);
+    final nlRes = scoreTuning(adaptive, nlCorpus, residualSuppress: true);
+    stderr.writeln('  linear echo           : $lin');
+    stderr.writeln('  nonlinear echo        : $nl   '
+        '(distortion costs ${_d(nl.meanSiSdr - lin.meanSiSdr)} dB SI-SDR)');
+    stderr.writeln('  nonlinear echo + RES  : $nlRes   '
+        '(residual recovers ${_d(nlRes.meanSiSdr - nl.meanSiSdr)} dB)');
+    stderr.writeln('Now tuning the rate on the NONLINEAR corpus…');
+  }
+
+  stderr.writeln('Building $where corpus (seed=$seed)…');
+  final corpus = build(loudspeaker);
   stderr.writeln('${corpus.length} scenarios.');
 
   // Baselines: the untuned adaptive rate, and the old fixed-mu default, so the
@@ -136,6 +169,23 @@ void main(List<String> argv) {
       'rateBeta0=${tuned.rateBeta0.toStringAsFixed(4)} '
       'rateMuMax=${tuned.rateMuMax.toStringAsFixed(4)}');
 }
+
+/// Map the --nonlin flag to a loudspeaker model.
+Loudspeaker _loudspeaker(String? name) {
+  switch (name) {
+    case 'clip':
+    case 'hardclip':
+      return Loudspeaker.hardClip;
+    case 'tanh':
+    case 'sigmoid':
+      return Loudspeaker.sigmoid;
+    default:
+      return Loudspeaker.linear;
+  }
+}
+
+/// Signed dB string.
+String _d(double x) => '${x >= 0 ? '+' : ''}${x.toStringAsFixed(1)}';
 
 String _delta(ObjectiveResult tuned, ObjectiveResult base) {
   final ds = tuned.score - base.score;

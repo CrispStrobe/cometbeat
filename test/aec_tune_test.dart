@@ -75,6 +75,80 @@ void main() {
     });
   });
 
+  group('loudspeaker nonlinearity model', () {
+    test('linear mode is an exact passthrough', () {
+      final x = Float64List.fromList([0.1, -0.4, 0.9, -0.2, 0.0]);
+      final y = applyLoudspeaker(x, Loudspeaker.linear, 4);
+      for (var i = 0; i < x.length; i++) {
+        expect(y[i], x[i]);
+      }
+    });
+
+    test(
+        'distorting modes hold the RMS but change the waveform (add harmonics)',
+        () {
+      // A pure tone: after a memoryless nonlinearity its RMS is preserved (level
+      // held) but its shape differs (energy moved into harmonics) — exactly what
+      // a linear echo filter cannot cancel.
+      final x = Float64List(4096);
+      for (var i = 0; i < x.length; i++) {
+        x[i] = 0.6 * sin(2 * pi * 5 * i / x.length);
+      }
+      double rms(Float64List v) {
+        var s = 0.0;
+        for (final e in v) {
+          s += e * e;
+        }
+        return sqrt(s / v.length);
+      }
+
+      for (final mode in [Loudspeaker.hardClip, Loudspeaker.sigmoid]) {
+        final y = applyLoudspeaker(x, mode, 4);
+        expect(
+          rms(y),
+          closeTo(rms(x), rms(x) * 0.02),
+          reason: '$mode should hold RMS',
+        );
+        var maxDiff = 0.0;
+        for (var i = 0; i < x.length; i++) {
+          maxDiff = max(maxDiff, (y[i] - x[i]).abs());
+        }
+        expect(
+          maxDiff,
+          greaterThan(0.05 * rms(x)),
+          reason: '$mode should change the waveform',
+        );
+      }
+    });
+
+    test('nonlinear echo costs the linear filter, and RES recovers it', () {
+      // The headline: a hard-clipped (nonlinear) echo the reference doesn't
+      // contain hurts the adaptive filter's fidelity, and a residual-suppression
+      // stage recovers most of it. Small corpus for speed.
+      final linear = buildCorpus(rooms: 3, nearMidis: const [57]);
+      final nonlinear = buildCorpus(
+        rooms: 3,
+        nearMidis: const [57],
+        loudspeaker: Loudspeaker.hardClip,
+        drive: 4,
+      );
+      const adaptive = AecTuning(adaptiveRate: true);
+      final lin = scoreTuning(adaptive, linear);
+      final nl = scoreTuning(adaptive, nonlinear);
+      final nlRes = scoreTuning(adaptive, nonlinear, residualSuppress: true);
+      expect(
+        nl.meanSiSdr,
+        lessThan(lin.meanSiSdr),
+        reason: 'distortion must cost SI-SDR: lin $lin vs nl $nl',
+      );
+      expect(
+        nlRes.meanSiSdr,
+        greaterThan(nl.meanSiSdr),
+        reason: 'RES must recover some: nl $nl vs +RES $nlRes',
+      );
+    });
+  });
+
   group('AEC corpus + objective', () {
     test('the corpus has ground truth and a real double-talk region', () {
       final corpus = buildCorpus(rooms: 2, nearMidis: const [69]);

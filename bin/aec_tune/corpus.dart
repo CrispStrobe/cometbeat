@@ -126,6 +126,8 @@ List<AecScenario> buildCorpus({
   double seconds = 2.0,
   int rooms = 4,
   List<int> nearMidis = const [57, 69, 45], // A3 (cello), A4, A2 (low cello)
+  Loudspeaker loudspeaker = Loudspeaker.linear,
+  double drive = 2.0,
 }) {
   final rng = Random(seed);
   final n = (rate * seconds).round();
@@ -145,7 +147,9 @@ List<AecScenario> buildCorpus({
     final ir =
         _roomIr(rng, delay: spec.delay, taps: spec.taps, decay: spec.decay);
     final ref = _noiseRef(rng, n);
-    final echo = _convolve(ref, ir);
+    // AEC sees the clean ref; the echo is the speaker-distorted ref (see the
+    // asset builder for why this makes the echo nonlinear).
+    final echo = _convolve(applyLoudspeaker(ref, loudspeaker, drive), ir);
     for (final midi in nearMidis) {
       final near = _instrument(midi, n, rate);
       final trueNear = Float64List(n);
@@ -181,6 +185,73 @@ List<AecScenario> buildCorpus({
 // The near-end note isn't assumed: it's DETECTED on the clean cello window, so
 // note-survival honestly asks "does the detector read the SAME note after
 // cancellation as it did before". A window with no clear pitch is skipped.
+
+/// Loudspeaker nonlinearity models applied to the reference BEFORE the echo
+/// path (a Hammerstein model) — how the AEC Challenge synthesizes its nonlinear
+/// echo. The AEC only ever sees the CLEAN reference, so the harmonics the
+/// speaker adds are NOT in the reference and a linear filter cannot cancel them:
+/// this is what makes an echo "nonlinear" and motivates a residual/nonlinear
+/// stage. Memoryless and patent-free.
+enum Loudspeaker {
+  /// No distortion — the linear echo (drive is ignored).
+  linear,
+
+  /// Hard amplitude clipping at peak/[drive] (drive 1 = no clip, 2 = clip at
+  /// half-peak). A loud speaker slamming into its excursion limit.
+  hardClip,
+
+  /// tanh soft-clip `tanh(drive·x)/drive` — unity small-signal gain, peaks
+  /// compressed; the "sigmoidal" distortion of a driven speaker. Higher drive =
+  /// more compression and more odd harmonics.
+  sigmoid,
+}
+
+/// Apply a memoryless loudspeaker nonlinearity to [x] (a fresh list). The output
+/// is renormalized to [x]'s RMS, so the model changes only the waveform SHAPE
+/// (the added harmonics a linear filter can't cancel), NOT the overall level —
+/// otherwise a compressing curve would just make the echo quieter and easier to
+/// cancel, hiding the distortion behind a gain change.
+Float64List applyLoudspeaker(Float64List x, Loudspeaker mode, double drive) {
+  if (mode == Loudspeaker.linear) return Float64List.fromList(x);
+
+  final out = Float64List(x.length);
+  switch (mode) {
+    case Loudspeaker.linear:
+      return Float64List.fromList(x);
+    case Loudspeaker.hardClip:
+      var peak = 0.0;
+      for (final v in x) {
+        if (v.abs() > peak) peak = v.abs();
+      }
+      final t = drive > 0 ? peak / drive : peak;
+      for (var i = 0; i < x.length; i++) {
+        out[i] = x[i].clamp(-t, t);
+      }
+    case Loudspeaker.sigmoid:
+      final d = drive <= 0 ? 1e-9 : drive;
+      for (var i = 0; i < x.length; i++) {
+        // tanh via exp; the /d keeps small-signal gain ≈ 1.
+        final z = 2 * d * x[i];
+        final e = exp(-z.abs());
+        final th = (1 - e) / (1 + e) * (z >= 0 ? 1 : -1);
+        out[i] = th / d;
+      }
+  }
+
+  // Renormalize to the input RMS: shape changes, level held constant.
+  var inSq = 0.0, outSq = 0.0;
+  for (var i = 0; i < x.length; i++) {
+    inSq += x[i] * x[i];
+    outSq += out[i] * out[i];
+  }
+  if (outSq > 1e-30) {
+    final g = sqrt(inSq / outSq);
+    for (var i = 0; i < out.length; i++) {
+      out[i] *= g;
+    }
+  }
+  return out;
+}
 
 Float64List _loadMonoWav(String path) =>
     wavToMonoFloat(readWavPcm16(File(path).readAsBytesSync()));
@@ -262,6 +333,8 @@ List<AecScenario> buildCorpusFromAssets({
   int seed = 20260717,
   double echoToNear = 2.0,
   int irTaps = 4096,
+  Loudspeaker loudspeaker = Loudspeaker.linear,
+  double drive = 2.0,
 }) {
   final rng = Random(seed);
   final n = (rate * seconds).round();
@@ -317,9 +390,13 @@ List<AecScenario> buildCorpusFromAssets({
 
   final out = <AecScenario>[];
   for (final room in rirs) {
-    // A seeded broadband reference "played" through this real room.
+    // A seeded broadband reference "played" through this real room. The AEC is
+    // given the CLEAN ref; the ECHO is the SPEAKER-DISTORTED ref through the
+    // room, so any loudspeaker nonlinearity is in the mic but not the reference
+    // — a linear filter can't cancel it (the point of the nonlinear corpus).
     final ref = _noiseRef(rng, n);
-    final rawEcho = _convolveReal(ref, room.ir);
+    final played = applyLoudspeaker(ref, loudspeaker, drive);
+    final rawEcho = _convolveReal(played, room.ir);
     for (final cello in cellos) {
       for (final note in notesPerCello[cello.name]!) {
         // The clean cello note, held through the double-talk half, normalized

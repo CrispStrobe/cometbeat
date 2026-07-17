@@ -62,6 +62,7 @@ ObjectiveResult scoreTuning(
   AecTuning tuning,
   List<AecScenario> corpus, {
   int rate = 44100,
+  bool residualSuppress = false,
 }) {
   var sumSiSdr = 0.0;
   var survived = 0;
@@ -69,7 +70,13 @@ ObjectiveResult scoreTuning(
     // The scenarios are pre-aligned (delay lives inside the room IR, applied
     // causally), so cancel with delay 0 — the tuner is judging the filter, not
     // the delay estimator.
-    final cleaned = cancelEcho(s.mic, s.ref, delay: 0, tuning: tuning).cleaned;
+    final cleaned = cancelEcho(
+      s.mic,
+      s.ref,
+      delay: 0,
+      tuning: tuning,
+      residualSuppress: residualSuppress,
+    ).cleaned;
     final dt = s.doubleTalkFrom;
     // cancelEcho drops a trailing partial block, so clamp the window.
     final end = cleaned.length;
