@@ -1322,6 +1322,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerOctave => 'Octave';
 
   @override
+  String get trackerEditStep => 'Step';
+
+  @override
   String get myMelodyPrompt =>
       'Write your melody — tap the staff or an instrument!';
 

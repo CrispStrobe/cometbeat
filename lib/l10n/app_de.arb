@@ -445,6 +445,7 @@
   "trackerStop": "Stopp",
   "trackerPickNote": "Note wählen",
   "trackerOctave": "Oktave",
+  "trackerEditStep": "Schritt",
   "myMelodyPrompt": "Schreibe deine Melodie — tippe die Linien oder ein Instrument!",
   "inputStaff": "Noten",
   "inputPiano": "Klavier",

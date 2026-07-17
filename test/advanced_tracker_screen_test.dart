@@ -84,4 +84,42 @@ void main() {
     expect(game.channelCount, before);
     expect(game.noteCount, 1); // the note moved down with its channel
   });
+
+  testWidgets(
+      'keyboard entry: a piano key types a note and advances the cursor',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+
+    game.moveCursor(0, 4);
+    await tester.pump();
+    expect(game.cursorChannel, 0);
+    expect(game.cursorRow, 4);
+
+    // 'z' = C at the base octave (default octave 4 -> C4 = MIDI 60).
+    game.typeKey('z');
+    await tester.pump();
+    expect(game.noteCount, 1);
+    expect(game.octave, 4);
+    // The cursor advanced by the default edit-step of 1.
+    expect(game.cursorRow, 5);
+
+    // 'q' = C one octave up (the upper keyboard row).
+    game.typeKey('q');
+    await tester.pump();
+    expect(game.noteCount, 2);
+    expect(game.cursorRow, 6);
+  });
+
+  testWidgets('per-track instrument can be reassigned', (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+
+    // Just assert the API drives without error and a subsequent note counts —
+    // the instrument change itself is exercised in the engine tests.
+    game.setChannelInstrument(0, 'flute');
+    game.setNote(0, 0, 60);
+    await tester.pump();
+    expect(game.noteCount, 1);
+  });
 }

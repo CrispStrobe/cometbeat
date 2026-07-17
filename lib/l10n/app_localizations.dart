@@ -2564,6 +2564,12 @@ abstract class AppLocalizations {
   /// **'Octave'**
   String get trackerOctave;
 
+  /// No description provided for @trackerEditStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step'**
+  String get trackerEditStep;
+
   /// No description provided for @myMelodyPrompt.
   ///
   /// In en, this message translates to:

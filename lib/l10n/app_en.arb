@@ -476,6 +476,7 @@
   "trackerStop": "Stop",
   "trackerPickNote": "Pick a note",
   "trackerOctave": "Octave",
+  "trackerEditStep": "Step",
   "myMelodyPrompt": "Write your melody — tap the staff or an instrument!",
   "inputStaff": "Staff",
   "inputPiano": "Piano",
