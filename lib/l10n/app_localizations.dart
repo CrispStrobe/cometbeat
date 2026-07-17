@@ -698,6 +698,18 @@ abstract class AppLocalizations {
   /// **'Note names'**
   String get workshopNoteNames;
 
+  /// No description provided for @workshopInspector.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspector'**
+  String get workshopInspector;
+
+  /// No description provided for @workshopInspectorEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a note to see its properties.'**
+  String get workshopInspectorEmpty;
+
   /// No description provided for @workshopSplitNotes.
   ///
   /// In en, this message translates to:

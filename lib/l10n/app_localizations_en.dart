@@ -345,6 +345,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopNoteNames => 'Note names';
 
   @override
+  String get workshopInspector => 'Inspector';
+
+  @override
+  String get workshopInspectorEmpty => 'Select a note to see its properties.';
+
+  @override
   String get workshopSplitNotes => 'Split notes across barlines';
 
   @override

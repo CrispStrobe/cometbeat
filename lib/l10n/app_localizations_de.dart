@@ -345,6 +345,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopNoteNames => 'Notennamen';
 
   @override
+  String get workshopInspector => 'Inspektor';
+
+  @override
+  String get workshopInspectorEmpty =>
+      'Wähle eine Note, um ihre Eigenschaften zu sehen.';
+
+  @override
   String get workshopSplitNotes => 'Noten über Taktstriche binden';
 
   @override

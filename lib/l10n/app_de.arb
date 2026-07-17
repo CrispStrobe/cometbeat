@@ -126,6 +126,8 @@
   "workshopFermata": "Fermate",
   "workshopBarNumbers": "Taktzahlen",
   "workshopNoteNames": "Notennamen",
+  "workshopInspector": "Inspektor",
+  "workshopInspectorEmpty": "Wähle eine Note, um ihre Eigenschaften zu sehen.",
   "workshopSplitNotes": "Noten über Taktstriche binden",
   "workshopPasteTokens": "Noten-Tokens einfügen…",
   "workshopPasteTokensHint": "bekern-/kern-Tokens einfügen (z. B. **kern <b> 4 c <b> *-)",

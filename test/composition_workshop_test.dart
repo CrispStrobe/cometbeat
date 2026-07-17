@@ -158,6 +158,30 @@ void main() {
     expect(editor.noteCount, 1);
   });
 
+  testWidgets('the Studio inspector is off by default and toggles on',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Place + select a note.
+    await tester.tap(_pianoKey());
+    await tester.pump();
+
+    // Off by default: no inspector panel, so its title isn't shown.
+    expect(find.text(l10n.workshopInspector), findsNothing);
+
+    // Toggle it on from the ⋮ menu.
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.pumpAndSettle();
+
+    // The panel now shows, with the selected note's editable properties.
+    expect(find.text(l10n.workshopInspector), findsOneWidget);
+    expect(find.byType(FilterChip), findsWidgets); // articulation/tie chips
+    expect(find.text(l10n.workshopStaccato), findsOneWidget);
+  });
+
   testWidgets('copy then paste duplicates the selection', (tester) async {
     await pump(tester);
     final editor = _editor(tester);

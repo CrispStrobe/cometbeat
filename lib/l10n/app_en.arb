@@ -157,6 +157,8 @@
   "workshopFermata": "Fermata",
   "workshopBarNumbers": "Bar numbers",
   "workshopNoteNames": "Note names",
+  "workshopInspector": "Inspector",
+  "workshopInspectorEmpty": "Select a note to see its properties.",
   "workshopSplitNotes": "Split notes across barlines",
   "workshopPasteTokens": "Paste notation tokens…",
   "workshopPasteTokensHint": "Paste bekern / kern tokens (e.g. **kern <b> 4 c <b> *-)",
