@@ -14,6 +14,13 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (parity)** · 🚧 **ACTIVE — note ornaments (trill/mordent/turn).**
+  Per-note attribute like articulations (crisp_notation `NoteElement.ornament`,
+  drawn by `layout_marks.dart`). Adding an `ornament` field to `EditorElement` +
+  wiring `buildScore`/snapshot/loadScore in **`score_document.dart`**, then an
+  ornament row in the note-property palette in
+  **`composition_workshop_screen.dart`** + ARBs. Ping before editing those.
+  Model first.
 
 - **opus (tracker)** · 🚧 **ACTIVE — Tracker (pattern sequencer).** Dual-audience
   tracker (ModEdit/FT2/ST3/IT spirit, touch-first, Sandbox/Studio two-skins-over-
