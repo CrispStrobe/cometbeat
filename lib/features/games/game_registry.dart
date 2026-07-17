@@ -112,6 +112,7 @@ import 'package:comet_beat/features/games/scales/same_diff_screen.dart';
 import 'package:comet_beat/features/games/scales/scale_builder_screen.dart';
 import 'package:comet_beat/features/games/scales/scale_detective_screen.dart';
 import 'package:comet_beat/features/games/scales/sing_back_screen.dart';
+import 'package:comet_beat/features/games/songs/instrument_family_screen.dart';
 import 'package:comet_beat/features/games/songs/song_screen.dart';
 import 'package:comet_beat/features/games/songs/tune_quiz_screen.dart';
 import 'package:comet_beat/features/games/transpose/concert_pitch_screen.dart';
@@ -1255,6 +1256,17 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameTuneQuiz,
       subtitle: (l) => l.gameTuneQuizSubtitle,
       builder: (_) => const TuneQuizScreen(),
+    ),
+    // Which Family? — name an instrument, tap its orchestral family
+    // (Strings/Woodwind/Brass/Percussion/Keyboard). A reading/knowledge quiz,
+    // not a timbre-ID one.
+    GameInfo(
+      id: 'instrument_family',
+      icon: Icons.category,
+      title: (l) => l.gameInstrumentFamily,
+      subtitle: (l) => l.gameInstrumentFamilySubtitle,
+      builder: (_) => const InstrumentFamilyScreen(),
+      tutorial: instrumentFamilyPrimer,
     ),
   ],
   'keyboard': [

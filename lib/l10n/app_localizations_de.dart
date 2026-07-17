@@ -3836,4 +3836,101 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get textbookPractise => 'Üben';
+
+  @override
+  String get gameInstrumentFamily => 'Welche Familie?';
+
+  @override
+  String get gameInstrumentFamilySubtitle =>
+      'Ordne ein Instrument seiner Familie zu: Streicher, Holzbläser, Blechbläser, Schlagwerk oder Tasten.';
+
+  @override
+  String get instrumentFamilyPrompt => 'Zu welcher Familie gehört es?';
+
+  @override
+  String get familyStrings => 'Streicher';
+
+  @override
+  String get familyWoodwind => 'Holzbläser';
+
+  @override
+  String get familyBrass => 'Blechbläser';
+
+  @override
+  String get familyPercussion => 'Schlagwerk';
+
+  @override
+  String get familyKeyboard => 'Tasten';
+
+  @override
+  String get instrViolin => 'Geige';
+
+  @override
+  String get instrCello => 'Cello';
+
+  @override
+  String get instrGuitar => 'Gitarre';
+
+  @override
+  String get instrHarp => 'Harfe';
+
+  @override
+  String get instrFlute => 'Flöte';
+
+  @override
+  String get instrClarinet => 'Klarinette';
+
+  @override
+  String get instrOboe => 'Oboe';
+
+  @override
+  String get instrSaxophone => 'Saxofon';
+
+  @override
+  String get instrRecorder => 'Blockflöte';
+
+  @override
+  String get instrTrumpet => 'Trompete';
+
+  @override
+  String get instrTrombone => 'Posaune';
+
+  @override
+  String get instrHorn => 'Horn';
+
+  @override
+  String get instrTuba => 'Tuba';
+
+  @override
+  String get instrDrums => 'Schlagzeug';
+
+  @override
+  String get instrXylophone => 'Xylophon';
+
+  @override
+  String get instrTimpani => 'Pauke';
+
+  @override
+  String get instrTriangle => 'Triangel';
+
+  @override
+  String get instrPiano => 'Klavier';
+
+  @override
+  String get instrOrgan => 'Orgel';
+
+  @override
+  String get primerFamilyTitle => 'Instrumentenfamilien';
+
+  @override
+  String get primerFamilyStrings =>
+      'Streicher klingen, wenn man sie streicht oder zupft: Geige, Cello, Gitarre und Harfe.';
+
+  @override
+  String get primerFamilyWinds =>
+      'Bläser brauchen deinen Atem. Holzbläser wie Flöte, Klarinette und Saxofon; Blechbläser wie Trompete, Posaune und Tuba.';
+
+  @override
+  String get primerFamilyPercKeys =>
+      'Schlagwerk wird geschlagen — Trommeln, Xylophon und Triangel. Tasteninstrumente wie Klavier und Orgel spielen viele Töne zugleich.';
 }

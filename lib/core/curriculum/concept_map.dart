@@ -515,8 +515,8 @@ const List<Concept> kConcepts = [
     GradeBand.g910,
     ConceptArea.timbre,
     'Instrument families / the orchestra',
-    [],
-  ), // GAP
+    ['instrument_family'],
+  ),
   Concept('reading_fluency', GradeBand.g34, ConceptArea.reading,
       'Reading notes fluently (both clefs)', [
     'place_note_treble',

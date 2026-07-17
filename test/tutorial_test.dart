@@ -149,6 +149,7 @@ void main() {
       'The shape of a piece': formPrimer,
       'Same key, or a new one?': modulationPrimer,
       'Three colours of scale': modePrimer,
+      'Instrument families': instrumentFamilyPrimer,
     };
     for (final entry in primers.entries) {
       await pumpGame(

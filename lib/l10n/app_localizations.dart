@@ -6937,6 +6937,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Practise'**
   String get textbookPractise;
+
+  /// No description provided for @gameInstrumentFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Which Family?'**
+  String get gameInstrumentFamily;
+
+  /// No description provided for @gameInstrumentFamilySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort an instrument into its family: strings, woodwind, brass, percussion or keyboard.'**
+  String get gameInstrumentFamilySubtitle;
+
+  /// No description provided for @instrumentFamilyPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Which family does it belong to?'**
+  String get instrumentFamilyPrompt;
+
+  /// No description provided for @familyStrings.
+  ///
+  /// In en, this message translates to:
+  /// **'Strings'**
+  String get familyStrings;
+
+  /// No description provided for @familyWoodwind.
+  ///
+  /// In en, this message translates to:
+  /// **'Woodwind'**
+  String get familyWoodwind;
+
+  /// No description provided for @familyBrass.
+  ///
+  /// In en, this message translates to:
+  /// **'Brass'**
+  String get familyBrass;
+
+  /// No description provided for @familyPercussion.
+  ///
+  /// In en, this message translates to:
+  /// **'Percussion'**
+  String get familyPercussion;
+
+  /// No description provided for @familyKeyboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyboard'**
+  String get familyKeyboard;
+
+  /// No description provided for @instrViolin.
+  ///
+  /// In en, this message translates to:
+  /// **'Violin'**
+  String get instrViolin;
+
+  /// No description provided for @instrCello.
+  ///
+  /// In en, this message translates to:
+  /// **'Cello'**
+  String get instrCello;
+
+  /// No description provided for @instrGuitar.
+  ///
+  /// In en, this message translates to:
+  /// **'Guitar'**
+  String get instrGuitar;
+
+  /// No description provided for @instrHarp.
+  ///
+  /// In en, this message translates to:
+  /// **'Harp'**
+  String get instrHarp;
+
+  /// No description provided for @instrFlute.
+  ///
+  /// In en, this message translates to:
+  /// **'Flute'**
+  String get instrFlute;
+
+  /// No description provided for @instrClarinet.
+  ///
+  /// In en, this message translates to:
+  /// **'Clarinet'**
+  String get instrClarinet;
+
+  /// No description provided for @instrOboe.
+  ///
+  /// In en, this message translates to:
+  /// **'Oboe'**
+  String get instrOboe;
+
+  /// No description provided for @instrSaxophone.
+  ///
+  /// In en, this message translates to:
+  /// **'Saxophone'**
+  String get instrSaxophone;
+
+  /// No description provided for @instrRecorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorder'**
+  String get instrRecorder;
+
+  /// No description provided for @instrTrumpet.
+  ///
+  /// In en, this message translates to:
+  /// **'Trumpet'**
+  String get instrTrumpet;
+
+  /// No description provided for @instrTrombone.
+  ///
+  /// In en, this message translates to:
+  /// **'Trombone'**
+  String get instrTrombone;
+
+  /// No description provided for @instrHorn.
+  ///
+  /// In en, this message translates to:
+  /// **'French horn'**
+  String get instrHorn;
+
+  /// No description provided for @instrTuba.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuba'**
+  String get instrTuba;
+
+  /// No description provided for @instrDrums.
+  ///
+  /// In en, this message translates to:
+  /// **'Drums'**
+  String get instrDrums;
+
+  /// No description provided for @instrXylophone.
+  ///
+  /// In en, this message translates to:
+  /// **'Xylophone'**
+  String get instrXylophone;
+
+  /// No description provided for @instrTimpani.
+  ///
+  /// In en, this message translates to:
+  /// **'Timpani'**
+  String get instrTimpani;
+
+  /// No description provided for @instrTriangle.
+  ///
+  /// In en, this message translates to:
+  /// **'Triangle'**
+  String get instrTriangle;
+
+  /// No description provided for @instrPiano.
+  ///
+  /// In en, this message translates to:
+  /// **'Piano'**
+  String get instrPiano;
+
+  /// No description provided for @instrOrgan.
+  ///
+  /// In en, this message translates to:
+  /// **'Organ'**
+  String get instrOrgan;
+
+  /// No description provided for @primerFamilyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Instrument families'**
+  String get primerFamilyTitle;
+
+  /// No description provided for @primerFamilyStrings.
+  ///
+  /// In en, this message translates to:
+  /// **'Strings sing when you bow or pluck them: the violin, cello, guitar and harp.'**
+  String get primerFamilyStrings;
+
+  /// No description provided for @primerFamilyWinds.
+  ///
+  /// In en, this message translates to:
+  /// **'Winds need your breath. Woodwinds like the flute, clarinet and saxophone; brass like the trumpet, trombone and tuba.'**
+  String get primerFamilyWinds;
+
+  /// No description provided for @primerFamilyPercKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Percussion is struck — drums, xylophone and triangle. Keyboards like the piano and organ play many notes at once.'**
+  String get primerFamilyPercKeys;
 }
 
 class _AppLocalizationsDelegate

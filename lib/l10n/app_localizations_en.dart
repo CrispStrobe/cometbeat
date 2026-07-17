@@ -3815,4 +3815,101 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get textbookPractise => 'Practise';
+
+  @override
+  String get gameInstrumentFamily => 'Which Family?';
+
+  @override
+  String get gameInstrumentFamilySubtitle =>
+      'Sort an instrument into its family: strings, woodwind, brass, percussion or keyboard.';
+
+  @override
+  String get instrumentFamilyPrompt => 'Which family does it belong to?';
+
+  @override
+  String get familyStrings => 'Strings';
+
+  @override
+  String get familyWoodwind => 'Woodwind';
+
+  @override
+  String get familyBrass => 'Brass';
+
+  @override
+  String get familyPercussion => 'Percussion';
+
+  @override
+  String get familyKeyboard => 'Keyboard';
+
+  @override
+  String get instrViolin => 'Violin';
+
+  @override
+  String get instrCello => 'Cello';
+
+  @override
+  String get instrGuitar => 'Guitar';
+
+  @override
+  String get instrHarp => 'Harp';
+
+  @override
+  String get instrFlute => 'Flute';
+
+  @override
+  String get instrClarinet => 'Clarinet';
+
+  @override
+  String get instrOboe => 'Oboe';
+
+  @override
+  String get instrSaxophone => 'Saxophone';
+
+  @override
+  String get instrRecorder => 'Recorder';
+
+  @override
+  String get instrTrumpet => 'Trumpet';
+
+  @override
+  String get instrTrombone => 'Trombone';
+
+  @override
+  String get instrHorn => 'French horn';
+
+  @override
+  String get instrTuba => 'Tuba';
+
+  @override
+  String get instrDrums => 'Drums';
+
+  @override
+  String get instrXylophone => 'Xylophone';
+
+  @override
+  String get instrTimpani => 'Timpani';
+
+  @override
+  String get instrTriangle => 'Triangle';
+
+  @override
+  String get instrPiano => 'Piano';
+
+  @override
+  String get instrOrgan => 'Organ';
+
+  @override
+  String get primerFamilyTitle => 'Instrument families';
+
+  @override
+  String get primerFamilyStrings =>
+      'Strings sing when you bow or pluck them: the violin, cello, guitar and harp.';
+
+  @override
+  String get primerFamilyWinds =>
+      'Winds need your breath. Woodwinds like the flute, clarinet and saxophone; brass like the trumpet, trombone and tuba.';
+
+  @override
+  String get primerFamilyPercKeys =>
+      'Percussion is struck — drums, xylophone and triangle. Keyboards like the piano and organ play many notes at once.';
 }

@@ -504,6 +504,30 @@ Tutorial modulationPrimer(AppLocalizations l10n) => Tutorial(
       ],
     );
 
+/// The orchestral instrument families: strings, winds (woodwind + brass),
+/// percussion and keyboard — named with familiar examples. Game:
+/// instrument_family.
+Tutorial instrumentFamilyPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerFamilyTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerFamilyStrings,
+          // A warm plucked/bowed-string triad to set the scene.
+          play: (a) => a.playMidiChord([55, 62, 67]),
+        ),
+        TutorialStep(
+          text: l10n.primerFamilyWinds,
+          // A bright fanfare-ish chord for the wind families.
+          play: (a) => a.playMidiChord([60, 64, 67]),
+        ),
+        TutorialStep(
+          text: l10n.primerFamilyPercKeys,
+          // A full keyboard-style stack (two hands) for percussion + keys.
+          play: (a) => a.playMidiChord([48, 60, 64, 67]),
+        ),
+      ],
+    );
+
 // ---- per-game primers (a distinct fact within an already-covered module) ----
 
 /// Reading on the BASS clef — its lines/spaces spell different notes than
