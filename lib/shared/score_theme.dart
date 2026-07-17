@@ -40,11 +40,11 @@ const MusicFont kLeipzigFont = MusicFont(
 
 /// The [MusicFont] backing each [ScoreFont] choice.
 MusicFont musicFontFor(ScoreFont font) => switch (font) {
-  ScoreFont.bravura => MusicFont.bravura,
-  ScoreFont.petaluma => kPetalumaFont,
-  ScoreFont.leland => kLelandFont,
-  ScoreFont.leipzig => kLeipzigFont,
-};
+      ScoreFont.bravura => MusicFont.bravura,
+      ScoreFont.petaluma => kPetalumaFont,
+      ScoreFont.leland => kLelandFont,
+      ScoreFont.leipzig => kLeipzigFont,
+    };
 
 /// The notation font currently in effect. Set by [SettingsService].
 MusicFont appScoreFont = MusicFont.bravura;

@@ -82,8 +82,7 @@ class SettingsService with ChangeNotifier {
     // New multi-font key; fall back to the legacy handwritten bool (→ Petaluma)
     // so an upgrading user keeps their choice.
     final fontName = prefs.getString(_scoreFontKey);
-    _scoreFont =
-        ScoreFont.values.asNameMap()[fontName] ??
+    _scoreFont = ScoreFont.values.asNameMap()[fontName] ??
         ((prefs.getBool(_handwrittenKey) ?? false)
             ? ScoreFont.petaluma
             : ScoreFont.bravura);
@@ -92,7 +91,7 @@ class SettingsService with ChangeNotifier {
     _applyScoreFont();
     _instrument =
         Instrument.values.asNameMap()[prefs.getString(_instrumentKey)] ??
-        Instrument.piano;
+            Instrument.piano;
     notifyListeners();
   }
 

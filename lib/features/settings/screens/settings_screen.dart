@@ -298,11 +298,11 @@ class SettingsScreen extends StatelessWidget {
 }
 
 IconData _instrumentIcon(Instrument instrument) => switch (instrument) {
-  Instrument.piano => Icons.piano,
-  Instrument.cello => Icons.music_note,
-  Instrument.flute => Icons.air,
-  Instrument.musicBox => Icons.toys,
-};
+      Instrument.piano => Icons.piano,
+      Instrument.cello => Icons.music_note,
+      Instrument.flute => Icons.air,
+      Instrument.musicBox => Icons.toys,
+    };
 
 String _instrumentName(AppLocalizations l10n, Instrument instrument) =>
     switch (instrument) {
@@ -313,8 +313,8 @@ String _instrumentName(AppLocalizations l10n, Instrument instrument) =>
     };
 
 String _scoreFontName(AppLocalizations l10n, ScoreFont font) => switch (font) {
-  ScoreFont.bravura => l10n.scoreFontBravura,
-  ScoreFont.petaluma => l10n.scoreFontPetaluma,
-  ScoreFont.leland => l10n.scoreFontLeland,
-  ScoreFont.leipzig => l10n.scoreFontLeipzig,
-};
+      ScoreFont.bravura => l10n.scoreFontBravura,
+      ScoreFont.petaluma => l10n.scoreFontPetaluma,
+      ScoreFont.leland => l10n.scoreFontLeland,
+      ScoreFont.leipzig => l10n.scoreFontLeipzig,
+    };
