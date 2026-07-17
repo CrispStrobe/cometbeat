@@ -90,6 +90,10 @@ Notation-depth + Studio-shell + playback arc (2026-07, the parity push):
   sounding notes; **multi-part** playback mixes every part into one WAV with a
   **per-part mute**; a **practice-speed** control (0.5×/0.75×/1×) slows playback
   without changing pitch. Reflects repeats/navigation/split via the timeline.
+  Two opt-in practice tools (⋮, default off): a **count-in** — a bar of clicks
+  rendered into the same WAV so it can't drift from the music, counted in the
+  meter's own beat unit — and **loop selection**, which repeats the selected range
+  until Stop, clipping every part so the accompaniment loops with the melody.
 
 Editing extras that lean on crisp_notation's editor contracts: caret (C2), drag-move
 (C3), grand staff (C5), element hit-regions for marquee + fine reorder
@@ -109,12 +113,13 @@ plugins beyond capture.
   within a cents window for enough of the note); the screen just drives the
   Ticker clock, feeds it mic readings, and paints. No audible backing on purpose
   (the mic would hear the speaker; a Preview button plays it first).
-- **Sing along with any Song Book song** — the song viewer has a **Sing along**
-  button that derives a target melody from the song's notation
-  (`chartFromScore` — top pitch per note, timed from the playback timeline) and
-  drops it into the same moving-score highway, octave-agnostic. Stars scale to the
-  song's length (`scaledStarScore`), so a long song isn't a free 3★. Turns the
-  Song Book (and the groove→Song Book export) into practice material.
+- **Sing along / Play along with any Song Book song** — the song viewer has both
+  buttons; each derives a target melody from the song's notation (`chartFromScore`
+  — top pitch per note, timed from the playback timeline) and drops it into the
+  same moving-score highway. **Sing along** is octave-agnostic (match it in your
+  own range); **Play along** targets the written octave, for an instrument. Stars
+  scale to the song's length (`scaledStarScore`), so a long song isn't a free 3★.
+  Turns the Song Book (and the groove→Song Book export) into practice material.
 - **Tuner** (cello corner) — open the mic, detect the note, show cents sharp/
   flat on an intonation meter. The whole chain mic → PCM → detector → meter.
 - **Chord Listener** — fuzzy chord recognition from the live mic: strum/play a
@@ -547,6 +552,14 @@ Games built on crisp_notation capabilities the app didn't use before.
   quietly writing notation. Play the tune back (rests preserved via
   `playChordSequence`, empty beats = silence) or clear. A sandbox like My Melody —
   no stars, no wrong answers; the bridge to notation for those who can't read yet.
+- **Melody doodle** (composition) — Colour Melody's **gesture** twin: drag a
+  freehand line across the box and it *becomes* a tune. The contour is quantised
+  to one C-pentatonic note per beat (a column averages its points, so a scribble
+  reads as its overall height; the top of the box is the highest note; untouched
+  beats stay rests) and renders live to a **real `Score`** underneath. Beat guides
+  and a coloured dot per quantised beat show the line turning into notes as you
+  draw, and a note sounds only when the drag crosses into a new beat. A sandbox —
+  no stars. For the youngest: "draw music" before you can tap a grid.
 - **Find the Key (bass)** (keyboard) — the staff→piano bridge in bass clef: the
   reusable `PianoKeyboard` shifts two octaves down (C2..B3) so the low staff
   naturals (G2..A3) and the 3★ black-key targets land on real keys. Own

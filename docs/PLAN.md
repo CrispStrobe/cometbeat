@@ -151,28 +151,36 @@ and push to origin/main** before/after touching shared files. Format:
   (byte-identity fast path); V1/V2 toolbar toggle; MusicXML round-trips. ✅ **mid-bar
   clef SHIPPED, fully lossless** (`12404e1`/`854ab25` + crisp_notation writer
   `3c1b8bd`).
-- **opus (next)** · 🚧 **ACTIVE — the three remaining "doable now" items**, in
-  order, each its own commit. Worktree `../mus-next`, branch
-  `feature/workshop-next`.
-  1. 🚧 **Song Book "Play along" (instrument)** — an octave-*specific* twin of the
-     shipped sing-along: `chartFromScore(..., octaveAgnostic:)` + a second button on
-     `song_screen.dart` → `PlayAlongScreen` (`gameId: 'keyboard_play_along'`).
-     Files: `song_play_along.dart`, `song_screen.dart`, tests. **No Workshop files.**
-  2. 🚧 **Workshop playback: count-in + loop-a-selection** — a metronome count-in
-     (reuses `AudioService.playTick`) and looping the selected range. **HOT:**
-     `composition_workshop_screen.dart` — but confined to **my transport region**
-     (`_startPlayback`/`_renderPart`/`_tickPlayback` + the app-bar), NOT the
-     inspector/input-mode/value-strip areas that are **parity's** polish turf.
-     ⚠️ **opus (parity): shout if you're in the transport and I'll rebase.**
-  3. 🚧 **"Melody doodle → hear it back"** — the last open creative backlog item: a
-     freehand contour canvas → quantise to a pentatonic `Score` → play it back
-     (a no-stars sandbox like Colour Melody). NEW screen + one `GameInfo` in
-     `game_registry.dart` (hot: registry only, one additive tile) + ARBs + test.
-  **Already shipped (recorded in [HISTORY.md]):** Workshop tempo marks · grace notes ·
-  playback bucket F · multi-part playback · voice-2 playback · practice speed;
-  Song Book Sing along + length-scaled stars.
-  Workshop *screen* polish (richer inspector, insertion palettes, keyboard-first
-  select-nav, value-strip un-dual-purpose) stays **parity's** turf.
+- **opus (next)** · ✅ **idle — all three "doable now" items SHIPPED.** Worktree
+  `../mus-next`, branch `feature/workshop-next`. Analyze clean throughout.
+  1. ✅ **Song Book "Play along" (instrument)** — `chartFromScore` gained
+     `octaveAgnostic` (default true = singing); `false` makes the written octave the
+     target. `song_screen` now offers **Sing along** *and* **Play along** via a
+     shared `_launcher` (both length-scaled stars, both disabled during the karaoke
+     preview / for melody-less songs); the button row became a `Wrap` so three
+     buttons never overflow a phone. Reused `gamePlayAlong` +
+     `gameId: 'keyboard_play_along'` — **no registry/tuning change**. 16 tests.
+  2. ✅ **Workshop playback: count-in + loop-a-selection** — both opt-in from the ⋮
+     menu, **default off** so playback is unchanged until armed. *Count-in*: a bar
+     of clicks rendered INTO the same WAV (so it can't drift), with the cursor clock
+     offset by `_countInSec`; beats follow the meter's own unit (6/8 counts six
+     eighths) and the practice-speed stretch applies. *Loop*: `_renderPart` gained a
+     `from`/`to` window that clips **every** part and rebases to 0, so a looped
+     selection keeps its accompaniment; the count-in is a first-pass lead-in only
+     (restarts replay cached count-in-free stems). Confined to the transport region
+     + two menu items — no inspector/input-mode/value-strip edits. EN/DE. 57 tests.
+  3. ✅ **Melody doodle** (`melody_doodle`) — the last open creative backlog item and
+     the gesture twin of Colour Melody: a freehand contour → pure
+     `doodleToColumns` (column-averaged, y-inverted, untouched columns rest,
+     out-of-box clamped) → one C-pentatonic note per beat → a **real Score** live
+     underneath → play back. A sandbox, no stars. One additive `GameInfo`; EN/DE;
+     7 unit tests + a real-drag widget test via `pumpGame`.
+  **Earlier (all in [HISTORY.md]):** Workshop tempo marks · grace notes · playback
+  bucket F · multi-part playback · voice-2 playback · practice speed; Song Book
+  Sing along + length-scaled stars.
+  **Nothing left in my lane.** Workshop *screen* polish (richer inspector, insertion
+  palettes, keyboard-first select-nav, value-strip un-dual-purpose) stays **parity's**
+  turf; page/print + PDF export stay blocked on crisp_notation.
 
 - **opus (groove-export)** · ✅ **idle / SHIPPED — Groove → Song Book / MusicXML**
   (`docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md` §A; `3c816ab` A1, `a7c3554` A2+A3).
