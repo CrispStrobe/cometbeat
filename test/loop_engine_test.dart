@@ -7,6 +7,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,6 +51,39 @@ void main() {
     // A swung melodic stem still fills the loop exactly.
     final track = kLoopMixerTracks.firstWhere((t) => t.id == 'melody');
     expect(track.variants.first.render(swung).length, swung.totalSamples);
+  });
+
+  // Regression: swing = 0.5 @ 100 bpm is the one value where stepMs × swing
+  // lands on the 10 ms grid, so the assertion above passed by LUCK. Other
+  // slider positions gave a non-integral swing offset, each swung eighth
+  // truncated up to a sample in renderSegmentsRaw, and stems of different
+  // patterns drifted up to 8 samples apart — the "steps integral in ms AND
+  // samples" invariant this class promises. _swingMs now snaps to the 10 ms
+  // grid, so EVERY stem is exactly totalSamples at every tempo and swing.
+  test('every stem is sample-exact at all tempos and swing amounts', () {
+    for (final bpm in [75, 100, 120]) {
+      for (final swing in [0.1, 0.15, 0.25, 0.33, 0.37, 0.5, 0.6]) {
+        final t = LoopTiming(tempoBpm: bpm, swing: swing);
+        // Boundaries land on the sample grid: ms × 44.1 is a whole number iff
+        // the ms is a multiple of 10.
+        for (var step = 0; step <= t.totalSteps; step++) {
+          expect(
+            t.boundaryMs(step) % 10,
+            0,
+            reason: 'bpm=$bpm swing=$swing boundary $step off the 10ms grid',
+          );
+        }
+        for (final track in kLoopMixerTracks) {
+          for (final v in track.variants) {
+            expect(
+              v.render(t).length,
+              t.totalSamples,
+              reason: 'bpm=$bpm swing=$swing ${track.id} stem drifted',
+            );
+          }
+        }
+      }
+    }
   });
 
   test('euclid distributes the right number of hits evenly', () {
@@ -419,5 +454,59 @@ void main() {
 
     e.send = LoopSend.none;
     expect(e.renderLoop(), equals(dry)); // send is in the cache key
+  });
+
+  // Regression: reverb/delay ran over a SINGLE loop with zero-initialized state,
+  // so the render was not the steady state of a repeating signal — the first
+  // ~300 ms of every iteration was echo-free and the tail sounding at the loop
+  // end vanished at the wrap (an audible "delay drops out on the downbeat",
+  // measured 36.9 % deviation from steady state for the delay send). The engine
+  // now pre-rolls one loop, so the rendered wet loop IS the periodic steady
+  // state. Verified here against a fully-converged 3-copy reference.
+  test('a send effect renders the steady-state loop (seam continuity)', () {
+    Float64List floats(Uint8List wav) => Float64List.fromList(
+          [for (final s in Int16List.sublistView(wav, 44)) s / 32768.0],
+        );
+    Float64List repeat(Float64List x, int k) {
+      final out = Float64List(x.length * k);
+      for (var c = 0; c < k; c++) {
+        out.setRange(c * x.length, (c + 1) * x.length, x);
+      }
+      return out;
+    }
+
+    for (final send in [LoopSend.delay, LoopSend.reverb]) {
+      final e = LoopEngine()
+        ..toggle('drums')
+        ..toggle('bass');
+      final dry = floats(e.renderLoop());
+      final n = dry.length;
+
+      // Ground truth: effect three concatenated copies, keep the last (fully
+      // converged) — the same effect params the engine uses.
+      final threeWet = send == LoopSend.delay
+          ? delayFx(repeat(dry, 3), delayMs: 300, feedback: 0.3, mix: 0.28)
+          : reverbFx(repeat(dry, 3), mix: 0.28);
+
+      e.send = send;
+      final rendered = floats(e.renderLoop());
+      expect(rendered.length, n);
+
+      var maxDev = 0.0;
+      var peak = 1e-9;
+      for (var i = 0; i < n; i++) {
+        final d = (rendered[i] - threeWet[2 * n + i]).abs();
+        if (d > maxDev) maxDev = d;
+        if (threeWet[2 * n + i].abs() > peak) peak = threeWet[2 * n + i].abs();
+      }
+      // The rendered loop must match the converged steady state to within a
+      // PCM16 quantization step (the render round-trips through Int16).
+      expect(
+        maxDev,
+        lessThan(1.5 / 32768 + peak * 0.01),
+        reason: '$send off steady state by '
+            '${(maxDev / peak * 100).toStringAsFixed(1)}%',
+      );
+    }
   });
 }

@@ -1348,6 +1348,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                     child: Slider(
                       value: _engine.swing,
                       max: 0.6,
+                      // Discrete stops: the engine snaps the swing offset to the
+                      // 10 ms sample grid anyway (see LoopTiming._swingMs), so a
+                      // continuous slider only offered indistinguishable values.
+                      divisions: 12,
                       onChanged: _setSwing,
                     ),
                   ),

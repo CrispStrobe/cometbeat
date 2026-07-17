@@ -55,11 +55,19 @@ class LoopTiming {
   int get totalSamples => (totalMs * kSampleRate) ~/ 1000;
   Duration get loopLength => Duration(milliseconds: totalMs);
 
-  int get _swingMs => (stepMs * swing).round();
+  // Snapped to the 10 ms grid: at 44.1 kHz a duration is a whole number of
+  // samples iff its ms value is a multiple of 10 (ms × 44.1), and stepMs
+  // (300/250/400) already is. Keeping the swing offset on the same grid makes
+  // EVERY boundary land on an exact sample — otherwise a swung eighth truncates
+  // up to one sample in renderSegmentsRaw and stems of different patterns drift
+  // apart (measured ≤8 samples), breaking the sample-integrality invariant this
+  // class promises. The ≤5 ms snap of the swing amount is imperceptible.
+  int get _swingMs => (stepMs * swing / 10).round() * 10;
 
   /// Millisecond onset of [step] (0..[totalSteps] inclusive): odd eighths
   /// start late by the swing amount. Durations derived from boundary
-  /// differences always sum back to [totalMs].
+  /// differences always sum back to [totalMs], and every boundary is an exact
+  /// sample (see [_swingMs]).
   int boundaryMs(int step) => step * stepMs + (step.isOdd ? _swingMs : 0);
 }
 
@@ -926,18 +934,30 @@ class LoopEngine {
   /// Applies the [send] effect to a mixed [pcm] via a Float64 round-trip.
   Int16List _applySend(Int16List pcm) {
     if (send == LoopSend.none) return pcm;
-    final f = Float64List(pcm.length);
-    for (var i = 0; i < pcm.length; i++) {
-      f[i] = pcm[i] / 32768.0;
+    final n = pcm.length;
+    // Pre-roll one full loop: reverb/delay start with zero-initialized state and
+    // truncate the tail at the buffer end, so a single-pass render is NOT the
+    // steady state of a REPEATING signal — the first ~300 ms of every iteration
+    // would be echo-free and the echoes sounding at the loop end would vanish at
+    // the wrap (an audible "delay drops out on the downbeat"). Effecting two
+    // copies and keeping the SECOND gives the effect the previous iteration's
+    // history, i.e. the periodic steady state. One loop of warmup fully covers
+    // these settings (a 300 ms / fb 0.3 delay decays to 0.3^16 over a 4.8 s loop).
+    final f = Float64List(n * 2);
+    for (var i = 0; i < n; i++) {
+      final s = pcm[i] / 32768.0;
+      f[i] = s;
+      f[n + i] = s;
     }
     final wet = switch (send) {
       LoopSend.reverb => reverbFx(f, mix: 0.28),
       LoopSend.delay => delayFx(f, delayMs: 300, feedback: 0.3, mix: 0.28),
       LoopSend.none => f,
     };
-    final out = Int16List(pcm.length);
-    for (var i = 0; i < wet.length && i < out.length; i++) {
-      out[i] = (wet[i] * 32768).round().clamp(-32768, 32767);
+    final out = Int16List(n);
+    for (var i = 0; i < n; i++) {
+      // The second copy is the converged, seam-continuous loop.
+      out[i] = (wet[n + i] * 32768).round().clamp(-32768, 32767);
     }
     return out;
   }
