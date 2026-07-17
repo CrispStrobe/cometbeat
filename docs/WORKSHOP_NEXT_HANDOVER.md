@@ -123,14 +123,19 @@ Ordered roughly easiest → hardest. Full context in `WORKSHOP_PARITY.md`
 
 ### Small notation follow-ups (the id-anchor / field pattern, low risk)
 
-- **Mid-*bar* clef changes** — `Measure.inlineClefs` (`InlineClefChange(onset,
-  clef)`, onset-addressed within a bar), vs today's bar-start `clefChange`. Needs
-  the anchor to also carry the onset (sum of durations before it in its reflowed
-  bar). ⚠ **BLOCKED for a lossless ship:** the crisp_notation MusicXML **writer
-  does not emit `inlineClefs`** (the reader does parse them), so save→reopen would
-  silently drop mid-bar clefs — breaking the lossless invariant. Add
-  `inlineClefs` to `musicxml_writer.dart` in the crisp_notation repo FIRST (public
-  `CrispStrobe/crisp_notation`, since CI resolves it), then do the editor side.
+- **Mid-*bar* clef changes** — ✅ **SHIPPED (display + import), with one library
+  follow-up** (`12404e1` model + `854ab25` UI). `_inlineClefs` id-anchor side-map
+  → `Measure.inlineClefs`; the `_withInlineClefs` stamp walks each reflowed bar
+  accumulating the tuplet-scaled onset and emits an `InlineClefChange` at the
+  anchor's onset (onset-0 anchors are a bar-start change, skipped). "Clef
+  (mid-bar)" row in the change-here dialog; `loadScore` recovers them (so
+  **importing** a score with mid-measure clefs keeps them);
+  `test/inline_clef_test.dart`. ⚠️ **The crisp_notation MusicXML *writer* does not
+  emit mid-measure clefs** (the reader parses them) — so our own MusicXML *file*
+  save→reopen drops them (in-memory `buildScore ↔ loadScore` is exact).
+  **Follow-up (library):** teach `musicxml_writer._writeVoice` to emit
+  `<attributes><clef>` at each `inlineClefs` onset — then flip the round-trip test
+  to go through MusicXML. See memory `workshop-musicxml-writer-gaps`.
 - **Voice 2** — `Measure.voice2` (crisp_notation engraves voices 1 **and** 2 only
   — stop there). The flat `_elements` gains a sibling `_voice2` list; `reflow`
   packs each independently onto the **shared** bar grid (they must agree on bar

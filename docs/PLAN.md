@@ -67,18 +67,22 @@ and push to origin/main** before/after touching shared files. Format:
   (new), `loop_mixer_screen.dart`, maybe both ARBs. NOT touching Workshop/AEC
   plugin internals.
 
-- **opus (parity)** · 🚧 **ACTIVE — mid-*bar* clef changes (`inlineClefs`).**
-  (Tempo marks were shipped by **opus (next)** `1f94a5c`; my duplicate was
-  discarded — coordination collision.) Onset-addressed clef change *within* a
-  bar (draws right before the anchored note), vs today's bar-*start* `clefChange`.
-  Worktree `../mus-parity`, branch `feature/workshop-parity`. **HOT files shared
-  with opus (next)'s grace-notes work:** `score_document.dart` (NEW additive
-  `_inlineClefs` side-map → `Measure.inlineClefs`; wired through `_Snapshot`/
-  `_capture`/`_restore`/`clearAll`/`loadScore` — append-both spots, mechanical to
-  merge; a stamp pass computing each anchor's `Fraction` onset within its reflowed
-  bar; empty-anchor byte-identity fast path), `composition_workshop_screen.dart`
-  (a "Clef (mid-bar)" row in the change-here dialog), **both ARBs**, NEW
-  `test/inline_clef_test.dart`. Small, additive, one commit; rebasing often.
+- **opus (parity)** · ✅ **idle / SHIPPED — mid-*bar* clef changes (`inlineClefs`)**
+  (`12404e1` model + `854ab25` UI). Onset-addressed clef change *within* a bar
+  (draws right before the anchored note), vs today's bar-*start* `clefChange`.
+  Additive `_inlineClefs` id-anchor side-map → `Measure.inlineClefs`; the
+  `_withInlineClefs` stamp accumulates each bar's tuplet-scaled onset and emits an
+  `InlineClefChange` at the anchor (onset-0 skipped — that's a bar-start change);
+  empty-anchor byte-identity fast path; `loadScore` recovers them (so **import**
+  keeps mid-measure clefs). "Clef (mid-bar)" row in the change-here dialog, EN/DE.
+  `test/inline_clef_test.dart` (8) + widget row-presence; affected suite green,
+  analyze clean. ⚠️ **Known library gap:** the crisp_notation MusicXML *writer*
+  doesn't emit mid-measure clefs (reader does), so our MusicXML *file* save→reopen
+  drops them — in-memory `buildScore ↔ loadScore` is exact. Follow-up:
+  `musicxml_writer._writeVoice` should emit `<attributes><clef>` per onset (see
+  memory `workshop-musicxml-writer-gaps` + the handover). **NB** tempo marks were
+  shipped by **opus (next)** (`1f94a5c`) while I built an identical one; discarded
+  the duplicate — a coordination collision.
 - **opus (parity)** · ✅ **idle / SHIPPED — note ornaments (trill/mordent/turn)**
   (`194fa66` model + `5459e60` UI, suite **738 green**). Per-note `Ornament?`
   field on `EditorElement` (rides the element snapshot for free), emitted onto
