@@ -106,6 +106,27 @@ Uint8List multiPartToMidi(
       ticksPerQuarter: ticksPerQuarter,
     );
 
+/// A (format 0 or 1) SMF → a [MultiPartScore], one part per `MTrk` that has
+/// notes. The mirror of [multiPartToMidi]: note-less tracks (a format-1 file's
+/// tempo/meta track 0, say) are skipped; if none has notes, the whole file is
+/// parsed as one part. So a single-track MIDI yields a 1-part score, and a
+/// DAW's N-instrument export yields N parts.
+MultiPartScore multiTrackMidiToMultiPart(Uint8List smf) {
+  final parts = <Score>[];
+  for (final track in splitMultiTrackMidi(smf)) {
+    try {
+      final score = scoreFromMidi(track);
+      final hasNotes =
+          score.measures.any((m) => m.elements.any((e) => e is NoteElement));
+      if (hasNotes) parts.add(score);
+    } catch (_) {
+      // A meta-only track (no notes) — scoreFromMidi throws; skip it.
+    }
+  }
+  if (parts.isEmpty) parts.add(scoreFromMidi(smf));
+  return MultiPartScore(parts);
+}
+
 // ─── Multi-voice ABC (unbounded V: voices — the orchestra case) ──────────────
 
 /// A [multiPart] score as ONE multi-voice ABC tune — each part becomes an ABC

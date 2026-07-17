@@ -204,6 +204,19 @@ void main() {
         );
       }
     });
+
+    test('multiPart → MIDI → multiTrackMidiToMultiPart keeps all parts', () {
+      final back = multiTrackMidiToMultiPart(multiPartToMidi(mp));
+      expect(back.parts.length, 2);
+      for (var p = 0; p < 2; p++) {
+        expect(_pitches(back.parts[p]), _pitches(mp.parts[p]));
+      }
+    });
+
+    test('a single-track MIDI reads back as a 1-part score', () {
+      final single = scoreToMidi(mp.parts.first);
+      expect(multiTrackMidiToMultiPart(single).parts.length, 1);
+    });
   });
 
   group('ModuleDoc ↔ MusicXML', () {

@@ -108,12 +108,19 @@ void main(List<String> args) {
         multi: multi,
       );
     } else if (_isMidi(_ext(inPath))) {
-      _fromScore(
-        scoreFromMidi(bytes),
-        outPath,
-        outExt,
-        stepsPerBeat: stepsPerBeat,
-      );
+      // A multi-track MIDI keeps every track as a part; a single-track one is a
+      // plain Score.
+      final mp = multiTrackMidiToMultiPart(bytes);
+      if (mp.parts.length > 1) {
+        _fromMultiPart(mp, outPath, outExt: outExt, stepsPerBeat: stepsPerBeat);
+      } else {
+        _fromScore(
+          mp.parts.isNotEmpty ? mp.parts.first : scoreFromMidi(bytes),
+          outPath,
+          outExt,
+          stepsPerBeat: stepsPerBeat,
+        );
+      }
     } else if (_isXml(_ext(inPath))) {
       _fromMultiPart(
         multiPartScoreFromMusicXml(String.fromCharCodes(bytes)),
@@ -256,20 +263,32 @@ void _fromMultiPart(
   required String outExt,
   required int stepsPerBeat,
 }) {
+  final parts = mp.parts.length;
   final fmt = _extToFormat[outExt];
   if (fmt != null) {
     final doc =
         multiPartToModuleDoc(mp, stepsPerBeat: stepsPerBeat, format: fmt);
     File(outPath).writeAsBytesSync(convertDocTo(doc, fmt));
-    stdout.writeln('notaconv: MusicXML → .$outExt '
-        '(${mp.parts.length} parts → ${doc.channelCount} ch, $outPath)');
+    stdout.writeln('notaconv: notation → .$outExt '
+        '($parts parts → ${doc.channelCount} ch, $outPath)');
   } else if (_isMidi(outExt)) {
     File(outPath).writeAsBytesSync(multiPartToMidi(mp));
-    stdout.writeln('notaconv: MusicXML → MIDI '
-        '(${mp.parts.length} tracks, $outPath)');
+    stdout.writeln('notaconv: notation → MIDI ($parts tracks, $outPath)');
+  } else if (_isXml(outExt)) {
+    File(outPath).writeAsStringSync(multiPartToMusicXml(mp));
+    stdout.writeln('notaconv: notation → MusicXML ($parts parts, $outPath)');
+  } else if (_extToText[outExt] == TextNotation.abc) {
+    File(outPath).writeAsStringSync(multiPartToAbc(mp));
+    stdout.writeln('notaconv: notation → ABC ($parts voices, $outPath)');
+  } else if (mp.parts.isEmpty) {
+    stderr.writeln('notaconv: nothing to write (no parts)');
+    exitCode = 1;
   } else {
-    stderr.writeln('notaconv: MusicXML → .$outExt not supported');
-    exitCode = 2;
+    // Single-Score formats (MEI/kern/MuseScore/LilyPond/.mscz) can't carry N
+    // parts — write the first one.
+    stderr
+        .writeln('notaconv: .$outExt is single-part; writing part 1 of $parts');
+    _fromScore(mp.parts.first, outPath, outExt, stepsPerBeat: stepsPerBeat);
   }
 }
 

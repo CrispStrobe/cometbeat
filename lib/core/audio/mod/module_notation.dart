@@ -41,6 +41,7 @@ export 'package:comet_beat/core/notation/multi_part_export.dart'
         multiPartToMidi,
         splitMultiTrackMidi,
         mergeToMultiTrackMidi,
+        multiTrackMidiToMultiPart,
         multiPartToAbc;
 
 // ─── Pitch / duration helpers (shared with bin/notaconv.dart's port) ─────────
