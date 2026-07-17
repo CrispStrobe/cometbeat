@@ -102,29 +102,15 @@ class _ScaleDetectiveScreenState extends State<ScaleDetectiveScreen>
         _scaleType = ScaleType.major;
       }
     }
-    final isMinor = _scaleType != ScaleType.major;
-    _key = isMinor ? Key.minor(Pitch(_tonic)) : Key.major(Pitch(_tonic));
-    final scale = Scale(Pitch(_tonic), _scaleType).pitches;
-
-    _wrongIndex = 1 + _random.nextInt(scale.length - 2); // not the tonics
-    final original = _pitchesOf(scale)[_wrongIndex];
-    // Shift by a semitone, away from any existing alteration so we stay
-    // within a single sharp/flat (B♭ in F major becomes B natural).
-    final shift =
-        original.alter == 0 ? (_random.nextBool() ? 1 : -1) : -original.alter;
-    final wrong = Pitch(
-      original.step,
-      alter: original.alter + shift,
-      octave: original.octave,
-    );
-
-    _pitches = [..._pitchesOf(scale)];
-    _pitches[_wrongIndex] = wrong;
+    _key = _scaleType == ScaleType.major
+        ? Key.major(Pitch(_tonic))
+        : Key.minor(Pitch(_tonic));
+    final built = buildDetectiveRound(_tonic, _scaleType, _key, _random);
+    _pitches = built.pitches;
+    _wrongIndex = built.wrongIndex;
     _tappedId = null;
     _lastAnswer = null;
   }
-
-  List<Pitch> _pitchesOf(List<Pitch> scale) => scale;
 
   String _token(Pitch p) {
     final accidental = switch (p.alter) {
@@ -220,4 +206,44 @@ class _ScaleDetectiveScreenState extends State<ScaleDetectiveScreen>
       ),
     );
   }
+}
+
+/// Builds one detective round: the scale for [tonic]/[scaleType] with exactly
+/// one interior note altered by a semitone (the "odd one out"), plus that note's
+/// index. [key] supplies the key signature.
+///
+/// The eligible notes to alter are the interior ones that render PLAIN for this
+/// key — i.e. whose accidental is exactly what the key signature provides
+/// (`alter == signature.alterFor(step)`). This deliberately EXCLUDES the raised
+/// leading tone of a harmonic-minor scale, which carries a note-level accidental
+/// (not in the key signature): altering it can neutralize that accidental and
+/// leave a plain, valid natural-minor scale with NO odd note visible anywhere —
+/// an unsolvable round that would mark any tap wrong. The raised 7th stays on
+/// screen as the intended legitimate distractor.
+@visibleForTesting
+({List<Pitch> pitches, int wrongIndex}) buildDetectiveRound(
+  Step tonic,
+  ScaleType scaleType,
+  Key key,
+  Random random,
+) {
+  final scale = Scale(Pitch(tonic), scaleType).pitches;
+  final sig = key.signature;
+  final eligible = [
+    for (var i = 1; i < scale.length - 1; i++) // never the tonic endpoints
+      if (scale[i].alter == sig.alterFor(scale[i].step)) i,
+  ];
+  final wrongIndex = eligible[random.nextInt(eligible.length)];
+  final original = scale[wrongIndex];
+  // Shift by a semitone, away from any existing (key-signature) alteration so we
+  // stay within a single sharp/flat (B♭ in F major becomes B natural, and F♯ in
+  // E minor becomes F natural — both visibly odd against the signature).
+  final shift =
+      original.alter == 0 ? (random.nextBool() ? 1 : -1) : -original.alter;
+  final wrong = Pitch(
+    original.step,
+    alter: original.alter + shift,
+    octave: original.octave,
+  );
+  return (pitches: [...scale]..[wrongIndex] = wrong, wrongIndex: wrongIndex);
 }
