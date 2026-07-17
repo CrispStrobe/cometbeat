@@ -19,6 +19,16 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
+- **opus (tracker)** · 🚧 **ACTIVE — per-channel FX chain (Tracker)**. Wire the
+  shipped DSP units (`crisp_dsp/modulated_delay.dart` + `reverb.dart`) into the
+  Tracker: a per-channel effect (none/delay/chorus/flanger/reverb) applied to the
+  channel stem in `_renderWithDynamics` before `mixStems`. **HOT files:**
+  `core/audio/tracker_engine.dart` (a `TrackerChannelEffect` enum + `applyChannelEffect`
+  + a mutable `effect` on `TrackerChannel` + `setChannelEffect` w/ cache-invalidate),
+  `features/games/composition/tracker_screen.dart` (an FX picker + tester seam) +
+  **both ARBs** (effect-name keys). Engine test (effected stem ≠ dry) + a tester test.
+  Landing in one commit; rebasing before push.
+
 - **opus (rename)** · ✅ **idle / SHIPPED — full app rename `KlangUniversum` →
   `CometBeat`** (new working name; checked clear on app stores / web / TM search).
   Package id `klang_universum`→`comet_beat` (**342 Dart files, ~1,768 imports**),
