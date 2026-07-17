@@ -17,30 +17,30 @@
 // full note·instrument·volume·fx cell, keyboard entry, sfxr/sampled instruments)
 // hangs off the same TrackerEngine document later — see docs/TRACKER_HANDOVER.md.
 
+import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:comet_beat/core/audio/mod/mod.dart';
+import 'package:comet_beat/core/audio/mod/mod_bridge.dart';
+import 'package:comet_beat/core/audio/mod/module_convert.dart'
+    show sniffModuleFormat;
+import 'package:comet_beat/core/audio/mod/module_doc.dart';
+import 'package:comet_beat/core/audio/mod/module_instrument_bridge.dart';
+import 'package:comet_beat/core/audio/synth.dart' show Drum;
+import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/gapless_loop_player.dart';
+import 'package:comet_beat/features/games/composition/tracker_notation.dart';
+import 'package:comet_beat/features/games/note_reading/note_colors.dart';
+import 'package:comet_beat/features/games/songs/song_book.dart';
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/scheduler.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
-import 'package:klang_universum/core/audio/mod/mod.dart';
-import 'package:klang_universum/core/audio/mod/mod_bridge.dart';
-import 'package:klang_universum/core/audio/mod/module_convert.dart'
-    show sniffModuleFormat;
-import 'package:klang_universum/core/audio/mod/module_doc.dart';
-import 'package:klang_universum/core/audio/mod/module_instrument_bridge.dart';
-import 'package:klang_universum/core/audio/synth.dart' show Drum;
-import 'package:klang_universum/core/audio/tracker_engine.dart';
-import 'package:klang_universum/core/audio/voice_clip_recorder.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/gapless_loop_player.dart';
-import 'package:klang_universum/features/games/composition/tracker_notation.dart';
-import 'package:klang_universum/features/games/note_reading/note_colors.dart';
-import 'package:klang_universum/features/games/songs/song_book.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/score_theme.dart';
 import 'package:provider/provider.dart';
 
 class TrackerScreen extends StatefulWidget {

@@ -13,9 +13,9 @@
 // "?" entry point + first-run gating. Rendering-only: no BuildContext here, so
 // tutorials stay easy to unit-test.
 
+import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Score;
 import 'package:flutter/foundation.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
 
 /// One page of a tutorial.
 @immutable

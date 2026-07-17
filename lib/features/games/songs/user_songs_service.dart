@@ -6,7 +6,8 @@
 
 import 'dart:convert';
 
-import 'package:crisp_notation/crisp_notation.dart' show Score, scoreFromMusicXml;
+import 'package:crisp_notation/crisp_notation.dart'
+    show Score, scoreFromMusicXml;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

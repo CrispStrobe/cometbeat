@@ -5,8 +5,8 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/loop_reference.dart';
 
 /// A PCM16 byte buffer from mono sample values (little-endian).
 Uint8List pcm(List<int> samples) =>

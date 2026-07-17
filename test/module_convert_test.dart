@@ -13,14 +13,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/it_reader.dart';
+import 'package:comet_beat/core/audio/mod/mod_module.dart';
+import 'package:comet_beat/core/audio/mod/mod_reader.dart';
+import 'package:comet_beat/core/audio/mod/module_convert.dart';
+import 'package:comet_beat/core/audio/mod/module_doc.dart';
+import 'package:comet_beat/core/audio/mod/s3m_reader.dart';
+import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/mod/it_reader.dart';
-import 'package:klang_universum/core/audio/mod/mod_module.dart';
-import 'package:klang_universum/core/audio/mod/mod_reader.dart';
-import 'package:klang_universum/core/audio/mod/module_convert.dart';
-import 'package:klang_universum/core/audio/mod/module_doc.dart';
-import 'package:klang_universum/core/audio/mod/s3m_reader.dart';
-import 'package:klang_universum/core/audio/mod/xm_reader.dart';
 
 Uint8List _read(String path) => File(path).readAsBytesSync();
 

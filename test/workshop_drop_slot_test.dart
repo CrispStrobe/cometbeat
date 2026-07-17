@@ -5,8 +5,8 @@
 
 import 'dart:ui';
 
+import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/screens/composition_workshop_screen.dart';
 
 // A 10-wide element whose notehead centre sits at x + 5, in [measure].
 ({String id, Rect bounds, int measureIndex}) region(

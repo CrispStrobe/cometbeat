@@ -2,10 +2,10 @@
 // model tests: pitch spelling, bar packing, duration decomposition, and the
 // progression path producing 4 bars.
 
+import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/features/games/composition/groove_notation.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart' hide isEmpty;
-import 'package:klang_universum/core/audio/loop_engine.dart';
-import 'package:klang_universum/features/games/composition/groove_notation.dart';
 
 void main() {
   test('pitchFromMidi spells the groove range', () {

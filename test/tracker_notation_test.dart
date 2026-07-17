@@ -2,11 +2,11 @@
 // a tracker channel and checks the note model (held runs → tied notes decomposed
 // into standard values, split at 4/4 bar lines).
 
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
+import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/synth.dart' show Instrument;
-import 'package:klang_universum/core/audio/tracker_engine.dart';
-import 'package:klang_universum/features/games/composition/tracker_notation.dart';
 
 TrackerChannel _channel(int rows, List<(int, int)> notes) {
   final ch = TrackerChannel(

@@ -6,11 +6,11 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/sfxr.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
-import 'package:klang_universum/core/audio/synth.dart';
-import 'package:klang_universum/core/audio/tracker_engine.dart';
 
 int _peak(Uint8List wav) {
   final data = ByteData.sublistView(wav);

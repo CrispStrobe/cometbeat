@@ -2,14 +2,14 @@
 // the drum pad on the notated onsets scores hits, and the run finishes with a
 // result screen. Also exercises rendering on the percussion clef.
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/drums/drum_read_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/features/games/drums/drum_read_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:comet_beat/features/games/songs/import/chordpro.dart';
+import 'package:comet_beat/features/games/songs/import/midi_import.dart';
+import 'package:comet_beat/features/games/songs/song_book.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show NoteElement, scoreFromAbc, scoreFromMusicXml, scoreToMusicXml;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/games/songs/import/chordpro.dart';
-import 'package:klang_universum/features/games/songs/import/midi_import.dart';
-import 'package:klang_universum/features/games/songs/song_book.dart';
 
 void main() {
   group('ChordPro', () {

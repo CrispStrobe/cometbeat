@@ -8,9 +8,9 @@
 // These run under `tester.runAsync` because `renderLayoutToPng` goes through
 // `dart:ui`'s real (non-faked) async rasterizer.
 
+import 'package:comet_beat/features/workshop/export/score_pdf.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/export/score_pdf.dart';
 
 const _quarter = NoteDuration(DurationBase.quarter);
 

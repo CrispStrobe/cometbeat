@@ -2,10 +2,10 @@
 // reports the correct tap order (card indices longest→shortest); tap the cards
 // by their keys in that order.
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_values/value_order_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_values/value_order_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

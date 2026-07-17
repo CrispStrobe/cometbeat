@@ -2,12 +2,12 @@
 // UI language: a German-UI child can drill English or solfège names, and vice
 // versa. `auto` keeps today's behaviour (follow the app language).
 
+import 'package:comet_beat/core/note_naming.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/l10n/app_localizations_de.dart';
+import 'package:comet_beat/l10n/app_localizations_en.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/note_naming.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/l10n/app_localizations_de.dart';
-import 'package:klang_universum/l10n/app_localizations_en.dart';
 
 void main() {
   final en = AppLocalizationsEn();

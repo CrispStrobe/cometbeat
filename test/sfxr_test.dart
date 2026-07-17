@@ -5,8 +5,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/sfxr.dart';
 
 double _peak(Float64List b) {
   var p = 0.0;

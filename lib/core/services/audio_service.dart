@@ -7,9 +7,8 @@
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter/foundation.dart';
-
-import 'package:klang_universum/core/audio/synth.dart';
 
 class AudioService {
   AudioPlayer? _player;

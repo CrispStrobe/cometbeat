@@ -2,15 +2,15 @@
 // the UI: the correct symbol varies per round, so tap whatever the game reports
 // as the target and check it scores + records under harmony.roman.
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/harmony/roman_numeral_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/harmony/roman_numeral_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

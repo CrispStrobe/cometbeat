@@ -1,14 +1,14 @@
 // Beat Runner — read & play a rhythm. The Ticker is the master clock (driven by
 // pump): tapping as a note lands scores; letting a note pass untapped does not.
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/measures/beat_runner_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/features/games/measures/beat_runner_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

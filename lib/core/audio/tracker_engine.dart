@@ -16,14 +16,13 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/crisp_dsp/resample.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/sfxr.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
-import 'package:klang_universum/core/audio/synth.dart';
-import 'package:klang_universum/core/audio/tracker_effects.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/tracker_effects.dart';
 
-export 'package:klang_universum/core/audio/tracker_effects.dart'
-    show TrackerEffect;
+export 'package:comet_beat/core/audio/tracker_effects.dart' show TrackerEffect;
 
 /// The musical clock a pattern renders against. [rows] steps at [stepsPerBeat]
 /// steps per beat, [tempoBpm] BPM. Pick values whose step length is an integral

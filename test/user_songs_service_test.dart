@@ -2,8 +2,8 @@
 // songs and chord sheets. Pure logic (add/remove/load/save + JSON), so it is
 // tested directly rather than through a widget.
 
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _xml = '''

@@ -5,10 +5,10 @@
 // Reports the MIDI note tapped; the caller decides what it means and sounds
 // like — the same contract as PianoKeyboard.
 
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/shared/midi_pitch.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/shared/midi_pitch.dart';
 
 class CelloFingerboard extends StatelessWidget {
   final void Function(int midi)? onTap;

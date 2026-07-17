@@ -4,8 +4,8 @@
 // label for the "tricky notes" list. Common namespaces get a tailored label;
 // everything else falls back to a prettified detail.
 
-import 'package:klang_universum/features/games/note_values/symbol_catalog.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
+import 'package:comet_beat/features/games/note_values/symbol_catalog.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 
 String _prettify(String s) => s
     .replaceAll(RegExp(r'[._]'), ' ')

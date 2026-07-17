@@ -5,6 +5,10 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:comet_beat/core/audio/mod/mod.dart';
+import 'package:comet_beat/core/audio/tracker_engine.dart' show TrackerEffect;
+import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
@@ -19,11 +23,6 @@ import 'package:crisp_notation/crisp_notation.dart'
         scoreFromMidi;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
-import 'package:klang_universum/core/audio/mod/mod.dart';
-import 'package:klang_universum/core/audio/tracker_engine.dart'
-    show TrackerEffect;
-import 'package:klang_universum/features/games/composition/tracker_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

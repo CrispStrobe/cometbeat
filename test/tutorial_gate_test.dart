@@ -2,11 +2,11 @@
 // auto-shows its tutorial on the first visit only, without the game screen
 // having to know anything about tutorials.
 
+import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/features/games/tutorial_gate.dart';
+import 'package:comet_beat/shared/tutorial/primers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/games/game_registry.dart';
-import 'package:klang_universum/features/games/tutorial_gate.dart';
-import 'package:klang_universum/shared/tutorial/primers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

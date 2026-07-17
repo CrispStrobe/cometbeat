@@ -7,10 +7,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/shared/score_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -37,7 +37,8 @@ void main() {
     expect(kidsScoreTheme.musicFont, MusicFont.bravura);
   });
 
-  test('the descriptor points at the app bundle, not the crisp_notation package',
+  test(
+      'the descriptor points at the app bundle, not the crisp_notation package',
       () {
     // package == null is what makes it resolve mus's own asset + font family,
     // so no crisp_notation change is needed.

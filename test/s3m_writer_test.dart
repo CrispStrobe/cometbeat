@@ -9,10 +9,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/s3m_module.dart';
+import 'package:comet_beat/core/audio/mod/s3m_reader.dart';
+import 'package:comet_beat/core/audio/mod/s3m_writer.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/mod/s3m_module.dart';
-import 'package:klang_universum/core/audio/mod/s3m_reader.dart';
-import 'package:klang_universum/core/audio/mod/s3m_writer.dart';
 
 void main() {
   test('output has the "SCRM" signature at 0x2C', () {

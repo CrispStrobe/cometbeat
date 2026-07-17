@@ -5,9 +5,9 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/aec_offline.dart';
+import 'package:comet_beat/core/audio/echo_canceller.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/aec_offline.dart';
-import 'package:klang_universum/core/audio/echo_canceller.dart';
 
 const _sr = 44100;
 

@@ -152,6 +152,7 @@ class S3mModule {
 
 /// A MIDI note for an S3M note byte (approximate; octave<<4 | semitone → MIDI).
 /// Returns -1 for empty/note-off.
-int s3mNoteToMidi(int note) => (note == S3mCell.emptyNote || note == S3mCell.noteOff)
-    ? -1
-    : (note >> 4) * 12 + (note & 0x0F) + 12;
+int s3mNoteToMidi(int note) =>
+    (note == S3mCell.emptyNote || note == S3mCell.noteOff)
+        ? -1
+        : (note >> 4) * 12 + (note & 0x0F) + 12;

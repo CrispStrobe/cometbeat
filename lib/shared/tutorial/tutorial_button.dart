@@ -4,10 +4,10 @@
 // with maybeShowTutorial() in the screen's initState for the first-run auto-show.
 // Drop into any AppBar `actions:` (or the shared GameAppBar).
 
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/tutorial.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/tutorial/tutorial.dart';
-import 'package:klang_universum/shared/tutorial/tutorial_sheet.dart';
 
 class TutorialButton extends StatelessWidget {
   const TutorialButton({super.key, required this.builder});

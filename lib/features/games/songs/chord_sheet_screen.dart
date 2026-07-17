@@ -4,9 +4,9 @@
 // above the syllables — every chip plays its triad. Guitar-campfire mode
 // for the notation-shy.
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/features/games/songs/import/chordpro.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/features/games/songs/import/chordpro.dart';
 import 'package:provider/provider.dart';
 
 class ChordSheetScreen extends StatelessWidget {

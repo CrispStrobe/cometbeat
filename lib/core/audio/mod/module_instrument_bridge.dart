@@ -15,11 +15,11 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/crisp_dsp/resample.dart';
-import 'package:klang_universum/core/audio/mod/module_convert.dart';
-import 'package:klang_universum/core/audio/mod/module_doc.dart';
-import 'package:klang_universum/core/audio/synth.dart' show kSampleRate;
-import 'package:klang_universum/core/audio/tracker_engine.dart'
+import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/mod/module_convert.dart';
+import 'package:comet_beat/core/audio/mod/module_doc.dart';
+import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
+import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
 
 /// Builds a [SampleInstrument] from a module [DocSample]. The PCM is resampled

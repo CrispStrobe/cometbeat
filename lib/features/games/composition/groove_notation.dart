@@ -6,8 +6,8 @@
 // a pure mapping: eighth-note steps → note/rest durations, 8 steps per 4/4
 // bar, cells split at barlines.
 
+import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:crisp_notation/crisp_notation.dart';
-import 'package:klang_universum/core/audio/loop_engine.dart';
 
 const _naturalSteps = {
   0: Step.c,

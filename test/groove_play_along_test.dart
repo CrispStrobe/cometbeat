@@ -4,11 +4,11 @@
 
 import 'dart:math';
 
+import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/features/games/composition/groove_play_along.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/loop_engine.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/play_along.dart';
-import 'package:klang_universum/features/games/composition/groove_play_along.dart';
 
 /// The exact frequency of an equal-tempered [midi] (A4 = 440) — so a fed
 /// reading lands dead-on the target note.

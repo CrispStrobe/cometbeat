@@ -1,13 +1,13 @@
+import 'package:comet_beat/core/note_naming.dart';
+import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/progress/screens/progress_screen.dart';
+import 'package:comet_beat/features/settings/screens/settings_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/note_naming.dart';
-import 'package:klang_universum/core/services/debug_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/progress/screens/progress_screen.dart';
-import 'package:klang_universum/features/settings/screens/settings_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,8 +82,8 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     PackageInfo.setMockInitialValues(
-      appName: 'KlangUniversum',
-      packageName: 'de.example.klang',
+      appName: 'CometBeat',
+      packageName: 'com.crispstrobe.cometBeat',
       version: '0.1.0',
       buildNumber: '1',
       buildSignature: '',

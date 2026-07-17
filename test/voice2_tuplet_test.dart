@@ -4,9 +4,9 @@
 // bracket). Now voice 2's reflow scales its tuplet members and _withVoice2 emits
 // TupletSpans with voice: 1 (crisp_notation draws inner-voice tuplet brackets).
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 Pitch _p(Step s, {int octave = 4}) => Pitch(s, octave: octave);
 const _eighth = NoteDuration(DurationBase.eighth);

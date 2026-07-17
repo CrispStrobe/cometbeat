@@ -1,6 +1,6 @@
 name: aec_fullduplex
 description: >-
-  Native full-duplex acoustic echo cancellation for Klang Universum — a
+  Native full-duplex acoustic echo cancellation for CometBeat — a
   miniaudio (MIT-0) duplex host plus our own MIT echo-canceller core (a C port
   of lib/core/audio/echo_canceller.dart). A Flutter FFI plugin; deliberately NOT
   a dependency of the app until it builds green on every CI platform (see

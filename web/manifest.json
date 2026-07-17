@@ -1,6 +1,6 @@
 {
-    "name": "KlangUniversum",
-    "short_name": "KlangUniversum",
+    "name": "CometBeat",
+    "short_name": "CometBeat",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#5E35B1",

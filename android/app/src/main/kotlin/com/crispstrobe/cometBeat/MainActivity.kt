@@ -1,4 +1,4 @@
-package com.crispstrobe.klang_universum
+package com.crispstrobe.cometBeat
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -3,14 +3,14 @@
 // Shared building blocks for minigame screens: the round header (progress +
 // prompt) and the end-of-game result view (stars, score, replay).
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/tuning.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/note_mascot.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/core/tuning.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/widgets/note_mascot.dart';
 import 'package:provider/provider.dart';
 
 class RoundHeader extends StatelessWidget {

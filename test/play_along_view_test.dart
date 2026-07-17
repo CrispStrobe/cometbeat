@@ -4,16 +4,16 @@
 // renders without throwing — the notation mode in particular builds a crisp_notation
 // Score, which the highway-only smoke test never exercises.
 
+import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart' show MultiSystemView;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/play_along.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/features/games/playalong/play_along_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -9,8 +9,8 @@
 // run through the real PitchDetector (kick zcr≈0.005 pitched-low ·
 // snare≈0.45 · hat≈0.67; see test/beat_capture_test.dart).
 
-import 'package:klang_universum/core/audio/loop_engine.dart';
-import 'package:klang_universum/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/synth.dart';
 
 /// One capture frame: elapsed ms, energy, brightness, and whether the
 /// detector heard a LOW pitch (a hummed "boom" reads as a pitched bass note).

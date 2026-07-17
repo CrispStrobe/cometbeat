@@ -16,11 +16,11 @@
 //       scoreToTrackerCells. Returns exactly [channelCount] cell-lists, each of
 //       length timing.rows.
 
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
+import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/synth.dart' show Instrument;
-import 'package:klang_universum/core/audio/tracker_engine.dart';
-import 'package:klang_universum/features/games/composition/tracker_notation.dart';
 
 TrackerChannel _ch(
   String id,

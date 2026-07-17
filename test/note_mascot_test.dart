@@ -1,9 +1,9 @@
 // The note mascot renders in every mood and animates on a mood change without
 // throwing (the geometry is best eyeballed live; this guards the plumbing).
 
+import 'package:comet_beat/shared/widgets/note_mascot.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/shared/widgets/note_mascot.dart';
 
 void main() {
   for (final mood in NoteMascotMood.values) {

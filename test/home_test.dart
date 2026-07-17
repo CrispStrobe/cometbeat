@@ -1,14 +1,14 @@
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_values/note_value_quiz_screen.dart';
+import 'package:comet_beat/features/home/screens/home_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/debug_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_values/note_value_quiz_screen.dart';
-import 'package:klang_universum/features/home/screens/home_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -82,7 +82,7 @@ void main() {
 
     expect(debug.menuEnabled, isFalse);
     for (var i = 0; i < 7; i++) {
-      await tester.tap(find.text('KlangUniversum'));
+      await tester.tap(find.text('CometBeat'));
       await tester.pump();
     }
     // The menu is revealed, but games stay locked until toggled in Settings.

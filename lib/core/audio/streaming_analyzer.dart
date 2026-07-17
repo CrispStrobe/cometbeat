@@ -10,8 +10,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/chroma_analysis.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/chroma_analysis.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 
 /// One analysed window.
 class AnalyzerFrame {

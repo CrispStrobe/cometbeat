@@ -14,10 +14,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/aec_engine.dart';
-import 'package:klang_universum/core/audio/chroma_analysis.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/streaming_analyzer.dart';
+import 'package:comet_beat/core/audio/aec_engine.dart';
+import 'package:comet_beat/core/audio/chroma_analysis.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/streaming_analyzer.dart';
 import 'package:record/record.dart';
 
 /// Why a capture session failed to start — surfaced to the UI so it can show

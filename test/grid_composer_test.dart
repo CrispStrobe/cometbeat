@@ -2,10 +2,10 @@
 // notes, tapping the same cell clears it, and the grid renders to a real Score
 // (two 4/4 bars) that plays back. Drives taps via the GridComposerTester seam.
 
+import 'package:comet_beat/features/games/composition/grid_composer_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/games/composition/grid_composer_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

@@ -21,7 +21,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/synth.dart';
 
 /// The musical clock the patterns render against: [bars] bars of 4/4 on an
 /// eighth-note step grid (2 bars for the free vamp, 4 with a progression).

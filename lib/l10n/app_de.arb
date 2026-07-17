@@ -1,6 +1,6 @@
 {
   "@@locale": "de",
-  "appTitle": "KlangUniversum",
+  "appTitle": "CometBeat",
   "homeTagline": "Entdecke das Universum der Musik!",
   "moduleNoteValues": "Notenwerte",
   "moduleNoteValuesSubtitle": "Ganze, halbe, Viertel — wie lange klingt eine Note?",
@@ -1086,9 +1086,9 @@
   "aboutProvider": "Anbieter",
   "aboutContact": "Kontakt",
   "aboutPrivacy": "Datenschutz",
-  "aboutPrivacyText": "KlangUniversum läuft vollständig auf deinem Gerät. Mikrofon-Audio (für Stimmgerät und Mitspielen) wird lokal in Echtzeit analysiert – niemals aufgezeichnet, gespeichert oder übertragen. Es gibt keine Konten, keine Werbung und kein Tracking.",
+  "aboutPrivacyText": "CometBeat läuft vollständig auf deinem Gerät. Mikrofon-Audio (für Stimmgerät und Mitspielen) wird lokal in Echtzeit analysiert – niemals aufgezeichnet, gespeichert oder übertragen. Es gibt keine Konten, keine Werbung und kein Tracking.",
   "aboutDisclaimer": "Haftungsausschluss",
-  "aboutDisclaimerText": "KlangUniversum ist eine Lernhilfe und wird ohne Gewähr bereitgestellt. Die Lehrplan-Stufen sind allgemeine Orientierung, kein offizieller Lehrplan.",
+  "aboutDisclaimerText": "CometBeat ist eine Lernhilfe und wird ohne Gewähr bereitgestellt. Die Lehrplan-Stufen sind allgemeine Orientierung, kein offizieller Lehrplan.",
   "aboutCredits": "Danksagungen",
   "aboutCreditsText": "Der Notensatz verwendet die Schriftart Bravura (SIL Open Font License).",
   "aboutOpenSourceLicenses": "Open-Source-Lizenzen"

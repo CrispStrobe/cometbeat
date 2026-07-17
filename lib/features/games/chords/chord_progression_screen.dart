@@ -8,21 +8,21 @@
 
 import 'dart:async';
 
+import 'package:comet_beat/core/audio/chord_progression.dart';
+import 'package:comet_beat/core/audio/chroma_analysis.dart';
+import 'package:comet_beat/core/audio/metronome.dart';
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/core/tuning.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/features/games/widgets/game_widgets.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:klang_universum/core/audio/chord_progression.dart';
-import 'package:klang_universum/core/audio/chroma_analysis.dart';
-import 'package:klang_universum/core/audio/metronome.dart';
-import 'package:klang_universum/core/audio/microphone_pitch_service.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/core/tuning.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/features/games/widgets/game_widgets.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/midi_pitch.dart';
 import 'package:provider/provider.dart';
 
 /// SRI item id for a play-along chord, e.g. `chords.play_along.g7`,

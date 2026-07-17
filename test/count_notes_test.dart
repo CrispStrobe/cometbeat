@@ -3,10 +3,10 @@
 // correct (matched on the FilledButton so it never collides with the round
 // counter's digits).
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/scales/count_notes_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/scales/count_notes_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

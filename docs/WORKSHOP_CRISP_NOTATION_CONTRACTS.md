@@ -27,7 +27,7 @@
 
 
 **Audience:** an agent working in the `crisp_notation` / `crisp_notation-public` repos.
-**Context:** the KlangUniversum (mus) app is building a full touch- **and**
+**Context:** the CometBeat (mus) app is building a full touch- **and**
 desktop-first score editor ("Composition Workshop",
 `lib/features/workshop/`). It drives an app-side editable model
 (`ScoreDocument`) and renders through crisp_notation. mus CI + local both resolve

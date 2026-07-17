@@ -1,17 +1,17 @@
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/games/tutorial_gate.dart';
+import 'package:comet_beat/features/home/screens/home_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/theme.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Bravura;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/debug_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/game_registry.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
-import 'package:klang_universum/features/games/tutorial_gate.dart';
-import 'package:klang_universum/features/home/screens/home_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/theme.dart';
 import 'package:provider/provider.dart';
 
 Future<void> main() async {
@@ -22,11 +22,11 @@ Future<void> main() async {
   // Real app only: auto-pop a game's first-run tutorial (off by default so it
   // never interrupts widget tests, which don't run main()).
   autoShowTutorials = true;
-  runApp(const KlangUniversumApp());
+  runApp(const CometBeatApp());
 }
 
-class KlangUniversumApp extends StatelessWidget {
-  const KlangUniversumApp({super.key});
+class CometBeatApp extends StatelessWidget {
+  const CometBeatApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +61,7 @@ class KlangUniversumApp extends StatelessWidget {
           context.read<AudioService>().soundOn = settings.soundOn;
           return MaterialApp(
             onGenerateTitle: (context) =>
-                AppLocalizations.of(context)?.appTitle ?? 'KlangUniversum',
+                AppLocalizations.of(context)?.appTitle ?? 'CometBeat',
             debugShowCheckedModeBanner: false,
             theme: buildAppTheme(),
             locale: settings.locale,

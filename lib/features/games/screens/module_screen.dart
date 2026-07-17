@@ -2,13 +2,13 @@
 //
 // Lists the minigames of one learning module (from the game registry).
 
+import 'package:comet_beat/core/models/learning_module.dart';
+import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/features/games/tutorial_gate.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/models/learning_module.dart';
-import 'package:klang_universum/core/services/debug_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/features/games/game_registry.dart';
-import 'package:klang_universum/features/games/tutorial_gate.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class ModuleScreen extends StatelessWidget {

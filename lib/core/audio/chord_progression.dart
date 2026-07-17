@@ -9,7 +9,7 @@
 
 import 'dart:math';
 
-import 'package:klang_universum/core/audio/chroma_analysis.dart';
+import 'package:comet_beat/core/audio/chroma_analysis.dart';
 
 /// One target chord positioned in musical time (beats from the chart start).
 class TargetChord {

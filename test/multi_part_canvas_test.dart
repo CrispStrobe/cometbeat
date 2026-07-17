@@ -2,11 +2,11 @@
 // Verifies it renders a MultiPartView for a multi-part document and reports
 // taps as global element ids (surface enlarged per the CI surface-flake note).
 
+import 'package:comet_beat/features/workshop/model/multi_part_document.dart';
+import 'package:comet_beat/features/workshop/widgets/multi_part_canvas.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/multi_part_document.dart';
-import 'package:klang_universum/features/workshop/widgets/multi_part_canvas.dart';
 
 import 'support/game_test_support.dart';
 

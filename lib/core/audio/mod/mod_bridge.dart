@@ -30,9 +30,9 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/mod_module.dart';
-import 'package:klang_universum/core/audio/synth.dart';
-import 'package:klang_universum/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/mod/mod_module.dart';
+import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/tracker_engine.dart';
 
 /// The MIDI note a raw imported sample is treated as playing at (≈ C-3).
 const int modBridgeBaseMidi = modNoteBaseMidi + 24;

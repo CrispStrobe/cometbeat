@@ -6,9 +6,9 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/loop_engine.dart';
-import 'package:klang_universum/core/audio/synth.dart';
 
 Int16List _pcm(Uint8List wav) => Int16List.sublistView(wav, 44);
 

@@ -12,8 +12,8 @@
 
 import 'dart:convert';
 
+import 'package:comet_beat/core/tuning.dart';
 import 'package:flutter/foundation.dart';
-import 'package:klang_universum/core/tuning.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// SM-2 state for one tracked learning item.

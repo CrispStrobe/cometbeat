@@ -6,7 +6,7 @@
 // the detected pitch changes (or goes silent), provided it was held at least
 // [minNoteMs] (so vibrato wobble and onset transients don't spawn blips).
 
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 
 class MelodyRecorder {
   MelodyRecorder({this.minNoteMs = 120});

@@ -3,18 +3,18 @@
 // it (score + SRI), letting one cross the hit-line costs a life, and catching
 // the whole run finishes with a result screen.
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_reading/falling_notes_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_reading/falling_notes_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/widgets/piano_keyboard.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

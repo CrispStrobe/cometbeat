@@ -2,19 +2,19 @@
 //
 // Language override (system/EN/DE) and a compact SRI statistics summary.
 
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
+import 'package:comet_beat/core/note_naming.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_reading/note_colors.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/settings/screens/about_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
-import 'package:klang_universum/core/audio/synth.dart' show Instrument;
-import 'package:klang_universum/core/note_naming.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/debug_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_reading/note_colors.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/features/settings/screens/about_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
@@ -260,7 +260,7 @@ class SettingsScreen extends StatelessWidget {
               return Text(
                 info == null
                     ? ''
-                    : 'KlangUniversum ${info.version}+${info.buildNumber}',
+                    : 'CometBeat ${info.version}+${info.buildNumber}',
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               );

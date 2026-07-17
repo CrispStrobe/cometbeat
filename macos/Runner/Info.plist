@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Klang Universum listens to your instrument or voice to show your pitch and how in-tune you are.</string>
+	<string>CometBeat listens to your instrument or voice to show your pitch and how in-tune you are.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>

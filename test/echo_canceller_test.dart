@@ -7,8 +7,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/echo_canceller.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/echo_canceller.dart';
 
 void main() {
   const b = 1024; // matches EchoCanceller's default block size

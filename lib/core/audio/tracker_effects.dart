@@ -21,7 +21,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/synth.dart';
 
 /// The per-cell effect commands the Tracker supports.
 enum TrackerEffect { none, arpeggio, vibrato, slideUp, slideDown }

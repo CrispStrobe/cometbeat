@@ -4,8 +4,8 @@
 // glyph, localized name, and duration (as a fraction of a whole note).
 // Used by the symbol quiz, the duration duel, and the review flow.
 
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/widgets/music_glyph.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/music_glyph.dart';
 
 class NoteSymbol {
   /// Catalog ID; SRI items use `note_values.symbol.<id>`.

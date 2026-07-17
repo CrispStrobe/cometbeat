@@ -1,9 +1,9 @@
 // groove_capture — sing-a-track quantization. Pure Dart: synthesized pitch
 // traces in, step cells out. No mic involved (mirrors melody_recorder_test).
 
+import 'package:comet_beat/core/audio/groove_capture.dart';
+import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/groove_capture.dart';
-import 'package:klang_universum/core/audio/loop_engine.dart';
 
 /// A trace holding [midi] over [fromMs]..[toMs] sampled every 25 ms.
 List<PitchSample> _hold(int? midi, double fromMs, double toMs) => [

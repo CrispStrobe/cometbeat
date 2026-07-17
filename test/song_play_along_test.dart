@@ -2,9 +2,9 @@
 // Melody = the top pitch of each sounded note; timing in quarter-beats from the
 // playback timeline (rests leave gaps); tempo from the score, octave-agnostic.
 
+import 'package:comet_beat/features/games/songs/song_play_along.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/games/songs/song_play_along.dart';
 
 const _quarter = NoteDuration(DurationBase.quarter);
 const _half = NoteDuration(DurationBase.half);

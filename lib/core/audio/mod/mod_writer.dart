@@ -18,7 +18,7 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/mod_module.dart';
+import 'package:comet_beat/core/audio/mod/mod_module.dart';
 
 /// Serializes [module] to ProTracker `.mod` bytes.
 Uint8List writeMod(ModModule module) {

@@ -2,12 +2,12 @@
 // show as cards; tapping the louder one advances the round. No staff, so a plain
 // provider harness is enough; we read the two glyphs and tap the louder.
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_values/dynamics_duel_screen.dart';
+import 'package:comet_beat/features/games/widgets/game_widgets.dart';
+import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_values/dynamics_duel_screen.dart';
-import 'package:klang_universum/features/games/widgets/game_widgets.dart';
-import 'package:klang_universum/shared/widgets/music_glyph.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

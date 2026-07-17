@@ -19,7 +19,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/pitch_analysis.dart' show kDefaultA4;
+import 'package:comet_beat/core/audio/pitch_analysis.dart' show kDefaultA4;
 
 const _pcNames = <String>[
   'C',

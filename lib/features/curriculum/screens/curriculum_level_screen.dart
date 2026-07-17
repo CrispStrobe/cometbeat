@@ -4,13 +4,13 @@
 // it (tap a game chip to play it). "Practise this level" opens a curated recital
 // — one game per topic — so the child can run the level as a mixed set.
 
+import 'package:comet_beat/core/curriculum/curriculum.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/features/recital/recital_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/curriculum/curriculum.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/game_registry.dart';
-import 'package:klang_universum/features/recital/recital_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class CurriculumLevelScreen extends StatelessWidget {

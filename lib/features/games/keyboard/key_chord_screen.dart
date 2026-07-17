@@ -9,17 +9,18 @@
 
 import 'dart:math';
 
-import 'package:crisp_notation/crisp_notation.dart' show ChordQuality, Pitch, Step, Triad;
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/features/games/widgets/game_widgets.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
+import 'package:crisp_notation/crisp_notation.dart'
+    show ChordQuality, Pitch, Step, Triad;
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/features/games/widgets/game_widgets.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/widgets/piano_keyboard.dart';
 import 'package:provider/provider.dart';
 
 class KeyChordScreen extends StatefulWidget {

@@ -11,10 +11,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/it_module.dart';
+import 'package:comet_beat/core/audio/mod/it_reader.dart';
+import 'package:comet_beat/core/audio/mod/it_writer.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/mod/it_module.dart';
-import 'package:klang_universum/core/audio/mod/it_reader.dart';
-import 'package:klang_universum/core/audio/mod/it_writer.dart';
 
 void main() {
   test('output has the "IMPM" signature', () {

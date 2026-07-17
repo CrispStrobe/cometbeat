@@ -3,6 +3,12 @@
 // and undoes/redoes. Note placement (from the piano) is covered by the
 // ScoreDocument model tests.
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         InteractiveGrandStaffView,
@@ -13,12 +19,6 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
-import 'package:klang_universum/features/workshop/screens/composition_workshop_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/widgets/piano_keyboard.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

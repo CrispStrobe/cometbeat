@@ -6,9 +6,9 @@
 // Flutter collects from every pub dep via LicenseRegistry. The bundled Bravura
 // (OFL) font license is registered first so it shows there too.
 
+import 'package:comet_beat/core/services/custom_licenses_registry.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/services/custom_licenses_registry.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 

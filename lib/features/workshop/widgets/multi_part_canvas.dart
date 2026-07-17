@@ -11,10 +11,10 @@
 // then renders it as a single, vertically-scrollable page. The engraving width
 // is bound to the viewport so systems break on-screen.
 
+import 'package:comet_beat/features/workshop/model/multi_part_document.dart';
+import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/material.dart' hide PageMetrics;
-import 'package:klang_universum/features/workshop/model/multi_part_document.dart';
-import 'package:klang_universum/shared/score_theme.dart';
 
 class MultiPartCanvas extends StatefulWidget {
   const MultiPartCanvas({

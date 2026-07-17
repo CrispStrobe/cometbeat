@@ -5,12 +5,12 @@
 // games/skills); the recommended level is marked, and tapping one opens its
 // topic breakdown.
 
+import 'package:comet_beat/core/curriculum/curriculum.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/curriculum/screens/curriculum_level_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/curriculum/curriculum.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/curriculum/screens/curriculum_level_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class CurriculumScreen extends StatelessWidget {

@@ -4,10 +4,10 @@
 // a perfect performance hits every note, silence misses every note, a wrong
 // pitch misses, and octave-agnostic charts accept octave-shifted singing.
 
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/tuning.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/play_along.dart';
-import 'package:klang_universum/core/tuning.dart';
 
 /// A reading exactly on [midi], [cents] off.
 PitchReading _reading(int midi, {double cents = 0}) {

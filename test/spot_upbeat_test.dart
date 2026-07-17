@@ -2,10 +2,10 @@
 // shared game surface is used; we tap the correct Upbeat / On-the-beat button
 // per the game's own report of the answer.
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/measures/spot_upbeat_screen.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/measures/spot_upbeat_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

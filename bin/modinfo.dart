@@ -12,8 +12,8 @@
 
 import 'dart:io';
 
-import 'package:klang_universum/core/audio/mod/module_convert.dart';
-import 'package:klang_universum/core/audio/mod/module_doc.dart';
+import 'package:comet_beat/core/audio/mod/module_convert.dart';
+import 'package:comet_beat/core/audio/mod/module_doc.dart';
 
 const _fmtName = {
   ModuleFormat.mod: 'ProTracker MOD',

@@ -22,6 +22,24 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:comet_beat/core/audio/aec_capability.dart';
+import 'package:comet_beat/core/audio/aec_engine.dart';
+import 'package:comet_beat/core/audio/beat_capture.dart';
+import 'package:comet_beat/core/audio/groove_capture.dart';
+import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/loop_reference.dart';
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/audio/wav_io.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/loop_player_service.dart';
+import 'package:comet_beat/features/games/composition/groove_notation.dart';
+import 'package:comet_beat/features/games/composition/groove_play_along.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show Clef, StaffView, multiPartToMusicXml;
 import 'package:file_selector/file_selector.dart';
@@ -29,24 +47,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
-import 'package:klang_universum/core/audio/aec_capability.dart';
-import 'package:klang_universum/core/audio/aec_engine.dart';
-import 'package:klang_universum/core/audio/beat_capture.dart';
-import 'package:klang_universum/core/audio/groove_capture.dart';
-import 'package:klang_universum/core/audio/loop_engine.dart';
-import 'package:klang_universum/core/audio/loop_reference.dart';
-import 'package:klang_universum/core/audio/microphone_pitch_service.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/play_along.dart';
-import 'package:klang_universum/core/audio/wav_io.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/loop_player_service.dart';
-import 'package:klang_universum/features/games/composition/groove_notation.dart';
-import 'package:klang_universum/features/games/composition/groove_play_along.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/score_theme.dart';
 import 'package:provider/provider.dart';
 
 class LoopMixerScreen extends StatefulWidget {

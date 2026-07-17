@@ -7,9 +7,9 @@
 // score_document_packing_golden_test.dart; these assert the function in
 // isolation and lock the contract slice 2 will call into.
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 const _whole = NoteDuration(DurationBase.whole);
 const _half = NoteDuration(DurationBase.half);

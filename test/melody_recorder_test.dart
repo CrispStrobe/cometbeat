@@ -3,9 +3,9 @@
 // Feeds simulated PitchReadings to MelodyRecorder and checks it transcribes the
 // sung pitch stream into the right notes, filtering blips and rests.
 
+import 'package:comet_beat/core/audio/melody_recorder.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/melody_recorder.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
 
 PitchReading _r(int midi) => PitchReading(
       frequency: 440.0 * _pow2((midi - 69) / 12),

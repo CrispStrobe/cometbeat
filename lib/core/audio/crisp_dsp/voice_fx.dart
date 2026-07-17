@@ -14,8 +14,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/crisp_dsp/formant_shift.dart';
-import 'package:klang_universum/core/audio/synth.dart' show kSampleRate;
+import 'package:comet_beat/core/audio/crisp_dsp/formant_shift.dart';
+import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 
 /// The voice-transform palette offered when recording an instrument.
 enum VoiceEffect { normal, chipmunk, monster, deep, robot }

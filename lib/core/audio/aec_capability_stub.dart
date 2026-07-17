@@ -4,7 +4,7 @@
 // native AEC engine here — the caller falls back to the `record` capture path.
 // See aec_capability.dart.
 
-import 'package:klang_universum/core/audio/aec_engine.dart';
+import 'package:comet_beat/core/audio/aec_engine.dart';
 
 /// No native engine on this platform.
 AecEngine? createNativeAecEngine() => null;

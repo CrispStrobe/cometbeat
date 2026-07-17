@@ -13,7 +13,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/synth.dart' show kSampleRate;
+import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:record/record.dart';
 
 class VoiceClipRecorder {

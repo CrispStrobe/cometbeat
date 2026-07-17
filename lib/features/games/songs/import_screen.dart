@@ -4,14 +4,14 @@
 // with [C] chords) into the text field, or pick a simple MIDI file.
 // Imported songs live in the Song Book (persisted via UserSongsService).
 
+import 'package:comet_beat/features/games/songs/import/chordpro.dart';
+import 'package:comet_beat/features/games/songs/import/midi_import.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show scoreFromAbc, scoreFromMusicXml, scoreToMusicXml;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/features/games/songs/import/chordpro.dart';
-import 'package:klang_universum/features/games/songs/import/midi_import.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class ImportScreen extends StatefulWidget {

@@ -2,11 +2,11 @@
 // only drops into its correct high/low basket, and sorting all four advances the
 // round. Uses the shared game surface so the staff cards lay out on CI.
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_reading/pitch_sort_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Clef, StaffView;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_reading/pitch_sort_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

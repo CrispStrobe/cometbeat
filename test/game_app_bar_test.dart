@@ -1,10 +1,10 @@
 // Covers GameAppBar: it shows the title and the app-wide sound toggle, and its
 // optional "?" opens the given primer (hidden when no primer is passed).
 
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/shared/tutorial/primers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/shared/tutorial/primers.dart';
 
 import 'support/game_test_support.dart';
 

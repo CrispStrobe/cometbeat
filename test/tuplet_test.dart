@@ -3,9 +3,9 @@
 // (a triplet of 3 eighths occupies 2 eighths), so reflow must pack them at the
 // scaled duration and buildScore emits a TupletSpan over their bar-index range.
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 Pitch _p(Step s, {int octave = 4}) => Pitch(s, octave: octave);
 const _eighth = NoteDuration(DurationBase.eighth);

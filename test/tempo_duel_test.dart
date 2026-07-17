@@ -2,11 +2,11 @@
 // as cards; tapping the faster one advances the round. No staff, so a plain
 // provider harness is enough; we read the two shown terms and tap the faster.
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_values/tempo_duel_screen.dart';
+import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_values/tempo_duel_screen.dart';
-import 'package:klang_universum/features/games/widgets/game_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

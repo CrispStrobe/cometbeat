@@ -2,8 +2,8 @@
 // streak is consecutive practice days ending today (with a one-day grace so it
 // doesn't read as broken before the first session of the day).
 
+import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _settle() =>

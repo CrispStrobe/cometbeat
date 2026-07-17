@@ -9,7 +9,7 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
-  String get appTitle => 'KlangUniversum';
+  String get appTitle => 'CometBeat';
 
   @override
   String get homeTagline => 'Entdecke das Universum der Musik!';
@@ -3225,14 +3225,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get aboutPrivacyText =>
-      'KlangUniversum läuft vollständig auf deinem Gerät. Mikrofon-Audio (für Stimmgerät und Mitspielen) wird lokal in Echtzeit analysiert – niemals aufgezeichnet, gespeichert oder übertragen. Es gibt keine Konten, keine Werbung und kein Tracking.';
+      'CometBeat läuft vollständig auf deinem Gerät. Mikrofon-Audio (für Stimmgerät und Mitspielen) wird lokal in Echtzeit analysiert – niemals aufgezeichnet, gespeichert oder übertragen. Es gibt keine Konten, keine Werbung und kein Tracking.';
 
   @override
   String get aboutDisclaimer => 'Haftungsausschluss';
 
   @override
   String get aboutDisclaimerText =>
-      'KlangUniversum ist eine Lernhilfe und wird ohne Gewähr bereitgestellt. Die Lehrplan-Stufen sind allgemeine Orientierung, kein offizieller Lehrplan.';
+      'CometBeat ist eine Lernhilfe und wird ohne Gewähr bereitgestellt. Die Lehrplan-Stufen sind allgemeine Orientierung, kein offizieller Lehrplan.';
 
   @override
   String get aboutCredits => 'Danksagungen';

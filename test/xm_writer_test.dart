@@ -10,10 +10,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
+import 'package:comet_beat/core/audio/mod/xm_reader.dart';
+import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/mod/xm_module.dart';
-import 'package:klang_universum/core/audio/mod/xm_reader.dart';
-import 'package:klang_universum/core/audio/mod/xm_writer.dart';
 
 void main() {
   test('output starts with the XM signature', () {

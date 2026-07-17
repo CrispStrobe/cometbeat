@@ -4,10 +4,10 @@
 // with the black keys overlaid. Reusable across the keyboard games — the
 // games decide what a tap means and what sound it makes.
 
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Step;
 // Material's Stepper also exports a `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
 
 class PianoKeyboard extends StatelessWidget {
   /// MIDI number of the leftmost key; must be a C (e.g. 60 = C4).

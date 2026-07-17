@@ -5,9 +5,9 @@
 // export swaps in a stub returning null; that path can't be exercised under
 // `flutter test` but is covered by the `flutter build web` CI/deploy step.
 
+import 'package:comet_beat/core/audio/aec_capability.dart';
+import 'package:comet_beat/core/audio/aec_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/aec_capability.dart';
-import 'package:klang_universum/core/audio/aec_engine.dart';
 
 void main() {
   test('createNativeAecEngine returns an AecEngine on an FFI platform (VM)',

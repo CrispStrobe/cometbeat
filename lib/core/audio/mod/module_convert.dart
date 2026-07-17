@@ -61,19 +61,19 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/it_module.dart';
-import 'package:klang_universum/core/audio/mod/it_reader.dart';
-import 'package:klang_universum/core/audio/mod/it_writer.dart';
-import 'package:klang_universum/core/audio/mod/mod_module.dart';
-import 'package:klang_universum/core/audio/mod/mod_reader.dart';
-import 'package:klang_universum/core/audio/mod/mod_writer.dart';
-import 'package:klang_universum/core/audio/mod/module_doc.dart';
-import 'package:klang_universum/core/audio/mod/s3m_module.dart';
-import 'package:klang_universum/core/audio/mod/s3m_reader.dart';
-import 'package:klang_universum/core/audio/mod/s3m_writer.dart';
-import 'package:klang_universum/core/audio/mod/xm_module.dart';
-import 'package:klang_universum/core/audio/mod/xm_reader.dart';
-import 'package:klang_universum/core/audio/mod/xm_writer.dart';
+import 'package:comet_beat/core/audio/mod/it_module.dart';
+import 'package:comet_beat/core/audio/mod/it_reader.dart';
+import 'package:comet_beat/core/audio/mod/it_writer.dart';
+import 'package:comet_beat/core/audio/mod/mod_module.dart';
+import 'package:comet_beat/core/audio/mod/mod_reader.dart';
+import 'package:comet_beat/core/audio/mod/mod_writer.dart';
+import 'package:comet_beat/core/audio/mod/module_doc.dart';
+import 'package:comet_beat/core/audio/mod/s3m_module.dart';
+import 'package:comet_beat/core/audio/mod/s3m_reader.dart';
+import 'package:comet_beat/core/audio/mod/s3m_writer.dart';
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
+import 'package:comet_beat/core/audio/mod/xm_reader.dart';
+import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 
 /// Detects the module container format by signature; null if unrecognized.
 ModuleFormat? sniffModuleFormat(Uint8List bytes) {

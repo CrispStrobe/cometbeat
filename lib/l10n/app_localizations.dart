@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'KlangUniversum'**
+  /// **'CometBeat'**
   String get appTitle;
 
   /// No description provided for @homeTagline.
@@ -5873,7 +5873,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutPrivacyText.
   ///
   /// In en, this message translates to:
-  /// **'KlangUniversum works entirely on your device. Microphone audio (for the tuner and play-along) is analysed locally in real time — never recorded, stored, or sent anywhere. There are no accounts, no ads, and no tracking.'**
+  /// **'CometBeat works entirely on your device. Microphone audio (for the tuner and play-along) is analysed locally in real time — never recorded, stored, or sent anywhere. There are no accounts, no ads, and no tracking.'**
   String get aboutPrivacyText;
 
   /// No description provided for @aboutDisclaimer.
@@ -5885,7 +5885,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutDisclaimerText.
   ///
   /// In en, this message translates to:
-  /// **'KlangUniversum is a learning aid, provided as is and without warranty. Curriculum levels are generic guidance, not an official syllabus.'**
+  /// **'CometBeat is a learning aid, provided as is and without warranty. Curriculum levels are generic guidance, not an official syllabus.'**
   String get aboutDisclaimerText;
 
   /// No description provided for @aboutCredits.

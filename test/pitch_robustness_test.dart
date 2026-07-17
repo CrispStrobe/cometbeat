@@ -10,8 +10,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
 
 double _f(int midi) => 440.0 * pow(2.0, (midi - 69) / 12.0);
 

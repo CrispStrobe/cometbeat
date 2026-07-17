@@ -7,19 +7,19 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/main.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Bravura, SmuflMetadata;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart' show ByteData, FontLoader;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/game_registry.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/main.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -50,7 +50,7 @@ void main() {
   testWidgets(
       'full flow: home -> Note Values -> Symbol Quiz -> finish -> stars on tile',
       (tester) async {
-    await tester.pumpWidget(const KlangUniversumApp());
+    await tester.pumpWidget(const CometBeatApp());
     await tester.pumpAndSettle();
 
     // Home -> module (module cards show localized EN titles in tests).

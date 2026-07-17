@@ -1,4 +1,4 @@
-# KlangUniversum (working title)
+# CometBeat (working title)
 
 A music notation and harmony learning app for children from primary school
 onwards (6+), built from minigames. Sibling of Space Math Academy

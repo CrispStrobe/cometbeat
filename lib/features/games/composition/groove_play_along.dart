@@ -12,8 +12,8 @@
 
 import 'dart:math';
 
-import 'package:klang_universum/core/audio/loop_engine.dart';
-import 'package:klang_universum/core/audio/play_along.dart';
+import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/play_along.dart';
 
 /// A [PlayAlongChart] over one groove track's [cells] at [bpm]. Two eighth-note
 /// steps make a beat; each pitched cell becomes a [TargetNote] (its top voice —

@@ -7,12 +7,12 @@
 
 import 'dart:async';
 
+import 'package:comet_beat/core/audio/chroma_analysis.dart';
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/audio/chroma_analysis.dart';
-import 'package:klang_universum/core/audio/microphone_pitch_service.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 
 /// A chord candidate named in the learner's convention, e.g. "Am", "G7", or
 /// "Hm" in German — the root spelled via the note-naming setting, suffix as-is.

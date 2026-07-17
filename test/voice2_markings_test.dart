@@ -4,9 +4,9 @@
 // them onto voice 2 on reopen (loadScore). Before this fix a dynamic/lyric set
 // while voice 2 was active was stored but never rendered, and lost on reopen.
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 Pitch _p(Step s, {int octave = 4}) => Pitch(s, octave: octave);
 const _quarter = NoteDuration(DurationBase.quarter);

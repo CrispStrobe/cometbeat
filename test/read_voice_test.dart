@@ -2,11 +2,11 @@
 // UI: the highlighted voice varies per round, so tap the note-name button that
 // matches the game's reported answer.
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_reading/read_voice_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Step, StaffSystemView;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_reading/read_voice_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

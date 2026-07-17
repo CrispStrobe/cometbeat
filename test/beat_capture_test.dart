@@ -5,11 +5,11 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/beat_capture.dart';
+import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/beat_capture.dart';
-import 'package:klang_universum/core/audio/loop_engine.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/synth.dart';
 
 List<BeatFrame> _analyze(Float64List audio, PitchDetector detector) {
   const hop = 1024;

@@ -9,8 +9,8 @@
 
 import 'dart:math';
 
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 
 const _whole = NoteDuration(DurationBase.whole);
 

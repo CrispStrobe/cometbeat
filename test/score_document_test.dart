@@ -2,9 +2,9 @@
 // Covers insert/rest/repitch/delete, multi-level undo/redo, exact bar-packing
 // (including dotted notes), accidental-carrying pitches, and auto clef.
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 Pitch _p(Step step, {int alter = 0, int octave = 4}) =>
     Pitch(step, alter: alter, octave: octave);

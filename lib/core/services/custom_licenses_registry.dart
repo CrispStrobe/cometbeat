@@ -11,7 +11,8 @@
 // - Petaluma (OFL) is bundled by THIS app (assets/smufl/, for the "Handwritten
 //   notes" theme), so the app registers it here.
 
-import 'package:crisp_notation/crisp_notation.dart' show registerBundledFontLicenses;
+import 'package:crisp_notation/crisp_notation.dart'
+    show registerBundledFontLicenses;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 

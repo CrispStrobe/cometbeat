@@ -13,17 +13,17 @@
 
 import 'dart:math';
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/tuning.dart';
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/features/games/widgets/game_widgets.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/music_glyph.dart';
+import 'package:comet_beat/shared/widgets/note_mascot.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/tuning.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/features/games/widgets/game_widgets.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/widgets/music_glyph.dart';
-import 'package:klang_universum/shared/widgets/note_mascot.dart';
 import 'package:provider/provider.dart';
 
 class BeatRunnerScreen extends StatefulWidget {

@@ -9,10 +9,10 @@
 // The computation is pure and clef-agnostic (driven by crisp_notation's diatonic
 // staff arithmetic) so it is unit-testable without a widget tree.
 
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 
 /// The nearest landmark to a target note and the signed diatonic distance to
 /// it (`steps` > 0 means the target is *above* the landmark).

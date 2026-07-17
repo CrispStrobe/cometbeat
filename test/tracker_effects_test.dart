@@ -3,9 +3,9 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/tracker_effects.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/synth.dart';
-import 'package:klang_universum/core/audio/tracker_effects.dart';
 
 double _peak(Float64List b) {
   var p = 0.0;

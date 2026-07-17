@@ -4,9 +4,9 @@
 // render/persist paths address a voice explicitly. An empty voice 2 renders
 // byte-for-byte as a single-voice score (guarded by the packing goldens).
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 Pitch _p(Step s, {int octave = 4}) => Pitch(s, octave: octave);
 const _quarter = NoteDuration(DurationBase.quarter);

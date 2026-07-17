@@ -59,7 +59,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/it_module.dart';
+import 'package:comet_beat/core/audio/mod/it_module.dart';
 
 /// Parses Impulse Tracker `.it` [bytes] into an [ItModule].
 ItModule parseIt(Uint8List bytes) {

@@ -11,7 +11,7 @@ miniaudio (MIT-0) duplex host + a cleanroom MIT echo-canceller, exposed over FFI
                        DESC
   s.homepage         = 'https://github.com/CrispStrobe/crisp_notation'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Klang Universum' => 'cze@mailbox.org' }
+  s.author           = { 'CometBeat' => 'cze@mailbox.org' }
 
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'

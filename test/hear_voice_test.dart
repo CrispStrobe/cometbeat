@@ -2,11 +2,11 @@
 // reports which voice plays alone, so tap that voice button; timers are cancelled
 // on dispose.
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_reading/hear_voice_screen.dart';
+import 'package:comet_beat/features/games/note_reading/satb_voicing.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_reading/hear_voice_screen.dart';
-import 'package:klang_universum/features/games/note_reading/satb_voicing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

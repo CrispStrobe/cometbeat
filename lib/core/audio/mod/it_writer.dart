@@ -56,7 +56,7 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/it_module.dart';
+import 'package:comet_beat/core/audio/mod/it_module.dart';
 
 /// Serializes an [ItModule] to Impulse Tracker `.it` bytes (parseIt-readable).
 Uint8List writeIt(ItModule module) {

@@ -3,10 +3,10 @@
 // ). Boots the real app — real fonts, real SMuFL metadata via
 // Bravura.load(), real audio path — navigates into a game and answers.
 
+import 'package:comet_beat/main.dart' as app;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:klang_universum/main.dart' as app;
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -19,7 +19,7 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     // Home renders all modules (first two unlocked on a fresh profile).
-    expect(find.text('KlangUniversum'), findsOneWidget);
+    expect(find.text('CometBeat'), findsOneWidget);
 
     await tester.tap(find.textContaining('Note Values').first);
     await tester.pumpAndSettle();

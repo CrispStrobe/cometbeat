@@ -10,7 +10,7 @@
 //   0x00 17  "Extended Module: "
 //   0x11 20  module name (NUL-padded/truncated)
 //   0x25 1   0x1A
-//   0x26 20  tracker name (e.g. "KlangUniversum", NUL-padded)
+//   0x26 20  tracker name (e.g. "CometBeat", NUL-padded)
 //   0x3A 2   version = 0x0104
 //   0x3C 4   headerSize = 276 (0x114) — pattern data starts at 0x3C+276 = 0x150
 //   0x40 2   songLength = order.length (clamp ≤ 256)   · 0x42 2 restart = 0
@@ -51,10 +51,10 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/xm_module.dart';
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
 
 const String _kSignature = 'Extended Module: ';
-const String _kTrackerName = 'KlangUniversum';
+const String _kTrackerName = 'CometBeat';
 
 /// Writes an ASCII string into [dst] at [offset], filling exactly [length]
 /// bytes: characters (truncated to `length`) then NUL padding.

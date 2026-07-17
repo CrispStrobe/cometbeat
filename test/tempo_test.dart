@@ -5,9 +5,9 @@
 // buildScore stamps it onto whichever bar that element lands in. Feeds
 // crisp_notation's `TempoMap`, so this is the prerequisite for real playback.
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 Pitch _p(Step s, {int octave = 4}) => Pitch(s, octave: octave);
 const _quarter = NoteDuration(DurationBase.quarter);

@@ -4,12 +4,12 @@
 // scoring: a perfect performance hits every chord, silence/wrong chords miss,
 // and a target found only as the 2nd candidate still counts (fuzzy tolerance).
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/chord_progression.dart';
-import 'package:klang_universum/core/audio/chroma_analysis.dart';
-import 'package:klang_universum/core/tuning.dart';
-import 'package:klang_universum/features/games/chords/chord_progression_screen.dart'
+import 'package:comet_beat/core/audio/chord_progression.dart';
+import 'package:comet_beat/core/audio/chroma_analysis.dart';
+import 'package:comet_beat/core/tuning.dart';
+import 'package:comet_beat/features/games/chords/chord_progression_screen.dart'
     show chordProgressionSriId;
+import 'package:flutter_test/flutter_test.dart';
 
 ChordReading _reading(List<ChordCandidate> candidates) =>
     ChordReading(candidates: candidates, chroma: List.filled(12, 0), energy: 1);

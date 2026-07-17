@@ -57,7 +57,7 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/s3m_module.dart';
+import 'package:comet_beat/core/audio/mod/s3m_module.dart';
 
 /// Serializes an [S3mModule] to Scream Tracker 3 `.s3m` bytes (parseS3m-readable).
 Uint8List writeS3m(S3mModule module) {

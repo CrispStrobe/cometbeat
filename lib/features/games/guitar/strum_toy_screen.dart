@@ -9,15 +9,15 @@
 // arpeggio-into-block-chord (AudioService.playArpeggioThenChord) rather than
 // six ringing strings.
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/features/games/note_reading/note_colors.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 // Material also exports `Step`; crisp_notation's wins here.
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/features/games/note_reading/note_colors.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 /// An open-chord shape: a fret per string in low→high order (E A D G B e);

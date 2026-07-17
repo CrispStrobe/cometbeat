@@ -7,9 +7,9 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/chroma_analysis.dart';
+import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/chroma_analysis.dart';
-import 'package:klang_universum/core/audio/synth.dart';
 
 /// Render simultaneous [freqs] and return a centred FFT window.
 Float64List _chordWindow(List<double> freqs, int windowSize) {

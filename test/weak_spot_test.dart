@@ -2,14 +2,14 @@
 // items, describeSriItem labels them readably, and the Progress screen surfaces
 // them as "your tricky notes".
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/progress/screens/progress_screen.dart';
+import 'package:comet_beat/features/progress/sri_item_label.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/progress/screens/progress_screen.dart';
-import 'package:klang_universum/features/progress/sri_item_label.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/l10n/app_localizations_en.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

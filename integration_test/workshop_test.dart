@@ -12,13 +12,14 @@
 // real desktop session or a CI runner with a display. The same flows are also
 // covered headlessly (and in CI) by test/composition_workshop_test.dart.
 
-import 'package:crisp_notation/crisp_notation.dart' show InteractiveGrandStaffView;
+import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
+import 'package:comet_beat/main.dart' as app;
+import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
+import 'package:crisp_notation/crisp_notation.dart'
+    show InteractiveGrandStaffView;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:klang_universum/features/workshop/screens/composition_workshop_screen.dart';
-import 'package:klang_universum/main.dart' as app;
-import 'package:klang_universum/shared/widgets/piano_keyboard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 CompositionWorkshopTester _editor(WidgetTester tester) =>

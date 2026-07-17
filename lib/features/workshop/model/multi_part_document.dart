@@ -22,9 +22,9 @@
 // Per the G6 handover this deliberately does NOT rewrite [ScoreDocument]; it
 // composes it. Undo/redo stays per part for v1.
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/foundation.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 /// A whole piece as an ordered list of instrument [parts], plus the layout
 /// grouping (brackets/braces and barline connections) drawn down the left edge.

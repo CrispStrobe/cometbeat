@@ -6,16 +6,16 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/aec_engine.dart';
+import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/features/games/composition/groove_play_along.dart';
+import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:crisp_notation/crisp_notation.dart' show StaffView;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/aec_engine.dart';
-import 'package:klang_universum/core/audio/loop_engine.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/synth.dart';
-import 'package:klang_universum/features/games/composition/groove_play_along.dart';
-import 'package:klang_universum/features/games/composition/loop_mixer_screen.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

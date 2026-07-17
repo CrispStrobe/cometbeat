@@ -10,7 +10,7 @@
 
 import 'dart:math';
 
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 
 /// One target note, positioned in musical time (beats from the chart start).
 class TargetNote {

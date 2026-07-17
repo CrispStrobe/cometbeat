@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/synth.dart';
 
 void main() {
   test('midiToFrequency hits the reference pitches', () {

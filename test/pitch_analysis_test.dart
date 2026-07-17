@@ -8,9 +8,9 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/synth.dart';
 
 /// Render a steady tone at [freq] and return a centred analysis window,
 /// avoiding the attack/decay edges so we test the sustained portion.

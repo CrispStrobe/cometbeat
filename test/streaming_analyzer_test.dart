@@ -7,11 +7,11 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/streaming_analyzer.dart';
+import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/streaming_analyzer.dart';
-import 'package:klang_universum/core/audio/synth.dart';
-import 'package:klang_universum/core/audio/wav_io.dart';
 
 Float64List _toMono(Int16List pcm) {
   final out = Float64List(pcm.length);

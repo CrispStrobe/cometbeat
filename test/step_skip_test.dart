@@ -2,12 +2,12 @@
 // the shared game surface is used; we tap the correct Step/Skip button per the
 // game's own report of the answer.
 
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/note_reading/step_skip_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Clef, StaffView;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/note_reading/step_skip_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -3,11 +3,11 @@
 // Learning progress: the Karteikasten (Leitner boxes projected from the
 // SM-2 state, as in space_math_academy) and per-module mastery bars.
 
+import 'package:comet_beat/core/models/learning_module.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/progress/sri_item_label.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/models/learning_module.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/progress/sri_item_label.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class ProgressScreen extends StatelessWidget {

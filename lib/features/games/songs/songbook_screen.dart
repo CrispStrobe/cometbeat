@@ -6,10 +6,10 @@
 // library), added from a picker, and the book renamed or deleted. Tapping a
 // song opens it in the shared player.
 
+import 'package:comet_beat/features/games/songs/song_screen.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/features/games/songs/song_screen.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class SongbookScreen extends StatelessWidget {

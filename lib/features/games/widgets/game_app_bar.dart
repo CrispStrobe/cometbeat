@@ -10,11 +10,11 @@
 // in tutorial_gate.dart, so passing `tutorial:` here is only needed if a screen
 // wants the button in its bar rather than as the floating overlay.
 
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/tutorial.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_button.dart';
+import 'package:comet_beat/shared/widgets/sound_toggle.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/tutorial/tutorial.dart';
-import 'package:klang_universum/shared/tutorial/tutorial_button.dart';
-import 'package:klang_universum/shared/widgets/sound_toggle.dart';
 
 class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
   const GameAppBar({

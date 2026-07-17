@@ -1,5 +1,5 @@
+import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

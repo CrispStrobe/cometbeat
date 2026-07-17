@@ -5,8 +5,8 @@
 // position: finger 1 a whole step above open, fingers 2/3 a half step
 // apart, finger 4 a fourth above open.
 
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 
 /// The four cello strings, low to high.
 enum CelloString {

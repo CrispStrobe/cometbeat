@@ -13,7 +13,7 @@
 // public school curricula — no badge/association branding, no verbatim text.
 // See docs/PLAN.md.
 
-import 'package:klang_universum/l10n/app_localizations.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 
 /// How a curriculum is framed. Only school Lehrpläne for now; the enum keeps the
 /// model open to other framings without touching consumers.

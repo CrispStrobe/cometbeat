@@ -12,8 +12,8 @@
 // over the whole set, while contiguous-only commands (block move, extend)
 // derive an index range from it.
 
+import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:crisp_notation/crisp_notation.dart';
-import 'package:klang_universum/shared/midi_pitch.dart';
 
 /// One editable event in the flat stream: a note, a chord (several simultaneous
 /// pitches), or a rest, with a stable [id] so it can be selected and edited.

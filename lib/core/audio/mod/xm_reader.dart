@@ -26,7 +26,7 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/xm_module.dart';
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
 
 const String _kSignature = 'Extended Module: ';
 const int _kFixedHeaderSize = 0x150;

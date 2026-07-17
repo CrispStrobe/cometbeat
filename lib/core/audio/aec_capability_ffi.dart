@@ -12,7 +12,7 @@
 import 'dart:typed_data';
 
 import 'package:aec_fullduplex/aec_engine.dart' as plugin;
-import 'package:klang_universum/core/audio/aec_engine.dart' as app;
+import 'package:comet_beat/core/audio/aec_engine.dart' as app;
 
 /// A native full-duplex AEC engine for this platform.
 app.AecEngine? createNativeAecEngine() => _NativeAecAdapter();

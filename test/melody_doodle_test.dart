@@ -2,11 +2,11 @@
 // and rendered to a real Score. The quantiser is pure, so most of this is a
 // plain unit test; the widget test drives a real drag.
 
+import 'package:comet_beat/features/games/composition/melody_doodle_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart' show NoteElement, Score;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/games/composition/melody_doodle_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

@@ -8,9 +8,8 @@
 // ARB files, and register its games. Nothing else needs to change — the home
 // screen renders from this list.
 
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-
-import 'package:klang_universum/l10n/app_localizations.dart';
 
 class LearningModule {
   /// Stable ID, also the first segment of this module's SRI item IDs.

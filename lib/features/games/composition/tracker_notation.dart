@@ -11,8 +11,8 @@
 // reverse (Score → Tracker) is inherently partial (quantize + monophonic-per-
 // channel + scale-snap) and is a later slice.
 
+import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:crisp_notation/crisp_notation.dart';
-import 'package:klang_universum/core/audio/tracker_engine.dart';
 
 // Sharp spelling for each pitch class → (Step, alter).
 const _pcSpelling = <(Step, int)>[

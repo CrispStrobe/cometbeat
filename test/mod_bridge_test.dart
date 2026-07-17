@@ -3,10 +3,10 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/mod.dart';
+import 'package:comet_beat/core/audio/mod/mod_bridge.dart';
+import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/mod/mod.dart';
-import 'package:klang_universum/core/audio/mod/mod_bridge.dart';
-import 'package:klang_universum/core/audio/tracker_engine.dart';
 
 /// A tiny 1-channel module: one sample, one pattern with a note on rows 0 and 32.
 ModModule _tinyMod() {

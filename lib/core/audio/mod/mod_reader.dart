@@ -18,7 +18,7 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/mod_module.dart';
+import 'package:comet_beat/core/audio/mod/mod_module.dart';
 
 /// Number of instrument slots in a ProTracker module (always 31 for M.K.).
 const int _sampleCount = 31;

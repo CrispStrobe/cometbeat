@@ -9,8 +9,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/mod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/mod/mod.dart';
 
 /// A minimal but complete, spec-valid ProTracker `.mod`, assembled here by hand
 /// (the oracle). One sample (8 bytes PCM, finetune −2, volume 48), one pattern

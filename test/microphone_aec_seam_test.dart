@@ -11,10 +11,10 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/aec_engine.dart';
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/aec_engine.dart';
-import 'package:klang_universum/core/audio/microphone_pitch_service.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
 
 /// Test double for the native engine: capture a start, collect references, and
 /// let the test push cleaned PCM on demand.

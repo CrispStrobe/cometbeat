@@ -7,7 +7,7 @@
 // Colour Melody rule) and octave-shifts the whole line into a comfortable
 // render register. Pure Dart, testable headlessly like melody_recorder.dart.
 
-import 'package:klang_universum/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/loop_engine.dart';
 
 /// One raw capture sample: elapsed ms → detected midi (null = silence).
 typedef PitchSample = (double, int?);

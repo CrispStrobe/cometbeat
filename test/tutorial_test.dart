@@ -2,13 +2,13 @@
 // engraved example + a Listen button on audio steps), pages through to the end,
 // and maybeShowTutorial auto-shows only on the first visit.
 
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/primers.dart';
+import 'package:comet_beat/shared/tutorial/tutorial.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:crisp_notation/crisp_notation.dart' show StaffView;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/tutorial/primers.dart';
-import 'package:klang_universum/shared/tutorial/tutorial.dart';
-import 'package:klang_universum/shared/tutorial/tutorial_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

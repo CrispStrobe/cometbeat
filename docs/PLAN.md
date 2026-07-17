@@ -19,14 +19,16 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
-- **opus (rename)** · 🚧 **ACTIVE — full app rename `KlangUniversum` → `CometBeat`**
-  (new working name; checked clear on app stores / web / TM search). Scope:
-  package id `klang_universum`→`comet_beat` (**every `import 'package:…'` line, ~300
-  files**), display names (iOS/macOS/Android/web/l10n `appTitle`), bundle ids →
+- **opus (rename)** · ✅ **idle / SHIPPED — full app rename `KlangUniversum` →
+  `CometBeat`** (new working name; checked clear on app stores / web / TM search).
+  Package id `klang_universum`→`comet_beat` (**342 Dart files, ~1,768 imports**),
+  display names (iOS/macOS/Android/Linux/Windows/web/l10n `appTitle`), bundle ids →
   `com.crispstrobe.cometBeat` (app not yet published), XM-writer tracker stamp,
-  README + this header. **Touching EVERY file** — landing as ONE atomic commit ASAP
-  to keep the rebase window tiny. 🙏 Please hold shared-file pushes
-  (`game_registry`/ARBs/`score_document`) for a few minutes. Branch: `main`.
+  README + this header + active docs. `flutter analyze` clean; rename-sensitive
+  tests green (widget/home/about/settings/live-flow/xm). **Deliberately NOT
+  renamed** (external/historical state — needs a manual follow-up): the GitHub repo
+  `CrispStrobe/klang-universum` (+ the CI checkout `path:` that mirrors it), the
+  Apple provisioning profile `ios-release.yml:PROFILE_NAME`, and `HISTORY.md`.
 
 - **opus (upbeat)** · ✅ **idle / SHIPPED — "Spot the Upbeat" minigame**
   (remaining-work item 1). A binary staff-read (Takte module): a short two-bar
@@ -155,7 +157,7 @@ roadmap" sections lower down.
 ### 🚀 Handover prompt for the next agent (copy-paste this)
 
 ```
-You're joining the Klang Universum repo (Flutter music-education app) where
+You're joining the CometBeat repo (Flutter music-education app) where
 SEVERAL agents work in parallel and push to origin/main — collisions are the
 main hazard. Before writing any code:
 

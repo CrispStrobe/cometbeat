@@ -2,9 +2,9 @@
 // sing a stored song against the moving-score highway (the shipped
 // PlayAlongEngine + mic grading). Pure and Flutter-free — unit-tested.
 
+import 'package:comet_beat/core/audio/play_along.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show NoteElement, Score, playbackTimeline;
-import 'package:klang_universum/core/audio/play_along.dart';
 
 /// Derives a play/sing-along [PlayAlongChart] from [score].
 ///

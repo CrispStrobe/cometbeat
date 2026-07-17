@@ -4,8 +4,8 @@
 // downbeat, then stays silent once the notes start (so it never plays over the
 // audio the mic is scoring).
 
+import 'package:comet_beat/core/audio/metronome.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/metronome.dart';
 
 /// Step the clicker from [start] beats through [end] and collect the beats it
 /// clicked (and which were accented).

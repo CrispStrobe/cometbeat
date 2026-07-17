@@ -15,9 +15,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/mod/module_convert.dart';
-import 'package:klang_universum/core/audio/mod/module_doc.dart';
-import 'package:klang_universum/core/audio/synth.dart' show wavBytes;
+import 'package:comet_beat/core/audio/mod/module_convert.dart';
+import 'package:comet_beat/core/audio/mod/module_doc.dart';
+import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 
 typedef _Encoder = Uint8List Function(ModuleDoc);
 const _encoders = <String, _Encoder>{

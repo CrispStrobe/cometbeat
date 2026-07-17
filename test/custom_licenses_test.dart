@@ -4,9 +4,9 @@
 // bundled Bravura (OFL) font license is present in the LicenseRegistry, so it
 // shows up on showLicensePage() alongside the auto-discovered pub licenses.
 
+import 'package:comet_beat/core/services/custom_licenses_registry.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/custom_licenses_registry.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

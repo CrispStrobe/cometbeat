@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "KlangUniversum",
+  "appTitle": "CometBeat",
   "homeTagline": "Discover the universe of music!",
   "moduleNoteValues": "Note Values",
   "moduleNoteValuesSubtitle": "Whole, half, quarter — how long does a note last?",
@@ -1344,9 +1344,9 @@
   "aboutProvider": "Provider",
   "aboutContact": "Contact",
   "aboutPrivacy": "Privacy",
-  "aboutPrivacyText": "KlangUniversum works entirely on your device. Microphone audio (for the tuner and play-along) is analysed locally in real time — never recorded, stored, or sent anywhere. There are no accounts, no ads, and no tracking.",
+  "aboutPrivacyText": "CometBeat works entirely on your device. Microphone audio (for the tuner and play-along) is analysed locally in real time — never recorded, stored, or sent anywhere. There are no accounts, no ads, and no tracking.",
   "aboutDisclaimer": "Disclaimer",
-  "aboutDisclaimerText": "KlangUniversum is a learning aid, provided as is and without warranty. Curriculum levels are generic guidance, not an official syllabus.",
+  "aboutDisclaimerText": "CometBeat is a learning aid, provided as is and without warranty. Curriculum levels are generic guidance, not an official syllabus.",
   "aboutCredits": "Credits",
   "aboutCreditsText": "Music engraving uses the Bravura font (SIL Open Font License).",
   "aboutOpenSourceLicenses": "Open-source licenses"

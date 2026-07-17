@@ -6,27 +6,27 @@
 
 import 'dart:async';
 
+import 'package:comet_beat/core/models/learning_module.dart';
+import 'package:comet_beat/core/services/debug_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/core/tuning.dart';
+import 'package:comet_beat/features/curriculum/screens/curriculum_screen.dart';
+import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
+import 'package:comet_beat/features/games/harmony/function_ear_screen.dart';
+import 'package:comet_beat/features/games/harmony/harmony_quiz_screen.dart';
+import 'package:comet_beat/features/games/note_reading/note_reading_quiz_screen.dart';
+import 'package:comet_beat/features/games/note_values/note_value_quiz_screen.dart';
+import 'package:comet_beat/features/games/scales/scale_detective_screen.dart';
+import 'package:comet_beat/features/games/screens/module_screen.dart';
+import 'package:comet_beat/features/progress/screens/progress_screen.dart';
+import 'package:comet_beat/features/recital/recital_screen.dart';
+import 'package:comet_beat/features/settings/screens/settings_screen.dart';
+import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/sound_toggle.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Clef;
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/models/learning_module.dart';
-import 'package:klang_universum/core/services/debug_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/core/tuning.dart';
-import 'package:klang_universum/features/curriculum/screens/curriculum_screen.dart';
-import 'package:klang_universum/features/games/chords/chord_quiz_screen.dart';
-import 'package:klang_universum/features/games/harmony/function_ear_screen.dart';
-import 'package:klang_universum/features/games/harmony/harmony_quiz_screen.dart';
-import 'package:klang_universum/features/games/note_reading/note_reading_quiz_screen.dart';
-import 'package:klang_universum/features/games/note_values/note_value_quiz_screen.dart';
-import 'package:klang_universum/features/games/scales/scale_detective_screen.dart';
-import 'package:klang_universum/features/games/screens/module_screen.dart';
-import 'package:klang_universum/features/progress/screens/progress_screen.dart';
-import 'package:klang_universum/features/recital/recital_screen.dart';
-import 'package:klang_universum/features/settings/screens/settings_screen.dart';
-import 'package:klang_universum/features/workshop/screens/composition_workshop_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/widgets/sound_toggle.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget {

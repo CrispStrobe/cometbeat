@@ -2,9 +2,9 @@
 // EditorElement (like articulations), emitted onto NoteElement.ornament and
 // drawn above the note by crisp_notation's layout_marks.
 
+import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
 
 Pitch _p(Step s, {int octave = 4}) => Pitch(s, octave: octave);
 const _quarter = NoteDuration(DurationBase.quarter);

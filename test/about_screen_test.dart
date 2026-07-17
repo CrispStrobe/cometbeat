@@ -1,11 +1,11 @@
 // About screen — renders the header, the Impressum/contact/privacy/disclaimer/
 // credits sections, and the open-source-licenses button.
 
+import 'package:comet_beat/features/settings/screens/about_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/features/settings/screens/about_screen.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 Widget _app() => const MaterialApp(
@@ -22,8 +22,8 @@ Widget _app() => const MaterialApp(
 void main() {
   setUp(() {
     PackageInfo.setMockInitialValues(
-      appName: 'KlangUniversum',
-      packageName: 'de.example.klang',
+      appName: 'CometBeat',
+      packageName: 'com.crispstrobe.cometBeat',
       version: '0.1.0',
       buildNumber: '1',
       buildSignature: '',

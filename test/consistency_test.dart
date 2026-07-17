@@ -1,12 +1,12 @@
 // Cross-cutting consistency checks: the registry, module list, star
 // brackets and localizations must stay in sync as games are added.
 
+import 'package:comet_beat/core/models/learning_module.dart';
+import 'package:comet_beat/core/tuning.dart';
+import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/models/learning_module.dart';
-import 'package:klang_universum/core/tuning.dart';
-import 'package:klang_universum/features/games/game_registry.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 
 void main() {
   test('module ids are unique and every game module exists', () {

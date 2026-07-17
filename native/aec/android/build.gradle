@@ -1,6 +1,6 @@
 // Flutter FFI plugin (Android) — builds the shared native code with the NDK via
 // the CMake under ../src.
-group = "org.klanguniversum.aec_fullduplex"
+group = "org.cometbeat.aec_fullduplex"
 version = "1.0"
 
 buildscript {
@@ -23,7 +23,7 @@ rootProject.allprojects {
 apply plugin: "com.android.library"
 
 android {
-    namespace = "org.klanguniversum.aec_fullduplex"
+    namespace = "org.cometbeat.aec_fullduplex"
     compileSdk = 34
 
     externalNativeBuild {

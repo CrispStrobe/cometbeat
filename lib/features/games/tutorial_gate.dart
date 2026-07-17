@@ -6,10 +6,10 @@
 // it's silent; reopen via the "?" button). Every game-launch site pushes
 // gameRoute(game) instead of MaterialPageRoute(builder: game.builder).
 
+import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/features/games/game_registry.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/tutorial/tutorial_sheet.dart';
 
 /// Whether opening a game auto-pops its first-run tutorial. `main()` turns this
 /// on for the real app; it stays **off** by default so widget tests that drive a

@@ -11,12 +11,12 @@
 
 import 'dart:math';
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/tuning.dart';
+import 'package:comet_beat/features/games/game_registry.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/progress_service.dart';
-import 'package:klang_universum/core/tuning.dart';
-import 'package:klang_universum/features/games/game_registry.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 /// Picks a 3–5 piece programme, favouring scored games the child has already

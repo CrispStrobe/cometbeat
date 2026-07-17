@@ -18,8 +18,8 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/chroma_analysis.dart' show fft;
-import 'package:klang_universum/core/audio/echo_canceller.dart';
+import 'package:comet_beat/core/audio/chroma_analysis.dart' show fft;
+import 'package:comet_beat/core/audio/echo_canceller.dart';
 
 // --- Quality metrics -------------------------------------------------------
 //

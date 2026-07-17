@@ -30,11 +30,11 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/aec_offline.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/core/audio/streaming_analyzer.dart';
-import 'package:klang_universum/core/audio/synth.dart';
-import 'package:klang_universum/core/audio/wav_io.dart';
+import 'package:comet_beat/core/audio/aec_offline.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/streaming_analyzer.dart';
+import 'package:comet_beat/core/audio/synth.dart';
+import 'package:comet_beat/core/audio/wav_io.dart';
 
 const _usage = '''
 AEC (acoustic echo cancellation) CLI — cancel the played reference out of a mic.

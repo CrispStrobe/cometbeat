@@ -17,7 +17,7 @@
 
 import 'dart:typed_data';
 
-import 'package:klang_universum/core/audio/chroma_analysis.dart' show fft;
+import 'package:comet_beat/core/audio/chroma_analysis.dart' show fft;
 
 /// In-place inverse FFT built on the forward [fft] (conjugate → fft → conjugate
 /// → scale).

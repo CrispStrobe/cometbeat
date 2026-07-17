@@ -6,12 +6,12 @@
 // points: [showTutorial] (open on demand, e.g. the "?" button) and
 // [maybeShowTutorial] (open once on a game's first visit, then remember).
 
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:crisp_notation/crisp_notation.dart' show StaffView;
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/score_theme.dart';
-import 'package:klang_universum/shared/tutorial/tutorial.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

@@ -4,11 +4,11 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/formant_shift.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/formant_shift.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/pitch_shift.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/resample.dart';
-import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
 
 /// A [seconds]-long sine at [hz] (44.1 kHz), a stand-in for a recording.
 Float64List _sine(double seconds, double hz, {int sr = 44100}) {

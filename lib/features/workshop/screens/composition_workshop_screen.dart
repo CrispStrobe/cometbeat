@@ -14,25 +14,25 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:comet_beat/core/note_naming.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/workshop/export/score_pdf.dart';
+import 'package:comet_beat/features/workshop/model/multi_part_document.dart';
+import 'package:comet_beat/features/workshop/model/score_document.dart';
+import 'package:comet_beat/features/workshop/widgets/multi_part_canvas.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/midi_pitch.dart';
+import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/widgets/music_glyph.dart';
+import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's pitch Step wins here.
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/services.dart';
-import 'package:klang_universum/core/note_naming.dart';
-import 'package:klang_universum/core/services/audio_service.dart';
-import 'package:klang_universum/core/services/settings_service.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/features/games/songs/user_songs_service.dart';
-import 'package:klang_universum/features/workshop/export/score_pdf.dart';
-import 'package:klang_universum/features/workshop/model/multi_part_document.dart';
-import 'package:klang_universum/features/workshop/model/score_document.dart';
-import 'package:klang_universum/features/workshop/widgets/multi_part_canvas.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
-import 'package:klang_universum/shared/midi_pitch.dart';
-import 'package:klang_universum/shared/score_theme.dart';
-import 'package:klang_universum/shared/widgets/music_glyph.dart';
-import 'package:klang_universum/shared/widgets/piano_keyboard.dart';
 import 'package:provider/provider.dart';
 
 /// A choosable note value: glyph + base duration.

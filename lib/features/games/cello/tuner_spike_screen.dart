@@ -8,12 +8,12 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/audio/microphone_pitch_service.dart';
-import 'package:klang_universum/core/audio/pitch_analysis.dart';
-import 'package:klang_universum/features/games/note_reading/note_names.dart';
-import 'package:klang_universum/features/games/widgets/game_app_bar.dart';
-import 'package:klang_universum/l10n/app_localizations.dart';
 
 /// Instruments with a fixed set of open strings the tuner can guide you
 /// through, plus a free chromatic mode.

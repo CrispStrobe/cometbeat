@@ -3,11 +3,11 @@
 // App settings, persisted in SharedPreferences: locale override (null = follow
 // the system, the default) and the note-naming convention.
 
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
+import 'package:comet_beat/core/note_naming.dart';
+import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart' show MusicFont;
 import 'package:flutter/material.dart';
-import 'package:klang_universum/core/audio/synth.dart' show Instrument;
-import 'package:klang_universum/core/note_naming.dart';
-import 'package:klang_universum/shared/score_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsService with ChangeNotifier {

@@ -2,11 +2,11 @@
 // driven through the game's KeyFindTester seam (by MIDI number), so the test
 // doesn't depend on keyboard hit-test geometry.
 
+import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/keyboard/key_find_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Clef;
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/services/sri_service.dart';
-import 'package:klang_universum/features/games/keyboard/key_find_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';

@@ -2,9 +2,9 @@
 // (so a Song Book song of any length scores fairly against a fixed bracket),
 // producing a starScore that yields the right star under `scoreToStars`.
 
+import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/tuning.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:klang_universum/core/audio/play_along.dart';
-import 'package:klang_universum/core/tuning.dart';
 
 void main() {
   const bracket = [1, 9, 13]; // the shipped 'sing_along' bracket
