@@ -7,7 +7,8 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:comet_beat/core/audio/mod/mod.dart';
-import 'package:comet_beat/core/audio/tracker_engine.dart' show TrackerEffect;
+import 'package:comet_beat/core/audio/tracker_engine.dart'
+    show TrackerChannelEffect, TrackerEffect;
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -354,6 +355,22 @@ void main() {
     game.toggleAccent(0, 0);
     await tester.pump();
     expect(game.isSoft(0, 0), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the selected channel effect can be set and cleared',
+      (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+    final game = _game(tester);
+
+    expect(game.channelEffect, TrackerChannelEffect.none);
+    game.setChannelEffect(TrackerChannelEffect.reverb);
+    await tester.pump();
+    expect(game.channelEffect, TrackerChannelEffect.reverb);
+
+    game.setChannelEffect(TrackerChannelEffect.none);
+    await tester.pump();
+    expect(game.channelEffect, TrackerChannelEffect.none);
     expect(tester.takeException(), isNull);
   });
 }

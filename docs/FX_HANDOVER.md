@@ -39,8 +39,11 @@ effects.dart` (arp/vibrato/slide). See auto-memory `tracker-effort`.
    (hardClip/softClip/fuzz/wavefold), the sfxr params we dropped (FM, LFO), and an
    optional FFT-convolution reverb. Each: a pure `Float64List → Float64List`
    transform (or per-sample fn), unit-tested (bounded, finite, changes-the-signal,
-   deterministic). **Integration TODO:** a per-channel effect chain in the Tracker
-   (apply a chosen effect to the channel stem before `mixStems`).
+   deterministic). ✅ **Integration DONE:** a per-channel effect in the Tracker —
+   `TrackerChannelEffect` + `applyChannelEffect` applied to the stem before
+   `mixStems` (`setChannelEffect` + cache-invalidate), with a `graphic_eq` app-bar
+   FX-picker sheet (EN/DE). (A per-channel *chain* of multiple effects is a future
+   extension; today it's one insert effect per channel.)
 2. **Better sample interpolation** — replace `resample.dart`'s linear interp with
    **cubic Hermite** (port from OpenMPT's resampler). Directly improves the
    **recorded-voice instrument** (the flagship) — smoother pitch-shifting. Small,

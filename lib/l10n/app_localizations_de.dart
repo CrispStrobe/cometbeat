@@ -1190,6 +1190,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerBorrowEmpty => 'Dieses Modul hat keine Samples zum Leihen.';
 
   @override
+  String get trackerChangeEffect => 'Kanal-Effekt';
+
+  @override
+  String get trackerFxNone => 'Kein';
+
+  @override
+  String get trackerFxDelay => 'Echo';
+
+  @override
+  String get trackerFxChorus => 'Chorus';
+
+  @override
+  String get trackerFxFlanger => 'Flanger';
+
+  @override
+  String get trackerFxReverb => 'Hall';
+
+  @override
   String get trackerSfxrZap => 'Zap';
 
   @override

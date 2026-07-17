@@ -32,15 +32,15 @@ and push to origin/main** before/after touching shared files. Format:
   per-round invariant `answerSame ⇔ notesShareMidi`). Analyze clean; consistency +
   star suites green.
 
-- **opus (tracker)** · 🚧 **ACTIVE — per-channel FX chain (Tracker)**. Wire the
-  shipped DSP units (`crisp_dsp/modulated_delay.dart` + `reverb.dart`) into the
-  Tracker: a per-channel effect (none/delay/chorus/flanger/reverb) applied to the
-  channel stem in `_renderWithDynamics` before `mixStems`. **HOT files:**
-  `core/audio/tracker_engine.dart` (a `TrackerChannelEffect` enum + `applyChannelEffect`
-  + a mutable `effect` on `TrackerChannel` + `setChannelEffect` w/ cache-invalidate),
-  `features/games/composition/tracker_screen.dart` (an FX picker + tester seam) +
-  **both ARBs** (effect-name keys). Engine test (effected stem ≠ dry) + a tester test.
-  Landing in one commit; rebasing before push.
+- **opus (tracker)** · ✅ **idle / SHIPPED — per-channel FX chain (Tracker)**. The
+  shipped DSP units (`crisp_dsp/modulated_delay.dart` + `reverb.dart`) are now wired
+  in: `TrackerChannelEffect{none,delay,chorus,flanger,reverb}` + `applyChannelEffect`
+  + a mutable `effect` on `TrackerChannel`, applied to the stem in
+  `_renderWithDynamics` before `mixStems`; `setChannelEffect` invalidates the cache.
+  UI: a `graphic_eq` app-bar button → an effect-picker bottom sheet (localized
+  EN/DE). Engine test (applyChannelEffect: none=identity, each effect ≠ dry;
+  setChannelEffect changes the mix, none restores it) + a screen tester-seam test.
+  analyze clean; 50 engine+screen tests green.
 
 - **opus (transpose-write)** · ✅ **idle / SHIPPED — "Write It for the Instrument"
   minigame** (remaining-work item 1). The inverse of Concert Pitch, doubling the

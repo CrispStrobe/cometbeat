@@ -379,4 +379,44 @@ void main() {
       expect(buf.any((v) => v != 0), isTrue);
     });
   });
+
+  group('per-channel effect', () {
+    test('applyChannelEffect: none is identity; each effect changes the stem',
+        () {
+      final stem = Float64List(2000);
+      for (var i = 0; i < stem.length; i++) {
+        stem[i] = 0.6 * sin(2 * pi * 220 * i / kSampleRate);
+      }
+      expect(applyChannelEffect(stem, TrackerChannelEffect.none), same(stem));
+      for (final fx in const [
+        TrackerChannelEffect.delay,
+        TrackerChannelEffect.chorus,
+        TrackerChannelEffect.flanger,
+        TrackerChannelEffect.reverb,
+      ]) {
+        final out = applyChannelEffect(stem, fx);
+        expect(out.length, stem.length);
+        var differs = false;
+        for (var i = 0; i < stem.length; i++) {
+          if ((out[i] - stem[i]).abs() > 1e-6) {
+            differs = true;
+            break;
+          }
+        }
+        expect(differs, isTrue, reason: '$fx should change the stem');
+      }
+    });
+
+    test('setChannelEffect changes the mix; none restores it (cache-aware)',
+        () {
+      final e =
+          TrackerEngine(timing: const TrackerTiming(rows: 8, stepsPerBeat: 2));
+      e.setCell(0, 0, const TrackerCell(midi: 60));
+      final dry = e.renderLoop();
+      e.setChannelEffect(0, TrackerChannelEffect.delay);
+      expect(e.renderLoop(), isNot(equals(dry)));
+      e.setChannelEffect(0, TrackerChannelEffect.none);
+      expect(e.renderLoop(), equals(dry));
+    });
+  });
 }

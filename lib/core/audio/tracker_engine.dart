@@ -16,7 +16,9 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:comet_beat/core/audio/synth.dart';
@@ -295,6 +297,42 @@ class PercussionInstrument implements TrackerInstrument {
   }
 }
 
+/// An optional insert effect applied to a channel's stem (before mixStems).
+enum TrackerChannelEffect { none, delay, chorus, flanger, reverb }
+
+/// Applies [fx] to a channel [stem] with kid-friendly default params, returning a
+/// SAME-LENGTH buffer (so stems still line up for mixStems). [TrackerChannelEffect.none]
+/// returns the stem unchanged.
+Float64List applyChannelEffect(
+  Float64List stem,
+  TrackerChannelEffect fx, {
+  int sampleRate = kSampleRate,
+}) =>
+    // The DSP functions' own defaults are the tuned kid-friendly params; only the
+    // few overrides that differ from those defaults are passed here.
+    switch (fx) {
+      TrackerChannelEffect.none => stem,
+      TrackerChannelEffect.delay => delayFx(
+          stem,
+          delayMs: 200,
+          feedback: 0.3,
+          mix: 0.3,
+          sampleRate: sampleRate,
+        ),
+      TrackerChannelEffect.chorus => chorusFx(
+          stem,
+          rateHz: 1.2,
+          mix: 0.4,
+          sampleRate: sampleRate,
+        ),
+      TrackerChannelEffect.flanger => flangerFx(
+          stem,
+          mix: 0.4,
+          sampleRate: sampleRate,
+        ),
+      TrackerChannelEffect.reverb => reverbFx(stem, sampleRate: sampleRate),
+    };
+
 /// One editable column: an [instrument], an authored mix [gain], and [rows]
 /// cells. Levels are combo-independent (each channel carries its gain into
 /// mixStems' unit-peak-per-stem + soft-limiter mixdown), so editing one channel
@@ -305,6 +343,7 @@ class TrackerChannel {
     required this.instrument,
     required int rows,
     this.gain = 0.6,
+    this.effect = TrackerChannelEffect.none,
     List<TrackerCell>? cells,
   }) : cells = cells != null
             ? List<TrackerCell>.of(cells)
@@ -323,6 +362,10 @@ class TrackerChannel {
   /// [TrackerEngine.setChannelInstrument] so caches are invalidated.
   TrackerInstrument instrument;
   final double gain;
+
+  /// Mutable insert effect on this channel's stem. Go through
+  /// [TrackerEngine.setChannelEffect] so caches are invalidated.
+  TrackerChannelEffect effect;
   final List<TrackerCell> cells;
 
   bool get hasAnyNote => cells.any((c) => !c.isEmpty);
@@ -463,6 +506,14 @@ class TrackerEngine {
     _wav = null;
   }
 
+  /// Sets a channel's insert [effect] (applied to its stem before mixStems) and
+  /// invalidates that channel's cached stem + the mixed WAV.
+  void setChannelEffect(int channel, TrackerChannelEffect effect) {
+    channels[channel].effect = effect;
+    _stemCache.remove(channel);
+    _wav = null;
+  }
+
   /// Replaces every cell of [channel] with [cells] (same length as the row
   /// count) — used to import a whole pattern (e.g. a Score). Invalidates caches.
   void setChannelCells(int channel, List<TrackerCell> cells) {
@@ -558,7 +609,7 @@ class TrackerEngine {
       }
       startStep += steps;
     }
-    return buf;
+    return applyChannelEffect(buf, ch.effect);
   }
 
   /// The current pattern mixed to PCM16 (one loop's worth). Used by [renderLoop]

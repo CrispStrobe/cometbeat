@@ -112,6 +112,10 @@ abstract interface class TrackerTester {
   /// Re-voices the selected channel to the palette option with [optionId].
   void setInstrument(String optionId);
 
+  /// The selected channel's insert effect, and a setter for it.
+  TrackerChannelEffect get channelEffect;
+  void setChannelEffect(TrackerChannelEffect fx);
+
   // --- Arrangement (pattern slots + song) ---
   int get slotCount;
   int get currentSlot;
@@ -284,6 +288,15 @@ class _TrackerScreenState extends State<TrackerScreen>
   void setInstrument(String optionId) {
     final option = kTrackerInstruments.firstWhere((o) => o.id == optionId);
     _engine.setChannelInstrument(_selected, option.build());
+    setState(() {});
+    _syncPlayback();
+  }
+
+  @override
+  TrackerChannelEffect get channelEffect => _engine.channels[_selected].effect;
+  @override
+  void setChannelEffect(TrackerChannelEffect fx) {
+    _engine.setChannelEffect(_selected, fx);
     setState(() {});
     _syncPlayback();
   }
@@ -970,6 +983,59 @@ class _TrackerScreenState extends State<TrackerScreen>
     );
   }
 
+  String _channelEffectLabel(AppLocalizations l10n, TrackerChannelEffect fx) =>
+      switch (fx) {
+        TrackerChannelEffect.none => l10n.trackerFxNone,
+        TrackerChannelEffect.delay => l10n.trackerFxDelay,
+        TrackerChannelEffect.chorus => l10n.trackerFxChorus,
+        TrackerChannelEffect.flanger => l10n.trackerFxFlanger,
+        TrackerChannelEffect.reverb => l10n.trackerFxReverb,
+      };
+
+  /// The per-channel insert-effect picker (none / delay / chorus / flanger /
+  /// reverb applied to the channel's stem before the mix).
+  void _showEffectSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext)!;
+        final current = _engine.channels[_selected].effect;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.trackerChangeEffect,
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final fx in TrackerChannelEffect.values)
+                      ChoiceChip(
+                        label: Text(_channelEffectLabel(l10n, fx)),
+                        selected: fx == current,
+                        onSelected: (_) {
+                          Navigator.pop(sheetContext);
+                          setChannelEffect(fx);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// The "pick a voice, then record" sheet.
   void _showRecordSheet() {
     showModalBottomSheet<void>(
@@ -1035,6 +1101,11 @@ class _TrackerScreenState extends State<TrackerScreen>
             icon: const Icon(Icons.tune),
             tooltip: l10n.trackerChangeInstrument,
             onPressed: _showInstrumentSheet,
+          ),
+          IconButton(
+            icon: const Icon(Icons.graphic_eq),
+            tooltip: l10n.trackerChangeEffect,
+            onPressed: _showEffectSheet,
           ),
           IconButton(
             icon: const Icon(Icons.library_music),

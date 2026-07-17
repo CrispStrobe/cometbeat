@@ -2288,6 +2288,42 @@ abstract class AppLocalizations {
   /// **'That module has no samples to borrow.'**
   String get trackerBorrowEmpty;
 
+  /// No description provided for @trackerChangeEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'Channel effect'**
+  String get trackerChangeEffect;
+
+  /// No description provided for @trackerFxNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get trackerFxNone;
+
+  /// No description provided for @trackerFxDelay.
+  ///
+  /// In en, this message translates to:
+  /// **'Echo'**
+  String get trackerFxDelay;
+
+  /// No description provided for @trackerFxChorus.
+  ///
+  /// In en, this message translates to:
+  /// **'Chorus'**
+  String get trackerFxChorus;
+
+  /// No description provided for @trackerFxFlanger.
+  ///
+  /// In en, this message translates to:
+  /// **'Flanger'**
+  String get trackerFxFlanger;
+
+  /// No description provided for @trackerFxReverb.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverb'**
+  String get trackerFxReverb;
+
   /// No description provided for @trackerSfxrZap.
   ///
   /// In en, this message translates to:
