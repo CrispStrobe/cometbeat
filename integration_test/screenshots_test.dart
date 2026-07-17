@@ -20,7 +20,7 @@ void main() {
   const prefix = String.fromEnvironment('SHOT_PREFIX', defaultValue: 'shot');
   // Force the app language so we can capture an EN and a DE set from one test
   // (the store needs screenshots per localization). Empty = follow the device.
-  const shotLocale = String.fromEnvironment('SHOT_LOCALE', defaultValue: '');
+  const shotLocale = String.fromEnvironment('SHOT_LOCALE');
 
   // Never pumpAndSettle — a looping animation (mascot, animated background)
   // never settles and would hang the run. Hold a screen by pumping fixed steps.
