@@ -19,6 +19,16 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
+- **opus (coverage)** · ✅ **idle / SHIPPED — regression tests for untested parser
+  branches** (test-only, no lib changes). Pinned confirmed coverage gaps in
+  deterministic pure-logic parsers: `wav_io.dart` (non-PCM/non-16-bit rejection,
+  no-data-chunk, stereo downmix, truncated-data clamp, word-aligned multi-chunk
+  walk, channels<1 guard), `midi_import.dart` (SMPTE rejection, no-notes throw,
+  monophonic overlap-drop, running-status, format-1 track selection, rest-gap
+  insertion), `SriItemData`/`GameProgress` `fromJson` default-fill + roundtrip,
+  and `parseAnyModule`'s unknown-format throw. 19 new cases across 4 new test
+  files; whole-project analyze clean.
+
 - **opus (primers-mine)** · ✅ **idle / SHIPPED — per-game tutorial primers for 3
   games** (learnability §1). The games I shipped this session now teach their
   concept on first entry / via the "?": **spot_upbeat** → new `upbeatPrimer`
