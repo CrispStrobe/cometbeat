@@ -279,6 +279,19 @@ class LoopTrack {
 
 /// The whole groove as one small serializable value: what's enabled, which
 /// variant and level each track uses, tempo and swing. The engine is a pure
+/// The tempo range the engine will accept. `LoopTiming.beatMs` is
+/// `60000 ~/ tempoBpm`, so an unvalidated tempo divides by whatever arrives:
+/// 0 threw IntegerDivisionByZeroException, a negative gave a negative
+/// `totalSamples` (RangeError when allocating the mix buffer), >60000 collapsed
+/// `beatMs` — and so `totalMs` — to 0 (modulo-by-zero in the playback ticker),
+/// and 1 bpm rendered an 8-minute ~42 MB WAV synchronously. A share token is
+/// user-pasteable free text, so this is untrusted input; every OTHER spec field
+/// is already validated on the way in ([GrooveSpec.fromJson] / [applySpec]).
+/// The UI only ever offers 75/100/120 (the values that keep the step grid
+/// integral in both ms and samples).
+const kMinTempoBpm = 40;
+const kMaxTempoBpm = 240;
+
 /// `spec → WAV` render (cached), which makes share tokens, save slots and
 /// seam-swap scheduling trivial.
 class GrooveSpec {
@@ -326,7 +339,11 @@ class GrooveSpec {
               .cast<String, num>()
               .map((k, v) => MapEntry(k, v.toDouble())),
         },
-        tempoBpm: (json['t'] as num? ?? 100).toInt(),
+        // Untrusted: a hand-edited token must not divide the timing math by 0
+        // (or by a negative). Clamped like `levels`/`swing` already are.
+        tempoBpm: (json['t'] as num? ?? 100)
+            .toInt()
+            .clamp(kMinTempoBpm, kMaxTempoBpm),
         swing: (json['s'] as num? ?? 0).toDouble(),
         progressionId: json['p'] as String?,
         userCells:
@@ -719,7 +736,10 @@ enum JamFit { chordTone, scaleTone, outside }
 class LoopEngine {
   LoopEngine({List<LoopTrack>? tracks, int tempoBpm = 100})
       : _baseTracks = tracks ?? kLoopMixerTracks,
-        _tempoBpm = tempoBpm;
+        // The field initializer bypasses the clamping setter, so clamp here too.
+        _tempoBpm = tempoBpm < kMinTempoBpm
+            ? kMinTempoBpm
+            : (tempoBpm > kMaxTempoBpm ? kMaxTempoBpm : tempoBpm);
 
   /// The sung layer's track id.
   static const userTrackId = 'voice';
@@ -787,8 +807,12 @@ class LoopEngine {
   int _tempoBpm;
   int get tempoBpm => _tempoBpm;
   set tempoBpm(int bpm) {
-    if (bpm == _tempoBpm) return;
-    _tempoBpm = bpm;
+    // Clamped like [swing]: `beatMs` divides by this, so 0/negative/absurd
+    // values break the timing math rather than just sounding odd. See
+    // [kMinTempoBpm].
+    final clamped = bpm.clamp(kMinTempoBpm, kMaxTempoBpm);
+    if (clamped == _tempoBpm) return;
+    _tempoBpm = clamped;
     _clearRenderCaches();
   }
 

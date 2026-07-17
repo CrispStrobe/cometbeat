@@ -4,6 +4,7 @@
 // GrooveSpec snapshot/serialization and the render cache. Mirrors
 // synth_test.dart: pure Dart, no device audio.
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/loop_engine.dart';
@@ -293,6 +294,59 @@ void main() {
     expect(decodeGrooveToken('hello'), isNull);
     expect(decodeGrooveToken('KU1.%%%not-base64%%%'), isNull);
     expect(decodeGrooveToken('KU1.aGVsbG8'), isNull, reason: 'not json');
+  });
+
+  // Regression: a share token is user-pasteable free text, and every spec field
+  // is validated on the way in EXCEPT tempo, which passed through raw into
+  // `beatMs = 60000 ~/ tempoBpm`. These tokens are all structurally valid, so
+  // decodeGrooveToken accepts them and the caller's "invalid code" path never
+  // fires — the damage landed one call later: t=0 threw
+  // IntegerDivisionByZeroException, t=-100 gave totalSamples=-211680 (RangeError
+  // allocating the mix buffer), t=60001 collapsed totalMs to 0 (modulo-by-zero
+  // in the playback ticker, every frame), t=1 rendered an 8-minute ~42 MB WAV
+  // synchronously on the UI thread.
+  test('a hand-edited tempo in a share token cannot break the timing math', () {
+    String tokenFor(int t) {
+      final json = jsonEncode({
+        'e': ['drums'],
+        't': t,
+      });
+      return 'KU1.${base64Url.encode(utf8.encode(json))}';
+    }
+
+    for (final t in [0, -100, 1, 60001]) {
+      final spec = decodeGrooveToken(tokenFor(t));
+      expect(spec, isNotNull, reason: 't=$t is structurally valid json');
+      expect(
+        spec!.tempoBpm,
+        inInclusiveRange(kMinTempoBpm, kMaxTempoBpm),
+        reason: 't=$t must be clamped by fromJson',
+      );
+
+      final engine = LoopEngine()..applySpec(spec);
+      expect(engine.tempoBpm, inInclusiveRange(kMinTempoBpm, kMaxTempoBpm));
+
+      // The timing math must stay positive and finite, and a render must not
+      // blow up.
+      final timing = LoopTiming(tempoBpm: engine.tempoBpm);
+      expect(timing.totalMs, greaterThan(0), reason: 't=$t');
+      expect(timing.totalSamples, greaterThan(0), reason: 't=$t');
+      expect(engine.renderLoop(), isNotEmpty, reason: 't=$t');
+    }
+  });
+
+  test('the tempo setter clamps direct misuse, leaving valid tempos alone', () {
+    final engine = LoopEngine();
+    engine.tempoBpm = 0;
+    expect(engine.tempoBpm, kMinTempoBpm);
+    engine.tempoBpm = 100000;
+    expect(engine.tempoBpm, kMaxTempoBpm);
+    // The constructor bypasses the setter — it must clamp too.
+    expect(LoopEngine(tempoBpm: 0).tempoBpm, kMinTempoBpm);
+    // The tempos the UI actually offers are untouched.
+    for (final bpm in [75, 100, 120]) {
+      expect(LoopEngine(tempoBpm: bpm).tempoBpm, bpm);
+    }
   });
 
   test('infinite mode: deterministic per iteration, varied across them', () {
