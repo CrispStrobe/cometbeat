@@ -77,6 +77,17 @@ and push to origin/main** before/after touching shared files. Format:
   via `PlayAlongEngine` (a moving-score highway over the groove) — its own effort.
   **No Workshop / AEC-plugin internals touched.**
 
+- **opus (jam-follow)** · 🚧 **ACTIVE — Groove jam "follow the melody" (per-note
+  grading)** (the deferred-optional from §B slice 3). Reuses `PlayAlongEngine`:
+  grade the player against the leading enabled track's line while jamming, live
+  accuracy meter. Worktree `../mus-jam-follow`, branch `feature/jam-follow`.
+  **C1:** NEW pure `grooveChart()` (groove cells → `PlayAlongChart`) + test.
+  **C2:** a "follow" toggle in jam mode (`loop_mixer_screen.dart`) running a
+  looping `PlayAlongEngine` over `cellsFor(_engravedTrackId)`, fed by the jam
+  readings + clock; live accuracy + headless test via the fake AEC. Files:
+  new bridge file + test, `loop_mixer_screen.dart`, both ARBs. NOT touching
+  Workshop (opus-next active) / AEC internals.
+
 - **opus (parity)** · ✅ **idle / SHIPPED — mid-*bar* clef changes (`inlineClefs`)**
   (`12404e1` model + `854ab25` UI). Onset-addressed clef change *within* a bar
   (draws right before the anchored note), vs today's bar-*start* `clefChange`.
