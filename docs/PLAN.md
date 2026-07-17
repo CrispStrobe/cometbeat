@@ -14,25 +14,27 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (next)** · 🚧 **ACTIVE — Workshop notation batch: tempo marks → grace
-  notes → playback** (`docs/WORKSHOP_NEXT_HANDOVER.md`, in order). Worktree
-  `../mus-next`, branch `feature/workshop-next`. **Touching the HOT Workshop set:**
-  `lib/features/workshop/model/score_document.dart` + `screens/
+- **opus (next)** · 🚧 **ACTIVE — Workshop notation batch: tempo → grace →
+  playback ALL SHIPPED; now the next handover items** (`docs/
+  WORKSHOP_NEXT_HANDOVER.md`). Worktree `../mus-next`, branch
+  `feature/workshop-next`. **HOT set:** `score_document.dart` + `screens/
   composition_workshop_screen.dart` + tests.
-  ✅ **Tempo marks SHIPPED** — document-level `Tempo? tempo` (→ `Score.tempo`) +
-  id-anchored `_tempoChanges` side-map (→ `Measure.tempoChange`), the clef/key
-  stamp pattern; Tempo row in the change-here dialog + "Initial tempo…" in the ⋮
-  menu; `test/tempo_test.dart` (byte-identity + MusicXML round-trip), de/en. Feeds
-  `TempoMap` for playback.
-  ✅ **Grace notes SHIPPED** — per-note `EditorElement.graceNotes: List<Pitch>` +
-  `graceStyle` FIELD (rides the snapshot/clipboard; NB it's a Pitch list, not a
-  NoteElement list) → `NoteElement.graceNotes`; zero bar duration so packing is
-  untouched (goldens hold). "Grace notes…" palette editor (tap C–B / octave /
-  acciaccatura·appoggiatura); `test/grace_note_test.dart` (round-trip + packing
-  invariant), de/en.
-  🚧 **Now: playback (bucket F)** — real transport + moving cursor over
-  `playbackTimeline`/`soundingAt`/`TempoMap` (the tempo marks feed it), replacing
-  the fixed-tempo `_play` beep. Will touch `AudioService` + the screen.
+  ✅ **Tempo marks** — document-level `Tempo? tempo` (→ `Score.tempo`) + id-anchored
+  `_tempoChanges` side-map (→ `Measure.tempoChange`), the clef/key stamp pattern;
+  Tempo row in the change-here dialog + "Initial tempo…" in the ⋮ menu;
+  `test/tempo_test.dart` (byte-identity + MusicXML round-trip), de/en.
+  ✅ **Grace notes** — per-note `EditorElement.graceNotes: List<Pitch>` + `graceStyle`
+  FIELD (rides the snapshot/clipboard; NB Pitch list, not a NoteElement list) →
+  `NoteElement.graceNotes`; zero bar duration so packing is untouched (goldens
+  hold). "Grace notes…" palette editor; `test/grace_note_test.dart`, de/en.
+  ✅ **Playback (bucket F)** — real transport + moving green cursor over
+  `playbackTimeline`/`TempoMap`; `AudioService.playTimedChords` renders one gap-
+  accurate WAV (rests = silence, chords together, tempo-scaled). Play/stop toggle;
+  Timer-driven cursor shares the seconds schedule with the audio. Reflects
+  repeats/navigation/split; tempo marks feed it. **Follow-up:** multi-part mixing +
+  per-part mute (today plays the active part only); multi-part canvas cursor.
+  🚧 **Now: next handover item** — mid-*bar* clef changes (`inlineClefs`) / voice 2 /
+  the Studio shell (Causes 2+3).
 
 - **opus (groove-export)** · ✅ **idle / SHIPPED — Groove → Song Book / MusicXML**
   (`docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md` §A; `3c816ab` A1, `a7c3554` A2+A3).
