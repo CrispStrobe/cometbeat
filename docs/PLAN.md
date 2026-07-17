@@ -23,14 +23,19 @@ and push to origin/main** before/after touching shared files. Format:
   new `test/tempo_test.dart`. Starting with **tempo marks** (bar-anchored stamp,
   feeds `Score.tempo`/`Measure.tempoChange` → `TempoMap`).
 
-- **opus (groove-export)** · 🚧 **ACTIVE — Groove → Song Book / MusicXML**
-  (`docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md` §A). Worktree `../mus-groove-export`,
-  branch `feature/groove-export`. Files: NEW `grooveParts()` in
-  `groove_notation.dart` (multi-part) + tests; `loop_mixer_screen.dart`
-  share-sheet "Save to Song Book" (+ optional Export MusicXML) via
-  `multiPartToMusicXml` → `UserSongsService.addSong`; **both ARBs**
-  (`loopMixerSaveSongBook*`). NOT touching any Workshop files (Song Book + the
-  MusicXML *writer* are the integration points).
+- **opus (groove-export)** · ✅ **idle / SHIPPED — Groove → Song Book / MusicXML**
+  (`docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md` §A; `3c816ab` A1, `a7c3554` A2+A3).
+  The Loop Mixer's share sheet now saves the groove as a **real multi-part
+  score** — the payoff of the toy and the on-ramp to the Workshop. **A1:** pure
+  `grooveParts()` in `groove_notation.dart` — enabled pitched tracks
+  (voice·melody·chords·sparkle·bass) → one `Score` each (bass clef for bass) →
+  `MultiPartScore`; drums/beat skipped (no percussion staff yet). **A2:** share
+  sheet "Save to Song Book" → `multiPartToMusicXml` → `UserSongsService.addSong`
+  (gated on a pitched track). **A3:** "Export sheet music (MusicXML)" desktop
+  save. l10n de/en (`loopMixerSaveSongBook/ExportMusicXml/SaveTitle`). Tests:
+  8/8 groove_notation + 12/12 loop_mixer (multi-part round-trip through the
+  Song Book). **No Workshop files touched.** Only §B (native-AEC jam grading)
+  of the handover remains unclaimed.
 
 - **opus (parity)** · 🚧 **ACTIVE — tempo marks** (id-anchor stamp, feeds
   playback/MusicXML; NB crisp_notation carries `Score.tempo`/`Measure.tempoChange`
