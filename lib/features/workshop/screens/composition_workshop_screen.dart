@@ -15,7 +15,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:comet_beat/core/notation/multi_part_export.dart'
-    show multiPartToAbc, multiPartToMidi;
+    show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
@@ -258,7 +258,8 @@ MultiPartScore importMultiPart(String fileName, Uint8List bytes) {
     'abc' => multiPartScoreFromAbc(text()),
     'mei' => multiPartScoreFromMei(text()),
     'krn' => multiPartScoreFromKern(text()),
-    // MIDI / MuseScore / Guitar Pro have no multi-part reader here yet.
+    'mid' || 'midi' => multiTrackMidiToMultiPart(bytes),
+    // MuseScore / Guitar Pro have no multi-part reader here yet.
     _ => MultiPartScore([importScore(fileName, bytes)]),
   };
 }

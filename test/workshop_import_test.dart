@@ -5,6 +5,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/notation/multi_part_export.dart'
+    show multiPartToMidi;
 import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -59,6 +61,17 @@ void main() {
     final mps = importMultiPart('tune.musicxml', _bytes(xml));
     expect(mps.parts, hasLength(1));
     expect(mps.parts.first.measures, isNotEmpty);
+  });
+
+  test('importMultiPart keeps both tracks of a multi-track MIDI', () {
+    final midi = multiPartToMidi(
+      MultiPartScore([
+        Score.simple(notes: 'c4:q d4 e4 f4'),
+        Score.simple(notes: 'g3:q e3 c3 g2'),
+      ]),
+    );
+    final mps = importMultiPart('band.mid', midi);
+    expect(mps.parts.length, 2, reason: 'one part per MIDI track');
   });
 
   test('importMultiPart falls back through importScore for unknown types', () {
