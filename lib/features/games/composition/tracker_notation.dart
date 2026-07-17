@@ -209,6 +209,88 @@ List<TrackerCell> scoreToTrackerCells(
   return cells;
 }
 
+// ---------------------------------------------------------------------------
+// Maximal fidelity: multi-channel bridges (both directions)
+// ---------------------------------------------------------------------------
+
+/// One [Score] per PITCHED channel that has notes — the full-band "score view".
+/// Empty channels and [PercussionInstrument] channels are skipped (drums have no
+/// pitch to notate). The channel with `id == 'bass'` is drawn in [Clef.bass];
+/// every other part uses [Clef.treble]. Each part reuses [trackerChannelToScore],
+/// so it inherits the same held-run → tied-note decomposition and bar splitting.
+List<Score> trackerToScoreParts(
+  List<TrackerChannel> channels,
+  TrackerTiming timing,
+) {
+  final parts = <Score>[];
+  for (final channel in channels) {
+    if (!channel.hasAnyNote) continue;
+    if (channel.instrument is PercussionInstrument) continue;
+    final clef = channel.id == 'bass' ? Clef.bass : Clef.treble;
+    parts.add(trackerChannelToScore(channel, timing, clef: clef));
+  }
+  return parts;
+}
+
+/// Splits a polyphonic [score] across [channelCount] monophonic tracker channels.
+/// For each element its pitches are sorted HIGH→LOW and dealt out to channels
+/// 0, 1, 2, … (channel 0 = the top voice); a monophonic note fills only channel 0
+/// and extra voices beyond [channelCount] are dropped. Durations quantize to the
+/// step grid and — when [snapToScale] — pitches snap to C-pentatonic, exactly as
+/// [scoreToTrackerCells] does. Returns exactly [channelCount] cell-lists, each of
+/// length [TrackerTiming.rows].
+List<List<TrackerCell>> scoreToChannels(
+  Score score,
+  TrackerTiming timing, {
+  int channelCount = 4,
+  bool snapToScale = true,
+}) {
+  final channels = [
+    for (var c = 0; c < channelCount; c++)
+      List<TrackerCell>.filled(timing.rows, TrackerCell.empty, growable: true),
+  ];
+  final elements = [for (final m in score.measures) ...m.elements];
+
+  var i = 0;
+  var step = 0;
+  while (i < elements.length && step < timing.rows) {
+    final el = elements[i];
+    if (el is RestElement) {
+      step += durationToSteps(el.duration, timing.stepsPerBeat);
+      i++;
+      continue;
+    }
+    if (el is NoteElement) {
+      var steps = durationToSteps(el.duration, timing.stepsPerBeat);
+      // Top voice first (high → low).
+      final voices = [for (final p in el.pitches) p.midiNumber]
+        ..sort((a, b) => b.compareTo(a));
+      // Merge tied continuations into one held note (element-level, matching
+      // scoreToTrackerCells).
+      var cur = el;
+      while (cur.tieToNext &&
+          i + 1 < elements.length &&
+          elements[i + 1] is NoteElement) {
+        final next = elements[i + 1] as NoteElement;
+        steps += durationToSteps(next.duration, timing.stepsPerBeat);
+        cur = next;
+        i++;
+      }
+      if (step < timing.rows) {
+        for (var v = 0; v < voices.length && v < channelCount; v++) {
+          final midi = snapToScale ? snapToPentatonic(voices[v]) : voices[v];
+          channels[v][step] = TrackerCell(midi: midi);
+        }
+      }
+      step += steps;
+      i++;
+      continue;
+    }
+    i++; // barlines / other elements — skip
+  }
+  return channels;
+}
+
 /// A short original C-pentatonic tune (one 4/4 bar of quarters, C D E G) offered
 /// as a starting melody to remix — proves the Score→Tracker direction end-to-end
 /// and gives a kid something to build on. Lands exactly on the melody channel's
