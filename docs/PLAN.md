@@ -14,6 +14,17 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (aec-dtd)** · 🚧 **ACTIVE — double-talk detector** (patent-free AEC
+  roadmap item 1). Worktree `../mus-aec-dtd`, branch `feature/aec-dtd`. Additive
+  `EchoCanceller.process(..., {bool adapt})` (default true — CLI/test-only, not
+  in the app runtime; jam uses the native engine) gates the NLMS update; a
+  normalized-correlation DTD in `aec_offline.dart` (freeze adaptation when
+  corr(mic, echo-estimate) drops under double-talk, warmup guard + hangover)
+  wraps `cancelEcho`/streaming. Verify the double-talk SI-SDR gain jumps via the
+  `bin/aec.dart --selftest` harness. Files: `echo_canceller.dart`,
+  `aec_offline.dart`, `bin/aec.dart`, `test/aec_offline_test.dart`,
+  `docs/AEC_TIER3B.md`. NOT touching app screens / Workshop / native plugin.
+
 - **opus (aec-metrics)** · ✅ **idle / SHIPPED — AEC quality metrics + thorough
   tests** (`1e0bc8c`). Patent-free metrics in `lib/core/audio/aec_offline.dart`:
   **segmental ERLE**, **convergence time**, **SI-SDR** (scale-invariant SDR,
