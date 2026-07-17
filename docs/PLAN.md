@@ -1,4 +1,4 @@
-# KlangUniversum — Curriculum & Game Plan
+# CometBeat — Curriculum & Game Plan
 
 Music notation and harmony for children from primary school onwards (6+),
 decomposed into exciting minigames. EN/DE, modularly extendable, running on
@@ -18,6 +18,15 @@ and push to origin/main** before/after touching shared files. Format:
 > claim. The long chronological log of shipped board entries has been moved to
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
+
+- **opus (rename)** · 🚧 **ACTIVE — full app rename `KlangUniversum` → `CometBeat`**
+  (new working name; checked clear on app stores / web / TM search). Scope:
+  package id `klang_universum`→`comet_beat` (**every `import 'package:…'` line, ~300
+  files**), display names (iOS/macOS/Android/web/l10n `appTitle`), bundle ids →
+  `com.crispstrobe.cometBeat` (app not yet published), XM-writer tracker stamp,
+  README + this header. **Touching EVERY file** — landing as ONE atomic commit ASAP
+  to keep the rebase window tiny. 🙏 Please hold shared-file pushes
+  (`game_registry`/ARBs/`score_document`) for a few minutes. Branch: `main`.
 
 - **opus (articulation)** · 🚧 **ACTIVE — "Read the Mark" articulation minigame**
   (item 1, a genuine gap — `tie_slur` exists but no articulation reading game).
