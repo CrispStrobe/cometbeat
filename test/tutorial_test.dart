@@ -131,6 +131,10 @@ void main() {
       'Half steps and whole steps': wholeHalfPrimer,
       'Which clef?': clefsPrimer, // bass-clef Score path
       'Four voices at once': voicesPrimer,
+      'Up or down?': directionPrimer,
+      'Same or different?': sameDiffPrimer,
+      'How many notes?': countNotesPrimer,
+      'Strong and weak beats': strongBeatPrimer, // time-signature Score path
     };
     for (final entry in primers.entries) {
       await pumpGame(

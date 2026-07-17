@@ -3190,6 +3190,50 @@ class AppLocalizationsDe extends AppLocalizations {
       'Um eine Stimme zu lesen, folge nur ihrer Linie: der Sopran ist die oberste Note, der Bass die unterste. Hör hin — erst oben, dann unten.';
 
   @override
+  String get primerDirectionTitle => 'Aufwärts oder abwärts?';
+
+  @override
+  String get primerDirectionUp =>
+      'Wenn eine Melodie steigt, ist jede Note höher als die davor — im Notenbild wandern die Noten nach oben, und der Klang geht hinauf.';
+
+  @override
+  String get primerDirectionDown =>
+      'Wenn sie fällt, ist jede Note tiefer als die davor — die Noten wandern nach unten, und der Klang sinkt.';
+
+  @override
+  String get primerSameDiffTitle => 'Gleich oder verschieden?';
+
+  @override
+  String get primerSameDiffSame =>
+      'Zwei Noten mit DERSELBEN Tonhöhe klingen genau gleich — wie ein Echo. Im Notenbild stehen sie an genau derselben Stelle.';
+
+  @override
+  String get primerSameDiffDifferent =>
+      'Ist die zweite Note auch nur einen Schritt höher oder tiefer, ist sie verschieden — und steht woanders. Hör hin: C, dann D.';
+
+  @override
+  String get primerCountTitle => 'Wie viele Noten?';
+
+  @override
+  String get primerCountThree =>
+      'Hör hin und zähl, wie viele einzelne Noten vorbeikommen. Hier sind es drei — zähl bei jedem neuen Klang eins weiter.';
+
+  @override
+  String get primerCountFour =>
+      'Jetzt vier. Sie kommen schnell, also zähl jede sofort mit, wenn sie erklingt.';
+
+  @override
+  String get primerAccentTitle => 'Betonte und unbetonte Schläge';
+
+  @override
+  String get primerAccentCount =>
+      'Im 4/4-Takt zählst du immer 1-2-3-4. Die 1 ist der BETONTE Schlag — der, den du am stärksten klopfst. Die 2, 3 und 4 sind leichter.';
+
+  @override
+  String get primerAccentThree =>
+      'Die Taktart bestimmt, welcher Schlag betont ist. Im 3/4-Takt zählst du 1-2-3, und wieder ist die 1 betont — der Schwung eines Walzers.';
+
+  @override
   String get colorScaffoldLabel => 'Farbhilfe für Anfänger';
 
   @override

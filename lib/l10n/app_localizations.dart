@@ -5786,6 +5786,78 @@ abstract class AppLocalizations {
   /// **'To read one voice, follow only its line: the soprano is the top note, the bass the bottom. Listen — top voice, then bottom.'**
   String get primerVoicesFollow;
 
+  /// No description provided for @primerDirectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Up or down?'**
+  String get primerDirectionTitle;
+
+  /// No description provided for @primerDirectionUp.
+  ///
+  /// In en, this message translates to:
+  /// **'When a melody climbs, every note is higher than the one before — on the staff the notes walk upward, and the sound rises.'**
+  String get primerDirectionUp;
+
+  /// No description provided for @primerDirectionDown.
+  ///
+  /// In en, this message translates to:
+  /// **'When it falls, every note is lower than the one before — the notes walk down the staff, and the sound sinks.'**
+  String get primerDirectionDown;
+
+  /// No description provided for @primerSameDiffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Same or different?'**
+  String get primerSameDiffTitle;
+
+  /// No description provided for @primerSameDiffSame.
+  ///
+  /// In en, this message translates to:
+  /// **'Two notes at the SAME pitch sound exactly alike — like an echo. On the staff they sit in the very same place.'**
+  String get primerSameDiffSame;
+
+  /// No description provided for @primerSameDiffDifferent.
+  ///
+  /// In en, this message translates to:
+  /// **'If the second note is even one step higher or lower, it is different — and it sits somewhere else on the staff. Listen: C then D.'**
+  String get primerSameDiffDifferent;
+
+  /// No description provided for @primerCountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How many notes?'**
+  String get primerCountTitle;
+
+  /// No description provided for @primerCountThree.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen and count how many separate notes go by. Here there are three — count one for each new sound.'**
+  String get primerCountThree;
+
+  /// No description provided for @primerCountFour.
+  ///
+  /// In en, this message translates to:
+  /// **'Now four. They come quickly, so count each one the moment it arrives.'**
+  String get primerCountFour;
+
+  /// No description provided for @primerAccentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Strong and weak beats'**
+  String get primerAccentTitle;
+
+  /// No description provided for @primerAccentCount.
+  ///
+  /// In en, this message translates to:
+  /// **'In 4/4 you count 1-2-3-4 over and over. Beat 1 is the STRONG beat — the one you tap hardest. Beats 2, 3 and 4 are lighter.'**
+  String get primerAccentCount;
+
+  /// No description provided for @primerAccentThree.
+  ///
+  /// In en, this message translates to:
+  /// **'The meter decides which beat is strong. In 3/4 you count 1-2-3, and the 1 is strong again — that\'s the lilt of a waltz.'**
+  String get primerAccentThree;
+
   /// No description provided for @colorScaffoldLabel.
   ///
   /// In en, this message translates to:

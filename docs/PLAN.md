@@ -125,7 +125,14 @@ and push to origin/main** before/after touching shared files. Format:
   F-clef and what they curl/dot around), `voicesPrimer` (S/A/T/B → duet,
   read_voice, which_voice, hear_voice). Plus **reuse-wiring `readingBassPrimer`
   onto all 8 bass variants**. Helpers gained `_curvePair()` + `_articulated()`.
-  Next: scales (direction, same/different, count-by-ear) + measures (strong beat).
+  ✅ **Batch 3 (scales + measures) SHIPPED — 7 games:** `directionPrimer` (climb vs
+  fall → direction_ear, run_direction, pitch_sort +bass), `sameDiffPrimer` (same
+  pitch = an echo, same spot on the staff), `countNotesPrimer` (count each new
+  sound), `strongBeatPrimer` (strong_beat — beat 1 lands loud then 2-3-4 lighter
+  via an async two-call `playPhrase(gain:)`, in 4/4 AND 3/4, so the accent is
+  actually *heard*). Next: chords (7ths + reuse `intervalsPrimer`), harmony
+  (roman, cadences), composition (phrase/Q&A), cello+keyboard (bowing, tenor
+  clef, grand staff).
 
 - **opus (primers-mine)** · ✅ **idle / SHIPPED — per-game tutorial primers for 3
   games** (learnability §1). The games I shipped this session now teach their

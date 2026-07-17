@@ -336,6 +336,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gamePitchSort,
       subtitle: (l) => l.gamePitchSortSubtitle,
       builder: (_) => const PitchSortScreen(),
+      tutorial: directionPrimer,
     ),
     // Same sort in the bass clef — bass-clef reading practice.
     GameInfo(
@@ -344,6 +345,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gamePitchSortBass,
       subtitle: (l) => l.gamePitchSortSubtitle,
       builder: (_) => const PitchSortScreen(clef: Clef.bass),
+      tutorial: directionPrimer,
     ),
     // Sharp/flat accidental-reading sort (same baskets format).
     GameInfo(
@@ -705,6 +707,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameStrongBeat,
       subtitle: (l) => l.gameStrongBeatSubtitle,
       builder: (_) => const StrongBeatScreen(),
+      tutorial: strongBeatPrimer,
     ),
     GameInfo(
       id: 'time_signature',
@@ -756,6 +759,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameDirectionEar,
       subtitle: (l) => l.gameDirectionEarSubtitle,
       builder: (_) => const DirectionEarScreen(),
+      tutorial: directionPrimer,
     ),
     // Same-or-different pitch discrimination — the youngest ear skill.
     GameInfo(
@@ -764,6 +768,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameSameDiff,
       subtitle: (l) => l.gameSameDiffSubtitle,
       builder: (_) => const SameDiffScreen(),
+      tutorial: sameDiffPrimer,
     ),
     // Direction of a short run — a step past Higher or Lower? (more notes).
     GameInfo(
@@ -772,6 +777,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameRunDirection,
       subtitle: (l) => l.gameRunDirectionSubtitle,
       builder: (_) => const RunDirectionScreen(),
+      tutorial: directionPrimer,
     ),
     // Count the notes — aural attention: how many notes did you just hear?
     GameInfo(
@@ -780,6 +786,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameCountNotes,
       subtitle: (l) => l.gameCountNotesSubtitle,
       builder: (_) => const CountNotesScreen(),
+      tutorial: countNotesPrimer,
     ),
     GameInfo(
       id: 'sing_back',

@@ -3177,6 +3177,50 @@ class AppLocalizationsEn extends AppLocalizations {
       'To read one voice, follow only its line: the soprano is the top note, the bass the bottom. Listen — top voice, then bottom.';
 
   @override
+  String get primerDirectionTitle => 'Up or down?';
+
+  @override
+  String get primerDirectionUp =>
+      'When a melody climbs, every note is higher than the one before — on the staff the notes walk upward, and the sound rises.';
+
+  @override
+  String get primerDirectionDown =>
+      'When it falls, every note is lower than the one before — the notes walk down the staff, and the sound sinks.';
+
+  @override
+  String get primerSameDiffTitle => 'Same or different?';
+
+  @override
+  String get primerSameDiffSame =>
+      'Two notes at the SAME pitch sound exactly alike — like an echo. On the staff they sit in the very same place.';
+
+  @override
+  String get primerSameDiffDifferent =>
+      'If the second note is even one step higher or lower, it is different — and it sits somewhere else on the staff. Listen: C then D.';
+
+  @override
+  String get primerCountTitle => 'How many notes?';
+
+  @override
+  String get primerCountThree =>
+      'Listen and count how many separate notes go by. Here there are three — count one for each new sound.';
+
+  @override
+  String get primerCountFour =>
+      'Now four. They come quickly, so count each one the moment it arrives.';
+
+  @override
+  String get primerAccentTitle => 'Strong and weak beats';
+
+  @override
+  String get primerAccentCount =>
+      'In 4/4 you count 1-2-3-4 over and over. Beat 1 is the STRONG beat — the one you tap hardest. Beats 2, 3 and 4 are lighter.';
+
+  @override
+  String get primerAccentThree =>
+      'The meter decides which beat is strong. In 3/4 you count 1-2-3, and the 1 is strong again — that\'s the lilt of a waltz.';
+
+  @override
   String get colorScaffoldLabel => 'Colour helper for beginners';
 
   @override

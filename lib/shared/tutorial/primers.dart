@@ -640,6 +640,91 @@ Tutorial enharmonicPrimer(AppLocalizations l10n) => Tutorial(
       ],
     );
 
+/// Which way a melody moves: climbing vs falling.
+/// Games: direction_ear, run_direction, pitch_sort (+bass).
+Tutorial directionPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerDirectionTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerDirectionUp,
+          score: _notes([60, 62, 64, 67]),
+          play: (a) => a.playPhrase([60, 62, 64, 67], noteMs: 450),
+        ),
+        TutorialStep(
+          text: l10n.primerDirectionDown,
+          score: _notes([67, 64, 62, 60]),
+          play: (a) => a.playPhrase([67, 64, 62, 60], noteMs: 450),
+        ),
+      ],
+    );
+
+/// Telling "the very same pitch" from "a different pitch" by ear.
+/// Game: same_diff.
+Tutorial sameDiffPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerSameDiffTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerSameDiffSame,
+          score: _notes([60, 60]), // the same note twice — an echo
+          play: (a) => a.playPhrase([60, 60], noteMs: 600),
+        ),
+        TutorialStep(
+          text: l10n.primerSameDiffDifferent,
+          score: _notes([60, 62]), // a step apart — clearly not an echo
+          play: (a) => a.playPhrase([60, 62], noteMs: 600),
+        ),
+      ],
+    );
+
+/// Counting how many separate notes go by — aural attention, no staff needed.
+/// Game: count_notes.
+Tutorial countNotesPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerCountTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerCountThree,
+          score: _notes([60, 64, 67]),
+          play: (a) => a.playPhrase([60, 64, 67], noteMs: 550),
+        ),
+        TutorialStep(
+          text: l10n.primerCountFour,
+          score: _notes([60, 62, 64, 65]),
+          play: (a) => a.playPhrase([60, 62, 64, 65], noteMs: 550),
+        ),
+      ],
+    );
+
+/// Metric accent: not every beat carries the same weight.
+/// Game: strong_beat.
+Tutorial strongBeatPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerAccentTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerAccentCount,
+          score: _notes(
+            [60, 60, 60, 60],
+            timeSignature: const TimeSignature(4, 4),
+          ),
+          // Beat 1 lands strong, beats 2-3-4 follow lighter — hear the pulse.
+          play: (a) async {
+            await a.playPhrase([60], noteMs: 480);
+            await a.playPhrase([60, 60, 60], noteMs: 480, gain: 0.3);
+          },
+        ),
+        TutorialStep(
+          text: l10n.primerAccentThree,
+          score: _notes(
+            [60, 60, 60],
+            timeSignature: const TimeSignature(3, 4),
+          ),
+          play: (a) async {
+            await a.playPhrase([60], noteMs: 480);
+            await a.playPhrase([60, 60], noteMs: 480, gain: 0.3);
+          },
+        ),
+      ],
+    );
+
 /// The two curves that look alike: a tie holds one pitch, a slur means smooth.
 /// Game: tie_slur.
 Tutorial tieSlurPrimer(AppLocalizations l10n) => Tutorial(
