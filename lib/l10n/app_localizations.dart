@@ -608,6 +608,12 @@ abstract class AppLocalizations {
   /// **'Appoggiatura'**
   String get workshopGraceAppoggiatura;
 
+  /// No description provided for @workshopStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get workshopStop;
+
   /// No description provided for @workshopArticulations.
   ///
   /// In en, this message translates to:

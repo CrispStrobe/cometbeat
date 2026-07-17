@@ -270,6 +270,31 @@ void main() {
     expect(find.text(l10n.workshopNoChange), findsNWidgets(6));
   });
 
+  testWidgets('the transport plays and stops, toggling its icon',
+      (tester) async {
+    await pump(tester);
+    await tester.tap(_pianoKeyAt(16)); // a non-empty document
+    await tester.pump();
+    await tester.tap(_pianoKeyAt(18));
+    await tester.pump();
+
+    // Play → the button flips to a stop icon and the cursor timer runs. Avoid
+    // pumpAndSettle here: the periodic playback timer never settles.
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pump(); // start
+    await tester.pump(const Duration(milliseconds: 60)); // one cursor tick
+    expect(find.byIcon(Icons.stop), findsOneWidget);
+    expect(find.byIcon(Icons.play_arrow), findsNothing);
+
+    // Stop → back to the play icon (and the timer is cancelled, so the test
+    // tears down cleanly).
+    await tester.tap(find.byIcon(Icons.stop));
+    await tester.pump();
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    expect(find.byIcon(Icons.stop), findsNothing);
+  });
+
   testWidgets('the palette opens the grace-notes editor', (tester) async {
     await pump(tester);
     await tester.tap(_pianoKey()); // place + select a note

@@ -300,6 +300,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopGraceAppoggiatura => 'Appoggiatura';
 
   @override
+  String get workshopStop => 'Stopp';
+
+  @override
   String get workshopArticulations => 'Artikulation & Bindebögen';
 
   @override

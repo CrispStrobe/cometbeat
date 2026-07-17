@@ -11,6 +11,7 @@
 //   • the on-screen piano (places notes at the caret).
 // Every edit runs through [ScoreDocument] (editable model + multi-level undo).
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:crisp_notation/crisp_notation.dart';
@@ -439,6 +440,22 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   // C7: the view feeds its element hit-regions here so a marquee rect → ids.
   final ElementRegionController _regions = ElementRegionController();
 
+  // ---- playback transport (bucket F) -------------------------------------
+  // A real transport over the library's playbackTimeline/TempoMap: the whole
+  // active part renders to one tempo/rest/chord-accurate WAV, while a wall-clock
+  // Timer advances a moving cursor that highlights the sounding element ids. The
+  // audio and the cursor share the same computed schedule (seconds from the
+  // TempoMap), so they start together and track each other without a position
+  // stream from the player. Repeats/navigation/RhythmPolicy.split already expand
+  // in the timeline, so playback reflects them.
+  Timer? _playTimer;
+  final Stopwatch _playClock = Stopwatch();
+  List<({String id, double start, double end})> _playSchedule = const [];
+  double _playEndSeconds = 0;
+  Set<String> _soundingIds = const {};
+
+  bool get _isPlaying => _playTimer != null;
+
   // The canvas-local pointer position (from a passive Listener), and where a
   // drag began — used to reorder a note by the horizontal drop position.
   Offset? _pointerLocal;
@@ -464,6 +481,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   @override
   void dispose() {
+    _playTimer?.cancel();
     _pianoScroll.dispose();
     _mpd.dispose();
     super.dispose();
@@ -1077,16 +1095,89 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   void _zoomBy(double d) =>
       setState(() => _zoom = (_zoom + d).clamp(8.0, 28.0));
 
-  void _play() {
+  void _togglePlay() => _isPlaying ? _stopPlayback() : _startPlayback();
+
+  /// Start real transport playback of the active part: render one tempo/rest/
+  /// chord-accurate WAV from the timeline and run a cursor over it. No-op on an
+  /// empty document.
+  void _startPlayback() {
     if (_doc.isEmpty) return;
-    _audio.playSequence([
-      for (final e in _doc.elements)
-        if (!e.isRest)
-          (
-            e.pitch!.midiNumber,
-            (e.duration.toFraction().toDouble() * 4 * 480).round(),
-          ),
+    final score = _doc.buildScore();
+    final timeline = playbackTimeline(score);
+    if (timeline.isEmpty) return;
+    final tm = tempoMapOf(score);
+
+    // Element id → its sounding midis (a chord contributes several), for audio.
+    final midisOf = <String, List<int>>{};
+    for (final m in score.measures) {
+      for (final e in m.elements) {
+        if (e is NoteElement && e.id != null) {
+          midisOf[e.id!] = [for (final p in e.pitches) p.midiNumber];
+        }
+      }
+    }
+
+    // One gap-accurate WAV for the whole timeline: rests become silent segments,
+    // chords sound together, each spans its own tempo-scaled duration.
+    _audio.playTimedChords([
+      for (final n in timeline)
+        (
+          n.isRest ? const <int>[] : (midisOf[n.elementId] ?? const <int>[]),
+          ((tm.secondsAt(n.end) - tm.secondsAt(n.start)) * 1000).round(),
+        ),
     ]);
+
+    // The cursor schedule in seconds (rests carry no highlight).
+    _playSchedule = [
+      for (final n in timeline)
+        if (!n.isRest)
+          (
+            id: n.elementId,
+            start: tm.secondsAt(n.start),
+            end: tm.secondsAt(n.end),
+          ),
+    ];
+    _playEndSeconds = timeline.fold<double>(0, (mx, n) {
+      final e = tm.secondsAt(n.end);
+      return e > mx ? e : mx;
+    });
+
+    _playClock
+      ..reset()
+      ..start();
+    _playTimer = Timer.periodic(
+      const Duration(milliseconds: 40),
+      (_) => _tickPlayback(),
+    );
+    setState(() {}); // reflect the transport (play → stop icon)
+  }
+
+  void _tickPlayback() {
+    final t = _playClock.elapsedMilliseconds / 1000.0;
+    if (t >= _playEndSeconds) {
+      _stopPlayback();
+      return;
+    }
+    final now = <String>{
+      for (final s in _playSchedule)
+        if (t >= s.start && t < s.end) s.id,
+    };
+    final changed =
+        now.length != _soundingIds.length || !now.every(_soundingIds.contains);
+    if (changed) setState(() => _soundingIds = now);
+  }
+
+  /// Stop playback: silence the audio, drop the cursor. Safe to call when idle.
+  void _stopPlayback() {
+    _playTimer?.cancel();
+    _playTimer = null;
+    _playClock.stop();
+    _audio.stop();
+    if (!mounted) {
+      _soundingIds = const {};
+      return;
+    }
+    setState(() => _soundingIds = const {});
   }
 
   Future<void> _exportText(String title, String text) async {
@@ -2024,6 +2115,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final selectedIds = _doc.selectedIds;
     final elementColors = <String, Color>{
       for (final id in selectedIds) id: Colors.amber,
+      // The playback cursor paints the sounding notes green, overriding any
+      // selection tint underneath so the moving highlight always reads.
+      for (final id in _soundingIds) id: Colors.green,
     };
     // Live drag is owned by crisp_notation (C10b `dragPreviewOpacity`): while a note
     // is dragged the view suppresses it and re-paints the *real* glyph
@@ -2084,9 +2178,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                 onPressed: _doc.canRedo ? () => setState(_doc.redo) : null,
               ),
               IconButton(
-                icon: const Icon(Icons.play_arrow),
-                tooltip: l10n.myMelodyPlay,
-                onPressed: _doc.isEmpty ? null : _play,
+                icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                tooltip: _isPlaying ? l10n.workshopStop : l10n.myMelodyPlay,
+                // Stay enabled while playing so the user can always stop, even
+                // if they emptied the document mid-playback.
+                onPressed: (_doc.isEmpty && !_isPlaying) ? null : _togglePlay,
               ),
               IconButton(
                 icon: const Icon(Icons.info_outline),

@@ -112,6 +112,17 @@ class AudioService {
         ]),
       );
 
+  /// Plays a timed sequence of chords: each entry is `(midi pitches, ms)`. An
+  /// **empty pitch list renders as a rest** (silence), so a full score timeline
+  /// — notes, chords and rests, each at its own tempo-scaled duration — plays as
+  /// one gap-accurate WAV. Backs the Workshop's score playback.
+  Future<void> playTimedChords(List<(List<int>, int)> events) => _play(
+        _wav([
+          for (final (midis, ms) in events)
+            if (ms > 0) (freqs: midis.map(midiToFrequency).toList(), ms: ms),
+        ]),
+      );
+
   /// Sequential chords (e.g. a cadence), [ms] each.
   Future<void> playChordSequence(List<List<int>> chords, {int ms = 900}) =>
       _play(
