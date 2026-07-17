@@ -22,11 +22,17 @@ and push to origin/main** before/after touching shared files. Format:
   ✅ **Tempo marks SHIPPED** — document-level `Tempo? tempo` (→ `Score.tempo`) +
   id-anchored `_tempoChanges` side-map (→ `Measure.tempoChange`), the clef/key
   stamp pattern; Tempo row in the change-here dialog + "Initial tempo…" in the ⋮
-  menu; `test/tempo_test.dart` (byte-identity + MusicXML round-trip), de/en, suite
-  green, analyze clean. Feeds `TempoMap` for playback.
-  🚧 **Now: grace notes** — `EditorElement.graceNotes: List<NoteElement>` (a FIELD
-  riding the snapshot) + a small entry UI; zero bar duration so reflow ignores
-  them for packing.
+  menu; `test/tempo_test.dart` (byte-identity + MusicXML round-trip), de/en. Feeds
+  `TempoMap` for playback.
+  ✅ **Grace notes SHIPPED** — per-note `EditorElement.graceNotes: List<Pitch>` +
+  `graceStyle` FIELD (rides the snapshot/clipboard; NB it's a Pitch list, not a
+  NoteElement list) → `NoteElement.graceNotes`; zero bar duration so packing is
+  untouched (goldens hold). "Grace notes…" palette editor (tap C–B / octave /
+  acciaccatura·appoggiatura); `test/grace_note_test.dart` (round-trip + packing
+  invariant), de/en.
+  🚧 **Now: playback (bucket F)** — real transport + moving cursor over
+  `playbackTimeline`/`soundingAt`/`TempoMap` (the tempo marks feed it), replacing
+  the fixed-tempo `_play` beep. Will touch `AudioService` + the screen.
 
 - **opus (groove-export)** · ✅ **idle / SHIPPED — Groove → Song Book / MusicXML**
   (`docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md` §A; `3c816ab` A1, `a7c3554` A2+A3).
