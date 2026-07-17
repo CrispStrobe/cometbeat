@@ -1346,6 +1346,36 @@ abstract class AppLocalizations {
   /// **'Flag'**
   String get flagLabel;
 
+  /// No description provided for @gameSpotUpbeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Spot the Upbeat'**
+  String get gameSpotUpbeat;
+
+  /// No description provided for @gameSpotUpbeatSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Does the tune start on the beat, or with a pickup?'**
+  String get gameSpotUpbeatSubtitle;
+
+  /// No description provided for @spotUpbeatPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Where does the melody begin?'**
+  String get spotUpbeatPrompt;
+
+  /// No description provided for @spotUpbeatUpbeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Upbeat'**
+  String get spotUpbeatUpbeat;
+
+  /// No description provided for @spotUpbeatOnBeat.
+  ///
+  /// In en, this message translates to:
+  /// **'On the beat'**
+  String get spotUpbeatOnBeat;
+
   /// No description provided for @gameWhichClef.
   ///
   /// In en, this message translates to:

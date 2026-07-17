@@ -314,6 +314,15 @@ Games built on crisp_notation capabilities the app didn't use before.
   exploit the real rule; the beam/flag contrast was verified at the crisp_notation
   layout level (same-beat eighths → 1 `BeamPrimitive`, eighth-rest between → 0).
   SRI `reading.beam.<beamed|flagged>`.
+- **Spot the Upbeat** (Takte) — a binary staff-read on where a tune begins: a
+  short two-bar melody starts either on the downbeat (a full first measure) or
+  with a **pickup / anacrusis** (an incomplete first measure — a few notes before
+  the first barline). The pickup is a real `Measure(..., pickup: true)`, so the
+  first bar genuinely holds less than the meter (a proper anacrusis, borrowed from
+  the last bar). At 2★ the note-counting shortcut is defeated — full bars may use
+  mixed rhythms (half + two quarters: three noteheads but still a full 4/4), and
+  the pickup runs 1–2 notes — so the answer needs real metric reading. Correct →
+  the melody plays. SRI `measures.upbeat.<yes|no>`.
 - **Connect the Notes — four new modes** (Notenwerte) — the connect-a-line board
   grew from 3 to 7 modes, each one `ConnectMode` case reusing an existing catalog
   so nothing drifts: **Dynamics** (mark glyph ↔ meaning, `connect_dynamics`,

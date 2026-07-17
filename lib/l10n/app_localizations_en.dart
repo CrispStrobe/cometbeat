@@ -690,6 +690,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get flagLabel => 'Flag';
 
   @override
+  String get gameSpotUpbeat => 'Spot the Upbeat';
+
+  @override
+  String get gameSpotUpbeatSubtitle =>
+      'Does the tune start on the beat, or with a pickup?';
+
+  @override
+  String get spotUpbeatPrompt => 'Where does the melody begin?';
+
+  @override
+  String get spotUpbeatUpbeat => 'Upbeat';
+
+  @override
+  String get spotUpbeatOnBeat => 'On the beat';
+
+  @override
   String get gameWhichClef => 'Which Clef?';
 
   @override

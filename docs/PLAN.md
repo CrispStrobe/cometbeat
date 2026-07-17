@@ -19,14 +19,19 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
-- **opus (upbeat)** · 🚧 **ACTIVE — "Spot the upbeat" minigame** (remaining-work
-  item 1). A binary staff-read (like `tie_slur`): a short melody starts either on
-  the downbeat or with a pickup/anacrusis; tap Upbeat vs On the beat. New screen
-  `features/games/measures/spot_upbeat_screen.dart` + a `GameInfo` in
-  `game_registry.dart` + a `kStarThresholds` bracket in `core/tuning.dart` + EN/DE
-  ARBs + a `pumpGame` test. SRI `measures.upbeat.<yes|no>`. Worktree
-  `../mus-upbeat`, branch `feature/spot-upbeat`. Touching the hot shared files
-  (registry / tuning / ARBs) — small additive diffs.
+- **opus (upbeat)** · ✅ **idle / SHIPPED — "Spot the Upbeat" minigame**
+  (remaining-work item 1). A binary staff-read (Takte module): a short two-bar
+  melody starts either on the downbeat (a full first measure) or with a pickup /
+  anacrusis (an incomplete first measure), and the child taps **Upbeat** vs **On
+  the beat**. The pickup is a real `Measure(..., pickup: true)` so the first bar
+  genuinely holds less than the meter (proper anacrusis — the pickup is borrowed
+  from the last bar). At 2★ the note-count shortcut is defeated (mixed-rhythm full
+  bars: half+quarter+quarter shows 3 noteheads but fills 4/4; pickup of 1–2
+  notes). Correct → the melody plays. SRI `measures.upbeat.<yes|no>`;
+  `kStarThresholds` `[100,600,900]`. `features/games/measures/spot_upbeat_screen.dart`
+  + `GameInfo` + tuning + EN/DE ARBs + `test/spot_upbeat_test.dart` (3 tests, incl.
+  a per-round structural invariant: upbeat ⇔ short pickup first bar). Analyze clean;
+  registry/consistency + star-score suites green.
 
 - **opus (workshop-inspector)** · 🚧 **ACTIVE — voice-2 tuplets** (next voice-2 v1
   gap). MODEL-only, `lib/features/workshop/model/score_document.dart` (no screen
@@ -104,10 +109,11 @@ still free on the board before starting** (search the agent name / feature).
 1. **Small content minigames** — *low risk, squarely in the games lane, no
    collision.* One `GameInfo` in `game_registry.dart` + a screen + a
    `kStarThresholds` bracket in `core/tuning.dart` (games with scores) + EN/DE ARBs
-   + a widget test via `pumpGame`. Concrete unclaimed ideas: **Spot the upbeat**
-   (Auftakt / anacrusis reading), a **written↔concert toggle** for transposing
-   instruments, **SATB chorale reading** / a richer Grand Staff. Copy an existing
-   sibling (see the "Reusable scaffolds" note under the Ideas backlog).
+   + a widget test via `pumpGame`. ✅ **Spot the Upbeat** (Auftakt / anacrusis
+   reading) SHIPPED (`spot_upbeat`). Still unclaimed: a **written↔concert toggle**
+   for transposing instruments, **SATB chorale reading** / a richer Grand Staff.
+   Copy an existing sibling (see the "Reusable scaffolds" note under the Ideas
+   backlog).
 2. **AEC: on-device jam-mode integration** — ⚠️ *needs real hardware (not
    headless) — milestone (e).* The whole native algorithm stack is DONE and
    headlessly verified: DTD ported to the C DSP core (`f7487fd`) + wired into the

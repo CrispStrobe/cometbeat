@@ -52,6 +52,7 @@ import 'package:klang_universum/features/games/keyboard/key_name_screen.dart';
 import 'package:klang_universum/features/games/measures/beat_runner_screen.dart';
 import 'package:klang_universum/features/games/measures/measure_fill_screen.dart';
 import 'package:klang_universum/features/games/measures/meter_detective_screen.dart';
+import 'package:klang_universum/features/games/measures/spot_upbeat_screen.dart';
 import 'package:klang_universum/features/games/measures/strong_beat_screen.dart';
 import 'package:klang_universum/features/games/measures/time_signature_screen.dart';
 import 'package:klang_universum/features/games/measures/which_beat_screen.dart';
@@ -655,6 +656,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameTimeSignatureSubtitle,
       builder: (_) => const TimeSignatureScreen(),
       tutorial: timeSignaturePrimer,
+    ),
+    // Spot the Upbeat — read whether a tune starts on the downbeat or with a
+    // pickup (anacrusis); the incomplete first measure is the cue.
+    GameInfo(
+      id: 'spot_upbeat',
+      icon: Icons.call_made,
+      title: (l) => l.gameSpotUpbeat,
+      subtitle: (l) => l.gameSpotUpbeatSubtitle,
+      builder: (_) => const SpotUpbeatScreen(),
     ),
   ],
   'scales': [

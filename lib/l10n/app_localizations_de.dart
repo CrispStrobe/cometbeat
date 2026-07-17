@@ -694,6 +694,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get flagLabel => 'Fähnchen';
 
   @override
+  String get gameSpotUpbeat => 'Auftakt finden';
+
+  @override
+  String get gameSpotUpbeatSubtitle =>
+      'Beginnt das Stück auf der Zählzeit oder mit einem Auftakt?';
+
+  @override
+  String get spotUpbeatPrompt => 'Wo beginnt die Melodie?';
+
+  @override
+  String get spotUpbeatUpbeat => 'Auftakt';
+
+  @override
+  String get spotUpbeatOnBeat => 'Volltakt';
+
+  @override
   String get gameWhichClef => 'Welcher Schlüssel?';
 
   @override
