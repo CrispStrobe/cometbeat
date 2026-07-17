@@ -19,6 +19,16 @@ and push to origin/main** before/after touching shared files. Format:
 > are live claims; don't edit another agent's ACTIVE claim. **Pending, actionable
 > work is scoped in the two blocks immediately below.**
 
+- **opus (aec-engine-dtd)** · 🚧 **ACTIVE — wire the native DTD into the engine
+  block loop** (remaining-work item 2a). Worktree `../mus-aec-engine-dtd`, branch
+  `feature/aec-engine-dtd`. All in `native/aec/` (out of app CI): add an opt-in
+  `AecDtd` to `struct AecEngine` (`aec_shim.{c,h}`) driving `aec_dsp_set_adapt`
+  in the block loop (`engine_run`), exposed via a new `aec_engine_set_dtd()`
+  toggle (default off — keeps the existing continuous-double-talk engine test
+  green) + FFI binding; a headless double-talk engine test (converge→double-talk
+  through the pump, DTD-on beats DTD-off). Verify `bash native/aec/build.sh`.
+  NOT touching app/Workshop.
+
 - **opus (aec-native-dtd)** · ✅ **idle / SHIPPED — double-talk detector ported to
   the native C engine** (`f7487fd`). Additive `aec_dsp_set_adapt()` NLMS gate
   (default adapt=1 → the existing default-adapt ERLE cross-check is unchanged, C
