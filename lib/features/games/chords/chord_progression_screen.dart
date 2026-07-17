@@ -246,15 +246,18 @@ class _ChordProgressionScreenState extends State<ChordProgressionScreen>
                     ),
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    // Wrap, not Row: the play button's label is the game title,
+                    // which with 'Preview' overflows a narrow phone — they stack.
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 12,
+                      runSpacing: 8,
                       children: [
                         OutlinedButton.icon(
                           onPressed: _running ? null : _preview,
                           icon: const Icon(Icons.volume_up),
                           label: Text(l.playAlongPreview),
                         ),
-                        const SizedBox(width: 12),
                         FilledButton.icon(
                           onPressed: _running ? _stop : _start,
                           icon: Icon(_running ? Icons.stop : Icons.play_arrow),
