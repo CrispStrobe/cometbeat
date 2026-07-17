@@ -26,6 +26,10 @@ import 'package:flutter/scheduler.dart';
 import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:klang_universum/core/audio/mod/mod.dart';
 import 'package:klang_universum/core/audio/mod/mod_bridge.dart';
+import 'package:klang_universum/core/audio/mod/module_convert.dart'
+    show sniffModuleFormat;
+import 'package:klang_universum/core/audio/mod/module_doc.dart';
+import 'package:klang_universum/core/audio/mod/module_instrument_bridge.dart';
 import 'package:klang_universum/core/audio/synth.dart' show Drum;
 import 'package:klang_universum/core/audio/tracker_engine.dart';
 import 'package:klang_universum/core/audio/voice_clip_recorder.dart';
@@ -455,6 +459,65 @@ class _TrackerScreenState extends State<TrackerScreen>
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(failed)));
     }
+  }
+
+  /// "Borrow a sample from a module": pick a `.mod/.s3m/.xm/.it`, choose one of
+  /// its samples, and make it the selected channel's instrument.
+  Future<void> _borrowInstrument() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final file = await openFile(
+        acceptedTypeGroups: [
+          const XTypeGroup(
+            label: 'Module',
+            extensions: ['mod', 's3m', 'xm', 'it'],
+          ),
+        ],
+      );
+      if (file == null || !mounted) return;
+      final bytes = await file.readAsBytes();
+      if (sniffModuleFormat(bytes) == null) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.trackerModFailed)));
+        return;
+      }
+      final samples = borrowableSamples(bytes);
+      if (samples.isEmpty) {
+        messenger
+            .showSnackBar(SnackBar(content: Text(l10n.trackerBorrowEmpty)));
+        return;
+      }
+      if (!mounted) return;
+      final picked = await showDialog<int>(
+        context: context,
+        builder: (ctx) => SimpleDialog(
+          title: Text(l10n.trackerBorrowSample),
+          children: [
+            for (final (index, sample) in samples)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(ctx, index),
+                child: Text(_sampleLabel(index, sample)),
+              ),
+          ],
+        ),
+      );
+      if (picked == null || !mounted) return;
+      _engine.setChannelInstrument(
+        _selected,
+        sampleInstrumentFromModule('borrow', bytes, picked),
+      );
+      setState(() {});
+      _syncPlayback();
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.trackerModFailed)));
+    }
+  }
+
+  String _sampleLabel(int index, DocSample s) {
+    final name = s.name.trim();
+    final title = name.isEmpty ? 'Sample ${index + 1}' : name;
+    return '${index + 1}. $title  (${s.pcm.length})';
   }
 
   Future<void> _exportMod() async {
@@ -994,6 +1057,8 @@ class _TrackerScreenState extends State<TrackerScreen>
                   _importMidi();
                 case 'exportMid':
                   _exportMidi();
+                case 'borrow':
+                  _borrowInstrument();
               }
             },
             itemBuilder: (context) => [
@@ -1012,6 +1077,10 @@ class _TrackerScreenState extends State<TrackerScreen>
               PopupMenuItem(
                 value: 'exportMid',
                 child: Text(l10n.trackerExportMidi),
+              ),
+              PopupMenuItem(
+                value: 'borrow',
+                child: Text(l10n.trackerBorrowSample),
               ),
             ],
           ),

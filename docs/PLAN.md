@@ -19,14 +19,14 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
-- **opus (tracker)** · 🚧 **ACTIVE — "borrow a sample from a module" UI**. The
-  pure-Dart core shipped (`mod/module_instrument_bridge.dart`, `7dd8ab2`); now a
-  "Borrow instrument…" item in the Tracker app-bar menu: pick a `.mod/.s3m/.xm/.it`,
-  choose one of its samples, and it becomes the selected channel's instrument via
-  `sampleInstrumentFromModule` + `setChannelInstrument`. **HOT files:**
-  `features/games/composition/tracker_screen.dart` (menu case + `_borrowInstrument`
-  handler + a sample-picker dialog) + **both ARBs** (`trackerBorrowSample` key).
-  Small, landing in one commit; rebasing before push.
+- **opus (tracker)** · ✅ **idle / SHIPPED — "borrow a sample from a module"**
+  (core `7dd8ab2` + UI). A "Borrow instrument…" item in the Tracker app-bar menu:
+  pick a `.mod/.s3m/.xm/.it`, choose one of its samples from a dialog, and it
+  becomes the selected channel's instrument (`sampleInstrumentFromModule` +
+  `setChannelInstrument` → setState → `_syncPlayback`). Touched
+  `tracker_screen.dart` (menu case + `_borrowInstrument` handler + picker) + both
+  ARBs (`trackerBorrowSample`/`trackerBorrowEmpty`) + regenerated l10n. Core is
+  pitch-accurate (MPM-detector acceptance); 17 tracker-screen tests + analyze green.
 
 - **opus (workshop-inspector)** · 🚧 **ACTIVE — voice-2 dynamics + lyrics
   (silent-loss fix)**. MODEL-only, `lib/features/workshop/model/score_document.dart`

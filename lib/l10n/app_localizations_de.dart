@@ -1130,6 +1130,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerModFailed => 'Diese .mod ließ sich nicht lesen/schreiben.';
 
   @override
+  String get trackerBorrowSample => 'Instrument leihen…';
+
+  @override
+  String get trackerBorrowEmpty => 'Dieses Modul hat keine Samples zum Leihen.';
+
+  @override
   String get trackerSfxrZap => 'Zap';
 
   @override

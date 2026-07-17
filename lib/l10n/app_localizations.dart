@@ -2174,6 +2174,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t read/write that .mod.'**
   String get trackerModFailed;
 
+  /// No description provided for @trackerBorrowSample.
+  ///
+  /// In en, this message translates to:
+  /// **'Borrow instrument…'**
+  String get trackerBorrowSample;
+
+  /// No description provided for @trackerBorrowEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'That module has no samples to borrow.'**
+  String get trackerBorrowEmpty;
+
   /// No description provided for @trackerSfxrZap.
   ///
   /// In en, this message translates to:

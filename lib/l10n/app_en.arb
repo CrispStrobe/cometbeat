@@ -411,6 +411,8 @@
   "trackerImportMidi": "Import MIDI…",
   "trackerExportMidi": "Export MIDI…",
   "trackerModFailed": "Couldn't read/write that .mod.",
+  "trackerBorrowSample": "Borrow instrument…",
+  "trackerBorrowEmpty": "That module has no samples to borrow.",
   "trackerSfxrZap": "Zap",
   "trackerSfxrBlip": "Blip",
   "trackerSfxrLaser": "Laser",

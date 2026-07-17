@@ -380,6 +380,8 @@
   "trackerImportMidi": "MIDI importieren…",
   "trackerExportMidi": "MIDI exportieren…",
   "trackerModFailed": "Diese .mod ließ sich nicht lesen/schreiben.",
+  "trackerBorrowSample": "Instrument leihen…",
+  "trackerBorrowEmpty": "Dieses Modul hat keine Samples zum Leihen.",
   "trackerSfxrZap": "Zap",
   "trackerSfxrBlip": "Blip",
   "trackerSfxrLaser": "Laser",
