@@ -326,10 +326,12 @@ editor you can't reliably save and reopen isn't one, and every feature we add
 above this line inherits the data loss. Cheap-ish, and it's the credibility
 floor.
 
-(Adjacent, same theme: only MusicXML/`.mxl` export all parts — every other
-format silently exports the **active part only** (`_generateExport:1157`). Same
-class of quiet wrong. The multi-part *readers* all exist in the library; only
-MusicXML has a multi-part *writer* — so this one is partly a library ask.)
+(Adjacent, same theme — now largely FIXED: MusicXML/`.mxl`, **MIDI, and ABC**
+export all parts. MIDI + ABC went through our own `core/notation/
+multi_part_export.dart` (`multiPartToMidi` = format-1 SMF one track/part;
+`multiPartToAbc` = one `V:` voice/part). Only MEI / kern / MuseScore / LilyPond
+still export the **active part only** — their library writers take a single
+`Score`; the export sheet flags which. Those four remain a library ask.)
 
 ---
 
