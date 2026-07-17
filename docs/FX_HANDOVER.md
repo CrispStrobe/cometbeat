@@ -30,12 +30,17 @@ effects.dart` (arp/vibrato/slide). See auto-memory `tracker-effort`.
 
 ## The gaps to fill (each a delegatable pure-DSP unit + test)
 1. **Complete the crispaudio effect chain** (Tier-B units skipped in the first
-   pass): `chorus`, `delay`, `flanger`, `reverb` (IR generator exists in crispaudio;
-   convolve with the app's `chroma_analysis.dart` FFT), standalone `ring_mod`, the
-   full `distortion` algorithm set (hardClip/softClip/fuzz/wavefold), and the sfxr
-   params we dropped (FM, LFO). Each: a pure `Float64List → Float64List` transform
-   (or a per-sample function), unit-tested (bounded, finite, changes-the-signal,
-   deterministic).
+   pass). ✅ **DONE — `delayFx`/`chorusFx`/`flangerFx`** (`crisp_dsp/
+   modulated_delay.dart`, shared fractional delay line) **+ `reverbFx`** (`crisp_dsp/
+   reverb.dart`, Freeverb: 8 combs + 4 allpass). All same-length pure transforms
+   with `mix==0` = dry identity; tests in `modulated_delay_test.dart`/`reverb_test.dart`
+   (echo lands at D/2D/3D, reverb impulse → decaying tail, finite/bounded/det).
+   Remaining here: standalone `ring_mod`, the full `distortion` set
+   (hardClip/softClip/fuzz/wavefold), the sfxr params we dropped (FM, LFO), and an
+   optional FFT-convolution reverb. Each: a pure `Float64List → Float64List`
+   transform (or per-sample fn), unit-tested (bounded, finite, changes-the-signal,
+   deterministic). **Integration TODO:** a per-channel effect chain in the Tracker
+   (apply a chosen effect to the channel stem before `mixStems`).
 2. **Better sample interpolation** — replace `resample.dart`'s linear interp with
    **cubic Hermite** (port from OpenMPT's resampler). Directly improves the
    **recorded-voice instrument** (the flagship) — smoother pitch-shifting. Small,
