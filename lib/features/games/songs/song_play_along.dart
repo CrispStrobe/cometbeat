@@ -6,13 +6,15 @@ import 'package:crisp_notation/crisp_notation.dart'
     show NoteElement, Score, playbackTimeline;
 import 'package:klang_universum/core/audio/play_along.dart';
 
-/// Derives a sing-along [PlayAlongChart] from [score].
+/// Derives a play/sing-along [PlayAlongChart] from [score].
 ///
 /// Each sounded note becomes a [TargetNote] at its **top** pitch (a chord's
 /// melody note), timed in quarter-note beats from [playbackTimeline] — so rests
-/// leave gaps and repeats/navigation expand exactly as playback does. The chart
-/// is **octave-agnostic**: a child sings the melody in their own comfortable
-/// range and it still counts.
+/// leave gaps and repeats/navigation expand exactly as playback does.
+///
+/// [octaveAgnostic] (the default) is right for **singing** — a child matches the
+/// melody in their own comfortable range and it still counts. Pass `false` for
+/// **playing** an instrument, where the written octave is the target.
 ///
 /// The tempo is [bpmOverride] if given, else the score's own initial tempo, else
 /// 100 bpm. An all-rest (or empty) score yields a chart with no notes.
@@ -20,6 +22,7 @@ PlayAlongChart chartFromScore(
   Score score, {
   required String name,
   int? bpmOverride,
+  bool octaveAgnostic = true,
 }) {
   // Top (melody) midi per element id — the highest pitch of a chord.
   final topMidiOf = <String, int>{};
@@ -56,6 +59,6 @@ PlayAlongChart chartFromScore(
     name: name,
     bpm: bpm > 0 ? bpm : 100,
     notes: notes,
-    octaveAgnostic: true,
+    octaveAgnostic: octaveAgnostic,
   );
 }

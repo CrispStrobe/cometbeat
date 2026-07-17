@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:crisp_notation/crisp_notation.dart'
     show MultiSystemView, NoteElement, Score;
 import 'package:flutter/material.dart';
+import 'package:klang_universum/core/audio/play_along.dart' show PlayAlongChart;
 import 'package:klang_universum/core/services/audio_service.dart';
 import 'package:klang_universum/features/games/playalong/play_along_screen.dart';
 import 'package:klang_universum/features/games/songs/chord_sheet_screen.dart';
@@ -48,8 +49,14 @@ class _SongScreenState extends State<SongScreen> {
 
   late final List<(String, int, int)> _playback = playbackOf(widget.score);
 
-  // A sing-along target derived from the song's notation (top pitch = melody).
+  // Targets derived from the song's notation (top pitch = melody). Singing is
+  // octave-agnostic (any comfortable range); playing an instrument is not.
   late final _singChart = chartFromScore(widget.score, name: widget.title);
+  late final _playChart = chartFromScore(
+    widget.score,
+    name: widget.title,
+    octaveAgnostic: false,
+  );
 
   late final Map<String, int> _midiById = {
     for (final measure in widget.score.measures)
@@ -89,6 +96,28 @@ class _SongScreenState extends State<SongScreen> {
       _highlightedId = null;
       _playing = false;
     });
+  }
+
+  /// The tap handler that drops [chart] into the moving-score highway, or null
+  /// (disabled) while the karaoke preview runs or when the song has no melody.
+  /// Stars scale to the song's length — a long song isn't a free 3★.
+  VoidCallback? _launcher(
+    PlayAlongChart chart, {
+    required String gameId,
+    required String sriPrefix,
+  }) {
+    if (_playing || chart.notes.isEmpty) return null;
+    return () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => PlayAlongScreen(
+              chart: chart,
+              title: widget.title,
+              gameId: gameId,
+              sriPrefix: sriPrefix,
+              scaleStarsToLength: true,
+            ),
+          ),
+        );
   }
 
   void _stop() {
@@ -141,8 +170,11 @@ class _SongScreenState extends State<SongScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              // Wrap, not Row: three buttons must not overflow a narrow phone.
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   FilledButton.icon(
                     onPressed: _playing ? _stop : _play,
@@ -151,27 +183,27 @@ class _SongScreenState extends State<SongScreen> {
                       _playing ? l10n.songStop : l10n.myMelodyPlay,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Sing the song against the moving-score highway (mic-graded).
-                  // Disabled while the karaoke preview plays, or when the song
-                  // has no singable melody (all rests / chords-only edge cases).
+                  // Sing / play the song against the moving-score highway
+                  // (mic-graded). Both are disabled while the karaoke preview
+                  // plays, or when the song has no melody (all-rest edge cases).
                   OutlinedButton.icon(
-                    onPressed: (_playing || _singChart.notes.isEmpty)
-                        ? null
-                        : () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => PlayAlongScreen(
-                                  chart: _singChart,
-                                  title: widget.title,
-                                  gameId: 'sing_along',
-                                  sriPrefix: 'voice.sing_along',
-                                  // A song is any length, so grade by fraction.
-                                  scaleStarsToLength: true,
-                                ),
-                              ),
-                            ),
+                    onPressed: _launcher(
+                      _singChart,
+                      gameId: 'sing_along',
+                      sriPrefix: 'voice.sing_along',
+                    ),
                     icon: const Icon(Icons.mic_external_on),
                     label: Text(l10n.gameSingAlong),
+                  ),
+                  // The instrument twin: the written octave IS the target.
+                  OutlinedButton.icon(
+                    onPressed: _launcher(
+                      _playChart,
+                      gameId: 'keyboard_play_along',
+                      sriPrefix: 'keyboard.play_along',
+                    ),
+                    icon: const Icon(Icons.moving),
+                    label: Text(l10n.gamePlayAlong),
                   ),
                 ],
               ),

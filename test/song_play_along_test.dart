@@ -47,6 +47,23 @@ void main() {
     expect(chart.notes[1].beats, 2);
   });
 
+  test('playing an instrument targets the written octave', () {
+    final chart = chartFromScore(
+      _score(
+        [
+          NoteElement(pitches: [_p(Step.d)], duration: _quarter, id: 'e0'),
+        ],
+      ),
+      name: 'Test',
+      octaveAgnostic: false,
+    );
+    expect(
+      chart.octaveAgnostic,
+      isFalse,
+      reason: 'the written octave IS the target when playing',
+    );
+  });
+
   test('tempo comes from the score; singing is octave-agnostic', () {
     final chart = chartFromScore(
       _score(

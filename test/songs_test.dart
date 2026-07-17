@@ -255,6 +255,11 @@ void main() {
     final singBtn = find.widgetWithText(OutlinedButton, 'Sing along');
     expect(singBtn, findsOneWidget);
     expect(tester.widget<OutlinedButton>(singBtn).onPressed, isNotNull);
+
+    // Its instrument twin sits alongside it.
+    final playBtn = find.widgetWithText(OutlinedButton, 'Play along');
+    expect(playBtn, findsOneWidget);
+    expect(tester.widget<OutlinedButton>(playBtn).onPressed, isNotNull);
   });
 
   testWidgets(
