@@ -17,6 +17,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/distortion.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/envelope.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart';
@@ -262,7 +263,12 @@ class SfxrInstrument implements TrackerInstrument {
 /// pitch the recorded sample represents (default C4). This is the payload behind
 /// "record your voice → play a tune with it".
 class SampleInstrument implements TrackerInstrument {
-  const SampleInstrument(this.id, this.sample, {this.baseMidi = 60});
+  const SampleInstrument(
+    this.id,
+    this.sample, {
+    this.baseMidi = 60,
+    this.envelope = Envelope.declick,
+  });
 
   /// Records-once: applies [fx] to [raw] and keeps the result as the sample.
   factory SampleInstrument.recorded(
@@ -271,17 +277,22 @@ class SampleInstrument implements TrackerInstrument {
     VoiceEffect fx, {
     int baseMidi = 60,
     int sampleRate = kSampleRate,
+    Envelope envelope = Envelope.declick,
   }) =>
       SampleInstrument(
         id,
         applyVoiceEffect(raw, fx, sampleRate: sampleRate),
         baseMidi: baseMidi,
+        envelope: envelope,
       );
 
   @override
   final String id;
   final Float64List sample;
   final int baseMidi;
+
+  /// A per-note volume envelope (default a gentle declick attack/release).
+  final Envelope envelope;
 
   @override
   Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
@@ -296,8 +307,16 @@ class SampleInstrument implements TrackerInstrument {
             timing.stepStartSample(startStep + steps) - startSample;
         final buf = resampleCubic(sample, midiToFrequency(midi) / baseFreq);
         final n = min(min(buf.length, runSamples), out.length - startSample);
-        for (var i = 0; i < n; i++) {
-          out[startSample + i] = buf[i];
+        if (n > 0) {
+          // Envelope only the played portion, so the release fades at the note's
+          // end (not the end of the resampled sample).
+          final voiced = applyEnvelope(
+            Float64List.sublistView(buf, 0, n),
+            envelope,
+          );
+          for (var i = 0; i < n; i++) {
+            out[startSample + i] = voiced[i];
+          }
         }
       }
       startStep += steps;
