@@ -996,6 +996,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerPlaySong => 'Play song';
 
   @override
+  String get trackerSoftNote => 'Soft note';
+
+  @override
+  String get trackerEffect => 'Effect';
+
+  @override
+  String get trackerEffectNone => 'None';
+
+  @override
+  String get trackerEffectArp => 'Arpeggio';
+
+  @override
+  String get trackerEffectVibrato => 'Vibrato';
+
+  @override
+  String get trackerEffectSlideUp => 'Slide up';
+
+  @override
+  String get trackerEffectSlideDown => 'Slide down';
+
+  @override
   String get trackerSfxrZap => 'Zap';
 
   @override

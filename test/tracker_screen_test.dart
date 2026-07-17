@@ -8,6 +8,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:klang_universum/core/audio/tracker_engine.dart'
+    show TrackerEffect;
 import 'package:klang_universum/features/games/composition/tracker_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -239,6 +241,19 @@ void main() {
     game.clearOrder();
     await tester.pump();
     expect(game.songOrder, isEmpty);
+  });
+
+  testWidgets('setting a per-note effect sticks', (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+    final game = _game(tester);
+    game.tapCell(0, 0); // melody (additive) note
+    await tester.pump();
+    expect(game.effectAt(0), TrackerEffect.none);
+
+    game.setNoteEffect(0, 0, TrackerEffect.vibrato);
+    await tester.pump();
+    expect(game.effectAt(0), TrackerEffect.vibrato);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('long-press toggles a note soft (dynamics)', (tester) async {

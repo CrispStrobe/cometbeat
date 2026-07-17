@@ -20,6 +20,10 @@ import 'package:klang_universum/core/audio/crisp_dsp/resample.dart';
 import 'package:klang_universum/core/audio/crisp_dsp/sfxr.dart';
 import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:klang_universum/core/audio/synth.dart';
+import 'package:klang_universum/core/audio/tracker_effects.dart';
+
+export 'package:klang_universum/core/audio/tracker_effects.dart'
+    show TrackerEffect;
 
 /// The musical clock a pattern renders against. [rows] steps at [stepsPerBeat]
 /// steps per beat, [tempoBpm] BPM. Pick values whose step length is an integral
@@ -59,10 +63,18 @@ class TrackerTiming {
 /// sounding. [volume] (0..1) is reserved for the Studio skin; Slice 0 ignores it
 /// and uses the channel gain.
 class TrackerCell {
-  const TrackerCell({this.midi, this.volume});
+  const TrackerCell({
+    this.midi,
+    this.volume,
+    this.effect = TrackerEffect.none,
+  });
 
   final int? midi;
   final double? volume;
+
+  /// A per-note effect command (arp/vibrato/slide). Honoured by additive voices
+  /// (see [AdditiveInstrument]); other instruments ignore it.
+  final TrackerEffect effect;
 
   bool get isEmpty => midi == null;
 
@@ -70,10 +82,13 @@ class TrackerCell {
 
   @override
   bool operator ==(Object other) =>
-      other is TrackerCell && other.midi == midi && other.volume == volume;
+      other is TrackerCell &&
+      other.midi == midi &&
+      other.volume == volume &&
+      other.effect == effect;
 
   @override
-  int get hashCode => Object.hash(midi, volume);
+  int get hashCode => Object.hash(midi, volume, effect);
 }
 
 /// Collapses a channel's cells into runs using the classic tracker rule: a
@@ -128,11 +143,40 @@ class AdditiveInstrument implements TrackerInstrument {
   final Instrument instrument;
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) =>
-      renderSegmentsRaw(
-        cellsToSegments(cells, timing),
-        timbre: timbreFor(instrument),
-      );
+  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
+    final timbre = timbreFor(instrument);
+    // Fast path: no per-note effects → the plain whole-channel additive render.
+    final hasEffect =
+        cells.any((c) => !c.isEmpty && c.effect != TrackerEffect.none);
+    if (!hasEffect) {
+      return renderSegmentsRaw(cellsToSegments(cells, timing), timbre: timbre);
+    }
+    // Effect path: render each note's run on its own so its effect can modulate
+    // the frequency during synthesis, then place it on the timeline.
+    final out = Float64List(timing.totalSamples);
+    var startStep = 0;
+    for (final (midi, steps) in cellRuns(cells)) {
+      if (midi != null) {
+        final start = (startStep * timing.stepMs * kSampleRate) ~/ 1000;
+        final ms = steps * timing.stepMs;
+        final effect = cells[startStep].effect;
+        final buf = effect == TrackerEffect.none
+            ? renderSegmentsRaw(
+                [
+                  (freqs: [midiToFrequency(midi)], ms: ms),
+                ],
+                timbre: timbre,
+              )
+            : renderNoteWithEffect(midi, ms, effect, timbre: timbre);
+        final n = min(buf.length, out.length - start);
+        for (var i = 0; i < n; i++) {
+          out[start + i] = buf[i];
+        }
+      }
+      startStep += steps;
+    }
+    return out;
+  }
 }
 
 /// A chiptune instrument: an sfxr preset (a frozen [SfxrParams]) synthesized at
@@ -449,7 +493,22 @@ class TrackerEngine {
   void setCellVolume(int channel, int row, double? volume) {
     final cur = channels[channel].cells[row];
     if (cur.isEmpty) return;
-    setCell(channel, row, TrackerCell(midi: cur.midi, volume: volume));
+    setCell(
+      channel,
+      row,
+      TrackerCell(midi: cur.midi, volume: volume, effect: cur.effect),
+    );
+  }
+
+  /// Sets the per-note [effect] of the note at [row]. No-op on an empty cell.
+  void setCellEffect(int channel, int row, TrackerEffect effect) {
+    final cur = channels[channel].cells[row];
+    if (cur.isEmpty) return;
+    setCell(
+      channel,
+      row,
+      TrackerCell(midi: cur.midi, volume: cur.volume, effect: effect),
+    );
   }
 
   /// Tap-to-place/remove for the grid: placing [midi] where the same note

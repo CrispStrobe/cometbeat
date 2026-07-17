@@ -122,6 +122,10 @@ abstract interface class TrackerTester {
   /// Long-press equivalent: toggle the note at ([row], [step]) soft/normal.
   void toggleAccent(int row, int step);
   bool isSoft(int row, int step);
+
+  /// Sets/reads the per-note effect at ([row], [step]) on the selected channel.
+  void setNoteEffect(int row, int step, TrackerEffect effect);
+  TrackerEffect effectAt(int step);
 }
 
 class _TrackerScreenState extends State<TrackerScreen>
@@ -288,11 +292,16 @@ class _TrackerScreenState extends State<TrackerScreen>
   void clearOrder() => setState(_order.clear);
   @override
   void toggleAccent(int row, int step) =>
-      _onLongPressCode(_gridRows(_selected)[row].code, step);
+      _toggleSoft(_gridRows(_selected)[row].code, step);
   @override
   bool isSoft(int row, int step) =>
       _engine.cellAt(_selected, step).volume != null &&
       _engine.cellAt(_selected, step).midi == _gridRows(_selected)[row].code;
+  @override
+  void setNoteEffect(int row, int step, TrackerEffect effect) =>
+      _setCellEffect(step, effect);
+  @override
+  TrackerEffect effectAt(int step) => _engine.cellAt(_selected, step).effect;
 
   bool _slotEmpty(List<List<TrackerCell>> snap) =>
       snap.every((ch) => ch.every((c) => c.isEmpty));
@@ -461,10 +470,10 @@ class _TrackerScreenState extends State<TrackerScreen>
     _syncPlayback();
   }
 
-  /// Long-press toggles a note between normal and soft (a quiet "ghost" note) —
-  /// the volume column, for dynamics.
   static const _softVolume = 0.45;
-  void _onLongPressCode(int code, int step) {
+
+  /// Toggles a note between normal and soft (a quiet "ghost" note) — dynamics.
+  void _toggleSoft(int code, int step) {
     final cell = _engine.cellAt(_selected, step);
     if (cell.midi != code) return; // only the note that's actually there
     _engine.setCellVolume(
@@ -475,6 +484,76 @@ class _TrackerScreenState extends State<TrackerScreen>
     setState(() {});
     _syncPlayback();
   }
+
+  void _setCellEffect(int step, TrackerEffect effect) {
+    _engine.setCellEffect(_selected, step, effect);
+    setState(() {});
+    _syncPlayback();
+  }
+
+  /// Long-press a placed note → a small menu for its dynamics + effect.
+  void _onLongPressCode(int code, int step) {
+    final cell = _engine.cellAt(_selected, step);
+    if (cell.midi != code) return; // only opens on a placed note
+    final additive =
+        _engine.channels[_selected].instrument is AdditiveInstrument;
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext)!;
+        final current = _engine.cellAt(_selected, step);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  title: Text(l10n.trackerSoftNote),
+                  value: current.volume != null,
+                  onChanged: (_) {
+                    Navigator.pop(sheetContext);
+                    _toggleSoft(code, step);
+                  },
+                ),
+                if (additive) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.trackerEffect,
+                    style: Theme.of(sheetContext).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      for (final fx in TrackerEffect.values)
+                        ChoiceChip(
+                          label: Text(_effectLabel(l10n, fx)),
+                          selected: current.effect == fx,
+                          onSelected: (_) {
+                            Navigator.pop(sheetContext);
+                            _setCellEffect(step, fx);
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _effectLabel(AppLocalizations l10n, TrackerEffect fx) => switch (fx) {
+        TrackerEffect.none => l10n.trackerEffectNone,
+        TrackerEffect.arpeggio => l10n.trackerEffectArp,
+        TrackerEffect.vibrato => l10n.trackerEffectVibrato,
+        TrackerEffect.slideUp => l10n.trackerEffectSlideUp,
+        TrackerEffect.slideDown => l10n.trackerEffectSlideDown,
+      };
 
   static Color _drumColor(Drum d) => switch (d) {
         Drum.kick => const Color(0xFF4E342E),

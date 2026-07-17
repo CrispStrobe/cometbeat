@@ -243,6 +243,28 @@ void main() {
     });
   });
 
+  group('per-note effects (additive)', () {
+    test('an effect changes the additive render', () {
+      final e = TrackerEngine(
+        timing: const TrackerTiming(rows: 8, stepsPerBeat: 2),
+      )..toggleNote(0, 0, 60); // melody = additive piano
+      final plain = e.renderLoop();
+      e.setCellEffect(0, 0, TrackerEffect.vibrato);
+      expect(e.cellAt(0, 0).effect, TrackerEffect.vibrato);
+      expect(e.renderLoop(), isNot(equals(plain)));
+    });
+
+    test('setCellVolume preserves the effect and vice versa', () {
+      final e = TrackerEngine(
+        timing: const TrackerTiming(rows: 8, stepsPerBeat: 2),
+      )..toggleNote(0, 0, 60);
+      e.setCellEffect(0, 0, TrackerEffect.arpeggio);
+      e.setCellVolume(0, 0, 0.5);
+      expect(e.cellAt(0, 0).effect, TrackerEffect.arpeggio);
+      expect(e.cellAt(0, 0).volume, 0.5);
+    });
+  });
+
   group('arrangement (renderSong)', () {
     int wavSamples(Uint8List wav) => (wav.length - 44) ~/ 2;
 

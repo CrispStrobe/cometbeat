@@ -1928,6 +1928,48 @@ abstract class AppLocalizations {
   /// **'Play song'**
   String get trackerPlaySong;
 
+  /// No description provided for @trackerSoftNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft note'**
+  String get trackerSoftNote;
+
+  /// No description provided for @trackerEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect'**
+  String get trackerEffect;
+
+  /// No description provided for @trackerEffectNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get trackerEffectNone;
+
+  /// No description provided for @trackerEffectArp.
+  ///
+  /// In en, this message translates to:
+  /// **'Arpeggio'**
+  String get trackerEffectArp;
+
+  /// No description provided for @trackerEffectVibrato.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrato'**
+  String get trackerEffectVibrato;
+
+  /// No description provided for @trackerEffectSlideUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide up'**
+  String get trackerEffectSlideUp;
+
+  /// No description provided for @trackerEffectSlideDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide down'**
+  String get trackerEffectSlideDown;
+
   /// No description provided for @trackerSfxrZap.
   ///
   /// In en, this message translates to:
