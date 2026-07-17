@@ -14,6 +14,15 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (next)** · 🚧 **ACTIVE — Workshop notation batch: tempo marks → grace
+  notes → playback** (`docs/WORKSHOP_NEXT_HANDOVER.md`, in order). Worktree
+  `../mus-next`, branch `feature/workshop-next`. **Touching the HOT Workshop set:**
+  `lib/features/workshop/model/score_document.dart` (id-anchor `_tempoChanges`
+  side-map + `Tempo?` initial-tempo field) + `screens/
+  composition_workshop_screen.dart` (tempo entry in the ⋮ / change-here dialog) +
+  new `test/tempo_test.dart`. Starting with **tempo marks** (bar-anchored stamp,
+  feeds `Score.tempo`/`Measure.tempoChange` → `TempoMap`).
+
 - **opus (groove-export)** · 🚧 **ACTIVE — Groove → Song Book / MusicXML**
   (`docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md` §A). Worktree `../mus-groove-export`,
   branch `feature/groove-export`. Files: NEW `grooveParts()` in
