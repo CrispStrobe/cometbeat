@@ -200,9 +200,13 @@ still free on the board before starting** (search the agent name / feature).
    read-only + Change-from-here today).
 
 **Blocked on crisp_notation (need a library change first — CI tracks public
-`CrispStrobe/crisp_notation@main`):** app-wide `showNoteNames` (only on
-`StaffView`, not `MultiSystemView`), a 7th-chord builder for Roman numerals, more
-SMuFL faces (Leland/Leipzig). **Needs real hardware (not headless):** AEC
+`CrispStrobe/crisp_notation@main`):** ~~app-wide `showNoteNames`~~ **DONE** —
+`showNoteNames` / `noteNameStyle` are now on every multi-part view:
+`MultiSystemView` + `InteractiveGrandStaffView` + `InteractiveMultiPartView`
+(crisp_notation 0.4.2) and the static `MultiPartView` (0.4.4, `044891d`); the
+Workshop already uses it via `InteractiveMultiPartView`/`MultiSystemView`. Still
+blocked: a 7th-chord builder for Roman numerals, more SMuFL faces
+(Leland/Leipzig). **Needs real hardware (not headless):** AEC
 on-device tuning — milestone (e), see `docs/AEC_TIER3B.md`. **Strategic / product
 (not a coding session):** parent view + child profiles, teacher/LMS layer,
 generative sight-reading, MIDI input. See the "Ideas backlog" + "Opportunity
