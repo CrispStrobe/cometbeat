@@ -457,8 +457,8 @@ const List<Concept> kConcepts = [
     GradeBand.g78,
     ConceptArea.harmony,
     'Changing key (modulation)',
-    [],
-  ), // GAP
+    ['modulation_ear'],
+  ),
 
   // --- Grades 9–10: inversions & 7ths, function, transposition, score reading.
   Concept(

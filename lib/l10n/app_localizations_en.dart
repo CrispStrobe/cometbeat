@@ -1707,6 +1707,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameMajorMinorEarSubtitle => 'Listen closely and decide';
 
   @override
+  String get gameModulation => 'Key Change?';
+
+  @override
+  String get gameModulationSubtitle => 'Does the tune move to a new key?';
+
+  @override
+  String get modulationPrompt => 'Does it stay in one key, or change key?';
+
+  @override
+  String get modulationSame => 'Same key';
+
+  @override
+  String get modulationChanged => 'Key changed';
+
+  @override
+  String get primerModulationTitle => 'Same key, or a new one?';
+
+  @override
+  String get primerModulationStay =>
+      'A tune has a home note. Here it climbs and comes back to the same home both times — it stays in one key.';
+
+  @override
+  String get primerModulationMove =>
+      'This time the second half is lifted higher, landing on a new home note. The music has changed key — that is modulation.';
+
+  @override
   String get listenMajorMinorPrompt => 'Listen! Does it sound major or minor?';
 
   @override

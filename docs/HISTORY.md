@@ -358,6 +358,12 @@ Games built on crisp_notation capabilities the app didn't use before.
   **natural** sign, rendered as a real ♮ via `NoteElement.showAccidental` on an
   unaltered pitch; below 2★ it stays the binary ♯/♭ drill. Card sign refactored
   bool→`int alter`. SRI gains `accidentals.sign.natural`.
+- **Key Change?** (Scales) — a modulation ear game: a short phrase either stays
+  in one key or modulates partway through (its second half lifted a perfect 4th
+  or 5th to a new tonic); the child taps "Same key" vs "Key changed". Phrases are
+  built from a C-major fragment ending on the tonic; the changed variant shifts
+  the second fragment up 5/7 semitones. Closes the `modulation` concept-map gap.
+  SRI `scales.modulation.<same|changed>`; `modulationPrimer` teaches it by ear.
 - **Triad or Seventh?** (Chords) — an ear game on the added seventh: a major
   triad (3 notes) vs a dominant-7 (triad + a minor 7th, 4 notes), tap which. The
   dom7 is built app-side from the major `Triad`'s pitches +

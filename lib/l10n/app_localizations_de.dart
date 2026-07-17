@@ -1717,6 +1717,32 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gameMajorMinorEarSubtitle => 'Hör genau hin und entscheide';
 
   @override
+  String get gameModulation => 'Tonartwechsel?';
+
+  @override
+  String get gameModulationSubtitle => 'Wechselt die Melodie die Tonart?';
+
+  @override
+  String get modulationPrompt => 'Bleibt es in einer Tonart oder wechselt es?';
+
+  @override
+  String get modulationSame => 'Gleiche Tonart';
+
+  @override
+  String get modulationChanged => 'Tonart gewechselt';
+
+  @override
+  String get primerModulationTitle => 'Gleiche Tonart oder eine neue?';
+
+  @override
+  String get primerModulationStay =>
+      'Eine Melodie hat einen Grundton. Hier steigt sie auf und kehrt beide Male zum selben Grundton zurück — sie bleibt in einer Tonart.';
+
+  @override
+  String get primerModulationMove =>
+      'Diesmal ist die zweite Hälfte höher und landet auf einem neuen Grundton. Die Musik hat die Tonart gewechselt — das ist eine Modulation.';
+
+  @override
   String get listenMajorMinorPrompt => 'Hör zu! Klingt das nach Dur oder Moll?';
 
   @override

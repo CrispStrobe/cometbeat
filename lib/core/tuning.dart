@@ -65,6 +65,8 @@ const Map<String, List<int>> kStarThresholds = {
   // Roman Numerals: 10 rounds × 100; clean run tops near 1000.
   'roman_numeral': [100, 600, 900],
   'major_minor_ear': [100, 600, 900],
+  // Key Change? (modulation ear): 10 rounds x 100.
+  'modulation_ear': [100, 600, 900],
   // Triad or Seventh? (hear the added 7th): 10 rounds x 100.
   'triad_seventh': [100, 600, 900],
   // Higher or Lower? (melodic-direction ear): 10 rounds x 100.

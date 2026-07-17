@@ -3224,6 +3224,54 @@ abstract class AppLocalizations {
   /// **'Listen closely and decide'**
   String get gameMajorMinorEarSubtitle;
 
+  /// No description provided for @gameModulation.
+  ///
+  /// In en, this message translates to:
+  /// **'Key Change?'**
+  String get gameModulation;
+
+  /// No description provided for @gameModulationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Does the tune move to a new key?'**
+  String get gameModulationSubtitle;
+
+  /// No description provided for @modulationPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Does it stay in one key, or change key?'**
+  String get modulationPrompt;
+
+  /// No description provided for @modulationSame.
+  ///
+  /// In en, this message translates to:
+  /// **'Same key'**
+  String get modulationSame;
+
+  /// No description provided for @modulationChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Key changed'**
+  String get modulationChanged;
+
+  /// No description provided for @primerModulationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Same key, or a new one?'**
+  String get primerModulationTitle;
+
+  /// No description provided for @primerModulationStay.
+  ///
+  /// In en, this message translates to:
+  /// **'A tune has a home note. Here it climbs and comes back to the same home both times — it stays in one key.'**
+  String get primerModulationStay;
+
+  /// No description provided for @primerModulationMove.
+  ///
+  /// In en, this message translates to:
+  /// **'This time the second half is lifted higher, landing on a new home note. The music has changed key — that is modulation.'**
+  String get primerModulationMove;
+
   /// No description provided for @listenMajorMinorPrompt.
   ///
   /// In en, this message translates to:

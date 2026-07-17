@@ -482,6 +482,28 @@ Tutorial drumsPrimer(AppLocalizations l10n) => Tutorial(
       ],
     );
 
+/// Modulation: a phrase can stay in one key, or move to a new home note partway
+/// through. Game: modulation_ear.
+Tutorial modulationPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerModulationTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerModulationStay,
+          // C-major fragment twice: the same home note (C) both times.
+          score: _notes([60, 64, 67, 64, 60, 62, 64, 60]),
+          play: (a) =>
+              a.playSequence(_run([60, 64, 67, 64, 60, 62, 64, 60], ms: 360)),
+        ),
+        TutorialStep(
+          text: l10n.primerModulationMove,
+          // Same fragment, then lifted up a 5th (to G): a new home note.
+          score: _notes([60, 64, 67, 64, 60, 67, 71, 67]),
+          play: (a) =>
+              a.playSequence(_run([60, 64, 67, 64, 60, 67, 71, 67], ms: 360)),
+        ),
+      ],
+    );
+
 // ---- per-game primers (a distinct fact within an already-covered module) ----
 
 /// Reading on the BASS clef — its lines/spaces spell different notes than

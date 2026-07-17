@@ -105,6 +105,7 @@ import 'package:comet_beat/features/games/scales/echo_sequence_screen.dart';
 import 'package:comet_beat/features/games/scales/in_scale_screen.dart';
 import 'package:comet_beat/features/games/scales/key_signature_screen.dart';
 import 'package:comet_beat/features/games/scales/major_minor_ear_screen.dart';
+import 'package:comet_beat/features/games/scales/modulation_ear_screen.dart';
 import 'package:comet_beat/features/games/scales/run_direction_screen.dart';
 import 'package:comet_beat/features/games/scales/same_diff_screen.dart';
 import 'package:comet_beat/features/games/scales/scale_builder_screen.dart';
@@ -783,6 +784,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameMajorMinorEar,
       subtitle: (l) => l.gameMajorMinorEarSubtitle,
       builder: (_) => const MajorMinorEarScreen(),
+    ),
+    // Modulation ear game: does the phrase stay in one key or change key?
+    GameInfo(
+      id: 'modulation_ear',
+      icon: Icons.moving,
+      title: (l) => l.gameModulation,
+      subtitle: (l) => l.gameModulationSubtitle,
+      builder: (_) => const ModulationEarScreen(),
+      tutorial: modulationPrimer,
     ),
     // Melodic-direction ear game (aural twin of the High or Low? sort).
     GameInfo(
