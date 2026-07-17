@@ -164,11 +164,19 @@ class _PitchSortScreenState extends State<PitchSortScreen> with QuizRoundMixin {
                 score: score,
                 onRestart: restartGame,
               )
-            : Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    RoundHeader(
+            // Fill the viewport normally; scroll instead of overflowing on a
+            // short screen (iPhone SE, amplified by longer German text).
+            : LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            RoundHeader(
                       correct: finished ? true : _lastDropOk,
                       round: round + 1,
                       totalRounds: totalRounds,
@@ -231,8 +239,14 @@ class _PitchSortScreenState extends State<PitchSortScreen> with QuizRoundMixin {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    FeedbackLine(correct: finished ? true : _lastDropOk),
-                  ],
+                            FeedbackLine(
+                              correct: finished ? true : _lastDropOk,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
       ),

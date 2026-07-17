@@ -1451,22 +1451,20 @@ class _TrackerScreenState extends State<TrackerScreen>
                 ),
               ],
               const SizedBox(height: 10),
-              Row(
+              // One Wrap for the tempo chips + Record/Clear so they flow onto a
+              // second line instead of overflowing on a narrow phone (the German
+              // button labels are wider than English).
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        for (final bpm in TrackerScreen.tempos)
-                          ChoiceChip(
-                            label: Text(_tempoLabel(l10n, bpm)),
-                            selected: _engine.timing.tempoBpm == bpm,
-                            onSelected: (_) => _setTempo(bpm),
-                          ),
-                      ],
+                  for (final bpm in TrackerScreen.tempos)
+                    ChoiceChip(
+                      label: Text(_tempoLabel(l10n, bpm)),
+                      selected: _engine.timing.tempoBpm == bpm,
+                      onSelected: (_) => _setTempo(bpm),
                     ),
-                  ),
-                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: _isRecording ? null : _showRecordSheet,
                     icon: Icon(_isRecording ? Icons.mic : Icons.mic_none),
@@ -1474,7 +1472,6 @@ class _TrackerScreenState extends State<TrackerScreen>
                       _isRecording ? l10n.trackerRecording : l10n.trackerRecord,
                     ),
                   ),
-                  const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: _engine.isEmpty ? null : _clearAll,
                     icon: const Icon(Icons.clear),

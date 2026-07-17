@@ -287,9 +287,12 @@ class _NoteSnakeScreenState extends State<NoteSnakeScreen>
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const Spacer(),
-                          Text(
-                            l10n.noteSnakePrompt,
-                            style: Theme.of(context).textTheme.bodySmall,
+                          Flexible(
+                            child: Text(
+                              l10n.noteSnakePrompt,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           SizedBox(

@@ -287,9 +287,12 @@ class _BeatRunnerScreenState extends State<BeatRunnerScreen>
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const Spacer(),
-                          Text(
-                            l10n.beatRunnerHint,
-                            style: Theme.of(context).textTheme.bodySmall,
+                          Flexible(
+                            child: Text(
+                              l10n.beatRunnerHint,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
