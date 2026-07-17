@@ -2570,6 +2570,18 @@ abstract class AppLocalizations {
   /// **'Step'**
   String get trackerEditStep;
 
+  /// No description provided for @trackerPatternNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New pattern'**
+  String get trackerPatternNew;
+
+  /// No description provided for @trackerPatternClone.
+  ///
+  /// In en, this message translates to:
+  /// **'Clone pattern'**
+  String get trackerPatternClone;
+
   /// No description provided for @myMelodyPrompt.
   ///
   /// In en, this message translates to:

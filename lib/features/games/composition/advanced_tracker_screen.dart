@@ -93,9 +93,13 @@ abstract interface class AdvancedTrackerTester {
   int get rows;
   int get noteCount;
   bool get isPlaying;
+  bool get isSongPlaying;
   int get cursorChannel;
   int get cursorRow;
   int get octave;
+  int get patternCount;
+  int get currentPattern;
+  int get orderLength;
 
   /// Place [midi] at [channel]/[row] (chromatic, no snapping).
   void setNote(int channel, int row, int midi);
@@ -109,6 +113,12 @@ abstract interface class AdvancedTrackerTester {
   void moveCursor(int channel, int row);
   void typeKey(String character);
   void setChannelInstrument(int channel, String instrumentId);
+
+  /// Arrangement: patterns + order list + song playback.
+  void addPattern({bool clone});
+  void selectPattern(int index);
+  void addToOrder(int patternIndex);
+  void playSong();
 }
 
 class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
@@ -126,6 +136,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// The sounding row (0-based), or -1 when stopped. Drives the playhead without
   /// a full rebuild.
   final _row = ValueNotifier<int>(-1);
+
+  /// Which order-list position is sounding in song mode (else -1).
+  final _playingOrder = ValueNotifier<int>(-1);
+
+  /// True while playing the whole arrangement (the order list) rather than
+  /// looping the current pattern.
+  bool _songMode = false;
 
   /// The edit cursor — keyboard and on-screen piano enter notes here.
   int _cursorChannel = 0;
@@ -148,13 +165,22 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _ticker = createTicker((_) {
       if (!_clock.isRunning) {
         if (_row.value != -1) _row.value = -1;
+        if (_playingOrder.value != -1) _playingOrder.value = -1;
         return;
       }
       final t = _song.timing;
-      final step = (_clock.elapsedMilliseconds % t.totalMs) ~/ t.stepMs;
-      if (step != _row.value) {
-        _row.value = step;
-        _followPlayhead(step);
+      if (_songMode && _song.songTotalMs > 0) {
+        final pos = _clock.elapsedMilliseconds % _song.songTotalMs;
+        _playingOrder.value = pos ~/ t.totalMs;
+        final step = (pos % t.totalMs) ~/ t.stepMs;
+        if (step != _row.value) _row.value = step;
+      } else {
+        if (_playingOrder.value != -1) _playingOrder.value = -1;
+        final step = (_clock.elapsedMilliseconds % t.totalMs) ~/ t.stepMs;
+        if (step != _row.value) {
+          _row.value = step;
+          _followPlayhead(step);
+        }
       }
     })
       ..start();
@@ -164,6 +190,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void dispose() {
     _ticker.dispose();
     _row.dispose();
+    _playingOrder.dispose();
     _vScroll.dispose();
     _focus.dispose();
     _loop.dispose();
@@ -238,6 +265,45 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     setState(() => _song.setChannelInstrument(channel, opt.build()));
     _syncPlayback();
   }
+
+  @override
+  bool get isSongPlaying => _clock.isRunning && _songMode;
+  @override
+  int get patternCount => _song.patterns.length;
+  @override
+  int get currentPattern => _song.currentIndex;
+  @override
+  int get orderLength => _song.order.length;
+  @override
+  void addPattern({bool clone = false}) {
+    setState(() {
+      final i = _song.addPattern(cloneCurrent: clone);
+      _song.selectPattern(i);
+      _cursorRow = 0;
+    });
+    _syncPlayback();
+  }
+
+  @override
+  void selectPattern(int index) {
+    setState(() {
+      _song.selectPattern(index);
+      if (_cursorRow >= _song.rows) _cursorRow = _song.rows - 1;
+    });
+    _syncPlayback();
+  }
+
+  @override
+  void addToOrder(int patternIndex) {
+    setState(() => _song.addToOrder(patternIndex));
+    _syncPlayback();
+  }
+
+  @override
+  void playSong() => _playSong();
+
+  void _addEmptyPattern() => addPattern();
+  void _clonePattern() => addPattern(clone: true);
 
   // --- Editing ---
 
@@ -326,36 +392,60 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   void _togglePlay() {
     if (_clock.isRunning) {
-      _clock
-        ..stop()
-        ..reset();
-      _loop.stop();
-      _row.value = -1;
-      setState(() {});
+      _stop();
     } else {
-      _clock
-        ..reset()
-        ..start();
-      _syncPlayback();
-      setState(() {});
+      _playPattern();
     }
   }
 
-  /// Swaps/stops the looping mix to match the current pattern, keeping the
-  /// musical phase so an edit never resets the beat.
+  void _stop() {
+    _clock
+      ..stop()
+      ..reset();
+    _loop.stop();
+    _row.value = -1;
+    _playingOrder.value = -1;
+    setState(() => _songMode = false);
+  }
+
+  /// Loop the current pattern.
+  void _playPattern() {
+    _songMode = false;
+    _clock
+      ..reset()
+      ..start();
+    _syncPlayback();
+    setState(() {});
+  }
+
+  /// Play the whole arrangement (the order list) back to back, looping.
+  void _playSong() {
+    _song.syncCurrent();
+    _songMode = true;
+    _clock
+      ..reset()
+      ..start();
+    _syncPlayback();
+    setState(() {});
+  }
+
+  /// Swaps/stops the looping mix to match the current pattern (or the whole
+  /// song in song mode), keeping the musical phase so an edit never resets the
+  /// beat.
   void _syncPlayback() {
     if (!_clock.isRunning) return;
-    if (_song.current.hasAnyNote == false &&
-        !_song.engine.channels.any(
-          (c) => c.hasAnyNote,
-        )) {
+    final anyNote = _song.engine.channels.any((c) => c.hasAnyNote) ||
+        _song.patterns.any((p) => p.hasAnyNote);
+    if (!anyNote) {
       _loop.stop();
       return;
     }
     if (!context.read<AudioService>().soundOn) return; // master mute
-    final wav = _song.renderCurrentPatternWav();
+    final wav =
+        _songMode ? _song.renderSongWav() : _song.renderCurrentPatternWav();
+    final total = _songMode ? _song.songTotalMs : _song.timing.totalMs;
     final position = Duration(
-      milliseconds: _clock.elapsedMilliseconds % _song.timing.totalMs,
+      milliseconds: total > 0 ? _clock.elapsedMilliseconds % total : 0,
     );
     _loop.playLoop(wav, position: position);
   }
@@ -536,6 +626,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             onPressed: _toBeginner,
           ),
           IconButton(
+            icon: const Icon(Icons.playlist_play),
+            tooltip: l10n.trackerPlaySong,
+            onPressed: _playSong,
+          ),
+          IconButton(
             icon: const Icon(Icons.delete_sweep_outlined),
             tooltip: l10n.trackerClear,
             onPressed: _clearAll,
@@ -559,6 +654,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             child: Column(
               children: [
                 _toolbar(l10n),
+                _arrangementBar(l10n),
                 const Divider(height: 1),
                 Expanded(child: _grid(context)),
                 const Divider(height: 1),
@@ -567,6 +663,90 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// The pattern selector + order list (the song arrangement).
+  Widget _arrangementBar(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      color: scheme.surfaceContainerLow,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          // Patterns: which one is being edited (+ add / clone).
+          Text('${l10n.trackerPattern}: '),
+          Expanded(
+            child: SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (var i = 0; i < _song.patterns.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: ChoiceChip(
+                        label: Text(_song.patterns[i].name),
+                        selected: i == _song.currentIndex,
+                        onSelected: (_) => selectPattern(i),
+                      ),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.add, size: 20),
+                    tooltip: l10n.trackerPatternNew,
+                    onPressed: _addEmptyPattern,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    tooltip: l10n.trackerPatternClone,
+                    onPressed: _clonePattern,
+                  ),
+                  if (_song.patterns.length > 1)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                      tooltip: l10n.trackerRemoveTrack,
+                      onPressed: () => setState(
+                        () => _song.removePattern(_song.currentIndex),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Order list: the play sequence; the sounding entry lights up.
+          Text('${l10n.trackerSong}: '),
+          Expanded(
+            child: SizedBox(
+              height: 36,
+              child: ValueListenableBuilder<int>(
+                valueListenable: _playingOrder,
+                builder: (context, playing, _) => ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (var i = 0; i < _song.order.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: InputChip(
+                          label: Text(_song.patterns[_song.order[i]].name),
+                          selected: i == playing,
+                          onPressed: () => selectPattern(_song.order[i]),
+                          onDeleted: () =>
+                              setState(() => _song.removeFromOrder(i)),
+                        ),
+                      ),
+                    ActionChip(
+                      avatar: const Icon(Icons.add, size: 16),
+                      label: Text(_song.current.name),
+                      onPressed: () => addToOrder(_song.currentIndex),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

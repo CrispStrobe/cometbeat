@@ -446,6 +446,8 @@
   "trackerPickNote": "Note wählen",
   "trackerOctave": "Oktave",
   "trackerEditStep": "Schritt",
+  "trackerPatternNew": "Neues Pattern",
+  "trackerPatternClone": "Pattern klonen",
   "myMelodyPrompt": "Schreibe deine Melodie — tippe die Linien oder ein Instrument!",
   "inputStaff": "Noten",
   "inputPiano": "Klavier",

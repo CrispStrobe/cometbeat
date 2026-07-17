@@ -122,4 +122,52 @@ void main() {
     await tester.pump();
     expect(game.noteCount, 1);
   });
+
+  testWidgets('multi-pattern: add, select and edit separate patterns',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+
+    expect(game.patternCount, 1);
+    game.setNote(0, 0, 60); // pattern 0
+    await tester.pump();
+
+    game.addPattern(); // -> pattern 1, selected
+    await tester.pump();
+    expect(game.patternCount, 2);
+    expect(game.currentPattern, 1);
+    expect(game.noteCount, 0); // fresh pattern
+
+    game.setNote(0, 0, 72); // pattern 1
+    await tester.pump();
+    expect(game.noteCount, 1);
+
+    game.selectPattern(0);
+    await tester.pump();
+    expect(game.noteCount, 1); // pattern 0's note restored
+  });
+
+  testWidgets('order list + play song', (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+
+    game.setNote(0, 0, 60);
+    game.addPattern(clone: true); // pattern 1 (index 1), selected
+    await tester.pump();
+    expect(game.patternCount, 2);
+
+    // Order starts as [0]; append the current pattern (1) -> [0, 1].
+    game.addToOrder(game.currentPattern);
+    await tester.pump();
+    expect(game.orderLength, 2);
+
+    game.playSong();
+    await tester.pump();
+    expect(game.isSongPlaying, isTrue);
+
+    game.togglePlay(); // stop
+    await tester.pump();
+    expect(game.isPlaying, isFalse);
+    expect(game.isSongPlaying, isFalse);
+  });
 }

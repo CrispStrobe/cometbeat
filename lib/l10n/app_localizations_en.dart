@@ -1325,6 +1325,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerEditStep => 'Step';
 
   @override
+  String get trackerPatternNew => 'New pattern';
+
+  @override
+  String get trackerPatternClone => 'Clone pattern';
+
+  @override
   String get myMelodyPrompt =>
       'Write your melody — tap the staff or an instrument!';
 

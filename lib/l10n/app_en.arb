@@ -477,6 +477,8 @@
   "trackerPickNote": "Pick a note",
   "trackerOctave": "Octave",
   "trackerEditStep": "Step",
+  "trackerPatternNew": "New pattern",
+  "trackerPatternClone": "Clone pattern",
   "myMelodyPrompt": "Write your melody — tap the staff or an instrument!",
   "inputStaff": "Staff",
   "inputPiano": "Piano",
