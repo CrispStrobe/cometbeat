@@ -19,15 +19,7 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
-- **opus (textbook-p1)** · 🚧 **ACTIVE — Textbook phase 1: concept inventory +
-  coverage gap analysis**. The existing `core/curriculum/curriculum.dart` spine
-  (5 grade bands g12→g910, topics→gameIds) places only 40/130 games. Building a
-  re-expressed **concept inventory** (`core/curriculum/concept_map.dart`, our
-  words — no verbatim curriculum text) tagging each grade-1–10 concept with its
-  band + the games that train it, and a pure **gap analyzer**
-  (`coverage_gaps.dart`) + test that prints untrained/thin concepts, orphan games,
-  and guards against dangling refs. Reveals where coverage is thin. NOT touching
-  games/primers/UI. Worktree `../mus-textbook`, branch `feature/textbook-p1`.
+- **opus (textbook-p1)** · ✅ **idle / SHIPPED — Textbook phase 1: concept inventory + gap analysis.** `core/curriculum/concept_map.dart` (60 grade-1–10 concepts, our words) + `coverage_gaps.dart` + a test that PRINTS the gap report and guards no-dangling-refs. **Reveals the 8 untrained concepts** (verse/chorus form, syncopation, triplets, ABA/rondo form, modulation, ornaments, modes, instrument families), many thin (1-game) concepts, and 56 orphan games; 74/130 games placed. Also wrote up the **bachelor-level extension + OER-source licence registry** (GFDL/NC = facts-only; CC-BY(-SA) = adaptable) and an **AnaVis-style form-analysis view** idea (fills the form gap). Pure Dart + test, no game/UI touch. Analyze clean; 3 tests green.
 
 - **opus (primer-quality)** · ✅ **idle / SHIPPED — primers revised to the 9yo bar + textbook-mode spec**. Audit found `cadencePrimer` had NO notation (both steps audio-only) and unexplained "V/I"; `upbeat`/`enharmonic`/`voices` each had an audio-only step; `seventh`/`phrase` used jargon. Fixed: **every step now has an engraved example** (new helpers `_progression` cadences, `_pickup` shows a real anacrusis bar, `_spelled` shows F♯ vs G♭ at their true staff spots), and the jargon ("V then I", "the tonic", "a third apart: root/third/fifth") is now concrete kid language. Also **wrote up the Textbook / read-through curriculum vision** (new section above `## Delivery`) incl. the Bundesländer-licensing constraint, the song-mnemonic examples (Kuckuck = descending minor 3rd), and the gap-analysis method. Analyze clean; tutorial + gate green.
 
@@ -989,11 +981,52 @@ coverage guard. Run it first — it orders all the work below.
 4. **Textbook reader UI** + narrative + progress + game deep-links.
 5. **Fill the gaps** the analysis found (new lessons/games for uncovered concepts).
 
-**Status:** spec written 2026-07-17. Phase 0 (this pass): the 45 concept primers
-were revised to the 9-year-old bar — every step now has an engraved example, and
-jargon ("V/I", "the tonic", "a third apart") was replaced with concrete language —
-so the lesson atoms are textbook-grade. Next: phase 1 (spine + gap analysis),
-then phase 2 (song examples).
+**Status:** Phase 0 done (primers to the 9yo bar). **Phase 1 done (2026-07-17):**
+`core/curriculum/concept_map.dart` (60 concepts, grade 1–10, our words) +
+`coverage_gaps.dart` + `test/curriculum_coverage_test.dart` (prints the gap
+report, guards no dangling refs). **Gap findings — the 8 UNTRAINED concepts (no
+game):** verse/chorus form, **syncopation**, **triplets/tuplets**, ABA/rondo form,
+**modulation**, **ornaments** (reading), **modes**, instrument families/orchestra.
+Plus many *thin* (1-game) concepts and 56 orphan games (variants/creative not
+placed in the path). Games placed: 74/130 (57%). Next: phase 2 (song examples),
+and fill the 8 gaps (§ New minigame targets from the gap report).
+
+### Extending the syllabus toward bachelor level (2026-07-17)
+The grade-1–10 spine is the floor; the concept map extends **upward toward
+undergraduate music theory** the same way (more bands / an `undergrad` tier). Draw
+structure & facts from established OER — but **the licence governs how**:
+
+| Source | Licence (verify per work) | How we may use it |
+|---|---|---|
+| **Open Music Theory 2** | CC-BY-SA 4.0 | facts + (adapted text OK **if** we attribute & share-alike the derived text) |
+| **Understanding Music: Past & Present** (Clark et al.) | CC-BY-SA 4.0 | same as above |
+| **Music Theory for the 21st-C Classroom** (Hutchinson) | **GFDL** | **facts/scope only — re-express.** GFDL is copyleft for *manuals*; shipping adapted GFDL text would obligate GFDL on the derivative, incompatible with our MIT/CC-BY mix → do NOT ship verbatim/adapted, use as a reference |
+| **Kyle Gullings OER** (Undergrad Music Theory) | often CC-BY-**NC**(-SA) | **facts only** — NC forbids our commercial (App Store) use of the *text*; re-express is fine |
+| **Multimodal Musicianship** (Malawey) | verify (Pressbooks OER, often CC-BY-NC-SA) | facts only unless a CC-BY/BY-SA item |
+| **Open Music Academy** (openmusic.academy) | per-item, often CC-BY-SA | facts + adapt CC-BY(-SA) items with attribution |
+| **ELMU** (E-Learning Plattform Musik) | verify per resource | facts; adapt only clearly CC-BY(-SA) items |
+| **OER-Musik.de** (U. Kaiser OpenBooks) | typically CC-BY-SA | facts + adapt with attribution/share-alike |
+| **Projekt #gis** (int'l students) | verify (OER) | facts; adapt only CC-BY(-SA) items |
+
+**Governing rule (unchanged):** our default for *every* source is **re-express the
+facts/structure in our own words** — always legal, sidesteps all licences.
+Verbatim/adapted text is considered ONLY for **CC-BY / CC-BY-SA** works (with
+attribution; SA obligates same-licence on the derived text), **never** for
+**CC-BY-NC** (app is commercial) or **GFDL** (copyleft/incompatible). Keep a
+per-source licence registry (`assets/licenses/` + the About page) for anything we
+adapt. When unsure, re-express.
+
+### AnaVis-style analysis view (idea → fills the *form* gap)
+The maintainer asks: *can we get close to AnaVis?* AnaVis visualises musical
+**form/harmonic analysis** as a colour-coded timeline (phrase/section blocks,
+cadences) aligned to the music. That is exactly the **musical_form / phrasing**
+concepts the gap report flags as untrained. Proposal: a **form-analysis view** —
+a horizontal timeline under a `crisp_notation` score (or a playing cursor) with
+labelled colour spans (A / B / A′ sections, antecedent/consequent phrases,
+cadence points), and a matching **"label the form" minigame**. Feasible app-side
+(score + a custom span-timeline widget); no new library dep. Tracks as: fills the
+form gap **and** seeds an analysis feature. Later: harmonic-function spans
+(T/S/D colouring) over a progression.
 
 ## Delivery
 
