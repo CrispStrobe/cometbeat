@@ -584,6 +584,30 @@ abstract class AppLocalizations {
   /// **'None'**
   String get workshopTempoNone;
 
+  /// No description provided for @workshopGraceNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Grace notes…'**
+  String get workshopGraceNotes;
+
+  /// No description provided for @workshopGraceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No grace notes yet — tap a note to add one.'**
+  String get workshopGraceEmpty;
+
+  /// No description provided for @workshopGraceAcciaccatura.
+  ///
+  /// In en, this message translates to:
+  /// **'Acciaccatura'**
+  String get workshopGraceAcciaccatura;
+
+  /// No description provided for @workshopGraceAppoggiatura.
+  ///
+  /// In en, this message translates to:
+  /// **'Appoggiatura'**
+  String get workshopGraceAppoggiatura;
+
   /// No description provided for @workshopArticulations.
   ///
   /// In en, this message translates to:

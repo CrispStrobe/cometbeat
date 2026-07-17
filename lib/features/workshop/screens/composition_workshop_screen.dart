@@ -1212,6 +1212,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           if (id != null) _showChangeHereDialog(id);
           return;
         }
+        if (a.$1 == 'grace') {
+          final id = _doc.selectedId;
+          if (id != null) _showGraceDialog(id);
+          return;
+        }
         setState(() {
           final id = _doc.selectedId;
           switch (a.$1) {
@@ -1270,6 +1275,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               checked: n?.ornament == e.key,
               child: Text('${l10n.workshopOrnament}: ${e.value}'),
             ),
+          CheckedPopupMenuItem<(String, Object?)>(
+            value: const ('grace', null),
+            checked: n?.graceNotes.isNotEmpty ?? false,
+            child: Text(l10n.workshopGraceNotes),
+          ),
           const PopupMenuDivider(),
           CheckedPopupMenuItem<(String, Object?)>(
             value: const ('repStart', null),
@@ -1395,6 +1405,114 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       _doc.setVoltaAt(id, volta);
       _doc.setNavigationAt(id, nav);
     });
+  }
+
+  /// A small editor for the **grace notes** attached to the selected note: a
+  /// run of pitches (drawn as small notes to the left) plus their [GraceStyle].
+  /// Notes are appended by tapping C–B at the chosen octave (defaulting to the
+  /// host note's octave) and removed by tapping their chip. Grace notes carry
+  /// zero bar duration, so nothing here changes bar packing.
+  Future<void> _showGraceDialog(String id) async {
+    final l10n = AppLocalizations.of(context)!;
+    final note = _doc.selected;
+    if (note == null || note.isRest) return;
+    final pitches = List<Pitch>.of(note.graceNotes);
+    var style = note.graceStyle;
+    var octave = note.pitch?.octave ?? 4;
+
+    final apply = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.workshopGraceNotes),
+        content: StatefulBuilder(
+          builder: (ctx, setLocal) => SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // The current grace sequence — tap a chip to remove it.
+                if (pitches.isEmpty)
+                  Text(
+                    l10n.workshopGraceEmpty,
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  )
+                else
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      for (var i = 0; i < pitches.length; i++)
+                        InputChip(
+                          label: Text(pitches[i].toString()),
+                          onDeleted: () => setLocal(() => pitches.removeAt(i)),
+                        ),
+                    ],
+                  ),
+                const Divider(height: 20),
+                // Octave stepper for the notes added below.
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed:
+                          octave > 0 ? () => setLocal(() => octave--) : null,
+                    ),
+                    Text('${l10n.intervalOctave} $octave'),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed:
+                          octave < 8 ? () => setLocal(() => octave++) : null,
+                    ),
+                  ],
+                ),
+                // Tap a note to append it to the grace run.
+                Wrap(
+                  spacing: 4,
+                  children: [
+                    for (final s in Step.values)
+                      OutlinedButton(
+                        onPressed: () => setLocal(
+                          () => pitches.add(Pitch(s, octave: octave)),
+                        ),
+                        child: Text(s.name.toUpperCase()),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Acciaccatura (slashed) vs appoggiatura (leaning).
+                SegmentedButton<GraceStyle>(
+                  segments: [
+                    ButtonSegment(
+                      value: GraceStyle.acciaccatura,
+                      label: Text(l10n.workshopGraceAcciaccatura),
+                    ),
+                    ButtonSegment(
+                      value: GraceStyle.appoggiatura,
+                      label: Text(l10n.workshopGraceAppoggiatura),
+                    ),
+                  ],
+                  selected: {style},
+                  onSelectionChanged: (s) => setLocal(() => style = s.first),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+
+    if (apply != true) return;
+    setState(() => _doc.setGraceNotesOfSelected(pitches, style: style));
   }
 
   /// Common metronome marks (quarter-note beat), each labelled with its rough

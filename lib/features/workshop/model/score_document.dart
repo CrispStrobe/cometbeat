@@ -27,6 +27,8 @@ class EditorElement {
     this.tieToNext = false,
     this.dynamic,
     this.ornament,
+    this.graceNotes = const [],
+    this.graceStyle = GraceStyle.acciaccatura,
   }) : pitches = [pitch];
 
   /// A chord: two or more simultaneous pitches (kept low → high).
@@ -38,6 +40,8 @@ class EditorElement {
     this.tieToNext = false,
     this.dynamic,
     this.ornament,
+    this.graceNotes = const [],
+    this.graceStyle = GraceStyle.acciaccatura,
   });
 
   const EditorElement.rest(this.duration, {required this.id})
@@ -45,7 +49,9 @@ class EditorElement {
         articulations = const {},
         tieToNext = false,
         dynamic = null,
-        ornament = null;
+        ornament = null,
+        graceNotes = const [],
+        graceStyle = GraceStyle.acciaccatura;
 
   /// The simultaneous pitches, low → high; empty for a rest.
   final List<Pitch> pitches;
@@ -62,6 +68,15 @@ class EditorElement {
   /// A single ornament above the note — trill / mordent / turn (null = none;
   /// rests carry none).
   final Ornament? ornament;
+
+  /// Grace notes played just before this note, drawn as small notes to its left
+  /// (empty = none; rests carry none). A list of pitches — a run of graces is a
+  /// mini-sequence, not a single value — with [graceStyle] choosing the look.
+  final List<Pitch> graceNotes;
+
+  /// Whether [graceNotes] read as acciaccatura (slashed, crushed) or
+  /// appoggiatura (leaning). Irrelevant when [graceNotes] is empty.
+  final GraceStyle graceStyle;
 
   bool get isRest => pitches.isEmpty;
 
@@ -80,6 +95,8 @@ class EditorElement {
           articulations: articulations,
           tieToNext: tieToNext,
           ornament: ornament,
+          graceNotes: graceNotes,
+          graceStyle: graceStyle,
         );
 
   EditorElement _copyWith({
@@ -91,6 +108,8 @@ class EditorElement {
     bool clearDynamic = false,
     Ornament? orn,
     bool clearOrnament = false,
+    List<Pitch>? graceNotes,
+    GraceStyle? graceStyle,
   }) =>
       EditorElement.chord(
         pitches ?? this.pitches,
@@ -100,10 +119,21 @@ class EditorElement {
         tieToNext: tieToNext ?? this.tieToNext,
         dynamic: clearDynamic ? null : (dyn ?? dynamic),
         ornament: clearOrnament ? null : (orn ?? ornament),
+        graceNotes: graceNotes ?? this.graceNotes,
+        graceStyle: graceStyle ?? this.graceStyle,
       );
 
   EditorElement withOrnament(Ornament? o) =>
       _copyWith(orn: o, clearOrnament: o == null);
+
+  /// Attach [notes] as grace notes (empty clears them), with [style]
+  /// (default acciaccatura). A no-op semantic on rests is enforced by the
+  /// caller ([setGraceNotesOfSelected] skips rests).
+  EditorElement withGraceNotes(
+    List<Pitch> notes, {
+    GraceStyle style = GraceStyle.acciaccatura,
+  }) =>
+      _copyWith(graceNotes: List.of(notes), graceStyle: style);
 
   /// Replace with a single pitch (collapses a chord).
   EditorElement withPitch(Pitch pitch) => _copyWith(pitches: [pitch]);
@@ -121,6 +151,8 @@ class EditorElement {
         tieToNext: tieToNext,
         dynamic: dynamic,
         ornament: ornament,
+        graceNotes: graceNotes,
+        graceStyle: graceStyle,
       );
 
   EditorElement withArticulations(Set<Articulation> a) =>
@@ -744,6 +776,21 @@ class ScoreDocument {
     }
   }
 
+  /// Attach [notes] as grace notes (an empty list clears them) with [style] on
+  /// every selected note. Grace notes have zero bar duration, so this never
+  /// changes packing. Rests are skipped. Undoable.
+  void setGraceNotesOfSelected(
+    List<Pitch> notes, {
+    GraceStyle style = GraceStyle.acciaccatura,
+  }) {
+    final indices = _selectedNoteIndices;
+    if (indices.isEmpty) return;
+    _snapshot();
+    for (final i in indices) {
+      _elements[i] = _elements[i].withGraceNotes(notes, style: style);
+    }
+  }
+
   /// Tie every selected note to the next (or untie, if all are already tied).
   void toggleTieOfSelected() {
     final notes = _selectedNoteIndices;
@@ -993,9 +1040,12 @@ class ScoreDocument {
   /// Bar-anchored attributes are recovered too: mid-score clef/key/time changes
   /// and repeat barlines re-anchor onto their bar's first element.
   ///
+  /// Per-note attributes are recovered too: ornaments and grace notes ride the
+  /// element as it is rebuilt.
+  ///
   /// Still dropped, because the flat element stream cannot represent them:
-  /// voices 2–4, tuplets, grace notes and ornaments. Those are unblocked by the
-  /// measure-spine work, not here — see docs/WORKSHOP_PARITY.md.
+  /// voices 2–4. Those are unblocked by the measure-spine work, not here —
+  /// see docs/WORKSHOP_PARITY.md.
   void loadScore(Score score) {
     _snapshot();
     _elements.clear();
@@ -1039,6 +1089,8 @@ class ScoreDocument {
               tieToNext: el.tieToNext,
               dynamic: el.id == null ? null : dynamics[el.id!],
               ornament: el.ornament,
+              graceNotes: List.of(el.graceNotes),
+              graceStyle: el.graceStyle,
             ),
           );
         } else if (el is RestElement) {

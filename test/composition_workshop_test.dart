@@ -270,6 +270,33 @@ void main() {
     expect(find.text(l10n.workshopNoChange), findsNWidgets(6));
   });
 
+  testWidgets('the palette opens the grace-notes editor', (tester) async {
+    await pump(tester);
+    await tester.tap(_pianoKey()); // place + select a note
+    await tester.pump();
+    final palette = find.byIcon(Icons.expand_less);
+    await tester.ensureVisible(palette);
+    await tester.pumpAndSettle();
+    await tester.tap(palette);
+    await tester.pumpAndSettle();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.text(l10n.workshopGraceNotes).last);
+    await tester.pumpAndSettle();
+
+    // The editor shows the empty hint, the note buttons and the style toggle.
+    expect(find.text(l10n.workshopGraceEmpty), findsOneWidget);
+    expect(find.text(l10n.workshopGraceAcciaccatura), findsOneWidget);
+    expect(find.text(l10n.workshopGraceAppoggiatura), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'C'), findsOneWidget);
+
+    // Adding a grace note replaces the hint with a chip.
+    await tester.tap(find.widgetWithText(OutlinedButton, 'D'));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.workshopGraceEmpty), findsNothing);
+    expect(find.byType(InputChip), findsOneWidget);
+  });
+
   testWidgets('the ⋮ menu opens the initial-tempo dialog', (tester) async {
     await pump(tester);
     await tester.tap(_pianoKey()); // a non-empty document

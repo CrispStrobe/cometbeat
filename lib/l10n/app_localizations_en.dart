@@ -287,6 +287,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopTempoNone => 'None';
 
   @override
+  String get workshopGraceNotes => 'Grace notes…';
+
+  @override
+  String get workshopGraceEmpty =>
+      'No grace notes yet — tap a note to add one.';
+
+  @override
+  String get workshopGraceAcciaccatura => 'Acciaccatura';
+
+  @override
+  String get workshopGraceAppoggiatura => 'Appoggiatura';
+
+  @override
   String get workshopArticulations => 'Articulations & ties';
 
   @override
