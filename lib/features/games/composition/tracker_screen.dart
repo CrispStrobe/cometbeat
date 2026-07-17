@@ -135,6 +135,12 @@ abstract interface class TrackerTester {
 
   /// The current song serialized to MOD bytes.
   Uint8List exportModBytes();
+
+  /// Loads a Score (as if from a MIDI file) into the channels.
+  void importMidiScore(Score score);
+
+  /// The current pattern serialized to Standard MIDI File bytes.
+  Uint8List exportMidiBytes();
 }
 
 class _TrackerScreenState extends State<TrackerScreen>
@@ -315,6 +321,10 @@ class _TrackerScreenState extends State<TrackerScreen>
   void importModModule(ModModule mod) => _loadMod(mod);
   @override
   Uint8List exportModBytes() => writeMod(_currentAsMod());
+  @override
+  void importMidiScore(Score score) => _loadMidi(score);
+  @override
+  Uint8List exportMidiBytes() => scoreToMidi(_trackerAsScore());
 
   bool _slotEmpty(List<List<TrackerCell>> snap) =>
       snap.every((ch) => ch.every((c) => c.isEmpty));
@@ -460,6 +470,97 @@ class _TrackerScreenState extends State<TrackerScreen>
       );
       if (location == null || !mounted) return;
       await XFile.fromData(bytes, name: 'tracker.mod').saveTo(location.path);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.trackerModFailed)));
+    }
+  }
+
+  // ── MIDI import / export (via the Score bridge) ────────────────────────────
+
+  /// The current pattern as a chord Score for MIDI export: each step becomes a
+  /// chord of every pitched channel's note there (a block-chord reduction — the
+  /// notes and their positions, one step each).
+  Score _trackerAsScore() {
+    final rows = _engine.rows;
+    final one = NoteDuration(
+      switch (_engine.timing.stepsPerBeat) {
+        1 => DurationBase.quarter,
+        4 => DurationBase.sixteenth,
+        _ => DurationBase.eighth,
+      },
+    );
+    final elements = <MusicElement>[];
+    for (var s = 0; s < rows; s++) {
+      final seen = <int>{};
+      final pitches = <Pitch>[];
+      for (final ch in _engine.channels) {
+        if (ch.instrument is PercussionInstrument) continue;
+        final m = ch.cells[s].midi;
+        if (m != null && seen.add(m)) pitches.add(pitchFromMidi(m));
+      }
+      elements.add(
+        pitches.isEmpty
+            ? RestElement(one)
+            : NoteElement(pitches: pitches, duration: one),
+      );
+    }
+    final barSteps = _engine.timing.stepsPerBeat * 4;
+    return Score(
+      clef: Clef.treble,
+      measures: [
+        for (var i = 0; i < elements.length; i += barSteps)
+          Measure(
+            elements.sublist(i, (i + barSteps).clamp(0, elements.length)),
+          ),
+      ],
+    );
+  }
+
+  /// Loads a MIDI-derived [score] into the pitched channels (chords split across
+  /// channels via scoreToChannels); the channels keep their voices.
+  void _loadMidi(Score score) {
+    final chans = scoreToChannels(score, _engine.timing);
+    for (var c = 0; c < chans.length && c < _engine.channels.length; c++) {
+      _engine.setChannelCells(c, chans[c]);
+    }
+    setState(() => _selected = 0);
+    _syncPlayback();
+  }
+
+  Future<void> _importMidi() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final failed = AppLocalizations.of(context)!.trackerModFailed;
+    try {
+      final file = await openFile(
+        acceptedTypeGroups: [
+          const XTypeGroup(label: 'MIDI', extensions: ['mid', 'midi']),
+        ],
+      );
+      if (file == null || !mounted) return;
+      _loadMidi(scoreFromMidi(await file.readAsBytes()));
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+    }
+  }
+
+  Future<void> _exportMidi() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes = scoreToMidi(_trackerAsScore());
+      final location = await getSaveLocation(
+        suggestedName: 'tracker.mid',
+        acceptedTypeGroups: [
+          const XTypeGroup(label: 'MIDI', extensions: ['mid', 'midi']),
+        ],
+      );
+      if (location == null || !mounted) return;
+      await XFile.fromData(bytes, name: 'tracker.mid').saveTo(location.path);
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
       );
@@ -883,15 +984,34 @@ class _TrackerScreenState extends State<TrackerScreen>
             onPressed: () => setState(() => _showNotation = !_showNotation),
           ),
           PopupMenuButton<String>(
-            onSelected: (v) => v == 'import' ? _importMod() : _exportMod(),
+            onSelected: (v) {
+              switch (v) {
+                case 'importMod':
+                  _importMod();
+                case 'exportMod':
+                  _exportMod();
+                case 'importMid':
+                  _importMidi();
+                case 'exportMid':
+                  _exportMidi();
+              }
+            },
             itemBuilder: (context) => [
               PopupMenuItem(
-                value: 'import',
+                value: 'importMod',
                 child: Text(l10n.trackerImportMod),
               ),
               PopupMenuItem(
-                value: 'export',
+                value: 'exportMod',
                 child: Text(l10n.trackerExportMod),
+              ),
+              PopupMenuItem(
+                value: 'importMid',
+                child: Text(l10n.trackerImportMidi),
+              ),
+              PopupMenuItem(
+                value: 'exportMid',
+                child: Text(l10n.trackerExportMidi),
               ),
             ],
           ),

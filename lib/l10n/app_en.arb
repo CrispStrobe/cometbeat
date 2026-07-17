@@ -383,6 +383,8 @@
   "trackerEffectSlideDown": "Slide down",
   "trackerImportMod": "Import .mod…",
   "trackerExportMod": "Export .mod…",
+  "trackerImportMidi": "Import MIDI…",
+  "trackerExportMidi": "Export MIDI…",
   "trackerModFailed": "Couldn't read/write that .mod.",
   "trackerSfxrZap": "Zap",
   "trackerSfxrBlip": "Blip",

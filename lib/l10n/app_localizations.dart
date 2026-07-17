@@ -2036,6 +2036,18 @@ abstract class AppLocalizations {
   /// **'Export .mod…'**
   String get trackerExportMod;
 
+  /// No description provided for @trackerImportMidi.
+  ///
+  /// In en, this message translates to:
+  /// **'Import MIDI…'**
+  String get trackerImportMidi;
+
+  /// No description provided for @trackerExportMidi.
+  ///
+  /// In en, this message translates to:
+  /// **'Export MIDI…'**
+  String get trackerExportMidi;
+
   /// No description provided for @trackerModFailed.
   ///
   /// In en, this message translates to:

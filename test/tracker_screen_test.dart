@@ -5,8 +5,19 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:crisp_notation/crisp_notation.dart' show StaffView;
-import 'package:flutter/material.dart';
+import 'package:crisp_notation/crisp_notation.dart'
+    show
+        Clef,
+        Measure,
+        NoteDuration,
+        NoteElement,
+        Pitch,
+        RestElement,
+        Score,
+        StaffView,
+        Step,
+        scoreFromMidi;
+import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:klang_universum/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:klang_universum/core/audio/mod/mod.dart';
@@ -297,6 +308,35 @@ void main() {
     // Export re-parses as a valid module (round-trips through the codec).
     final back = parseMod(game.exportModBytes());
     expect(back.channelCount, greaterThanOrEqualTo(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('MIDI imports and exports (the MIDI↔MOD hub)', (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+    final game = _game(tester);
+
+    // A tiny score (a C–E chord + rests), as if parsed from a MIDI file.
+    const score = Score(
+      clef: Clef.treble,
+      measures: [
+        Measure([
+          NoteElement(
+            pitches: [Pitch(Step.c), Pitch(Step.e)],
+            duration: NoteDuration.quarter,
+          ),
+          RestElement(NoteDuration.quarter),
+          RestElement(NoteDuration.half),
+        ]),
+      ],
+    );
+
+    game.importMidiScore(score);
+    await tester.pump();
+    expect(game.noteCount, greaterThan(0)); // chord split across channels
+
+    final midi = game.exportMidiBytes();
+    expect(midi.isNotEmpty, isTrue);
+    expect(scoreFromMidi(midi).measures, isNotEmpty); // round-trips as MIDI
     expect(tester.takeException(), isNull);
   });
 

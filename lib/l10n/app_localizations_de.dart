@@ -1055,6 +1055,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerExportMod => '.mod exportieren…';
 
   @override
+  String get trackerImportMidi => 'MIDI importieren…';
+
+  @override
+  String get trackerExportMidi => 'MIDI exportieren…';
+
+  @override
   String get trackerModFailed => 'Diese .mod ließ sich nicht lesen/schreiben.';
 
   @override
