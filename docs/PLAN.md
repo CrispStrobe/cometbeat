@@ -105,9 +105,12 @@ and push to origin/main** before/after touching shared files. Format:
   and `tracker_notation.dart` (multi-part Tracker↔Score + chord split) — 22 tests,
   `ac12747`. I then integrated all shared-file wiring: **per-note effects** (cell
   menu) `28f2f83`, **MOD import/export UI** (file_selector) `ae484a9`, **multi-part
-  score view** `d67cb56`, **gapless two-player swap** `df7e644`. **`.xm` codec
-  DEFERRED** — needs a real fixture/oracle (packed patterns + delta samples); blind
-  modarchive fetches returned only `.mod`. Its own dedicated effort later.
+  score view** `d67cb56`, **gapless two-player swap** `df7e644`, and **MIDI
+  import/export = the MIDI↔MOD hub** (via crisp_notation `scoreFromMidi`/
+  `scoreToMidi`, no external converter) `8a80421`. **`.xm`/`.s3m`/`.it` codecs
+  DEFERRED with a research brief** in handover §6: port **libxmp-lite (MIT)**
+  loaders (read-only), order S3M→XM→IT; each needs a real fixture/oracle. Its own
+  effort.
 - **opus (tracker)** · ✅ **idle / SHIPPED — `.mod` import/export codec.** Pure-Dart
   ProTracker codec in `lib/core/audio/mod/` (model+contract `mod_module.dart`,
   `parseMod` reader, `writeMod` writer — implemented by two sub-agents against the

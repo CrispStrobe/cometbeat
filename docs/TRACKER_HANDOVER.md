@@ -215,9 +215,37 @@ split); the score-view panel now shows all parts stacked.
 **✅ Gapless swap** (`df7e644`) — `gapless_loop_player.dart`, a two-player seamless
 loop (start-new-then-stop-old; no timers, so flutter_test-safe).
 
-**🚧 Still deferred:** the **`.xm` (FastTracker 2) codec** — needs a real fixture or
-a hand-authored oracle (packed patterns + delta-encoded samples); a dedicated
-effort. `.mod` is fully done.
+**✅ MIDI import/export — the MIDI↔MOD hub** (`8a80421`). No external converter
+needed: MIDI routes through the Score bridge (crisp_notation `scoreFromMidi` /
+`scoreToMidi`). The tracker's file menu imports/exports **both `.mod` and MIDI**, so
+MIDI→MOD = import MIDI + export MOD (and vice-versa). Import splits chords across
+channels (`scoreToChannels`); export is a block-chord reduction (`_trackerAsScore`).
+
+## 6. XM / S3M / IT codecs — research brief (for the future effort)
+
+The module ecosystem has great **readers** but no reusable **writers**: `libxmp`
+and `libopenmpt` are **decode/read-only**; only the GUI trackers (OpenMPT,
+MilkyTracker — BSD; Schism — GPL) write/convert. And they're C/C++, so for our
+pure-Dart/web-safe app we **port loaders**, not link a lib.
+
+- **Port base (reading): `libxmp`'s per-format loaders** — `loaders/xm_load.c`,
+  `s3m_load.c`, `it_load.c`. These + the model are packaged as **libxmp-lite**,
+  which is **entirely MIT** — the clean, self-contained, permissive source to port.
+  Keep **libopenmpt** (BSD-3) open as a correctness oracle; **avoid Schism (GPL)**
+  as a copy source.
+- **Build order (effort→value): S3M first** (simplest, closest to our `.mod`
+  codec; parapointers ×16 + RLE-packed patterns, no mandatory sample compression),
+  **then XM** (pattern bit-flag packing + delta-encoded 8/16-bit samples), **then
+  IT** (hardest — IT214/IT215 block-based variable-bit-width sample decompression +
+  node envelopes; do the decompressor as its own unit-tested module vs libopenmpt).
+- **Specs:** XM → the modland "FastTracker 2 v2.04 (.xm)" doc + "The Complete XM";
+  S3M → shikadi ModdingWiki S3M_Format; IT → `ITTECH.TXT` (schismtracker wiki) +
+  the OpenMPT wiki "Development: Formats/IT" (clearest on IT compression).
+- **Writers** (later): no read-only lib helps — reference MilkyTracker/OpenMPT
+  (BSD) save routines or write from spec, as we did for `.mod`.
+- **Testing:** each needs a real fixture (a verified `.xm`/`.s3m`/`.it`) or a
+  hand-authored golden oracle — the missing piece that made me defer `.xm` here.
+  Delegate to agents the same way (contract + test suite → one file each).
 
 ---
 
