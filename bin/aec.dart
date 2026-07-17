@@ -61,7 +61,73 @@ Options:
   --res           Enable residual echo suppression (spectral post-filter on what
                   the linear filter leaves). Best combined with --dtd.
   -h, --help      Show this help.
+
+Tuning (all modes; omitted = the default in AecTuning). Every run prints the
+non-default knobs next to its metrics, so a sweep's output says which point
+produced which number:
+  --block <n>            Samples per block = the filter's echo tail (dflt 1024).
+  --mu <f>               NLMS step, 0..2 — higher adapts faster, less stably.
+  --power-smoothing <f>  Per-bin reference-power averaging (0..1).
+  --far-end-floor <f>    Below this reference power, stop learning.
+  --reg <f>              Denominator floor as a multiple of mean block power.
+  --leak <f>             Per-block filter shrink (robust-NLMS stabilizer).
+  --eps <f>              Numeric guard in the NLMS denominator.
+  --dtd-threshold <f>    Correlation below this ⇒ double-talk (needs --dtd).
+  --dtd-hangover <n>     Blocks to hold a freeze.
+  --dtd-warmup <n>       Blocks to always adapt first (let the filter converge).
+  --dtd-far-end-floor <f>  Below this reference power the DTD stays out.
+  --res-oversub <f>      Residual-echo over-subtraction (needs --res).
+  --res-gain-floor <f>   Suppression floor, 0=mute .. 1=untouched.
+  --res-smoothing <f>    Residual/echo spectral power smoothing.
+  --res-leak-smoothing <f>  Smoothing of the leakage estimate λ.
+
+Sweep example — same capture, several steps, compare the reported ERLE:
+  for mu in 0.3 0.5 0.7 1.0; do
+    dart run bin/aec.dart --mic cap.wav --ref played.wav --mu "\$mu"
+  done
 ''';
+
+/// Builds the tuning from the CLI flags — anything unset keeps its default.
+/// A value that's present but unparseable (`--mu 0,7`) is collected into
+/// [errors] rather than quietly falling back: a sweep that silently ran the
+/// defaults would print the same number for every point and read as "this knob
+/// does nothing".
+AecTuning _tuning(_Args args, List<String> errors) {
+  const d = AecTuning();
+  double dv(String k, double fallback) {
+    final raw = args.value(k);
+    if (raw == null) return fallback;
+    final v = double.tryParse(raw);
+    if (v == null) errors.add('--$k needs a number, got "$raw"');
+    return v ?? fallback;
+  }
+
+  int iv(String k, int fallback) {
+    final raw = args.value(k);
+    if (raw == null) return fallback;
+    final v = int.tryParse(raw);
+    if (v == null) errors.add('--$k needs an integer, got "$raw"');
+    return v ?? fallback;
+  }
+
+  return AecTuning(
+    blockSize: iv('block', d.blockSize),
+    mu: dv('mu', d.mu),
+    powerSmoothing: dv('power-smoothing', d.powerSmoothing),
+    eps: dv('eps', d.eps),
+    farEndFloor: dv('far-end-floor', d.farEndFloor),
+    regFactor: dv('reg', d.regFactor),
+    leak: dv('leak', d.leak),
+    dtdThreshold: dv('dtd-threshold', d.dtdThreshold),
+    dtdHangoverBlocks: iv('dtd-hangover', d.dtdHangoverBlocks),
+    dtdWarmupBlocks: iv('dtd-warmup', d.dtdWarmupBlocks),
+    dtdFarEndFloor: dv('dtd-far-end-floor', d.dtdFarEndFloor),
+    resOverSubtract: dv('res-oversub', d.resOverSubtract),
+    resGainFloor: dv('res-gain-floor', d.resGainFloor),
+    resPowerSmoothing: dv('res-smoothing', d.resPowerSmoothing),
+    resLeakSmoothing: dv('res-leak-smoothing', d.resLeakSmoothing),
+  );
+}
 
 Future<void> main(List<String> argv) async {
   final args = _Args(argv);
@@ -74,9 +140,16 @@ Future<void> main(List<String> argv) async {
   final dtd = args.flag('dtd');
   final res = args.flag('res');
   final delay = int.tryParse(args.value('delay') ?? '');
+  final tuningErrors = <String>[];
+  final tuning = _tuning(args, tuningErrors);
+  if (tuningErrors.isNotEmpty) {
+    tuningErrors.forEach(stderr.writeln);
+    exitCode = 2;
+    return;
+  }
 
   if (args.flag('selftest')) {
-    _selftest(rate: rate, detect: detect);
+    _selftest(rate: rate, detect: detect, tuning: tuning);
     return;
   }
   if (args.flag('stdin')) {
@@ -86,6 +159,7 @@ Future<void> main(List<String> argv) async {
       detect: detect,
       dtd: dtd,
       res: res,
+      tuning: tuning,
     );
     return;
   }
@@ -98,6 +172,7 @@ Future<void> main(List<String> argv) async {
       detect: detect,
       dtd: dtd,
       res: res,
+      tuning: tuning,
     );
     return;
   }
@@ -139,7 +214,11 @@ Float64List _roomEcho(Float64List ref, {int delay = 200}) {
 ///     fidelity gain. ERLE is deliberately not used here (preserving the
 ///     near-end keeps residual energy up). The detector confirms the surviving
 ///     pitch is the instrument, not the band.
-void _selftest({required int rate, required bool detect}) {
+void _selftest({
+  required int rate,
+  required bool detect,
+  AecTuning tuning = const AecTuning(),
+}) {
   const instrumentMidi = 69; // A4 "instrument" (must survive)
   final n = rate * 2; // 2 seconds
   // A broadband "band" reference (seeded white noise) — a well-conditioned
@@ -154,10 +233,16 @@ void _selftest({required int rate, required bool detect}) {
   // 1. Echo-only cancellation strength — linear, then with the residual
   //    suppressor mopping up what the linear filter leaves.
   final echoOnly = _roomEcho(ref);
-  final r1 = cancelEcho(echoOnly, ref);
+  final r1 = cancelEcho(echoOnly, ref, tuning: tuning);
   final m1 = AecMetrics.measure(echoOnly, r1.cleaned);
-  final r1res = cancelEcho(echoOnly, ref, residualSuppress: true);
+  final r1res = cancelEcho(
+    echoOnly,
+    ref,
+    tuning: tuning,
+    residualSuppress: true,
+  );
   final m1res = AecMetrics.measure(echoOnly, r1res.cleaned);
+  stderr.writeln('tuning: ${tuning.describe()}');
   stderr.writeln('estimated delay: ${r1.delay} samples');
   stderr.writeln('echo-only, linear: ${m1.report(sampleRate: rate)}');
   stderr.writeln('echo-only, +RES  : ${m1res.report(sampleRate: rate)}');
@@ -172,11 +257,17 @@ void _selftest({required int rate, required bool detect}) {
   for (var i = 0; i < n; i++) {
     mic[i] = echoOnly[i] + (i >= half ? near[i] : 0);
   }
-  final r2 = cancelEcho(mic, ref); // linear only
-  final r2dtd = cancelEcho(mic, ref, doubleTalkDetect: true); // + DTD
+  final r2 = cancelEcho(mic, ref, tuning: tuning); // linear only
+  final r2dtd = cancelEcho(
+    mic,
+    ref,
+    tuning: tuning,
+    doubleTalkDetect: true,
+  ); // + DTD
   final r2full = cancelEcho(
     mic,
     ref,
+    tuning: tuning,
     doubleTalkDetect: true,
     residualSuppress: true,
   ); // + DTD + RES
@@ -184,24 +275,32 @@ void _selftest({required int rate, required bool detect}) {
   final siLinear = siSdrDb(near, r2.cleaned, from: half);
   final siClean = siSdrDb(near, r2dtd.cleaned, from: half);
   final siFull = siSdrDb(near, r2full.cleaned, from: half);
-  stderr.writeln('double-talk SI-SDR vs the true near-end: '
-      'raw mic ${siMic.toStringAsFixed(1)} dB → '
-      'linear ${siLinear.toStringAsFixed(1)} dB → '
-      '+DTD ${siClean.toStringAsFixed(1)} dB '
-      '(froze ${r2dtd.frozenBlocks} blocks; '
-      '+${(siClean - siMic).toStringAsFixed(1)} dB vs mic, '
-      '+${(siClean - siLinear).toStringAsFixed(1)} dB vs linear)');
-  stderr.writeln('             …and +DTD+RES: ${siFull.toStringAsFixed(1)} dB '
-      '(${(siFull - siClean).toStringAsFixed(1)} dB vs DTD-only — RES must not '
-      'chew the voice)');
+  stderr.writeln(
+    'double-talk SI-SDR vs the true near-end: '
+    'raw mic ${siMic.toStringAsFixed(1)} dB → '
+    'linear ${siLinear.toStringAsFixed(1)} dB → '
+    '+DTD ${siClean.toStringAsFixed(1)} dB '
+    '(froze ${r2dtd.frozenBlocks} blocks; '
+    '+${(siClean - siMic).toStringAsFixed(1)} dB vs mic, '
+    '+${(siClean - siLinear).toStringAsFixed(1)} dB vs linear)',
+  );
+  stderr.writeln(
+    '             …and +DTD+RES: ${siFull.toStringAsFixed(1)} dB '
+    '(${(siFull - siClean).toStringAsFixed(1)} dB vs DTD-only — RES must not '
+    'chew the voice)',
+  );
 
-  final heard =
-      _detectDominant(Float64List.sublistView(r2dtd.cleaned, half), rate);
+  final heard = _detectDominant(
+    Float64List.sublistView(r2dtd.cleaned, half),
+    rate,
+  );
   final rawHeard = _detectDominant(Float64List.sublistView(mic, half), rate);
-  stderr.writeln('detector: raw mic reads '
-      '${rawHeard == null ? "—" : _noteName(rawHeard)}, '
-      'cleaned reads ${heard == null ? "—" : _noteName(heard)}  '
-      '(instrument ${_noteName(instrumentMidi)})');
+  stderr.writeln(
+    'detector: raw mic reads '
+    '${rawHeard == null ? "—" : _noteName(rawHeard)}, '
+    'cleaned reads ${heard == null ? "—" : _noteName(heard)}  '
+    '(instrument ${_noteName(instrumentMidi)})',
+  );
   if (detect && heard != null) _printFrameNote(r2dtd.cleaned, rate);
 
   // The DTD freezes the filter on the near-end instead of adapting to it (big
@@ -248,12 +347,15 @@ void _files({
   required bool detect,
   required bool dtd,
   required bool res,
+  AecTuning tuning = const AecTuning(),
 }) {
   final micWav = readWavPcm16(File(micPath).readAsBytesSync());
   final refWav = readWavPcm16(File(refPath).readAsBytesSync());
   if (micWav.sampleRate != refWav.sampleRate) {
-    stderr.writeln('mic and ref sample rates differ '
-        '(${micWav.sampleRate} vs ${refWav.sampleRate})');
+    stderr.writeln(
+      'mic and ref sample rates differ '
+      '(${micWav.sampleRate} vs ${refWav.sampleRate})',
+    );
     exitCode = 2;
     return;
   }
@@ -263,16 +365,22 @@ void _files({
     mic,
     wavToMonoFloat(refWav),
     delay: delay,
+    tuning: tuning,
     doubleTalkDetect: dtd,
     residualSuppress: res,
   );
   final metrics = AecMetrics.measure(mic, result.cleaned);
-  stderr.writeln('delay ${result.delay} samples '
-      '(${(result.delay * 1000 / sr).toStringAsFixed(1)} ms)'
-      '${dtd ? ', DTD froze ${result.frozenBlocks} blocks' : ''}');
+  stderr.writeln('tuning: ${tuning.describe()}');
+  stderr.writeln(
+    'delay ${result.delay} samples '
+    '(${(result.delay * 1000 / sr).toStringAsFixed(1)} ms)'
+    '${dtd ? ', DTD froze ${result.frozenBlocks} blocks' : ''}',
+  );
   stderr.writeln(metrics.report(sampleRate: sr));
-  stderr.writeln('(ERLE assumes far-end single-talk; if the recording has '
-      'near-end speech, judge by --detect / SI-SDR instead)');
+  stderr.writeln(
+    '(ERLE assumes far-end single-talk; if the recording has '
+    'near-end speech, judge by --detect / SI-SDR instead)',
+  );
 
   if (outPath != null) {
     final pcm = Int16List(result.cleaned.length);
@@ -296,18 +404,23 @@ Future<void> _stream({
   required bool detect,
   required bool dtd,
   required bool res,
+  AecTuning tuning = const AecTuning(),
 }) async {
   final aec = StreamingEchoCanceller(
     refDelay: refDelay,
+    tuning: tuning,
     doubleTalkDetect: dtd,
     residualSuppress: res,
   );
+  stderr.writeln('tuning: ${tuning.describe()}');
   final analyzer = detect
       ? StreamingAudioAnalyzer(detector: PitchDetector(sampleRate: rate))
       : null;
   if (detect) {
-    stderr.writeln('AEC + detect on stdin: stereo PCM16 @ $rate Hz. '
-        'Ctrl-C to stop.');
+    stderr.writeln(
+      'AEC + detect on stdin: stereo PCM16 @ $rate Hz. '
+      'Ctrl-C to stop.',
+    );
   }
 
   Future<void> handle(Uint8List cleaned) async {
@@ -344,10 +457,12 @@ int? _detectDominant(Float64List signal, int rate) {
 }
 
 void _printFrame(PitchReading p) {
-  stdout.writeln('${p.noteName.padRight(3)}  '
-      '${p.cents >= 0 ? '+' : ''}${p.cents.toStringAsFixed(0).padLeft(3)}c  '
-      '${p.frequency.toStringAsFixed(1).padLeft(7)}Hz  '
-      'clarity ${p.clarity.toStringAsFixed(2)}');
+  stdout.writeln(
+    '${p.noteName.padRight(3)}  '
+    '${p.cents >= 0 ? '+' : ''}${p.cents.toStringAsFixed(0).padLeft(3)}c  '
+    '${p.frequency.toStringAsFixed(1).padLeft(7)}Hz  '
+    'clarity ${p.clarity.toStringAsFixed(2)}',
+  );
 }
 
 const _names = [

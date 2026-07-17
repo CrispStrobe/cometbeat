@@ -439,6 +439,116 @@ class DoubleTalkDetector {
   }
 }
 
+/// Every numeric knob of the AEC chain, in one object, so a caller can tune the
+/// whole thing without reaching into the three stages separately.
+///
+/// The stages ([EchoCanceller], [DoubleTalkDetector], [ResidualEchoSuppressor])
+/// each carry their own defaults; this mirrors them so [cancelEcho] and
+/// [StreamingEchoCanceller] have something to forward. Defaults here are the
+/// stage defaults — `const AecTuning()` is the untuned chain.
+///
+/// The `res*` / `dtd*` knobs only bite when the corresponding stage is enabled
+/// (`residualSuppress` / `doubleTalkDetect`); they're inert otherwise.
+class AecTuning {
+  const AecTuning({
+    this.blockSize = 1024,
+    this.mu = 0.7,
+    this.powerSmoothing = 0.9,
+    this.eps = 1e-6,
+    this.farEndFloor = 1e-5,
+    this.regFactor = 1.0,
+    this.leak = 1e-3,
+    this.dtdThreshold = 0.9,
+    this.dtdHangoverBlocks = 8,
+    this.dtdWarmupBlocks = 12,
+    this.dtdFarEndFloor = 1e-5,
+    this.resOverSubtract = 1.0,
+    this.resGainFloor = 0.1,
+    this.resPowerSmoothing = 0.8,
+    this.resLeakSmoothing = 0.95,
+    this.resEps = 1e-12,
+  });
+
+  /// Samples per processed block, shared by the canceller and the suppressor —
+  /// also the adaptive filter's echo-tail length. A power of two.
+  final int blockSize;
+
+  // --- Linear canceller (see [EchoCanceller] for what each one does). ---
+  final double mu;
+  final double powerSmoothing;
+  final double eps;
+  final double farEndFloor;
+  final double regFactor;
+  final double leak;
+
+  // --- Double-talk detector (see [DoubleTalkDetector]). ---
+  final double dtdThreshold;
+  final int dtdHangoverBlocks;
+  final int dtdWarmupBlocks;
+  final double dtdFarEndFloor;
+
+  // --- Residual suppressor (see [ResidualEchoSuppressor]). ---
+  final double resOverSubtract;
+  final double resGainFloor;
+  final double resPowerSmoothing;
+  final double resLeakSmoothing;
+  final double resEps;
+
+  EchoCanceller createCanceller() => EchoCanceller(
+        blockSize: blockSize,
+        mu: mu,
+        powerSmoothing: powerSmoothing,
+        eps: eps,
+        farEndFloor: farEndFloor,
+        regFactor: regFactor,
+        leak: leak,
+      );
+
+  DoubleTalkDetector createDetector() => DoubleTalkDetector(
+        threshold: dtdThreshold,
+        hangoverBlocks: dtdHangoverBlocks,
+        warmupBlocks: dtdWarmupBlocks,
+        farEndFloor: dtdFarEndFloor,
+      );
+
+  ResidualEchoSuppressor createSuppressor() => ResidualEchoSuppressor(
+        blockSize: blockSize,
+        overSubtract: resOverSubtract,
+        gainFloor: resGainFloor,
+        powerSmoothing: resPowerSmoothing,
+        leakSmoothing: resLeakSmoothing,
+        eps: resEps,
+      );
+
+  /// One line naming only what differs from the defaults — for a CLI/test print
+  /// that has to say which point in the parameter space produced a number.
+  String describe() {
+    const d = AecTuning();
+    final parts = <String>[
+      if (blockSize != d.blockSize) 'block=$blockSize',
+      if (mu != d.mu) 'mu=$mu',
+      if (powerSmoothing != d.powerSmoothing) 'powerSmoothing=$powerSmoothing',
+      if (eps != d.eps) 'eps=$eps',
+      if (farEndFloor != d.farEndFloor) 'farEndFloor=$farEndFloor',
+      if (regFactor != d.regFactor) 'reg=$regFactor',
+      if (leak != d.leak) 'leak=$leak',
+      if (dtdThreshold != d.dtdThreshold) 'dtdThreshold=$dtdThreshold',
+      if (dtdHangoverBlocks != d.dtdHangoverBlocks)
+        'dtdHangover=$dtdHangoverBlocks',
+      if (dtdWarmupBlocks != d.dtdWarmupBlocks) 'dtdWarmup=$dtdWarmupBlocks',
+      if (dtdFarEndFloor != d.dtdFarEndFloor) 'dtdFarEndFloor=$dtdFarEndFloor',
+      if (resOverSubtract != d.resOverSubtract) 'resOverSub=$resOverSubtract',
+      if (resGainFloor != d.resGainFloor) 'resGainFloor=$resGainFloor',
+      if (resPowerSmoothing != d.resPowerSmoothing)
+        'resPowerSmoothing=$resPowerSmoothing',
+      if (resLeakSmoothing != d.resLeakSmoothing)
+        'resLeakSmoothing=$resLeakSmoothing',
+      if (resEps != d.resEps) 'resEps=$resEps',
+    ];
+    return parts.isEmpty ? 'defaults' : parts.join(' ');
+  }
+}
+
 /// Cancels the echo of [ref] from [mic] over the whole signal. Aligns [ref] to
 /// [mic] by [delay] samples (estimated with [estimateEchoDelay] when null),
 /// then runs the [EchoCanceller] block by block. The trailing partial block is
@@ -447,20 +557,20 @@ AecResult cancelEcho(
   Float64List mic,
   Float64List ref, {
   int? delay,
-  int blockSize = 1024,
+  AecTuning tuning = const AecTuning(),
   bool doubleTalkDetect = false,
   bool residualSuppress = false,
 }) {
+  final blockSize = tuning.blockSize;
   final d = delay ?? estimateEchoDelay(mic, ref);
   final aligned = Float64List(mic.length);
   for (var i = 0; i < mic.length; i++) {
     final j = i - d;
     aligned[i] = (j >= 0 && j < ref.length) ? ref[j] : 0;
   }
-  final aec = EchoCanceller(blockSize: blockSize);
-  final dtd = doubleTalkDetect ? DoubleTalkDetector() : null;
-  final res =
-      residualSuppress ? ResidualEchoSuppressor(blockSize: blockSize) : null;
+  final aec = tuning.createCanceller();
+  final dtd = doubleTalkDetect ? tuning.createDetector() : null;
+  final res = residualSuppress ? tuning.createSuppressor() : null;
   final blocks = mic.length ~/ blockSize;
   final out = Float64List(blocks * blockSize);
   var frozen = 0;
@@ -501,21 +611,20 @@ AecResult cancelEcho(
 /// full-duplex / loopback capture.
 class StreamingEchoCanceller {
   StreamingEchoCanceller({
-    this.blockSize = 1024,
+    this.tuning = const AecTuning(),
     this.refDelay = 0,
     bool doubleTalkDetect = false,
     bool residualSuppress = false,
   })  : assert(refDelay >= 0),
-        _aec = EchoCanceller(blockSize: blockSize),
-        _dtd = doubleTalkDetect ? DoubleTalkDetector() : null,
-        _res = residualSuppress
-            ? ResidualEchoSuppressor(blockSize: blockSize)
-            : null,
+        _aec = tuning.createCanceller(),
+        _dtd = doubleTalkDetect ? tuning.createDetector() : null,
+        _res = residualSuppress ? tuning.createSuppressor() : null,
         // Seed the reference with `refDelay` zeros so ref[i] lines up with
         // mic[i-refDelay] — the reference arriving delayed relative to the mic.
         _ref = List<double>.filled(refDelay, 0, growable: true);
 
-  final int blockSize;
+  final AecTuning tuning;
+  int get blockSize => tuning.blockSize;
   final int refDelay;
   final EchoCanceller _aec;
   final DoubleTalkDetector? _dtd;

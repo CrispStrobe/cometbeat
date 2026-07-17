@@ -172,9 +172,7 @@ void main() {
     for (var off = 0; off < stereo.length; off += 777) {
       final end = min(off + 777, stereo.length);
       acc.add(
-        streamer.addInterleavedPcm16(
-          Uint8List.sublistView(stereo, off, end),
-        ),
+        streamer.addInterleavedPcm16(Uint8List.sublistView(stereo, off, end)),
       );
     }
     final streamed = acc.toBytes();
@@ -208,7 +206,12 @@ void main() {
     test('a smaller block size still cancels', () {
       final ref = _noise(n, seed: 3);
       final mic = _echo(ref);
-      final out = cancelEcho(mic, ref, delay: 0, blockSize: 512).cleaned;
+      final out = cancelEcho(
+        mic,
+        ref,
+        delay: 0,
+        tuning: const AecTuning(blockSize: 512),
+      ).cleaned;
       expect(segmentalErleDb(mic, out, segment: 512), greaterThan(20));
     });
 
@@ -446,36 +449,38 @@ void main() {
       );
     });
 
-    test('does not chew the near-end under double-talk (DTD-gated leakage)',
-        () {
-      final ref = _noise(n);
-      final echo = _echo(ref);
-      final near = Float64List(n);
-      for (var t = 0; t < n; t++) {
-        near[t] = 0.35 * sin(2 * pi * 440 * t / _sr);
-      }
-      const half = n ~/ 2;
-      final mic = Float64List(n);
-      for (var t = 0; t < n; t++) {
-        mic[t] = echo[t] + (t >= half ? near[t] : 0);
-      }
-      final dtd = cancelEcho(mic, ref, delay: 0, doubleTalkDetect: true);
-      final full = cancelEcho(
-        mic,
-        ref,
-        delay: 0,
-        doubleTalkDetect: true,
-        residualSuppress: true,
-      );
-      final siDtd = siSdrDb(near, dtd.cleaned, from: half);
-      final siFull = siSdrDb(near, full.cleaned, from: half);
-      // RES may cost a hair of fidelity, but must not meaningfully damage it.
-      expect(
-        siFull,
-        greaterThan(siDtd - 1.5),
-        reason: 'DTD $siDtd dB → +RES $siFull dB',
-      );
-    });
+    test(
+      'does not chew the near-end under double-talk (DTD-gated leakage)',
+      () {
+        final ref = _noise(n);
+        final echo = _echo(ref);
+        final near = Float64List(n);
+        for (var t = 0; t < n; t++) {
+          near[t] = 0.35 * sin(2 * pi * 440 * t / _sr);
+        }
+        const half = n ~/ 2;
+        final mic = Float64List(n);
+        for (var t = 0; t < n; t++) {
+          mic[t] = echo[t] + (t >= half ? near[t] : 0);
+        }
+        final dtd = cancelEcho(mic, ref, delay: 0, doubleTalkDetect: true);
+        final full = cancelEcho(
+          mic,
+          ref,
+          delay: 0,
+          doubleTalkDetect: true,
+          residualSuppress: true,
+        );
+        final siDtd = siSdrDb(near, dtd.cleaned, from: half);
+        final siFull = siSdrDb(near, full.cleaned, from: half);
+        // RES may cost a hair of fidelity, but must not meaningfully damage it.
+        expect(
+          siFull,
+          greaterThan(siDtd - 1.5),
+          reason: 'DTD $siDtd dB → +RES $siFull dB',
+        );
+      },
+    );
 
     test('passes a pure near-end through when there is no echo estimate', () {
       // Far-end silent ⇒ echoEst is 0 ⇒ nothing to subtract ⇒ unity gain.
@@ -489,8 +494,12 @@ void main() {
 
     test('output stays finite and bounded', () {
       final ref = _noise(n, amp: 0.9);
-      final out =
-          cancelEcho(_echo(ref), ref, delay: 0, residualSuppress: true).cleaned;
+      final out = cancelEcho(
+        _echo(ref),
+        ref,
+        delay: 0,
+        residualSuppress: true,
+      ).cleaned;
       expect(out.every((s) => s.isFinite), isTrue);
       expect(out.every((s) => s.abs() <= 2.0), isTrue);
     });
@@ -503,6 +512,116 @@ void main() {
       expect(outBytes, isNotEmpty);
       // Cancellation still happens end-to-end through the streaming path.
       expect(streamer.erleDb, greaterThan(0));
+    });
+  });
+
+  // A tuning knob that silently doesn't reach its stage is worse than no knob:
+  // a sweep over it reports the SAME number every time and reads as "this
+  // parameter doesn't matter". Each test below drives one knob to a value whose
+  // effect is unmistakable, so the wiring — not the DSP — is what's pinned.
+  group('tuning reaches the stages', () {
+    test('mu drives the linear filter (mu=0 ⇒ it never adapts)', () {
+      final ref = _noise(n);
+      final mic = _echo(ref);
+      final frozen = cancelEcho(
+        mic,
+        ref,
+        delay: 0,
+        tuning: const AecTuning(mu: 0),
+      );
+      final adapting = cancelEcho(mic, ref, delay: 0);
+      expect(
+        frozen.erleDb,
+        lessThan(1),
+        reason: 'mu=0 must not cancel at all, got ${frozen.erleDb} dB',
+      );
+      // Segmental, not global: a global figure averages in the pre-convergence
+      // warmup, which is exactly what a working mu is still climbing out of.
+      expect(
+        segmentalErleDb(mic, adapting.cleaned),
+        greaterThan(20),
+        reason: 'the default mu still converges',
+      );
+    });
+
+    test('blockSize reaches both the canceller and the stream framing', () {
+      final ref = _noise(n);
+      final streamer = StreamingEchoCanceller(
+        tuning: const AecTuning(blockSize: 512),
+        residualSuppress: true,
+      );
+      expect(streamer.blockSize, 512);
+      // Cleaned mono PCM16 comes back one block at a time: 512 samples = 1024 B.
+      final out = streamer.addInterleavedPcm16(_interleave(_echo(ref), ref));
+      expect(out.length % 1024, 0);
+      expect(streamer.erleDb, greaterThan(10));
+    });
+
+    test('dtdThreshold reaches the detector', () {
+      final ref = _noise(n);
+      final mic = _echo(ref);
+      // Correlation is bounded by 1, so a threshold above it reads every block
+      // as double-talk and freezes past the warmup; 0 is below it, so never.
+      final always = cancelEcho(
+        mic,
+        ref,
+        delay: 0,
+        doubleTalkDetect: true,
+        tuning: const AecTuning(dtdThreshold: 1.1),
+      );
+      final never = cancelEcho(
+        mic,
+        ref,
+        delay: 0,
+        doubleTalkDetect: true,
+        tuning: const AecTuning(dtdThreshold: 0),
+      );
+      expect(always.frozenBlocks, greaterThan(0));
+      expect(never.frozenBlocks, 0);
+    });
+
+    test('resGainFloor reaches the suppressor (floor=1 ⇒ no attenuation)', () {
+      final ref = _noise(n);
+      final mic = _echo(ref);
+      final linear = cancelEcho(mic, ref, delay: 0).cleaned;
+      final floored = cancelEcho(
+        mic,
+        ref,
+        delay: 0,
+        residualSuppress: true,
+        tuning: const AecTuning(resGainFloor: 1),
+      ).cleaned;
+      // A gain floor of 1 pins every bin's gain at "untouched", so the RES is a
+      // pass-through and the output is the linear canceller's, sample for sample.
+      for (var i = 0; i < linear.length; i++) {
+        expect(floored[i], closeTo(linear[i], 1e-9));
+      }
+    });
+
+    test('streaming and batch agree on a non-default tuning', () {
+      const tuning = AecTuning(mu: 0.3, blockSize: 512, leak: 1e-2);
+      final ref = _noise(n);
+      final mic = _echo(ref);
+      final batch = cancelEcho(mic, ref, delay: 0, tuning: tuning).cleaned;
+      final streamer = StreamingEchoCanceller(tuning: tuning);
+      final bytes = streamer.addInterleavedPcm16(_interleave(mic, ref));
+      final view = ByteData.sublistView(bytes);
+      for (var i = 0; i < view.lengthInBytes ~/ 2; i++) {
+        final streamed = view.getInt16(i * 2, Endian.little) / 32768.0;
+        expect(streamed, closeTo(batch[i], 1e-4));
+      }
+    });
+
+    test('describe() names only the knobs that differ from the defaults', () {
+      expect(const AecTuning().describe(), 'defaults');
+      expect(const AecTuning(mu: 0.3).describe(), 'mu=0.3');
+      final both = const AecTuning(
+        blockSize: 512,
+        resGainFloor: 0.5,
+      ).describe();
+      expect(both, contains('block=512'));
+      expect(both, contains('resGainFloor=0.5'));
+      expect(both, isNot(contains('mu=')));
     });
   });
 }

@@ -19,6 +19,27 @@ and push to origin/main** before/after touching shared files. Format:
 > [HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological).
 > **Pending, actionable work is scoped in the two blocks immediately below.**
 
+- **opus (aec-tune)** · ✅ **idle / SHIPPED — AEC tuning knobs reachable from the
+  CLI / pipe**. The pipe harness existed but only exposed `--delay/--rate/--dtd/
+  --res`: `cancelEcho` and `StreamingEchoCanceller` built `EchoCanceller()`,
+  `DoubleTalkDetector()` and `ResidualEchoSuppressor()` with hard-coded defaults
+  and forwarded nothing, so a sweep over `mu`/`leak`/`blockSize`/DTD/RES meant
+  editing source. New **`AecTuning`** (aec_offline.dart) mirrors all 16 stage
+  knobs + `createCanceller/Detector/Suppressor()` + `describe()` (names only the
+  non-defaults — every CLI run prints it, so a sweep's output says which point
+  produced which number). Both entry points take `tuning:`; `blockSize` moved
+  into it (the one caller updated). `bin/aec.dart` gained a flag per knob
+  (`--mu`, `--block`, `--leak`, `--dtd-threshold`, `--res-gain-floor`, …) in all
+  three modes (selftest/files/stdin). Verified over a real pipe: mu 0→0.0 dB,
+  0.1→7.2, 0.3→12.7, 0.7→16.0, 1.5→15.6 (overshoot); `--block 256 --res`→20.4 dB.
+  6 new tests pin that each knob *reaches* its stage (a knob that silently
+  doesn't is worse than none) + streaming≡batch on a non-default tuning. Files:
+  `lib/core/audio/aec_offline.dart`, `bin/aec.dart`, `test/aec_offline_test.dart`
+  — no app/native code touched. Analyze clean, full suite green.
+  **Not done:** the native Tier-3b path (`aec_shim.h`) still exposes only
+  `set_period/set_dtd/set_res` — the C DSP keeps its own constants, so a tuning
+  found here doesn't yet transfer to the on-device engine.
+
 - **opus (coverage)** · ✅ **idle / SHIPPED — regression tests for untested parser
   branches** (test-only, no lib changes). Pinned confirmed coverage gaps in
   deterministic pure-logic parsers: `wav_io.dart` (non-PCM/non-16-bit rejection,
