@@ -1,7 +1,7 @@
 name: comet_beat
 description: A music notation and harmony learning app, from primary school kids onwards. Working title CometBeat.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+3
 
 environment:
   sdk: ^3.5.0
