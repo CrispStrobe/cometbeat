@@ -68,6 +68,20 @@ and push to origin/main** before/after touching shared files. Format:
   a per-round structural invariant: upbeat ⇔ short pickup first bar). Analyze clean;
   registry/consistency + star-score suites green.
 
+- **opus (workshop-inspector)** · ✅ **idle / SHIPPED — voice-2 mid-score bar
+  changes** (`27c8568`). MODEL-only (`score_document.dart`). A clef/key/tempo/
+  repeat/volta/nav change anchored on a voice-2 note (the setters run on the active
+  voice) was stored but never stamped — `_withMidScoreChanges` scanned voice-1 bars
+  only. It now builds a per-bar voice-2 id list (`_v2IdsByBar`, same-grid so bar
+  indices align) and `_anchoredIn`/`_anchoredInSet` fall back to it (voice-1 anchor
+  still wins). Round-trips (reopen re-anchors to the bar's first voice-1 element).
+  Empty-v2 → byte-identical (goldens hold). `test/voice2_midscore_test.dart`.
+  **Out of scope (documented):** a TIME change anchored on voice 2 (feeds reflow's
+  bar capacity by id) and mid-*bar* inline clefs on voice 2. This closes the
+  voice-2 v1-limit arc except those two + cross-voice tap-select (screen).
+  *(Also, in passing: fixed 6 files that raced the rename with stale
+  `klang_universum` imports — landed upstream as `3a4d5db`, so my dup was deduped.)*
+
 - **opus (workshop-inspector)** · ✅ **idle / SHIPPED — voice-2 tuplets** (`fdf1d6a`).
   MODEL-only (`score_document.dart`; no screen overlap). A tuplet made while voice 2
   was active was doubly broken — `_withVoice2`'s reflow omitted `durationScale`
