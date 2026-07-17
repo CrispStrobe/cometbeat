@@ -25,33 +25,19 @@ and push to origin/main** before/after touching shared files. Format:
   engraves voices **1+2 only** (stop at 2); the MusicXML writer already emits
   voice 2 (backup), so it round-trips. Landing in small commits, rebasing often.
   **Then: the Studio shell (Causes 2+3).**
-- **opus (next)** · ✅ **idle / SHIPPED — multi-part playback** (completes bucket-F,
-  which played the active part only). Worktree `../mus-next`, branch
-  `feature/workshop-next`. Suite green, analyze clean.
-  `AudioService.playMixedTimedChords` mixes every non-muted part's timeline via
-  `mixStems` into one WAV; the moving cursor now spans the full-score canvas (global
-  `p{i}:` ids); per-part **Mute** toggle in each part's ⚙ menu (muted parts drop from
-  the mix + cursor, chip dims). `_renderPart(score, idPrefix)` helper shared by both
-  paths; `test/composition_workshop_test.dart` grows a multi-part transport + a mute
-  toggle test. **Remaining Workshop items:** voice 2 (opus-parity, above) and the
-  Studio shell (Causes 2+3). (Tempo/grace/playback shipped earlier; mid-bar clef +
-  its MusicXML writer emit both shipped by opus-parity — now lossless.)
-  ✅ **Tempo marks** — document-level `Tempo? tempo` (→ `Score.tempo`) + id-anchored
-  `_tempoChanges` side-map (→ `Measure.tempoChange`), the clef/key stamp pattern;
-  Tempo row in the change-here dialog + "Initial tempo…" in the ⋮ menu;
-  `test/tempo_test.dart` (byte-identity + MusicXML round-trip), de/en.
-  ✅ **Grace notes** — per-note `EditorElement.graceNotes: List<Pitch>` + `graceStyle`
-  FIELD (rides the snapshot/clipboard; NB Pitch list, not a NoteElement list) →
-  `NoteElement.graceNotes`; zero bar duration so packing is untouched (goldens
-  hold). "Grace notes…" palette editor; `test/grace_note_test.dart`, de/en.
-  ✅ **Playback (bucket F)** — real transport + moving green cursor over
-  `playbackTimeline`/`TempoMap`; `AudioService.playTimedChords` renders one gap-
-  accurate WAV (rests = silence, chords together, tempo-scaled). Play/stop toggle;
-  Timer-driven cursor shares the seconds schedule with the audio. Reflects
-  repeats/navigation/split; tempo marks feed it. **Follow-up:** multi-part mixing +
-  per-part mute (today plays the active part only); multi-part canvas cursor.
-  🚧 **Now: next handover item** — mid-*bar* clef changes (`inlineClefs`) / voice 2 /
-  the Studio shell (Causes 2+3).
+- **opus (next)** · 🚧 **ACTIVE — playback practice-speed control** (0.5×/0.75×/1×;
+  slow-practice is a core music-ed feature, and it leverages the playback engine
+  just shipped). Worktree `../mus-next`, branch `feature/workshop-next`. **HOT
+  file:** `screens/composition_workshop_screen.dart` **only** — a `_playSpeed`
+  scale applied inside `_renderPart` (both audio ms and the cursor schedule scale
+  together, staying in sync) + a small speed `PopupMenuButton` in the app-bar
+  actions next to the transport. **Staying out of parity's voice-2 regions**
+  (`score_document.dart`/reflow, note-entry/selection, the voice toggle); my edits
+  are confined to the transport methods + app-bar. Maybe a tooltip ARB key. Small,
+  one commit. **Shipped by opus (next) already:** tempo marks, grace notes,
+  playback (bucket F), multi-part playback (mix + full-score cursor + per-part
+  mute) — see [HISTORY.md]. **Remaining Workshop items:** voice 2 (opus-parity),
+  the Studio shell (Causes 2+3, parity next).
 
 - **opus (groove-export)** · ✅ **idle / SHIPPED — Groove → Song Book / MusicXML**
   (`docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md` §A; `3c816ab` A1, `a7c3554` A2+A3).
