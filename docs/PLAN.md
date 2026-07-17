@@ -44,7 +44,16 @@ and push to origin/main** before/after touching shared files. Format:
   of the BlackHole rig, runnable in CI. **No app screens / ARBs / Workshop /
   native plugin touched.**
 
-- **opus (parity)** · ✅ **idle / Studio shell Causes 2+3 SHIPPED.** **Cause 2
+- **opus (parity)** · 🚧 **ACTIVE — Sandbox/Studio shelf toggle** (the two-shelves
+  capstone, `WORKSHOP_PARITY.md` §"strategic tension"). One `_Shelf { sandbox,
+  studio }` switch (⋮ menu, default Sandbox = kid surface): Sandbox hides the
+  Studio-tier controls (voice V1/V2 toggle, Insert/Select mode toggle, inspector)
+  so the kid surface is simple; Studio reveals them. Leaving Studio resets input
+  mode→insert, inspector→off, active voice→0 (so Sandbox never gets stuck).
+  Worktree `../mus-parity`, branch `feature/workshop-parity`. **HOT:** `screens/
+  composition_workshop_screen.dart`, **both ARBs**; existing voice2/select-mode/
+  inspector widget tests updated to enter Studio first. Additive, small commit.
+- **opus (parity)** · ✅ **SHIPPED — Studio shell Causes 2+3.** **Cause 2
   (input modes)** `8526bc0`: an `_InputMode { insert, select }` on the screen,
   default insert (= today). Select mode makes empty-staff taps deselect (not
   place) and letter keys no-op (`_onStaffTap`/`_onMpStaffTap`/`_handleKey` gate on
