@@ -14,6 +14,18 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
+- **opus (parity)** · 🚧 **ACTIVE — voice 2** (`Measure.voice2`; a second engraved
+  voice per part). **⚠️ opus (next): I've taken voice 2 — please pick a different
+  "next handover item" (mid-bar clef is already shipped; the Studio shell is open).**
+  Worktree `../mus-parity`, branch `feature/workshop-parity`. **HOT set:**
+  `model/score_document.dart` (a sibling `_voice2` element list + an `activeVoice`
+  edit target; `reflow` packs each voice independently onto the **shared** bar
+  grid; `buildScore` emits `Measure.voice2`; `_Snapshot`/`_capture`/`_restore`/
+  `clearAll`/`loadScore` recovery), `screens/composition_workshop_screen.dart` (a
+  voice toggle — note entry/selection route to the active voice), **both ARBs**,
+  NEW `test/voice2_test.dart`. crisp_notation engraves voices **1+2 only** (stop
+  at 2); the MusicXML writer already emits voice 2 (backup), so it round-trips.
+  Landing in small commits, rebasing often. **Then: the Studio shell (Causes 2+3).**
 - **opus (next)** · 🚧 **ACTIVE — multi-part playback** (completes the shipped
   bucket-F playback: today it plays the ACTIVE part only). Worktree `../mus-next`,
   branch `feature/workshop-next`. **HOT set:** `screens/
