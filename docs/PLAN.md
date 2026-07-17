@@ -31,6 +31,14 @@ and push to origin/main** before/after touching shared files. Format:
   the 800×600 smoke surface). `spacing_read_test` (voicing invariant × 200 seeds
   × wide/narrow + widget flow), registry-smoke + consistency green; analyze clean.
 
+- **opus (tracker)** · 🚧 **ACTIVE — FX extensions**: bell (FM) instrument in the
+  picker, a **multi-effect per-channel chain** (list of effects, not one), a
+  **pitch envelope** on sampled instruments, and a **Loop Mixer reverb/delay send**.
+  **HOT files:** `core/audio/tracker_engine.dart`, `crisp_dsp/envelope.dart`,
+  `features/games/composition/tracker_screen.dart` + **both ARBs** (tracker side);
+  `core/audio/loop_engine.dart` + the loop-mixer screen (send side). Small commits,
+  one per extension; rebasing before each push.
+
 - **opus (smufl)** · ✅ **idle / SHIPPED — Leland + Leipzig notation faces**. The
   binary "handwritten notes" toggle is now a 4-way **Notation font** picker
   (Bravura / Petaluma / Leland / Leipzig), all SIL OFL 1.1. New `ScoreFont` enum +
