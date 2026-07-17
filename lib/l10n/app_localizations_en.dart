@@ -3064,6 +3064,50 @@ class AppLocalizationsEn extends AppLocalizations {
       'So F♯ and G♭ sound identical. Other twins: C♯=D♭, D♯=E♭, G♯=A♭, A♯=B♭.';
 
   @override
+  String get primerTempoTitle => 'How fast? Tempo words';
+
+  @override
+  String get primerTempoSlow =>
+      'At the top of a piece an Italian word gives the speed. Largo is very slow, Adagio is slow. Listen — these four notes are Adagio.';
+
+  @override
+  String get primerTempoFast =>
+      'Allegro is fast, Presto very fast. The same four notes, just quicker — listen to the difference.';
+
+  @override
+  String get primerDynamicsTitle => 'How loud? p and f';
+
+  @override
+  String get primerDynamicsSoft =>
+      'Dynamics tell you how loud to play. p (piano) means soft — and pp (pianissimo) is very soft. Listen: this is piano.';
+
+  @override
+  String get primerDynamicsLoud =>
+      'f (forte) means loud, and ff (fortissimo) very loud. The same notes again — now forte.';
+
+  @override
+  String get primerDottedTitle => 'The dot that adds half';
+
+  @override
+  String get primerDottedPlain =>
+      'A half note lasts 2 beats. Count ‘1-2’ while it rings.';
+
+  @override
+  String get primerDottedDotted =>
+      'A dot after a note adds HALF its value again: 2 beats + 1 = a dotted half note of 3 beats. Count ‘1-2-3’.';
+
+  @override
+  String get primerRestsTitle => 'Silence has length';
+
+  @override
+  String get primerRestsSilence =>
+      'A rest is silence — and you count it, just like a note. Here it goes play, rest, play, rest — one beat each.';
+
+  @override
+  String get primerRestsMatch =>
+      'Every note value has a matching rest. A half note rings for 2 beats; a half rest is 2 beats of silence.';
+
+  @override
   String get colorScaffoldLabel => 'Colour helper for beginners';
 
   @override

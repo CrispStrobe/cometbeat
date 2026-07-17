@@ -3077,6 +3077,50 @@ class AppLocalizationsDe extends AppLocalizations {
       'Fis und Ges klingen also gleich. Weitere Zwillinge: Cis=Des, Dis=Es, Gis=As, Ais=B.';
 
   @override
+  String get primerTempoTitle => 'Wie schnell? Tempo-Wörter';
+
+  @override
+  String get primerTempoSlow =>
+      'Über einem Stück steht ein italienisches Wort für das Tempo. Largo ist sehr langsam, Adagio langsam. Hör hin — diese vier Noten sind Adagio.';
+
+  @override
+  String get primerTempoFast =>
+      'Allegro ist schnell, Presto sehr schnell. Dieselben vier Noten, nur schneller — hör den Unterschied.';
+
+  @override
+  String get primerDynamicsTitle => 'Wie laut? p und f';
+
+  @override
+  String get primerDynamicsSoft =>
+      'Die Dynamik sagt dir, wie laut du spielst. p (piano) heißt leise — und pp (pianissimo) sehr leise. Hör hin: das ist piano.';
+
+  @override
+  String get primerDynamicsLoud =>
+      'f (forte) heißt laut, ff (fortissimo) sehr laut. Dieselben Noten noch einmal — jetzt forte.';
+
+  @override
+  String get primerDottedTitle => 'Der Punkt, der die Hälfte dazugibt';
+
+  @override
+  String get primerDottedPlain =>
+      'Eine halbe Note dauert 2 Schläge. Zähl „1-2“, solange sie klingt.';
+
+  @override
+  String get primerDottedDotted =>
+      'Ein Punkt hinter der Note gibt die HÄLFTE ihres Wertes dazu: 2 Schläge + 1 = eine punktierte Halbe mit 3 Schlägen. Zähl „1-2-3“.';
+
+  @override
+  String get primerRestsTitle => 'Auch Stille hat eine Länge';
+
+  @override
+  String get primerRestsSilence =>
+      'Eine Pause ist Stille — und sie wird mitgezählt wie eine Note. Hier heißt es: spielen, Pause, spielen, Pause — je ein Schlag.';
+
+  @override
+  String get primerRestsMatch =>
+      'Zu jedem Notenwert gibt es eine passende Pause. Eine halbe Note klingt 2 Schläge; eine halbe Pause ist 2 Schläge Stille.';
+
+  @override
   String get colorScaffoldLabel => 'Farbhilfe für Anfänger';
 
   @override

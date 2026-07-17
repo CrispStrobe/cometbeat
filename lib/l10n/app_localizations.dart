@@ -5600,6 +5600,78 @@ abstract class AppLocalizations {
   /// **'So F♯ and G♭ sound identical. Other twins: C♯=D♭, D♯=E♭, G♯=A♭, A♯=B♭.'**
   String get primerEnharmonicTwins;
 
+  /// No description provided for @primerTempoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How fast? Tempo words'**
+  String get primerTempoTitle;
+
+  /// No description provided for @primerTempoSlow.
+  ///
+  /// In en, this message translates to:
+  /// **'At the top of a piece an Italian word gives the speed. Largo is very slow, Adagio is slow. Listen — these four notes are Adagio.'**
+  String get primerTempoSlow;
+
+  /// No description provided for @primerTempoFast.
+  ///
+  /// In en, this message translates to:
+  /// **'Allegro is fast, Presto very fast. The same four notes, just quicker — listen to the difference.'**
+  String get primerTempoFast;
+
+  /// No description provided for @primerDynamicsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How loud? p and f'**
+  String get primerDynamicsTitle;
+
+  /// No description provided for @primerDynamicsSoft.
+  ///
+  /// In en, this message translates to:
+  /// **'Dynamics tell you how loud to play. p (piano) means soft — and pp (pianissimo) is very soft. Listen: this is piano.'**
+  String get primerDynamicsSoft;
+
+  /// No description provided for @primerDynamicsLoud.
+  ///
+  /// In en, this message translates to:
+  /// **'f (forte) means loud, and ff (fortissimo) very loud. The same notes again — now forte.'**
+  String get primerDynamicsLoud;
+
+  /// No description provided for @primerDottedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The dot that adds half'**
+  String get primerDottedTitle;
+
+  /// No description provided for @primerDottedPlain.
+  ///
+  /// In en, this message translates to:
+  /// **'A half note lasts 2 beats. Count ‘1-2’ while it rings.'**
+  String get primerDottedPlain;
+
+  /// No description provided for @primerDottedDotted.
+  ///
+  /// In en, this message translates to:
+  /// **'A dot after a note adds HALF its value again: 2 beats + 1 = a dotted half note of 3 beats. Count ‘1-2-3’.'**
+  String get primerDottedDotted;
+
+  /// No description provided for @primerRestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Silence has length'**
+  String get primerRestsTitle;
+
+  /// No description provided for @primerRestsSilence.
+  ///
+  /// In en, this message translates to:
+  /// **'A rest is silence — and you count it, just like a note. Here it goes play, rest, play, rest — one beat each.'**
+  String get primerRestsSilence;
+
+  /// No description provided for @primerRestsMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Every note value has a matching rest. A half note rings for 2 beats; a half rest is 2 beats of silence.'**
+  String get primerRestsMatch;
+
   /// No description provided for @colorScaffoldLabel.
   ///
   /// In en, this message translates to:

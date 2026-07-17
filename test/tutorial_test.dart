@@ -121,6 +121,10 @@ void main() {
       'Chord symbols': chordChartPrimer, // chord-symbol Score path
       'Starting on the upbeat': upbeatPrimer,
       'The same note, two names': enharmonicPrimer,
+      'How fast? Tempo words': tempoTermsPrimer,
+      'How loud? p and f': dynamicsPrimer,
+      'The dot that adds half': dottedNotePrimer, // dotted-duration Score path
+      'Silence has length': restsPrimer, // RestElement Score path
     };
     for (final entry in primers.entries) {
       await pumpGame(

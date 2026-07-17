@@ -22,6 +22,7 @@ import 'package:crisp_notation/crisp_notation.dart'
         Measure,
         NoteDuration,
         NoteElement,
+        RestElement,
         Score,
         TimeSignature;
 
@@ -32,6 +33,7 @@ import 'package:crisp_notation/crisp_notation.dart'
 Score _notes(
   List<int> midis, {
   DurationBase dur = DurationBase.quarter,
+  int dots = 0,
   Clef clef = Clef.treble,
   KeySignature keySignature = const KeySignature(0),
   TimeSignature? timeSignature,
@@ -47,9 +49,28 @@ Score _notes(
           for (var i = 0; i < midis.length; i++)
             NoteElement.note(
               pitchFromMidi(midis[i]),
-              NoteDuration(dur),
+              NoteDuration(dur, dots: dots),
               id: 'n$i',
             ),
+        ]),
+      ],
+    );
+
+/// A single-measure staff mixing notes and rests: a `null` entry becomes a rest
+/// of the same value, so silence can be *shown* next to sound.
+Score _rhythm(
+  List<int?> midis, {
+  DurationBase dur = DurationBase.quarter,
+}) =>
+    Score(
+      clef: Clef.treble,
+      measures: [
+        Measure([
+          for (var i = 0; i < midis.length; i++)
+            if (midis[i] case final int m)
+              NoteElement.note(pitchFromMidi(m), NoteDuration(dur), id: 'n$i')
+            else
+              RestElement(NoteDuration(dur), id: 'r$i'),
         ]),
       ],
     );
@@ -575,6 +596,98 @@ Tutorial enharmonicPrimer(AppLocalizations l10n) => Tutorial(
           text: l10n.primerEnharmonicTwins,
           // The same pitch twice — identical sound, two names.
           play: (a) => a.playSequence(_run([66, 66], ms: 500)),
+        ),
+      ],
+    );
+
+/// Italian tempo words: the speed written at the top of a piece. The SAME phrase
+/// is played slow then fast, so the word maps onto a heard difference.
+/// Games: tempo_duel, connect_tempo.
+Tutorial tempoTermsPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerTempoTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerTempoSlow,
+          score: _notes([60, 62, 64, 65]),
+          play: (a) => a.playPhrase([60, 62, 64, 65], noteMs: 750), // Adagio
+        ),
+        TutorialStep(
+          text: l10n.primerTempoFast,
+          score: _notes([60, 62, 64, 65]),
+          play: (a) => a.playPhrase([60, 62, 64, 65], noteMs: 220), // Allegro
+        ),
+      ],
+    );
+
+/// Dynamics: p/f and their families. The same phrase is played soft then loud
+/// (a real gain difference), so the letters map onto a heard difference.
+/// Games: dynamics_duel, connect_dynamics.
+Tutorial dynamicsPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerDynamicsTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerDynamicsSoft,
+          score: _notes([60, 64, 67]),
+          play: (a) => a.playPhrase([60, 64, 67], gain: 0.22), // piano
+        ),
+        TutorialStep(
+          text: l10n.primerDynamicsLoud,
+          score: _notes([60, 64, 67]),
+          play: (a) => a.playPhrase([60, 64, 67]), // forte (full gain)
+        ),
+      ],
+    );
+
+/// The augmentation dot: it adds HALF the note's value again. Shown as a half
+/// note (2 beats) beside a dotted half (3 beats), and heard at those lengths.
+/// Game: dotted_sort.
+Tutorial dottedNotePrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerDottedTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerDottedPlain,
+          score: _notes([60], dur: DurationBase.half),
+          play: (a) => a.playPhrase([60], noteMs: 1000), // 2 beats
+        ),
+        TutorialStep(
+          text: l10n.primerDottedDotted,
+          score: _notes([60], dur: DurationBase.half, dots: 1),
+          play: (a) => a.playPhrase([60], noteMs: 1500), // 3 beats — half again
+        ),
+      ],
+    );
+
+/// Rests: silence with a written length. Shown as note/rest/note/rest and heard
+/// with real gaps, then paired value-for-value with notes.
+/// Game: connect_rests.
+Tutorial restsPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerRestsTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerRestsSilence,
+          score: _rhythm([60, null, 62, null]),
+          // An empty chord is a beat of silence — play, rest, play, rest.
+          play: (a) => a.playChordSequence(
+            const [
+              [60],
+              [],
+              [62],
+              [],
+            ],
+            ms: 500,
+          ),
+        ),
+        TutorialStep(
+          text: l10n.primerRestsMatch,
+          // A half note then a half rest: same value, one sounds, one doesn't.
+          score: _rhythm([60, null], dur: DurationBase.half),
+          play: (a) => a.playChordSequence(
+            const [
+              [60],
+              [],
+            ],
+            ms: 1000,
+          ),
         ),
       ],
     );

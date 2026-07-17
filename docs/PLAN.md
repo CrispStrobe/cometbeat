@@ -40,8 +40,16 @@ and push to origin/main** before/after touching shared files. Format:
   `interval_ladder`/`connect_intervals` → `intervalsPrimer`. **Landing module by
   module in small commits** (primers.dart + both ARBs + game_registry +
   tutorial_test are hot — rebasing each batch). Worktree `../mus-primer-coverage`,
-  branch `feature/primer-coverage`. Batch 1: note_values (tempo / dynamics /
-  dotted / rests).
+  branch `feature/primer-coverage`.
+  ✅ **Batch 1 (note_values) SHIPPED:** `tempoTermsPrimer` (tempo_duel,
+  connect_tempo — same phrase at Adagio then Allegro via `playPhrase(noteMs:)`),
+  `dynamicsPrimer` (dynamics_duel, connect_dynamics — same phrase at
+  `gain: 0.22` then full, a real loudness difference), `dottedNotePrimer`
+  (dotted_sort — half vs dotted-half, 2 vs 3 beats, shown + heard),
+  `restsPrimer` (connect_rests — note/rest/note/rest with real silent beats).
+  Helpers gained `_notes(dots:)` + `_rhythm()` (null = a `RestElement`), so dots
+  and rests can be *shown*. Next: note_reading (ties/slurs, articulations,
+  beams, whole/half, clefs, SATB voices + bass-variant reuse).
 
 - **opus (primers-mine)** · ✅ **idle / SHIPPED — per-game tutorial primers for 3
   games** (learnability §1). The games I shipped this session now teach their

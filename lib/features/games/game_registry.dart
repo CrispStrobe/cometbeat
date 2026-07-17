@@ -209,6 +209,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameDottedSort,
       subtitle: (l) => l.gameDottedSortSubtitle,
       builder: (_) => const DottedSortScreen(),
+      tutorial: dottedNotePrimer,
     ),
     GameInfo(
       id: 'duration_duel',
@@ -224,6 +225,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameTempoDuel,
       subtitle: (l) => l.gameTempoDuelSubtitle,
       builder: (_) => const TempoDuelScreen(),
+      tutorial: tempoTermsPrimer,
     ),
     // Louder or Softer? — read two dynamic marks, tap the louder.
     GameInfo(
@@ -232,6 +234,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameDynamicsDuel,
       subtitle: (l) => l.gameDynamicsDuelSubtitle,
       builder: (_) => const DynamicsDuelScreen(),
+      tutorial: dynamicsPrimer,
     ),
     // Match each dynamic mark to its meaning (pp ↔ very soft) — the Connect
     // board with a dynamics mode; the reading side of Louder or Softer?.
@@ -241,6 +244,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameConnectDynamics,
       subtitle: (l) => l.gameConnectDynamicsSubtitle,
       builder: (_) => const ConnectLineScreen(mode: ConnectMode.dynamics),
+      tutorial: dynamicsPrimer,
     ),
     // Match each rest to the note it equals in length (quarter rest ↔ quarter
     // note) — the Connect board with a rests mode; reads the silent side.
@@ -250,6 +254,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameConnectRests,
       subtitle: (l) => l.gameConnectRestsSubtitle,
       builder: (_) => const ConnectLineScreen(mode: ConnectMode.rests),
+      tutorial: restsPrimer,
     ),
     // Match each Italian tempo word to its meaning (Largo ↔ very slow) — the
     // Connect board with a tempo mode; the reading vocabulary drill.
@@ -259,6 +264,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameConnectTempo,
       subtitle: (l) => l.gameConnectTempoSubtitle,
       builder: (_) => const ConnectLineScreen(mode: ConnectMode.tempo),
+      tutorial: tempoTermsPrimer,
     ),
     // Match each note value to how many beats it lasts in 4/4 (half ↔ 2 beats)
     // — the Connect board with a beats mode; core rhythm-reading.
