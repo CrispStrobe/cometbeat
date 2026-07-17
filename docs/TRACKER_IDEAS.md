@@ -68,9 +68,12 @@ interpolation above. Order + contracts/tests plan: `FX_HANDOVER.md`.
   extension: module→(.mid/.xml), and `.mid`/`.xml`→module (`--multi` =
   multi-track). Live-verified: module→multi-track-MIDI→.xm and
   module→MusicXML→.it round-trip through real files.
-- ⏳ **Note-off through the codecs** — XM/IT/S3M readers+writers don't yet map
-  their key-off to `DocCell.off`, so a rest survives Score↔doc but NOT a real
-  module-bytes round-trip (MOD has no key-off at all). Next.
+- ✅ **Note-off through the codecs** SHIPPED — XM (97) / IT (255) / S3M (254)
+  key-off now maps to/from `DocCell.off` in `module_convert.dart` (read + write),
+  so a rest survives a REAL module-bytes round-trip (Score→doc→bytes→doc→Score),
+  tested per-format. MOD has no key-off, so a rest rings through there (asserted +
+  documented). The N×N matrix is unaffected (readers only set note-off on the
+  actual key-off byte, which the goldens don't use).
 - **Score→Tracker beyond one bar** — more of the grid / variable pattern length.
 - **Live Workshop↔Tracker handoff** — open a Workshop score directly into the
   Tracker and back (the converter's ready; this is app plumbing).

@@ -211,6 +211,7 @@ ModuleDoc docFromS3m(S3mModule m) {
         cells.add(
           DocCell(
             note: s3mNoteToMidi(c.note),
+            noteOff: c.note == S3mCell.noteOff,
             instrument: c.instrument,
             volume: c.volume == S3mCell.noVolume ? -1 : c.volume,
           ),
@@ -264,6 +265,7 @@ ModuleDoc docFromXm(XmModule m) {
         cells.add(
           DocCell(
             note: xmNoteToMidi(c.note),
+            noteOff: c.note == XmCell.noteOff,
             instrument: c.instrument,
             volume: vol,
           ),
@@ -316,6 +318,7 @@ ModuleDoc docFromIt(ItModule m) {
         cells.add(
           DocCell(
             note: itNoteToMidi(c.note),
+            noteOff: c.note == 255 || c.note == ItCell.noteCut,
             instrument: c.instrument,
             volume: vol,
           ),
@@ -445,7 +448,9 @@ XmModule docToXm(ModuleDoc doc) {
           final c = srcRow[ch];
           cells.add(
             XmCell(
-              note: c.note < 0 ? 0 : (c.note - 11).clamp(1, 96),
+              note: c.noteOff
+                  ? XmCell.noteOff
+                  : (c.note < 0 ? 0 : (c.note - 11).clamp(1, 96)),
               instrument: c.instrument.clamp(0, 255),
               volume: c.volume < 0 ? 0 : (0x10 + c.volume).clamp(0x10, 0x50),
             ),
@@ -522,7 +527,7 @@ S3mModule docToS3m(ModuleDoc doc) {
           final c = srcRow[ch];
           cells.add(
             S3mCell(
-              note: _midiToS3mNote(c.note),
+              note: c.noteOff ? S3mCell.noteOff : _midiToS3mNote(c.note),
               instrument: c.instrument.clamp(0, 255),
               volume: c.volume < 0 ? S3mCell.noVolume : c.volume.clamp(0, 64),
             ),
@@ -585,7 +590,8 @@ ItModule docToIt(ModuleDoc doc) {
           final c = srcRow[ch];
           cells.add(
             ItCell(
-              note: c.note < 0 ? -1 : c.note.clamp(0, 119),
+              // IT note 255 = note-off (writeIt emits it since it != -1).
+              note: c.noteOff ? 255 : (c.note < 0 ? -1 : c.note.clamp(0, 119)),
               instrument: c.instrument.clamp(0, 255),
               volpan: c.volume < 0 ? -1 : c.volume.clamp(0, 64),
             ),

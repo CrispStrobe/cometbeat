@@ -74,8 +74,9 @@ List<(int?, int)> _flat(Score s, int spb) {
 /// The ordered melody (note pitches, rests dropped, tied continuations merged) —
 /// for codecs that re-quantize durations or split a held note into tied pieces
 /// but must preserve the tune.
-List<int> _pitches(Score s) =>
-    [for (final r in _flat(s, 4)) if (r.$1 != null) r.$1!];
+List<int> _pitches(Score s) {
+  return [for (final r in _flat(s, 4)) if (r.$1 != null) r.$1!];
+}
 
 /// Packs per-channel DocCell columns into a one-pattern ModuleDoc.
 ModuleDoc _pack(List<List<DocCell>> cols, {String title = 'T'}) {
@@ -218,6 +219,33 @@ void main() {
         _pitches(moduleChannelToScore(back, 0)),
         _pitches(moduleChannelToScore(doc, 0)),
       );
+    });
+  });
+
+  group('a rest survives a real module-bytes round-trip (note-off codec)', () {
+    // C quarter, quarter REST, G quarter. The rest must come back a rest, not be
+    // swallowed by the C ringing on — which needs the format's key-off byte.
+    const runs = [(60, 4), (null, 4), (67, 4)];
+    final score = runsToScore(runs, 4);
+
+    for (final fmt in [ModuleFormat.it, ModuleFormat.xm, ModuleFormat.s3m]) {
+      test('${fmt.name}: Score → doc → bytes → doc → Score keeps the rest', () {
+        final doc = scoreToModuleDoc(score, format: fmt);
+        final bytes = convertDocTo(doc, fmt);
+        final back = moduleChannelToScore(parseAnyModule(bytes), 0);
+        expect(_flat(back, 4), runs, reason: 'the middle rest survived $fmt');
+      });
+    }
+
+    test('MOD has no key-off, so the note rings through the rest (documented)',
+        () {
+      final doc = scoreToModuleDoc(score, format: ModuleFormat.mod);
+      final back = moduleChannelToScore(
+        parseAnyModule(convertDocTo(doc, ModuleFormat.mod)),
+        0,
+      );
+      // The rest is absorbed: C rings 8 steps, then G — no (null, 4) in between.
+      expect(_flat(back, 4).any((r) => r.$1 == null), isFalse);
     });
   });
 
