@@ -335,10 +335,14 @@ Score moduleToVoicedScore(
   );
 }
 
+/// How many channels actually sound (have at least one note).
+int soundingChannelCount(ModuleDoc doc) =>
+    _soundingChannelsByBusyness(doc).length;
+
 /// How many sounding channels [moduleToVoicedScore] would drop (channels beyond
 /// [maxVoices]) — for a caller to warn "kept the 4 busiest of N".
 int voicedDroppedChannels(ModuleDoc doc, {int maxVoices = 4}) {
-  final n = _soundingChannelsByBusyness(doc).length;
+  final n = soundingChannelCount(doc);
   return n > maxVoices ? n - maxVoices : 0;
 }
 
@@ -661,6 +665,40 @@ enum TextNotation { abc, kern, mei, musescore, lilypond }
 /// True if this format can be parsed back to a Score (everything but LilyPond).
 bool textNotationReadable(TextNotation fmt) => fmt != TextNotation.lilypond;
 
+/// A [multiPart] score as ONE multi-voice ABC tune — each part becomes an ABC
+/// `V:` voice. Unlike [scoreToAbc]'s 4-voices-on-one-staff cap, ABC `V:` voices
+/// are separate staves and UNBOUNDED, so this keeps every instrument: the
+/// orchestra case. [partNames] label the voices; each voice carries its part's
+/// clef. (crisp_notation_core has no multi-part ABC writer, so we assemble it
+/// from the per-part single-voice tunes.)
+String multiPartToAbc(MultiPartScore multiPart, {List<String>? partNames}) {
+  final parts = multiPart.parts;
+  final out = StringBuffer()
+    ..writeln('X:1')
+    ..writeln('L:1/8')
+    ..writeln('K:C');
+  if (parts.isEmpty) return out.toString();
+
+  String clefOf(Clef c) => c == Clef.bass ? 'bass' : 'treble';
+  // Declare all voices first (readers expect the V: roster before the bodies).
+  for (var i = 0; i < parts.length; i++) {
+    final name = (partNames != null && i < partNames.length)
+        ? partNames[i]
+        : 'V${i + 1}';
+    out.writeln('V:${i + 1} name="$name" clef=${clefOf(parts[i].clef)}');
+  }
+  // Then each voice's body — the per-part tune with its header fields stripped.
+  final headerField = RegExp(r'^[A-Za-z]:');
+  for (var i = 0; i < parts.length; i++) {
+    out.writeln('V:${i + 1}');
+    for (final line in scoreToAbc(parts[i]).split('\n')) {
+      if (line.trim().isEmpty || headerField.hasMatch(line)) continue;
+      out.writeln(line);
+    }
+  }
+  return out.toString();
+}
+
 /// A single [score] serialized to [fmt] text.
 String scoreToTextNotation(Score score, TextNotation fmt) => switch (fmt) {
       TextNotation.abc => scoreToAbc(score),
@@ -690,13 +728,24 @@ String moduleToTextNotation(
   TextNotation fmt, {
   int? channel,
   int stepsPerBeat = 4,
-}) =>
-    scoreToTextNotation(
-      channel != null
-          ? moduleChannelToScore(doc, channel, stepsPerBeat: stepsPerBeat)
-          : moduleToVoicedScore(doc, stepsPerBeat: stepsPerBeat),
+}) {
+  if (channel != null) {
+    return scoreToTextNotation(
+      moduleChannelToScore(doc, channel, stepsPerBeat: stepsPerBeat),
       fmt,
     );
+  }
+  // ABC has unbounded V: voices → keep EVERY channel (the orchestra case).
+  if (fmt == TextNotation.abc) {
+    final mp = moduleToMultiPart(doc, stepsPerBeat: stepsPerBeat);
+    return multiPartToAbc(mp.score, partNames: mp.partNames);
+  }
+  // The other single-Score writers cap at 4 overlay voices on one staff.
+  return scoreToTextNotation(
+    moduleToVoicedScore(doc, stepsPerBeat: stepsPerBeat),
+    fmt,
+  );
+}
 
 /// [text] in [fmt] → a playable single-channel [ModuleDoc]. Returns null for a
 /// write-only format ([TextNotation.lilypond]).

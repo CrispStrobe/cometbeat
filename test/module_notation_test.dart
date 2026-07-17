@@ -312,13 +312,28 @@ void main() {
       expect(m.voice4, isEmpty);
     });
 
-    test('ABC output carries overlay voices (& markers)', () {
-      final doc3 = _pack([
-        [_n(72), _e],
-        [_n(60), _e],
-        [_n(48), _e],
+    test('ABC keeps EVERY channel as a V: voice (unbounded — orchestra case)',
+        () {
+      // 6 channels → 6 ABC voices (well past the 4-voice single-staff cap).
+      final doc6 = _pack([
+        for (var c = 0; c < 6; c++) [_n(55 + c), _e],
       ]);
-      expect(moduleToTextNotation(doc3, TextNotation.abc), contains('&'));
+      final abc = moduleToTextNotation(doc6, TextNotation.abc);
+      final voices = RegExp(r'^V:\d+ name=', multiLine: true).allMatches(abc);
+      expect(voices.length, 6);
+      expect(soundingChannelCount(doc6), 6);
+    });
+
+    test('multiPartToAbc voices carry their part clef', () {
+      final mp = moduleToMultiPart(
+        _pack([
+          [_n(72), _e], // treble
+          [_n(40), _e], // low → bass clef
+        ]),
+      );
+      final abc = multiPartToAbc(mp.score, partNames: mp.partNames);
+      expect(abc, contains('clef=treble'));
+      expect(abc, contains('clef=bass'));
     });
 
     test('more than 4 channels: keep the busiest 4, report the rest', () {

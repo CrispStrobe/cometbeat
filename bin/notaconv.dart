@@ -276,7 +276,11 @@ void _fromMultiPart(
 /// Describes how many voices a module→text export kept, for the status line.
 String _voiceDetail(ModuleDoc doc, int? channel, TextNotation fmt) {
   if (channel != null) return 'channel $channel';
-  // MEI/kern writers are single-voice; ABC/MuseScore render up to 4 overlays.
+  // ABC has unbounded V: voices → every sounding channel.
+  if (fmt == TextNotation.abc) {
+    return '${soundingChannelCount(doc)} voices (all channels)';
+  }
+  // MEI/kern writers are single-voice; MuseScore renders up to 4 overlays.
   if (fmt == TextNotation.mei || fmt == TextNotation.kern) {
     return 'voice 1 (single-voice format)';
   }
