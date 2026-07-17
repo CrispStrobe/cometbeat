@@ -318,6 +318,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopPlaybackSpeed => 'Playback speed';
 
   @override
+  String get workshopCountIn => 'Count-in';
+
+  @override
+  String get workshopLoopSelection => 'Loop selection';
+
+  @override
   String get workshopArticulations => 'Articulations & ties';
 
   @override

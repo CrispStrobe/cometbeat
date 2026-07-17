@@ -427,6 +427,64 @@ void main() {
     expect(find.byIcon(Icons.play_arrow), findsOneWidget);
   });
 
+  testWidgets('count-in and loop are ⋮ toggles, off by default',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    // Both start off, so playback is unchanged until armed.
+    for (final label in [l10n.workshopCountIn, l10n.workshopLoopSelection]) {
+      final item = tester.widget<CheckedPopupMenuItem<String>>(
+        find.ancestor(
+          of: find.text(label),
+          matching: find.byType(CheckedPopupMenuItem<String>),
+        ),
+      );
+      expect(item.checked, isFalse, reason: '$label defaults off');
+    }
+
+    // Arming count-in sticks.
+    await tester.tap(find.text(l10n.workshopCountIn));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    final countIn = tester.widget<CheckedPopupMenuItem<String>>(
+      find.ancestor(
+        of: find.text(l10n.workshopCountIn),
+        matching: find.byType(CheckedPopupMenuItem<String>),
+      ),
+    );
+    expect(countIn.checked, isTrue);
+  });
+
+  testWidgets('playback still runs with count-in and loop armed',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(_pianoKeyAt(16));
+    await tester.pump();
+    await tester.tap(_pianoKeyAt(18)); // a second note, and it stays selected
+    await tester.pump();
+
+    // Arm both.
+    for (final label in [l10n.workshopCountIn, l10n.workshopLoopSelection]) {
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+
+    // The transport starts (count-in prepended, selection looped) and stops.
+    await tester.tap(find.byIcon(Icons.play_arrow));
+    await tester.pump();
+    expect(find.byIcon(Icons.stop), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.stop));
+    await tester.pump();
+    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+  });
+
   testWidgets('the playback speed control switches the shown speed',
       (tester) async {
     await pump(tester);

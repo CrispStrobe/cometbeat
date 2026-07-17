@@ -644,6 +644,18 @@ abstract class AppLocalizations {
   /// **'Playback speed'**
   String get workshopPlaybackSpeed;
 
+  /// No description provided for @workshopCountIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Count-in'**
+  String get workshopCountIn;
+
+  /// No description provided for @workshopLoopSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop selection'**
+  String get workshopLoopSelection;
+
   /// No description provided for @workshopArticulations.
   ///
   /// In en, this message translates to:

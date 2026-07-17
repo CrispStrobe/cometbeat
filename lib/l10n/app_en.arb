@@ -148,6 +148,8 @@
   "workshopStop": "Stop",
   "workshopMutePart": "Mute",
   "workshopPlaybackSpeed": "Playback speed",
+  "workshopCountIn": "Count-in",
+  "workshopLoopSelection": "Loop selection",
   "workshopArticulations": "Articulations & ties",
   "workshopOrnament": "Ornament",
   "workshopStaccato": "Staccato",

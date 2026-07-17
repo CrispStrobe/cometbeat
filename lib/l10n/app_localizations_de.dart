@@ -318,6 +318,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopPlaybackSpeed => 'Wiedergabetempo';
 
   @override
+  String get workshopCountIn => 'Einzähler';
+
+  @override
+  String get workshopLoopSelection => 'Auswahl wiederholen';
+
+  @override
   String get workshopArticulations => 'Artikulation & Bindebögen';
 
   @override

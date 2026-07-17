@@ -509,6 +509,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   double _playSpeed = 1;
   static const List<double> _playSpeeds = [0.5, 0.75, 1.0];
 
+  // Count-in: a bar of metronome clicks before the music, so you can come in on
+  // time. Rendered INTO the same WAV (clicks then silence per beat), with the
+  // cursor clock offset by [_countInSec] — the first cycle only; a loop restart
+  // drops straight back to the music.
+  bool _countIn = false;
+  double _countInSec = 0;
+  static const int _kClickMidi = 84; // a high tick, as playCountedNote uses
+  static const int _kClickMs = 60;
+
+  // Loop the selected range until Stop (practice a hard bar). The window comes
+  // from the ACTIVE part's selection but clips every part, so the accompaniment
+  // loops with it. [_loopStems] caches the count-in-free audio for restarts.
+  bool _loopSelection = false;
+  bool _loopActive = false;
+  bool _loopMulti = false;
+  List<List<(List<int>, int)>> _loopStems = const [];
+
   bool get _isPlaying => _playTimer != null;
 
   /// Whether there's anything to play: in multi-part mode any part with content
@@ -1203,17 +1220,26 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// One part's playback data: the timed-chord [events] for the audio render and
   /// the seconds [schedule] driving the cursor (ids carry [idPrefix] so the
   /// multi-part canvas's global `p{i}:` ids match). [endSeconds] is when it ends.
+  ///
+  /// [from]/[to] clip playback to a **loop window** (seconds on this part's own
+  /// stretched clock): only entries starting inside it are rendered, and both the
+  /// events and the schedule are rebased so the window begins at 0. Every part
+  /// gets the same window, so a looped selection keeps its accompaniment.
   ({
     List<(List<int>, int)> events,
     List<({String id, double start, double end})> schedule,
     double endSeconds,
-  }) _renderPart(Score score, String idPrefix) {
+  }) _renderPart(Score score, String idPrefix, {double? from, double? to}) {
     final timeline = playbackTimeline(score);
     final tm = tempoMapOf(score);
     // Practice speed stretches wall-clock time (0.5× → everything lasts twice as
     // long) without touching pitch. The SAME factor scales the audio durations
     // and the cursor schedule, so they stay locked together.
     final stretch = 1 / _playSpeed;
+    final origin = from ?? 0;
+    // Entries whose onset falls in the window (all of them when unwindowed).
+    bool inWindow(double start) =>
+        (from == null || start >= from - 1e-9) && (to == null || start < to - 1e-9);
 
     // Element id → its sounding midis (a chord contributes several). Every voice
     // is scanned, so voice-2 notes sound too — the playback timeline emits them
@@ -1231,28 +1257,27 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
     // Gap-accurate events: rests are silent segments, chords sound together,
     // each spans its own tempo-scaled duration.
-    final events = <(List<int>, int)>[
-      for (final n in timeline)
-        (
-          n.isRest ? const <int>[] : (midisOf[n.elementId] ?? const <int>[]),
-          ((tm.secondsAt(n.end) - tm.secondsAt(n.start)) * 1000 * stretch)
-              .round(),
-        ),
-    ];
-    // The cursor schedule in seconds (rests carry no highlight).
-    final schedule = <({String id, double start, double end})>[
-      for (final n in timeline)
-        if (!n.isRest)
-          (
-            id: '$idPrefix${n.elementId}',
-            start: tm.secondsAt(n.start) * stretch,
-            end: tm.secondsAt(n.end) * stretch,
-          ),
-    ];
-    final endSeconds = timeline.fold<double>(0, (mx, n) {
-      final e = tm.secondsAt(n.end) * stretch;
-      return e > mx ? e : mx;
-    });
+    final events = <(List<int>, int)>[];
+    final schedule = <({String id, double start, double end})>[];
+    var endSeconds = 0.0;
+    for (final n in timeline) {
+      final start = tm.secondsAt(n.start) * stretch;
+      final end = tm.secondsAt(n.end) * stretch;
+      if (!inWindow(start)) continue;
+      final midis =
+          n.isRest ? const <int>[] : (midisOf[n.elementId] ?? const <int>[]);
+      events.add((midis, ((end - start) * 1000).round()));
+      if (!n.isRest) {
+        // Rests carry no highlight; times rebase to the window's start.
+        final entry = (
+          id: '$idPrefix${n.elementId}',
+          start: start - origin,
+          end: end - origin,
+        );
+        schedule.add(entry);
+      }
+      if (end - origin > endSeconds) endSeconds = end - origin;
+    }
     return (events: events, schedule: schedule, endSeconds: endSeconds);
   }
 
@@ -1261,35 +1286,47 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// full score (global ids); with one part it's the single-part path. No-op with
   /// nothing to play.
   void _startPlayback() {
-    final schedule = <({String id, double start, double end})>[];
-    var end = 0.0;
+    // A loop window from the ACTIVE part's selection (when Loop is armed and
+    // something is selected); it clips every part so accompaniment loops too.
+    final (from, to) = _loopWindow();
 
-    if (_mpd.partCount > 1) {
-      final partEvents = <List<(List<int>, int)>>[];
+    final schedule = <({String id, double start, double end})>[];
+    final stems = <List<(List<int>, int)>>[];
+    var end = 0.0;
+    final multi = _mpd.partCount > 1;
+
+    if (multi) {
       for (var i = 0; i < _mpd.partCount; i++) {
         if (_mutedParts.contains(i) || _mpd.parts[i].isEmpty) continue;
         final p = _renderPart(
           _mpd.parts[i].buildScore(),
           MultiPartDocument.prefixFor(i),
+          from: from,
+          to: to,
         );
-        partEvents.add(p.events);
+        if (p.events.isEmpty) continue;
+        stems.add(p.events);
         schedule.addAll(p.schedule);
         if (p.endSeconds > end) end = p.endSeconds;
       }
-      if (partEvents.isEmpty) return; // everything muted or empty
-      _audio.playMixedTimedChords(partEvents);
     } else {
       if (_doc.isEmpty) return;
-      final p = _renderPart(_doc.buildScore(), '');
+      final p = _renderPart(_doc.buildScore(), '', from: from, to: to);
       if (p.events.isEmpty) return;
-      _audio.playTimedChords(p.events);
+      stems.add(p.events);
       schedule.addAll(p.schedule);
       end = p.endSeconds;
     }
-    if (end <= 0) return;
+    if (stems.isEmpty || end <= 0) return; // everything muted / empty / clipped
 
-    _playSchedule = schedule;
+    _loopMulti = multi;
+    _loopStems = stems; // count-in-free: what a loop restart replays
+    _loopActive = _loopSelection && from != null;
+    _playSchedule = schedule; // music-relative (count-in offset applied on read)
     _playEndSeconds = end;
+    _countInSec = _countIn ? _countInSeconds() : 0;
+
+    _playAudio(withCountIn: _countIn);
     _playClock
       ..reset()
       ..start();
@@ -1300,19 +1337,96 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     setState(() {}); // reflect the transport (play → stop icon)
   }
 
+  /// The selection's [start, end] on the active part's stretched clock, or
+  /// (null, null) when Loop is off or nothing playable is selected.
+  (double?, double?) _loopWindow() {
+    if (!_loopSelection) return (null, null);
+    final selected = _doc.selectedIds;
+    if (selected.isEmpty) return (null, null);
+    final full = _renderPart(_doc.buildScore(), '');
+    double? from, to;
+    for (final s in full.schedule) {
+      if (!selected.contains(s.id)) continue;
+      if (from == null || s.start < from) from = s.start;
+      if (to == null || s.end > to) to = s.end;
+    }
+    return (from, to);
+  }
+
+  /// One bar of clicks at the current tempo — the count-in's wall-clock length.
+  /// Beats are the meter's own unit (6/8 counts six eighths, not six quarters),
+  /// and the practice-speed stretch applies so the lead-in matches the music.
+  double _countInSeconds() {
+    final bpm = _doc.tempo?.quarterBpm ?? 100;
+    final quarterBpm = bpm <= 0 ? 100.0 : bpm;
+    final ts = _doc.timeSignature;
+    final beatSec = 60 / quarterBpm * (4 / ts.beatUnit) / _playSpeed;
+    return beatSec * _countInBeats;
+  }
+
+  int get _countInBeats => _doc.timeSignature.beats.clamp(2, 8);
+
+  /// Renders + plays the cached stems, optionally prefixed by the count-in. In
+  /// the mix EVERY stem is offset by the count-in (silence) so the parts stay
+  /// aligned; only the first stem carries the audible clicks.
+  void _playAudio({required bool withCountIn}) {
+    if (!withCountIn) {
+      if (_loopMulti) {
+        _audio.playMixedTimedChords(_loopStems);
+      } else {
+        _audio.playTimedChords(_loopStems.first);
+      }
+      return;
+    }
+    final beatMs = _countInSeconds() * 1000 / _countInBeats;
+    final clicks = <(List<int>, int)>[
+      for (var i = 0; i < _countInBeats; i++) ...[
+        (const [_kClickMidi], _kClickMs),
+        (const <int>[], (beatMs - _kClickMs).round().clamp(0, 5000)),
+      ],
+    ];
+    final padMs = (beatMs * _countInBeats).round();
+    if (_loopMulti) {
+      _audio.playMixedTimedChords([
+        for (var i = 0; i < _loopStems.length; i++)
+          if (i == 0) [...clicks, ..._loopStems[i]]
+          // Silence, so this part's music still starts after the count-in.
+          else [(const <int>[], padMs), ..._loopStems[i]],
+      ]);
+    } else {
+      _audio.playTimedChords([...clicks, ..._loopStems.first]);
+    }
+  }
+
   void _tickPlayback() {
-    final t = _playClock.elapsedMilliseconds / 1000.0;
+    // Music time: the count-in runs before zero, so nothing highlights yet.
+    final t = _playClock.elapsedMilliseconds / 1000.0 - _countInSec;
     if (t >= _playEndSeconds) {
+      if (_loopActive) {
+        _restartLoop();
+        return;
+      }
       _stopPlayback();
       return;
     }
     final now = <String>{
-      for (final s in _playSchedule)
-        if (t >= s.start && t < s.end) s.id,
+      if (t >= 0)
+        for (final s in _playSchedule)
+          if (t >= s.start && t < s.end) s.id,
     };
     final changed =
         now.length != _soundingIds.length || !now.every(_soundingIds.contains);
     if (changed) setState(() => _soundingIds = now);
+  }
+
+  /// Next loop cycle: straight back to the music (the count-in is a lead-in for
+  /// the first pass only), replaying the cached count-in-free stems.
+  void _restartLoop() {
+    _countInSec = 0;
+    _playAudio(withCountIn: false);
+    _playClock
+      ..reset()
+      ..start();
   }
 
   /// Stop playback: silence the audio, drop the cursor. Safe to call when idle.
@@ -1320,6 +1434,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     _playTimer?.cancel();
     _playTimer = null;
     _playClock.stop();
+    _loopActive = false;
     _audio.stop();
     if (!mounted) {
       _soundingIds = const {};
@@ -2568,6 +2683,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       });
                     case 'tempo':
                       _showInitialTempoDialog();
+                    case 'countin':
+                      setState(() => _countIn = !_countIn);
+                    case 'loop':
+                      setState(() => _loopSelection = !_loopSelection);
                     case 'save':
                       _save();
                     case 'export':
@@ -2624,6 +2743,18 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     Icons.speed,
                     l10n.workshopInitialTempo,
                     true,
+                  ),
+                  // Playback options — a lead-in click, and looping the
+                  // selection to drill a hard bar.
+                  CheckedPopupMenuItem<String>(
+                    value: 'countin',
+                    checked: _countIn,
+                    child: Text(l10n.workshopCountIn),
+                  ),
+                  CheckedPopupMenuItem<String>(
+                    value: 'loop',
+                    checked: _loopSelection,
+                    child: Text(l10n.workshopLoopSelection),
                   ),
                   _menuItem(
                     'save',
