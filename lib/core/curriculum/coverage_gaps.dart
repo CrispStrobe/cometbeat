@@ -72,13 +72,15 @@ class CoverageReport {
       final us = untrained.where((c) => c.band == band).toList();
       if (us.isEmpty) continue;
       b.writeln(
-          '  ${band.label}: ${us.map((c) => '${c.title} [${c.area.name}]').join('; ')}',);
+        '  ${band.label}: ${us.map((c) => '${c.title} [${c.area.name}]').join('; ')}',
+      );
     }
     b
       ..writeln()
       ..writeln('THIN concepts (one game only):')
       ..writeln(
-          '  ${thin.map((c) => '${c.title} (${c.gameIds.single})').join('; ')}',)
+        '  ${thin.map((c) => '${c.title} (${c.gameIds.single})').join('; ')}',
+      )
       ..writeln()
       ..writeln('ORPHAN games (registered but in no concept): '
           '${orphanGames.length}')

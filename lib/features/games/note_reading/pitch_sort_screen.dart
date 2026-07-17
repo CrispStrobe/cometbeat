@@ -177,68 +177,71 @@ class _PitchSortScreenState extends State<PitchSortScreen> with QuizRoundMixin {
                         child: Column(
                           children: [
                             RoundHeader(
-                      correct: finished ? true : _lastDropOk,
-                      round: round + 1,
-                      totalRounds: totalRounds,
-                      prompt: l10n.pitchSortPrompt,
-                    ),
-                    const SizedBox(height: 16),
-                    // Card pool.
-                    SizedBox(
-                      height: 120,
-                      child: Center(
-                        child: Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 16,
-                          children: [
-                            for (var i = 0; i < _cards.length; i++)
-                              if (!_placed[i])
-                                Draggable<int>(
-                                  data: i,
-                                  feedback: _NoteCard(
-                                    score: _score(_cards[i]),
-                                    dragging: true,
-                                  ),
-                                  childWhenDragging: const SizedBox(
-                                    width: 84,
-                                    height: 104,
-                                  ),
-                                  onDraggableCanceled: (_, __) => _onMiss(i),
-                                  child: _NoteCard(score: _score(_cards[i])),
-                                ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        for (final high in PitchSortScreen._buckets)
-                          Expanded(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 6),
-                              child: DragTarget<int>(
-                                onWillAcceptWithDetails: (d) =>
-                                    _high[d.data] == high,
-                                onAcceptWithDetails: (d) =>
-                                    _onAccept(d.data, high),
-                                builder: (context, candidate, __) => _Bucket(
-                                  high: high,
-                                  label: high
-                                      ? l10n.pitchHighLabel
-                                      : l10n.pitchLowLabel,
-                                  hovering: candidate.isNotEmpty,
-                                  contents: _binned[high] ?? const [],
-                                  scoreOf: _score,
+                              correct: finished ? true : _lastDropOk,
+                              round: round + 1,
+                              totalRounds: totalRounds,
+                              prompt: l10n.pitchSortPrompt,
+                            ),
+                            const SizedBox(height: 16),
+                            // Card pool.
+                            SizedBox(
+                              height: 120,
+                              child: Center(
+                                child: Wrap(
+                                  alignment: WrapAlignment.center,
+                                  spacing: 16,
+                                  children: [
+                                    for (var i = 0; i < _cards.length; i++)
+                                      if (!_placed[i])
+                                        Draggable<int>(
+                                          data: i,
+                                          feedback: _NoteCard(
+                                            score: _score(_cards[i]),
+                                            dragging: true,
+                                          ),
+                                          childWhenDragging: const SizedBox(
+                                            width: 84,
+                                            height: 104,
+                                          ),
+                                          onDraggableCanceled: (_, __) =>
+                                              _onMiss(i),
+                                          child: _NoteCard(
+                                              score: _score(_cards[i])),
+                                        ),
+                                  ],
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
+                            const Spacer(),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                for (final high in PitchSortScreen._buckets)
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6),
+                                      child: DragTarget<int>(
+                                        onWillAcceptWithDetails: (d) =>
+                                            _high[d.data] == high,
+                                        onAcceptWithDetails: (d) =>
+                                            _onAccept(d.data, high),
+                                        builder: (context, candidate, __) =>
+                                            _Bucket(
+                                          high: high,
+                                          label: high
+                                              ? l10n.pitchHighLabel
+                                              : l10n.pitchLowLabel,
+                                          hovering: candidate.isNotEmpty,
+                                          contents: _binned[high] ?? const [],
+                                          scoreOf: _score,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
                             FeedbackLine(
                               correct: finished ? true : _lastDropOk,
                             ),
