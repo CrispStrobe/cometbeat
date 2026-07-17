@@ -455,8 +455,11 @@ Games built on crisp_notation capabilities the app didn't use before.
   Tracker → Score renders the selected channel as a live `StaffView` "score view"
   (held runs → tied notes, bar-split); Score → Tracker imports a melody back onto
   the grid (partial — quantize + top-note + pentatonic snap), round-trip tested.
-  Sandbox, no stars. (Mic capture is device-only; the DSP + assign→play path are
-  unit-tested headlessly.)
+  **Studio depth:** a per-channel instrument picker (additive + chiptune), a
+  **drums** channel (drum-row grid), **song mode** (4 pattern slots A–D + an
+  editable order-list + a song-length playhead), and **per-note dynamics**
+  (long-press → soft "ghost" notes). Sandbox, no stars. (Mic capture is
+  device-only; the DSP + assign→play path are unit-tested headlessly.)
 - **Loop Mixer — beatbox + jam along** (composition, ladder slice 10) — the
   mic closes the circle twice more. **Beatbox a beat:** count-in, 2 bars of
   "boom-ts-pss" into the mic, and it comes back as a teal drum card — onset

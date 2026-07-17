@@ -186,9 +186,29 @@ concatenates pattern snapshots into one long loop; the screen has **4 pattern
 slots (A–D)** (`exportCells`/`importCells` snapshots) + a **Play song** action
 chaining the non-empty slots.
 
-**🚧 Remaining stretch** (not started). Per-cell effect commands (arp/porta/
-vibrato), gapless swap, an editable order-list (vs. the current A→D auto-order), a
-song-length playhead, and loading a real `.mod`/`.xm` (substantial parsers).
+**✅ Song mode v2** (`6afdaf2`). An **editable order-list** (`_order` slot indices
++ an order strip: deletable chips + "add current slot") and a **song-length
+playhead** (`_playingOrder` highlights the sounding order entry; editing exits song
+mode).
+
+**✅ Per-note dynamics** (`9b53b3e`). A renderer-agnostic **volume column**:
+long-press a note → soft "ghost" note; `_stem` scales each note's sample range by
+`TrackerCell.volume` (all instruments honour it). Dynamics are relative within a
+channel (a lone note normalizes back — musically correct).
+
+**🚧 Genuinely-remaining (each its own effort, deliberately NOT rushed):**
+- **`.mod`/`.xm` import** — a large binary parser (31 sample headers + 64-row × 4-
+  channel patterns + embedded 8-bit PCM), and a poor fit for the 8-step Sandbox as-
+  is: it needs **variable-length patterns** (64 rows), **≥4 channels**, sample-slot
+  instruments, and file-picker plumbing first. The natural bridge is small though —
+  a `.mod` embeds PCM samples, which map straight onto `SampleInstrument`; a good
+  first step is "borrow an instrument sound from a classic `.mod`", not full
+  playback. Recommend a dedicated slice; don't bolt it on.
+- **Arp/porta/vibrato effect commands** — per-cell modulation over the rendered
+  channel (unlike the dynamics volume column, these need per-instrument render
+  changes). Studio-shelf depth.
+- **Gapless song swap** — dual-player crossfade at the loop boundary (audio polish;
+  hard to unit-test headlessly).
 
 ---
 

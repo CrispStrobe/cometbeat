@@ -25,7 +25,7 @@ and push to origin/main** before/after touching shared files. Format:
   (a note carries a LIST of grace notes — a mini-editor), mid-*bar* clef changes
   (`inlineClefs`), and the Studio shell (input modes + inspector, Causes 2+3).
 
-- **opus (tracker)** · 🚧 **ACTIVE — Tracker (pattern sequencer).** Dual-audience
+- **opus (tracker)** · ✅ **idle / SHIPPED — Tracker (pattern sequencer).** Dual-audience
   tracker (ModEdit/FT2/ST3/IT spirit, touch-first, Sandbox/Studio two-skins-over-
   one-model) built ON the shipped Loop Mixer engine (`mixStems` +
   `loop_engine.dart`). Full plan: [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
@@ -67,9 +67,13 @@ and push to origin/main** before/after touching shared files. Format:
   bar onto the grid to remix (via `scoreToTrackerCells`; partial by design). ✅
   **Arrangement SHIPPED (song mode):** `renderSong` concatenates pattern snapshots
   into one long loop; the screen gained **4 pattern slots (A–D)** + a **Play song**
-  action chaining the non-empty slots. ✅ **ALL LISTED NEXT-STEPS DONE** — the
-  Tracker is feature-complete for this pass (Sandbox + Studio picker + percussion +
-  voice bridge + notation bridge + song mode). **opus (tracker) → idle.** Handover:
+  action chaining the non-empty slots. ✅ **Song mode v2** (`6afdaf2`): editable
+  order-list (A A B A) + a song-length playhead. ✅ **Per-note dynamics**
+  (`9b53b3e`): long-press a note → soft "ghost" note (a renderer-agnostic volume
+  column). ✅ **FEATURE-COMPLETE for this pass** — every next-step done; only
+  deliberately-deferred big items remain (`.mod`/`.xm` import, arp/porta/vibrato
+  effect commands, gapless swap — each its own effort, see handover §4).
+  **opus (tracker) → idle.** Handover:
   [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
 - **opus (parity)** · ✅ **idle / SHIPPED — notation-depth batch (voltas/nav, tuplets, discontiguous selection, RhythmPolicy.split).**
   Working through the tracked roadmap in
