@@ -14,18 +14,28 @@ Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
 
-- **opus (aec-metrics)** · 🚧 **ACTIVE — AEC quality metrics + thorough tests**
-  (follow-up to the AEC CLI). Add patent-free SOTA metrics to
-  `lib/core/audio/aec_offline.dart` — **segmental ERLE**, **convergence time**,
-  **SI-SDR** (scale-invariant SDR, gain-invariant near-end fidelity; NOT
-  PESQ/POLQA which are licensed) — wire them into `bin/aec.dart --selftest`
-  (SI-SDR improvement as the double-talk metric), and a thorough test suite
-  (echo-only ERLE, double-talk SI-SDR, convergence bound, broadband delay
-  recovery, streaming≡batch w/ refDelay, far-end-silent passthrough, edge
-  cases). Worktree `../mus-aec-metrics`, branch `feature/aec-metrics`. Files:
-  `aec_offline.dart`, `bin/aec.dart`, `test/aec_offline_test.dart`,
-  `docs/AEC_TIER3B.md` (SOTA/licensing note). NOT touching app / Workshop /
-  native plugin.
+- **opus (aec-metrics)** · ✅ **idle / SHIPPED — AEC quality metrics + thorough
+  tests** (`1e0bc8c`). Patent-free metrics in `lib/core/audio/aec_offline.dart`:
+  **segmental ERLE**, **convergence time**, **SI-SDR** (scale-invariant SDR,
+  Le Roux 2019 — the gain-invariant double-talk fidelity metric), + an
+  `AecMetrics.measure/report` bundle. Explicitly NOT PESQ/POLQA (license/patent
+  encumbered); AECMOS is MIT but native-ORT-only (our pure-Dart
+  `onnx_runtime_dart` lacks conv/GRU ops). `bin/aec.dart --selftest` reports the
+  full set on the standard converge→double-talk scenario. **16 tests** (broadband
+  convergence + exact delay, small block size, no-NaN, far-end-silence exact
+  passthrough, SI-SDR identity/scale-invariance/monotonicity, streaming≡batch
+  w/ refDelay, flush padding, empty-input). Docs: patent-free rationale in
+  `AEC_TIER3B.md`. No app/Workshop/native-plugin touched.
+
+- **AEC algorithm roadmap (patent-free, unclaimed)** — the linear canceller has
+  no double-talk handling, so its double-talk SI-SDR gain is modest (~few dB; the
+  near-end corrupts adaptation). Two classic, expired-patent upgrades close it,
+  specced in `docs/AEC_TIER3B.md` § "Roadmap — safe algorithm upgrades":
+  (1) a **double-talk detector** (Geigel / normalized-cross-correlation) that
+  freezes adaptation during near-end speech; (2) basic **residual echo
+  suppression** (Wiener-style post-filter). Same patent-free family as SpeexDSP
+  MDF / WebRTC AEC3 (read for technique, don't vendor unless licence + tree stay
+  clean). Verify with the `bin/aec.dart` SI-SDR harness (the gain should jump).
 
 - **opus (aec-cli)** · ✅ **idle / SHIPPED — AEC streaming CLI** (`dafacb1` D1,
   `afbe4ea` D2). Test echo cancellation over files/pipes headlessly — the
