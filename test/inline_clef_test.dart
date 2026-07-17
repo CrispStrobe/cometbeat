@@ -7,10 +7,10 @@
 // at the anchored element's onset. The id moves with its note, so the change rides
 // re-barring for free.
 //
-// NB the crisp_notation MusicXML *writer* does not yet emit mid-measure clefs
-// (the reader does), so a MusicXML *file* save→reopen drops them — a tracked
-// library follow-up. The in-memory Score round-trip (buildScore ↔ loadScore) IS
-// exact, and that is what these assert.
+// Save → reopen is lossless: crisp_notation's MusicXML writer emits a mid-measure
+// `<attributes><clef>` at each `inlineClefs` onset (`3c1b8bd`) and the reader
+// parses it back, so both the in-memory Score round-trip AND the full MusicXML
+// file round-trip preserve mid-bar clefs.
 
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -113,6 +113,20 @@ void main() {
       reopened.buildScore().measures[0].inlineClefs,
       [InlineClefChange(_half, Clef.bass)],
       reason: 'the mid-bar clef survives buildScore → loadScore',
+    );
+  });
+
+  test('MusicXML file round-trip (save → reopen) is lossless', () {
+    final src = ScoreDocument();
+    final ids = fill(src, 4);
+    src.setInlineClefAt(ids[2], Clef.bass);
+
+    final parsed = scoreFromMusicXml(scoreToMusicXml(src.buildScore()));
+    final reopened = ScoreDocument()..loadScore(parsed);
+    expect(
+      reopened.buildScore().measures[0].inlineClefs,
+      [InlineClefChange(_half, Clef.bass)],
+      reason: 'the mid-bar clef survives export → import',
     );
   });
 

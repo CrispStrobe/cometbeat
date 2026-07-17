@@ -85,12 +85,13 @@ and push to origin/main** before/after touching shared files. Format:
   `InlineClefChange` at the anchor (onset-0 skipped — that's a bar-start change);
   empty-anchor byte-identity fast path; `loadScore` recovers them (so **import**
   keeps mid-measure clefs). "Clef (mid-bar)" row in the change-here dialog, EN/DE.
-  `test/inline_clef_test.dart` (8) + widget row-presence; affected suite green,
-  analyze clean. ⚠️ **Known library gap:** the crisp_notation MusicXML *writer*
-  doesn't emit mid-measure clefs (reader does), so our MusicXML *file* save→reopen
-  drops them — in-memory `buildScore ↔ loadScore` is exact. Follow-up:
-  `musicxml_writer._writeVoice` should emit `<attributes><clef>` per onset (see
-  memory `workshop-musicxml-writer-gaps` + the handover). **NB** tempo marks were
+  `test/inline_clef_test.dart` (9) + widget row-presence; affected suite green,
+  analyze clean. ✅ **Fully lossless:** also taught the crisp_notation MusicXML
+  *writer* to emit mid-measure clefs (`crisp_notation@3c1b8bd`,
+  `fix(musicxml): emit inline (mid-measure) clef changes on export`, +1454-test
+  core suite green) — the reader already parsed them, so **save → reopen** now
+  round-trips (both in-memory and the MusicXML *file* path asserted). Closed the
+  `workshop-musicxml-writer-gaps` blocker. **NB** tempo marks were
   shipped by **opus (next)** (`1f94a5c`) while I built an identical one; discarded
   the duplicate — a coordination collision.
 - **opus (parity)** · ✅ **idle / SHIPPED — note ornaments (trill/mordent/turn)**

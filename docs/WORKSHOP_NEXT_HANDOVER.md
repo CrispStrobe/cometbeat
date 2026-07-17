@@ -123,19 +123,16 @@ Ordered roughly easiest → hardest. Full context in `WORKSHOP_PARITY.md`
 
 ### Small notation follow-ups (the id-anchor / field pattern, low risk)
 
-- **Mid-*bar* clef changes** — ✅ **SHIPPED (display + import), with one library
-  follow-up** (`12404e1` model + `854ab25` UI). `_inlineClefs` id-anchor side-map
+- **Mid-*bar* clef changes** — ✅ **SHIPPED, fully lossless** (`12404e1` model +
+  `854ab25` UI; writer `crisp_notation@3c1b8bd`). `_inlineClefs` id-anchor side-map
   → `Measure.inlineClefs`; the `_withInlineClefs` stamp walks each reflowed bar
   accumulating the tuplet-scaled onset and emits an `InlineClefChange` at the
   anchor's onset (onset-0 anchors are a bar-start change, skipped). "Clef
-  (mid-bar)" row in the change-here dialog; `loadScore` recovers them (so
-  **importing** a score with mid-measure clefs keeps them);
-  `test/inline_clef_test.dart`. ⚠️ **The crisp_notation MusicXML *writer* does not
-  emit mid-measure clefs** (the reader parses them) — so our own MusicXML *file*
-  save→reopen drops them (in-memory `buildScore ↔ loadScore` is exact).
-  **Follow-up (library):** teach `musicxml_writer._writeVoice` to emit
-  `<attributes><clef>` at each `inlineClefs` onset — then flip the round-trip test
-  to go through MusicXML. See memory `workshop-musicxml-writer-gaps`.
+  (mid-bar)" row in the change-here dialog; `loadScore` recovers them.
+  `test/inline_clef_test.dart`. **The MusicXML writer now emits mid-measure clefs**
+  (it used to only write the bar-start clef; the reader already parsed them), so
+  **save → reopen is lossless** — both the in-memory and the MusicXML *file*
+  round-trip are asserted. This closed the `workshop-musicxml-writer-gaps` blocker.
 - **Voice 2** — `Measure.voice2` (crisp_notation engraves voices 1 **and** 2 only
   — stop there). The flat `_elements` gains a sibling `_voice2` list; `reflow`
   packs each independently onto the **shared** bar grid (they must agree on bar
