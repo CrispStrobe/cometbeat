@@ -29,6 +29,20 @@ and push to origin/main** before/after touching shared files. Format:
   and `parseAnyModule`'s unknown-format throw. 19 new cases across 4 new test
   files; whole-project analyze clean.
 
+- **opus (primer-coverage)** · 🚧 **ACTIVE — real per-concept primers for every
+  game** (learnability §1, multi-batch). Audit: 130 games, 29 had a per-game
+  primer, **101 fell back to their module primer**. `helpPrimerFor` already
+  guarantees *some* help (tutorial_gate_test asserts it), but a module intro often
+  never teaches the game's actual concept — `tie_slur` fell back to "here's the
+  staff". **Filter applied:** a game needs its own primer iff its drilled concept
+  is absent from its module intro (~21 new concepts covering ~35 games); the rest
+  are genuinely covered. Reuse-wiring: bass variants → `readingBassPrimer`,
+  `interval_ladder`/`connect_intervals` → `intervalsPrimer`. **Landing module by
+  module in small commits** (primers.dart + both ARBs + game_registry +
+  tutorial_test are hot — rebasing each batch). Worktree `../mus-primer-coverage`,
+  branch `feature/primer-coverage`. Batch 1: note_values (tempo / dynamics /
+  dotted / rests).
+
 - **opus (primers-mine)** · ✅ **idle / SHIPPED — per-game tutorial primers for 3
   games** (learnability §1). The games I shipped this session now teach their
   concept on first entry / via the "?": **spot_upbeat** → new `upbeatPrimer`
