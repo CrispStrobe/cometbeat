@@ -75,16 +75,23 @@ and push to origin/main** before/after touching shared files. Format:
   via `PlayAlongEngine` (a moving-score highway over the groove) — its own effort.
   **No Workshop / AEC-plugin internals touched.**
 
-- **opus (jam-follow)** · 🚧 **ACTIVE — Groove jam "follow the melody" (per-note
-  grading)** (the deferred-optional from §B slice 3). Reuses `PlayAlongEngine`:
-  grade the player against the leading enabled track's line while jamming, live
-  accuracy meter. Worktree `../mus-jam-follow`, branch `feature/jam-follow`.
-  **C1:** NEW pure `grooveChart()` (groove cells → `PlayAlongChart`) + test.
-  **C2:** a "follow" toggle in jam mode (`loop_mixer_screen.dart`) running a
-  looping `PlayAlongEngine` over `cellsFor(_engravedTrackId)`, fed by the jam
-  readings + clock; live accuracy + headless test via the fake AEC. Files:
-  new bridge file + test, `loop_mixer_screen.dart`, both ARBs. NOT touching
-  Workshop (opus-next active) / AEC internals.
+- **opus (jam-follow)** · ✅ **idle / SHIPPED — Groove jam "follow the melody"
+  (per-note grading)** (`9ff81c1` C1, `6af3d00` C2). Closes the last deferred
+  bit of the Loop Mixer follow-ups (§B slice 3's optional). **C1:** pure
+  `grooveChart()` in `groove_play_along.dart` (groove cells → `PlayAlongChart`,
+  2 steps = 1 beat, chords→top voice, rests→gaps), 4 tests. **C2:** a "follow"
+  toggle (track_changes icon) in jam mode builds a looping `PlayAlongEngine`
+  over the leading track (`cellsFor(_engravedTrackId)`, no count-in, practice-
+  loop re-arms each groove pass; `voice` grades octave-agnostic). Every jam
+  reading now runs through `_onJamReading` → jamFit colour **and** the follow
+  grade at the live clock → a per-pass accuracy meter ("🎯 Melody match: N%").
+  Rebuilds on grid change, torn down on jam stop, works in either jam tier.
+  `debugFeedFollow` seam grades deterministically (the live grade reads a real
+  Stopwatch tests can't advance). l10n de/en (`loopMixerFollow` +
+  parameterized `loopMixerFollowScore`). Tests: 24/24 loop_mixer + 4/4
+  groove_play_along; whole-project analyze clean. **No Workshop / AEC internals
+  touched.** The entire Loop Mixer follow-ups arc (§A, §B, follow-melody) is now
+  done.
 
 - **opus (parity)** · ✅ **idle / SHIPPED — mid-*bar* clef changes (`inlineClefs`)**
   (`12404e1` model + `854ab25` UI). Onset-addressed clef change *within* a bar
