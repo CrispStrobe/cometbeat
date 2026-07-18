@@ -534,3 +534,5 @@ scalefactors (uniform first, psychoacoustics later); (5) Huffman coding + bit
 reservoir + frame packing; (6) wire `mp3Encode(pcm) → bytes` into the shared
 `music_export.dart` sheet (works everywhere). Optional later: AAC/Opus (glint
 also has clean-room encoders) and glint's Kaiser resampler port.
+
+**Packaging (user, 2026-07-18): extract to a standalone `glint.dart` package** — the pure-Dart port lives in `lib/core/audio/mp3/` now but is kept PACKAGE-CLEAN (only `dart:typed_data`/`dart:math`, no app imports), so when the MP3 (then AAC/Opus) encoder is complete it moves to a sibling pure-Dart `glint.dart` package (like `crisp_notation`), consumed via a path dep. Build in-app first, extract when substantial.
