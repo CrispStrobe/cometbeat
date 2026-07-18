@@ -1590,7 +1590,8 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
       spb,
       pool: song.instruments,
     );
-    for (final reg in _panRegionsVariable(channels[c].pan, flatCells, rowStart)) {
+    for (final reg
+        in _panRegionsVariable(channels[c].pan, flatCells, rowStart)) {
       final theta = (reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
       final lGain = cos(theta);
       final rGain = sin(theta);

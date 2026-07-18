@@ -46,7 +46,7 @@ void main() {
         () {
       // Entry 0 at 120 BPM, entry 1 dropped to 60 BPM (rows twice as long).
       final s = TrackerSong(
-        timing: const TrackerTiming(rows: 8, tempoBpm: 120),
+        timing: const TrackerTiming(rows: 8), // song tempo 120 (the default)
         patternCount: 2,
       );
       s.selectPattern(0);
@@ -62,7 +62,7 @@ void main() {
       // A constant-120 reference (no Fxx): 16 rows × 125 ms = 2000 ms.
       const stepMs120 = 125;
       const stepMs60 = 250;
-      final expectedMs = 8 * stepMs120 + 8 * stepMs60; // 1000 + 2000 = 3000
+      const expectedMs = 8 * stepMs120 + 8 * stepMs60; // 1000 + 2000 = 3000
       expect(s.songTotalMs, greaterThan(16 * stepMs120)); // longer than uniform
       expect((s.songTotalMs - expectedMs).abs(), lessThan(20));
 
