@@ -1822,6 +1822,32 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
 - [x] **Melody doodle → hear it back** — **shipped** (`melody_doodle`,
   composition): draw a contour → it quantises to the same C-pentatonic grid as
   *Colour Melody* and plays back. The gesture twin of `grid_composer`.
+- [ ] **Drumkit mode — live play + record + auto-clean → tracks/score** (user
+  request 2026-07-18). A **playable drum kit** (tap pads — kick/snare/hats/toms/
+  cymbals; reuse the SFXR/`renderDrumPattern` drum voices + the Drums corner's
+  pad) that is fun to (a) **play live** and (b) **record**. A recorded take is a
+  timestamped hit stream (pad + ms), which is then **automatically CLEANED**
+  before it becomes editable data:
+  - **Quantize / cleanup parameters**, difficulty-scaled: a *Relevanzschwelle*
+    (relevance threshold) — the max deviation from the exact grid that still
+    snaps — plus the **grid resolution ceiling** (beginners snap to **1/4 or
+    1/8**; advanced allows 1/16+ and finer), a swing/groove-preserve toggle, and
+    a velocity/ghost threshold (drop hits below a level). Reuse the onset/timing
+    machinery already in `beat_capture.dart` (beatbox→drum rows, onset from the
+    brightest loud frame) and the Loop Mixer's eighth-step data-pattern grid.
+  - **Output routing (the point):** the cleaned pattern drops into
+    - the **Tracker** as drum rows — **both Beginner** (the pentatonic grid's
+      drum lane) **and Advanced** (`TrackerSong` percussion channels; the
+      per-cell model already exists), and
+    - a **Score** (the neutral **percussion staff** — the Drums corner already
+      reads/writes it), and/or a Loop Mixer beat row / GrooveSpec.
+  - **Scope note:** the capture+quantize core is Flutter-free and unit-testable
+    (synth a hit stream with jitter → assert it snaps to the intended grid at
+    each Relevanzschwelle); the pads + record UI is a screen; the routing reuses
+    existing tracker/score/groove writers. Big-ish (L) but decomposes cleanly:
+    (1) quantize core + tests, (2) kit + live play, (3) record + cleanup UI,
+    (4) the three output bridges. Coordinate with the tracker agents (drum
+    channels) before touching `tracker_song.dart`.
 
 ### F. Infrastructure / platform (not kid-facing games)
 - [x] **Web-safe OMR-tokens import bridge** — **shipped** (2026-07-15): the
