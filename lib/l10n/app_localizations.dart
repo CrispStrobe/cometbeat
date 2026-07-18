@@ -7664,6 +7664,72 @@ abstract class AppLocalizations {
   /// **'Tension (dominant)'**
   String get funcDominant;
 
+  /// No description provided for @funcTonicKid.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get funcTonicKid;
+
+  /// No description provided for @funcSubdominantKid.
+  ///
+  /// In en, this message translates to:
+  /// **'Away'**
+  String get funcSubdominantKid;
+
+  /// No description provided for @funcDominantKid.
+  ///
+  /// In en, this message translates to:
+  /// **'Tension'**
+  String get funcDominantKid;
+
+  /// No description provided for @analysisHarmonyHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Harmony'**
+  String get analysisHarmonyHeading;
+
+  /// No description provided for @cadenceAuthentic.
+  ///
+  /// In en, this message translates to:
+  /// **'perfect cadence'**
+  String get cadenceAuthentic;
+
+  /// No description provided for @cadenceHalf.
+  ///
+  /// In en, this message translates to:
+  /// **'half cadence'**
+  String get cadenceHalf;
+
+  /// No description provided for @cadencePlagal.
+  ///
+  /// In en, this message translates to:
+  /// **'plagal cadence'**
+  String get cadencePlagal;
+
+  /// No description provided for @cadenceDeceptive.
+  ///
+  /// In en, this message translates to:
+  /// **'deceptive cadence'**
+  String get cadenceDeceptive;
+
+  /// No description provided for @analysisDepthKids.
+  ///
+  /// In en, this message translates to:
+  /// **'Kids'**
+  String get analysisDepthKids;
+
+  /// No description provided for @analysisDepthLearner.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner'**
+  String get analysisDepthLearner;
+
+  /// No description provided for @analysisDepthExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get analysisDepthExpert;
+
   /// No description provided for @harmonyExampleAuthentic.
   ///
   /// In en, this message translates to:
@@ -7759,6 +7825,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Harmony & function'**
   String get analysisHubHarmony;
+
+  /// No description provided for @analysisHubComputed.
+  ///
+  /// In en, this message translates to:
+  /// **'Read from the notes (auto-analysis)'**
+  String get analysisHubComputed;
 
   /// No description provided for @formExampleTernary.
   ///

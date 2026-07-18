@@ -18,6 +18,7 @@
 
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/form_timeline.dart';
+import 'package:comet_beat/features/games/composition/score_analysis_view.dart';
 import 'package:comet_beat/features/games/widgets/playing_staff.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
@@ -716,6 +717,10 @@ class AnalysisHubScreen extends StatelessWidget {
           header(l10n.analysisHubHarmony),
           for (final list in kHarmonyExamples.values)
             for (final e in list) HarmonyAnalysisView(example: e),
+          // Computed by the analysis engine straight from the notes.
+          header(l10n.analysisHubComputed),
+          for (final (title, score) in kAnalysisExamples)
+            ScoreAnalysisView(title: title, score: score),
           const SizedBox(height: 16),
         ],
       ),

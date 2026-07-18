@@ -4193,6 +4193,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get funcDominant => 'Tension (dominant)';
 
   @override
+  String get funcTonicKid => 'Home';
+
+  @override
+  String get funcSubdominantKid => 'Away';
+
+  @override
+  String get funcDominantKid => 'Tension';
+
+  @override
+  String get analysisHarmonyHeading => 'Harmony';
+
+  @override
+  String get cadenceAuthentic => 'perfect cadence';
+
+  @override
+  String get cadenceHalf => 'half cadence';
+
+  @override
+  String get cadencePlagal => 'plagal cadence';
+
+  @override
+  String get cadenceDeceptive => 'deceptive cadence';
+
+  @override
+  String get analysisDepthKids => 'Kids';
+
+  @override
+  String get analysisDepthLearner => 'Learner';
+
+  @override
+  String get analysisDepthExpert => 'Expert';
+
+  @override
   String get harmonyExampleAuthentic =>
       'Home → away → tension → home (I–IV–V–I)';
 
@@ -4245,6 +4278,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get analysisHubHarmony => 'Harmony & function';
+
+  @override
+  String get analysisHubComputed => 'Read from the notes (auto-analysis)';
 
   @override
   String get formExampleTernary => 'Ternary form (A–B–A)';
