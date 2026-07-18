@@ -9,7 +9,7 @@ import 'dart:math';
 
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_replay.dart'
-    show kFxSetVolume, kFxVolumeSlide;
+    show kFxSetVolume, kFxVolumeSlide, kDefaultTicksPerRow;
 import 'package:comet_beat/core/audio/tracker_replayer.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -436,6 +436,52 @@ void main() {
       song.engine.setCell(0, 0, ex(kExNoteDelay, 3, midi: 60));
       final peak = replaySong(song).pcm.fold<int>(0, (m, v) => max(m, v.abs()));
       expect(peak, greaterThan(1000));
+    });
+  });
+
+  group('Fxx set-speed', () {
+    TrackerSong speedSong(int? fParam) {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      // A vibrato note so the effect granularity (ticks/row) is audible.
+      song.engine.setCell(0, 0, fx(kFxVibrato, 0x88, midi: 60));
+      for (var r = 1; r < 8; r++) {
+        song.engine.setCell(0, r, fx(kFxVibrato, 0x00));
+      }
+      if (fParam != null) {
+        // Put the Fxx on a fresh channel/row 0 so it is seen first in play order.
+        song.engine.setCell(1, 0, fx(kFxSetSpeed, fParam));
+      }
+      song.syncCurrent(); // persist live edits into the pattern snapshot
+      return song;
+    }
+
+    test('songInitialSpeed reads the first Fxx speed, ignores tempo/none', () {
+      expect(songInitialSpeed(speedSong(0x03)), 3);
+      expect(songInitialSpeed(speedSong(0x0C)), 12);
+      // A tempo Fxx (>= 0x20) is not a speed → fall back to the default.
+      expect(songInitialSpeed(speedSong(0x7D)), kDefaultTicksPerRow);
+      // No Fxx → fallback.
+      expect(songInitialSpeed(speedSong(null)), kDefaultTicksPerRow);
+      // Explicit fallback is honoured.
+      expect(songInitialSpeed(speedSong(null), fallback: 4), 4);
+    });
+
+    test('the speed changes the render (finer granularity ≠ default)', () {
+      final fast = replaySong(speedSong(0x03)).pcm; // 3 ticks/row
+      final slow = replaySong(speedSong(0x0C)).pcm; // 12 ticks/row
+      expect(fast.length, slow.length); // speed never changes duration
+      var diff = false;
+      for (var i = 0; i < fast.length; i++) {
+        if (fast[i] != slow[i]) {
+          diff = true;
+          break;
+        }
+      }
+      expect(
+        diff,
+        isTrue,
+        reason: 'ticks/row should affect the vibrato render',
+      );
     });
   });
 }

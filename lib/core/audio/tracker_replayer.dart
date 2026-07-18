@@ -24,9 +24,11 @@
 // (orderIndex, patternIndex, row) so the playhead can follow the non-linear
 // sequence. Implemented too: Exy extended — E1x/E2x fine porta, E9x retrigger,
 // EAx/EBx fine volume, ECx note cut, EDx note delay (per-tick, in ReplayVoice) +
-// E6x pattern loop (a row-level flow, in walkFlow). Still TODO: Fxx
-// set-speed/tempo (makes row DURATION non-uniform — needs per-row timing, not
-// just reordering), 9xx sample-offset.
+// E6x pattern loop (a row-level flow, in walkFlow). Fxx SET-SPEED too: the first
+// Fxx (param <0x20) in play order sets the replayer's ticks/row (effect
+// granularity) via [songInitialSpeed] — timing-safe, since speed subdivides the
+// row without changing its duration. Still TODO: Fxx set-TEMPO + mid-song
+// speed/tempo changes (need per-row row-duration timing), 9xx sample-offset.
 //
 // Mixing (see Trap A in docs/TRACKER_REPLAYER_HANDOVER.md): the replayer sums
 // voices at a FIXED-normalized amplitude (each additive voice divided by its
@@ -65,6 +67,7 @@ const int kFxVibratoVolSlide = 0x6; // 6xy = 4xy (continue) + Axy
 const int kFxTremolo = 0x7; // 7xy
 const int kFxPositionJump = 0xB; // Bxx — continue at order xx, row 0
 const int kFxPatternBreak = 0xD; // Dxx — next order entry, row = decimal(xx)
+const int kFxSetSpeed = 0xF; // Fxx — <0x20 set speed (ticks/row); ≥0x20 tempo
 const int kFxExtended =
     0xE; // Exy — sub-command in the high nibble of the param
 
@@ -557,9 +560,11 @@ ReplayResult replayPattern(
   TrackerTiming timing, {
   int ticksPerRow = kDefaultTicksPerRow,
 }) {
+  final speed = _firstSpeedInColumns(cells, timing.rows);
+  final ticks = speed > 0 ? speed : ticksPerRow;
   final mix = Float64List(timing.totalSamples);
   for (var c = 0; c < channels.length && c < cells.length; c++) {
-    _renderChannelInto(mix, channels[c], cells[c], timing, ticksPerRow, 0);
+    _renderChannelInto(mix, channels[c], cells[c], timing, ticks, 0);
   }
   return ReplayResult(_mixToPcm(mix), const [RowTiming(0, 0, 0, 0)]);
 }
@@ -666,6 +671,37 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
   return played;
 }
 
+/// The first `Fxx` set-SPEED value (`0 < param < 0x20`, ticks/row) in [columns]
+/// scanned row-major, or -1 if none. Tempo `Fxx` (param ≥ 0x20) is ignored here.
+int _firstSpeedInColumns(List<List<TrackerCell>> columns, int rows) {
+  for (var r = 0; r < rows; r++) {
+    for (final col in columns) {
+      if (r < col.length) {
+        final c = col[r];
+        if (c.fxCmd == kFxSetSpeed && c.fxParam > 0 && c.fxParam < 0x20) {
+          return c.fxParam;
+        }
+      }
+    }
+  }
+  return -1;
+}
+
+/// The speed ([TrackerTiming]-independent ticks/row) a song should replay at: the
+/// first `Fxx` set-speed command in play order, else [fallback]. Applied by
+/// [replaySong] so an imported/authored module's authored speed sets the effect
+/// granularity. (Speed subdivides the row — it does NOT change row duration in
+/// our musical-timing model, so it never affects the song length. Fxx TEMPO is a
+/// separate follow-up.)
+int songInitialSpeed(TrackerSong song, {int fallback = kDefaultTicksPerRow}) {
+  for (final oi in song.order) {
+    if (oi < 0 || oi >= song.patterns.length) continue;
+    final s = _firstSpeedInColumns(song.patterns[oi].cells, song.timing.rows);
+    if (s > 0) return s;
+  }
+  return fallback;
+}
+
 /// Replays the whole [song] (its order list) into one mixed PCM16 + a row-timing
 /// map. Command-free / flow-free songs render one [TrackerTiming.totalMs] per
 /// order entry (uniform); when the song [songUsesFlow] the order is expanded by
@@ -677,7 +713,10 @@ ReplayResult replaySong(
   int ticksPerRow = kDefaultTicksPerRow,
 }) {
   song.syncCurrent();
-  if (songUsesFlow(song)) return _replayFlow(song, ticksPerRow);
+  // An Fxx set-speed command overrides the default ticks/row (effect
+  // granularity); timing-safe (speed subdivides the row, not its duration).
+  final ticks = songInitialSpeed(song, fallback: ticksPerRow);
+  if (songUsesFlow(song)) return _replayFlow(song, ticks);
 
   final timing = song.timing;
   final channels = song.channels;
@@ -702,7 +741,7 @@ ReplayResult replaySong(
         channels[c],
         cells[c],
         timing,
-        ticksPerRow,
+        ticks,
         sampleOffset,
       );
     }
