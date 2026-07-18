@@ -485,6 +485,38 @@ void main() {
     });
   });
 
+  group('Fxx set-tempo', () {
+    TrackerSong tempoSong(int? fParam) {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      if (fParam != null) song.engine.setCell(1, 0, fx(kFxSetSpeed, fParam));
+      song.syncCurrent();
+      return song;
+    }
+
+    test('songInitialTempo reads the first Fxx tempo (≥0x20), else null', () {
+      expect(songInitialTempo(tempoSong(0x7D)), 125); // 0x7D = 125 BPM
+      expect(songInitialTempo(tempoSong(0x03)), isNull); // that is a speed
+      expect(songInitialTempo(tempoSong(null)), isNull);
+    });
+
+    test('replaySong + songTotalMs render uniformly at the Fxx tempo', () {
+      const at120 = TrackerTiming(rows: 8); // default tempo is 120
+      const at80 = TrackerTiming(rows: 8, tempoBpm: 80);
+      final base = tempoSong(null); // 120 BPM (no Fxx)
+      final slow = tempoSong(0x50); // 0x50 = 80 BPM → longer
+
+      expect(base.songTotalMs, at120.totalMs);
+      expect(slow.songTotalMs, at80.totalMs); // Fxx tempo applied
+
+      final pcm = replaySong(slow).pcm;
+      expect(pcm.length, at80.totalSamples); // render length matches
+      expect(replaySong(base).pcm.length, at120.totalSamples);
+      expect(pcm.length, isNot(at120.totalSamples)); // tempo really changed it
+      expect(pcm.fold<int>(0, (m, v) => max(m, v.abs())), greaterThan(1000));
+    });
+  });
+
   group('playhead map (resolveTimingMap / rowIndexAtMs)', () {
     test('resolveTimingMap matches replaySong().timing (uniform + flow)', () {
       // Uniform (no flow).

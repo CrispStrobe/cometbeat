@@ -24,11 +24,12 @@
 // (orderIndex, patternIndex, row) so the playhead can follow the non-linear
 // sequence. Implemented too: Exy extended — E1x/E2x fine porta, E9x retrigger,
 // EAx/EBx fine volume, ECx note cut, EDx note delay (per-tick, in ReplayVoice) +
-// E6x pattern loop (a row-level flow, in walkFlow). Fxx SET-SPEED too: the first
-// Fxx (param <0x20) in play order sets the replayer's ticks/row (effect
-// granularity) via [songInitialSpeed] — timing-safe, since speed subdivides the
-// row without changing its duration. Still TODO: Fxx set-TEMPO + mid-song
-// speed/tempo changes (need per-row row-duration timing), 9xx sample-offset.
+// E6x pattern loop (a row-level flow, in walkFlow). Fxx SET-SPEED (first Fxx
+// param <0x20 → ticks/row, [songInitialSpeed]) AND SET-TEMPO (first Fxx param
+// ≥0x20 → BPM, [songInitialTempo]/[effectiveTiming]) too: both are applied
+// UNIFORMLY to the whole render (the value a module sets at the top), so timing
+// stays uniform and songTotalMs matches. Still TODO: MID-SONG speed/tempo
+// CHANGES (need per-row row-duration timing), 9xx sample-offset.
 //
 // Mixing (see Trap A in docs/TRACKER_REPLAYER_HANDOVER.md): the replayer sums
 // voices at a FIXED-normalized amplitude (each additive voice divided by its
@@ -560,7 +561,7 @@ ReplayResult replayPattern(
   TrackerTiming timing, {
   int ticksPerRow = kDefaultTicksPerRow,
 }) {
-  final speed = _firstSpeedInColumns(cells, timing.rows);
+  final speed = _firstFxx(cells, timing.rows, wantTempo: false);
   final ticks = speed > 0 ? speed : ticksPerRow;
   final mix = Float64List(timing.totalSamples);
   for (var c = 0; c < channels.length && c < cells.length; c++) {
@@ -671,15 +672,22 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
   return played;
 }
 
-/// The first `Fxx` set-SPEED value (`0 < param < 0x20`, ticks/row) in [columns]
-/// scanned row-major, or -1 if none. Tempo `Fxx` (param ≥ 0x20) is ignored here.
-int _firstSpeedInColumns(List<List<TrackerCell>> columns, int rows) {
+/// The first `Fxx` value in [columns] (scanned row-major) of the requested kind:
+/// [wantTempo] false → a SET-SPEED (`0 < param < 0x20`, ticks/row); [wantTempo]
+/// true → a SET-TEMPO (param ≥ 0x20, BPM). Returns -1 if none of that kind.
+int _firstFxx(
+  List<List<TrackerCell>> columns,
+  int rows, {
+  required bool wantTempo,
+}) {
   for (var r = 0; r < rows; r++) {
     for (final col in columns) {
       if (r < col.length) {
         final c = col[r];
-        if (c.fxCmd == kFxSetSpeed && c.fxParam > 0 && c.fxParam < 0x20) {
-          return c.fxParam;
+        if (c.fxCmd == kFxSetSpeed) {
+          final isTempo = c.fxParam >= 0x20;
+          if (wantTempo && isTempo) return c.fxParam;
+          if (!wantTempo && c.fxParam > 0 && !isTempo) return c.fxParam;
         }
       }
     }
@@ -691,15 +699,38 @@ int _firstSpeedInColumns(List<List<TrackerCell>> columns, int rows) {
 /// first `Fxx` set-speed command in play order, else [fallback]. Applied by
 /// [replaySong] so an imported/authored module's authored speed sets the effect
 /// granularity. (Speed subdivides the row — it does NOT change row duration in
-/// our musical-timing model, so it never affects the song length. Fxx TEMPO is a
-/// separate follow-up.)
+/// our musical-timing model, so it never affects the song length.)
 int songInitialSpeed(TrackerSong song, {int fallback = kDefaultTicksPerRow}) {
   for (final oi in song.order) {
     if (oi < 0 || oi >= song.patterns.length) continue;
-    final s = _firstSpeedInColumns(song.patterns[oi].cells, song.timing.rows);
+    final s =
+        _firstFxx(song.patterns[oi].cells, song.timing.rows, wantTempo: false);
     if (s > 0) return s;
   }
   return fallback;
+}
+
+/// The tempo (BPM) a song should replay at: the first `Fxx` set-tempo command
+/// (param ≥ 0x20) in play order, else `null` (use the song's own tempo). This is
+/// applied uniformly to the whole render (like the initial tempo a module sets at
+/// the top) — mid-song tempo CHANGES need the per-row-duration rework and are a
+/// follow-up. Because it's uniform, [TrackerSong.songTotalMs] applies the same
+/// value so the render length stays consistent.
+int? songInitialTempo(TrackerSong song) {
+  for (final oi in song.order) {
+    if (oi < 0 || oi >= song.patterns.length) continue;
+    final t =
+        _firstFxx(song.patterns[oi].cells, song.timing.rows, wantTempo: true);
+    if (t > 0) return t.clamp(32, 255);
+  }
+  return null;
+}
+
+/// [song.timing] with the initial `Fxx` set-tempo applied (if any) — the tempo
+/// the render and [TrackerSong.songTotalMs] both use.
+TrackerTiming effectiveTiming(TrackerSong song) {
+  final t = songInitialTempo(song);
+  return t != null ? song.timing.copyWith(tempoBpm: t) : song.timing;
 }
 
 /// The row-timing map WITHOUT rendering any audio — the same
@@ -710,7 +741,7 @@ int songInitialSpeed(TrackerSong song, {int fallback = kDefaultTicksPerRow}) {
 /// highlight follows Bxx/Dxx/E6x jumps instead of assuming fixed pattern lengths.
 List<RowTiming> resolveTimingMap(TrackerSong song) {
   song.syncCurrent();
-  final timing = song.timing;
+  final timing = effectiveTiming(song); // match the render's Fxx set-tempo
   if (songUsesFlow(song)) {
     final played = walkFlow(song);
     final flatTiming =
@@ -775,7 +806,8 @@ ReplayResult replaySong(
   final ticks = songInitialSpeed(song, fallback: ticksPerRow);
   if (songUsesFlow(song)) return _replayFlow(song, ticks);
 
-  final timing = song.timing;
+  // An Fxx set-tempo command sets the (uniform) render tempo.
+  final timing = effectiveTiming(song);
   final channels = song.channels;
   final order = song.order;
   final patternSamples = timing.totalSamples;
@@ -814,7 +846,7 @@ ReplayResult replaySong(
 ReplayResult _replayFlow(TrackerSong song, int ticksPerRow) {
   final played = walkFlow(song);
   final channels = song.channels;
-  final base = song.timing;
+  final base = effectiveTiming(song); // Fxx set-tempo (uniform)
   final flatRows = played.isEmpty ? 1 : played.length;
   final flatTiming = base.copyWith(rows: flatRows);
   final mix = Float64List(flatTiming.totalSamples);
