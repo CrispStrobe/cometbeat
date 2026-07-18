@@ -606,6 +606,12 @@ Games built on crisp_notation capabilities the app didn't use before.
   MIDI/module + saves to the Song Book) and `toDrumPattern` (→ a Loop Mixer
   `DrumRowsPattern`), re-placing each hit by its grid-independent musical
   position; 7 tests. So a recorded rhythm reaches every notation/export path.
+  **DrumKit tap-to-record**: a Record button captures pad taps at their loop
+  position and, on stop, quantises the take onto the step grid (overdub) via
+  `quantizeToResolution(eighth)` → `toDrumPattern` — play a beat in and it lands
+  as clean eighths, stray double-taps collapsing. Added the fixed-grid
+  `quantizeToResolution` (a step machine wants its set grid, not the coarsest
+  feel). Device-free + `debugRecordTaps` seam; +3 tests.
 - **Loop Mixer — beatbox + jam along** (composition, ladder slice 10) — the
   mic closes the circle twice more. **Beatbox a beat:** count-in, 2 bars of
   "boom-ts-pss" into the mic, and it comes back as a teal drum card — onset
