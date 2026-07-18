@@ -14,7 +14,24 @@ brew install libopenmpt        # provides openmpt123 (+ the lib)
 openmpt123 --version           # confirm
 ```
 
-## The A/B workflow
+## One-command A/B: `bin/oracle_ab.dart`
+
+The whole compare is wrapped in a reusable harness that renders BOTH sides, runs
+our pitch detector over each, and prints an agreement verdict:
+
+```
+dart run bin/oracle_ab.dart <module.s3m>   # A/B a real module
+dart run bin/oracle_ab.dart --selftest     # synthesize a scale module + A/B it
+```
+
+It reports, per side, the detected note trajectory, the pitch-class overlap
+(Jaccard), the voiced-frame fraction, and whether the pitch rises — then a
+`PASS`/`CHECK` verdict (agreement, NOT bit-exactness — we're a musical
+approximation). `--selftest` builds a rising-scale S3M on a looping sine and
+A/Bs it; it currently reads `PASS` (ours vs ref: pc-overlap 0.75, voiced
+fractions ~0.91 both, glide-direction match). Needs `openmpt123` on PATH.
+
+## The manual A/B workflow
 
 ```
 OUT=/tmp/oracle
