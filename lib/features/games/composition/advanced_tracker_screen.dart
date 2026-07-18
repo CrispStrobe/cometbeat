@@ -218,6 +218,11 @@ abstract interface class AdvancedTrackerTester {
   void orderMove(int delta);
   void orderInsert();
 
+  /// In-grid volume-column editing (the FT2 field cursor).
+  void cycleField();
+  void typeVolume(String hexChar);
+  double? volumeAt(int channel, int row);
+
   /// Block editing (copy/cut/paste/paste-mix/transpose over a marked rectangle).
   bool get hasSelection;
   void selectTrack();
@@ -307,6 +312,15 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// The selected position in the order list (for reorder/insert/delete).
   int _orderCursor = 0;
 
+  /// Metronome: click on beat crossings during playback.
+  bool _metronome = false;
+  int _lastTickStep = -1;
+
+  /// Two-digit hex volume entry (FT2's 00–40 volume column): the accumulator and
+  /// how many digits have been typed in the current cell (resets on a move).
+  int _volAccum = 0;
+  int _volDigits = 0;
+
   /// Pending state for note-name entry ("F" then "2"): the note's semitone and
   /// whether a sharp was typed, awaiting the octave digit. Null = nothing armed.
   int? _pendingSemi;
@@ -360,7 +374,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         _playingOrder.value = pos ~/ t.totalMs;
         posInPattern = pos % t.totalMs;
         final step = posInPattern ~/ t.stepMs;
-        if (step != _row.value) _row.value = step;
+        if (step != _row.value) {
+          _row.value = step;
+          _maybeTick(step);
+        }
       } else {
         if (_playingOrder.value != -1) _playingOrder.value = -1;
         posInPattern = _elapsedMs % t.totalMs;
@@ -368,6 +385,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         if (step != _row.value) {
           _row.value = step;
           _followPlayhead(step);
+          _maybeTick(step);
         }
       }
       _updateLevels(posInPattern);
@@ -707,6 +725,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// Move the cursor and drop any selection (a plain move / click).
   void _moveCursorClearing(int channel, int row) {
+    _resetVolEntry();
     setState(() {
       _cursorChannel = channel.clamp(0, _song.channelCount - 1);
       _cursorRow = row.clamp(0, _song.rows - 1);
@@ -719,6 +738,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// Extend the selection to (channel,row): arm the anchor at the current cursor
   /// if none, then move the cursor to the new corner.
   void _extendTo(int channel, int row) {
+    _resetVolEntry();
     setState(() {
       _anchorChannel ??= _cursorChannel;
       _anchorRow ??= _cursorRow;
@@ -831,8 +851,28 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   // --- Keyboard ---
 
-  /// Field-cursor editing: Tab cycles note→volume→effect; a hex digit in the
-  /// volume field sets the cursor note's volume (16 levels, FT2's volume column).
+  void _resetVolEntry() {
+    _volAccum = 0;
+    _volDigits = 0;
+  }
+
+  /// Feeds one hex digit into the FT2 volume column (high nibble then low →
+  /// value 00–40 = 0–64). No-op on a cell without a note.
+  void _enterVolumeHex(int hex) {
+    if (_song.engine.cellAt(_cursorChannel, _cursorRow).midi == null) return;
+    _pushUndo();
+    _volAccum = (_volDigits == 0 ? hex : (_volAccum * 16 + hex)).clamp(0, 64);
+    _volDigits = (_volDigits + 1) % 2;
+    final v = _volAccum / 64.0;
+    setState(
+      () => _song.engine
+          .setCellVolume(_cursorChannel, _cursorRow, v >= 0.999 ? null : v),
+    );
+    _syncPlayback();
+  }
+
+  /// Field-cursor editing: Tab cycles note→volume→effect; two hex digits in the
+  /// volume field set the cursor note's volume (FT2's 00–40 volume column).
   /// Returns non-null when the key was part of field editing.
   KeyEventResult? _handleFieldKey(KeyEvent event, LogicalKeyboardKey key) {
     if (key == LogicalKeyboardKey.tab) {
@@ -841,24 +881,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           ? (_field.index - 1 + vals.length) % vals.length
           : (_field.index + 1) % vals.length;
       setState(() => _field = vals[next]);
+      _resetVolEntry();
       return KeyEventResult.handled;
     }
     if (_field == _CellField.volume) {
       final hex = _hexOf(event.character);
       if (hex != null) {
-        final cell = _song.engine.cellAt(_cursorChannel, _cursorRow);
-        if (cell.midi != null) {
-          _pushUndo();
-          final v = hex / 15.0;
-          setState(
-            () => _song.engine.setCellVolume(
-              _cursorChannel,
-              _cursorRow,
-              v >= 0.999 ? null : v,
-            ),
-          );
-          _syncPlayback();
-        }
+        _enterVolumeHex(hex);
         return KeyEventResult.handled;
       }
       // Swallow other printable keys so they don't become notes in this field.
@@ -1198,6 +1227,16 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// Reads each channel's RMS at the current in-pattern position for the VU
   /// meters (a ~1/30 s window). Cheap — the stems are already cached.
+  /// Clicks the metronome on beat crossings (once per beat step).
+  void _maybeTick(int step) {
+    if (!_metronome) return;
+    final spb = _song.timing.stepsPerBeat;
+    if (step % spb != 0 || step == _lastTickStep) return;
+    _lastTickStep = step;
+    final audio = context.read<AudioService>();
+    if (audio.soundOn) audio.playTick(accent: step == 0);
+  }
+
   void _updateLevels(int posInPatternMs) {
     final startSample = (posInPatternMs * 44100) ~/ 1000;
     const window = 1470; // ~33 ms at 44.1 kHz
@@ -1387,6 +1426,20 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void orderMove(int delta) => _orderMove(delta);
   @override
   void orderInsert() => _orderInsert();
+  @override
+  void cycleField() => setState(
+        () => _field =
+            _CellField.values[(_field.index + 1) % _CellField.values.length],
+      );
+  @override
+  void typeVolume(String hexChar) {
+    final hex = _hexOf(hexChar);
+    if (hex != null) _enterVolumeHex(hex);
+  }
+
+  @override
+  double? volumeAt(int channel, int row) =>
+      _song.engine.cellAt(channel, row).volume;
 
   static const _voiceIcons = <VoiceEffect, IconData>{
     VoiceEffect.normal: Icons.person,
@@ -2261,6 +2314,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               color: _loopOn ? scheme.primary : null,
               onPressed: () => setState(() => _loopOn = !_loopOn),
             ),
+            IconButton(
+              icon: Icon(
+                _metronome ? Icons.av_timer : Icons.av_timer_outlined,
+              ),
+              tooltip: l10n.trackerMetronome,
+              color: _metronome ? scheme.primary : null,
+              onPressed: () => setState(() => _metronome = !_metronome),
+            ),
             const SizedBox(width: 16),
             AnimatedBuilder(
               animation: Listenable.merge([_row, _playingOrder]),
@@ -2723,7 +2784,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     // note + volume + effect sub-columns (classic tracker cell).
     final note = hasNote ? trackerNoteName(cell.midi!) : '···';
     final vol = hasNote && cell.volume != null && cell.volume != 1.0
-        ? (cell.volume! * 99).round().toString().padLeft(2, '0')
+        ? (cell.volume! * 64)
+            .round()
+            .toRadixString(16)
+            .toUpperCase()
+            .padLeft(2, '0')
         : '··';
     // Effect column: the classic hex command (e.g. C20/A04) when present, else
     // the legacy arp/vibrato/slide letter, else a dot.

@@ -382,6 +382,25 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('volume field: two hex digits set the note volume (FT2 00-40)',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.setNote(0, 0, 60);
+    game.moveCursor(0, 0);
+    await tester.pump();
+
+    game.cycleField(); // note -> volume
+    await tester.pump();
+    // "2" then "0" = 0x20 = 32/64 = half volume.
+    game.typeVolume('2');
+    game.typeVolume('0');
+    await tester.pump();
+    final v = game.volumeAt(0, 0);
+    expect(v, isNotNull);
+    expect(v!, closeTo(0.5, 0.02));
+  });
+
   testWidgets('order list can be reordered and extended', (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());
     final game = _game(tester);

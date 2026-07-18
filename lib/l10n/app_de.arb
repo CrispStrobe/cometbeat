@@ -470,6 +470,7 @@
   "trackerInterpolate": "Lautstärken interpolieren",
   "trackerField": "Spalte (Note / Lautst. / FX)",
   "trackerPlayFromCursor": "Ab Cursor abspielen",
+  "trackerMetronome": "Metronom",
   "trackerOrderMoveLeft": "Platz nach links",
   "trackerOrderMoveRight": "Platz nach rechts",
   "trackerOrderInsert": "Kopie einfügen",

@@ -1402,6 +1402,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerPlayFromCursor => 'Ab Cursor abspielen';
 
   @override
+  String get trackerMetronome => 'Metronom';
+
+  @override
   String get trackerOrderMoveLeft => 'Platz nach links';
 
   @override

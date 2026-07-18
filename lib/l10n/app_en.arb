@@ -501,6 +501,7 @@
   "trackerInterpolate": "Interpolate volumes",
   "trackerField": "Column (note / vol / fx)",
   "trackerPlayFromCursor": "Play from cursor",
+  "trackerMetronome": "Metronome",
   "trackerOrderMoveLeft": "Move slot left",
   "trackerOrderMoveRight": "Move slot right",
   "trackerOrderInsert": "Insert a copy",

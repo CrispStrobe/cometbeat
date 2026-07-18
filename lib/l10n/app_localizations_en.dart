@@ -1395,6 +1395,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerPlayFromCursor => 'Play from cursor';
 
   @override
+  String get trackerMetronome => 'Metronome';
+
+  @override
   String get trackerOrderMoveLeft => 'Move slot left';
 
   @override

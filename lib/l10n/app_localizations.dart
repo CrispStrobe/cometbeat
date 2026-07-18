@@ -2708,6 +2708,12 @@ abstract class AppLocalizations {
   /// **'Play from cursor'**
   String get trackerPlayFromCursor;
 
+  /// No description provided for @trackerMetronome.
+  ///
+  /// In en, this message translates to:
+  /// **'Metronome'**
+  String get trackerMetronome;
+
   /// No description provided for @trackerOrderMoveLeft.
   ///
   /// In en, this message translates to:
