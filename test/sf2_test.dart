@@ -66,6 +66,34 @@ void main() {
         throwsFormatException,
       );
     });
+
+    test('reads chPitchCorrection and bakes it into the resample', () {
+      final pcm = sineI16(880, 20);
+      Sf2SoundFont build(int corr) => Sf2SoundFont.parse(
+            oneSampleSf2(
+              pcm: pcm,
+              sampleRate: 44100,
+              rootKey: 60,
+              loopStart: 0,
+              loopEnd: 0,
+              pitchCorrection: corr,
+            ),
+          );
+
+      // The signed correction is parsed off shdr byte 41.
+      expect(build(0).samples.single.pitchCorrection, 0);
+      expect(build(30).samples.single.pitchCorrection, 30);
+      expect(build(-30).samples.single.pitchCorrection, -30);
+
+      // A non-zero correction stretches the sample (baked tuning) → the built
+      // instrument's buffer differs in length from the uncorrected one; zero
+      // correction at the engine rate leaves it exactly the sample length.
+      final none = sampleInstrumentFromSf2(build(0).samples.single, id: 'a');
+      final corrected =
+          sampleInstrumentFromSf2(build(50).samples.single, id: 'b');
+      expect(none.sample.length, pcm.length); // 44.1kHz, no correction → as-is
+      expect(corrected.sample.length, isNot(pcm.length));
+    });
   });
 
   group('SF2 GM preset → zone mapping', () {

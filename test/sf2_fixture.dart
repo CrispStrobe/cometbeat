@@ -43,8 +43,9 @@ Uint8List _shdr(
   int ls,
   int le,
   int sr,
-  int pitch,
-) =>
+  int pitch, {
+  int correction = 0,
+}) =>
     _named(name, 46, (d) {
       d.setUint32(20, start, Endian.little);
       d.setUint32(24, end, Endian.little);
@@ -52,6 +53,7 @@ Uint8List _shdr(
       d.setUint32(32, le, Endian.little);
       d.setUint32(36, sr, Endian.little);
       d.setUint8(40, pitch);
+      d.setInt8(41, correction); // chPitchCorrection (signed cents)
     });
 
 Uint8List _rec4(int a, int b) {
@@ -117,6 +119,7 @@ Uint8List oneSampleSf2({
   required int rootKey,
   required int loopStart,
   required int loopEnd,
+  int pitchCorrection = 0,
 }) {
   final pdta = _pdta([
     _chunk('phdr', _phdr('GMTest', 0, 0)),
@@ -128,7 +131,16 @@ Uint8List oneSampleSf2({
     _chunk(
       'shdr',
       _concat([
-        _shdr('Tone', 0, pcm.length, loopStart, loopEnd, sampleRate, rootKey),
+        _shdr(
+          'Tone',
+          0,
+          pcm.length,
+          loopStart,
+          loopEnd,
+          sampleRate,
+          rootKey,
+          correction: pitchCorrection,
+        ),
         _shdr('EOS', 0, 0, 0, 0, 0, 0),
       ]),
     ),

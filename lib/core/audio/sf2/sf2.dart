@@ -16,6 +16,7 @@
 // samples, e.g. MuseScore's FluidR3Mono) needs an OGG decoder — a follow-up; the
 // MIT FluidR3_GM `.sf2` is uncompressed and works today. Flutter-free, pure Dart.
 
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
@@ -38,6 +39,7 @@ class Sf2Sample {
     required this.pcm,
     required this.sampleRate,
     required this.originalPitch,
+    required this.pitchCorrection,
     required this.loopStart,
     required this.loopEnd,
   });
@@ -46,6 +48,12 @@ class Sf2Sample {
   final Float64List pcm;
   final int sampleRate;
   final int originalPitch;
+
+  /// Fine tuning of the recording, in cents (SF2 shdr `chPitchCorrection`): the
+  /// sample sounds this many cents sharp of [originalPitch]. Baked into the
+  /// resample so the instrument plays in tune.
+  final int pitchCorrection;
+
   final int loopStart;
   final int loopEnd;
 
@@ -154,6 +162,8 @@ class Sf2SoundFont {
       final endLoop = data.getUint32(o + 32, Endian.little);
       final sr = data.getUint32(o + 36, Endian.little);
       final pitch = bytes[o + 40];
+      final correction =
+          data.getInt8(o + 41); // chPitchCorrection, signed cents
       if (name == 'EOS' || endS <= start || endS > pool.length) continue;
       final n = endS - start;
       final pcm = Float64List(n);
@@ -165,6 +175,7 @@ class Sf2SoundFont {
         pcm: pcm,
         sampleRate: sr == 0 ? kSampleRate : sr,
         originalPitch: pitch > 127 ? 60 : pitch,
+        pitchCorrection: correction,
         loopStart: startLoop > start ? startLoop - start : 0,
         loopEnd: endLoop > start ? endLoop - start : 0,
       );
@@ -298,14 +309,18 @@ SampleInstrument sampleInstrumentFromSf2(Sf2Sample s, {required String id}) {
   );
 }
 
-/// Resample a soundfont sample to the engine rate, scaling its loop points.
+/// Resample a soundfont sample to the engine rate AND bake in its pitch
+/// correction (so the integer-rooted [SampleInstrument] plays in tune), scaling
+/// the loop points by the same factor. A sample that sounds `c` cents sharp is
+/// stretched by 2^(c/1200) to lower it back onto its root key.
 (Float64List, int, int) _resampleWithLoop(Sf2Sample s) {
   var pcm = s.pcm;
   var loopStart = s.loopStart;
   var loopLen = s.loops ? s.loopEnd - s.loopStart : 0;
-  if (s.sampleRate != kSampleRate) {
-    final ratio = s.sampleRate / kSampleRate;
-    pcm = resampleCubic(pcm, ratio);
+  final ratio =
+      (s.sampleRate / kSampleRate) * pow(2, s.pitchCorrection / 1200.0);
+  if ((ratio - 1.0).abs() > 1e-9) {
+    pcm = resampleCubic(pcm, ratio.toDouble());
     loopStart = (loopStart / ratio).round();
     loopLen = (loopLen / ratio).round();
   }
