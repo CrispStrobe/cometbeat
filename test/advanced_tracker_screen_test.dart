@@ -308,6 +308,26 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('the on-screen piano lights the sounding notes of a row',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.setNote(0, 0, 60); // C4 on channel 0
+    game.setNote(1, 0, 67); // G4 on channel 1
+    game.setNote(0, 4, 72); // a note on a different row
+    await tester.pump();
+
+    final row0 = game.debugSoundingMidis(0);
+    expect(row0, containsAll(<int>[60, 67]));
+    expect(row0, isNot(contains(72))); // that's row 4, not row 0
+
+    // Muting a channel drops its note from the highlight.
+    game.toggleMute(1);
+    await tester.pump();
+    expect(game.debugSoundingMidis(0), isNot(contains(67)));
+    expect(game.debugSoundingMidis(0), contains(60));
+  });
+
   testWidgets('the instrument picker stamps new notes with the pool instrument',
       (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());

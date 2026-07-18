@@ -292,6 +292,10 @@ abstract interface class AdvancedTrackerTester {
   int get instrumentPoolSize;
   int instrumentAt(int channel, int row);
 
+  /// The midis the on-screen piano lights up for pattern [row] (un-muted
+  /// channels) — the "keys glow as they play" highlight.
+  List<int> debugSoundingMidis(int row);
+
   /// Block editing (copy/cut/paste/paste-mix/transpose over a marked rectangle).
   bool get hasSelection;
   void selectTrack();
@@ -1436,6 +1440,24 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     if (audio.soundOn) audio.playTick(accent: step == 0);
   }
 
+  /// The midis sounding at pattern [row] across un-muted channels — the keys the
+  /// on-screen piano lights up as playback crosses that row.
+  List<int> _soundingMidisAt(int row) {
+    if (row < 0 || row >= _song.rows) return const [];
+    final out = <int>[];
+    for (var c = 0; c < _song.channelCount; c++) {
+      if (_song.isMuted(c)) continue;
+      final midi = _song.engine.cellAt(c, row).midi;
+      if (midi != null) out.add(midi);
+    }
+    return out;
+  }
+
+  Map<int, Color> _soundingKeys() {
+    final color = Theme.of(context).colorScheme.primary;
+    return {for (final m in _soundingMidisAt(_row.value)) m: color};
+  }
+
   void _updateLevels(int posInPatternMs) {
     final startSample = (posInPatternMs * 44100) ~/ 1000;
     const window = 1470; // ~33 ms at 44.1 kHz
@@ -1819,6 +1841,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   int instrumentAt(int channel, int row) =>
       _song.engine.cellAt(channel, row).instrument;
+  @override
+  List<int> debugSoundingMidis(int row) => _soundingMidisAt(row);
 
   static const _voiceIcons = <VoiceEffect, IconData>{
     VoiceEffect.normal: Icons.person,
@@ -3707,15 +3731,21 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
                   width: _pianoWhiteKeys * _pianoKeyWidth,
-                  child: PianoKeyboard(
-                    startMidi: _pianoStartMidi,
-                    whiteKeyCount: _pianoWhiteKeys,
-                    showLabels: true,
-                    showOctaveNumbers: true,
-                    onKeyTap: (midi) {
-                      _enterNoteAtCursor(midi);
-                      _focus.requestFocus();
-                    },
+                  // Rebuild only the keyboard as the playhead crosses rows, so
+                  // the keys of the sounding notes light up in time.
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: _row,
+                    builder: (context, _, __) => PianoKeyboard(
+                      startMidi: _pianoStartMidi,
+                      whiteKeyCount: _pianoWhiteKeys,
+                      showLabels: true,
+                      showOctaveNumbers: true,
+                      keyColors: _soundingKeys(),
+                      onKeyTap: (midi) {
+                        _enterNoteAtCursor(midi);
+                        _focus.requestFocus();
+                      },
+                    ),
                   ),
                 ),
               ),
