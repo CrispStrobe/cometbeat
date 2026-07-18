@@ -67,6 +67,37 @@ void main() {
       );
     });
 
+    test('.sf3: extracts each Ogg stream + decodes via the injected seam', () {
+      // A fake "Ogg stream": OggS magic + a marker byte the fake decoder maps to
+      // a known PCM length, so we prove the byte-range extraction + decode wiring.
+      final ogg = Uint8List.fromList([...'OggS'.codeUnits, 0, 42, 7]);
+      final bytes = compressedSf3(
+        oggStream: ogg,
+        loopStart: 4,
+        loopEnd: 20, // decoded-frame positions (NOT byte offsets)
+      );
+      expect(sf2IsCompressed(bytes), isTrue);
+
+      Uint8List? seen;
+      Float64List fake(Uint8List stream) {
+        seen = stream;
+        return Float64List(24)..[10] = 0.5; // stand-in decoded PCM
+      }
+
+      final sf = Sf2SoundFont.parse(bytes, vorbis: fake);
+      // The decoder received EXACTLY the sample's Ogg byte range.
+      expect(seen, equals(ogg));
+      expect(sf.samples.length, 1);
+      final s = sf.samples.single;
+      expect(s.pcm.length, 24); // the decoded PCM, not the compressed bytes
+      // .sf3 loop points are decoded-frame positions, used as-is (no `-start`).
+      expect(s.loopStart, 4);
+      expect(s.loopEnd, 20);
+      expect(s.loops, isTrue);
+      // The preset graph still resolves over the decoded sample.
+      expect(sf.presets.single.zones.single.sampleIndex, 0);
+    });
+
     test('detects + rejects a compressed .sf3 (OGG samples)', () {
       // A soundfont whose smpl data starts with the "OggS" magic = .sf3.
       // 'OggS' as two little-endian int16 words: 0x674F, 0x5367.

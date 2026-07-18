@@ -86,6 +86,13 @@ Uint8List _sdta(List<Int16List> samples) => _chunk(
       _concat([_tag('sdta'), _chunk('smpl', _smplBytes(samples))]),
     );
 
+/// An `sdta`/`smpl` chunk holding RAW bytes (for a `.sf3` fixture where `smpl`
+/// is concatenated OGG-Vorbis streams, not PCM).
+Uint8List _sdtaRaw(Uint8List smpl) => _chunk(
+      'LIST',
+      _concat([_tag('sdta'), _chunk('smpl', smpl)]),
+    );
+
 Uint8List _pdta(List<Uint8List> subChunks) =>
     _chunk('LIST', _concat([_tag('pdta'), ...subChunks]));
 
@@ -163,6 +170,42 @@ Uint8List oneSampleSf2({
       pdta,
     ]),
   );
+}
+
+/// A compressed `.sf3`-style fixture: one preset, one sample whose `smpl` data
+/// is the raw [oggStream] bytes (must start with `OggS`). shdr start/end are the
+/// BYTE range `[0, oggStream.length)`; loop points are DECODED-frame positions.
+Uint8List compressedSf3({
+  required Uint8List oggStream,
+  int rootKey = 60,
+  int loopStart = 0,
+  int loopEnd = 0,
+}) {
+  final pdta = _pdta([
+    _chunk('phdr', _phdr('SF3Test', 0, 0)),
+    _chunk('pbag', _concat([_rec4(0, 0), _rec4(1, 0)])),
+    _chunk('pgen', _rec4(41, 0)),
+    _chunk('inst', _inst('SF3Inst', 1)),
+    _chunk('ibag', _concat([_rec4(0, 0), _rec4(2, 0)])),
+    _chunk('igen', _concat([_rec4(43, 0 | (127 << 8)), _rec4(53, 0)])),
+    _chunk(
+      'shdr',
+      _concat([
+        // start=0, end=oggStream.length (BYTE offsets into smpl).
+        _shdr(
+          'OggTone',
+          0,
+          oggStream.length,
+          loopStart,
+          loopEnd,
+          44100,
+          rootKey,
+        ),
+        _shdr('EOS', 0, 0, 0, 0, 0, 0),
+      ]),
+    ),
+  ]);
+  return _chunk('RIFF', _concat([_tag('sfbk'), _sdtaRaw(oggStream), pdta]));
 }
 
 /// A two-sample, one-preset, TWO-zone SF2 (key split at 60): sample A (low) for

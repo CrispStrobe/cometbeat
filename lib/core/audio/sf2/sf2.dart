@@ -12,11 +12,13 @@
 //      zone covering each note's key and resampling that sample from its root
 //      key (reusing the engine's sample loop) — a real multi-sample GM voice.
 //
-// Handles UNCOMPRESSED `.sf2` (raw PCM in `smpl`). `.sf3` (OGG-Vorbis-compressed
-// samples, e.g. MuseScore's FluidR3Mono) is DETECTED (via the `OggS` magic) and
-// rejected with a clear error — decoding it needs an OGG decoder (a follow-up);
-// use [sf2IsCompressed] to pre-check. The MIT FluidR3_GM `.sf2` is uncompressed
-// and works today. Flutter-free, pure Dart.
+// Handles UNCOMPRESSED `.sf2` (raw PCM in `smpl`) directly. For a compressed
+// `.sf3` (e.g. MuseScore's FluidR3Mono), each `smpl` byte range `[start,end)` is
+// a self-contained OGG-Vorbis stream (verified on the real file: all 1186
+// streams begin `OggS`); pass a [VorbisDecode] to `parse(bytes, vorbis: …)` to
+// decode them (the app injects a glint-backed decoder — see
+// docs/GLINT_VORBIS_HANDOVER.md), else `.sf3` throws a clear error
+// ([sf2IsCompressed] pre-checks). Flutter-free, pure Dart.
 
 import 'dart:math';
 import 'dart:typed_data';
@@ -24,6 +26,12 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+
+/// Decodes ONE complete Ogg-Vorbis logical stream (the bytes of a single `.sf3`
+/// sample) to mono PCM in ±1.0. The app injects a glint-backed implementation
+/// (native FFI / web wasm — see docs/GLINT_VORBIS_HANDOVER.md); tests inject a
+/// fake. Returning `null` means "couldn't decode this stream" (skipped).
+typedef VorbisDecode = Float64List? Function(Uint8List oggStream);
 
 // SF2 generator operators we read.
 const _genKeyRange = 43;
@@ -129,9 +137,12 @@ class Sf2SoundFont {
   Sf2Sample? sampleAt(int i) =>
       (i >= 0 && i < _samplesByShdr.length) ? _samplesByShdr[i] : null;
 
-  /// Parse an `.sf2` byte buffer. Throws [FormatException] if the RIFF/sfbk
-  /// structure or required chunks are missing.
-  factory Sf2SoundFont.parse(Uint8List bytes) {
+  /// Parse a SoundFont byte buffer. An uncompressed `.sf2` reads raw PCM; a
+  /// compressed `.sf3` (OGG-Vorbis samples) is decoded via [vorbis] — pass a
+  /// glint-backed decoder to support `.sf3`, else a `.sf3` throws a clear error
+  /// (see [sf2IsCompressed]). Throws [FormatException] if the RIFF/sfbk structure
+  /// or required chunks are missing.
+  factory Sf2SoundFont.parse(Uint8List bytes, {VorbisDecode? vorbis}) {
     final data = ByteData.sublistView(bytes);
     if (_tag(bytes, 0) != 'RIFF' || _tag(bytes, 8) != 'sfbk') {
       throw const FormatException('not a RIFF/sfbk SoundFont');
@@ -163,20 +174,23 @@ class Sf2SoundFont {
       throw const FormatException('SoundFont missing smpl/shdr chunks');
     }
     // `.sf3` stores each sample as an OGG-Vorbis stream in `smpl` (starts with
-    // the "OggS" magic) instead of raw PCM — decoding that needs an OGG decoder
-    // we don't have. Fail with a clear, catchable message rather than reading
-    // the compressed bytes as garbage PCM.
-    if (smpl.$2 >= 4 && _tag(bytes, smpl.$1) == 'OggS') {
+    // the "OggS" magic) instead of raw PCM. With a [vorbis] decoder we decode
+    // each stream; without one, fail with a clear, catchable message rather than
+    // reading the compressed bytes as garbage PCM.
+    final compressed = smpl.$2 >= 4 && _tag(bytes, smpl.$1) == 'OggS';
+    if (compressed && vorbis == null) {
       throw const FormatException(
-        'compressed .sf3 (OGG-Vorbis samples) is not supported yet — '
-        'use an uncompressed .sf2 soundfont',
+        'compressed .sf3 (OGG-Vorbis samples) needs a Vorbis decoder — '
+        'pass Sf2SoundFont.parse(bytes, vorbis: …) or use an uncompressed .sf2',
       );
     }
 
-    // Sample pool as signed 16-bit words.
-    final pool = Int16List(smpl.$2 ~/ 2);
-    for (var i = 0; i < pool.length; i++) {
-      pool[i] = data.getInt16(smpl.$1 + i * 2, Endian.little);
+    // Raw-PCM pool (uncompressed .sf2 only; .sf3 decodes per stream instead).
+    final pool = compressed ? Int16List(0) : Int16List(smpl.$2 ~/ 2);
+    if (!compressed) {
+      for (var i = 0; i < pool.length; i++) {
+        pool[i] = data.getInt16(smpl.$1 + i * 2, Endian.little);
+      }
     }
 
     // shdr: 46-byte records → samples indexed by record number.
@@ -194,11 +208,34 @@ class Sf2SoundFont {
       final pitch = bytes[o + 40];
       final correction =
           data.getInt8(o + 41); // chPitchCorrection, signed cents
-      if (name == 'EOS' || endS <= start || endS > pool.length) continue;
-      final n = endS - start;
-      final pcm = Float64List(n);
-      for (var j = 0; j < n; j++) {
-        pcm[j] = pool[start + j] / 32768.0;
+      if (name == 'EOS' || endS <= start) continue;
+
+      final Float64List pcm;
+      final int lStart;
+      final int lEnd;
+      if (compressed) {
+        // .sf3: start/end are BYTE offsets into smpl delimiting this sample's
+        // self-contained Ogg-Vorbis stream; loop points are absolute DECODED
+        // sample-frame positions (0-based in the decoded PCM).
+        if (smpl.$1 + endS > bytes.length) continue;
+        final ogg =
+            Uint8List.sublistView(bytes, smpl.$1 + start, smpl.$1 + endS);
+        final decoded = vorbis!(ogg);
+        if (decoded == null || decoded.isEmpty) continue;
+        pcm = decoded;
+        lStart = startLoop;
+        lEnd = endLoop;
+      } else {
+        // .sf2: start/end are sample-frame offsets into the shared PCM pool;
+        // loop points are absolute pool positions (→ relative to `start`).
+        if (endS > pool.length) continue;
+        final n = endS - start;
+        pcm = Float64List(n);
+        for (var j = 0; j < n; j++) {
+          pcm[j] = pool[start + j] / 32768.0;
+        }
+        lStart = startLoop > start ? startLoop - start : 0;
+        lEnd = endLoop > start ? endLoop - start : 0;
       }
       samplesByShdr[i] = Sf2Sample(
         name: name,
@@ -206,8 +243,8 @@ class Sf2SoundFont {
         sampleRate: sr == 0 ? kSampleRate : sr,
         originalPitch: pitch > 127 ? 60 : pitch,
         pitchCorrection: correction,
-        loopStart: startLoop > start ? startLoop - start : 0,
-        loopEnd: endLoop > start ? endLoop - start : 0,
+        loopStart: lStart,
+        loopEnd: lEnd,
       );
     }
 
