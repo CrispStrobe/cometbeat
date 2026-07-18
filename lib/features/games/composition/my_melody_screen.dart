@@ -13,6 +13,7 @@ import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
+import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/widgets/cello_fingerboard.dart';
 import 'package:comet_beat/shared/widgets/guitar_fretboard.dart';
@@ -23,6 +24,7 @@ import 'package:crisp_notation/crisp_notation.dart'
         DurationBase,
         InteractiveStaff,
         Measure,
+        MultiPartScore,
         NoteDuration,
         NoteElement,
         Pitch,
@@ -274,6 +276,18 @@ class _MyMelodyScreenState extends State<MyMelodyScreen> {
                     onPressed: _notes.isEmpty ? null : _saveToSongBook,
                     icon: const Icon(Icons.bookmark_add_outlined),
                     label: Text(l10n.myMelodySave),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _notes.isEmpty
+                        ? null
+                        : () => showMusicExportSheet(
+                              context,
+                              multiPart: MultiPartScore([_exportScore()]),
+                              partNames: const [],
+                              baseName: 'my_melody',
+                            ),
+                    icon: const Icon(Icons.ios_share),
+                    label: Text(l10n.musicExportTitle),
                   ),
                   FilledButton.tonalIcon(
                     onPressed: _notes.isEmpty

@@ -16,11 +16,13 @@ import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
+import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
         DurationBase,
         Measure,
+        MultiPartScore,
         NoteDuration,
         NoteElement,
         Score,
@@ -262,6 +264,17 @@ class _FreeSingScreenState extends State<FreeSingScreen> {
                       onPressed: _saveToSongBook,
                       icon: const Icon(Icons.save_alt),
                       label: Text(l.myMelodySave),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => showMusicExportSheet(
+                        context,
+                        multiPart: MultiPartScore([_buildScore()]),
+                        partNames: const [],
+                        baseName: 'free_sing',
+                      ),
+                      icon: const Icon(Icons.ios_share),
+                      label: Text(l.musicExportTitle),
                     ),
                     const SizedBox(width: 12),
                   ],

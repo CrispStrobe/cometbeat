@@ -41,6 +41,7 @@ import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show Clef, HarmonicFunction, StaffView, multiPartToMusicXml;
@@ -681,6 +682,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
               onTap: () => Navigator.pop(sheet, 'musicxml'),
             ),
             ListTile(
+              leading: const Icon(Icons.ios_share),
+              title: Text(l10n.musicExportTitle),
+              enabled: hasPitchedTrack,
+              onTap: () => Navigator.pop(sheet, 'export'),
+            ),
+            ListTile(
               leading: const Icon(Icons.download),
               title: Text(l10n.loopMixerSaveAudio),
               enabled: _engine.enabled.isNotEmpty,
@@ -703,6 +710,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         await _saveToSongBook();
       case 'musicxml':
         await _exportMusicXml();
+      case 'export':
+        _exportGroove();
       case 'wav':
         await _saveWav();
       default:
@@ -731,6 +740,19 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final parts = grooveParts(_engine, nameOf: (id) => _trackLabel(l10n, id));
     if (parts == null) return null;
     return multiPartToMusicXml(parts.score, partNames: parts.partNames);
+  }
+
+  /// Export the groove's notation to any format (the shared music-export sheet).
+  void _exportGroove() {
+    final l10n = AppLocalizations.of(context)!;
+    final parts = grooveParts(_engine, nameOf: (id) => _trackLabel(l10n, id));
+    if (parts == null) return;
+    showMusicExportSheet(
+      context,
+      multiPart: parts.score,
+      partNames: parts.partNames,
+      baseName: 'groove',
+    );
   }
 
   /// Persists the groove into the Song Book as a real multi-part score — the
