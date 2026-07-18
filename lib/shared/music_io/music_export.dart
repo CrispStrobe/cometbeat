@@ -4,8 +4,8 @@
 // holds a MultiPartScore (Song Book, trackers, Loop Mixer, …) can offer the
 // whole library's writers from one place instead of copy-pasting per screen.
 //
-// Multi-part formats (MusicXML/.mxl/ABC/MEI/MuseScore/MIDI/module) keep every
-// voice; the remaining single-Score engrave formats (kern/LilyPond/Braille/PDF)
+// Multi-part formats (MusicXML/.mxl/ABC/MEI/MuseScore/kern/MIDI/module) keep
+// every voice; the remaining single-Score engrave formats (LilyPond/Braille/PDF)
 // export the first part (mirrors the Score Workshop's "active part" behaviour) —
 // the library has no multi-part writer for those yet.
 
@@ -72,7 +72,7 @@ final List<_ExportFormat> _kFormats = [
   _ExportFormat(
     'Humdrum **kern',
     'krn',
-    (mp, names) => _utf8(scoreToKern(_first(mp))),
+    (mp, names) => _utf8(multiPartToKern(mp, partNames: names)),
   ),
   _ExportFormat(
     'LilyPond',

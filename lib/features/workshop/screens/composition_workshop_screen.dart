@@ -2623,7 +2623,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               : scoreToMei(score),
         );
       case 'krn':
-        return (null, scoreToKern(score));
+        // Humdrum keeps every part (one **kern spine per part) when multi-part.
+        return (
+          null,
+          _mpd.partCount > 1
+              ? multiPartToKern(_mpd.buildMultiPart(), partNames: _mpd.names)
+              : scoreToKern(score),
+        );
       case 'mscx':
         // MuseScore keeps every part (one <Staff> per part) when multi-part.
         return (
