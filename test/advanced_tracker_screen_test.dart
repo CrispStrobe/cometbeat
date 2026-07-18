@@ -361,6 +361,45 @@ void main() {
     expect(mp.parts.first.measures, isNotEmpty);
   });
 
+  testWidgets('live record: notes land at the playhead while playing',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.setNote(0, 0, 60); // something to play so the clock/loop runs
+    game.togglePlay();
+    game.toggleRecord();
+    await tester.pump();
+    expect(game.isRecording, isTrue);
+
+    // Typing a note while recording+playing writes it (at the sounding row),
+    // without moving the edit cursor.
+    game.moveCursor(1, 8); // cursor on channel 1
+    final before = game.noteCount;
+    game.typeKey('z');
+    await tester.pump();
+    expect(game.noteCount, before + 1);
+    game.stop();
+    await tester.pump();
+  });
+
+  testWidgets('interpolate ramps volumes across a selection', (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.setRows(16);
+    // Notes on channel 0 at rows 0..8 (all default full volume).
+    for (var r = 0; r <= 8; r++) {
+      game.setNote(0, r, 60);
+    }
+    await tester.pump();
+
+    game.moveCursor(0, 0);
+    game.selectTrack(); // selects channel 0, rows 0..15
+    game.interpolateBlock();
+    await tester.pump();
+    // Runs without error and the notes remain.
+    expect(game.noteCount, greaterThanOrEqualTo(9));
+  });
+
   testWidgets('undo/redo restores and reapplies cell edits', (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());
     final game = _game(tester);

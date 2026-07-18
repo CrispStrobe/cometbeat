@@ -116,6 +116,10 @@ enum _NoteEntry {
   noteNames,
 }
 
+/// The sub-column the in-grid cursor edits (FT2's note / volume / effect
+/// columns). Typing digits into [volume]/[effect] edits that column directly.
+enum _CellField { note, volume, effect }
+
 /// FastTracker-2 style computer-keyboard piano map: the typed character ->
 /// semitone offset from the current base octave. Two rows span ~two octaves
 /// (the lower ZXCV… row + the upper QWERTY… row).
@@ -200,6 +204,11 @@ abstract interface class AdvancedTrackerTester {
   void undo();
   void redo();
 
+  /// FT2 feel: live record (jam at the playhead) + block interpolate.
+  bool get isRecording;
+  void toggleRecord();
+  void interpolateBlock();
+
   /// Block editing (copy/cut/paste/paste-mix/transpose over a marked rectangle).
   bool get hasSelection;
   void selectTrack();
@@ -273,6 +282,18 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   int _octave = 4;
   int _editStep = 1;
   _NoteEntry _entryMode = _NoteEntry.pianoKeys;
+
+  /// FT2-style live record: while ON and playing, notes land at the SOUNDING row
+  /// (the playhead) instead of the edit cursor — jam straight into the pattern.
+  bool _recording = false;
+
+  /// Which sub-column the cursor edits in-grid (FT2 note/vol/fx columns). Typing
+  /// hex into vol/fx edits that column directly; Tab / ←→ move between fields.
+  _CellField _field = _CellField.note;
+
+  /// The number of rows between highlighted "beat" lines in the grid (FT2's
+  /// row-highlight spacing; default = the beat, i.e. stepsPerBeat).
+  int? _highlightEvery;
 
   /// Pending state for note-name entry ("F" then "2"): the note's semitone and
   /// whether a sharp was typed, awaiting the octave digit. Null = nothing armed.
@@ -580,9 +601,30 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     });
   }
 
-  /// Enters [midi] at the cursor and advances by the edit-step (wrapping).
+  /// Enters [midi] at the cursor and advances by the edit-step (wrapping). In
+  /// live-record mode (playing) it lands at the SOUNDING row instead, preserving
+  /// any existing volume/effect on that cell, and doesn't move the edit cursor —
+  /// jam straight into the pattern.
   void _enterNoteAtCursor(int midi) {
     _pushUndo();
+    if (_recording && _clock.isRunning && _row.value >= 0) {
+      final row = _row.value;
+      final cur = _song.engine.cellAt(_cursorChannel, row);
+      _song.engine.setCell(
+        _cursorChannel,
+        row,
+        TrackerCell(
+          midi: midi,
+          volume: cur.volume,
+          effect: cur.effect,
+          fxCmd: cur.fxCmd,
+          fxParam: cur.fxParam,
+        ),
+      );
+      setState(() {});
+      _syncPlayback();
+      return;
+    }
     _song.engine.setCell(_cursorChannel, _cursorRow, TrackerCell(midi: midi));
     setState(() => _cursorRow = (_cursorRow + _editStep) % _song.rows);
     _ensureCursorVisible();
@@ -701,7 +743,82 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _syncPlayback();
   }
 
+  /// FT2 "interpolate": linearly ramps each selected channel's note volumes from
+  /// the top selected row to the bottom (a fade/swell over the block).
+  void _interpolateBlock() {
+    if (!_hasSelection) return;
+    final s = _selRect;
+    if (s.rHi <= s.rLo) return;
+    _pushUndo();
+    setState(() {
+      for (var c = s.cLo; c <= s.cHi; c++) {
+        final v0 = _song.engine.cellAt(c, s.rLo).volume ?? 1.0;
+        final v1 = _song.engine.cellAt(c, s.rHi).volume ?? 1.0;
+        for (var r = s.rLo; r <= s.rHi; r++) {
+          if (_song.engine.cellAt(c, r).midi == null) continue;
+          final t = (r - s.rLo) / (s.rHi - s.rLo);
+          final v = (v0 + (v1 - v0) * t).clamp(0.0, 1.0);
+          _song.engine.setCellVolume(c, r, v >= 0.999 ? null : v);
+        }
+      }
+    });
+    _syncPlayback();
+  }
+
   // --- Keyboard ---
+
+  /// Field-cursor editing: Tab cycles note→volume→effect; a hex digit in the
+  /// volume field sets the cursor note's volume (16 levels, FT2's volume column).
+  /// Returns non-null when the key was part of field editing.
+  KeyEventResult? _handleFieldKey(KeyEvent event, LogicalKeyboardKey key) {
+    if (key == LogicalKeyboardKey.tab) {
+      const vals = _CellField.values;
+      final next = HardwareKeyboard.instance.isShiftPressed
+          ? (_field.index - 1 + vals.length) % vals.length
+          : (_field.index + 1) % vals.length;
+      setState(() => _field = vals[next]);
+      return KeyEventResult.handled;
+    }
+    if (_field == _CellField.volume) {
+      final hex = _hexOf(event.character);
+      if (hex != null) {
+        final cell = _song.engine.cellAt(_cursorChannel, _cursorRow);
+        if (cell.midi != null) {
+          _pushUndo();
+          final v = hex / 15.0;
+          setState(
+            () => _song.engine.setCellVolume(
+              _cursorChannel,
+              _cursorRow,
+              v >= 0.999 ? null : v,
+            ),
+          );
+          _syncPlayback();
+        }
+        return KeyEventResult.handled;
+      }
+      // Swallow other printable keys so they don't become notes in this field.
+      if (event.character != null && event.character!.trim().isNotEmpty) {
+        return KeyEventResult.handled;
+      }
+    }
+    if (_field == _CellField.effect) {
+      // Any printable key opens the effect-column editor for the cursor cell.
+      if (event.character != null && event.character!.trim().isNotEmpty) {
+        _cellMenu(_cursorChannel, _cursorRow);
+        return KeyEventResult.handled;
+      }
+    }
+    return null;
+  }
+
+  int? _hexOf(String? ch) {
+    if (ch == null || ch.isEmpty) return null;
+    final c = ch.toLowerCase().codeUnitAt(0);
+    if (c >= 0x30 && c <= 0x39) return c - 0x30; // 0-9
+    if (c >= 0x61 && c <= 0x66) return c - 0x61 + 10; // a-f
+    return null;
+  }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -742,11 +859,27 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         }
         return KeyEventResult.handled;
       }
+      if (key == LogicalKeyboardKey.keyI) {
+        _interpolateBlock();
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.keyZ) {
+        _undo();
+        return KeyEventResult.handled;
+      }
+      if (key == LogicalKeyboardKey.keyY) {
+        _redo();
+        return KeyEventResult.handled;
+      }
     }
     if (key == LogicalKeyboardKey.escape) {
       _unmark();
       return KeyEventResult.handled;
     }
+
+    // In-grid field cursor (Tab cycles note/vol/fx; hex edits the volume field).
+    final fieldResult = _handleFieldKey(event, key);
+    if (fieldResult != null) return fieldResult;
 
     // Alt+Arrows / Alt+PageUp/Down: transpose the block (semitone / octave).
     if (alt) {
@@ -1154,6 +1287,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void undo() => _undo();
   @override
   void redo() => _redo();
+  @override
+  bool get isRecording => _recording;
+  @override
+  void toggleRecord() => setState(() => _recording = !_recording);
+  @override
+  void interpolateBlock() => _interpolateBlock();
 
   static const _voiceIcons = <VoiceEffect, IconData>{
     VoiceEffect.normal: Icons.person,
@@ -1923,6 +2062,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               _transposeBlock(12);
             case 'octDown':
               _transposeBlock(-12);
+            case 'interp':
+              _interpolateBlock();
             case 'clear':
               _clearBlock();
             case 'unmark':
@@ -1961,6 +2102,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             value: 'octDown',
             child: Text(l10n.trackerBlockOctDown),
           ),
+          PopupMenuItem(value: 'interp', child: Text(l10n.trackerInterpolate)),
           const PopupMenuDivider(),
           PopupMenuItem(value: 'clear', child: Text(l10n.trackerBlockClear)),
           if (_hasSelection)
@@ -1988,6 +2130,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               icon: Icon(playing ? Icons.pause : Icons.play_arrow),
               tooltip: playing ? l10n.trackerPause : l10n.trackerPlay,
               onPressed: _togglePlay,
+            ),
+            IconButton(
+              icon: const Icon(Icons.fiber_manual_record),
+              color: _recording ? scheme.error : null,
+              tooltip: l10n.trackerRecordLive,
+              onPressed: () => setState(() => _recording = !_recording),
             ),
             IconButton(
               icon: const Icon(Icons.skip_previous),
@@ -2405,10 +2553,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     ColorScheme scheme,
   ) {
     final isActive = row == activeRow;
-    final isBeat = row % stepsPerBeat == 0;
+    final hl = _highlightEvery ?? stepsPerBeat;
+    final isBeat = row % hl == 0;
+    final isMeasure = row % (hl * 4) == 0;
     final rowBg = isActive
         ? scheme.primaryContainer
-        : (isBeat ? scheme.surfaceContainerHighest : null);
+        : isMeasure
+            ? scheme.surfaceContainerHigh
+            : (isBeat ? scheme.surfaceContainerHighest : null);
     return Container(
       height: _rowHeight,
       color: rowBg,
@@ -2486,15 +2638,29 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                       ? scheme.onSurface
                       : scheme.onSurfaceVariant.withValues(alpha: 0.4),
                   fontWeight: hasNote ? FontWeight.w600 : FontWeight.w400,
+                  decoration: isCursor && _field == _CellField.note
+                      ? TextDecoration.underline
+                      : null,
+                  decorationColor: scheme.primary,
+                  decorationThickness: 2,
                 ),
               ),
               const SizedBox(width: 4),
+              // Volume + effect sub-columns; the active field underlines when the
+              // cell holds the cursor (the FT2 column cursor).
               Text(
-                '$vol$fx',
-                style: TextStyle(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  fontSize: 10,
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                vol,
+                style: _subColStyle(
+                  scheme,
+                  isCursor && _field == _CellField.volume,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Text(
+                fx,
+                style: _subColStyle(
+                  scheme,
+                  isCursor && _field == _CellField.effect,
                 ),
               ),
             ],
@@ -2503,6 +2669,15 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       ),
     );
   }
+
+  TextStyle _subColStyle(ColorScheme scheme, bool active) => TextStyle(
+        fontFeatures: const [FontFeature.tabularFigures()],
+        fontSize: 10,
+        color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+        decoration: active ? TextDecoration.underline : null,
+        decorationColor: scheme.primary,
+        decorationThickness: 2,
+      );
 
   /// The effect column as a 3-char hex code (command nibble + param byte).
   static String _commandHex(TrackerCell c) {
@@ -2579,6 +2754,24 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   ),
                 ),
               const Spacer(),
+              // The edit column (note/vol/fx) — Tab cycles it; tap for touch.
+              Tooltip(
+                message: l10n.trackerField,
+                child: OutlinedButton(
+                  onPressed: () => setState(
+                    () => _field = _CellField
+                        .values[(_field.index + 1) % _CellField.values.length],
+                  ),
+                  child: Text(
+                    switch (_field) {
+                      _CellField.note => '♪',
+                      _CellField.volume => 'vol',
+                      _CellField.effect => 'fx',
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
               // Clear-at-cursor + advance (the "===" key on a real tracker).
               Tooltip(
                 message: l10n.trackerClearCell,

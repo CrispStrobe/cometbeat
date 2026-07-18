@@ -2684,6 +2684,24 @@ abstract class AppLocalizations {
   /// **'Show key hints'**
   String get trackerShowKeys;
 
+  /// No description provided for @trackerRecordLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Live record (jam into the pattern)'**
+  String get trackerRecordLive;
+
+  /// No description provided for @trackerInterpolate.
+  ///
+  /// In en, this message translates to:
+  /// **'Interpolate volumes'**
+  String get trackerInterpolate;
+
+  /// No description provided for @trackerField.
+  ///
+  /// In en, this message translates to:
+  /// **'Column (note / vol / fx)'**
+  String get trackerField;
+
   /// No description provided for @trackerClearCell.
   ///
   /// In en, this message translates to:

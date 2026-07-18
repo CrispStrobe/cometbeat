@@ -1383,6 +1383,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerShowKeys => 'Show key hints';
 
   @override
+  String get trackerRecordLive => 'Live record (jam into the pattern)';
+
+  @override
+  String get trackerInterpolate => 'Interpolate volumes';
+
+  @override
+  String get trackerField => 'Column (note / vol / fx)';
+
+  @override
   String get trackerClearCell => 'Clear cell';
 
   @override

@@ -1390,6 +1390,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerShowKeys => 'Tastenhinweise zeigen';
 
   @override
+  String get trackerRecordLive => 'Live-Aufnahme (ins Pattern jammen)';
+
+  @override
+  String get trackerInterpolate => 'Lautstärken interpolieren';
+
+  @override
+  String get trackerField => 'Spalte (Note / Lautst. / FX)';
+
+  @override
   String get trackerClearCell => 'Zelle löschen';
 
   @override
