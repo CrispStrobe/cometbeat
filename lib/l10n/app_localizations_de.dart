@@ -1414,6 +1414,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerMetronome => 'Metronom';
 
   @override
+  String get trackerFollow => 'Abspielposition folgen';
+
+  @override
+  String get trackerInsertRow => 'Zeile einfügen (am Cursor)';
+
+  @override
+  String get trackerDeleteRow => 'Zeile löschen (am Cursor)';
+
+  @override
   String get trackerFxHelp => 'In der FX-Spalte tippen: Befehl + 2 Hex-Ziffern';
 
   @override

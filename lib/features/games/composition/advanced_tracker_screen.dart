@@ -220,6 +220,10 @@ abstract interface class AdvancedTrackerTester {
   /// Play the current pattern from the cursor row (FT2 F7).
   void playFromCursor();
 
+  /// Insert / delete a whole row at the cursor.
+  void insertRow();
+  void deleteRow();
+
   /// Order-list editing.
   List<int> get orderList;
   void selectOrderSlot(int i);
@@ -234,6 +238,9 @@ abstract interface class AdvancedTrackerTester {
   /// In-grid effect-column hex entry; read the cell's (cmd, param).
   void typeEffect(String hexChar);
   (int, int) effectAt(int channel, int row);
+
+  /// The MIDI note at a cell (null = empty).
+  int? noteAt(int channel, int row);
 
   /// Block editing (copy/cut/paste/paste-mix/transpose over a marked rectangle).
   bool get hasSelection;
@@ -327,6 +334,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// Metronome: click on beat crossings during playback.
   bool _metronome = false;
   int _lastTickStep = -1;
+
+  /// Whether the grid auto-scrolls to follow the playhead during playback.
+  bool _followPlay = true;
 
   /// Two-digit hex volume entry (FT2's 00–40 volume column): the accumulator and
   /// how many digits have been typed in the current cell (resets on a move).
@@ -848,6 +858,36 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// FT2 "interpolate": linearly ramps each selected channel's note volumes from
   /// the top selected row to the bottom (a fade/swell over the block).
+  /// Inserts a blank row at the cursor across every channel — the rows below
+  /// shift down one and the last row falls off (row count stays fixed).
+  void _insertRow() {
+    _pushUndo();
+    setState(() {
+      for (var c = 0; c < _song.channelCount; c++) {
+        for (var r = _song.rows - 1; r > _cursorRow; r--) {
+          _song.engine.setCell(c, r, _song.engine.cellAt(c, r - 1));
+        }
+        _song.engine.clearCell(c, _cursorRow);
+      }
+    });
+    _syncPlayback();
+  }
+
+  /// Deletes the cursor row across every channel — the rows below shift up one
+  /// and the last row becomes blank.
+  void _deleteRow() {
+    _pushUndo();
+    setState(() {
+      for (var c = 0; c < _song.channelCount; c++) {
+        for (var r = _cursorRow; r < _song.rows - 1; r++) {
+          _song.engine.setCell(c, r, _song.engine.cellAt(c, r + 1));
+        }
+        _song.engine.clearCell(c, _song.rows - 1);
+      }
+    });
+    _syncPlayback();
+  }
+
   void _interpolateBlock() {
     if (!_hasSelection) return;
     final s = _selRect;
@@ -1089,6 +1129,15 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       );
       return KeyEventResult.handled;
     }
+    // Insert / Shift+Delete: insert / delete a whole row at the cursor.
+    if (key == LogicalKeyboardKey.insert) {
+      _insertRow();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.delete && shift) {
+      _deleteRow();
+      return KeyEventResult.handled;
+    }
     if (key == LogicalKeyboardKey.delete ||
         key == LogicalKeyboardKey.backspace) {
       if (_hasSelection) {
@@ -1304,7 +1353,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   }
 
   void _followPlayhead(int step) {
-    if (!_vScroll.hasClients || step == _lastFollowedRow) return;
+    if (!_followPlay || !_vScroll.hasClients || step == _lastFollowedRow) {
+      return;
+    }
     _lastFollowedRow = step;
     final target = (step * _rowHeight) - 120;
     final max = _vScroll.position.maxScrollExtent;
@@ -1473,6 +1524,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   void playFromCursor() => _playPattern(fromRow: _cursorRow);
   @override
+  void insertRow() => _insertRow();
+  @override
+  void deleteRow() => _deleteRow();
+  @override
   List<int> get orderList => List.unmodifiable(_song.order);
   @override
   void selectOrderSlot(int i) => setState(() => _orderCursor = i);
@@ -1505,6 +1560,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     final c = _song.engine.cellAt(channel, row);
     return (c.fxCmd, c.fxParam);
   }
+
+  @override
+  int? noteAt(int channel, int row) => _song.engine.cellAt(channel, row).midi;
 
   static const _voiceIcons = <VoiceEffect, IconData>{
     VoiceEffect.normal: Icons.person,
@@ -2353,6 +2411,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               _transposeBlock(-12);
             case 'interp':
               _interpolateBlock();
+            case 'insRow':
+              _insertRow();
+            case 'delRow':
+              _deleteRow();
             case 'clear':
               _clearBlock();
             case 'unmark':
@@ -2392,6 +2454,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             child: Text(l10n.trackerBlockOctDown),
           ),
           PopupMenuItem(value: 'interp', child: Text(l10n.trackerInterpolate)),
+          const PopupMenuDivider(),
+          PopupMenuItem(value: 'insRow', child: Text(l10n.trackerInsertRow)),
+          PopupMenuItem(value: 'delRow', child: Text(l10n.trackerDeleteRow)),
           const PopupMenuDivider(),
           PopupMenuItem(value: 'clear', child: Text(l10n.trackerBlockClear)),
           if (_hasSelection)
@@ -2463,6 +2528,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               tooltip: l10n.trackerMetronome,
               color: _metronome ? scheme.primary : null,
               onPressed: () => setState(() => _metronome = !_metronome),
+            ),
+            IconButton(
+              icon: Icon(
+                _followPlay ? Icons.my_location : Icons.location_searching,
+              ),
+              tooltip: l10n.trackerFollow,
+              color: _followPlay ? scheme.primary : null,
+              onPressed: () => setState(() => _followPlay = !_followPlay),
             ),
             const SizedBox(width: 16),
             AnimatedBuilder(

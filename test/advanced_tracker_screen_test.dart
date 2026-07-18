@@ -441,6 +441,25 @@ void main() {
     expect(game.effectAt(0, 0), (0xC, 0x20));
   });
 
+  testWidgets('insert/delete row shifts the column', (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.setRows(16);
+    game.setNote(0, 2, 60); // a note at row 2
+    game.moveCursor(0, 1);
+    await tester.pump();
+
+    game.insertRow(); // insert at row 1 -> the note moves to row 3
+    await tester.pump();
+    expect(game.noteAt(0, 3), 60);
+    expect(game.noteAt(0, 2), isNull);
+
+    game.moveCursor(0, 1);
+    game.deleteRow(); // delete row 1 -> the note moves back to row 2
+    await tester.pump();
+    expect(game.noteAt(0, 2), 60);
+  });
+
   testWidgets('order list can be reordered and extended', (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());
     final game = _game(tester);

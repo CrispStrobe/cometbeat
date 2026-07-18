@@ -2732,6 +2732,24 @@ abstract class AppLocalizations {
   /// **'Metronome'**
   String get trackerMetronome;
 
+  /// No description provided for @trackerFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow the playhead'**
+  String get trackerFollow;
+
+  /// No description provided for @trackerInsertRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert row (at cursor)'**
+  String get trackerInsertRow;
+
+  /// No description provided for @trackerDeleteRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete row (at cursor)'**
+  String get trackerDeleteRow;
+
   /// No description provided for @trackerFxHelp.
   ///
   /// In en, this message translates to:

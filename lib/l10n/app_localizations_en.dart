@@ -1407,6 +1407,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerMetronome => 'Metronome';
 
   @override
+  String get trackerFollow => 'Follow the playhead';
+
+  @override
+  String get trackerInsertRow => 'Insert row (at cursor)';
+
+  @override
+  String get trackerDeleteRow => 'Delete row (at cursor)';
+
+  @override
   String get trackerFxHelp => 'In the fx column, type: command + 2 hex digits';
 
   @override
