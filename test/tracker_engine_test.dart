@@ -276,6 +276,22 @@ void main() {
       expect(early, greaterThan(0));
     });
 
+    test('the sound library groups by category (Song Book-style browsing)', () {
+      final byCat = soundLibraryByCategory();
+      // Tonal (additive), plucked (KS) and chiptune (sfxr) are all present.
+      expect(byCat[SoundCategory.tonal]!.map((o) => o.id), contains('piano'));
+      expect(byCat[SoundCategory.plucked]!.map((o) => o.id), contains('harp'));
+      expect(byCat[SoundCategory.chiptune]!.map((o) => o.id), contains('zap'));
+      // Every catalog entry is classified, none dropped.
+      final grouped = byCat.values.fold<int>(0, (n, l) => n + l.length);
+      expect(grouped, kTrackerInstruments.length);
+      // The plucked group is exactly the three strings.
+      expect(
+        byCat[SoundCategory.plucked]!.map((o) => o.id).toSet(),
+        {'pluck', 'harp', 'pluckBass'},
+      );
+    });
+
     test('the plucked strings are in the built-in sound library palette', () {
       final ids = kTrackerInstruments.map((o) => o.id).toSet();
       expect(ids.containsAll({'pluck', 'harp', 'pluckBass'}), isTrue);

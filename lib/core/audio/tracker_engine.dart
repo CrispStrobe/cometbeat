@@ -726,15 +726,45 @@ List<TrackerChannel> defaultTrackerChannels({int rows = 16}) => [
       ),
     ];
 
-/// A selectable voice for the instrument picker: a stable [id] (matches the
-/// built instrument's `id`, for highlighting the current choice + tests) and a
-/// factory. Additive timbres + a curated sfxr palette; the recorded `voice`
-/// instrument stays off the picker (it's set by recording).
+/// The family a sound belongs to, so a picker / sound-library browser can group
+/// entries (like the Song Book groups songs). Derived from the instrument type
+/// by [soundCategoryOf].
+enum SoundCategory { tonal, plucked, chiptune, drum, recorded }
+
+/// Classify a built [instrument] into a [SoundCategory] for the library browser.
+SoundCategory soundCategoryOf(TrackerInstrument instrument) {
+  if (instrument is KarplusInstrument) return SoundCategory.plucked;
+  if (instrument is SfxrInstrument) return SoundCategory.chiptune;
+  if (instrument is PercussionInstrument) return SoundCategory.drum;
+  if (instrument is SampleInstrument) return SoundCategory.recorded;
+  return SoundCategory.tonal; // additive + anything new/tonal
+}
+
+/// A selectable voice for the instrument picker / sound-library browser: a
+/// stable [id] (matches the built instrument's `id`, for highlighting the
+/// current choice + tests) and a factory. Additive timbres + a curated sfxr
+/// palette + Karplus-Strong strings; the recorded `voice` instrument stays off
+/// the palette (it's set by recording). [category] groups it in the browser
+/// (derived from the built instrument's type).
 class InstrumentOption {
   const InstrumentOption(this.id, this.build);
 
   final String id;
   final TrackerInstrument Function() build;
+
+  /// The sound family this option belongs to (built once to classify).
+  SoundCategory get category => soundCategoryOf(build());
+}
+
+/// The built-in sound library grouped by [SoundCategory] — the seam a Song
+/// Book-style sound browser enumerates (tonal / plucked / chiptune first, drum /
+/// recorded when present). Preserves [kTrackerInstruments] order within a group.
+Map<SoundCategory, List<InstrumentOption>> soundLibraryByCategory() {
+  final out = <SoundCategory, List<InstrumentOption>>{};
+  for (final o in kTrackerInstruments) {
+    (out[o.category] ??= []).add(o);
+  }
+  return out;
 }
 
 /// The picker palette / built-in sound library: four additive voices, seven
