@@ -671,6 +671,104 @@ void _renderSampleChannelInto(
   }
 }
 
+/// The variable-timing sibling of [_renderSampleChannelInto]: the same per-tick
+/// resampling read-pointer (pitch/volume effects + sample loop), but over
+/// VARIABLE row spans — row `r` runs from absolute sample `rowStart[r]` to
+/// `rowStart[r+1]`, subdivided into `ticksPerRow[r]` ticks. So a SAMPLE channel
+/// that carries per-tick effects (porta/vibrato/tremolo/Cxx/Axy) AND a mid-song
+/// tempo/speed change (or a per-pattern length change) plays those effects
+/// instead of falling back to one-shot-per-note. Mixes into the absolute-offset
+/// `mix` (rowStart is already absolute), unit-peak × gain like the other
+/// non-additive paths.
+void _renderSampleChannelIntoVariable(
+  Float64List mix,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<int> ticksPerRow,
+  List<TrackerInstrument>? pool,
+) {
+  final env = channel.volumeEnvelope;
+  final hasEnv = env != null && !env.isEmpty;
+  const declickSec = 0.003;
+  final rows = cells.length;
+  final stem = Float64List(rowStart[rows]);
+  var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
+  final voice = ReplayVoice();
+  var readPos = 0.0;
+  var noteStartSample = 0;
+
+  for (var r = 0; r < rows; r++) {
+    final cellInst = cells[r].instrument;
+    if (cellInst > 0 &&
+        pool != null &&
+        cellInst - 1 < pool.length &&
+        pool[cellInst - 1] is SampleInstrument) {
+      cur = pool[cellInst - 1];
+    }
+    voice.armRow(cells[r]);
+    if (voice.retriggeredThisRow) {
+      final c = cells[r];
+      readPos = c.fxCmd == kFxSampleOffset ? (c.fxParam * 256).toDouble() : 0.0;
+      noteStartSample = rowStart[r];
+    }
+    if ((!voice.active && !voice.hasPendingNote) ||
+        cur is! SampleInstrument ||
+        cur.sample.isEmpty) {
+      continue;
+    }
+
+    final baseMidi = cur.baseMidi;
+    final s = cur.sample;
+    final loops = cur.loops;
+    final loopStart = cur.loopStart;
+    final loopLen = cur.loopLength;
+    final loopEnd = loopStart + loopLen;
+    final rowS = rowStart[r];
+    final rowE = rowStart[r + 1];
+    final tpr = ticksPerRow[r] < 1 ? 1 : ticksPerRow[r];
+    for (var k = 0; k < tpr; k++) {
+      final ts = rowS + ((rowE - rowS) * k) ~/ tpr;
+      final te = rowS + ((rowE - rowS) * (k + 1)) ~/ tpr;
+      final state = voice.tick(k, tpr);
+      if (state.retrigger) {
+        readPos = 0.0;
+        noteStartSample = ts;
+      }
+      if (!voice.active) continue;
+      final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
+      final vol = (state.volume / kMaxVolume) * voice.noteVolume;
+      for (var i = ts; i < te && i < stem.length; i++) {
+        if (loops && readPos >= loopEnd) {
+          readPos = loopStart + ((readPos - loopStart) % loopLen);
+        }
+        final idx = readPos.floor();
+        if (idx >= s.length - 1 && !loops) break; // one-shot: sample exhausted
+        final frac = readPos - idx;
+        final next =
+            idx + 1 < s.length ? s[idx + 1] : (loops ? s[loopStart] : 0.0);
+        final sampleVal = s[idx] * (1 - frac) + next * frac;
+        final t = (i - noteStartSample) / kSampleRate;
+        final attack = t < declickSec ? t / declickSec : 1.0;
+        final el = hasEnv ? env.levelAt(t * 1000) : 1.0;
+        stem[i] += sampleVal * vol * attack * el;
+        readPos += ratio;
+      }
+    }
+  }
+
+  var peak = 0.0;
+  for (final v in stem) {
+    if (v.abs() > peak) peak = v.abs();
+  }
+  if (peak == 0) return;
+  final scale = channel.gain / peak;
+  final n = min(stem.length, mix.length);
+  for (var i = 0; i < n; i++) {
+    mix[i] += stem[i] * scale;
+  }
+}
+
 /// The synthesis parameters of an additive [inst] (harmonics + envelope + the
 /// L1 harmonic norm used to keep the voice's peak ≤ 1). Recomputed whenever a
 /// per-cell instrument switches the additive timbre.
@@ -1627,7 +1725,21 @@ void _renderChannelIntoVariable(
 
   final inst = _additiveOf(channel.instrument);
   if (inst == null) {
-    _renderNonAdditiveVariable(mix, channel, cells, rowStart, pool);
+    // A sample channel with per-tick effects gets the variable-timing tick voice
+    // (porta/vibrato/tremolo/Cxx/Axy over the variable spans); otherwise the
+    // cheaper one-shot-per-note path (byte-identical when effect-free).
+    if (channel.instrument is SampleInstrument && _hasPerTickEffect(cells)) {
+      _renderSampleChannelIntoVariable(
+        mix,
+        channel,
+        cells,
+        rowStart,
+        ticksPerRow,
+        pool,
+      );
+    } else {
+      _renderNonAdditiveVariable(mix, channel, cells, rowStart, pool);
+    }
     return;
   }
 

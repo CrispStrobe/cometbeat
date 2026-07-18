@@ -8,7 +8,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
+import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_replay.dart'
     show kFxSetVolume, kFxVolumeSlide, kDefaultTicksPerRow;
@@ -805,6 +805,58 @@ void main() {
 
       expect(pcm.fold<int>(0, (m, v) => max(m, v.abs())), greaterThan(1000));
       // A rising pitch crosses zero more often later than earlier.
+      expect(crossings(n ~/ 2, n), greaterThan(crossings(0, n ~/ 2)));
+    });
+
+    test('per-tick effects apply on a SAMPLE channel with VARIABLE timing', () {
+      // Gap fix: a sample channel carrying a per-tick porta AND a mid-song tempo
+      // change (→ the variable-timing render path) used to fall back to
+      // one-shot-per-note (flat). It must now RISE like the uniform path does.
+      final sample = Float64List.fromList([
+        for (var i = 0; i < 120000; i++) sin(2 * pi * 110 * i / kSampleRate),
+      ]);
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty);
+      cells[0] = const TrackerCell(midi: 48);
+      for (var r = 1; r < 8; r++) {
+        cells[r] = fx(kFxPortaUp, 0x04); // gentle porta up (rings + rises)
+      }
+      final sampleCh = TrackerChannel(
+        id: 's',
+        instrument: SampleInstrument('s', sample, baseMidi: 48),
+        gain: 0.9,
+        rows: 8,
+      );
+      // A second, silent channel supplies a mid-song set-tempo (120 → 80) so
+      // songUsesVariableTiming is true (no note → contributes no audio).
+      final tempoCells = List<TrackerCell>.filled(8, TrackerCell.empty);
+      tempoCells[4] = fx(kFxSetSpeed, 0x50); // 0x50 = 80 BPM (≥0x20 → tempo)
+      final tempoCh = TrackerChannel(
+        id: 't',
+        instrument: const AdditiveInstrument('p', Instrument.piano),
+        rows: 8,
+      );
+      final song = TrackerSong.fromParts(
+        channels: [sampleCh, tempoCh],
+        timing: const TrackerTiming(rows: 8),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells, tempoCells]),
+        ],
+        order: [0],
+      );
+      expect(songUsesVariableTiming(song), isTrue); // the variable path is used
+
+      final pcm = replaySong(song).pcm;
+      final n = pcm.length;
+      int crossings(int lo, int hi) {
+        var c = 0;
+        for (var i = lo + 1; i < hi; i++) {
+          if ((pcm[i - 1] < 0) != (pcm[i] < 0)) c++;
+        }
+        return c;
+      }
+
+      expect(pcm.fold<int>(0, (m, v) => max(m, v.abs())), greaterThan(1000));
+      // Porta applied on the variable path → still rising (more crossings late).
       expect(crossings(n ~/ 2, n), greaterThan(crossings(0, n ~/ 2)));
     });
   });

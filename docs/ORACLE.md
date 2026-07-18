@@ -85,8 +85,16 @@ was found before shipping a mapping that silently wouldn't play.
   ours (per-0.2s RMS ≈ constant), whereas the same sample with the loop flag OFF
   decays to silence after ~one sample length in both — exactly the loop/one-shot
   distinction. Non-looping samples keep the byte-identical one-shot resample path.
-  Follow-up remaining: the variable-timing sample path
-  (`_renderNonAdditiveVariable`) is still one-shot-per-note (no per-tick yet).
+- **Variable-timing sample per-tick effects: DONE.** A SAMPLE channel that carries
+  per-tick effects AND a mid-song tempo/speed change (or a per-pattern length
+  change) now renders through `_renderSampleChannelIntoVariable` (the variable-span
+  sibling of `_renderSampleChannelInto`) instead of falling back to
+  one-shot-per-note, so porta/vibrato/tremolo/`Cxx`/`Axy` sound on that path too;
+  effect-free sample channels keep the cheaper `_renderNonAdditiveVariable`
+  one-shot path. Test: a sample channel with a porta + a 120→80 mid-song tempo
+  change still reads as a rising pitch. `songTotalMs`/`resolveTimingMap` are
+  already mid-song-tempo-aware (verified: onsets go non-uniform after the change).
+  **No known replayer follow-ups remain.**
 - **S3M** command→`fxCmd`/`fxParam` table: implemented in
   `module_convert._s3mEffectToFx` (core commands, structural test + oracle-
   verified). **IT** (`_itEffectToFx`) is DONE too — oracle-verified: an IT porta reads NEARLY IDENTICALLY to openmpt123 (A2 C3 G3 C4 F#4 C5 F5 C6 F6 B6 in both). All four import formats (MOD/XM/S3M/IT) now carry + SOUND their effects.
