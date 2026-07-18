@@ -166,3 +166,9 @@ high effort for diminishing returns.
   unshaped×1.25 so a big ceiling can't balloon a frame. Quiet passages shrink.
   Follow-up: a Xing/Info header so players report exact VBR duration/seek (the
   audio is correct now; only the estimated duration is approximate without it).
+
+## VBR Xing header
+`mp3EncodeMonoVbr`/`mp3EncodeStereoVbr` now prepend a Xing header frame (a silent
+64 kbps frame carrying "Xing" + frame count + byte count + a 100-entry seek TOC).
+Players report exact duration and can seek. Verified: ffprobe reads 4.02 s for a
+4 s clip (was an inaccurate estimate before the header).
