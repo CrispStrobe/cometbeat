@@ -17,6 +17,7 @@ import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -201,25 +202,7 @@ class _VoiceLabScreenState extends State<VoiceLabScreen>
   Future<void> _export() async {
     final out = _out;
     if (out == null || out.isEmpty) return;
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final loc = await getSaveLocation(
-        suggestedName: 'voice.wav',
-        acceptedTypeGroups: const [
-          XTypeGroup(label: 'WAV', extensions: ['wav']),
-        ],
-      );
-      if (loc == null || !mounted) return;
-      await XFile.fromData(_wav(out), name: 'voice.wav').saveTo(loc.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.voiceLabSavedTo(loc.path))),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      messenger
-          .showSnackBar(SnackBar(content: Text(l10n.voiceLabExportFailed)));
-    }
+    await showAudioExportSheet(context, pcm: out, baseName: 'voice');
   }
 
   void _snack(String msg) => ScaffoldMessenger.of(context)

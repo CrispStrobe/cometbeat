@@ -115,6 +115,19 @@
   "musicExportTitle": "Export as…",
   "musicExportEmpty": "Nothing to export yet",
   "musicExportFailed": "Export failed",
+  "audioExportTitle": "Export sound",
+  "audioExportWav": "WAV (uncompressed)",
+  "audioExportMp3": "MP3 (smaller)",
+  "audioExportEmpty": "Nothing to export yet",
+  "audioExportFailed": "Export failed",
+  "audioExportSavedTo": "Saved to {path}",
+  "@audioExportSavedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
   "workshopExportXml": "Export MusicXML",
   "workshopExportSvg": "Export SVG (print)",
   "workshopExportImage": "Export image (PNG)",

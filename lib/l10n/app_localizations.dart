@@ -488,6 +488,42 @@ abstract class AppLocalizations {
   /// **'Export failed'**
   String get musicExportFailed;
 
+  /// No description provided for @audioExportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export sound'**
+  String get audioExportTitle;
+
+  /// No description provided for @audioExportWav.
+  ///
+  /// In en, this message translates to:
+  /// **'WAV (uncompressed)'**
+  String get audioExportWav;
+
+  /// No description provided for @audioExportMp3.
+  ///
+  /// In en, this message translates to:
+  /// **'MP3 (smaller)'**
+  String get audioExportMp3;
+
+  /// No description provided for @audioExportEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to export yet'**
+  String get audioExportEmpty;
+
+  /// No description provided for @audioExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed'**
+  String get audioExportFailed;
+
+  /// No description provided for @audioExportSavedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {path}'**
+  String audioExportSavedTo(String path);
+
   /// No description provided for @workshopExportXml.
   ///
   /// In en, this message translates to:

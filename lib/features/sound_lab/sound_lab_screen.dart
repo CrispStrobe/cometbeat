@@ -9,7 +9,7 @@ import 'package:comet_beat/core/audio/synth.dart' show kSampleRate, wavBytes;
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/sound_lab/sfx_engine.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
-import 'package:file_selector/file_selector.dart';
+import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -98,27 +98,8 @@ class _SoundLabScreenState extends State<SoundLabScreen>
 
   void _play() => context.read<AudioService>().playWavBytes(_wav());
 
-  Future<void> _exportWav() async {
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final loc = await getSaveLocation(
-        suggestedName: 'sound.wav',
-        acceptedTypeGroups: const [
-          XTypeGroup(label: 'WAV', extensions: ['wav']),
-        ],
-      );
-      if (loc == null || !mounted) return;
-      await XFile.fromData(_wav(), name: 'sound.wav').saveTo(loc.path);
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.soundLabSavedTo(loc.path))),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      messenger
-          .showSnackBar(SnackBar(content: Text(l10n.soundLabExportFailed)));
-    }
-  }
+  Future<void> _export() =>
+      showAudioExportSheet(context, pcm: _pcm, baseName: 'sound');
 
   Future<void> _copyToken() async {
     await Clipboard.setData(ClipboardData(text: _params.shareToken));
@@ -145,7 +126,7 @@ class _SoundLabScreenState extends State<SoundLabScreen>
           IconButton(
             icon: const Icon(Icons.ios_share),
             tooltip: l10n.soundLabExport,
-            onPressed: _exportWav,
+            onPressed: _export,
           ),
           IconButton(
             icon: const Icon(Icons.link),

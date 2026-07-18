@@ -231,6 +231,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get musicExportFailed => 'Export failed';
 
   @override
+  String get audioExportTitle => 'Export sound';
+
+  @override
+  String get audioExportWav => 'WAV (uncompressed)';
+
+  @override
+  String get audioExportMp3 => 'MP3 (smaller)';
+
+  @override
+  String get audioExportEmpty => 'Nothing to export yet';
+
+  @override
+  String get audioExportFailed => 'Export failed';
+
+  @override
+  String audioExportSavedTo(String path) {
+    return 'Saved to $path';
+  }
+
+  @override
   String get workshopExportXml => 'Export MusicXML';
 
   @override
