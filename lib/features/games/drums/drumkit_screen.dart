@@ -42,6 +42,12 @@ abstract interface class DrumkitTester {
   bool cellAt(Drum drum, int step);
   void toggle(Drum drum, int step);
   int get hitCount;
+
+  /// Undo/redo of every pattern change (grid edits, record takes, clear).
+  bool get canUndo;
+  bool get canRedo;
+  void undo();
+  void redo();
   bool get isPlaying;
   void togglePlay();
   void stop();
@@ -96,6 +102,11 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   late final Ticker _ticker;
   final _step = ValueNotifier<int>(-1);
   int _tempo = 100;
+
+  // Undo/redo history of pattern snapshots (grid edits, record takes, clear).
+  static const _maxUndo = 50;
+  final List<Map<Drum, List<bool>>> _undoStack = [];
+  final List<Map<Drum, List<bool>>> _redoStack = [];
 
   // Tap-to-record: capture (drum, loop-relative ms) while recording, then
   // quantise onto the step grid on stop.
@@ -169,8 +180,50 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   @override
   bool cellAt(Drum drum, int step) => _rows[drum]![step];
 
+  // --- Undo / redo -----------------------------------------------------------
+
+  Map<Drum, List<bool>> _snapshot() => {
+        for (final e in _rows.entries) e.key: [...e.value],
+      };
+
+  /// Record the current pattern before a mutation, and drop the redo branch.
+  void _pushUndo() {
+    _undoStack.add(_snapshot());
+    if (_undoStack.length > _maxUndo) _undoStack.removeAt(0);
+    _redoStack.clear();
+  }
+
+  void _restore(Map<Drum, List<bool>> snap) {
+    for (final d in Drum.values) {
+      _rows[d]!.setAll(0, snap[d]!);
+    }
+  }
+
+  @override
+  bool get canUndo => _undoStack.isNotEmpty;
+
+  @override
+  bool get canRedo => _redoStack.isNotEmpty;
+
+  @override
+  void undo() {
+    if (_undoStack.isEmpty) return;
+    _redoStack.add(_snapshot());
+    setState(() => _restore(_undoStack.removeLast()));
+    _syncPlayback();
+  }
+
+  @override
+  void redo() {
+    if (_redoStack.isEmpty) return;
+    _undoStack.add(_snapshot());
+    setState(() => _restore(_redoStack.removeLast()));
+    _syncPlayback();
+  }
+
   @override
   void toggle(Drum drum, int step) {
+    _pushUndo();
     setState(() => _rows[drum]![step] = !_rows[drum]![step]);
     _syncPlayback();
   }
@@ -213,6 +266,8 @@ class _DrumkitScreenState extends State<DrumkitScreen>
 
   @override
   void clear() {
+    if (hitCount == 0) return;
+    _pushUndo();
     setState(() {
       for (final row in _rows.values) {
         row.fillRange(0, row.length, false);
@@ -277,6 +332,8 @@ class _DrumkitScreenState extends State<DrumkitScreen>
     List<({Drum drum, double ms})> taps,
     double beatMs,
   ) {
+    if (taps.isEmpty) return;
+    _pushUndo(); // a record take is undoable
     setState(() {
       for (final drum in Drum.values) {
         final onsets = <RhythmOnset>[
@@ -487,6 +544,16 @@ class _DrumkitScreenState extends State<DrumkitScreen>
       appBar: GameAppBar(
         title: l10n.drumkitTitle,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.undo),
+            tooltip: l10n.myMelodyUndo,
+            onPressed: canUndo ? undo : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.redo),
+            tooltip: l10n.workshopRedo,
+            onPressed: canRedo ? redo : null,
+          ),
           IconButton(
             icon: const Icon(Icons.bookmark_add_outlined),
             tooltip: l10n.drumkitSave,

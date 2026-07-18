@@ -41,6 +41,46 @@ void main() {
     expect(kit.hitCount, 2);
   });
 
+  testWidgets('undo/redo covers grid edits, record takes and clear',
+      (tester) async {
+    await pumpGame(tester, const DrumkitScreen());
+    final kit = _kit(tester);
+    expect(kit.canUndo, isFalse);
+
+    // A grid edit is undoable.
+    kit.toggle(Drum.kick, 0);
+    await tester.pump();
+    expect(kit.hitCount, 1);
+    expect(kit.canUndo, isTrue);
+    kit.undo();
+    await tester.pump();
+    expect(kit.hitCount, 0);
+    expect(kit.canRedo, isTrue);
+    kit.redo();
+    await tester.pump();
+    expect(kit.hitCount, 1);
+
+    // A record take is one undo step (back to just the grid edit).
+    kit.setTempo(120);
+    kit.debugRecordTaps([
+      (drum: Drum.snare, ms: 250),
+      (drum: Drum.hat, ms: 500),
+    ]);
+    await tester.pump();
+    expect(kit.hitCount, 3);
+    kit.undo();
+    await tester.pump();
+    expect(kit.hitCount, 1); // the take is gone; the kick remains
+
+    // Clear is undoable too.
+    kit.clear();
+    await tester.pump();
+    expect(kit.hitCount, 0);
+    kit.undo();
+    await tester.pump();
+    expect(kit.hitCount, 1);
+  });
+
   testWidgets('play/stop + clear + tempo + pad tap do not crash',
       (tester) async {
     await pumpGame(tester, const DrumkitScreen());
