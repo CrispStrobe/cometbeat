@@ -4,11 +4,14 @@
 // row-major -> channel-major transpose. Pure Dart, no device audio.
 
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show parseAnyModule;
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
+import 'package:comet_beat/core/audio/mod/s3m_module.dart';
+import 'package:comet_beat/core/audio/mod/s3m_writer.dart';
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -175,7 +178,41 @@ void main() {
         expect(song.usesInstruments, isTrue);
       }
     });
+
+    test('S3M letter-commands map to the right fxCmd/fxParam on import', () {
+      // Author a 1-channel S3M whose rows carry known S3M commands, write it,
+      // import it, and assert the cross-format mapping (verified vs libopenmpt —
+      // see docs/ORACLE.md).
+      final rows = <List<S3mCell>>[
+        [const S3mCell(note: 0x40, instrument: 1, volume: 64)], // C-5
+        [const S3mCell(command: 6, info: 0x20)], // F — porta up  → 0x1
+        [const S3mCell(command: 8, info: 0x34)], // H — vibrato   → 0x4
+        [const S3mCell(command: 3, info: 0x08)], // C — break     → 0xD
+        [const S3mCell(command: 20, info: 0x80)], // T — set tempo → 0xF
+      ];
+      final m = S3mModule(
+        title: 'fxmap',
+        channelCount: 1,
+        order: [0],
+        samples: [S3mSample.empty(), S3mSample(pcm: _sine())],
+        patterns: [S3mPattern(rows)],
+      );
+      final song = songFromModuleBytes(writeS3m(m));
+      final col = song.patterns[0].cells[0];
+      expect((col[1].fxCmd, col[1].fxParam), (0x1, 0x20)); // porta up
+      expect((col[2].fxCmd, col[2].fxParam), (0x4, 0x34)); // vibrato
+      expect(col[3].fxCmd, 0xD); // pattern break
+      expect((col[4].fxCmd, col[4].fxParam), (0xF, 0x80)); // tempo
+    });
   });
+}
+
+Int8List _sine() {
+  final s = Int8List(512);
+  for (var i = 0; i < s.length; i++) {
+    s[i] = (100 * sin(2 * pi * 4 * i / s.length)).round();
+  }
+  return s;
 }
 
 int? _firstDocNote(ModuleDoc doc) {

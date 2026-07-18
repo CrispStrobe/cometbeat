@@ -194,6 +194,72 @@ ModuleDoc docFromMod(ModModule m) {
   );
 }
 
+/// Maps an S3M letter-command (A=1..Z=26) + info byte to our MOD-numbered
+/// `(fxCmd, fxParam)` (the DocCell effect column). S3M's command SET differs from
+/// MOD's numbering, so this is a real translation. Verified against libopenmpt
+/// (`openmpt123 --render`) — see docs/ORACLE.md. Commands with no equivalent in
+/// our set return `(0, 0)` (dropped). fxCmd values match the replayer's `kFx*`.
+(int, int) _s3mEffectToFx(int cmd, int info) {
+  switch (cmd) {
+    case 1: // A — set speed (ticks/row); our Fxx < 0x20 = speed
+      return info == 0 ? (0, 0) : (0xF, info < 0x20 ? info : 0x1F);
+    case 2: // B — position jump
+      return (0xB, info);
+    case 3: // C — pattern break (row param, decimal like MOD's Dxx)
+      return (0xD, info);
+    case 4: // D — volume slide (Dxy: x up / y down — matches our Axy; fine
+      //     slides with an 0xF nibble are approximated as a normal slide)
+      return (0xA, info);
+    case 5: // E — portamento down
+      return (0x2, info);
+    case 6: // F — portamento up
+      return (0x1, info);
+    case 7: // G — tone portamento
+      return (0x3, info);
+    case 8: // H — vibrato
+      return (0x4, info);
+    case 10: // J — arpeggio
+      return (0x0, info);
+    case 11: // K — vibrato + volume slide
+      return (0x6, info);
+    case 12: // L — tone porta + volume slide
+      return (0x5, info);
+    case 15: // O — set sample offset
+      return (0x9, info);
+    case 18: // R — tremolo
+      return (0x7, info);
+    case 19: // S — special/extended: remap the sub-command nibble
+      return _s3mSpecialToFx(info);
+    case 20: // T — set tempo (BPM); our Fxx >= 0x20 = tempo
+      return (0xF, info < 0x20 ? 0x20 : info);
+    case 21: // U — fine vibrato (approximated as vibrato)
+      return (0x4, info);
+    case 24: // X — set pan (0x00..0x80) → our 8xx (0x00..0xFF)
+      return (0x8, (info * 2).clamp(0, 0xFF));
+    default:
+      // I tremor · M/N channel-volume · P pan-slide · Q retrig+volslide ·
+      // V/W global-volume · Y panbrello · Z MIDI — no equivalent (dropped).
+      return (0, 0);
+  }
+}
+
+/// S3M `Sxy` special sub-commands → our `Exy` extended (where an equivalent
+/// exists). The sub-command nibble maps: SBx→E6x loop, SCx→ECx cut, SDx→EDx
+/// delay. Others (waveforms, panning, pattern delay, finetune) are dropped.
+(int, int) _s3mSpecialToFx(int info) {
+  final sub = (info >> 4) & 0xF, val = info & 0xF;
+  switch (sub) {
+    case 0xB: // SBx — pattern loop → E6x
+      return (0xE, (0x6 << 4) | val);
+    case 0xC: // SCx — note cut → ECx
+      return (0xE, (0xC << 4) | val);
+    case 0xD: // SDx — note delay → EDx
+      return (0xE, (0xD << 4) | val);
+    default:
+      return (0, 0);
+  }
+}
+
 ModuleDoc docFromS3m(S3mModule m) {
   final samples = <DocSample>[];
   for (final s in m.samples) {
@@ -219,12 +285,15 @@ ModuleDoc docFromS3m(S3mModule m) {
     for (final row in pat.rows) {
       final cells = <DocCell>[];
       for (final c in row) {
+        final (fxCmd, fxParam) = _s3mEffectToFx(c.command, c.info);
         cells.add(
           DocCell(
             note: s3mNoteToMidi(c.note),
             noteOff: c.note == S3mCell.noteOff,
             instrument: c.instrument,
             volume: c.volume == S3mCell.noVolume ? -1 : c.volume,
+            effect: fxCmd,
+            effectParam: fxParam,
           ),
         );
       }
