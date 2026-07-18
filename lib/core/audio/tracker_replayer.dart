@@ -717,6 +717,27 @@ bool songUsesFlow(TrackerSong song) => song.patterns.any(
       ),
     );
 
+/// Whether every pattern referenced by [song.order] has exactly
+/// [song.timing.rows] rows — the classic uniform-length assumption. When false,
+/// patterns vary in length (Feature B), so the render must route through the
+/// walk/flatten path ([_replayFlow]) instead of the fixed-size concatenation,
+/// exactly like a flow song. A uniform-length song stays on the fast path and
+/// renders bit-for-bit as before.
+bool songHasUniformPatternLengths(TrackerSong song) {
+  final r = song.timing.rows;
+  for (final oi in song.order) {
+    if (oi < 0 || oi >= song.patterns.length) continue;
+    if (song.patterns[oi].rows != r) return false;
+  }
+  return true;
+}
+
+/// Whether [song] must render through the walk/flatten path — because it carries
+/// flow commands OR its patterns vary in length. The uniform, flow-free song
+/// keeps the fast fixed-size render.
+bool songNeedsWalkRender(TrackerSong song) =>
+    songUsesFlow(song) || !songHasUniformPatternLengths(song);
+
 /// Expands [song]'s order/pattern/row walk under the flow rules (Bxx jump, Dxx
 /// break, E6x pattern loop) into the flat sequence of rows actually played. Bxx
 /// wins the order, Dxx sets the landing row; both on one row ⇒ jump order + break
@@ -725,7 +746,6 @@ bool songUsesFlow(TrackerSong song) => song.patterns.any(
 /// error).
 List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
   final order = song.order;
-  final rows = song.timing.rows;
   final played = <PlayedRow>[];
   var oi = 0;
   var row = 0;
@@ -734,7 +754,14 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
   while (oi >= 0 && oi < order.length && played.length < maxRows) {
     final patternIndex = order[oi];
     final cells = song.patterns[patternIndex].cells;
-    if (row < 0 || row >= rows) row = 0;
+    // Per-pattern length: each entry uses ITS OWN row count (Feature B). A jump/
+    // break landing row is clamped to the TARGET pattern's length here.
+    final rows = song.patterns[patternIndex].rows;
+    if (row < 0) {
+      row = 0;
+    } else if (row >= rows) {
+      row = rows - 1;
+    }
     played.add(PlayedRow(oi, patternIndex, row));
 
     // Scan the row across channels for flow commands (first of each wins).
@@ -746,8 +773,8 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
       if (c.fxCmd == kFxPositionJump) {
         jumpToOrder ??= c.fxParam;
       } else if (c.fxCmd == kFxPatternBreak) {
-        breakToRow ??=
-            ((c.fxParam >> 4) * 10 + (c.fxParam & 0xF)).clamp(0, rows - 1);
+        // Decimal row param; clamped to the TARGET pattern's length at landing.
+        breakToRow ??= (c.fxParam >> 4) * 10 + (c.fxParam & 0xF);
       } else if (c.fxCmd == kFxExtended &&
           ((c.fxParam >> 4) & 0xF) == kExPatternLoop) {
         loopValue ??= c.fxParam & 0xF;
@@ -860,7 +887,8 @@ TrackerTiming effectiveTiming(TrackerSong song) {
 List<RowTiming> resolveTimingMap(TrackerSong song) {
   song.syncCurrent();
   final timing = effectiveTiming(song); // match the render's Fxx set-tempo
-  if (songUsesFlow(song)) {
+  // Flow OR variable-length patterns both resolve via the flattened walk.
+  if (songNeedsWalkRender(song)) {
     final played = walkFlow(song);
     final flatTiming =
         timing.copyWith(rows: played.isEmpty ? 1 : played.length);
@@ -922,7 +950,8 @@ ReplayResult replaySong(
   // An Fxx set-speed command overrides the default ticks/row (effect
   // granularity); timing-safe (speed subdivides the row, not its duration).
   final ticks = songInitialSpeed(song, fallback: ticksPerRow);
-  if (songUsesFlow(song)) return _replayFlow(song, ticks);
+  // Flow OR variable-length patterns both flatten the played sequence.
+  if (songNeedsWalkRender(song)) return _replayFlow(song, ticks);
 
   // An Fxx set-tempo command sets the (uniform) render tempo.
   final timing = effectiveTiming(song);

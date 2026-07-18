@@ -181,7 +181,11 @@ class TrackerSong {
   /// common flow-free, tempo-free case short-circuits with no allocation.
   int get songTotalMs {
     final t = effectiveTiming(this);
-    return songUsesFlow(this)
+    // Uniform tempo throughout (Feature B changes row COUNT, not tempo), so the
+    // length is stepMs × the number of played rows. Flow OR variable-length
+    // patterns walk the played sequence; the uniform, flow-free case
+    // short-circuits with no allocation.
+    return songNeedsWalkRender(this)
         ? t.stepMs * walkFlow(this).length
         : t.totalMs * order.length;
   }
@@ -224,12 +228,21 @@ class TrackerSong {
   }
 
   /// Save the live pattern, then load [index] into the engine for editing.
+  /// Re-times the engine to the selected pattern's own row count (Feature B:
+  /// patterns may have different lengths), so the engine's per-channel
+  /// cell-count assert holds and editing a variable-length pattern works.
   void selectPattern(int index) {
     assert(index >= 0 && index < patterns.length);
     if (index == _current) return;
     syncCurrent();
     _current = index;
-    _engine.importCells(current.cells);
+    final newRows = current.rows;
+    if (newRows != _engine.timing.rows) {
+      // _rebuild re-sizes the band to the new timing and imports current.cells.
+      _rebuild(_engine.channels, _engine.timing.copyWith(rows: newRows));
+    } else {
+      _engine.importCells(current.cells);
+    }
   }
 
   // --- Song arrangement --------------------------------------------------
@@ -459,6 +472,26 @@ class TrackerSong {
     _rebuild(_engine.channels, _engine.timing.copyWith(rows: newRows));
   }
 
+  /// Resizes ONE pattern (Feature B: per-pattern variable length) to [newRows]
+  /// steps — truncating extra rows or padding with [TrackerCell.empty] — leaving
+  /// every other pattern untouched. If it resizes the CURRENT pattern, the engine
+  /// is re-timed to [newRows] so its per-channel cell-count assert holds and
+  /// editing the new rows works. (Contrast [setRows], which resizes ALL patterns.)
+  void setPatternRows(int patternIndex, int newRows) {
+    assert(patternIndex >= 0 && patternIndex < patterns.length);
+    assert(newRows > 0);
+    final p = patterns[patternIndex];
+    if (p.rows == newRows) return;
+    final isCurrent = patternIndex == _current;
+    if (isCurrent) syncCurrent(); // capture live edits before resizing
+    for (final col in p.cells) {
+      _resizeColumn(col, newRows);
+    }
+    if (isCurrent) {
+      _rebuild(_engine.channels, _engine.timing.copyWith(rows: newRows));
+    }
+  }
+
   /// Sets the tempo (BPM) — re-times the engine, cells unchanged.
   void setTempo(int bpm) {
     if (bpm == timing.tempoBpm || bpm <= 0) return;
@@ -488,13 +521,17 @@ class TrackerSong {
   /// through the tick [replaySong] when any pattern [usesCommands].
   Uint8List renderSongWav() {
     syncCurrent();
-    if (usesCommands || usesInstruments) {
+    // Route through the tick replayer for commands, per-cell instruments, flow,
+    // OR variable-length patterns (the offline concatenation assumes one fixed
+    // pattern length). A uniform, command-free song keeps the fast offline path.
+    if (usesCommands || usesInstruments || songNeedsWalkRender(this)) {
       return wavBytes(replaySong(this).pcm);
     }
     return renderSong(_engine, [for (final i in order) patterns[i].cells]);
   }
 
-  /// Total rendered song length in samples (uniform pattern length for now).
+  /// Total rendered song length in samples (sums each played pattern's own
+  /// length under [songTotalMs]).
   int get songTotalSamples => (songTotalMs * kSampleRate) ~/ 1000;
 
   // --- internals ---------------------------------------------------------

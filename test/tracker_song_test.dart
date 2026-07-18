@@ -384,4 +384,92 @@ void main() {
       expect(c.instrument, 3);
     });
   });
+
+  group('per-pattern variable length (Feature B)', () {
+    test('setPatternRows resizes only the named pattern; others untouched', () {
+      final song = TrackerSong(
+        timing: const TrackerTiming(rows: 8),
+        patternCount: 3,
+      );
+      song.setPatternRows(1, 16);
+      expect(song.patterns[0].rows, 8);
+      expect(song.patterns[1].rows, 16);
+      expect(song.patterns[2].rows, 8);
+      // Resizing a non-current pattern does not re-time the engine.
+      expect(song.rows, 8);
+    });
+
+    test('setPatternRows truncates, preserving surviving rows', () {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      song.engine.setCell(0, 3, const TrackerCell(midi: 64));
+      song.engine.setCell(0, 6, const TrackerCell(midi: 67));
+      song.syncCurrent();
+      song.setPatternRows(0, 4); // current pattern, truncate to 4
+      expect(song.rows, 4); // engine re-timed
+      expect(song.patterns[0].cells[0][0].midi, 60);
+      expect(song.patterns[0].cells[0][3].midi, 64);
+      expect(song.patterns[0].cells[0].length, 4); // row 6 gone
+    });
+
+    test('setPatternRows pads the current pattern with empty rows', () {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 4));
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      song.syncCurrent();
+      song.setPatternRows(0, 8);
+      expect(song.rows, 8);
+      expect(song.patterns[0].cells[0][0].midi, 60);
+      expect(song.patterns[0].cells[0][7].isEmpty, isTrue);
+      // The engine accepts an edit on a freshly-added row.
+      song.engine.setCell(0, 7, const TrackerCell(midi: 72));
+      song.syncCurrent();
+      expect(song.patterns[0].cells[0][7].midi, 72);
+    });
+
+    test('setPatternRows to the same size is a no-op', () {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      song.setPatternRows(0, 8);
+      expect(song.rows, 8);
+    });
+
+    test('selectPattern re-times to the selected pattern length', () {
+      final song = TrackerSong(
+        timing: const TrackerTiming(rows: 8),
+        patternCount: 2,
+      );
+      song.setPatternRows(1, 12);
+      song.selectPattern(1);
+      expect(song.rows, 12);
+      song.selectPattern(0);
+      expect(song.rows, 8);
+    });
+
+    test('renderSongWav sums differing pattern lengths', () {
+      final song = TrackerSong(
+        timing: const TrackerTiming(rows: 8),
+        patternCount: 2,
+      );
+      song.setPatternRows(1, 16);
+      song.selectPattern(0);
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      song.order
+        ..clear()
+        ..addAll([0, 1]);
+      song.syncCurrent();
+      final wav = song.renderSongWav();
+      final expectedSamples = song.timing.stepMs * 24 * 44100 ~/ 1000;
+      expect((_wavPcmLen(wav) - expectedSamples).abs(), lessThan(200));
+    });
+
+    test('an all-equal-length song still reports the uniform length', () {
+      final song = TrackerSong(
+        timing: const TrackerTiming(rows: 8),
+        patternCount: 2,
+      );
+      song.order
+        ..clear()
+        ..addAll([0, 1, 0]);
+      expect(song.songTotalMs, song.timing.totalMs * 3);
+    });
+  });
 }
