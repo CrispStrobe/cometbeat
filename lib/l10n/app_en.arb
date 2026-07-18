@@ -444,6 +444,7 @@
   "trackerChannelVoice": "Voice",
   "trackerToggleNotation": "Show notation",
   "trackerWideRange": "Wide range (more octaves)",
+  "trackerSimplified": "Simplified for Beginner mode (pitched notes snapped to the grid; drums dropped)",
   "trackerImportTune": "Load a tune",
   "trackerSwing": "Swing",
   "trackerDemoTune": "Simple tune (C D E G)",

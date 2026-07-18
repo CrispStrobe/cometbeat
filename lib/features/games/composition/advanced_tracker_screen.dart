@@ -2026,7 +2026,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       };
 
   void _toBeginner() => Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const TrackerScreen()),
+        MaterialPageRoute(
+          builder: (_) => TrackerScreen(initialSong: _song),
+        ),
       );
 
   // --- Import / export (reuses the existing module + notation bridges) ---

@@ -1221,6 +1221,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerWideRange => 'Wide range (more octaves)';
 
   @override
+  String get trackerSimplified =>
+      'Simplified for Beginner mode (pitched notes snapped to the grid; drums dropped)';
+
+  @override
   String get trackerImportTune => 'Load a tune';
 
   @override

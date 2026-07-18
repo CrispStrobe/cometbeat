@@ -50,7 +50,13 @@ import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 
 class TrackerScreen extends StatefulWidget {
-  const TrackerScreen({super.key});
+  const TrackerScreen({super.key, this.initialSong});
+
+  /// An optional Advanced-mode song to open with — the Advanced→Beginner switch
+  /// hands its groove down here. Lossy on purpose (the kid grid is 8 steps,
+  /// pentatonic, few channels): pitched notes are downsampled onto the grid and
+  /// snapped to the wide pentatonic; drums are dropped. Null = a fresh sandbox.
+  final TrackerSong? initialSong;
 
   /// One 4/4 bar of eighth-note steps.
   static const steps = 8;
@@ -266,6 +272,7 @@ class _TrackerScreenState extends State<TrackerScreen>
   void initState() {
     super.initState();
     _slots = List.generate(_slotCount, (_) => _engine.exportCells());
+    if (widget.initialSong != null) _loadFromSong(widget.initialSong!);
     _ticker = createTicker((_) {
       final t = _engine.timing;
       if (_songMode && _order.isNotEmpty && _clock.isRunning) {
@@ -519,6 +526,78 @@ class _TrackerScreenState extends State<TrackerScreen>
       patterns: patterns,
       order: order,
     );
+  }
+
+  /// Loads an Advanced-mode [song] onto the kid grid (the Advanced→Beginner
+  /// hand-down). Lossy on purpose: pitched channels map onto the Beginner's
+  /// pitched channels in order, each pattern is downsampled to [steps] and every
+  /// note snapped to the (wide) pentatonic; drums, and any channels/patterns
+  /// beyond the grid, are dropped. A one-time notice tells the kid what changed.
+  void _loadFromSong(TrackerSong song) {
+    song.syncCurrent(); // flush live edits into patterns[current] before reading
+    final steps = _engine.rows;
+    final pitchedDest = [
+      for (var c = 0; c < _engine.channels.length; c++)
+        if (_engine.channels[c].instrument is! PercussionInstrument) c,
+    ];
+    if (pitchedDest.isEmpty) return;
+
+    // The pentatonic codes a Beginner channel can hold across the wide range —
+    // the snap targets for an arbitrary chromatic note.
+    List<int> codesFor(int ch) => [
+          for (final o in _wideOctaves)
+            for (var r = 0; r < TrackerScreen.rowSteps.length; r++)
+              _midiFor(ch, r) + 12 * o,
+        ];
+    int snap(int ch, int midi) {
+      var best = codesFor(ch).first;
+      for (final code in codesFor(ch)) {
+        if ((code - midi).abs() < (best - midi).abs()) best = code;
+      }
+      return best;
+    }
+
+    final empty = [
+      for (final col in _engine.exportCells())
+        List<TrackerCell>.filled(col.length, const TrackerCell()),
+    ];
+    for (var s = 0; s < _slotCount; s++) {
+      final slot = [for (final col in empty) List<TrackerCell>.of(col)];
+      if (s < song.patterns.length) {
+        final pat = song.patterns[s];
+        var destIndex = 0;
+        for (var ac = 0; ac < pat.cells.length; ac++) {
+          if (ac >= song.channels.length) break;
+          if (song.channels[ac].instrument is PercussionInstrument) continue;
+          final destCh = pitchedDest[destIndex % pitchedDest.length];
+          destIndex++;
+          final col = pat.cells[ac];
+          final rows = col.length;
+          for (var step = 0; step < steps; step++) {
+            final ar = rows == 0 ? 0 : (step * rows ~/ steps);
+            final midi = col[ar].midi;
+            if (midi != null) {
+              slot[destCh][step] = TrackerCell(midi: snap(destCh, midi));
+            }
+          }
+        }
+      }
+      _slots[s] = slot;
+    }
+    _engine.importCells(_slots[0]);
+    _order
+      ..clear()
+      ..addAll(song.order.where((i) => i >= 0 && i < _slotCount));
+    _currentSlot = 0;
+    // Notice (post-frame — context isn't ready during initState).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.trackerSimplified),
+        ),
+      );
+    });
   }
 
   /// Saves the live pattern into the current slot, then loads slot [index].

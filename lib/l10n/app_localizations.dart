@@ -2354,6 +2354,12 @@ abstract class AppLocalizations {
   /// **'Wide range (more octaves)'**
   String get trackerWideRange;
 
+  /// No description provided for @trackerSimplified.
+  ///
+  /// In en, this message translates to:
+  /// **'Simplified for Beginner mode (pitched notes snapped to the grid; drums dropped)'**
+  String get trackerSimplified;
+
   /// No description provided for @trackerImportTune.
   ///
   /// In en, this message translates to:

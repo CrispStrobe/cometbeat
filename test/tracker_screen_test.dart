@@ -11,7 +11,8 @@ import 'package:comet_beat/core/audio/mod/mod.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show parseAnyModule;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
-    show TrackerChannelEffect, TrackerEffect;
+    show TrackerCell, TrackerChannelEffect, TrackerEffect;
+import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:crisp_notation/crisp_notation.dart'
@@ -94,6 +95,21 @@ void main() {
     expect(notes, 2);
     // The order lists the non-empty slot (A) so it actually plays.
     expect(song.order, contains(0));
+  });
+
+  testWidgets('an Advanced song hands down onto the kid grid (snapped)',
+      (tester) async {
+    final song = TrackerSong(); // default band, 32 rows
+    song.engine.setCell(0, 0, const TrackerCell(midi: 61)); // chromatic C#
+    song.engine.setCell(0, 8, const TrackerCell(midi: 67)); // G
+
+    await pumpGame(tester, TrackerScreen(initialSong: song));
+    final game = _game(tester);
+    await tester.pump(); // let the post-frame notice fire
+
+    // Downsample maps rows 0 and 8 (of 32) onto steps 0 and 2 -> two notes.
+    expect(game.noteCount, 2);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('wide range opens three octaves of pitch rows', (tester) async {

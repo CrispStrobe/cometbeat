@@ -413,6 +413,7 @@
   "trackerChannelVoice": "Stimme",
   "trackerToggleNotation": "Noten zeigen",
   "trackerWideRange": "Großer Tonumfang (mehr Oktaven)",
+  "trackerSimplified": "Für den Anfänger-Modus vereinfacht (Töne aufs Raster gerundet; Schlagzeug entfällt)",
   "trackerImportTune": "Melodie laden",
   "trackerSwing": "Swing",
   "trackerDemoTune": "Kurze Melodie (C D E G)",

@@ -1227,6 +1227,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerWideRange => 'Großer Tonumfang (mehr Oktaven)';
 
   @override
+  String get trackerSimplified =>
+      'Für den Anfänger-Modus vereinfacht (Töne aufs Raster gerundet; Schlagzeug entfällt)';
+
+  @override
   String get trackerImportTune => 'Melodie laden';
 
   @override
