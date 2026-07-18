@@ -4,8 +4,10 @@
 import 'package:comet_beat/core/audio/beat_capture.dart' show BeatFrame;
 import 'package:comet_beat/core/audio/synth.dart' show Drum;
 import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';
@@ -109,5 +111,33 @@ void main() {
     expect(kit.cellAt(Drum.hat, 6), isTrue);
     expect(kit.hitCount, 3);
     expect(kit.isListening, isFalse);
+  });
+
+  testWidgets('the beat saves to the Song Book as a rhythm-line score',
+      (tester) async {
+    final songs = UserSongsService();
+    await pumpGame(
+      tester,
+      const DrumkitScreen(),
+      extraProviders: [
+        ChangeNotifierProvider<UserSongsService>.value(value: songs),
+      ],
+    );
+    final kit = _kit(tester);
+
+    // Empty grid → nothing to save.
+    expect(kit.debugMusicXml(), isNull);
+
+    kit.toggle(Drum.kick, 0);
+    kit.toggle(Drum.kick, 8);
+    kit.toggle(Drum.hat, 4);
+    await tester.pump();
+
+    expect(songs.songs, isEmpty);
+    final xml = kit.debugSaveToSongBook(songs);
+    expect(xml, isNotNull);
+    expect(xml, contains('<score-partwise'));
+    expect(songs.songs, hasLength(1));
+    expect(songs.songs.single.musicXml, contains('<score-partwise'));
   });
 }

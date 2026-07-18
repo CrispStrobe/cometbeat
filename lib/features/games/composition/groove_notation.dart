@@ -7,6 +7,7 @@
 // bar, cells split at barlines.
 
 import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/synth.dart' show Drum;
 import 'package:crisp_notation/crisp_notation.dart';
 
 const _naturalSteps = {
@@ -114,6 +115,61 @@ const grooveTrackOrder = ['voice', 'melody', 'chords', 'sparkle', 'bass'];
       grooveScore(cells, clef: id == 'bass' ? Clef.bass : Clef.treble),
     );
     partNames.add(nameOf(id));
+  }
+  if (parts.isEmpty) return null;
+  return (score: MultiPartScore(parts), partNames: partNames);
+}
+
+/// The pitch each drum is engraved on for a rhythm-line reduction — kick low,
+/// snare in the middle, hat high, so the three lines read (and play back)
+/// distinctly. Naturals, so they spell cleanly (F2 / C4 / G5).
+int _drumMidi(Drum drum) => switch (drum) {
+      Drum.kick => 41, // F2
+      Drum.snare => 60, // C4
+      Drum.hat => 79, // G5
+    };
+
+/// One drum row (eighth-grid booleans) as [PatternCell]s: each hit is a single
+/// eighth note; consecutive silent steps merge into one rest. So a beat reads as
+/// eighth-note hits with tidy rests between, not a sustained line.
+List<PatternCell> _drumRowCells(List<bool> row, int midi) {
+  final cells = <PatternCell>[];
+  var i = 0;
+  while (i < row.length) {
+    if (row[i]) {
+      cells.add((midis: [midi], steps: 1));
+      i++;
+    } else {
+      var j = i;
+      while (j < row.length && !row[j]) {
+        j++;
+      }
+      cells.add((midis: null, steps: j - i));
+      i = j;
+    }
+  }
+  return cells;
+}
+
+/// A drum [pattern] (fixed eighth grid) engraved as a multi-part score — one
+/// rhythm-line part per drum that has any hit (kick low, snare middle, hat
+/// high), so a tapped or beatboxed beat exports to MusicXML/MIDI and saves to
+/// the Song Book. [nameOf] resolves each drum to a display part name (keeps this
+/// module Flutter-free). Null when the pattern is silent.
+///
+/// NB a rhythm REDUCTION — pitched lines that preserve the timing — not real
+/// percussion notation (the kid theme has no drum staff yet).
+({MultiPartScore score, List<String> partNames})? drumParts(
+  DrumRowsPattern pattern, {
+  required String Function(Drum drum) nameOf,
+}) {
+  final parts = <Score>[];
+  final partNames = <String>[];
+  for (final drum in Drum.values) {
+    final row = pattern.rows[drum];
+    if (row == null || !row.contains(true)) continue;
+    parts.add(grooveScore(_drumRowCells(row, _drumMidi(drum))));
+    partNames.add(nameOf(drum));
   }
   if (parts.isEmpty) return null;
   return (score: MultiPartScore(parts), partNames: partNames);

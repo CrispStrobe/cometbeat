@@ -2222,6 +2222,36 @@ abstract class AppLocalizations {
   /// **'Nothing heard — try beatboxing louder.'**
   String get drumkitBeatboxNothing;
 
+  /// No description provided for @drumkitSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to Song Book'**
+  String get drumkitSave;
+
+  /// No description provided for @drumkitExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get drumkitExport;
+
+  /// No description provided for @drumkitSaveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name your beat'**
+  String get drumkitSaveTitle;
+
+  /// No description provided for @drumkitDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'My beat'**
+  String get drumkitDefaultName;
+
+  /// No description provided for @drumkitSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to the Song Book'**
+  String get drumkitSaved;
+
   /// No description provided for @drumkitKick.
   ///
   /// In en, this message translates to:

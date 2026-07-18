@@ -1157,6 +1157,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get drumkitBeatboxNothing => 'Nichts gehört — beatboxe lauter.';
 
   @override
+  String get drumkitSave => 'Ins Liederbuch';
+
+  @override
+  String get drumkitExport => 'Exportieren';
+
+  @override
+  String get drumkitSaveTitle => 'Benenne deinen Beat';
+
+  @override
+  String get drumkitDefaultName => 'Mein Beat';
+
+  @override
+  String get drumkitSaved => 'Im Liederbuch gespeichert';
+
+  @override
   String get drumkitKick => 'Bass';
 
   @override

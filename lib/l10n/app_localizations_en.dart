@@ -1150,6 +1150,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drumkitBeatboxNothing => 'Nothing heard — try beatboxing louder.';
 
   @override
+  String get drumkitSave => 'Save to Song Book';
+
+  @override
+  String get drumkitExport => 'Export';
+
+  @override
+  String get drumkitSaveTitle => 'Name your beat';
+
+  @override
+  String get drumkitDefaultName => 'My beat';
+
+  @override
+  String get drumkitSaved => 'Saved to the Song Book';
+
+  @override
   String get drumkitKick => 'Kick';
 
   @override

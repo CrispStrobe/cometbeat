@@ -3,9 +3,22 @@
 // progression path producing 4 bars.
 
 import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/synth.dart' show Drum;
 import 'package:comet_beat/features/games/composition/groove_notation.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart' hide isEmpty;
+
+DrumRowsPattern _pattern(Map<Drum, String> rows) {
+  final map = {
+    for (final d in Drum.values) d: List<bool>.filled(kPatternSteps, false),
+  };
+  rows.forEach((drum, s) {
+    for (var i = 0; i < s.length && i < kPatternSteps; i++) {
+      map[drum]![i] = s[i] == 'x';
+    }
+  });
+  return DrumRowsPattern(map);
+}
 
 void main() {
   test('pitchFromMidi spells the groove range', () {
@@ -134,6 +147,50 @@ void main() {
       expect(xml, contains('MELODY'));
       expect(xml, contains('CHORDS'));
       // Re-reading the first part yields an engravable score.
+      expect(scoreFromMusicXml(xml).measures, isNotEmpty);
+    });
+  });
+
+  group('drumParts (beat → rhythm-line score)', () {
+    String label(Drum d) => d.name;
+
+    test('an empty pattern → null', () {
+      expect(drumParts(_pattern(const {}), nameOf: label), isNull);
+    });
+
+    test('one part per drum that has a hit, in Drum order', () {
+      final result = drumParts(
+        _pattern(const {
+          Drum.kick: 'x.......x.......',
+          Drum.hat: '..x...x...x...x.',
+        }),
+        nameOf: label,
+      )!;
+
+      // snare has no hits → skipped; kick before hat (Drum order).
+      expect(result.partNames, ['kick', 'hat']);
+      expect(result.score.parts.length, 2);
+      // 16 eighth steps = two 4/4 bars per part.
+      expect(result.score.parts[0].measures.length, 2);
+
+      // The kick part carries exactly its two hits as notes.
+      final kickNotes = result.score.parts[0].measures
+          .expand((m) => m.elements)
+          .whereType<NoteElement>()
+          .length;
+      expect(kickNotes, 2);
+    });
+
+    test('exports to MusicXML with a part per drum', () {
+      final result = drumParts(
+        _pattern(const {Drum.kick: 'x...x...x...x...'}),
+        nameOf: label,
+      )!;
+      final xml = multiPartToMusicXml(
+        result.score,
+        partNames: result.partNames,
+      );
+      expect(xml, contains('<score-partwise'));
       expect(scoreFromMusicXml(xml).measures, isNotEmpty);
     });
   });

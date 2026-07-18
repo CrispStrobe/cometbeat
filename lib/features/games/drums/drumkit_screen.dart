@@ -22,8 +22,15 @@ import 'package:comet_beat/core/audio/synth.dart'
     show Drum, renderDrum, wavBytes;
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
+import 'package:comet_beat/features/games/composition/groove_notation.dart'
+    show drumParts;
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music_io/music_export.dart'
+    show showMusicExportSheet;
+import 'package:crisp_notation/crisp_notation.dart'
+    show MultiPartScore, multiPartToMusicXml;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -60,6 +67,11 @@ abstract interface class DrumkitTester {
   /// Test seam: run captured beatbox [frames] through classify → quantise →
   /// grid, without a live microphone.
   void debugBeatboxFrames(List<BeatFrame> frames);
+
+  /// Save/export: the beat as a rhythm-line score (one part per drum). Test
+  /// seams: persist into [songs] and read back the MusicXML (null when empty).
+  String? debugSaveToSongBook(UserSongsService songs);
+  String? debugMusicXml();
 }
 
 class DrumkitScreen extends StatefulWidget {
@@ -357,6 +369,93 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   void debugBeatboxFrames(List<BeatFrame> frames) =>
       _quantizeTapsIntoRows(beatboxToTaps(frames), _timing.beatMs.toDouble());
 
+  // --- Save / export ---------------------------------------------------------
+
+  /// The beat as a rhythm-line multi-part score (one part per drum with a hit),
+  /// or null when the grid is empty. [nameOf] resolves the localized labels.
+  ({MultiPartScore score, List<String> partNames})? _beatParts(
+    AppLocalizations l10n,
+  ) =>
+      drumParts(DrumRowsPattern(_rows), nameOf: (d) => _drumLabel(l10n, d));
+
+  String? _beatMusicXml(AppLocalizations l10n) {
+    final parts = _beatParts(l10n);
+    if (parts == null) return null;
+    return multiPartToMusicXml(parts.score, partNames: parts.partNames);
+  }
+
+  Future<void> _saveToSongBook() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final songs = context.read<UserSongsService>();
+    final xml = _beatMusicXml(l10n);
+    if (xml == null) return;
+
+    final controller = TextEditingController(text: l10n.drumkitDefaultName);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.drumkitSaveTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (v) => Navigator.of(ctx).pop(v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: Text(l10n.drumkitSave),
+          ),
+        ],
+      ),
+    );
+    if (title == null) return;
+    final name = title.trim().isEmpty ? l10n.drumkitDefaultName : title.trim();
+    songs.addSong(
+      ImportedSong(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: name,
+        musicXml: xml,
+      ),
+    );
+    messenger.showSnackBar(SnackBar(content: Text(l10n.drumkitSaved)));
+  }
+
+  void _exportBeat() {
+    final l10n = AppLocalizations.of(context)!;
+    final parts = _beatParts(l10n);
+    if (parts == null) return;
+    showMusicExportSheet(
+      context,
+      multiPart: parts.score,
+      partNames: parts.partNames,
+      baseName: 'beat',
+    );
+  }
+
+  @override
+  String? debugSaveToSongBook(UserSongsService songs) {
+    final l10n = AppLocalizations.of(context)!;
+    final xml = _beatMusicXml(l10n);
+    if (xml == null) return null;
+    songs.addSong(
+      ImportedSong(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: l10n.drumkitDefaultName,
+        musicXml: xml,
+      ),
+    );
+    return xml;
+  }
+
+  @override
+  String? debugMusicXml() => _beatMusicXml(AppLocalizations.of(context)!);
+
   @override
   int get tempo => _tempo;
 
@@ -385,7 +484,21 @@ class _DrumkitScreenState extends State<DrumkitScreen>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: GameAppBar(title: l10n.drumkitTitle),
+      appBar: GameAppBar(
+        title: l10n.drumkitTitle,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bookmark_add_outlined),
+            tooltip: l10n.drumkitSave,
+            onPressed: hitCount == 0 ? null : _saveToSongBook,
+          ),
+          IconButton(
+            icon: const Icon(Icons.ios_share),
+            tooltip: l10n.drumkitExport,
+            onPressed: hitCount == 0 ? null : _exportBeat,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
