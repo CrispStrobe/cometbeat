@@ -27,6 +27,7 @@ import 'package:comet_beat/features/progress/screens/progress_screen.dart';
 import 'package:comet_beat/features/recital/recital_screen.dart';
 import 'package:comet_beat/features/settings/screens/settings_screen.dart';
 import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
+import 'package:comet_beat/features/sound_lab/voice_lab_screen.dart';
 import 'package:comet_beat/features/textbook/textbook_screen.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -197,6 +198,7 @@ class HomeScreen extends StatelessWidget {
                   3 => const LoopMixerScreen(),
                   4 => const DrumkitScreen(),
                   5 => const SoundLabScreen(),
+                  6 => const VoiceLabScreen(),
                   _ => const CompositionWorkshopScreen(),
                 },
               ),
@@ -259,6 +261,16 @@ class HomeScreen extends StatelessWidget {
                     const Icon(Icons.graphic_eq, size: 20),
                     const SizedBox(width: 12),
                     Text(l10n.soundLabTitle),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 6,
+                child: Row(
+                  children: [
+                    const Icon(Icons.record_voice_over, size: 20),
+                    const SizedBox(width: 12),
+                    Text(l10n.voiceLabTitle),
                   ],
                 ),
               ),

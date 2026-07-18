@@ -1288,6 +1288,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundLabEcho => 'Echo';
 
   @override
+  String get voiceLabTitle => 'Voice Lab';
+
+  @override
+  String get voiceLabPlay => 'Play';
+
+  @override
+  String get voiceLabExport => 'Export WAV';
+
+  @override
+  String get voiceLabRecord => 'Record';
+
+  @override
+  String get voiceLabLoad => 'Load WAV';
+
+  @override
+  String get voiceLabHint =>
+      'Record your voice or load a sound, then transform it.';
+
+  @override
+  String get voiceLabCharacter => 'Character';
+
+  @override
+  String get voiceLabPitch => 'Pitch';
+
+  @override
+  String get voiceLabSpeed => 'Speed';
+
+  @override
+  String get voiceLabTremolo => 'Wobble';
+
+  @override
+  String get voiceLabGate => 'Gate';
+
+  @override
+  String get voiceLabReverb => 'Reverb';
+
+  @override
+  String get voiceLabNoMic => 'Microphone permission is needed';
+
+  @override
+  String get voiceLabRecordFailed => 'Couldn\'t record';
+
+  @override
+  String get voiceLabExportFailed => 'Export failed';
+
+  @override
+  String voiceLabSavedTo(String path) {
+    return 'Saved to $path';
+  }
+
+  @override
   String get tabPasteAscii => 'Paste ASCII tab';
 
   @override

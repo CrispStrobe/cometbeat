@@ -2492,6 +2492,102 @@ abstract class AppLocalizations {
   /// **'Echo'**
   String get soundLabEcho;
 
+  /// No description provided for @voiceLabTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Lab'**
+  String get voiceLabTitle;
+
+  /// No description provided for @voiceLabPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get voiceLabPlay;
+
+  /// No description provided for @voiceLabExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export WAV'**
+  String get voiceLabExport;
+
+  /// No description provided for @voiceLabRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get voiceLabRecord;
+
+  /// No description provided for @voiceLabLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Load WAV'**
+  String get voiceLabLoad;
+
+  /// No description provided for @voiceLabHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Record your voice or load a sound, then transform it.'**
+  String get voiceLabHint;
+
+  /// No description provided for @voiceLabCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'Character'**
+  String get voiceLabCharacter;
+
+  /// No description provided for @voiceLabPitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Pitch'**
+  String get voiceLabPitch;
+
+  /// No description provided for @voiceLabSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get voiceLabSpeed;
+
+  /// No description provided for @voiceLabTremolo.
+  ///
+  /// In en, this message translates to:
+  /// **'Wobble'**
+  String get voiceLabTremolo;
+
+  /// No description provided for @voiceLabGate.
+  ///
+  /// In en, this message translates to:
+  /// **'Gate'**
+  String get voiceLabGate;
+
+  /// No description provided for @voiceLabReverb.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverb'**
+  String get voiceLabReverb;
+
+  /// No description provided for @voiceLabNoMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission is needed'**
+  String get voiceLabNoMic;
+
+  /// No description provided for @voiceLabRecordFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t record'**
+  String get voiceLabRecordFailed;
+
+  /// No description provided for @voiceLabExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed'**
+  String get voiceLabExportFailed;
+
+  /// No description provided for @voiceLabSavedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {path}'**
+  String voiceLabSavedTo(String path);
+
   /// No description provided for @tabPasteAscii.
   ///
   /// In en, this message translates to:
