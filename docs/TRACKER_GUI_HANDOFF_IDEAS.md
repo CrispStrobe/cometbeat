@@ -405,3 +405,70 @@ step-grid drum editor.
   + Open-in-X** → **(4) D4a Drumkit/BoomBox** (pad + step grid over
   `DrumRowsPattern`) → **(5) D2 sound library + DAW editor** (biggest; editor UI
   first over existing instruments, then the store once serialization lands).
+
+---
+
+# E. Audio output architecture — findings (CrisperWeaver, glint) + what to learn
+
+Investigated 2026-07-18 (two read-only repo surveys) after the question "how do
+we output audio, should we use glint, anything to learn from CrisperWeaver's
+multi-track?".
+
+## How WE output audio today
+Everything is **offline-rendered in Dart** → one WAV → played via the
+**`audioplayers`** plugin. `synth.dart mixStems` / `renderDrumPattern` /
+`tracker_replayer` sum all stems into a `Float64List`; `wavBytes` makes a PCM16
+WAV; `GaplessLoopPlayer` double-buffers two `AudioPlayer`s to loop without a
+seam; one-shots (pad hits, previews) call `playWavBytes`. Mic = `record`.
+**Consequence:** there is **no live per-track mixer** — a fader/mute/solo change
+re-renders the WHOLE mix and swaps it in phase (`_syncPlayback`). Fine for loops;
+not real-time multi-track (can't ride one track's gain live without a re-render;
+per-play latency limits tight monitoring).
+
+## CrisperWeaver (../CrisperWeaver) — what its "multi-track" actually is
+It **isn't** multi-track: it's a single-track offline ASR/TTS app (Flutter +
+`just_audio`/`just_audio_media_kit`). One mono `Float32List` buffer; editing is
+sample-level **splice** (trim/cut/split → a new WAV), no summing of two signals
+anywhere, no pan/mute/solo, one stream ever plays. So it sits **at or below** our
+altitude for mixing and CONFIRMS the "render-offline → play-one-file" pattern
+rather than improving it. **But three techniques are worth lifting:**
+- **★ Move the offline mixdown to a worker ISOLATE** (`Isolate.run(() => …)`) +
+  a path/spec-keyed render cache, so the UI never janks on a big render. OUR
+  `_syncPlayback` re-renders on the main isolate on every fader move / edit — on
+  a long tracker song or the Loop Mixer that can stutter. This is the concrete,
+  high-value lesson. (CrisperWeaver: `audio_edit_service.dart` isolate+cache.)
+- A **prefetch/consume** isolate pattern (decode/render the next thing while the
+  current plays) — maps onto pre-rendering the next pattern.
+- A cheap **duration probe** (a throwaway player parses length without decoding).
+- NB CrisperWeaver itself **bundles `glint`** as a codec fallback + for MP3/AAC/
+  Opus export — so glint is already a proven ecosystem dependency.
+
+## glint (../glint) — a CODEC suite, NOT an output engine
+glint is a clean-room **MIT C++17 audio *codec* library**: MP3 / AAC-LC / Opus
+encode+decode, WAV I/O, and a Kaiser windowed-sinc **resampler** — offline
+(buffer→buffer), with real **Dart/Flutter FFI bindings** (`glint_audio`) that
+build for Android + iOS (+ WASM). It **never opens an audio device**: no
+playback, no mixer, no multi-track. So:
+- **Audio OUTPUT / real-time multi-track → NO.** glint cannot make sound or mix.
+- **Compressed EXPORT → YES, real value.** Our "save audio" is WAV-only; glint
+  adds shareable **MP3/AAC/Opus** export from Flutter (`GlintEncoder`/
+  `GlintAacEncoder`/Opus). A genuine feature for the export sheet.
+- **Higher-quality resampling → maybe.** `glintResample` (Kaiser sinc) could
+  replace our linear `crisp_dsp/resample.dart` for sampled instruments (quality).
+- ⚠ Its "noise-shaping" is *codec* quantization-noise shaping, NOT a PCM
+  dither/requantizer — don't expect a dither lib.
+
+## The real conclusion — two independent paths
+1. **Smoothness now (unblocked, ours):** render the mixdown in an **isolate** +
+   cache (the CrisperWeaver lesson). Removes jank from Loop-Mixer/Tracker fader
+   moves without changing the audio model. Highest bang-for-buck.
+2. **Compressed export (unblocked):** wire **glint** (`glint_audio` FFI) into the
+   shared export sheet → MP3/AAC/Opus. Optional: glint's Kaiser resampler for
+   sample instruments.
+3. **True real-time multi-track (the DAW dream, bigger):** neither glint nor
+   CrisperWeaver provides it. It needs a real-time engine — **`flutter_soloud`**
+   (SoLoud: many PCM voices on a mixing bus, live per-voice volume/pan, low
+   latency, cross-platform incl. web) or a miniaudio/AudioTrack FFI layer. Only
+   worth it if we want live faders/solo WITHOUT re-render; a large swap of the
+   `audioplayers`+offline-WAV core. Scope it separately if the DAW (D2) demands
+   live mixing; the isolate render (#1) covers most of the pain until then.
