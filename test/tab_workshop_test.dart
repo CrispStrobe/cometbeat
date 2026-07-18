@@ -124,6 +124,33 @@ void main() {
     expect(tab.fretAt(0, 0), isNull);
   });
 
+  testWidgets('🔍 Inspect mode: a cell reports its fretted note',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester);
+    final open0 = tab.tuning.strings[0]; // string 0's open pitch
+
+    expect(tab.inspectMode, isFalse);
+    tab.toggleInspectMode();
+    await tester.pump();
+    expect(tab.inspectMode, isTrue);
+
+    // Fret 0 sounds the open string; fret 3 is three semitones up.
+    tab.selectCell(0, 0);
+    tab.enterFret(0);
+    await tester.pump();
+    expect(tab.debugInspectInfo(0, 0)?.$1, open0.toString());
+
+    tab.enterFret(3);
+    await tester.pump();
+    expect(
+      tab.debugInspectInfo(0, 0)?.$1,
+      Pitch.fromMidi(open0.midiNumber + 3).toString(),
+    );
+    // (Column-chord naming shares the Tracker's chordSymbolFor path, tested
+    // there; here the single-note spelling is what's tab-specific.)
+  });
+
   testWidgets('add and remove a column changes the count', (tester) async {
     await pumpGame(tester, const TabWorkshopScreen());
     final tab = _tab(tester);

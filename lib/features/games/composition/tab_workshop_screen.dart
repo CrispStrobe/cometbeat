@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_mic_capture.dart';
@@ -111,6 +112,13 @@ abstract class TabWorkshopTester {
   /// Feeds a reading straight into the mic-capture path, bypassing the plugin,
   /// so the wiring is testable without a microphone.
   void debugFeedReading(PitchReading reading);
+
+  /// 🔍 Looking Glass: whether inspect mode is on, toggle it, and (for a test)
+  /// the `(noteNames, columnChord)` the inspector reports for a cell (null = an
+  /// empty column).
+  bool get inspectMode;
+  void toggleInspectMode();
+  (String, String?)? debugInspectInfo(int col, int string);
 }
 
 /// A guitar/bass **tablature editor** (B1) — the Tab Workshop. Author tab on a
@@ -144,6 +152,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   int _selCol = 0;
   int _selString = 0;
   int _bpm = 120;
+  bool _inspect = false; // 🔍 Looking Glass: tap a cell to see its note + chord
   String? _sourceName;
   final _focus = FocusNode();
 
@@ -197,6 +206,47 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         _selString = string.clamp(0, _doc.stringCount - 1);
       });
 
+  /// The sounding pitch of ([string], [fret]) on this tuning (capo is a display
+  /// offset only — [TabDocument.toScore] ignores it, so the inspector does too).
+  Pitch _pitchAt(int string, int fret) =>
+      Pitch.fromMidi(_doc.tuning.strings[string].midiNumber + fret);
+
+  /// 🔍 Describe cell ([col], [string]): the fretted note, the chord the whole
+  /// column sounds, and the string/fret (+ any attached chord name). Null when
+  /// the column is empty (nothing to inspect).
+  InspectInfo? _inspectInfoFor(int col, int string) {
+    final column = _doc.columns[col];
+    final colPitches = <Pitch>[
+      for (var s = 0; s < _doc.stringCount; s++)
+        if (column.frets[s] case final int f) _pitchAt(s, f),
+    ];
+    if (colPitches.isEmpty) return null;
+    final fret = column.frets[string];
+    final names = fret != null
+        ? _pitchAt(string, fret).toString()
+        : colPitches.map((p) => p.toString()).join(' ');
+    final where = fret != null
+        ? 'string ${string + 1} · fret $fret'
+        : 'string ${string + 1}';
+    final chordName = column.chord?.name;
+    return InspectInfo(
+      noteNames: names,
+      chordSymbol: chordSymbolFor(colPitches),
+      detail: chordName != null ? '$where · $chordName' : where,
+    );
+  }
+
+  /// A cell tap: inspect it in Looking-Glass mode, else select it for editing.
+  void _onCellTap(int col, int string) {
+    if (_inspect) {
+      selectCell(col, string); // show which cell, then describe it
+      final info = _inspectInfoFor(col, string);
+      if (info != null) showInspect(context, info);
+      return;
+    }
+    selectCell(col, string);
+  }
+
   @override
   void enterFret(int fret) => setState(() {
         _doc.setDuration(_selCol, _dur);
@@ -244,6 +294,16 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   @override
   void debugFeedReading(PitchReading reading) => _onReading(reading);
+
+  @override
+  bool get inspectMode => _inspect;
+  @override
+  void toggleInspectMode() => setState(() => _inspect = !_inspect);
+  @override
+  (String, String?)? debugInspectInfo(int col, int string) {
+    final info = _inspectInfoFor(col, string);
+    return info == null ? null : (info.noteNames, info.chordSymbol);
+  }
 
   /// A committed note from the mic lands at the cursor, then the cursor steps
   /// on — so playing a phrase writes it across the grid.
@@ -581,6 +641,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             onPressed: _toggleMic,
           ),
           IconButton(
+            icon: Icon(_inspect ? Icons.search_off : Icons.search),
+            isSelected: _inspect,
+            tooltip: l10n.inspectMode,
+            onPressed: () => setState(() => _inspect = !_inspect),
+          ),
+          IconButton(
             icon: const Icon(Icons.folder_open),
             tooltip: l10n.tabImport,
             onPressed: openScoreFile,
@@ -824,7 +890,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     final selected = col == _selCol && string == _selString;
     final scheme = Theme.of(context).colorScheme;
     return GestureDetector(
-      onTap: () => selectCell(col, string),
+      onTap: () => _onCellTap(col, string),
       child: Container(
         width: 32,
         height: 30,
