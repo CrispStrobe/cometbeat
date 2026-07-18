@@ -1,0 +1,39 @@
+name: glint_vorbis
+description: >-
+  Native Ogg-Vorbis DECODER for CometBeat's .sf3 SoundFont path — the minimal
+  Vorbis source set from the glint codec suite (MIT), compiled into the app as a
+  Flutter FFI plugin. Exposes glint_vorbis_decode / glint_free. Reached via
+  lib/core/audio/sf2/vorbis_capability.dart. Re-vendor with sync_glint.sh.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.0
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  ffi: ^2.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  plugin:
+    # FFI plugin: the tooling builds + bundles the native code. C++ is shared
+    # across platforms via src/CMakeLists.txt (Android/Linux/Windows) and the
+    # podspec Classes/ forwarders (macOS/iOS).
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true
+      linux:
+        ffiPlugin: true
+      macos:
+        ffiPlugin: true
+      windows:
+        ffiPlugin: true

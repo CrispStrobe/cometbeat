@@ -1,0 +1,25 @@
+// Flutter FFI plugin (Android) — builds the C++ Vorbis decoder via the NDK
+// (CMake under ../src). c++_shared STL for the glint C++17 sources.
+group = "org.cometbeat.glint_vorbis"
+version = "1.0"
+
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath("com.android.tools.build:gradle:8.1.0") }
+}
+rootProject.allprojects { repositories { google(); mavenCentral() } }
+apply plugin: "com.android.library"
+
+android {
+    namespace = "org.cometbeat.glint_vorbis"
+    compileSdk = 34
+    externalNativeBuild { cmake { path = "../src/CMakeLists.txt" } }
+    defaultConfig {
+        minSdk = 21
+        externalNativeBuild { cmake { arguments "-DANDROID_STL=c++_shared" } }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}

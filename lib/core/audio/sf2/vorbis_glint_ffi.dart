@@ -38,8 +38,13 @@ typedef _Free = void Function(Pointer<Void>);
 /// (`libglint.dylib`/`.so`/`glint.dll`), then use [decode] as the
 /// [VorbisDecode] seam for `.sf3` soundfonts.
 class GlintVorbis {
+  /// Load an external glint shared library by path (dev / a bundled lib file).
   GlintVorbis.open(String libraryPath)
       : this._(DynamicLibrary.open(libraryPath));
+
+  /// Use symbols linked directly into the host process — the normal in-app path
+  /// when the `glint_vorbis` FFI plugin compiled glint's decoder into the app.
+  GlintVorbis.process() : this._(DynamicLibrary.process());
 
   GlintVorbis._(this._lib) {
     _decode =

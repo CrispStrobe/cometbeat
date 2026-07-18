@@ -22,16 +22,32 @@ List<String> _candidates() {
   return const [];
 }
 
-/// A glint-backed [VorbisDecode] for `.sf3`, or null if the glint library can't
+/// A glint-backed [VorbisDecode] for `.sf3`, or null if the glint decoder can't
 /// be loaded on this platform (then `.sf3` stays unsupported, no crash). Pass
 /// [libraryPath] to force a specific library (dev/testing).
+///
+/// Resolution order: an explicit [libraryPath]; then the `glint_vorbis` FFI
+/// plugin compiled into the app (symbols in the process); then the
+/// platform-conventional bundled library name.
 VorbisDecode? loadGlintVorbis({String? libraryPath}) {
-  final names = libraryPath != null ? [libraryPath] : _candidates();
-  for (final name in names) {
+  if (libraryPath != null) {
+    try {
+      return GlintVorbis.open(libraryPath).vorbisDecode;
+    } catch (_) {
+      return null;
+    }
+  }
+  // The FFI plugin links glint's decoder into the app → symbols in-process.
+  try {
+    return GlintVorbis.process().vorbisDecode;
+  } catch (_) {
+    // Not compiled in (tests / plugin absent) → try a bundled library file.
+  }
+  for (final name in _candidates()) {
     try {
       return GlintVorbis.open(name).vorbisDecode;
     } catch (_) {
-      // Missing lib / missing symbol → try the next candidate, else null.
+      // Try the next candidate, else null.
     }
   }
   return null;

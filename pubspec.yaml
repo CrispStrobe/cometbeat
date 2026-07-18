@@ -68,6 +68,13 @@ dependencies:
   # .sf3 SoundFont path (native only; web uses a wasm/stub seam). See
   # docs/GLINT_VORBIS_HANDOVER.md + core/audio/sf2/.
   ffi: ^2.1.0
+  # Native Ogg-Vorbis DECODER (glint, MIT) compiled into the app as an FFI
+  # plugin → makes .sf3 SoundFonts decodable on native. Reached ONLY through
+  # core/audio/sf2/vorbis_capability.dart (web gets the dart:ffi-free stub); the
+  # decoder degrades gracefully to null if the plugin isn't built. Re-vendor the
+  # glint sources with native/glint/sync_glint.sh.
+  glint_vorbis:
+    path: native/glint
 
 # crisp_notation_core is published (0.4.3), but the path dep above tracks main,
 # which runs ahead of it — pin core to the same workspace so the two never

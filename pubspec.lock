@@ -364,6 +364,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  glint_vorbis:
+    dependency: "direct main"
+    description:
+      path: "native/glint"
+      relative: true
+    source: path
+    version: "0.1.0"
   hooks:
     dependency: transitive
     description:
