@@ -38,3 +38,11 @@ List<ContentSource> buildSources({HttpGet http = defaultHttpGet}) => [
       OpenScoreSource.stringQuartets(http),
       CommonsSource(http),
     ];
+
+/// Sources that yield **audio samples** (WAV), not notation — kept out of
+/// [buildSources] because they don't decode to MusicXML. The Tracker's
+/// sample-instrument UI is the intended consumer (see
+/// docs/CC0_SAMPLE_SOURCE_HANDOFF.md). CC0/PD-filtered by the default policy.
+List<ContentSource> buildSampleSources({HttpGet http = defaultHttpGet}) => [
+      CommonsSource.audio(http),
+    ];

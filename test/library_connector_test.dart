@@ -244,6 +244,22 @@ void main() {
       expect(items.map((i) => i.declaredLicense).toList(), ['CC0']);
     });
 
+    test('audio() source searches WAV and CC0/PD-filters (default policy)',
+        () async {
+      const wavJson = '''
+      {"query":{"pages":{
+        "1":{"pageid":1,"title":"File:Piano C4.wav","imageinfo":[{"url":"https://upload.wikimedia.org/x/Piano_C4.wav","extmetadata":{"LicenseShortName":{"value":"CC0"}}}]},
+        "2":{"pageid":2,"title":"File:Guitar note.wav","imageinfo":[{"url":"https://upload.wikimedia.org/x/Guitar_note.wav","extmetadata":{"LicenseShortName":{"value":"CC BY-SA 4.0"}}}]}
+      }}}''';
+      final src = CommonsSource.audio((_) async => utf8.encode(wavJson));
+      expect(src.searchUrl('piano', 10).toString(), contains('audio%2Fwav'));
+      final items = await src.browse();
+      // Default policy: only the CC0 wav; format tagged 'wav'; title trimmed.
+      expect(items.map((i) => i.declaredLicense).toList(), ['CC0']);
+      expect(items.single.format, 'wav');
+      expect(items.single.title, 'Piano C4');
+    });
+
     test('opting into attribution licenses also admits CC BY-SA, never NC',
         () async {
       final src = CommonsSource(

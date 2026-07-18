@@ -14,20 +14,49 @@ class CommonsSource implements ContentSource {
   final HttpGet _http;
   final LicensePolicy _policy;
 
-  CommonsSource(this._http, {LicensePolicy policy = const LicensePolicy()})
-      : _policy = policy;
+  @override
+  final String id;
+  @override
+  final String name;
 
-  @override
-  String get id => 'wikimedia_commons';
-  @override
-  String get name => 'Wikimedia Commons';
+  /// The MediaWiki `filemime:` this source searches (e.g. `audio/midi`,
+  /// `audio/wav`).
+  final String filemime;
+
+  /// The [LibraryItem.format] to tag results with (`midi`, `wav`, …).
+  final String format;
+
+  CommonsSource(
+    this._http, {
+    LicensePolicy policy = const LicensePolicy(),
+    this.id = 'wikimedia_commons',
+    this.name = 'Wikimedia Commons',
+    this.filemime = 'audio/midi',
+    this.format = 'midi',
+  }) : _policy = policy;
+
+  /// CC0/PD (per default policy) **WAV audio samples** — a sound source the
+  /// Tracker/instruments can consume. Key-free MediaWiki API.
+  factory CommonsSource.audio(
+    HttpGet http, {
+    LicensePolicy policy = const LicensePolicy(),
+  }) =>
+      CommonsSource(
+        http,
+        policy: policy,
+        id: 'wikimedia_commons_audio',
+        name: 'Wikimedia Commons (sounds)',
+        filemime: 'audio/wav',
+        format: 'wav',
+      );
+
   @override
   String get homepage => 'https://commons.wikimedia.org';
   @override
   String get licenseSummary => 'Free / public domain (per file)';
 
   Uri searchUrl(String query, int limit) {
-    final search = 'filemime:audio/midi ${query.trim()}'.trim();
+    final search = 'filemime:$filemime ${query.trim()}'.trim();
     return Uri.parse(
       'https://commons.wikimedia.org/w/api.php'
       '?action=query&format=json&origin=*'
@@ -83,7 +112,7 @@ class CommonsSource implements ContentSource {
           sourceUrl: 'https://commons.wikimedia.org/wiki/'
               '${Uri.encodeComponent(fullTitle)}',
           downloadUrl: Uri.parse(url),
-          format: 'midi',
+          format: format,
         ),
       );
     }
@@ -94,11 +123,14 @@ class CommonsSource implements ContentSource {
   @override
   Future<Uint8List> fetch(LibraryItem item) => _http(item.downloadUrl);
 
-  /// "File:Some Tune.mid" → "Some Tune".
+  /// "File:Some Tune.mid" → "Some Tune" (strips `File:` + a known audio ext).
   static String _displayTitle(String title) {
     var t = title;
     if (t.startsWith('File:')) t = t.substring(5);
-    t = t.replaceAll(RegExp(r'\.midi?$', caseSensitive: false), '');
+    t = t.replaceAll(
+      RegExp(r'\.(midi?|wav|ogg|flac)$', caseSensitive: false),
+      '',
+    );
     return t.trim();
   }
 
