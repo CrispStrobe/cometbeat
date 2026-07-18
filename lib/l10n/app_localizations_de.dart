@@ -1782,6 +1782,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerLoadWav => 'WAV-Datei laden…';
 
   @override
+  String get trackerFreeSounds => 'Freie Klänge durchsuchen…';
+
+  @override
   String get trackerPreview => 'Vorhören';
 
   @override

@@ -632,6 +632,7 @@
   "trackerSampleReverse": "Reverse",
   "trackerAssignSample": "Use for this track",
   "trackerLoadWav": "Load WAV file…",
+  "trackerFreeSounds": "Browse free sounds…",
   "trackerPreview": "Preview",
   "trackerCopyInstrument": "Copy instrument to…",
   "trackerBlock": "Block",

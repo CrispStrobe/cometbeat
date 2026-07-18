@@ -3440,6 +3440,12 @@ abstract class AppLocalizations {
   /// **'Load WAV file…'**
   String get trackerLoadWav;
 
+  /// No description provided for @trackerFreeSounds.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse free sounds…'**
+  String get trackerFreeSounds;
+
   /// No description provided for @trackerPreview.
   ///
   /// In en, this message translates to:

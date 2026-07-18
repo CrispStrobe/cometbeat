@@ -13,6 +13,7 @@ import 'package:comet_beat/features/library/donation.dart';
 import 'package:comet_beat/features/library/library_browser_screen.dart';
 import 'package:comet_beat/features/library/library_import.dart';
 import 'package:comet_beat/features/library/license_policy.dart';
+import 'package:comet_beat/features/library/sample_library_sheet.dart';
 import 'package:comet_beat/features/library/sources/commons_source.dart';
 import 'package:comet_beat/features/library/sources/openscore_source.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -347,6 +348,41 @@ void main() {
     );
     await tester.pump();
     expect(find.byIcon(Icons.local_cafe), findsOneWidget);
+  });
+
+  testWidgets('sample sheet: picking a sound returns decoded PCM',
+      (tester) async {
+    final src = _FakeSource([_item()], () => Uint8List.fromList([1, 2, 3]));
+    Float64List? result;
+    await tester.pumpWidget(
+      _wrap(
+        Builder(
+          builder: (ctx) => Center(
+            child: ElevatedButton(
+              onPressed: () async {
+                result = await showSampleLibrarySheet(
+                  ctx,
+                  sources: [src],
+                  decode: (_) => Float64List.fromList([0.1, 0.2, 0.3, 0.4]),
+                );
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+        UserSongsService(),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Test Song'), findsOneWidget); // the sample is listed
+
+    await tester.tap(find.text('Test Song'));
+    await tester.pumpAndSettle();
+    expect(result, isNotNull);
+    expect(result!.length, 4); // decoded PCM handed back to the caller
+    expect(src.fetchCount, 1);
   });
 
   testWidgets('browser lists items and imports one into the Song Book',

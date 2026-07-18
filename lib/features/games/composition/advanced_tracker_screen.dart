@@ -63,6 +63,7 @@ import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/features/library/sample_library_sheet.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart'
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -2157,6 +2158,27 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                       ? null
                       : () async {
                           final loaded = await _loadWavClip();
+                          if (!ctx.mounted) return;
+                          if (loaded == null || loaded.isEmpty) {
+                            setSheet(() => error = l10n.trackerRecordFailed);
+                            return;
+                          }
+                          setSheet(() {
+                            clip = loaded;
+                            sampStart = 0.0;
+                            sampEnd = 1.0;
+                            error = null;
+                          });
+                        },
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.travel_explore),
+                  label: Text(l10n.trackerFreeSounds),
+                  onPressed: recording
+                      ? null
+                      : () async {
+                          final loaded = await showSampleLibrarySheet(ctx);
                           if (!ctx.mounted) return;
                           if (loaded == null || loaded.isEmpty) {
                             setSheet(() => error = l10n.trackerRecordFailed);
