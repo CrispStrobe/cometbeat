@@ -127,4 +127,25 @@ void main() {
     expect(mono[0], closeTo(0.5, 1e-9));
     expect(mono[1], closeTo(-0.5, 1e-9));
   });
+
+  test(
+      'a "fmt " chunk within 16 bytes of EOF throws FormatException, not '
+      'RangeError', () {
+    // The chunk walk only guarantees the 8-byte chunk header fits, but the fmt
+    // body is 16 bytes. Craft a 44-byte file whose chunk walk lands a "fmt " id
+    // at offset 36 (body 44 = EOF): reading the fmt fields would run off the
+    // buffer. The reader's contract is FormatException on anything unreadable.
+    final b = Uint8List(44);
+    final d = ByteData.sublistView(b);
+    b.setRange(0, 4, 'RIFF'.codeUnits);
+    b.setRange(8, 12, 'WAVE'.codeUnits);
+    // chunk @12: "JUNK" size=16 -> next chunk at 12 + 8 + 16 = 36
+    b.setRange(12, 16, 'JUNK'.codeUnits);
+    d.setUint32(16, 16, Endian.little);
+    // chunk @36: "fmt " id, header fits (p+8=44) but body+16 = 60 > 44
+    b.setRange(36, 40, 'fmt '.codeUnits);
+    d.setUint32(40, 16, Endian.little);
+    expect(() => readWavPcm16(b), throwsFormatException);
+    expect(() => readWavPcm16(b), throwsA(isNot(isA<RangeError>())));
+  });
 }

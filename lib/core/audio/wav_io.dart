@@ -42,7 +42,13 @@ WavData readWavPcm16(Uint8List bytes) {
     final id = tag(p);
     final size = data.getUint32(p + 4, Endian.little);
     final body = p + 8;
-    if (id == 'fmt ') {
+    // The loop only guarantees the 8-byte chunk header fits (body <= length);
+    // the fmt chunk reads 16 more bytes (up to body + 16). A `fmt ` id within
+    // 16 bytes of EOF (a truncated / crafted WAV) would otherwise read past the
+    // buffer and throw a RangeError — but this reader's contract is to throw
+    // FormatException on anything it can't read. Skip an under-length fmt chunk;
+    // audioFormat then stays 0 and the PCM16 check below rejects it cleanly.
+    if (id == 'fmt ' && body + 16 <= bytes.length) {
       audioFormat = data.getUint16(body, Endian.little);
       channels = data.getUint16(body + 2, Endian.little);
       sampleRate = data.getUint32(body + 4, Endian.little);
