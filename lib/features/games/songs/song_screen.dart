@@ -9,6 +9,7 @@ import 'dart:async';
 
 import 'package:comet_beat/core/audio/play_along.dart' show PlayAlongChart;
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart';
 import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
 import 'package:comet_beat/features/games/songs/chord_sheet_screen.dart';
@@ -22,7 +23,13 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart'
-    show MultiSystemView, NoteElement, Score, multiPartScoreFromMusicXml;
+    show
+        MultiSystemView,
+        NoteElement,
+        Score,
+        ScoreAnalysis,
+        analyze,
+        multiPartScoreFromMusicXml;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -47,6 +54,8 @@ class SongScreen extends StatefulWidget {
 class _SongScreenState extends State<SongScreen> {
   String? _highlightedId;
   bool _playing = false;
+  bool _inspect = false; // 🔍 Looking Glass: tap a note to see what it is
+  late final ScoreAnalysis _analysis = analyze(widget.score);
   int _playToken = 0; // invalidates a running play loop
 
   late final List<(String, int, int)> _playback = playbackOf(widget.score);
@@ -146,6 +155,13 @@ class _SongScreenState extends State<SongScreen> {
         title: Text(widget.title),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: l10n.inspectMode,
+            isSelected: _inspect,
+            selectedIcon: const Icon(Icons.search_off),
+            onPressed: () => setState(() => _inspect = !_inspect),
+          ),
+          IconButton(
             icon: const Icon(Icons.insights),
             tooltip: l10n.analyzeAction,
             onPressed: () => Navigator.of(context).push(
@@ -176,6 +192,12 @@ class _SongScreenState extends State<SongScreen> {
                         if (_highlightedId != null) _highlightedId!,
                       },
                       onElementTap: (id) {
+                        if (_inspect) {
+                          final info =
+                              inspectElement(widget.score, id, _analysis);
+                          if (info != null) showInspect(context, info);
+                          return;
+                        }
                         final midi = _midiById[id];
                         if (midi != null) {
                           context

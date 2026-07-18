@@ -8036,6 +8036,12 @@ abstract class AppLocalizations {
   /// **'Analyse the harmony'**
   String get analyzeAction;
 
+  /// No description provided for @inspectMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspect (tap a note)'**
+  String get inspectMode;
+
   /// No description provided for @analysisFormLabel.
   ///
   /// In en, this message translates to:

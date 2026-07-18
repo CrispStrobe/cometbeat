@@ -1462,6 +1462,7 @@
   "funcDominantKid": "Spannung",
   "analysisHarmonyHeading": "Harmonie",
   "analyzeAction": "Harmonie analysieren",
+  "inspectMode": "Untersuchen (Note antippen)",
   "analysisFormLabel": "Form",
   "analysisCircleOfFifths": "Quintenzirkel",
   "analysisTension": "Spannung",

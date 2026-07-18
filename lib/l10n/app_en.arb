@@ -1720,6 +1720,7 @@
   "funcDominantKid": "Tension",
   "analysisHarmonyHeading": "Harmony",
   "analyzeAction": "Analyse the harmony",
+  "inspectMode": "Inspect (tap a note)",
   "analysisFormLabel": "Form",
   "analysisCircleOfFifths": "Circle of fifths",
   "analysisTension": "Tension",

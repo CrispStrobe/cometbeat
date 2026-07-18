@@ -4385,6 +4385,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyzeAction => 'Analyse the harmony';
 
   @override
+  String get inspectMode => 'Inspect (tap a note)';
+
+  @override
   String get analysisFormLabel => 'Form';
 
   @override

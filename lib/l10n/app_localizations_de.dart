@@ -4410,6 +4410,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get analyzeAction => 'Harmonie analysieren';
 
   @override
+  String get inspectMode => 'Untersuchen (Note antippen)';
+
+  @override
   String get analysisFormLabel => 'Form';
 
   @override
