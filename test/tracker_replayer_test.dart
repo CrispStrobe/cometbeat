@@ -637,6 +637,46 @@ void main() {
       expect(rms(0, n ~/ 4), greaterThan(rms(3 * n ~/ 4, n) * 2));
     });
 
+    test('a fade-out envelope shapes a SAMPLE (non-additive) note too', () {
+      // A ~500 ms sine sample, a 4-row (500 ms) note, faded full → silent.
+      final sample = Float64List.fromList([
+        for (var i = 0; i < 22050; i++) sin(2 * pi * 220 * i / kSampleRate),
+      ]);
+      final ch = TrackerChannel(
+        id: 's',
+        instrument: SampleInstrument('s', sample),
+        gain: 0.9,
+        rows: 4,
+        volumeEnvelope: const VolumeEnvelope([
+          (ms: 0, level: 1.0),
+          (ms: 500, level: 0.0),
+        ]),
+      );
+      final cells = List<TrackerCell>.filled(4, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60);
+      final song = TrackerSong.fromParts(
+        channels: [ch],
+        timing: const TrackerTiming(rows: 4),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells]),
+        ],
+        order: [0],
+      );
+      expect(song.usesEnvelopes, isTrue);
+
+      final pcm = replaySong(song).pcm;
+      final n = pcm.length;
+      double rms(int a, int b) {
+        var s = 0.0;
+        for (var i = a; i < b; i++) {
+          s += pcm[i] * pcm[i].toDouble();
+        }
+        return sqrt(s / (b - a));
+      }
+
+      expect(rms(0, n ~/ 4), greaterThan(rms(3 * n ~/ 4, n) * 2));
+    });
+
     test('a flat (always-1.0) envelope leaves the render byte-identical', () {
       TrackerSong mk(VolumeEnvelope? env) {
         final s = TrackerSong(timing: const TrackerTiming(rows: 8));

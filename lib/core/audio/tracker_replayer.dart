@@ -510,8 +510,9 @@ Float64List renderChannelPerNote(
   TrackerInstrument channelInstrument,
   List<TrackerCell> cells,
   TrackerTiming timing,
-  List<TrackerInstrument> pool,
-) {
+  List<TrackerInstrument> pool, {
+  VolumeEnvelope? envelope,
+}) {
   final stem = Float64List(timing.totalSamples);
   final rows = cells.length;
   var curInst = channelInstrument;
@@ -531,8 +532,15 @@ Float64List renderChannelPerNote(
       final e =
           capRow < rows ? timing.stepStartSample(capRow) : timing.totalSamples;
       final lim = min(e, min(buf.length, stem.length));
-      for (var i = s; i < lim; i++) {
-        stem[i] += buf[i];
+      if (envelope == null) {
+        for (var i = s; i < lim; i++) {
+          stem[i] += buf[i];
+        }
+      } else {
+        // Shape each note by the volume envelope (time from the note's onset).
+        for (var i = s; i < lim; i++) {
+          stem[i] += buf[i] * envelope.levelAt((i - s) / kSampleRate * 1000);
+        }
       }
     }
     startStep += steps;
@@ -580,8 +588,16 @@ void _renderChannelInto(
     // by its pool instrument) that is BYTE-IDENTICAL to the whole render when the
     // instrument doesn't change (see renderChannelPerNote).
     final hasPerCell = pool != null && cells.any((c) => c.instrument != 0);
-    final stem = hasPerCell
-        ? renderChannelPerNote(channel.instrument, cells, timing, pool)
+    final env = channel.volumeEnvelope;
+    final hasEnv = env != null && !env.isEmpty;
+    final stem = (hasPerCell || hasEnv)
+        ? renderChannelPerNote(
+            channel.instrument,
+            cells,
+            timing,
+            pool ?? const <TrackerInstrument>[],
+            envelope: hasEnv ? env : null,
+          )
         : channel.instrument.renderChannel(cells, timing);
     var peak = 0.0;
     for (final v in stem) {
@@ -1509,6 +1525,8 @@ void _renderNonAdditiveVariable(
 ) {
   final rows = cells.length;
   final stem = Float64List(rowStart[rows]);
+  final env = channel.volumeEnvelope;
+  final hasEnv = env != null && !env.isEmpty;
   var curInst = channel.instrument;
   var startStep = 0;
   for (final (midi, steps) in cellRuns(cells)) {
@@ -1533,7 +1551,8 @@ void _renderNonAdditiveVariable(
         final buf = curInst.renderChannel([trigger], noteTiming);
         final lim = min(runSamples, min(buf.length, stem.length - s));
         for (var i = 0; i < lim; i++) {
-          stem[s + i] += buf[i];
+          final el = hasEnv ? env.levelAt(i / kSampleRate * 1000) : 1.0;
+          stem[s + i] += buf[i] * el;
         }
       }
     }
