@@ -601,7 +601,11 @@ Games built on crisp_notation capabilities the app didn't use before.
   playing isn't over-quantised to sixteenths, and a beginner cap collapses stray
   16th flams) → `quantizeRhythm` drops sub-strength noise, snaps, and collapses
   same-step hits. The shared front-end before conversion to Tracker/GrooveSpec/
-  Score/MIDI. 15 headless tests.
+  Score/MIDI. 15 headless tests. **Model conversion** (`rhythm_convert.dart`):
+  `toTrackerColumn` (→ a Tracker channel, which already exports Score/MusicXML/
+  MIDI/module + saves to the Song Book) and `toDrumPattern` (→ a Loop Mixer
+  `DrumRowsPattern`), re-placing each hit by its grid-independent musical
+  position; 7 tests. So a recorded rhythm reaches every notation/export path.
 - **Loop Mixer — beatbox + jam along** (composition, ladder slice 10) — the
   mic closes the circle twice more. **Beatbox a beat:** count-in, 2 bars of
   "boom-ts-pss" into the mic, and it comes back as a teal drum card — onset
