@@ -274,11 +274,14 @@ class ReplayVoice {
       case kFxTonePorta:
         if (_param != 0) _memTonePorta = _param;
       case kFxVibrato:
-      case kFxVibratoVolSlide:
         final x = (_param >> 4) & 0xF, y = _param & 0xF;
         if (x != 0) _memVibSpeed = x;
         if (y != 0) _memVibDepth = y;
-        if (_cmd == kFxVibratoVolSlide && _param != 0) _memVolSlide = _param;
+      case kFxVibratoVolSlide:
+        // 6xy = CONTINUE the vibrato (reuse the existing speed/depth memory) +
+        // volume slide xy. The param is the SLIDE amount, not vib speed/depth —
+        // do NOT touch the vibrato memory (would corrupt/invent vibrato).
+        if (_param != 0) _memVolSlide = _param;
       case kFxTremolo:
         final x = (_param >> 4) & 0xF, y = _param & 0xF;
         if (x != 0) _memTremSpeed = x;
@@ -464,6 +467,21 @@ int _nextTriggerRow(List<TrackerCell> cells, int from) {
   return cells.length;
 }
 
+/// The run length in SECONDS of the note (re)triggered at row [from] — from its
+/// row start to the next trigger (or the pattern end) — the envelope's timebase.
+double _runSeconds(
+  List<TrackerCell> cells,
+  int from,
+  int rows,
+  TrackerTiming timing,
+) {
+  final runEnd = _nextTriggerRow(cells, from);
+  final endSample =
+      runEnd < rows ? timing.stepStartSample(runEnd) : timing.totalSamples;
+  final runSamples = endSample - timing.stepStartSample(from);
+  return runSamples > 0 ? runSamples / kSampleRate : 0.001;
+}
+
 /// Whether [instrument] is an additive voice the replayer synthesizes tick-wise.
 Instrument? _additiveOf(TrackerInstrument instrument) =>
     instrument is AdditiveInstrument ? instrument.instrument : null;
@@ -588,14 +606,14 @@ void _renderChannelInto(
       if (pi != null) tp = _timbreParamsOf(pi);
     }
     voice.armRow(cells[r]);
-    if (voice.startsNoteThisRow) {
-      if (voice.retriggeredThisRow) voice.oscPhase = 0;
+    // Only a note that ACTUALLY triggers at tick 0 resets the envelope state
+    // now. A pending EDx delay must NOT touch it here — a prior note may still be
+    // ringing through ticks 0..x-1, and moving its start would re-attack it. The
+    // delayed note sets its own start/run when it fires in the tick loop below.
+    if (voice.retriggeredThisRow) {
+      voice.oscPhase = 0;
       voice.noteStartSample = sampleOffset + timing.stepStartSample(r);
-      final runEnd = _nextTriggerRow(cells, r);
-      final endSample =
-          runEnd < rows ? timing.stepStartSample(runEnd) : timing.totalSamples;
-      final runSamples = endSample - timing.stepStartSample(r);
-      voice.noteSeconds = runSamples > 0 ? runSamples / kSampleRate : 0.001;
+      voice.noteSeconds = _runSeconds(cells, r, rows, timing);
     }
     // A silent row: no live note and nothing pending to trigger this row.
     if (!voice.active && !voice.hasPendingNote) continue;
@@ -607,10 +625,13 @@ void _renderChannelInto(
       final ts = rowStart + ((rowEnd - rowStart) * k) ~/ ticksPerRow;
       final te = rowStart + ((rowEnd - rowStart) * (k + 1)) ~/ ticksPerRow;
       final state = voice.tick(k, ticksPerRow);
-      // A retrigger (E9x) or a delayed note (EDx) restarts the envelope here.
+      // A retrigger (E9x) or a delayed note (EDx) restarts the envelope here —
+      // at the actual fire tick, so a delayed note's start/run are set only when
+      // it sounds (never disturbing a prior ringing note earlier in the row).
       if (state.retrigger) {
         voice.oscPhase = 0;
         voice.noteStartSample = ts;
+        voice.noteSeconds = _runSeconds(cells, r, rows, timing);
       }
       if (!voice.active) continue; // pre-delay silence / never triggered
       final freq = _freqOfMidi(state.pitch);

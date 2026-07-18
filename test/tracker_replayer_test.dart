@@ -599,6 +599,64 @@ void main() {
     });
   });
 
+  group('audit fixes', () {
+    test('6xy continues vibrato with its own memory (does not corrupt it)', () {
+      // 4-1-8 arms vibrato (speed 1, depth 8 ⇒ ±1 st). 6-0-4 must NOT reparse
+      // its param as vib speed/depth — the vibrato keeps swinging ±1 st.
+      final cells = [
+        fx(kFxVibrato, 0x18, midi: 60),
+        fx(kFxVibratoVolSlide, 0x04),
+        fx(kFxVibratoVolSlide, 0x04),
+        fx(kFxVibratoVolSlide, 0x04),
+      ];
+      final t = traceChannel(cells, ticksPerRow: 8); // 32 ticks = one cycle
+      final all = <double>[];
+      for (var r = 0; r < 4; r++) {
+        for (var k = 0; k < 8; k++) {
+          all.add(t.pitchAt(r, k));
+        }
+      }
+      // Depth still 8 → reaches ~±1 st (a corrupted depth of 4 would only ±0.5).
+      expect(all.reduce(max), greaterThan(60.9));
+      expect(all.reduce(min), lessThan(59.1));
+    });
+
+    test('6xy with no prior vibrato does not invent one', () {
+      final t = traceChannel([
+        const TrackerCell(midi: 60),
+        fx(kFxVibratoVolSlide, 0x84), // 6-8-4: no prior 4xy
+      ]);
+      // No vibrato memory → the 8 is a slide nibble, not a vib speed → flat.
+      for (var k = 0; k < 6; k++) {
+        expect(t.pitchAt(1, k), 60);
+      }
+    });
+
+    test('EDx delayed note does not re-attack a still-ringing prior note', () {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60)); // rings, decaying
+      song.engine
+          .setCell(0, 4, ex(kExNoteDelay, 3, midi: 72)); // fires at tick 3
+      final pcm = replaySong(song).pcm;
+      final s4 = song.timing.stepStartSample(4);
+      double rms(int a, int b) {
+        var sum = 0.0;
+        for (var i = a; i < b; i++) {
+          sum += pcm[i] * pcm[i].toDouble();
+        }
+        return sqrt(sum / (b - a));
+      }
+
+      // Just before row 4, and just after its start (still before the delay
+      // fires at tick 3) — only the decaying note 60 sounds in both windows.
+      final before = rms(s4 - 400, s4 - 100);
+      final after = rms(s4 + 50, s4 + 350);
+      // A re-attack would spike `after` far above `before`; a clean continued
+      // decay keeps it at or below.
+      expect(after, lessThanOrEqualTo(before * 1.3));
+    });
+  });
+
   group('per-note non-additive render (per-cell instrument on samples)', () {
     Float64List tone(double hz) => Float64List.fromList([
           for (var i = 0; i < 4000; i++) sin(2 * pi * hz * i / kSampleRate),
