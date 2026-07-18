@@ -20,16 +20,18 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/pitch_analysis.dart' show PitchDetector;
 import 'package:comet_beat/core/audio/sf2/sf2.dart';
+import 'package:comet_beat/core/audio/sf2/vorbis_glint_ffi.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 
 void main(List<String> args) {
   if (args.isEmpty || args.first.startsWith('-')) {
     stderr.writeln('usage: dart run bin/sf3_oracle.dart <file.sf3> '
-        '[--limit N] [--ffmpeg <path>]');
+        '[--limit N] [--ffmpeg <path>] [--glint <libglint.dylib>]');
     exit(2);
   }
   final path = args.first;
   final ffmpeg = _value(args, '--ffmpeg') ?? 'ffmpeg';
+  final glintLib = _value(args, '--glint');
   final limit = int.tryParse(_value(args, '--limit') ?? '') ?? (1 << 30);
 
   final bytes = File(path).readAsBytesSync();
@@ -38,13 +40,16 @@ void main(List<String> args) {
     exit(1);
   }
 
-  // A reused temp file for the ffmpeg backend (parse is single-threaded).
+  // Decoder backend: glint (native FFI — the app's real decoder) if --glint is
+  // given, else ffmpeg (the reference stand-in).
+  final glint = glintLib == null ? null : GlintVorbis.open(glintLib);
   final tmp = File('${Directory.systemTemp.path}/sf3_oracle_stream.ogg');
   var idx = 0, decoded = 0, failed = 0;
   Float64List? vorbis(Uint8List ogg) {
     if (idx++ >= limit) return null; // --limit: skip beyond N (fast smoke)
-    final pcm = _ffmpegDecode(ffmpeg, tmp, ogg);
-    if (pcm == null) {
+    final pcm =
+        glint != null ? glint.decode(ogg) : _ffmpegDecode(ffmpeg, tmp, ogg);
+    if (pcm == null || pcm.isEmpty) {
       failed++;
       return null;
     }
@@ -54,6 +59,7 @@ void main(List<String> args) {
 
   final sf = Sf2SoundFont.parse(bytes, vorbis: vorbis);
   if (tmp.existsSync()) tmp.deleteSync();
+  stdout.writeln('decoder: ${glint != null ? 'glint ($glintLib)' : 'ffmpeg'}');
   stdout.writeln(path);
   stdout.writeln('  decoded $decoded streams (failed $failed) · '
       '${sf.presets.length} presets');

@@ -64,6 +64,10 @@ dependencies:
   # gets a dart:ffi-free stub. See docs/AEC_TIER3B.md.
   aec_fullduplex:
     path: native/aec
+  # FFI helpers (allocators) for the native glint Vorbis decoder that backs the
+  # .sf3 SoundFont path (native only; web uses a wasm/stub seam). See
+  # docs/GLINT_VORBIS_HANDOVER.md + core/audio/sf2/.
+  ffi: ^2.1.0
 
 # crisp_notation_core is published (0.4.3), but the path dep above tracks main,
 # which runs ahead of it — pin core to the same workspace so the two never
