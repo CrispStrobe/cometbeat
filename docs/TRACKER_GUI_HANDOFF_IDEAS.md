@@ -472,3 +472,43 @@ playback, no mixer, no multi-track. So:
    worth it if we want live faders/solo WITHOUT re-render; a large swap of the
    `audioplayers`+offline-WAV core. Scope it separately if the DAW (D2) demands
    live mixing; the isolate render (#1) covers most of the pain until then.
+
+## E — execution notes (E1 shipped; E2 de-risked; E3 scoped)
+
+**E1 (isolate render) — SHIPPED (first cut).** Loop Mixer WAV export runs on
+`Isolate.run`, sending only the small `GrooveSpec` (rebuild+render in the
+worker), so a long export never freezes the frame. The LIVE in-phase loop swap
+stays SYNCHRONOUS on purpose: making it async would break the phase swap, and a
+sample-heavy song's isolate send-copy has its own main-thread cost that offsets
+the win. Follow-up: apply the same one-shot-render→isolate pattern to module
+export + the tracker's play-from-top full render (with a token guard so a
+superseded render doesn't swap in late).
+
+**E2 (glint MP3/AAC/Opus export) — a NATIVE-BUNDLING effort, de-risked.**
+`glint_audio` (`~/code/glint/bindings/dart`, pub name `glint_audio` v0.9.0) is a
+**bring-your-own-`libglint`** FFI binding: it `DynamicLibrary.open('libglint.
+dylib'/'.so'/'.dll')` with **no prebuilt lib and no Flutter plugin build hook**.
+So this is the SAME shape as our `native/aec/` plugin, NOT a pubspec wire-up —
+adding a bare dep would red CI/the app (open() fails at runtime; a path dep to
+`~/code/glint` is absent in CI). **De-risked:** `libglint.dylib` (857 KB) builds
+cleanly from glint's CMake `glint_shared` target on this macOS (`cmake -B … &&
+cmake --build … --target glint_shared`). **Plan (mirror the AEC, macOS-first):**
+(1) a `core/audio/glint_capability.dart` seam that is **web-stubbed** and returns
+null where `libglint` isn't bundled; (2) build + bundle `libglint.dylib` into the
+macOS Runner (Android `.so` per-ABI / iOS framework later); (3) `glint_audio`
+added ONLY where bundled + **excluded from CI analyze** like the AEC; (4) wire
+`GlintEncoder`/Opus into the shared `music_export.dart` sheet, platform-gated.
+Optional: `glintResample` (Kaiser sinc) to replace linear `crisp_dsp/resample.
+dart` for sampled instruments. This needs an app build to verify (env-wrapper),
+so it's its own careful slice — not folded into a screen commit.
+
+**E3 (real-time multi-track engine) — the biggest, scoped last.** Replaces the
+`audioplayers`+offline-WAV core with a real-time mixer so faders/solo/mute are
+live WITHOUT a re-render. Candidate: **`flutter_soloud`** (SoLoud — many PCM
+voices on a bus, per-voice volume/pan, low latency, cross-platform incl. web via
+wasm). Migration: load each stem as a SoLoud sound; play them as simultaneous
+voices; map track gain/pan/mute/solo onto voice params; keep offline WAV render
+only for EXPORT. This touches every playback callsite (`GaplessLoopPlayer`, the
+tracker/loop-mixer/drumkit transports) — a multi-day core swap with real
+web/latency verification. Do it only when the DAW (D2) genuinely needs live
+mixing; E1 (isolate render) removes most of the jank pain until then.
