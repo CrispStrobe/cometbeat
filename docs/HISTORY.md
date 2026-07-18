@@ -623,6 +623,11 @@ Games built on crisp_notation capabilities the app didn't use before.
   eighth step is a note or rest). App-bar Save (→ Song Book) + Export (the shared
   music-export sheet → MusicXML/MIDI). So a tapped or beatboxed beat leaves the
   kit as notation. Closes the DrumKit record arc.
+- **Looper core** (audio core) — the pure foundation for a better looper:
+  `loop_record.dart` with `quantizeLoopBars` (snap a take to a whole number of
+  bars → seamless loop lengths), `snapPunch` (snap a record window to bar
+  boundaries → quantised punch-in/out), and a generic `LoopStack<T>` overdub
+  layer stack (undo/redo + per-layer mute). 9 headless tests.
 - **Loop Mixer — beatbox + jam along** (composition, ladder slice 10) — the
   mic closes the circle twice more. **Beatbox a beat:** count-in, 2 bars of
   "boom-ts-pss" into the mic, and it comes back as a teal drum card — onset
