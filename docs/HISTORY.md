@@ -628,6 +628,10 @@ Games built on crisp_notation capabilities the app didn't use before.
   bars → seamless loop lengths), `snapPunch` (snap a record window to bar
   boundaries → quantised punch-in/out), and a generic `LoopStack<T>` overdub
   layer stack (undo/redo + per-layer mute). 9 headless tests.
+- **DrumKit undo/redo** — a snapshot history (deep-copied pattern before each
+  mutation) backs app-bar Undo/Redo across grid edits, whole record takes, and
+  clear; a fresh edit drops the redo branch. Fills the gap left by the new
+  destructive record/clear operations.
 - **Loop Mixer — beatbox + jam along** (composition, ladder slice 10) — the
   mic closes the circle twice more. **Beatbox a beat:** count-in, 2 bars of
   "boom-ts-pss" into the mic, and it comes back as a teal drum card — onset

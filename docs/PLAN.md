@@ -850,8 +850,10 @@ small games.** Scope each as its own claimed effort:
    an eighth note or rest, so no tie/duration puzzle — reuses `grooveScore`.
    App-bar Save-to-Song-Book (title dialog → `UserSongsService`) + Export (the
    shared music-export sheet → MusicXML/MIDI/etc.); `debugSaveToSongBook`/
-   `debugMusicXml` seams. **DrumKit item COMPLETE — tap-record + beatbox-record +
-   save/export.** **Only-if-wanted:** expose the skill-tier cap as a setting (the
+   `debugMusicXml` seams. ✅ **Undo/redo (`6914791`):** a snapshot history backs
+   app-bar Undo/Redo across grid edits, record takes and clear (a fresh edit drops
+   the redo branch) — filling the gap the destructive record/clear opened. **DrumKit
+   item COMPLETE — tap-record + beatbox-record + save/export + undo/redo.** **Only-if-wanted:** expose the skill-tier cap as a setting (the
    grid is fixed eighth today); more `Drum` voices ([needs-engine]); real
    percussion-staff notation (vs the pitched reduction).
 2. ✅ **SHIPPED — Recording with a beginner "Relevanzschwelle" (rhythm relevance
