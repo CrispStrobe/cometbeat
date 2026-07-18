@@ -24,6 +24,7 @@ import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
+        ElementRegionController,
         MultiSystemView,
         NoteElement,
         Score,
@@ -57,6 +58,13 @@ class _SongScreenState extends State<SongScreen> {
   bool _inspect = false; // 🔍 Looking Glass: tap a note to see what it is
   late final ScoreAnalysis _analysis = analyze(widget.score);
   int _playToken = 0; // invalidates a running play loop
+
+  // 🔍 Desktop hover-inspect: the note under the mouse while Inspect is on (a
+  // looking glass you sweep over the score). Null on touch; tap opens the sheet.
+  final ElementRegionController _regions = ElementRegionController();
+  InspectInfo? _hoverInfo;
+  Offset? _hoverAt;
+  String? _hoverId;
 
   late final List<(String, int, int)> _playback = playbackOf(widget.score);
 
@@ -146,6 +154,44 @@ class _SongScreenState extends State<SongScreen> {
     super.dispose();
   }
 
+  /// 🔍 Desktop hover in Inspect mode: resolve the note under the cursor and
+  /// show a floating card. Re-runs the lookup only when the hovered element
+  /// changes (analysis is precomputed once in [_analysis]).
+  void _onScoreHover(Offset localPos) {
+    if (!_inspect) {
+      _clearHoverInspect();
+      return;
+    }
+    final ids = _regions.elementIdsIn(
+      Rect.fromCenter(center: localPos, width: 6, height: 6),
+    );
+    final id = ids.isEmpty ? null : ids.first;
+    if (id == _hoverId) {
+      if (id != null && _hoverAt != localPos) {
+        setState(() => _hoverAt = localPos);
+      }
+      return;
+    }
+    if (id == null) {
+      _clearHoverInspect();
+      return;
+    }
+    setState(() {
+      _hoverId = id;
+      _hoverInfo = inspectElement(widget.score, id, _analysis);
+      _hoverAt = localPos;
+    });
+  }
+
+  void _clearHoverInspect() {
+    if (_hoverInfo != null || _hoverId != null) {
+      setState(() {
+        _hoverInfo = null;
+        _hoverId = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -184,27 +230,63 @@ class _SongScreenState extends State<SongScreen> {
                 child: Card(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
-                    child: MultiSystemView(
-                      score: widget.score,
-                      staffSpace: 11,
-                      theme: kidsScoreTheme,
-                      highlightedIds: {
-                        if (_highlightedId != null) _highlightedId!,
-                      },
-                      onElementTap: (id) {
-                        if (_inspect) {
-                          final info =
-                              inspectElement(widget.score, id, _analysis);
-                          if (info != null) showInspect(context, info);
-                          return;
-                        }
-                        final midi = _midiById[id];
-                        if (midi != null) {
-                          context
-                              .read<AudioService>()
-                              .playMidiNote(midi, ms: 500);
-                        }
-                      },
+                    child: MouseRegion(
+                      onHover: (e) => _onScoreHover(e.localPosition),
+                      onExit: (_) => _clearHoverInspect(),
+                      child: Stack(
+                        children: [
+                          MultiSystemView(
+                            score: widget.score,
+                            staffSpace: 11,
+                            theme: kidsScoreTheme,
+                            controller: _regions,
+                            highlightedIds: {
+                              if (_highlightedId != null) _highlightedId!,
+                            },
+                            onElementTap: (id) {
+                              if (_inspect) {
+                                final info = inspectElement(
+                                  widget.score,
+                                  id,
+                                  _analysis,
+                                );
+                                if (info != null) showInspect(context, info);
+                                return;
+                              }
+                              final midi = _midiById[id];
+                              if (midi != null) {
+                                context
+                                    .read<AudioService>()
+                                    .playMidiNote(midi, ms: 500);
+                              }
+                            },
+                          ),
+                          if (_inspect &&
+                              _hoverInfo != null &&
+                              _hoverAt != null)
+                            Positioned(
+                              left: _hoverAt!.dx + 14,
+                              top: _hoverAt!.dy + 14,
+                              child: IgnorePointer(
+                                child: ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 260),
+                                  child: Card(
+                                    elevation: 4,
+                                    margin: EdgeInsets.zero,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      child: inspectBody(context, _hoverInfo!),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
