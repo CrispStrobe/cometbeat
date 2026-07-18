@@ -437,6 +437,7 @@
   "trackerChannelDrums": "Drums",
   "trackerChannelVoice": "Voice",
   "trackerToggleNotation": "Show notation",
+  "trackerWideRange": "Wide range (more octaves)",
   "trackerImportTune": "Load a tune",
   "trackerSwing": "Swing",
   "trackerDemoTune": "Simple tune (C D E G)",

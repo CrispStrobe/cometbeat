@@ -406,6 +406,7 @@
   "trackerChannelDrums": "Schlagzeug",
   "trackerChannelVoice": "Stimme",
   "trackerToggleNotation": "Noten zeigen",
+  "trackerWideRange": "Großer Tonumfang (mehr Oktaven)",
   "trackerImportTune": "Melodie laden",
   "trackerSwing": "Swing",
   "trackerDemoTune": "Kurze Melodie (C D E G)",

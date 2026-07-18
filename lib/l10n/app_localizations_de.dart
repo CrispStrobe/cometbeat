@@ -1206,6 +1206,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerToggleNotation => 'Noten zeigen';
 
   @override
+  String get trackerWideRange => 'Großer Tonumfang (mehr Oktaven)';
+
+  @override
   String get trackerImportTune => 'Melodie laden';
 
   @override

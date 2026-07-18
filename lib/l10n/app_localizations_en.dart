@@ -1200,6 +1200,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerToggleNotation => 'Show notation';
 
   @override
+  String get trackerWideRange => 'Wide range (more octaves)';
+
+  @override
   String get trackerImportTune => 'Load a tune';
 
   @override

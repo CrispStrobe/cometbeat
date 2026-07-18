@@ -72,6 +72,29 @@ void main() {
     expect(game.noteCount, 0);
   });
 
+  testWidgets('wide range opens three octaves of pitch rows', (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+    final game = _game(tester);
+    game.selectChannel(0); // a pitched channel
+
+    final narrow = game.pitchRows;
+    expect(game.wideRange, isFalse);
+
+    game.setWideRange(true);
+    await tester.pump();
+    expect(game.wideRange, isTrue);
+    expect(game.pitchRows, narrow * 3); // low + mid + high octaves
+
+    // A note on a top (high-octave) row — only reachable in wide mode — lands.
+    game.tapCell(0, 0);
+    await tester.pump();
+    expect(game.noteCount, 1);
+
+    game.setWideRange(false);
+    await tester.pump();
+    expect(game.pitchRows, narrow);
+  });
+
   testWidgets('each instrument tab edits its own channel', (tester) async {
     await pumpGame(tester, const TrackerScreen());
     final game = _game(tester);

@@ -2312,6 +2312,12 @@ abstract class AppLocalizations {
   /// **'Show notation'**
   String get trackerToggleNotation;
 
+  /// No description provided for @trackerWideRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Wide range (more octaves)'**
+  String get trackerWideRange;
+
   /// No description provided for @trackerImportTune.
   ///
   /// In en, this message translates to:

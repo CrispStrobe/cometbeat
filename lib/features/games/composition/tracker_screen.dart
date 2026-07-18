@@ -111,6 +111,10 @@ abstract interface class TrackerTester {
   bool get notationVisible;
   void toggleNotation();
 
+  /// Whether the pitched grid spans the wide (three-octave) range, and a toggle.
+  bool get wideRange;
+  void setWideRange(bool on);
+
   /// Whether the groove swings (off-beats delayed), and a toggle.
   bool get swingOn;
   void setSwing(bool on);
@@ -204,6 +208,15 @@ class _TrackerScreenState extends State<TrackerScreen>
   int _selected = 0;
   bool _isRecording = false;
   bool _showNotation = false;
+
+  /// Whether the pitched grid shows the WIDE range (three octaves of the
+  /// pentatonic — low/mid/high — so kids can reach the full tonal range) rather
+  /// than the friendly single octave. Off by default so it never overwhelms; a
+  /// toggle opens it up. Drums are unaffected.
+  bool _wideRange = false;
+
+  /// The octaves the wide grid spans, high → low (0 = the default row set).
+  static const _wideOctaves = [1, 0, -1];
 
   /// Time-stretch factor applied to a recorded voice clip before it becomes an
   /// instrument (pitch preserved): 1.0 = as-recorded, >1 slower/longer, <1 faster.
@@ -323,6 +336,10 @@ class _TrackerScreenState extends State<TrackerScreen>
   bool get notationVisible => _showNotation;
   @override
   void toggleNotation() => setState(() => _showNotation = !_showNotation);
+  @override
+  bool get wideRange => _wideRange;
+  @override
+  void setWideRange(bool on) => setState(() => _wideRange = on);
 
   @override
   bool get swingOn => _engine.timing.swing > 0;
@@ -939,7 +956,7 @@ class _TrackerScreenState extends State<TrackerScreen>
   bool _isPercussion(int channel) =>
       _engine.channels[channel].instrument is PercussionInstrument;
 
-  /// The MIDI note a pitched grid row maps to for [channel].
+  /// The MIDI note a pitched grid row maps to for [channel] (single-octave grid).
   int _midiFor(int channel, int row) =>
       TrackerScreen._rowMidiOct4[row] +
       12 * (TrackerScreen._channelOctave[_engine.channels[channel].id] ?? 0);
@@ -954,12 +971,16 @@ class _TrackerScreenState extends State<TrackerScreen>
           _GridRow(_drumColor(drum), drum.index, icon: _drumIcon(drum)),
       ];
     }
+    // Wide range: stack the pentatonic across three octaves (high → low) so the
+    // full tonal range is reachable; else the friendly single octave.
+    final octaves = _wideRange ? _wideOctaves : const [0];
     return [
-      for (var r = 0; r < TrackerScreen.rowSteps.length; r++)
-        _GridRow(
-          pitchClassColor(TrackerScreen.rowSteps[r]),
-          _midiFor(channel, r),
-        ),
+      for (final o in octaves)
+        for (var r = 0; r < TrackerScreen.rowSteps.length; r++)
+          _GridRow(
+            pitchClassColor(TrackerScreen.rowSteps[r]),
+            _midiFor(channel, r) + 12 * o,
+          ),
     ];
   }
 
@@ -1394,6 +1415,12 @@ class _TrackerScreenState extends State<TrackerScreen>
             icon: Icon(_showNotation ? Icons.grid_view : Icons.music_note),
             tooltip: l10n.trackerToggleNotation,
             onPressed: () => setState(() => _showNotation = !_showNotation),
+          ),
+          IconButton(
+            icon: Icon(_wideRange ? Icons.unfold_less : Icons.unfold_more),
+            tooltip: l10n.trackerWideRange,
+            color: _wideRange ? Theme.of(context).colorScheme.primary : null,
+            onPressed: () => setState(() => _wideRange = !_wideRange),
           ),
           PopupMenuButton<String>(
             onSelected: (v) {
