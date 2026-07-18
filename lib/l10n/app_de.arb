@@ -400,6 +400,7 @@
   "tabAddTrack": "Spur hinzufügen",
   "tabRemoveTrack": "Spur entfernen",
   "tabOpenSongBook": "Aus Liederbuch öffnen",
+  "tabOpenWorkshop": "In Noten-Werkstatt öffnen",
   "tabPasteAscii": "ASCII-Tab einfügen",
   "tabPasteAsciiHint": "e|--0--3--|\nB|--1-----|\n...",
   "tabSongBookEmpty": "Dein Liederbuch ist leer",

@@ -1186,6 +1186,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabOpenSongBook => 'Open from Song Book';
 
   @override
+  String get tabOpenWorkshop => 'Open in Score Workshop';
+
+  @override
   String get tabPasteAscii => 'Paste ASCII tab';
 
   @override

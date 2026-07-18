@@ -9,6 +9,7 @@ import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_mic_capture.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:file_selector/file_selector.dart';
@@ -117,6 +118,9 @@ abstract class TabWorkshopTester {
 
   /// Replaces the active track with tab parsed from ASCII-tab [text].
   void pasteAsciiTab(String text);
+
+  /// The multi-part score handed to the Score Workshop (one part per track).
+  MultiPartScore debugWorkshopScore();
   bool get isListening;
 
   /// Feeds a reading straight into the mic-capture path, bypassing the plugin,
@@ -412,6 +416,26 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   bool isMuted(int track) => _tracks[track].muted;
   @override
   bool isSoloed(int track) => _tracks[track].soloed;
+
+  /// The whole band as a [MultiPartScore] (one part per track).
+  MultiPartScore _bandScore() =>
+      MultiPartScore([for (final t in _tracks) t.doc.toScore()]);
+
+  @override
+  MultiPartScore debugWorkshopScore() => _bandScore();
+
+  /// Opens the current tab in the full Score Workshop (reuses its public
+  /// `initialScore` param — no edit to that screen).
+  void _openInScoreWorkshop() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CompositionWorkshopScreen(
+          initialScore: _bandScore(),
+          initialNames: [for (final t in _tracks) t.name],
+        ),
+      ),
+    );
+  }
 
   /// MusicXML for the whole band — multi-part when there is more than one
   /// track, else the single active track.
@@ -799,6 +823,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             icon: const Icon(Icons.bookmark_add_outlined),
             tooltip: l10n.tabSaveSongBook,
             onPressed: _promptSave,
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_note),
+            tooltip: l10n.tabOpenWorkshop,
+            onPressed: _openInScoreWorkshop,
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.ios_share),

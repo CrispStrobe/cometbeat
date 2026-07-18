@@ -397,6 +397,16 @@ void main() {
     expect(topRow, contains(3)); // the 3rd-fret note
   });
 
+  testWidgets('Open in Score Workshop hands over one part per track',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester)..addTrack();
+    await tester.pump();
+
+    final score = tab.debugWorkshopScore();
+    expect(score.parts, hasLength(2)); // one Score per tab track
+  });
+
   testWidgets('tempo control starts at 120', (tester) async {
     await pumpGame(tester, const TabWorkshopScreen());
     expect(_tab(tester).bpm, 120);

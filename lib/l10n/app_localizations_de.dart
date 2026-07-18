@@ -1193,6 +1193,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabOpenSongBook => 'Aus Liederbuch öffnen';
 
   @override
+  String get tabOpenWorkshop => 'In Noten-Werkstatt öffnen';
+
+  @override
   String get tabPasteAscii => 'ASCII-Tab einfügen';
 
   @override

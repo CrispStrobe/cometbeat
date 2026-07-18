@@ -2294,6 +2294,12 @@ abstract class AppLocalizations {
   /// **'Open from Song Book'**
   String get tabOpenSongBook;
 
+  /// No description provided for @tabOpenWorkshop.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Score Workshop'**
+  String get tabOpenWorkshop;
+
   /// No description provided for @tabPasteAscii.
   ///
   /// In en, this message translates to:
