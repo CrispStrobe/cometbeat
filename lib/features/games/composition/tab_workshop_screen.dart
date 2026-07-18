@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
+import 'package:comet_beat/features/games/composition/tab_mic_capture.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -102,6 +106,11 @@ abstract class TabWorkshopTester {
   void selectTrack(int index);
   void addTrack();
   void removeTrack();
+  bool get isListening;
+
+  /// Feeds a reading straight into the mic-capture path, bypassing the plugin,
+  /// so the wiring is testable without a microphone.
+  void debugFeedReading(PitchReading reading);
 }
 
 /// A guitar/bass **tablature editor** (B1) — the Tab Workshop. Author tab on a
@@ -138,6 +147,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   String? _sourceName;
   final _focus = FocusNode();
 
+  // Mic capture: play a note, it lands on the fretboard at the cursor.
+  final MicrophonePitchService _mic = MicrophonePitchService();
+  StreamSubscription<PitchReading>? _micSub;
+  TabMicCapture? _capture;
+  bool _listening = false;
+
   // Playback highlight: a Ticker lights the sounding column's note id in time.
   late final Ticker _ticker;
   bool _playing = false;
@@ -157,6 +172,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   @override
   void dispose() {
+    _micSub?.cancel();
+    _mic.dispose();
     _ticker.dispose();
     _focus.dispose();
     super.dispose();
@@ -222,6 +239,54 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       col < _doc.columns.length ? _doc.columns[col].chord?.name : null;
   @override
   int get bpm => _bpm;
+  @override
+  bool get isListening => _listening;
+
+  @override
+  void debugFeedReading(PitchReading reading) => _onReading(reading);
+
+  /// A committed note from the mic lands at the cursor, then the cursor steps
+  /// on — so playing a phrase writes it across the grid.
+  void _onReading(PitchReading reading) {
+    final placement = (_capture ??= TabMicCapture(_doc.tuning)).accept(reading);
+    if (placement == null) return;
+    setState(() {
+      _doc.setDuration(_selCol, _dur);
+      _doc.setFret(_selCol, placement.$1, placement.$2);
+      _selCol++; // setFret grows the document as needed
+      _selString = placement.$1;
+    });
+  }
+
+  Future<void> _toggleMic() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (_listening) {
+      await _micSub?.cancel();
+      _micSub = null;
+      await _mic.stop();
+      if (!mounted) return;
+      setState(() => _listening = false);
+      return;
+    }
+    try {
+      if (!await _mic.hasPermission()) {
+        if (!mounted) return;
+        _snack(l10n.tabMicDenied);
+        return;
+      }
+      _capture = TabMicCapture(_doc.tuning);
+      _micSub = _mic.readings.listen(_onReading);
+      await _mic.start();
+      if (!mounted) return;
+      setState(() => _listening = true);
+    } catch (_) {
+      await _micSub?.cancel();
+      _micSub = null;
+      if (!mounted) return;
+      _snack(l10n.tabMicFailed);
+    }
+  }
+
   @override
   int get trackCount => _tracks.length;
   @override
@@ -499,6 +564,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
             tooltip: l10n.tabPlay,
             onPressed: _play,
+          ),
+          IconButton(
+            icon: Icon(_listening ? Icons.mic : Icons.mic_none),
+            tooltip: l10n.tabMic,
+            color: _listening ? Theme.of(context).colorScheme.error : null,
+            onPressed: _toggleMic,
           ),
           IconButton(
             icon: const Icon(Icons.folder_open),

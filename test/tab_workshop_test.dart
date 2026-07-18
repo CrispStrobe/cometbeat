@@ -4,7 +4,10 @@
 // these assertions are on chrome/state, not painted output.
 
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
+
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
@@ -261,6 +264,28 @@ void main() {
     expect(svc.songs, hasLength(1));
     // Two parts in the score-partwise part-list.
     expect('<score-part '.allMatches(svc.songs.single.musicXml).length, 2);
+  });
+
+  testWidgets('mic readings land on the fretboard and advance the cursor',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester);
+    tab.selectCell(0, 0);
+    await tester.pump();
+
+    expect(tab.isListening, isFalse); // mic is off until toggled
+
+    // Three agreeing frames of the open bottom string commit one placement.
+    final lowE = Tuning.standardGuitar.strings[5].midiNumber;
+    final freq = 440.0 * math.pow(2, (lowE - 69) / 12.0);
+    for (var i = 0; i < 3; i++) {
+      tab.debugFeedReading(
+        PitchReading(frequency: freq, clarity: 0.99, a4: 440, rms: 0.2),
+      );
+    }
+    await tester.pump();
+
+    expect(tab.fretAt(0, 5), 0); // open, bottom string, at the cursor column
   });
 
   testWidgets('tempo control starts at 120', (tester) async {

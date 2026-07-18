@@ -1139,6 +1139,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabTempo => 'Tempo';
 
   @override
+  String get tabMic => 'Einspielen (Mikrofon)';
+
+  @override
+  String get tabMicDenied => 'Mikrofon-Berechtigung wird benötigt';
+
+  @override
+  String get tabMicFailed => 'Mikrofon konnte nicht gestartet werden';
+
+  @override
   String get tabTracks => 'Spuren';
 
   @override

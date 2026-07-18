@@ -2186,6 +2186,24 @@ abstract class AppLocalizations {
   /// **'Tempo'**
   String get tabTempo;
 
+  /// No description provided for @tabMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Play it in (microphone)'**
+  String get tabMic;
+
+  /// No description provided for @tabMicDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission is needed'**
+  String get tabMicDenied;
+
+  /// No description provided for @tabMicFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start the microphone'**
+  String get tabMicFailed;
+
   /// No description provided for @tabTracks.
   ///
   /// In en, this message translates to:
