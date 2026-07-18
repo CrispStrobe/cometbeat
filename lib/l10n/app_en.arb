@@ -1677,6 +1677,7 @@
   "funcSubdominantKid": "Away",
   "funcDominantKid": "Tension",
   "analysisHarmonyHeading": "Harmony",
+  "analyzeAction": "Analyse the harmony",
   "cadenceAuthentic": "perfect cadence",
   "cadenceHalf": "half cadence",
   "cadencePlagal": "plagal cadence",

@@ -4262,6 +4262,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analysisHarmonyHeading => 'Harmony';
 
   @override
+  String get analyzeAction => 'Analyse the harmony';
+
+  @override
   String get cadenceAuthentic => 'perfect cadence';
 
   @override

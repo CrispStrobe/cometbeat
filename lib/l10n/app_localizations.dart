@@ -7796,6 +7796,12 @@ abstract class AppLocalizations {
   /// **'Harmony'**
   String get analysisHarmonyHeading;
 
+  /// No description provided for @analyzeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyse the harmony'**
+  String get analyzeAction;
+
   /// No description provided for @cadenceAuthentic.
   ///
   /// In en, this message translates to:

@@ -9,6 +9,7 @@ import 'dart:async';
 
 import 'package:comet_beat/core/audio/play_along.dart' show PlayAlongChart;
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/features/games/composition/score_analysis_view.dart';
 import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
 import 'package:comet_beat/features/games/songs/chord_sheet_screen.dart';
 import 'package:comet_beat/features/games/songs/import/chordpro.dart';
@@ -140,7 +141,23 @@ class _SongScreenState extends State<SongScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.insights),
+            tooltip: l10n.analyzeAction,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => _SongAnalysisScreen(
+                  title: widget.title,
+                  score: widget.score,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -354,6 +371,28 @@ class SongListScreen extends StatelessWidget {
                 ),
               ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Harmonic analysis of a song — the computed AnaVis over its real score.
+class _SongAnalysisScreen extends StatelessWidget {
+  const _SongAnalysisScreen({required this.title, required this.score});
+
+  final String title;
+  final Score score;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.analysisHarmonyHeading)),
+      body: ListView(
+        children: [
+          ScoreAnalysisView(title: title, score: score),
+          const SizedBox(height: 16),
         ],
       ),
     );

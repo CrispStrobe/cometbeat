@@ -224,6 +224,25 @@ void main() {
     expect(find.text('Play'), findsOneWidget); // finished, reset to Play
   });
 
+  testWidgets('song screen: Analyse opens the computed harmony view',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    // A C-major arpeggio bar → the engine reads an implied I chord.
+    const song =
+        Song(id: 't', title: 'Arp', dsl: 'c4:q e4:q g4:q c5:q', lyrics: '');
+    await tester.pumpWidget(_wrap(SongScreen(song: song), sri));
+    await tester.pumpAndSettle();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(find.byIcon(Icons.insights));
+    await tester.pumpAndSettle();
+    // The analysis screen, with the tonic chord read from the notes.
+    expect(find.text(l10n.analysisHarmonyHeading), findsOneWidget);
+    expect(find.text('I'), findsWidgets);
+  });
+
   testWidgets('song screen: Stop halts playback', (tester) async {
     final sri = SriService(getNow: () => DateTime(2026, 7, 11));
     const song =
