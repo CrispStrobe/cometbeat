@@ -1162,6 +1162,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabRemoveTrack => 'Remove track';
 
   @override
+  String get tabOpenSongBook => 'Open from Song Book';
+
+  @override
+  String get tabSongBookEmpty => 'Your Song Book is empty';
+
+  @override
   String get tabSaveSongBook => 'Save to Song Book';
 
   @override

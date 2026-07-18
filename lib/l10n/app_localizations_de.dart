@@ -1169,6 +1169,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabRemoveTrack => 'Spur entfernen';
 
   @override
+  String get tabOpenSongBook => 'Aus Liederbuch öffnen';
+
+  @override
+  String get tabSongBookEmpty => 'Dein Liederbuch ist leer';
+
+  @override
   String get tabSaveSongBook => 'Ins Liederbuch speichern';
 
   @override

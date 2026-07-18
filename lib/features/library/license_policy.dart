@@ -18,6 +18,9 @@ import 'package:comet_beat/features/library/content_source.dart';
 enum LicenseKind {
   publicDomain,
   cc0,
+  mit,
+  apache2,
+  bsd,
   ccBy,
   ccBySa,
   ccByNc,
@@ -25,9 +28,13 @@ enum LicenseKind {
   allRightsReserved,
   unknown;
 
-  /// "Totally free": no conditions at all (public domain / CC0). This is what
-  /// the default policy allows.
+  /// "Totally free": no conditions at all (public domain / CC0).
   bool get isUnconditional => this == publicDomain || this == cc0;
+
+  /// A permissive software-style license (MIT / Apache-2.0 / BSD): use for any
+  /// purpose, the only duty is preserving the license/notice text. Treated as
+  /// acceptable by default alongside CC0/PD (maintainer directive).
+  bool get isPermissiveNotice => this == mit || this == apache2 || this == bsd;
 
   /// Permissive, but only if its conditions are honoured — credit for CC BY,
   /// credit + share-alike on derivatives for CC BY-SA.
@@ -37,6 +44,9 @@ enum LicenseKind {
   String get label => switch (this) {
         publicDomain => 'Public Domain',
         cc0 => 'CC0',
+        mit => 'MIT',
+        apache2 => 'Apache-2.0',
+        bsd => 'BSD',
         ccBy => 'CC BY',
         ccBySa => 'CC BY-SA',
         ccByNc => 'CC BY-NC',
@@ -68,9 +78,12 @@ class LicensePolicy {
 
   const LicensePolicy({this.allowAttributionLicenses = false});
 
-  /// Whether [kind] may be imported under this policy.
+  /// Whether [kind] may be imported under this policy. Totally-free (CC0/PD) and
+  /// permissive-notice (MIT/Apache/BSD) are always allowed; CC-BY/CC-BY-SA only
+  /// when opted in.
   bool allows(LicenseKind kind) =>
       kind.isUnconditional ||
+      kind.isPermissiveNotice ||
       (allowAttributionLicenses && kind.needsAttribution);
 
   /// Classifies a free-text declared license into a [LicenseKind]. Conservative:
@@ -96,6 +109,14 @@ class LicensePolicy {
       return s.contains('cc0') || s.contains('zero')
           ? LicenseKind.cc0
           : LicenseKind.publicDomain;
+    }
+
+    // Permissive software licenses (before the CC / all-rights-reserved reads;
+    // word-boundary matches so "mit"/"bsd" don't fire inside other words).
+    if (!isCc) {
+      if (s.contains('apache')) return LicenseKind.apache2;
+      if (RegExp(r'\bmit\b').hasMatch(s)) return LicenseKind.mit;
+      if (RegExp(r'\bbsd\b').hasMatch(s)) return LicenseKind.bsd;
     }
 
     if (isCc) {

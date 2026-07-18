@@ -2246,6 +2246,18 @@ abstract class AppLocalizations {
   /// **'Remove track'**
   String get tabRemoveTrack;
 
+  /// No description provided for @tabOpenSongBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Open from Song Book'**
+  String get tabOpenSongBook;
+
+  /// No description provided for @tabSongBookEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Song Book is empty'**
+  String get tabSongBookEmpty;
+
   /// No description provided for @tabSaveSongBook.
   ///
   /// In en, this message translates to:

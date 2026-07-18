@@ -392,6 +392,8 @@
   "tabTracks": "Spuren",
   "tabAddTrack": "Spur hinzufügen",
   "tabRemoveTrack": "Spur entfernen",
+  "tabOpenSongBook": "Aus Liederbuch öffnen",
+  "tabSongBookEmpty": "Dein Liederbuch ist leer",
   "tabSaveSongBook": "Ins Liederbuch speichern",
   "tabSaved": "„{title}“ gespeichert",
   "@tabSaved": {

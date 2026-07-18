@@ -172,10 +172,12 @@ lib/features/library/
 
 A single pure function every import passes through. Behaviour:
 
-- **DEFAULT = TOTALLY FREE only (`PD` / `CC0`)** — licenses with *no conditions
-  at all* (maintainer directive). Nothing imported by default carries a credit or
-  share-alike obligation. Implemented as `LicensePolicy()` where
-  `allowAttributionLicenses = false`.
+- **DEFAULT = totally-free + permissive-software** — `PD` / `CC0` (no conditions)
+  **plus `MIT` / `Apache-2.0` / `BSD`** (permissive-with-notice: use for anything,
+  the only duty is preserving the license text, which the credits screen already
+  does). Maintainer directive. Implemented as `LicensePolicy()` where
+  `allowAttributionLicenses = false` — `LicenseKind.isUnconditional` (CC0/PD) and
+  `isPermissiveNotice` (MIT/Apache/BSD) are both admitted.
 - **`CC-BY` / `CC-BY-SA` are OFF by default**, opted into with
   `LicensePolicy(allowAttributionLicenses: true)` — they are permissive but carry
   obligations (credit; share-alike on *derivatives*). ⚠ Because our Tracker/Tab

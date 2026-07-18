@@ -107,9 +107,15 @@ void main() {
       expect(p.classify('CC BY-NC 4.0'), LicenseKind.ccByNc);
       expect(p.classify('CC BY-NC-SA'), LicenseKind.ccByNc);
       expect(p.classify('CC BY-ND'), LicenseKind.ccByNd);
+      expect(p.classify('MIT'), LicenseKind.mit);
+      expect(p.classify('MIT License'), LicenseKind.mit);
+      expect(p.classify('Apache-2.0'), LicenseKind.apache2);
+      expect(p.classify('BSD-3-Clause'), LicenseKind.bsd);
       expect(p.classify('All Rights Reserved'), LicenseKind.allRightsReserved);
       expect(p.classify(''), LicenseKind.unknown);
       expect(p.classify('some weird thing'), LicenseKind.unknown);
+      // A word that merely contains "mit"/"bsd" must NOT match.
+      expect(p.classify('permitted for personal use'), LicenseKind.unknown);
     });
 
     test('only CC0/PD are unconditional; CC BY/BY-SA need attribution', () {
@@ -122,11 +128,13 @@ void main() {
     });
   });
 
-  test('default policy = TOTALLY FREE only (CC0/PD); everything else blocked',
-      () {
+  test('default policy = CC0/PD + permissive-software (MIT/Apache/BSD)', () {
     const p = LicensePolicy(); // default
     expect(p.gate(_item()), LicenseKind.cc0); // CC0 ok
-    expect(p.isAllowed(_item(license: 'Public Domain')), isTrue);
+    for (final lic in ['Public Domain', 'MIT', 'Apache-2.0', 'BSD-3-Clause']) {
+      expect(p.isAllowed(_item(license: lic)), isTrue, reason: lic);
+    }
+    // Attribution + restrictive families are all blocked by default.
     for (final lic in ['CC BY 4.0', 'CC BY-SA 4.0', 'CC BY-NC 4.0', '']) {
       expect(
         () => p.gate(_item(license: lic)),

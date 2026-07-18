@@ -423,6 +423,8 @@
   "tabTracks": "Tracks",
   "tabAddTrack": "Add track",
   "tabRemoveTrack": "Remove track",
+  "tabOpenSongBook": "Open from Song Book",
+  "tabSongBookEmpty": "Your Song Book is empty",
   "tabSaveSongBook": "Save to Song Book",
   "tabSaved": "Saved “{title}”",
   "@tabSaved": {

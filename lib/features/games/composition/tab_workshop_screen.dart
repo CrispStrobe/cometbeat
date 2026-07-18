@@ -107,6 +107,9 @@ abstract class TabWorkshopTester {
   void selectTrack(int index);
   void addTrack();
   void removeTrack();
+
+  /// Loads a Song-Book song (by MusicXML) into the active track as editable tab.
+  void openSongMusicXml(String title, String musicXml);
   bool get isListening;
 
   /// Feeds a reading straight into the mic-capture path, bypassing the plugin,
@@ -439,6 +442,57 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     }
   }
 
+  @override
+  void openSongMusicXml(String title, String musicXml) {
+    try {
+      final score = scoreFromMusicXml(musicXml);
+      setState(() {
+        _tracks[_active].doc = TabDocument.fromScore(score, _doc.tuning);
+        _sourceName = title;
+        _selCol = 0;
+        _selString = 0;
+      });
+    } catch (_) {
+      if (mounted) _snack(AppLocalizations.of(context)!.tabImportFailed);
+    }
+  }
+
+  /// Bottom-sheet list of Song-Book songs; pick one to load as editable tab.
+  Future<void> _openFromSongBook() async {
+    final l10n = AppLocalizations.of(context)!;
+    final songs = context.read<UserSongsService>().songs;
+    if (songs.isEmpty) {
+      _snack(l10n.tabSongBookEmpty);
+      return;
+    }
+    final picked = await showModalBottomSheet<ImportedSong>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                l10n.tabOpenSongBook,
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+            ),
+            for (final s in songs)
+              ListTile(
+                leading: const Icon(Icons.music_note),
+                title: Text(s.title),
+                subtitle: s.attribution == null ? null : Text(s.attribution!),
+                onTap: () => Navigator.of(ctx).pop(s),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    openSongMusicXml(picked.title, picked.musicXml);
+  }
+
   void _loadDemo() => setState(() {
         _tracks[_active].doc =
             TabDocument.fromScore(asciiTabToScore(_demoTab), _doc.tuning);
@@ -650,6 +704,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             icon: const Icon(Icons.folder_open),
             tooltip: l10n.tabImport,
             onPressed: openScoreFile,
+          ),
+          IconButton(
+            icon: const Icon(Icons.library_music_outlined),
+            tooltip: l10n.tabOpenSongBook,
+            onPressed: _openFromSongBook,
           ),
           IconButton(
             icon: const Icon(Icons.bookmark_add_outlined),

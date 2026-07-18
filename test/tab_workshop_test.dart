@@ -315,6 +315,28 @@ void main() {
     expect(tab.fretAt(0, 5), 0); // open, bottom string, at the cursor column
   });
 
+  testWidgets('Open from Song Book loads a song as editable tab',
+      (tester) async {
+    final svc = UserSongsService();
+    final xml = scoreToMusicXml(Score.simple(notes: 'c4:q d4 e4 f4'));
+    svc.addSong(ImportedSong(id: 's1', title: 'Loaded Song', musicXml: xml));
+
+    await pumpGame(
+      tester,
+      const TabWorkshopScreen(),
+      extraProviders: [
+        ChangeNotifierProvider<UserSongsService>.value(value: svc),
+      ],
+    );
+    final tab = _tab(tester);
+    expect(tab.sourceName, isNull); // demo
+
+    tab.openSongMusicXml('Loaded Song', xml);
+    await tester.pump();
+    expect(tab.sourceName, 'Loaded Song');
+    expect(tab.columnCount, greaterThan(0)); // notes became fretted columns
+  });
+
   testWidgets('tempo control starts at 120', (tester) async {
     await pumpGame(tester, const TabWorkshopScreen());
     expect(_tab(tester).bpm, 120);
