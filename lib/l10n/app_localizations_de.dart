@@ -1477,6 +1477,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sampleExtractExport => 'WAV exportieren';
 
   @override
+  String get sampleExtractExportFolder => 'Alle in einen Ordner exportieren';
+
+  @override
+  String sampleExtractSavedFolder(int n, String dir) {
+    return '$n WAVs gespeichert in $dir';
+  }
+
+  @override
   String get sampleExtractAdd => 'Zu Meine Samples';
 
   @override

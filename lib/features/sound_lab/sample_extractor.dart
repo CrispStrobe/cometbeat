@@ -44,6 +44,29 @@ class ExtractedSample {
   String get displayName => name.trim().isEmpty ? 'sample $index' : name.trim();
 }
 
+/// Sanitizes [name] into a filesystem-safe base (no extension).
+String safeSampleFileName(String name) {
+  final cleaned = name.replaceAll(RegExp(r'[^A-Za-z0-9 _-]'), '').trim();
+  return cleaned.isEmpty ? 'sample' : cleaned;
+}
+
+/// Turns display names into unique `.wav` filenames: sanitized, and any
+/// collision disambiguated with a `-2`, `-3`, … suffix. Order-preserving.
+List<String> uniqueWavNames(Iterable<String> displayNames) {
+  final used = <String>{};
+  final out = <String>[];
+  for (final n in displayNames) {
+    final base = safeSampleFileName(n);
+    var candidate = base;
+    var k = 2;
+    while (!used.add('$candidate.wav')) {
+      candidate = '$base-${k++}';
+    }
+    out.add('$candidate.wav');
+  }
+  return out;
+}
+
 /// The C-5 reference rate a tracker sample plays at when no rate is stored.
 const _kDefaultC5Speed = 8363;
 

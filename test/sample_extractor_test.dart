@@ -90,6 +90,20 @@ void main() {
     });
   });
 
+  group('uniqueWavNames (pure)', () {
+    test('sanitizes and de-duplicates collisions', () {
+      final names = uniqueWavNames(['kick', 'kick', 'sn@re!', 'kick']);
+      expect(names, ['kick.wav', 'kick-2.wav', 'snre.wav', 'kick-3.wav']);
+    });
+
+    test('blank/illegal names fall back to "sample"', () {
+      expect(
+        uniqueWavNames(['', '***', 'ok']),
+        ['sample.wav', 'sample-2.wav', 'ok.wav'],
+      );
+    });
+  });
+
   group('SampleExtractorScreen (seam)', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 

@@ -514,6 +514,14 @@
   },
   "sampleExtractPreview": "Vorhören",
   "sampleExtractExport": "WAV exportieren",
+  "sampleExtractExportFolder": "Alle in einen Ordner exportieren",
+  "sampleExtractSavedFolder": "{n} WAVs gespeichert in {dir}",
+  "@sampleExtractSavedFolder": {
+    "placeholders": {
+      "n": { "type": "int" },
+      "dir": { "type": "String" }
+    }
+  },
   "sampleExtractAdd": "Zu Meine Samples",
   "sampleExtractAddAll": "Alle zu Meine Samples",
   "sampleExtractAdded": "„{name}“ hinzugefügt",

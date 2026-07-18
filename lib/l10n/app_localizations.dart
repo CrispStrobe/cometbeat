@@ -2816,6 +2816,18 @@ abstract class AppLocalizations {
   /// **'Export WAV'**
   String get sampleExtractExport;
 
+  /// No description provided for @sampleExtractExportFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Export all to a folder'**
+  String get sampleExtractExportFolder;
+
+  /// No description provided for @sampleExtractSavedFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {n} WAVs to {dir}'**
+  String sampleExtractSavedFolder(int n, String dir);
+
   /// No description provided for @sampleExtractAdd.
   ///
   /// In en, this message translates to:

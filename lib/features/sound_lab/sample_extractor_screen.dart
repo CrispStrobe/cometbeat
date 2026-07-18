@@ -107,9 +107,37 @@ class _SampleExtractorScreenState extends State<SampleExtractorScreen>
   Future<void> _exportOne(ExtractedSample s) => showAudioExportSheet(
         context,
         pcm: s.pcm,
-        baseName: _safeFile(s.displayName),
+        baseName: safeSampleFileName(s.displayName),
         sampleRate: s.sampleRate,
       );
+
+  /// Writes every extracted sample as a WAV into a chosen folder.
+  Future<void> _exportAllToFolder() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final dir = await getDirectoryPath();
+    if (dir == null || !mounted) return;
+    setState(() => _busy = true);
+    final names = uniqueWavNames([for (final s in _samples) s.displayName]);
+    var written = 0;
+    try {
+      for (var i = 0; i < _samples.length; i++) {
+        final s = _samples[i];
+        final wav = pcmFloatToWav(s.pcm, sampleRate: s.sampleRate);
+        await XFile.fromData(wav, name: names[i]).saveTo('$dir/${names[i]}');
+        written++;
+      }
+    } catch (_) {
+      // fall through — report however many made it
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(l10n.sampleExtractSavedFolder(written, dir))),
+      );
+  }
 
   Future<void> _addOne(int index) async {
     final l10n = AppLocalizations.of(context)!;
@@ -143,11 +171,6 @@ class _SampleExtractorScreenState extends State<SampleExtractorScreen>
       );
   }
 
-  static String _safeFile(String s) {
-    final cleaned = s.replaceAll(RegExp(r'[^A-Za-z0-9 _-]'), '').trim();
-    return cleaned.isEmpty ? 'sample' : cleaned;
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -155,12 +178,18 @@ class _SampleExtractorScreenState extends State<SampleExtractorScreen>
       appBar: AppBar(
         title: Text(l10n.sampleExtractTitle),
         actions: [
-          if (_samples.isNotEmpty)
+          if (_samples.isNotEmpty) ...[
+            IconButton(
+              icon: const Icon(Icons.drive_folder_upload),
+              tooltip: l10n.sampleExtractExportFolder,
+              onPressed: _busy ? null : _exportAllToFolder,
+            ),
             IconButton(
               icon: const Icon(Icons.library_add),
               tooltip: l10n.sampleExtractAddAll,
               onPressed: _busy ? null : _addAll,
             ),
+          ],
         ],
       ),
       body: Column(
