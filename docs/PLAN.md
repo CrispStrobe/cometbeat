@@ -829,7 +829,7 @@ roadmap" sections lower down.
 A big directive block from the maintainer; **the next major arc after the current
 small games.** Scope each as its own claimed effort:
 
-1. 🟡 **PARTLY SHIPPED — DrumKit → a studio-style beat maker.** ✅ **Tap-to-record
+1. ✅ **SHIPPED — DrumKit → a studio-style beat maker.** ✅ **Tap-to-record
    (`cb1ba49`):** a Record button captures pad taps at their loop position and, on
    stop, quantises the take onto the step grid (overdub) via the new engines
    (`quantizeToResolution(eighth)` → `toDrumPattern`). Each drum snaps
@@ -840,10 +840,18 @@ small games.** Scope each as its own claimed effort:
    New pure bridge `beat_capture.beatboxToTaps` (`detectOnsets` + per-onset
    `classifyHit` → taps) — verified against the real synth→detector harness;
    `debugBeatboxFrames` seam for a headless widget test. Both record paths now
-   converge on the generic rhythm engine. **Remaining:** Save-to-Song-Book from
-   the DrumKit (needs a drum-pattern→notation converter — the groove bridge drops
-   unpitched drums, so this is real work, not a reuse); expose the skill-tier cap
-   as a setting (the grid is fixed eighth today); more `Drum` voices ([needs-engine]).
+   converge on the generic rhythm engine. ✅ **Save to Song Book + Export
+   (`dae7b7a`):** new pure `groove_notation.drumParts(DrumRowsPattern)` engraves a
+   beat as a rhythm-line multi-part score (one part per drum with a hit — kick low
+   F2 / snare middle C4 / hat high G5; a reduction that preserves the timing,
+   since the kid theme has no percussion staff). At the eighth grid every step is
+   an eighth note or rest, so no tie/duration puzzle — reuses `grooveScore`.
+   App-bar Save-to-Song-Book (title dialog → `UserSongsService`) + Export (the
+   shared music-export sheet → MusicXML/MIDI/etc.); `debugSaveToSongBook`/
+   `debugMusicXml` seams. **DrumKit item COMPLETE — tap-record + beatbox-record +
+   save/export.** **Only-if-wanted:** expose the skill-tier cap as a setting (the
+   grid is fixed eighth today); more `Drum` voices ([needs-engine]); real
+   percussion-staff notation (vs the pitched reduction).
 2. ✅ **SHIPPED — Recording with a beginner "Relevanzschwelle" (rhythm relevance
    threshold).** The quantisation ENGINE is done: `lib/core/audio/rhythm_quantize.dart`
    (`04fc357`) — `detectOnsets` → `chooseResolution` (auto coarsest-grid-the-player-
