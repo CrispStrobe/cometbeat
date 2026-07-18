@@ -22,8 +22,11 @@
 // keep working). Implemented: Bxx position jump · Dxx pattern break (with the
 // classic decimal row param). The row-timing map maps each flat row back to its
 // (orderIndex, patternIndex, row) so the playhead can follow the non-linear
-// sequence. Still TODO: Fxx set-speed/tempo (makes row DURATION non-uniform —
-// needs per-row timing, not just reordering), Exy extended, 9xx sample-offset.
+// sequence. Implemented too: Exy extended — E1x/E2x fine porta, E9x retrigger,
+// EAx/EBx fine volume, ECx note cut, EDx note delay (per-tick, in ReplayVoice) +
+// E6x pattern loop (a row-level flow, in walkFlow). Still TODO: Fxx
+// set-speed/tempo (makes row DURATION non-uniform — needs per-row timing, not
+// just reordering), 9xx sample-offset.
 //
 // Mixing (see Trap A in docs/TRACKER_REPLAYER_HANDOVER.md): the replayer sums
 // voices at a FIXED-normalized amplitude (each additive voice divided by its
@@ -62,6 +65,18 @@ const int kFxVibratoVolSlide = 0x6; // 6xy = 4xy (continue) + Axy
 const int kFxTremolo = 0x7; // 7xy
 const int kFxPositionJump = 0xB; // Bxx — continue at order xx, row 0
 const int kFxPatternBreak = 0xD; // Dxx — next order entry, row = decimal(xx)
+const int kFxExtended =
+    0xE; // Exy — sub-command in the high nibble of the param
+
+// Exy sub-commands (the high nibble of the param; the low nibble is the value).
+const int kExFinePortaUp = 0x1; // E1x — bump pitch up x fine units, once
+const int kExFinePortaDown = 0x2; // E2x — bump pitch down x, once
+const int kExPatternLoop = 0x6; // E60 set loop start · E6x loop back x times
+const int kExRetrigger = 0x9; // E9x — retrigger the note every x ticks
+const int kExFineVolUp = 0xA; // EAx — raise volume by x, once
+const int kExFineVolDown = 0xB; // EBx — lower volume by x, once
+const int kExNoteCut = 0xC; // ECx — cut the note (volume 0) at tick x
+const int kExNoteDelay = 0xD; // EDx — delay the note trigger until tick x
 
 // --- Tuning constants (MUSICAL APPROXIMATIONS, not period-accurate MOD) -------
 //
@@ -154,7 +169,24 @@ class ReplayVoice {
   // The command armed for the current row.
   int _cmd = 0;
   int _param = 0;
-  bool _retriggered = false; // did the current row (re)trigger a note?
+  bool _retriggered =
+      false; // did the current row (re)trigger a note at tick 0?
+
+  // EDx note delay: a note that triggers partway through the row.
+  int? _pendingDelayTick;
+  double _pendingNote = 0;
+  double _pendingNoteVolume = 1.0;
+
+  int get _exSub =>
+      (_param >> 4) & 0xF; // Exy sub-command (valid when cmd == E)
+  int get _exVal => _param & 0xF; // Exy value
+
+  /// Whether a delayed note (EDx) is still waiting to trigger this row.
+  bool get hasPendingNote => _pendingDelayTick != null;
+
+  /// Whether this row starts a note (immediate trigger OR a pending delayed one)
+  /// — the audio renderer computes the envelope run-length when true.
+  bool get startsNoteThisRow => _retriggered || _pendingDelayTick != null;
 
   // Audio-only envelope bookkeeping (ignored by [traceChannel]).
   int noteStartSample = 0;
@@ -183,8 +215,17 @@ class ReplayVoice {
     _cmd = cell.fxCmd;
     _param = cell.fxParam;
     _retriggered = false;
+    _pendingDelayTick = null;
 
-    if (cell.midi != null) {
+    // EDx note delay: defer the trigger to tick x instead of triggering now.
+    final noteDelay =
+        _cmd == kFxExtended && _exSub == kExNoteDelay && cell.midi != null;
+
+    if (noteDelay) {
+      _pendingNote = cell.midi!.toDouble();
+      _pendingNoteVolume = cell.volume ?? 1.0;
+      _pendingDelayTick = _exVal;
+    } else if (cell.midi != null) {
       final m = cell.midi!.toDouble();
       if (_isTonePorta) {
         targetPitch = m;
@@ -231,6 +272,18 @@ class ReplayVoice {
         if (_param != 0) _memVolSlide = _param;
       case kFxSetVolume:
         volume = _param.clamp(0, kMaxVolume);
+      case kFxExtended:
+        // One-time (tick-0) extended commands: fine porta and fine volume.
+        switch (_exSub) {
+          case kExFinePortaUp:
+            pitch += _exVal * kPortaSemitonesPerUnit;
+          case kExFinePortaDown:
+            pitch -= _exVal * kPortaSemitonesPerUnit;
+          case kExFineVolUp:
+            volume = (volume + _exVal).clamp(0, kMaxVolume);
+          case kExFineVolDown:
+            volume = (volume - _exVal).clamp(0, kMaxVolume);
+        }
     }
   }
 
@@ -242,7 +295,21 @@ class ReplayVoice {
   /// (pitch, volume0to64) to synthesize this tick. [ticksPerRow] is the row's
   /// speed. Slide-type effects act on ticks 1.. (tick 0 holds), matching classic
   /// tracker behaviour; arpeggio and the LFOs act on every tick.
-  ({double pitch, double volume}) tick(int k, int ticksPerRow) {
+  ({double pitch, double volume, bool retrigger}) tick(int k, int ticksPerRow) {
+    var retrigger = false;
+
+    // EDx note delay: the deferred note triggers at its tick.
+    if (_pendingDelayTick != null && k == _pendingDelayTick) {
+      pitch = _pendingNote;
+      targetPitch = _pendingNote;
+      noteVolume = _pendingNoteVolume;
+      active = true;
+      retrigger = true;
+      _vibPhase = 0;
+      _tremPhase = 0;
+      _pendingDelayTick = null;
+    }
+
     var effPitch = pitch;
     var effVol = volume.toDouble();
 
@@ -294,7 +361,18 @@ class ReplayVoice {
       if (_cmd != kFxTremolo) effVol = volume.toDouble();
     }
 
-    return (pitch: effPitch, volume: effVol);
+    // Extended per-tick commands: E9x retrigger, ECx note cut.
+    if (_cmd == kFxExtended) {
+      if (_exSub == kExRetrigger && _exVal > 0 && k > 0 && k % _exVal == 0) {
+        retrigger = true;
+        _vibPhase = 0;
+        _tremPhase = 0;
+      } else if (_exSub == kExNoteCut && k >= _exVal) {
+        effVol = 0;
+      }
+    }
+
+    return (pitch: effPitch, volume: effVol, retrigger: retrigger);
   }
 }
 
@@ -304,16 +382,23 @@ class ReplayVoice {
 /// state-machine output with no audio, for trajectory tests. `pitch[r][k]` is the
 /// fractional-MIDI pitch synthesized at row r, tick k; `volume[r][k]` is 0..64.
 class ChannelTrace {
-  ChannelTrace(this.pitch, this.volume);
+  ChannelTrace(this.pitch, this.volume, this.retrigger);
 
   final List<List<double>> pitch;
   final List<List<double>> volume;
+
+  /// Whether the note (re)triggered at row [r], tick [k] — for EDx note delay
+  /// and E9x retrigger, which don't otherwise change pitch/volume.
+  final List<List<bool>> retrigger;
 
   /// The effective pitch at row [r], tick [k].
   double pitchAt(int r, int k) => pitch[r][k];
 
   /// The effective volume (0..64) at row [r], tick [k].
   double volumeAt(int r, int k) => volume[r][k];
+
+  /// Whether row [r], tick [k] (re)triggered the note.
+  bool retriggerAt(int r, int k) => retrigger[r][k];
 }
 
 /// Runs the voice state machine over [cells] and returns the per-tick
@@ -325,19 +410,23 @@ ChannelTrace traceChannel(
   final voice = ReplayVoice();
   final pitch = <List<double>>[];
   final volume = <List<double>>[];
+  final retrigger = <List<bool>>[];
   for (final cell in cells) {
     voice.armRow(cell);
     final rowPitch = <double>[];
     final rowVol = <double>[];
+    final rowRetrig = <bool>[];
     for (var k = 0; k < ticksPerRow; k++) {
       final s = voice.tick(k, ticksPerRow);
       rowPitch.add(s.pitch);
       rowVol.add(s.volume);
+      rowRetrig.add(s.retrigger);
     }
     pitch.add(rowPitch);
     volume.add(rowVol);
+    retrigger.add(rowRetrig);
   }
-  return ChannelTrace(pitch, volume);
+  return ChannelTrace(pitch, volume, retrigger);
 }
 
 // --- Audio rendering ---------------------------------------------------------
@@ -407,8 +496,8 @@ void _renderChannelInto(
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
     voice.armRow(cells[r]);
-    if (voice.retriggeredThisRow) {
-      voice.oscPhase = 0;
+    if (voice.startsNoteThisRow) {
+      if (voice.retriggeredThisRow) voice.oscPhase = 0;
       voice.noteStartSample = sampleOffset + timing.stepStartSample(r);
       final runEnd = _nextTriggerRow(cells, r);
       final endSample =
@@ -416,7 +505,8 @@ void _renderChannelInto(
       final runSamples = endSample - timing.stepStartSample(r);
       voice.noteSeconds = runSamples > 0 ? runSamples / kSampleRate : 0.001;
     }
-    if (!voice.active) continue;
+    // A silent row: no live note and nothing pending to trigger this row.
+    if (!voice.active && !voice.hasPendingNote) continue;
 
     final rowStart = sampleOffset + timing.stepStartSample(r);
     final rowEnd = sampleOffset +
@@ -425,6 +515,12 @@ void _renderChannelInto(
       final ts = rowStart + ((rowEnd - rowStart) * k) ~/ ticksPerRow;
       final te = rowStart + ((rowEnd - rowStart) * (k + 1)) ~/ ticksPerRow;
       final state = voice.tick(k, ticksPerRow);
+      // A retrigger (E9x) or a delayed note (EDx) restarts the envelope here.
+      if (state.retrigger) {
+        voice.oscPhase = 0;
+        voice.noteStartSample = ts;
+      }
+      if (!voice.active) continue; // pre-delay silence / never triggered
       final freq = _freqOfMidi(state.pitch);
       final volScale = (state.volume / kMaxVolume) * voice.noteVolume * gain;
       final phaseInc = 2 * pi * freq / kSampleRate;
@@ -488,21 +584,29 @@ class PlayedRow {
 bool songUsesFlow(TrackerSong song) => song.patterns.any(
       (p) => p.cells.any(
         (col) => col.any(
-          (c) => c.fxCmd == kFxPositionJump || c.fxCmd == kFxPatternBreak,
+          (c) =>
+              c.fxCmd == kFxPositionJump ||
+              c.fxCmd == kFxPatternBreak ||
+              (c.fxCmd == kFxExtended &&
+                  ((c.fxParam >> 4) & 0xF) == kExPatternLoop),
         ),
       ),
     );
 
 /// Expands [song]'s order/pattern/row walk under the flow rules (Bxx jump, Dxx
-/// break) into the flat sequence of rows actually played. Bxx wins the order,
-/// Dxx sets the landing row; both on one row ⇒ jump order + break row. Guarded by
-/// [maxRows] so a backward Bxx loop terminates (documented cap, not an error).
+/// break, E6x pattern loop) into the flat sequence of rows actually played. Bxx
+/// wins the order, Dxx sets the landing row; both on one row ⇒ jump order + break
+/// row. E60 marks a loop start, E6x (x>0) repeats the marked span x extra times.
+/// Guarded by [maxRows] so a backward loop terminates (documented cap, not an
+/// error).
 List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
   final order = song.order;
   final rows = song.timing.rows;
   final played = <PlayedRow>[];
   var oi = 0;
   var row = 0;
+  var loopStartRow = 0; // E6x pattern-loop start (defaults to row 0)
+  var loopCount = 0; // remaining E6x repeats
   while (oi >= 0 && oi < order.length && played.length < maxRows) {
     final patternIndex = order[oi];
     final cells = song.patterns[patternIndex].cells;
@@ -512,6 +616,7 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
     // Scan the row across channels for flow commands (first of each wins).
     int? jumpToOrder;
     int? breakToRow;
+    int? loopValue; // E6x low nibble (0 = set the loop start)
     for (final col in cells) {
       final c = col[row];
       if (c.fxCmd == kFxPositionJump) {
@@ -519,6 +624,17 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
       } else if (c.fxCmd == kFxPatternBreak) {
         breakToRow ??=
             ((c.fxParam >> 4) * 10 + (c.fxParam & 0xF)).clamp(0, rows - 1);
+      } else if (c.fxCmd == kFxExtended &&
+          ((c.fxParam >> 4) & 0xF) == kExPatternLoop) {
+        loopValue ??= c.fxParam & 0xF;
+      }
+    }
+
+    void advance() {
+      row += 1;
+      if (row >= rows) {
+        oi += 1;
+        row = 0;
       }
     }
 
@@ -528,12 +644,23 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
     } else if (breakToRow != null) {
       oi += 1;
       row = breakToRow;
-    } else {
-      row += 1;
-      if (row >= rows) {
-        oi += 1;
-        row = 0;
+    } else if (loopValue == 0) {
+      loopStartRow = row; // E60 marks the loop start, then plays on
+      advance();
+    } else if (loopValue != null && loopValue > 0) {
+      if (loopCount == 0) {
+        loopCount = loopValue; // arm the loop
+        row = loopStartRow;
+      } else {
+        loopCount -= 1;
+        if (loopCount > 0) {
+          row = loopStartRow;
+        } else {
+          advance(); // loop finished
+        }
       }
+    } else {
+      advance();
     }
   }
   return played;

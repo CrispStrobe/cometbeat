@@ -18,6 +18,10 @@ import 'package:flutter_test/flutter_test.dart';
 TrackerCell fx(int cmd, int param, {int? midi}) =>
     TrackerCell(midi: midi, fxCmd: cmd, fxParam: param);
 
+/// An Exy extended command: sub-command [sub] (high nibble) + value [val].
+TrackerCell ex(int sub, int val, {int? midi}) =>
+    fx(kFxExtended, (sub << 4) | val, midi: midi);
+
 void main() {
   group('arpeggio (0xy)', () {
     test('cycles base / base+x / base+y each tick without moving the base', () {
@@ -359,6 +363,78 @@ void main() {
       );
       expect(s.songTotalMs, s.timing.stepMs * played.length);
       final peak = res.pcm.fold<int>(0, (m, v) => max(m, v.abs()));
+      expect(peak, greaterThan(1000));
+    });
+  });
+
+  group('extended (Exy)', () {
+    test('E1x/E2x fine porta bump the pitch once', () {
+      final up = traceChannel([
+        const TrackerCell(midi: 60),
+        ex(kExFinePortaUp, 4), // +4/16 = +0.25 st, once
+      ]);
+      expect(up.pitchAt(1, 0), closeTo(60.25, 1e-9));
+      expect(up.pitchAt(1, 5), closeTo(60.25, 1e-9)); // one-time, holds
+
+      final down = traceChannel([
+        const TrackerCell(midi: 60),
+        ex(kExFinePortaDown, 4),
+      ]);
+      expect(down.pitchAt(1, 0), closeTo(59.75, 1e-9));
+    });
+
+    test('EAx/EBx fine volume bump the volume once', () {
+      final t = traceChannel([
+        fx(kFxSetVolume, 0x20, midi: 60), // volume 32
+        ex(kExFineVolUp, 4), // +4 → 36
+        ex(kExFineVolDown, 8), // −8 → 28
+      ]);
+      expect(t.volumeAt(1, 0), 36);
+      expect(t.volumeAt(2, 0), 28);
+    });
+
+    test('ECx cuts the note (volume 0) at its tick', () {
+      final t = traceChannel([
+        fx(kFxSetVolume, 0x40, midi: 60), // full
+        ex(kExNoteCut, 3), // cut at tick 3
+      ]);
+      expect(t.volumeAt(1, 2), 64); // before the cut
+      expect(t.volumeAt(1, 3), 0); // cut
+      expect(t.volumeAt(1, 5), 0);
+    });
+
+    test('EDx delays the note trigger to its tick', () {
+      final t = traceChannel([ex(kExNoteDelay, 3, midi: 60)]);
+      expect(t.retriggerAt(0, 2), isFalse); // not yet
+      expect(t.retriggerAt(0, 3), isTrue); // triggers here
+      expect(t.pitchAt(0, 3), 60);
+      expect(t.pitchAt(0, 5), 60);
+    });
+
+    test('E9x retriggers the note every x ticks', () {
+      final t = traceChannel([
+        const TrackerCell(midi: 60),
+        ex(kExRetrigger, 2), // every 2 ticks
+      ]);
+      expect(t.retriggerAt(1, 1), isFalse);
+      expect(t.retriggerAt(1, 2), isTrue);
+      expect(t.retriggerAt(1, 4), isTrue);
+    });
+
+    test('E6x pattern loop repeats the marked span (walkFlow)', () {
+      final s = TrackerSong(timing: const TrackerTiming(rows: 4));
+      s.engine.setCell(0, 0, ex(kExPatternLoop, 0)); // E60 loop start
+      s.engine.setCell(0, 3, ex(kExPatternLoop, 1)); // E61 loop once
+      s.syncCurrent();
+      expect(songUsesFlow(s), isTrue);
+      final rows = [for (final pr in walkFlow(s)) pr.row];
+      expect(rows, [0, 1, 2, 3, 0, 1, 2, 3]); // played twice
+    });
+
+    test('a note-delay song renders non-silent audio', () {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      song.engine.setCell(0, 0, ex(kExNoteDelay, 3, midi: 60));
+      final peak = replaySong(song).pcm.fold<int>(0, (m, v) => max(m, v.abs()));
       expect(peak, greaterThan(1000));
     });
   });
