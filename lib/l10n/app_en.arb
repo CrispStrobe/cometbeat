@@ -633,6 +633,7 @@
   "trackerAssignSample": "Use for this track",
   "trackerLoadWav": "Load WAV file…",
   "trackerFreeSounds": "Browse free sounds…",
+  "trackerStarterBeat": "Add a starter beat",
   "trackerPreview": "Preview",
   "trackerCopyInstrument": "Copy instrument to…",
   "trackerBlock": "Block",

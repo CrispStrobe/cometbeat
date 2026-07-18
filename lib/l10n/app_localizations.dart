@@ -3446,6 +3446,12 @@ abstract class AppLocalizations {
   /// **'Browse free sounds…'**
   String get trackerFreeSounds;
 
+  /// No description provided for @trackerStarterBeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a starter beat'**
+  String get trackerStarterBeat;
+
   /// No description provided for @trackerPreview.
   ///
   /// In en, this message translates to:

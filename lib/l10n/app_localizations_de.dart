@@ -1785,6 +1785,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerFreeSounds => 'Freie Klänge durchsuchen…';
 
   @override
+  String get trackerStarterBeat => 'Starter-Beat hinzufügen';
+
+  @override
   String get trackerPreview => 'Vorhören';
 
   @override

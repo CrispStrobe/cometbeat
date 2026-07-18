@@ -64,6 +64,7 @@ import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/library/sample_library_sheet.dart';
+import 'package:comet_beat/features/library/starter_pattern.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart'
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -2921,6 +2922,17 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// A built-in two-pattern demo groove so newcomers instantly see + hear a full
   /// tune (melody + sparkle + bass on the default band; pattern 01 lifts the
   /// melody a third for a call/response).
+  /// Lays a simple backbeat across the current pattern using each channel's
+  /// assigned instrument — pairs with "Browse free sounds" (assign CC0 samples,
+  /// then one-tap a groove). Additive: reuses the per-cell [setNote] path.
+  void _applyStarterBeat() {
+    final hits =
+        starterBeatHits(channels: _song.channels.length, rows: _song.rows);
+    for (final h in hits) {
+      setNote(h.channel, h.row, 60); // C4; drum/one-shot samples ignore pitch
+    }
+  }
+
   void _loadDemo() {
     final song = TrackerSong(); // default band, 32 rows @ 4 steps/beat
     void put(int ch, int row, int midi) =>
@@ -3002,6 +3014,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   _importScore();
                 case 'demo':
                   _loadDemo();
+                case 'starterBeat':
+                  _applyStarterBeat();
                 case 'saveSong':
                   _saveToSongBook();
                 case 'exportMidi':
@@ -3024,6 +3038,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 l10n.trackerImportScore,
               ),
               _menuRow('demo', Icons.auto_awesome, l10n.trackerLoadDemo),
+              _menuRow(
+                'starterBeat',
+                Icons.auto_fix_high,
+                l10n.trackerStarterBeat,
+              ),
               const PopupMenuDivider(),
               _menuRow(
                 'saveSong',

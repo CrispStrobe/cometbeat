@@ -50,6 +50,38 @@ sample** sheet (the one that already assigns a `SampleInstrument` to a track):
   (CC-BY-SA samples edited into a track become share-alike derivatives — the same
   editor risk documented in `LIBRARIES_AND_TAB_SCOPING.md` §1.5).
 
+## UPDATE — the consumer is now BUILT (minimal, coordinated)
+
+`opus (libraries-and-tab)` wired it in with a **single additive button**
+(coordinated on the board with @tracker-ui/@tracker-adv, their 45 screen tests
+still green):
+
+- **`showSampleLibrarySheet(context)`** (`lib/features/library/
+  sample_library_sheet.dart`) — the whole browse/fetch/decode UI, returns a
+  decoded mono-float `Float64List` (the same type `_loadWavClip` produces).
+- **`advanced_tracker_screen.dart`** — one "Browse free sounds" `OutlinedButton`
+  after "Load WAV", reusing the exact `clip = Float64List` seam. That's the only
+  edit in the Tracker's file.
+
+So a child can now drop a CC0 sound onto a track. Step 1–4 above are DONE.
+
+## Still a follow-up — the "starter-module generator" (Tracker owners' piece)
+
+Authoring a *starter song* from a few CC0 samples (auto-fill a simple beat/riff
+across channels) means building/mutating a **`TrackerSong`** — `@tracker-replayer`'s
+model (`tracker_song.dart`) + the pattern-cell API. That is squarely Tracker
+territory, so it is left to its owner rather than edited across the boundary. A
+clean, collision-free split if wanted:
+
+- **libraries-and-tab could provide** a *pure* `starterPattern(style, channels,
+  steps) → List<List<bool>>` (or `int?` sample-index per cell) helper — no
+  dependency on `TrackerSong`, fully unit-testable.
+- **The Tracker owner applies it**: walk the grid and `setCell(...)` per hit,
+  after the user has assigned CC0 samples to channels via "Browse free sounds".
+
+Ping `libraries-and-tab` on the board to take the pure-helper half if that split
+is wanted.
+
 ## Why not a standalone download-to-disk UI here
 A browser that only saves a WAV to disk with no in-app instrument is low value,
 and the real home for samples is the Tracker's instrument path — which
