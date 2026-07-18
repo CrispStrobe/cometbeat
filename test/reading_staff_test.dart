@@ -3,6 +3,7 @@
 
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/widgets/playing_staff.dart';
 import 'package:comet_beat/features/games/widgets/reading_staff.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/material.dart' hide Step;
@@ -64,5 +65,35 @@ void main() {
       tester.widget<StaffView>(find.byType(StaffView)).noteNameStyle,
       NoteNameStyle.german,
     );
+  });
+
+  testWidgets('with a playback controller the notes light up (and keep names)',
+      (tester) async {
+    final settings = SettingsService();
+    await settings.setShowNoteNames(true);
+    final pb = ScorePlayback();
+    addTearDown(pb.dispose);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SettingsService>.value(
+        value: settings,
+        child: MaterialApp(
+          home: Scaffold(
+            body: ReadingStaffView(score: _score(), playback: pb),
+          ),
+        ),
+      ),
+    );
+    StaffView staff() => tester.widget<StaffView>(find.byType(StaffView));
+    // The reading scaffold still shows through the playing wrapper.
+    expect(staff().showNoteNames, isTrue);
+    expect(staff().highlightedIds, isEmpty);
+
+    pb.play([
+      (ids: {'n'}, ms: 100),
+    ]);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+    expect(staff().highlightedIds, {'n'});
+    await tester.pump(const Duration(milliseconds: 120)); // finishes → clears
   });
 }

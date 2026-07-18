@@ -65,12 +65,20 @@ class PlayingStaffView extends StatefulWidget {
     required this.controller,
     this.staffSpace = 11,
     this.theme = CrispNotationTheme.kids,
+    this.showNoteNames = false,
+    this.noteNameStyle = NoteNameStyle.letter,
   });
 
   final Score score;
   final ScorePlayback controller;
   final double staffSpace;
   final CrispNotationTheme theme;
+
+  /// Print letter names under the noteheads (the reading scaffold). Off by
+  /// default; set by [ReadingStaffView] so name-safe games keep the scaffold
+  /// while their notes light up.
+  final bool showNoteNames;
+  final NoteNameStyle noteNameStyle;
 
   @override
   State<PlayingStaffView> createState() => _PlayingStaffViewState();
@@ -153,6 +161,8 @@ class _PlayingStaffViewState extends State<PlayingStaffView>
       staffSpace: widget.staffSpace,
       theme: widget.theme,
       highlightedIds: _highlight,
+      showNoteNames: widget.showNoteNames,
+      noteNameStyle: widget.noteNameStyle,
     );
   }
 }

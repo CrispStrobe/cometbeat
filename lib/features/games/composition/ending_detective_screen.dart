@@ -13,6 +13,7 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
+import 'package:comet_beat/features/games/widgets/playing_staff.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -30,6 +31,7 @@ class EndingDetectiveScreen extends StatefulWidget {
 class _EndingDetectiveScreenState extends State<EndingDetectiveScreen>
     with QuizRoundMixin {
   final _random = Random();
+  final _pb = ScorePlayback();
 
   late List<Pitch> _melody;
   late bool _finishedEnding; // ends on the tonic C
@@ -41,6 +43,12 @@ class _EndingDetectiveScreenState extends State<EndingDetectiveScreen>
 
   @override
   String get gameType => 'ending_detective';
+
+  @override
+  void dispose() {
+    _pb.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -69,9 +77,14 @@ class _EndingDetectiveScreenState extends State<EndingDetectiveScreen>
   }
 
   void _playMelody() {
-    context.read<AudioService>().playSequence([
+    final seq = [
       for (var i = 0; i < _melody.length; i++)
         (_melody[i].midiNumber, i == _melody.length - 1 ? 800 : 400),
+    ];
+    context.read<AudioService>().playSequence(seq);
+    // Light each note as it sounds. Score.simple ids notes e0, e1, … in order.
+    _pb.play([
+      for (var i = 0; i < seq.length; i++) (ids: {'e$i'}, ms: seq[i].$2),
     ]);
   }
 
@@ -142,8 +155,9 @@ class _EndingDetectiveScreenState extends State<EndingDetectiveScreen>
                         child: Center(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: StaffView(
+                            child: PlayingStaffView(
                               score: _score,
+                              controller: _pb,
                               staffSpace: 10,
                               theme: kidsScoreTheme,
                             ),

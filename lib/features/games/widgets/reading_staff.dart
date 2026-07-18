@@ -12,6 +12,7 @@
 
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/note_reading/note_names.dart';
+import 'package:comet_beat/features/games/widgets/playing_staff.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/widgets.dart';
@@ -23,6 +24,7 @@ class ReadingStaffView extends StatelessWidget {
     required this.score,
     this.staffSpace = 18,
     this.theme,
+    this.playback,
   });
 
   final Score score;
@@ -31,15 +33,31 @@ class ReadingStaffView extends StatelessWidget {
   /// Defaults to [kidsScoreTheme] (the games' theme) when omitted.
   final CrispNotationTheme? theme;
 
+  /// When set, the notes light up in time with playback (the reading scaffold
+  /// is kept). Drive it from the game's play method — see [PlayingStaffView].
+  final ScorePlayback? playback;
+
   @override
   Widget build(BuildContext context) {
     final show = context.watch<SettingsService>().showNoteNames;
+    final style = show ? noteNameStyleFor(context) : NoteNameStyle.letter;
+    final controller = playback;
+    if (controller != null) {
+      return PlayingStaffView(
+        score: score,
+        controller: controller,
+        staffSpace: staffSpace,
+        theme: theme ?? kidsScoreTheme,
+        showNoteNames: show,
+        noteNameStyle: style,
+      );
+    }
     return StaffView(
       score: score,
       staffSpace: staffSpace,
       theme: theme ?? kidsScoreTheme,
       showNoteNames: show,
-      noteNameStyle: show ? noteNameStyleFor(context) : NoteNameStyle.letter,
+      noteNameStyle: style,
     );
   }
 }

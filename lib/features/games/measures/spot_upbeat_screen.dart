@@ -19,6 +19,7 @@ import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
+import 'package:comet_beat/features/games/widgets/playing_staff.dart';
 import 'package:comet_beat/features/games/widgets/reading_staff.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -64,6 +65,7 @@ class _SpotUpbeatScreenState extends State<SpotUpbeatScreen>
   }
 
   final _random = Random();
+  final _pb = ScorePlayback();
 
   late bool _upbeat; // does the melody start with a pickup?
   late Score _cardScore; // the melody shown this round
@@ -76,6 +78,12 @@ class _SpotUpbeatScreenState extends State<SpotUpbeatScreen>
 
   @override
   String get gameType => 'spot_upbeat';
+
+  @override
+  void dispose() {
+    _pb.dispose();
+    super.dispose();
+  }
 
   // A correct answer plays the melody (so the lilt is heard); a miss buzzes.
   @override
@@ -102,6 +110,7 @@ class _SpotUpbeatScreenState extends State<SpotUpbeatScreen>
   void _buildMelody({required bool hard}) {
     var pos = 3 + _random.nextInt(4); // 3..6, mid-staff
     final midi = <int>[];
+    var idc = 0; // ids in play order (n0, n1, …) so playback can light them
     Pitch next() {
       final step = const [-2, -1, 1, 2][_random.nextInt(4)];
       pos = (pos + step).clamp(1, 7);
@@ -110,17 +119,15 @@ class _SpotUpbeatScreenState extends State<SpotUpbeatScreen>
       return p;
     }
 
-    List<NoteElement> quarters(int n) =>
-        [for (var i = 0; i < n; i++) NoteElement.note(next(), _q)];
+    NoteElement note(NoteDuration d) =>
+        NoteElement.note(next(), d, id: 'n${idc++}');
+
+    List<NoteElement> quarters(int n) => [for (var i = 0; i < n; i++) note(_q)];
 
     // A full 4/4 bar: four quarters, or (hard) a mixed rhythm that still fills
     // the bar but shows fewer noteheads — so counting notes can't win.
     Measure fullBar() => hard && _random.nextBool()
-        ? Measure([
-            NoteElement.note(next(), _h),
-            NoteElement.note(next(), _q),
-            NoteElement.note(next(), _q),
-          ])
+        ? Measure([note(_h), note(_q), note(_q)])
         : Measure(quarters(4));
 
     final measures = <Measure>[];
@@ -159,6 +166,10 @@ class _SpotUpbeatScreenState extends State<SpotUpbeatScreen>
     }
     if (correct) {
       audio.playPhrase(_midi, noteMs: 360);
+      // Light each note as it sounds (ids n0, n1, … in play order).
+      _pb.play([
+        for (var i = 0; i < _midi.length; i++) (ids: {'n$i'}, ms: 360),
+      ]);
     } else {
       audio.playWrong();
     }
@@ -206,6 +217,7 @@ class _SpotUpbeatScreenState extends State<SpotUpbeatScreen>
                             child: ReadingStaffView(
                               score: _cardScore,
                               staffSpace: 13,
+                              playback: _pb,
                             ),
                           ),
                         ),
