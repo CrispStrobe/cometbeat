@@ -1019,6 +1019,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerExportMusicXml => 'Als Noten exportieren (MusicXML)';
 
   @override
+  String get loopMixerOpenTracker => 'Im Tracker öffnen';
+
+  @override
+  String get loopMixerOpenWorkshop => 'In der Noten-Werkstatt öffnen';
+
+  @override
   String get loopMixerSaveTitle => 'Benenne deinen Groove';
 
   @override

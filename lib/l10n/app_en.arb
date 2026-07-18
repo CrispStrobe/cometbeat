@@ -370,6 +370,8 @@
   "loopMixerSaveAudio": "Save as audio (WAV)",
   "loopMixerSaveSongBook": "Save to Song Book",
   "loopMixerExportMusicXml": "Export sheet music (MusicXML)",
+  "loopMixerOpenTracker": "Open in the Tracker",
+  "loopMixerOpenWorkshop": "Open in the Score Workshop",
   "loopMixerSaveTitle": "Name your groove",
   "loopMixerSaveFailed": "Saving audio isn't available here",
   "loopMixerLoad": "Load",

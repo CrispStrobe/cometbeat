@@ -1013,6 +1013,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerExportMusicXml => 'Export sheet music (MusicXML)';
 
   @override
+  String get loopMixerOpenTracker => 'Open in the Tracker';
+
+  @override
+  String get loopMixerOpenWorkshop => 'Open in the Score Workshop';
+
+  @override
   String get loopMixerSaveTitle => 'Name your groove';
 
   @override

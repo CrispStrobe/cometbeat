@@ -1958,6 +1958,18 @@ abstract class AppLocalizations {
   /// **'Export sheet music (MusicXML)'**
   String get loopMixerExportMusicXml;
 
+  /// No description provided for @loopMixerOpenTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in the Tracker'**
+  String get loopMixerOpenTracker;
+
+  /// No description provided for @loopMixerOpenWorkshop.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in the Score Workshop'**
+  String get loopMixerOpenWorkshop;
+
   /// No description provided for @loopMixerSaveTitle.
   ///
   /// In en, this message translates to:

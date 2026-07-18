@@ -57,6 +57,7 @@ import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
+import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
@@ -72,7 +73,6 @@ import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
         Pitch,
-        Score,
         chordSymbolFor,
         multiPartScoreFromAbc,
         multiPartScoreFromKern,
@@ -2870,36 +2870,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     }
   }
 
-  TrackerSong _songFromMultiPart(MultiPartScore mp) {
-    const timing = TrackerTiming(rows: 64);
-    final channels = <TrackerChannel>[];
-    final cells = <List<TrackerCell>>[];
-    for (var p = 0; p < mp.parts.length; p++) {
-      final Score part = mp.parts[p];
-      final col = scoreToChannels(
-        part,
-        timing,
-        channelCount: 1,
-        snapToScale: false,
-      ).first;
-      channels.add(
-        TrackerChannel(
-          id: 'part${p + 1}',
-          instrument: kTrackerInstruments.first.build(),
-          rows: timing.rows,
-          cells: col,
-        ),
-      );
-      cells.add(col);
-    }
-    if (channels.isEmpty) return TrackerSong();
-    return TrackerSong.fromParts(
-      channels: channels,
-      timing: timing,
-      patterns: [TrackerPattern(name: '00', cells: cells)],
-      order: [0],
-    );
-  }
+  TrackerSong _songFromMultiPart(MultiPartScore mp) =>
+      trackerSongFromMultiPart(mp);
 
   /// A built-in two-pattern demo groove so newcomers instantly see + hear a full
   /// tune (melody + sparkle + bass on the default band; pattern 01 lifts the

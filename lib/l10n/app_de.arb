@@ -339,6 +339,8 @@
   "loopMixerSaveAudio": "Als Audio speichern (WAV)",
   "loopMixerSaveSongBook": "Ins Liederbuch speichern",
   "loopMixerExportMusicXml": "Als Noten exportieren (MusicXML)",
+  "loopMixerOpenTracker": "Im Tracker öffnen",
+  "loopMixerOpenWorkshop": "In der Noten-Werkstatt öffnen",
   "loopMixerSaveTitle": "Benenne deinen Groove",
   "loopMixerSaveFailed": "Audio speichern geht hier nicht",
   "loopMixerLoad": "Laden",

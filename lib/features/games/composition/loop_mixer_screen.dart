@@ -34,12 +34,15 @@ import 'package:comet_beat/core/audio/play_along.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/loop_player_service.dart';
+import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart';
 import 'package:comet_beat/features/games/composition/groove_play_along.dart';
+import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
     show harmonicFunctionColor;
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
@@ -694,6 +697,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
               onTap: () => Navigator.pop(sheet, 'export'),
             ),
             ListTile(
+              leading: const Icon(Icons.grid_view),
+              title: Text(l10n.loopMixerOpenTracker),
+              enabled: hasPitchedTrack,
+              onTap: () => Navigator.pop(sheet, 'tracker'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_note),
+              title: Text(l10n.loopMixerOpenWorkshop),
+              enabled: hasPitchedTrack,
+              onTap: () => Navigator.pop(sheet, 'workshop'),
+            ),
+            ListTile(
               leading: const Icon(Icons.download),
               title: Text(l10n.loopMixerSaveAudio),
               enabled: _engine.enabled.isNotEmpty,
@@ -718,6 +733,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         await _exportMusicXml();
       case 'export':
         _exportGroove();
+      case 'tracker':
+        _openInTracker();
+      case 'workshop':
+        _openInWorkshop();
       case 'wav':
         await _saveWav();
       default:
@@ -758,6 +777,36 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       multiPart: parts.score,
       partNames: parts.partNames,
       baseName: 'groove',
+    );
+  }
+
+  /// Send the groove's pitched tracks into the Advanced Tracker to keep editing
+  /// on the grid (via the score bridge — one chromatic channel per track).
+  void _openInTracker() {
+    final l10n = AppLocalizations.of(context)!;
+    final parts = grooveParts(_engine, nameOf: (id) => _trackLabel(l10n, id));
+    if (parts == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdvancedTrackerScreen(
+          initialSong: trackerSongFromMultiPart(parts.score),
+        ),
+      ),
+    );
+  }
+
+  /// Open the groove in the Score Workshop for staff editing.
+  void _openInWorkshop() {
+    final l10n = AppLocalizations.of(context)!;
+    final parts = grooveParts(_engine, nameOf: (id) => _trackLabel(l10n, id));
+    if (parts == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CompositionWorkshopScreen(
+          initialScore: parts.score,
+          initialNames: parts.partNames,
+        ),
+      ),
     );
   }
 
