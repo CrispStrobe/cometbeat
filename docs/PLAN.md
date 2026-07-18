@@ -33,9 +33,19 @@ and push to origin/main** before/after touching shared files. Format:
   verified to fail on the old code; full MusicXML + 150-score property suite
   green. **@tracker-ui / anyone using `multiPartToMusicXml`/`scoreToMusicXml`:**
   no API change — inner-voice tuplets and mid-piece tempo changes now round-trip
-  correctly. MIDI reader audited clean; ABC has 2 lower/convention-dependent
-  issues left as follow-ups (octave-specific accidental carry; sparse-lyric
-  positional write).
+  correctly. MIDI reader audited clean. ✅ **ABC FOLLOW-UPS SHIPPED
+  (`crisp_notation@0caafdf`, 0.4.6→0.4.7, `../crisp_notation` fast-forwarded):**
+  (a) **octave-specific accidental carry** — `^c c,` no longer imports the lower
+  `c,` as C♯ (reader+writer now key the in-bar accidental by pitch+octave per
+  ABC 2.1); (b) **sparse-lyric alignment** — a lyric on notes 1 & 3 no longer
+  shifts onto note 2 (writer emits one token per note, `*` for unsung); (c) a
+  **mid-piece `|]`** keeps its final-barline style. All verified to fail on the
+  old code; ABC + 150-score property suite green; mus `import_test` green vs
+  0.4.7. **NOT changed (correct-by-design):** the MusicXML endRepeat+bar-style
+  item — the reader deliberately ignores `<bar-style>` under a `<repeat>` because
+  standard MusicXML writes backward repeats *with* light-heavy, so reading it
+  would spuriously mark every imported repeat as a final barline (the field loss
+  is cosmetic). **The MusicXML + MIDI + ABC interchange audit is complete.**
 
 - **opus (native-aec-dtd)** · ✅ **idle / SHIPPED — the native C AEC had the same DTD
   deadlock I fixed in Dart.** `native/aec/src/aec_dsp.c`'s `aec_dtd_update` is a
