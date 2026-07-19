@@ -14,12 +14,12 @@ import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate, wavBytes;
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
-import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/sound_lab/my_samples_sheet.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
+import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -187,12 +187,15 @@ class _VoiceLabScreenState extends State<VoiceLabScreen>
   Future<void> _loadWav() async {
     try {
       final file = await openFile(
-        acceptedTypeGroups: const [
-          XTypeGroup(label: 'WAV', extensions: ['wav']),
-        ],
+        acceptedTypeGroups: const [kAudioImportGroup],
       );
       if (file == null || !mounted) return;
-      _clip = wavToMonoFloat(readWavPcm16(await file.readAsBytes()));
+      final imported = importAudioMono(await file.readAsBytes());
+      if (imported == null) {
+        if (mounted) _snack(AppLocalizations.of(context)!.voiceLabRecordFailed);
+        return;
+      }
+      _clip = imported.pcm;
       _reprocess();
     } catch (_) {
       if (mounted) _snack(AppLocalizations.of(context)!.voiceLabRecordFailed);

@@ -1597,7 +1597,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceLabRecord => 'Record';
 
   @override
-  String get voiceLabLoad => 'Load WAV';
+  String get voiceLabLoad => 'Load audio';
 
   @override
   String get voiceLabHint =>

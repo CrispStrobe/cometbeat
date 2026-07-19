@@ -540,7 +540,7 @@
   "voiceLabPlay": "Abspielen",
   "voiceLabExport": "WAV exportieren",
   "voiceLabRecord": "Aufnehmen",
-  "voiceLabLoad": "WAV laden",
+  "voiceLabLoad": "Audio laden",
   "voiceLabHint": "Nimm deine Stimme auf oder lade einen Klang, dann verwandle ihn.",
   "voiceLabCharacter": "Charakter",
   "voiceLabPitch": "Tonhöhe",

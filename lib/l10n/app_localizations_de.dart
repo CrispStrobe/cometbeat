@@ -1604,7 +1604,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get voiceLabRecord => 'Aufnehmen';
 
   @override
-  String get voiceLabLoad => 'WAV laden';
+  String get voiceLabLoad => 'Audio laden';
 
   @override
   String get voiceLabHint =>

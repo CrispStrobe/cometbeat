@@ -3083,7 +3083,7 @@ abstract class AppLocalizations {
   /// No description provided for @voiceLabLoad.
   ///
   /// In en, this message translates to:
-  /// **'Load WAV'**
+  /// **'Load audio'**
   String get voiceLabLoad;
 
   /// No description provided for @voiceLabHint.
