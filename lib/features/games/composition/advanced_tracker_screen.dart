@@ -39,6 +39,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/crisp_dsp/sample_edit.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:comet_beat/core/audio/daw_sources.dart' show TrackerSource;
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show convertDocTo;
 import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
@@ -69,6 +70,7 @@ import 'package:comet_beat/features/library/starter_pattern.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart'
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
@@ -373,6 +375,9 @@ abstract interface class AdvancedTrackerTester {
   /// card is showing (a note cell shows it; an empty cell clears it).
   void debugHoverCell(int channel, int row);
   bool get debugHoverCardShown;
+
+  /// Send the whole song to the Multitrack (DAW) as a clip.
+  void sendToDaw();
 
   /// Block editing (copy/cut/paste/paste-mix/transpose over a marked rectangle).
   bool get hasSelection;
@@ -2116,6 +2121,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   bool get debugHoverCardShown => _inspect && _hoverInfo != null;
 
+  @override
+  void sendToDaw() => sendToMultitrack(context, TrackerSource(_song));
+
   static const _voiceIcons = <VoiceEffect, IconData>{
     VoiceEffect.normal: Icons.person,
     VoiceEffect.chipmunk: Icons.pets,
@@ -3055,6 +3063,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   _pickModuleFormat();
                 case 'exportAudio':
                   _exportAudio();
+                case 'daw':
+                  sendToDaw();
                 case 'workshop':
                   _openInWorkshop();
               }
@@ -3096,6 +3106,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 l10n.trackerExportModule,
               ),
               _menuRow('exportAudio', Icons.download, l10n.audioExportTitle),
+              _menuRow('daw', Icons.library_add, l10n.dawSend),
               const PopupMenuDivider(),
               _menuRow('workshop', Icons.edit_note, l10n.trackerOpenWorkshop),
             ],

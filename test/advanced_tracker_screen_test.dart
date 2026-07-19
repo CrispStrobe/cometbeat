@@ -7,12 +7,14 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show multiPartScoreFromMusicXml;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';
@@ -55,6 +57,26 @@ void main() {
     game.togglePlay();
     await tester.pump();
     expect(game.isPlaying, isFalse);
+  });
+
+  testWidgets('Send to Multitrack adds the song as a DAW clip', (tester) async {
+    final daw = DawService();
+    await pumpGame(
+      tester,
+      const AdvancedTrackerScreen(),
+      extraProviders: [ChangeNotifierProvider<DawService>.value(value: daw)],
+    );
+    final game = _game(tester);
+
+    game.setNote(0, 0, 60);
+    game.setNote(0, 4, 67);
+    await tester.pump();
+
+    expect(daw.clipCount, 0);
+    game.sendToDaw();
+    expect(daw.clipCount, 1);
+    // The sent clip renders to real audio (a TrackerSource over the song).
+    expect(daw.bake(), isNotEmpty);
   });
 
   testWidgets('🔍 Inspect mode: a cell reports its note + the row chord',
