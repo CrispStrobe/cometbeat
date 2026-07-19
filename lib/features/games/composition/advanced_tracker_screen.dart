@@ -44,6 +44,7 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show convertDocTo;
 import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
 import 'package:comet_beat/core/audio/sample_pitch.dart';
+import 'package:comet_beat/core/audio/sound_library.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
@@ -370,6 +371,9 @@ abstract interface class AdvancedTrackerTester {
   /// success). What "Share song" / "Load song" do minus the dialogs.
   String debugSongToken();
   bool debugLoadToken(String token);
+
+  /// Open the built-in Sound Library browser sheet (for a widget test).
+  void debugShowSoundLibrary();
 
   /// The midis the on-screen piano lights up for pattern [row] (un-muted
   /// channels) — the "keys glow as they play" highlight.
@@ -1705,6 +1709,24 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 style: Theme.of(ctx).textTheme.titleLarge,
               ),
             ),
+            // Add a built-in / SoundFont voice to the pool.
+            ListTile(
+              leading: const Icon(Icons.library_music),
+              title: Text(l10n.trackerAddFromLibrary),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showSoundLibrary();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.piano),
+              title: Text(l10n.trackerLoadSoundFont),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _loadSoundFont();
+              },
+            ),
+            const Divider(height: 1),
             for (var i = 0; i <= _song.instruments.length; i++)
               ListTile(
                 leading: Icon(
@@ -1989,6 +2011,129 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   void debugAddInstrument(TrackerInstrument inst) => _addPoolInstrument(inst);
+
+  /// Audition any instrument — render a middle-C note and loop-preview it.
+  void _auditionInstrument(TrackerInstrument inst) {
+    const timing = TrackerTiming(rows: 4, stepsPerBeat: 2);
+    final pcm = inst.renderChannel(
+      const [
+        TrackerCell(midi: 60),
+        TrackerCell.empty,
+        TrackerCell.empty,
+        TrackerCell.empty,
+      ],
+      timing,
+    );
+    if (!pcm.any((v) => v != 0)) return;
+    final i16 = Int16List(pcm.length);
+    for (var i = 0; i < pcm.length; i++) {
+      i16[i] = (pcm[i].clamp(-1.0, 1.0) * 32767).round();
+    }
+    _samplePreview.playLoop(wavBytes(i16));
+  }
+
+  String _categoryLabel(AppLocalizations l10n, SoundCategory c) => switch (c) {
+        SoundCategory.tonal => l10n.trackerLibTonal,
+        SoundCategory.plucked => l10n.trackerLibPlucked,
+        SoundCategory.chiptune => l10n.trackerLibChiptune,
+        SoundCategory.drum => l10n.trackerLibDrum,
+        SoundCategory.recorded => l10n.trackerLibRecorded,
+      };
+
+  /// Load a bundled CC0 percussion sample (from assets) → append it to the pool.
+  Future<void> _addBundledPercussion(BundledSampleInfo info) async {
+    final data = await rootBundle.load(info.assetPath);
+    if (!mounted) return;
+    final bytes = data.buffer.asUint8List();
+    _addPoolInstrument(bundledSampleInstrument(info, bytes));
+  }
+
+  Widget _libraryHeader(BuildContext ctx, String label) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Text(
+          label,
+          style: Theme.of(ctx).textTheme.labelLarge?.copyWith(
+                color: Theme.of(ctx).colorScheme.primary,
+              ),
+        ),
+      );
+
+  Widget _libraryTile(
+    BuildContext ctx,
+    String label, {
+    VoidCallback? audition,
+    required VoidCallback onAdd,
+  }) =>
+      ListTile(
+        dense: true,
+        leading: audition == null
+            ? const Icon(Icons.music_note)
+            : IconButton(
+                icon: const Icon(Icons.volume_up),
+                tooltip: AppLocalizations.of(ctx)!.trackerPreview,
+                onPressed: audition,
+              ),
+        title: Text(label),
+        trailing: const Icon(Icons.add),
+        onTap: onAdd,
+      );
+
+  @override
+  void debugShowSoundLibrary() => _showSoundLibrary();
+
+  /// Browse the built-in Sound Library (procedural voices by category + CC0
+  /// percussion). Tap ▶ to audition, tap the row to add it to the pool.
+  void _showSoundLibrary() {
+    final l10n = AppLocalizations.of(context)!;
+    final byCat = soundLibraryByCategory();
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: DraggableScrollableSheet(
+          expand: false,
+          maxChildSize: 0.85,
+          builder: (sheetCtx, scroll) => ListView(
+            controller: scroll,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Text(
+                  l10n.trackerSoundLibrary,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+              ),
+              for (final cat in SoundCategory.values)
+                if ((byCat[cat] ?? const []).isNotEmpty) ...[
+                  _libraryHeader(ctx, _categoryLabel(l10n, cat)),
+                  for (final o in byCat[cat]!)
+                    _libraryTile(
+                      ctx,
+                      _instrumentLabel(o.id),
+                      audition: () => _auditionInstrument(o.build()),
+                      onAdd: () {
+                        _addPoolInstrument(o.build());
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                ],
+              _libraryHeader(ctx, l10n.trackerLibPercussion),
+              for (final info in kBundledPercussion)
+                _libraryTile(
+                  ctx,
+                  info.id,
+                  onAdd: () async {
+                    await _addBundledPercussion(info);
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Audition an edited sample before assigning it — plays its PCM (voice fx +
   /// trim/stretch already baked into `inst.sample`) once on the preview player.
@@ -3204,6 +3349,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   _applyStarterBeat();
                 case 'loadSoundFont':
                   _loadSoundFont();
+                case 'soundLibrary':
+                  _showSoundLibrary();
                 case 'shareSong':
                   _shareSong();
                 case 'loadSong':
@@ -3243,6 +3390,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 'starterBeat',
                 Icons.auto_fix_high,
                 l10n.trackerStarterBeat,
+              ),
+              _menuRow(
+                'soundLibrary',
+                Icons.library_music,
+                l10n.trackerSoundLibrary,
               ),
               _menuRow(
                 'loadSoundFont',

@@ -4628,6 +4628,54 @@ abstract class AppLocalizations {
   /// **'Load SoundFont…'**
   String get trackerLoadSoundFont;
 
+  /// No description provided for @trackerSoundLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound library'**
+  String get trackerSoundLibrary;
+
+  /// No description provided for @trackerAddFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Add from library…'**
+  String get trackerAddFromLibrary;
+
+  /// No description provided for @trackerLibTonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Tonal'**
+  String get trackerLibTonal;
+
+  /// No description provided for @trackerLibPlucked.
+  ///
+  /// In en, this message translates to:
+  /// **'Plucked'**
+  String get trackerLibPlucked;
+
+  /// No description provided for @trackerLibChiptune.
+  ///
+  /// In en, this message translates to:
+  /// **'Chiptune'**
+  String get trackerLibChiptune;
+
+  /// No description provided for @trackerLibDrum.
+  ///
+  /// In en, this message translates to:
+  /// **'Drum'**
+  String get trackerLibDrum;
+
+  /// No description provided for @trackerLibRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded'**
+  String get trackerLibRecorded;
+
+  /// No description provided for @trackerLibPercussion.
+  ///
+  /// In en, this message translates to:
+  /// **'Percussion (CC0)'**
+  String get trackerLibPercussion;
+
   /// No description provided for @trackerShareSong.
   ///
   /// In en, this message translates to:

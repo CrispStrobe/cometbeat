@@ -58,6 +58,27 @@ void main() {
     expect(game.instrumentAt(0, 0), before + 1);
   });
 
+  testWidgets('Sound Library browser lists voices and adds one to the pool',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    final before = game.instrumentPoolSize;
+
+    // pumpAndSettle would hang on the screen's running animations; pump the
+    // sheet in with an explicit duration instead.
+    game.debugShowSoundLibrary();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    // The library lists the built-in voices (Piano is a tonal option).
+    expect(find.text('Piano'), findsWidgets);
+
+    // Tapping a voice adds it to the pool and closes the sheet.
+    await tester.tap(find.text('Piano').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(game.instrumentPoolSize, before + 1);
+  });
+
   testWidgets('Share/Load song round-trips via the CBS1. token',
       (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());

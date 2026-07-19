@@ -2421,6 +2421,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerLoadSoundFont => 'SoundFont laden…';
 
   @override
+  String get trackerSoundLibrary => 'Klangbibliothek';
+
+  @override
+  String get trackerAddFromLibrary => 'Aus Bibliothek hinzufügen…';
+
+  @override
+  String get trackerLibTonal => 'Tonal';
+
+  @override
+  String get trackerLibPlucked => 'Gezupft';
+
+  @override
+  String get trackerLibChiptune => 'Chiptune';
+
+  @override
+  String get trackerLibDrum => 'Schlagzeug';
+
+  @override
+  String get trackerLibRecorded => 'Aufgenommen';
+
+  @override
+  String get trackerLibPercussion => 'Perkussion (CC0)';
+
+  @override
   String get trackerShareSong => 'Song teilen (Token)';
 
   @override
