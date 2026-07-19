@@ -304,6 +304,18 @@
   "gameGuitarTabReadSubtitle": "Welche Note spielt dieser Bund?",
   "gameFretboardFind": "Note finden",
   "gameFretboardFindSubtitle": "Tippe, wo die Note auf dem Griffbrett liegt",
+  "gameCapoMatch": "Kapo-Rätsel",
+  "gameCapoMatchSubtitle": "Wie klingt der Griff mit Kapodaster?",
+  "capoMatchPrompt": "Wie klingt dieser Griff mit dem Kapodaster?",
+  "capoMatchShapeLabel": "Griffform",
+  "capoMatchCapo": "Kapo {fret}",
+  "@capoMatchCapo": {
+    "placeholders": {
+      "fret": {
+        "type": "int"
+      }
+    }
+  },
   "fretboardFindPrompt": "Finde {note} auf dem Griffbrett",
   "@fretboardFindPrompt": {
     "placeholders": {

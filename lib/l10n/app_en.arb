@@ -342,6 +342,18 @@
   "gameGuitarTabReadSubtitle": "What note does this fret play?",
   "gameFretboardFind": "Find the Note",
   "gameFretboardFindSubtitle": "Tap where the note is on the fretboard",
+  "gameCapoMatch": "Capo Match",
+  "gameCapoMatchSubtitle": "With a capo, what does the shape sound like?",
+  "capoMatchPrompt": "With the capo on, what does this shape sound like?",
+  "capoMatchShapeLabel": "chord shape",
+  "capoMatchCapo": "Capo {fret}",
+  "@capoMatchCapo": {
+    "placeholders": {
+      "fret": {
+        "type": "int"
+      }
+    }
+  },
   "fretboardFindPrompt": "Find {note} on the fretboard",
   "@fretboardFindPrompt": {
     "placeholders": {

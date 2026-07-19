@@ -210,6 +210,7 @@ const Map<String, List<int>> kStarThresholds = {
   'guitar_string_quiz': [100, 600, 900],
   'guitar_tab_read': [100, 600, 900],
   'fretboard_find': [100, 600, 900],
+  'capo_match': [100, 600, 900],
   'key_find': [100, 600, 900],
   'key_name': [100, 600, 900],
   'grand_staff_read': [100, 600, 900],

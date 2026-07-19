@@ -1748,6 +1748,36 @@ abstract class AppLocalizations {
   /// **'Tap where the note is on the fretboard'**
   String get gameFretboardFindSubtitle;
 
+  /// No description provided for @gameCapoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Capo Match'**
+  String get gameCapoMatch;
+
+  /// No description provided for @gameCapoMatchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'With a capo, what does the shape sound like?'**
+  String get gameCapoMatchSubtitle;
+
+  /// No description provided for @capoMatchPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'With the capo on, what does this shape sound like?'**
+  String get capoMatchPrompt;
+
+  /// No description provided for @capoMatchShapeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'chord shape'**
+  String get capoMatchShapeLabel;
+
+  /// No description provided for @capoMatchCapo.
+  ///
+  /// In en, this message translates to:
+  /// **'Capo {fret}'**
+  String capoMatchCapo(int fret);
+
   /// No description provided for @fretboardFindPrompt.
   ///
   /// In en, this message translates to:

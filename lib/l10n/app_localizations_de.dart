@@ -908,6 +908,23 @@ class AppLocalizationsDe extends AppLocalizations {
       'Tippe, wo die Note auf dem Griffbrett liegt';
 
   @override
+  String get gameCapoMatch => 'Kapo-Rätsel';
+
+  @override
+  String get gameCapoMatchSubtitle => 'Wie klingt der Griff mit Kapodaster?';
+
+  @override
+  String get capoMatchPrompt => 'Wie klingt dieser Griff mit dem Kapodaster?';
+
+  @override
+  String get capoMatchShapeLabel => 'Griffform';
+
+  @override
+  String capoMatchCapo(int fret) {
+    return 'Kapo $fret';
+  }
+
+  @override
   String fretboardFindPrompt(String note) {
     return 'Finde $note auf dem Griffbrett';
   }

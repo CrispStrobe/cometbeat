@@ -904,6 +904,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tap where the note is on the fretboard';
 
   @override
+  String get gameCapoMatch => 'Capo Match';
+
+  @override
+  String get gameCapoMatchSubtitle =>
+      'With a capo, what does the shape sound like?';
+
+  @override
+  String get capoMatchPrompt =>
+      'With the capo on, what does this shape sound like?';
+
+  @override
+  String get capoMatchShapeLabel => 'chord shape';
+
+  @override
+  String capoMatchCapo(int fret) {
+    return 'Capo $fret';
+  }
+
+  @override
   String fretboardFindPrompt(String note) {
     return 'Find $note on the fretboard';
   }

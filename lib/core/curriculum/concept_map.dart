@@ -580,6 +580,7 @@ const List<Concept> kConcepts = [
     'guitar_string_quiz',
     'guitar_tab_read',
     'fretboard_find',
+    'capo_match',
     'guitar_play_along',
     'strum_toy',
   ]),

@@ -36,6 +36,7 @@ import 'package:comet_beat/features/games/composition/question_answer_screen.dar
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/drums/drum_read_screen.dart';
 import 'package:comet_beat/features/games/expression/charades_screen.dart';
+import 'package:comet_beat/features/games/guitar/capo_match_screen.dart';
 import 'package:comet_beat/features/games/guitar/fretboard_find_screen.dart';
 import 'package:comet_beat/features/games/guitar/guitar_string_quiz_screen.dart';
 import 'package:comet_beat/features/games/guitar/guitar_tab_read_screen.dart';
@@ -1311,6 +1312,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameFretboardFind,
       subtitle: (l) => l.gameFretboardFindSubtitle,
       builder: (_) => const FretboardFindScreen(),
+    ),
+    GameInfo(
+      id: 'capo_match',
+      icon: Icons.straighten,
+      title: (l) => l.gameCapoMatch,
+      subtitle: (l) => l.gameCapoMatchSubtitle,
+      builder: (_) => const CapoMatchScreen(),
+      unlockedWhen: (p) => p.starsFor('fretboard_find') >= 1,
+      lockedHint: (l) => l.advancedGameHint,
     ),
     GameInfo(
       id: 'strum_toy',
