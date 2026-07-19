@@ -8432,6 +8432,12 @@ abstract class AppLocalizations {
   /// **'Not quite — try again!'**
   String get tutorialTryAgain;
 
+  /// No description provided for @tutorialTryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Here it is — tap the green one!'**
+  String get tutorialTryHint;
+
   /// No description provided for @primerReadingTitle.
   ///
   /// In en, this message translates to:

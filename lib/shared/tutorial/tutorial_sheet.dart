@@ -182,6 +182,13 @@ class _StepViewState extends State<_StepView> {
   /// Index of the last-tapped "try it" choice (null until the child tries).
   int? _picked;
 
+  /// How many wrong taps so far — after a couple, the sheet gently reveals the
+  /// right answer so a stuck child isn't left guessing forever.
+  int _wrongTries = 0;
+
+  /// Reveal the answer once the child has missed this many times.
+  static const _revealAfter = 2;
+
   @override
   void dispose() {
     _pb.dispose();
@@ -256,6 +263,8 @@ class _StepViewState extends State<_StepView> {
     ThemeData theme,
   ) {
     final picked = _picked;
+    final reveal = _wrongTries >= _revealAfter;
+    final gotIt = picked != null && choices[picked].correct;
     return Column(
       children: [
         const SizedBox(height: 20),
@@ -269,22 +278,32 @@ class _StepViewState extends State<_StepView> {
                 label: choices[i].label,
                 selected: picked == i,
                 correct: choices[i].correct,
-                onTap: () => setState(() => _picked = i),
+                // Once the child is stuck, glow the right answer(s) as a hint —
+                // but not after they've already found it.
+                hint: reveal && !gotIt && choices[i].correct,
+                onTap: () => setState(() {
+                  if (!choices[i].correct) _wrongTries++;
+                  _picked = i;
+                }),
               ),
           ],
         ),
         if (picked != null) ...[
           const SizedBox(height: 10),
           Text(
-            choices[picked].correct
+            gotIt
                 ? l10n.tutorialTryCorrect
-                : l10n.tutorialTryAgain,
+                : reveal
+                    ? l10n.tutorialTryHint
+                    : l10n.tutorialTryAgain,
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: choices[picked].correct
+              color: gotIt
                   ? Colors.green.shade700
-                  : theme.colorScheme.error,
+                  : reveal
+                      ? Colors.green.shade700
+                      : theme.colorScheme.error,
             ),
           ),
         ],
@@ -301,12 +320,16 @@ class _ChoiceChip extends StatelessWidget {
     required this.selected,
     required this.correct,
     required this.onTap,
+    this.hint = false,
   });
 
   final String label;
   final bool selected;
   final bool correct;
   final VoidCallback onTap;
+
+  /// Gently glow this (correct) option to reveal the answer to a stuck child.
+  final bool hint;
 
   @override
   Widget build(BuildContext context) {
@@ -327,6 +350,9 @@ class _ChoiceChip extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: bg,
         foregroundColor: fg,
+        // The reveal hint: a green ring around the right answer.
+        side:
+            hint ? BorderSide(color: Colors.green.shade600, width: 2.5) : null,
       ),
       onPressed: onTap,
       icon: Icon(
@@ -334,7 +360,9 @@ class _ChoiceChip extends StatelessWidget {
             ? Icons.check_circle_rounded
             : wrong
                 ? Icons.cancel_rounded
-                : Icons.touch_app_rounded,
+                : hint
+                    ? Icons.arrow_forward_rounded
+                    : Icons.touch_app_rounded,
         size: 18,
       ),
       label: Text(label),

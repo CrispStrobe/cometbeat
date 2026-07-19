@@ -4545,6 +4545,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialTryAgain => 'Not quite — try again!';
 
   @override
+  String get tutorialTryHint => 'Here it is — tap the green one!';
+
+  @override
   String get primerReadingTitle => 'Reading notes';
 
   @override

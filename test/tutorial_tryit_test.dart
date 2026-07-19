@@ -97,4 +97,54 @@ void main() {
     expect(find.text("That's right! 🎉"), findsOneWidget);
     expect(find.text('Not quite — try again!'), findsNothing);
   });
+
+  testWidgets('after two wrong tries the answer is gently revealed', (
+    tester,
+  ) async {
+    final tutorial = Tutorial(
+      title: 'Note values',
+      steps: [
+        TutorialStep(
+          text: 'Which one?',
+          choices: const [
+            TutorialChoice('right', correct: true),
+            TutorialChoice('wrongA'),
+            TutorialChoice('wrongB'),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (ctx) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showTutorial(ctx, tutorial),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // One miss: still just "try again".
+    await tester.tap(find.text('wrongA'));
+    await tester.pump();
+    expect(find.text('Not quite — try again!'), findsOneWidget);
+    expect(find.text('Here it is — tap the green one!'), findsNothing);
+
+    // Second miss: the answer is revealed with a kinder hint.
+    await tester.tap(find.text('wrongB'));
+    await tester.pump();
+    expect(find.text('Here it is — tap the green one!'), findsOneWidget);
+    expect(find.text('Not quite — try again!'), findsNothing);
+  });
 }

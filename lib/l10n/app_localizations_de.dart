@@ -4563,6 +4563,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tutorialTryAgain => 'Fast — versuch es nochmal!';
 
   @override
+  String get tutorialTryHint => 'Hier ist sie — tipp auf die grüne!';
+
+  @override
   String get primerReadingTitle => 'Noten lesen';
 
   @override
