@@ -339,6 +339,16 @@
   "guitarStringPrompt": "Which note is this open string?",
   "gameGuitarTabRead": "Read the Tab",
   "gameGuitarTabReadSubtitle": "What note does this fret play?",
+  "gameFretboardFind": "Find the Note",
+  "gameFretboardFindSubtitle": "Tap where the note is on the fretboard",
+  "fretboardFindPrompt": "Find {note} on the fretboard",
+  "@fretboardFindPrompt": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
   "guitarTabReadPrompt": "Which note is this?",
   "moduleCello": "Cello Corner",
   "moduleCelloSubtitle": "Strings, fingers and clefs for young cellists",

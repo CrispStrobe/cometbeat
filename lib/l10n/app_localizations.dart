@@ -1730,6 +1730,24 @@ abstract class AppLocalizations {
   /// **'What note does this fret play?'**
   String get gameGuitarTabReadSubtitle;
 
+  /// No description provided for @gameFretboardFind.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the Note'**
+  String get gameFretboardFind;
+
+  /// No description provided for @gameFretboardFindSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap where the note is on the fretboard'**
+  String get gameFretboardFindSubtitle;
+
+  /// No description provided for @fretboardFindPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Find {note} on the fretboard'**
+  String fretboardFindPrompt(String note);
+
   /// No description provided for @guitarTabReadPrompt.
   ///
   /// In en, this message translates to:

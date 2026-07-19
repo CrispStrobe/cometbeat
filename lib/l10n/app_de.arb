@@ -301,6 +301,16 @@
   "guitarStringPrompt": "Welche Note ist diese leere Saite?",
   "gameGuitarTabRead": "Tabulatur lesen",
   "gameGuitarTabReadSubtitle": "Welche Note spielt dieser Bund?",
+  "gameFretboardFind": "Note finden",
+  "gameFretboardFindSubtitle": "Tippe, wo die Note auf dem Griffbrett liegt",
+  "fretboardFindPrompt": "Finde {note} auf dem Griffbrett",
+  "@fretboardFindPrompt": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
   "guitarTabReadPrompt": "Welche Note ist das?",
   "moduleCello": "Cello-Ecke",
   "moduleCelloSubtitle": "Saiten, Finger und Schlüssel für junge Cellisten",

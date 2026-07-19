@@ -898,6 +898,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gameGuitarTabReadSubtitle => 'Welche Note spielt dieser Bund?';
 
   @override
+  String get gameFretboardFind => 'Note finden';
+
+  @override
+  String get gameFretboardFindSubtitle =>
+      'Tippe, wo die Note auf dem Griffbrett liegt';
+
+  @override
+  String fretboardFindPrompt(String note) {
+    return 'Finde $note auf dem Griffbrett';
+  }
+
+  @override
   String get guitarTabReadPrompt => 'Welche Note ist das?';
 
   @override
