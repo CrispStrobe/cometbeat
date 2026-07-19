@@ -125,6 +125,60 @@ List<GmPart> gmPartsFromMultiPart(MultiPartScore mp) => [
         ),
     ];
 
+/// The first tempo the SMF declares, in quarter-note BPM, or null if none — so
+/// a renderer can play a MIDI at its notated tempo (the core's `scoreFromMidi`
+/// drops tempo). Scans the `FF 51 03` tempo meta across all tracks (it's usually
+/// on the meta track 0 that has no notes, hence a whole-file scan).
+int? midiTempoBpm(Uint8List smf) {
+  for (final track in splitMultiTrackMidi(smf)) {
+    if (track.length < 22) continue;
+    var offset = 22;
+    var runningStatus = 0;
+    int readVarLen() {
+      var value = 0;
+      while (offset < track.length) {
+        final byte = track[offset++];
+        value = (value << 7) | (byte & 0x7f);
+        if (byte & 0x80 == 0) break;
+      }
+      return value;
+    }
+
+    while (offset < track.length) {
+      readVarLen(); // delta time
+      if (offset >= track.length) break;
+      var status = track[offset];
+      if (status & 0x80 != 0) {
+        offset++;
+      } else {
+        status = runningStatus;
+      }
+      if (status == 0xff) {
+        if (offset >= track.length) break;
+        final metaType = track[offset++];
+        final length = readVarLen();
+        if (offset + length > track.length) break;
+        if (metaType == 0x51 && length == 3) {
+          final us = (track[offset] << 16) |
+              (track[offset + 1] << 8) |
+              track[offset + 2];
+          if (us > 0) return (60000000 / us).round();
+        }
+        offset += length;
+        continue;
+      }
+      if (status == 0xf0 || status == 0xf7) {
+        offset += readVarLen();
+        continue;
+      }
+      runningStatus = status;
+      final kind = status & 0xf0;
+      offset += (kind == 0xc0 || kind == 0xd0) ? 1 : 2;
+    }
+  }
+  return null;
+}
+
 /// Split [smf] (a format 0 or 1 SMF) into [GmPart]s — one per `MTrk` that has
 /// notes, each carrying its GM program + percussion flag. Note-less tracks (a
 /// format-1 tempo/meta track 0) are skipped; a single-track MIDI yields one part.

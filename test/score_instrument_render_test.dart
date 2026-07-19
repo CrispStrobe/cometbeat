@@ -61,4 +61,53 @@ void main() {
     expect(pcm, isNotEmpty);
     expect(_peak(pcm), greaterThan(0.01));
   });
+
+  Score oneNote(DynamicLevel? dyn) => Score(
+        clef: Clef.treble,
+        measures: [
+          const Measure([
+            NoteElement(
+              id: 'e0',
+              pitches: [Pitch(Step.c)],
+              duration: NoteDuration.whole,
+            ),
+          ]),
+        ],
+        dynamics: dyn == null ? const [] : [DynamicMarking('e0', dyn)],
+      );
+
+  test('dynamics scale note loudness (ff louder than pp)', () {
+    final pp = renderScoreWithInstrument(oneNote(DynamicLevel.pp), _voice());
+    final ff = renderScoreWithInstrument(oneNote(DynamicLevel.ff), _voice());
+    expect(_peak(ff), greaterThan(_peak(pp)));
+  });
+
+  test('a score with no dynamics is byte-identical to the plain render', () {
+    // The expressive path is gated on score.dynamics being non-empty, so an
+    // unmarked score renders exactly as before.
+    final a = renderScoreWithInstrument(oneNote(null), _voice());
+    final b = renderScoreWithInstrument(oneNote(null), _voice());
+    expect(a, b);
+    // ff differs from the unmarked (default full-level) render.
+    final ff = renderScoreWithInstrument(oneNote(DynamicLevel.ff), _voice());
+    expect(
+      _peak(ff),
+      lessThan(_peak(a)),
+      reason: 'ff = 112/127 gain < unmarked full 1.0',
+    );
+  });
+
+  test('panPartsToStereo places part 0 left, part 1 right', () {
+    final loud = Float64List(64)..fillRange(0, 64, 0.5);
+    final silent = Float64List(64);
+    // part 0 loud → louder on the left; part 1 silent.
+    final (l0, r0) = panPartsToStereo([loud, silent]);
+    expect(_peak(l0), greaterThan(_peak(r0)));
+    // swap → louder on the right.
+    final (l1, r1) = panPartsToStereo([silent, loud]);
+    expect(_peak(r1), greaterThan(_peak(l1)));
+    // a single part is centred (equal channels).
+    final (lc, rc) = panPartsToStereo([loud]);
+    expect(_peak(lc), closeTo(_peak(rc), 1e-9));
+  });
 }

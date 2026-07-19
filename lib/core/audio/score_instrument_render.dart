@@ -7,6 +7,7 @@
 //
 // Pure Dart — no Flutter — so it is unit-testable and web-safe.
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
@@ -28,6 +29,40 @@ int _durMs(NoteDuration d, int quarterMs) {
   return (4 * quarterMs * num / den).round();
 }
 
+// Note-on velocity per dynamic level — mirrors crisp_notation_core's MIDI writer
+// so the rendered dynamics match an exported MIDI. Gain is velocity/127, so the
+// louder a mark the closer to unity; the caller's normalize restores overall
+// level (relative dynamics are what matter). mf (80) → 0.63.
+const Map<DynamicLevel, int> _dynamicVelocity = {
+  DynamicLevel.pppp: 8,
+  DynamicLevel.ppp: 20,
+  DynamicLevel.pp: 33,
+  DynamicLevel.p: 49,
+  DynamicLevel.mp: 64,
+  DynamicLevel.mf: 80,
+  DynamicLevel.f: 96,
+  DynamicLevel.ff: 112,
+  DynamicLevel.fff: 122,
+  DynamicLevel.ffff: 127,
+  DynamicLevel.sf: 112,
+  DynamicLevel.sfz: 118,
+  DynamicLevel.sffz: 124,
+  DynamicLevel.fz: 112,
+  DynamicLevel.rf: 100,
+  DynamicLevel.fp: 96,
+};
+
+/// Levels that accent one note rather than setting a lasting level (they don't
+/// carry forward the way p/f/… do).
+const Set<DynamicLevel> _momentary = {
+  DynamicLevel.sf,
+  DynamicLevel.sfz,
+  DynamicLevel.sffz,
+  DynamicLevel.fz,
+  DynamicLevel.rf,
+  DynamicLevel.fp,
+};
+
 /// Render a single held note (a rest is caller-handled): the note on step 0,
 /// sustained across enough empty rows to cover [durMs].
 Float64List _renderNote(TrackerInstrument inst, int midi, int durMs) {
@@ -46,15 +81,53 @@ void _placeVoice(
   int quarterMs,
   int sampleRate,
   List<(int, Float64List)> out,
-  void Function(int end) grow,
-) {
+  void Function(int end) grow, {
+  required Map<String, DynamicLevel> dynByElement,
+  required bool expressive,
+}) {
   var cursorMs = 0;
+  var currentVel = 80; // mf until a dynamic says otherwise
   for (final e in elements) {
     if (e is NoteElement) {
       final durMs = _durMs(e.duration, quarterMs);
       final startSample = (cursorMs * sampleRate / 1000).round();
+
+      // Dynamics + articulations → a per-note gain (and staccato shortening).
+      // Only when the score actually carries dynamics, so an unmarked score is
+      // byte-identical to the plain render.
+      var gain = 1.0;
+      var playMs = durMs;
+      if (expressive) {
+        var vel = currentVel;
+        final marked = e.id == null ? null : dynByElement[e.id];
+        if (marked != null) {
+          final v = _dynamicVelocity[marked] ?? 80;
+          if (_momentary.contains(marked)) {
+            vel = v; // this note only
+          } else {
+            currentVel = v; // lasting level
+            vel = v;
+          }
+        }
+        if (e.articulations.contains(Articulation.accent)) {
+          vel = (vel + 15).clamp(0, 127);
+        }
+        if (e.articulations.contains(Articulation.marcato)) {
+          vel = (vel + 20).clamp(0, 127);
+        }
+        gain = vel / 127.0;
+        if (e.articulations.contains(Articulation.staccato)) {
+          playMs = (durMs * 0.55).round(); // clipped, but timing unchanged
+        }
+      }
+
       for (final p in e.pitches) {
-        final pcm = _renderNote(inst, p.midiNumber, durMs);
+        final pcm = _renderNote(inst, p.midiNumber, playMs);
+        if (gain != 1.0) {
+          for (var i = 0; i < pcm.length; i++) {
+            pcm[i] *= gain;
+          }
+        }
         out.add((startSample, pcm));
         grow(startSample + pcm.length);
       }
@@ -76,6 +149,11 @@ Float64List renderScoreWithInstrument(
   var maxLen = 0;
   void grow(int end) => maxLen = end > maxLen ? end : maxLen;
 
+  final dynByElement = {
+    for (final d in score.dynamics) d.elementId: d.level,
+  };
+  final expressive = dynByElement.isNotEmpty;
+
   final voices = <List<MusicElement>>[[], [], [], []];
   for (final m in score.measures) {
     voices[0].addAll(m.elements);
@@ -85,7 +163,16 @@ Float64List renderScoreWithInstrument(
   }
   for (final v in voices) {
     if (v.isNotEmpty) {
-      _placeVoice(v, inst, quarterMs, sampleRate, placements, grow);
+      _placeVoice(
+        v,
+        inst,
+        quarterMs,
+        sampleRate,
+        placements,
+        grow,
+        dynByElement: dynByElement,
+        expressive: expressive,
+      );
     }
   }
 
@@ -106,15 +193,11 @@ Float64List renderPartsWithVoices(
   int quarterMs = 500,
   int sampleRate = kSampleRate,
 }) {
-  final rendered = [
-    for (final (score, voice) in parts)
-      renderScoreWithInstrument(
-        score,
-        voice,
-        quarterMs: quarterMs,
-        sampleRate: sampleRate,
-      ),
-  ];
+  final rendered = renderPartsSeparate(
+    parts,
+    quarterMs: quarterMs,
+    sampleRate: sampleRate,
+  );
   var len = 0;
   for (final p in rendered) {
     if (p.length > len) len = p.length;
@@ -126,6 +209,54 @@ Float64List renderPartsWithVoices(
     }
   }
   return out;
+}
+
+/// Render each `(score, voice)` pair to its OWN mono buffer (not summed) — so a
+/// caller can pan the parts across the stereo field ([panPartsToStereo]).
+List<Float64List> renderPartsSeparate(
+  List<(Score, TrackerInstrument)> parts, {
+  int quarterMs = 500,
+  int sampleRate = kSampleRate,
+}) =>
+    [
+      for (final (score, voice) in parts)
+        renderScoreWithInstrument(
+          score,
+          voice,
+          quarterMs: quarterMs,
+          sampleRate: sampleRate,
+        ),
+    ];
+
+/// Pan [parts] across the stereo field with a constant-power law and sum into
+/// (left, right). Parts are spread evenly within ±[spread] (0 = mono-centred,
+/// 1 = hard L/R); a single part is centred. Constant-power keeps the summed
+/// loudness even as a part moves off-centre.
+(Float64List left, Float64List right) panPartsToStereo(
+  List<Float64List> parts, {
+  double spread = 0.6,
+}) {
+  var len = 0;
+  for (final p in parts) {
+    if (p.length > len) len = p.length;
+  }
+  final left = Float64List(len);
+  final right = Float64List(len);
+  for (var k = 0; k < parts.length; k++) {
+    final pan = parts.length < 2
+        ? 0.0
+        : (-spread + 2 * spread * k / (parts.length - 1));
+    // pan −1..1 → angle 0..π/2; cos/sin give the L/R gains (equal at centre).
+    final theta = (pan + 1) * 0.25 * math.pi;
+    final lg = math.cos(theta);
+    final rg = math.sin(theta);
+    final p = parts[k];
+    for (var i = 0; i < p.length; i++) {
+      left[i] += p[i] * lg;
+      right[i] += p[i] * rg;
+    }
+  }
+  return (left, right);
 }
 
 /// Render every part of [mp] through [inst] and sum.

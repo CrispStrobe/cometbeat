@@ -137,6 +137,48 @@ void main() {
     expect(parts[1].isDrum, isTrue, reason: 'channel 10 → percussion');
   });
 
+  test('midiTempoBpm reads the SMF tempo meta (else null)', () {
+    // A tempo meta for 100 BPM: 600000 µs/quarter = 0x0927C0.
+    const us = 600000;
+    final tempoTrack = _mtrk([
+      0x00, 0xFF, 0x51, 0x03, //
+      (us >> 16) & 0xff, (us >> 8) & 0xff, us & 0xff,
+      ..._note(0, 60, 480),
+    ]);
+    final smf = Uint8List.fromList([
+      ...'MThd'.codeUnits,
+      0,
+      0,
+      0,
+      6,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0xE0,
+      ...tempoTrack,
+    ]);
+    expect(midiTempoBpm(smf), 100);
+
+    // No tempo meta → null (caller falls back to 120).
+    final noTempo = Uint8List.fromList([
+      ...'MThd'.codeUnits,
+      0,
+      0,
+      0,
+      6,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0xE0,
+      ..._mtrk(_note(0, 60, 480)),
+    ]);
+    expect(midiTempoBpm(noTempo), isNull);
+  });
+
   test('renderPartsWithVoices sums each part through its own voice', () {
     final parts = gmPartsFromMidi(_bandMidi());
     final voice = SampleInstrument('v', Float64List(512)..fillRange(0, 8, 0.3));

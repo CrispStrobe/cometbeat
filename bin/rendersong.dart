@@ -30,6 +30,7 @@
 // GLINT_LIB at libglint.dylib/.so/glint.dll (uncompressed `.sf2` needs nothing).
 
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/gm_song_render.dart';
@@ -39,7 +40,7 @@ import 'package:comet_beat/core/audio/sf2/sf2.dart' show VorbisDecode;
 import 'package:comet_beat/core/audio/sf2/soundfont_loader.dart';
 import 'package:comet_beat/core/audio/sf2/vorbis_glint_ffi.dart';
 import 'package:comet_beat/core/audio/synth.dart'
-    show Instrument, kSampleRate, wavBytes;
+    show Instrument, kSampleRate, wavBytes, wavBytesStereo;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 // The Flutter-free notation core (a dependency_override, re-exported via
 // crisp_notation) — import it directly to stay Flutter-free.
@@ -87,9 +88,12 @@ void main(List<String> args) {
   final inPath = pos[0];
   final outPath = pos[1];
   if (bpm < 1) _fail('--bpm must be positive');
-
-  final quarterMs = (60000 / bpm).round();
   final fmt = from ?? _formatOf(inPath);
+  final lower = outPath.toLowerCase();
+  final isMp3 = lower.endsWith('.mp3');
+  if (!isMp3 && !lower.endsWith('.wav')) {
+    _fail('output must end in .wav or .mp3');
+  }
 
   // General-MIDI per-part voicing: with a SoundFont, voice each part by its OWN
   // GM program (drums → the bank-128 kit) — from a multi-track MIDI's program
@@ -100,16 +104,33 @@ void main(List<String> args) {
     'abc', 'musicxml', 'mxl', 'mscx', 'mscz', 'mei', 'kern', //
   };
 
-  final Float64List pcm;
+  // Render to per-part mono buffers (GM → panned stereo) or one mono buffer.
+  // Tempo: --bpm wins, else the score's / MIDI's own tempo, else 120.
+  List<Float64List>? gmParts;
+  Float64List? mono;
+  int effBpm;
+
   if (gmEligible && fmt == 'midi') {
-    final parts = gmPartsFromMidi(File(inPath).readAsBytesSync());
-    pcm = _renderGmParts(parts, _loadFont(sf2), quarterMs);
+    final bytes = File(inPath).readAsBytesSync();
+    effBpm = bpmExplicit(args) ? bpm : (midiTempoBpm(bytes) ?? 120);
+    gmParts = _renderGmParts(
+      gmPartsFromMidi(bytes),
+      _loadFont(sf2),
+      _quarterMs(effBpm),
+    );
   } else if (gmEligible && multiPartFormats.contains(fmt)) {
     final mp = _load(inPath, from) as MultiPartScore;
-    pcm = _renderGmParts(gmPartsFromMultiPart(mp), _loadFont(sf2), quarterMs);
+    effBpm = bpmExplicit(args) ? bpm : _tempoOfParts(mp.parts);
+    gmParts = _renderGmParts(
+      gmPartsFromMultiPart(mp),
+      _loadFont(sf2),
+      _quarterMs(effBpm),
+    );
   } else {
-    // Parse to a Score / MultiPartScore and render it through one voice.
     final loaded = _load(inPath, from);
+    final parts = loaded is MultiPartScore ? loaded.parts : [loaded as Score];
+    effBpm = bpmExplicit(args) ? bpm : _tempoOfParts(parts);
+    final qms = _quarterMs(effBpm);
     final TrackerInstrument voice;
     if (sf2 != null) {
       voice = _soundFontVoice(sf2, preset);
@@ -117,32 +138,52 @@ void main(List<String> args) {
       voice = const AdditiveInstrument('piano', Instrument.piano);
       stderr.writeln('no --sf2 given → built-in additive piano');
     }
-    pcm = loaded is MultiPartScore
-        ? renderMultiPartWithInstrument(loaded, voice, quarterMs: quarterMs)
-        : renderScoreWithInstrument(
-            loaded as Score,
-            voice,
-            quarterMs: quarterMs,
-          );
+    mono = loaded is MultiPartScore
+        ? renderMultiPartWithInstrument(loaded, voice, quarterMs: qms)
+        : renderScoreWithInstrument(loaded as Score, voice, quarterMs: qms);
   }
-  if (pcm.isEmpty) _fail('the score produced no notes to render');
 
-  // 4) Headroom-normalize (peak → 0.9 · gain), then write WAV or MP3.
-  _normalize(pcm, 0.9 * gain);
-  final lower = outPath.toLowerCase();
+  // Mix down → soft-knee master → write. Stereo (panned) for a GM band of ≥2
+  // parts, mono otherwise.
+  final target = 0.9 * gain;
   final Uint8List bytes;
-  if (lower.endsWith('.mp3')) {
-    bytes = mp3EncodeMono(pcm, bitrate: bitrate);
-  } else if (lower.endsWith('.wav')) {
-    bytes = wavBytes(_toInt16(pcm));
+  final int frames;
+  if (gmParts != null && gmParts.length > 1) {
+    final (left, right) = panPartsToStereo(gmParts);
+    if (left.isEmpty) _fail('the score produced no notes to render');
+    _masterStereo(left, right, target);
+    frames = left.length;
+    bytes = isMp3
+        ? mp3EncodeStereo(left, right, bitrate: bitrate)
+        : _wavStereo(left, right);
   } else {
-    _fail('output must end in .wav or .mp3');
+    final m = (gmParts != null && gmParts.isNotEmpty) ? gmParts.first : mono!;
+    if (m.isEmpty) _fail('the score produced no notes to render');
+    _master(m, target);
+    frames = m.length;
+    bytes = isMp3 ? mp3EncodeMono(m, bitrate: bitrate) : wavBytes(_toInt16(m));
   }
   File(outPath).writeAsBytesSync(bytes);
 
-  final secs = (pcm.length / kSampleRate).toStringAsFixed(1);
-  stderr
-      .writeln('wrote $outPath  (${bytes.length} bytes, ${secs}s @ $bpm BPM)');
+  final secs = (frames / kSampleRate).toStringAsFixed(1);
+  final chans = (gmParts != null && gmParts.length > 1) ? 'stereo' : 'mono';
+  stderr.writeln(
+    'wrote $outPath  (${bytes.length} bytes, ${secs}s @ $effBpm BPM, $chans)',
+  );
+}
+
+int _quarterMs(int bpm) => (60000 / bpm).round();
+
+/// Whether `--bpm` was passed explicitly (so it overrides the score's tempo).
+bool bpmExplicit(List<String> args) => args.contains('--bpm');
+
+/// The tempo (quarter-note BPM) of the first part that declares one, else 120.
+int _tempoOfParts(List<Score> parts) {
+  for (final p in parts) {
+    final t = p.tempo?.quarterBpm;
+    if (t != null) return t.round();
+  }
+  return 120;
 }
 
 // ── Input routing (mirrors crisp_notation_cli's _loadScore) ──────────────────
@@ -247,9 +288,10 @@ TrackerInstrument _soundFontVoice(String sf2Path, int preset) {
 }
 
 /// Voice each [parts] entry with its own GM preset from [font] (drums → the
-/// bank-128 kit) and mix. Falls back to bank 0 for the same program, then the
-/// font's first preset, so a sparse SoundFont still plays something.
-Float64List _renderGmParts(
+/// bank-128 kit) and render each to its OWN mono buffer (for stereo panning).
+/// Falls back to bank 0 for the same program, then the font's first preset, so
+/// a sparse SoundFont still plays something.
+List<Float64List> _renderGmParts(
   List<GmPart> parts,
   LoadedSoundFont font,
   int quarterMs,
@@ -264,7 +306,7 @@ Float64List _renderGmParts(
     final label = p.name.isEmpty ? 'track' : p.name;
     stderr.writeln('  part "$label" → ${soundFontPresetLabel(preset)}');
   }
-  return renderPartsWithVoices(voiced, quarterMs: quarterMs);
+  return renderPartsSeparate(voiced, quarterMs: quarterMs);
 }
 
 /// A native Vorbis decoder for `.sf3`, if `GLINT_LIB` points at the glint
@@ -282,17 +324,76 @@ VorbisDecode? _tryVorbis() {
 
 // ── PCM helpers ──────────────────────────────────────────────────────────────
 
-void _normalize(Float64List pcm, double target) {
+/// tanh(v) via exp (dart:math has no tanh).
+double _tanh(double v) {
+  if (v > 20) return 1.0;
+  if (v < -20) return -1.0;
+  final e = math.exp(2 * v);
+  return (e - 1) / (e + 1);
+}
+
+// The soft-knee level: values well below it pass ≈linearly, louder ones saturate
+// smoothly — so a lone transient spike doesn't force the normalize to crush
+// everything else (the flat-top harshness of hard clipping is avoided too).
+const double _knee = 0.6;
+
+/// Master a mono buffer: tanh soft-knee (glue + tame spikes) → normalize to
+/// [target].
+void _master(Float64List x, double target) {
+  for (var i = 0; i < x.length; i++) {
+    x[i] = _knee * _tanh(x[i] / _knee);
+  }
   var peak = 0.0;
-  for (final s in pcm) {
+  for (final s in x) {
     final a = s.abs();
     if (a > peak) peak = a;
   }
   if (peak <= 0) return;
-  final k = target / peak;
-  for (var i = 0; i < pcm.length; i++) {
-    pcm[i] *= k;
+  final g = target / peak;
+  for (var i = 0; i < x.length; i++) {
+    x[i] *= g;
   }
+}
+
+/// Master a stereo pair together (shared knee + a shared normalize gain, so the
+/// stereo image isn't skewed by per-channel scaling).
+void _masterStereo(Float64List left, Float64List right, double target) {
+  for (var i = 0; i < left.length; i++) {
+    left[i] = _knee * _tanh(left[i] / _knee);
+  }
+  for (var i = 0; i < right.length; i++) {
+    right[i] = _knee * _tanh(right[i] / _knee);
+  }
+  var peak = 0.0;
+  for (final s in left) {
+    final a = s.abs();
+    if (a > peak) peak = a;
+  }
+  for (final s in right) {
+    final a = s.abs();
+    if (a > peak) peak = a;
+  }
+  if (peak <= 0) return;
+  final g = target / peak;
+  for (var i = 0; i < left.length; i++) {
+    left[i] *= g;
+  }
+  for (var i = 0; i < right.length; i++) {
+    right[i] *= g;
+  }
+}
+
+/// Interleave a stereo pair and encode as a WAV.
+Uint8List _wavStereo(Float64List left, Float64List right) {
+  final n = left.length > right.length ? left.length : right.length;
+  final il = Int16List(n * 2);
+  for (var i = 0; i < n; i++) {
+    final l = i < left.length ? left[i] : 0.0;
+    final r = i < right.length ? right[i] : 0.0;
+    il[i * 2] = (l.clamp(-1.0, 1.0) * 32767).round();
+    il[i * 2 + 1] = (r.clamp(-1.0, 1.0) * 32767).round();
+  }
+  return wavBytesStereo(il);
 }
 
 Int16List _toInt16(Float64List pcm) {
