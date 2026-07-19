@@ -243,6 +243,27 @@ void main() {
     expect(tab.columnCount, before + 1 + 8 + 16 + 4);
   });
 
+  testWidgets('the insert sheet previews without inserting', (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester);
+    final before = tab.columnCount;
+
+    // Open the "Insert…" sheet (the only auto_awesome button).
+    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.auto_awesome));
+    await tester.pumpAndSettle();
+
+    // Preview plays one pass through the transport — the document is untouched
+    // and the sheet stays open (its Insert button is still showing).
+    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.play_arrow));
+    await tester.pump();
+    expect(tab.columnCount, before); // nothing inserted
+    // The sheet is still open (its Preview button is still showing).
+    expect(
+      find.widgetWithIcon(OutlinedButton, Icons.play_arrow),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('tapping a fret keypad button writes to the selected cell',
       (tester) async {
     await pumpGame(tester, const TabWorkshopScreen());

@@ -733,6 +733,7 @@
   "tabPatternRoot": "Root",
   "tabPatternScaleType": "Scale",
   "tabPatternOctaves": "Octaves",
+  "tabPatternPreview": "Preview",
   "tabPatternInsert": "Insert",
   "tabPatternAdded": "Added {count} steps",
   "@tabPatternAdded": {

@@ -343,6 +343,16 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   String? chordNameAt(int col) =>
       col < _doc.columns.length ? _doc.columns[col].chord?.name : null;
 
+  /// Plays [cols] once through the shared transport so a pattern/progression/
+  /// scale can be heard before it's inserted. Reuses the capo-correct playback
+  /// timeline; does not touch the document.
+  void _previewColumns(List<TabColumn> cols) {
+    if (cols.isEmpty) return;
+    final events = TabDocument(tuning: _doc.tuning, columns: cols)
+        .toPlaybackEvents(bpm: _bpm, capo: _capo);
+    context.read<AudioService>().playTimedChords(events);
+  }
+
   /// Drops [cols] in after the cursor and parks the cursor on the last of them.
   int _insertRun(List<TabColumn> cols) {
     if (cols.isEmpty) return 0;
@@ -1629,27 +1639,58 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
               ],
             ),
             const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.add),
-                label: Text(l10n.tabPatternInsert),
-                onPressed: () {
-                  final style = styles[styleIdx].$2;
-                  final n = switch (mode) {
-                    0 => insertChordStyle(chord, style, repeat: repeat),
-                    1 => insertProgression(progName, style, repeat: repeat),
-                    _ => insertScale(
-                        48 + rootPc,
-                        scaleName,
-                        octaves: octaves,
-                        descending: descending,
-                        repeat: repeat,
-                      ),
-                  };
-                  Navigator.of(ctx).pop(n);
-                },
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text(l10n.tabPatternPreview),
+                  // Hear one pass of the current selection without inserting.
+                  onPressed: () {
+                    final style = styles[styleIdx].$2;
+                    _previewColumns(
+                      switch (mode) {
+                        0 =>
+                          chordStyleColumns(kGuitarChords[chord]!, style, _dur),
+                        1 => progressionColumns(
+                            kProgressions[progName]!,
+                            kGuitarChords,
+                            style,
+                            _dur,
+                          ),
+                        _ => scaleColumns(
+                            _doc.tuning,
+                            48 + rootPc,
+                            kScales[scaleName]!,
+                            _dur,
+                            octaves: octaves,
+                            descending: descending,
+                          ),
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.tabPatternInsert),
+                  onPressed: () {
+                    final style = styles[styleIdx].$2;
+                    final n = switch (mode) {
+                      0 => insertChordStyle(chord, style, repeat: repeat),
+                      1 => insertProgression(progName, style, repeat: repeat),
+                      _ => insertScale(
+                          48 + rootPc,
+                          scaleName,
+                          octaves: octaves,
+                          descending: descending,
+                          repeat: repeat,
+                        ),
+                    };
+                    Navigator.of(ctx).pop(n);
+                  },
+                ),
+              ],
             ),
           ]);
           return SafeArea(

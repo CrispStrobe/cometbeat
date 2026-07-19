@@ -3698,6 +3698,12 @@ abstract class AppLocalizations {
   /// **'Octaves'**
   String get tabPatternOctaves;
 
+  /// No description provided for @tabPatternPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get tabPatternPreview;
+
   /// No description provided for @tabPatternInsert.
   ///
   /// In en, this message translates to:

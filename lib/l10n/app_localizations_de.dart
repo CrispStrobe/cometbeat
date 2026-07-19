@@ -1940,6 +1940,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabPatternOctaves => 'Oktaven';
 
   @override
+  String get tabPatternPreview => 'Vorhören';
+
+  @override
   String get tabPatternInsert => 'Einfügen';
 
   @override
