@@ -20,6 +20,7 @@
 // over files for CI, and truly live over stdin for hands-on validation.
 
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/aec_offline.dart';
@@ -31,6 +32,7 @@ import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
 import 'package:comet_beat/core/audio/transcription/note_hmm.dart';
 import 'package:comet_beat/core/audio/transcription/pyin.dart';
+import 'package:comet_beat/core/audio/transcription/tuning.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
 
 const _usage = '''
@@ -103,6 +105,8 @@ Future<void> main(List<String> argv) async {
         switchCost: double.tryParse(args.value('switch') ?? ''),
         minFrames: int.tryParse(args.value('minframes') ?? ''),
         smoothWindow: int.tryParse(args.value('smooth') ?? ''),
+        // Auto-estimate the tuning offset (S3) unless the user pinned --a4.
+        autoTune: !args.flag('a4') && !args.flag('no-autotune'),
       );
       return;
     }
@@ -202,6 +206,7 @@ void _transcribe(
   double? switchCost,
   int? minFrames,
   int? smoothWindow,
+  bool autoTune = true,
 }) {
   final wav = readWavPcm16(wavBytes);
   final mono = wavToMonoFloat(wav);
@@ -213,9 +218,16 @@ void _transcribe(
   if (smoothWindow != null && smoothWindow > 1) {
     track = _medianSmoothF0(track, smoothWindow);
   }
+  var ref = a4;
+  if (autoTune) {
+    final cents = estimateTuningCents(track, a4: a4);
+    ref = a4 * pow(2, cents / 1200);
+    stderr.writeln('estimated tuning: ${cents >= 0 ? '+' : ''}'
+        '${cents.toStringAsFixed(1)}c  → A4 ≈ ${ref.toStringAsFixed(1)} Hz');
+  }
   final notes = segmentNotes(
     track,
-    a4: a4,
+    a4: ref,
     switchCost: switchCost ?? 1.8,
     minFrames: minFrames ?? 5,
   );
