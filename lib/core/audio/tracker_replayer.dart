@@ -26,8 +26,8 @@
 // control, E4x/E7x vibrato/tremolo waveform (sine/saw/square), E5x set-finetune,
 // E9x retrigger, EAx/EBx fine volume, ECx note cut, EDx note delay (per-tick, in
 // ReplayVoice) + E6x pattern loop and EEx pattern delay (row-level flow, in
-// walkFlow), and Rxy retrigger+volslide (kFxRetrigVolSlide). Fxx SET-SPEED
-// (param <0x20 →
+// walkFlow), plus Rxy retrigger+volslide (kFxRetrigVolSlide) and Txy tremor
+// (kFxTremor). Fxx SET-SPEED (param <0x20 →
 // ticks/row) AND SET-TEMPO (param ≥0x20 → BPM): [walkFlow] annotates every played
 // row with the speed/tempo IN EFFECT for that row. A song with a single (or no)
 // value renders UNIFORMLY (the top-of-module value, [songInitialSpeed]/
@@ -116,6 +116,10 @@ const int kExPatternDelay =
 /// retrigger (the XM table). Not a 0x0–0xF nibble, so it never collides with the
 /// classic MOD commands; importers can map XM effect 0x1B onto it.
 const int kFxRetrigVolSlide = 0x1B;
+
+/// Txy — tremor: pulse the note ON for x ticks then OFF for y, repeating. A new
+/// non-colliding command (XM effect 0x1D); importers can map XM effect T onto it.
+const int kFxTremor = 0x1D;
 
 // --- Tuning constants (MUSICAL APPROXIMATIONS, not period-accurate MOD) -------
 //
@@ -241,6 +245,7 @@ class ReplayVoice {
   int _memTremDepth = 0;
   int _memVolSlide = 0;
   int _memRetrig = 0; // Rxy param (x = vol code, y = tick interval)
+  int _memTremor = 0; // Txy param (x = on ticks, y = off ticks)
 
   // LFO waveform select (E4x/E7x) + glissando control (E3x) — persist across
   // rows like a real tracker's per-channel control state.
@@ -367,6 +372,8 @@ class ReplayVoice {
         volume = _param.clamp(0, kMaxVolume);
       case kFxRetrigVolSlide:
         if (_param != 0) _memRetrig = _param;
+      case kFxTremor:
+        if (_param != 0) _memTremor = _param;
       case kFxExtended:
         // One-time (tick-0) extended commands: fine porta and fine volume.
         switch (_exSub) {
@@ -491,6 +498,13 @@ class ReplayVoice {
         volume = retrigVolume(volume, (_memRetrig >> 4) & 0xF);
         effVol = volume.toDouble();
       }
+    }
+
+    // Txy tremor: the note pulses ON for x ticks then OFF for y, repeating.
+    if (_cmd == kFxTremor) {
+      final x = (_memTremor >> 4) & 0xF, y = _memTremor & 0xF;
+      final cycle = x + y;
+      if (cycle > 0 && k % cycle >= x) effVol = 0; // in the OFF phase
     }
 
     return (pitch: effPitch, volume: effVol, retrigger: retrigger);
@@ -660,6 +674,7 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
         cmd == kFxVolumeSlide ||
         cmd == kFxSetVolume ||
         cmd == kFxRetrigVolSlide ||
+        cmd == kFxTremor ||
         cmd == kFxExtended) {
       return true;
     }

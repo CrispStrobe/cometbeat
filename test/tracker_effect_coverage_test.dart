@@ -146,4 +146,26 @@ void main() {
       expect(retrigVolume(10, 0xB), 14); // +4
     });
   });
+
+  group('Txy tremor', () {
+    test('pulses the note ON for x ticks, OFF for y, repeating', () {
+      // T31: on for 3 ticks, off for 1 → a 4-tick cycle.
+      final t = traceChannel([
+        const TrackerCell(midi: 60, fxCmd: kFxTremor, fxParam: 0x31),
+      ]);
+      expect(t.volumeAt(0, 0), closeTo(kMaxVolume, 1e-9)); // on
+      expect(t.volumeAt(0, 2), closeTo(kMaxVolume, 1e-9)); // still on
+      expect(t.volumeAt(0, 3), closeTo(0, 1e-9)); // off
+      expect(t.volumeAt(0, 4), closeTo(kMaxVolume, 1e-9)); // cycle repeats
+    });
+
+    test('T00 (no cycle) leaves the note fully on', () {
+      final t = traceChannel([
+        const TrackerCell(midi: 60, fxCmd: kFxTremor), // param 0 = T00
+      ]);
+      for (var k = 0; k < kDefaultTicksPerRow; k++) {
+        expect(t.volumeAt(0, k), closeTo(kMaxVolume, 1e-9));
+      }
+    });
+  });
 }
