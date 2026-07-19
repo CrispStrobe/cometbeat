@@ -1023,6 +1023,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerHarmonyOff => 'Frei';
 
   @override
+  String get loopMixerRoll => 'Überrasch mich — neuen Groove würfeln';
+
+  @override
   String get loopMixerScore => 'Als Noten zeigen';
 
   @override

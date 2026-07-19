@@ -22,6 +22,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:math';
 
 import 'package:comet_beat/core/audio/aec_capability.dart';
 import 'package:comet_beat/core/audio/aec_engine.dart';
@@ -1125,6 +1126,43 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _syncPlayback();
   }
 
+  final _rng = Random();
+
+  /// "Surprise me": roll a fresh, always-good groove. Every combination is
+  /// consonant (all content is one pentatonic), so the only job is to pick a
+  /// full-sounding mix and random variants. Drums anchor the beat; bass usually
+  /// joins; each melodic voice joins by chance with at least one guaranteed, so
+  /// it never sounds empty. A gentle swing roll varies the feel.
+  void _roll() {
+    setState(() {
+      final ids = _engine.tracks.map((t) => t.id).toSet();
+      _engine.enabled.clear();
+      if (ids.contains('drums')) _engine.enabled.add('drums');
+      if (ids.contains('bass') && _rng.nextDouble() < 0.8) {
+        _engine.enabled.add('bass');
+      }
+      final melodic =
+          ['melody', 'chords', 'sparkle', 'voice'].where(ids.contains).toList();
+      for (final id in melodic) {
+        if (_rng.nextDouble() < 0.55) _engine.enabled.add(id);
+      }
+      if (melodic.isNotEmpty && !melodic.any(_engine.enabled.contains)) {
+        _engine.enabled.add(melodic[_rng.nextInt(melodic.length)]);
+      }
+      if (ids.contains('beat') && _rng.nextDouble() < 0.4) {
+        _engine.enabled.add('beat');
+      }
+      // A random variant for every enabled layer, and a light swing nudge.
+      for (final track in _engine.tracks) {
+        if (_engine.enabled.contains(track.id) && track.variants.length > 1) {
+          _engine.variants[track.id] = _rng.nextInt(track.variants.length);
+        }
+      }
+      _engine.swing = _rng.nextBool() ? 0.0 : (_rng.nextInt(4) + 1) * 0.1;
+    });
+    _syncPlayback();
+  }
+
   void _cycleVariant(String id) {
     setState(() => _engine.cycleVariant(id));
     if (_engine.enabled.contains(id)) _syncPlayback();
@@ -1329,6 +1367,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                         beats: _engine.timing.bars * LoopTiming.beatsPerBar,
                       ),
                     ),
+                  ),
+                  IconButton.filledTonal(
+                    icon: const Icon(Icons.casino),
+                    tooltip: l10n.loopMixerRoll,
+                    onPressed: _roll,
+                    visualDensity: VisualDensity.compact,
                   ),
                   IconButton(
                     icon: Icon(

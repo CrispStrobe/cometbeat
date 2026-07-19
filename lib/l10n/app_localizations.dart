@@ -1964,6 +1964,12 @@ abstract class AppLocalizations {
   /// **'Free'**
   String get loopMixerHarmonyOff;
 
+  /// Tooltip for the dice button that randomizes the Loop Mixer groove.
+  ///
+  /// In en, this message translates to:
+  /// **'Surprise me — roll a new groove'**
+  String get loopMixerRoll;
+
   /// No description provided for @loopMixerScore.
   ///
   /// In en, this message translates to:

@@ -378,6 +378,10 @@
   "loopMixerScaleMajor": "Major",
   "loopMixerScaleMinor": "Minor",
   "loopMixerHarmonyOff": "Free",
+  "loopMixerRoll": "Surprise me — roll a new groove",
+  "@loopMixerRoll": {
+    "description": "Tooltip for the dice button that randomizes the Loop Mixer groove."
+  },
   "loopMixerScore": "Show as sheet music",
   "loopMixerScoreEmpty": "Turn on a layer to see it written as notes.",
   "@loopMixerScoreEmpty": {

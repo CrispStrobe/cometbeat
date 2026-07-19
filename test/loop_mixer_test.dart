@@ -269,6 +269,25 @@ void main() {
     expect(game.scale, GrooveScale.majorPentatonic);
   });
 
+  testWidgets('the dice rolls a fresh, always-full groove', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.enabledTracks, isEmpty);
+    const melodic = {'melody', 'chords', 'sparkle', 'voice'};
+    // Every roll anchors drums + at least one melodic voice and is never empty
+    // (all content is one pentatonic, so any combination is consonant). Roll
+    // many times to cover the randomness.
+    for (var i = 0; i < 12; i++) {
+      await tester.tap(find.byIcon(Icons.casino));
+      await tester.pump();
+      final on = game.enabledTracks;
+      expect(on, isNotEmpty, reason: 'roll $i');
+      expect(on, contains('drums'), reason: 'roll $i anchors drums');
+      expect(on.any(melodic.contains), isTrue,
+          reason: 'roll $i has a melodic voice');
+    }
+  });
+
   testWidgets('Save to Song Book is offered only when a pitched track plays',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
