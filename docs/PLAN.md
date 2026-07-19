@@ -9,6 +9,7 @@ This file tracks **what is pending and planned**. What's already built and live
 is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
+- **opus (midi-renderer)** · 🚧 **ACTIVE — SOTA MIDI-renderer roadmap (see "## MIDI renderer — SOTA roadmap" below).** Building the gap between our notation-centric render and a real SF2/MIDI renderer (FluidSynth/BASSMIDI-class), in the recommended order: (S1) master **reverb send**, (S2) **ADSR attack/release** envelope shaping in the render bridge, (S3) **event-accurate MIDI synth** (`lib/core/audio/midi_render.dart` — raw MIDI events on a sample clock, no 16th-grid quantization; exact timing, tempo map, sustain pedal CC64, pitch-bend, CC7/10/11, mid-song program/bank changes), (S4) **low-pass filter + LFO vibrato** per voice. Files: `bin/rendersong.dart` · `score_instrument_render.dart` (mine) · NEW `midi_render.dart` · maybe SF2 gen parsing in `sf2/sf2.dart` (envelope/filter/pan gens — will claim before touching). Shipped slice-by-slice.
 - **opus (rendersong-velocity)** · ✅ **SHIPPED — honor MIDI note velocity end-to-end** (`crisp_notation@4792748` + mus `4d1fe394`). Was: the core `scoreFromMidi` DROPPED per-note velocity, so a MIDI's performed dynamics were lost before rendering. Now `NoteElement.velocity` (int? 0..127, additive/backward-compat) is threaded through the MIDI reader (pending→_Note→group→_Ev→NoteElement; a chord takes its loudest) and written back by `scoreToMidi` (explicit velocity > dynamics-derived), so a MIDI's dynamics round-trip (+2 core tests; 300-score sustain-grid + dynamics→velocity suites stay green). mus `renderScoreWithInstrument` voices a note by velocity/127 when present (precedence: velocity > notated DynamicMarkings > full level; no-velocity byte-identical), so rendersong's GM MIDI mixes AND the app's Workshop/Tab "play with instrument" now hear per-note dynamics (114 render/gm/workshop/tab tests green). +mus test. Now idle. **⇒ render quality: correct tempo · notated dynamics · MIDI velocity · stereo · soft-master · per-part GM voicing — all shipped.**
 > **opus** now works in its own worktree `../mus-opus` (branch `feature/opus`),
 > merging to `origin/main` only at checkpoints — no longer editing the shared
@@ -536,6 +537,67 @@ or wiring the native DTD into jam mode + porting RES to C (verify harness green:
 
 _The long chronological log of shipped board entries now lives in_
 _[HISTORY.md → "Agent coordination board — shipped log"](HISTORY.md#agent-coordination-board--shipped-log-chronological)._
+
+## MIDI renderer — SOTA roadmap
+
+Where our song→audio render (`bin/rendersong.dart` + `score_instrument_render.dart`
++ `sf2/`) stands vs industry SoundFont/MIDI renderers (FluidSynth, BASSMIDI,
+timidity++, MuseScore\'s synth), and what to build. We are already well past a
+toy — real SF2 zones (key + **velocity** layers), loop-sustained samples,
+root-key/coarse/fine tune, initial attenuation, per-part **General-MIDI**
+voicing across every format, score/MIDI **tempo**, notated **dynamics**, MIDI
+note **velocity**, **stereo** per-part panning, and a soft-knee master. Two
+frontiers remain.
+
+### Frontier A — SoundFont synthesis realism (we are a "sample player", not a "synth voice")
+Our SF2 voice plays the right sample at the right pitch/tune/velocity-layer with
+loop-sustain + attenuation, but omits the parts of the SF2 spec that make it
+sound alive:
+- **Volume ADSR envelope** (esp. a RELEASE tail) — SF2 gens 33–38. Today a
+  note-off is a hard stop (declick only); the #1 "MIDI-ish" tell.
+- **Low-pass filter + filter envelope** — gens 8/9. Half of GM timbres rely on
+  velocity→cutoff; without it everything is bright/static.
+- **LFOs — vibrato & tremolo** — gens 21–25. Strings/winds/pads sound dead
+  without vibrato.
+- **Reverb (+ chorus) send** — gens 16/15. Every SOTA renderer adds reverb; it
+  is what makes GM sound "produced" vs dry.
+- **Per-zone pan (gen 17) + the SF2 modulator list** (velocity→filter,
+  mod-wheel→vibrato, …).
+
+### Frontier B — faithful MIDI playback (architectural: notation-centric vs event-centric)
+Our path is MIDI → **quantized** Score (16th grid) → render — great for
+engraving-derived audio, wrong for a faithful MIDI renderer. A real renderer
+schedules every message on a sample timeline. We currently drop:
+- **Exact event timing** — quantized to 16ths; loses swing, groove, off-grid
+  tuplets, human micro-timing. *The big one.*
+- **Tempo map** — only the first tempo; no accel/rit.
+- **Sustain pedal (CC64)**, **pitch bend**, **CC7/10/11** (volume/pan/
+  expression), **CC1 mod-wheel→vibrato**.
+- **Mid-track program changes** (we take only the first per track) and **bank
+  select (CC0/32)** for GS/XG banks.
+- **Aftertouch, RPN/NRPN** (pitch-bend range, tuning).
+
+### Frontier C — output/polish (minor)
+24-bit / FLAC output, higher sample rates, dithering, real-time playback (we are
+offline-batch only), chorus.
+
+### Build order (each slice independently shippable)
+1. **S1 — master reverb send** (`rendersong`, reuse `crisp_dsp/reverb.dart`).
+   Universal, trivial, immediate "produced" lift for every format.
+2. **S2 — ADSR attack/release** shaping in the render bridge
+   (`score_instrument_render.dart`) — a musical attack ramp + release tail per
+   note; removes the hard-stop tell for ALL formats and the built-in voice
+   (generic, not yet SF2-per-instrument times).
+3. **S3 — event-accurate MIDI synth** — NEW `lib/core/audio/midi_render.dart`:
+   parse raw MIDI events → schedule on a sample clock (no quantization) →
+   synthesize SF2 zone voices directly with true per-voice ADSR (reading the
+   SF2 envelope gens), loop-sustain, pan, pitch-bend, CC7/10/11, sustain pedal,
+   tempo map, and mid-song program/bank changes → stereo + reverb. `rendersong`
+   uses it for `.mid` + `--sf2`. Unlocks most of Frontier B at once.
+4. **S4 — low-pass filter + LFO vibrato** per voice (in the S3 synth; optionally
+   a light post-filter for the generic bridge).
+
+Deferred / nice-to-have: chorus, RPN/NRPN tuning, 24-bit/FLAC, real-time.
 
 ## Automatic Music Transcription — build plan (S1–S5, 3 parallel workers)
 
