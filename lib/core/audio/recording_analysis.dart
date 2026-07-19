@@ -62,6 +62,52 @@ class RecordingAnalysis {
     return out;
   }
 
+  /// A real-audio-robust monophonic melody transcription. Where [noteRun] just
+  /// collapses runs, this MEDIAN-SMOOTHS the per-window pitch first (window
+  /// [smoothWindow]) — killing the single-window octave/semitone glitches and
+  /// brief vibrato excursions that pepper real recordings — then keeps notes
+  /// held at least [minFrames] windows.
+  ///
+  /// NB genuinely monophonic: it reads a solo instrument line well, but cannot
+  /// transcribe polyphony (piano+accompaniment) or heavy vibrato singing — for
+  /// those a monophonic pitch tracker is the wrong tool.
+  List<int> melody({int smoothWindow = 5, int minFrames = 4}) {
+    if (frames.isEmpty) return const [];
+    // Per-frame nearest MIDI; -1 marks an unvoiced window.
+    final track = [
+      for (final f in frames) f.pitch.hasPitch ? f.pitch.nearestMidi : -1,
+    ];
+    final half = (smoothWindow < 1 ? 1 : smoothWindow) ~/ 2;
+    final smoothed = <int>[];
+    for (var i = 0; i < track.length; i++) {
+      final votes = <int>[];
+      for (var j = i - half; j <= i + half; j++) {
+        if (j >= 0 && j < track.length && track[j] >= 0) votes.add(track[j]);
+      }
+      if (votes.isEmpty) {
+        smoothed.add(-1);
+        continue;
+      }
+      votes.sort();
+      smoothed.add(votes[votes.length ~/ 2]); // median
+    }
+    final runs = <({int midi, int count})>[];
+    for (final m in smoothed) {
+      if (m < 0) continue;
+      if (runs.isNotEmpty && runs.last.midi == m) {
+        runs[runs.length - 1] = (midi: m, count: runs.last.count + 1);
+      } else {
+        runs.add((midi: m, count: 1));
+      }
+    }
+    final out = <int>[];
+    for (final run in runs) {
+      if (run.count < minFrames) continue;
+      if (out.isEmpty || out.last != run.midi) out.add(run.midi);
+    }
+    return out;
+  }
+
   /// The SUSTAINED chords over time (best-candidate name per window), collapsing
   /// repeats. [minFrames] drops chords held for fewer than that many consecutive
   /// windows — the transient guesses at a chord boundary (a straddling window)

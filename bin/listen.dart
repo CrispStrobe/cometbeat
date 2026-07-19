@@ -49,6 +49,7 @@ Options:
   --a4 <hz>       Tuning reference (default 440).
   --chords        Also run chord recognition.
   --all           Print silent frames too (default: only frames with a result).
+  --melody        With --wav: print the smoothed melody transcription, not frames.
   -h, --help      Show this help.
 ''';
 
@@ -63,6 +64,7 @@ Future<void> main(List<String> argv) async {
   final a4 = double.tryParse(args.value('a4') ?? '') ?? kDefaultA4;
   final withChords = args.flag('chords');
   final printAll = args.flag('all');
+  final melodyOnly = args.flag('melody');
 
   StreamingAudioAnalyzer analyzerFor(int sr) => StreamingAudioAnalyzer(
         detector: PitchDetector(sampleRate: sr, a4: a4),
@@ -98,6 +100,16 @@ Future<void> main(List<String> argv) async {
       'Loaded @ ${result.sampleRate} Hz, ${result.channels}ch  '
       '(${result.durationSeconds.toStringAsFixed(2)}s)',
     );
+    if (melodyOnly) {
+      const names = [
+        'C', 'C#', 'D', 'D#', 'E', 'F', //
+        'F#', 'G', 'G#', 'A', 'A#', 'B',
+      ];
+      stdout.writeln(
+        result.melody().map((m) => '${names[m % 12]}${m ~/ 12 - 1}').join(' '),
+      );
+      return;
+    }
     for (final f in result.frames) {
       _printFrame(f, printAll);
     }

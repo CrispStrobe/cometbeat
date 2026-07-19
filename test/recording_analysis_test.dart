@@ -4,9 +4,34 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/recording_analysis.dart';
+import 'package:comet_beat/core/audio/streaming_analyzer.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+// A RecordingAnalysis built directly from a per-window MIDI track (null =
+// unvoiced) — for testing the smoother/segmenter without rendering audio.
+RecordingAnalysis _fromTrack(List<int?> midis) => RecordingAnalysis(
+      sampleRate: 44100,
+      channels: 1,
+      durationSeconds: midis.length * 1024 / 44100,
+      frames: [
+        for (var i = 0; i < midis.length; i++)
+          AnalyzerFrame(
+            startSample: i * 1024,
+            sampleRate: 44100,
+            pitch: midis[i] == null
+                ? PitchReading.silent()
+                : PitchReading(
+                    frequency: midiToFrequency(midis[i]!),
+                    clarity: 1,
+                    a4: kDefaultA4,
+                  ),
+            chord: null,
+          ),
+      ],
+    );
 
 // A WAV recording of [segments] at [sr] (renderWav is fixed at 44.1k, so build
 // the PCM + header at the requested rate explicitly).
@@ -106,6 +131,35 @@ void main() {
     test('Mary Had a Little Lamb (E D C D E E E) → E D C D E', () {
       final r = analyzeRecording(_song([64, 62, 60, 62, 64, 64, 64]));
       expect(r.noteRun(), [64, 62, 60, 62, 64]);
+    });
+  });
+
+  group('melody() is robust to real-audio frame noise', () {
+    test('on clean synthetic audio it matches the played scale', () {
+      final r = analyzeRecording(_song([60, 62, 64, 65, 67, 69, 71, 72]));
+      expect(r.melody(), [60, 62, 64, 65, 67, 69, 71, 72]);
+    });
+
+    test('median smoothing removes octave spikes + vibrato wobble', () {
+      // Three sustained notes (~8 windows each) peppered with the single-window
+      // glitches a real recording produces: an octave jump, a low dropout, a
+      // semitone wobble, and a brief unvoiced gap. The melody is still C D E.
+      final noisy = <int?>[
+        60, 60, 72, 60, 60, 61, 60, 60, // C4 with a +12 spike and a wobble
+        62, 62, 62, null, 50, 62, 62, 62, // D4 with a gap + a low glitch
+        64, 63, 64, 64, 76, 64, 64, 64, // E4 with a wobble + a spike
+      ];
+      expect(_fromTrack(noisy).melody(), [60, 62, 64]);
+    });
+
+    test('a too-short blip is dropped; empty/unvoiced is empty', () {
+      // A 2-window blip between two real notes is below minFrames → dropped.
+      expect(
+        _fromTrack([60, 60, 60, 60, 60, 74, 74, 67, 67, 67, 67, 67]).melody(),
+        [60, 67],
+      );
+      expect(_fromTrack([]).melody(), isEmpty);
+      expect(_fromTrack([null, null, null]).melody(), isEmpty);
     });
   });
 
