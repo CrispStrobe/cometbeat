@@ -131,6 +131,82 @@ class RecordingAnalysis {
     }
     return out;
   }
+
+  /// The plain-triad qualities (vs a 7th/extended chord).
+  static const _triadSuffixes = {'', 'm', 'dim', 'aug'};
+
+  /// The chord read for one frame, biased toward the SIMPLE triad: a real
+  /// sustained chord's overtones make a 7th score just above the triad, but for
+  /// a beginners' listener "C" beats "Cmaj7". If the best candidate is a 7th/
+  /// extension and a triad sits within [triadMargin] of it, take the triad.
+  String? _frameChord(ChordReading? c, double triadMargin) {
+    if (c == null || c.candidates.isEmpty) return null;
+    final best = c.candidates.first;
+    if (_triadSuffixes.contains(best.suffix)) return best.name;
+    for (final cand in c.candidates) {
+      if (_triadSuffixes.contains(cand.suffix) &&
+          best.score - cand.score <= triadMargin) {
+        return cand.name;
+      }
+    }
+    return best.name;
+  }
+
+  /// A real-audio-robust chord progression. Where [chordRun] just collapses
+  /// runs, this MODE-SMOOTHS the chord track (window [smoothWindow]) — outvoting
+  /// the transient 7th/relative-minor guesses a sustained, decaying real chord
+  /// throws off from its overtones — biases each frame toward the plain triad
+  /// (see [_frameChord]/[triadMargin]) and keeps chords held at least
+  /// [minFrames] windows. Empty unless analysed with [detectChords].
+  List<String> chordProgression({
+    int smoothWindow = 5,
+    int minFrames = 4,
+    double triadMargin = 0.06,
+  }) {
+    if (frames.isEmpty) return const [];
+    final track = [for (final f in frames) _frameChord(f.chord, triadMargin)];
+    final half = (smoothWindow < 1 ? 1 : smoothWindow) ~/ 2;
+    final smoothed = <String?>[];
+    for (var i = 0; i < track.length; i++) {
+      final counts = <String, int>{};
+      for (var j = i - half; j <= i + half; j++) {
+        if (j >= 0 && j < track.length && track[j] != null) {
+          counts[track[j]!] = (counts[track[j]!] ?? 0) + 1;
+        }
+      }
+      if (counts.isEmpty) {
+        smoothed.add(null);
+        continue;
+      }
+      // The most-voted chord in the window (first-seen wins ties).
+      String? best;
+      var bestCount = 0;
+      for (var j = i - half; j <= i + half; j++) {
+        if (j < 0 || j >= track.length || track[j] == null) continue;
+        final c = counts[track[j]!]!;
+        if (c > bestCount) {
+          bestCount = c;
+          best = track[j];
+        }
+      }
+      smoothed.add(best);
+    }
+    final runs = <({String name, int count})>[];
+    for (final name in smoothed) {
+      if (name == null) continue;
+      if (runs.isNotEmpty && runs.last.name == name) {
+        runs[runs.length - 1] = (name: name, count: runs.last.count + 1);
+      } else {
+        runs.add((name: name, count: 1));
+      }
+    }
+    final out = <String>[];
+    for (final run in runs) {
+      if (run.count < minFrames) continue;
+      if (out.isEmpty || out.last != run.name) out.add(run.name);
+    }
+    return out;
+  }
 }
 
 /// Analyse a PCM16 WAV [wavBytes]: pitch (and optionally chords when

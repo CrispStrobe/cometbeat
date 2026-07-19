@@ -4,11 +4,37 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/chroma_analysis.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/recording_analysis.dart';
 import 'package:comet_beat/core/audio/streaming_analyzer.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+// A RecordingAnalysis from a per-window chord-candidate track: each entry is
+// that window's top candidates as (rootPc, suffix, score).
+RecordingAnalysis _fromChordTrack(List<List<(int, String, double)>> perFrame) =>
+    RecordingAnalysis(
+      sampleRate: 44100,
+      channels: 1,
+      durationSeconds: perFrame.length * 4096 / 44100,
+      frames: [
+        for (var i = 0; i < perFrame.length; i++)
+          AnalyzerFrame(
+            startSample: i * 4096,
+            sampleRate: 44100,
+            pitch: PitchReading.silent(),
+            chord: ChordReading(
+              candidates: [
+                for (final (r, s, sc) in perFrame[i])
+                  ChordCandidate(rootPc: r, suffix: s, score: sc),
+              ],
+              chroma: List.filled(12, 0),
+              energy: 1,
+            ),
+          ),
+      ],
+    );
 
 // A RecordingAnalysis built directly from a per-window MIDI track (null =
 // unvoiced) — for testing the smoother/segmenter without rendering audio.
@@ -160,6 +186,44 @@ void main() {
       );
       expect(_fromTrack([]).melody(), isEmpty);
       expect(_fromTrack([null, null, null]).melody(), isEmpty);
+    });
+  });
+
+  group('chordProgression() is robust to real chord overtones', () {
+    test('on clean synthetic chords it matches the progression', () {
+      final r = analyzeRecording(
+        _chords([
+          [60, 64, 67], // C
+          [65, 69, 72], // F
+          [67, 71, 74], // G
+          [60, 64, 67], // C
+        ]),
+        detectChords: true,
+      );
+      expect(r.chordProgression(), ['C', 'F', 'G', 'C']);
+    });
+
+    test('prefers the plain triad when a 7th narrowly outscores it', () {
+      // A sustained C chord whose overtones make Cmaj7 score just above C, then
+      // F, a brief Em decay artifact, and C again → the played C F ( ) C.
+      const cLikeMaj7 = [(0, '', 0.95), (0, 'maj7', 0.99)]; // C within margin
+      const fClean = [(5, '', 0.98)];
+      const emBlip = [(4, 'm', 0.9)];
+      final track = <List<(int, String, double)>>[
+        ...List.filled(8, cLikeMaj7),
+        ...List.filled(8, fClean),
+        emBlip, emBlip, // 2 windows < minFrames → dropped
+        ...List.filled(8, cLikeMaj7),
+      ];
+      expect(_fromChordTrack(track).chordProgression(), ['C', 'F', 'C']);
+    });
+
+    test('keeps the 7th when the triad is clearly worse (real 7th chord)', () {
+      const realMaj7 = [(0, 'maj7', 0.99), (0, '', 0.80)]; // C far below
+      expect(
+        _fromChordTrack(List.filled(8, realMaj7)).chordProgression(),
+        ['Cmaj7'],
+      );
     });
   });
 

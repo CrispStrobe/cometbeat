@@ -108,6 +108,9 @@ Future<void> main(List<String> argv) async {
       stdout.writeln(
         result.melody().map((m) => '${names[m % 12]}${m ~/ 12 - 1}').join(' '),
       );
+      if (withChords) {
+        stdout.writeln('chords: ${result.chordProgression().join(' ')}');
+      }
       return;
     }
     for (final f in result.frames) {
