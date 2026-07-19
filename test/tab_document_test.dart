@@ -79,6 +79,32 @@ void main() {
     expect(doc.columns[0].frets[0], 3);
   });
 
+  test('transposeBy shifts every note on its own string', () {
+    final doc = TabDocument.blank(guitar, initialColumns: 2)
+      ..setFret(0, 5, 3) // low E, fret 3
+      ..setFret(1, 4, 5); // A, fret 5
+    expect(doc.transposeBy(2), isTrue);
+    expect(doc.columns[0].frets[5], 5); // 3 + 2
+    expect(doc.columns[1].frets[4], 7); // 5 + 2
+  });
+
+  test('transposeBy is all-or-nothing when a note would leave the fretboard',
+      () {
+    final doc = TabDocument.blank(guitar, initialColumns: 1)
+      ..setFret(0, 5, 1); // fret 1 — can't go down 2
+    expect(doc.transposeBy(-2), isFalse);
+    expect(doc.columns[0].frets[5], 1); // unchanged
+  });
+
+  test('transposeBy clears the now-wrong chord label', () {
+    final doc = TabDocument.blank(guitar, initialColumns: 1)
+      ..setFret(0, 5, 3)
+      ..setChord(0, kGuitarChords['C']);
+    expect(doc.columns[0].chord?.name, 'C');
+    doc.transposeBy(2);
+    expect(doc.columns[0].chord, isNull); // the C shape no longer matches
+  });
+
   test('a chord column pins each string in pitch order', () {
     final doc = TabDocument.blank(guitar, initialColumns: 1)
       ..setFret(0, 0, 0)

@@ -3806,6 +3806,30 @@ abstract class AppLocalizations {
   /// **'Duplicate bar'**
   String get tabDuplicateBar;
 
+  /// No description provided for @tabTranspose.
+  ///
+  /// In en, this message translates to:
+  /// **'Key'**
+  String get tabTranspose;
+
+  /// No description provided for @tabTransposeUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Transpose up a semitone'**
+  String get tabTransposeUp;
+
+  /// No description provided for @tabTransposeDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Transpose down a semitone'**
+  String get tabTransposeDown;
+
+  /// No description provided for @tabTransposeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t transpose further — a note would fall off the fretboard.'**
+  String get tabTransposeLimit;
+
   /// No description provided for @tabTechnique.
   ///
   /// In en, this message translates to:

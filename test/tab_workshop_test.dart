@@ -242,6 +242,23 @@ void main() {
     expect(tab.columnCount, before + added);
   });
 
+  testWidgets('transpose shifts the tab, and is blocked at the fret limit',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester);
+    tab.selectCell(0, 0);
+    tab.enterFret(3); // a note at fret 3 on the top string
+    await tester.pump();
+
+    expect(tab.transposeBy(1), isTrue); // up one semitone
+    await tester.pump();
+    expect(tab.fretAt(0, 0), 4);
+
+    expect(tab.transposeBy(-99), isFalse); // would fall off — refused
+    await tester.pump();
+    expect(tab.fretAt(0, 0), 4); // unchanged
+  });
+
   testWidgets('generative insert adds a run after the cursor and moves it',
       (tester) async {
     await pumpGame(tester, const TabWorkshopScreen());

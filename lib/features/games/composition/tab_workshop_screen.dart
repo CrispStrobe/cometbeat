@@ -109,6 +109,10 @@ abstract class TabWorkshopTester {
   /// Copies the whole bar the cursor is in and inserts it right after; the
   /// cursor lands on the first column of the copy. Returns columns added.
   int duplicateBar();
+
+  /// Transposes the whole tab by [semitones] (all-or-nothing; false = a note
+  /// would fall off the fretboard, nothing changed).
+  bool transposeBy(int semitones);
   void play();
   bool get isPlaying;
 
@@ -341,6 +345,20 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       setState(() => _selCol = end.clamp(0, _doc.columns.length - 1));
     }
     return n;
+  }
+
+  @override
+  bool transposeBy(int semitones) {
+    final ok = _doc.transposeBy(semitones);
+    if (ok) {
+      setState(() {});
+    } else if (mounted) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.tabTransposeLimit)),
+      );
+    }
+    return ok;
   }
 
   @override
@@ -1453,6 +1471,21 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 icon: const Icon(Icons.control_point_duplicate),
                 tooltip: l10n.tabDuplicateBar,
                 onPressed: duplicateBar,
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.arrow_downward),
+                tooltip: l10n.tabTransposeDown,
+                onPressed: () => transposeBy(-1),
+              ),
+              Text(
+                l10n.tabTranspose,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_upward),
+                tooltip: l10n.tabTransposeUp,
+                onPressed: () => transposeBy(1),
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(

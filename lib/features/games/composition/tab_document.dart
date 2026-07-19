@@ -286,6 +286,31 @@ class TabDocument {
     return copies.length;
   }
 
+  /// Transposes every note by [semitones] by shifting its fret on the SAME
+  /// string (so the pitch moves correctly and the fingering shape is kept).
+  /// All-or-nothing: returns false and changes nothing if any note would leave
+  /// the 0..24 fret range, so nothing is ever silently dropped. Chord labels
+  /// (which describe the old shape) are cleared on a successful transpose.
+  bool transposeBy(int semitones) {
+    if (semitones == 0) return true;
+    for (final col in columns) {
+      for (final f in col.frets.values) {
+        final nf = f + semitones;
+        if (nf < 0 || nf > 24) return false;
+      }
+    }
+    for (var c = 0; c < columns.length; c++) {
+      final col = columns[c];
+      if (col.frets.isEmpty) continue;
+      columns[c] = TabColumn(
+        frets: {for (final e in col.frets.entries) e.key: e.value + semitones},
+        duration: col.duration,
+        techniques: col.techniques,
+      );
+    }
+    return true;
+  }
+
   /// Removes the column at [col] (no-op if out of range or it's the last one).
   void removeColumn(int col) {
     if (columns.length > 1 && col >= 0 && col < columns.length) {

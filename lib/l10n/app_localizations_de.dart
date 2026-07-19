@@ -2019,6 +2019,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabDuplicateBar => 'Takt duplizieren';
 
   @override
+  String get tabTranspose => 'Tonart';
+
+  @override
+  String get tabTransposeUp => 'Einen Halbton höher';
+
+  @override
+  String get tabTransposeDown => 'Einen Halbton tiefer';
+
+  @override
+  String get tabTransposeLimit =>
+      'Weiter geht\'s nicht — eine Note fiele vom Griffbrett.';
+
+  @override
   String get tabTechnique => 'Technik';
 
   @override

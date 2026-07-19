@@ -2013,6 +2013,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabDuplicateBar => 'Duplicate bar';
 
   @override
+  String get tabTranspose => 'Key';
+
+  @override
+  String get tabTransposeUp => 'Transpose up a semitone';
+
+  @override
+  String get tabTransposeDown => 'Transpose down a semitone';
+
+  @override
+  String get tabTransposeLimit =>
+      'Can\'t transpose further — a note would fall off the fretboard.';
+
+  @override
   String get tabTechnique => 'Technique';
 
   @override
