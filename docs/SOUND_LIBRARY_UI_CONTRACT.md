@@ -116,9 +116,38 @@ if (inst != null) {
 - Tests: `test/soundfont_loader_test.dart` (facade + real-font dev check) and
   `test/soundfont_sheet_test.dart` (widget flow) are the pattern.
 
+## Engine primitives ready to wire (@tracker-ui checklist)
+
+Everything below is shipped, tested, and frozen — pure engine/glue in
+@tracker-replayer's lane. The remaining work is screen-side (yours):
+
+1. **Load a SoundFont** — `showSoundFontSheet(context) → TrackerInstrument?`
+   (`features/library/soundfont_sheet.dart`); or the headless facade
+   `loadSoundFont` / `soundFontInstrument` (`sf2/soundfont_loader.dart`).
+   *Wire:* an entry in the instrument panel; localize the sheet's strings.
+2. **Persist / share a sound** — `instrumentToJson` / `instrumentFromJson`
+   (+`…JsonString`) for every authored voice (`tracker_instrument_codec.dart`);
+   `isSerializableInstrument()` gates. The JSON string *is* a share token.
+   *Wire:* the `SoundLibraryService` (save/load user sounds across sessions).
+3. **Persist a loaded GM voice cheaply** — `SoundFontRef` (path+bank+program) +
+   `resolveSoundFontRef(ref, bytes)`; `resolveInstrumentJson(json, loadBytes:)`
+   resolves a MIXED library (embedded + referenced) through one path
+   (`sf2/soundfont_loader.dart`). *Wire:* store the ref when the picked voice is
+   a SoundFont preset; re-read the file on load.
+4. **Richer drum kit** — `Drum` is now 8 voices (kick/snare/hat + openHat/clap/
+   tom/rim/cowbell); `renderDrum` synthesizes each. Screens that iterate
+   `Drum.values` already show them. *Wire:* l10n labels + per-voice colours/icons
+   for the 5 new voices (I left neutral defaults); decide whether the kid grid
+   shows all 8 or a curated subset.
+5. **PCM-preserving module export** — `moduleDocFromSong(song)` keeps a
+   SampleInstrument's real waveform + the effect column; pair with
+   `convertToMod/Xm/S3m/It` (`tracker_song_module.dart`). *Wire:* route the
+   Advanced Tracker's "Export module" through this instead of the Score path.
+
 ## Coordination
 - **HANDS OFF** `tracker_engine.dart` / `tracker_song.dart` / `sf2/*` /
-  `sound_library*.dart` / `soundfont_loader.dart` — those are @tracker-replayer's;
-  the APIs above are frozen. `features/library/soundfont_sheet.dart` is yours to
-  localize/restyle when you wire it.
+  `sound_library*.dart` / `soundfont_loader.dart` / `tracker_instrument_codec.dart`
+  / `tracker_song_module.dart` / the `Drum` enum + `renderDrum` in `synth.dart` —
+  those are @tracker-replayer's; the APIs above are frozen.
+  `features/library/soundfont_sheet.dart` is yours to localize/restyle.
 - Claim the browser on the PLAN board before you touch the tracker screens, as usual.
