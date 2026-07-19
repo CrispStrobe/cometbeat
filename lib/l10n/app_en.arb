@@ -384,6 +384,7 @@
   "loopMixerKitLofi": "Lo-fi",
   "loopMixerFilter": "Filter",
   "loopMixerQuantize": "Quantize launch (drop in on the beat)",
+  "loopMixerSolo": "Solo pad (drag to play in key)",
   "loopMixerScenes": "Sections",
   "loopMixerScenesHint": "Tap to launch, hold to capture the current layers",
   "loopMixerChain": "Chain sections (auto-advance)",

@@ -2000,6 +2000,12 @@ abstract class AppLocalizations {
   /// **'Quantize launch (drop in on the beat)'**
   String get loopMixerQuantize;
 
+  /// No description provided for @loopMixerSolo.
+  ///
+  /// In en, this message translates to:
+  /// **'Solo pad (drag to play in key)'**
+  String get loopMixerSolo;
+
   /// No description provided for @loopMixerScenes.
   ///
   /// In en, this message translates to:

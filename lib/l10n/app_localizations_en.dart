@@ -1036,6 +1036,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerQuantize => 'Quantize launch (drop in on the beat)';
 
   @override
+  String get loopMixerSolo => 'Solo pad (drag to play in key)';
+
+  @override
   String get loopMixerScenes => 'Sections';
 
   @override

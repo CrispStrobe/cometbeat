@@ -346,6 +346,7 @@
   "loopMixerKitLofi": "Lo-fi",
   "loopMixerFilter": "Filter",
   "loopMixerQuantize": "Quantisiert starten (im Takt einsetzen)",
+  "loopMixerSolo": "Solo-Pad (ziehen für Töne in der Tonart)",
   "loopMixerScenes": "Teile",
   "loopMixerScenesHint": "Tippen zum Starten, halten zum Speichern der Schichten",
   "loopMixerChain": "Teile verketten (automatisch weiter)",

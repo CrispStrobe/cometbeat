@@ -1041,6 +1041,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerQuantize => 'Quantisiert starten (im Takt einsetzen)';
 
   @override
+  String get loopMixerSolo => 'Solo-Pad (ziehen für Töne in der Tonart)';
+
+  @override
   String get loopMixerScenes => 'Teile';
 
   @override

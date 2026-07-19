@@ -34,7 +34,14 @@ import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
-import 'package:comet_beat/core/audio/synth.dart' show kDrumKits;
+import 'package:comet_beat/core/audio/synth.dart'
+    show
+        Instrument,
+        kDrumKits,
+        midiToFrequency,
+        renderSegments,
+        timbreFor,
+        wavBytes;
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/loop_player_service.dart';
@@ -48,6 +55,7 @@ import 'package:comet_beat/features/games/composition/loop_secrets.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
     show harmonicFunctionColor;
+import 'package:comet_beat/features/games/composition/smear_pad.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
@@ -162,6 +170,13 @@ abstract interface class LoopMixerTester {
   bool sceneIsEmpty(int i);
   bool get isChaining;
   void toggleChain();
+
+  /// Scale-locked smear pad (§F-1): visibility, and — for tests — the in-key
+  /// notes played and a way to play the note at a normalized x position.
+  bool get smearPadVisible;
+  void toggleSmearPad();
+  List<int> get debugSmearNotes;
+  void debugSmearAt(double x);
   bool get hasVoiceTrack;
   bool get hasBeatTrack;
   bool get isJamming;
@@ -353,6 +368,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   bool _showScore = false;
   bool _infinite = false;
 
+  // §F-1 smear pad: a scale-locked solo surface. Notes played this session are
+  // recorded so a "keep it" could capture them into a layer (follow-up).
+  bool _showSmear = false;
+  final List<int> _smearNotes = [];
+
   // Quantized launch: when on, toggling a playing card queues the change until
   // the next loop seam (it "arms") so layers always drop in on the beat.
   bool _quantize = false;
@@ -394,6 +414,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   bool get isChaining => _chaining;
   @override
   void toggleChain() => _toggleChain();
+  @override
+  bool get smearPadVisible => _showSmear;
+  @override
+  void toggleSmearPad() => _toggleSmearPad();
+  @override
+  List<int> get debugSmearNotes => _smearNotes;
+  @override
+  void debugSmearAt(double x) => _playSmearNote(
+        smearMidi(
+          x,
+          key: _engine.key,
+          minor: _engine.scale == GrooveScale.minorPentatonic,
+        ),
+      );
   @override
   void toggleInfinite() => setState(() => _infinite = !_infinite);
 
@@ -1373,6 +1407,25 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     });
   }
 
+  // --- Smear pad (§F-1) -----------------------------------------------------
+
+  void _toggleSmearPad() => setState(() => _showSmear = !_showSmear);
+
+  // Play an in-key note as a short blip over the running groove, and remember it.
+  void _playSmearNote(int midi) {
+    _smearNotes.add(midi);
+    final audio = context.read<AudioService>();
+    if (!audio.soundOn) return;
+    final pcm = renderSegments(
+      [
+        (freqs: [midiToFrequency(midi)], ms: 260),
+      ],
+      timbre: timbreFor(Instrument.musicBox),
+      gain: 0.7,
+    );
+    audio.playWavBytes(wavBytes(pcm));
+  }
+
   // --- Section/scene grid (§G-1) -------------------------------------------
 
   void _captureScene(int i) =>
@@ -1881,6 +1934,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                   ),
                   IconButton(
                     icon: Icon(
+                      Icons.gesture,
+                      color: _showSmear
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    isSelected: _showSmear,
+                    tooltip: l10n.loopMixerSolo,
+                    onPressed: _toggleSmearPad,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    icon: Icon(
                       Icons.surround_sound,
                       color: send != LoopSend.none
                           ? Theme.of(context).colorScheme.primary
@@ -2079,6 +2144,19 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 ),
               ),
               const SizedBox(height: 6),
+              // §F-1 solo pad: drag to improvise an in-key lead over the groove.
+              if (_showSmear)
+                SizedBox(
+                  height: 72,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: SmearPad(
+                      keyRoot: _engine.key,
+                      minor: _engine.scale == GrooveScale.minorPentatonic,
+                      onNote: _playSmearNote,
+                    ),
+                  ),
+                ),
               // Section grid: capture/launch/chain scenes into an arrangement.
               _sceneRow(l10n),
               // A gentle band challenge (no score) to nudge exploration.

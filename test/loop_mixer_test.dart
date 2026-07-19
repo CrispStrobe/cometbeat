@@ -15,6 +15,7 @@ import 'package:comet_beat/features/games/composition/groove_play_along.dart';
 import 'package:comet_beat/features/games/composition/loop_creatures.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_secrets.dart';
+import 'package:comet_beat/features/games/composition/smear_pad.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:crisp_notation/crisp_notation.dart' show StaffView;
 import 'package:flutter/material.dart';
@@ -676,6 +677,29 @@ void main() {
     game.debugLoopWrap();
     await tester.pump();
     expect(game.loopIteration, 6);
+  });
+
+  testWidgets('the smear pad toggles and plays in-key notes', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.smearPadVisible, isFalse);
+
+    game.toggleSmearPad();
+    await tester.pump();
+    expect(game.smearPadVisible, isTrue);
+    expect(find.byType(SmearPad), findsOneWidget);
+
+    // Playing across the pad yields a rising run of C-pentatonic notes.
+    for (final x in [0.0, 0.5, 1.0]) {
+      game.debugSmearAt(x);
+    }
+    await tester.pump();
+    expect(game.debugSmearNotes, isNotEmpty);
+    expect(
+      game.debugSmearNotes.every((m) => const {0, 2, 4, 7, 9}.contains(m % 12)),
+      isTrue,
+    );
+    expect(game.debugSmearNotes.last, greaterThan(game.debugSmearNotes.first));
   });
 
   testWidgets('section scenes capture, relaunch, and chain at the seam',
