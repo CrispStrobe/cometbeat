@@ -170,15 +170,21 @@ detected meter in the commit.
 
 ### W-SEP — source separation → per-stem multi-part transcription (biggest lever)
 
-> ✅ **The ASSEMBLY GLUE is PRE-BUILT (`20a1f066`, `stems.dart`, 6 tests):**
-> `transcribeStems(Stems)` routes each stem to the right engine (vocals/bass →
-> monophonic, other → chords, drums → W-DRUMS), engraves with correct
-> key/clef against one shared grid, and assembles a `MultiPartScore`;
-> `transcribeSong(mono, {separator})` separates then assembles. The `Separator`
-> is INJECTED. **W-SEP now only has to provide `separate(mono) → Stems`** (Demucs
-> / Open-Unmix ONNX) — the per-stem→per-engine→multi-part-score pipeline already
-> works and is tested. Same download-on-demand / `!kIsWeb` / skip-if-absent rules
-> as the CREPE shell.
+> ✅ **PREPARED + GLUED — only the model remains.** (1) Assembly glue
+> (`20a1f066`, `stems.dart`, 6 tests): `transcribeStems`/`transcribeSong` route
+> each stem → engine (vocals/bass mono, other → chords, drums → W-DRUMS) →
+> `MultiPartScore`. (2) HTDemucs adapter shell (`50c996a6`, `separate.dart` +
+> `separate_model_store.dart` + `separator_provider` + 6 tests): mono→stereo,
+> per-segment normalise, overlapping inference + triangular overlap-add
+> (reconstructs identity EXACTLY), stem mapping — all tested; ONNX call wired to
+> onnx_runtime_dart; `demucsSeparator(model)` yields the injected `Separator`.
+> **⇒ NEW (2026-07-19): W-SEP is UNBLOCKED — onnx_runtime_dart 0.10.x fast-pathed
+> HTDemucs (ConvTranspose ~5× + GLU fusion) and CrispASR gained `--separate`
+> (htdemucs 4-stem + mel-band-roformer, MIT).** The Dart `crispasr 0.8.11`
+> package does NOT bind `--separate` yet, so the clean path is a Demucs ONNX via
+> the onnx_runtime_dart htdemucs fast path (mirrors basic_pitch). **Remaining:
+> publish/convert the MIT HTDemucs ONNX, set `_modelUrl`, confirm the 2 tensor
+> names + segment length.**
 
 **Role.** The reason we fail on full songs is mixed sources. Split a song into
 stems and transcribe each with the right engine → a multi-part score. This is the
