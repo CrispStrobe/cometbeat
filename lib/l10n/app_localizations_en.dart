@@ -4851,6 +4851,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'A SKIP jumps over one — a line straight to the next line: C to E. Skips sound bouncier than steps.';
 
   @override
+  String get primerStepSkipTry => 'Now you try: is this a step or a skip?';
+
+  @override
   String get primerIntervalsTitle => 'How far apart?';
 
   @override
@@ -5010,6 +5013,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'A SLUR curves over DIFFERENT pitches. Play them smoothly, joined with no gap between them — that\'s legato.';
 
   @override
+  String get primerCurveTry =>
+      'Now you try: same pitch under a curve — tie or slur?';
+
+  @override
   String get primerArticulationTitle => 'How to play the note';
 
   @override
@@ -5074,6 +5081,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get primerDirectionDown =>
       'When it falls, every note is lower than the one before — the notes walk down the staff, and the sound sinks.';
+
+  @override
+  String get primerDirectionTry => 'Now you try: which way does this pair go?';
 
   @override
   String get primerSameDiffTitle => 'Same or different?';

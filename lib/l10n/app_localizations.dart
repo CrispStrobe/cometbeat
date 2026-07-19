@@ -8936,6 +8936,12 @@ abstract class AppLocalizations {
   /// **'A SKIP jumps over one — a line straight to the next line: C to E. Skips sound bouncier than steps.'**
   String get primerStepSkipSkip;
 
+  /// No description provided for @primerStepSkipTry.
+  ///
+  /// In en, this message translates to:
+  /// **'Now you try: is this a step or a skip?'**
+  String get primerStepSkipTry;
+
   /// No description provided for @primerIntervalsTitle.
   ///
   /// In en, this message translates to:
@@ -9194,6 +9200,12 @@ abstract class AppLocalizations {
   /// **'A SLUR curves over DIFFERENT pitches. Play them smoothly, joined with no gap between them — that\'s legato.'**
   String get primerCurveSlur;
 
+  /// No description provided for @primerCurveTry.
+  ///
+  /// In en, this message translates to:
+  /// **'Now you try: same pitch under a curve — tie or slur?'**
+  String get primerCurveTry;
+
   /// No description provided for @primerArticulationTitle.
   ///
   /// In en, this message translates to:
@@ -9301,6 +9313,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'When it falls, every note is lower than the one before — the notes walk down the staff, and the sound sinks.'**
   String get primerDirectionDown;
+
+  /// No description provided for @primerDirectionTry.
+  ///
+  /// In en, this message translates to:
+  /// **'Now you try: which way does this pair go?'**
+  String get primerDirectionTry;
 
   /// No description provided for @primerSameDiffTitle.
   ///

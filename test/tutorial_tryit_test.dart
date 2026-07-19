@@ -23,6 +23,9 @@ void main() {
       chordsPrimer(l),
       seventhPrimer(l),
       keySignaturePrimer(l),
+      directionPrimer(l),
+      stepSkipPrimer(l),
+      tieSlurPrimer(l),
     ];
     for (final primer in primers) {
       expect(

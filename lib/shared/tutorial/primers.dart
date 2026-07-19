@@ -656,6 +656,16 @@ Tutorial stepSkipPrimer(AppLocalizations l10n) => Tutorial(
           score: _notes([60, 64]), // C–E: line to the next line
           beats: _run([60, 64], ms: 600),
         ),
+        // Active recall: read a C–E jump as a skip.
+        TutorialStep(
+          text: l10n.primerStepSkipTry,
+          score: _notes([60, 64]), // C–E jumps over D → a skip
+          beats: _run([60, 64], ms: 600),
+          choices: [
+            TutorialChoice(l10n.skipLabel, correct: true),
+            TutorialChoice(l10n.stepLabel),
+          ],
+        ),
       ],
     );
 
@@ -1026,6 +1036,16 @@ Tutorial directionPrimer(AppLocalizations l10n) => Tutorial(
           score: _notes([67, 64, 62, 60]),
           play: (a) => a.playPhrase([67, 64, 62, 60], noteMs: 450),
         ),
+        // Active recall: read the direction of a rising pair.
+        TutorialStep(
+          text: l10n.primerDirectionTry,
+          score: _notes([60, 67]), // C then G — clearly upward
+          play: (a) => a.playPhrase([60, 67], noteMs: 450),
+          choices: [
+            TutorialChoice(l10n.directionUpLabel, correct: true),
+            TutorialChoice(l10n.directionDownLabel),
+          ],
+        ),
       ],
     );
 
@@ -1120,6 +1140,16 @@ Tutorial tieSlurPrimer(AppLocalizations l10n) => Tutorial(
           text: l10n.primerCurveSlur,
           score: _curvePair(60, 64, tie: false), // C slurred to E
           play: (a) => a.playPhrase([60, 64], noteMs: 800),
+        ),
+        // Active recall: a curve joining the SAME pitch is a tie.
+        TutorialStep(
+          text: l10n.primerCurveTry,
+          score: _curvePair(60, 60, tie: true), // C to C = a tie
+          play: (a) => a.playPhrase([60], noteMs: 1600),
+          choices: [
+            TutorialChoice(l10n.tieLabel, correct: true),
+            TutorialChoice(l10n.slurLabel),
+          ],
         ),
       ],
     );

@@ -4871,6 +4871,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ein SPRUNG überspringt eine — von einer Linie gleich zur nächsten Linie: C zu E. Sprünge klingen hüpfender als Schritte.';
 
   @override
+  String get primerStepSkipTry =>
+      'Jetzt du: Ist das ein Schritt oder ein Sprung?';
+
+  @override
   String get primerIntervalsTitle => 'Wie weit auseinander?';
 
   @override
@@ -5029,6 +5033,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ein BINDEBOGEN spannt sich über VERSCHIEDENE Tonhöhen. Spiel sie weich und ohne Lücke verbunden — das heißt legato.';
 
   @override
+  String get primerCurveTry =>
+      'Jetzt du: gleiche Tonhöhe unter einem Bogen — Halte- oder Bindebogen?';
+
+  @override
   String get primerArticulationTitle => 'Wie du die Note spielst';
 
   @override
@@ -5093,6 +5101,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get primerDirectionDown =>
       'Wenn sie fällt, ist jede Note tiefer als die davor — die Noten wandern nach unten, und der Klang sinkt.';
+
+  @override
+  String get primerDirectionTry =>
+      'Jetzt du: In welche Richtung geht dieses Paar?';
 
   @override
   String get primerSameDiffTitle => 'Gleich oder verschieden?';
