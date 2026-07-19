@@ -1760,6 +1760,48 @@ abstract class AppLocalizations {
   /// **'With a capo, what does the shape sound like?'**
   String get gameCapoMatchSubtitle;
 
+  /// No description provided for @primerFretboardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One note, many places'**
+  String get primerFretboardTitle;
+
+  /// No description provided for @primerFretboardSame.
+  ///
+  /// In en, this message translates to:
+  /// **'The same note lives in several spots on the fretboard — different strings, different frets.'**
+  String get primerFretboardSame;
+
+  /// No description provided for @primerFretboardAny.
+  ///
+  /// In en, this message translates to:
+  /// **'So when you look for a note, tapping ANY of its spots is right!'**
+  String get primerFretboardAny;
+
+  /// No description provided for @primerCapoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What a capo does'**
+  String get primerCapoTitle;
+
+  /// No description provided for @primerCapoClamp.
+  ///
+  /// In en, this message translates to:
+  /// **'A capo clamps all the strings up a fret — like a new nut higher up the neck.'**
+  String get primerCapoClamp;
+
+  /// No description provided for @primerCapoShape.
+  ///
+  /// In en, this message translates to:
+  /// **'So a shape you know, like C…'**
+  String get primerCapoShape;
+
+  /// No description provided for @primerCapoSounds.
+  ///
+  /// In en, this message translates to:
+  /// **'…sounds HIGHER. With the capo on the 2nd fret, that C shape rings out as a D.'**
+  String get primerCapoSounds;
+
   /// No description provided for @capoMatchPrompt.
   ///
   /// In en, this message translates to:

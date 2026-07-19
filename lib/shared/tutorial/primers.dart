@@ -1489,3 +1489,35 @@ Tutorial restsPrimer(AppLocalizations l10n) => Tutorial(
         ),
       ],
     );
+
+/// Every note lives in SEVERAL places on the fretboard — the same pitch sits on
+/// different strings at different frets, so finding ANY one of them is right.
+/// Game: fretboard_find.
+Tutorial fretboardFindPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerFretboardTitle,
+      steps: [
+        TutorialStep(
+          text: l10n.primerFretboardSame,
+          play: (a) => a.playMidiNote(60),
+        ),
+        TutorialStep(text: l10n.primerFretboardAny),
+      ],
+    );
+
+/// A capo clamps every string up a fret, so a familiar shape SOUNDS higher — a
+/// C shape at capo 2 sounds like D. Game: capo_match.
+Tutorial capoMatchPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerCapoTitle,
+      steps: [
+        TutorialStep(text: l10n.primerCapoClamp),
+        TutorialStep(
+          text: l10n.primerCapoShape,
+          play: (a) => a.playMidiChord([60, 64, 67]), // a C major shape
+        ),
+        TutorialStep(
+          text: l10n.primerCapoSounds,
+          play: (a) =>
+              a.playMidiChord([62, 66, 69]), // …sounds like D with capo 2
+        ),
+      ],
+    );

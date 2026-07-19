@@ -1312,6 +1312,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameFretboardFind,
       subtitle: (l) => l.gameFretboardFindSubtitle,
       builder: (_) => const FretboardFindScreen(),
+      tutorial: fretboardFindPrimer,
     ),
     GameInfo(
       id: 'capo_match',
@@ -1319,6 +1320,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.gameCapoMatch,
       subtitle: (l) => l.gameCapoMatchSubtitle,
       builder: (_) => const CapoMatchScreen(),
+      tutorial: capoMatchPrimer,
       unlockedWhen: (p) => p.starsFor('fretboard_find') >= 1,
       lockedHint: (l) => l.advancedGameHint,
     ),

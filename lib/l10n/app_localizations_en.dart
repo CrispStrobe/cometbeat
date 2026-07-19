@@ -911,6 +911,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'With a capo, what does the shape sound like?';
 
   @override
+  String get primerFretboardTitle => 'One note, many places';
+
+  @override
+  String get primerFretboardSame =>
+      'The same note lives in several spots on the fretboard — different strings, different frets.';
+
+  @override
+  String get primerFretboardAny =>
+      'So when you look for a note, tapping ANY of its spots is right!';
+
+  @override
+  String get primerCapoTitle => 'What a capo does';
+
+  @override
+  String get primerCapoClamp =>
+      'A capo clamps all the strings up a fret — like a new nut higher up the neck.';
+
+  @override
+  String get primerCapoShape => 'So a shape you know, like C…';
+
+  @override
+  String get primerCapoSounds =>
+      '…sounds HIGHER. With the capo on the 2nd fret, that C shape rings out as a D.';
+
+  @override
   String get capoMatchPrompt =>
       'With the capo on, what does this shape sound like?';
 

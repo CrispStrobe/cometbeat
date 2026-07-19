@@ -914,6 +914,31 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gameCapoMatchSubtitle => 'Wie klingt der Griff mit Kapodaster?';
 
   @override
+  String get primerFretboardTitle => 'Eine Note, viele Plätze';
+
+  @override
+  String get primerFretboardSame =>
+      'Dieselbe Note gibt es an mehreren Stellen auf dem Griffbrett — verschiedene Saiten, verschiedene Bünde.';
+
+  @override
+  String get primerFretboardAny =>
+      'Wenn du eine Note suchst, ist JEDER ihrer Plätze richtig!';
+
+  @override
+  String get primerCapoTitle => 'Was ein Kapo macht';
+
+  @override
+  String get primerCapoClamp =>
+      'Ein Kapodaster klemmt alle Saiten einen Bund höher — wie ein neuer Sattel weiter oben.';
+
+  @override
+  String get primerCapoShape => 'Ein Griff, den du kennst, wie C…';
+
+  @override
+  String get primerCapoSounds =>
+      '…klingt HÖHER. Mit dem Kapo im 2. Bund klingt der C-Griff wie ein D.';
+
+  @override
   String get capoMatchPrompt => 'Wie klingt dieser Griff mit dem Kapodaster?';
 
   @override
