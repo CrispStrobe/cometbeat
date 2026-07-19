@@ -48,7 +48,7 @@ pure via `traceChannel(cells, {ticksPerRow}) → ChannelTrace`
 | E4x | Vibrato waveform | ✅ *(added — sine/saw/square via `trackerLfo`)* |
 | E7x | Tremolo waveform | ✅ *(added — sine/saw/square)* |
 | E5x | Set finetune | ✅ *(added — ±(x−8)/16 semitone nudge)* |
-| EEx | **Pattern delay** | ❌ missing — **timing-significant** |
+| EEx | **Pattern delay** | ✅ *(shipped by @tracker-replayer, walkFlow)* |
 | E0x/E8x/EFx | filter / sync / funk-loop | ⬜ rare, low priority |
 
 ## Not implemented — XM/S3M/IT extras (beyond MOD)
@@ -86,18 +86,15 @@ These are deliberately NOT done by the cross-lane pass — each touches the timi
 render core or the cell model, i.e. exactly the parts that would conflict with
 the active tracker worker:
 
-1. **EEx pattern delay** — repeats the current row x+1 times; a song using it
-   plays at the **wrong length/rhythm** (silent no-op today). Needs a
-   `repeat`/suppress-retrigger flag on `PlayedRow` + integration with
-   `TrackerTiming` (the render maps rows→samples via `timing`, not the PlayedRow
-   list). Highest audible impact of the gaps.
-2. **Fine F-nibble slides (Axy/1xx/2xx)** — **format-ambiguous**: in MOD, `1F0`
+1. ✅ **EEx pattern delay** — **SHIPPED by @tracker-replayer** (walkFlow, row-level
+   flow). Was the highest-impact gap; done.
+2. **Rxy / Txy importer wiring** — replayer sides DONE (`kFxRetrigVolSlide` 0x1B,
+   `kFxTremor` 0x1D, both gated into `_hasPerTickEffect`); only the `.xm` reader
+   mapping (XM effect R→Rxy, T→Txy) remains so real files reach them. One line each.
+3. **Fine F-nibble slides (Axy/1xx/2xx)** — **format-ambiguous**: in MOD, `1F0`
    is a fast slide; in S3M/XM, `1Fx` is fine. The replayer doesn't track source
    format, so this needs a format flag (or a decision to assume S3M/XM) before
    it's safe — otherwise it regresses MOD playback.
-3. **Rxy** retrigger+volslide — replayer + `fxCmd 0x1B` + XM table **DONE**;
-   only the `.xm` importer mapping (XM effect R → `kFxRetrigVolSlide`) remains so
-   real files reach it. One line in the reader.
 4. **Gxx global / Mxx channel volume** — needs a scalar in the mix stage
    (`mixStems`), not just per-voice; larger, do last.
 
