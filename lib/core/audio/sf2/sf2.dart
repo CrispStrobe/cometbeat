@@ -161,7 +161,11 @@ class Sf2SoundFont {
       throw const FormatException('not a RIFF/sfbk SoundFont');
     }
 
-    // Collect the offset/length of every sub-chunk we care about.
+    // Collect the offset/length of every sub-chunk we care about. Chunk sizes
+    // are attacker-controlled, so every `end`/recorded size is clamped to the
+    // real buffer — a corrupt font can only ever yield a clean FormatException
+    // downstream, never an out-of-bounds read. Valid fonts are unaffected (the
+    // clamps are no-ops when sizes fit).
     final chunks = <String, (int, int)>{};
     var pos = 12; // past 'RIFF' <size> 'sfbk'
     while (pos + 8 <= bytes.length) {
@@ -170,11 +174,14 @@ class Sf2SoundFont {
       final body = pos + 8;
       if (ck == 'LIST') {
         var sp = body + 4; // past the list type
-        final end = body + size;
+        final end = min(body + size, bytes.length);
         while (sp + 8 <= end) {
           final sck = _tag(bytes, sp);
           final ssize = data.getUint32(sp + 4, Endian.little);
-          chunks[sck] = (sp + 8, ssize);
+          // Bound the recorded size so every later read of this chunk stays
+          // inside the buffer even if the header lies about its length.
+          final avail = bytes.length - (sp + 8);
+          chunks[sck] = (sp + 8, ssize < avail ? ssize : avail);
           sp = sp + 8 + ssize + (ssize.isOdd ? 1 : 0);
         }
       }
@@ -414,7 +421,10 @@ bool sf2IsCompressed(Uint8List bytes) {
   return false;
 }
 
-String _tag(Uint8List b, int o) => String.fromCharCodes(b, o, o + 4);
+/// A 4-char RIFF tag at [o], or '' if [o]..[o]+4 runs past the buffer (so a
+/// short/truncated file fails the RIFF/sfbk check cleanly instead of throwing).
+String _tag(Uint8List b, int o) =>
+    (o >= 0 && o + 4 <= b.length) ? String.fromCharCodes(b, o, o + 4) : '';
 
 String _cstr(Uint8List b, int o, int max) {
   var n = 0;
