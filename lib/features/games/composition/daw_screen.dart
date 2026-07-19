@@ -8,7 +8,8 @@
 // It seeds demo clips (a beat + a tune) and receives real clips from every
 // module's "Send to DAW". A to-scale timeline: clips are drawn at their render
 // duration and dragged along the lane to reposition in time; per-track mute;
-// tap a clip to freeze it to audio, ✕ to remove; Merge-all + WAV/MP3 export.
+// tap a clip for its inspector (volume + fades, freeze, remove), ✕ to remove;
+// Merge-all, undo/redo, and WAV/MP3 export.
 
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -71,6 +72,18 @@ abstract interface class DawTester {
   void redo();
   bool get canUndo;
   bool get canRedo;
+
+  /// Per-clip gain + fade lengths.
+  void setClipGain(int track, int index, double gain);
+  double clipGain(int track, int index);
+  void setClipFades(
+    int track,
+    int index, {
+    double? fadeInMs,
+    double? fadeOutMs,
+  });
+  double clipFadeInMs(int track, int index);
+  double clipFadeOutMs(int track, int index);
 
   /// Test seam: the length (samples) the arrangement bakes to.
   int debugBakeLength();
@@ -192,6 +205,34 @@ class _DawScreenState extends State<DawScreen> implements DawTester {
   @override
   bool get canRedo => _daw.canRedo;
 
+  @override
+  void setClipGain(int track, int index, double gain) =>
+      _daw.setClipGain(track, index, gain);
+
+  @override
+  double clipGain(int track, int index) => _daw.clipGain(track, index);
+
+  @override
+  void setClipFades(
+    int track,
+    int index, {
+    double? fadeInMs,
+    double? fadeOutMs,
+  }) =>
+      _daw.setClipFades(
+        track,
+        index,
+        fadeInMs: fadeInMs,
+        fadeOutMs: fadeOutMs,
+      );
+
+  @override
+  double clipFadeInMs(int track, int index) => _daw.clipFadeInMs(track, index);
+
+  @override
+  double clipFadeOutMs(int track, int index) =>
+      _daw.clipFadeOutMs(track, index);
+
   Float64List _bake() => _daw.bake();
 
   Int16List _toPcm16(Float64List pcm) {
@@ -242,6 +283,99 @@ class _DawScreenState extends State<DawScreen> implements DawTester {
     freezeClip(track, index);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.dawFrozen)),
+    );
+  }
+
+  // Tap a clip → gain + fade sliders, freeze, remove.
+  void _openClipInspector(int track, int index) {
+    final l10n = AppLocalizations.of(context)!;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) {
+          // The clip may have been removed while the sheet is open.
+          if (index >= _daw.timeline.tracks[track].clips.length) {
+            return const SizedBox.shrink();
+          }
+          final frozen = _daw.isClipFrozen(track, index);
+          Widget slider(
+            String label,
+            double value,
+            double max,
+            String Function(double) fmt,
+            void Function(double) onChanged,
+          ) =>
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$label — ${fmt(value)}'),
+                  Slider(
+                    value: value.clamp(0, max),
+                    max: max,
+                    onChanged: (v) => setSheet(() => onChanged(v)),
+                  ),
+                ],
+              );
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  slider(
+                    l10n.dawGain,
+                    _daw.clipGain(track, index),
+                    1.5,
+                    (v) => '${(v * 100).round()}%',
+                    (v) => setClipGain(track, index, v),
+                  ),
+                  slider(
+                    l10n.dawFadeIn,
+                    _daw.clipFadeInMs(track, index),
+                    2000,
+                    (v) => '${v.round()} ms',
+                    (v) => setClipFades(track, index, fadeInMs: v),
+                  ),
+                  slider(
+                    l10n.dawFadeOut,
+                    _daw.clipFadeOutMs(track, index),
+                    2000,
+                    (v) => '${v.round()} ms',
+                    (v) => setClipFades(track, index, fadeOutMs: v),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: frozen
+                            ? null
+                            : () {
+                                Navigator.of(sheetCtx).pop();
+                                _freezeWithToast(track, index);
+                              },
+                        icon: Icon(frozen ? Icons.lock : Icons.ac_unit),
+                        label: Text(l10n.dawFreeze),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetCtx).pop();
+                          removeClip(track, index);
+                        },
+                        icon: const Icon(Icons.delete_outline),
+                        label: Text(l10n.dawRemoveClip),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -459,7 +593,7 @@ class _DawScreenState extends State<DawScreen> implements DawTester {
           j,
           _dragOriginMs + d.localOffsetFromOrigin.dx / _pxPerSecond * 1000,
         ),
-        onTap: frozen ? null : () => _freezeWithToast(i, j),
+        onTap: () => _openClipInspector(i, j),
         child: Container(
           padding: const EdgeInsets.only(left: 6),
           decoration: BoxDecoration(

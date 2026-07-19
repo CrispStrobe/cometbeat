@@ -1196,6 +1196,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawRedo => 'Wiederholen';
 
   @override
+  String get dawGain => 'Lautstärke';
+
+  @override
+  String get dawFadeIn => 'Einblenden';
+
+  @override
+  String get dawFadeOut => 'Ausblenden';
+
+  @override
+  String get dawRemoveClip => 'Entfernen';
+
+  @override
   String get drumkitTitle => 'Schlagzeug';
 
   @override

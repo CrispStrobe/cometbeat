@@ -4,7 +4,7 @@
 
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -128,6 +128,25 @@ void main() {
     daw.addDemoBeat();
     await tester.pump();
     expect(daw.canExport, isTrue);
+  });
+
+  testWidgets('tapping a clip opens the inspector; gain slider changes gain',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+    expect(daw.clipGain(0, 0), 1.0);
+
+    // Tap the clip box → the inspector sheet with a Volume label + sliders.
+    await tester.tap(find.text('🥁'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Slider), findsNWidgets(3)); // gain + fade-in + fade-out
+
+    // Drag the gain slider down; the clip's gain drops below 1.
+    await tester.drag(find.byType(Slider).first, const Offset(-80, 0));
+    await tester.pump();
+    expect(daw.clipGain(0, 0), lessThan(1.0));
   });
 
   testWidgets('undo/redo reverse and replay edits', (tester) async {

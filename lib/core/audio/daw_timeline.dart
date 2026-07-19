@@ -60,25 +60,39 @@ class _Ref {
 }
 
 /// A placed clip: its [source], where it starts ([startMs]), a linear [gain],
-/// and whether it's [muted].
+/// whether it's [muted], and optional fade-in/out ramps ([fadeInMs]/
+/// [fadeOutMs]) applied at render time.
 class Clip {
   const Clip({
     required this.source,
     this.startMs = 0,
     this.gain = 1.0,
     this.muted = false,
+    this.fadeInMs = 0,
+    this.fadeOutMs = 0,
   });
 
   final ClipSource source;
   final double startMs;
   final double gain;
   final bool muted;
+  final double fadeInMs;
+  final double fadeOutMs;
 
-  Clip copyWith({double? startMs, double? gain, bool? muted}) => Clip(
+  Clip copyWith({
+    double? startMs,
+    double? gain,
+    bool? muted,
+    double? fadeInMs,
+    double? fadeOutMs,
+  }) =>
+      Clip(
         source: source,
         startMs: startMs ?? this.startMs,
         gain: gain ?? this.gain,
         muted: muted ?? this.muted,
+        fadeInMs: fadeInMs ?? this.fadeInMs,
+        fadeOutMs: fadeOutMs ?? this.fadeOutMs,
       );
 }
 
@@ -117,8 +131,9 @@ Float64List renderTimeline(
 }) {
   final store = cache ?? <Object, Float64List>{};
 
-  // Resolve every audible clip to (startSample, pcm, gain), tracking the length.
-  final placed = <({int start, Float64List pcm, double gain})>[];
+  // Resolve every audible clip to a placement, tracking the length.
+  final placed =
+      <({int start, Float64List pcm, double gain, int fadeIn, int fadeOut})>[];
   var totalSamples = 0;
   for (final track in timeline.tracks) {
     if (track.muted) continue;
@@ -130,7 +145,15 @@ Float64List renderTimeline(
       );
       if (pcm.isEmpty) continue;
       final start = (clip.startMs * sampleRate / 1000).round();
-      placed.add((start: start, pcm: pcm, gain: clip.gain * track.gain));
+      placed.add(
+        (
+          start: start,
+          pcm: pcm,
+          gain: clip.gain * track.gain,
+          fadeIn: (clip.fadeInMs * sampleRate / 1000).round(),
+          fadeOut: (clip.fadeOutMs * sampleRate / 1000).round(),
+        ),
+      );
       final end = start + pcm.length;
       if (end > totalSamples) totalSamples = end;
     }
@@ -139,8 +162,17 @@ Float64List renderTimeline(
 
   final master = Float64List(totalSamples);
   for (final p in placed) {
-    for (var i = 0; i < p.pcm.length; i++) {
-      master[p.start + i] += p.pcm[i] * p.gain;
+    final n = p.pcm.length;
+    for (var i = 0; i < n; i++) {
+      // Fade envelope: ramp up over fadeIn, down over fadeOut; if they overlap
+      // (a clip shorter than its fades), the smaller ramp wins.
+      var env = 1.0;
+      if (p.fadeIn > 0 && i < p.fadeIn) env = i / p.fadeIn;
+      if (p.fadeOut > 0 && i >= n - p.fadeOut) {
+        final down = (n - i) / p.fadeOut;
+        if (down < env) env = down;
+      }
+      master[p.start + i] += p.pcm[i] * p.gain * env;
     }
   }
 

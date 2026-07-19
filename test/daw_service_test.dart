@@ -160,6 +160,39 @@ void main() {
     expect(s.clipStartMs(0, 0), 0);
   });
 
+  test('setClipGain scales the bake and clamps at zero', () {
+    final s = DawService()..addClip(_tone(0.4, 100));
+    expect(s.bake()[0], closeTo(0.4, 1e-9));
+    s.setClipGain(0, 0, 0.5);
+    expect(s.clipGain(0, 0), 0.5);
+    expect(s.bake()[0], closeTo(0.2, 1e-9));
+    s.setClipGain(0, 0, -1); // clamped
+    expect(s.clipGain(0, 0), 0);
+  });
+
+  test('setClipFades sets each side independently and clamps', () {
+    final s = DawService()..addClip(_tone(0.4, 44100));
+    s.setClipFades(0, 0, fadeInMs: 100);
+    expect(s.clipFadeInMs(0, 0), 100);
+    expect(s.clipFadeOutMs(0, 0), 0); // untouched
+    s.setClipFades(0, 0, fadeOutMs: 250);
+    expect(s.clipFadeInMs(0, 0), 100); // still set
+    expect(s.clipFadeOutMs(0, 0), 250);
+    s.setClipFades(0, 0, fadeInMs: -5); // clamped
+    expect(s.clipFadeInMs(0, 0), 0);
+  });
+
+  test('a gain-slider sweep coalesces into one undo', () {
+    final s = DawService()..addClip(_tone(0.4, 100));
+    s
+      ..setClipGain(0, 0, 0.8)
+      ..setClipGain(0, 0, 0.6)
+      ..setClipGain(0, 0, 0.4); // one sweep
+    expect(s.clipGain(0, 0), 0.4);
+    s.undo(); // back to the pre-sweep gain in one step
+    expect(s.clipGain(0, 0), 1.0);
+  });
+
   test('undo restores after clear', () {
     final s = DawService()
       ..addClip(_tone(0.3, 100))

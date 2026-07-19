@@ -1189,6 +1189,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawRedo => 'Redo';
 
   @override
+  String get dawGain => 'Volume';
+
+  @override
+  String get dawFadeIn => 'Fade in';
+
+  @override
+  String get dawFadeOut => 'Fade out';
+
+  @override
+  String get dawRemoveClip => 'Remove';
+
+  @override
   String get drumkitTitle => 'Drum Kit';
 
   @override

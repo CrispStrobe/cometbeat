@@ -2294,6 +2294,30 @@ abstract class AppLocalizations {
   /// **'Redo'**
   String get dawRedo;
 
+  /// No description provided for @dawGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get dawGain;
+
+  /// No description provided for @dawFadeIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade in'**
+  String get dawFadeIn;
+
+  /// No description provided for @dawFadeOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade out'**
+  String get dawFadeOut;
+
+  /// No description provided for @dawRemoveClip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get dawRemoveClip;
+
   /// No description provided for @drumkitTitle.
   ///
   /// In en, this message translates to:

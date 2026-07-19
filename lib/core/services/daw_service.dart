@@ -30,9 +30,17 @@ class DawService extends ChangeNotifier {
   final List<_Snapshot> _redo = [];
   static const int _maxUndo = 50;
 
-  // Consecutive moves of the SAME clip coalesce into one undo entry (a drag is
-  // one gesture, not one-per-pixel). Any other edit resets this.
-  Object? _moveToken;
+  // Consecutive edits sharing a token (a clip drag, a gain-slider sweep)
+  // coalesce into one undo entry. Any discrete edit or undo/redo resets it.
+  Object? _coalesceToken;
+
+  // Snapshot only when a coalescing run starts (the token changes).
+  void _coalesced(Object token) {
+    if (_coalesceToken != token) {
+      _pushUndo();
+      _coalesceToken = token;
+    }
+  }
 
   _Snapshot _capture() => _Snapshot(
         tracks: [
@@ -63,7 +71,7 @@ class DawService extends ChangeNotifier {
   // A discrete edit: snapshot + break any move-coalescing run.
   void _record() {
     _pushUndo();
-    _moveToken = null;
+    _coalesceToken = null;
   }
 
   /// Whether there is anything to undo / redo.
@@ -75,7 +83,7 @@ class DawService extends ChangeNotifier {
     if (_undo.isEmpty) return;
     _redo.add(_capture());
     _restore(_undo.removeLast());
-    _moveToken = null;
+    _coalesceToken = null;
     notifyListeners();
   }
 
@@ -83,7 +91,7 @@ class DawService extends ChangeNotifier {
     if (_redo.isEmpty) return;
     _undo.add(_capture());
     _restore(_redo.removeLast());
-    _moveToken = null;
+    _coalesceToken = null;
     notifyListeners();
   }
 
@@ -121,15 +129,45 @@ class DawService extends ChangeNotifier {
   /// Move a clip along the timeline (drag-in-time). [startMs] is clamped to ≥ 0.
   /// Consecutive moves of the same clip coalesce into a single undo entry.
   void moveClip(int track, int index, double startMs) {
-    final token = (track, index);
-    if (_moveToken != token) {
-      _pushUndo();
-      _moveToken = token;
-    }
+    _coalesced(('move', track, index));
     final clips = timeline.tracks[track].clips;
     clips[index] = clips[index].copyWith(startMs: startMs < 0 ? 0 : startMs);
     notifyListeners();
   }
+
+  /// Set a clip's linear [gain] (0 = silent). A slider sweep coalesces to one
+  /// undo entry.
+  void setClipGain(int track, int index, double gain) {
+    _coalesced(('gain', track, index));
+    final clips = timeline.tracks[track].clips;
+    clips[index] = clips[index].copyWith(gain: gain < 0 ? 0 : gain);
+    notifyListeners();
+  }
+
+  /// Set a clip's fade-in / fade-out ramp length in ms (each clamped to ≥ 0).
+  /// Pass only the one you're changing; a slider sweep coalesces per side.
+  void setClipFades(
+    int track,
+    int index, {
+    double? fadeInMs,
+    double? fadeOutMs,
+  }) {
+    _coalesced(('fade', track, index, fadeInMs != null));
+    final clips = timeline.tracks[track].clips;
+    clips[index] = clips[index].copyWith(
+      fadeInMs: fadeInMs == null ? null : (fadeInMs < 0 ? 0 : fadeInMs),
+      fadeOutMs: fadeOutMs == null ? null : (fadeOutMs < 0 ? 0 : fadeOutMs),
+    );
+    notifyListeners();
+  }
+
+  /// A clip's current gain / fade lengths.
+  double clipGain(int track, int index) =>
+      timeline.tracks[track].clips[index].gain;
+  double clipFadeInMs(int track, int index) =>
+      timeline.tracks[track].clips[index].fadeInMs;
+  double clipFadeOutMs(int track, int index) =>
+      timeline.tracks[track].clips[index].fadeOutMs;
 
   /// A clip's start on the timeline, in ms.
   double clipStartMs(int track, int index) =>

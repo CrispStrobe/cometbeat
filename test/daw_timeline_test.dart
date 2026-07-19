@@ -116,4 +116,32 @@ void main() {
     expect(h[0], lessThan(1.0)); // hot is pulled below the rail
     expect(h[0], greaterThan(0.6)); // ...but stays loud (soft knee)
   });
+
+  test('clip gain scales the whole clip', () {
+    final src = _ToneSource(0.4, 4);
+    final t = DawTimeline(
+      tracks: [
+        DawTrack(clips: [Clip(source: src, gain: 0.5)]),
+      ],
+    );
+    final out = renderTimeline(t, sampleRate: _sr, limit: false);
+    expect(out[0], closeTo(0.2, 1e-9)); // 0.4 * 0.5
+  });
+
+  test('fade-in ramps up and fade-out ramps down at the clip edges', () {
+    // 10 samples of 0.5; 4-sample fade-in, 4-sample fade-out (_sr=1000 → ms).
+    final src = _ToneSource(0.5, 10);
+    final t = DawTimeline(
+      tracks: [
+        DawTrack(
+          clips: [Clip(source: src, fadeInMs: 4, fadeOutMs: 4)],
+        ),
+      ],
+    );
+    final out = renderTimeline(t, sampleRate: _sr, limit: false);
+    expect(out[0], closeTo(0.0, 1e-9)); // fade-in starts at 0
+    expect(out[2], closeTo(0.5 * 2 / 4, 1e-9)); // halfway up the ramp
+    expect(out[5], closeTo(0.5, 1e-9)); // full level in the middle
+    expect(out[9], closeTo(0.5 * 1 / 4, 1e-9)); // last sample, near the end
+  });
 }
