@@ -300,6 +300,25 @@ Order within a group = rough value ÷ effort.
 - **Instrument/sample edge cases**: velocity-layer SF2 export, 16-bit vs 8-bit
   sample paths, loop-type nibble fidelity across formats.
 
+**D) Engine-coverage completion (follow-ups from the B round — @tracker-replayer, 2026-07-19)**
+The new post-mix effects landed on the primary render paths; extend them to the
+remaining paths so playback is consistent regardless of song shape. All
+engine-lane / collision-free.
+- **D1 — Global volume (Gxx/Hxy) on the remaining render paths.** Shipped on
+  `replayPattern` + uniform mono `replaySong`; still missing on `_replayFlow`
+  (mono flow), `_replayVariable` (mono mid-song-tempo), and ALL stereo paths
+  (`replayPatternStereo`, uniform `replaySongStereo`, `_replayFlowStereo`,
+  `_replayVariableStereo`). Fix: build the row scan each path already has
+  (`_rowScan` / a flat scan from `walkFlow`'s `played`) and multiply the
+  `globalVolumeEnvelope` into `mix` (mono) or `left`+`right` (stereo).
+- **D2 — Pan slide (Pxy) on the variable-timing stereo path.** Shipped in
+  `_panRegions` (uniform stereo); `_panRegionsVariable` still only reads 8xx.
+  Fix: mirror the Pxy step into `_panRegionsVariable`.
+- **D3 — Authoring UI for the extended effects.** Gxx/Hxy/Txx/Pxy (+ the already-
+  engine-supported Exy sub-commands) have no tracker UI — the `_CommandEditor`
+  only types a 0x0–0xF nibble. Needs an "extended effects" picker. Touches
+  `advanced_tracker_screen.dart` (hot lane) — coordinate with @tracker-ui.
+
 **Reusable scaffolds already in place:** `mixStems` (synth.dart), the field-cursor
 model (`_CellField`), the block-op machinery (`copyBlock`/`pasteBlock`/
 `_fillInstrumentBlock`/`_interpolateBlock`), `walkFlow`, the song codec
