@@ -3784,6 +3784,38 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wie viele Schläge? Verbinde jede Note mit ihrer Zahl (im 4/4-Takt)!';
 
   @override
+  String get gameConnectDegrees => 'Tonstufen verbinden';
+
+  @override
+  String get gameConnectDegreesSubtitle =>
+      'Ordne jeder Stufennummer ihren Namen zu (1 = Tonika, 5 = Dominante)';
+
+  @override
+  String get connectDegreesPrompt =>
+      'Ordne jede Tonstufen-Nummer ihrem Namen zu — tippe zum Hören!';
+
+  @override
+  String get degreeTonic => 'Tonika';
+
+  @override
+  String get degreeSupertonic => 'Supertonika';
+
+  @override
+  String get degreeMediant => 'Mediante';
+
+  @override
+  String get degreeSubdominant => 'Subdominante';
+
+  @override
+  String get degreeDominant => 'Dominante';
+
+  @override
+  String get degreeSubmediant => 'Submediante';
+
+  @override
+  String get degreeLeadingTone => 'Leitton';
+
+  @override
   String get beatCount4 => '4 Schläge';
 
   @override

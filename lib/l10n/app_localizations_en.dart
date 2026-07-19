@@ -3769,6 +3769,38 @@ class AppLocalizationsEn extends AppLocalizations {
       'How many beats? Connect each note to its count (in 4/4)!';
 
   @override
+  String get gameConnectDegrees => 'Connect the Scale Degrees';
+
+  @override
+  String get gameConnectDegreesSubtitle =>
+      'Match each degree number to its name (1 = Tonic, 5 = Dominant)';
+
+  @override
+  String get connectDegreesPrompt =>
+      'Match each scale-degree number to its name — tap to hear it!';
+
+  @override
+  String get degreeTonic => 'Tonic';
+
+  @override
+  String get degreeSupertonic => 'Supertonic';
+
+  @override
+  String get degreeMediant => 'Mediant';
+
+  @override
+  String get degreeSubdominant => 'Subdominant';
+
+  @override
+  String get degreeDominant => 'Dominant';
+
+  @override
+  String get degreeSubmediant => 'Submediant';
+
+  @override
+  String get degreeLeadingTone => 'Leading tone';
+
+  @override
   String get beatCount4 => '4 beats';
 
   @override

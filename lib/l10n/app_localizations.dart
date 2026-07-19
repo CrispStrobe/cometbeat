@@ -7052,6 +7052,66 @@ abstract class AppLocalizations {
   /// **'How many beats? Connect each note to its count (in 4/4)!'**
   String get connectBeatsPrompt;
 
+  /// No description provided for @gameConnectDegrees.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect the Scale Degrees'**
+  String get gameConnectDegrees;
+
+  /// No description provided for @gameConnectDegreesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Match each degree number to its name (1 = Tonic, 5 = Dominant)'**
+  String get gameConnectDegreesSubtitle;
+
+  /// No description provided for @connectDegreesPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Match each scale-degree number to its name — tap to hear it!'**
+  String get connectDegreesPrompt;
+
+  /// No description provided for @degreeTonic.
+  ///
+  /// In en, this message translates to:
+  /// **'Tonic'**
+  String get degreeTonic;
+
+  /// No description provided for @degreeSupertonic.
+  ///
+  /// In en, this message translates to:
+  /// **'Supertonic'**
+  String get degreeSupertonic;
+
+  /// No description provided for @degreeMediant.
+  ///
+  /// In en, this message translates to:
+  /// **'Mediant'**
+  String get degreeMediant;
+
+  /// No description provided for @degreeSubdominant.
+  ///
+  /// In en, this message translates to:
+  /// **'Subdominant'**
+  String get degreeSubdominant;
+
+  /// No description provided for @degreeDominant.
+  ///
+  /// In en, this message translates to:
+  /// **'Dominant'**
+  String get degreeDominant;
+
+  /// No description provided for @degreeSubmediant.
+  ///
+  /// In en, this message translates to:
+  /// **'Submediant'**
+  String get degreeSubmediant;
+
+  /// No description provided for @degreeLeadingTone.
+  ///
+  /// In en, this message translates to:
+  /// **'Leading tone'**
+  String get degreeLeadingTone;
+
   /// No description provided for @beatCount4.
   ///
   /// In en, this message translates to:

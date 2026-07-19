@@ -422,7 +422,7 @@ const List<Concept> kConcepts = [
     GradeBand.g78,
     ConceptArea.harmony,
     'Tonic, subdominant, dominant',
-    ['harmony_quiz', 'function_ear'],
+    ['harmony_quiz', 'function_ear', 'connect_degrees'],
   ),
   Concept(
     'roman_numerals',

@@ -293,6 +293,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameConnectBeatsSubtitle,
       builder: (_) => const ConnectLineScreen(mode: ConnectMode.beats),
     ),
+    // Match each scale-degree number to its name (1 ↔ Tonic, 5 ↔ Dominant) and
+    // hear it — the beginner harmony vocabulary the roman-numeral games assume.
+    GameInfo(
+      id: 'connect_degrees',
+      icon: Icons.stairs_outlined,
+      title: (l) => l.gameConnectDegrees,
+      subtitle: (l) => l.gameConnectDegreesSubtitle,
+      builder: (_) => const ConnectLineScreen(mode: ConnectMode.degrees),
+    ),
     GameInfo(
       id: 'rhythm_tap',
       icon: Icons.touch_app,

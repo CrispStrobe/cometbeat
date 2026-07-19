@@ -46,7 +46,16 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:provider/provider.dart';
 
 /// What the two columns hold.
-enum ConnectMode { notes, symbols, intervals, dynamics, rests, tempo, beats }
+enum ConnectMode {
+  notes,
+  symbols,
+  intervals,
+  dynamics,
+  rests,
+  tempo,
+  beats,
+  degrees,
+}
 
 /// One matchable item: a left visual, a (unique) right name, a match key, the
 /// colour of its wire, the pitch to sound on a correct link (if any), and the
@@ -143,6 +152,7 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
         ConnectMode.rests => 'connect_rests',
         ConnectMode.tempo => 'connect_tempo',
         ConnectMode.beats => 'connect_beats',
+        ConnectMode.degrees => 'connect_degrees',
         ConnectMode.notes =>
           widget.clef == Clef.bass ? 'connect_line_bass' : 'connect_line',
       };
@@ -166,6 +176,7 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
       ConnectMode.rests => _restItems(),
       ConnectMode.tempo => _tempoItems(),
       ConnectMode.beats => _beatItems(),
+      ConnectMode.degrees => _degreeItems(),
       ConnectMode.notes => _noteItems(),
     };
     _lefts = items;
@@ -392,6 +403,48 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
         _ => l10n.tempoVeryFast, // 'Presto'
       };
 
+  List<_ConnectItem> _degreeItems() {
+    // Match a scale-degree number to its name, and hear the degree in C major.
+    // The four functional pillars for beginners (1 tonic, 4 subdominant,
+    // 5 dominant, 7 leading tone); the colour tones (2, 3, 6) join at 2★.
+    const pillars = {1, 4, 5, 7};
+    // (degree, C-major midi): 1=C4 … 7=B4.
+    const midi = {1: 60, 2: 62, 3: 64, 4: 65, 5: 67, 6: 69, 7: 71};
+    final wide = context.read<ProgressService>().starsFor(progressId) >= 2;
+    final pool = [
+      for (var d = 1; d <= 7; d++)
+        if (wide || pillars.contains(d)) d,
+    ]..shuffle(_random);
+    final picked = pool.take(ConnectLineScreen.pairs).toList();
+
+    return [
+      for (var i = 0; i < picked.length; i++)
+        _ConnectItem(
+          card: Text(
+            '${picked[i]}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+          matchKey: 'degree${picked[i]}',
+          sriId: 'harmony.degree.${picked[i]}',
+          playMidi: midi[picked[i]],
+          label: (ctx) => _degreeName(AppLocalizations.of(ctx)!, picked[i]),
+          color: (_, __) => _symbolPalette[i % _symbolPalette.length],
+        ),
+    ];
+  }
+
+  static String _degreeName(AppLocalizations l10n, int degree) =>
+      switch (degree) {
+        1 => l10n.degreeTonic,
+        2 => l10n.degreeSupertonic,
+        3 => l10n.degreeMediant,
+        4 => l10n.degreeSubdominant,
+        5 => l10n.degreeDominant,
+        6 => l10n.degreeSubmediant,
+        _ => l10n.degreeLeadingTone, // 7
+      };
+
   List<_ConnectItem> _beatItems() {
     // Each note-value glyph paired with how many beats it lasts in 4/4:
     // whole = 4, half = 2, quarter = 1, eighth = ½. Whole/half/quarter/eighth
@@ -507,6 +560,7 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
       ConnectMode.rests => l10n.gameConnectRests,
       ConnectMode.tempo => l10n.gameConnectTempo,
       ConnectMode.beats => l10n.gameConnectBeats,
+      ConnectMode.degrees => l10n.gameConnectDegrees,
       ConnectMode.notes => l10n.gameConnectLine,
     };
     final prompt = switch (widget.mode) {
@@ -516,6 +570,7 @@ class _ConnectLineScreenState extends State<ConnectLineScreen>
       ConnectMode.rests => l10n.connectRestsPrompt,
       ConnectMode.tempo => l10n.connectTempoPrompt,
       ConnectMode.beats => l10n.connectBeatsPrompt,
+      ConnectMode.degrees => l10n.connectDegreesPrompt,
       ConnectMode.notes => l10n.connectLinePrompt,
     };
 
