@@ -77,6 +77,21 @@ void main() {
     });
   });
 
+  group('chooseClef', () {
+    test('a low (cello) line picks bass clef', () {
+      // C2–C3 arpeggio, all below middle C.
+      expect(chooseClef(_notes([36, 40, 43, 48, 40, 36])), Clef.bass);
+    });
+
+    test('a treble-register melody picks treble clef', () {
+      expect(chooseClef(_notes([64, 65, 67, 69, 71, 72])), Clef.treble);
+    });
+
+    test('empty input defaults to treble', () {
+      expect(chooseClef(const []), Clef.treble);
+    });
+  });
+
   group('respell', () {
     Score makeScore(List<int> midis) => Score(
           clef: Clef.treble,

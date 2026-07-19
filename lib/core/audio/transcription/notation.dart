@@ -52,6 +52,17 @@ const Map<Step, int> _stepSemitones = {
 
 int _pc(int midi) => ((midi % 12) + 12) % 12;
 
+/// Pick the clef that keeps the music on the staff: bass for a line centred below
+/// middle C (a cello/bass part), treble otherwise. Splitting at middle C
+/// (MIDI 60) is the textbook grand-staff boundary and minimises ledger lines for
+/// a single-line transcription. Empty → treble.
+Clef chooseClef(List<NoteEvent> notes) {
+  if (notes.isEmpty) return Clef.treble;
+  final midis = [for (final n in notes) n.midi]..sort();
+  final median = midis[midis.length ~/ 2];
+  return median < 60 ? Clef.bass : Clef.treble;
+}
+
 /// Estimate the key of [notes] by correlating their duration-weighted
 /// pitch-class profile against the 24 Krumhansl key profiles. Empty → C major.
 KeyEstimate estimateKey(List<NoteEvent> notes) {

@@ -65,6 +65,7 @@ Future<TranscriptionResult> transcribeRecording(
     routed.notes,
     grid,
     beatsPerBar: meter.beatsPerBar,
+    clef: chooseClef(routed.notes), // bass for a low line, else treble
   );
   // Detect the key and re-spell (B-flat, not A-sharp) + stamp the key signature.
   final key = estimateKey(routed.notes);
