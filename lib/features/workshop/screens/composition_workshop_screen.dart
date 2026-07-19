@@ -2697,8 +2697,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         // Engrave every part (all staves per system) when multi-part.
         return (
           await (_mpd.partCount > 1
-              ? exportMultiPartToPdf(_mpd.buildMultiPart(),
-                  theme: kidsScoreTheme)
+              ? exportMultiPartToPdf(
+                  _mpd.buildMultiPart(),
+                  theme: kidsScoreTheme,
+                )
               : exportScoreToPdf(score, theme: kidsScoreTheme)),
           null,
         );
