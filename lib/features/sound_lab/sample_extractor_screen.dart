@@ -19,8 +19,8 @@ const _kModuleGroup = XTypeGroup(
   extensions: [
     // Tracker modules…
     'mod', 'xm', 's3m', 'it',
-    // …and sample-pack archives (no 7z — package:archive has no LZMA codec).
-    'zip', 'tar', 'gz', 'tgz', 'bz2', 'xz',
+    // …and sample-pack archives (7z via our own pure-Dart reader).
+    'zip', '7z', 'tar', 'gz', 'tgz', 'bz2', 'xz',
   ],
 );
 

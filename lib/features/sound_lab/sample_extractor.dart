@@ -1,6 +1,6 @@
 // Pulls the individual samples out of a container the user supplies: either a
-// tracker module (.mod/.xm/.s3m/.it) or a sample-pack archive (.zip/.tar and
-// its gz/bz2/xz variants).
+// tracker module (.mod/.xm/.s3m/.it) or a sample-pack archive
+// (.zip/.7z/.tar and its gz/bz2/xz variants).
 //
 // A module bundles its instrument samples as raw PCM; the app already decodes
 // every format to a common `ModuleDoc` (normalized float PCM + per-sample
@@ -9,8 +9,9 @@
 // public `parseAnyModule` — it does not touch the module codecs.
 //
 // Archives go through `package:archive` (MIT, pure Dart — so this works on web
-// too). **7z is deliberately unsupported**: `archive` has no 7z/LZMA codec, and
-// rather than fail obscurely we detect the magic bytes and say so.
+// too) for zip/tar/gz/bz2/xz, and through our own pure-Dart `sevenz_reader`
+// for .7z (which `package:archive` has no codec for) — the format real
+// Freepats sample packs ship in.
 //
 // (Legality note: this extracts from a file the user supplies, exactly like
 // importing a WAV — no redistribution. Whether a given module's or pack's
@@ -19,6 +20,7 @@
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:comet_beat/core/archive/sevenz_reader.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show parseAnyModule;
 import 'package:comet_beat/core/audio/wav_io.dart';
@@ -78,9 +80,8 @@ List<String> uniqueWavNames(Iterable<String> displayNames) {
   return out;
 }
 
-/// True if [bytes] starts with the 7-Zip signature (`7z¼¯' `).
-bool isSevenZip(Uint8List bytes) =>
-    _startsWith(bytes, const [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]);
+/// True if [bytes] starts with the 7-Zip signature.
+bool isSevenZip(Uint8List bytes) => isSevenZArchive(bytes);
 
 bool _startsWith(Uint8List bytes, List<int> magic) {
   if (bytes.length < magic.length) return false;
@@ -99,12 +100,8 @@ bool looksLikeArchive(Uint8List bytes) =>
     isSevenZip(bytes);
 
 /// Opens a sample-pack archive, transparently un-wrapping a compressed tar.
+/// (.7z is handled separately by [extractArchiveSamples] — our own reader.)
 Archive _openArchive(Uint8List bytes) {
-  if (isSevenZip(bytes)) {
-    throw const FormatException(
-      '7z archives are not supported — re-pack as .zip or .tar.gz',
-    );
-  }
   try {
     if (_startsWith(bytes, const [0x50, 0x4B])) {
       return ZipDecoder().decodeBytes(bytes);
@@ -129,25 +126,37 @@ Archive _openArchive(Uint8List bytes) {
 /// Extracts every decodable WAV from a sample-pack archive. Entries that
 /// aren't WAVs — or are WAVs in an encoding we can't read — are skipped, so
 /// one odd file never sinks the whole pack. Throws [FormatException] if the
-/// container itself can't be opened (including .7z).
+/// container itself can't be opened.
 List<ExtractedSample> extractArchiveSamples(
   Uint8List bytes, {
   String sourceFile = 'pack',
 }) {
-  final archive = _openArchive(bytes);
+  // .7z goes through our own pure-Dart reader; everything else through
+  // package:archive. Both yield (name, bytes) pairs we treat identically.
+  final entries = <(String, Uint8List)>[];
+  if (isSevenZip(bytes)) {
+    for (final e in readSevenZ(bytes).entries) {
+      if (!e.isDirectory) entries.add((e.name, e.content));
+    }
+  } else {
+    for (final e in _openArchive(bytes)) {
+      if (!e.isFile) continue;
+      final data = e.readBytes();
+      if (data != null && data.isNotEmpty) entries.add((e.name, data));
+    }
+  }
+
   final out = <ExtractedSample>[];
-  for (final entry in archive) {
-    if (!entry.isFile) continue;
-    if (!entry.name.toLowerCase().endsWith('.wav')) continue;
-    final data = entry.readBytes();
-    if (data == null || data.isEmpty) continue;
+  for (final (name, data) in entries) {
+    if (!name.toLowerCase().endsWith('.wav')) continue;
+    if (data.isEmpty) continue;
     try {
       final wav = readWavPcm16(data);
       final pcm = wavToMonoFloat(wav);
       if (pcm.isEmpty) continue;
       out.add(
         ExtractedSample(
-          name: _entryName(entry.name),
+          name: _entryName(name),
           sampleRate: wav.sampleRate > 0 ? wav.sampleRate : _kDefaultC5Speed,
           pcm: pcm,
           sourceFile: sourceFile,

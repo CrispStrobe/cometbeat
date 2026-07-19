@@ -1,6 +1,7 @@
 // The module Sample Extractor — build a real .mod carrying a sample, extract
 // it back, and drive the screen (batch load + add-to-library) via its seam.
 
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -149,22 +150,35 @@ void main() {
       expect(out.single.displayName, 'ok');
     });
 
-    test('7z is rejected with an explicit, actionable message', () {
-      final sevenZ = Uint8List.fromList(
+    test('extracts WAVs from a real .7z (Delta:2 + BZip2 chain)', () {
+      // Built by the 7-Zip CLI; same coder chain real Freepats packs use.
+      final sevenZ = File('test/fixtures/sevenz/wavpack.7z').readAsBytesSync();
+      expect(isSevenZip(sevenZ), isTrue);
+      expect(looksLikeArchive(sevenZ), isTrue);
+
+      final out = extractArchiveSamples(sevenZ, sourceFile: 'kit');
+      expect(out.map((s) => s.displayName).toList()..sort(), ['hi', 'lo']);
+      expect(out.every((s) => s.pcm.isNotEmpty), isTrue);
+      expect(out.first.sourceFile, 'kit');
+    });
+
+    test('a truncated .7z fails as a FormatException', () {
+      // Half a real archive: the signature header still points at a footer
+      // that is no longer there.
+      final full = File('test/fixtures/sevenz/wavpack.7z').readAsBytesSync();
+      final truncated = Uint8List.sublistView(full, 0, full.length ~/ 2);
+      expect(
+        () => extractArchiveSamples(truncated),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('magic with a zero-length header is a valid EMPTY archive', () {
+      // Not an error: 7z encodes "no entries" as nextHeaderSize == 0.
+      final empty = Uint8List.fromList(
         [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, ...List.filled(32, 0)],
       );
-      expect(isSevenZip(sevenZ), isTrue);
-      expect(looksLikeArchive(sevenZ), isTrue); // sniffed, then refused
-      expect(
-        () => extractArchiveSamples(sevenZ),
-        throwsA(
-          isA<FormatException>().having(
-            (e) => e.message,
-            'message',
-            contains('7z'),
-          ),
-        ),
-      );
+      expect(extractArchiveSamples(empty), isEmpty);
     });
 
     test('looksLikeArchive distinguishes packs from modules', () {
