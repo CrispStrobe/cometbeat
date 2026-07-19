@@ -641,9 +641,13 @@ Games built on crisp_notation capabilities the app didn't use before.
   cache-keyed by model value. The **Multitrack** arranger screen (reached from the
   home Workshop menu) places clips on tracks and BAKES the mix to play; per-track
   mute, seeded demo clips. A shared app-wide `DawService` holds the arrangement so
-  clips sent from any module accumulate into one project; the **DrumKit** got the
-  first "To Multitrack" send (a snapshot `DrumSource`). ~24 headless tests; design
-  in `docs/DAW_SCOPING.md`.
+  clips sent from any module accumulate into one project. **Every module can
+  now Send to the Multitrack** — DrumKit (snapshot `DrumSource`), Loop Mixer
+  (`GrooveSource`), Song Book (`ScoreSource`), Composition Workshop + TAB
+  Workshop (multi-part `ScoreSource`), and the Tracker (`TrackerSource`) — each
+  via the shared `sendToMultitrack` helper (`addClip` + a localized snackbar),
+  each with a live widget test that the clip lands and bakes to audio. ~30
+  headless tests; design in `docs/DAW_SCOPING.md`.
 - **DrumKit undo/redo** — a snapshot history (deep-copied pattern before each
   mutation) backs app-bar Undo/Redo across grid edits, whole record takes, and
   clear; a fresh edit drops the redo branch. Fills the gap left by the new
