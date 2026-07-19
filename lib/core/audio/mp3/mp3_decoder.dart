@@ -32,6 +32,10 @@ class Mp3Pcm {
 /// Decode a full MPEG-1 Layer III [mp3] stream (mono/stereo/joint, long blocks).
 Mp3Pcm mp3Decode(Uint8List mp3) => _Mp3Decoder().decode(mp3);
 
+/// Test hook: if non-null, each decoded granule appends
+/// `[blockType, bigValues, globalGain, part23Length, nonzeroIx]`.
+List<List<int>>? mp3DecoderDebugLog;
+
 const List<int> _kSlen1 = [0, 0, 0, 0, 3, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4];
 const List<int> _kSlen2 = [0, 1, 2, 3, 0, 1, 2, 3, 1, 2, 3, 1, 2, 3, 2, 3];
 const List<int> _kScfBands = [0, 6, 11, 16, 21];
@@ -217,6 +221,15 @@ class _Mp3Decoder {
         final part2Start = br.pos;
         _readScalefactors(br, g, ch, gr, scfsi[ch]);
         _readHuffman(br, g, ch, sfb, part2Start);
+        if (mp3DecoderDebugLog != null) {
+          var nz = 0;
+          for (var i = 0; i < 576; i++) {
+            if (_ix[ch][i] != 0) nz++;
+          }
+          mp3DecoderDebugLog!.add(
+            [g.blockType, g.bigValues, g.globalGain, g.part23Length, nz],
+          );
+        }
       }
       for (var ch = 0; ch < nch; ch++) {
         _requantize(gi[gr][ch], ch, sfb, srIdx);

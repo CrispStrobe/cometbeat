@@ -33,6 +33,14 @@ class Mp3BlockScheduler {
   /// Test hook: force every granule to this block type (0/1/2/3). Null = normal.
   static int? debugForceType;
 
+  /// Test hook: if non-null, each schedule() appends its `[t0,t1]` here.
+  static List<List<int>>? debugLog;
+
+  /// Test hook: if non-null, block types are taken from this flat granule
+  /// sequence (by a global granule counter) instead of the energy scheduler.
+  static List<int>? debugForceSeq;
+  static int _seqPos = 0;
+
   static const double _attackRatio = 6.0; // ~7.8 dB energy jump
   static const int _shortExtend = 2; // keep short this many granules after
 
@@ -43,7 +51,18 @@ class Mp3BlockScheduler {
 
   /// [grEnergy] are the two granules' subband energies. Returns `[t0, t1]`.
   List<int> schedule(List<double> grEnergy) {
-    if (debugForceType != null) return [debugForceType!, debugForceType!];
+    if (debugForceSeq != null) {
+      final s = debugForceSeq!;
+      final r = [s[_seqPos % s.length], s[(_seqPos + 1) % s.length]];
+      _seqPos += 2;
+      debugLog?.add(r);
+      return r;
+    }
+    if (debugForceType != null) {
+      final r = [debugForceType!, debugForceType!];
+      debugLog?.add(r);
+      return r;
+    }
     final want = [false, false];
     for (var g = 0; g < 2; g++) {
       if (_energyValid &&
@@ -91,6 +110,7 @@ class Mp3BlockScheduler {
 
     final last = types[1];
     _carry = last == 1 ? 2 : (last == 2 ? 3 : 0);
+    debugLog?.add(types);
     return types;
   }
 }

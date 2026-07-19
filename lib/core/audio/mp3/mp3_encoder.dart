@@ -66,6 +66,10 @@ Uint8List mp3EncodeJointStereo(
 /// 1/√2, the mid/side scale factor (glint `kInvSqrt2`).
 const double _kInvSqrt2 = 0.7071067811865476;
 
+/// Test hook: if non-null, each encoded granule appends
+/// `[blockType, bigValues, globalGain, part23Length, nonzeroIx]`.
+List<List<int>>? mp3EncoderDebugLog;
+
 /// VBR target global_gain per quality (glint `vbr_target_gain`): 0 = best
 /// (finest), 9 = smallest. Each step is ~1.1 dB of quantization noise.
 const List<int> _kVbrTargetGain = [
@@ -300,6 +304,19 @@ Uint8List _mp3Encode(
     for (var g = 0; g < 2; g++) {
       for (var ch = 0; ch < nch; ch++) {
         final gi = gr[g][ch];
+        if (mp3EncoderDebugLog != null) {
+          var nz = 0;
+          for (var i = 0; i < 576; i++) {
+            if (gi.ix[i] != 0) nz++;
+          }
+          mp3EncoderDebugLog!.add([
+            gi.blockType,
+            gi.regions.bigValues,
+            gi.globalGain,
+            gi.part23Length,
+            nz,
+          ]);
+        }
         if (gi.blockType != 0) {
           mp3EncodeGranuleWs(md, gi.ix, gi.regions);
         } else {
