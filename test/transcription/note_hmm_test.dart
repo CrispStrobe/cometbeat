@@ -97,4 +97,49 @@ void main() {
     expect(segmentNotes(pyinF0(Float64List(_sr))), isEmpty);
     expect(segmentNotes(const []), isEmpty);
   });
+
+  group('removeOctaveArtifacts (real-audio subharmonic cleanup)', () {
+    NoteEvent n(int midi, double on, double off) =>
+        (midi: midi, onMs: on, offMs: off, confidence: 1.0);
+
+    test('drops a short sub-octave blip between two notes', () {
+      final cleaned = removeOctaveArtifacts([
+        n(67, 0, 400), // G4
+        n(43, 400, 470), // G2 — a 70 ms sub-octave blip (two octaves down)
+        n(69, 470, 870), // A4
+      ]);
+      expect([for (final e in cleaned) e.midi], [67, 69]);
+    });
+
+    test('drops a short sub-octave blip trailing off the end', () {
+      final cleaned = removeOctaveArtifacts([
+        n(79, 0, 400), // G5
+        n(33, 400, 480), // A1 — the classic decay-tail artifact
+      ]);
+      expect([for (final e in cleaned) e.midi], [79]);
+    });
+
+    test('keeps a LONG low note — a real octave leap is not a blip', () {
+      final kept = removeOctaveArtifacts([
+        n(67, 0, 400),
+        n(43, 400, 900), // 500 ms — a genuine low note, not an artifact
+        n(69, 900, 1300),
+      ]);
+      expect([for (final e in kept) e.midi], [67, 43, 69]);
+    });
+
+    test('keeps a short note that is only a step below its neighbours', () {
+      final kept = removeOctaveArtifacts([
+        n(67, 0, 400),
+        n(65, 400, 470), // F4 — a fast passing note, well within an octave
+        n(69, 470, 870),
+      ]);
+      expect([for (final e in kept) e.midi], [67, 65, 69]);
+    });
+
+    test('is a no-op on a clean transcription', () {
+      final notes = segmentNotes(pyinF0(_melody(song)));
+      expect(removeOctaveArtifacts(notes), notes);
+    });
+  });
 }

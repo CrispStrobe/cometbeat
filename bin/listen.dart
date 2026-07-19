@@ -68,6 +68,8 @@ Options:
                   before note segmentation — removes single-frame octave jumps.
   --switch <c>    Note-HMM pitch-switch cost (default 1.8; higher = fewer notes).
   --minframes <n> Drop notes shorter than n pYIN frames (default 5).
+  --keep-octaves  Keep subharmonic octave-error blips (default: drop short notes
+                  sitting an octave+ below both neighbours — real-audio cleanup).
   -h, --help      Show this help.
 ''';
 
@@ -243,12 +245,22 @@ void _transcribe(_Args args, double a4) {
     stderr.writeln('estimated tuning: ${cents >= 0 ? '+' : ''}'
         '${cents.toStringAsFixed(1)}c  → A4 ≈ ${ref.toStringAsFixed(1)} Hz');
   }
-  final notes = segmentNotes(
+  var notes = segmentNotes(
     track,
     a4: ref,
     switchCost: double.tryParse(args.value('switch') ?? '') ?? 1.8,
     minFrames: int.tryParse(args.value('minframes') ?? '') ?? 5,
   );
+  // Drop subharmonic octave-error blips (real recordings — decay tails, plucked
+  // notes, sung slides) unless the user opts out.
+  if (!args.flag('keep-octaves')) {
+    final before = notes.length;
+    notes = removeOctaveArtifacts(notes);
+    if (notes.length != before) {
+      stderr.writeln('octave cleanup: dropped ${before - notes.length} '
+          'subharmonic blip(s)');
+    }
+  }
 
   // S2 rhythm grid → S5 engraving → MusicXML.
   final grid = detectRhythm(mono, sampleRate: sr);

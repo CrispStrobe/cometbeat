@@ -174,3 +174,36 @@ List<NoteEvent> segmentNotes(
   }
   return notes;
 }
+
+/// Drop subharmonic octave-error notes from a transcription.
+///
+/// On real recordings pYIN occasionally locks a sub-octave for a moment — during
+/// a plucked note's decay, a bowed/breath transition, or a sung slide — and the
+/// note-HMM emits a SHORT note an octave (or two) below the line. It's not a real
+/// melodic leap: a genuine octave dip and instant return, briefer than the notes
+/// around it, essentially never happens in a melody. So a short note sitting
+/// ≥[octaveDrop] semitones below BOTH its neighbours (or its one neighbour at an
+/// edge) is removed. This measurably cleans up real-audio output (pizzicato,
+/// low-register, sung takes) while being a no-op on clean input — the octave
+/// condition is what discriminates, the [maxMs] gate is a safety belt against
+/// nuking a real low note in a wide-range melody.
+List<NoteEvent> removeOctaveArtifacts(
+  List<NoteEvent> notes, {
+  int octaveDrop = 11,
+  double maxMs = 150,
+}) {
+  if (notes.length < 2) return notes;
+  final out = <NoteEvent>[];
+  for (var i = 0; i < notes.length; i++) {
+    final n = notes[i];
+    if (n.offMs - n.onMs <= maxMs) {
+      final prev = i > 0 ? notes[i - 1] : null;
+      final next = i < notes.length - 1 ? notes[i + 1] : null;
+      final belowPrev = prev == null || prev.midi - n.midi >= octaveDrop;
+      final belowNext = next == null || next.midi - n.midi >= octaveDrop;
+      if (belowPrev && belowNext) continue; // a subharmonic blip — drop it
+    }
+    out.add(n);
+  }
+  return out;
+}
