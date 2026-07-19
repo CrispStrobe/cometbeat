@@ -643,6 +643,7 @@
     "placeholders": { "title": { "type": "String" } }
   },
   "tabPlay": "Abspielen",
+  "tabCountIn": "Einzähler",
   "tabClear": "Leeren",
   "tabDuration": "Notenlänge",
   "tabClearCell": "Löschen",

@@ -3464,6 +3464,12 @@ abstract class AppLocalizations {
   /// **'Play'**
   String get tabPlay;
 
+  /// No description provided for @tabCountIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Count-in'**
+  String get tabCountIn;
+
   /// No description provided for @tabClear.
   ///
   /// In en, this message translates to:

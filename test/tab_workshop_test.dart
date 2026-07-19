@@ -456,4 +456,30 @@ void main() {
     expect(tab.isPlaying, isFalse);
     expect(tab.highlightedIds, isEmpty);
   });
+
+  testWidgets('count-in: enabling it counts in before playback, stop cancels',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester);
+
+    expect(tab.countInOn, isFalse);
+    tab.setCountIn(true);
+    await tester.pump();
+    expect(tab.countInOn, isTrue);
+
+    // Play → the metronome count-in runs first (counting-in, not yet playing).
+    tab.play();
+    await tester.pump();
+    expect(tab.isCountingIn, isTrue);
+    expect(tab.isPlaying, isFalse);
+
+    // Stopping during the count-in cancels it cleanly.
+    tab.play(); // toggles stop
+    await tester.pump();
+    expect(tab.isCountingIn, isFalse);
+    expect(tab.isPlaying, isFalse);
+    // Let any pending count-in timer fire; it must not resume playback.
+    await tester.pump(const Duration(seconds: 3));
+    expect(tab.isPlaying, isFalse);
+  });
 }

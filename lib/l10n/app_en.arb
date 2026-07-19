@@ -694,6 +694,7 @@
     "placeholders": { "title": { "type": "String" } }
   },
   "tabPlay": "Play",
+  "tabCountIn": "Count-in",
   "tabClear": "Clear",
   "tabDuration": "Note length",
   "tabClearCell": "Clear",

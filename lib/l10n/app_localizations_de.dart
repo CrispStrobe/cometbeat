@@ -1823,6 +1823,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabPlay => 'Abspielen';
 
   @override
+  String get tabCountIn => 'Einzähler';
+
+  @override
   String get tabClear => 'Leeren';
 
   @override

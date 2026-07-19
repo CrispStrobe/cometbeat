@@ -98,6 +98,11 @@ abstract class TabWorkshopTester {
   void removeColumnAtCursor();
   void play();
   bool get isPlaying;
+
+  /// A one-bar metronome count-in before playback (opt-in).
+  bool get countInOn;
+  void setCountIn(bool on);
+  bool get isCountingIn;
   Set<String> get highlightedIds;
   void toggleTechnique(TabTechnique t);
   Set<TabTechnique> techniquesAt(int col);
@@ -190,6 +195,9 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   // Playback highlight: a Ticker lights the sounding column's note id in time.
   late final Ticker _ticker;
   bool _playing = false;
+  bool _countIn = false; // opt-in one-bar metronome before playback
+  bool _countingIn = false;
+  int _playToken = 0; // bumped to cancel an in-flight count-in
   Set<String> _highlightedIds = const {};
   List<({int col, int start, int end, bool note})> _schedule = const [];
   int _totalMs = 0;
@@ -297,6 +305,13 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   void play() => _play();
   @override
   bool get isPlaying => _playing;
+
+  @override
+  bool get countInOn => _countIn;
+  @override
+  void setCountIn(bool on) => setState(() => _countIn = on);
+  @override
+  bool get isCountingIn => _countingIn;
   @override
   Set<String> get highlightedIds => _highlightedIds;
   @override
@@ -615,10 +630,36 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       });
 
   void _play() {
-    if (_playing) {
+    if (_playing || _countingIn) {
       _stopPlayback();
       return;
     }
+    if (_countIn) {
+      unawaited(_runCountIn());
+    } else {
+      _startPlayback();
+    }
+  }
+
+  /// A one-bar (4-beat) metronome count-in, then playback — so a learner can
+  /// catch the pulse before playing along. Sequential with the audio (they
+  /// share one player), and cancellable via [_stopPlayback].
+  Future<void> _runCountIn() async {
+    final token = ++_playToken;
+    setState(() => _countingIn = true);
+    final beatMs = (60000 / _bpm).round();
+    final audio = context.read<AudioService>();
+    for (var i = 0; i < 4; i++) {
+      if (!mounted || token != _playToken) return;
+      unawaited(audio.playTick(accent: i == 0));
+      await Future<void>.delayed(Duration(milliseconds: beatMs));
+    }
+    if (!mounted || token != _playToken) return;
+    setState(() => _countingIn = false);
+    _startPlayback();
+  }
+
+  void _startPlayback() {
     // Audio: every track sounding together. Highlight: the ACTIVE track's own
     // column timeline (that's what the preview shows).
     final events = _doc.toPlaybackEvents(bpm: _bpm);
@@ -647,9 +688,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   }
 
   void _stopPlayback() {
+    _playToken++; // cancels any in-flight count-in
     if (_ticker.isActive) _ticker.stop();
     setState(() {
       _playing = false;
+      _countingIn = false;
       _highlightedIds = const {};
     });
   }
@@ -801,6 +844,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
             tooltip: l10n.tabPlay,
             onPressed: _play,
+          ),
+          IconButton(
+            icon: const Icon(Icons.av_timer),
+            color: _countIn ? Theme.of(context).colorScheme.primary : null,
+            tooltip: l10n.tabCountIn,
+            onPressed: () => setState(() => _countIn = !_countIn),
           ),
           IconButton(
             icon: Icon(_listening ? Icons.mic : Icons.mic_none),

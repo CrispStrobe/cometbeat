@@ -1816,6 +1816,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabPlay => 'Play';
 
   @override
+  String get tabCountIn => 'Count-in';
+
+  @override
   String get tabClear => 'Clear';
 
   @override
