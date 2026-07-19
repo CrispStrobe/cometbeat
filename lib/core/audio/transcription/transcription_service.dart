@@ -14,6 +14,7 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
+import 'package:comet_beat/core/audio/transcription/metre.dart';
 import 'package:comet_beat/core/audio/transcription/rhythm.dart';
 import 'package:comet_beat/core/audio/transcription/route.dart';
 import 'package:comet_beat/core/audio/transcription/transcribe.dart';
@@ -22,13 +23,15 @@ import 'package:crisp_notation_core/crisp_notation_core.dart' show Score;
 
 /// The outcome of transcribing a recording: the engraved [score], the [notes] it
 /// was built from (each carries a `confidence` a UI can surface), which [engine]
-/// the router chose, the [probe] that decided, and the detected [bpm].
+/// the router chose, the [probe] that decided, the detected [bpm], and the
+/// estimated [meter] (beats-per-bar → the score's time signature).
 typedef TranscriptionResult = ({
   Score score,
   List<NoteEvent> notes,
   TranscriptionEngine engine,
   InputProbe probe,
   double bpm,
+  Meter meter,
 });
 
 /// Transcribe [wavBytes] (a PCM16 WAV, any channel count / sample rate) into a
@@ -53,12 +56,18 @@ Future<TranscriptionResult> transcribeRecording(
     forceEngine: forceEngine,
   );
   final grid = detectRhythm(mono, sampleRate: wav.sampleRate);
-  final score = transcribeToScore(routed.notes, grid);
+  final meter = estimateMeter(grid);
+  final score = transcribeToScore(
+    routed.notes,
+    grid,
+    beatsPerBar: meter.beatsPerBar,
+  );
   return (
     score: score,
     notes: routed.notes,
     engine: routed.engine,
     probe: routed.probe,
     bpm: grid.bpm,
+    meter: meter,
   );
 }
