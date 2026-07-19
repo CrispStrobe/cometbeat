@@ -115,6 +115,7 @@ abstract class TabWorkshopTester {
   /// the last inserted column. All three return the number of columns added.
   int insertStrum(String chordName);
   int insertArpeggio(String chordName, ArpStyle style);
+  int insertPattern(String chordName, PickPattern pattern);
   int insertScale(
     int rootMidi,
     String scaleName, {
@@ -364,6 +365,13 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     final c = kGuitarChords[chordName];
     if (c == null) return 0;
     return _insertRun(arpeggioColumns(c, style, _dur));
+  }
+
+  @override
+  int insertPattern(String chordName, PickPattern pattern) {
+    final c = kGuitarChords[chordName];
+    if (c == null) return 0;
+    return _insertRun(patternColumns(c, pattern));
   }
 
   @override
@@ -1452,8 +1460,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     final l10n = AppLocalizations.of(context)!;
     var chordMode = true; // false = scale mode
     var chord = kGuitarChords.keys.first;
-    var arp = ArpStyle.up;
-    var strum = true; // strum vs. arpeggiate
+    var styleIdx = 0; // index into the chord-mode style list below
     var rootPc = 0; // 0 = C
     var scaleName = kScales.keys.first;
     var octaves = 1;
@@ -1469,6 +1476,38 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 selected: on,
                 onSelected: (_) => setSheet(onTap),
               );
+          // Chord-mode styles: a strum, the four arpeggio directions, then the
+          // fingerstyle/strum patterns. Each thunk inserts using the currently
+          // selected [chord] and returns the number of columns added.
+          final chordStyles = <(String, int Function())>[
+            (l10n.tabPatternStrum, () => insertStrum(chord)),
+            (l10n.tabPatternUp, () => insertArpeggio(chord, ArpStyle.up)),
+            (l10n.tabPatternDown, () => insertArpeggio(chord, ArpStyle.down)),
+            (
+              l10n.tabPatternUpDown,
+              () => insertArpeggio(chord, ArpStyle.upDown)
+            ),
+            (
+              l10n.tabPatternDownUp,
+              () => insertArpeggio(chord, ArpStyle.downUp)
+            ),
+            (
+              l10n.tabPatternTravis,
+              () => insertPattern(chord, PickPattern.travis)
+            ),
+            (
+              l10n.tabPatternBoomChuck,
+              () => insertPattern(chord, PickPattern.boomChuck)
+            ),
+            (
+              l10n.tabPatternStrumEighths,
+              () => insertPattern(chord, PickPattern.strumEighths)
+            ),
+            (
+              l10n.tabPatternIsland,
+              () => insertPattern(chord, PickPattern.islandStrum)
+            ),
+          ];
           final children = <Widget>[
             Row(
               children: [
@@ -1520,12 +1559,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  seg(l10n.tabPatternStrum, strum, () => strum = true),
-                  for (final s in ArpStyle.values)
-                    seg(_arpLabel(l10n, s), !strum && arp == s, () {
-                      strum = false;
-                      arp = s;
-                    }),
+                  for (var i = 0; i < chordStyles.length; i++)
+                    seg(chordStyles[i].$1, styleIdx == i, () => styleIdx = i),
                 ],
               ),
             ]);
@@ -1593,9 +1628,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 label: Text(l10n.tabPatternInsert),
                 onPressed: () {
                   final n = chordMode
-                      ? (strum
-                          ? insertStrum(chord)
-                          : insertArpeggio(chord, arp))
+                      ? chordStyles[styleIdx].$2()
                       : insertScale(
                           48 + rootPc,
                           scaleName,
@@ -1626,13 +1659,6 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       );
     }
   }
-
-  String _arpLabel(AppLocalizations l10n, ArpStyle s) => switch (s) {
-        ArpStyle.up => l10n.tabPatternUp,
-        ArpStyle.down => l10n.tabPatternDown,
-        ArpStyle.upDown => l10n.tabPatternUpDown,
-        ArpStyle.downUp => l10n.tabPatternDownUp,
-      };
 
   String _techLabel(AppLocalizations l10n, TabTechnique t) => switch (t) {
         TabTechnique.hammer => l10n.tabTechHammer,

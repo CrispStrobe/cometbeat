@@ -60,6 +60,53 @@ void main() {
     expect(ud.first.frets.keys.first, ud.last.frets.keys.first);
   });
 
+  test('travis roll alternates bass and treble over eight eighths', () {
+    final cols = patternColumns(cMajor, PickPattern.travis);
+    expect(cols, hasLength(8));
+    expect(cols.every((c) => c.duration == NoteDuration.eighth), isTrue);
+    // Even steps are the bass (lowest string = highest index in an open C);
+    // odd steps are treble (a higher string / lower index).
+    final voices = chordVoices(cMajor);
+    final low = voices.last;
+    for (var i = 0; i < cols.length; i += 2) {
+      expect(
+        cols[i].frets.keys.single,
+        greaterThanOrEqualTo(voices[voices.length - 2]),
+        reason: 'step $i should be a bass string',
+      );
+    }
+    expect(cols[0].frets.keys.single, low); // first pluck is the root bass
+    expect(cols[1].frets.keys.single, voices.first); // then the top string
+  });
+
+  test('boom-chuck is bass, strum, alt-bass, strum in quarters', () {
+    final cols = patternColumns(cMajor, PickPattern.boomChuck);
+    expect(cols, hasLength(4));
+    expect(cols.every((c) => c.duration == NoteDuration.quarter), isTrue);
+    expect(cols[0].frets.length, 1); // boom = single bass
+    expect(cols[1].frets.length, greaterThan(1)); // chuck = full strum
+    expect(cols[3].frets.length, greaterThan(1));
+  });
+
+  test('eighths strum is eight full chords', () {
+    final cols = patternColumns(cMajor, PickPattern.strumEighths);
+    final voices = chordVoices(cMajor);
+    expect(cols, hasLength(8));
+    expect(cols.every((c) => c.frets.length == voices.length), isTrue);
+    expect(cols.every((c) => c.duration == NoteDuration.eighth), isTrue);
+  });
+
+  test('island strum leaves rests in the syncopation', () {
+    final cols = patternColumns(cMajor, PickPattern.islandStrum);
+    expect(cols, hasLength(8));
+    // Pattern D · D U · U D U → two rests (empty columns) at steps 1 and 4.
+    final rests = [
+      for (var i = 0; i < cols.length; i++)
+        if (cols[i].frets.isEmpty) i,
+    ];
+    expect(rests, [1, 4]);
+  });
+
   test('scale run ascends by the interval set and lands on the octave', () {
     // C major from C3 (MIDI 48), one octave.
     final cols = scaleColumns(guitar, 48, kScales['Major']!, q);

@@ -3620,6 +3620,30 @@ abstract class AppLocalizations {
   /// **'Down-up'**
   String get tabPatternDownUp;
 
+  /// No description provided for @tabPatternTravis.
+  ///
+  /// In en, this message translates to:
+  /// **'Travis'**
+  String get tabPatternTravis;
+
+  /// No description provided for @tabPatternBoomChuck.
+  ///
+  /// In en, this message translates to:
+  /// **'Boom-chuck'**
+  String get tabPatternBoomChuck;
+
+  /// No description provided for @tabPatternStrumEighths.
+  ///
+  /// In en, this message translates to:
+  /// **'8ths strum'**
+  String get tabPatternStrumEighths;
+
+  /// No description provided for @tabPatternIsland.
+  ///
+  /// In en, this message translates to:
+  /// **'Island'**
+  String get tabPatternIsland;
+
   /// No description provided for @tabPatternRoot.
   ///
   /// In en, this message translates to:

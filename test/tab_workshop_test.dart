@@ -11,6 +11,7 @@ import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
+import 'package:comet_beat/features/games/composition/tab_patterns.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -228,6 +229,12 @@ void main() {
     await tester.pump();
     expect(scaled, 8);
     expect(tab.columnCount, before + 1 + 8);
+
+    // A Travis roll = 8 eighth-note columns.
+    final travis = tab.insertPattern('C', PickPattern.travis);
+    await tester.pump();
+    expect(travis, 8);
+    expect(tab.columnCount, before + 1 + 8 + 8);
   });
 
   testWidgets('tapping a fret keypad button writes to the selected cell',

@@ -1901,6 +1901,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabPatternDownUp => 'Ab-auf';
 
   @override
+  String get tabPatternTravis => 'Travis';
+
+  @override
+  String get tabPatternBoomChuck => 'Wumm-tschak';
+
+  @override
+  String get tabPatternStrumEighths => 'Achtel-Schlag';
+
+  @override
+  String get tabPatternIsland => 'Island';
+
+  @override
   String get tabPatternRoot => 'Grundton';
 
   @override
