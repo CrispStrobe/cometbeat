@@ -9,6 +9,7 @@ import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_mic_capture.dart';
+import 'package:comet_beat/features/games/composition/tab_patterns.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -108,6 +109,18 @@ abstract class TabWorkshopTester {
   Set<TabTechnique> techniquesAt(int col);
   void setChordByName(String? name);
   String? chordNameAt(int col);
+
+  /// Generative insert (after the cursor): strum a chord, arpeggiate it in a
+  /// picking pattern, or lay a scale across the fretboard. The cursor lands on
+  /// the last inserted column. All three return the number of columns added.
+  int insertStrum(String chordName);
+  int insertArpeggio(String chordName, ArpStyle style);
+  int insertScale(
+    int rootMidi,
+    String scaleName, {
+    int octaves,
+    bool descending,
+  });
   void saveToSongBook(String title);
   int get bpm;
   int get trackCount;
@@ -327,6 +340,53 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   String? chordNameAt(int col) =>
       col < _doc.columns.length ? _doc.columns[col].chord?.name : null;
+
+  /// Drops [cols] in after the cursor and parks the cursor on the last of them.
+  int _insertRun(List<TabColumn> cols) {
+    if (cols.isEmpty) return 0;
+    setState(() {
+      final at = _selCol + 1;
+      _doc.insertColumnsAt(at, cols);
+      _selCol = (at + cols.length - 1).clamp(0, _doc.columns.length - 1);
+    });
+    return cols.length;
+  }
+
+  @override
+  int insertStrum(String chordName) {
+    final c = kGuitarChords[chordName];
+    if (c == null) return 0;
+    return _insertRun(strumColumns(c, _dur));
+  }
+
+  @override
+  int insertArpeggio(String chordName, ArpStyle style) {
+    final c = kGuitarChords[chordName];
+    if (c == null) return 0;
+    return _insertRun(arpeggioColumns(c, style, _dur));
+  }
+
+  @override
+  int insertScale(
+    int rootMidi,
+    String scaleName, {
+    int octaves = 1,
+    bool descending = false,
+  }) {
+    final intervals = kScales[scaleName];
+    if (intervals == null) return 0;
+    return _insertRun(
+      scaleColumns(
+        _doc.tuning,
+        rootMidi,
+        intervals,
+        _dur,
+        octaves: octaves,
+        descending: descending,
+      ),
+    );
+  }
+
   @override
   int get bpm => _bpm;
   @override
@@ -1299,6 +1359,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 label: Text(l10n.tabChord),
                 onPressed: _pickChord,
               ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.auto_awesome, size: 18),
+                label: Text(l10n.tabPattern),
+                onPressed: _pickPattern,
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -1364,6 +1429,210 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     if (picked == null) return;
     setChordByName(picked.isEmpty ? null : picked);
   }
+
+  static const List<String> _rootNames = [
+    'C',
+    'C♯',
+    'D',
+    'D♯',
+    'E',
+    'F',
+    'F♯',
+    'G',
+    'G♯',
+    'A',
+    'A♯',
+    'B',
+  ];
+
+  /// A bottom sheet that generates a run of columns from a chord (strum or
+  /// picking-pattern arpeggio) or a scale (root + type + octaves + direction),
+  /// inserting it after the cursor at the current note length.
+  Future<void> _pickPattern() async {
+    final l10n = AppLocalizations.of(context)!;
+    var chordMode = true; // false = scale mode
+    var chord = kGuitarChords.keys.first;
+    var arp = ArpStyle.up;
+    var strum = true; // strum vs. arpeggiate
+    var rootPc = 0; // 0 = C
+    var scaleName = kScales.keys.first;
+    var octaves = 1;
+    var descending = false;
+
+    final inserted = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          Widget seg(String label, bool on, VoidCallback onTap) => ChoiceChip(
+                label: Text(label),
+                selected: on,
+                onSelected: (_) => setSheet(onTap),
+              );
+          final children = <Widget>[
+            Row(
+              children: [
+                Expanded(
+                  child: seg(
+                    l10n.tabPatternChord,
+                    chordMode,
+                    () => chordMode = true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: seg(
+                    l10n.tabPatternScale,
+                    !chordMode,
+                    () => chordMode = false,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ];
+          if (chordMode) {
+            children.addAll([
+              Text(
+                l10n.tabChordPick,
+                style: Theme.of(ctx).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final name in kGuitarChords.keys)
+                    ChoiceChip(
+                      label: Text(name),
+                      selected: chord == name,
+                      onSelected: (_) => setSheet(() => chord = name),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.tabPatternStyle,
+                style: Theme.of(ctx).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  seg(l10n.tabPatternStrum, strum, () => strum = true),
+                  for (final s in ArpStyle.values)
+                    seg(_arpLabel(l10n, s), !strum && arp == s, () {
+                      strum = false;
+                      arp = s;
+                    }),
+                ],
+              ),
+            ]);
+          } else {
+            children.addAll([
+              Text(
+                l10n.tabPatternRoot,
+                style: Theme.of(ctx).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (var pc = 0; pc < 12; pc++)
+                    ChoiceChip(
+                      label: Text(_rootNames[pc]),
+                      selected: rootPc == pc,
+                      onSelected: (_) => setSheet(() => rootPc = pc),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.tabPatternScaleType,
+                style: Theme.of(ctx).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final name in kScales.keys)
+                    ChoiceChip(
+                      label: Text(name),
+                      selected: scaleName == name,
+                      onSelected: (_) => setSheet(() => scaleName = name),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Text(l10n.tabPatternOctaves),
+                  const SizedBox(width: 8),
+                  for (final o in [1, 2])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: seg('$o', octaves == o, () => octaves = o),
+                    ),
+                  const SizedBox(width: 16),
+                  seg(l10n.tabPatternUp, !descending, () => descending = false),
+                  const SizedBox(width: 6),
+                  seg(l10n.tabPatternDown, descending, () => descending = true),
+                ],
+              ),
+            ]);
+          }
+          children.addAll([
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.add),
+                label: Text(l10n.tabPatternInsert),
+                onPressed: () {
+                  final n = chordMode
+                      ? (strum
+                          ? insertStrum(chord)
+                          : insertArpeggio(chord, arp))
+                      : insertScale(
+                          48 + rootPc,
+                          scaleName,
+                          octaves: octaves,
+                          descending: descending,
+                        );
+                  Navigator.of(ctx).pop(n);
+                },
+              ),
+            ),
+          ]);
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: children,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (inserted != null && inserted > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.tabPatternAdded(inserted))),
+      );
+    }
+  }
+
+  String _arpLabel(AppLocalizations l10n, ArpStyle s) => switch (s) {
+        ArpStyle.up => l10n.tabPatternUp,
+        ArpStyle.down => l10n.tabPatternDown,
+        ArpStyle.upDown => l10n.tabPatternUpDown,
+        ArpStyle.downUp => l10n.tabPatternDownUp,
+      };
 
   String _techLabel(AppLocalizations l10n, TabTechnique t) => switch (t) {
         TabTechnique.hammer => l10n.tabTechHammer,

@@ -3566,6 +3566,90 @@ abstract class AppLocalizations {
   /// **'No chord'**
   String get tabChordNone;
 
+  /// No description provided for @tabPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert…'**
+  String get tabPattern;
+
+  /// No description provided for @tabPatternChord.
+  ///
+  /// In en, this message translates to:
+  /// **'Chord'**
+  String get tabPatternChord;
+
+  /// No description provided for @tabPatternScale.
+  ///
+  /// In en, this message translates to:
+  /// **'Scale'**
+  String get tabPatternScale;
+
+  /// No description provided for @tabPatternStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Style'**
+  String get tabPatternStyle;
+
+  /// No description provided for @tabPatternStrum.
+  ///
+  /// In en, this message translates to:
+  /// **'Strum'**
+  String get tabPatternStrum;
+
+  /// No description provided for @tabPatternUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Up'**
+  String get tabPatternUp;
+
+  /// No description provided for @tabPatternDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Down'**
+  String get tabPatternDown;
+
+  /// No description provided for @tabPatternUpDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Up-down'**
+  String get tabPatternUpDown;
+
+  /// No description provided for @tabPatternDownUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Down-up'**
+  String get tabPatternDownUp;
+
+  /// No description provided for @tabPatternRoot.
+  ///
+  /// In en, this message translates to:
+  /// **'Root'**
+  String get tabPatternRoot;
+
+  /// No description provided for @tabPatternScaleType.
+  ///
+  /// In en, this message translates to:
+  /// **'Scale'**
+  String get tabPatternScaleType;
+
+  /// No description provided for @tabPatternOctaves.
+  ///
+  /// In en, this message translates to:
+  /// **'Octaves'**
+  String get tabPatternOctaves;
+
+  /// No description provided for @tabPatternInsert.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert'**
+  String get tabPatternInsert;
+
+  /// No description provided for @tabPatternAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added {count} steps'**
+  String tabPatternAdded(int count);
+
   /// No description provided for @tabExport.
   ///
   /// In en, this message translates to:

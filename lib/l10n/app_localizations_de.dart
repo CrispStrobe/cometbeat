@@ -1874,6 +1874,50 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabChordNone => 'Kein Akkord';
 
   @override
+  String get tabPattern => 'Einfügen…';
+
+  @override
+  String get tabPatternChord => 'Akkord';
+
+  @override
+  String get tabPatternScale => 'Tonleiter';
+
+  @override
+  String get tabPatternStyle => 'Stil';
+
+  @override
+  String get tabPatternStrum => 'Anschlag';
+
+  @override
+  String get tabPatternUp => 'Auf';
+
+  @override
+  String get tabPatternDown => 'Ab';
+
+  @override
+  String get tabPatternUpDown => 'Auf-ab';
+
+  @override
+  String get tabPatternDownUp => 'Ab-auf';
+
+  @override
+  String get tabPatternRoot => 'Grundton';
+
+  @override
+  String get tabPatternScaleType => 'Tonleiter';
+
+  @override
+  String get tabPatternOctaves => 'Oktaven';
+
+  @override
+  String get tabPatternInsert => 'Einfügen';
+
+  @override
+  String tabPatternAdded(int count) {
+    return '$count Schritte hinzugefügt';
+  }
+
+  @override
   String get tabExport => 'Exportieren';
 
   @override

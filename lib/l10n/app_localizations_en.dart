@@ -1867,6 +1867,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabChordNone => 'No chord';
 
   @override
+  String get tabPattern => 'Insert…';
+
+  @override
+  String get tabPatternChord => 'Chord';
+
+  @override
+  String get tabPatternScale => 'Scale';
+
+  @override
+  String get tabPatternStyle => 'Style';
+
+  @override
+  String get tabPatternStrum => 'Strum';
+
+  @override
+  String get tabPatternUp => 'Up';
+
+  @override
+  String get tabPatternDown => 'Down';
+
+  @override
+  String get tabPatternUpDown => 'Up-down';
+
+  @override
+  String get tabPatternDownUp => 'Down-up';
+
+  @override
+  String get tabPatternRoot => 'Root';
+
+  @override
+  String get tabPatternScaleType => 'Scale';
+
+  @override
+  String get tabPatternOctaves => 'Octaves';
+
+  @override
+  String get tabPatternInsert => 'Insert';
+
+  @override
+  String tabPatternAdded(int count) {
+    return 'Added $count steps';
+  }
+
+  @override
   String get tabExport => 'Export';
 
   @override

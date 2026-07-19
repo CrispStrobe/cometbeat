@@ -243,6 +243,12 @@ class TabDocument {
   void insertColumn(int col) =>
       columns.insert(col.clamp(0, columns.length), const TabColumn());
 
+  /// Insert a run of ready-made columns (a strum, arpeggio or scale) at [at].
+  void insertColumnsAt(int at, List<TabColumn> cols) {
+    if (cols.isEmpty) return;
+    columns.insertAll(at.clamp(0, columns.length), cols);
+  }
+
   /// Removes the column at [col] (no-op if out of range or it's the last one).
   void removeColumn(int col) {
     if (columns.length > 1 && col >= 0 && col < columns.length) {

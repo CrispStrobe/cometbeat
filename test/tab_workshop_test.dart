@@ -209,6 +209,27 @@ void main() {
     expect(tab.columnCount, before);
   });
 
+  testWidgets('generative insert adds a run after the cursor and moves it',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final tab = _tab(tester);
+    tab.selectCell(0, 0);
+    await tester.pump();
+    final before = tab.columnCount;
+
+    // Strum = one column; the cursor lands on it (the fret keypad now shows it).
+    final strummed = tab.insertStrum('C');
+    await tester.pump();
+    expect(strummed, 1);
+    expect(tab.columnCount, before + 1);
+
+    // A one-octave major scale = 8 single-note columns.
+    final scaled = tab.insertScale(48, 'Major');
+    await tester.pump();
+    expect(scaled, 8);
+    expect(tab.columnCount, before + 1 + 8);
+  });
+
   testWidgets('tapping a fret keypad button writes to the selected cell',
       (tester) async {
     await pumpGame(tester, const TabWorkshopScreen());

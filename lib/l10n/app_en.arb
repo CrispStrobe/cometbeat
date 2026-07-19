@@ -711,6 +711,27 @@
   "tabChord": "Chord",
   "tabChordPick": "Pick a chord",
   "tabChordNone": "No chord",
+  "tabPattern": "Insert…",
+  "tabPatternChord": "Chord",
+  "tabPatternScale": "Scale",
+  "tabPatternStyle": "Style",
+  "tabPatternStrum": "Strum",
+  "tabPatternUp": "Up",
+  "tabPatternDown": "Down",
+  "tabPatternUpDown": "Up-down",
+  "tabPatternDownUp": "Down-up",
+  "tabPatternRoot": "Root",
+  "tabPatternScaleType": "Scale",
+  "tabPatternOctaves": "Octaves",
+  "tabPatternInsert": "Insert",
+  "tabPatternAdded": "Added {count} steps",
+  "@tabPatternAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tabExport": "Export",
   "tabExportGp": "Guitar Pro (.gp)",
   "tabExportMusicXml": "MusicXML",

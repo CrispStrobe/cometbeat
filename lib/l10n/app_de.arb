@@ -660,6 +660,27 @@
   "tabChord": "Akkord",
   "tabChordPick": "Akkord wählen",
   "tabChordNone": "Kein Akkord",
+  "tabPattern": "Einfügen…",
+  "tabPatternChord": "Akkord",
+  "tabPatternScale": "Tonleiter",
+  "tabPatternStyle": "Stil",
+  "tabPatternStrum": "Anschlag",
+  "tabPatternUp": "Auf",
+  "tabPatternDown": "Ab",
+  "tabPatternUpDown": "Auf-ab",
+  "tabPatternDownUp": "Ab-auf",
+  "tabPatternRoot": "Grundton",
+  "tabPatternScaleType": "Tonleiter",
+  "tabPatternOctaves": "Oktaven",
+  "tabPatternInsert": "Einfügen",
+  "tabPatternAdded": "{count} Schritte hinzugefügt",
+  "@tabPatternAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tabExport": "Exportieren",
   "tabExportGp": "Guitar Pro (.gp)",
   "tabExportMusicXml": "MusicXML",
