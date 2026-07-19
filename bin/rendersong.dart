@@ -35,6 +35,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
 import 'package:comet_beat/core/audio/gm_song_render.dart';
+import 'package:comet_beat/core/audio/midi_render.dart' show renderMidiFile;
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart';
 import 'package:comet_beat/core/audio/score_instrument_render.dart';
 import 'package:comet_beat/core/audio/sf2/sf2.dart' show VorbisDecode;
@@ -55,6 +56,7 @@ void main(List<String> args) {
   var preset = 0;
   var presetSet = false;
   var single = false;
+  var notation = false; // force the quantized notation path for MIDI
   var bpm = 120;
   var bitrate = 192;
   var gain = 1.0;
@@ -67,6 +69,8 @@ void main(List<String> args) {
         sf2 = _next(args, ++i, a);
       case '--single':
         single = true;
+      case '--notation':
+        notation = true;
       case '--preset':
         preset = int.parse(_next(args, ++i, a));
         presetSet = true;
@@ -108,13 +112,24 @@ void main(List<String> args) {
     'abc', 'musicxml', 'mxl', 'mscx', 'mscz', 'mei', 'kern', //
   };
 
-  // Render to per-part mono buffers (GM → panned stereo) or one mono buffer.
+  // Render to a stereo pair (event-accurate MIDI synth), per-part mono buffers
+  // (notation GM → panned stereo), or one mono buffer.
   // Tempo: --bpm wins, else the score's / MIDI's own tempo, else 120.
+  (Float64List, Float64List)? stereoPair;
   List<Float64List>? gmParts;
   Float64List? mono;
   int effBpm;
 
-  if (gmEligible && fmt == 'midi') {
+  if (gmEligible && fmt == 'midi' && !notation) {
+    // Event-accurate synth: exact timing, tempo map, CC7/10/11, sustain pedal,
+    // per-channel program — the faithful MIDI path (--notation forces the old
+    // quantized route). The file's tempo map is used, so --bpm is ignored here.
+    final bytes = File(inPath).readAsBytesSync();
+    effBpm = midiTempoBpm(bytes) ?? 120;
+    stereoPair = renderMidiFile(bytes, _loadFont(sf2));
+    stderr.writeln('  event-accurate MIDI synth '
+        '(exact timing · tempo map · CC · sustain pedal)');
+  } else if (gmEligible && fmt == 'midi') {
     final bytes = File(inPath).readAsBytesSync();
     effBpm = bpmExplicit(args) ? bpm : (midiTempoBpm(bytes) ?? 120);
     gmParts = _renderGmParts(
@@ -152,8 +167,10 @@ void main(List<String> args) {
   final target = 0.9 * gain;
   final Uint8List bytes;
   final int frames;
-  if (gmParts != null && gmParts.length > 1) {
-    var (left, right) = panPartsToStereo(gmParts);
+  final isStereo =
+      stereoPair != null || (gmParts != null && gmParts.length > 1);
+  if (isStereo) {
+    var (left, right) = stereoPair ?? panPartsToStereo(gmParts!);
     if (left.isEmpty) _fail('the score produced no notes to render');
     if (reverb > 0) {
       left = reverbFx(left, mix: reverb);
@@ -175,7 +192,7 @@ void main(List<String> args) {
   File(outPath).writeAsBytesSync(bytes);
 
   final secs = (frames / kSampleRate).toStringAsFixed(1);
-  final chans = (gmParts != null && gmParts.length > 1) ? 'stereo' : 'mono';
+  final chans = isStereo ? 'stereo' : 'mono';
   stderr.writeln(
     'wrote $outPath  (${bytes.length} bytes, ${secs}s @ $effBpm BPM, $chans)',
   );
@@ -438,6 +455,8 @@ Options:
   --sf2 <file>     SoundFont (.sf2 / .sf3) to voice the song with
   --preset <N>     force ONE preset (index) for the whole song
   --single         force a single voice (preset 0) — disables GM per-part
+  --notation       MIDI: force the quantized notation path (default is the
+                   event-accurate synth: exact timing, CC, sustain pedal)
   --bpm <B>        tempo (default 120)
   --bitrate <K>    MP3 bitrate kbps (default 192)
   --gain <G>       output gain multiplier (default 1.0)
