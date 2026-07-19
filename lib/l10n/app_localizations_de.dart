@@ -5136,6 +5136,24 @@ class AppLocalizationsDe extends AppLocalizations {
       'Triff die laufende Partitur mit deiner Stimme';
 
   @override
+  String get gameMidiPlayAlong => 'MIDI-Datei spielen';
+
+  @override
+  String get gameMidiPlayAlongSubtitle =>
+      'Wähle eine .mid und spiel oder sing dazu';
+
+  @override
+  String get midiPlayAlongHint =>
+      'Wähle eine MIDI-Datei und spiel oder sing zu ihrer Melodie auf einer laufenden Partitur.';
+
+  @override
+  String get midiPlayAlongChoose => 'MIDI-Datei wählen';
+
+  @override
+  String get midiPlayAlongFailed =>
+      'Diese MIDI-Datei konnte nicht gelesen werden.';
+
+  @override
   String get gameOdeToJoy => 'An die Freude';
 
   @override

@@ -5114,6 +5114,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gameSingAlongSubtitle => 'Match the moving score with your voice';
 
   @override
+  String get gameMidiPlayAlong => 'Play a MIDI file';
+
+  @override
+  String get gameMidiPlayAlongSubtitle =>
+      'Pick a .mid and play or sing along to it';
+
+  @override
+  String get midiPlayAlongHint =>
+      'Choose a MIDI file and play or sing along to its melody on a moving score.';
+
+  @override
+  String get midiPlayAlongChoose => 'Choose a MIDI file';
+
+  @override
+  String get midiPlayAlongFailed => 'Couldn\'t read that MIDI file.';
+
+  @override
   String get gameOdeToJoy => 'Ode to Joy';
 
   @override

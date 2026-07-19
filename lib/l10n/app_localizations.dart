@@ -9380,6 +9380,36 @@ abstract class AppLocalizations {
   /// **'Match the moving score with your voice'**
   String get gameSingAlongSubtitle;
 
+  /// No description provided for @gameMidiPlayAlong.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a MIDI file'**
+  String get gameMidiPlayAlong;
+
+  /// No description provided for @gameMidiPlayAlongSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a .mid and play or sing along to it'**
+  String get gameMidiPlayAlongSubtitle;
+
+  /// No description provided for @midiPlayAlongHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a MIDI file and play or sing along to its melody on a moving score.'**
+  String get midiPlayAlongHint;
+
+  /// No description provided for @midiPlayAlongChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a MIDI file'**
+  String get midiPlayAlongChoose;
+
+  /// No description provided for @midiPlayAlongFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read that MIDI file.'**
+  String get midiPlayAlongFailed;
+
   /// No description provided for @gameOdeToJoy.
   ///
   /// In en, this message translates to:
