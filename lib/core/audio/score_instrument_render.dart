@@ -98,6 +98,36 @@ Float64List renderScoreWithInstrument(
   return mix;
 }
 
+/// Render each `(score, voice)` pair through its OWN instrument and sum them —
+/// the per-part voicing a General-MIDI song needs (piano on one part, bass on
+/// another, a drum kit on a third). [quarterMs] sets the shared tempo.
+Float64List renderPartsWithVoices(
+  List<(Score, TrackerInstrument)> parts, {
+  int quarterMs = 500,
+  int sampleRate = kSampleRate,
+}) {
+  final rendered = [
+    for (final (score, voice) in parts)
+      renderScoreWithInstrument(
+        score,
+        voice,
+        quarterMs: quarterMs,
+        sampleRate: sampleRate,
+      ),
+  ];
+  var len = 0;
+  for (final p in rendered) {
+    if (p.length > len) len = p.length;
+  }
+  final out = Float64List(len);
+  for (final p in rendered) {
+    for (var i = 0; i < p.length; i++) {
+      out[i] += p[i];
+    }
+  }
+  return out;
+}
+
 /// Render every part of [mp] through [inst] and sum.
 Float64List renderMultiPartWithInstrument(
   MultiPartScore mp,

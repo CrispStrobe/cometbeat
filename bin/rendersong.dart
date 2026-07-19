@@ -17,6 +17,11 @@
 //   # no SoundFont → a built-in additive piano
 //   dart run bin/rendersong.dart score.musicxml out.mp3
 //
+// A multi-track MIDI + a SoundFont voices EACH part with its own General-MIDI
+// instrument (piano, bass, strings…) and the channel-10 track with a drum kit —
+// this is the default for MIDI + --sf2. Pass --preset N or --single for one
+// voice across the whole song. Other formats render through one voice.
+//
 // Inputs (by extension, or --from): abc · mid/midi · musicxml/xml · mxl ·
 //   mscx · mscz · mei · krn/kern · gp3 · gp4 · gp5 · gp/gpx · gpif.
 // Outputs (by extension): .wav · .mp3 (mono).
@@ -27,6 +32,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/gm_song_render.dart';
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart';
 import 'package:comet_beat/core/audio/score_instrument_render.dart';
 import 'package:comet_beat/core/audio/sf2/sf2.dart' show VorbisDecode;
@@ -45,6 +51,8 @@ void main(List<String> args) {
   String? sf2;
   String? from;
   var preset = 0;
+  var presetSet = false;
+  var single = false;
   var bpm = 120;
   var bitrate = 192;
   var gain = 1.0;
@@ -54,8 +62,11 @@ void main(List<String> args) {
     switch (a) {
       case '--sf2':
         sf2 = _next(args, ++i, a);
+      case '--single':
+        single = true;
       case '--preset':
         preset = int.parse(_next(args, ++i, a));
+        presetSet = true;
       case '--bpm':
         bpm = int.parse(_next(args, ++i, a));
       case '--bitrate':
@@ -77,23 +88,35 @@ void main(List<String> args) {
   final outPath = pos[1];
   if (bpm < 1) _fail('--bpm must be positive');
 
-  // 1) Parse the input to a Score / MultiPartScore.
-  final loaded = _load(inPath, from);
-
-  // 2) Choose the voice: a SoundFont preset, or a built-in additive piano.
-  final TrackerInstrument voice;
-  if (sf2 != null) {
-    voice = _soundFontVoice(sf2, preset);
-  } else {
-    voice = const AdditiveInstrument('piano', Instrument.piano);
-    stderr.writeln('no --sf2 given → built-in additive piano');
-  }
-
-  // 3) Render every note through the voice at the requested tempo.
   final quarterMs = (60000 / bpm).round();
-  final Float64List pcm = loaded is MultiPartScore
-      ? renderMultiPartWithInstrument(loaded, voice, quarterMs: quarterMs)
-      : renderScoreWithInstrument(loaded as Score, voice, quarterMs: quarterMs);
+  final fmt = from ?? _formatOf(inPath);
+
+  // General-MIDI per-part voicing: a multi-track MIDI + a SoundFont, each part
+  // voiced by its OWN GM program (drums → the bank-128 kit). This is the default
+  // for MIDI + --sf2; --preset N or --single forces one voice for the whole song.
+  final gmMode = fmt == 'midi' && sf2 != null && !presetSet && !single;
+
+  final Float64List pcm;
+  if (gmMode) {
+    pcm = _renderGm(inPath, sf2, quarterMs);
+  } else {
+    // Parse to a Score / MultiPartScore and render it through one voice.
+    final loaded = _load(inPath, from);
+    final TrackerInstrument voice;
+    if (sf2 != null) {
+      voice = _soundFontVoice(sf2, preset);
+    } else {
+      voice = const AdditiveInstrument('piano', Instrument.piano);
+      stderr.writeln('no --sf2 given → built-in additive piano');
+    }
+    pcm = loaded is MultiPartScore
+        ? renderMultiPartWithInstrument(loaded, voice, quarterMs: quarterMs)
+        : renderScoreWithInstrument(
+            loaded as Score,
+            voice,
+            quarterMs: quarterMs,
+          );
+  }
   if (pcm.isEmpty) _fail('the score produced no notes to render');
 
   // 4) Headroom-normalize (peak → 0.9 · gain), then write WAV or MP3.
@@ -198,10 +221,14 @@ String _readText(File file) {
 
 // ── SoundFont voice ──────────────────────────────────────────────────────────
 
-TrackerInstrument _soundFontVoice(String sf2Path, int preset) {
+LoadedSoundFont _loadFont(String sf2Path) {
   final f = File(sf2Path);
   if (!f.existsSync()) _fail('no such SoundFont: $sf2Path');
-  final loaded = loadSoundFont(f.readAsBytesSync(), vorbis: _tryVorbis());
+  return loadSoundFont(f.readAsBytesSync(), vorbis: _tryVorbis());
+}
+
+TrackerInstrument _soundFontVoice(String sf2Path, int preset) {
+  final loaded = _loadFont(sf2Path);
   if (preset < 0 || preset >= loaded.presets.length) {
     _fail('--preset $preset out of range (font has ${loaded.presets.length})');
   }
@@ -209,6 +236,27 @@ TrackerInstrument _soundFontVoice(String sf2Path, int preset) {
   stderr.writeln('voice: ${soundFontPresetLabel(p)}'
       '${loaded.compressed ? ' (.sf3)' : ''}');
   return soundFontInstrument(loaded, p);
+}
+
+/// General-MIDI per-part render: split [inPath] into GM parts, voice each with
+/// its own program from [sf2Path] (drums → the bank-128 kit), and mix.
+Float64List _renderGm(String inPath, String sf2Path, int quarterMs) {
+  final font = _loadFont(sf2Path);
+  final parts = gmPartsFromMidi(File(inPath).readAsBytesSync());
+  if (parts.isEmpty) _fail('no playable tracks in $inPath');
+  final voiced = <(Score, TrackerInstrument)>[];
+  for (final p in parts) {
+    // Drums live in bank 128; melodic voices in bank 0. Fall back to bank 0 for
+    // the same program, then to the font's first preset, so a sparse SoundFont
+    // still plays something.
+    final preset = findPreset(font, p.isDrum ? 128 : 0, p.program) ??
+        findPreset(font, 0, p.program) ??
+        font.presets.first;
+    voiced.add((p.score, soundFontInstrument(font, preset)));
+    final label = p.name.isEmpty ? 'track' : p.name;
+    stderr.writeln('  part "$label" → ${soundFontPresetLabel(preset)}');
+  }
+  return renderPartsWithVoices(voiced, quarterMs: quarterMs);
 }
 
 /// A native Vorbis decoder for `.sf3`, if `GLINT_LIB` points at the glint
@@ -270,7 +318,8 @@ Render a song through a SoundFont to WAV/MP3.
 
 Options:
   --sf2 <file>     SoundFont (.sf2 / .sf3) to voice the song with
-  --preset <N>     preset index within the SoundFont (default 0)
+  --preset <N>     force ONE preset (index) for the whole song
+  --single         force a single voice (preset 0) — disables GM per-part
   --bpm <B>        tempo (default 120)
   --bitrate <K>    MP3 bitrate kbps (default 192)
   --gain <G>       output gain multiplier (default 1.0)
