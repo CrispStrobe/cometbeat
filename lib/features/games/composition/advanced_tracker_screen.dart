@@ -378,6 +378,9 @@ abstract interface class AdvancedTrackerTester {
   /// Remove pool instrument [poolIndex] (what the panel's 🗑 does).
   void debugRemovePoolInstrument(int poolIndex);
 
+  /// Set the per-cell instrument column (what the cell menu's picker does).
+  void debugSetCellInstrument(int channel, int row, int inst);
+
   /// The midis the on-screen piano lights up for pattern [row] (un-muted
   /// channels) — the "keys glow as they play" highlight.
   List<int> debugSoundingMidis(int row);
@@ -2083,12 +2086,16 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         SoundCategory.recorded => l10n.trackerLibRecorded,
       };
 
-  /// Load a bundled CC0 percussion sample (from assets) → append it to the pool.
-  Future<void> _addBundledPercussion(BundledSampleInfo info) async {
+  /// Load a bundled CC0 percussion sample (from assets) → hand it to [onPick]
+  /// (defaults to appending it to the pool).
+  Future<void> _addBundledPercussion(
+    BundledSampleInfo info, {
+    void Function(TrackerInstrument)? onPick,
+  }) async {
     final data = await rootBundle.load(info.assetPath);
     if (!mounted) return;
     final bytes = data.buffer.asUint8List();
-    _addPoolInstrument(bundledSampleInstrument(info, bytes));
+    (onPick ?? _addPoolInstrument)(bundledSampleInstrument(info, bytes));
   }
 
   Widget _libraryHeader(BuildContext ctx, String label) => Padding(
@@ -2129,9 +2136,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _removePoolInstrument(poolIndex);
 
   /// Browse the built-in Sound Library (procedural voices by category + CC0
-  /// percussion). Tap ▶ to audition, tap the row to add it to the pool.
-  void _showSoundLibrary() {
+  /// percussion). Tap ▶ to audition, tap the row to pick a voice — by default it
+  /// is added to the shared pool; [onPick] overrides that (e.g. to set a
+  /// channel's default instrument).
+  void _showSoundLibrary({void Function(TrackerInstrument)? onPick}) {
     final l10n = AppLocalizations.of(context)!;
+    final add = onPick ?? _addPoolInstrument;
     final byCat = soundLibraryByCategory();
     showModalBottomSheet<void>(
       context: context,
@@ -2160,7 +2170,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                       _instrumentLabel(o.id),
                       audition: () => _auditionInstrument(o.build()),
                       onAdd: () {
-                        _addPoolInstrument(o.build());
+                        add(o.build());
                         Navigator.of(ctx).pop();
                       },
                     ),
@@ -2171,7 +2181,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   ctx,
                   info.id,
                   onAdd: () async {
-                    await _addBundledPercussion(info);
+                    await _addBundledPercussion(info, onPick: onPick);
                     if (ctx.mounted) Navigator.of(ctx).pop();
                   },
                 ),
@@ -2265,8 +2275,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       TrackerCell(
         midi: cur.midi,
         volume: cur.volume,
+        effect: cur.effect,
         fxCmd: cmd,
         fxParam: param,
+        instrument: cur.instrument,
       ),
     );
     _syncPlayback();
@@ -2658,11 +2670,48 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     ),
                 ],
               ),
+              const SizedBox(height: 8),
+              // Set the channel's default voice from the Sound Library or a
+              // SoundFont (not just the built-in chips above).
+              Wrap(
+                spacing: 8,
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.library_music, size: 18),
+                    label: Text(l10n.trackerSoundLibrary),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _showSoundLibrary(
+                        onPick: (inst) =>
+                            _setChannelInstrumentVoice(channel, inst),
+                      );
+                    },
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.piano, size: 18),
+                    label: Text(l10n.trackerLoadSoundFont),
+                    onPressed: () async {
+                      Navigator.of(ctx).pop();
+                      final inst = await showSoundFontSheet(context);
+                      if (inst != null && mounted) {
+                        _setChannelInstrumentVoice(channel, inst);
+                      }
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// Set [channel]'s default instrument to [inst] (from the library / a
+  /// SoundFont) and refresh playback.
+  void _setChannelInstrumentVoice(int channel, TrackerInstrument inst) {
+    setState(() => _song.setChannelInstrument(channel, inst));
+    _syncPlayback();
   }
 
   String _envelopeLabel(AppLocalizations l10n, String key) => switch (key) {
@@ -2763,6 +2812,30 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     ),
                 ],
               ),
+              const SizedBox(height: 12),
+              // Per-cell INSTRUMENT column: this note can use any pool voice
+              // (the FT2 instrument column), independent of the channel default.
+              Text(l10n.trackerInstruments),
+              Wrap(
+                spacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: Text(l10n.trackerInstrumentDefault),
+                    selected: cell.instrument == 0,
+                    onSelected: (_) =>
+                        _pickCellInstrument(ctx, channel, row, 0),
+                  ),
+                  for (var p = 0; p < _song.instruments.length; p++)
+                    ChoiceChip(
+                      label: Text(
+                        '${p + 1} ${_instrumentLabel(_song.instruments[p].id)}',
+                      ),
+                      selected: cell.instrument == p + 1,
+                      onSelected: (_) =>
+                          _pickCellInstrument(ctx, channel, row, p + 1),
+                    ),
+                ],
+              ),
               const Divider(height: 20),
               // Classic MOD effect COLUMN (Cxx set-volume, Axy volume-slide);
               // more commands land as the replayer grows. Applies live.
@@ -2805,9 +2878,25 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           effect: cur.effect,
           fxCmd: cmd,
           fxParam: param,
+          instrument: cur.instrument, // don't drop the per-cell instrument
         ),
       ),
     );
+    _syncPlayback();
+  }
+
+  /// Set the cell's instrument column (0 = channel default, else a 1-based pool
+  /// index) from the cell menu, then close it.
+  void _pickCellInstrument(BuildContext ctx, int channel, int row, int inst) {
+    _pushUndo();
+    setState(() => _song.engine.setCellInstrument(channel, row, inst));
+    _syncPlayback();
+    Navigator.of(ctx).pop();
+  }
+
+  @override
+  void debugSetCellInstrument(int channel, int row, int inst) {
+    setState(() => _song.engine.setCellInstrument(channel, row, inst));
     _syncPlayback();
   }
 

@@ -75,6 +75,24 @@ void main() {
     expect(game.activeInstrument, 0); // was the active → falls back to default
   });
 
+  testWidgets('per-cell instrument column: set it, a command edit keeps it',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.setNote(0, 0, 60);
+    await tester.pump();
+
+    // Assign the cell a pool instrument (2) — the cell menu's picker.
+    game.debugSetCellInstrument(0, 0, 2);
+    await tester.pump();
+    expect(game.instrumentAt(0, 0), 2);
+
+    // Editing the effect-command column must NOT drop the per-cell instrument.
+    game.debugSetCommand(0, 0, 0xC, 0x20);
+    await tester.pump();
+    expect(game.instrumentAt(0, 0), 2);
+  });
+
   testWidgets('Sound Library browser lists voices and adds one to the pool',
       (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());

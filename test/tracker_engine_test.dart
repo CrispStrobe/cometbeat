@@ -454,6 +454,27 @@ void main() {
       expect(e.cellAt(0, 0).effect, TrackerEffect.arpeggio);
       expect(e.cellAt(0, 0).volume, 0.5);
     });
+
+    test('setCellInstrument sets the column + preserves everything else', () {
+      final e = TrackerEngine(
+        timing: const TrackerTiming(rows: 8, stepsPerBeat: 2),
+      )..toggleNote(0, 0, 60);
+      e.setCellVolume(0, 0, 0.5);
+      e.setCellEffect(0, 0, TrackerEffect.vibrato);
+      e.setCellInstrument(0, 0, 3);
+      final c = e.cellAt(0, 0);
+      expect(c.instrument, 3);
+      expect(c.midi, 60);
+      expect(c.volume, 0.5);
+      expect(c.effect, TrackerEffect.vibrato);
+    });
+
+    test('setCellInstrument is a no-op on an empty cell', () {
+      final e = TrackerEngine(
+        timing: const TrackerTiming(rows: 8, stepsPerBeat: 2),
+      )..setCellInstrument(0, 0, 2);
+      expect(e.cellAt(0, 0).isEmpty, isTrue);
+    });
   });
 
   group('arrangement (renderSong)', () {
