@@ -16,9 +16,12 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/loop_record.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate, wavBytes;
+import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/loop_player_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 /// One overdub layer: a label + one bar-cycle of mono PCM.
 class _PerformLayer {
@@ -31,6 +34,15 @@ class _PerformLayer {
 /// without audio hardware.
 abstract class PerformTester {
   void addSeed(String kind);
+
+  /// Play-in a melody: start capturing, tap notes, then finish — the played
+  /// notes render into a new melodic loop layer.
+  void startPlayIn();
+  void playInNote(int midi);
+  void finishPlayIn();
+  void cancelPlayIn();
+  bool get isPlayingIn;
+
   int get layerCount;
   String layerLabel(int i);
   bool isMuted(int i);
@@ -63,6 +75,10 @@ class _PerformScreenState extends State<PerformScreen>
   final Stopwatch _clock = Stopwatch();
   bool _playing = false;
 
+  // Play-in recording: captured `(midi, loop-phase ms)` while the keyboard is up.
+  bool _playIn = false;
+  final List<(int midi, int phaseMs)> _playInNotes = [];
+
   static const int _bpm = 120;
 
   /// One bar (4 beats) of samples at [_bpm] — the master loop length.
@@ -83,6 +99,72 @@ class _PerformScreenState extends State<PerformScreen>
     _stack.add(_PerformLayer(kind, _seedLoop(kind)));
     _refresh();
   }
+
+  // ── Play-in a melody (S2) ─────────────────────────────────────────────────
+  @override
+  bool get isPlayingIn => _playIn;
+
+  @override
+  void startPlayIn() {
+    _playInNotes.clear();
+    _playIn = true;
+    // Run the clock so taps get a loop-phase; if there are layers, play along.
+    if (!_clock.isRunning) {
+      _clock
+        ..reset()
+        ..start();
+    }
+    if (_stack.activeLayers.isNotEmpty && !_playing) play();
+    setState(() {});
+  }
+
+  @override
+  void playInNote(int midi) {
+    if (!_playIn) return;
+    final loopMs = _loopSamples / kSampleRate * 1000;
+    _playInNotes.add((midi, (_clock.elapsedMilliseconds % loopMs).round()));
+  }
+
+  @override
+  void finishPlayIn() {
+    _playIn = false;
+    if (_playInNotes.isNotEmpty) {
+      _stack.add(_PerformLayer('melody', _renderMelody(_playInNotes)));
+    }
+    _playInNotes.clear();
+    _refresh();
+  }
+
+  @override
+  void cancelPlayIn() {
+    _playIn = false;
+    _playInNotes.clear();
+    setState(() {});
+  }
+
+  /// Render captured `(midi, phaseMs)` notes into a one-bar loop: each note is
+  /// snapped to the nearest 16th, held until the next note (capped at a beat),
+  /// and synthesised with a soft decay.
+  Float64List _renderMelody(List<(int, int)> notes) {
+    final n = _loopSamples;
+    final buf = Float64List(n);
+    final sixteenth = n ~/ 16;
+    final beat = n ~/ 4;
+    // Snap each note to a 16th-note sample position, sorted in time.
+    final placed = [
+      for (final (midi, ms) in notes)
+        (midi, ((ms / 1000 * kSampleRate) / sixteenth).round() * sixteenth % n),
+    ]..sort((a, b) => a.$2.compareTo(b.$2));
+    for (var i = 0; i < placed.length; i++) {
+      final (midi, start) = placed[i];
+      final next = i + 1 < placed.length ? placed[i + 1].$2 : n;
+      final dur = (next - start).clamp(sixteenth, beat);
+      _tone(buf, _midiToFreq(midi), start, dur, gain: 0.28, decay: 6);
+    }
+    return buf;
+  }
+
+  double _midiToFreq(int midi) => 440.0 * pow(2, (midi - 69) / 12).toDouble();
 
   @override
   int get layerCount => _stack.layers.length;
@@ -328,6 +410,11 @@ class _PerformScreenState extends State<PerformScreen>
                       label: Text(_seedLabel(l10n, kind)),
                       onPressed: () => addSeed(kind),
                     ),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.piano),
+                    label: Text(l10n.performPlayIn),
+                    onPressed: _playIn ? null : startPlayIn,
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -369,6 +456,40 @@ class _PerformScreenState extends State<PerformScreen>
                         },
                       ),
               ),
+              if (_playIn) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.performPlayInHint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: cancelPlayIn,
+                      child: Text(l10n.performCancel),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.check),
+                      label: Text(l10n.performDone),
+                      onPressed: finishPlayIn,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 140,
+                  child: PianoKeyboard(
+                    whiteKeyCount: 8,
+                    onKeyTap: (midi) {
+                      context.read<AudioService>().playMidiNote(midi, ms: 400);
+                      playInNote(midi);
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
         ),

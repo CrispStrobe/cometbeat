@@ -2038,6 +2038,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get performClear => 'Clear all';
 
   @override
+  String get performPlayIn => 'Play a melody';
+
+  @override
+  String get performPlayInHint =>
+      'Tap the keys to play your melody — it becomes a new layer.';
+
+  @override
+  String get performDone => 'Done';
+
+  @override
+  String get performCancel => 'Cancel';
+
+  @override
   String get performMute => 'Mute layer';
 
   @override

@@ -3854,6 +3854,30 @@ abstract class AppLocalizations {
   /// **'Clear all'**
   String get performClear;
 
+  /// No description provided for @performPlayIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a melody'**
+  String get performPlayIn;
+
+  /// No description provided for @performPlayInHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the keys to play your melody — it becomes a new layer.'**
+  String get performPlayInHint;
+
+  /// No description provided for @performDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get performDone;
+
+  /// No description provided for @performCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get performCancel;
+
   /// No description provided for @performMute.
   ///
   /// In en, this message translates to:

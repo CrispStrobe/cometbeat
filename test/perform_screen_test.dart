@@ -68,6 +68,35 @@ void main() {
     expect(p.canUndo, isFalse);
   });
 
+  testWidgets('play-in a melody becomes a new layer', (tester) async {
+    await tester.pumpWidget(_wrap(const PerformScreen()));
+    await tester.pump();
+    final p = _perform(tester);
+
+    p.startPlayIn();
+    await tester.pump();
+    expect(p.isPlayingIn, isTrue);
+
+    // Tap a little C-major run.
+    for (final midi in [60, 64, 67, 72]) {
+      p.playInNote(midi);
+    }
+    p.finishPlayIn();
+    await tester.pump();
+
+    expect(p.isPlayingIn, isFalse);
+    expect(p.layerCount, 1); // the played melody is now a layer
+    expect(p.layerLabel(0), 'melody');
+    expect(_peak(p.debugMix()), greaterThan(0.0)); // and it makes sound
+
+    // Cancel discards without adding a layer.
+    p.startPlayIn();
+    p.playInNote(62);
+    p.cancelPlayIn();
+    await tester.pump();
+    expect(p.layerCount, 1); // still just the first melody
+  });
+
   testWidgets('play/stop toggles and does not crash without audio',
       (tester) async {
     await tester.pumpWidget(_wrap(const PerformScreen()));

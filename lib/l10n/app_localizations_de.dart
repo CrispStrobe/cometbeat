@@ -2044,6 +2044,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get performClear => 'Alles löschen';
 
   @override
+  String get performPlayIn => 'Melodie spielen';
+
+  @override
+  String get performPlayInHint =>
+      'Tippe die Tasten, um deine Melodie zu spielen — sie wird zu einer neuen Ebene.';
+
+  @override
+  String get performDone => 'Fertig';
+
+  @override
+  String get performCancel => 'Abbrechen';
+
+  @override
   String get performMute => 'Ebene stumm';
 
   @override
