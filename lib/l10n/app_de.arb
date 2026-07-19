@@ -855,6 +855,7 @@
   "trackerLibDrum": "Schlagzeug",
   "trackerLibRecorded": "Aufgenommen",
   "trackerLibPercussion": "Perkussion (CC0)",
+  "trackerRemove": "Entfernen",
   "trackerShareSong": "Song teilen (Token)",
   "trackerLoadSong": "Song laden (Token)",
   "trackerSongCopied": "Song-Token in die Zwischenablage kopiert",

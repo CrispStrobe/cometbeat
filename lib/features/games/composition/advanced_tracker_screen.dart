@@ -375,6 +375,9 @@ abstract interface class AdvancedTrackerTester {
   /// Open the built-in Sound Library browser sheet (for a widget test).
   void debugShowSoundLibrary();
 
+  /// Remove pool instrument [poolIndex] (what the panel's 🗑 does).
+  void debugRemovePoolInstrument(int poolIndex);
+
   /// The midis the on-screen piano lights up for pattern [row] (un-muted
   /// channels) — the "keys glow as they play" highlight.
   List<int> debugSoundingMidis(int row);
@@ -1698,59 +1701,99 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text(
-                l10n.trackerInstruments,
-                style: Theme.of(ctx).textTheme.titleLarge,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Text(
+                  l10n.trackerInstruments,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
               ),
-            ),
-            // Add a built-in / SoundFont voice to the pool.
-            ListTile(
-              leading: const Icon(Icons.library_music),
-              title: Text(l10n.trackerAddFromLibrary),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _showSoundLibrary();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.piano),
-              title: Text(l10n.trackerLoadSoundFont),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _loadSoundFont();
-              },
-            ),
-            const Divider(height: 1),
-            for (var i = 0; i <= _song.instruments.length; i++)
+              // Add a built-in / SoundFont voice to the pool.
               ListTile(
-                leading: Icon(
-                  _activeInstrument == i
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                  color: _activeInstrument == i
-                      ? Theme.of(ctx).colorScheme.primary
-                      : null,
-                ),
-                title: Text(
-                  i == 0
-                      ? l10n.trackerInstrumentDefault
-                      : '$i   ${_instrumentLabel(_song.instruments[i - 1].id)}',
-                ),
+                leading: const Icon(Icons.library_music),
+                title: Text(l10n.trackerAddFromLibrary),
                 onTap: () {
-                  setState(() => _activeInstrument = i);
                   Navigator.of(ctx).pop();
+                  _showSoundLibrary();
                 },
               ),
-          ],
+              ListTile(
+                leading: const Icon(Icons.piano),
+                title: Text(l10n.trackerLoadSoundFont),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _loadSoundFont();
+                },
+              ),
+              const Divider(height: 1),
+              for (var i = 0; i <= _song.instruments.length; i++)
+                ListTile(
+                  leading: Icon(
+                    _activeInstrument == i
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: _activeInstrument == i
+                        ? Theme.of(ctx).colorScheme.primary
+                        : null,
+                  ),
+                  title: Text(
+                    i == 0
+                        ? l10n.trackerInstrumentDefault
+                        : '$i   ${_instrumentLabel(_song.instruments[i - 1].id)}',
+                  ),
+                  // Pool voices can be auditioned and removed (the default row
+                  // can't). Removing remaps the cell instrument column.
+                  trailing: i == 0
+                      ? null
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.volume_up),
+                              tooltip: l10n.trackerPreview,
+                              onPressed: () =>
+                                  _auditionInstrument(_song.instruments[i - 1]),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              tooltip: l10n.trackerRemove,
+                              onPressed: () {
+                                _removePoolInstrument(i - 1);
+                                setSheet(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                  onTap: () {
+                    setState(() => _activeInstrument = i);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Remove pool instrument [poolIndex] (the model remaps the cell instrument
+  /// column) and keep the active-instrument selection valid across the shift.
+  void _removePoolInstrument(int poolIndex) {
+    setState(() {
+      _song.removeInstrument(poolIndex);
+      final removed = poolIndex + 1; // 1-based
+      if (_activeInstrument == removed) {
+        _activeInstrument = 0;
+      } else if (_activeInstrument > removed) {
+        _activeInstrument -= 1;
+      }
+    });
+    _syncPlayback();
   }
 
   void _showMixer(AppLocalizations l10n) {
@@ -2080,6 +2123,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   void debugShowSoundLibrary() => _showSoundLibrary();
+
+  @override
+  void debugRemovePoolInstrument(int poolIndex) =>
+      _removePoolInstrument(poolIndex);
 
   /// Browse the built-in Sound Library (procedural voices by category + CC0
   /// percussion). Tap ▶ to audition, tap the row to add it to the pool.

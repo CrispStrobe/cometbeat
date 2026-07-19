@@ -906,6 +906,7 @@
   "trackerLibDrum": "Drum",
   "trackerLibRecorded": "Recorded",
   "trackerLibPercussion": "Percussion (CC0)",
+  "trackerRemove": "Remove",
   "trackerShareSong": "Share song (token)",
   "trackerLoadSong": "Load song (token)",
   "trackerSongCopied": "Song token copied to clipboard",

@@ -4676,6 +4676,12 @@ abstract class AppLocalizations {
   /// **'Percussion (CC0)'**
   String get trackerLibPercussion;
 
+  /// No description provided for @trackerRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get trackerRemove;
+
   /// No description provided for @trackerShareSong.
   ///
   /// In en, this message translates to:

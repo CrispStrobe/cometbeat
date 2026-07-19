@@ -256,6 +256,37 @@ class TrackerSong {
     }
   }
 
+  /// Remove pool instrument [poolIndex] (0-based) and REMAP the per-cell
+  /// instrument column across every pattern so notes keep the right voice: a
+  /// cell pointing AT the removed instrument falls back to the channel default
+  /// (0); a cell pointing at a LATER pool instrument shifts down by one. No-op
+  /// for an out-of-range index. Syncs live edits first, then reloads the
+  /// (remapped) current pattern into the engine.
+  void removeInstrument(int poolIndex) {
+    if (poolIndex < 0 || poolIndex >= instruments.length) return;
+    syncCurrent();
+    final removed = poolIndex + 1; // 1-based value in TrackerCell.instrument
+    for (final p in patterns) {
+      for (final col in p.cells) {
+        for (var r = 0; r < col.length; r++) {
+          final c = col[r];
+          if (c.instrument == 0 || c.instrument < removed) continue;
+          final newInst = c.instrument == removed ? 0 : c.instrument - 1;
+          col[r] = TrackerCell(
+            midi: c.midi,
+            volume: c.volume,
+            effect: c.effect,
+            fxCmd: c.fxCmd,
+            fxParam: c.fxParam,
+            instrument: newInst,
+          );
+        }
+      }
+    }
+    instruments.removeAt(poolIndex);
+    _engine.importCells(current.cells); // the current pattern was remapped
+  }
+
   /// Save the live pattern, then load [index] into the engine for editing.
   /// Re-times the engine to the selected pattern's own row count (Feature B:
   /// patterns may have different lengths), so the engine's per-channel

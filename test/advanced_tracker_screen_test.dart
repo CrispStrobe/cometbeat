@@ -58,6 +58,23 @@ void main() {
     expect(game.instrumentAt(0, 0), before + 1);
   });
 
+  testWidgets('removing a pool voice shrinks the pool + fixes the active index',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+
+    game.debugAddInstrument(const AdditiveInstrument('a', Instrument.cello));
+    await tester.pump();
+    final size = game.instrumentPoolSize;
+    final active = game.activeInstrument; // the freshly-added voice (1-based)
+    expect(active, size);
+
+    game.debugRemovePoolInstrument(active - 1); // remove the active one
+    await tester.pump();
+    expect(game.instrumentPoolSize, size - 1);
+    expect(game.activeInstrument, 0); // was the active → falls back to default
+  });
+
   testWidgets('Sound Library browser lists voices and adds one to the pool',
       (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());

@@ -2435,6 +2435,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerLibPercussion => 'Percussion (CC0)';
 
   @override
+  String get trackerRemove => 'Remove';
+
+  @override
   String get trackerShareSong => 'Share song (token)';
 
   @override

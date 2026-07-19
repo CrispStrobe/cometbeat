@@ -495,4 +495,34 @@ void main() {
       expect(song.songTotalMs, greaterThan(base));
     });
   });
+
+  group('removeInstrument', () {
+    test('remaps the per-cell instrument column', () {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 4));
+      // The pool starts with 4 default voices; add two more (1-based 5 and 6).
+      song.instruments.add(const AdditiveInstrument('x', Instrument.piano));
+      song.instruments.add(const AdditiveInstrument('y', Instrument.cello));
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60, instrument: 1));
+      song.engine.setCell(0, 1, const TrackerCell(midi: 62, instrument: 5));
+      song.engine.setCell(0, 2, const TrackerCell(midi: 64, instrument: 6));
+      final poolBefore = song.instruments.length; // 6
+
+      song.removeInstrument(4); // pool index 4 = the 1-based value 5
+      expect(song.instruments.length, poolBefore - 1);
+      // At 1 (before the removed one) → unchanged; == 5 → 0 (default); 6 → 5.
+      expect(song.engine.cellAt(0, 0).instrument, 1);
+      expect(song.engine.cellAt(0, 1).instrument, 0);
+      expect(song.engine.cellAt(0, 2).instrument, 5);
+      // Notes themselves untouched.
+      expect(song.engine.cellAt(0, 2).midi, 64);
+    });
+
+    test('out-of-range index is a no-op', () {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 4));
+      final n = song.instruments.length;
+      song.removeInstrument(-1);
+      song.removeInstrument(999);
+      expect(song.instruments.length, n);
+    });
+  });
 }
