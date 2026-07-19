@@ -316,7 +316,7 @@ engine-lane / collision-free.
 - ✅ **D2 SHIPPED** (`233ead40`): _panRegionsVariable now handles Pxy (+ticksPerRow), so a variable-timing panned song slides too. Was: Shipped in
   `_panRegions` (uniform stereo); `_panRegionsVariable` still only reads 8xx.
   Fix: mirror the Pxy step into `_panRegionsVariable`.
-- **D3 — Authoring UI for the extended effects.** Gxx/Hxy/Txx/Pxy (+ the already-
+- ✅ **D3 SHIPPED** (`f6633e4e`): the command-editor effect dropdown now offers Gxx/Hxy/Pxy/Txy; the in-grid effect column renders via radix-36 so extended commands show their letter code (G20/T02/PF0) and fit the 3-char column. Field-cursor hex stays 0–F. Was: Gxx/Hxy/Txx/Pxy (+ the already-
   engine-supported Exy sub-commands) have no tracker UI — the `_CommandEditor`
   only types a 0x0–0xF nibble. Needs an "extended effects" picker. Touches
   `advanced_tracker_screen.dart` (hot lane) — coordinate with @tracker-ui.
