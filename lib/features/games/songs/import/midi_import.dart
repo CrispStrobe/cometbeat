@@ -42,20 +42,32 @@ Score scoreFromMidi(Uint8List bytes, {int maxNotes = 64}) {
   if (division & 0x8000 != 0) {
     throw const FormatException('SMPTE time division is not supported');
   }
+  if (division == 0) {
+    // 0 ticks/quarter would make the sixteenth grid divide by zero below
+    // (Infinity/NaN.round() throws) — reject it as malformed here instead.
+    throw const FormatException('Invalid MIDI time division (0)');
+  }
 
-  // Walk the chunks; collect notes from the first track that has any.
+  // Walk the chunks; collect notes from the first track that has any. A chunk
+  // length is attacker-controlled, so the track slice is clamped to the buffer
+  // — a corrupt/truncated MIDI can only yield a clean FormatException, never an
+  // out-of-bounds RangeError.
   var offset = 8 + data.getUint32(4);
   List<_MidiNote>? notes;
   while (offset + 8 <= bytes.length && notes == null) {
     final chunkType = String.fromCharCodes(bytes.sublist(offset, offset + 4));
     final chunkLength = data.getUint32(offset + 4);
+    final chunkEnd = offset + 8 + chunkLength;
     if (chunkType == 'MTrk') {
       final track = _readTrack(
-        bytes.sublist(offset + 8, offset + 8 + chunkLength),
+        bytes.sublist(
+          offset + 8,
+          chunkEnd <= bytes.length ? chunkEnd : bytes.length,
+        ),
       );
       if (track.isNotEmpty) notes = track;
     }
-    offset += 8 + chunkLength;
+    offset = chunkEnd;
   }
   if (notes == null) {
     throw const FormatException('No notes found in any track');

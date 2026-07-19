@@ -126,6 +126,51 @@ void main() {
     expect(rests.first.duration.fraction, (1, 4));
   });
 
+  group('scoreFromMidi is robust to malformed input (no Error, no crash)', () {
+    // A track with one complete note (note-on, delta, note-off) + end.
+    const noteTrack = [0x00, 0x90, 60, 0x40, 0x40, 0x80, 60, 0x00, ..._eot];
+
+    test('a chunk length exceeding the buffer throws cleanly, not a RangeError',
+        () {
+      // MThd (division 96) then an MTrk claiming a 0x7FFFFFFF body, file ends.
+      final lying = Uint8List.fromList([
+        ...'MThd'.codeUnits, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96, //
+        ...'MTrk'.codeUnits, 0x7F, 0xFF, 0xFF, 0xFF, 0x90, 60, 64,
+      ]);
+      // Clamped to the buffer: the (incomplete) note yields no output -> a clean
+      // FormatException, never an out-of-bounds RangeError.
+      expect(() => scoreFromMidi(lying), throwsFormatException);
+    });
+
+    test('a zero time division is rejected (no divide-by-zero)', () {
+      // division 0 would make the 1/16 grid divide by zero (Infinity.round()).
+      expect(
+        () => scoreFromMidi(_smf([noteTrack], division: 0)),
+        throwsFormatException,
+      );
+    });
+
+    test('fuzz: no malformed input throws a non-Exception Error', () {
+      for (var seed = 0; seed < 120; seed++) {
+        final len = 1 + (seed * 131) % 6000;
+        final b = Uint8List(len);
+        var x = seed * 2654435761 + 1;
+        for (var i = 0; i < len; i++) {
+          x = (x * 1103515245 + 12345) & 0x7fffffff;
+          b[i] = x & 0xff;
+        }
+        if (seed.isEven && len > 14) b.setRange(0, 4, 'MThd'.codeUnits);
+        try {
+          scoreFromMidi(b);
+        } on Exception {
+          // clean — acceptable
+        } catch (e) {
+          fail('seed $seed threw a non-Exception: ${e.runtimeType}: $e');
+        }
+      }
+    });
+  });
+
   group('multi-track SMF parsing rejects malformed input cleanly', () {
     // splitMultiTrackMidi / multiTrackMidiToMultiPart parse an untrusted MIDI
     // file. A truncated header or a chunk declaring more bytes than exist must
