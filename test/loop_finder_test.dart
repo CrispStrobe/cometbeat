@@ -99,5 +99,70 @@ void main() {
       final noise = Float64List(300); // too short → no loop
       expect(autoLoopedSample('n', noise, pingPong: true).pingPong, isFalse);
     });
+
+    test('crossfade option keeps the loop working (renders, sustains)', () {
+      final inst = autoLoopedSample('rec', sine(4000, 40), crossfade: true);
+      expect(inst.loops, isTrue);
+      const timing = TrackerTiming(rows: 8, stepsPerBeat: 2);
+      final cells = [
+        const TrackerCell(midi: 60),
+        ...List<TrackerCell>.filled(7, TrackerCell.empty),
+      ];
+      final buf = inst.renderChannel(cells, timing);
+      final past = inst.sample.length + 20000;
+      expect(buf.sublist(past, past + 500).any((v) => v.abs() > 1e-3), isTrue);
+    });
+  });
+
+  group('crossfadeLoop', () {
+    // A rising ramp so the raw wrap (pcm[loopEnd-1] → pcm[loopStart]) is a big
+    // discontinuity we can measure.
+    Float64List ramp(int n) {
+      final s = Float64List(n);
+      for (var i = 0; i < n; i++) {
+        s[i] = i / n;
+      }
+      return s;
+    }
+
+    test('the loop tail lands on the pre-start → a continuous wrap', () {
+      final pcm = ramp(300);
+      const loopStart = 100, loopLength = 100; // loopEnd 200
+      final rawDiscontinuity = (pcm[199] - pcm[99]).abs();
+      expect(rawDiscontinuity, greaterThan(0.3)); // there really is a jump
+
+      final out = crossfadeLoop(
+        pcm,
+        loopStart: loopStart,
+        loopLength: loopLength,
+        fade: 50,
+      );
+      // The last looped sample now equals the pre-start sample, so wrapping to
+      // pcm[loopStart] continues naturally (pcm[99] → pcm[100]).
+      expect(out[199], closeTo(pcm[99], 1e-9));
+    });
+
+    test('is non-destructive + only touches the fade region', () {
+      final pcm = ramp(300);
+      final out = crossfadeLoop(
+        pcm,
+        loopStart: 100,
+        loopLength: 100,
+        fade: 50,
+      );
+      // Input untouched.
+      expect(pcm[199], closeTo(199 / 300, 1e-12));
+      // Everything before the fade region [150, 200) is unchanged.
+      for (var i = 0; i < 150; i++) {
+        expect(out[i], closeTo(pcm[i], 1e-12), reason: 'changed at $i');
+      }
+    });
+
+    test('is a no-op copy when there is no room for the fade', () {
+      final pcm = ramp(300);
+      // loopStart (20) < fade (256, the default) → not enough lead-in → unchanged.
+      final out = crossfadeLoop(pcm, loopStart: 20, loopLength: 100);
+      expect(out, pcm); // element-wise equal (a copy)
+    });
   });
 }

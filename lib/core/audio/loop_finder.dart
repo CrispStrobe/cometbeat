@@ -97,20 +97,68 @@ int _risingZeroCrossAtOrAfter(Float64List pcm, int from, int limit) {
   return -1;
 }
 
+/// Smooth a forward loop's seam by crossfading its tail into the pre-loop
+/// lead-in, so the wrap `pcm[loopEnd-1] → pcm[loopStart]` is click-free even for
+/// a real (aperiodic/decaying) recording that [findLoopPoints] couldn't match
+/// perfectly. Returns a NEW buffer (the input is unchanged); only the [fade]
+/// samples ending at loopEnd are altered.
+///
+/// Over the last [fade] samples the loop tail fades from its own content to the
+/// content that precedes the loop start, landing on `pcm[loopStart-1]` — so the
+/// next played sample (`pcm[loopStart]`) continues naturally. No-op (a copy)
+/// when there isn't room (`loopStart < fade` or `loopLength < fade`). Equal-power
+/// (sin/cos) weights keep the loudness steady across the blend.
+Float64List crossfadeLoop(
+  Float64List pcm, {
+  required int loopStart,
+  required int loopLength,
+  int fade = 256,
+}) {
+  final out = Float64List.fromList(pcm);
+  final loopEnd = loopStart + loopLength;
+  final f = fade;
+  if (f < 2 ||
+      loopStart < f ||
+      loopLength < f ||
+      loopEnd > pcm.length ||
+      loopStart <= 0) {
+    return out; // not enough room — leave the loop as picked
+  }
+  for (var i = 0; i < f; i++) {
+    final w = (i + 1) / f; // 0 → 1 across the fade
+    final a = cos(w * pi / 2); // tail (fades out)
+    final b = sin(w * pi / 2); // pre-start lead-in (fades in) — equal power
+    out[loopEnd - f + i] =
+        pcm[loopEnd - f + i] * a + pcm[loopStart - f + i] * b;
+  }
+  return out;
+}
+
 /// Build a [SampleInstrument] from a raw recording, auto-detecting a sustain
 /// loop so a held note rings instead of dying at the sample end. Falls back to a
 /// one-shot (no loop) when [findLoopPoints] finds nothing confident. [pingPong]
-/// makes the detected loop bidirectional.
+/// makes the detected loop bidirectional; [crossfade] smooths a forward loop's
+/// seam ([crossfadeLoop]) — recommended for real recordings, skipped for
+/// ping-pong (which bounces, so it never has a wrap discontinuity).
 SampleInstrument autoLoopedSample(
   String id,
   Float64List pcm, {
   int baseMidi = 60,
   bool pingPong = false,
+  bool crossfade = false,
 }) {
   final lp = findLoopPoints(pcm);
+  var sample = pcm;
+  if (lp != null && crossfade && !pingPong) {
+    sample = crossfadeLoop(
+      pcm,
+      loopStart: lp.loopStart,
+      loopLength: lp.loopLength,
+    );
+  }
   return SampleInstrument(
     id,
-    pcm,
+    sample,
     baseMidi: baseMidi,
     loopStart: lp?.loopStart ?? 0,
     loopLength: lp?.loopLength ?? 0,

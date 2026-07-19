@@ -6,7 +6,8 @@
 
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/loop_finder.dart' show findLoopPoints;
+import 'package:comet_beat/core/audio/loop_finder.dart'
+    show crossfadeLoop, findLoopPoints;
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -47,19 +48,30 @@ int? detectSampleBaseMidi(Float64List pcm, {int sampleRate = kSampleRate}) {
 /// Build a ready-to-play [SampleInstrument] from a raw recording: auto-detect
 /// its base pitch (so it plays IN TUNE) and, when [autoLoop] is set, a seamless
 /// sustain loop (so a held note rings). Falls back to `baseMidi` 60 / a one-shot
-/// when detection finds nothing. [pingPong] makes any detected loop bidirectional.
+/// when detection finds nothing. [pingPong] makes any detected loop
+/// bidirectional; [crossfade] smooths a forward loop's seam (recommended for
+/// real recordings, skipped for ping-pong).
 SampleInstrument tunedRecordedSample(
   String id,
   Float64List pcm, {
   int sampleRate = kSampleRate,
   bool autoLoop = true,
   bool pingPong = false,
+  bool crossfade = false,
 }) {
   final base = detectSampleBaseMidi(pcm, sampleRate: sampleRate) ?? 60;
   final lp = autoLoop ? findLoopPoints(pcm) : null;
+  var sample = pcm;
+  if (lp != null && crossfade && !pingPong) {
+    sample = crossfadeLoop(
+      pcm,
+      loopStart: lp.loopStart,
+      loopLength: lp.loopLength,
+    );
+  }
   return SampleInstrument(
     id,
-    pcm,
+    sample,
     baseMidi: base,
     loopStart: lp?.loopStart ?? 0,
     loopLength: lp?.loopLength ?? 0,
