@@ -1768,6 +1768,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get myInstrumentsAudition => 'Note spielen';
 
   @override
+  String get myInstrumentsPlay => 'Spielen';
+
+  @override
   String get myInstrumentsDelete => 'Löschen';
 
   @override

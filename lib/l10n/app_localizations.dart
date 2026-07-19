@@ -3374,6 +3374,12 @@ abstract class AppLocalizations {
   /// **'Play a note'**
   String get myInstrumentsAudition;
 
+  /// No description provided for @myInstrumentsPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get myInstrumentsPlay;
+
   /// No description provided for @myInstrumentsDelete.
   ///
   /// In en, this message translates to:

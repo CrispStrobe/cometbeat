@@ -610,6 +610,7 @@
   "myInstrumentsTitle": "Meine Instrumente",
   "myInstrumentsEmpty": "Noch keine Instrumente. Forme eine Stimme und tippe „Als Instrument speichern“.",
   "myInstrumentsAudition": "Note spielen",
+  "myInstrumentsPlay": "Spielen",
   "myInstrumentsDelete": "Löschen",
   "voiceLabSaveInstrument": "Als Instrument speichern",
   "voiceLabInstrumentSaved": "„{name}“ in Meine Instrumente gespeichert",

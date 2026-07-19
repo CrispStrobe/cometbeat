@@ -32,11 +32,16 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
   );
 }
 
-/// Renders a middle-C from [inst] for a preview (mono float, ~4 rows).
-Float64List auditionInstrument(TrackerInstrument inst) => inst.renderChannel(
-      const [TrackerCell(midi: 60)],
+/// Renders one note ([midi], default middle C) from [inst] for a preview.
+Float64List renderInstrumentNote(TrackerInstrument inst, [int midi = 60]) =>
+    inst.renderChannel(
+      [TrackerCell(midi: midi)],
       const TrackerTiming(rows: 4),
     );
+
+/// One octave of white keys, C4..C5 — the play keyboard's notes + labels.
+const List<int> kKeyboardMidi = [60, 62, 64, 65, 67, 69, 71, 72];
+const List<String> kKeyboardLabels = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C'];
 
 /// Test seam — drive the sheet without tapping through the UI.
 abstract class MyInstrumentsTester {
@@ -86,12 +91,55 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
     if (mounted) setState(() => _items = list);
   }
 
-  void _audition(SavedInstrument s) {
-    final inst = s.instrument;
-    if (inst == null) return; // references need the font bytes — skip
-    final pcm = auditionInstrument(inst);
+  void _playNote(TrackerInstrument inst, int midi) {
+    final pcm = renderInstrumentNote(inst, midi);
     if (pcm.isEmpty) return;
     context.read<AudioService>().playWavBytes(pcmFloatToWav(pcm));
+  }
+
+  void _audition(SavedInstrument s) {
+    final inst = s.instrument;
+    if (inst != null) _playNote(inst, 60); // references need the font — skip
+  }
+
+  /// Opens a one-octave keyboard that plays [s] at each tapped pitch.
+  Future<void> _showKeyboard(SavedInstrument s) async {
+    final inst = s.instrument;
+    if (inst == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${l10n.myInstrumentsPlay} · ${s.name}'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  for (var i = 0; i < kKeyboardMidi.length; i++)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: SizedBox(
+                          height: 96,
+                          child: ElevatedButton(
+                            onPressed: () => _playNote(inst, kKeyboardMidi[i]),
+                            child: Text(kKeyboardLabels[i]),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -152,10 +200,22 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                             onPressed:
                                 s.isReference ? null : () => _audition(s),
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: l10n.myInstrumentsDelete,
-                            onPressed: () => deleteAt(i),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.piano),
+                                tooltip: l10n.myInstrumentsPlay,
+                                onPressed: s.isReference
+                                    ? null
+                                    : () => _showKeyboard(s),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: l10n.myInstrumentsDelete,
+                                onPressed: () => deleteAt(i),
+                              ),
+                            ],
                           ),
                         );
                       },

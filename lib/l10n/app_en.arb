@@ -661,6 +661,7 @@
   "myInstrumentsTitle": "My Instruments",
   "myInstrumentsEmpty": "No saved instruments yet. Shape a voice and tap “Save as instrument”.",
   "myInstrumentsAudition": "Play a note",
+  "myInstrumentsPlay": "Play",
   "myInstrumentsDelete": "Delete",
   "voiceLabSaveInstrument": "Save as instrument",
   "voiceLabInstrumentSaved": "Saved “{name}” to My Instruments",

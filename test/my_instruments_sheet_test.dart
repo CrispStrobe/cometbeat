@@ -78,13 +78,39 @@ void main() {
     expect(find.textContaining('No saved instruments'), findsOneWidget);
   });
 
-  test('auditionInstrument renders a non-silent note', () {
+  test('renderInstrumentNote is non-silent across the keyboard octave', () {
     final inst = _saved('x').instrument!;
-    final pcm = auditionInstrument(inst);
-    var peak = 0.0;
-    for (final s in pcm) {
-      if (s.abs() > peak) peak = s.abs();
+    for (final midi in kKeyboardMidi) {
+      final pcm = renderInstrumentNote(inst, midi);
+      var peak = 0.0;
+      for (final s in pcm) {
+        if (s.abs() > peak) peak = s.abs();
+      }
+      expect(peak, greaterThan(0.01), reason: 'silent at midi $midi');
     }
-    expect(peak, greaterThan(0.01));
+    // a higher note is genuinely different audio, not the same buffer
+    expect(
+      renderInstrumentNote(inst, 72),
+      isNot(renderInstrumentNote(inst)),
+    );
+  });
+
+  testWidgets('the 🎹 button opens a one-octave keyboard', (tester) async {
+    final store = InstrumentLibraryStore();
+    await store.save(_saved('bell'));
+    await pumpGame(
+      tester,
+      _hosted(MyInstrumentsSheet(store: InstrumentLibraryStore())),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.piano));
+    await tester.pumpAndSettle();
+
+    // one labelled button per white key (C D E F G A B C)
+    for (final label in const ['C', 'D', 'E', 'F', 'G', 'A', 'B']) {
+      expect(find.widgetWithText(ElevatedButton, label), findsWidgets);
+    }
+    expect(find.byType(ElevatedButton), findsNWidgets(kKeyboardMidi.length));
   });
 }

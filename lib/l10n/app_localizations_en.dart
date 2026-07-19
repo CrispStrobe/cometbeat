@@ -1761,6 +1761,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myInstrumentsAudition => 'Play a note';
 
   @override
+  String get myInstrumentsPlay => 'Play';
+
+  @override
   String get myInstrumentsDelete => 'Delete';
 
   @override
