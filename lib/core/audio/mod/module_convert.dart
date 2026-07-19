@@ -49,7 +49,8 @@
 //   • patterns: each DocPattern → a 64-row × 4-channel ModPattern (pad/truncate
 //     rows to 64, channels to 4). cell: period = note<0 ? 0 : midiToPeriod(note),
 //     sample = instrument.clamp(0,31). A volume-column value is carried as a Cxx
-//     set-volume effect (MOD has no volume column); source effects still drop.
+//     set-volume effect (MOD has no volume column) and a note-off as C00 (MOD has
+//     no note-off — C00 silences the note); source effects still drop.
 //
 // convertToMod(doc) = writeMod(docToMod(doc)).
 //
@@ -520,17 +521,19 @@ ModModule docToMod(ModuleDoc doc) {
       for (var ch = 0; ch < 4; ch++) {
         if (ch < srcRow.length) {
           final c = srcRow[ch];
-          // MOD has no volume column, but a Cxx effect sets the note volume
-          // (0x00–0x40). Carry an explicit volume-column value that way so it
-          // survives export instead of being dropped. MOD isn't carrying any
-          // other effect here, so the single effect slot is free; a real
-          // effect (once translated) would take precedence.
+          // MOD has neither a volume column nor a note-off, but a Cxx effect
+          // sets the note volume (0x00–0x40): carry an explicit volume that way,
+          // and emulate a note-off as C00 (volume 0) so the note is silenced (a
+          // rest) instead of ringing on. MOD isn't carrying any other effect
+          // here, so the single effect slot is free; a real effect (once
+          // translated) would take precedence.
           final hasVol = c.volume >= 0;
+          final cxx = hasVol || c.noteOff;
           cells.add(
             ModCell(
               sample: c.instrument.clamp(0, 31),
               period: c.note < 0 ? 0 : midiToPeriod(c.note),
-              effect: hasVol ? 0xC : 0,
+              effect: cxx ? 0xC : 0,
               effectParam: hasVol ? c.volume.clamp(0, 64) : 0,
             ),
           );
