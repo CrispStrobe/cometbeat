@@ -10,6 +10,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+- **opus (midi-velocity)** · 🚧 **ACTIVE — velocity/dynamics fidelity in `scoreToMidi`** (MIDI opportunity #1, see the "🎹 MIDI in/out" scoped block below). `scoreToMidi` writes a fixed velocity 80 + ignores dynamics; mapping `Score.dynamics` (`DynamicMarking` id→`DynamicLevel`) → base velocity, accent/marcato → bump, staccato → shorter note-off. Files: `crisp_notation_core/src/midi/midi_writer.dart` + test (cross-repo `CrispStrobe/crisp_notation`). Byte-compatible when no dynamics. Upgrades all mus MIDI exports; no app collision. Then #2 (MIDI→play-along), #3 (transcription surface) in sequence.
+
 - **opus (transcribe-midi)** · ✅ **SHIPPED — `--midi FILE` output + fixed silent MIDI export** (`1d58d479`, `bin/listen.dart --transcribe`). `scoreToMidi(score, quarterBpm: grid.bpm)` behind a new `--midi FILE` flag (composes with `--out` MusicXML). **Found+fixed a real bug:** scoreToMidi only emits notes it can find by `NoteElement.id`, but `transcribeToScore` built notes WITHOUT ids → MIDI came out silent (meta-only) though MusicXML was fine; now every element gets a unique id (`e0`,`e1`,… — the `Score.parse` convention), so ANY transcription-MIDI consumer benefits. Verified: synth C D E F G A G → a 104-byte SMF (was 41, meta-only) that reads back via `scoreFromMidi` as the same pitches. +round-trip regression test. Full analyze clean; transcription suite green (37). Now idle.
 - **opus (transcribe-basicpitch)** · ✅ **SHIPPED — Transcription Worker 3 neural chain** (Basic Pitch polyphonic via `onnx_runtime_dart`). `basicPitchTranscribe(Float64List) → List<NoteEvent>`: resample→22050, overlap-windowed ONNX inference, faithful Apache-2.0 port of `output_to_notes_polyphonic` (onset/frame/infer-onsets/melodia). **Validated vs the reference impl**: `nmp.onnx` runs on our runtime at **cosine 1.0** vs onnxruntime (all 3 heads); the note decoder matches Python `basic_pitch.output_to_notes_polyphonic` **EXACTLY** on a committed fixture (normal + inferred-onset + melodia paths). 5 tests green (3 deterministic + reference-parity + model-gated synthetic triad **note-F 1.0**). CLI `bin/transcribe_basicpitch.dart` (WAV→notes). Model download-on-demand (Apache-2.0 NOTICE shipped) — no bundled asset. **pubspec**: moved `onnx_runtime_dart` dev→runtime path dep (lib/ uses it) — the transcriber is WEB-SAFE (proven via `dart compile js`); dart:io is confined to the native `basic_pitch_model_store.dart` (download/cache), so S5 can use it on web by providing model bytes itself. Files: `transcription/basic_pitch.dart`, `test/…/basic_pitch_test.dart` + `basic_pitch_ref.json`, `basic_pitch_model_store.dart`, `bin/transcribe_basicpitch.dart`, pubspec. Now idle.
 
@@ -410,6 +412,49 @@ These lean on infra we already own (mic capture, onset detection, the groove/
 tracker engines, model converters). Sequence suggestion: **(2) the quantisation
 threshold engine first** (pure, testable, unlocks the rest) → **(1) DrumKit
 record** → **(3) model conversion** → **(4) Looper**. Not started.
+
+### 🎹 MIDI in/out — surface map + opportunities (scoped 2026-07-19)
+
+**What we already have (all file-level SMF, no device I/O):** three core
+primitives — `scoreToMidi` (format-0, single Score) · `multiPartToMidi`
+(format-1, one track/part, `lib/core/notation/multi_part_export.dart`) ·
+`scoreFromMidi` / `multiTrackMidiToMultiPart` (readers, hardened). **Export
+(OUT):** the shared export sheet (`lib/shared/music_io/music_export.dart`) gives
+MIDI to Drumkit · Loop Mixer · My Melody · Free Sing · Song Book · My Samples;
+plus Workshop, Tracker (basic+adv), Tab Workshop, and CLIs `notaconv` +
+`listen --transcribe --midi`. **Import (IN):** Workshop, Tracker, Tab Workshop,
+Song import, Library import. So export is broad and import lands in the editors.
+
+**Opportunities, cleanest → hardest — implement in this order:**
+
+1. ⏳ **Velocity/dynamics fidelity in `scoreToMidi`** *(library, S · highest
+   leverage).* `scoreToMidi` writes a **fixed velocity 80** for every note and
+   ignores the model's dynamics — but `Score` already carries `DynamicMarking`
+   (id→`DynamicLevel`) and `NoteElement.articulations` (accent/marcato/staccato).
+   Map dynamic level → base velocity, accent/marcato → a bump, staccato → a
+   shorter note-off. **One function in `crisp_notation_core`
+   `src/midi/midi_writer.dart` + a test; upgrades ALL seven export surfaces at
+   once**, byte-compatible when a score has no dynamics. Cross-repo (push to
+   `CrispStrobe/crisp_notation` too — CI aligns).
+2. ⏳ **Import a MIDI → play/sing along to it** *(app, S · nearly free).* You can
+   import MIDI into the *editors* but not turn a `.mid` into a play-along level.
+   The pieces already exist: `scoreFromMidi(bytes)` → `chartFromScore` /
+   `SongScreen.fromScore` (`songs/song_play_along.dart`) already derive a
+   `PlayAlongChart` from any `Score`. Just needs an entry point — a "Play along
+   to a MIDI file" pick (file → `scoreFromMidi` → `SongScreen.fromScore`) in the
+   Song Book / play-along area. Any `.mid` becomes a game level.
+3. ⏳ **Transcription → app surface (record/import audio → transcribe → save).**
+   The whole `audio → notes → MIDI/MusicXML` chain (`transcribeToScore`, the CLI
+   `--midi`) is **CLI/core only — no app screen**. A "record or pick audio →
+   transcribe → Song Book / export MIDI" flow is the natural consumer. Engine is
+   done; it's a screen + the export sheet. ⚠️ *Adjacent to the active
+   recorded-song-analysis worker — coordinate/claim before touching that lane.*
+4. 🔭 **Real-time / device MIDI (the strategic prize, L · plugin project).** No
+   USB/BLE MIDI input or MIDI-out today (grep for `flutter_midi`/`midi_command`
+   is empty); the roadmap lists "MIDI input" as the one real-instrument input
+   still open. A MIDI-in layer (plugin + permission/route seam) would drive the
+   keyboard/note games, play-along, and Workshop/Tracker step-entry more
+   accurately than the mic. Not a single-session ship; scope as its own arc.
 
 ### 🚀 Handover prompt for the next agent (copy-paste this)
 
