@@ -22,7 +22,7 @@ parallel. Recommended ordering by leverage:
 | **1** | **W-METRE** | ✅ *slice 1 (`estimateMeter`) SHIPPED* — remaining: metrical quantisation | correct barlines/anacrusis/meter, not assumed 4/4 |
 | **1** | **W-SEP** | source separation → per-stem multi-part transcription | the single biggest jump: "transcribe a whole song" |
 | **2** | **W-HARMONY** | neural chord + key estimation | lead sheets; enharmonic spelling input |
-| **2** | **W-NOTATION** | ✅ *slice 1 (key + enharmonic spelling) SHIPPED* — remaining: voice/staff separation (+ PM2S later) | turns a note dump into a READABLE engraving |
+| **2** | **W-NOTATION** | ✅ *COMPLETE* — key+spelling, clef, chords, voice+staff separation all shipped (optional PM2S later) | turns a note dump into a READABLE engraving |
 | **3** | **W-PIANO-MT3** | piano-specialist model, then seq2seq multi-instrument | near-SOTA polyphonic; frontier |
 | **3** | **W-DRUMS** | ✅ *DSP path (kick/snare/hat) SHIPPED* — remaining: finer kit + pattern-quantise | pairs with `beat_capture.dart`; completes the band |
 
@@ -170,9 +170,20 @@ detected meter in the commit.
 
 ### W-SEP — source separation → per-stem multi-part transcription (biggest lever)
 
+> ✅ **The ASSEMBLY GLUE is PRE-BUILT (`20a1f066`, `stems.dart`, 6 tests):**
+> `transcribeStems(Stems)` routes each stem to the right engine (vocals/bass →
+> monophonic, other → chords, drums → W-DRUMS), engraves with correct
+> key/clef against one shared grid, and assembles a `MultiPartScore`;
+> `transcribeSong(mono, {separator})` separates then assembles. The `Separator`
+> is INJECTED. **W-SEP now only has to provide `separate(mono) → Stems`** (Demucs
+> / Open-Unmix ONNX) — the per-stem→per-engine→multi-part-score pipeline already
+> works and is tested. Same download-on-demand / `!kIsWeb` / skip-if-absent rules
+> as the CREPE shell.
+
 **Role.** The reason we fail on full songs is mixed sources. Split a song into
 stems and transcribe each with the right engine → a multi-part score. This is the
-jump from demo to industry-grade.
+jump from demo to industry-grade. **The assembly is done (`stems.dart`); your job
+is the separation model.**
 
 **Files.** `lib/core/audio/transcription/separate.dart` +
 `separate_model_store.dart` + `test/transcription/separate_test.dart`. A demo CLI
@@ -232,10 +243,11 @@ progression in the commit. (4) Deterministic + skip-if-absent.
 > (`07811aea`): `chooseClef` — bass for a low line, treble otherwise.** ✅
 > **Polyphonic chords SHIPPED (`a26f4f45`): chord-aware `transcribeToScore` —
 > simultaneous notes → one multi-pitch note-head, held chords merge; monophonic
-> unchanged.** **Remaining for this worker: VOICE/STAFF separation (assign
-> overlapping notes to ≤4 voices + a grand staff so independent lines are
-> notated as such, not re-articulated chords), and the optional PM2S neural
-> slice.**
+> unchanged.** ✅ **Voice/staff separation SHIPPED (`ade609ab`, `voices.dart`,
+> 7 tests): `separateVoices` (≤4 voices; melody over a held bass → 2 voices; a
+> block chord stays 1) + `toGrandStaff` (treble+bass split, aligned, valid
+> grand-staff MusicXML).** **⇒ W-NOTATION COMPLETE** — only the optional PM2S
+> neural slice (expressive timing → notated rhythm) is left, if ever wanted.
 
 **Role.** Turn a flat `NoteEvent` stream into a READABLE score: separate voices
 and hands/staves, add a key signature, and spell enharmonics correctly. Slice 1
