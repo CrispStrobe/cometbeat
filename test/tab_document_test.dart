@@ -26,6 +26,34 @@ void main() {
     expect(score.tabVoicings.first.strings, [5]);
   });
 
+  test('capo raises the sounding pitch, tab-voicing string unchanged', () {
+    final doc = TabDocument.blank(guitar, initialColumns: 1)..setFret(0, 5, 3);
+    final open = doc.toScore();
+    final capo2 = doc.toScore(capo: 2);
+    final openMidi = open.measures.first.elements
+        .whereType<NoteElement>()
+        .first
+        .pitches
+        .single
+        .midiNumber;
+    final capoMidi = capo2.measures.first.elements
+        .whereType<NoteElement>()
+        .first
+        .pitches
+        .single
+        .midiNumber;
+    // Standard-staff / concert pitch is transposed up by the capo…
+    expect(capoMidi, openMidi + 2);
+    // …but the note is still pinned to the same string (fret display is
+    // re-derived against the capo-shifted tuning, so the number is unchanged).
+    expect(capo2.tabVoicings.first.strings, [5]);
+    // Playback follows the same transpose.
+    expect(
+      doc.toPlaybackEvents(capo: 2).first.$1.single,
+      doc.toPlaybackEvents().first.$1.single + 2,
+    );
+  });
+
   test('a chord column pins each string in pitch order', () {
     final doc = TabDocument.blank(guitar, initialColumns: 1)
       ..setFret(0, 0, 0)

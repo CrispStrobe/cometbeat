@@ -254,10 +254,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         _selString = string.clamp(0, _doc.stringCount - 1);
       });
 
-  /// The sounding pitch of ([string], [fret]) on this tuning (capo is a display
-  /// offset only — [TabDocument.toScore] ignores it, so the inspector does too).
+  /// The sounding pitch of ([string], [fret]) on this tuning, including the
+  /// capo transpose so the inspector reports what is actually heard.
   Pitch _pitchAt(int string, int fret) =>
-      Pitch.fromMidi(_doc.tuning.strings[string].midiNumber + fret);
+      Pitch.fromMidi(_doc.tuning.strings[string].midiNumber + fret + _capo);
 
   /// 🔍 Describe cell ([col], [string]): the fretted note, the chord the whole
   /// column sounds, and the string/fret (+ any attached chord name). Null when
@@ -511,9 +511,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   bool isSoloed(int track) => _tracks[track].soloed;
 
-  /// The whole band as a [MultiPartScore] (one part per track).
+  /// The whole band as a [MultiPartScore] (one part per track), transposed by
+  /// the capo so exports and hand-offs match what the editor plays.
   MultiPartScore _bandScore() =>
-      MultiPartScore([for (final t in _tracks) t.doc.toScore()]);
+      MultiPartScore([for (final t in _tracks) t.doc.toScore(capo: _capo)]);
 
   @override
   MultiPartScore debugWorkshopScore() => _bandScore();
@@ -535,9 +536,9 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   /// track, else the single active track.
   String _bandMusicXml() => _tracks.length > 1
       ? multiPartToMusicXml(
-          MultiPartScore([for (final t in _tracks) t.doc.toScore()]),
+          MultiPartScore([for (final t in _tracks) t.doc.toScore(capo: _capo)]),
         )
-      : scoreToMusicXml(_doc.toScore());
+      : scoreToMusicXml(_doc.toScore(capo: _capo));
 
   @override
   void saveToSongBook(String title) {
@@ -736,11 +737,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   void _startPlayback() {
     // Audio: every track sounding together. Highlight: the ACTIVE track's own
     // column timeline (that's what the preview shows).
-    final events = _doc.toPlaybackEvents(bpm: _bpm);
+    final events = _doc.toPlaybackEvents(bpm: _bpm, capo: _capo);
     final band = mergePlaybackEvents(
       [
         for (final t in audibleTracks(_tracks))
-          t.doc.toPlaybackEvents(bpm: _bpm),
+          t.doc.toPlaybackEvents(bpm: _bpm, capo: _capo),
       ],
     );
     context.read<AudioService>().playTimedChords(band);
@@ -791,7 +792,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   // ── Export ───────────────────────────────────────────────────────────────
   Future<void> _export(String format) async {
-    final score = _doc.toScore();
+    final score = _doc.toScore(capo: _capo);
     final base = (_sourceName ?? 'tab').replaceAll(RegExp(r'\.[^.]*$'), '');
     switch (format) {
       case 'gp':
@@ -799,7 +800,9 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         // tuning); techniques ride along as GPIF note properties.
         final gpif = _tracks.length > 1
             ? multiPartToGpif(
-                MultiPartScore([for (final t in _tracks) t.doc.toScore()]),
+                MultiPartScore(
+                  [for (final t in _tracks) t.doc.toScore(capo: _capo)],
+                ),
                 tunings: [for (final t in _tracks) t.doc.tuning],
                 names: [for (final t in _tracks) t.name],
               )
@@ -893,7 +896,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final score = _doc.toScore();
+    final score = _doc.toScore(capo: _capo);
     final view = _showStandard
         ? NotationTabView(
             score: score,

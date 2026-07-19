@@ -259,7 +259,12 @@ class TabDocument {
   /// Engraves the document as a [Score] with [TabVoicing]s pinning each note to
   /// its authored strings. Columns tile into ≤8-step (4/4) bars without ever
   /// splitting a note across a barline (so voicing ids stay 1:1 with columns).
-  Score toScore() {
+  ///
+  /// [capo] raises every sounding pitch by that many semitones (a capo clamps
+  /// the nut up). Fret numbers stay capo-relative, so the tab staff — which
+  /// re-derives frets against the capo-shifted tuning — keeps showing the
+  /// authored numbers, while the standard staff and playback sound transposed.
+  Score toScore({int capo = 0}) {
     final measures = <Measure>[];
     final voicings = <TabVoicing>[];
     final bends = <Bend>[];
@@ -293,7 +298,7 @@ class TabDocument {
           ..sort((a, b) => a.key.compareTo(b.key));
         final pitches = [
           for (final e in entries)
-            pitchFromMidi(tuning.strings[e.key].midiNumber + e.value),
+            pitchFromMidi(tuning.strings[e.key].midiNumber + e.value + capo),
         ];
         final id = 't$c';
         bar.add(NoteElement(pitches: pitches, duration: col.duration, id: id));
@@ -340,8 +345,9 @@ class TabDocument {
   }
 
   /// A `(midi pitches, ms)` timeline for `AudioService.playTimedChords`, at
-  /// [bpm] (a quarter note = 60000/bpm ms).
-  List<(List<int>, int)> toPlaybackEvents({int bpm = 120}) {
+  /// [bpm] (a quarter note = 60000/bpm ms). [capo] raises every pitch by that
+  /// many semitones so playback matches a clamped nut (see [toScore]).
+  List<(List<int>, int)> toPlaybackEvents({int bpm = 120, int capo = 0}) {
     final eighthMs = (60000 / bpm / 2).round();
     return [
       for (final col in columns)
@@ -350,7 +356,7 @@ class TabDocument {
             for (final e
                 in (col.frets.entries.toList()
                   ..sort((a, b) => a.key.compareTo(b.key))))
-              tuning.strings[e.key].midiNumber + e.value,
+              tuning.strings[e.key].midiNumber + e.value + capo,
           ],
           _stepsOf(col.duration) * eighthMs,
         ),
