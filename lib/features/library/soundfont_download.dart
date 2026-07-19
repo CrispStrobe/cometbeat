@@ -22,27 +22,59 @@ import 'package:comet_beat/core/audio/sf2/sf2_remote.dart';
 import 'package:comet_beat/features/library/source_registry.dart'
     show defaultHttpGet;
 
+// Every URL below was verified reachable (HTTP 200, octet-stream, expected
+// size) and MIT-licensed at authoring time. All are pinned to immutable hosts:
+// a git TAG on musescore/MuseScore (tags don't move) and the osuosl MuseScore
+// mirror (which carries the license + sample-sources files next to the fonts).
+
 /// A compressed (`.sf3`, Ogg-Vorbis) mono re-encoding of FluidR3 GM — the full
-/// General-MIDI set at ~1/10th the size of the uncompressed `.sf2`, so it's the
-/// friendly default. MIT (it's FluidR3, Frank Wen), decoded via the glint
-/// Vorbis path. The [url] is a configurable mirror (as with [kFluidR3Gm]); the
-/// maintainer can repoint it at any verified host.
+/// General-MIDI set at ~1/10th the size of the uncompressed original, so it's
+/// the friendly default. MIT (FluidR3 by Frank Wen; mono conversion by Michael
+/// Cowgill). Decoded via the glint Vorbis path `loadSoundFont` auto-selects.
 const kFluidR3MonoGm = SoundFontSource(
   id: 'fluidr3mono_gm',
-  name: 'FluidR3 Mono GM (General MIDI, compact)',
-  url: 'https://github.com/musescore/MuseScore/raw/v2.1/share/sound/'
-      'FluidR3Mono_GM.sf3',
+  name: 'FluidR3 Mono GM (compact)',
+  url: 'https://raw.githubusercontent.com/musescore/MuseScore/2.1/'
+      'share/sound/FluidR3Mono_GM.sf3',
   license: 'MIT',
-  attribution: 'FluidR3 GM by Frank Wen — MIT license (mono .sf3 re-encode)',
-  approxBytes: 13000000,
+  attribution: 'FluidR3 GM by Frank Wen; mono by Michael Cowgill — MIT',
+  approxBytes: 14563174,
 );
 
-/// The curated download catalog, smallest first: the ~13 MB compact `.sf3` as
-/// the recommended default, then the full ~140 MB uncompressed `.sf2`. Both are
-/// complete 128-instrument General-MIDI sets under the MIT licence.
+/// MuseScore General (compressed `.sf3`) — the modern MuseScore soundbank: full
+/// GM plus many extra banks/kits, best overall coverage. MIT (S. Christian
+/// Collins, atop FluidR3Mono). Needs the glint Vorbis decoder.
+const kMuseScoreGeneralSf3 = SoundFontSource(
+  id: 'musescore_general_sf3',
+  name: 'MuseScore General (full coverage)',
+  url: 'https://ftp.osuosl.org/pub/musescore/soundfont/'
+      'MuseScore_General/MuseScore_General.sf3',
+  license: 'MIT',
+  attribution: 'MuseScore General by S. Christian Collins et al. — MIT',
+  approxBytes: 39900972,
+);
+
+/// MuseScore General as an UNCOMPRESSED `.sf2` — the no-decoder fallback: large,
+/// but plays even where the glint Vorbis decoder isn't available (so a `.sf3`
+/// would be rejected). MIT, same source as [kMuseScoreGeneralSf3].
+const kMuseScoreGeneralSf2 = SoundFontSource(
+  id: 'musescore_general_sf2',
+  name: 'MuseScore General (uncompressed, no decoder needed)',
+  url: 'https://ftp.osuosl.org/pub/musescore/soundfont/'
+      'MuseScore_General/MuseScore_General.sf2',
+  license: 'MIT',
+  attribution: 'MuseScore General by S. Christian Collins et al. — MIT',
+  approxBytes: 215614036,
+);
+
+/// The curated download catalog, smallest first: the ~14 MB compact `.sf3` as
+/// the recommended default, then the fuller ~38 MB `.sf3`, then the ~206 MB
+/// uncompressed `.sf2` that needs no Vorbis decoder. All are complete
+/// General-MIDI sets under the MIT licence, verified reachable at authoring.
 const List<SoundFontSource> kGmSoundFonts = [
   kFluidR3MonoGm,
-  kFluidR3Gm,
+  kMuseScoreGeneralSf3,
+  kMuseScoreGeneralSf2,
 ];
 
 /// A human "~13 MB" / "~141 MB" size hint for [source], or '' if unknown.

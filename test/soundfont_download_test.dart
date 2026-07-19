@@ -39,8 +39,9 @@ void main() {
   });
 
   test('size hint formats megabytes', () {
-    expect(soundFontSizeHint(kFluidR3MonoGm), '~12 MB');
-    expect(soundFontSizeHint(kFluidR3Gm), contains('MB'));
+    expect(soundFontSizeHint(kFluidR3MonoGm), '~14 MB');
+    expect(soundFontSizeHint(kMuseScoreGeneralSf3), '~38 MB');
+    expect(soundFontSizeHint(kMuseScoreGeneralSf2), '~206 MB');
   });
 
   test('download gates on licence, fetches once, then serves from cache',
