@@ -274,6 +274,30 @@ void main() {
     expect(s.trackGain(0), 1.0);
   });
 
+  test('add / remove / rename track', () {
+    final s = DawService(); // starts with 2 tracks (A, B)
+    expect(s.timeline.tracks.length, 2);
+
+    s.addTrack();
+    expect(s.timeline.tracks.length, 3);
+
+    s.renameTrack(0, 'Drums');
+    expect(s.trackName(0), 'Drums');
+
+    s.removeTrack(1);
+    expect(s.timeline.tracks.length, 2);
+    expect(s.trackName(0), 'Drums'); // survivor kept
+
+    // Never drops below one lane.
+    s.removeTrack(0);
+    s.removeTrack(0);
+    expect(s.timeline.tracks.length, 1);
+
+    // Every op is undoable.
+    s.undo();
+    expect(s.timeline.tracks.length, 2);
+  });
+
   test('toggleTrackSolo isolates a track and undoes', () {
     final s = DawService()
       ..addClip(_tone(0.5, 100))

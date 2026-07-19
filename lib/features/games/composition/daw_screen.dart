@@ -68,6 +68,12 @@ abstract interface class DawTester {
   /// Solo a track (while any track is soloed, only soloed tracks are heard).
   void toggleTrackSolo(int track);
   bool isTrackSoloed(int track);
+
+  /// Track management: add an empty lane, remove one (min one kept), rename.
+  void addTrack();
+  void removeTrack(int track);
+  void renameTrack(int track, String name);
+  String trackName(int track);
   void addDemoBeat();
   void addDemoTune();
   void addSampleClip(SampleClip clip);
@@ -214,6 +220,62 @@ class _DawScreenState extends State<DawScreen>
 
   @override
   bool isTrackSoloed(int track) => _daw.isTrackSoloed(track);
+
+  @override
+  void addTrack() => _daw.addTrack();
+
+  @override
+  void removeTrack(int track) {
+    _daw.removeTrack(track);
+    if (_playing) play();
+  }
+
+  @override
+  void renameTrack(int track, String name) => _daw.renameTrack(track, name);
+
+  @override
+  String trackName(int track) => _daw.trackName(track);
+
+  /// Track name → a small menu to rename the lane or remove it.
+  Future<void> _trackMenu(int i) async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(text: _daw.trackName(i));
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.dawTrackTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(labelText: l10n.dawTrackName),
+          onSubmitted: (_) => Navigator.of(ctx).pop('rename'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: _daw.timeline.tracks.length <= 1
+                ? null
+                : () => Navigator.of(ctx).pop('remove'),
+            child: Text(l10n.dawRemoveTrack),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.dawCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop('rename'),
+            child: Text(l10n.dawRename),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'rename') {
+      final name = controller.text.trim();
+      if (name.isNotEmpty) renameTrack(i, name);
+    } else if (action == 'remove') {
+      removeTrack(i);
+    }
+  }
 
   DrumRowsPattern _demoBeat() {
     final rows = {
@@ -728,6 +790,11 @@ class _DawScreenState extends State<DawScreen>
                     icon: const Icon(Icons.folder_open),
                     label: Text(l10n.dawOpenProject),
                   ),
+                  OutlinedButton.icon(
+                    onPressed: addTrack,
+                    icon: const Icon(Icons.add_road),
+                    label: Text(l10n.dawAddTrack),
+                  ),
                 ],
               ),
             ),
@@ -861,10 +928,13 @@ class _DawScreenState extends State<DawScreen>
           Row(
             children: [
               Expanded(
-                child: Text(
-                  track.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                child: InkWell(
+                  onTap: () => _trackMenu(i),
+                  child: Text(
+                    track.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               InkWell(

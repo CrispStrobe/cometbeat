@@ -2522,6 +2522,48 @@ abstract class AppLocalizations {
   /// **'Added to the Multitrack'**
   String get dawSent;
 
+  /// No description provided for @dawAddTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add track'**
+  String get dawAddTrack;
+
+  /// No description provided for @dawTrackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track'**
+  String get dawTrackTitle;
+
+  /// No description provided for @dawTrackName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get dawTrackName;
+
+  /// No description provided for @dawRenameTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get dawRenameTrack;
+
+  /// No description provided for @dawRemoveTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove track'**
+  String get dawRemoveTrack;
+
+  /// No description provided for @dawRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get dawRename;
+
+  /// No description provided for @dawCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get dawCancel;
+
   /// No description provided for @dawSaveProject.
   ///
   /// In en, this message translates to:

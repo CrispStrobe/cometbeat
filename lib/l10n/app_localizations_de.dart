@@ -1317,6 +1317,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawSent => 'Zur Mehrspur hinzugefügt';
 
   @override
+  String get dawAddTrack => 'Spur hinzufügen';
+
+  @override
+  String get dawTrackTitle => 'Spur';
+
+  @override
+  String get dawTrackName => 'Name';
+
+  @override
+  String get dawRenameTrack => 'Umbenennen';
+
+  @override
+  String get dawRemoveTrack => 'Spur entfernen';
+
+  @override
+  String get dawRename => 'Umbenennen';
+
+  @override
+  String get dawCancel => 'Abbrechen';
+
+  @override
   String get dawSaveProject => 'Projekt speichern';
 
   @override

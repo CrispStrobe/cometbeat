@@ -118,6 +118,31 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Append a new empty track (auto-named by position).
+  void addTrack() {
+    _record();
+    timeline.tracks.add(DawTrack(name: '${timeline.tracks.length + 1}'));
+    notifyListeners();
+  }
+
+  /// Remove a whole track and its clips. Keeps at least one track so the
+  /// arranger always has a lane.
+  void removeTrack(int track) {
+    if (timeline.tracks.length <= 1) return;
+    _record();
+    timeline.tracks.removeAt(track);
+    notifyListeners();
+  }
+
+  /// Rename a track.
+  void renameTrack(int track, String name) {
+    _record();
+    timeline.tracks[track].name = name;
+    notifyListeners();
+  }
+
+  String trackName(int track) => timeline.tracks[track].name;
+
   /// Mute / unmute a whole track.
   void toggleTrackMute(int track) {
     _record();
