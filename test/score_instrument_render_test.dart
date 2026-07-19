@@ -97,6 +97,29 @@ void main() {
     );
   });
 
+  Score oneVel(int? velocity) => Score(
+        clef: Clef.treble,
+        measures: [
+          Measure([
+            NoteElement(
+              id: 'e0',
+              pitches: const [Pitch(Step.c)],
+              duration: NoteDuration.whole,
+              velocity: velocity,
+            ),
+          ]),
+        ],
+      );
+
+  test('MIDI note velocity scales loudness (120 louder than 40)', () {
+    final soft = renderScoreWithInstrument(oneVel(40), _voice());
+    final loud = renderScoreWithInstrument(oneVel(120), _voice());
+    expect(_peak(loud), greaterThan(_peak(soft)));
+    // No velocity → unscaled (full) render, louder than an explicit 120.
+    final none = renderScoreWithInstrument(oneVel(null), _voice());
+    expect(_peak(none), greaterThan(_peak(loud)));
+  });
+
   test('panPartsToStereo places part 0 left, part 1 right', () {
     final loud = Float64List(64)..fillRange(0, 64, 0.5);
     final silent = Float64List(64);

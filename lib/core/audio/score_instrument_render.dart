@@ -92,13 +92,15 @@ void _placeVoice(
       final durMs = _durMs(e.duration, quarterMs);
       final startSample = (cursorMs * sampleRate / 1000).round();
 
-      // Dynamics + articulations → a per-note gain (and staccato shortening).
-      // Only when the score actually carries dynamics, so an unmarked score is
-      // byte-identical to the plain render.
+      // A per-note gain (and staccato shortening) from the note's loudness:
+      // an explicit performed velocity (a MIDI import) wins; else notated
+      // dynamics. Left null — and the render byte-identical — when the note has
+      // neither, so a plain score is unchanged.
       var gain = 1.0;
       var playMs = durMs;
-      if (expressive) {
-        var vel = currentVel;
+      int? vel = e.velocity;
+      if (vel == null && expressive) {
+        vel = currentVel;
         final marked = e.id == null ? null : dynByElement[e.id];
         if (marked != null) {
           final v = _dynamicVelocity[marked] ?? 80;
@@ -109,6 +111,8 @@ void _placeVoice(
             vel = v;
           }
         }
+      }
+      if (vel != null) {
         if (e.articulations.contains(Articulation.accent)) {
           vel = (vel + 15).clamp(0, 127);
         }
