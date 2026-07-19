@@ -10,6 +10,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+- **opus (transcribe-basicpitch)** · 🚧 **ACTIVE — Transcription Worker 3 neural chain** (Basic Pitch polyphonic via `onnx_runtime_dart`). Verified `nmp.onnx` runs on our runtime at **cosine 1.0** vs ORT (all 3 heads). Building `basic_pitch.dart` — resample→22050, window (43844-sample, 30-frame overlap), ONNX inference, port of Apache-2.0 `output_to_notes_polyphonic` → `NoteEvent` — + download-on-demand model store + tests (deterministic posteriorgram, model-gated synthetic triad, real-recording CLI). Files: `transcription/basic_pitch.dart` + `test/transcription/basic_pitch_test.dart` (+ `pubspec.yaml`/assets for the model — announced here). Non-colliding with Worker 1/2; does not touch `contracts.dart`/`note_metrics.dart`.
+
 Live board so parallel agents don't collide. **Update this at every checkpoint
 and push to origin/main** before/after touching shared files. Format:
 `agent · task · files touched · status`.
