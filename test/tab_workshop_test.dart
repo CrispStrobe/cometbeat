@@ -8,7 +8,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
-
+import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
@@ -52,6 +52,22 @@ void main() {
       expect(tabImportExtensions, contains('gpx'));
       expect(tabImportExtensions, contains('musicxml'));
     });
+  });
+
+  testWidgets('To Multitrack sends the tab band as a DAW clip', (tester) async {
+    final daw = DawService();
+    await pumpGame(
+      tester,
+      const TabWorkshopScreen(),
+      extraProviders: [ChangeNotifierProvider<DawService>.value(value: daw)],
+    );
+    final tab = _tab(tester);
+
+    // The demo riff is non-empty, so sending yields a clip that bakes.
+    expect(daw.clipCount, 0);
+    tab.sendToDaw();
+    expect(daw.clipCount, 1);
+    expect(daw.bake(), isNotEmpty);
   });
 
   testWidgets('opens with the demo riff and tuning/capo controls',

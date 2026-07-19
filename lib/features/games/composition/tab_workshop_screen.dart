@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -11,6 +12,7 @@ import 'package:comet_beat/features/games/composition/tab_mic_capture.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show setEquals;
@@ -138,6 +140,9 @@ abstract class TabWorkshopTester {
   /// card is showing (a fretted cell shows it; an empty column clears it).
   void debugHoverCell(int col, int string);
   bool get debugHoverCardShown;
+
+  /// Send the whole tab band to the Multitrack (DAW) as a clip.
+  void sendToDaw();
 }
 
 /// A guitar/bass **tablature editor** (B1) — the Tab Workshop. Author tab on a
@@ -702,8 +707,13 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
           'MIDI',
           const ['mid'],
         );
+      case 'daw':
+        sendToDaw();
     }
   }
+
+  @override
+  void sendToDaw() => sendToMultitrack(context, ScoreSource(_bandScore()));
 
   Future<void> _saveBytes(
     Uint8List bytes,
@@ -840,6 +850,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 child: Text(l10n.tabExportMusicXml),
               ),
               PopupMenuItem(value: 'midi', child: Text(l10n.tabExportMidi)),
+              PopupMenuItem(value: 'daw', child: Text(l10n.dawSend)),
             ],
           ),
           IconButton(
