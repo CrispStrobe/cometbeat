@@ -107,9 +107,13 @@ List<Uint8List> splitMultiTrackMidi(Uint8List smf) {
 }
 
 /// A [multiPart] score → a format-1 SMF, one track per part.
+///
+/// [quarterBpm] is optional: when omitted each part falls back to its own
+/// [Score.tempo] (see [scoreToMidi]), so the file plays at the notated tempo
+/// instead of a fixed 120.
 Uint8List multiPartToMidi(
   MultiPartScore multiPart, {
-  double quarterBpm = 120,
+  double? quarterBpm,
   int ticksPerQuarter = 480,
 }) =>
     mergeToMultiTrackMidi(
