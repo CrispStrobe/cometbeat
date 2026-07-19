@@ -6,6 +6,7 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/game_registry.dart';
 import 'package:comet_beat/features/games/note_reading/connect_line_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Clef;
@@ -56,6 +57,45 @@ Future<void> _drag(WidgetTester tester, int i, int j) async {
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets(
+      'every connect (mode, clef) has a unique progressId, in sync with the '
+      'registry', (tester) async {
+    // Each combo that backs a real connect game. A duplicate here is the bug
+    // the tenor-clef fix closed: two games silently sharing SM-2 progress.
+    final combos = <(ConnectMode, Clef)>[
+      for (final mode in ConnectMode.values)
+        if (mode == ConnectMode.notes) ...[
+          (mode, Clef.treble),
+          (mode, Clef.bass),
+          (mode, Clef.tenor),
+        ] else
+          (mode, Clef.treble),
+    ];
+
+    final produced = <String>[];
+    for (final (mode, clef) in combos) {
+      await tester.pumpWidget(_app(mode: mode, clef: clef));
+      final id = _game(tester).progressId;
+      expect(id, isNotEmpty, reason: '$mode / $clef');
+      produced.add(id);
+    }
+
+    expect(
+      produced.toSet().length,
+      produced.length,
+      reason: 'two connect games share a progressId: $produced',
+    );
+
+    // The screen's progressIds and the registry's connect_* game ids must match
+    // exactly — a new mode without a GameInfo (or vice versa) drifts otherwise.
+    final registryConnectIds = kGamesByModule.values
+        .expand((g) => g)
+        .map((g) => g.id)
+        .where((id) => id.startsWith('connect_'))
+        .toSet();
+    expect(produced.toSet(), registryConnectIds);
+  });
 
   testWidgets('a wrong drop does not connect', (tester) async {
     await tester.pumpWidget(_app());
