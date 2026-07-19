@@ -22,6 +22,71 @@ class DawService extends ChangeNotifier {
   // timeline rather than stacking at 0.
   double _nextStartMs = 0;
 
+  // --- Undo / redo -----------------------------------------------------------
+  // Each discrete edit snapshots the arrangement first. Clips are immutable
+  // (replaced, never mutated in place) so a snapshot shares Clip instances — a
+  // deep copy of the *structure* (tracks + clip lists) is enough.
+  final List<_Snapshot> _undo = [];
+  final List<_Snapshot> _redo = [];
+  static const int _maxUndo = 50;
+
+  // Consecutive moves of the SAME clip coalesce into one undo entry (a drag is
+  // one gesture, not one-per-pixel). Any other edit resets this.
+  Object? _moveToken;
+
+  _Snapshot _capture() => _Snapshot(
+        tracks: [
+          for (final t in timeline.tracks)
+            DawTrack(
+              name: t.name,
+              gain: t.gain,
+              muted: t.muted,
+              clips: [...t.clips],
+            ),
+        ],
+        nextStartMs: _nextStartMs,
+      );
+
+  void _restore(_Snapshot s) {
+    timeline.tracks
+      ..clear()
+      ..addAll(s.tracks);
+    _nextStartMs = s.nextStartMs;
+  }
+
+  void _pushUndo() {
+    _undo.add(_capture());
+    if (_undo.length > _maxUndo) _undo.removeAt(0);
+    _redo.clear();
+  }
+
+  // A discrete edit: snapshot + break any move-coalescing run.
+  void _record() {
+    _pushUndo();
+    _moveToken = null;
+  }
+
+  /// Whether there is anything to undo / redo.
+  bool get canUndo => _undo.isNotEmpty;
+  bool get canRedo => _redo.isNotEmpty;
+
+  /// Step back / forward through edits.
+  void undo() {
+    if (_undo.isEmpty) return;
+    _redo.add(_capture());
+    _restore(_undo.removeLast());
+    _moveToken = null;
+    notifyListeners();
+  }
+
+  void redo() {
+    if (_redo.isEmpty) return;
+    _undo.add(_capture());
+    _restore(_redo.removeLast());
+    _moveToken = null;
+    notifyListeners();
+  }
+
   /// Total clips across all tracks.
   int get clipCount => timeline.tracks.fold(0, (n, t) => n + t.clips.length);
 
@@ -29,6 +94,7 @@ class DawService extends ChangeNotifier {
   /// the next free slot. Modules send a SNAPSHOT source (a copy of their model),
   /// so further edits in the module don't retroactively change the sent clip.
   void addClip(ClipSource source, {int track = 0}) {
+    _record();
     while (timeline.tracks.length <= track) {
       timeline.tracks.add(DawTrack(name: '${timeline.tracks.length + 1}'));
     }
@@ -40,18 +106,26 @@ class DawService extends ChangeNotifier {
 
   /// Mute / unmute a whole track.
   void toggleTrackMute(int track) {
+    _record();
     timeline.tracks[track].muted = !timeline.tracks[track].muted;
     notifyListeners();
   }
 
   /// Remove one clip.
   void removeClip(int track, int index) {
+    _record();
     timeline.tracks[track].clips.removeAt(index);
     notifyListeners();
   }
 
   /// Move a clip along the timeline (drag-in-time). [startMs] is clamped to ≥ 0.
+  /// Consecutive moves of the same clip coalesce into a single undo entry.
   void moveClip(int track, int index, double startMs) {
+    final token = (track, index);
+    if (_moveToken != token) {
+      _pushUndo();
+      _moveToken = token;
+    }
     final clips = timeline.tracks[track].clips;
     clips[index] = clips[index].copyWith(startMs: startMs < 0 ? 0 : startMs);
     notifyListeners();
@@ -91,6 +165,7 @@ class DawService extends ChangeNotifier {
       () => clip.source.render(kDawSampleRate),
     );
     if (pcm.isEmpty) return;
+    _record();
     timeline.tracks[track].clips[index] = Clip(
       source: SampleSource(pcm),
       startMs: clip.startMs,
@@ -125,6 +200,7 @@ class DawService extends ChangeNotifier {
 
   /// Merge one track's clips into a single audio take on that track.
   void mergeTrack(int track) {
+    _record();
     final merged = _mergeGroup(timeline.tracks[track].clips);
     timeline.tracks[track].clips
       ..clear()
@@ -135,6 +211,7 @@ class DawService extends ChangeNotifier {
   /// Merge **every** clip across all tracks into one audio take on track 0
   /// (\"one or many, including all\"). Other lanes are left empty.
   void mergeAll() {
+    _record();
     final all = [for (final t in timeline.tracks) ...t.clips];
     final merged = _mergeGroup(all);
     for (final t in timeline.tracks) {
@@ -146,6 +223,7 @@ class DawService extends ChangeNotifier {
 
   /// Drop every clip (and the render cache).
   void clear() {
+    _record();
     for (final t in timeline.tracks) {
       t.clips.clear();
     }
@@ -157,4 +235,11 @@ class DawService extends ChangeNotifier {
   /// Bake the whole arrangement to one mono PCM buffer (only changed clips
   /// re-render, thanks to the per-source cache).
   Float64List bake() => renderTimeline(timeline, cache: _cache);
+}
+
+/// A structural snapshot of the arrangement for undo/redo.
+class _Snapshot {
+  _Snapshot({required this.tracks, required this.nextStartMs});
+  final List<DawTrack> tracks;
+  final double nextStartMs;
 }

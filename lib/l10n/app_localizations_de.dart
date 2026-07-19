@@ -1190,6 +1190,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawFrozen => 'In eine Audiospur umgewandelt';
 
   @override
+  String get dawUndo => 'Rückgängig';
+
+  @override
+  String get dawRedo => 'Wiederholen';
+
+  @override
   String get drumkitTitle => 'Schlagzeug';
 
   @override

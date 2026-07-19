@@ -66,6 +66,12 @@ abstract interface class DawTester {
   /// Whether the arrangement can be exported (has audible content).
   bool get canExport;
 
+  /// Undo / redo the last edits.
+  void undo();
+  void redo();
+  bool get canUndo;
+  bool get canRedo;
+
   /// Test seam: the length (samples) the arrangement bakes to.
   int debugBakeLength();
 }
@@ -174,6 +180,18 @@ class _DawScreenState extends State<DawScreen> implements DawTester {
   @override
   bool get canExport => _daw.clipCount > 0;
 
+  @override
+  void undo() => _daw.undo();
+
+  @override
+  void redo() => _daw.redo();
+
+  @override
+  bool get canUndo => _daw.canUndo;
+
+  @override
+  bool get canRedo => _daw.canRedo;
+
   Float64List _bake() => _daw.bake();
 
   Int16List _toPcm16(Float64List pcm) {
@@ -250,6 +268,16 @@ class _DawScreenState extends State<DawScreen> implements DawTester {
       appBar: GameAppBar(
         title: l10n.dawTitle,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.undo),
+            tooltip: l10n.dawUndo,
+            onPressed: daw.canUndo ? undo : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.redo),
+            tooltip: l10n.dawRedo,
+            onPressed: daw.canRedo ? redo : null,
+          ),
           IconButton(
             icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
             tooltip: _playing ? l10n.songStop : l10n.myMelodyPlay,

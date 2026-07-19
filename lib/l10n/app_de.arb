@@ -398,6 +398,8 @@
   "dawMerged": "Zu einer Audiospur zusammengeführt",
   "dawFreeze": "In Audio umwandeln",
   "dawFrozen": "In eine Audiospur umgewandelt",
+  "dawUndo": "Rückgängig",
+  "dawRedo": "Wiederholen",
   "drumkitTitle": "Schlagzeug",
   "drumkitRecord": "Aufnehmen",
   "drumkitStopRecording": "Aufnahme stoppen",

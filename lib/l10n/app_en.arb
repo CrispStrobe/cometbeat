@@ -436,6 +436,8 @@
   "dawMerged": "Merged into one audio take",
   "dawFreeze": "Freeze to audio",
   "dawFrozen": "Frozen to an audio take",
+  "dawUndo": "Undo",
+  "dawRedo": "Redo",
   "drumkitTitle": "Drum Kit",
   "drumkitRecord": "Record",
   "drumkitStopRecording": "Stop recording",

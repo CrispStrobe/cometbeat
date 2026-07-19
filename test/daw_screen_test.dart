@@ -130,6 +130,26 @@ void main() {
     expect(daw.canExport, isTrue);
   });
 
+  testWidgets('undo/redo reverse and replay edits', (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    expect(daw.canUndo, isFalse);
+
+    daw.addDemoBeat();
+    daw.addDemoTune();
+    await tester.pump();
+    expect(daw.clipCount, 2);
+    expect(daw.canUndo, isTrue);
+
+    daw.undo();
+    await tester.pump();
+    expect(daw.clipCount, 1);
+
+    daw.redo();
+    await tester.pump();
+    expect(daw.clipCount, 2);
+  });
+
   testWidgets('clear empties every track', (tester) async {
     await _pumpDaw(tester);
     final daw = _daw(tester);

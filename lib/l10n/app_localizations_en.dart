@@ -1183,6 +1183,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawFrozen => 'Frozen to an audio take';
 
   @override
+  String get dawUndo => 'Undo';
+
+  @override
+  String get dawRedo => 'Redo';
+
+  @override
   String get drumkitTitle => 'Drum Kit';
 
   @override

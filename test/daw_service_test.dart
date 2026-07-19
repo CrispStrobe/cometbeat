@@ -118,6 +118,58 @@ void main() {
     final s = DawService()..addClip(_tone(0.3, 44100));
     expect(s.clipDurationMs(0, 0), closeTo(1000, 0.001));
   });
+
+  test('undo/redo step through edits', () {
+    final s = DawService();
+    expect(s.canUndo, isFalse);
+
+    s.addClip(_tone(0.3, 100)); // edit 1
+    s.addClip(_tone(0.3, 100)); // edit 2
+    expect(s.clipCount, 2);
+    expect(s.canUndo, isTrue);
+
+    s.undo();
+    expect(s.clipCount, 1);
+    s.undo();
+    expect(s.clipCount, 0);
+    expect(s.canUndo, isFalse);
+    expect(s.canRedo, isTrue);
+
+    s.redo();
+    expect(s.clipCount, 1);
+    s.redo();
+    expect(s.clipCount, 2);
+  });
+
+  test('a fresh edit clears the redo stack', () {
+    final s = DawService()..addClip(_tone(0.3, 100));
+    s.undo();
+    expect(s.canRedo, isTrue);
+    s.addClip(_tone(0.3, 100)); // diverges → redo dropped
+    expect(s.canRedo, isFalse);
+  });
+
+  test('consecutive moves of one clip coalesce into a single undo', () {
+    final s = DawService()..addClip(_tone(0.3, 100));
+    s
+      ..moveClip(0, 0, 500)
+      ..moveClip(0, 0, 900)
+      ..moveClip(0, 0, 1300); // one gesture
+    expect(s.clipStartMs(0, 0), 1300);
+    s.undo(); // undoes the whole drag at once, back to the pre-move start
+    expect(s.clipStartMs(0, 0), 0);
+  });
+
+  test('undo restores after clear', () {
+    final s = DawService()
+      ..addClip(_tone(0.3, 100))
+      ..addClip(_tone(0.3, 100), track: 1);
+    expect(s.clipCount, 2);
+    s.clear();
+    expect(s.clipCount, 0);
+    s.undo();
+    expect(s.clipCount, 2);
+  });
 }
 
 /// A live source whose render reflects a mutable buffer — a stand-in for a

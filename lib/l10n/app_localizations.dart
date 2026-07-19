@@ -2282,6 +2282,18 @@ abstract class AppLocalizations {
   /// **'Frozen to an audio take'**
   String get dawFrozen;
 
+  /// No description provided for @dawUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get dawUndo;
+
+  /// No description provided for @dawRedo.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get dawRedo;
+
   /// No description provided for @drumkitTitle.
   ///
   /// In en, this message translates to:
