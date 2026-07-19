@@ -2440,6 +2440,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerInstrumentDefault => 'Channel default';
 
   @override
+  String get trackerLongPressToHear => 'Long-press a voice to hear it';
+
+  @override
   String get trackerRecordSample => 'Record sample';
 
   @override

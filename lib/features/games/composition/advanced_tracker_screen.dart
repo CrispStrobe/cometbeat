@@ -2660,15 +2660,24 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 runSpacing: 8,
                 children: [
                   for (final opt in kTrackerInstruments)
-                    ChoiceChip(
-                      label: Text(_instrumentLabel(opt.id)),
-                      selected: opt.id == currentId,
-                      onSelected: (_) {
-                        setChannelInstrument(channel, opt.id);
-                        Navigator.of(ctx).pop();
-                      },
+                    GestureDetector(
+                      // Long-press to audition the voice before assigning it.
+                      onLongPress: () => _auditionInstrument(opt.build()),
+                      child: ChoiceChip(
+                        label: Text(_instrumentLabel(opt.id)),
+                        selected: opt.id == currentId,
+                        onSelected: (_) {
+                          setChannelInstrument(channel, opt.id);
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
                     ),
                 ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.trackerLongPressToHear,
+                style: Theme.of(ctx).textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
               // Set the channel's default voice from the Sound Library or a
@@ -2826,16 +2835,28 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                         _pickCellInstrument(ctx, channel, row, 0),
                   ),
                   for (var p = 0; p < _song.instruments.length; p++)
-                    ChoiceChip(
-                      label: Text(
-                        '${p + 1} ${_instrumentLabel(_song.instruments[p].id)}',
+                    GestureDetector(
+                      // Long-press to audition this pool voice before assigning.
+                      onLongPress: () =>
+                          _auditionInstrument(_song.instruments[p]),
+                      child: ChoiceChip(
+                        label: Text(
+                          '${p + 1} ${_instrumentLabel(_song.instruments[p].id)}',
+                        ),
+                        selected: cell.instrument == p + 1,
+                        onSelected: (_) =>
+                            _pickCellInstrument(ctx, channel, row, p + 1),
                       ),
-                      selected: cell.instrument == p + 1,
-                      onSelected: (_) =>
-                          _pickCellInstrument(ctx, channel, row, p + 1),
                     ),
                 ],
               ),
+              if (_song.instruments.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  l10n.trackerLongPressToHear,
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
+              ],
               const Divider(height: 20),
               // Classic MOD effect COLUMN (Cxx set-volume, Axy volume-slide);
               // more commands land as the replayer grows. Applies live.

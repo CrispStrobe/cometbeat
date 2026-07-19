@@ -2450,6 +2450,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerInstrumentDefault => 'Spur-Standard';
 
   @override
+  String get trackerLongPressToHear =>
+      'Zum Anhören lange auf eine Stimme drücken';
+
+  @override
   String get trackerRecordSample => 'Sample aufnehmen';
 
   @override

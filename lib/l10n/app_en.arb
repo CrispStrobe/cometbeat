@@ -914,6 +914,7 @@
   "trackerPanPingPong": "Ping-pong",
   "trackerInstruments": "Instrument for new notes",
   "trackerInstrumentDefault": "Channel default",
+  "trackerLongPressToHear": "Long-press a voice to hear it",
   "trackerRecordSample": "Record sample",
   "trackerSampleTrim": "Trim silence",
   "trackerSampleTrimDrag": "Drag the handles to trim the sample",

@@ -863,6 +863,7 @@
   "trackerPanPingPong": "Ping-Pong",
   "trackerInstruments": "Instrument für neue Noten",
   "trackerInstrumentDefault": "Spur-Standard",
+  "trackerLongPressToHear": "Zum Anhören lange auf eine Stimme drücken",
   "trackerRecordSample": "Sample aufnehmen",
   "trackerSampleTrim": "Stille kürzen",
   "trackerSampleTrimDrag": "Zum Kürzen die Griffe ziehen",

@@ -4682,6 +4682,12 @@ abstract class AppLocalizations {
   /// **'Channel default'**
   String get trackerInstrumentDefault;
 
+  /// No description provided for @trackerLongPressToHear.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press a voice to hear it'**
+  String get trackerLongPressToHear;
+
   /// No description provided for @trackerRecordSample.
   ///
   /// In en, this message translates to:
