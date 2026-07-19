@@ -4557,6 +4557,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Every note has a letter name: A B C D E F G. This one is E — tap Listen to hear it.';
 
   @override
+  String get primerReadingTry => 'Now you try: what letter name is this note?';
+
+  @override
   String get primerValuesTitle => 'How long is a note?';
 
   @override
@@ -4608,6 +4611,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get primerScalesMinor =>
       'A minor scale sounds darker, a little sad. Listen to A minor.';
+
+  @override
+  String get primerScalesTry =>
+      'Now you try: how many different notes does a major scale have before it repeats?';
+
+  @override
+  String get primerIntervalsTry =>
+      'Now you try: count the steps from C up to E (C-D-E). What number is it?';
 
   @override
   String get primerChordsTitle => 'Building a chord';

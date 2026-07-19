@@ -8450,6 +8450,12 @@ abstract class AppLocalizations {
   /// **'Every note has a letter name: A B C D E F G. This one is E — tap Listen to hear it.'**
   String get primerReadingNames;
 
+  /// No description provided for @primerReadingTry.
+  ///
+  /// In en, this message translates to:
+  /// **'Now you try: what letter name is this note?'**
+  String get primerReadingTry;
+
   /// No description provided for @primerValuesTitle.
   ///
   /// In en, this message translates to:
@@ -8533,6 +8539,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A minor scale sounds darker, a little sad. Listen to A minor.'**
   String get primerScalesMinor;
+
+  /// No description provided for @primerScalesTry.
+  ///
+  /// In en, this message translates to:
+  /// **'Now you try: how many different notes does a major scale have before it repeats?'**
+  String get primerScalesTry;
+
+  /// No description provided for @primerIntervalsTry.
+  ///
+  /// In en, this message translates to:
+  /// **'Now you try: count the steps from C up to E (C-D-E). What number is it?'**
+  String get primerIntervalsTry;
 
   /// No description provided for @primerChordsTitle.
   ///

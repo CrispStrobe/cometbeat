@@ -17,6 +17,9 @@ void main() {
       accidentalsPrimer(l),
       timeSignaturePrimer(l),
       strongBeatPrimer(l),
+      readingPrimer(l),
+      scalesPrimer(l),
+      intervalsPrimer(l),
     ];
     for (final primer in primers) {
       expect(

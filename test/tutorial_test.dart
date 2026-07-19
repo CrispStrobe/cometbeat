@@ -50,7 +50,10 @@ void main() {
         .tap(find.text('Listen')); // plays via AudioService (no-op here)
     await tester.pump();
 
-    // Page to the last step; the button becomes "Got it!" and dismisses.
+    // Page through to the last step; the button becomes "Got it!" and
+    // dismisses. (Step 3 names a note, step 4 is the "try it" practice.)
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     expect(find.text('Got it!'), findsOneWidget);
@@ -119,7 +122,9 @@ void main() {
     await tester.tap(find.text('maybe'));
     await tester.pumpAndSettle();
     expect(find.text('Reading notes'), findsOneWidget);
-    // Page to the last step, then dismiss.
+    // Page to the last step, then dismiss (reading primer has 4 steps).
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Next'));

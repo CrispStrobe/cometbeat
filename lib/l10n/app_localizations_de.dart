@@ -4575,6 +4575,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Jede Note hat einen Buchstabennamen: A H C D E F G. Diese hier ist E — tippe auf Anhören.';
 
   @override
+  String get primerReadingTry =>
+      'Jetzt du: Welchen Buchstabennamen hat diese Note?';
+
+  @override
   String get primerValuesTitle => 'Wie lang ist eine Note?';
 
   @override
@@ -4626,6 +4630,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get primerScalesMinor =>
       'Eine Moll-Tonleiter klingt dunkler, etwas traurig. Hör a-Moll.';
+
+  @override
+  String get primerScalesTry =>
+      'Jetzt du: Wie viele verschiedene Töne hat eine Dur-Tonleiter, bevor sie sich wiederholt?';
+
+  @override
+  String get primerIntervalsTry =>
+      'Jetzt du: Zähl die Schritte von C bis E (C-D-E). Welche Zahl ist das?';
 
   @override
   String get primerChordsTitle => 'Einen Akkord bauen';

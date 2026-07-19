@@ -225,6 +225,17 @@ Tutorial readingPrimer(AppLocalizations l10n) => Tutorial(
           score: _notes([64]), // E
           play: (a) => a.playMidiNote(64),
         ),
+        // Active recall: read a note off the staff. F/E/G are the same letter
+        // in German (only B→H differs), so the choices need no localization.
+        TutorialStep(
+          text: l10n.primerReadingTry,
+          score: _notes([65]), // F, the first space
+          choices: const [
+            TutorialChoice('F', correct: true),
+            TutorialChoice('E'),
+            TutorialChoice('G'),
+          ],
+        ),
       ],
     );
 
@@ -303,6 +314,17 @@ Tutorial scalesPrimer(AppLocalizations l10n) => Tutorial(
         TutorialStep(
           text: l10n.primerScalesMinor,
           beats: _run(_aMinor),
+        ),
+        // Active recall: a major scale is 7 different notes, then the 8th
+        // repeats the first an octave up.
+        TutorialStep(
+          text: l10n.primerScalesTry,
+          score: _notes(_cMajor),
+          choices: const [
+            TutorialChoice('7', correct: true),
+            TutorialChoice('5'),
+            TutorialChoice('8'),
+          ],
         ),
       ],
     );
@@ -674,6 +696,16 @@ Tutorial intervalsPrimer(AppLocalizations l10n) => Tutorial(
           // a descending minor 3rd (G → E).
           score: _notes([67, 64]),
           beats: _run([67, 64], ms: 700),
+        ),
+        // Active recall: count the interval C–E (C-D-E = 3 letter names).
+        TutorialStep(
+          text: l10n.primerIntervalsTry,
+          score: _notes([60, 64]), // C up to E
+          choices: const [
+            TutorialChoice('3', correct: true),
+            TutorialChoice('2'),
+            TutorialChoice('5'),
+          ],
         ),
       ],
     );
