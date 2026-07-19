@@ -186,6 +186,56 @@ void main() {
       plain.syncCurrent();
       expect(plain.usesPan, isFalse);
     });
+
+    test('a variable-timing panned song still slides the pan (Pxy)', () {
+      final s = TrackerSong(timing: const TrackerTiming(rows: 6));
+      for (var r = 0; r < 6; r++) {
+        s.engine.setCell(
+          0,
+          r,
+          const TrackerCell(midi: 60, fxCmd: kFxPanSlide, fxParam: 0xF0),
+        );
+      }
+      // A mid-song tempo change forces the variable-timing stereo path.
+      s.engine
+          .setCell(1, 2, const TrackerCell(fxCmd: kFxSetSpeed, fxParam: 0x50));
+      s.syncCurrent();
+      expect(s.usesPan, isTrue);
+      final wav = s.renderCurrentPatternWav();
+      expect(_u16(wav, 22), 2);
+      expect(
+        tailEnergy(wav, channel: 1),
+        greaterThan(tailEnergy(wav, channel: 0)),
+      );
+    });
+  });
+
+  group('global volume on the stereo path', () {
+    int wavPeak(Uint8List wav) {
+      final d = ByteData.sublistView(wav);
+      var p = 0;
+      for (var i = 44; i + 1 < wav.length; i += 2) {
+        final v = d.getInt16(i, Endian.little).abs();
+        if (v > p) p = v;
+      }
+      return p;
+    }
+
+    test('G00 silences a panned (stereo) song', () {
+      final s = TrackerSong(timing: const TrackerTiming(rows: 4));
+      // A note + G00 on ch0; an 8xx on ch1 arms the stereo render.
+      s.engine.setCell(
+        0,
+        0,
+        const TrackerCell(midi: 60, fxCmd: kFxSetGlobalVolume),
+      ); // G00
+      s.engine.setCell(1, 0, const TrackerCell(fxCmd: kFxSetPan)); // 8x00 left
+      s.syncCurrent();
+      expect(s.usesPan, isTrue);
+      final wav = s.renderCurrentPatternWav();
+      expect(_u16(wav, 22), 2); // stereo
+      expect(wavPeak(wav), 0); // global volume 0 → silent
+    });
   });
 
   group('mono regression (byte-identity)', () {

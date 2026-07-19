@@ -551,6 +551,25 @@ void main() {
       expect(half, greaterThan(0));
       expect(half, lessThan(full));
     });
+
+    test('G00 silences a FLOW song (walkFlow render path)', () {
+      final s = TrackerSong(timing: const TrackerTiming(rows: 4));
+      s.engine.setCell(0, 0, fx(kFxSetGlobalVolume, 0x00, midi: 60)); // G00
+      s.engine.setCell(0, 1, fx(kFxPatternBreak, 0x00)); // Dxx → flow path
+      s.syncCurrent();
+      expect(songUsesFlow(s), isTrue);
+      expect(peak(replaySong(s)), 0);
+    });
+
+    test('G00 silences a VARIABLE-timing song (mid-song tempo change)', () {
+      final s = TrackerSong(timing: const TrackerTiming(rows: 4));
+      s.engine.setCell(0, 0, fx(kFxSetGlobalVolume, 0x00, midi: 60)); // G00
+      s.engine.setCell(0, 1, fx(kFxSetSpeed, 0x50)); // tempo 80
+      s.engine.setCell(0, 2, fx(kFxSetSpeed, 0x60)); // tempo 96 → variable
+      s.syncCurrent();
+      expect(songUsesVariableTiming(s), isTrue);
+      expect(peak(replaySong(s)), 0);
+    });
   });
 
   group('Txx tempo slide', () {

@@ -1330,6 +1330,45 @@ void _applyGlobalVolumeMix(
   }
 }
 
+/// The stereo sibling of [_applyGlobalVolumeMix]: the same global-volume envelope
+/// multiplies into both [left] and [right] (global volume is spatially neutral).
+void _applyGlobalVolumeStereo(
+  Float64List left,
+  Float64List right,
+  List<List<TrackerCell>> rows,
+  List<int> starts,
+  int ticks,
+) {
+  final env = globalVolumeEnvelope(rows, starts, left.length, ticks);
+  if (env == null) return;
+  for (var i = 0; i < left.length; i++) {
+    left[i] *= env[i];
+    right[i] *= env[i];
+  }
+}
+
+/// Row-major channel cells + each played row's start sample for a flattened
+/// (walkFlow) sequence — the [globalVolumeEnvelope] shape for the flow/variable
+/// render paths. [rowStartOf] maps a played-row index to its start sample.
+(List<List<TrackerCell>>, List<int>) _flatRowScan(
+  List<PlayedRow> played,
+  TrackerSong song,
+  int channelCount,
+  int Function(int i) rowStartOf,
+) {
+  final rows = <List<TrackerCell>>[];
+  final starts = <int>[];
+  for (var i = 0; i < played.length; i++) {
+    final pr = played[i];
+    rows.add([
+      for (var c = 0; c < channelCount; c++)
+        song.patterns[pr.patternIndex].cells[c][pr.row],
+    ]);
+    starts.add(rowStartOf(i));
+  }
+  return (rows, starts);
+}
+
 /// The stereo sibling of [replayPattern]: renders each channel mono then pans it
 /// (per-channel [TrackerChannel.pan] + 8xx) into an INTERLEAVED stereo PCM16.
 /// [ReplayResult.pcm] is interleaved L,R — wrap it with [wavBytesStereo].
@@ -1357,6 +1396,8 @@ ReplayResult replayPatternStereo(
       pool: pool,
     );
   }
+  final (gvRows, gvStarts) = _rowScan(cells, timing, 0);
+  _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticks);
   return ReplayResult(
     _interleaveToPcm(left, right),
     const [RowTiming(0, 0, 0, 0)],
@@ -1889,6 +1930,15 @@ ReplayResult replaySongStereo(
       );
     }
   }
+  final gvRows = <List<TrackerCell>>[];
+  final gvStarts = <int>[];
+  for (var o = 0; o < order.length; o++) {
+    final (rr, ss) =
+        _rowScan(song.patterns[order[o]].cells, timing, patternSamples * o);
+    gvRows.addAll(rr);
+    gvStarts.addAll(ss);
+  }
+  _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticks);
   return ReplayResult(_interleaveToPcm(left, right), timingMap);
 }
 
@@ -1919,6 +1969,14 @@ ReplayResult _replayFlow(TrackerSong song, int ticksPerRow) {
       pool: song.instruments,
     );
   }
+
+  final (gvRows, gvStarts) = _flatRowScan(
+    played,
+    song,
+    channels.length,
+    flatTiming.stepStartSample,
+  );
+  _applyGlobalVolumeMix(mix, gvRows, gvStarts, ticksPerRow);
 
   final timingMap = [
     for (var i = 0; i < played.length; i++)
@@ -1957,6 +2015,13 @@ ReplayResult _replayFlowStereo(TrackerSong song, int ticksPerRow) {
       pool: song.instruments,
     );
   }
+  final (gvRows, gvStarts) = _flatRowScan(
+    played,
+    song,
+    channels.length,
+    flatTiming.stepStartSample,
+  );
+  _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticksPerRow);
   final timingMap = [
     for (var i = 0; i < played.length; i++)
       RowTiming(
@@ -2015,6 +2080,10 @@ ReplayResult _replayVariable(TrackerSong song) {
       pool: song.instruments,
     );
   }
+
+  final (gvRows, gvStarts) =
+      _flatRowScan(played, song, channels.length, (i) => rowStart[i]);
+  _applyGlobalVolumeMix(mix, gvRows, gvStarts, speed0);
 
   final starts = _variableRowStartMs(song, played);
   final timingMap = [
@@ -2257,8 +2326,12 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
         startStep += steps;
       }
     } else {
-      for (final reg
-          in _panRegionsVariable(channels[c].pan, flatCells, rowStart)) {
+      for (final reg in _panRegionsVariable(
+        channels[c].pan,
+        flatCells,
+        rowStart,
+        ticksPerRow: speed0,
+      )) {
         final theta = (reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
         final lGain = cos(theta);
         final rGain = sin(theta);
@@ -2270,6 +2343,10 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
       }
     }
   }
+
+  final (gvRows, gvStarts) =
+      _flatRowScan(played, song, channels.length, (i) => rowStart[i]);
+  _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, speed0);
 
   final starts = _variableRowStartMs(song, played);
   final timingMap = [
@@ -2284,29 +2361,37 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
   return ReplayResult(_interleaveToPcm(left, right), timingMap);
 }
 
-/// Variable-timing pan regions: like [_panRegions] but 8xx boundaries come from
-/// the per-row sample offsets [rowStart] (the flattened length is `rowStart.last`).
+/// Variable-timing pan regions: like [_panRegions] (8xx set + Pxy slide) but the
+/// row boundaries come from the per-row sample offsets [rowStart] (the flattened
+/// length is `rowStart.last`). [ticksPerRow] scales the Pxy step.
 List<({int start, int end, double pan})> _panRegionsVariable(
   double basePan,
   List<TrackerCell> cells,
-  List<int> rowStart,
-) {
+  List<int> rowStart, {
+  int ticksPerRow = kDefaultTicksPerRow,
+}) {
   final total = rowStart.last;
   final regions = <({int start, int end, double pan})>[];
   var pan = basePan;
   var regionStart = 0;
   for (var r = 0; r < cells.length && r < rowStart.length - 1; r++) {
     final c = cells[r];
+    double? newPan;
     if (c.fxCmd == kFxSetPan) {
-      final newPan = _panFromParam(c.fxParam);
-      if (newPan != pan) {
-        final s = rowStart[r];
-        if (s > regionStart) {
-          regions.add((start: regionStart, end: s, pan: pan));
-        }
-        regionStart = s;
-        pan = newPan;
+      newPan = _panFromParam(c.fxParam);
+    } else if (c.fxCmd == kFxPanSlide) {
+      final rightAmt = (c.fxParam >> 4) & 0xF;
+      final leftAmt = c.fxParam & 0xF;
+      final t = ticksPerRow > 1 ? ticksPerRow : 1;
+      newPan = (pan + (rightAmt - leftAmt) * t / 128.0).clamp(-1.0, 1.0);
+    }
+    if (newPan != null && newPan != pan) {
+      final s = rowStart[r];
+      if (s > regionStart) {
+        regions.add((start: regionStart, end: s, pan: pan));
       }
+      regionStart = s;
+      pan = newPan;
     }
   }
   regions.add((start: regionStart, end: total, pan: pan));
