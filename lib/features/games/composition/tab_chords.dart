@@ -21,6 +21,9 @@ const Map<String, ChordDiagram> kGuitarChords = {
   'A7': ChordDiagram([0, 2, 0, 2, 0, -1], name: 'A7'),
   'E7': ChordDiagram([0, 0, 1, 0, 2, 0], name: 'E7'),
   'D7': ChordDiagram([2, 1, 2, 0, -1, -1], name: 'D7'),
+  'G7': ChordDiagram([1, 0, 0, 0, 2, 3], name: 'G7'),
+  'C7': ChordDiagram([0, 1, 3, 2, 3, -1], name: 'C7'),
+  'B7': ChordDiagram([2, 0, 2, 1, 2, -1], name: 'B7'),
 };
 
 /// Draws a [ChordDiagram] as a compact fretboard grid (name, nut, dots, and

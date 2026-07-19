@@ -144,6 +144,27 @@ void main() {
     expect(cols, hasLength(2)); // Zz dropped
   });
 
+  test('new dominant-7th voicings spell the right chord tones', () {
+    Set<int> pcs(String name) {
+      final col = strumColumns(kGuitarChords[name]!, q).single;
+      return {
+        for (final e in col.frets.entries)
+          (guitar.strings[e.key].midiNumber + e.value) % 12,
+      };
+    }
+
+    expect(pcs('G7'), {7, 11, 2, 5}); // G B D F
+    expect(pcs('C7'), {0, 4, 10}); // C E B♭ (5th omitted — common open voicing)
+    expect(pcs('B7'), {11, 3, 6, 9}); // B D♯ F♯ A
+  });
+
+  test('blues in E uses the B7 dominant and strums 12 bars', () {
+    final e = kProgressions['Blues in E (12-bar)']!;
+    expect(e, contains('B7'));
+    final cols = progressionColumns(e, kGuitarChords, ChordStyle.strum, q);
+    expect(cols, hasLength(12));
+  });
+
   test('every built-in progression resolves to real chords', () {
     for (final chords in kProgressions.values) {
       expect(

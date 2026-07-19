@@ -158,14 +158,28 @@ List<TabColumn> chordStyleColumns(
 /// chord resolves to a real open shape. Named by their feel + the chords used.
 const Map<String, List<String>> kProgressions = {
   'Pop (C–G–Am–F)': ['C', 'G', 'Am', 'F'],
+  'Pop (G–D–Em–C)': ['G', 'D', 'Em', 'C'],
   'I–IV–V (G–C–D)': ['G', 'C', 'D'],
   '50s (C–Am–F–G)': ['C', 'Am', 'F', 'G'],
+  'Doo-wop (G–Em–C–D)': ['G', 'Em', 'C', 'D'],
   'ii–V–I (Dm–G–C)': ['Dm', 'G', 'C'],
+  'ii–V–I (Am–D7–G)': ['Am', 'D7', 'G'],
   'Andalusian (Am–G–F–E)': ['Am', 'G', 'F', 'E'],
+  'Turnaround (G–E7–A7–D7)': ['G', 'E7', 'A7', 'D7'],
   'Blues in A (12-bar)': [
     'A', 'A', 'A', 'A', //
     'D', 'D', 'A', 'A', //
     'E', 'D', 'A', 'E', //
+  ],
+  'Blues in E (12-bar)': [
+    'E', 'E', 'E', 'E', //
+    'A', 'A', 'E', 'E', //
+    'B7', 'A', 'E', 'B7', //
+  ],
+  'Blues in G (12-bar)': [
+    'G7', 'G7', 'G7', 'G7', //
+    'C7', 'C7', 'G7', 'G7', //
+    'D7', 'C7', 'G7', 'D7', //
   ],
 };
 
