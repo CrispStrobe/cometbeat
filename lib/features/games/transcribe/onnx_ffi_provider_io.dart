@@ -81,7 +81,17 @@ Future<NeuralTranscriber?> loadOnnxFfiNeural({bool download = false}) async {
 Future<ChordEstimator?> loadOnnxFfiChords({bool download = false}) async {
   final store = HarmonyModelStore();
   if (!download && !store.isPresent()) return null;
-  if (download && !await store.ensureFiles()) return null;
+  if (download) {
+    // ensureFiles() throws if the BTC licence (CC-BY-NC-SA, non-commercial)
+    // isn't accepted. This is a best-effort resolver probe, so it must degrade
+    // to null (the resolver then falls back / leaves chords off), NOT abort the
+    // whole resolve — consent is enforced on the explicit download/UI path.
+    try {
+      if (!await store.ensureFiles()) return null;
+    } catch (_) {
+      return null;
+    }
+  }
   if (!store.isPresent()) return null;
   final Uint8List modelBytes;
   final CqtFilterBank cqt;
