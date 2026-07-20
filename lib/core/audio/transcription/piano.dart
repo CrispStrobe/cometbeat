@@ -96,7 +96,9 @@ List<Float32List> pianoEnframe(Float64List audio) {
 /// `[reg_onset, reg_offset, frame, velocity]`, each row-major `[segFrames×88]`.
 List<Float32List> pianoRunSegment(OnnxModel model, Float32List seg) {
   final out = model.run(
-    {_inName: Tensor.float(seg, [1, _segSamples])},
+    {
+      _inName: Tensor.float(seg, [1, _segSamples]),
+    },
     _outNames,
   );
   return [
