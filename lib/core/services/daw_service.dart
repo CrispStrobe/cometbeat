@@ -445,6 +445,46 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// **Re-speed** a clip: bake what it plays and resample it by [factor] — a
+  /// tape-style effect where speed and pitch move together (2× = faster + an
+  /// octave up + half as long; 0.5× = slower + an octave down + twice as long).
+  /// Like [reverseClip] the result is a fixed [SampleSource] take; taps compound
+  /// (Faster twice = 4×). No-op on a silent clip or a non-positive [factor].
+  void resampleClip(int track, int index, double factor) {
+    if (factor <= 0) return;
+    final clip = timeline.tracks[track].clips[index];
+    final rendered = _cache.putIfAbsent(
+      clip.source.cacheKey,
+      () => clip.source.render(kDawSampleRate),
+    );
+    final window = trimmedPcm(clip, rendered);
+    if (window.isEmpty) return;
+    final outLen = (window.length / factor).round();
+    if (outLen < 1) return;
+    _record();
+    // Linear-interpolated resample: out[i] samples the source at i * factor.
+    final out = Float64List(outLen);
+    for (var i = 0; i < outLen; i++) {
+      final pos = i * factor;
+      final j = pos.floor();
+      if (j + 1 < window.length) {
+        final frac = pos - j;
+        out[i] = window[j] * (1 - frac) + window[j + 1] * frac;
+      } else {
+        out[i] = window[window.length - 1];
+      }
+    }
+    timeline.tracks[track].clips[index] = Clip(
+      source: SampleSource(out),
+      startMs: clip.startMs,
+      gain: clip.gain,
+      muted: clip.muted,
+      fadeInMs: clip.fadeInMs,
+      fadeOutMs: clip.fadeOutMs,
+    );
+    notifyListeners();
+  }
+
   /// **Merge** clips into one baked audio take, preserving their relative
   /// timing: the group renders (unlimited, so the master limiter still applies
   /// once at final bake) to a single [SampleSource] placed at the earliest

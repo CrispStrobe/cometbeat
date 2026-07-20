@@ -100,6 +100,10 @@ abstract interface class DawTester {
   /// Reverse the clip's audio (bakes it to a backwards take).
   void reverseClip(int track, int index);
 
+  /// Resample the clip by [factor] — tape-style speed/pitch (2× faster, 0.5×
+  /// slower). Bakes to a fixed take.
+  void resampleClip(int track, int index, double factor);
+
   /// Timeline: move a clip in time, and read a clip's start + to-scale duration.
   void moveClip(int track, int index, double startMs);
   double clipStartMs(int track, int index);
@@ -382,6 +386,10 @@ class _DawScreenState extends State<DawScreen>
 
   @override
   void reverseClip(int track, int index) => _daw.reverseClip(track, index);
+
+  @override
+  void resampleClip(int track, int index, double factor) =>
+      _daw.resampleClip(track, index, factor);
 
   @override
   void moveClip(int track, int index, double startMs) =>
@@ -730,6 +738,23 @@ class _DawScreenState extends State<DawScreen>
                         },
                         icon: const Icon(Icons.fast_rewind),
                         label: Text(l10n.dawReverse),
+                      ),
+                      // Tape-style speed: slower (½×) / faster (2×).
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetCtx).pop();
+                          resampleClip(track, index, 0.5);
+                        },
+                        icon: const Icon(Icons.slow_motion_video),
+                        label: Text(l10n.dawSlower),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(sheetCtx).pop();
+                          resampleClip(track, index, 2.0);
+                        },
+                        icon: const Icon(Icons.speed),
+                        label: Text(l10n.dawFaster),
                       ),
                       TextButton.icon(
                         onPressed: () {

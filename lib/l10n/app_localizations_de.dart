@@ -1511,6 +1511,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawReverse => 'Rückwärts';
 
   @override
+  String get dawSlower => 'Langsamer';
+
+  @override
+  String get dawFaster => 'Schneller';
+
+  @override
   String get dawFreeze => 'In Audio umwandeln';
 
   @override

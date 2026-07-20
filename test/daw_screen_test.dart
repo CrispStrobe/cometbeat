@@ -193,6 +193,23 @@ void main() {
     expect(daw.isClipFrozen(0, 0), isTrue); // now a baked SampleSource take
   });
 
+  testWidgets('Faster resamples the clip to a shorter baked take',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+    final before = daw.clipDurationMs(0, 0);
+
+    await tester.tap(find.text('🥁'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Faster'));
+    await tester.pumpAndSettle();
+
+    expect(daw.isClipFrozen(0, 0), isTrue); // baked take
+    expect(daw.clipDurationMs(0, 0), closeTo(before / 2, before * 0.1)); // ~½
+  });
+
   testWidgets('the snap toggle flips snapping and a ruler labels the timeline',
       (tester) async {
     await _pumpDaw(tester);

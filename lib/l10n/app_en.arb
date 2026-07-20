@@ -599,6 +599,8 @@
   "dawDuplicate": "Duplicate",
   "dawSplit": "Split",
   "dawReverse": "Reverse",
+  "dawSlower": "Slower",
+  "dawFaster": "Faster",
   "dawFreeze": "Freeze to audio",
   "dawFrozen": "Frozen to an audio take",
   "dawUndo": "Undo",

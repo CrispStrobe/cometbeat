@@ -2864,6 +2864,18 @@ abstract class AppLocalizations {
   /// **'Reverse'**
   String get dawReverse;
 
+  /// No description provided for @dawSlower.
+  ///
+  /// In en, this message translates to:
+  /// **'Slower'**
+  String get dawSlower;
+
+  /// No description provided for @dawFaster.
+  ///
+  /// In en, this message translates to:
+  /// **'Faster'**
+  String get dawFaster;
+
   /// No description provided for @dawFreeze.
   ///
   /// In en, this message translates to:

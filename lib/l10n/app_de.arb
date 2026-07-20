@@ -536,6 +536,8 @@
   "dawDuplicate": "Duplizieren",
   "dawSplit": "Teilen",
   "dawReverse": "Rückwärts",
+  "dawSlower": "Langsamer",
+  "dawFaster": "Schneller",
   "dawFreeze": "In Audio umwandeln",
   "dawFrozen": "In eine Audiospur umgewandelt",
   "dawUndo": "Rückgängig",

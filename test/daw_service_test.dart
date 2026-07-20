@@ -440,6 +440,41 @@ void main() {
       expect(s.timeline.tracks[0].clips[0].source, same(src));
     });
   });
+
+  group('resampleClip', () {
+    Float64List ramp(int n) =>
+        Float64List.fromList([for (var i = 0; i < n; i++) i / n]);
+    Float64List renderOf(DawService s) =>
+        s.timeline.tracks[0].clips[0].source.render(kDawSampleRate);
+
+    test('2x halves the length, 0.5x doubles it', () {
+      final fast = DawService()..addClip(SampleSource(ramp(100)));
+      fast.resampleClip(0, 0, 2.0);
+      expect(renderOf(fast).length, 50);
+      final slow = DawService()..addClip(SampleSource(ramp(100)));
+      slow.resampleClip(0, 0, 0.5);
+      expect(renderOf(slow).length, 200);
+    });
+
+    test('keeps the first sample and stays in range', () {
+      final s = DawService()..addClip(SampleSource(ramp(100)));
+      s.resampleClip(0, 0, 2.0);
+      final out = renderOf(s);
+      expect(out.first, closeTo(0.0, 1e-9));
+      expect(out.every((v) => v >= 0 && v <= 1), isTrue);
+    });
+
+    test('a non-positive factor is a no-op; undo restores the source', () {
+      final src = SampleSource(ramp(50));
+      final s = DawService()..addClip(src);
+      s.resampleClip(0, 0, 0); // no-op
+      expect(s.timeline.tracks[0].clips[0].source, same(src));
+      s.resampleClip(0, 0, 2.0);
+      expect(s.timeline.tracks[0].clips[0].source, isNot(same(src)));
+      s.undo();
+      expect(s.timeline.tracks[0].clips[0].source, same(src));
+    });
+  });
 }
 
 /// A live source whose render reflects a mutable buffer — a stand-in for a
