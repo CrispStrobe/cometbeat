@@ -4,10 +4,9 @@
 // holds a MultiPartScore (Song Book, trackers, Loop Mixer, …) can offer the
 // whole library's writers from one place instead of copy-pasting per screen.
 //
-// Every format here keeps every part (MusicXML/.mxl/ABC/MEI/MuseScore/kern/
-// LilyPond/MIDI/module all multi-voice; PDF engraves one system per line with
-// all staves) — only Braille exports the first part (a single-Score engrave
-// with no multi-part writer yet).
+// Every format here keeps every part — MusicXML/.mxl/ABC/MEI/MuseScore/kern/
+// LilyPond/MIDI/module are multi-voice, Braille is written section-by-section
+// (each part labelled), and PDF engraves one system per line with all staves.
 
 import 'dart:async';
 import 'dart:convert';
@@ -37,7 +36,6 @@ class _ExportFormat {
 }
 
 Uint8List _utf8(String s) => Uint8List.fromList(utf8.encode(s));
-Score _first(MultiPartScore mp) => mp.parts.first;
 
 final List<_ExportFormat> _kFormats = [
   // Multi-part (every voice survives).
@@ -82,7 +80,7 @@ final List<_ExportFormat> _kFormats = [
   _ExportFormat(
     'Braille',
     'brf',
-    (mp, names) => _utf8(scoreToBraille(_first(mp))),
+    (mp, names) => _utf8(multiPartToBraille(mp, partNames: names)),
   ),
   _ExportFormat(
     'MuseScore',
