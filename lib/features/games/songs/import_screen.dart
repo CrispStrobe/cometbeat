@@ -183,8 +183,9 @@ class _ImportScreenState extends State<ImportScreen> {
   }
 
   /// Picks a `.jams` file (JSON Annotated Music Specification — the MIR chord/
-  /// beat/key dataset format) and imports its chord annotation as a chord sheet,
-  /// reusing the ChordPro storage + playback path.
+  /// melody/beat/key dataset format). A `note_midi` melody imports as a song
+  /// (via the MIDI path — tempo drives the rhythm, beats the meter, key_mode the
+  /// title); otherwise a chord annotation imports as a chord sheet.
   Future<void> _importJamsFile() async {
     try {
       final file = await openFile(
@@ -195,19 +196,36 @@ class _ImportScreenState extends State<ImportScreen> {
       if (file == null || !mounted) return;
       final bytes = await file.readAsBytes();
       if (!mounted) return;
-      final source = jamsToChordPro(utf8.decode(bytes)); // validates
-      final sheet = parseChordPro(source);
+      final json = utf8.decode(bytes);
       final base = file.name.replaceAll(RegExp(r'\.[^.]+$'), '');
       final typed = _title.text.trim();
-      context.read<UserSongsService>().addSheet(
-            ImportedChordSheet(
-              id: _newId(),
-              title: typed.isNotEmpty
-                  ? typed
-                  : (sheet.title == 'JAMS chords' ? base : sheet.title),
-              source: source,
-            ),
-          );
+
+      if (jamsMelodyNotes(json).isNotEmpty) {
+        // Melody → a notated song, reusing the MIDI importer.
+        final mp = multiTrackMidiToMultiPart(jamsToMidi(json));
+        final name = typed.isNotEmpty ? typed : (jamsTitle(json) ?? base);
+        final key = jamsKey(json);
+        context.read<UserSongsService>().addSong(
+              ImportedSong(
+                id: _newId(),
+                title: key != null ? '$name — $key' : name,
+                musicXml: multiPartToMusicXml(mp),
+              ),
+            );
+      } else {
+        // Chords → a chord sheet (throws if neither annotation is present).
+        final source = jamsToChordPro(json);
+        final sheet = parseChordPro(source);
+        context.read<UserSongsService>().addSheet(
+              ImportedChordSheet(
+                id: _newId(),
+                title: typed.isNotEmpty
+                    ? typed
+                    : (sheet.title == 'JAMS chords' ? base : sheet.title),
+                source: source,
+              ),
+            );
+      }
       _done();
     } catch (e) {
       if (mounted) _fail(e);

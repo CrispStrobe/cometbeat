@@ -1234,7 +1234,7 @@
   "importMidiFile": "MIDI-Datei wählen…",
   "importMusicXmlFile": "MusicXML-Datei wählen…",
   "importMusicFile": "Datei importieren (MusicXML/MXL/ABC/MEI/kern/MIDI)…",
-  "importJamsFile": "Akkorde aus einer JAMS-Datei importieren…",
+  "importJamsFile": "JAMS-Datei importieren (Akkorde oder Melodie)…",
   "importDone": "Importiert!",
   "importFailed": "Import fehlgeschlagen: {error}",
   "importedSongs": "Meine importierten Lieder",

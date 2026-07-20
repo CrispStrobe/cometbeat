@@ -3474,7 +3474,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Datei importieren (MusicXML/MXL/ABC/MEI/kern/MIDI)…';
 
   @override
-  String get importJamsFile => 'Akkorde aus einer JAMS-Datei importieren…';
+  String get importJamsFile => 'JAMS-Datei importieren (Akkorde oder Melodie)…';
 
   @override
   String get importDone => 'Importiert!';

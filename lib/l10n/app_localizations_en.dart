@@ -3462,7 +3462,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Import a file (MusicXML/MXL/ABC/MEI/kern/MIDI)…';
 
   @override
-  String get importJamsFile => 'Import chords from a JAMS file…';
+  String get importJamsFile => 'Import a JAMS file (chords or melody)…';
 
   @override
   String get importDone => 'Imported!';

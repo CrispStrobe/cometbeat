@@ -1307,7 +1307,7 @@
   "importMidiFile": "Pick a MIDI file…",
   "importMusicXmlFile": "Pick a MusicXML file…",
   "importMusicFile": "Import a file (MusicXML/MXL/ABC/MEI/kern/MIDI)…",
-  "importJamsFile": "Import chords from a JAMS file…",
+  "importJamsFile": "Import a JAMS file (chords or melody)…",
   "importDone": "Imported!",
   "importFailed": "Import failed: {error}",
   "@importFailed": {

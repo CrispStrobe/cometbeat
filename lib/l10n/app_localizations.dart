@@ -6545,7 +6545,7 @@ abstract class AppLocalizations {
   /// No description provided for @importJamsFile.
   ///
   /// In en, this message translates to:
-  /// **'Import chords from a JAMS file…'**
+  /// **'Import a JAMS file (chords or melody)…'**
   String get importJamsFile;
 
   /// No description provided for @importDone.

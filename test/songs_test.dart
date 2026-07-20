@@ -549,7 +549,7 @@ void main() {
         .pumpWidget(_wrap(_launcher(const ImportScreen()), sri, songs: songs));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Import chords from a JAMS file…'));
+    await tester.tap(find.text('Import a JAMS file (chords or melody)…'));
     await tester.pumpAndSettle();
 
     // Imported as a chord sheet (not a song), titled from file_metadata.
@@ -563,5 +563,35 @@ void main() {
       'G',
       'Am',
     ]);
+  });
+
+  testWidgets('import screen: picking a JAMS melody adds a song (key in title)',
+      (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    final songs = UserSongsService();
+    const jams = '{"file_metadata":{"title":"Scale"},"annotations":['
+        '{"namespace":"note_midi","data":['
+        '{"time":0.0,"duration":0.5,"value":60},'
+        '{"time":0.5,"duration":0.5,"value":62},'
+        '{"time":1.0,"duration":0.5,"value":64}]},'
+        '{"namespace":"tempo","data":[{"time":0.0,"duration":0.0,"value":120}]},'
+        '{"namespace":"key_mode","data":['
+        '{"time":0.0,"duration":0.0,"value":"C:major"}]}]}';
+    FileSelectorPlatform.instance = _FakeFileSelector(
+      XFile.fromData(Uint8List.fromList(utf8.encode(jams)), path: 'scale.jams'),
+    );
+
+    await tester
+        .pumpWidget(_wrap(_launcher(const ImportScreen()), sri, songs: songs));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import a JAMS file (chords or melody)…'));
+    await tester.pumpAndSettle();
+
+    // A note_midi melody imports as a song (not a chord sheet); key_mode is
+    // surfaced in the title.
+    expect(songs.sheets, isEmpty);
+    expect(songs.songs, hasLength(1));
+    expect(songs.songs.single.title, 'Scale — C major');
   });
 }
