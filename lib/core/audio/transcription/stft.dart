@@ -13,10 +13,15 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/chroma_analysis.dart' show fft;
 
-/// A centered STFT with `nFft`-point frames, `hop` stride, and a periodic Hann
-/// window — matching `torch.stft(center=True, pad_mode='reflect')`.
+/// An STFT with `nFft`-point frames, `hop` stride, and a periodic Hann window.
+///
+/// With [center] true (the default) it matches `torch.stft(center=True,
+/// pad_mode='reflect')` — the Open-Unmix front-end. With [center] false it
+/// matches `torch.stft(center=False)` / kaldi-native-fbank's `knf.Stft`
+/// (no padding, frame `t` covers `signal[t*hop .. t*hop+nFft)`) — the Spleeter
+/// front-end.
 class Stft {
-  Stft(this.nFft, this.hop)
+  Stft(this.nFft, this.hop, {this.center = true})
       : nFreq = nFft ~/ 2 + 1,
         window = _hann(nFft) {
     assert(nFft & (nFft - 1) == 0, 'nFft must be a power of two');
@@ -24,6 +29,7 @@ class Stft {
 
   final int nFft;
   final int hop;
+  final bool center;
   final int nFreq; // nFft/2 + 1
   final Float64List window;
 
@@ -38,8 +44,32 @@ class Stft {
   /// Forward STFT. Returns `(re, im, nFrames)` with `re`/`im` row-major
   /// `[nFrames × nFreq]` (`[t*nFreq + f]`).
   (Float64List, Float64List, int) forward(Float64List signal) {
-    final half = nFft ~/ 2;
     final len = signal.length;
+
+    // center=false (Spleeter / knf.Stft): no padding, frame `t` reads the raw
+    // signal at `[t*hop .. t*hop+nFft)`; nFrames = 1 + (len-nFft)/hop.
+    if (!center) {
+      final nFrames = len < nFft ? 0 : 1 + (len - nFft) ~/ hop;
+      final re = Float64List(nFrames * nFreq);
+      final im = Float64List(nFrames * nFreq);
+      final fr = Float64List(nFft), fi = Float64List(nFft);
+      for (var t = 0; t < nFrames; t++) {
+        final s = t * hop;
+        for (var i = 0; i < nFft; i++) {
+          fr[i] = signal[s + i] * window[i];
+          fi[i] = 0.0;
+        }
+        fft(fr, fi);
+        final o = t * nFreq;
+        for (var f = 0; f < nFreq; f++) {
+          re[o + f] = fr[f];
+          im[o + f] = fi[f];
+        }
+      }
+      return (re, im, nFrames);
+    }
+
+    final half = nFft ~/ 2;
     final padded = Float64List(len + nFft)..setRange(half, half + len, signal);
     // reflect-center like torch.stft.
     int refl(int i) {
@@ -114,10 +144,12 @@ class Stft {
     for (var i = 0; i < total; i++) {
       if (wsum[i] > 1e-8) out[i] /= wsum[i];
     }
-    // Trim the center padding.
+    // center=false (knf.IStft): the OLA buffer already starts at sample 0 — no
+    // half-frame trim. center=true (torch.istft): drop the nFft/2 pad.
+    final offset = center ? half : 0;
     final result = Float64List(length);
     for (var i = 0; i < length; i++) {
-      final s = half + i;
+      final s = offset + i;
       result[i] = s < total ? out[s] : 0.0;
     }
     return result;
