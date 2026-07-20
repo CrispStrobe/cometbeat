@@ -3,7 +3,9 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/beat_capture.dart' show BeatFrame;
+import 'package:comet_beat/core/audio/loop_engine.dart' show PatternCell;
 import 'package:comet_beat/core/services/live_voice.dart' show LiveVoiceMode;
+import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/composition/perform_screen.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
@@ -45,6 +47,48 @@ bool _same(Float64List a, Float64List b) {
 }
 
 void main() {
+  setUp(MelodyBridge.instance.clear);
+
+  testWidgets('shares a melody layer out and loads a shared tune in',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const PerformScreen()));
+    await tester.pump();
+    final p = _perform(tester);
+
+    expect(p.hasMelodyLayer, isFalse);
+    expect(p.canLoadSharedMelody, isFalse);
+
+    // A tune another mode published (C-E-G, then a rest).
+    MelodyBridge.instance.publish(
+      SharedMelody(
+        cells: const <PatternCell>[
+          (midis: [60], steps: 2),
+          (midis: [64], steps: 2),
+          (midis: [67], steps: 4),
+          (midis: null, steps: 8),
+        ],
+        tempoBpm: 100,
+        source: 'loopmixer',
+      ),
+    );
+    expect(p.canLoadSharedMelody, isTrue);
+
+    // Pull it in — it becomes a melodic layer that sounds.
+    p.loadSharedMelody();
+    await tester.pump();
+    expect(p.layerCount, 1);
+    expect(p.hasMelodyLayer, isTrue);
+    expect(_peak(p.debugMix()), greaterThan(0.0));
+
+    // Share it back out — round-trips through the bridge (source looper).
+    MelodyBridge.instance.clear();
+    p.shareMelody();
+    final shared = MelodyBridge.instance.current;
+    expect(shared, isNotNull);
+    expect(shared!.source, 'looper');
+    expect(shared.isEmpty, isFalse);
+  });
+
   testWidgets('stack layers, mute/undo/redo, and the mix reflects it',
       (tester) async {
     await tester.pumpWidget(_wrap(const PerformScreen()));

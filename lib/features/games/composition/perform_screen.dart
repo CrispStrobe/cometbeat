@@ -21,7 +21,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
 import 'package:comet_beat/core/audio/groove_capture.dart'
     show PitchSample, quantizeToGroove;
 import 'package:comet_beat/core/audio/loop_engine.dart'
-    show DrumRowsPattern, PatternCell;
+    show DrumRowsPattern, LoopTiming, PatternCell, kPatternSteps;
 import 'package:comet_beat/core/audio/loop_record.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart'
@@ -33,6 +33,7 @@ import 'package:comet_beat/core/audio/synth.dart'
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/live_voice.dart';
 import 'package:comet_beat/core/services/loop_player_service.dart';
+import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/soloud_live_voice.dart'
     show SoLoudLiveVoice;
 import 'package:comet_beat/features/sound_lab/my_samples_sheet.dart'
@@ -137,6 +138,13 @@ abstract class PerformTester {
   void finishPlayIn();
   void cancelPlayIn();
   bool get isPlayingIn;
+
+  /// Shared-tune bridge (MelodyBridge): publish the first melodic layer out as
+  /// a shared tune, and pull a shared tune in as a new melodic layer.
+  bool get hasMelodyLayer;
+  void shareMelody();
+  bool get canLoadSharedMelody;
+  void loadSharedMelody();
 
   int get layerCount;
   String layerLabel(int i);
@@ -585,6 +593,78 @@ class _PerformScreenState extends State<PerformScreen>
         cells: _beatCells(hits),
         percussive: true,
       ),
+    );
+    _refresh();
+  }
+
+  // ── Shared-tune bridge (MelodyBridge) ──────────────────────────────────────
+  // The Live Looper is a full member: it publishes a melodic layer out and
+  // pulls a shared tune in as a new layer. Its own grid is 16ths over [_bars]
+  // bars; the bridge's is a 2-bar cycle of eighth-steps ([kPatternSteps]), so
+  // publish down-samples to that grid and load maps the tune proportionally
+  // across the current loop (filling it, whatever the loop length).
+
+  /// The first melodic (non-percussive) layer that carries notes, or -1.
+  int _melodyLayerIndex() =>
+      _stack.layers.indexWhere((l) => !l.percussive && l.cells.isNotEmpty);
+
+  @override
+  bool get hasMelodyLayer => _melodyLayerIndex() >= 0;
+
+  @override
+  void shareMelody() {
+    final i = _melodyLayerIndex();
+    if (i < 0) return;
+    // Down-sample the layer's 16th-grid cells onto the bridge's eighth grid.
+    final rows = List<int?>.filled(kPatternSteps, null);
+    for (final c in _stack.layers[i].cells) {
+      final b = (_stepsTotal <= 0
+              ? 0
+              : (c.step * kPatternSteps / _stepsTotal).round())
+          .clamp(0, kPatternSteps - 1);
+      rows[b] = c.row; // a melodic cell's row IS its (absolute) MIDI
+    }
+    MelodyBridge.instance.publish(
+      SharedMelody(
+        cells: patternCellsFromMidiRows(rows),
+        tempoBpm: _bpm,
+        source: 'looper',
+      ),
+    );
+  }
+
+  @override
+  bool get canLoadSharedMelody => MelodyBridge.instance.hasMelody;
+
+  @override
+  void loadSharedMelody() {
+    final shared = MelodyBridge.instance.current;
+    if (shared == null || shared.isEmpty) return;
+    final totalSteps = shared.cells.fold<int>(0, (a, c) => a + c.steps);
+    if (totalSteps <= 0) return;
+    // Nothing baked yet → size the loop to the tune's natural length (a 2-bar
+    // cycle drops in 1:1); otherwise the tune fills the already-set loop.
+    if (canSetup && totalSteps > LoopTiming.stepsPerBar && _bars < 2) {
+      _bars = 2;
+    }
+    final notes = <(int, int, double)>[];
+    var step = 0;
+    for (final c in shared.cells) {
+      final midis = c.midis;
+      if (midis != null && midis.isNotEmpty) {
+        notes.add(
+          (
+            midis.first + shared.key,
+            (step / totalSteps * _loopMs).round(),
+            1.0
+          ),
+        );
+      }
+      step += c.steps;
+    }
+    if (notes.isEmpty) return;
+    _stack.add(
+      _PerformLayer('melody', _renderMelody(notes), cells: _melodyCells(notes)),
     );
     _refresh();
   }
@@ -1523,6 +1603,27 @@ class _PerformScreenState extends State<PerformScreen>
             itemBuilder: (context) => [
               PopupMenuItem(value: false, child: Text(l10n.performBounceMix)),
               PopupMenuItem(value: true, child: Text(l10n.performBounceLayers)),
+            ],
+          ),
+          // Shared-tune bridge: hand a melodic layer to the Loop Mixer / Tracker
+          // / Workshop, or pull a tune they shared in as a new layer.
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.library_music_outlined),
+            tooltip: l10n.tuneShare,
+            enabled: hasMelodyLayer || MelodyBridge.instance.hasMelody,
+            onSelected: (v) =>
+                v == 'share' ? shareMelody() : loadSharedMelody(),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'share',
+                enabled: hasMelodyLayer,
+                child: Text(l10n.tuneShare),
+              ),
+              PopupMenuItem(
+                value: 'load',
+                enabled: MelodyBridge.instance.hasMelody,
+                child: Text(l10n.tuneLoadShared),
+              ),
             ],
           ),
           IconButton(
