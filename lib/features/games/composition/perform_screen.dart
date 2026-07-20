@@ -80,10 +80,14 @@ class _LayerRoll extends StatelessWidget {
     required this.cells,
     required this.percussive,
     required this.steps,
+    this.playStep,
   });
   final List<_Cell> cells;
   final bool percussive;
   final int steps;
+
+  /// The 16th step the transport is on (LL3), or null when stopped.
+  final int? playStep;
 
   @override
   Widget build(BuildContext context) {
@@ -96,10 +100,12 @@ class _LayerRoll extends StatelessWidget {
           cells: cells,
           percussive: percussive,
           steps: steps,
+          playStep: playStep,
           fill: scheme.primary,
           grid: scheme.outlineVariant,
           bar: scheme.outline,
           bg: scheme.surfaceContainerHighest,
+          play: scheme.tertiary,
         ),
       ),
     );
@@ -111,18 +117,22 @@ class _RollPainter extends CustomPainter {
     required this.cells,
     required this.percussive,
     required this.steps,
+    required this.playStep,
     required this.fill,
     required this.grid,
     required this.bar,
     required this.bg,
+    required this.play,
   });
   final List<_Cell> cells;
   final bool percussive;
   final int steps;
+  final int? playStep;
   final Color fill;
   final Color grid;
   final Color bar;
   final Color bg;
+  final Color play;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -136,6 +146,15 @@ class _RollPainter extends CustomPainter {
     canvas.clipRRect(r);
 
     final stepW = size.width / steps;
+
+    // LL3: the playhead column, under the notes.
+    final ps = playStep;
+    if (ps != null && ps >= 0 && ps < steps) {
+      canvas.drawRect(
+        Rect.fromLTWH(ps * stepW, 0, stepW, size.height),
+        Paint()..color = play.withValues(alpha: 0.35),
+      );
+    }
     // Beat lines every 4 steps; heavier bar lines every 16.
     for (var s = 4; s < steps; s += 4) {
       final x = s * stepW;
@@ -185,6 +204,7 @@ class _RollPainter extends CustomPainter {
       old.cells != cells ||
       old.steps != steps ||
       old.percussive != percussive ||
+      old.playStep != playStep ||
       old.fill != fill;
 }
 
@@ -1846,6 +1866,11 @@ class _PerformScreenState extends State<PerformScreen>
                                 cells: layer.cells,
                                 percussive: layer.percussive,
                                 steps: _stepsTotal,
+                                playStep: _playing
+                                    ? (loopProgress * _stepsTotal)
+                                        .floor()
+                                        .clamp(0, _stepsTotal - 1)
+                                    : null,
                               ),
                             ),
                             Slider(
