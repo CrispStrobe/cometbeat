@@ -48,4 +48,22 @@ void main() {
     expect(z.filterCutoffHz, closeTo(523.3, 1));
     expect(z.filterQ, greaterThan(1.0));
   });
+
+  test('LFO: frequency cents → Hz; depths default to no effect', () {
+    const off = Sf2Zone(keyLo: 0, keyHi: 127, sampleIndex: 0, rootKey: 60);
+    expect(off.vibLfoHz, closeTo(8.176, 0.01)); // 0 cents → 8.176 Hz
+    expect(off.vibLfoToPitchCents, 0); // no vibrato by default
+    expect(off.modLfoToVolumeCb, 0); // no tremolo by default
+
+    const vib = Sf2Zone(
+      keyLo: 0,
+      keyHi: 127,
+      sampleIndex: 0,
+      rootKey: 60,
+      freqVibLfoCents: 1200, // ×2 → ~16.35 Hz
+      vibLfoToPitchCents: 40,
+    );
+    expect(vib.vibLfoHz, closeTo(16.35, 0.05));
+    expect(vib.vibLfoToPitchCents, 40);
+  });
 }

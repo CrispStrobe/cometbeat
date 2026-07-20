@@ -51,6 +51,15 @@ const _genSustainVolEnv = 37;
 const _genReleaseVolEnv = 38;
 const _genInitialFilterFc = 8; // low-pass cutoff, absolute cents
 const _genInitialFilterQ = 9; // resonance, centibels
+// LFO generators. modLFO can sweep pitch (gen 5) and volume (gen 13); vibLFO
+// sweeps pitch (gen 6). Delays are timecents; freqs are absolute cents.
+const _genModLfoToPitch = 5; // cents
+const _genVibLfoToPitch = 6; // cents
+const _genModLfoToVolume = 13; // centibels
+const _genDelayModLfo = 21;
+const _genFreqModLfo = 22;
+const _genDelayVibLfo = 23;
+const _genFreqVibLfo = 24;
 
 /// One sample from a soundfont: its decoded PCM (−1..1), the rate it was
 /// recorded at, the MIDI key it represents ([originalPitch]), and its loop
@@ -106,6 +115,13 @@ class Sf2Zone {
     this.releaseVolTc = -12000,
     this.filterFcCents = 13500,
     this.filterQCb = 0,
+    this.modLfoToPitchCents = 0,
+    this.vibLfoToPitchCents = 0,
+    this.modLfoToVolumeCb = 0,
+    this.delayModLfoTc = -12000,
+    this.freqModLfoCents = 0,
+    this.delayVibLfoTc = -12000,
+    this.freqVibLfoCents = 0,
   });
 
   final int keyLo;
@@ -146,6 +162,21 @@ class Sf2Zone {
   /// A biquad Q from the resonance: `10^((dB − 3.01)/20)`, so 0 cB → ~0.707
   /// (Butterworth, flat) and higher cB peaks.
   double get filterQ => pow(10, (filterQCb / 10 - 3.01) / 20).toDouble();
+
+  /// LFO modulation. modLFO → pitch (gen 5) + volume (gen 13); vibLFO → pitch
+  /// (gen 6). Depths default 0 (no effect), so an unset font is unchanged.
+  final int modLfoToPitchCents;
+  final int vibLfoToPitchCents;
+  final int modLfoToVolumeCb;
+  final int delayModLfoTc;
+  final int freqModLfoCents;
+  final int delayVibLfoTc;
+  final int freqVibLfoCents;
+
+  double get modLfoHz => 8.176 * pow(2, freqModLfoCents / 1200).toDouble();
+  double get vibLfoHz => 8.176 * pow(2, freqVibLfoCents / 1200).toDouble();
+  double get delayModLfoSec => _tcSec(delayModLfoTc);
+  double get delayVibLfoSec => _tcSec(delayVibLfoTc);
 
   /// velRange (gen 44): the MIDI velocity window this zone (sample layer) covers,
   /// so a soft vs loud note picks a different recording. Default 0..127 (the
@@ -374,6 +405,13 @@ List<Sf2Preset> _parsePresets(
           sustainVol = 0,
           releaseVol = -12000;
       var filterFc = 13500, filterQ = 0;
+      var modLfoPitch = 0,
+          vibLfoPitch = 0,
+          modLfoVol = 0,
+          delayModLfo = -12000,
+          freqModLfo = 0,
+          delayVibLfo = -12000,
+          freqVibLfo = 0;
       int? sampleId, rootOverride;
       for (var g = gStart; g < gEnd; g++) {
         final oper = u16(igenOff + g * 4);
@@ -412,6 +450,20 @@ List<Sf2Preset> _parsePresets(
           filterFc = samt; // absolute cents (signed)
         } else if (oper == _genInitialFilterQ) {
           filterQ = amt; // centibels
+        } else if (oper == _genModLfoToPitch) {
+          modLfoPitch = samt;
+        } else if (oper == _genVibLfoToPitch) {
+          vibLfoPitch = samt;
+        } else if (oper == _genModLfoToVolume) {
+          modLfoVol = samt;
+        } else if (oper == _genDelayModLfo) {
+          delayModLfo = samt;
+        } else if (oper == _genFreqModLfo) {
+          freqModLfo = samt;
+        } else if (oper == _genDelayVibLfo) {
+          delayVibLfo = samt;
+        } else if (oper == _genFreqVibLfo) {
+          freqVibLfo = samt;
         }
       }
       if (sampleId != null && sampleId >= 0 && sampleId < sampleCount) {
@@ -436,6 +488,13 @@ List<Sf2Preset> _parsePresets(
             releaseVolTc: releaseVol,
             filterFcCents: filterFc,
             filterQCb: filterQ,
+            modLfoToPitchCents: modLfoPitch,
+            vibLfoToPitchCents: vibLfoPitch,
+            modLfoToVolumeCb: modLfoVol,
+            delayModLfoTc: delayModLfo,
+            freqModLfoCents: freqModLfo,
+            delayVibLfoTc: delayVibLfo,
+            freqVibLfoCents: freqVibLfo,
           ),
         );
       }

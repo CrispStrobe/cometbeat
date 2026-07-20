@@ -9,9 +9,9 @@
 //   • note velocity, CC7 volume, CC11 expression, CC10 pan
 //   • sustain pedal (CC64): a note held past its note-off until the pedal lifts
 //   • channel 10 → the bank-128 drum kit
-//   • continuous PITCH BEND (glides mid-note) — pitch-bend range ±2 semitones
-//   • CC1 mod-wheel → LFO VIBRATO (with a short onset)
-//   • velocity → low-pass cutoff (soft notes duller, hard notes bright)
+//   • continuous PITCH BEND (glides mid-note); RPN 0 sets the range
+//   • the zone's SF2 volume envelope (DAHDSR), low-pass filter (cutoff/Q), and
+//     LFOs (vibrato + tremolo) — plus CC1 mod-wheel vibrato on top
 //   • the zone's loop region for sustain + its tuning/attenuation
 //
 // Pure Dart, Flutter-free (crisp_notation_core split helper + the SF2 loader).
@@ -394,6 +394,19 @@ void _resampleNote(
   );
 
   final vibOnset = (_vibratoOnsetSec * sr).round();
+
+  // Font LFOs (hoisted): vibLFO→pitch, modLFO→pitch, modLFO→volume. Depths
+  // default 0 (no effect), so an unset font is unchanged.
+  final hasVib = zone.vibLfoToPitchCents != 0;
+  final hasModPitch = zone.modLfoToPitchCents != 0;
+  final hasTrem = zone.modLfoToVolumeCb != 0;
+  final vibDepthSt = zone.vibLfoToPitchCents / 100.0;
+  final modPitchSt = zone.modLfoToPitchCents / 100.0;
+  final vibW = 2 * math.pi * zone.vibLfoHz / sr;
+  final modW = 2 * math.pi * zone.modLfoHz / sr;
+  final vibDelayS = (zone.delayVibLfoSec * sr).round();
+  final modDelayS = (zone.delayModLfoSec * sr).round();
+
   var bi = 0;
   var phase = 0.0;
 
@@ -407,13 +420,22 @@ void _resampleNote(
       bi++;
     }
     final bend = bendCurve.isEmpty ? 0.0 : bendCurve[bi].$2;
-    var vib = 0.0;
+    // Pitch modulation (semitones): CC1 mod-wheel vibrato + the font's own
+    // vibLFO and modLFO→pitch.
+    var pitchMod = 0.0;
     if (n.modCents > 0) {
       final depth = i < vibOnset ? n.modCents * (i / vibOnset) : n.modCents;
-      vib = depth / 100.0 * math.sin(2 * math.pi * _vibratoRateHz * i / sr);
+      pitchMod +=
+          depth / 100.0 * math.sin(2 * math.pi * _vibratoRateHz * i / sr);
     }
-    final ratio =
-        baseRatio * math.pow(2, (semisFixed + bend + vib) / 12.0).toDouble();
+    if (hasVib && i >= vibDelayS) {
+      pitchMod += vibDepthSt * math.sin(vibW * (i - vibDelayS));
+    }
+    if (hasModPitch && i >= modDelayS) {
+      pitchMod += modPitchSt * math.sin(modW * (i - modDelayS));
+    }
+    final ratio = baseRatio *
+        math.pow(2, (semisFixed + bend + pitchMod) / 12.0).toDouble();
 
     // Linear-interpolated sample read.
     final i0 = phase.floor();
@@ -431,7 +453,13 @@ void _resampleNote(
       final t = (i - durSamples) / releaseS; // 0→1
       env = offLevel * math.exp(t * math.log(1e-4)); // → ~0
     }
-    v *= env * baseGain;
+    // modLFO → volume (tremolo): the level swings ±(cB/10) dB.
+    var trem = 1.0;
+    if (hasTrem && i >= modDelayS) {
+      final lfo = math.sin(modW * (i - modDelayS));
+      trem = math.pow(10, zone.modLfoToVolumeCb / 10 * lfo / 20).toDouble();
+    }
+    v *= env * baseGain * trem;
 
     // The SF2 low-pass filter.
     v = filter.process(v);
