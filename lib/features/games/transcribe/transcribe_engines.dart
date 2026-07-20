@@ -14,6 +14,8 @@ import 'package:comet_beat/core/audio/transcription/route.dart'
 import 'package:comet_beat/features/games/transcribe/crepe_provider.dart';
 import 'package:comet_beat/features/games/transcribe/harmony_provider.dart';
 import 'package:comet_beat/features/games/transcribe/neural_provider.dart';
+import 'package:comet_beat/features/games/transcribe/onnx_ffi_provider.dart'
+    as onnx_ffi;
 import 'package:comet_beat/features/games/transcribe/rmvpe_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -47,17 +49,23 @@ Future<F0Estimator?> loadCrispasrCrepeF0({bool download = false}) async =>
 Future<NeuralTranscriber?> loadCrispasrPiano({bool download = false}) async =>
     null;
 
-/// `onnxFfi` runtime — the same CREPE/RMVPE `.onnx` models on the NATIVE ONNX
-/// Runtime via FFI. Blocked on a native-ORT binding + bundled libs.
-Future<F0Estimator?> loadOnnxFfiF0({bool download = false}) async => null;
+/// `onnxFfi` runtime — the same CREPE `.onnx` model on the NATIVE ONNX Runtime
+/// via FFI (the `onnxruntime` plugin), reusing crepeF0WithRunner. WIRED for F0
+/// (`onnx_ffi_provider.dart`): live in a desktop/mobile app build with the CREPE
+/// model cached; null elsewhere (web / headless / model absent) → falls back to
+/// the pure-Dart onnx F0 path.
+Future<F0Estimator?> loadOnnxFfiF0({bool download = false}) =>
+    onnx_ffi.loadOnnxFfiF0(download: download);
 
-/// `onnxFfi` runtime — Basic Pitch `.onnx` on the native ONNX Runtime.
-Future<NeuralTranscriber?> loadOnnxFfiNeural({bool download = false}) async =>
-    null;
+/// `onnxFfi` runtime — Basic Pitch `.onnx` on the native ONNX Runtime. Not yet
+/// wired (the pure-Dart onnx path serves polyphony); stub via the provider.
+Future<NeuralTranscriber?> loadOnnxFfiNeural({bool download = false}) =>
+    onnx_ffi.loadOnnxFfiNeural(download: download);
 
-/// `onnxFfi` runtime — BTC chords `.onnx` on the native ONNX Runtime.
-Future<ChordEstimator?> loadOnnxFfiChords({bool download = false}) async =>
-    null;
+/// `onnxFfi` runtime — BTC chords `.onnx` on the native ONNX Runtime. Not yet
+/// wired (the pure-Dart onnx path serves chords); stub via the provider.
+Future<ChordEstimator?> loadOnnxFfiChords({bool download = false}) =>
+    onnx_ffi.loadOnnxFfiChords(download: download);
 
 /// Resolve the engines from [config], probing every RUNTIME for every step and
 /// honouring the per-step backend choice. Each step can run on up to three

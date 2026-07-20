@@ -18,6 +18,13 @@ dependencies:
   # Sibling path dep (CI/deploy check out CrispStrobe/onnx_runtime_dart too).
   onnx_runtime_dart:
     path: ../onnx_runtime_dart
+  # Native ONNX Runtime via FFI (Flutter plugin — desktop/mobile only, NOT web
+  # and NOT `dart run`). The "onnxFfi" backend of the transcription decision
+  # framework: the SAME .onnx models (CREPE/RMVPE/Basic-Pitch/BTC) on native ORT
+  # for a GPU-accelerated in-app path. Confined to the onnx_ffi_* providers
+  # behind a conditional import; absent ⇒ the resolver falls back to the pure-
+  # Dart onnx_runtime_dart path. onnxruntime 1.4.1 is MIT (sdk >=2.17 <4.0).
+  onnxruntime: ^1.4.1
   flutter_localizations:
     sdk: flutter
 

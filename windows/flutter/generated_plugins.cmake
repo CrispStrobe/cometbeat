@@ -14,6 +14,7 @@ list(APPEND FLUTTER_FFI_PLUGIN_LIST
   aec_fullduplex
   glint_vorbis
   jni
+  onnxruntime
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

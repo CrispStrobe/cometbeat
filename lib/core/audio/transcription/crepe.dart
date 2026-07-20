@@ -50,6 +50,48 @@ PitchTrack crepeF0(
   double fmin = 50,
   double fmax = 2006,
   int batchFrames = 512,
+}) =>
+    crepeF0WithRunner(
+      mono,
+      run: (frames, nf) {
+        final act = model.run(
+          {
+            _inName: Tensor.float(frames, [nf, _window]),
+          },
+          const [_outName],
+        )[_outName]!;
+        return act.f ?? act.asFloatList();
+      },
+      sampleRate: sampleRate,
+      hopMs: hopMs,
+      fmin: fmin,
+      fmax: fmax,
+      batchFrames: batchFrames,
+    );
+
+/// Runs one batch of `[nFrames, 1024]` normalised frames and returns the flat
+/// `[nFrames·360]` activation. This is the ONLY model-runtime coupling in the
+/// CREPE chain — supply a runner backed by `onnx_runtime_dart` (pure Dart, the
+/// default via [crepeF0]) OR the native ONNX Runtime (the `onnxFfi` backend),
+/// and the identical framing/normalisation/decoding runs either way.
+typedef CrepeActivationRunner = Float32List Function(
+  Float32List frames,
+  int nFrames,
+);
+
+/// [crepeF0] with the model runtime abstracted behind [run]. Same 16 kHz
+/// framing, per-frame normalisation, and `weighted_argmax` decoding as [crepeF0]
+/// — only the inference call differs, so the pure-Dart and native-ORT paths
+/// stay bit-for-bit identical apart from the backend. [run] receives a freshly
+/// copied `[nFrames·1024]` Float32List and must return `[nFrames·360]`.
+PitchTrack crepeF0WithRunner(
+  Float64List mono, {
+  required CrepeActivationRunner run,
+  int sampleRate = 44100,
+  double hopMs = 10,
+  double fmin = 50,
+  double fmax = 2006,
+  int batchFrames = 512,
 }) {
   final p = _prepare(mono, sampleRate, hopMs, fmin, fmax);
   final track = <PitchFrame>[];
@@ -57,13 +99,8 @@ PitchTrack crepeF0(
   for (var f0i = 0; f0i < p.totalFrames; f0i += batchFrames) {
     final nf = math.min(batchFrames, p.totalFrames - f0i);
     final input = _fillBatch(p.padded, p.hop, f0i, nf, frameBuf, batchFrames);
-    final act = model.run(
-      {
-        _inName: Tensor.float(Float32List.fromList(input), [nf, _window]),
-      },
-      const [_outName],
-    )[_outName]!;
-    _decodeBatch(act.f ?? act.asFloatList(), nf, f0i, p, track);
+    final af = run(Float32List.fromList(input), nf);
+    _decodeBatch(af, nf, f0i, p, track);
   }
   return track;
 }
