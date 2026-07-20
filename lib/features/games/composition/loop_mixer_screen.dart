@@ -71,6 +71,7 @@ import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
+import 'package:comet_beat/shared/widgets/step_grid.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show Clef, HarmonicFunction, Score, StaffView, multiPartToMusicXml;
 import 'package:file_selector/file_selector.dart';
@@ -168,6 +169,13 @@ abstract interface class LoopMixerTester {
   void toggleBeatEdit();
   void debugEditBeatCell(Drum drum, int step);
   DrumRowsPattern? get debugBeatPattern;
+
+  /// LM-UX4b: the tappable diatonic step-grid that builds/edits the tune (the
+  /// user melodic track), via the shared StepGridView + setUserTrack.
+  bool get tuneEditVisible;
+  void toggleTuneEdit();
+  void debugEditTuneCell(int midi, int step);
+  List<PatternCell>? get debugTuneCells;
   String get grooveToken;
   bool loadGrooveToken(String token);
   bool get isInfinite;
@@ -485,6 +493,87 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     lane[step] = !lane[step];
     _engine.setUserBeatTrack(DrumRowsPattern(rows));
     _engine.enabled.add(LoopEngine.beatTrackId);
+    setState(() {});
+    _restartGroove();
+  }
+
+  // LM-UX4b: the tune (pitched) step-editor — reuses the shared StepGridView.
+  bool _showTuneEdit = false;
+  @override
+  bool get tuneEditVisible => _showTuneEdit;
+  @override
+  void toggleTuneEdit() => setState(() => _showTuneEdit = !_showTuneEdit);
+  @override
+  List<PatternCell>? get debugTuneCells => _engine.userTrackCells;
+  @override
+  void debugEditTuneCell(int midi, int step) => _toggleTuneCell(midi, step);
+
+  /// The tune editor's pitch rows — one octave of the current key's pentatonic
+  /// scale, so every tap lands a note that fits the band (colour-melody rule).
+  List<int> get _tuneRows {
+    final base = 60 + _engine.key; // C4 transposed into the current key
+    final deg = _engine.scale == GrooveScale.minorPentatonic
+        ? const [0, 3, 5, 7, 10, 12]
+        : const [0, 2, 4, 7, 9, 12];
+    return [for (final d in deg) base + d];
+  }
+
+  /// The user melodic cells as grid cells (one StepCell per pitch per onset).
+  List<StepCell> _tuneStepCells() {
+    final cells = _engine.userTrackCells ?? const <PatternCell>[];
+    final out = <StepCell>[];
+    var pos = 0;
+    for (final c in cells) {
+      final midis = c.midis;
+      if (midis != null) {
+        for (final m in midis) {
+          out.add(StepCell(m, pos, len: c.steps));
+        }
+      }
+      pos += c.steps;
+    }
+    return out;
+  }
+
+  /// Grid cells → a bar of [PatternCell]s (rests fill the gaps).
+  List<PatternCell> _stepCellsToPattern(List<StepCell> cells, int steps) {
+    final byStep = <int, List<int>>{};
+    for (final c in cells) {
+      (byStep[c.step] ??= []).add(c.row);
+    }
+    final out = <PatternCell>[];
+    var pos = 0;
+    while (pos < steps) {
+      final midis = byStep[pos];
+      var next = pos + 1;
+      while (next < steps && !byStep.containsKey(next)) {
+        next++;
+      }
+      out.add((midis: midis, steps: next - pos));
+      pos = next;
+    }
+    return out;
+  }
+
+  void _toggleTuneCell(int midi, int step) {
+    const steps = kPatternSteps; // the user melodic track fills 2 bars
+    final cells = _tuneStepCells();
+    final idx = cells.indexWhere((c) => c.row == midi && c.step == step);
+    final next = [...cells];
+    if (idx >= 0) {
+      next.removeAt(idx);
+    } else {
+      next.add(StepCell(midi, step, len: 2));
+    }
+    if (next.isEmpty) {
+      _engine.clearUserTrack();
+    } else {
+      _engine.setUserTrack(
+        _stepCellsToPattern(next, steps),
+        instrument: Instrument.musicBox,
+      );
+      _engine.enabled.add(LoopEngine.userTrackId);
+    }
     setState(() {});
     _restartGroove();
   }
@@ -1627,6 +1716,40 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     );
   }
 
+  /// LM-UX4b: a tappable diatonic step-grid that builds/edits the tune, using
+  /// the shared StepGridView + the LM-UX3 playhead.
+  Widget _buildTuneEditor(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.loopMixerTuneEditHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            ValueListenableBuilder<int>(
+              valueListenable: _hlStep,
+              builder: (context, hl, _) => StepGridView(
+                cells: _tuneStepCells(),
+                steps: kPatternSteps,
+                melodyRows: _tuneRows,
+                playStep: hl >= 0 ? hl % kPatternSteps : null,
+                onToggle: _toggleTuneCell,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// A consistent labelled control row (LM-UX5) — a fixed-width label so every
   /// option (Key / Scale / Kit / Swing / Filter / …) left-aligns cleanly.
   Widget _optionRow(String label, Widget control) => Padding(
@@ -2492,6 +2615,15 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                       onPressed: toggleBeatEdit,
                       visualDensity: VisualDensity.compact,
                     ),
+                    // LM-UX4b: the tappable tune (pitched) step-editor.
+                    IconButton(
+                      icon: Icon(
+                        _showTuneEdit ? Icons.piano : Icons.piano_outlined,
+                      ),
+                      tooltip: l10n.loopMixerTuneEdit,
+                      onPressed: toggleTuneEdit,
+                      visualDensity: VisualDensity.compact,
+                    ),
                     IconButton(
                       icon: Icon(
                         Icons.all_inclusive,
@@ -2658,6 +2790,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 // on yet — so the toggle always shows something.
                 if (_showScore) _buildScorePanel(l10n),
                 if (_showBeatEdit) _buildBeatEditor(l10n),
+                if (_showTuneEdit) _buildTuneEditor(l10n),
                 const SizedBox(height: 8),
                 // The track lane is natural-height; the whole body scrolls (this
                 // screen has ~10 control rows that don't fit a short phone).

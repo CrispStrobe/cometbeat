@@ -2588,6 +2588,18 @@ abstract class AppLocalizations {
   /// **'Tap the grid to build your own beat.'**
   String get loopMixerBeatEditHint;
 
+  /// No description provided for @loopMixerTuneEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the tune'**
+  String get loopMixerTuneEdit;
+
+  /// No description provided for @loopMixerTuneEditHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the grid to build your own tune — every note fits the band.'**
+  String get loopMixerTuneEditHint;
+
   /// Hint shown in the Loop Mixer score panel when no track is enabled to engrave.
   ///
   /// In en, this message translates to:

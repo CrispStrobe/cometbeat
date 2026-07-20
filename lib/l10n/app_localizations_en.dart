@@ -1370,6 +1370,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerBeatEditHint => 'Tap the grid to build your own beat.';
 
   @override
+  String get loopMixerTuneEdit => 'Edit the tune';
+
+  @override
+  String get loopMixerTuneEditHint =>
+      'Tap the grid to build your own tune — every note fits the band.';
+
+  @override
   String get loopMixerScoreEmpty =>
       'Turn on a layer to see it written as notes.';
 

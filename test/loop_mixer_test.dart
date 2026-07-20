@@ -985,6 +985,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('LM-UX4b: tapping the tune grid builds/edits the melody',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.hasVoiceTrack, isFalse);
+    expect(game.debugTuneCells, isNull);
+
+    // Tapping a pitch creates the user melodic track with that note.
+    game.debugEditTuneCell(60, 0); // C4 at step 0
+    await tester.pump();
+    expect(game.hasVoiceTrack, isTrue);
+    expect(game.enabledTracks, contains(LoopEngine.userTrackId));
+    // The pattern carries a note at step 0.
+    final cells = game.debugTuneCells!;
+    expect(cells.first.midis, contains(60));
+
+    // A second note is added, then the first can be removed.
+    game.debugEditTuneCell(67, 4);
+    await tester.pump();
+    expect(
+      game.debugTuneCells!.any((c) => c.midis?.contains(67) ?? false),
+      isTrue,
+    );
+
+    game.debugEditTuneCell(60, 0); // remove C4
+    await tester.pump();
+    expect(
+      game.debugTuneCells!.any((c) => c.midis?.contains(60) ?? false),
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('LM-UX7: a custom harmony is added, selected, and shown',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

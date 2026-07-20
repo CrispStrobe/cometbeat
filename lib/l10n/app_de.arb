@@ -458,6 +458,8 @@
   "loopMixerScore": "Als Noten zeigen",
   "loopMixerBeatEdit": "Beat bearbeiten",
   "loopMixerBeatEditHint": "Tippe ins Raster, um deinen eigenen Beat zu bauen.",
+  "loopMixerTuneEdit": "Melodie bearbeiten",
+  "loopMixerTuneEditHint": "Tippe ins Raster, um deine eigene Melodie zu bauen — jede Note passt zur Band.",
   "loopMixerScoreEmpty": "Schalte eine Spur ein, um sie als Noten zu sehen.",
   "loopMixerShare": "Teile deinen Groove",
   "loopMixerCopyCode": "Groove-Code kopieren",

@@ -1160,6 +1160,11 @@ class LoopEngine {
   DrumRowsPattern? get userBeatPattern =>
       _userBeatTrack?.variants.first as DrumRowsPattern?;
 
+  /// The user melodic ("voice") track's cells, if installed — read by the Loop
+  /// Mixer's tune editor (the pitched twin of [userBeatPattern]).
+  List<PatternCell>? get userTrackCells =>
+      (_userTrack?.variants.first as MelodicPattern?)?.cells;
+
   /// Installs (or replaces) the sung layer from captured cells
   /// (groove_capture.dart) — a normal track from here on: toggleable,
   /// level-able, engraved, tokenized.
