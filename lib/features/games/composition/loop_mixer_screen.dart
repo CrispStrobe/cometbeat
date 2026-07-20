@@ -36,6 +36,7 @@ import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
 import 'package:comet_beat/core/audio/synth.dart'
     show
+        Drum,
         Instrument,
         kDrumKits,
         midiToFrequency,
@@ -161,6 +162,12 @@ abstract interface class LoopMixerTester {
   void stopAll();
   bool get scoreVisible;
   void toggleScorePanel();
+
+  /// LM-UX4: the tappable drum step-grid that builds/edits the beat.
+  bool get beatEditVisible;
+  void toggleBeatEdit();
+  void debugEditBeatCell(Drum drum, int step);
+  DrumRowsPattern? get debugBeatPattern;
   String get grooveToken;
   bool loadGrooveToken(String token);
   bool get isInfinite;
@@ -436,6 +443,52 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void toggleScorePanel() => setState(() => _showScore = !_showScore);
 
   bool _showScore = false;
+
+  // LM-UX4: the beat step-editor panel.
+  bool _showBeatEdit = false;
+  @override
+  bool get beatEditVisible => _showBeatEdit;
+  @override
+  void toggleBeatEdit() => setState(() => _showBeatEdit = !_showBeatEdit);
+  @override
+  DrumRowsPattern? get debugBeatPattern => _engine.userBeatPattern;
+  @override
+  void debugEditBeatCell(Drum drum, int step) =>
+      _toggleBeatEditCell(drum, step);
+
+  /// The beat grid's step count — the user beat's length, or one bar.
+  int get _beatSteps {
+    final p = _engine.userBeatPattern;
+    if (p == null) return LoopTiming.stepsPerBar;
+    return p.rows.values.fold(
+      LoopTiming.stepsPerBar,
+      (m, r) => r.length > m ? r.length : m,
+    );
+  }
+
+  /// Toggle one cell of the beat grid and re-render (LM-UX4). Reads/writes the
+  /// user beat track, preserving the other lanes.
+  void _toggleBeatEditCell(Drum drum, int step) {
+    final steps = _beatSteps;
+    final p = _engine.userBeatPattern;
+    final rows = <Drum, List<bool>>{};
+    if (p != null) {
+      for (final e in p.rows.entries) {
+        final row = List<bool>.filled(steps, false);
+        for (var i = 0; i < e.value.length && i < steps; i++) {
+          row[i] = e.value[i];
+        }
+        rows[e.key] = row;
+      }
+    }
+    final lane = rows.putIfAbsent(drum, () => List<bool>.filled(steps, false));
+    lane[step] = !lane[step];
+    _engine.setUserBeatTrack(DrumRowsPattern(rows));
+    _engine.enabled.add(LoopEngine.beatTrackId);
+    setState(() {});
+    _restartGroove();
+  }
+
   bool _infinite = false;
 
   // §F-1 smear pad: a scale-locked solo surface. Each played note is recorded
@@ -1508,6 +1561,72 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     );
   }
 
+  /// LM-UX4: a tappable kick/snare/hat × step grid that builds/edits the beat.
+  Widget _buildBeatEditor(AppLocalizations l10n) {
+    final steps = _beatSteps;
+    final p = _engine.userBeatPattern;
+    final scheme = Theme.of(context).colorScheme;
+    bool on(Drum d, int s) => (p?.rows[d]?.length ?? 0) > s && p!.rows[d]![s];
+    final lanes = [
+      (Drum.hat, l10n.performPadHat),
+      (Drum.snare, l10n.performPadSnare),
+      (Drum.kick, l10n.performPadKick),
+    ];
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.loopMixerBeatEditHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            for (final (drum, label) in lanes)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 46,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                    for (var s = 0; s < steps; s++)
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _toggleBeatEditCell(drum, s),
+                          child: Container(
+                            height: 24,
+                            margin: const EdgeInsets.all(1),
+                            decoration: BoxDecoration(
+                              color: on(drum, s)
+                                  ? scheme.primary
+                                  : (s % 4 == 0
+                                      ? scheme.surfaceContainerHighest
+                                      : scheme.surfaceContainerHigh),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// A consistent labelled control row (LM-UX5) — a fixed-width label so every
   /// option (Key / Scale / Kit / Swing / Filter / …) left-aligns cleanly.
   Widget _optionRow(String label, Widget control) => Padding(
@@ -2364,6 +2483,15 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                       onPressed: toggleScorePanel,
                       visualDensity: VisualDensity.compact,
                     ),
+                    // LM-UX4: the tappable beat step-editor.
+                    IconButton(
+                      icon: Icon(
+                        _showBeatEdit ? Icons.grid_on : Icons.grid_view,
+                      ),
+                      tooltip: l10n.loopMixerBeatEdit,
+                      onPressed: toggleBeatEdit,
+                      visualDensity: VisualDensity.compact,
+                    ),
                     IconButton(
                       icon: Icon(
                         Icons.all_inclusive,
@@ -2529,6 +2657,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 // (drums/beat as a rhythm reduction), or a hint when nothing is
                 // on yet — so the toggle always shows something.
                 if (_showScore) _buildScorePanel(l10n),
+                if (_showBeatEdit) _buildBeatEditor(l10n),
                 const SizedBox(height: 8),
                 // The track lane is natural-height; the whole body scrolls (this
                 // screen has ~10 control rows that don't fit a short phone).

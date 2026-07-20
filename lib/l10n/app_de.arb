@@ -456,6 +456,8 @@
   "loopMixerComboMarching": "Blaskapelle",
   "loopMixerComboFullBand": "Ganze Band",
   "loopMixerScore": "Als Noten zeigen",
+  "loopMixerBeatEdit": "Beat bearbeiten",
+  "loopMixerBeatEditHint": "Tippe ins Raster, um deinen eigenen Beat zu bauen.",
   "loopMixerScoreEmpty": "Schalte eine Spur ein, um sie als Noten zu sehen.",
   "loopMixerShare": "Teile deinen Groove",
   "loopMixerCopyCode": "Groove-Code kopieren",

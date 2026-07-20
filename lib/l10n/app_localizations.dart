@@ -2576,6 +2576,18 @@ abstract class AppLocalizations {
   /// **'Show as sheet music'**
   String get loopMixerScore;
 
+  /// No description provided for @loopMixerBeatEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the beat'**
+  String get loopMixerBeatEdit;
+
+  /// No description provided for @loopMixerBeatEditHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the grid to build your own beat.'**
+  String get loopMixerBeatEditHint;
+
   /// Hint shown in the Loop Mixer score panel when no track is enabled to engrave.
   ///
   /// In en, this message translates to:

@@ -958,6 +958,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('LM-UX4: tapping the beat grid builds/edits the beat',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.hasBeatTrack, isFalse);
+    expect(game.debugBeatPattern, isNull);
+
+    // Tapping a kick cell creates the user beat track with that hit.
+    game.debugEditBeatCell(Drum.kick, 0);
+    await tester.pump();
+    expect(game.hasBeatTrack, isTrue);
+    expect(game.enabledTracks, contains(LoopEngine.beatTrackId));
+    expect(game.debugBeatPattern!.rows[Drum.kick]![0], isTrue);
+
+    // A second lane adds to the same pattern.
+    game.debugEditBeatCell(Drum.snare, 4);
+    await tester.pump();
+    expect(game.debugBeatPattern!.rows[Drum.snare]![4], isTrue);
+    expect(game.debugBeatPattern!.rows[Drum.kick]![0], isTrue); // preserved
+
+    // Tapping the same kick cell again clears it.
+    game.debugEditBeatCell(Drum.kick, 0);
+    await tester.pump();
+    expect(game.debugBeatPattern!.rows[Drum.kick]![0], isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('LM-UX7: a custom harmony is added, selected, and shown',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

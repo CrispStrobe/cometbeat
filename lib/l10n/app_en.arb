@@ -513,6 +513,8 @@
     "description": "Tooltip for the dice button that randomizes the Loop Mixer groove."
   },
   "loopMixerScore": "Show as sheet music",
+  "loopMixerBeatEdit": "Edit the beat",
+  "loopMixerBeatEditHint": "Tap the grid to build your own beat.",
   "loopMixerScoreEmpty": "Turn on a layer to see it written as notes.",
   "@loopMixerScoreEmpty": {
     "description": "Hint shown in the Loop Mixer score panel when no track is enabled to engrave."

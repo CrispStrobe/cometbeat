@@ -1364,6 +1364,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerScore => 'Show as sheet music';
 
   @override
+  String get loopMixerBeatEdit => 'Edit the beat';
+
+  @override
+  String get loopMixerBeatEditHint => 'Tap the grid to build your own beat.';
+
+  @override
   String get loopMixerScoreEmpty =>
       'Turn on a layer to see it written as notes.';
 
