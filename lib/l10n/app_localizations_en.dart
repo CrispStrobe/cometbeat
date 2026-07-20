@@ -1208,6 +1208,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerFilter => 'Filter';
 
   @override
+  String get primerLoopMixerTitle => 'Loop Mixer';
+
+  @override
+  String get primerLoopMixerConcept =>
+      'This is your band! Tap a creature to switch its part on or off. Stack a few and they play together — instantly in time.';
+
+  @override
+  String get primerLoopMixerVariant =>
+      'The letter (A / B / C) on a card is that part\'s pattern — tap it to try another, or hold it to shuffle a fresh one.';
+
+  @override
+  String get primerLoopMixerLevel =>
+      'The little slider on a card makes that part louder or softer, so you can balance the band.';
+
+  @override
+  String get primerLoopMixerCapture =>
+      'Sing a tune or beatbox a beat — it counts you in, records, and adds YOUR part to the band as a new card.';
+
+  @override
+  String get primerLoopMixerStyle =>
+      'Style changes the whole band\'s flavour. Harmony gives it chord changes instead of a single vamp.';
+
+  @override
+  String get primerLoopMixerKeyScale =>
+      'Key moves every part higher or lower together. Scale picks major (happy) or minor (moody) — the band always stays in tune.';
+
+  @override
+  String get primerLoopMixerKitFeel =>
+      'Kit swaps the drum sound, Swing adds a shuffle, and Filter is the big sweep: Dark on the left, Thin on the right.';
+
+  @override
+  String get primerLoopMixerScore =>
+      'Turn on the notes to SEE your groove written out — and watch each note light up as it plays.';
+
+  @override
   String get loopMixerQuantize => 'Quantize launch (drop in on the beat)';
 
   @override

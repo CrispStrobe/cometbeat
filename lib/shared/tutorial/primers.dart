@@ -270,6 +270,21 @@ Tutorial noteValuesPrimer(AppLocalizations l10n) => Tutorial(
       ],
     );
 
+/// The Loop Mixer: how the band works + what each control does (LM-UX6).
+Tutorial loopMixerPrimer(AppLocalizations l10n) => Tutorial(
+      title: l10n.primerLoopMixerTitle,
+      steps: [
+        TutorialStep(text: l10n.primerLoopMixerConcept),
+        TutorialStep(text: l10n.primerLoopMixerVariant),
+        TutorialStep(text: l10n.primerLoopMixerLevel),
+        TutorialStep(text: l10n.primerLoopMixerCapture),
+        TutorialStep(text: l10n.primerLoopMixerStyle),
+        TutorialStep(text: l10n.primerLoopMixerKeyScale),
+        TutorialStep(text: l10n.primerLoopMixerKitFeel),
+        TutorialStep(text: l10n.primerLoopMixerScore),
+      ],
+    );
+
 /// Filling a measure to the beat. Module: measures.
 Tutorial measuresPrimer(AppLocalizations l10n) => Tutorial(
       title: l10n.primerMeasuresTitle,

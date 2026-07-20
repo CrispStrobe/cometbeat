@@ -2294,6 +2294,60 @@ abstract class AppLocalizations {
   /// **'Filter'**
   String get loopMixerFilter;
 
+  /// No description provided for @primerLoopMixerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Mixer'**
+  String get primerLoopMixerTitle;
+
+  /// No description provided for @primerLoopMixerConcept.
+  ///
+  /// In en, this message translates to:
+  /// **'This is your band! Tap a creature to switch its part on or off. Stack a few and they play together — instantly in time.'**
+  String get primerLoopMixerConcept;
+
+  /// No description provided for @primerLoopMixerVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'The letter (A / B / C) on a card is that part\'s pattern — tap it to try another, or hold it to shuffle a fresh one.'**
+  String get primerLoopMixerVariant;
+
+  /// No description provided for @primerLoopMixerLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'The little slider on a card makes that part louder or softer, so you can balance the band.'**
+  String get primerLoopMixerLevel;
+
+  /// No description provided for @primerLoopMixerCapture.
+  ///
+  /// In en, this message translates to:
+  /// **'Sing a tune or beatbox a beat — it counts you in, records, and adds YOUR part to the band as a new card.'**
+  String get primerLoopMixerCapture;
+
+  /// No description provided for @primerLoopMixerStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Style changes the whole band\'s flavour. Harmony gives it chord changes instead of a single vamp.'**
+  String get primerLoopMixerStyle;
+
+  /// No description provided for @primerLoopMixerKeyScale.
+  ///
+  /// In en, this message translates to:
+  /// **'Key moves every part higher or lower together. Scale picks major (happy) or minor (moody) — the band always stays in tune.'**
+  String get primerLoopMixerKeyScale;
+
+  /// No description provided for @primerLoopMixerKitFeel.
+  ///
+  /// In en, this message translates to:
+  /// **'Kit swaps the drum sound, Swing adds a shuffle, and Filter is the big sweep: Dark on the left, Thin on the right.'**
+  String get primerLoopMixerKitFeel;
+
+  /// No description provided for @primerLoopMixerScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on the notes to SEE your groove written out — and watch each note light up as it plays.'**
+  String get primerLoopMixerScore;
+
   /// No description provided for @loopMixerQuantize.
   ///
   /// In en, this message translates to:

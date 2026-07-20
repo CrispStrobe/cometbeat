@@ -68,6 +68,7 @@ import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
 import 'package:crisp_notation/crisp_notation.dart'
     show Clef, HarmonicFunction, Score, StaffView, multiPartToMusicXml;
 import 'package:file_selector/file_selector.dart';
@@ -2194,7 +2195,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: GameAppBar(title: l10n.gameLoopMixer),
+      // LM-UX6: the "?" opens the concept + what-each-control-does primer.
+      appBar: GameAppBar(title: l10n.gameLoopMixer, tutorial: loopMixerPrimer),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),

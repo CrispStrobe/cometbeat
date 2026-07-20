@@ -1212,6 +1212,41 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerFilter => 'Filter';
 
   @override
+  String get primerLoopMixerTitle => 'Loop-Mixer';
+
+  @override
+  String get primerLoopMixerConcept =>
+      'Das ist deine Band! Tippe ein Wesen an, um seine Spur ein- oder auszuschalten. Staple ein paar — sie spielen sofort im Takt zusammen.';
+
+  @override
+  String get primerLoopMixerVariant =>
+      'Der Buchstabe (A / B / C) auf einer Karte ist das Muster dieser Spur — tippe für ein anderes, halte für ein neues, zufälliges.';
+
+  @override
+  String get primerLoopMixerLevel =>
+      'Der kleine Regler auf einer Karte macht diese Spur lauter oder leiser, damit du die Band ausbalancierst.';
+
+  @override
+  String get primerLoopMixerCapture =>
+      'Sing eine Melodie oder beatboxe einen Beat — es zählt ein, nimmt auf und fügt DEINE Spur als neue Karte hinzu.';
+
+  @override
+  String get primerLoopMixerStyle =>
+      'Stil ändert den ganzen Band-Charakter. Harmonie bringt Akkordwechsel statt nur eines Vamps.';
+
+  @override
+  String get primerLoopMixerKeyScale =>
+      'Tonart verschiebt alle Spuren zusammen höher oder tiefer. Tonleiter wählt Dur (fröhlich) oder Moll (düster) — die Band bleibt immer stimmig.';
+
+  @override
+  String get primerLoopMixerKitFeel =>
+      'Kit tauscht den Schlagzeug-Sound, Swing bringt Shuffle, und Filter ist der große Sweep: links Dunkel, rechts Dünn.';
+
+  @override
+  String get primerLoopMixerScore =>
+      'Schalte die Noten ein, um deinen Groove aufgeschrieben zu SEHEN — und jede Note leuchtet auf, während sie spielt.';
+
+  @override
   String get loopMixerQuantize => 'Quantisiert starten (im Takt einsetzen)';
 
   @override
