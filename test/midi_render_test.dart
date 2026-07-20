@@ -346,6 +346,44 @@ void main() {
     expect(ps / pl, greaterThan(0.08), reason: 'but not as steep as square');
   });
 
+  test('per-zone reverb send (gen 16): a wet instrument gets more reverb', () {
+    double energy(Float64List x) {
+      var s = 0.0;
+      for (final v in x) {
+        s += v * v;
+      }
+      return s;
+    }
+
+    final dry = loadSoundFont(
+      oneSampleSf2(
+        pcm: sineI16(2000, 64),
+        sampleRate: 44100,
+        rootKey: 60,
+        loopStart: 0,
+        loopEnd: 0,
+      ),
+    );
+    final wet = loadSoundFont(
+      oneSampleSf2(
+        pcm: sineI16(2000, 64),
+        sampleRate: 44100,
+        rootKey: 60,
+        loopStart: 0,
+        loopEnd: 0,
+        reverbSendPermille: 800, // 80% authored reverb send
+      ),
+    );
+    final smf = _midi(_note(0, 60, 240));
+    final ed = energy(renderMidiFile(smf, dry, reverbMix: 0.5).$1);
+    final ew = energy(renderMidiFile(smf, wet, reverbMix: 0.5).$1);
+    expect(
+      ew,
+      greaterThan(ed * 1.05),
+      reason: 'the font-authored reverb send adds wet energy',
+    );
+  });
+
   test('empty / non-MIDI input yields empty output', () {
     final (l, r) = renderMidiFile(Uint8List.fromList([1, 2, 3]), font);
     expect(l, isEmpty);

@@ -36,6 +36,11 @@ import 'package:comet_beat/core/notation/multi_part_export.dart'
     show splitMultiTrackMidi;
 
 const double _maxTailSec = 3; // cap a note's release tail (buffer headroom)
+// Reverb-return makeup: the per-zone SF2 reverb sends (gen 16, median ~5%) are
+// far smaller than the flat CC-default we used before, so the wet return is
+// scaled up to keep the same overall space while preserving the font's
+// per-instrument WET/dry variation (a pad far wetter than a bass).
+const double _reverbReturnGain = 4.6;
 const double _bendRangeSemis = 2; // GM default (RPN 0 not yet read)
 const double _vibratoRateHz = 5.5;
 const double _vibratoMaxCents = 50; // at full mod wheel
@@ -466,9 +471,10 @@ class _Note {
       stereoSpread: 23,
       sampleRate: sampleRate,
     );
+    final g = reverbMix * _reverbReturnGain;
     for (var i = 0; i < maxLen; i++) {
-      left[i] += wl[i] * reverbMix;
-      right[i] += wr[i] * reverbMix;
+      left[i] += wl[i] * g;
+      right[i] += wr[i] * g;
     }
   }
   if (wantChor) {
@@ -642,6 +648,13 @@ void _renderZone(
   final rg = math.sin(theta);
   final baseGain = n.gain * zone.gain;
 
+  // Effects sends: the zone's OWN authored reverb/chorus (SF2 gens 16/15) is the
+  // base — so a pad is wet and a bass dry, as the font intends — plus the
+  // channel's CC91/93 send (scaled by the SF2 default modulator's 0.2). Before,
+  // every note got the flat CC-default send regardless of instrument.
+  final zReverb = (zone.reverbSend + 0.2 * n.reverb).clamp(0.0, 1.0);
+  final zChorus = (zone.chorusSend + 0.2 * n.chorus).clamp(0.0, 1.0);
+
   // SF2 modulation envelope (a 2nd DAHDSR) → filter cutoff (+ pitch): the attack
   // "bite" that a static filter lacks — e.g. a kick's low base cutoff opens into
   // a bright click, then the envelope decays back toward the boom body. Times
@@ -804,14 +817,14 @@ void _renderZone(
     final vr = v * rg;
     left[outIdx] += vl;
     right[outIdx] += vr;
-    // Per-channel reverb/chorus send contributions.
-    if (revL != null && n.reverb > 0) {
-      revL[outIdx] += vl * n.reverb;
-      revR![outIdx] += vr * n.reverb;
+    // Per-zone reverb/chorus send contributions (font send + CC send).
+    if (revL != null && zReverb > 0) {
+      revL[outIdx] += vl * zReverb;
+      revR![outIdx] += vr * zReverb;
     }
-    if (chorL != null && n.chorus > 0) {
-      chorL[outIdx] += vl * n.chorus;
-      chorR![outIdx] += vr * n.chorus;
+    if (chorL != null && zChorus > 0) {
+      chorL[outIdx] += vl * zChorus;
+      chorR![outIdx] += vr * zChorus;
     }
 
     // Advance the read head, wrapping the loop for sustain. Loop-until-release

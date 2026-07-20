@@ -52,6 +52,8 @@ const _genReleaseVolEnv = 38;
 const _genInitialFilterFc = 8; // low-pass cutoff, absolute cents
 const _genInitialFilterQ = 9; // resonance, centibels
 const _genPan = 17; // 0.1% units, −500 (left) .. +500 (right)
+const _genChorusSend = 15; // 0.1% units, 0..1000 (per-instrument chorus)
+const _genReverbSend = 16; // 0.1% units, 0..1000 (per-instrument reverb)
 const _genExclusiveClass = 57; // same-class notes cut each other off
 const _genSampleModes = 54; // 0 none · 1 loop · 3 loop until release
 const _genScaleTuning =
@@ -174,6 +176,8 @@ class Sf2Zone {
     this.loopEndOffset = 0,
     this.key2VolEnvHoldTc = 0,
     this.key2VolEnvDecayTc = 0,
+    this.reverbSendPermille = 0,
+    this.chorusSendPermille = 0,
   });
 
   final int keyLo;
@@ -292,6 +296,13 @@ class Sf2Zone {
   /// decay time per key ABOVE 60, so a font's high notes ring shorter.
   final int key2VolEnvHoldTc;
   final int key2VolEnvDecayTc;
+
+  /// Per-instrument effects sends (SF2 gens 16/15), in 0.1% units (0..1000) —
+  /// the font's authored reverb/chorus amount for this zone.
+  final int reverbSendPermille;
+  final int chorusSendPermille;
+  double get reverbSend => (reverbSendPermille / 1000).clamp(0.0, 1.0);
+  double get chorusSend => (chorusSendPermille / 1000).clamp(0.0, 1.0);
 
   /// The hold / decay time in seconds for MIDI [key], with the SF2 key-scaling
   /// applied (each key above 60 shortens it by [key2VolEnvHoldTc]/[…DecayTc]).
@@ -645,6 +656,8 @@ List<Sf2Preset> _parsePresets(
       key2VolEnvHoldTc: iv((g) => g.key2VolHold, 0) + po((g) => g.key2VolHold),
       key2VolEnvDecayTc:
           iv((g) => g.key2VolDecay, 0) + po((g) => g.key2VolDecay),
+      reverbSendPermille: iv((g) => g.reverbSend, 0) + po((g) => g.reverbSend),
+      chorusSendPermille: iv((g) => g.chorusSend, 0) + po((g) => g.chorusSend),
       // Velocity→filter modulators: the instrument zone's (or the instrument
       // global zone's) PLUS the preset's (they add — a drum kit's high-velocity
       // filter-open lives at the preset level). Empty → SF2 default at play time.
@@ -727,6 +740,7 @@ class _Gen {
   int? delayModEnv, attackModEnv, holdModEnv, decayModEnv, sustainModEnv;
   int? releaseModEnv, startOff, startCoarse;
   int? loopStartOff, loopEndOff, key2VolHold, key2VolDecay;
+  int? reverbSend, chorusSend; // gen 16 / 15, 0.1% units
   // velocity→filterFc modulators, flattened as [amount, dir, type, …] triples.
   List<int>? velFilterMods;
 }
@@ -816,6 +830,10 @@ _Gen _readGens(ByteData data, int genOff, int gStart, int gEnd, int genCount) {
         g.key2VolHold = samt;
       case _genKeynumToVolEnvDecay:
         g.key2VolDecay = samt;
+      case _genReverbSend:
+        g.reverbSend = amt;
+      case _genChorusSend:
+        g.chorusSend = amt;
       case _genPan:
         g.pan = samt;
       case _genExclusiveClass:
