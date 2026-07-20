@@ -175,6 +175,28 @@ void main() {
     expect(notes, hasLength(2));
   });
 
+  test('GP export keeps the arranged string, not fretFor\'s lowest fret', () {
+    // Regression: the writer used to re-fret every pitch with the greedy
+    // Tuning.fretFor, so a tab arrangement was discarded on .gp export. B2 is
+    // reachable at fret 7 on the low-E string (5) OR fret 2 on the A string (4);
+    // the user pinned string 5 / fret 7. fretFor would drop it to 4 / 2 — the
+    // tab-voicing must win now.
+    final doc = TabDocument.blank(guitar, initialColumns: 1)..setFret(0, 5, 7);
+    final gpif = scoreToGpif(doc.toScore(), tuning: guitar);
+    expect(
+      gpif,
+      contains('<String>5</String></Property>'
+          '<Property name="Fret"><Fret>7</Fret></Property>'),
+      reason: 'the arranged string 5 / fret 7 must survive export',
+    );
+    expect(gpif, isNot(contains('<Fret>2</Fret>'))); // fretFor would use 4 / 2
+    // The sounding pitch is unchanged either way.
+    final back = scoreFromGpif(readGpifFromGp(writeGpFromGpif(gpif)));
+    final note =
+        back.measures.expand((m) => m.elements).whereType<NoteElement>().single;
+    expect(note.pitches.single.midiNumber, guitar.strings[5].midiNumber + 7);
+  });
+
   test('techniques emit the matching noteId-keyed Score lists', () {
     // 4 quarter notes = one 4/4 bar, ids t0..t3.
     final doc = TabDocument.blank(guitar, initialColumns: 4)

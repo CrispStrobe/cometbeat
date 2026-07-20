@@ -13,7 +13,10 @@
 // arranger can later slot in behind the same List<List<int>> → List<Fretting>
 // shape without touching callers.
 
-import 'package:crisp_notation/crisp_notation.dart' show Tuning;
+// Imports Tuning from crisp_notation_core (not the crisp_notation umbrella) so
+// this stays Flutter-free and usable from headless CLIs (bin/tabconv.dart). The
+// umbrella re-exports the same Tuning, so GUI callers are unaffected.
+import 'package:crisp_notation_core/crisp_notation_core.dart' show Tuning;
 
 /// One column's chosen fretting: string index (0 = top tab line) → fret (0 =
 /// open). An empty map is a rest / silent column.
