@@ -198,8 +198,11 @@ void main() {
         }
         totals.add(pb.fold<int>(0, (a, e) => a + e.$2));
       }
-      expect(totals.toSet(), hasLength(1),
-          reason: '${song.id}: voices must be equal length');
+      expect(
+        totals.toSet(),
+        hasLength(1),
+        reason: '${song.id}: voices must be equal length',
+      );
     }
   });
 
