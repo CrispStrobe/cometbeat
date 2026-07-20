@@ -75,9 +75,11 @@ abstract class PerformTester {
   /// Groove setup (P3): tempo + key, settable only while empty ([canSetup]).
   int get bpm;
   int get keyShift;
+  int get bars; // Q1: master loop length
   bool get canSetup;
   void setTempo(int bpm);
   void setKey(int semitones);
+  void setLoopBars(int bars);
 
   /// Sing / beatbox a layer (P4): convert captured mic frames into a layer.
   /// The mic flow calls these; tests drive them with synthetic frames.
@@ -164,19 +166,26 @@ class _PerformScreenState extends State<PerformScreen>
   final Map<String, Float64List> _padVoices = {};
   final Map<String, String> _padVoiceNames = {};
 
-  // Groove setup (P3): tempo + key, chosen while the stack is empty then locked
-  // (baked layers are fixed-length PCM, so they can't be re-timed after the fact).
+  // Groove setup (P3/Q1): tempo + key + loop length, chosen while the stack is
+  // empty then locked (baked layers are fixed-length PCM, can't be re-timed).
   int _bpm = 120;
   int _keyShift = 0; // semitones from C
+  int _bars = 1; // Q1: master loop length in bars
 
-  /// One bar (4 beats) of samples at [_bpm] — the master loop length.
-  int get _loopSamples => (kSampleRate * 4 * 60 / _bpm).round();
+  /// One bar (4 beats) of samples at [_bpm].
+  int get _barSamples => (kSampleRate * 4 * 60 / _bpm).round();
+
+  /// The master loop = [_bars] bars; a shorter (1-bar) seed tiles under it.
+  int get _loopSamples => _barSamples * _bars;
 
   /// The seed loops S1 offers (kind → label key builder).
   static const List<String> _kinds = ['beat', 'bass', 'chords', 'melody'];
 
   /// The selectable tempos — all keep the bar length integral in samples.
   static const List<int> _kTempos = [75, 100, 120];
+
+  /// Selectable loop lengths, in bars.
+  static const List<int> _kLoopBars = [1, 2, 4];
 
   /// Selectable keys (root name, semitones from C).
   static const List<(int, String)> _kKeys = [
@@ -205,7 +214,8 @@ class _PerformScreenState extends State<PerformScreen>
   Timer? _countInTimer;
   Timer? _capStopTimer;
 
-  int get _barMs => (_loopSamples / kSampleRate * 1000).round();
+  int get _barMs => (_barSamples / kSampleRate * 1000).round();
+  double get _loopMs => _loopSamples / kSampleRate * 1000;
 
   @override
   void initState() {
@@ -268,6 +278,16 @@ class _PerformScreenState extends State<PerformScreen>
   void setKey(int semitones) {
     if (!canSetup) return;
     _keyShift = semitones;
+    setState(() {});
+  }
+
+  @override
+  int get bars => _bars;
+
+  @override
+  void setLoopBars(int bars) {
+    if (!canSetup || !_kLoopBars.contains(bars)) return;
+    _bars = bars;
     setState(() {});
   }
 
@@ -453,10 +473,7 @@ class _PerformScreenState extends State<PerformScreen>
   @override
   void startPlayInBeat() => _startPlayIn('beat');
 
-  int get _phaseNow {
-    final loopMs = _loopSamples / kSampleRate * 1000;
-    return (_clock.elapsedMilliseconds % loopMs).round();
-  }
+  int get _phaseNow => (_clock.elapsedMilliseconds % _loopMs).round();
 
   @override
   void playInNote(int midi) {
@@ -570,13 +587,13 @@ class _PerformScreenState extends State<PerformScreen>
     setState(() {});
   }
 
-  /// Render captured `(drum, phaseMs)` hits into a one-bar loop — each hit
-  /// snapped to the nearest 16th and synthesised as kick/snare/hat.
+  /// Render captured `(drum, phaseMs)` hits across the whole loop — each hit
+  /// snapped to the nearest 16th (a per-bar grid) and synthesised.
   Float64List _renderBeat(List<(String, int)> hits) {
     final n = _loopSamples;
     final buf = Float64List(n);
-    final sixteenth = n ~/ 16;
-    final beat = n ~/ 4;
+    final sixteenth = _barSamples ~/ 16;
+    final beat = _barSamples ~/ 4;
     final rng = Random(7);
     for (final (drum, ms) in hits) {
       final start =
@@ -628,14 +645,14 @@ class _PerformScreenState extends State<PerformScreen>
     context.read<AudioService>().playWavBytes(wavBytes(_toInt16(buf)));
   }
 
-  /// Render captured `(midi, phaseMs)` notes into a one-bar loop: each note is
-  /// snapped to the nearest 16th, held until the next note (capped at a beat),
-  /// and synthesised with a soft decay.
+  /// Render captured `(midi, phaseMs)` notes across the whole loop: each note is
+  /// snapped to the nearest 16th (a per-bar grid), held until the next note
+  /// (capped at a beat), and synthesised with a soft decay.
   Float64List _renderMelody(List<(int, int)> notes) {
     final n = _loopSamples;
     final buf = Float64List(n);
-    final sixteenth = n ~/ 16;
-    final beat = n ~/ 4;
+    final sixteenth = _barSamples ~/ 16;
+    final beat = _barSamples ~/ 4;
     // Snap each note to a 16th-note sample position, sorted in time.
     final placed = [
       for (final (midi, ms) in notes)
@@ -837,11 +854,8 @@ class _PerformScreenState extends State<PerformScreen>
   bool get isPlaying => _playing;
 
   Duration get _phase {
-    final loopMs = _loopSamples / kSampleRate * 1000;
-    if (loopMs <= 0 || !_clock.isRunning) return Duration.zero;
-    return Duration(
-      milliseconds: (_clock.elapsedMilliseconds % loopMs).round(),
-    );
+    if (_loopMs <= 0 || !_clock.isRunning) return Duration.zero;
+    return Duration(milliseconds: _phaseNow);
   }
 
   @override
@@ -854,14 +868,14 @@ class _PerformScreenState extends State<PerformScreen>
   // ── Transport (P5) ────────────────────────────────────────────────────────
   @override
   double get loopProgress {
-    if (!_clock.isRunning) return 0;
-    return (_phaseNow / _barMs).clamp(0.0, 1.0).toDouble();
+    if (!_clock.isRunning || _loopMs <= 0) return 0;
+    return (_phaseNow / _loopMs).clamp(0.0, 1.0).toDouble();
   }
 
   @override
   int get currentBeat {
     if (!_clock.isRunning) return -1;
-    return (_phaseNow / _barMs * 4).floor().clamp(0, 3);
+    return (_phaseNow / (_barMs / 4)).floor() % 4; // beat within the bar
   }
 
   @override
@@ -911,8 +925,9 @@ class _PerformScreenState extends State<PerformScreen>
   }
 
   // ── Built-in seed loops (S1) ──────────────────────────────────────────────
+  // Seeds are always ONE bar; `renderLoopStack` tiles them under a longer loop.
   Float64List _seedLoop(String kind) {
-    final n = _loopSamples;
+    final n = _barSamples;
     final beat = n ~/ 4;
     final eighth = n ~/ 8;
     final buf = Float64List(n);
@@ -1073,6 +1088,17 @@ class _PerformScreenState extends State<PerformScreen>
                         label: Text(name),
                         selected: _keyShift == semis,
                         onSelected: (_) => setKey(semis),
+                      ),
+                    const SizedBox(width: 12),
+                    Text(
+                      l10n.performLength,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    for (final b in _kLoopBars)
+                      ChoiceChip(
+                        label: Text(l10n.performBars(b)),
+                        selected: _bars == b,
+                        onSelected: (_) => setLoopBars(b),
                       ),
                   ],
                 ),

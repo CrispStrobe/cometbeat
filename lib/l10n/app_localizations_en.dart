@@ -2063,6 +2063,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get performKey => 'Key';
 
   @override
+  String get performLength => 'Length';
+
+  @override
+  String performBars(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bars',
+      one: '1 bar',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get performSing => 'Sing a part';
 
   @override

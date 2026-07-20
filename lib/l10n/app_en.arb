@@ -818,6 +818,13 @@
   "performPlayInHint": "Tap the keys to play your melody — it becomes a new layer.",
   "performTempo": "Tempo",
   "performKey": "Key",
+  "performLength": "Length",
+  "performBars": "{count, plural, =1{1 bar} other{{count} bars}}",
+  "@performBars": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "performSing": "Sing a part",
   "performBeatbox": "Beatbox",
   "performRecording": "Recording… sing or beatbox one bar",

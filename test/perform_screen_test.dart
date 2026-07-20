@@ -398,6 +398,39 @@ void main() {
     expect(p.currentBeat, -1);
   });
 
+  testWidgets('multi-bar loop length: captures span the loop, seeds tile',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const PerformScreen()));
+    await tester.pump();
+    final p = _perform(tester);
+
+    expect(p.bars, 1);
+    // A seed is always one bar.
+    expect(p.debugSeed('bass').length, 88200);
+
+    // Choose a 4-bar loop (while empty).
+    p.setLoopBars(4);
+    await tester.pump();
+    expect(p.bars, 4);
+    expect(p.debugSeed('bass').length, 88200); // seed stays one bar
+
+    // A played-in melody now spans the whole 4-bar loop.
+    p.startPlayIn();
+    for (final m in [60, 64, 67, 72]) {
+      p.playInNote(m);
+    }
+    p.finishPlayIn();
+    await tester.pump();
+    expect(p.layerCount, 1);
+    expect(_peak(p.debugMix().toList()), greaterThan(0.0));
+    // The mix runs the full 4 bars (88200 * 4).
+    expect(p.debugMix().length, 88200 * 4);
+
+    // Length locks once a layer exists.
+    p.setLoopBars(1);
+    expect(p.bars, 4);
+  });
+
   testWidgets('play/stop toggles and does not crash without audio',
       (tester) async {
     await tester.pumpWidget(_wrap(const PerformScreen()));

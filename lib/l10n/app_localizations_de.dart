@@ -2069,6 +2069,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String get performKey => 'Tonart';
 
   @override
+  String get performLength => 'Länge';
+
+  @override
+  String performBars(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Takte',
+      one: '1 Takt',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get performSing => 'Part singen';
 
   @override

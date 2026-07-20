@@ -755,6 +755,13 @@
   "performPlayInHint": "Tippe die Tasten, um deine Melodie zu spielen — sie wird zu einer neuen Ebene.",
   "performTempo": "Tempo",
   "performKey": "Tonart",
+  "performLength": "Länge",
+  "performBars": "{count, plural, =1{1 Takt} other{{count} Takte}}",
+  "@performBars": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "performSing": "Part singen",
   "performBeatbox": "Beatbox",
   "performRecording": "Aufnahme… sing oder beatboxe einen Takt",

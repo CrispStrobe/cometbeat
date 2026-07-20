@@ -3902,6 +3902,18 @@ abstract class AppLocalizations {
   /// **'Key'**
   String get performKey;
 
+  /// No description provided for @performLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get performLength;
+
+  /// No description provided for @performBars.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 bar} other{{count} bars}}'**
+  String performBars(int count);
+
   /// No description provided for @performSing.
   ///
   /// In en, this message translates to:
