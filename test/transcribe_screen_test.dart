@@ -71,6 +71,9 @@ void main() {
         TranscribeScreen(
           debugPickAudio: () async => wav,
           debugNeural: ({bool download = false}) async => null,
+          // No RMVPE, so the resolver falls to CREPE (RMVPE is preferred when
+          // present — this keeps the test deterministic regardless of caches).
+          debugRmvpe: ({bool download = false}) async => null,
           // A stand-in CREPE estimator: flags that it ran, then delegates to the
           // real pYIN so the pipeline still produces notes.
           debugCrepe: ({bool download = false}) async =>

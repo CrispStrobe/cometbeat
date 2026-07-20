@@ -14,6 +14,8 @@ import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/features/games/songs/song_screen.dart';
 import 'package:comet_beat/features/games/transcribe/crepe_provider.dart';
 import 'package:comet_beat/features/games/transcribe/neural_provider.dart';
+import 'package:comet_beat/features/games/transcribe/rmvpe_provider.dart';
+import 'package:comet_beat/features/games/transcribe/transcribe_engines.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart' show Score;
 import 'package:file_selector/file_selector.dart';
@@ -37,6 +39,7 @@ class TranscribeScreen extends StatefulWidget {
     this.debugPickAudio,
     this.debugNeural,
     this.debugCrepe,
+    this.debugRmvpe,
   });
 
   /// Test seam: replaces the file-picker. Returns WAV bytes, or null to cancel.
@@ -47,6 +50,9 @@ class TranscribeScreen extends StatefulWidget {
 
   /// Test seam: replaces CREPE F0-estimator loading.
   final Future<F0Estimator?> Function({bool download})? debugCrepe;
+
+  /// Test seam: replaces RMVPE F0-estimator loading.
+  final Future<F0Estimator?> Function({bool download})? debugRmvpe;
 
   @override
   State<TranscribeScreen> createState() => _TranscribeScreenState();
@@ -65,19 +71,36 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
     super.didChangeDependencies();
     if (_configApplied) return;
     _configApplied = true;
-    // Default the melody-pitch (CREPE) toggle from the Settings "Transcription
-    // engine" F0 choice — on for a neural backend, off for on-device/auto. The
-    // user can still override it here. No-op when the config isn't in scope
-    // (widget tests): the toggle keeps its default-off.
+    // Default the melody-pitch (neural F0) toggle from the Settings "Transcription
+    // engine" F0 choice — on for a neural backend, off for on-device/auto.
+    final f0 = _config().backendFor(TranscriptionStep.f0);
+    if (f0 == Backend.onnx || f0 == Backend.crispasr) _neuralPitch = true;
+  }
+
+  /// The persisted engine config, or defaults when the service isn't in scope
+  /// (widget tests).
+  TranscriptionEngineConfig _config() {
     try {
-      final f0 = context
-          .read<TranscriptionConfigService>()
-          .config
-          .backendFor(TranscriptionStep.f0);
-      if (f0 == Backend.onnx || f0 == Backend.crispasr) _neuralPitch = true;
+      return context.read<TranscriptionConfigService>().config;
     } on ProviderNotFoundException {
-      // keep the default
+      return const TranscriptionEngineConfig();
     }
+  }
+
+  /// The neural F0 estimator to inject when melody-pitch is on — RMVPE preferred
+  /// over CREPE (the router's choice), forcing a download. Null ⇒ pYIN. Not used
+  /// for the polyphonic engine (it has no F0 stage). Threads the test seams.
+  Future<F0Estimator?> _f0() async {
+    if (!_neuralPitch || _choice == EngineChoice.neural) return null;
+    final cfg = _config().copyWith(
+      backends: {..._config().backends, TranscriptionStep.f0: Backend.onnx},
+    );
+    final engines = await resolveEngines(
+      cfg,
+      loadRmvpe: widget.debugRmvpe ?? loadRmvpeF0Estimator,
+      loadCrepeOnnx: widget.debugCrepe ?? loadCrepeF0Estimator,
+    );
+    return engines.f0;
   }
 
   Future<Uint8List?> _pickAudio() async {
@@ -90,11 +113,6 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
 
   Future<NeuralTranscriber?> _neural({bool download = false}) {
     final loader = widget.debugNeural ?? loadNeuralTranscriber;
-    return loader(download: download);
-  }
-
-  Future<F0Estimator?> _crepe({bool download = false}) {
-    final loader = widget.debugCrepe ?? loadCrepeF0Estimator;
     return loader(download: download);
   }
 
@@ -114,11 +132,9 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
       final neural = _choice == EngineChoice.monophonic
           ? null
           : await _neural(download: _choice == EngineChoice.neural);
-      // Neural pitch (CREPE) upgrades the monophonic F0 when opted in — not for
-      // the polyphonic neural engine, which doesn't use an F0 estimator.
-      final f0 = (_neuralPitch && _choice != EngineChoice.neural)
-          ? await _crepe(download: true)
-          : null;
+      // Neural pitch (RMVPE/CREPE, per the Settings config) upgrades the
+      // monophonic F0 when opted in — not for the polyphonic engine.
+      final f0 = await _f0();
       final force = switch (_choice) {
         EngineChoice.monophonic => TranscriptionEngine.monophonic,
         EngineChoice.neural => TranscriptionEngine.neural,
