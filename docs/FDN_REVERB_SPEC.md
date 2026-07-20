@@ -96,6 +96,48 @@ unit impulse through `fdnReverb` and asserts, at `roomSize: 0.7, damping: 0.4`:
    noise; output stays bounded (`|x| < 8`); the impulse tail decays monotonically
    in RMS to `< peak/100` before the buffer ends.
 6. **Empty in → empty out.**
+7. **Smooth, non-metallic tail (NEW — the current build FAILS this).** The tail's
+   spectral flatness (geomean/mean of the power spectrum over 200 Hz–10 kHz,
+   measured on the active decay region of the impulse response) must be `> 0.35`.
+   A static FDN with long fixed delays reads ~0.27 — a peaky comb that sounds
+   *metallic/ringy*, worst on percussion. On identical input the reference reads
+   ~2× flatter (~0.36). See "## Update" below for how to fix it.
+
+## Update — kill the metallic ringing (criterion 7)
+
+The first build passed criteria 1–6 but its tail **rings** (fixed comb → low
+spectral flatness → metallic, especially on drums). Two standard, public
+techniques close the gap. **Clean-room still applies: implement these from the
+public/textbook descriptions and this spec only — do NOT read fluidsynth's,
+Freeverb's, or any reverb's source.**
+
+1. **Modulate the delay-line read positions (the key fix).** Slowly vary each
+   line's effective delay length with a low-frequency oscillator, reading the
+   line at a *fractional* position (linear or first-order all-pass interpolation).
+   This continuously de-tunes the modal comb so successive round-trips decorrelate
+   and the metallic ringing smears into a smooth tail. This is a well-documented
+   reverb technique (delay-line modulation / "chorused" FDN; see Dattorro 1997,
+   *Effect Design Part 1*, and Julius O. Smith, PASP). Design targets (these are
+   just parameters, not anyone's code):
+   - a **slow rate**, ~0.7–1.5 Hz, with a **different phase per line** (e.g. spread
+     360°/N across the N lines) so the lines never modulate in lockstep;
+   - a **small depth**, ~3–8 samples peak (enough to move across several samples,
+     small enough not to audibly pitch-bend sustained tones);
+   - update the modulated read index at a modest control rate (e.g. every ~32–64
+     samples) with fractional interpolation between updates — full per-sample is
+     also fine.
+   Keep it deterministic (no `Random`): drive the LFO from a sample counter.
+2. **Shorter, denser delay lines.** The current `[1009…3407]` are long and sparse
+   → audible discrete echoes and a coarse comb. Use **shorter** mutually co-prime
+   lengths (roughly the **~500–1500 sample** range at 44.1 kHz) so the echo
+   density is higher and the tail is denser/smoother. (You may also raise N to 12
+   if helpful, but 8 modulated + short is expected to be enough.)
+
+Preserve everything that already passes: the unitary Householder feedback, the
+one-pole damping, the RT60/roomSize mapping, and the shared-mono + decorrelated
+stereo blend (`out = a·mono + b·decorr`) that hit the width/correlation band.
+Modulation is *magnitude-neutral* on average, so RT60 and width should hold; if a
+metric drifts, re-tune rather than abandon the modulation.
 
 ## Reference oracle (black box, for your A/B — do not read its code)
 
@@ -104,7 +146,11 @@ unit impulse through `fdnReverb` and asserts, at `roomSize: 0.7, damping: 0.4`:
 and *measure* the target character; the numeric targets above are already
 distilled from it. `scratchpad/fdn/measure_ir.dart` measures RT60 / width /
 correlation / crest of any stereo WAV — run it on your own rendered IR to
-compare.
+compare. `scratchpad/fdn/ring_metrics.dart` measures the **tail spectral
+flatness** (criterion 7) of any stereo WAV; `scratchpad/fdn/oracle_crash_ir.wav`
+is the reference reverb's response to a broadband hit (flatness **0.364**) — your
+target for smoothness. The unit test already checks flatness on the impulse, so
+you don't strictly need these, but they let you A/B the *character*.
 
 ## Deliverables
 

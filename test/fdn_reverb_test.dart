@@ -33,6 +33,82 @@ double _rms(List<double> x, int a, int b) {
   return sqrt(s / max(1, e - max(0, a)));
 }
 
+/// In-place iterative radix-2 FFT (length a power of two).
+void _fft(Float64List re, Float64List im) {
+  final n = re.length;
+  for (var i = 1, j = 0; i < n; i++) {
+    var bit = n >> 1;
+    for (; (j & bit) != 0; bit >>= 1) {
+      j ^= bit;
+    }
+    j ^= bit;
+    if (i < j) {
+      var t = re[i];
+      re[i] = re[j];
+      re[j] = t;
+      t = im[i];
+      im[i] = im[j];
+      im[j] = t;
+    }
+  }
+  for (var len = 2; len <= n; len <<= 1) {
+    final ang = -2 * pi / len;
+    final wr = cos(ang), wi = sin(ang);
+    for (var i = 0; i < n; i += len) {
+      var cr = 1.0, ci = 0.0;
+      for (var k = 0; k < len ~/ 2; k++) {
+        final ur = re[i + k], ui = im[i + k];
+        final vr = re[i + k + len ~/ 2] * cr - im[i + k + len ~/ 2] * ci;
+        final vi = re[i + k + len ~/ 2] * ci + im[i + k + len ~/ 2] * cr;
+        re[i + k] = ur + vr;
+        im[i + k] = ui + vi;
+        re[i + k + len ~/ 2] = ur - vr;
+        im[i + k + len ~/ 2] = ui - vi;
+        final ncr = cr * wr - ci * wi;
+        ci = cr * wi + ci * wr;
+        cr = ncr;
+      }
+    }
+  }
+}
+
+/// Welch-averaged spectral flatness of the impulse-response TAIL over
+/// [200 Hz, 10 kHz]: geomean(P)/mean(P). →1 flat/noise-like (smooth reverb),
+/// →0 peaky (a static-FDN comb colours the tail). Higher = less metallic.
+double _tailFlatness(List<double> mono, int tailStart, int tailEnd) {
+  const fftN = 8192;
+  final hann = Float64List(fftN);
+  for (var i = 0; i < fftN; i++) {
+    hann[i] = 0.5 - 0.5 * cos(2 * pi * i / (fftN - 1));
+  }
+  final psd = Float64List(fftN ~/ 2);
+  var wins = 0;
+  for (var s = tailStart;
+      s + fftN <= min(tailEnd, mono.length);
+      s += fftN ~/ 2) {
+    final re = Float64List(fftN), im = Float64List(fftN);
+    for (var i = 0; i < fftN; i++) {
+      re[i] = mono[s + i] * hann[i];
+    }
+    _fft(re, im);
+    for (var k = 0; k < fftN ~/ 2; k++) {
+      psd[k] += re[k] * re[k] + im[k] * im[k];
+    }
+    wins++;
+  }
+  if (wins == 0) return 0;
+  final loBin = (200 * fftN / _sr).floor();
+  final hiBin = (10000 * fftN / _sr).ceil();
+  var logSum = 0.0, sum = 0.0, cnt = 0;
+  for (var k = loBin; k <= hiBin && k < psd.length; k++) {
+    final p = psd[k] / wins + 1e-20;
+    logSum += log(p);
+    sum += p;
+    cnt++;
+  }
+  return exp(logSum / cnt) / (sum / cnt);
+}
+
 void main() {
   test('empty in → empty out', () {
     final (l, r) = fdnReverb(Float64List(0));
@@ -207,5 +283,39 @@ void main() {
     expect((hfLate + 1e-9) / (hfEarly + 1e-9),
         lessThan((lfLate + 1e-9) / (lfEarly + 1e-9)),
         reason: 'damping must attenuate highs faster than lows');
+  });
+
+  // ------------------------------------------------------------------
+  // ANTI-RINGING: a static FDN colours the tail — its fixed delay comb makes a
+  // peaky (metallic) spectrum. The reference smears it by MODULATING its delay
+  // lines and using shorter/denser delays. Spectral flatness of the tail
+  // captures it: on identical input the reference reads ~2x flatter than our
+  // static build. This is the audible defect on percussion.
+  // ------------------------------------------------------------------
+  test('tail is SPECTRALLY SMOOTH, not a metallic comb (flatness > 0.35)', () {
+    final (l, r) = fdnReverb(_impulse(), roomSize: 0.7, damping: 0.4);
+    final mono = [for (var i = 0; i < l.length; i++) (l[i] + r[i]) / 2];
+    var peakAt = 0, peak = 0.0;
+    for (var i = 0; i < mono.length; i++) {
+      if (mono[i].abs() > peak) {
+        peak = mono[i].abs();
+        peakAt = i;
+      }
+    }
+    final tailStart = min(mono.length - 1, peakAt + (0.2 * _sr).round());
+    // Restrict to the ACTIVE decay region (down to ~-50 dB); trailing silence
+    // would dilute the measure. Scan a block-RMS envelope for the last loud one.
+    const block = 512;
+    var tailEnd = tailStart + block;
+    for (var s = tailStart; s + block <= mono.length; s += block) {
+      if (_rms(mono, s, s + block) > peak * 0.003) tailEnd = s + block;
+    }
+    // A static FDN's fixed modal comb reads ~0.27; the reference reverb, on
+    // identical input, is ~2x flatter (~0.36). Modulated + dense delays smooth
+    // the tail. If this fails, the tail rings — add delay-line modulation and
+    // shorten/densify the delays (do NOT weaken the threshold).
+    expect(_tailFlatness(mono, tailStart, tailEnd), greaterThan(0.35),
+        reason: 'tail spectrum is comb-coloured (metallic) — modulate the '
+            'delay lines and densify them to smear the modal peaks');
   });
 }

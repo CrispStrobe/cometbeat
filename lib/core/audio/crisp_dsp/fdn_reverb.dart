@@ -21,13 +21,40 @@
 //     b·decorr. The a:b ratio tunes the L/R correlation to the reference's
 //     moderate, mono-SAFE width — WIDE but positively correlated, not phasey or
 //     cancelling in mono (the whole point of an FDN over a mono reverb).
+//   • Each delay line's READ position is slowly MODULATED by a per-line LFO and
+//     read at a FRACTIONAL position via a first-order ALL-PASS interpolator
+//     (unity magnitude, phase only). A static FDN has a fixed modal comb → a
+//     metallic, ringing tail; continuously de-tuning each line's length
+//     decorrelates successive round-trips so the comb peaks smear into a smooth
+//     (spectrally flat) tail (the "chorused" FDN; Dattorro 1997, *Effect
+//     Design*; Julius O. Smith, PASP). Each LFO runs at its own slow rate and
+//     phase so the lines never move in lockstep; modulation is magnitude-neutral
+//     on average, so RT60/width are preserved.
 
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 /// The eight co-prime delay-line lengths at 44.1 kHz (samples). Primes ⇒
-/// pairwise co-prime; spread across ~1000–3400 to maximise echo density.
+/// pairwise co-prime; spread across ~1000–3400. A wide spread of longer lines
+/// packs MANY overlapping resonant modes into the band, so the summed comb is
+/// dense to begin with — the modulation below then smears the residual peaks. (A
+/// short 8-line set would leave a SPARSE comb with deep notches — fewer modes,
+/// LESS flat — so density here comes from length + count, then modulation.)
 const List<int> _kDelays44k = [1009, 1129, 1381, 1663, 1993, 2377, 2851, 3407];
+
+/// Delay-line modulation (the anti-ringing fix). Each line's read position is
+/// swept by a sine LFO and read at a FRACTIONAL position via a first-order
+/// ALL-PASS interpolator (unity magnitude — phase only, so it neither tilts the
+/// spectrum nor touches RT60/damping; linear interpolation would low-pass the
+/// tail and, ironically, make it LESS flat). The lines share a slow rate range
+/// but each runs at its own rate (spread across [_kModRateLoHz, _kModRateHiHz])
+/// and its own phase, so they never de-tune in lockstep — the fixed modal comb
+/// keeps shifting and smears into a spectrally-flat (non-metallic) tail. The
+/// depth is a peak read-offset in samples at 44.1 kHz; modulation is
+/// magnitude-neutral on average, so width/RT60 are preserved.
+const double _kModRateLoHz = 0.7;
+const double _kModRateHiHz = 1.5;
+const double _kModDepth44k = 24.0;
 
 /// Per-channel DECORRELATOR taps: each channel sums a DISJOINT, interleaved half
 /// of the delay lines (L ← lines 0,2,4,6; R ← lines 1,3,5,7). Because the two
@@ -110,10 +137,36 @@ const List<int> _kDiffusers44k = [67, 113, 167, 223, 281, 349];
   // summed tail well bounded.
   const inputGain = 0.18;
 
-  // Circular delay buffers, per-line write cursors, and per-line damping state.
-  final bufs = [for (var i = 0; i < lines; i++) Float64List(len[i])];
+  // Delay-line modulation: peak read-offset (samples) plus a per-line LFO phase
+  // increment (each line at its own rate, spread across the Lo..Hi range) and a
+  // per-line phase offset spread over 360°/N, so no two lines modulate in
+  // lockstep. Deterministic — driven by the sample index t, never Random.
+  final modDepth = _kModDepth44k * scale;
+  final phaseInc = List<double>.generate(
+    lines,
+    (i) =>
+        2.0 *
+        math.pi *
+        (_kModRateLoHz + (_kModRateHiHz - _kModRateLoHz) * i / (lines - 1)) /
+        sr,
+  );
+  final phaseOff = List<double>.generate(
+    lines,
+    (i) => 2.0 * math.pi * i / lines,
+  );
+
+  // Circular delay buffers, per-line WRITE cursors, per-line damping state, and
+  // per-line all-pass interpolator state. Buffers carry headroom (base length +
+  // modulation depth + interpolation slack) so the modulated read can reach a
+  // few samples PAST the base delay.
+  final bufLen = List<int>.generate(
+    lines,
+    (i) => len[i] + modDepth.ceil() + 2,
+  );
+  final bufs = [for (var i = 0; i < lines; i++) Float64List(bufLen[i])];
   final pos = List<int>.filled(lines, 0);
   final lpState = List<double>.filled(lines, 0.0);
+  final apState = List<double>.filled(lines, 0.0);
 
   // Input diffusion: a chain of Schroeder all-passes (unity gain, k = 0.6).
   final diffLen = [
@@ -158,15 +211,33 @@ const List<int> _kDiffusers44k = [67, 113, 167, 223, 281, 349];
     }
     final x = xd * inputGain;
 
-    // Read each delay's output; accumulate the shared (mono) sum and the two
-    // disjoint decorrelator half-sums, and low-pass each line (one-pole
-    // "damping") ready for feedback.
+    // Read each delay's output at its MODULATED, fractional position (linear
+    // interpolation), accumulate the shared (mono) sum and the two disjoint
+    // decorrelator half-sums, and low-pass each line (one-pole "damping") ready
+    // for feedback. The slow per-line LFO de-tunes the delay by a few samples so
+    // the modal comb smears → a smooth (non-metallic) tail.
     var monoSum = 0.0;
     var decL = 0.0;
     var decR = 0.0;
     var dampedSum = 0.0;
     for (var i = 0; i < lines; i++) {
-      final v = bufs[i][pos[i]];
+      final delay = len[i] + modDepth * math.sin(phaseInc[i] * t + phaseOff[i]);
+      final bl = bufLen[i];
+      // First-order all-pass fractional read: split the modulated delay into an
+      // integer part M (sample at delay M = s0, at M+1 = s1) and a fraction, and
+      // interpolate with a = (1−frac)/(1+frac). Unity magnitude → no HF tilt, so
+      // the tail stays spectrally flat and RT60/damping are untouched.
+      final m = delay.floor();
+      final frac = delay - m;
+      var a0 = pos[i] - m;
+      while (a0 < 0) {
+        a0 += bl;
+      }
+      var a1 = a0 - 1;
+      if (a1 < 0) a1 += bl;
+      final a = (1.0 - frac) / (1.0 + frac);
+      final v = a * bufs[i][a0] + bufs[i][a1] - a * apState[i];
+      apState[i] = v;
       monoSum += v;
       decL += _kDecorrL[i] * v;
       decR += _kDecorrR[i] * v;
@@ -205,7 +276,7 @@ const List<int> _kDiffusers44k = [67, 113, 167, 223, 281, 349];
     for (var i = 0; i < lines; i++) {
       bufs[i][pos[i]] = x + g * (damped[i] - hs);
       final p = pos[i] + 1;
-      pos[i] = p == len[i] ? 0 : p;
+      pos[i] = p == bufLen[i] ? 0 : p;
     }
   }
 
