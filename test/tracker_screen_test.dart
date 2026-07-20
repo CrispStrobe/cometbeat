@@ -10,9 +10,11 @@ import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:comet_beat/core/audio/mod/mod.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show parseAnyModule;
+import 'package:comet_beat/core/audio/synth.dart' show Drum;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerCell, TrackerChannelEffect, TrackerEffect;
 import 'package:comet_beat/core/audio/tracker_song.dart';
+import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:crisp_notation/crisp_notation.dart'
@@ -38,7 +40,45 @@ TrackerTester _game(WidgetTester tester) =>
         as TrackerTester;
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    BeatBridge.instance.clear();
+  });
+
+  testWidgets('shares the drum channel out and loads a shared beat in',
+      (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+    final game = _game(tester);
+
+    // A shared beat another mode published (kick+hat on 0, snare on 4).
+    List<bool> row(List<int> hits) =>
+        [for (var i = 0; i < 16; i++) hits.contains(i)];
+    BeatBridge.instance.publish(
+      SharedBeat(
+        rows: {
+          Drum.kick: row([0, 8]),
+          Drum.hat: row([0, 2, 4, 6, 8, 10, 12, 14]),
+          Drum.snare: row([4, 12]),
+        },
+        tempoBpm: 120,
+      ),
+    );
+    expect(game.canLoadSharedBeat, isTrue);
+    expect(game.noteCount, 0);
+
+    // Pull it in — drums land in the beginner percussion channel (simplified).
+    game.loadSharedBeat();
+    await tester.pump();
+    expect(game.noteCount, greaterThan(0));
+
+    // Share the drum channel back out — round-trips through the bridge.
+    BeatBridge.instance.clear();
+    game.shareBeat();
+    final shared = BeatBridge.instance.current;
+    expect(shared, isNotNull);
+    expect(shared!.source, 'tracker');
+    expect(shared.isEmpty, isFalse);
+  });
 
   testWidgets('placing a note starts the groove; clearing stops it',
       (tester) async {

@@ -32,6 +32,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
@@ -125,6 +126,12 @@ abstract interface class TrackerTester {
   /// Whether the groove swings (off-beats delayed), and a toggle.
   bool get swingOn;
   void setSwing(bool on);
+
+  /// Shared-groove bridge: publish the drum channel out, and pull a shared beat
+  /// in (simplified to the beginner kick/snare/hat grid).
+  void shareBeat();
+  bool get canLoadSharedBeat;
+  void loadSharedBeat();
 
   /// Imports the built-in demo tune into the melody channel (Score → Tracker).
   void importDemo();
@@ -1124,6 +1131,89 @@ class _TrackerScreenState extends State<TrackerScreen>
     _syncPlayback();
   }
 
+  // --- Shared-groove bridge --------------------------------------------------
+  //
+  // The beginner drum channel is monophonic (one drum per step) with a 3-voice
+  // grid (kick/snare/hat), so interop is honest about the fit: SHARE reads the
+  // channel out losslessly (each step already has ≤1 drum); LOAD simplifies a
+  // richer shared beat down to kick/snare/hat, one per step (priority
+  // kick > snare > hat), since that's all the beginner grid can show.
+
+  int _percussionIndex() =>
+      _engine.channels.indexWhere((c) => c.instrument is PercussionInstrument);
+
+  @override
+  void shareBeat() {
+    final ch = _percussionIndex();
+    if (ch < 0) return;
+    final steps = _engine.rows;
+    final rows = <Drum, List<bool>>{};
+    for (var s = 0; s < steps; s++) {
+      final midi = _engine.cellAt(ch, s).midi;
+      if (midi == null) continue;
+      final drum = Drum.values[midi.clamp(0, Drum.values.length - 1)];
+      (rows[drum] ??= List<bool>.filled(steps, false))[s] = true;
+    }
+    if (rows.isEmpty) return;
+    BeatBridge.instance.publish(
+      SharedBeat(
+        rows: rows,
+        tempoBpm: _engine.timing.tempoBpm,
+        source: 'tracker',
+      ),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.beatShared)),
+    );
+  }
+
+  @override
+  bool get canLoadSharedBeat =>
+      BeatBridge.instance.hasBeat && _percussionIndex() >= 0;
+
+  /// Maps any shared drum onto the beginner grid's kick / snare / hat.
+  Drum _beginnerVoice(Drum d) => switch (d) {
+        Drum.kick || Drum.lowTom => Drum.kick,
+        Drum.snare || Drum.clap || Drum.rim => Drum.snare,
+        _ => Drum.hat, // hats, cymbals, toms, cowbell → the hat row
+      };
+
+  @override
+  void loadSharedBeat() {
+    final shared = BeatBridge.instance.current;
+    if (shared == null || shared.isEmpty) return;
+    final ch = _percussionIndex();
+    if (ch < 0) return;
+    final steps = _engine.rows;
+    final fitted = shared.rowsFitted(steps);
+    // Collapse to the loudest voice per step: kick beats snare beats hat.
+    const priority = [Drum.kick, Drum.snare, Drum.hat];
+    for (var s = 0; s < steps; s++) {
+      Drum? pick;
+      for (final d in Drum.values) {
+        if (!fitted[d]![s]) continue;
+        final v = _beginnerVoice(d);
+        if (pick == null || priority.indexOf(v) < priority.indexOf(pick)) {
+          pick = v;
+        }
+      }
+      _engine.setCell(
+        ch,
+        s,
+        pick == null
+            ? TrackerCell.empty
+            : TrackerCell(midi: pick.index, volume: 1),
+      );
+    }
+    setState(() {});
+    _syncPlayback();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.beatLoaded)),
+    );
+  }
+
   /// Long-press a placed note → a small menu for its dynamics + effect.
   void _onLongPressCode(int code, int step) {
     final cell = _engine.cellAt(_selected, step);
@@ -1556,6 +1646,10 @@ class _TrackerScreenState extends State<TrackerScreen>
                   _borrowInstrument();
                 case 'saveSong':
                   _saveToSongBook();
+                case 'shareBeat':
+                  shareBeat();
+                case 'loadBeat':
+                  loadSharedBeat();
                 case 'swing':
                   setSwing(!swingOn);
               }
@@ -1565,6 +1659,16 @@ class _TrackerScreenState extends State<TrackerScreen>
                 value: 'swing',
                 checked: swingOn,
                 child: Text(l10n.trackerSwing),
+              ),
+              PopupMenuItem(
+                value: 'shareBeat',
+                enabled: _percussionIndex() >= 0,
+                child: Text(l10n.beatShare),
+              ),
+              PopupMenuItem(
+                value: 'loadBeat',
+                enabled: canLoadSharedBeat,
+                child: Text(l10n.beatLoadShared),
               ),
               PopupMenuItem(
                 value: 'importMod',
