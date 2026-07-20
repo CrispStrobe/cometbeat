@@ -146,6 +146,94 @@ void main() {
     expect(_peak(l), greaterThan(0.0));
   });
 
+  test('channel aftertouch (0xD0) adds vibrato to a sounding note', () {
+    final plain = _midi(_note(0, 60, 480));
+    // Full channel pressure set at the note-on → continuous vibrato.
+    final at = _midi([0, 0xD0, 127, ..._note(0, 60, 480)]);
+    final (p, _) = renderMidiFile(plain, font);
+    final (a, _) = renderMidiFile(at, font);
+    expect(a, isNot(p), reason: 'aftertouch modulates the pitch (vibrato)');
+  });
+
+  test('sostenuto (CC66) holds notes down at press, not ones played after', () {
+    // A looping font so a *held* note keeps sounding (a one-shot would stop at
+    // the sample end regardless of how long it is held).
+    final loopFont = loadSoundFont(
+      oneSampleSf2(
+        pcm: sineI16(400, 8),
+        sampleRate: 44100,
+        rootKey: 60,
+        loopStart: 0,
+        loopEnd: 400,
+        sampleModes: 1, // gen 54 = loop
+      ),
+    );
+    // The last output sample above a small threshold — how long sound lasts.
+    int lastSound(Float64List x) {
+      for (var i = x.length - 1; i >= 0; i--) {
+        if (x[i].abs() > 0.01) return i;
+      }
+      return 0;
+    }
+
+    // Baseline: note off at tick 120, no pedal → stops shortly after.
+    final base = _midi([0, 0x90, 60, 0x64, 0x81, 0x00, 0x80, 60, 0]);
+    // Captured: press CC66 while the note sounds, THEN note off → held to the end.
+    final captured = _midi([
+      0, 0x90, 60, 0x64, // note on
+      ..._cc(0, 66, 127), // sostenuto down (captures the sounding note)
+      0x81, 0x00, 0x80, 60, 0, // note off at tick 128
+    ]);
+    // After-pedal: press CC66 FIRST, then play → not captured → stops normally.
+    final afterPedal = _midi([
+      ..._cc(0, 66, 127), // sostenuto down (nothing sounding yet)
+      0, 0x90, 60, 0x64, //
+      0x81, 0x00, 0x80, 60, 0,
+    ]);
+
+    final (b, _) = renderMidiFile(base, loopFont);
+    final (c, _) = renderMidiFile(captured, loopFont);
+    final (ap, _) = renderMidiFile(afterPedal, loopFont);
+    expect(
+      lastSound(c),
+      greaterThan(lastSound(b) + 8000),
+      reason: 'a captured note is held well past its note-off',
+    );
+    expect(
+      lastSound(ap),
+      lessThan(lastSound(c) - 8000),
+      reason: 'a note played after the pedal is NOT held',
+    );
+  });
+
+  test('GS NRPN 18h retunes a single drum key (per-drum pitch)', () {
+    // Zero-crossings over a fixed early window: a higher pitch = more crossings.
+    int zc(Float64List x, int n) {
+      final m = x.length < n ? x.length : n;
+      var z = 0;
+      for (var i = 1; i < m; i++) {
+        if ((x[i] >= 0) != (x[i - 1] >= 0)) z++;
+      }
+      return z;
+    }
+
+    final plain = _midi([..._note(9, 60, 240)]); // drum ch, key 60
+    // NRPN 18h/key 60, data 0x40+12 → +12 semitones (an octave up).
+    final tuned = _midi([
+      ..._cc(9, 99, 0x18), // NRPN MSB = drum pitch coarse
+      ..._cc(9, 98, 60), // NRPN LSB = drum key 60
+      ..._cc(9, 6, 64 + 12), // data entry = centre + 12 st
+      ..._note(9, 60, 240),
+    ]);
+    final (p, _) = renderMidiFile(plain, font);
+    final (t, _) = renderMidiFile(tuned, font);
+    expect(
+      zc(t, 800),
+      greaterThan(zc(p, 800) + 10),
+      reason: 'the retuned drum plays an octave higher',
+    );
+  });
+
   test('empty / non-MIDI input yields empty output', () {
     final (l, r) = renderMidiFile(Uint8List.fromList([1, 2, 3]), font);
     expect(l, isEmpty);

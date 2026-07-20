@@ -8,7 +8,9 @@
 //   • per-channel program + bank select, with mid-song program changes
 //   • note velocity, CC7 volume, CC11 expression, CC10 pan
 //   • sustain pedal (CC64): a note held past its note-off until the pedal lifts
-//   • channel 10 → the bank-128 drum kit
+//   • sostenuto pedal (CC66): holds ONLY the notes already down when pressed
+//   • channel aftertouch (0xD0): channel pressure → vibrato depth (continuous)
+//   • channel 10 → the bank-128 drum kit; GS NRPN 18h retunes a single drum key
 //   • continuous PITCH BEND (glides mid-note); RPN 0 sets the range
 //   • the zone's SF2 volume envelope (DAHDSR), low-pass filter (cutoff/Q), and
 //     LFOs (vibrato + tremolo) — plus CC1 mod-wheel vibrato on top
@@ -62,6 +64,7 @@ class _Pending {
     this.bank,
     this.program,
     this.isDrum,
+    this.tuneOffset,
   );
   final int startTick;
   final int vel;
@@ -73,6 +76,7 @@ class _Pending {
   final int bank;
   final int program;
   final bool isDrum;
+  final double tuneOffset; // GS NRPN drum-pitch offset, semitones
 }
 
 /// A resolved sounding note.
@@ -91,6 +95,7 @@ class _Note {
     this.bank,
     this.program,
     this.isDrum,
+    this.tuneOffset,
   );
   final int startSample;
   final int endSample;
@@ -105,6 +110,7 @@ class _Note {
   final int bank;
   final int program;
   final bool isDrum;
+  final double tuneOffset; // GS NRPN drum-pitch offset, semitones
 
   /// Absolute sample at which a same-exclusive-class note cuts this one off
   /// (1<<62 = never). Set in the render pass.
@@ -166,15 +172,27 @@ class _Note {
   final reverbSend = List<double>.filled(16, 40 / 127); // CC91 (GM default)
   final chorusSend = List<double>.filled(16, 0.0); // CC93
   final soft = List<bool>.filled(16, false); // CC67 soft pedal
-  // Pitch-bend range (RPN 0), default ±2 st; RPN select + data-entry state.
+  // Pitch-bend range (RPN 0), default ±2 st; RPN/NRPN select + data-entry state.
   final bendRange = List<double>.filled(16, _bendRangeSemis);
   final rpnMsb = List<int>.filled(16, 127);
   final rpnLsb = List<int>.filled(16, 127);
+  final nrpnMsb = List<int>.filled(16, 127);
+  final nrpnLsb = List<int>.filled(16, 127);
+  // Which parameter CC6/38 (data entry) address: true = RPN, false = NRPN.
+  final rpnActive = List<bool>.filled(16, true);
+  // GS NRPN 18h: per-channel, per-drum-key pitch offset (semitones from 0x40).
+  final drumTune = List.generate(16, (_) => <int, double>{});
   // Per-channel pitch-bend curve: (absolute sample, semitones), time-ordered.
   final bendByChannel = List.generate(16, (_) => <(int, double)>[]);
+  // Per-channel channel-aftertouch curve: (absolute sample, vibrato cents).
+  final atByChannel = List.generate(16, (_) => <(int, double)>[]);
 
   final pending = <int, List<_Pending>>{};
   final pedalHeld = <int, List<_Pending>>{};
+  final sostHeld =
+      <int, List<_Pending>>{}; // deferred note-offs (sostenuto down)
+  // Per-channel: the note identities that were sounding when CC66 was pressed.
+  final sostCaptured = List.generate(16, (_) => <_Pending>{});
   final notes = <_Note>[];
   var lastTick = 0;
 
@@ -197,6 +215,7 @@ class _Note {
       p.bank,
       p.program,
       p.isDrum,
+      p.tuneOffset,
     );
     notes.add(note);
   }
@@ -207,6 +226,9 @@ class _Note {
     final p = q.removeAt(0);
     if (sustain[ch]) {
       (pedalHeld[ch << 8 | key] ??= []).add(p);
+    } else if (sostCaptured[ch].contains(p)) {
+      // Sostenuto holds only the notes that were down when it was pressed.
+      (sostHeld[ch << 8 | key] ??= []).add(p);
     } else {
       finalize(ch, key, tick, p);
     }
@@ -218,6 +240,15 @@ class _Note {
         finalize(ch, k & 0xff, tick, p);
       }
     }
+  }
+
+  void liftSostenuto(int ch, int tick) {
+    for (final k in sostHeld.keys.where((k) => k >> 8 == ch).toList()) {
+      for (final p in sostHeld.remove(k)!) {
+        finalize(ch, k & 0xff, tick, p);
+      }
+    }
+    sostCaptured[ch].clear(); // pedal up: captured notes release normally now
   }
 
   for (final ev in events) {
@@ -239,6 +270,7 @@ class _Note {
               program[ch],
               // GS rhythm part, or XG drum channel (CC0 bank MSB = 127).
               drumChannel[ch] || bank[ch] == 127,
+              drumTune[ch][ev.d1] ?? 0.0, // GS NRPN 18h per-drum pitch
             ),
           );
         } else {
@@ -270,6 +302,19 @@ class _Note {
             final down = ev.d2 >= 64;
             if (!down) liftPedal(ch, ev.tick);
             sustain[ch] = down;
+          case 66:
+            final down = ev.d2 >= 64;
+            if (down) {
+              // Capture every note currently sounding on this channel.
+              sostCaptured[ch]
+                ..clear()
+                ..addAll([
+                  for (final k in pending.keys.where((k) => k >> 8 == ch))
+                    ...pending[k]!,
+                ]);
+            } else {
+              liftSostenuto(ch, ev.tick);
+            }
           case 120: // all sound off
           case 123: // all notes off
             for (final k in pending.keys.where((k) => k >> 8 == ch).toList()) {
@@ -278,6 +323,7 @@ class _Note {
               }
             }
             liftPedal(ch, ev.tick);
+            liftSostenuto(ch, ev.tick);
           case 121: // reset all controllers
             volume[ch] = 100 / 127;
             expression[ch] = 1;
@@ -288,19 +334,35 @@ class _Note {
             soft[ch] = false;
           case 101:
             rpnMsb[ch] = ev.d2;
+            rpnActive[ch] = true;
           case 100:
             rpnLsb[ch] = ev.d2;
-          case 6: // data-entry MSB: RPN 0 → bend range in semitones
-            if (rpnMsb[ch] == 0 && rpnLsb[ch] == 0) {
-              bendRange[ch] = ev.d2.toDouble();
+            rpnActive[ch] = true;
+          case 99:
+            nrpnMsb[ch] = ev.d2;
+            rpnActive[ch] = false;
+          case 98:
+            nrpnLsb[ch] = ev.d2;
+            rpnActive[ch] = false;
+          case 6: // data-entry MSB → the last-selected RPN or NRPN
+            if (rpnActive[ch]) {
+              if (rpnMsb[ch] == 0 && rpnLsb[ch] == 0) {
+                bendRange[ch] = ev.d2.toDouble();
+              }
+            } else if (nrpnMsb[ch] == 0x18) {
+              // GS drum pitch coarse: NRPN LSB = drum key, data 0x40 = centre.
+              drumTune[ch][nrpnLsb[ch]] = (ev.d2 - 64).toDouble();
             }
           case 38: // data-entry LSB: RPN 0 → the cents part of the range
-            if (rpnMsb[ch] == 0 && rpnLsb[ch] == 0) {
+            if (rpnActive[ch] && rpnMsb[ch] == 0 && rpnLsb[ch] == 0) {
               bendRange[ch] = bendRange[ch].truncateToDouble() + ev.d2 / 100.0;
             }
         }
       case 0xC0:
         program[ch] = ev.d1;
+      case 0xD0: // channel aftertouch (pressure) → vibrato depth, continuous
+        atByChannel[ch]
+            .add((sampleAt(ev.tick).round(), ev.d1 / 127.0 * _vibratoMaxCents));
       case 0xE0:
         final value = (ev.d2 << 7) | ev.d1; // 0..16383, 8192 = centre
         final semis = (value - 8192) / 8192.0 * bendRange[ch];
@@ -316,6 +378,11 @@ class _Note {
     }
   }
   for (final entry in pedalHeld.entries) {
+    for (final p in entry.value) {
+      finalize(entry.key >> 8, entry.key & 0xff, endTick, p);
+    }
+  }
+  for (final entry in sostHeld.entries) {
     for (final p in entry.value) {
       finalize(entry.key >> 8, entry.key & 0xff, endTick, p);
     }
@@ -364,6 +431,7 @@ class _Note {
       preset,
       n,
       bendByChannel[n.channel],
+      atByChannel[n.channel],
       left,
       right,
       revL,
@@ -427,6 +495,7 @@ void _resampleNote(
   Sf2Preset preset,
   _Note n,
   List<(int, double)> bendCurve,
+  List<(int, double)> atCurve,
   Float64List left,
   Float64List right,
   Float64List? revL,
@@ -461,6 +530,7 @@ void _resampleNote(
       n,
       notePan,
       bendCurve,
+      atCurve,
       left,
       right,
       revL,
@@ -481,6 +551,7 @@ void _renderZone(
   _Note n,
   double notePan,
   List<(int, double)> bendCurve,
+  List<(int, double)> atCurve,
   Float64List left,
   Float64List right,
   Float64List? revL,
@@ -493,8 +564,9 @@ void _renderZone(
   final len = pcm.length;
   final root = zone.rootKey >= 0 ? zone.rootKey : sample.originalPitch;
   final baseRatio = sample.sampleRate / sr;
-  // Fixed pitch offset (semitones) for this key: key vs root + zone/sample tune.
-  final semisFixed = (n.key - root + zone.coarseTune) +
+  // Fixed pitch offset (semitones) for this key: key vs root + zone/sample tune
+  // + any GS NRPN per-drum retune.
+  final semisFixed = (n.key - root + zone.coarseTune + n.tuneOffset) +
       (zone.fineTune + sample.pitchCorrection) / 100.0;
 
   // Loop only when the zone's sampleModes (gen 54) enables it (and the sample
@@ -573,6 +645,7 @@ void _renderZone(
   final cutFade = (0.006 * sr).round();
 
   var bi = 0;
+  var ai = 0;
   var phase = 0.0;
 
   for (var i = 0; i < total; i++) {
@@ -593,6 +666,16 @@ void _renderZone(
       final depth = i < vibOnset ? n.modCents * (i / vibOnset) : n.modCents;
       pitchMod +=
           depth / 100.0 * math.sin(2 * math.pi * _vibratoRateHz * i / sr);
+    }
+    // Channel aftertouch: a continuous vibrato whose depth tracks the pressure
+    // curve (sampled at this output index, like the bend curve).
+    while (ai + 1 < atCurve.length && atCurve[ai + 1].$1 <= outIdx) {
+      ai++;
+    }
+    final atCents = atCurve.isEmpty ? 0.0 : atCurve[ai].$2;
+    if (atCents > 0) {
+      pitchMod +=
+          atCents / 100.0 * math.sin(2 * math.pi * _vibratoRateHz * i / sr);
     }
     if (hasVib && i >= vibDelayS) {
       pitchMod += vibDepthSt * math.sin(vibW * (i - vibDelayS));
@@ -763,6 +846,7 @@ void _applyGsDrumSysex(List<Uint8List> sysex, List<bool> drumChannel) {
           kind == 0x90 ||
           kind == 0xb0 ||
           kind == 0xc0 ||
+          kind == 0xd0 ||
           kind == 0xe0) {
         all.add(_Evt(tick, kind, channel, d1, d2));
       }

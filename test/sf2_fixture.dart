@@ -130,13 +130,15 @@ Uint8List oneSampleSf2({
   int attenuationCb = 0,
   int coarseTune = 0,
   int fineTune = 0,
+  int sampleModes = 0,
 }) {
-  // Instrument-zone generators: keyRange, optional atten/tune, then sampleID
-  // (terminal). Signed tune values are written as their two's-complement bits.
+  // Instrument-zone generators: keyRange, optional atten/tune/loop-mode, then
+  // sampleID (terminal). Signed tune values are two's-complement bits.
   final gens = <Uint8List>[_rec4(43, 0 | (127 << 8))];
   if (attenuationCb != 0) gens.add(_rec4(48, attenuationCb));
   if (coarseTune != 0) gens.add(_rec4(51, coarseTune & 0xFFFF));
   if (fineTune != 0) gens.add(_rec4(52, fineTune & 0xFFFF));
+  if (sampleModes != 0) gens.add(_rec4(54, sampleModes)); // gen 54: loop mode
   gens.add(_rec4(53, 0)); // sampleID 0
   final pdta = _pdta([
     _chunk('phdr', _phdr('GMTest', 0, 0)),
