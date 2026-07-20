@@ -98,15 +98,15 @@ The audio model is trained, ONNX-exported, parity-verified on pure-Dart
 (`zenodo.org/records/3371780`) — derived weights are redistributable **with
 attribution**. Registry `license` field: `CC-BY-4.0 (GuitarSet)`. The §0 kill-switch passes.
 
-**⚠ Honest scope note — vanilla, not GuitarProFX.** The spec asked for the
-GuitarProFX-augmented weights, but **no public GuitarProFX weights exist** (the
+**⚠ Honest scope note — vanilla, not GP-FX.** The spec asked for the
+GP-FX-augmented weights, but **no public GP-FX weights exist** (the
 tab-cnn repo is code-only; the DAFx-24 variant's weights aren't released), so this
 is the **vanilla TabCNN trained fresh on GuitarSet**. Quality matches the vanilla
 paper: **held-out (guitarist-5 fold) tablature F1 = 0.745** (P 0.784 / R 0.710) vs
 the paper's 0.748 — a single held-out fold, not the full 6-fold protocol.
 **EGSet12 zero-shot was NOT evaluated** (would need that corpus); per the spec,
 expect the vanilla model to degrade on real *electric* guitar (~0.45 zero-shot),
-so the **GuitarProFX re-render augmentation remains the future robustness lever** —
+so the **GP-FX re-render augmentation remains the future robustness lever** —
 retrain with it if/when the augmented data or weights become available (the export
 + CQT + publish pipeline is now in place to re-ship instantly).
 
