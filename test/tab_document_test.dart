@@ -226,8 +226,7 @@ void main() {
     );
   });
 
-  test('techniques ride a GPIF export (glissando/bend/vibrato survive)',
-      () {
+  test('techniques ride a GPIF export (glissando/bend/vibrato survive)', () {
     final doc = TabDocument.blank(guitar, initialColumns: 2)
       ..setFret(0, 0, 5)
       ..setFret(1, 0, 7)
