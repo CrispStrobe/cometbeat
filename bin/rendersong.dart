@@ -41,6 +41,7 @@ import 'package:comet_beat/core/audio/midi_render.dart' show renderMidiFile;
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart';
 import 'package:comet_beat/core/audio/score_instrument_render.dart';
 import 'package:comet_beat/core/audio/sf2/sf2.dart' show VorbisDecode;
+import 'package:comet_beat/core/audio/sf2/sfz.dart' show loadSfz;
 import 'package:comet_beat/core/audio/sf2/soundfont_loader.dart';
 import 'package:comet_beat/core/audio/sf2/vorbis_glint_ffi.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
@@ -354,6 +355,24 @@ String _readText(File file) {
 LoadedSoundFont _loadFont(String sf2Path) {
   final f = File(sf2Path);
   if (!f.existsSync()) _fail('no such SoundFont: $sf2Path');
+  // A `.sfz` is a text instrument: parse it and load its WAV samples relative
+  // to the .sfz's own directory (the same model, so playback is unchanged).
+  if (sf2Path.toLowerCase().endsWith('.sfz')) {
+    final dir = File(sf2Path).parent.path;
+    try {
+      return loadSfz(
+        f.readAsStringSync(),
+        readSample: (rel) {
+          final s = File('$dir/$rel');
+          return s.existsSync() ? s.readAsBytesSync() : null;
+        },
+        name: sf2Path.split(Platform.pathSeparator).last,
+        onWarn: (m) => stderr.writeln('  $m'),
+      );
+    } on SoundFontLoadException catch (e) {
+      _fail('SFZ: ${e.message}');
+    }
+  }
   return loadSoundFont(f.readAsBytesSync(), vorbis: _tryVorbis());
 }
 
@@ -593,7 +612,7 @@ Render a song through a SoundFont to WAV/MP3.
   dart run bin/rendersong.dart <in> <out.wav|.mp3> [options]
 
 Options:
-  --sf2 <file>     SoundFont (.sf2 / .sf3) to voice the song with
+  --sf2 <file>     SoundFont (.sf2 / .sf3) or SFZ instrument (.sfz) to voice with
   --preset <N>     force ONE preset (index) for the whole song
   --single         force a single voice (preset 0) — disables GM per-part
   --notation       MIDI: force the quantized notation path (default is the
