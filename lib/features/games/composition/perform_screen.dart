@@ -33,6 +33,8 @@ import 'package:comet_beat/core/audio/synth.dart'
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/live_voice.dart';
 import 'package:comet_beat/core/services/loop_player_service.dart';
+import 'package:comet_beat/core/services/soloud_live_voice.dart'
+    show SoLoudLiveVoice;
 import 'package:comet_beat/features/sound_lab/my_samples_sheet.dart'
     show showMySamplesSheet;
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
@@ -184,9 +186,11 @@ class _PerformScreenState extends State<PerformScreen>
     implements PerformTester {
   final LoopStack<_PerformLayer> _stack = LoopStack<_PerformLayer>();
   final LoopPlayerService _loop = LoopPlayerService();
-  // F1/R1: polyphonic play-in voices behind a swappable backend (classic pool
-  // or the real-time engine), chosen by the user's setting with graceful degrade.
-  final LiveVoiceEngine _live = LiveVoiceEngine();
+  // F1/R1/R2: polyphonic play-in voices behind a swappable backend (classic
+  // audioplayers pool or the real-time flutter_soloud engine), chosen by the
+  // user's setting with graceful degrade when the engine can't initialise.
+  final LiveVoiceEngine _live =
+      LiveVoiceEngine(realtimeFactory: SoLoudLiveVoice.new);
   final Stopwatch _clock = Stopwatch();
   bool _playing = false;
 

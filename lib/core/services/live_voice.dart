@@ -40,6 +40,11 @@ abstract class LiveVoice {
   /// True when this is a genuine low-latency engine (not the classic pool).
   bool get isRealtime;
 
+  /// Bring the backend up. Returns whether it is actually usable — a backend
+  /// that can't initialise (unsupported platform / headless test) returns
+  /// false and the engine degrades to the classic pool.
+  Future<bool> init();
+
   /// Play [wav] (identified by [key] so a backend can cache the decoded source)
   /// at [volume] (0..1+, the play-in velocity).
   Future<void> play(String key, Uint8List wav, {double volume = 1.0});
@@ -58,6 +63,9 @@ class PooledLiveVoice implements LiveVoice {
   bool get isRealtime => false;
 
   @override
+  Future<bool> init() async => true;
+
+  @override
   Future<void> play(String key, Uint8List wav, {double volume = 1.0}) =>
       _pool.play(wav, volume: volume);
 
@@ -74,8 +82,10 @@ class PooledLiveVoice implements LiveVoice {
 /// UI can ship and be tested before the native dependency lands.
 typedef RealtimeVoiceFactory = LiveVoice? Function();
 
-/// Picks and manages the active [LiveVoice] from the user's [LiveVoiceMode],
-/// degrading to CLASSIC whenever REALTIME isn't available.
+/// Picks and manages the active [LiveVoice] from the user's [LiveVoiceMode].
+/// The classic pool is always live; the real-time backend is built + `init()`ed
+/// on demand and swapped in only when it comes up, so playback works
+/// immediately and degrades to CLASSIC whenever REALTIME can't initialise.
 class LiveVoiceEngine {
   LiveVoiceEngine({RealtimeVoiceFactory? realtimeFactory})
       : _realtimeFactory = realtimeFactory ?? (() => null);
@@ -83,40 +93,46 @@ class LiveVoiceEngine {
   static const _prefKey = 'perform_audio_mode';
 
   final RealtimeVoiceFactory _realtimeFactory;
+  final PooledLiveVoice _pool = PooledLiveVoice();
+  LiveVoice? _realtime; // set only when a real-time backend is up
   LiveVoiceMode _mode = LiveVoiceMode.auto;
-  LiveVoice? _active;
 
   LiveVoiceMode get mode => _mode;
 
-  /// The backend actually in use right now (built lazily on first need).
-  LiveVoice get _voice => _active ??= _select();
+  /// True when a real-time engine is the one actually playing.
+  bool get isRealtimeActive => _realtime != null;
 
-  /// True when the real-time engine is the one actually playing.
-  bool get isRealtimeActive => _voice.isRealtime;
+  LiveVoice get _voice => _realtime ?? _pool;
 
-  LiveVoice _select() {
-    if (_mode != LiveVoiceMode.classic) {
-      final rt = _tryRealtime();
-      if (rt != null) return rt;
-    }
-    return PooledLiveVoice();
-  }
-
-  LiveVoice? _tryRealtime() {
+  /// (Re)select the backend for [_mode]. Tears down any current real-time voice
+  /// and, unless CLASSIC, tries to build + init one — keeping the pool on any
+  /// failure.
+  Future<void> _rebuild() async {
+    _realtime?.dispose();
+    _realtime = null;
+    if (_mode == LiveVoiceMode.classic) return;
+    LiveVoice? rt;
     try {
-      return _realtimeFactory();
+      rt = _realtimeFactory();
     } catch (e) {
-      if (kDebugMode) debugPrint('[LIVEVOICE] realtime unavailable: $e');
-      return null;
+      if (kDebugMode) debugPrint('[LIVEVOICE] realtime build failed: $e');
+      rt = null;
+    }
+    if (rt == null) return;
+    var ok = false;
+    try {
+      ok = await rt.init();
+    } catch (e) {
+      if (kDebugMode) debugPrint('[LIVEVOICE] realtime init failed: $e');
+    }
+    if (ok) {
+      _realtime = rt;
+    } else {
+      rt.dispose();
     }
   }
 
-  void _rebuild() {
-    _active?.dispose();
-    _active = _select();
-  }
-
-  /// Load the persisted mode (best-effort).
+  /// Load the persisted mode (best-effort) and select the backend.
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -124,12 +140,12 @@ class LiveVoiceEngine {
     } catch (_) {
       _mode = LiveVoiceMode.auto;
     }
-    _rebuild();
+    await _rebuild();
   }
 
   Future<void> setMode(LiveVoiceMode mode) async {
     _mode = mode;
-    _rebuild();
+    await _rebuild();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefKey, mode.name);
@@ -141,10 +157,14 @@ class LiveVoiceEngine {
   Future<void> play(String key, Uint8List wav, {double volume = 1.0}) =>
       _voice.play(key, wav, volume: volume);
 
-  void invalidate() => _active?.invalidate();
+  void invalidate() {
+    _pool.invalidate();
+    _realtime?.invalidate();
+  }
 
   void dispose() {
-    _active?.dispose();
-    _active = null;
+    _pool.dispose();
+    _realtime?.dispose();
+    _realtime = null;
   }
 }

@@ -39,6 +39,12 @@ dependencies:
 
   # Audio
   audioplayers: ^6.1.0
+  # Real-time, low-latency polyphonic voice for the Perform play-in keyboard/pads
+  # (the "3" of the feel/instrument arc). Used ONLY behind LiveVoiceEngine's
+  # capability hook (core/services/live_voice.dart) with graceful degrade to the
+  # audioplayers pool — if it can't init (unsupported platform / headless test),
+  # playback falls back and nothing breaks.
+  flutter_soloud: ^3.1.10
 
   # Files (import of MIDI etc.)
   file_selector: ^1.0.3
