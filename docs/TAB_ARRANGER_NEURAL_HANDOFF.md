@@ -109,8 +109,12 @@ same `tabcnn-cqt.bin`):
 
 - **`tabcnn-gpfx.onnx`** ⭐ — GuitarProFX-augmented, **electric-robust**, sha256
   `8d9ce59157bdab37fb4816d32d7f29f3da0cdbf3c7876707c819af4d1f88e6b7` —
-  `.../models-v1/tabcnn-gpfx.onnx`. **EGSet12 F1 ≈ 0.77** (its published number;
-  end-to-end on GuitarSet via amt-tools features reproduces tab F1 0.77). **Prefer this.**
+  `.../models-v1/tabcnn-gpfx.onnx`. **EGSet12 (12-track, frame-level tab F1) = 0.59
+  micro / 0.55 macro — MEASURED here** (per-track 0.30–0.80, effects-heavy tracks
+  lower), matching the paper's reported 0.585; **~0.77 on clean GuitarSet**. Still
+  a big lift over vanilla's ~0.45 EGSet12 zero-shot. (An earlier note said "0.77
+  on EGSet12" — that was a single-track figure; the real 12-track number is 0.59.)
+  **Prefer this for electric guitar.**
 - `tabcnn.onnx` — vanilla (trained here on GuitarSet), tab F1 0.745 held-out; use
   only if you want the raw-magnitude front-end.
 
