@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/transcription/harmony.dart';
 import 'package:comet_beat/core/audio/transcription/harmony_model_store.dart';
+import 'package:comet_beat/core/audio/transcription/model_license.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _sr = 22050;
@@ -46,6 +47,9 @@ Float64List _triad(int root, bool major, double seconds) {
 }
 
 Future<HarmonyBundle?> _tryBundle() async {
+  // The BTC weights are CC-BY-NC-SA (non-commercial) — the store is gated; the
+  // test consents so it can exercise the model.
+  acceptModelLicense(HarmonyModelStore.licenseSpdx);
   try {
     return await HarmonyModelStore().load(); // downloads on first run
   } catch (_) {
