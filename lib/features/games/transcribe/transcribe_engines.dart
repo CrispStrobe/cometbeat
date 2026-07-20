@@ -5,6 +5,7 @@
 // whether it's actually present; anything unpicked or absent falls back to
 // pure-Dart (a null engine).
 
+import 'package:comet_beat/core/audio/transcription/crispasr_pitch.dart';
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
 import 'package:comet_beat/core/audio/transcription/harmony.dart'
     show ChordEstimator;
@@ -33,11 +34,13 @@ typedef TranscriptionEngines = ({
 // FFI backend gracefully falls back to pure-Dart ONNX.
 // ---------------------------------------------------------------------------
 
-/// `crispasr` runtime — CREPE F0 via CrispASR ggml. The in-repo `flutter/crispasr`
-/// binding already has `List<PitchFrame> pitch(Float32List pcm16k)` whose
-/// PitchFrame IS our `{timeMs, f0Hz, voicedProb}`; un-stub = resample mono→16 kHz
-/// Float32, call `pitch()`, map frames → PitchTrack. Blocked on the pub release.
-Future<F0Estimator?> loadCrispasrCrepeF0({bool download = false}) async => null;
+/// `crispasr` runtime — CREPE F0 via CrispASR ggml. WIRED via the `crispasr
+/// --pitch` CLI (`crispasr_pitch.dart`): available when the binary + a CREPE
+/// GGUF are configured (env `CRISPASR_BIN` / `CRISPASR_CREPE_GGUF`). Null → the
+/// resolver falls to the ONNX F0 path. (A future FFI binding to `crepe_compute_f0`
+/// — once the crispasr pub package ships it — can replace the CLI here.)
+Future<F0Estimator?> loadCrispasrCrepeF0({bool download = false}) async =>
+    crispasrCliCrepeF0();
 
 /// `crispasr` runtime — polyphonic transcription via CrispASR ggml PIANO (Kong).
 /// Returns [NoteEvent]s; blocked on the pub release exposing the piano C ABI.

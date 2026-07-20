@@ -167,7 +167,9 @@ void main() {
     expect(pianoUsed, isTrue, reason: 'ggml piano beats ONNX Basic Pitch');
   });
 
-  test('all FFI runtimes stubbed null today', () async {
+  test('runtimes null unless configured/present', () async {
+    // CrispASR CREPE is wired via the CLI but env-gated: null without a
+    // CRISPASR_BIN + GGUF, so it's null on CI/dev by default.
     expect(await loadCrispasrCrepeF0(), isNull);
     expect(await loadCrispasrPiano(), isNull);
     expect(await loadOnnxFfiF0(), isNull);
