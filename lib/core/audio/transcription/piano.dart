@@ -61,8 +61,9 @@ Future<List<NoteEvent>> pianoTranscribe(
       : resampleLinear(mono, sampleRate / pianoSampleRate);
   if (audio.isEmpty) return const [];
 
-  final heads = _runSegments(audio, model);
-  return decodePianoHeads(heads);
+  final segs = pianoEnframe(audio);
+  final perSeg = [for (final seg in segs) pianoRunSegment(model, seg)];
+  return decodePianoHeads(pianoDeframeSegments(perSeg));
 }
 
 /// Wrap a loaded [model] as the route.dart [NeuralTranscriber] the pipeline
@@ -70,53 +71,55 @@ Future<List<NoteEvent>> pianoTranscribe(
 NeuralTranscriber pianoTranscriber(OnnxModel model) => (mono, sampleRate) =>
     pianoTranscribe(mono, model: model, sampleRate: sampleRate);
 
-/// Enframe → run each 10 s segment → deframe into whole-recording heads.
-PianoHeads _runSegments(Float64List audio, OnnxModel model) {
-  // Pad to a whole number of segments, then overlapping windows (hop = seg/2).
+/// Enframe [audio] (already 16 kHz) into overlapping 10 s segments (5 s hop),
+/// padded to a whole number of segments. Each segment is a model input.
+List<Float32List> pianoEnframe(Float64List audio) {
   final nSeg = (audio.length / _segSamples).ceil();
   final padded = Float32List(nSeg * _segSamples);
   for (var i = 0; i < audio.length; i++) {
     padded[i] = audio[i];
   }
   const hop = _segSamples ~/ 2;
-  final starts = <int>[];
+  final segs = <Float32List>[];
   for (var p = 0; p + _segSamples <= padded.length; p += hop) {
-    starts.add(p);
-  }
-  if (starts.isEmpty) starts.add(0);
-
-  final onset = <Float32List>[];
-  final offset = <Float32List>[];
-  final frame = <Float32List>[];
-  final velocity = <Float32List>[];
-  int segFrames = 0;
-  for (final s in starts) {
     final seg = Float32List(_segSamples);
-    seg.setRange(0, _segSamples, padded, s);
-    final out = model.run(
-      {
-        _inName: Tensor.float(seg, [1, _segSamples]),
-      },
-      _outNames,
-    );
-    Float32List head(String name) {
-      final t = out[name]!;
-      return Float32List.fromList(t.f ?? t.asFloatList());
-    }
-
-    onset.add(head('reg_onset'));
-    offset.add(head('reg_offset'));
-    frame.add(head('frame'));
-    velocity.add(head('velocity'));
-    segFrames = onset.last.length ~/ _classes;
+    seg.setRange(0, _segSamples, padded, p);
+    segs.add(seg);
   }
+  if (segs.isEmpty) {
+    segs.add(Float32List(_segSamples)..setRange(0, _segSamples, padded, 0));
+  }
+  return segs;
+}
 
+/// Run ONE 10 s [seg] through [model] → the four head rows
+/// `[reg_onset, reg_offset, frame, velocity]`, each row-major `[segFrames×88]`.
+List<Float32List> pianoRunSegment(OnnxModel model, Float32List seg) {
+  final out = model.run(
+    {_inName: Tensor.float(seg, [1, _segSamples])},
+    _outNames,
+  );
+  return [
+    for (final n in _outNames)
+      () {
+        final t = out[n]!;
+        return Float32List.fromList(t.f ?? t.asFloatList());
+      }(),
+  ];
+}
+
+/// Deframe per-segment head rows (from [pianoRunSegment]) back to whole-
+/// recording [PianoHeads].
+PianoHeads pianoDeframeSegments(List<List<Float32List>> perSeg) {
+  List<Float32List> col(int i) => [for (final s in perSeg) s[i]];
+  final segFrames = perSeg.first.first.length ~/ _classes;
+  final onset = _deframe(col(0), segFrames);
   return (
-    onset: _deframe(onset, segFrames),
-    offset: _deframe(offset, segFrames),
-    frame: _deframe(frame, segFrames),
-    velocity: _deframe(velocity, segFrames),
-    frames: _deframe(onset, segFrames).length ~/ _classes,
+    onset: onset,
+    offset: _deframe(col(1), segFrames),
+    frame: _deframe(col(2), segFrames),
+    velocity: _deframe(col(3), segFrames),
+    frames: onset.length ~/ _classes,
   );
 }
 

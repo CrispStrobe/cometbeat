@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/transcription/separate_spleeter.dart';
 import 'package:comet_beat/core/audio/transcription/separate_spleeter_model_store.dart';
+import 'package:comet_beat/core/audio/transcription/stems.dart' show Separator;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
 
@@ -124,6 +125,35 @@ void main() {
           final (maxD, cos) = compare(res[stem]!, ref, ref.length);
           expect(cos, greaterThan(0.9999), reason: '$stem cos=$cos');
           expect(maxD, lessThan(5e-3), reason: '$stem max|Δ|=$maxD');
+        }
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+
+    test(
+      'concurrent separator (parallel isolates) == sync, matches reference',
+      () async {
+        final Separator sep;
+        try {
+          sep = await SpleeterModelStore().separator(concurrent: true);
+        } catch (_) {
+          // ignore: avoid_print
+          print('SKIP: Spleeter 4-stem models unavailable.');
+          return;
+        }
+        final mono = synthMono(44100);
+        final stems = await sep(mono, 44100);
+        final got = {
+          'vocals': stems.vocals,
+          'drums': stems.drums,
+          'bass': stems.bass,
+          'other': stems.other,
+        };
+        for (final stem in spleeter4Stems) {
+          final ref = readBin('$_dir/spleeter_e2e4_$stem.bin');
+          final (maxD, cos) = compare(got[stem]!, ref, ref.length);
+          expect(cos, greaterThan(0.9999), reason: 'concurrent $stem cos=$cos');
+          expect(maxD, lessThan(5e-3), reason: 'concurrent $stem max|Δ|=$maxD');
         }
       },
       timeout: const Timeout(Duration(minutes: 3)),

@@ -11,11 +11,28 @@
 library;
 
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/transcription/separate_spleeter.dart';
-import 'package:comet_beat/core/audio/transcription/stems.dart' show Separator;
+import 'package:comet_beat/core/audio/transcription/stems.dart'
+    show Separator, Stems;
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
+
+/// Runs ONE stem model (loaded from [path]) on the prepared [input] — the body
+/// of each concurrency isolate. Reads the model file inside the isolate (from
+/// the OS cache) so the 38 MB weights are NOT copied across the isolate port;
+/// only the (shared) input tensor is sent.
+Float32List _runStemIsolate(
+  ({String path, Float32List input, List<int> shape}) job,
+) {
+  final model = OnnxModel.fromBytes(File(job.path).readAsBytesSync());
+  final out = model.run(
+    {spleeterInputName: Tensor.float(job.input, job.shape)},
+    const [spleeterOutputName],
+  )[spleeterOutputName]!;
+  return Float32List.fromList(out.f ?? out.asFloatList());
+}
 
 /// Which Spleeter configuration to provision.
 enum SpleeterConfig {
@@ -113,8 +130,52 @@ class SpleeterModelStore {
     };
   }
 
-  /// The stems.dart [Separator] backed by these models.
-  Future<Separator> separator() async => spleeterSeparator(await load());
+  /// The stems.dart [Separator] backed by these models. By default (native) the
+  /// N independent stem models run CONCURRENTLY across isolates (~2× wall-clock
+  /// for 4-stem on this hardware — the within-model conv pool gives nothing at
+  /// Spleeter's shapes, but the stems are embarrassingly parallel). Set
+  /// `COMET_SPLEETER_CONCURRENT=0` (or pass `concurrent: false`) for the
+  /// single-isolate path. Falls back to sync if the files can't be provisioned.
+  Future<Separator> separator({bool? concurrent}) async {
+    final files = await ensureFiles();
+    final useConcurrent = concurrent ??
+        (Platform.environment['COMET_SPLEETER_CONCURRENT'] != '0');
+    if (files == null || !useConcurrent) {
+      return spleeterSeparator(await load());
+    }
+    final paths = {for (final s in stemNames) s: files[s]!.path};
+    final names = stemNames;
+    return (Float64List mono, int sampleRate) =>
+        _separateConcurrent(mono, sampleRate, paths, names);
+  }
+
+  /// Prepare → run the stem models in parallel isolates → assemble.
+  static Future<Stems> _separateConcurrent(
+    Float64List mono,
+    int sampleRate,
+    Map<String, String> paths,
+    List<String> names,
+  ) async {
+    final prep = spleeterPrepare(mono, sampleRate: sampleRate);
+    if (prep.nFrames == 0) {
+      return (vocals: null, drums: null, bass: null, other: null);
+    }
+    final specs = await Future.wait([
+      for (final name in names)
+        Isolate.run(
+          () => _runStemIsolate(
+            (path: paths[name]!, input: prep.input, shape: prep.shape),
+          ),
+        ),
+    ]);
+    final res = spleeterAssemble(prep, specs, names);
+    return (
+      vocals: res['vocals'],
+      drums: res['drums'],
+      bass: res['bass'],
+      other: res['other'] ?? res['accompaniment'],
+    );
+  }
 
   static Future<Uint8List?> _get(String url) async {
     final client = HttpClient();

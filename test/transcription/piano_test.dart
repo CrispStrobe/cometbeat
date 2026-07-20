@@ -9,6 +9,8 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/transcription/piano.dart';
 import 'package:comet_beat/core/audio/transcription/piano_model_store.dart';
+import 'package:comet_beat/core/audio/transcription/route.dart'
+    show NeuralTranscriber;
 import 'package:flutter_test/flutter_test.dart';
 
 const String _dir = 'test/transcription';
@@ -80,6 +82,33 @@ void main() {
     });
   });
 
+  group('Piano deframe (multi-segment stitch, no model)', () {
+    for (final n in [2, 3]) {
+      test('$n segments stitch like Kong deframe', () {
+        const segFrames = 101, classes = 88;
+        final flat = readBin32('$_dir/piano_deframe_in_$n.bin');
+        // Split into n segments (each [segFrames×88]); repeat into all 4 heads.
+        final perSeg = <List<Float32List>>[];
+        for (var s = 0; s < n; s++) {
+          final seg = Float32List.sublistView(
+            flat,
+            s * segFrames * classes,
+            (s + 1) * segFrames * classes,
+          );
+          perSeg.add([seg, seg, seg, seg]);
+        }
+        final heads = pianoDeframeSegments(perSeg);
+        final ref = readBin32('$_dir/piano_deframe_out_$n.bin');
+        expect(heads.frames * classes, ref.length, reason: 'deframed length');
+        for (final head in [heads.onset, heads.offset, heads.frame]) {
+          for (var i = 0; i < ref.length; i++) {
+            expect(head[i], ref[i], reason: 'deframe[$i]');
+          }
+        }
+      });
+    }
+  });
+
   group('Piano end-to-end (model-gated)', () {
     test(
       'runtime parity + events match onnxruntime',
@@ -120,6 +149,32 @@ void main() {
           expect(events[i].midi, r['midi'], reason: 'e2e midi[$i]');
           expect(events[i].onMs, closeTo((r['onMs'] as num).toDouble(), 15.0));
           expect(pianoMidiVelocity(events[i]), closeTo(r['vel'] as num, 2));
+        }
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+
+    test(
+      'concurrent transcriber (parallel-isolate segments) == reference',
+      () async {
+        final NeuralTranscriber transcribe;
+        try {
+          transcribe = await PianoModelStore().transcriber(concurrent: true);
+        } catch (_) {
+          // ignore: avoid_print
+          print('SKIP: piano model unavailable.');
+          return;
+        }
+        final audio = synthInput((_sr * 2.5).toInt());
+        final events = await transcribe(audio, _sr);
+        final ref = (jsonDecode(
+          File('$_dir/piano_e2e_events.json').readAsStringSync(),
+        ) as Map<String, dynamic>)['events'] as List;
+        expect(events.length, ref.length, reason: 'concurrent event count');
+        for (var i = 0; i < ref.length; i++) {
+          final r = ref[i] as Map<String, dynamic>;
+          expect(events[i].midi, r['midi'], reason: 'concurrent midi[$i]');
+          expect(events[i].onMs, closeTo((r['onMs'] as num).toDouble(), 15.0));
         }
       },
       timeout: const Timeout(Duration(minutes: 3)),
