@@ -2691,6 +2691,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                           ],
                         ),
                       ),
+                  ],
+                ),
+                // The control bar WRAPS: ten compact buttons are ~400px, which
+                // doesn't fit one line on a 375px phone (layout_audit_test).
+                // Wrapping to a second run keeps every control reachable —
+                // a horizontal scroller would hide them behind an invisible
+                // affordance.
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  children: [
                     IconButton.filledTonal(
                       icon: const Icon(Icons.casino),
                       tooltip: l10n.loopMixerRoll,
