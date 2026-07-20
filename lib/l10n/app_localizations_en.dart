@@ -1613,6 +1613,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drumkitHat => 'Hi-hat';
 
   @override
+  String get drumkitOpenHat => 'Open hat';
+
+  @override
+  String get drumkitClap => 'Clap';
+
+  @override
+  String get drumkitTom => 'Tom';
+
+  @override
+  String get drumkitRim => 'Rim';
+
+  @override
+  String get drumkitCowbell => 'Cowbell';
+
+  @override
+  String get drumkitCrash => 'Crash';
+
+  @override
+  String get drumkitRide => 'Ride';
+
+  @override
+  String get drumkitLowTom => 'Low tom';
+
+  @override
+  String get drumkitHighTom => 'High tom';
+
+  @override
   String get tabWorkshopTitle => 'Guitar Tab';
 
   @override

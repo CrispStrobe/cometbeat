@@ -3074,6 +3074,60 @@ abstract class AppLocalizations {
   /// **'Hi-hat'**
   String get drumkitHat;
 
+  /// No description provided for @drumkitOpenHat.
+  ///
+  /// In en, this message translates to:
+  /// **'Open hat'**
+  String get drumkitOpenHat;
+
+  /// No description provided for @drumkitClap.
+  ///
+  /// In en, this message translates to:
+  /// **'Clap'**
+  String get drumkitClap;
+
+  /// No description provided for @drumkitTom.
+  ///
+  /// In en, this message translates to:
+  /// **'Tom'**
+  String get drumkitTom;
+
+  /// No description provided for @drumkitRim.
+  ///
+  /// In en, this message translates to:
+  /// **'Rim'**
+  String get drumkitRim;
+
+  /// No description provided for @drumkitCowbell.
+  ///
+  /// In en, this message translates to:
+  /// **'Cowbell'**
+  String get drumkitCowbell;
+
+  /// No description provided for @drumkitCrash.
+  ///
+  /// In en, this message translates to:
+  /// **'Crash'**
+  String get drumkitCrash;
+
+  /// No description provided for @drumkitRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Ride'**
+  String get drumkitRide;
+
+  /// No description provided for @drumkitLowTom.
+  ///
+  /// In en, this message translates to:
+  /// **'Low tom'**
+  String get drumkitLowTom;
+
+  /// No description provided for @drumkitHighTom.
+  ///
+  /// In en, this message translates to:
+  /// **'High tom'**
+  String get drumkitHighTom;
+
   /// No description provided for @tabWorkshopTitle.
   ///
   /// In en, this message translates to:

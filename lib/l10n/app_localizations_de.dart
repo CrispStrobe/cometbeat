@@ -1618,6 +1618,33 @@ class AppLocalizationsDe extends AppLocalizations {
   String get drumkitHat => 'Hi-Hat';
 
   @override
+  String get drumkitOpenHat => 'Offene Hi-Hat';
+
+  @override
+  String get drumkitClap => 'Klatschen';
+
+  @override
+  String get drumkitTom => 'Tom';
+
+  @override
+  String get drumkitRim => 'Rim';
+
+  @override
+  String get drumkitCowbell => 'Kuhglocke';
+
+  @override
+  String get drumkitCrash => 'Crash';
+
+  @override
+  String get drumkitRide => 'Ride';
+
+  @override
+  String get drumkitLowTom => 'Tiefes Tom';
+
+  @override
+  String get drumkitHighTom => 'Hohes Tom';
+
+  @override
   String get tabWorkshopTitle => 'Gitarren-Tabulatur';
 
   @override
