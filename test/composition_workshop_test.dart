@@ -136,6 +136,24 @@ void main() {
     editor.loadSharedMelody();
     await tester.pump();
     expect(editor.noteCount, 4);
+
+    // Publish the notated melody back onto the bridge — the active voice is
+    // quantized onto the 2-bar eighth grid (source 'workshop').
+    expect(editor.canShareMelody, isTrue);
+    MelodyBridge.instance.clear();
+    editor.shareMelody();
+    final shared = MelodyBridge.instance.current;
+    expect(shared, isNotNull);
+    expect(shared!.source, 'workshop');
+    expect(shared.isEmpty, isFalse);
+    // C quarter, E quarter, G half → the three pitched cells, in order.
+    final pitched = shared.cells.where((c) => c.midis != null).toList();
+    expect(pitched.map((c) => c.midis!.first), [60, 64, 67]);
+    expect(pitched.map((c) => c.steps), [2, 2, 4]);
+    expect(
+      shared.cells.fold<int>(0, (a, c) => a + c.steps),
+      16, // fills the 2-bar grid
+    );
   });
 
   testWidgets('the Analysis toggle shows the live harmony banner',

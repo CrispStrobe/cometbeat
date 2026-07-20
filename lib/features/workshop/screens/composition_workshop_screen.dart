@@ -17,7 +17,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/audio/loop_engine.dart'
-    show LoopTiming, PatternCell;
+    show LoopTiming, PatternCell, kPatternSteps;
 import 'package:comet_beat/core/audio/score_instrument_render.dart'
     show renderMultiPartWithInstrument;
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
@@ -485,10 +485,12 @@ abstract interface class CompositionWorkshopTester {
   /// Send the current document to the Multitrack (DAW) as a clip.
   void sendToDaw();
 
-  /// Shared-tune bridge (MelodyBridge): pull a groove riff in as notes. The
-  /// Workshop is a load-only member — it doesn't publish back (see the impl).
+  /// Shared-tune bridge (MelodyBridge): trade a groove riff both ways — pull one
+  /// in as notes, or publish the active voice out onto the 2-bar eighth grid.
   bool get canLoadSharedMelody;
   void loadSharedMelody();
+  bool get canShareMelody;
+  void shareMelody();
 
   /// Test seam: whether the 🔍 desktop hover card is currently showing a note.
   bool get debugHoverCardShown;
@@ -804,15 +806,60 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   void _onPianoKey(int midi) => _placePitch(pitchFromMidi(midi));
 
-  // ── Shared-tune bridge (MelodyBridge): pull a groove riff in as notes ───────
-  // The Workshop only PULLS: a tune built on the 16-step grid (Loop Mixer /
-  // Tracker / Live Looper) loads as notes + rests to notate or extend here. It
-  // doesn't publish back — the score's lossless outward path is MIDI/MusicXML,
-  // the Song Book, and the direct Tracker→Workshop handoff, none of which lose
-  // rhythm to a 2-bar grid the way a symbolic publish would.
+  // ── Shared-tune bridge (MelodyBridge): trade a groove riff both ways ────────
+  // PULL: a tune built on the 16-step grid (Loop Mixer / Tracker / Live Looper)
+  // loads as notes + rests to notate or extend here. PUBLISH: the active voice
+  // is quantized onto the bridge's 2-bar eighth grid and handed back out, so a
+  // melody notated here can drive a groove layer elsewhere. (The score's
+  // *lossless* outward path stays MIDI/MusicXML + the Song Book; this bridge is
+  // deliberately the lossy-but-live groove handoff — chords collapse to their
+  // lowest note, sub-eighth rhythm quantizes to the eighth grid, 2 bars max.)
 
   @override
   bool get canLoadSharedMelody => MelodyBridge.instance.hasMelody;
+
+  /// The active voice quantized onto the bridge's 2-bar eighth grid: each event
+  /// becomes a [PatternCell] of `fraction × stepsPerBar` eighth-steps (≥1; a
+  /// chord collapses to its lowest note, a rest carries no pitch), windowed to
+  /// [kPatternSteps] and padded with a trailing rest so it fills the grid.
+  List<PatternCell> _docToTuneCells() {
+    const stepsPerBar = LoopTiming.stepsPerBar; // eighth-steps in a 4/4 bar
+    final cells = <PatternCell>[];
+    var filled = 0;
+    for (final e in _doc.elements) {
+      if (filled >= kPatternSteps) break;
+      final (num, den) = e.duration.fraction; // of a whole note
+      var steps = (num * stepsPerBar / den).round();
+      if (steps < 1) steps = 1;
+      if (filled + steps > kPatternSteps) steps = kPatternSteps - filled;
+      cells.add((midis: e.isRest ? null : [e.pitch!.midiNumber], steps: steps));
+      filled += steps;
+    }
+    if (filled < kPatternSteps) {
+      cells.add((midis: null, steps: kPatternSteps - filled));
+    }
+    return cells;
+  }
+
+  @override
+  bool get canShareMelody => !_doc.isEmpty;
+
+  @override
+  void shareMelody() {
+    final cells = _docToTuneCells();
+    if (cells.every((c) => c.midis == null)) return; // nothing but rests
+    MelodyBridge.instance.publish(
+      SharedMelody(
+        cells: cells,
+        tempoBpm: (_doc.tempo?.quarterBpm ?? 100).round(),
+        source: 'workshop',
+      ),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.tuneShared)),
+    );
+  }
 
   /// Each grid cell of [stepsPerBar]-per-bar eighth-steps → the fewest notatable
   /// durations that fill it (a whole note = one bar), a note carrying the cell's
@@ -3308,6 +3355,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       );
                     case 'loadTune':
                       loadSharedMelody();
+                    case 'shareTune':
+                      shareMelody();
                   }
                 },
                 itemBuilder: (ctx) => [
@@ -3377,8 +3426,15 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     l10n.dawSend,
                     !_doc.isEmpty,
                   ),
-                  // Pull a tune built in the Loop Mixer / Tracker in as notes
-                  // (MelodyBridge) to notate or extend it here.
+                  // Trade a tune with the Loop Mixer / Tracker / Live Looper
+                  // (MelodyBridge): pull one in as notes, or hand this melody out
+                  // to drive a groove layer there.
+                  _menuItem(
+                    'shareTune',
+                    Icons.upload,
+                    l10n.tuneShare,
+                    !_doc.isEmpty,
+                  ),
                   _menuItem(
                     'loadTune',
                     Icons.download,
