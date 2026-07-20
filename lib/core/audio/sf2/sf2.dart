@@ -54,6 +54,8 @@ const _genInitialFilterQ = 9; // resonance, centibels
 const _genPan = 17; // 0.1% units, −500 (left) .. +500 (right)
 const _genExclusiveClass = 57; // same-class notes cut each other off
 const _genSampleModes = 54; // 0 none · 1 loop · 3 loop until release
+const _genScaleTuning =
+    56; // cents of pitch change per key (100 = normal, 0 = drums)
 // LFO generators. modLFO can sweep pitch (gen 5) and volume (gen 13); vibLFO
 // sweeps pitch (gen 6). Delays are timecents; freqs are absolute cents.
 const _genModLfoToPitch = 5; // cents
@@ -134,6 +136,7 @@ class Sf2Zone {
     this.panTenthPct = 0,
     this.exclusiveClass = 0,
     this.sampleModes = 0,
+    this.scaleTuning = 100,
   });
 
   final int keyLo;
@@ -203,6 +206,11 @@ class Sf2Zone {
   final int sampleModes;
   bool get loopEnabled => sampleModes == 1 || sampleModes == 3;
   bool get loopUntilRelease => sampleModes == 3;
+
+  /// scaleTuning (gen 56): cents of pitch change per MIDI key away from the root
+  /// (100 = normal chromatic, 0 = untuned — a drum kit's key selects a different
+  /// sample, not a transposition). Drives how much [keyLo]..[keyHi] shifts pitch.
+  final int scaleTuning;
 
   /// velRange (gen 44): the MIDI velocity window this zone (sample layer) covers,
   /// so a soft vs loud note picks a different recording. Default 0..127 (the
@@ -483,6 +491,7 @@ List<Sf2Preset> _parsePresets(
       // Not additive from a preset (instrument-only per spec).
       exclusiveClass: iv((g) => g.exclusiveClass, 0),
       sampleModes: iv((g) => g.sampleModes, 0),
+      scaleTuning: iv((g) => g.scaleTuning, 100),
     );
   }
 
@@ -540,7 +549,8 @@ class _Gen {
   int? filterFc, filterQ;
   int? modLfoPitch, vibLfoPitch, modLfoVol;
   int? delayModLfo, freqModLfo, delayVibLfo, freqVibLfo;
-  int? pan, exclusiveClass, sampleModes, sampleId, rootOverride, instIndex;
+  int? pan, exclusiveClass, sampleModes, scaleTuning, sampleId;
+  int? rootOverride, instIndex;
 }
 
 /// Read the generators in [gStart, gEnd) of a pgen/igen chunk into a [_Gen].
@@ -606,6 +616,8 @@ _Gen _readGens(ByteData data, int genOff, int gStart, int gEnd, int genCount) {
         g.exclusiveClass = amt;
       case _genSampleModes:
         g.sampleModes = amt;
+      case _genScaleTuning:
+        g.scaleTuning = amt;
     }
   }
   return g;
@@ -849,7 +861,12 @@ Sf2Instrument sf2InstrumentFromPreset(
         inst: SampleInstrument(
           '$id.${z.sampleIndex}',
           pcm,
-          baseMidi: z.rootKey >= 0 ? z.rootKey : s.originalPitch,
+          // scaleTuning 0 = an untuned drum zone: the key selects the sample and
+          // must not transpose it. Zones are single-key, so basing the sample at
+          // the zone's own key means key−base = 0 (no shift). Else use the root.
+          baseMidi: z.scaleTuning == 0
+              ? z.keyLo
+              : (z.rootKey >= 0 ? z.rootKey : s.originalPitch),
           loopStart: loopStart,
           loopLength: loopLen,
         ),

@@ -564,9 +564,13 @@ void _renderZone(
   final len = pcm.length;
   final root = zone.rootKey >= 0 ? zone.rootKey : sample.originalPitch;
   final baseRatio = sample.sampleRate / sr;
-  // Fixed pitch offset (semitones) for this key: key vs root + zone/sample tune
-  // + any GS NRPN per-drum retune.
-  final semisFixed = (n.key - root + zone.coarseTune + n.tuneOffset) +
+  // Fixed pitch offset (semitones) for this key. The key→pitch distance scales
+  // by the zone's scaleTuning (100 = chromatic; 0 = a drum kit, where the key
+  // picks a sample and must NOT transpose it), plus zone/sample tune and any GS
+  // NRPN per-drum retune (those are absolute, not key-scaled).
+  final semisFixed = (n.key - root) * zone.scaleTuning / 100.0 +
+      zone.coarseTune +
+      n.tuneOffset +
       (zone.fineTune + sample.pitchCorrection) / 100.0;
 
   // Loop only when the zone's sampleModes (gen 54) enables it (and the sample

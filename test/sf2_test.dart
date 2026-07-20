@@ -208,6 +208,30 @@ void main() {
       expect(sf.presets.single.zones.single.attenuationCb, 160);
     });
 
+    test('scaleTuning 0 (a drum zone) parses; default is 100 (chromatic)', () {
+      final normal = Sf2SoundFont.parse(
+        oneSampleSf2(
+          pcm: sineI16(880, 20),
+          sampleRate: 44100,
+          rootKey: 60,
+          loopStart: 0,
+          loopEnd: 0,
+        ),
+      );
+      expect(normal.presets.single.zones.single.scaleTuning, 100);
+      final drum = Sf2SoundFont.parse(
+        oneSampleSf2(
+          pcm: sineI16(880, 20),
+          sampleRate: 44100,
+          rootKey: 60,
+          loopStart: 0,
+          loopEnd: 0,
+          scaleTuning: 0, // key does not transpose the sample
+        ),
+      );
+      expect(drum.presets.single.zones.single.scaleTuning, 0);
+    });
+
     test('a key-split preset picks the RIGHT sample per note', () {
       // Sample A = low buzz (few periods), B = high buzz (many periods): a
       // note in each range should read a clearly different pitch.

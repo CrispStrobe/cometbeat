@@ -234,6 +234,50 @@ void main() {
     );
   });
 
+  test('scaleTuning 0 (drums): different keys play at the SAME pitch', () {
+    // A normal font transposes with the key; an untuned (drum) font must not —
+    // the key only selects which sample, never its pitch.
+    int zc(Float64List x) {
+      final n = x.length < 1500 ? x.length : 1500;
+      var z = 0;
+      for (var i = 1; i < n; i++) {
+        if ((x[i] >= 0) != (x[i - 1] >= 0)) z++;
+      }
+      return z;
+    }
+
+    final normal = loadSoundFont(
+      oneSampleSf2(
+        pcm: sineI16(2000, 40),
+        sampleRate: 44100,
+        rootKey: 60,
+        loopStart: 0,
+        loopEnd: 0,
+      ),
+    );
+    final drum = loadSoundFont(
+      oneSampleSf2(
+        pcm: sineI16(2000, 40),
+        sampleRate: 44100,
+        rootKey: 60,
+        loopStart: 0,
+        loopEnd: 0,
+        scaleTuning: 0,
+      ),
+    );
+    final low = _midi(_note(0, 60, 240));
+    final high = _midi(_note(0, 72, 240)); // an octave up
+    // Normal: +12 keys → ~2× the zero-crossings (an octave higher).
+    expect(
+      zc(renderMidiFile(high, normal).$1),
+      greaterThan(zc(renderMidiFile(low, normal).$1) + 20),
+    );
+    // Drum (scaleTuning 0): both keys sound at the sample's native pitch.
+    final dLow = zc(renderMidiFile(low, drum).$1);
+    final dHigh = zc(renderMidiFile(high, drum).$1);
+    expect((dHigh - dLow).abs(), lessThan(8), reason: 'key must not transpose');
+  });
+
   test('empty / non-MIDI input yields empty output', () {
     final (l, r) = renderMidiFile(Uint8List.fromList([1, 2, 3]), font);
     expect(l, isEmpty);

@@ -30,7 +30,6 @@
 // GLINT_LIB at libglint.dylib/.so/glint.dll (uncompressed `.sf2` needs nothing).
 
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
@@ -424,53 +423,21 @@ VorbisDecode? _tryVorbis() {
 
 // ── PCM helpers ──────────────────────────────────────────────────────────────
 
-/// tanh(v) via exp (dart:math has no tanh).
-double _tanh(double v) {
-  if (v > 20) return 1.0;
-  if (v < -20) return -1.0;
-  final e = math.exp(2 * v);
-  return (e - 1) / (e + 1);
-}
+/// Master a mono buffer: peak-normalize to [target] (< 1.0), pure gain only.
+///
+/// No soft-clip / waveshaping: because the whole buffer is scaled by one gain,
+/// this can never distort — the mix keeps its exact shape and [target]'s
+/// headroom (0.9 → −1 dB) covers reconstruction overshoot. An earlier version
+/// soft-clipped the top of the normalized signal, which audibly buzzed a nearly
+/// pure low tone (a kick drum): its wide near-peak crest got flattened into
+/// harmonics. Gain staging already lives in the SF2 voice + this normalize, so
+/// no clipper is needed. (Loudness for playback is handled downstream.)
+void _master(Float64List x, double target) => _scaleToPeak(x, target);
 
-// Above this fraction of full scale the soft-clipper starts rounding; below it
-// the signal passes untouched. So the master is transparent for all but the
-// loudest transients — no gross compression of a dense, many-voice mix (the old
-// fixed-knee tanh, fed a raw sum that peaked well above unity, flattened
-// everything into a buzzy quasi-square wave).
-const double _clipThresh = 0.8;
-
-/// A soft clipper that is the identity below [_clipThresh] and asymptotes toward
-/// (but never reaches) 1.0 above it, so only true overs get gently rounded.
-double _softClip(double x) {
-  final a = x.abs();
-  if (a <= _clipThresh) return x;
-  final over = (a - _clipThresh) / (1 - _clipThresh);
-  final r = _clipThresh + (1 - _clipThresh) * _tanh(over);
-  return x.isNegative ? -r : r;
-}
-
-/// Master a mono buffer: normalize to unity (pure gain — cannot distort), gently
-/// soft-clip the top, then scale to [target].
-void _master(Float64List x, double target) {
-  _scaleToPeak(x, 1);
-  for (var i = 0; i < x.length; i++) {
-    x[i] = _softClip(x[i]);
-  }
-  _scaleToPeak(x, target);
-}
-
-/// Master a stereo pair together, using a SHARED peak/gain so the stereo image
-/// isn't skewed by per-channel scaling.
-void _masterStereo(Float64List left, Float64List right, double target) {
-  _scaleToPeak2(left, right, 1);
-  for (var i = 0; i < left.length; i++) {
-    left[i] = _softClip(left[i]);
-  }
-  for (var i = 0; i < right.length; i++) {
-    right[i] = _softClip(right[i]);
-  }
-  _scaleToPeak2(left, right, target);
-}
+/// Master a stereo pair together, using ONE shared gain so the stereo image
+/// isn't skewed by per-channel scaling. Pure gain, as [_master].
+void _masterStereo(Float64List left, Float64List right, double target) =>
+    _scaleToPeak2(left, right, target);
 
 /// Scale [x] so its peak magnitude becomes [target] (no-op on silence).
 void _scaleToPeak(Float64List x, double target) {
