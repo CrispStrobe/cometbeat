@@ -442,10 +442,25 @@ class _Note {
     );
   }
 
-  // Wet the send buses once and fold them into the master.
+  // Wet the send buses once and fold them into the master. A mono send →
+  // stereo return: sum the (panned) sends to one bus, then run it through two
+  // decorrelated reverbs — the right offset by the Freeverb stereo spread (23
+  // samples) — so even a centre-panned note gets a WIDE, spacious tail instead
+  // of one stuck on its own side. A bigger room gives the tail the length that
+  // reads as "air"/space (a dry mix sounds stale next to a real synth).
   if (wantRev) {
-    final wl = reverbFx(revL!, mix: 1, sampleRate: sampleRate);
-    final wr = reverbFx(revR!, mix: 1, sampleRate: sampleRate);
+    final send = Float64List(maxLen);
+    for (var i = 0; i < maxLen; i++) {
+      send[i] = (revL![i] + revR![i]) * 0.5;
+    }
+    final wl = reverbFx(send, mix: 1, roomSize: 0.82, sampleRate: sampleRate);
+    final wr = reverbFx(
+      send,
+      mix: 1,
+      roomSize: 0.82,
+      stereoSpread: 23,
+      sampleRate: sampleRate,
+    );
     for (var i = 0; i < maxLen; i++) {
       left[i] += wl[i] * reverbMix;
       right[i] += wr[i] * reverbMix;

@@ -88,11 +88,18 @@ class _Allpass {
 
 /// Applies a Freeverb-style reverb to [input]. [roomSize] (0..1) lengthens the
 /// tail, [damping] (0..1) darkens it, [mix] (0..1) is the wet/dry blend.
+///
+/// [stereoSpread] offsets every comb/allpass delay by this many samples — the
+/// classic Freeverb trick for a wide tail: run the LEFT channel with 0 and the
+/// RIGHT with the Freeverb default (23) so the two wet signals decorrelate into
+/// a spacious stereo image instead of a narrow, centred one. Default 0 keeps
+/// the mono behaviour for every existing caller.
 Float64List reverbFx(
   Float64List input, {
   double roomSize = 0.6,
   double damping = 0.4,
   double mix = 0.3,
+  int stereoSpread = 0,
   int sampleRate = kSampleRate,
 }) {
   final n = input.length;
@@ -110,10 +117,12 @@ Float64List reverbFx(
   final feedback = 0.7 + 0.28 * room; // < 1
 
   final combs = [
-    for (final base in _kCombTuning) _Comb(_scaleDelay(base, sampleRate)),
+    for (final base in _kCombTuning)
+      _Comb(_scaleDelay(base + stereoSpread, sampleRate)),
   ];
   final allpasses = [
-    for (final base in _kAllpassTuning) _Allpass(_scaleDelay(base, sampleRate)),
+    for (final base in _kAllpassTuning)
+      _Allpass(_scaleDelay(base + stereoSpread, sampleRate)),
   ];
 
   final dryGain = 1 - m;

@@ -248,7 +248,7 @@ void main() {
 
     final normal = loadSoundFont(
       oneSampleSf2(
-        pcm: sineI16(2000, 40),
+        pcm: sineI16(4000, 80), // long enough that +12 keys doesn't run out
         sampleRate: 44100,
         rootKey: 60,
         loopStart: 0,
@@ -257,7 +257,7 @@ void main() {
     );
     final drum = loadSoundFont(
       oneSampleSf2(
-        pcm: sineI16(2000, 40),
+        pcm: sineI16(4000, 80), // long enough that +12 keys doesn't run out
         sampleRate: 44100,
         rootKey: 60,
         loopStart: 0,

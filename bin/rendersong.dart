@@ -61,7 +61,7 @@ void main(List<String> args) {
   var bpm = 120;
   var bitrate = 192;
   var gain = 1.0;
-  var reverb = 0.16; // subtle room by default; --reverb 0 for dry
+  var reverb = 0.22; // a present stereo room by default; --reverb 0 for dry
   var chorus = 0.0; // off by default
   var bits = 16; // WAV bit depth (16 or 24)
   var play = false; // play the result through the system audio
@@ -612,7 +612,7 @@ Options:
   --bpm <B>        tempo (default 120)
   --bitrate <K>    MP3 bitrate kbps (default 192)
   --gain <G>       output gain multiplier (default 1.0)
-  --reverb <0..1>  master reverb mix (default 0.16; 0 = dry)
+  --reverb <0..1>  master reverb mix (default 0.22, stereo; 0 = dry)
   --chorus <0..1>  master chorus mix (default 0 = off)
   --bits <16|24>   WAV/FLAC bit depth (default 16)
   --play           play the result through the system audio (the <out> file is
