@@ -14,13 +14,22 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/beat_capture.dart'
+    show BeatFrame, quantizeToBeat;
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
     show resampleCubic;
+import 'package:comet_beat/core/audio/groove_capture.dart'
+    show PitchSample, quantizeToGroove;
+import 'package:comet_beat/core/audio/loop_engine.dart'
+    show DrumRowsPattern, PatternCell;
 import 'package:comet_beat/core/audio/loop_record.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart';
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart'
+    show MicrophonePitchService, PitchCaptureException;
 import 'package:comet_beat/core/audio/sample_pitch.dart'
     show detectSampleBaseMidi;
-import 'package:comet_beat/core/audio/synth.dart' show kSampleRate, wavBytes;
+import 'package:comet_beat/core/audio/synth.dart'
+    show Drum, kSampleRate, wavBytes;
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/loop_player_service.dart';
 import 'package:comet_beat/features/sound_lab/my_samples_sheet.dart'
@@ -69,6 +78,12 @@ abstract class PerformTester {
   bool get canSetup;
   void setTempo(int bpm);
   void setKey(int semitones);
+
+  /// Sing / beatbox a layer (P4): convert captured mic frames into a layer.
+  /// The mic flow calls these; tests drive them with synthetic frames.
+  void addSungLayer(List<PitchSample> samples, {required int totalMs});
+  void addBeatboxLayer(List<BeatFrame> frames, {required int totalMs});
+  bool get isCapturing;
 
   /// A single note of the current sample voice, pitched — for tests.
   Float64List debugPitched(int midi);
@@ -175,6 +190,19 @@ class _PerformScreenState extends State<PerformScreen>
   Timer? _boundaryTimer;
   int _lastPhaseMs = 0;
 
+  // Sing / beatbox capture (P4). Lazy mic (never touched in headless tests).
+  MicrophonePitchService? _mic;
+  StreamSubscription<Object?>? _micSub;
+  final Stopwatch _capClock = Stopwatch();
+  final List<({double ms, int? midi, double rms, double zcr})> _frames = [];
+  String? _capMode; // 'sing' | 'beat' | null = idle
+  String _capPhase = 'idle'; // 'countIn' | 'recording'
+  int _countdown = 0;
+  Timer? _countInTimer;
+  Timer? _capStopTimer;
+
+  int get _barMs => (_loopSamples / kSampleRate * 1000).round();
+
   @override
   void initState() {
     super.initState();
@@ -193,6 +221,10 @@ class _PerformScreenState extends State<PerformScreen>
   @override
   void dispose() {
     _boundaryTimer?.cancel();
+    _countInTimer?.cancel();
+    _capStopTimer?.cancel();
+    _micSub?.cancel();
+    _mic?.stop();
     _loop.dispose();
     super.dispose();
   }
@@ -231,6 +263,162 @@ class _PerformScreenState extends State<PerformScreen>
 
   @override
   Float64List debugSeed(String kind) => _seedLoop(kind);
+
+  // ── Sing / beatbox a layer (P4) ───────────────────────────────────────────
+  @override
+  bool get isCapturing => _capMode != null;
+
+  static const Map<Drum, String> _drumNames = {
+    Drum.kick: 'kick',
+    Drum.snare: 'snare',
+    Drum.hat: 'hat',
+  };
+
+  /// A quantized groove (cells over [steps]) → my `(midi, phaseMs)` notes.
+  List<(int, int)> _cellsToNotes(List<PatternCell> cells, int steps) {
+    final barMs = _barMs;
+    final out = <(int, int)>[];
+    var step = 0;
+    for (final c in cells) {
+      final midis = c.midis;
+      if (midis != null && midis.isNotEmpty) {
+        out.add((midis.first, (step * barMs / steps).round()));
+      }
+      step += c.steps;
+    }
+    return out;
+  }
+
+  /// A quantized beat pattern → my `(drum, phaseMs)` hits (unknown drums → hat).
+  List<(String, int)> _rowsToHits(DrumRowsPattern pattern) {
+    final barMs = _barMs;
+    final out = <(String, int)>[];
+    pattern.rows.forEach((drum, row) {
+      final name = _drumNames[drum] ?? 'hat';
+      final steps = row.length;
+      for (var s = 0; s < steps; s++) {
+        if (row[s]) out.add((name, (s * barMs / steps).round()));
+      }
+    });
+    return out;
+  }
+
+  @override
+  void addSungLayer(List<PitchSample> samples, {required int totalMs}) {
+    const steps = 8;
+    final cells = quantizeToGroove(samples, totalMs: totalMs, steps: steps);
+    if (cells == null) return;
+    final notes = _cellsToNotes(cells, steps);
+    if (notes.isEmpty) return;
+    _stack.add(_PerformLayer('melody', _renderMelody(notes)));
+    _refresh();
+  }
+
+  @override
+  void addBeatboxLayer(List<BeatFrame> frames, {required int totalMs}) {
+    const steps = 8;
+    final pattern = quantizeToBeat(frames, totalMs: totalMs, steps: steps);
+    if (pattern == null) return;
+    final hits = _rowsToHits(pattern);
+    if (hits.isEmpty) return;
+    _stack.add(_PerformLayer('beat', _renderBeat(hits)));
+    _refresh();
+  }
+
+  /// Mic flow: count-in (4 ticks) → record one bar → convert to a layer. The
+  /// band is silenced first so the monophonic detector hears the performer.
+  Future<void> _startCapture(String mode) async {
+    if (_capMode != null) return;
+    final audio = context.read<AudioService>();
+    if (_playing) stop();
+    setState(() {
+      _capMode = mode;
+      _capPhase = 'countIn';
+      _countdown = 4;
+    });
+    unawaited(audio.playTick(accent: true));
+    final beatMs = (_barMs / 4).round();
+    _countInTimer = Timer.periodic(Duration(milliseconds: beatMs), (t) {
+      if (!mounted) return t.cancel();
+      if (_countdown <= 1) {
+        t.cancel();
+        unawaited(_beginRecording());
+      } else {
+        setState(() => _countdown--);
+        unawaited(audio.playTick());
+      }
+    });
+  }
+
+  Future<void> _beginRecording() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    _frames.clear();
+    final mic = _mic ??= MicrophonePitchService();
+    mic.echoCancel = false; // full accuracy; nothing plays during capture
+    try {
+      _micSub = mic.readings.listen((r) {
+        final frame = (
+          ms: _capClock.elapsedMilliseconds.toDouble(),
+          midi: r.hasPitch ? r.nearestMidi : null,
+          rms: r.rms,
+          zcr: r.zcr,
+        );
+        _frames.add(frame);
+      });
+      await mic.start();
+    } on PitchCaptureException {
+      await _micSub?.cancel();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.performSingNothing)),
+      );
+      setState(() {
+        _capMode = null;
+        _capPhase = 'idle';
+      });
+      return;
+    }
+    if (!mounted) return;
+    _capClock
+      ..reset()
+      ..start();
+    setState(() => _capPhase = 'recording');
+    _capStopTimer = Timer(Duration(milliseconds: _barMs), _finishRecording);
+  }
+
+  Future<void> _finishRecording() async {
+    _capClock.stop();
+    await _mic?.stop();
+    await _micSub?.cancel();
+    if (!mounted) return;
+    final mode = _capMode;
+    final totalMs = _barMs;
+    final frames = List.of(_frames);
+    setState(() {
+      _capMode = null;
+      _capPhase = 'idle';
+    });
+    if (mode == 'sing') {
+      addSungLayer(
+        [for (final f in frames) (f.ms, f.midi)],
+        totalMs: totalMs,
+      );
+    } else if (mode == 'beat') {
+      addBeatboxLayer(
+        [
+          for (final f in frames)
+            (
+              ms: f.ms,
+              rms: f.rms,
+              zcr: f.zcr,
+              pitchedLow: f.midi != null && f.midi! < 60,
+            ),
+        ],
+        totalMs: totalMs,
+      );
+    }
+  }
 
   // ── Play-in a layer: melody (S2) / beat pads (S3) ─────────────────────────
   @override
@@ -825,7 +1013,7 @@ class _PerformScreenState extends State<PerformScreen>
         ],
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -888,47 +1076,93 @@ class _PerformScreenState extends State<PerformScreen>
                     label: Text(l10n.performPlayInBeat),
                     onPressed: isPlayingIn ? null : startPlayInBeat,
                   ),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.mic),
+                    label: Text(l10n.performSing),
+                    onPressed: (isPlayingIn || isCapturing)
+                        ? null
+                        : () => _startCapture('sing'),
+                  ),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.record_voice_over),
+                    label: Text(l10n.performBeatbox),
+                    onPressed: (isPlayingIn || isCapturing)
+                        ? null
+                        : () => _startCapture('beat'),
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _stack.layers.isEmpty
-                    ? Center(
-                        child: Text(
-                          l10n.performEmptyHint,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _stack.layers.length,
-                        itemBuilder: (context, i) {
-                          final muted = _stack.isMuted(i);
-                          return Card(
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: muted
-                                    ? scheme.surfaceContainerHighest
-                                    : scheme.primaryContainer,
-                                child: Text('${i + 1}'),
-                              ),
-                              title: Text(
-                                _seedLabel(l10n, _stack.layers[i].label),
-                              ),
-                              trailing: IconButton(
-                                icon: Icon(
-                                  muted ? Icons.volume_off : Icons.volume_up,
-                                ),
-                                tooltip: muted
-                                    ? l10n.performUnmute
-                                    : l10n.performMute,
-                                onPressed: () => toggleMute(i),
-                              ),
-                            ),
-                          );
-                        },
+              if (isCapturing) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _capPhase == 'recording'
+                            ? Icons.fiber_manual_record
+                            : Icons.timer,
+                        color: scheme.onPrimaryContainer,
                       ),
-              ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _capPhase == 'recording'
+                            ? l10n.performRecording
+                            : l10n.performCountIn(_countdown),
+                        style: TextStyle(color: scheme.onPrimaryContainer),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              if (_stack.layers.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  child: Text(
+                    l10n.performEmptyHint,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _stack.layers.length,
+                  itemBuilder: (context, i) {
+                    final muted = _stack.isMuted(i);
+                    return Card(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: muted
+                              ? scheme.surfaceContainerHighest
+                              : scheme.primaryContainer,
+                          child: Text('${i + 1}'),
+                        ),
+                        title: Text(
+                          _seedLabel(l10n, _stack.layers[i].label),
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(
+                            muted ? Icons.volume_off : Icons.volume_up,
+                          ),
+                          tooltip:
+                              muted ? l10n.performUnmute : l10n.performMute,
+                          onPressed: () => toggleMute(i),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               if (_stack.layers.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 SizedBox(

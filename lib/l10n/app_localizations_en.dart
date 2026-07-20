@@ -2063,6 +2063,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get performKey => 'Key';
 
   @override
+  String get performSing => 'Sing a part';
+
+  @override
+  String get performBeatbox => 'Beatbox';
+
+  @override
+  String get performRecording => 'Recording… sing or beatbox one bar';
+
+  @override
+  String performCountIn(int count) {
+    return 'Get ready… $count';
+  }
+
+  @override
+  String get performSingNothing => 'I didn\'t hear anything — try again';
+
+  @override
   String get performPickSound => 'Pick a sound';
 
   @override

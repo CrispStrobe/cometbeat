@@ -2069,6 +2069,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get performKey => 'Tonart';
 
   @override
+  String get performSing => 'Part singen';
+
+  @override
+  String get performBeatbox => 'Beatbox';
+
+  @override
+  String get performRecording => 'Aufnahme… sing oder beatboxe einen Takt';
+
+  @override
+  String performCountIn(int count) {
+    return 'Achtung… $count';
+  }
+
+  @override
+  String get performSingNothing =>
+      'Ich habe nichts gehört — versuch es nochmal';
+
+  @override
   String get performPickSound => 'Klang wählen';
 
   @override

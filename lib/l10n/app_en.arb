@@ -818,6 +818,16 @@
   "performPlayInHint": "Tap the keys to play your melody — it becomes a new layer.",
   "performTempo": "Tempo",
   "performKey": "Key",
+  "performSing": "Sing a part",
+  "performBeatbox": "Beatbox",
+  "performRecording": "Recording… sing or beatbox one bar",
+  "performCountIn": "Get ready… {count}",
+  "@performCountIn": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "performSingNothing": "I didn't hear anything — try again",
   "performPickSound": "Pick a sound",
   "performVoiceSample": "Your sound",
   "performVoiceSynth": "Synth voice",

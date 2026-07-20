@@ -755,6 +755,16 @@
   "performPlayInHint": "Tippe die Tasten, um deine Melodie zu spielen — sie wird zu einer neuen Ebene.",
   "performTempo": "Tempo",
   "performKey": "Tonart",
+  "performSing": "Part singen",
+  "performBeatbox": "Beatbox",
+  "performRecording": "Aufnahme… sing oder beatboxe einen Takt",
+  "performCountIn": "Achtung… {count}",
+  "@performCountIn": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "performSingNothing": "Ich habe nichts gehört — versuch es nochmal",
   "performPickSound": "Klang wählen",
   "performVoiceSample": "Dein Klang",
   "performVoiceSynth": "Synth-Stimme",

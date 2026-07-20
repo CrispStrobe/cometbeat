@@ -3902,6 +3902,36 @@ abstract class AppLocalizations {
   /// **'Key'**
   String get performKey;
 
+  /// No description provided for @performSing.
+  ///
+  /// In en, this message translates to:
+  /// **'Sing a part'**
+  String get performSing;
+
+  /// No description provided for @performBeatbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Beatbox'**
+  String get performBeatbox;
+
+  /// No description provided for @performRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording… sing or beatbox one bar'**
+  String get performRecording;
+
+  /// No description provided for @performCountIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Get ready… {count}'**
+  String performCountIn(int count);
+
+  /// No description provided for @performSingNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'I didn\'t hear anything — try again'**
+  String get performSingNothing;
+
   /// No description provided for @performPickSound.
   ///
   /// In en, this message translates to:

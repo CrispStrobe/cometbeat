@@ -2,6 +2,7 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/beat_capture.dart' show BeatFrame;
 import 'package:comet_beat/features/games/composition/perform_screen.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -327,6 +328,49 @@ void main() {
     p.setKey(0);
     expect(p.bpm, 100);
     expect(p.keyShift, 7);
+  });
+
+  testWidgets('sing/beatbox capture converts frames into a layer',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const PerformScreen()));
+    await tester.pump();
+    final p = _perform(tester);
+
+    const totalMs = 2000; // one bar at 120 bpm
+    expect(p.isCapturing, isFalse);
+
+    // A sung line: two held (pentatonic) pitches across the bar.
+    final samples = <(double, int?)>[
+      for (var t = 0; t < totalMs; t += 20)
+        (t.toDouble(), t < totalMs ~/ 2 ? 60 : 64),
+    ];
+    p.addSungLayer(samples, totalMs: totalMs);
+    await tester.pump();
+    expect(p.layerCount, 1);
+    expect(p.layerLabel(0), 'melody');
+    expect(_peak(p.debugMix().toList()), greaterThan(0.0));
+
+    // A beatboxed pattern: four loud onsets over the bar.
+    final frames = <BeatFrame>[
+      for (var t = 0; t < totalMs; t += 20)
+        (
+          ms: t.toDouble(),
+          rms: (t % 500 == 0) ? 0.8 : 0.0001,
+          zcr: (t % 500 == 0) ? 0.05 : 0.0,
+          pitchedLow: t % 500 == 0,
+        ),
+    ];
+    p.addBeatboxLayer(frames, totalMs: totalMs);
+    await tester.pump();
+    expect(p.layerCount, 2);
+    expect(p.layerLabel(1), 'beat');
+    expect(_peak(p.debugMix().toList()), greaterThan(0.0));
+
+    // Nothing captured → no layer added.
+    p.addSungLayer(const [], totalMs: totalMs);
+    p.addBeatboxLayer(const [], totalMs: totalMs);
+    await tester.pump();
+    expect(p.layerCount, 2);
   });
 
   testWidgets('play/stop toggles and does not crash without audio',
