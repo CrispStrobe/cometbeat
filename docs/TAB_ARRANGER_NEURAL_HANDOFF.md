@@ -98,17 +98,37 @@ The audio model is trained, ONNX-exported, parity-verified on pure-Dart
 (`zenodo.org/records/3371780`) — derived weights are redistributable **with
 attribution**. Registry `license` field: `CC-BY-4.0 (GuitarSet)`. The §0 kill-switch passes.
 
-**⚠ Honest scope note — vanilla, not GP-FX.** The spec asked for the
-GP-FX-augmented weights, but **no public GP-FX weights exist** (the
-tab-cnn repo is code-only; the DAFx-24 variant's weights aren't released), so this
-is the **vanilla TabCNN trained fresh on GuitarSet**. Quality matches the vanilla
-paper: **held-out (guitarist-5 fold) tablature F1 = 0.745** (P 0.784 / R 0.710) vs
-the paper's 0.748 — a single held-out fold, not the full 6-fold protocol.
-**EGSet12 zero-shot was NOT evaluated** (would need that corpus); per the spec,
-expect the vanilla model to degrade on real *electric* guitar (~0.45 zero-shot),
-so the **GP-FX re-render augmentation remains the future robustness lever** —
-retrain with it if/when the augmented data or weights become available (the export
-+ CQT + publish pipeline is now in place to re-ship instantly).
+### ⭐ GuitarProFX variant ALSO delivered — `tabcnn-gpfx.onnx` (use this one)
+
+Correction: the GP-FX-augmented weights **do** exist (they weren't found in the
+first pass). They're on **Zenodo 11406378** (`best_TabCNN_tablature_trancription_model`,
+sha256 `1470a308…`, **CC BY 4.0**) — the DAFx-24 Pedroza et al. model, built on
+Cwitkowitz's `amt-tools` (MIT). I converted it too, so there are now **two** models
+on `models-v1` (both `[N,192,9,1]` → `[N,6,21]` LogSoftmax, identical class layout,
+same `tabcnn-cqt.bin`):
+
+- **`tabcnn-gpfx.onnx`** ⭐ — GuitarProFX-augmented, **electric-robust**, sha256
+  `8d9ce59157bdab37fb4816d32d7f29f3da0cdbf3c7876707c819af4d1f88e6b7` —
+  `.../models-v1/tabcnn-gpfx.onnx`. **EGSet12 F1 ≈ 0.77** (its published number;
+  end-to-end on GuitarSet via amt-tools features reproduces tab F1 0.77). **Prefer this.**
+- `tabcnn.onnx` — vanilla (trained here on GuitarSet), tab F1 0.745 held-out; use
+  only if you want the raw-magnitude front-end.
+
+**⚠ The gpfx model needs a DIFFERENT front-end normalization** (same CQT geometry
++ same blob, different post-step): `abs(cqt)` → **`librosa.amplitude_to_db(C,
+ref=np.max)`** (per-clip) → **rescale to [0,1]**. The vanilla model wants RAW
+magnitude (no log). So the provider picks the normalization per model:
+```
+mag = |Σ band·boxcarSTFT| / √length      # from tabcnn-cqt.bin, both models
+# gpfx:    db = 20·log10(mag/mag.max()); db = max(db, -80); feats = (db+80)/80  (≈ amplitude_to_db ref=max, top_db 80)
+# vanilla: feats = mag                    (+ peak-normalize the waveform first)
+```
+- **Class remap done in the export:** amt-tools natively uses `class 20 = silent,
+  class k = fret k`; `tabcnn-gpfx.onnx` **rolls** that to your frozen contract
+  (class 0 = silent, class k = fret k−1), so the decoder needs no changes.
+- Verified on `onnx_runtime_dart` (runs, argmax parity vs the torch reference).
+- **HF mirror** (both variants + card): `https://huggingface.co/cstr/tabcnn-onnx`.
+- **Provenance/attribution required:** GuitarSet (CC BY 4.0) + Pedroza et al. (DAFx-24).
 
 Our side of that contract is now IN the tree, testable with synthetic emissions:
 
