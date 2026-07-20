@@ -578,6 +578,10 @@ class _DrumkitScreenState extends State<DrumkitScreen>
         Drum.tom => 'Tom',
         Drum.rim => 'Rim',
         Drum.cowbell => 'Cowbell',
+        Drum.crash => 'Crash',
+        Drum.ride => 'Ride',
+        Drum.lowTom => 'Low tom',
+        Drum.highTom => 'High tom',
       };
 
   IconData _drumIcon(Drum d) => switch (d) {

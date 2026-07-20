@@ -173,6 +173,11 @@ int _drumMidi(Drum drum) => switch (drum) {
       Drum.rim => 72, // C5
       Drum.cowbell => 76, // E5
       Drum.openHat => 81, // A5
+      // Cymbals sit above the hat; the tom family spreads around the mid tom.
+      Drum.crash => 83, // B5
+      Drum.ride => 84, // C6
+      Drum.lowTom => 43, // G2
+      Drum.highTom => 52, // E3
     };
 
 /// One drum row (eighth-grid booleans) as [PatternCell]s: each hit is a single

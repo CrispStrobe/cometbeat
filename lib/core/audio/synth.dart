@@ -268,7 +268,23 @@ Uint8List wavBytesStereo(
 /// The percussion palette. The first three (kick/snare/hat) are the classic
 /// grid rows; the rest widen the kit (open hat, clap, tom, rim, cowbell). New
 /// voices are APPENDED so existing index/order mappings stay stable.
-enum Drum { kick, snare, hat, openHat, clap, tom, rim, cowbell }
+// Appended, never reordered: some call sites index the kit by `Drum.values[i]`
+// (tracker drum channel) and share tokens/stored patterns may reference the
+// ordinal, so indices 0–7 must stay put.
+enum Drum {
+  kick,
+  snare,
+  hat,
+  openHat,
+  clap,
+  tom,
+  rim,
+  cowbell,
+  crash,
+  ride,
+  lowTom,
+  highTom,
+}
 
 /// A timbre profile applied to every drum voice — same hit *timing*, different
 /// *sound*. All multipliers are 1.0 (crush 0) for the clean synth kit; other
@@ -469,6 +485,75 @@ Float64List renderDrum(
         final a = sq(540 * tn * t);
         final b = sq(800 * tn * t);
         out[i] = (a + b) * exp(-8 * dk * t);
+      }
+      return _finishDrum(out, kit.crush);
+    case Drum.crash:
+      // A bright cymbal wash: differentiated (high-passed) noise with a long,
+      // slow decay — the openHat's big sibling. Longer + brighter than any hat.
+      final n = (900 * sampleRate) ~/ 1000;
+      final out = Float64List(n);
+      final noise = Random(7);
+      var prev = 0.0;
+      for (var i = 0; i < n; i++) {
+        final t = i / sampleRate;
+        final white = noise.nextDouble() * 2 - 1;
+        // A quick swell into the crash, then a long shimmering tail.
+        final swell = t < 0.006 ? t / 0.006 : 1.0;
+        out[i] = (white - prev) * swell * exp(-3.2 * dk * t);
+        prev = white;
+      }
+      return _finishDrum(out, kit.crush);
+    case Drum.ride:
+      // A ride cymbal: a metallic "ping" (a cluster of inharmonic high partials)
+      // over a quieter shimmering noise bed, medium-long decay. The ping gives it
+      // a defined pitch the crash lacks.
+      final n = (620 * sampleRate) ~/ 1000;
+      final out = Float64List(n);
+      final noise = Random(8);
+      var prev = 0.0;
+      // Inharmonic, bell-like partials.
+      const partials = [3010.0, 4200.0, 5300.0, 7100.0];
+      for (var i = 0; i < n; i++) {
+        final t = i / sampleRate;
+        var ping = 0.0;
+        for (final f in partials) {
+          ping += sin(2 * pi * f * tn * t);
+        }
+        ping *=
+            exp(-9 * dk * t) / partials.length; // the attack ping decays fast
+        final white = noise.nextDouble() * 2 - 1;
+        final bed =
+            (white - prev) * nz * 0.5 * exp(-5 * dk * t); // shimmer tail
+        prev = white;
+        out[i] = ping + bed;
+      }
+      return _finishDrum(out, kit.crush);
+    case Drum.lowTom:
+      // A floor tom: a sine gliding 130→70 Hz, a long decay (lower + longer than
+      // the mid tom).
+      final n = (280 * sampleRate) ~/ 1000;
+      final out = Float64List(n);
+      var phase = 0.0;
+      final startF = 130 * tn, depth = (130 - 70) * tn * sw;
+      for (var i = 0; i < n; i++) {
+        final t = i / sampleRate;
+        final freq = startF - depth * (t / 0.280);
+        phase += freq / sampleRate;
+        out[i] = sin(2 * pi * phase) * exp(-7 * dk * t);
+      }
+      return _finishDrum(out, kit.crush);
+    case Drum.highTom:
+      // A rack tom: a sine gliding 260→150 Hz, a shorter decay (higher + tighter
+      // than the mid tom) — a tom fill reads low→mid→high across the three.
+      final n = (170 * sampleRate) ~/ 1000;
+      final out = Float64List(n);
+      var phase = 0.0;
+      final startF = 260 * tn, depth = (260 - 150) * tn * sw;
+      for (var i = 0; i < n; i++) {
+        final t = i / sampleRate;
+        final freq = startF - depth * (t / 0.170);
+        phase += freq / sampleRate;
+        out[i] = sin(2 * pi * phase) * exp(-11 * dk * t);
       }
       return _finishDrum(out, kit.crush);
   }

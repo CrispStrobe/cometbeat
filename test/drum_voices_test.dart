@@ -1,5 +1,5 @@
-// The percussion palette: every Drum voice (the 3 classics + the 5 extended
-// kit voices) renders a non-silent, unit-peak one-shot, and the new voices are
+// The percussion palette: every Drum voice (the 3 classics + the extended kit
+// voices) renders a non-silent, unit-peak one-shot, and the new voices are
 // distinct from each other and from the originals.
 
 import 'dart:typed_data';
@@ -21,12 +21,16 @@ void main() {
       }
     });
 
-    test('the kit has 8 voices (3 classic + 5 extended)', () {
-      expect(Drum.values.length, 8);
-      // The classic three keep their positions (index/order is stable).
+    test('the kit has 12 voices (3 classic + 9 extended)', () {
+      expect(Drum.values.length, 12);
+      // The classic three keep their positions (index/order is stable — call
+      // sites index by Drum.values[i], and share tokens store the ordinal).
       expect(Drum.values[0], Drum.kick);
       expect(Drum.values[1], Drum.snare);
       expect(Drum.values[2], Drum.hat);
+      // The first-wave extended voices keep their indices too (appended, never
+      // reordered): cowbell was index 7 before the cymbals/toms were added.
+      expect(Drum.values[7], Drum.cowbell);
       // The new voices are present.
       for (final d in [
         Drum.openHat,
@@ -34,9 +38,39 @@ void main() {
         Drum.tom,
         Drum.rim,
         Drum.cowbell,
+        Drum.crash,
+        Drum.ride,
+        Drum.lowTom,
+        Drum.highTom,
       ]) {
         expect(Drum.values.contains(d), isTrue);
       }
+    });
+
+    test('the tom family reads low → mid → high (rising fundamental)', () {
+      // A tom fill wants distinct pitches. Estimate each tom's fundamental from
+      // its first-half zero-crossing rate (the glide starts near the top).
+      double crossRate(Float64List b) {
+        var c = 0;
+        final half = b.length ~/ 2;
+        for (var i = 1; i < half; i++) {
+          if ((b[i - 1] < 0) != (b[i] < 0)) c++;
+        }
+        return c / (half / kSampleRate);
+      }
+
+      final low = crossRate(renderDrum(Drum.lowTom));
+      final mid = crossRate(renderDrum(Drum.tom));
+      final high = crossRate(renderDrum(Drum.highTom));
+      expect(low, lessThan(mid), reason: 'lowTom below the mid tom');
+      expect(mid, lessThan(high), reason: 'highTom above the mid tom');
+    });
+
+    test('the crash rings longer than any hat (a cymbal wash)', () {
+      // The crash decays slowly — its buffer is the longest in the kit.
+      final crash = renderDrum(Drum.crash).length;
+      expect(crash, greaterThan(renderDrum(Drum.hat).length));
+      expect(crash, greaterThan(renderDrum(Drum.openHat).length));
     });
 
     test('each new voice is distinct from the others (length or content)', () {
