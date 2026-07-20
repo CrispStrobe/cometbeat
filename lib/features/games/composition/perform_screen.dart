@@ -42,18 +42,9 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
 import 'package:comet_beat/shared/widgets/scrollable_piano.dart';
+import 'package:comet_beat/shared/widgets/step_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-/// One placed event in a layer's symbolic pattern (LL1) — a grid cell on a
-/// 16th-step timeline. [row] is a MIDI pitch for melodic layers, or a drum lane
-/// (0 = top … ) for percussive ones; [len] is the length in 16th steps.
-class _Cell {
-  const _Cell(this.row, this.step, {this.len = 1});
-  final int row;
-  final int step;
-  final int len;
-}
 
 /// One overdub layer: a label + one bar-cycle of mono PCM, plus the symbolic
 /// pattern it was built from (LL1) so it can be SEEN (mini piano-roll) and
@@ -62,7 +53,7 @@ class _PerformLayer {
   _PerformLayer(
     this.label,
     this.pcm, {
-    List<_Cell> cells = const [],
+    List<StepCell> cells = const [],
     this.percussive = false,
   }) : cells = [...cells];
   final String label;
@@ -72,216 +63,9 @@ class _PerformLayer {
   Float64List pcm;
 
   /// The editable symbolic pattern (mutable copy).
-  final List<_Cell> cells;
+  final List<StepCell> cells;
   final bool percussive;
   double gain = 1.0; // Q3: per-layer volume
-}
-
-/// A compact mini piano-roll of a layer's [cells] (LL1) — so a kid SEES what
-/// each layer plays: melodic layers show pitch rows, percussive ones the drum
-/// lanes, over a bar/beat grid across [steps] 16th columns.
-class _LayerRoll extends StatelessWidget {
-  const _LayerRoll({
-    required this.cells,
-    required this.percussive,
-    required this.steps,
-    this.playStep,
-    this.onToggle,
-    this.melodyRows = const [],
-  });
-  final List<_Cell> cells;
-  final bool percussive;
-  final int steps;
-
-  /// The 16th step the transport is on (LL3), or null when stopped.
-  final int? playStep;
-
-  /// LL2/LL2b: tap a cell to toggle it. The callback gets the STORED row value
-  /// (a drum lane for beats, a MIDI pitch for melodies) and the step.
-  final void Function(int row, int step)? onToggle;
-
-  /// The melody edit grid (ascending MIDI); each display row is one entry.
-  final List<int> melodyRows;
-
-  int get _rowCount =>
-      percussive ? 3 : (melodyRows.isEmpty ? 1 : melodyRows.length);
-  double get _h => percussive ? 36 : 78;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final paint = CustomPaint(
-      painter: _RollPainter(
-        cells: cells,
-        percussive: percussive,
-        steps: steps,
-        playStep: playStep,
-        melodyRows: melodyRows,
-        fill: scheme.primary,
-        grid: scheme.outlineVariant,
-        bar: scheme.outline,
-        bg: scheme.surfaceContainerHighest,
-        play: scheme.tertiary,
-      ),
-    );
-    final editable = onToggle != null && steps > 0 && _rowCount > 0;
-    return SizedBox(
-      height: _h,
-      width: double.infinity,
-      child: editable
-          ? LayoutBuilder(
-              builder: (context, c) => GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapDown: (d) {
-                  final step = (d.localPosition.dx / c.maxWidth * steps)
-                      .floor()
-                      .clamp(0, steps - 1);
-                  final yRow = (d.localPosition.dy / _h * _rowCount)
-                      .floor()
-                      .clamp(0, _rowCount - 1);
-                  // Display row (0 = top) → stored value.
-                  final int stored;
-                  if (percussive) {
-                    stored = yRow; // 0 hat · 1 snare · 2 kick
-                  } else {
-                    stored =
-                        melodyRows[(_rowCount - 1) - yRow]; // top = highest
-                  }
-                  onToggle!(stored, step);
-                },
-                child: paint,
-              ),
-            )
-          : paint,
-    );
-  }
-}
-
-class _RollPainter extends CustomPainter {
-  _RollPainter({
-    required this.cells,
-    required this.percussive,
-    required this.steps,
-    required this.playStep,
-    required this.melodyRows,
-    required this.fill,
-    required this.grid,
-    required this.bar,
-    required this.bg,
-    required this.play,
-  });
-  final List<_Cell> cells;
-  final bool percussive;
-  final int steps;
-  final int? playStep;
-  final List<int> melodyRows;
-  final Color fill;
-  final Color grid;
-  final Color bar;
-  final Color bg;
-  final Color play;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (steps <= 0) return;
-    final r = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(r, Paint()..color = bg);
-    canvas.save();
-    canvas.clipRRect(r);
-
-    final stepW = size.width / steps;
-
-    // LL3: the playhead column, under the notes.
-    final ps = playStep;
-    if (ps != null && ps >= 0 && ps < steps) {
-      canvas.drawRect(
-        Rect.fromLTWH(ps * stepW, 0, stepW, size.height),
-        Paint()..color = play.withValues(alpha: 0.35),
-      );
-    }
-    // Beat lines every 4 steps; heavier bar lines every 16.
-    for (var s = 4; s < steps; s += 4) {
-      final x = s * stepW;
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x, size.height),
-        Paint()
-          ..color = s % 16 == 0 ? bar : grid
-          ..strokeWidth = s % 16 == 0 ? 1.2 : 0.6,
-      );
-    }
-
-    // Rows: 3 drum lanes, or the diatonic melody grid (nearest degree).
-    final int rows;
-    int Function(_Cell) rowOf = (_) => 0;
-    if (percussive) {
-      rows = 3;
-      rowOf = (c) => c.row.clamp(0, 2);
-    } else if (melodyRows.isNotEmpty) {
-      rows = melodyRows.length;
-      rowOf = (c) {
-        var best = 0;
-        var bd = 1 << 30;
-        for (var i = 0; i < melodyRows.length; i++) {
-          final d = (melodyRows[i] - c.row).abs();
-          if (d < bd) {
-            bd = d;
-            best = i;
-          }
-        }
-        return (rows - 1) - best; // higher pitch → top
-      };
-    } else if (cells.isEmpty) {
-      rows = 1;
-    } else {
-      final lo = cells.map((c) => c.row).reduce(min);
-      final hi = cells.map((c) => c.row).reduce(max);
-      rows = (hi - lo + 1).clamp(1, 24);
-      rowOf = (c) => (hi - c.row).clamp(0, rows - 1);
-    }
-
-    // Faint horizontal row separators for the melody grid (readability).
-    if (!percussive && rows > 1) {
-      for (var i = 1; i < rows; i++) {
-        final y = i * size.height / rows;
-        canvas.drawLine(
-          Offset(0, y),
-          Offset(size.width, y),
-          Paint()
-            ..color = grid
-            ..strokeWidth = 0.4,
-        );
-      }
-    }
-
-    final rowH = size.height / rows;
-    final cellPaint = Paint()..color = fill;
-    for (final c in cells) {
-      final x = c.step * stepW;
-      final w = max(stepW * c.len - 1, 2.0);
-      final y = rowOf(c) * rowH;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(x + 0.5, y + 1, w, max(rowH - 2, 2)),
-          const Radius.circular(2),
-        ),
-        cellPaint,
-      );
-    }
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_RollPainter old) =>
-      old.cells != cells ||
-      old.steps != steps ||
-      old.percussive != percussive ||
-      old.playStep != playStep ||
-      old.melodyRows != melodyRows ||
-      old.fill != fill;
 }
 
 /// Test seam onto the Perform screen — build/mute/undo layers + read the mix
@@ -542,12 +326,12 @@ class _PerformScreenState extends State<PerformScreen>
 
   /// Melodic `(midi, phaseMs, vel)` notes → grid cells, held to the next note
   /// (capped at a beat) — mirrors [_renderMelody]'s placement.
-  List<_Cell> _melodyCells(List<(int, int, double)> notes) {
+  List<StepCell> _melodyCells(List<(int, int, double)> notes) {
     final placed = [for (final (m, ms, _) in notes) (m, _stepOf(ms))]
       ..sort((a, b) => a.$2.compareTo(b.$2));
     return [
       for (var i = 0; i < placed.length; i++)
-        _Cell(
+        StepCell(
           placed[i].$1,
           placed[i].$2,
           len: ((i + 1 < placed.length ? placed[i + 1].$2 : _stepsTotal) -
@@ -558,16 +342,16 @@ class _PerformScreenState extends State<PerformScreen>
   }
 
   /// Percussive `(drum, phaseMs, vel)` hits → grid cells on the drum lanes.
-  List<_Cell> _beatCells(List<(String, int, double)> hits) => [
+  List<StepCell> _beatCells(List<(String, int, double)> hits) => [
         for (final (drum, ms, _) in hits)
-          _Cell(_drumRow[drum] ?? 0, _stepOf(ms)),
+          StepCell(_drumRow[drum] ?? 0, _stepOf(ms)),
       ];
 
   static const List<String> _rowDrum = ['hat', 'snare', 'kick'];
 
   /// Render a layer's edited [cells] back to PCM (LL2) — the reverse of the
   /// cell builders, through the same renderers (so pad voices / swing apply).
-  Float64List _renderCells(List<_Cell> cells, bool percussive) {
+  Float64List _renderCells(List<StepCell> cells, bool percussive) {
     final sixteenthMs = _barMs / 16;
     if (percussive) {
       return _renderBeat([
@@ -586,40 +370,40 @@ class _PerformScreenState extends State<PerformScreen>
 
   /// The symbolic pattern behind a built-in seed (one bar, tiled across the
   /// loop), matching what [_seedLoop] synthesises — so seed layers show too.
-  List<_Cell> _seedCells(String kind) {
-    final bar = <_Cell>[];
+  List<StepCell> _seedCells(String kind) {
+    final bar = <StepCell>[];
     switch (kind) {
       case 'beat':
         bar
-          ..add(const _Cell(2, 0)) // kick on beats 1 & 3
-          ..add(const _Cell(2, 8))
-          ..add(const _Cell(1, 4)) // snare on 2 & 4
-          ..add(const _Cell(1, 12));
+          ..add(const StepCell(2, 0)) // kick on beats 1 & 3
+          ..add(const StepCell(2, 8))
+          ..add(const StepCell(1, 4)) // snare on 2 & 4
+          ..add(const StepCell(1, 12));
         for (var e = 0; e < 8; e++) {
-          bar.add(_Cell(0, e * 2)); // hats on every eighth
+          bar.add(StepCell(0, e * 2)); // hats on every eighth
         }
       case 'bass':
         const roots = [36, 36, 41, 43]; // C2 C2 F2 G2
         for (var b = 0; b < 4; b++) {
-          bar.add(_Cell(roots[b] + _keyShift, b * 4, len: 4));
+          bar.add(StepCell(roots[b] + _keyShift, b * 4, len: 4));
         }
       case 'chords':
         const chord = [60, 64, 67]; // C E G
         for (var b = 0; b < 4; b += 2) {
           for (final m in chord) {
-            bar.add(_Cell(m + _keyShift, b * 4, len: 8));
+            bar.add(StepCell(m + _keyShift, b * 4, len: 8));
           }
         }
       case 'melody':
         const riff = [72, 74, 76, 79, 76, 74, 72, 79]; // C D E G E D C G
         for (var e = 0; e < 8; e++) {
-          bar.add(_Cell(riff[e] + _keyShift, e * 2, len: 2));
+          bar.add(StepCell(riff[e] + _keyShift, e * 2, len: 2));
         }
     }
     // Tile the one-bar pattern across the loop.
     return [
       for (var b = 0; b < _bars; b++)
-        for (final c in bar) _Cell(c.row, c.step + b * 16, len: c.len),
+        for (final c in bar) StepCell(c.row, c.step + b * 16, len: c.len),
     ];
   }
 
@@ -1486,7 +1270,7 @@ class _PerformScreenState extends State<PerformScreen>
     if (idx >= 0) {
       l.cells.removeAt(idx);
     } else {
-      l.cells.add(_Cell(row, step, len: l.percussive ? 1 : 2));
+      l.cells.add(StepCell(row, step, len: l.percussive ? 1 : 2));
     }
     l.pcm = _renderCells(l.cells, l.percussive); // re-render in place
     _refresh(); // re-sum + hot-swap if playing
@@ -1984,7 +1768,7 @@ class _PerformScreenState extends State<PerformScreen>
                             // LL1: SEE what this layer plays.
                             Opacity(
                               opacity: muted ? 0.4 : 1,
-                              child: _LayerRoll(
+                              child: StepGridView(
                                 cells: layer.cells,
                                 percussive: layer.percussive,
                                 steps: _stepsTotal,
