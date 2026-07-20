@@ -106,14 +106,7 @@ class SongbookScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SongScreen.fromScore(
-                          title: song.title,
-                          score: song.score,
-                        ),
-                      ),
-                    ),
+                    onTap: () => openImportedSong(context, song),
                   ),
                 );
               },

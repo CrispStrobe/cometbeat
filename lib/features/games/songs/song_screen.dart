@@ -14,9 +14,9 @@ import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart';
 import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
 import 'package:comet_beat/features/games/songs/chord_sheet_screen.dart';
-import 'package:comet_beat/features/games/songs/ensemble_song_screen.dart';
 import 'package:comet_beat/features/games/songs/import/chordpro.dart';
 import 'package:comet_beat/features/games/songs/import_screen.dart';
+import 'package:comet_beat/features/games/songs/multi_part_song_screen.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart';
 import 'package:comet_beat/features/games/songs/song_play_along.dart';
 import 'package:comet_beat/features/games/songs/songbook_screen.dart';
@@ -355,6 +355,19 @@ String _safeName(String title) {
   return cleaned.isEmpty ? 'song' : cleaned;
 }
 
+/// Open an imported song: a multi-part one (a transcription or ensemble) goes
+/// to the stacked multi-staff view so every voice shows; a single-part one goes
+/// to the karaoke [SongScreen].
+void openImportedSong(BuildContext context, ImportedSong song) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => song.isMultiPart
+          ? MultiPartSongScreen(title: song.title, score: song.multiPart)
+          : SongScreen.fromScore(title: song.title, score: song.score),
+    ),
+  );
+}
+
 class SongListScreen extends StatelessWidget {
   const SongListScreen({super.key});
 
@@ -412,7 +425,12 @@ class SongListScreen extends StatelessWidget {
                 trailing: const Icon(Icons.play_circle_outline),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => EnsembleSongScreen(song: song),
+                    builder: (_) => MultiPartSongScreen(
+                      title: song.title,
+                      score: song.score,
+                      partNames: song.partNames,
+                      quarterMs: song.quarterMs,
+                    ),
                   ),
                 ),
               ),
@@ -491,14 +509,7 @@ class SongListScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SongScreen.fromScore(
-                        title: song.title,
-                        score: song.score,
-                      ),
-                    ),
-                  ),
+                  onTap: () => openImportedSong(context, song),
                 ),
               ),
           ],

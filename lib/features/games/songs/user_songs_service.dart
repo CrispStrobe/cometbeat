@@ -7,7 +7,7 @@
 import 'dart:convert';
 
 import 'package:crisp_notation/crisp_notation.dart'
-    show Score, scoreFromMusicXml;
+    show MultiPartScore, Score, multiPartScoreFromMusicXml, scoreFromMusicXml;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,7 +32,22 @@ class ImportedSong {
     this.sourceUrl,
   });
 
+  /// The first part as a single [Score] (karaoke/play-along/analysis use this).
   Score get score => scoreFromMusicXml(musicXml);
+
+  /// EVERY part (all instruments/staves) — a transcription or ensemble keeps its
+  /// voices here. Single-part songs parse to a one-part [MultiPartScore].
+  MultiPartScore get multiPart => multiPartScoreFromMusicXml(musicXml);
+
+  /// True when the song has more than one part (so it should be shown on the
+  /// stacked multi-staff view, not flattened to part 1). Safe on bad XML.
+  bool get isMultiPart {
+    try {
+      return multiPart.parts.length > 1;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,

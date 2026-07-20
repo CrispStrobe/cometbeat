@@ -7,7 +7,7 @@ import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/songs/chord_sheet_screen.dart';
-import 'package:comet_beat/features/games/songs/ensemble_song_screen.dart';
+import 'package:comet_beat/features/games/songs/multi_part_song_screen.dart';
 import 'package:comet_beat/features/games/songs/import/chordpro.dart';
 import 'package:comet_beat/features/games/songs/import_screen.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart';
@@ -15,7 +15,8 @@ import 'package:comet_beat/features/games/songs/song_screen.dart';
 import 'package:comet_beat/features/games/songs/tune_quiz_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
-import 'package:crisp_notation/crisp_notation.dart' show MultiSystemView;
+import 'package:crisp_notation/crisp_notation.dart'
+    show MultiSystemView, multiPartToMusicXml;
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -233,6 +234,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  test('an imported multi-part song exposes ALL its parts (not flattened)', () {
+    // A 4-voice canon written to multi-part MusicXML must read back as 4 parts —
+    // this is exactly what a saved whole-song transcription stores.
+    final canon = kEnsembleSongs.firstWhere((s) => s.voices.length == 4);
+    final xml = multiPartToMusicXml(canon.score, partNames: canon.partNames);
+    final song = ImportedSong(id: 'x', title: 'Canon', musicXml: xml);
+
+    expect(song.isMultiPart, isTrue);
+    expect(song.multiPart.parts, hasLength(4));
+    // The single-part getter still yields just the first part (karaoke path).
+    expect(song.score.measures, isNotEmpty);
+  });
+
   testWidgets('ensemble screen stacks a staff per voice and plays',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 4000);
@@ -240,7 +254,16 @@ void main() {
     addTearDown(tester.view.reset);
     final sri = SriService(getNow: () => DateTime(2026, 7, 11));
     final song = kEnsembleSongs.firstWhere((s) => s.voices.length == 4);
-    await tester.pumpWidget(_wrap(EnsembleSongScreen(song: song), sri));
+    await tester.pumpWidget(
+      _wrap(
+        MultiPartSongScreen(
+          title: song.title,
+          score: song.score,
+          partNames: song.partNames,
+        ),
+        sri,
+      ),
+    );
     await tester.pumpAndSettle();
 
     // One staff (system view) per voice.
