@@ -10,6 +10,7 @@ import 'package:comet_beat/core/audio/transcription/route.dart'
     show F0Estimator, NeuralTranscriber;
 import 'package:comet_beat/features/games/transcribe/crepe_provider.dart';
 import 'package:comet_beat/features/games/transcribe/neural_provider.dart';
+import 'package:comet_beat/features/games/transcribe/rmvpe_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// The neural engines to inject for a single-recording transcription: an [f0]
@@ -26,16 +27,20 @@ typedef TranscriptionEngines = ({F0Estimator? f0, NeuralTranscriber? neural});
 Future<F0Estimator?> loadCrispasrCrepeF0({bool download = false}) async => null;
 
 /// Resolve the engines from [config], probing availability via the injected
-/// loaders and honouring the per-step backend choice. F0 has two neural
-/// backends: ONNX CREPE (live — [loadCrepeOnnx]) and CrispASR ggml CREPE (future
-/// — [loadCrepeGgml], stub); polyphony uses Basic Pitch ONNX ([loadNeural]). An
-/// explicitly-chosen (non-auto) neural F0 backend downloads its model; auto is
-/// probe-only (uses whatever's cached). Test seams: pass fake loaders.
+/// loaders and honouring the per-step backend choice. F0 has THREE neural
+/// backends: RMVPE ONNX (best for voice — [loadRmvpe]) and CREPE ONNX
+/// ([loadCrepeOnnx]) both map to `onnx` (RMVPE preferred when present), and
+/// CrispASR ggml CREPE (future — [loadCrepeGgml], stub) maps to `crispasr`;
+/// polyphony uses Basic Pitch ONNX ([loadNeural]). An explicitly-chosen
+/// (non-auto) neural F0 backend downloads its model; auto is probe-only (uses
+/// whatever's cached). Test seams: pass fake loaders.
 Future<TranscriptionEngines> resolveEngines(
   TranscriptionEngineConfig config, {
   bool isWeb = kIsWeb,
   Future<NeuralTranscriber?> Function({bool download}) loadNeural =
       loadNeuralTranscriber,
+  Future<F0Estimator?> Function({bool download}) loadRmvpe =
+      loadRmvpeF0Estimator,
   Future<F0Estimator?> Function({bool download}) loadCrepeOnnx =
       loadCrepeF0Estimator,
   Future<F0Estimator?> Function({bool download}) loadCrepeGgml =
@@ -44,8 +49,10 @@ Future<TranscriptionEngines> resolveEngines(
   final neuralFn = await loadNeural();
   // A concrete F0 choice opts into a download; auto just uses what's cached.
   final f0Explicit = config.backendFor(TranscriptionStep.f0) != Backend.auto;
+  final rmvpeFn = await loadRmvpe(download: f0Explicit);
   final crepeOnnxFn = await loadCrepeOnnx(download: f0Explicit);
   final crepeGgmlFn = await loadCrepeGgml(download: f0Explicit);
+  final onnxF0 = rmvpeFn ?? crepeOnnxFn; // RMVPE preferred over CREPE
 
   final poly = config.resolve(
     TranscriptionStep.polyphonic,
@@ -57,7 +64,7 @@ Future<TranscriptionEngines> resolveEngines(
     isWeb: isWeb,
     available: {
       if (crepeGgmlFn != null) Backend.crispasr,
-      if (crepeOnnxFn != null) Backend.onnx,
+      if (onnxF0 != null) Backend.onnx,
     },
   );
 
@@ -65,7 +72,7 @@ Future<TranscriptionEngines> resolveEngines(
     neural: poly.backend == Backend.onnx ? neuralFn : null,
     f0: switch (f0.backend) {
       Backend.crispasr => crepeGgmlFn,
-      Backend.onnx => crepeOnnxFn,
+      Backend.onnx => onnxF0,
       _ => null,
     },
   );

@@ -36,10 +36,30 @@ void main() {
       isWeb: false,
       loadNeural: ({bool download = false}) async => null,
       loadCrepeGgml: ({bool download = false}) async => null,
+      loadRmvpe: ({bool download = false}) async => null,
       loadCrepeOnnx: ({bool download = false}) async => _fakeF0,
     );
     expect(e.f0, isNotNull);
     expect(e.neural, isNull);
+  });
+
+  test('RMVPE is preferred over CREPE for the ONNX F0 backend', () async {
+    var rmvpeUsed = false;
+    Future<PitchTrack> rmvpe(Float64List m, int sr) async {
+      rmvpeUsed = true;
+      return const [];
+    }
+
+    final e = await resolveEngines(
+      cfg,
+      isWeb: false,
+      loadNeural: ({bool download = false}) async => null,
+      loadRmvpe: ({bool download = false}) async => rmvpe,
+      loadCrepeOnnx: ({bool download = false}) async => _fakeF0,
+    );
+    expect(e.f0, isNotNull);
+    await e.f0!(Float64List(0), 44100); // the chosen estimator is RMVPE
+    expect(rmvpeUsed, isTrue);
   });
 
   test('nothing installed → both null (pure-Dart)', () async {
@@ -47,6 +67,7 @@ void main() {
       cfg,
       isWeb: false,
       loadNeural: ({bool download = false}) async => null,
+      loadRmvpe: ({bool download = false}) async => null,
       loadCrepeGgml: ({bool download = false}) async => null,
       loadCrepeOnnx: ({bool download = false}) async => null,
     );
