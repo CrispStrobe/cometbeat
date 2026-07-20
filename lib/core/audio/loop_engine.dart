@@ -1154,6 +1154,12 @@ class LoopEngine {
     _clearRenderCaches();
   }
 
+  /// The user beat track's pattern, if one is installed — so a caller can share
+  /// the current beat (e.g. via the shared-groove bridge). Null when the beat is
+  /// only the style's built-in groove.
+  DrumRowsPattern? get userBeatPattern =>
+      _userBeatTrack?.variants.first as DrumRowsPattern?;
+
   /// Installs (or replaces) the sung layer from captured cells
   /// (groove_capture.dart) — a normal track from here on: toggleable,
   /// level-able, engraved, tokenized.

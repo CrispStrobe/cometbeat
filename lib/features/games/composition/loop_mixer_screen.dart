@@ -46,6 +46,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/loop_player_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart';
@@ -198,6 +199,12 @@ abstract interface class LoopMixerTester {
   void debugSmearSample(double ms, double x);
   bool get hasVoiceTrack;
   bool get hasBeatTrack;
+
+  /// Shared-groove bridge: publish this mixer's beat so other modes can load it,
+  /// and pull the shared beat in as the user beat track.
+  void shareBeat();
+  bool get canLoadSharedBeat;
+  void loadSharedBeat();
   bool get isJamming;
   void toggleJam();
 
@@ -510,6 +517,44 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       _engine.enabled.add(LoopEngine.beatTrackId);
     });
     _restartGroove();
+  }
+
+  // --- Shared-groove bridge --------------------------------------------------
+
+  @override
+  void shareBeat() {
+    final pattern = _engine.userBeatPattern;
+    if (pattern == null) return;
+    BeatBridge.instance.publish(
+      SharedBeat(
+        rows: pattern.rows,
+        tempoBpm: _engine.tempoBpm,
+        swing: _engine.swing,
+        source: 'loopmixer',
+      ),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.beatShared)),
+    );
+  }
+
+  @override
+  bool get canLoadSharedBeat => BeatBridge.instance.hasBeat;
+
+  @override
+  void loadSharedBeat() {
+    final shared = BeatBridge.instance.current;
+    if (shared == null || shared.isEmpty) return;
+    setState(() {
+      _engine.setUserBeatTrack(shared.toDrumPattern());
+      _engine.enabled.add(LoopEngine.beatTrackId);
+    });
+    _restartGroove();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.beatLoaded)),
+    );
   }
 
   /// The capture always spans 2 straight bars at the current tempo (what a
@@ -1033,12 +1078,30 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
               enabled: _engine.enabled.isNotEmpty,
               onTap: () => Navigator.pop(sheet, 'daw'),
             ),
+            // Shared-groove bridge: publish this mixer's beat / pull the beat
+            // another mode (e.g. the Drum Kit) shared.
+            ListTile(
+              leading: const Icon(Icons.upload),
+              title: Text(l10n.beatShare),
+              enabled: _engine.userBeatPattern != null,
+              onTap: () => Navigator.pop(sheet, 'shareBeat'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.download),
+              title: Text(l10n.beatLoadShared),
+              enabled: BeatBridge.instance.hasBeat,
+              onTap: () => Navigator.pop(sheet, 'loadBeat'),
+            ),
           ],
         ),
       ),
     );
     if (!mounted) return;
     switch (action) {
+      case 'shareBeat':
+        shareBeat();
+      case 'loadBeat':
+        loadSharedBeat();
       case 'copy':
         await Clipboard.setData(ClipboardData(text: grooveToken));
         messenger.showSnackBar(

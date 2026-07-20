@@ -12,6 +12,7 @@ import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
+import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/groove_play_along.dart';
 import 'package:comet_beat/features/games/composition/loop_creatures.dart';
@@ -74,7 +75,45 @@ Uint8List _tonePcm16(
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    BeatBridge.instance.clear();
+  });
+
+  testWidgets('loads a shared beat as the user beat track, and shares back',
+      (tester) async {
+    // A beat another mode (e.g. the Drum Kit) published to the bridge.
+    BeatBridge.instance.publish(
+      SharedBeat(
+        rows: {
+          Drum.kick: [true, false, false, false, true, false, false, false],
+          Drum.snare: [false, false, false, false, true, false, false, false],
+        },
+        tempoBpm: 110,
+        source: 'drumkit',
+      ),
+    );
+
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.hasBeatTrack, isFalse);
+    expect(game.canLoadSharedBeat, isTrue);
+
+    // Pull it in — it becomes the mixer's user beat track and plays.
+    game.loadSharedBeat();
+    await tester.pump();
+    expect(game.hasBeatTrack, isTrue);
+    expect(game.enabledTracks, contains(LoopEngine.beatTrackId));
+
+    // Share it back out — round-trips through the bridge from the mixer.
+    BeatBridge.instance.clear();
+    game.shareBeat();
+    final shared = BeatBridge.instance.current;
+    expect(shared, isNotNull);
+    expect(shared!.source, 'loopmixer');
+    expect(shared.rows[Drum.kick]!.take(5), [true, false, false, false, true]);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('To Multitrack sends the groove as a DAW clip', (tester) async {
     final daw = DawService();
