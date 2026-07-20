@@ -133,6 +133,8 @@ Uint8List oneSampleSf2({
   int sampleModes = 0,
   int presetAttenuationCb = 0, // preset-level gen 48 (adds to the instrument's)
   int? scaleTuning, // gen 56 (null = unset → SF2 default 100)
+  int? filterFcCents, // gen 8 (null = unset → wide open)
+  int modEnvToFilterCents = 0, // gen 11 (mod envelope → filter cutoff)
 }) {
   // Instrument-zone generators: keyRange, optional atten/tune/loop-mode, then
   // sampleID (terminal). Signed tune values are two's-complement bits.
@@ -142,6 +144,10 @@ Uint8List oneSampleSf2({
   if (fineTune != 0) gens.add(_rec4(52, fineTune & 0xFFFF));
   if (sampleModes != 0) gens.add(_rec4(54, sampleModes)); // gen 54: loop mode
   if (scaleTuning != null) gens.add(_rec4(56, scaleTuning)); // gen 56
+  if (filterFcCents != null) gens.add(_rec4(8, filterFcCents)); // gen 8
+  if (modEnvToFilterCents != 0) {
+    gens.add(_rec4(11, modEnvToFilterCents & 0xFFFF)); // gen 11
+  }
   gens.add(_rec4(53, 0)); // sampleID 0
   // Preset-zone generators: an optional preset-level attenuation (gen 48), then
   // the instrument (gen 41, terminal).

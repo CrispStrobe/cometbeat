@@ -632,17 +632,51 @@ void _renderZone(
   final rg = math.sin(theta);
   final baseGain = n.gain * zone.gain;
 
-  // SF2 2-pole resonant low-pass at the zone's own cutoff/Q, plus the zone's
-  // velocity→filter modulation: the SF2 default darkens soft notes, but a drum
-  // kit's own modulator OPENS a low base cutoff on a hard hit (the "click" that
-  // a dull, boomy kick otherwise lacks).
-  final velCents = zone.velFilterCents(n.velNorm);
-  final cutoffHz = (zone.filterCutoffHz * math.pow(2, velCents / 1200))
-      .clamp(20.0, sr / 2 - 1)
-      .toDouble();
+  // SF2 modulation envelope (a 2nd DAHDSR) → filter cutoff (+ pitch): the attack
+  // "bite" that a static filter lacks — e.g. a kick's low base cutoff opens into
+  // a bright click, then the envelope decays back toward the boom body. Times
+  // are seconds; the sustain is a level (1 = held open).
+  final meDelayS = (zone.delayModEnvSec * sr).round();
+  final meAttackS = math.max((zone.attackModEnvSec * sr).round(), 1);
+  final meHoldS = (zone.holdModEnvSec * sr).round();
+  final meDecayS = math.max((zone.decayModEnvSec * sr).round(), 1);
+  final meSustain = zone.modEnvSustain;
+  final meReleaseS = math.max((zone.releaseModEnvSec * sr).round(), 1);
+  final meToFilterCents = zone.modEnvToFilterCents.toDouble();
+  final meToPitchSt = zone.modEnvToPitchCents / 100.0;
+  final hasModEnv = zone.hasModEnv;
+
+  // The mod-envelope value (0..1): a DAHDSR up to note-off, then a linear release
+  // (the mod env is applied in the log domain — cents — so it decays linearly).
+  double modEnvPre(int i) {
+    if (i < meDelayS) return 0;
+    var t = i - meDelayS;
+    if (t < meAttackS) return t / meAttackS;
+    t -= meAttackS;
+    if (t < meHoldS) return 1;
+    t -= meHoldS;
+    if (t < meDecayS) return 1 + (meSustain - 1) * (t / meDecayS);
+    return meSustain;
+  }
+
+  final meOffLevel = modEnvPre(durSamples);
+  double modEnvAt(int i) {
+    if (i < durSamples) return modEnvPre(i);
+    final t = (i - durSamples) / meReleaseS;
+    return (meOffLevel * (1 - t)).clamp(0.0, 1.0);
+  }
+
+  // SF2 2-pole resonant low-pass. Base cutoff = the zone's own cutoff modulated
+  // by velocity (the SF2 default darkens soft notes; a drum kit's modulator
+  // OPENS a low base cutoff on a hard hit). The mod envelope then sweeps it.
+  final baseFcCents = zone.filterFcCents + zone.velFilterCents(n.velNorm);
+  double cutoffHzAt(double me) =>
+      (8.176 * math.pow(2, (baseFcCents + meToFilterCents * me) / 1200))
+          .clamp(20.0, sr / 2 - 1)
+          .toDouble();
   final filter = Biquad(
     BiquadKind.lowpass,
-    freq: cutoffHz,
+    freq: cutoffHzAt(modEnvAt(0)),
     sampleRate: sr.toDouble(),
     q: zone.filterQ,
   );
@@ -667,7 +701,11 @@ void _renderZone(
 
   var bi = 0;
   var ai = 0;
-  var phase = 0.0;
+  // Start reading at the zone's sample-start offset (SF2 gens 0/4) — skips a
+  // lead-in so the attack lands as authored (a common drum-kit trick).
+  var phase = (zone.sampleStartOffset > 0 && zone.sampleStartOffset < len)
+      ? zone.sampleStartOffset.toDouble()
+      : 0.0;
 
   for (var i = 0; i < total; i++) {
     final outIdx = n.startSample + i;
@@ -703,6 +741,10 @@ void _renderZone(
     }
     if (hasModPitch && i >= modDelayS) {
       pitchMod += modPitchSt * math.sin(modW * (i - modDelayS));
+    }
+    // Mod envelope → pitch (a kick's attack pitch-drop, etc.).
+    if (hasModEnv && meToPitchSt != 0) {
+      pitchMod += meToPitchSt * modEnvAt(i);
     }
     final ratio = baseRatio *
         math.pow(2, (semisFixed + bend + pitchMod) / 12.0).toDouble();
@@ -741,7 +783,11 @@ void _renderZone(
     if (i >= cutRel) cut = math.max(0.0, 1 - (i - cutRel) / cutFade);
     v *= env * baseGain * trem * cut;
 
-    // The SF2 low-pass filter.
+    // The SF2 low-pass filter, swept by the mod envelope (retuned at a control
+    // rate, every 16 samples, so the sweep stays cheap and click-free).
+    if (hasModEnv && meToFilterCents != 0 && (i & 15) == 0) {
+      filter.setFreq(cutoffHzAt(modEnvAt(i)));
+    }
     v = filter.process(v);
 
     final vl = v * lg;

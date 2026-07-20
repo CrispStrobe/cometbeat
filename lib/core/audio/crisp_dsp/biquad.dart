@@ -40,8 +40,11 @@ class EqBand {
 /// A stateful Direct-Form-I biquad. Coefficients are computed once at
 /// construction from ([kind], [freq], [sampleRate], [q], [gainDb]).
 class Biquad {
-  late final double _b0, _b1, _b2, _a1, _a2; // normalised by a0
+  double _b0 = 1, _b1 = 0, _b2 = 0, _a1 = 0, _a2 = 0; // normalised by a0
   double _x1 = 0, _x2 = 0, _y1 = 0, _y2 = 0;
+
+  final BiquadKind _kind;
+  final double _sr, _q, _gainDb;
 
   Biquad(
     BiquadKind kind, {
@@ -49,8 +52,21 @@ class Biquad {
     required double sampleRate,
     double q = 0.707,
     double gainDb = 0,
-  }) {
-    final sr = sampleRate <= 0 ? 44100.0 : sampleRate;
+  })  : _kind = kind,
+        _sr = sampleRate <= 0 ? 44100.0 : sampleRate,
+        _q = q,
+        _gainDb = gainDb {
+    setFreq(freq);
+  }
+
+  /// Retune the corner to [freq] in place, recomputing the coefficients WITHOUT
+  /// clearing the filter memory — so the cutoff can sweep mid-note (an SF2
+  /// mod-envelope → filter) click-free.
+  void setFreq(double freq) {
+    final kind = _kind;
+    final sr = _sr;
+    final q = _q;
+    final gainDb = _gainDb;
     // Keep the corner strictly inside (0, Nyquist) so tan/sin stay finite.
     final f = freq.clamp(1.0, sr / 2 - 1);
     final qq = q <= 0 ? 1e-4 : q;

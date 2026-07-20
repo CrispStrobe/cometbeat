@@ -281,6 +281,48 @@ void main() {
     expect((dHigh - dLow).abs(), lessThan(8), reason: 'key must not transpose');
   });
 
+  test('mod envelope → filter opens a low cutoff (the attack "click")', () {
+    // A low base cutoff makes a dull sound; a mod-envelope→filter opens it on
+    // the attack (a kick/hat click). Measure high-frequency content.
+    double brightness(Float64List x) {
+      var hf = 0.0, energy = 0.0;
+      for (var i = 1; i < x.length; i++) {
+        hf += (x[i] - x[i - 1]).abs();
+        energy += x[i].abs();
+      }
+      return energy == 0 ? 0 : hf / energy;
+    }
+
+    const lowFc = 4500; // ~130 Hz base cutoff (dull)
+    final dull = loadSoundFont(
+      oneSampleSf2(
+        pcm: sineI16(2000, 64),
+        sampleRate: 44100,
+        rootKey: 60,
+        loopStart: 0,
+        loopEnd: 0,
+        filterFcCents: lowFc,
+      ),
+    );
+    final bright = loadSoundFont(
+      oneSampleSf2(
+        pcm: sineI16(2000, 64),
+        sampleRate: 44100,
+        rootKey: 60,
+        loopStart: 0,
+        loopEnd: 0,
+        filterFcCents: lowFc,
+        modEnvToFilterCents: 7200, // mod env opens the cutoff +6 octaves
+      ),
+    );
+    final smf = _midi(_note(0, 60, 240));
+    expect(
+      brightness(renderMidiFile(smf, bright).$1),
+      greaterThan(brightness(renderMidiFile(smf, dull).$1)),
+      reason: 'the mod-envelope filter sweep restores high frequencies',
+    );
+  });
+
   test('empty / non-MIDI input yields empty output', () {
     final (l, r) = renderMidiFile(Uint8List.fromList([1, 2, 3]), font);
     expect(l, isEmpty);

@@ -65,6 +65,22 @@ const _genDelayModLfo = 21;
 const _genFreqModLfo = 22;
 const _genDelayVibLfo = 23;
 const _genFreqVibLfo = 24;
+// Modulation envelope: a 2nd DAHDSR that can sweep pitch (gen 7) and filter
+// cutoff (gen 11) — the attack "bite" of many instruments (a kick's click that
+// opens the cutoff then decays back to its body). Times are timecents; sustain
+// is in 0.1% of full-scale DECREASE (0 = hold at peak, 1000 = decay to zero).
+const _genModEnvToPitch = 7; // cents
+const _genModEnvToFilterFc = 11; // cents
+const _genDelayModEnv = 25;
+const _genAttackModEnv = 26;
+const _genHoldModEnv = 27;
+const _genDecayModEnv = 28;
+const _genSustainModEnv = 29; // 0.1% decrease
+const _genReleaseModEnv = 30;
+// Sample play start offset (added to the shdr start): gen 0 in samples, gen 4 in
+// units of 32768 samples. Skips a lead-in so the attack lands as authored.
+const _genStartAddrsOffset = 0;
+const _genStartAddrsCoarseOffset = 4;
 
 /// One sample from a soundfont: its decoded PCM (−1..1), the rate it was
 /// recorded at, the MIDI key it represents ([originalPitch]), and its loop
@@ -138,6 +154,15 @@ class Sf2Zone {
     this.sampleModes = 0,
     this.scaleTuning = 100,
     this.velFilterMods = const [],
+    this.modEnvToPitchCents = 0,
+    this.modEnvToFilterCents = 0,
+    this.delayModEnvTc = -12000,
+    this.attackModEnvTc = -12000,
+    this.holdModEnvTc = -12000,
+    this.decayModEnvTc = -12000,
+    this.sustainModEnvPermille = 0,
+    this.releaseModEnvTc = -12000,
+    this.sampleStartOffset = 0,
   });
 
   final int keyLo;
@@ -218,6 +243,35 @@ class Sf2Zone {
   /// to 2400 cents). A drum kit adds a positive one so a hard hit opens a low
   /// base cutoff into its bright "click".
   final List<int> velFilterMods;
+
+  /// Modulation envelope (a 2nd DAHDSR) and its targets. [modEnvToFilterCents]
+  /// sweeps the filter cutoff and [modEnvToPitchCents] the pitch by the envelope
+  /// value (0..1). [sustainModEnvPermille] is the DECREASE in 0.1% units, so the
+  /// sustain level is `1 − permille/1000`. Times are timecents.
+  final int modEnvToPitchCents;
+  final int modEnvToFilterCents;
+  final int delayModEnvTc;
+  final int attackModEnvTc;
+  final int holdModEnvTc;
+  final int decayModEnvTc;
+  final int sustainModEnvPermille;
+  final int releaseModEnvTc;
+
+  double get delayModEnvSec => _tcSec(delayModEnvTc);
+  double get attackModEnvSec => _tcSec(attackModEnvTc);
+  double get holdModEnvSec => _tcSec(holdModEnvTc);
+  double get decayModEnvSec => _tcSec(decayModEnvTc);
+  double get releaseModEnvSec => _tcSec(releaseModEnvTc);
+
+  /// The mod-envelope sustain level (0..1): 1 − permille/1000.
+  double get modEnvSustain =>
+      (1 - sustainModEnvPermille / 1000).clamp(0.0, 1.0);
+
+  /// Whether this zone's mod envelope actually modulates anything.
+  bool get hasModEnv => modEnvToFilterCents != 0 || modEnvToPitchCents != 0;
+
+  /// The sample offset (in frames) to start playback at (SF2 gens 0 + 4).
+  final int sampleStartOffset;
 
   /// The cutoff modulation in cents for MIDI [vel] (0..1), summing this zone's
   /// velocity→filter modulators — or the SF2 default when it has none.
@@ -540,6 +594,25 @@ List<Sf2Preset> _parsePresets(
       exclusiveClass: iv((g) => g.exclusiveClass, 0),
       sampleModes: iv((g) => g.sampleModes, 0),
       scaleTuning: iv((g) => g.scaleTuning, 100),
+      // Modulation envelope + its pitch/filter targets (additive, like the vol
+      // env); and the sample play-start offset (gen 0 + gen 4×32768).
+      modEnvToPitchCents:
+          iv((g) => g.modEnvToPitch, 0) + po((g) => g.modEnvToPitch),
+      modEnvToFilterCents:
+          iv((g) => g.modEnvToFilter, 0) + po((g) => g.modEnvToFilter),
+      delayModEnvTc:
+          iv((g) => g.delayModEnv, -12000) + po((g) => g.delayModEnv),
+      attackModEnvTc:
+          iv((g) => g.attackModEnv, -12000) + po((g) => g.attackModEnv),
+      holdModEnvTc: iv((g) => g.holdModEnv, -12000) + po((g) => g.holdModEnv),
+      decayModEnvTc:
+          iv((g) => g.decayModEnv, -12000) + po((g) => g.decayModEnv),
+      sustainModEnvPermille:
+          iv((g) => g.sustainModEnv, 0) + po((g) => g.sustainModEnv),
+      releaseModEnvTc:
+          iv((g) => g.releaseModEnv, -12000) + po((g) => g.releaseModEnv),
+      sampleStartOffset:
+          iv((g) => g.startOff, 0) + 32768 * iv((g) => g.startCoarse, 0),
       // Velocity→filter modulators: the instrument zone's (or the instrument
       // global zone's) PLUS the preset's (they add — a drum kit's high-velocity
       // filter-open lives at the preset level). Empty → SF2 default at play time.
@@ -616,6 +689,11 @@ class _Gen {
   int? delayModLfo, freqModLfo, delayVibLfo, freqVibLfo;
   int? pan, exclusiveClass, sampleModes, scaleTuning, sampleId;
   int? rootOverride, instIndex;
+  // Modulation envelope (2nd DAHDSR) + its pitch/filter targets, and the sample
+  // play-start offset.
+  int? modEnvToPitch, modEnvToFilter;
+  int? delayModEnv, attackModEnv, holdModEnv, decayModEnv, sustainModEnv;
+  int? releaseModEnv, startOff, startCoarse;
   // velocity→filterFc modulators, flattened as [amount, dir, type, …] triples.
   List<int>? velFilterMods;
 }
@@ -677,6 +755,26 @@ _Gen _readGens(ByteData data, int genOff, int gStart, int gEnd, int genCount) {
         g.delayVibLfo = samt;
       case _genFreqVibLfo:
         g.freqVibLfo = samt;
+      case _genModEnvToPitch:
+        g.modEnvToPitch = samt;
+      case _genModEnvToFilterFc:
+        g.modEnvToFilter = samt;
+      case _genDelayModEnv:
+        g.delayModEnv = samt;
+      case _genAttackModEnv:
+        g.attackModEnv = samt;
+      case _genHoldModEnv:
+        g.holdModEnv = samt;
+      case _genDecayModEnv:
+        g.decayModEnv = samt;
+      case _genSustainModEnv:
+        g.sustainModEnv = amt;
+      case _genReleaseModEnv:
+        g.releaseModEnv = samt;
+      case _genStartAddrsOffset:
+        g.startOff = amt;
+      case _genStartAddrsCoarseOffset:
+        g.startCoarse = amt;
       case _genPan:
         g.pan = samt;
       case _genExclusiveClass:
