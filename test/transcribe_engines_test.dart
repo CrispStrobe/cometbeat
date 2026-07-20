@@ -7,11 +7,14 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
+import 'package:comet_beat/core/audio/transcription/harmony.dart'
+    show ChordEvent;
 import 'package:comet_beat/features/games/transcribe/transcribe_engines.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<List<NoteEvent>> _fakeNeural(Float64List m, int sr) async => const [];
 Future<PitchTrack> _fakeF0(Float64List m, int sr) async => const [];
+Future<List<ChordEvent>> _fakeChords(Float64List m, int sr) async => const [];
 
 void main() {
   const cfg = TranscriptionEngineConfig();
@@ -96,6 +99,32 @@ void main() {
     );
     expect(e.f0, isNotNull); // ONNX CREPE is fine on web
     expect(e.neural, isNotNull);
+  });
+
+  test('a neural chords choice → the chord estimator when installed', () async {
+    final e = await resolveEngines(
+      cfg.copyWith(backends: {TranscriptionStep.chords: Backend.onnx}),
+      isWeb: false,
+      loadNeural: ({bool download = false}) async => null,
+      loadRmvpe: ({bool download = false}) async => null,
+      loadCrepeOnnx: ({bool download = false}) async => null,
+      loadCrepeGgml: ({bool download = false}) async => null,
+      loadHarmony: ({bool download = false}) async => _fakeChords,
+    );
+    expect(e.chords, isNotNull);
+  });
+
+  test('chords stay null when harmony is absent', () async {
+    final e = await resolveEngines(
+      cfg.copyWith(backends: {TranscriptionStep.chords: Backend.onnx}),
+      isWeb: false,
+      loadNeural: ({bool download = false}) async => null,
+      loadRmvpe: ({bool download = false}) async => null,
+      loadCrepeOnnx: ({bool download = false}) async => null,
+      loadCrepeGgml: ({bool download = false}) async => null,
+      loadHarmony: ({bool download = false}) async => null,
+    );
+    expect(e.chords, isNull);
   });
 
   test('the CrispASR ggml CREPE stub is null until the package ships pitch()',

@@ -2288,6 +2288,7 @@
   "transcriptionStepF0": "Melodie-Tonhöhe",
   "transcriptionStepPoly": "Akkorde & Klavier",
   "transcriptionStepSep": "Song aufteilen",
+  "transcriptionStepChords": "Akkorde",
   "transcriptionBackendAuto": "Auto",
   "transcriptionBackendDart": "Auf dem Gerät",
   "transcriptionBackendNeural": "Neuronal"

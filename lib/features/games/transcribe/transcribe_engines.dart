@@ -6,17 +6,25 @@
 // pure-Dart (a null engine).
 
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
+import 'package:comet_beat/core/audio/transcription/harmony.dart'
+    show ChordEstimator;
 import 'package:comet_beat/core/audio/transcription/route.dart'
     show F0Estimator, NeuralTranscriber;
 import 'package:comet_beat/features/games/transcribe/crepe_provider.dart';
+import 'package:comet_beat/features/games/transcribe/harmony_provider.dart';
 import 'package:comet_beat/features/games/transcribe/neural_provider.dart';
 import 'package:comet_beat/features/games/transcribe/rmvpe_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// The neural engines to inject for a single-recording transcription: an [f0]
-/// estimator (CREPE) for the monophonic path and a [neural] transcriber (Basic
-/// Pitch) for the polyphonic path. Either null ⇒ use the pure-Dart default.
-typedef TranscriptionEngines = ({F0Estimator? f0, NeuralTranscriber? neural});
+/// estimator (RMVPE/CREPE) for the monophonic path, a [neural] transcriber (Basic
+/// Pitch) for the polyphonic path, and a [chords] recogniser (BTC). Each null ⇒
+/// use the pure-Dart default (or, for chords, none).
+typedef TranscriptionEngines = ({
+  F0Estimator? f0,
+  NeuralTranscriber? neural,
+  ChordEstimator? chords,
+});
 
 /// CREPE F0 via CrispASR ggml. Returns null until the `crispasr` pub package
 /// exposes its pitch FFI — the in-repo `flutter/crispasr` binding already has
@@ -45,8 +53,13 @@ Future<TranscriptionEngines> resolveEngines(
       loadCrepeF0Estimator,
   Future<F0Estimator?> Function({bool download}) loadCrepeGgml =
       loadCrispasrCrepeF0,
+  Future<ChordEstimator?> Function({bool download}) loadHarmony =
+      loadHarmonyEstimator,
 }) async {
   final neuralFn = await loadNeural();
+  final chordsExplicit =
+      config.backendFor(TranscriptionStep.chords) != Backend.auto;
+  final harmonyFn = await loadHarmony(download: chordsExplicit);
   // A concrete F0 choice opts into a download; auto just uses what's cached.
   final f0Explicit = config.backendFor(TranscriptionStep.f0) != Backend.auto;
   final rmvpeFn = await loadRmvpe(download: f0Explicit);
@@ -67,6 +80,11 @@ Future<TranscriptionEngines> resolveEngines(
       if (onnxF0 != null) Backend.onnx,
     },
   );
+  final chords = config.resolve(
+    TranscriptionStep.chords,
+    isWeb: isWeb,
+    available: {if (harmonyFn != null) Backend.onnx},
+  );
 
   return (
     neural: poly.backend == Backend.onnx ? neuralFn : null,
@@ -75,5 +93,6 @@ Future<TranscriptionEngines> resolveEngines(
       Backend.onnx => onnxF0,
       _ => null,
     },
+    chords: chords.backend == Backend.onnx ? harmonyFn : null,
   );
 }

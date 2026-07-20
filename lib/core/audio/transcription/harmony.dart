@@ -31,6 +31,13 @@ typedef ChordEvent = ({
   double offMs,
 });
 
+/// A chord recogniser over mono audio — the injectable seam for the neural
+/// (BTC) chord backend, mirroring F0Estimator / NeuralTranscriber.
+typedef ChordEstimator = Future<List<ChordEvent>> Function(
+  Float64List mono,
+  int sampleRate,
+);
+
 /// BTC's 25-class maj/min vocabulary (index → symbol).
 const List<String> btcChordLabels = [
   'C', 'C:min', 'C#', 'C#:min', 'D', 'D:min', 'D#', 'D#:min', 'E', 'E:min', //

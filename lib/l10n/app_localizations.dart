@@ -12356,6 +12356,12 @@ abstract class AppLocalizations {
   /// **'Split a song'**
   String get transcriptionStepSep;
 
+  /// No description provided for @transcriptionStepChords.
+  ///
+  /// In en, this message translates to:
+  /// **'Chords'**
+  String get transcriptionStepChords;
+
   /// No description provided for @transcriptionBackendAuto.
   ///
   /// In en, this message translates to:

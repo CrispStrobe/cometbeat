@@ -6774,6 +6774,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transcriptionStepSep => 'Split a song';
 
   @override
+  String get transcriptionStepChords => 'Chords';
+
+  @override
   String get transcriptionBackendAuto => 'Auto';
 
   @override

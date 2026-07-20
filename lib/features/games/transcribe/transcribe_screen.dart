@@ -8,11 +8,14 @@
 // `debugNeural`) let a widget test drive the flow with no file-picker/mic/ONNX.
 
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
+import 'package:comet_beat/core/audio/transcription/harmony.dart'
+    show ChordEstimator;
 import 'package:comet_beat/core/audio/transcription/route.dart';
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/features/games/songs/song_screen.dart';
 import 'package:comet_beat/features/games/transcribe/crepe_provider.dart';
+import 'package:comet_beat/features/games/transcribe/harmony_provider.dart';
 import 'package:comet_beat/features/games/transcribe/neural_provider.dart';
 import 'package:comet_beat/features/games/transcribe/rmvpe_provider.dart';
 import 'package:comet_beat/features/games/transcribe/transcribe_engines.dart';
@@ -40,6 +43,7 @@ class TranscribeScreen extends StatefulWidget {
     this.debugNeural,
     this.debugCrepe,
     this.debugRmvpe,
+    this.debugHarmony,
   });
 
   /// Test seam: replaces the file-picker. Returns WAV bytes, or null to cancel.
@@ -53,6 +57,9 @@ class TranscribeScreen extends StatefulWidget {
 
   /// Test seam: replaces RMVPE F0-estimator loading.
   final Future<F0Estimator?> Function({bool download})? debugRmvpe;
+
+  /// Test seam: replaces neural chord-estimator (BTC) loading.
+  final Future<ChordEstimator?> Function({bool download})? debugHarmony;
 
   @override
   State<TranscribeScreen> createState() => _TranscribeScreenState();
@@ -87,20 +94,21 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
     }
   }
 
-  /// The neural F0 estimator to inject when melody-pitch is on — RMVPE preferred
-  /// over CREPE (the router's choice), forcing a download. Null ⇒ pYIN. Not used
-  /// for the polyphonic engine (it has no F0 stage). Threads the test seams.
-  Future<F0Estimator?> _f0() async {
-    if (!_neuralPitch || _choice == EngineChoice.neural) return null;
-    final cfg = _config().copyWith(
-      backends: {..._config().backends, TranscriptionStep.f0: Backend.onnx},
-    );
-    final engines = await resolveEngines(
+  /// Resolve the neural engines from the Settings config, threading the test
+  /// seams. Melody-pitch on ⇒ force the ONNX F0 (RMVPE preferred, then CREPE).
+  Future<TranscriptionEngines> _resolve() {
+    final base = _config();
+    final cfg = _neuralPitch
+        ? base.copyWith(
+            backends: {...base.backends, TranscriptionStep.f0: Backend.onnx},
+          )
+        : base;
+    return resolveEngines(
       cfg,
       loadRmvpe: widget.debugRmvpe ?? loadRmvpeF0Estimator,
       loadCrepeOnnx: widget.debugCrepe ?? loadCrepeF0Estimator,
+      loadHarmony: widget.debugHarmony ?? loadHarmonyEstimator,
     );
-    return engines.f0;
   }
 
   Future<Uint8List?> _pickAudio() async {
@@ -132,9 +140,15 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
       final neural = _choice == EngineChoice.monophonic
           ? null
           : await _neural(download: _choice == EngineChoice.neural);
-      // Neural pitch (RMVPE/CREPE, per the Settings config) upgrades the
-      // monophonic F0 when opted in — not for the polyphonic engine.
-      final f0 = await _f0();
+      // Neural pitch (RMVPE/CREPE) upgrades the monophonic F0 when opted in;
+      // neural chords (BTC) run only when explicitly chosen in Settings.
+      final engines = await _resolve();
+      final f0 =
+          (_neuralPitch && _choice != EngineChoice.neural) ? engines.f0 : null;
+      final chords =
+          _config().backendFor(TranscriptionStep.chords) == Backend.onnx
+              ? engines.chords
+              : null;
       final force = switch (_choice) {
         EngineChoice.monophonic => TranscriptionEngine.monophonic,
         EngineChoice.neural => TranscriptionEngine.neural,
@@ -146,14 +160,17 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
       // can't cross an isolate, so run inline then. Under a widget test (a debug
       // pick source) run inline too — a compute() isolate doesn't advance the
       // test's fake clock.
-      final useIsolate =
-          neural == null && f0 == null && widget.debugPickAudio == null;
+      final useIsolate = neural == null &&
+          f0 == null &&
+          chords == null &&
+          widget.debugPickAudio == null;
       final result = useIsolate
           ? await compute(_monoInIsolate, (bytes: bytes, a4: 440.0))
           : await transcribeRecording(
               bytes,
               neural: neural,
               f0: f0,
+              chordEstimator: chords,
               forceEngine: force,
             );
       if (!mounted) return;

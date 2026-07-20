@@ -6811,6 +6811,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get transcriptionStepSep => 'Song aufteilen';
 
   @override
+  String get transcriptionStepChords => 'Akkorde';
+
+  @override
   String get transcriptionBackendAuto => 'Auto';
 
   @override

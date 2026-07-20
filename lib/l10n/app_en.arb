@@ -2584,6 +2584,7 @@
   "transcriptionStepF0": "Melody pitch",
   "transcriptionStepPoly": "Chords & piano",
   "transcriptionStepSep": "Split a song",
+  "transcriptionStepChords": "Chords",
   "transcriptionBackendAuto": "Auto",
   "transcriptionBackendDart": "On-device",
   "transcriptionBackendNeural": "Neural"

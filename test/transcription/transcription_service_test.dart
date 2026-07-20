@@ -8,6 +8,8 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
+import 'package:comet_beat/core/audio/transcription/harmony.dart'
+    show ChordEvent;
 import 'package:comet_beat/core/audio/transcription/route.dart';
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart';
@@ -105,6 +107,19 @@ void main() {
           if (e is NoteElement) e.pitches.length,
     ];
     expect(chords, contains(3), reason: 'one 3-note chord note-head');
+  });
+
+  test('an injected chord estimator populates result.chords', () async {
+    Future<List<ChordEvent>> fakeChords(Float64List m, int sr) async => const [
+          (label: 'C', rootPc: 0, quality: 'maj', onMs: 0, offMs: 500),
+          (label: 'G', rootPc: 7, quality: 'maj', onMs: 500, offMs: 1000),
+        ];
+    final r = await transcribeRecording(
+      _wav(const [60, 62, 64]),
+      chordEstimator: fakeChords,
+    );
+    expect(r.chords, hasLength(2));
+    expect(r.chords.first.label, 'C');
   });
 
   test('empty / near-silent audio never throws, yields an empty score',

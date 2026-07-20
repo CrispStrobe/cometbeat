@@ -502,6 +502,13 @@ class _TranscriptionEngineSection extends StatelessWidget {
                       TranscriptionStep.separation,
                       const [Backend.auto, Backend.crispasr],
                     ),
+                    _stepPicker(
+                      context,
+                      svc,
+                      l10n.transcriptionStepChords,
+                      TranscriptionStep.chords,
+                      const [Backend.auto, Backend.pureDart, Backend.onnx],
+                    ),
                   ],
                 ),
               ],

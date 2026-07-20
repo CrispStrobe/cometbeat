@@ -14,6 +14,8 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/transcription/contracts.dart';
+import 'package:comet_beat/core/audio/transcription/harmony.dart'
+    show ChordEstimator, ChordEvent;
 import 'package:comet_beat/core/audio/transcription/metre.dart';
 import 'package:comet_beat/core/audio/transcription/notation.dart';
 import 'package:comet_beat/core/audio/transcription/rhythm.dart';
@@ -24,8 +26,9 @@ import 'package:crisp_notation_core/crisp_notation_core.dart' show Score;
 
 /// The outcome of transcribing a recording: the engraved [score], the [notes] it
 /// was built from (each carries a `confidence` a UI can surface), which [engine]
-/// the router chose, the [probe] that decided, the detected [bpm], and the
-/// estimated [meter] (beats-per-bar → the score's time signature).
+/// the router chose, the [probe] that decided, the detected [bpm], the estimated
+/// [meter] (beats-per-bar → the time signature), the [key], and any recognised
+/// [chords] (empty unless a neural chord estimator was supplied).
 typedef TranscriptionResult = ({
   Score score,
   List<NoteEvent> notes,
@@ -34,6 +37,7 @@ typedef TranscriptionResult = ({
   double bpm,
   Meter meter,
   KeyEstimate key,
+  List<ChordEvent> chords,
 });
 
 /// Transcribe [wavBytes] (a PCM16 WAV, any channel count / sample rate) into a
@@ -47,6 +51,7 @@ Future<TranscriptionResult> transcribeRecording(
   double a4 = 440,
   NeuralTranscriber? neural,
   F0Estimator? f0,
+  ChordEstimator? chordEstimator,
   TranscriptionEngine? forceEngine,
 }) async {
   final wav = readWavPcm16(wavBytes);
@@ -59,6 +64,9 @@ Future<TranscriptionResult> transcribeRecording(
     f0: f0,
     forceEngine: forceEngine,
   );
+  final chords = chordEstimator == null
+      ? const <ChordEvent>[]
+      : await chordEstimator(mono, wav.sampleRate);
   final grid = detectRhythm(mono, sampleRate: wav.sampleRate);
   final meter = estimateMeter(grid);
   final raw = transcribeToScore(
@@ -78,5 +86,6 @@ Future<TranscriptionResult> transcribeRecording(
     bpm: grid.bpm,
     meter: meter,
     key: key,
+    chords: chords,
   );
 }
