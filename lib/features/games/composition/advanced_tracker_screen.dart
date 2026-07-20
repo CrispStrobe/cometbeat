@@ -3204,6 +3204,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     }
     final minV = isVolume ? 0.0 : -1.0;
     final scheme = Theme.of(context).colorScheme;
+    int? dragIdx; // the breakpoint being dragged on the canvas
 
     await showModalBottomSheet<void>(
       context: context,
@@ -3224,16 +3225,41 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   style: Theme.of(ctx).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
+                // Drag a dot to move a breakpoint; the sliders below are the
+                // precise editor. Both mutate the same `points` list.
                 SizedBox(
                   height: 72,
                   width: double.infinity,
-                  child: CustomPaint(
-                    painter: _EnvelopePainter(
-                      points: [for (final p in points) (p.ms, p.value)],
-                      minV: minV,
-                      line: scheme.primary,
-                      grid: scheme.outlineVariant,
-                    ),
+                  child: LayoutBuilder(
+                    builder: (ctx, cons) {
+                      final box = Size(cons.maxWidth, 72);
+                      void moveTo(Offset local) {
+                        final idx = dragIdx;
+                        if (idx == null || idx >= points.length) return;
+                        final (ms, value) = envPointFromLocal(local, box, minV);
+                        setSheet(() => points[idx] = (ms: ms, value: value));
+                      }
+
+                      return GestureDetector(
+                        onPanDown: (d) => dragIdx = nearestEnvPointIndex(
+                          [for (final p in points) (p.ms, p.value)],
+                          d.localPosition,
+                          box,
+                        ),
+                        onPanUpdate: (d) => moveTo(d.localPosition),
+                        onPanEnd: (_) => dragIdx = null,
+                        onPanCancel: () => dragIdx = null,
+                        child: CustomPaint(
+                          size: box,
+                          painter: _EnvelopePainter(
+                            points: [for (final p in points) (p.ms, p.value)],
+                            minV: minV,
+                            line: scheme.primary,
+                            grid: scheme.outlineVariant,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -5670,6 +5696,38 @@ class _CommandEditorState extends State<_CommandEditor> {
 }
 
 /// Draws a pattern's mixed PCM as a vertical-bar waveform with a playhead line.
+/// Maps a local tap [pos] inside an envelope canvas of [size] to a
+/// `(ms 0..2000, value minV..1)` breakpoint — x → ms, y inverted (top = 1).
+(int, double) envPointFromLocal(Offset pos, Size size, double minV) {
+  final ms =
+      size.width <= 0 ? 0 : (pos.dx / size.width * 2000).round().clamp(0, 2000);
+  final t = size.height <= 0 ? 1.0 : (1 - pos.dy / size.height).clamp(0.0, 1.0);
+  final value = (minV + t * (1 - minV)).clamp(minV, 1.0);
+  return (ms, value);
+}
+
+/// The index of the [points] breakpoint whose canvas x is nearest [pos] within
+/// [thresholdPx] (drag-to-move hit test), or null if the tap missed them all.
+int? nearestEnvPointIndex(
+  List<(int, double)> points,
+  Offset pos,
+  Size size, {
+  double thresholdPx = 32,
+}) {
+  if (points.isEmpty || size.width <= 0) return null;
+  int? best;
+  var bestDx = thresholdPx;
+  for (var i = 0; i < points.length; i++) {
+    final x = points[i].$1.clamp(0, 2000) / 2000 * size.width;
+    final dx = (x - pos.dx).abs();
+    if (dx <= bestDx) {
+      bestDx = dx;
+      best = i;
+    }
+  }
+  return best;
+}
+
 /// Draws a custom envelope's `(ms, value)` breakpoints as a line with dots over
 /// a 0–2000 ms axis, value from [minV]..1 mapped top(1)→bottom(minV).
 class _EnvelopePainter extends CustomPainter {

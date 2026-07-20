@@ -1023,6 +1023,25 @@ void main() {
     expect(game.noteAt(0, 3), 69);
   });
 
+  test('envPointFromLocal maps canvas pixels to (ms, value)', () {
+    const size = Size(200, 72);
+    expect(envPointFromLocal(const Offset(0, 0), size, 0.0), (0, 1.0));
+    expect(envPointFromLocal(const Offset(200, 72), size, 0.0), (2000, 0.0));
+    final (ms, v) = envPointFromLocal(const Offset(100, 36), size, -1.0);
+    expect(ms, 1000); // centre x → mid ms
+    expect(v, closeTo(0.0, 1e-9)); // centre y with pan range → pan 0
+  });
+
+  test('nearestEnvPointIndex hit-tests the closest breakpoint in x', () {
+    const size = Size(200, 72); // point x = ms/2000*200
+    const pts = [(0, 1.0), (1000, 0.5), (2000, 0.0)]; // x = 0, 100, 200
+    expect(nearestEnvPointIndex(pts, const Offset(5, 40), size), 0);
+    expect(nearestEnvPointIndex(pts, const Offset(98, 10), size), 1);
+    expect(nearestEnvPointIndex(pts, const Offset(200, 70), size), 2);
+    // Equidistant from 100 and 200 (dx 50 each) — beyond the 32px threshold.
+    expect(nearestEnvPointIndex(pts, const Offset(150, 40), size), isNull);
+  });
+
   testWidgets('custom envelope editor applies + clears volume/pan points',
       (tester) async {
     await pumpGame(tester, const AdvancedTrackerScreen());
