@@ -133,4 +133,23 @@ void main() {
       );
     });
   });
+
+  group('resample clamping', () {
+    test('a full-scale sample stays in [-1,1] after resampling', () {
+      // A ±1 square-ish wave with sharp transitions makes cubic resampling
+      // overshoot (~1.2+). c5speed ≠ engine rate forces a resample.
+      final pcm = Float64List.fromList([
+        for (var i = 0; i < 256; i++) (i ~/ 4).isEven ? 1.0 : -1.0,
+      ]);
+      final inst = sampleInstrumentFromDoc(
+        's',
+        DocSample(pcm: pcm, c5speed: 8000), // ≠ engine rate → forces a resample
+      );
+      var peak = 0.0;
+      for (final v in inst.sample) {
+        if (v.abs() > peak) peak = v.abs();
+      }
+      expect(peak, lessThanOrEqualTo(1.0)); // no overshoot clipping downstream
+    });
+  });
 }

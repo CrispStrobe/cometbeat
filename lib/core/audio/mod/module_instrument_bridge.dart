@@ -37,6 +37,17 @@ SampleInstrument sampleInstrumentFromDoc(
   final c5 = sample.c5speed > 0 ? sample.c5speed : 8363;
   final ratio = c5 / engineRate;
   final atEngineRate = resampleCubic(sample.pcm, ratio);
+  // Cubic resampling overshoots [-1,1] at transients (ringing) — a full-scale
+  // sample can peak ~1.2+, which then clips and distorts when several stack in
+  // the mix. Clamp back to unity so imported samples stay in range.
+  for (var i = 0; i < atEngineRate.length; i++) {
+    final v = atEngineRate[i];
+    if (v > 1.0) {
+      atEngineRate[i] = 1.0;
+    } else if (v < -1.0) {
+      atEngineRate[i] = -1.0;
+    }
+  }
   // Loop points are in ORIGINAL-sample units → scale to the engine rate (output
   // index = original / ratio). loopLength 0 = no loop.
   final loopStart = (sample.loopStart / ratio).round();
