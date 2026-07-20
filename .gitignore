@@ -53,3 +53,6 @@ app.*.map.json
 # Local dev notes (never shared)
 CLAUDE.md
 test/fixtures/wild_local.*
+# Real tracker modules for local parser validation — copyrighted music, never
+# committed; fetched by bin/fetch_wild_modules.dart, tested by module_wild_test.
+test/fixtures/wild/
