@@ -46,6 +46,36 @@ void main() {
       expect(r.backend, Backend.onnx);
     });
 
+    test('the 3-path order: ggml > native-ORT FFI > pure-Dart ONNX', () {
+      // native-ORT FFI beats pure-Dart ONNX when both are present…
+      expect(
+        cfg.resolve(
+          TranscriptionStep.f0,
+          isWeb: false,
+          available: {Backend.onnx, Backend.onnxFfi},
+        ).backend,
+        Backend.onnxFfi,
+      );
+      // …and CrispASR ggml beats both.
+      expect(
+        cfg.resolve(
+          TranscriptionStep.f0,
+          isWeb: false,
+          available: {Backend.onnx, Backend.onnxFfi, Backend.crispasr},
+        ).backend,
+        Backend.crispasr,
+      );
+    });
+
+    test('web never uses either FFI runtime', () {
+      final r = cfg.resolve(
+        TranscriptionStep.f0,
+        isWeb: true,
+        available: {Backend.onnxFfi, Backend.onnx, Backend.crispasr},
+      );
+      expect(r.backend, Backend.onnx); // both FFI runtimes excluded
+    });
+
     test('native, nothing neural available → pure-Dart', () {
       final r = cfg.resolve(
         TranscriptionStep.f0,

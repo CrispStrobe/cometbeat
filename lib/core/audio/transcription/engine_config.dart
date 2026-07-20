@@ -29,8 +29,21 @@ enum TranscriptionStep {
   notation, // voice/staff separation, spelling (crisp_notation)
 }
 
-/// A backend an engine can run on. [auto] picks the best AVAILABLE one.
-enum Backend { auto, pureDart, onnx, crispasr }
+/// The runtime a step's model runs on. [auto] picks the best AVAILABLE one.
+///
+/// Three neural runtimes (the "3 paths"), fastest-first for native:
+///   • [crispasr] — CrispASR ggml/GGUF via FFI. Native, GPU-fast. Has CREPE,
+///     piano, and separation (htdemucs/RoFormer) today; not RMVPE/Basic-Pitch/BTC.
+///   • [onnxFfi]  — the native ONNX Runtime via FFI. Native, fast; runs any of
+///     our .onnx models. Needs a native-ORT binding + bundled libs (no web).
+///   • [onnx]     — onnx_runtime_dart, PURE Dart (no native lib). Runs on WEB.
+///     The default neural runtime today; the others are drop-ins as they land.
+/// Plus [pureDart] (pYIN, chroma, DSP — everywhere) and [auto].
+enum Backend { auto, pureDart, onnx, onnxFfi, crispasr }
+
+/// Whether [b] needs native FFI (so it's unavailable on web).
+bool backendNeedsFfi(Backend b) =>
+    b == Backend.crispasr || b == Backend.onnxFfi;
 
 /// One quality preset that maps to a concrete size+quant (users pick this, not
 /// the raw knobs). fast = smallest/quickest; accurate = biggest/best; balanced
@@ -95,7 +108,7 @@ class TranscriptionEngineConfig {
     // A concrete preference is honoured only if it's usable.
     bool usable(Backend b) {
       if (b == Backend.pureDart) return true;
-      if (isWeb && b == Backend.crispasr) return false; // no FFI on web
+      if (isWeb && backendNeedsFfi(b)) return false; // no FFI on web
       return available.contains(b);
     }
 
@@ -103,11 +116,12 @@ class TranscriptionEngineConfig {
       return usable(pref) ? (backend: pref, size: size, quant: quant) : dart();
     }
 
-    // Auto: prefer the highest-quality available backend for this step.
-    // Native → CrispASR ggml (GPU-fast) > ONNX > pure-Dart. Web → ONNX > Dart.
+    // Auto: prefer the fastest available runtime for this step. Native →
+    // CrispASR ggml > native-ORT FFI > pure-Dart ONNX > pure-Dart. Web → ONNX
+    // (pure-Dart) > pure-Dart, since the FFI runtimes can't run there.
     for (final b in isWeb
         ? const [Backend.onnx]
-        : const [Backend.crispasr, Backend.onnx]) {
+        : const [Backend.crispasr, Backend.onnxFfi, Backend.onnx]) {
       if (usable(b)) return (backend: b, size: size, quant: quant);
     }
     return dart();
