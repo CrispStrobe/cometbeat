@@ -4,6 +4,8 @@
 
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/songs/song_screen.dart'
+    show SongListScreen;
 import 'package:comet_beat/features/games/songs/songbook_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -42,6 +44,23 @@ Widget _host(UserSongsService songs, Widget child) => MultiProvider(
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets(
+      'the Song Book lists the built-in children songs when the library is empty',
+      (tester) async {
+    final songs = UserSongsService();
+    await songs.load(); // fresh: no collections, no imported songs
+    await tester.pumpWidget(_host(songs, const SongListScreen()));
+    await tester.pumpAndSettle();
+
+    // The public-domain children's songs are always shown on the main Song Book
+    // list — an empty user library never makes the Song Book itself empty.
+    // (The "empty" message only appears inside an empty *collection*.)
+    expect(find.text('Alle meine Entchen'), findsOneWidget);
+    expect(find.text('Twinkle, Twinkle, Little Star'), findsOneWidget);
+    expect(find.text('Old MacDonald Had a Farm'), findsOneWidget);
+    expect(find.text('No songs yet — tap Add songs.'), findsNothing);
+  });
 
   testWidgets('add-songs picker toggles membership; remove drops from book',
       (tester) async {
