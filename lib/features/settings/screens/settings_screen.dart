@@ -4,6 +4,7 @@
 
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
+import 'package:comet_beat/core/build_info.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/debug_service.dart';
@@ -290,7 +291,7 @@ class SettingsScreen extends StatelessWidget {
               return Text(
                 info == null
                     ? ''
-                    : 'CometBeat ${info.version}+${info.buildNumber}',
+                    : 'CometBeat ${BuildInfo.versionLabel('${info.version}+${info.buildNumber}')}',
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               );

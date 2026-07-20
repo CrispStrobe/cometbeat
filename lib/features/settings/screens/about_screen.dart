@@ -6,6 +6,7 @@
 // Flutter collects from every pub dep via LicenseRegistry. The bundled Bravura
 // (OFL) font license is registered first so it shows there too.
 
+import 'package:comet_beat/core/build_info.dart';
 import 'package:comet_beat/core/services/custom_licenses_registry.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -95,7 +96,8 @@ class AboutScreen extends StatelessWidget {
     showLicensePage(
       context: context,
       applicationName: l10n.appTitle,
-      applicationVersion: '${info.version}+${info.buildNumber}',
+      applicationVersion:
+          BuildInfo.versionLabel('${info.version}+${info.buildNumber}'),
       applicationLegalese: l10n.appLegalese,
     );
   }
@@ -141,7 +143,10 @@ class _AppHeader extends StatelessWidget {
                     builder: (context, snap) => Text(
                       snap.hasData
                           ? l10n.aboutVersionLabel(
-                              '${snap.data!.version}+${snap.data!.buildNumber}',
+                              BuildInfo.versionLabel(
+                                '${snap.data!.version}+'
+                                '${snap.data!.buildNumber}',
+                              ),
                             )
                           : '…',
                       style: Theme.of(context).textTheme.bodySmall,

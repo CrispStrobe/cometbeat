@@ -73,7 +73,11 @@ jobs:
 
       - name: Build web
         working-directory: cometbeat
-        run: flutter build web --release
+        # Bake the commit + build time into the app (About screen provenance).
+        run: |
+          flutter build web --release \
+            --dart-define=GIT_COMMIT=$(git rev-parse --short HEAD) \
+            --dart-define=BUILD_TIME=$(date -u +%Y-%m-%dT%H:%MZ)
 
       # Vercel's outputDirectory is deploy_web (vercel.json). Drop the debug
       # symbolication maps the runtime never fetches (~8 MB) — same as the

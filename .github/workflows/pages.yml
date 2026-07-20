@@ -65,7 +65,11 @@ jobs:
       # or "/" base href would 404 every asset and blank the page).
       - name: Build web
         working-directory: cometbeat
-        run: flutter build web --release --base-href /cometbeat/
+        # Bake the commit + build time into the app (About screen provenance).
+        run: |
+          flutter build web --release --base-href /cometbeat/ \
+            --dart-define=GIT_COMMIT=$(git rev-parse --short HEAD) \
+            --dart-define=BUILD_TIME=$(date -u +%Y-%m-%dT%H:%MZ)
 
       # Drop the debug symbolication maps the runtime never fetches (~8 MB), same
       # as the Vercel flow — keeps the gh-pages branch lean.
