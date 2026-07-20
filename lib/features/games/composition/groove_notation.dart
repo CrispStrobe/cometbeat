@@ -48,6 +48,7 @@ Score grooveScore(List<PatternCell> cells, {Clef clef = Clef.treble}) {
   final measures = <Measure>[];
   var bar = <MusicElement>[];
   var posInBar = 0;
+  var idc = 0; // LM-UX3: stable note ids for playback highlight
 
   void emit(List<int>? midis, int steps) {
     var remaining = steps;
@@ -62,6 +63,7 @@ Score grooveScore(List<PatternCell> cells, {Clef clef = Clef.treble}) {
           NoteElement(
             pitches: [for (final m in midis) pitchFromMidi(m)],
             duration: duration,
+            id: 'g${idc++}',
           ),
         );
       }
@@ -81,6 +83,32 @@ Score grooveScore(List<PatternCell> cells, {Clef clef = Clef.treble}) {
   if (bar.isNotEmpty) measures.add(Measure(bar));
 
   return Score(clef: clef, measures: measures);
+}
+
+/// Steps a [grooveScore] element occupies (reverse of the [_durations] grid).
+int _durationSteps(NoteDuration d) {
+  for (final (s, dur) in _durations) {
+    if (dur == d) return s;
+  }
+  return 1;
+}
+
+/// The id of the note sounding at [step] (0-based, [LoopTiming.stepsPerBar] per
+/// bar) in a [grooveScore], or null (a rest, or past the end) — the seam the
+/// Loop Mixer's live sheet-music highlight (LM-UX3) reads from its loop clock.
+String? grooveNoteIdAtStep(Score score, int step) {
+  if (step < 0) return null;
+  var pos = 0;
+  for (final m in score.measures) {
+    for (final el in m.elements) {
+      final s = _durationSteps(el.duration);
+      if (el is NoteElement && el.id != null && step >= pos && step < pos + s) {
+        return el.id;
+      }
+      pos += s;
+    }
+  }
+  return null;
 }
 
 /// A drum pattern as ONE rhythm-reduction staff for the live panel: every

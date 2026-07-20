@@ -221,4 +221,24 @@ void main() {
       expect(scoreFromMusicXml(xml).measures, isNotEmpty);
     });
   });
+
+  group('grooveNoteIdAtStep (LM-UX3 highlight)', () {
+    test('maps each step to the note sounding then, null on rests', () {
+      // C (2 steps) · rest (2) · G (2) · rest (2) = one bar.
+      final score = grooveScore(const [
+        (midis: [60], steps: 2),
+        (midis: null, steps: 2),
+        (midis: [67], steps: 2),
+        (midis: null, steps: 2),
+      ]);
+      final id0 = grooveNoteIdAtStep(score, 0);
+      expect(id0, isNotNull);
+      expect(grooveNoteIdAtStep(score, 1), id0); // still the first note
+      expect(grooveNoteIdAtStep(score, 2), isNull); // a rest
+      final id4 = grooveNoteIdAtStep(score, 4);
+      expect(id4, isNotNull);
+      expect(id4, isNot(id0)); // a different note
+      expect(grooveNoteIdAtStep(score, -1), isNull);
+    });
+  });
 }

@@ -276,6 +276,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// Smooth loop phase 0..1 for the sweeping playhead; -1 while stopped.
   final _progress = ValueNotifier<double>(-1);
 
+  /// Current eighth-step index across the loop (LM-UX3) for the sheet-music
+  /// note highlight; -1 while stopped. Changes ~8×/bar (not every frame), so
+  /// the staff only re-lays out when the sounding note actually moves.
+  final _hlStep = ValueNotifier<int>(-1);
+
   int _iteration = 0;
   int _lastPhaseMs = 0;
 
@@ -291,6 +296,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       if (!_clock.isRunning) {
         _step.value = -1;
         _progress.value = -1;
+        _hlStep.value = -1;
         return;
       }
       final t = _engine.timing;
@@ -299,6 +305,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       _lastPhaseMs = phase;
       _step.value = phase ~/ t.beatMs;
       _progress.value = phase / t.totalMs;
+      _hlStep.value = (phase / (t.beatMs / 2)).floor(); // eighth-step index
     })
       ..start();
   }
@@ -308,6 +315,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _ticker.dispose();
     _step.dispose();
     _progress.dispose();
+    _hlStep.dispose();
     _loop.dispose();
     _countInTimer?.cancel();
     _captureStopTimer?.cancel();
@@ -1426,15 +1434,30 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           ),
           // LM-UX2: render the staff at a legible size and SCROLL a wide bar
           // horizontally instead of shrinking the whole thing to fit.
+          // LM-UX3: light up the note currently sounding, driven by the loop
+          // clock's eighth-step index (rebuilds only when the note moves).
           Expanded(
             child: SizedBox(
               height: _scoreRowHeight,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: StaffView(
-                  score: score,
-                  staffSpace: 11,
-                  theme: kidsScoreTheme,
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _hlStep,
+                  builder: (context, step, _) {
+                    final totalSteps =
+                        score.measures.length * LoopTiming.stepsPerBar;
+                    final ids = <String>{};
+                    if (step >= 0 && totalSteps > 0) {
+                      final id = grooveNoteIdAtStep(score, step % totalSteps);
+                      if (id != null) ids.add(id);
+                    }
+                    return StaffView(
+                      score: score,
+                      staffSpace: 11,
+                      theme: kidsScoreTheme,
+                      highlightedIds: ids,
+                    );
+                  },
                 ),
               ),
             ),
