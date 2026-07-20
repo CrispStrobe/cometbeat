@@ -46,9 +46,10 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
         id: 'ch${c + 1}',
         instrument: _instrumentForChannel(doc, rep[c], c),
         rows: rows,
-        // The channel's dominant sample carries the module's envelopes (XM/IT);
-        // convert them onto the channel so the imported module plays — and
-        // shows in the envelope editor — with its shaping intact.
+        // The channel's dominant sample carries the module's default pan +
+        // envelopes (XM/IT); convert them onto the channel so the imported
+        // module plays — and shows in the editor — with its shaping intact.
+        pan: _channelPan(doc, rep[c]),
         volumeEnvelope: _channelVolEnv(doc, rep[c]),
         panEnvelope: _channelPanEnv(doc, rep[c]),
       ),
@@ -125,6 +126,14 @@ DocSample? _sampleFor(ModuleDoc doc, int ins) =>
     (ins >= 1 && ins - 1 <= doc.samples.length - 1)
         ? doc.samples[ins - 1]
         : null;
+
+/// The dominant sample's default pan (0..255, 128 centre) as a channel pan
+/// (−1 left … +1 right). Centre when there's no sample.
+double _channelPan(ModuleDoc doc, int ins) {
+  final s = _sampleFor(doc, ins);
+  if (s == null) return 0.0;
+  return ((s.pan - 128) / 128).clamp(-1.0, 1.0);
+}
 
 /// The dominant sample's volume envelope as a tracker [VolumeEnvelope] (ticks →
 /// ms at the module tempo, value 0..64 → level 0..1). Null when there's none.
@@ -257,8 +266,10 @@ ModuleDoc moduleDocFromSong(
   // first with an envelope wins.
   final volEnvBySlot = <int, VolumeEnvelope>{};
   final panEnvBySlot = <int, PanEnvelope>{};
+  final panBySlot = <int, double>{};
   for (final ch in song.channels) {
     final slot = slotOf(ch.instrument);
+    panBySlot.putIfAbsent(slot, () => ch.pan);
     final ve = ch.volumeEnvelope;
     if (ve != null && !ve.isEmpty) volEnvBySlot.putIfAbsent(slot, () => ve);
     final pe = ch.panEnvelope;
@@ -314,6 +325,7 @@ ModuleDoc moduleDocFromSong(
           insts[k],
           engineRate,
           sixteenBit,
+          pan: _docPan(panBySlot[k]),
           volumeEnvelope: _docVolEnv(volEnvBySlot[k], tempo),
           panEnvelope: _docPanEnv(panEnvBySlot[k], tempo),
         ),
@@ -352,10 +364,16 @@ DocEnvelope _docPanEnv(PanEnvelope? e, int tempo) {
 /// One module [DocSample] for [inst]: a [SampleInstrument] keeps its real PCM
 /// (tuning baked into c5speed); any other voice is rendered to a base-note
 /// (MIDI 60) one-shot.
+/// A channel pan (−1..1) as a doc default pan (0..255, 128 centre). Centre when
+/// null (no channel used the instrument).
+int _docPan(double? p) =>
+    p == null ? 128 : (p * 128 + 128).round().clamp(0, 255);
+
 DocSample _docSampleForInstrument(
   TrackerInstrument inst,
   int engineRate,
   bool sixteenBit, {
+  int pan = 128,
   DocEnvelope volumeEnvelope = const DocEnvelope(),
   DocEnvelope panEnvelope = const DocEnvelope(),
 }) {
@@ -372,6 +390,7 @@ DocSample _docSampleForInstrument(
       pingPong: inst.pingPong,
       // Full precision where the format allows (XM/IT/S3M); MOD stays 8-bit.
       sixteenBit: sixteenBit,
+      pan: pan,
       volumeEnvelope: volumeEnvelope,
       panEnvelope: panEnvelope,
     );
@@ -387,6 +406,7 @@ DocSample _docSampleForInstrument(
     pcm: _trimTrailingSilence(pcm),
     c5speed: engineRate,
     sixteenBit: sixteenBit,
+    pan: pan,
     volumeEnvelope: volumeEnvelope,
     panEnvelope: panEnvelope,
   );

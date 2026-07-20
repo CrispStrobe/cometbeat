@@ -159,6 +159,27 @@ void main() {
       expect(env.points, [(0, 64), (5, 0)]); // 100 ms → 5 ticks; 1.0 → 64
     });
 
+    test('a channel pan exports onto the doc sample', () {
+      final ch = TrackerChannel(
+        id: 's',
+        instrument: SampleInstrument('rec', buzz(200)),
+        rows: 8,
+        pan: 0.5, // right of centre
+      );
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty);
+      cells[0] = const TrackerCell(midi: 60);
+      final song = TrackerSong.fromParts(
+        channels: [ch],
+        timing: const TrackerTiming(rows: 8),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells]),
+        ],
+        order: [0],
+      );
+      // 0.5 → 0.5 × 128 + 128 = 192.
+      expect(moduleDocFromSong(song).samples.first.pan, 192);
+    });
+
     test('a channel envelope survives a full song → XM → song round-trip', () {
       final ch = TrackerChannel(
         id: 's',

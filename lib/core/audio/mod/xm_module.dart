@@ -58,6 +58,7 @@ class XmSample {
     this.volume = 64,
     this.finetune = 0,
     this.relativeNote = 0,
+    this.pan = 128,
     this.loopStart = 0,
     this.loopLength = 0,
     this.sixteenBit = false,
@@ -71,6 +72,7 @@ class XmSample {
   final int volume; // 0..64
   final int finetune; // -128..127
   final int relativeNote; // signed semitone transpose
+  final int pan; // 0 hard left … 128 centre … 255 hard right
   final int loopStart, loopLength;
   final bool sixteenBit;
   final bool pingPong; // loop-type 2 (bidirectional)

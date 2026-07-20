@@ -72,6 +72,28 @@ void main() {
     expect(s.panEnvelope.isEmpty, isTrue);
   });
 
+  test('an XM sample default pan round-trips through the doc', () {
+    final pcm = Float64List.fromList([
+      for (var i = 0; i < 64; i++) i % 8 < 4 ? 0.5 : -0.5,
+    ]);
+    final doc = ModuleDoc(
+      sourceFormat: ModuleFormat.xm,
+      channelCount: 1,
+      order: [0],
+      patterns: [
+        const DocPattern(
+          [
+            [DocCell(note: 60, instrument: 1)],
+          ],
+          1,
+        ),
+      ],
+      samples: [DocSample(pcm: pcm, pan: 200)], // right of centre
+    );
+    // Panning is a raw header byte, so it survives exactly.
+    expect(_firstUsed(parseAnyModule(convertToXm(doc))).pan, 200);
+  });
+
   test('MOD has no envelopes — the envelope drops (documented limitation)', () {
     const vol = DocEnvelope(points: [(0, 64), (40, 0)], enabled: true);
     final back = parseAnyModule(

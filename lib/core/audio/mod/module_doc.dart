@@ -54,6 +54,7 @@ class DocSample {
     this.loopStart = 0,
     this.loopLength = 0,
     this.c5speed = 8363,
+    this.pan = 128,
     this.pingPong = false,
     this.sixteenBit = false,
     this.volumeEnvelope = const DocEnvelope(),
@@ -68,6 +69,11 @@ class DocSample {
   final int loopStart; // in samples
   final int loopLength; // in samples (0 = no loop)
   final int c5speed; // playback rate (Hz) at the C-5 reference
+
+  /// Default stereo position, 0 = hard left … 128 = centre … 255 = hard right.
+  /// XM carries this per sample; MOD/S3M default to centre here.
+  final int pan;
+
   final bool pingPong; // bidirectional ("ping-pong") loop (IT/XM flag)
 
   /// Store the sample at 16-bit depth where the container supports it (XM/IT).

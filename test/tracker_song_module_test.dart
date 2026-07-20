@@ -367,6 +367,25 @@ void main() {
       expect(pan.points[1].pan, closeTo(1.0, 1e-9)); // 64 → hard right
     });
 
+    test('a sample default pan becomes the channel pan', () {
+      final doc = ModuleDoc(
+        sourceFormat: ModuleFormat.xm,
+        channelCount: 1,
+        order: [0],
+        patterns: [
+          const DocPattern(
+            [
+              [DocCell(note: 60, instrument: 1)],
+            ],
+            1,
+          ),
+        ],
+        samples: [DocSample(pcm: Float64List(64), pan: 32)], // hard-ish left
+      );
+      final ch = songFromModuleDoc(doc).channels.first;
+      expect(ch.pan, closeTo((32 - 128) / 128, 1e-9)); // −0.75
+    });
+
     test('no envelope → the channel has none', () {
       final doc = ModuleDoc(
         sourceFormat: ModuleFormat.mod,

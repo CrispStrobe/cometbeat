@@ -260,7 +260,7 @@ Uint8List writeXm(XmModule module) {
       final loopType =
           sample.loopLength > 0 ? (sample.pingPong ? 0x02 : 0x01) : 0;
       sh[14] = loopType | (sixteen ? 0x10 : 0);
-      sh[15] = 128; // panning
+      sh[15] = sample.pan.clamp(0, 255); // panning (128 = centre)
       shb.setInt8(16, sample.relativeNote);
       sh[17] = 0; // reserved
       _writeName(sh, 18, 22, sample.name);

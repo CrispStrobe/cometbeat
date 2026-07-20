@@ -202,7 +202,7 @@ XmModule parseXm(Uint8List bytes) {
       final volume = bytes[headerCursor + 12];
       final finetune = bd.getInt8(headerCursor + 13);
       final type = bytes[headerCursor + 14];
-      // panning at +15 (unused here)
+      final pan = bytes[headerCursor + 15]; // 0 left … 128 centre … 255 right
       final relativeNote = bd.getInt8(headerCursor + 16);
       // reserved at +17
       final sName = _readName(bytes, headerCursor + 18, headerCursor + 40);
@@ -214,6 +214,7 @@ XmModule parseXm(Uint8List bytes) {
           volume: volume,
           finetune: finetune,
           relativeNote: relativeNote,
+          pan: pan,
           sixteenBit: (type & 0x10) != 0,
           pingPong: (type & 0x03) == 2, // loop type: 0 none, 1 fwd, 2 pingpong
           name: sName,
@@ -233,6 +234,7 @@ XmModule parseXm(Uint8List bytes) {
           volume: meta.volume,
           finetune: meta.finetune,
           relativeNote: meta.relativeNote,
+          pan: meta.pan,
           loopStart: meta.loopStart,
           loopLength: meta.loopLength,
           sixteenBit: meta.sixteenBit,
@@ -365,6 +367,7 @@ class _SampleMeta {
     required this.volume,
     required this.finetune,
     required this.relativeNote,
+    required this.pan,
     required this.sixteenBit,
     required this.pingPong,
     required this.name,
@@ -372,7 +375,7 @@ class _SampleMeta {
 
   final int lengthInBytes;
   final int loopStart, loopLength;
-  final int volume, finetune, relativeNote;
+  final int volume, finetune, relativeNote, pan;
   final bool sixteenBit;
   final bool pingPong;
   final String name;
