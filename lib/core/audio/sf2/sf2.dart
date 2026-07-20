@@ -51,6 +51,7 @@ const _genSustainVolEnv = 37;
 const _genReleaseVolEnv = 38;
 const _genInitialFilterFc = 8; // low-pass cutoff, absolute cents
 const _genInitialFilterQ = 9; // resonance, centibels
+const _genPan = 17; // 0.1% units, −500 (left) .. +500 (right)
 // LFO generators. modLFO can sweep pitch (gen 5) and volume (gen 13); vibLFO
 // sweeps pitch (gen 6). Delays are timecents; freqs are absolute cents.
 const _genModLfoToPitch = 5; // cents
@@ -74,6 +75,7 @@ class Sf2Sample {
     required this.pitchCorrection,
     required this.loopStart,
     required this.loopEnd,
+    this.sampleType = 1,
   });
 
   final String name;
@@ -88,6 +90,11 @@ class Sf2Sample {
 
   final int loopStart;
   final int loopEnd;
+
+  /// shdr `sampleType` (ROM flag stripped): 1 mono · 2 right · 4 left · 8 linked.
+  final int sampleType;
+  bool get isRight => sampleType == 2;
+  bool get isLeft => sampleType == 4;
 
   bool get loops => loopEnd > loopStart && loopEnd <= pcm.length;
 }
@@ -122,6 +129,7 @@ class Sf2Zone {
     this.freqModLfoCents = 0,
     this.delayVibLfoTc = -12000,
     this.freqVibLfoCents = 0,
+    this.panTenthPct = 0,
   });
 
   final int keyLo;
@@ -177,6 +185,10 @@ class Sf2Zone {
   double get vibLfoHz => 8.176 * pow(2, freqVibLfoCents / 1200).toDouble();
   double get delayModLfoSec => _tcSec(delayModLfoTc);
   double get delayVibLfoSec => _tcSec(delayVibLfoTc);
+
+  /// Zone pan (gen 17), −1 (hard left) .. +1 (hard right); 0 = centre.
+  final int panTenthPct;
+  double get pan => (panTenthPct / 500.0).clamp(-1.0, 1.0);
 
   /// velRange (gen 44): the MIDI velocity window this zone (sample layer) covers,
   /// so a soft vs loud note picks a different recording. Default 0..127 (the
@@ -310,6 +322,8 @@ class Sf2SoundFont {
       final pitch = bytes[o + 40];
       final correction =
           data.getInt8(o + 41); // chPitchCorrection, signed cents
+      final sampleType =
+          data.getUint16(o + 44, Endian.little) & 0x7fff; // strip ROM flag
       if (name == 'EOS' || endS <= start) continue;
 
       final Float64List pcm;
@@ -347,6 +361,7 @@ class Sf2SoundFont {
         pitchCorrection: correction,
         loopStart: lStart,
         loopEnd: lEnd,
+        sampleType: sampleType,
       );
     }
 
@@ -411,7 +426,8 @@ List<Sf2Preset> _parsePresets(
           delayModLfo = -12000,
           freqModLfo = 0,
           delayVibLfo = -12000,
-          freqVibLfo = 0;
+          freqVibLfo = 0,
+          panTenth = 0;
       int? sampleId, rootOverride;
       for (var g = gStart; g < gEnd; g++) {
         final oper = u16(igenOff + g * 4);
@@ -464,6 +480,8 @@ List<Sf2Preset> _parsePresets(
           delayVibLfo = samt;
         } else if (oper == _genFreqVibLfo) {
           freqVibLfo = samt;
+        } else if (oper == _genPan) {
+          panTenth = samt; // 0.1% units (signed)
         }
       }
       if (sampleId != null && sampleId >= 0 && sampleId < sampleCount) {
@@ -495,6 +513,7 @@ List<Sf2Preset> _parsePresets(
             freqModLfoCents: freqModLfo,
             delayVibLfoTc: delayVibLfo,
             freqVibLfoCents: freqVibLfo,
+            panTenthPct: panTenth,
           ),
         );
       }

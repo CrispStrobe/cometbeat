@@ -24,7 +24,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart'
     show Biquad, BiquadKind;
 import 'package:comet_beat/core/audio/sf2/sf2.dart'
-    show Sf2Preset, Sf2SoundFont, Sf2Zone;
+    show Sf2Preset, Sf2Sample, Sf2SoundFont, Sf2Zone;
 import 'package:comet_beat/core/audio/sf2/soundfont_loader.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/notation/multi_part_export.dart'
@@ -305,9 +305,9 @@ Sf2Preset? _presetFor(
   );
 }
 
-/// Resample the note's zone into [left]/[right] at its start, with continuous
-/// pitch bend, mod-wheel vibrato, loop-sustain, a release tail, a velocity
-/// low-pass, and constant-power pan.
+/// Voice the note: play EVERY zone covering its key/velocity (a stereo L/R pair
+/// or a layered patch triggers all of them), each panned by the channel pan +
+/// the zone's own pan (or its sample's L/R type).
 void _resampleNote(
   Sf2SoundFont font,
   Sf2Preset preset,
@@ -318,18 +318,42 @@ void _resampleNote(
   int sr,
 ) {
   final vel = (n.velNorm * 127).round();
-  Sf2Zone? zone;
-  for (final z in preset.zones) {
-    if (z.coversKeyVel(n.key, vel)) {
-      zone = z;
-      break;
-    }
+  final covering = [
+    for (final z in preset.zones)
+      if (z.coversKeyVel(n.key, vel)) z,
+  ];
+  if (covering.isEmpty && preset.zones.isNotEmpty) {
+    covering.add(preset.zones.first);
   }
-  zone ??= preset.zones.isEmpty ? null : preset.zones.first;
-  if (zone == null) return;
-  final sample = font.sampleAt(zone.sampleIndex);
-  if (sample == null || sample.pcm.isEmpty) return;
 
+  for (final zone in covering) {
+    final sample = font.sampleAt(zone.sampleIndex);
+    if (sample == null || sample.pcm.isEmpty) continue;
+    // Stereo placement: the zone pan (gen 17), or the sample's L/R type when the
+    // zone doesn't set one, added to the channel's CC10 pan.
+    var zpan = zone.pan;
+    if (zpan == 0) {
+      if (sample.isLeft) zpan = -1;
+      if (sample.isRight) zpan = 1;
+    }
+    final notePan = (n.pan + zpan).clamp(-1.0, 1.0);
+    _renderZone(zone, sample, n, notePan, bendCurve, left, right, sr);
+  }
+}
+
+/// Resample one [zone]/[sample] into [left]/[right] at the note's start, with
+/// pitch bend, LFOs, the SF2 DAHDSR envelope + low-pass, loop-sustain, and a
+/// constant-power pan at [notePan].
+void _renderZone(
+  Sf2Zone zone,
+  Sf2Sample sample,
+  _Note n,
+  double notePan,
+  List<(int, double)> bendCurve,
+  Float64List left,
+  Float64List right,
+  int sr,
+) {
   final pcm = sample.pcm;
   final len = pcm.length;
   final root = zone.rootKey >= 0 ? zone.rootKey : sample.originalPitch;
@@ -375,7 +399,7 @@ void _resampleNote(
 
   final offLevel = preRelease(durSamples); // level when note-off begins release
 
-  final theta = (n.pan.clamp(-1.0, 1.0) + 1) * 0.25 * math.pi;
+  final theta = (notePan.clamp(-1.0, 1.0) + 1) * 0.25 * math.pi;
   final lg = math.cos(theta);
   final rg = math.sin(theta);
   final baseGain = n.gain * zone.gain;

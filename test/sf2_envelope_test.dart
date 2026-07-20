@@ -3,6 +3,8 @@
 // the resampling voice's DAHDSR so a font's own attack/decay/sustain/release
 // play as designed.
 
+import 'dart:typed_data';
+
 import 'package:comet_beat/core/audio/sf2/sf2.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -65,5 +67,39 @@ void main() {
     );
     expect(vib.vibLfoHz, closeTo(16.35, 0.05));
     expect(vib.vibLfoToPitchCents, 40);
+  });
+
+  test('zone pan (gen 17) 0.1%→−1..1 + sample L/R type', () {
+    const centre = Sf2Zone(keyLo: 0, keyHi: 127, sampleIndex: 0, rootKey: 60);
+    expect(centre.pan, 0);
+    const left = Sf2Zone(
+      keyLo: 0,
+      keyHi: 127,
+      sampleIndex: 0,
+      rootKey: 60,
+      panTenthPct: -500,
+    );
+    const half = Sf2Zone(
+      keyLo: 0,
+      keyHi: 127,
+      sampleIndex: 0,
+      rootKey: 60,
+      panTenthPct: 250,
+    );
+    expect(left.pan, closeTo(-1.0, 1e-9));
+    expect(half.pan, closeTo(0.5, 1e-9));
+
+    final l = Sf2Sample(
+      name: 's',
+      pcm: Float64List(4),
+      sampleRate: 44100,
+      originalPitch: 60,
+      pitchCorrection: 0,
+      loopStart: 0,
+      loopEnd: 0,
+      sampleType: 4,
+    );
+    expect(l.isLeft, isTrue);
+    expect(l.isRight, isFalse);
   });
 }
