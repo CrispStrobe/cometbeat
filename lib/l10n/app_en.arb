@@ -838,6 +838,10 @@
     }
   },
   "performSingNothing": "I didn't hear anything — try again",
+  "performAccent": "Dynamics",
+  "performAccentSoft": "Soft",
+  "performAccentNormal": "Normal",
+  "performAccentLoud": "Loud",
   "performPickSound": "Pick a sound",
   "performVoiceSample": "Your sound",
   "performVoiceSynth": "Synth voice",

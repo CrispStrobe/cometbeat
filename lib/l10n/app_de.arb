@@ -775,6 +775,10 @@
     }
   },
   "performSingNothing": "Ich habe nichts gehört — versuch es nochmal",
+  "performAccent": "Dynamik",
+  "performAccentSoft": "Leise",
+  "performAccentNormal": "Normal",
+  "performAccentLoud": "Laut",
   "performPickSound": "Klang wählen",
   "performVoiceSample": "Dein Klang",
   "performVoiceSynth": "Synth-Stimme",

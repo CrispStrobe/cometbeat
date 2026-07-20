@@ -585,6 +585,41 @@ void main() {
     expect(identical(p.debugNoteWav(60), b), isTrue); // re-cached
   });
 
+  testWidgets('accent captures velocity: soft taps render quieter than loud',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const PerformScreen()));
+    await tester.pump();
+    final p = _perform(tester);
+
+    expect(p.accent, 1.0);
+
+    // Play a soft beat.
+    p.setAccent(0.55);
+    await tester.pump();
+    expect(p.accent, 0.55);
+    p.startPlayInBeat();
+    for (final d in ['kick', 'snare', 'hat', 'kick']) {
+      p.playInPad(d);
+    }
+    p.finishPlayIn();
+    await tester.pump();
+    final soft = _peak(p.debugMix().toList());
+
+    // Same beat, loud.
+    p.clearAll();
+    p.setAccent(1.5);
+    await tester.pump();
+    p.startPlayInBeat();
+    for (final d in ['kick', 'snare', 'hat', 'kick']) {
+      p.playInPad(d);
+    }
+    p.finishPlayIn();
+    await tester.pump();
+    final loud = _peak(p.debugMix().toList());
+
+    expect(loud, greaterThan(soft)); // velocity made it louder
+  });
+
   testWidgets('play/stop toggles and does not crash without audio',
       (tester) async {
     await tester.pumpWidget(_wrap(const PerformScreen()));

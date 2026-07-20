@@ -2110,6 +2110,18 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ich habe nichts gehört — versuch es nochmal';
 
   @override
+  String get performAccent => 'Dynamik';
+
+  @override
+  String get performAccentSoft => 'Leise';
+
+  @override
+  String get performAccentNormal => 'Normal';
+
+  @override
+  String get performAccentLoud => 'Laut';
+
+  @override
   String get performPickSound => 'Klang wählen';
 
   @override

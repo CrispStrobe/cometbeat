@@ -87,6 +87,10 @@ abstract class PerformTester {
   void setLoopBars(int bars);
   void setSwing(double amount);
 
+  /// Play-in dynamics (F2): soft/normal/loud accent applied to captured taps.
+  double get accent;
+  void setAccent(double amount);
+
   /// Sing / beatbox a layer (P4): convert captured mic frames into a layer.
   /// The mic flow calls these; tests drive them with synthetic frames.
   void addSungLayer(List<PitchSample> samples, {required int totalMs});
@@ -186,8 +190,17 @@ class _PerformScreenState extends State<PerformScreen>
   // Play-in recording: which panel is up ('melody' keyboard / 'beat' pads), and
   // the captured taps with their loop-phase.
   String? _playInMode;
-  final List<(int midi, int phaseMs)> _playInNotes = [];
-  final List<(String drum, int phaseMs)> _playInHits = [];
+  // Captured taps carry a velocity (F2: the accent selected at capture time).
+  final List<(int midi, int phaseMs, double vel)> _playInNotes = [];
+  final List<(String drum, int phaseMs, double vel)> _playInHits = [];
+
+  // F2: play-in dynamics — soft / normal / loud (no touch pressure on a screen).
+  double _accent = 1.0;
+  static const List<(double, String)> _kAccents = [
+    (0.55, 'soft'),
+    (1.0, 'normal'),
+    (1.5, 'loud'),
+  ];
 
   // Sampler voice (P1): a captured sound played pitched. null = built-in synth.
   Float64List? _voicePcm;
@@ -367,30 +380,32 @@ class _PerformScreenState extends State<PerformScreen>
     Drum.hat: 'hat',
   };
 
-  /// A quantized groove (cells over [steps]) → my `(midi, phaseMs)` notes.
-  List<(int, int)> _cellsToNotes(List<PatternCell> cells, int steps) {
+  /// A quantized groove (cells over [steps]) → `(midi, phaseMs, vel)` notes
+  /// (sung layers play at full velocity).
+  List<(int, int, double)> _cellsToNotes(List<PatternCell> cells, int steps) {
     final barMs = _barMs;
-    final out = <(int, int)>[];
+    final out = <(int, int, double)>[];
     var step = 0;
     for (final c in cells) {
       final midis = c.midis;
       if (midis != null && midis.isNotEmpty) {
-        out.add((midis.first, (step * barMs / steps).round()));
+        out.add((midis.first, (step * barMs / steps).round(), 1.0));
       }
       step += c.steps;
     }
     return out;
   }
 
-  /// A quantized beat pattern → my `(drum, phaseMs)` hits (unknown drums → hat).
-  List<(String, int)> _rowsToHits(DrumRowsPattern pattern) {
+  /// A quantized beat pattern → `(drum, phaseMs, vel)` hits (unknown drums →
+  /// hat; beatboxed hits play at full velocity).
+  List<(String, int, double)> _rowsToHits(DrumRowsPattern pattern) {
     final barMs = _barMs;
-    final out = <(String, int)>[];
+    final out = <(String, int, double)>[];
     pattern.rows.forEach((drum, row) {
       final name = _drumNames[drum] ?? 'hat';
       final steps = row.length;
       for (var s = 0; s < steps; s++) {
-        if (row[s]) out.add((name, (s * barMs / steps).round()));
+        if (row[s]) out.add((name, (s * barMs / steps).round(), 1.0));
       }
     });
     return out;
@@ -541,13 +556,13 @@ class _PerformScreenState extends State<PerformScreen>
   @override
   void playInNote(int midi) {
     if (_playInMode != 'melody') return;
-    _playInNotes.add((midi, _phaseNow));
+    _playInNotes.add((midi, _phaseNow, _accent));
   }
 
   @override
   void playInPad(String drum) {
     if (_playInMode != 'beat') return;
-    _playInHits.add((drum, _phaseNow));
+    _playInHits.add((drum, _phaseNow, _accent));
   }
 
   // ── Sampler voice (P1) ────────────────────────────────────────────────────
@@ -600,7 +615,8 @@ class _PerformScreenState extends State<PerformScreen>
   }
 
   @override
-  Float64List debugBeat(List<(String, int)> hits) => _renderBeat(hits);
+  Float64List debugBeat(List<(String, int)> hits) =>
+      _renderBeat([for (final (d, ms) in hits) (d, ms, 1.0)]);
 
   /// The sample voice resampled so [midi] plays in tune (base pitch → [midi]),
   /// optionally capped to [maxSamples]. Empty when no sample voice is set.
@@ -618,16 +634,35 @@ class _PerformScreenState extends State<PerformScreen>
   @override
   Float64List debugPitched(int midi) => _pitched(midi);
 
+  // ── Play-in dynamics (F2) ─────────────────────────────────────────────────
+  @override
+  double get accent => _accent;
+
+  @override
+  void setAccent(double amount) {
+    _accent = amount.clamp(0.3, 1.6);
+    _noteWavCache.clear(); // audition volume follows the accent
+    _padWavCache.clear();
+    setState(() {});
+  }
+
   /// The playable WAV for a keyboard note (F1) — the pitched sample voice if
   /// set, else a short synth tone. Cached per midi (cleared on voice change).
   Uint8List _noteWav(int midi) => _noteWavCache.putIfAbsent(midi, () {
         if (hasSampleVoice) {
-          return wavBytes(
-            _toInt16(_pitched(midi, maxSamples: (kSampleRate * 0.7).round())),
-          );
+          final pitched =
+              _pitched(midi, maxSamples: (kSampleRate * 0.7).round());
+          return wavBytes(_toInt16(_scaled(pitched, _accent)));
         }
         final buf = Float64List((kSampleRate * 0.6).round());
-        _tone(buf, _midiToFreq(midi), 0, buf.length, gain: 0.28, decay: 6);
+        _tone(
+          buf,
+          _midiToFreq(midi),
+          0,
+          buf.length,
+          gain: 0.28 * _accent,
+          decay: 6,
+        );
         return wavBytes(_toInt16(buf));
       });
 
@@ -643,16 +678,24 @@ class _PerformScreenState extends State<PerformScreen>
           final clip = voice.length > cap
               ? Float64List.sublistView(voice, 0, cap)
               : voice;
-          return wavBytes(_toInt16(clip));
+          return wavBytes(_toInt16(_scaled(clip, _accent)));
         }
         final buf = Float64List((kSampleRate * 0.25).round());
+        final a = _accent;
         switch (drum) {
           case 'kick':
-            _tone(buf, 55, 0, buf.length, gain: 0.6, decay: 22);
+            _tone(buf, 55, 0, buf.length, gain: 0.6 * a, decay: 22);
           case 'snare':
-            _noise(buf, 0, buf.length, Random(7), gain: 0.4);
+            _noise(buf, 0, buf.length, Random(7), gain: 0.4 * a);
           default: // hat
-            _noise(buf, 0, buf.length ~/ 3, Random(9), gain: 0.12, decay: 90);
+            _noise(
+              buf,
+              0,
+              buf.length ~/ 3,
+              Random(9),
+              gain: 0.12 * a,
+              decay: 90,
+            );
         }
         return wavBytes(_toInt16(buf));
       });
@@ -693,30 +736,30 @@ class _PerformScreenState extends State<PerformScreen>
     setState(() {});
   }
 
-  /// Render captured `(drum, phaseMs)` hits across the whole loop — each hit
-  /// snapped to the nearest 16th (a per-bar grid) and synthesised.
-  Float64List _renderBeat(List<(String, int)> hits) {
+  /// Render captured `(drum, phaseMs, vel)` hits across the whole loop — each
+  /// hit snapped to the nearest 16th (a per-bar grid), scaled by its velocity.
+  Float64List _renderBeat(List<(String, int, double)> hits) {
     final n = _loopSamples;
     final buf = Float64List(n);
     final sixteenth = _barSamples ~/ 16;
     final beat = _barSamples ~/ 4;
     final rng = Random(7);
-    for (final (drum, ms) in hits) {
+    for (final (drum, ms, vel) in hits) {
       final snapped =
           ((ms / 1000 * kSampleRate) / sixteenth).round() * sixteenth % n;
       final start = _swung(snapped, sixteenth);
       final voice = _padVoices[drum];
       if (voice != null && voice.isNotEmpty) {
-        _place(buf, voice, start, beat); // your own sound (P2)
+        _place(buf, voice, start, beat, gain: 0.7 * vel); // your own sound (P2)
         continue;
       }
       switch (drum) {
         case 'kick':
-          _tone(buf, 55, start, sixteenth * 2, gain: 0.6, decay: 22);
+          _tone(buf, 55, start, sixteenth * 2, gain: 0.6 * vel, decay: 22);
         case 'snare':
-          _noise(buf, start, sixteenth * 2, rng, gain: 0.4);
+          _noise(buf, start, sixteenth * 2, rng, gain: 0.4 * vel);
         default: // hat
-          _noise(buf, start, sixteenth, rng, gain: 0.12, decay: 90);
+          _noise(buf, start, sixteenth, rng, gain: 0.12 * vel, decay: 90);
       }
     }
     return buf;
@@ -736,30 +779,31 @@ class _PerformScreenState extends State<PerformScreen>
   /// Render captured `(midi, phaseMs)` notes across the whole loop: each note is
   /// snapped to the nearest 16th (a per-bar grid), held until the next note
   /// (capped at a beat), and synthesised with a soft decay.
-  Float64List _renderMelody(List<(int, int)> notes) {
+  Float64List _renderMelody(List<(int, int, double)> notes) {
     final n = _loopSamples;
     final buf = Float64List(n);
     final sixteenth = _barSamples ~/ 16;
     final beat = _barSamples ~/ 4;
     // Snap each note to a 16th-note sample position (swung), sorted in time.
     final placed = [
-      for (final (midi, ms) in notes)
+      for (final (midi, ms, vel) in notes)
         (
           midi,
           _swung(
             ((ms / 1000 * kSampleRate) / sixteenth).round() * sixteenth % n,
             sixteenth,
           ),
+          vel,
         ),
     ]..sort((a, b) => a.$2.compareTo(b.$2));
     for (var i = 0; i < placed.length; i++) {
-      final (midi, start) = placed[i];
+      final (midi, start, vel) = placed[i];
       final next = i + 1 < placed.length ? placed[i + 1].$2 : n;
       final dur = (next - start).clamp(sixteenth, beat);
       if (hasSampleVoice) {
-        _place(buf, _pitched(midi), start, dur);
+        _place(buf, _pitched(midi), start, dur, gain: 0.7 * vel);
       } else {
-        _tone(buf, _midiToFreq(midi), start, dur, gain: 0.28, decay: 6);
+        _tone(buf, _midiToFreq(midi), start, dur, gain: 0.28 * vel, decay: 6);
       }
     }
     return buf;
@@ -1579,6 +1623,29 @@ class _PerformScreenState extends State<PerformScreen>
                       label: Text(l10n.performDone),
                       onPressed: finishPlayIn,
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      l10n.performAccent,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    for (final (amount, key) in _kAccents)
+                      ChoiceChip(
+                        label: Text(
+                          switch (key) {
+                            'soft' => l10n.performAccentSoft,
+                            'loud' => l10n.performAccentLoud,
+                            _ => l10n.performAccentNormal,
+                          },
+                        ),
+                        selected: _accent == amount,
+                        onSelected: (_) => setAccent(amount),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),

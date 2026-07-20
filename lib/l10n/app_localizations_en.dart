@@ -2103,6 +2103,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get performSingNothing => 'I didn\'t hear anything — try again';
 
   @override
+  String get performAccent => 'Dynamics';
+
+  @override
+  String get performAccentSoft => 'Soft';
+
+  @override
+  String get performAccentNormal => 'Normal';
+
+  @override
+  String get performAccentLoud => 'Loud';
+
+  @override
   String get performPickSound => 'Pick a sound';
 
   @override

@@ -3962,6 +3962,30 @@ abstract class AppLocalizations {
   /// **'I didn\'t hear anything — try again'**
   String get performSingNothing;
 
+  /// No description provided for @performAccent.
+  ///
+  /// In en, this message translates to:
+  /// **'Dynamics'**
+  String get performAccent;
+
+  /// No description provided for @performAccentSoft.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft'**
+  String get performAccentSoft;
+
+  /// No description provided for @performAccentNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get performAccentNormal;
+
+  /// No description provided for @performAccentLoud.
+  ///
+  /// In en, this message translates to:
+  /// **'Loud'**
+  String get performAccentLoud;
+
   /// No description provided for @performPickSound.
   ///
   /// In en, this message translates to:
