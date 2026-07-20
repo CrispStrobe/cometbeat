@@ -8,9 +8,13 @@
 //   dart run bin/modconv.dart song.it out.mod
 //   dart run bin/modconv.dart song.xm --extract-samples samples/   # → WAVs
 //
-// Cross-format conversion is lossy by design (per-cell effects are dropped, XM/IT
-// samples downcast to 8-bit): notes, instruments, volume, samples and structure
-// carry over. Flutter-free — runs under plain `dart run`.
+// Notes, instruments, volume, samples, order, and the effect column all carry
+// over; conversion is only lossy where a format can't represent a feature —
+// MOD caps at 4 channels and 8-bit samples (its volume/note-off become Cxx/C00
+// effects), S3M/IT translate effects to their letter commands (a few Exy have no
+// equivalent), and XM/IT keep 16-bit sample precision. See the per-dimension
+// contract in test/module_*_roundtrip_test.dart. Flutter-free — runs under
+// plain `dart run`.
 
 import 'dart:io';
 import 'dart:typed_data';
