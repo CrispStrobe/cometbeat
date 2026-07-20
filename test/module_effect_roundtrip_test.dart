@@ -28,7 +28,15 @@ const _effects = <String, (int, int)>{
   '9xx sample offset': (0x9, 0x10),
   'Bxx position jump': (0xB, 0x02),
   'Dxx pattern break': (0xD, 0x08),
+  // Extended (Exy) sub-commands our readers translate ↔ S3M/IT Sxy.
+  'E6x pattern loop': (0xE, 0x62),
+  'ECx note cut': (0xE, 0xC3),
+  'EDx note delay': (0xE, 0xD2),
 };
+
+/// Formats whose effect column shares MOD's `Exy` numbering directly — the only
+/// ones that carry an Exy sub-command with no S3M/IT letter equivalent.
+const _modStyleExtended = {ModuleFormat.mod, ModuleFormat.xm};
 
 ModuleDoc _docWith(int cmd, int param) {
   final pcm = Float64List(32);
@@ -69,6 +77,20 @@ void main() {
         });
       });
     }
+
+    test('an un-mapped Exy (E1x) survives MOD/XM but drops on S3M/IT', () {
+      // E1x fine-porta has no S3M/IT letter equivalent our reader maps, so it
+      // rides MOD/XM's shared Exy numbering but is dropped by S3M/IT.
+      for (final fmt in ModuleFormat.values) {
+        final c = _cellAfter(0xE, 0x14, fmt);
+        if (_modStyleExtended.contains(fmt)) {
+          expect(c.effect, 0xE, reason: '${fmt.name} keeps E1x');
+          expect(c.effectParam, 0x14);
+        } else {
+          expect(c.effect, 0, reason: '${fmt.name} drops un-mapped E1x');
+        }
+      }
+    });
 
     test('no format drops the effect column any more', () {
       final dropped = <String>[];

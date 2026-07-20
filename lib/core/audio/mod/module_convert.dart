@@ -532,6 +532,17 @@ ModuleDoc docFromIt(ItModule m) {
       return (2, param); // B position jump
     case 0xD:
       return (3, param); // C pattern break
+    case 0xE:
+      // Exy extended → S3M/IT `Sxy` (command 19). Only the three sub-commands
+      // our readers map back survive (E6x/ECx/EDx ↔ SBx/SCx/SDx); other Exy have
+      // no S3M/IT equivalent and are dropped (MOD/XM still carry them 1:1).
+      final val = param & 0xF;
+      return switch ((param >> 4) & 0xF) {
+        0x6 => (19, (0xB << 4) | val), // E6x pattern loop  → SBx
+        0xC => (19, (0xC << 4) | val), // ECx note cut      → SCx
+        0xD => (19, (0xD << 4) | val), // EDx note delay    → SDx
+        _ => (0, 0),
+      };
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:
