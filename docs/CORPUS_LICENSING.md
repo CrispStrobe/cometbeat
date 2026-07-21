@@ -159,6 +159,22 @@ All licences below read verbatim from the source's own LICENSE file / legal page
     Fernando Velázquez, Bert Appermont, "Arranged by…"). That count over-estimates
     (some are same-person username mismatches or PD composers like Satie), but a
     proper dedup/originality pass is warranted before treating PDMX as clean-original.
+  - **Originality pass done + quarantine applied** (2026-07-21): a Wikidata life+70
+    check (reusing `bin/eu_pd_check.py`'s logic, extended to flag *living*
+    composers) over the 2,245 unique third-party composer names split them: **~3,357
+    demonstrably clean** (PD composer d≤1955 → CC0 engraving of a PD work; or a
+    placeholder like "Composer"; or an amateur that resolves to no notable composer),
+    **~741 unresolvable/odd** (low-risk), and **76 that name a real in-copyright
+    composer** — the actionable residual (jazz standards: Ellington/Garner/Goodman;
+    film/game/pop: Rodgers, Denver, Ed Sheeran, Einaudi, Koji Kondo, Santaolalla…;
+    plus a ~29-entry "James Brown" Wikidata **namesake false-positive** — an amateur
+    band arranger, though those titles are pop covers so risky anyway). All **76 were
+    quarantined**: `pdmx_exclude.json` (the ingest now skips them), MIDIs moved to
+    `pdmx/quarantine/midi/`, record in `pdmx_quarantine.json`. **PDMX 7,547 → 7,471**
+    in `db.json` (total 9,455). Tooling: `tool/pdmx_originality_classify.py` +
+    `tool/pdmx_originality_report.py`. NB this catches only *named* copyrighted
+    composers; works hiding under a blank/amateur composer field (recognisable by
+    TITLE — "Hallelujah", "Perfect") would need a separate title-based scan.
   - **Full Zenodo release cached** (`zenodo.15571083`, 2026-07-21) on the VPS at
     `/mnt/volume1/pdmx-cc0-midi/zenodo/`: `mid.tar.gz` (254,035 official MIDIs),
     `mxl.tar.gz` (MusicXML), `pdf.tar.gz` (9 GB sheet-music PDFs), full `PDMX.csv`

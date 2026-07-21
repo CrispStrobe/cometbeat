@@ -82,8 +82,13 @@ def main():
     ship_dir = Path(sys.argv[4])       # music-db/pdmx/ship/midi
     out_path = Path(sys.argv[5])       # music-db/pdmx-manifest.json
 
-    # The clean subset = the hashes we actually built MIDIs for.
+    # The clean subset = the hashes we actually built MIDIs for, MINUS the
+    # quarantine list (entries whose named composer resolved to an in-copyright
+    # person — see tool/pdmx_originality_check; written to pdmx_exclude.json).
     have = {p.stem for p in mid_src.glob("*.mid")}
+    excl_path = out_path.parent / "pdmx_exclude.json"
+    exclude = set(json.loads(excl_path.read_text())) if excl_path.exists() else set()
+    have -= exclude
     ship_dir.mkdir(parents=True, exist_ok=True)
 
     items, copied, skipped = [], 0, 0
