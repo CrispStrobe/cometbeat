@@ -164,9 +164,24 @@ split into three groups, none of which is dense string/fret gold:
   amateur transcriptions of PD works, no explicit licence): REDACTED.com,
   delcamp.net, REDACTED.net (On-Line Guitar Archive), REDACTED.org, REDACTED.com,
   REDACTED.com, REDACTED.de, REDACTED.com/CGCL, REDACTED.org,
-  REDACTED (archived). ASCII tab → has (string,fret), but the same
+  REDACTED (archived). ASCII/tab → has (string,fret), but the same
   §3-Schöpfungshöhe / §44b-TDM question as REDACTED, and same noisy-amateur
-  caveat. Not cleaner than REDACTED itself.
+  caveat. Not cleaner than REDACTED itself — so not a *training* source.
+
+  **⚠ Correction + a REDACTED (eval-only) exception — REDACTED.com.**
+  Earlier filed as "ASCII tab"; it actually publishes **`.gpx` (Guitar Pro)**
+  next to PDF + MIDI — `REDACTED.com/gpx/<name>.gpx`, **229+ pieces** on the
+  index, composers all long-PD (Sor, Bach, Tárrega, Aguado, Coste, Carcassi,
+  Giuliani, Carulli). `.gpx` carries **full explicit (string, fret) per note**,
+  and **we already import it** (`scoreFromGpif`), so each file → (pitch-window →
+  string/fret) columns in the `acceptance.json` schema, exactly like the IDMT NC
+  set. Licence: no explicit grant (about page bot-blocks; hobbyist transcriptions
+  → §3/§44b contested, same as REDACTED). So **NOT for the shipped model's
+  weights** — but for a **REDACTED generalization benchmark** (produces
+  numbers only, never trained on, never shipped) it sits in the same eval-only
+  tier as IDMT (CC BY-NC-ND). Cleaner than IDMT on axis 2 (PD classical vs
+  original recordings), richer labels than ASCII. Keep the primary ship gate on
+  GuitarSet player 05; use REDACTED `.gpx` + IDMT as secondary OOD checks.
 - **MIDI archives** (pitch only — no string/fret; and NOT clean):
   **REDACTED.com** — 5,641 MIDIs, but *"Copyright François Faucher
   1998–2025,"* **no licence**, and includes still-in-copyright composers
