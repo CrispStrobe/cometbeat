@@ -109,9 +109,24 @@ void main() {
     await expectLater(s.resolve('test_gm'), throwsA(isA<StateError>()));
   });
 
-  test('the real catalog is non-empty and permissively licensed', () {
+  test('the real catalog offers the working GeneralUser GS default', () {
     expect(kSoundFontCatalog, isNotEmpty);
     final s = SoundFontStore(cacheDirOverride: tmp.path);
-    expect(s.describeCatalog(), contains('fluidr3_gm'));
+    final desc = s.describeCatalog();
+    expect(desc, contains('generaluser_gs'));
+    expect(desc, contains('fluidr3_gm'));
+  });
+
+  test('GeneralUser GS (a verified non-SPDX license) is allowlisted', () async {
+    // The REAL catalog (no override) — proves the custom GeneralUser GS license
+    // passes the download gate (an SPDX-only gate would refuse it).
+    final s = SoundFontStore(
+      cacheDirOverride: tmp.path,
+      log: (_) {},
+      fetch: (_) async => _fakeBytes(),
+    );
+    final p = await s.resolve('generaluser_gs');
+    expect(p, endsWith('generaluser_gs.sf2'));
+    expect(File(p).existsSync(), isTrue);
   });
 }

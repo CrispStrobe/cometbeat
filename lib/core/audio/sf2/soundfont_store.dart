@@ -18,9 +18,40 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/sf2/sf2_remote.dart'
     show ByteFetcher, SoundFontSource, isPermissiveLicense, kFluidR3Gm;
 
+/// GeneralUser GS (S. Christian Collins) — a compact (~32 MB) full General-MIDI
+/// bank, uncompressed `.sf2` (no OGG decoder needed), verified reachable. Its
+/// license (v2.0, see the source repo's documentation/LICENSE.txt) is genuinely
+/// permissive but NOT an SPDX id: "You may use GeneralUser GS without
+/// restriction for your own music creation, private or commercial … feel free
+/// to use it in your software projects, and to modify [it] …" — redistribution,
+/// commercial use and modification are all granted. It is therefore allowlisted
+/// explicitly below ([_permitted]); the URL is a community GitHub mirror (the
+/// author asks only that his OWN download server not be hot-linked).
+const kGeneralUserGs = SoundFontSource(
+  id: 'generaluser_gs',
+  name: 'GeneralUser GS (S. Christian Collins)',
+  url: 'https://github.com/mrbumpy409/GeneralUser-GS/raw/main/'
+      'GeneralUser-GS.sf2',
+  license: 'GeneralUser-GS-2.0',
+  attribution:
+      'GeneralUser GS by S. Christian Collins — GeneralUser GS License '
+      'v2.0 (free private/commercial use, redistribution & modification allowed)',
+  approxBytes: 32319396,
+);
+
+/// The GeneralUser GS license id, allowlisted alongside the SPDX-permissive set.
+const _generalUserLicense = 'GeneralUser-GS-2.0';
+
 /// The soundfonts the CLI can auto-download — permissively licensed, uncompressed
-/// `.sf2` (so no native OGG decoder is needed). Add more `SoundFontSource`s here.
-const kSoundFontCatalog = <SoundFontSource>[kFluidR3Gm];
+/// `.sf2` (so no native OGG decoder is needed). GeneralUser GS is the working
+/// default; FluidR3 GM (MIT) is offered too but its `sf2_remote.dart` mirror URL
+/// is currently dead (flagged for that file's owner). Add more here.
+const kSoundFontCatalog = <SoundFontSource>[kGeneralUserGs, kFluidR3Gm];
+
+/// Whether [license] is permissive enough to auto-download: the SPDX-permissive
+/// allowlist, plus the explicitly-verified GeneralUser GS custom license.
+bool _permitted(String license) =>
+    isPermissiveLicense(license) || license == _generalUserLicense;
 
 /// Resolves a `--sf2` argument to a local `.sf2` file path, downloading a
 /// catalog soundfont on first use and caching it under
@@ -87,7 +118,7 @@ class SoundFontStore {
         'id: ${catalog.map((s) => s.id).join(", ")}',
       );
     }
-    if (!isPermissiveLicense(source.license)) {
+    if (!_permitted(source.license)) {
       throw StateError(
         'refusing to download "${source.name}": '
         '${source.license} is not a permissive license',
