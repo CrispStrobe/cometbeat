@@ -126,6 +126,47 @@ finding. So the shippable *tab* corpus is exactly this shippable *score* corpus.
 
 ---
 
+## Tab pipeline — datasets to IMPROVE it (symbolic→tab, audio→tab)
+
+Different goal from bundling: training/eval data to make the tab pipeline
+better, not content to ship. Licence logic shifts slightly — for a model shipped
+in a commercial app, **CC BY / CC0 = trainable; CC BY-NC = eval/dev only; ND =
+can't even derive.** Axis 2 is usually clean here because the audio is recorded
+**for** the dataset (no third-party song underneath) — GAPS is the exception
+(YouTube-linked real performances).
+
+**The highest-value "improve" move needs no new data — it re-uses GuitarSet as a
+BENCHMARK for our arranger.** Every note in GuitarSet's JAMS carries the
+string+fret a real guitarist chose. Extract (pitch-sequence → human string/fret),
+run our own `arrangeTab` on the same pitches, and measure agreement + playability.
+That turns GuitarSet (CC BY 4.0, already on the VPS) from "content" into a
+quantified quality metric + regression benchmark for symbolic→tab — the "improve,
+not just use" the arranger currently lacks (it has a cost model, no ground truth).
+
+### Datasets (verified via Zenodo API this session)
+
+| Dataset | Zenodo | Licence | Use for |
+|---|---|---|---|
+| **GuitarSet** | 3371780 | **CC BY 4.0** | GOLD. note+string+fret ground truth → arranger benchmark AND audio→tab train. Have it. |
+| **Guitar-TECHS** | 14963133 | **CC BY 4.0** (4.1 GB) | electric; techniques + excerpts + chords + scales, diverse hardware. audio→tab + technique. ✅ trainable |
+| **AG-PT-set** | 10159492 | **CC BY 4.0** (6.7 GB) | acoustic; 12 playing techniques, onset-labeled (10h). technique detection. ✅ trainable |
+| **EGDB (rendered)** | 12674910 | **CC BY 4.0** (1 GB) | 240 electric tracks; tone/effect robustness (FX-removal variant). ✅ trainable |
+| **Five guitar dataset** | 4988354 | **CC BY 4.0** | 30 perfs, multi-setup (DI/mobile). ✅ trainable |
+| **FiloBass** | 10069709 | **CC BY 4.0** | jazz bass transcriptions — only if we extend to bass. ✅ |
+| **ToqueFlamenco** | 804050 | **CC BY 4.0** | flamenco falsetas + MIDI manual transcriptions. ✅ |
+| **GAPS (Guitar-Aligned Performance Scores)** | 17152440 | **CC BY-NC-SA** | aligned MIDI + scores + downbeats; THE audio→score set. ❌ NC → eval/dev only, not the shipped model |
+| **IDMT-SMT-Guitar** | 7544110 | **CC BY-NC-ND** | classic transcription set; NC **and** ND → ❌ dev/test only |
+
+**For the audio→tab effort** (another agent is on a TabCNN/OMR path — see
+`tabcnn_emitter.dart`, `audiveris/`): the CC-BY training expansion of the
+GuitarSet-only TabCNN is **Guitar-TECHS + AG-PT-set**. **Do NOT train the
+shipped model on GAPS or IDMT-SMT-Guitar** (NC) — use them only to evaluate.
+
+**Fingering (left-hand finger 1–4), not just fret:** GuitarSet gives string+fret
+(→ position), from which fingering can be *derived* but is not labelled. No clean
+CC-BY explicit-fingering guitar corpus surfaced this pass — flag as a data gap if
+the arranger is to output finger numbers, not just frets.
+
 ## Still unverified (web budget exhausted this session)
 
 - **Essen Folksong / EsAC** — Schaffrath research data; historically "free for
