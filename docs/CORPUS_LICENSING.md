@@ -222,6 +222,46 @@ fret is deterministic; left-hand fingering is only auxiliary.
 is *exactly* why the "generate tabs from clean scores via `arrangeTab`" strategy
 matters: sourced ground truth alone won't scale a fret/fingering model.
 
+### Tab-labeler model — SHIPPED, and how this corpus work feeds it
+
+The symbolic→tab labeler is built and published: `cstr/tab-labeler-onnx` (HF),
+trainer at `onnx_runtime_dart/tool/tab_labeler/{extract,train}.py`, acceptance
+gate `test/tab_labeler_accept_test.dart`. It's the "improve the arranger"
+direction, done: a tiny CNN scores `(string,fret)` placements so `arrangeTab`'s
+Viterbi fingers like a human. Same `[6,21]` contract as the audio→tab TabCNN, so
+the shipped decoder consumes both.
+
+**Licence provenance — verified clean.** Trained **only on GuitarSet (CC BY 4.0)**
+(`extract.py` reads GuitarSet JAMS; val held out on player 05). HF card is
+`license: cc-by-4.0` and attributes GuitarSet verbatim (*"Trained on GuitarSet
+(Xi et al., ISMIR 2018, CC BY 4.0) — derived weights redistributable with
+attribution. No DadaGP / no request-gated data."*). So the shipped model is
+commercial-clean **provided the app carries the GuitarSet attribution** (add it
+to the About/licenses registry alongside Bravura OFL).
+
+**Measured result (my run of the promoted `8270` model, 60 held-out songs /
+8,715 positions):** human-fingering agreement **56.98% (heuristic) → 82.70%
+(model), +25.71 pts**, at ~equal hand movement. The model never emits tab — it
+only scores positions the arranger enumerates, so playability invariants hold.
+
+⚠ **Stale model card:** the HF card documents **78.59% (+21.6 pts)** — an earlier
+model. The promoted weights (`8270`) now measure **82.70% (+25.71 pts)**. Update
+the card, and confirm which weights are actually live on HF (there's a local
+`hf-upload-8270` dir).
+
+**How the corpus findings extend it (clean training expansion):**
+- **EGSet12** (CC BY 4.0, `.jams`+`.gp`, original) — new clean per-string data
+  beyond GuitarSet's 6 players. Tiny, but adds a 7th player/style at zero licence
+  cost. Fold into `extract.py`'s GuitarSet glob.
+- **Mutopia `.ly`, `non-sa/` only** — the 47 string-labeled files (`tool/
+  mutopia_guitar_scan.py`) are extra symbolic supervision, BUT the **CC BY-SA
+  subset is copyleft** — training a CC-BY model on it risks forcing share-alike.
+  The `sa/` vs `non-sa/` split exists for exactly this: **only `non-sa/` (CC BY /
+  PD) may feed the shipped CC-BY model**; `sa/` files are eval-only unless the
+  model itself goes BY-SA.
+- **Guitar-TECHS / AG-PT-set (CC BY)** — for the *audio*→tab TabCNN, not this
+  symbolic labeler.
+
 ## Still unverified
 
 - **RISM open data** — the layer *under* PrIMuS; a possible MEI unlock if its
