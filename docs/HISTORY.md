@@ -143,11 +143,12 @@ harmonics) and selectable tunings.
   jams→gp→jams, gp→gp idempotence), the subset writer was widened to preserve what
   it used to drop: **voice 2** (polyphonic staff), **tuplets** (was distorting
   timing — a triplet bar read back 3.5 beats instead of 3.0), the **key signature**
-  (incl. mid-score changes), **dynamics** (PPP…FFF) and **staccato/accent
-  articulations**. Each is symmetric writer+reader with a round-trip test; a
-  non-tuplet, C-major, single-voice score stays byte-identical (the golden fixture
-  is unchanged). Remaining subset limits (grace notes, lyrics) drop gracefully;
-  clef is N/A for a fretboard format.
+  (incl. mid-score changes), **dynamics** (PPP…FFF), **staccato/accent
+  articulations**, **grace notes** (as `BeforeBeat` grace beats) and **lyrics**
+  (per verse, syllables+hyphens). Each is symmetric writer+reader with a
+  round-trip test; a non-tuplet, C-major, single-voice score with no lyrics stays
+  byte-identical (the golden fixture is unchanged). The only remaining subset
+  limit is clef — N/A for a fretboard/tab format.
 - **`bin/tabconv.dart`** — a headless "any notation → `.gp`" converter (ABC / MIDI /
   MusicXML / MuseScore / MEI / kern / GPIF / JAMS melody), running the arranger so
   the frets are playable; `--tuning`/`--capo`/`--no-arrange`/`--from`, multi-part →
