@@ -1,5 +1,28 @@
 # Symbolic tab labeler (score/MIDI → fingering) — worker handover
 
+> ## ✅ DELIVERED (onnx_runtime_dart agent)
+> Trained, ONNX-exported, parity-verified on pure-Dart `onnx_runtime_dart`,
+> published, and wired behind the seam.
+> - **Weights:** `cstr/tab-labeler-onnx` (HF) + `models-v1` release —
+>   `tab-labeler.onnx` (~1 MB, 244 k params), sha256
+>   `c466b1e4e6bbf2ab87560d2b3197d0d29bf9d91be87d29fdd122c08cb290263f`.
+> - **IO:** `input float32[N,49,9,1]` (49 pitch bins × 9-column window; multi-hot
+>   MIDI-40..88 presence) → `output float32[N,6,21]` per-string LogSoftmax; class
+>   0 = silent, class k = fret k-1; string 0 = high e. Emission score for
+>   `(string,fret)` = `output[string][fret+1]`. **Reuses TabCNN's exact contract**
+>   so the shipped decoder is unchanged. Pure-Dart parity cosine 1.0, max|Δ| 5.7e-6.
+> - **Data:** GuitarSet annotations (CC BY 4.0) — `note→string/fret` labels; held
+>   out by guitarist (player 05). Registry `license`: `CC-BY-4.0 (GuitarSet)`.
+> - **Provider:** `lib/features/games/composition/tab_labeler.dart` —
+>   `TabLabeler implements TabPositionModel` + `TabLabelerModelStore` (HF download /
+>   `COMET_TABLABELER_DIR`). Null-on-offline → heuristic fallback.
+> - **Acceptance (`test/tab_labeler_accept_test.dart`, store-gated):** on 60
+>   held-out GuitarSet songs / 8,715 positions, human-fingering agreement
+>   **56.98% (heuristic) → 78.59% (model), +21.6 pts**, at ~equal hand movement.
+>   Playability invariants still hold structurally (the DP enforces them).
+> - **Repro pipeline:** onnx_runtime_dart `tool/tab_labeler/` (extract/train/
+>   parity/export_acceptance + README).
+
 **Mission:** train + export a small model that scores `(string, fret)` placements
 for a sequence of note columns, so `arrangeTab`'s Viterbi produces more human-like
 fingering than the hand-tuned heuristic. This is the **symbolic arm** of the tab
