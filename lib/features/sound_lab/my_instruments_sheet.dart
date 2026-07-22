@@ -14,8 +14,11 @@ import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
+import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
+import 'package:comet_beat/shared/music_io/audio_import.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -25,6 +28,7 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
   BuildContext context, {
   InstrumentLibraryStore? store,
   bool pickable = true,
+  String? restrictToCategory,
 }) {
   return showModalBottomSheet<SavedInstrument>(
     context: context,
@@ -33,6 +37,7 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
     builder: (_) => MyInstrumentsSheet(
       store: store ?? InstrumentLibraryStore(),
       pickable: pickable,
+      restrictToCategory: restrictToCategory,
     ),
   );
 }
@@ -65,11 +70,17 @@ class MyInstrumentsSheet extends StatefulWidget {
   const MyInstrumentsSheet({
     required this.store,
     this.pickable = true,
+    this.restrictToCategory,
     super.key,
   });
 
   final InstrumentLibraryStore store;
   final bool pickable;
+
+  /// When set (e.g. 'Samples'), the sheet is a picker for JUST that rubric — no
+  /// tabs, only its items. Used so the old sample-only pickers become thin
+  /// adapters over this one dialog.
+  final String? restrictToCategory;
 
   @override
   State<MyInstrumentsSheet> createState() => _MyInstrumentsSheetState();
@@ -86,7 +97,67 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
   @override
   void initState() {
     super.initState();
+    _category = widget.restrictToCategory;
     _reload();
+  }
+
+  /// Imports a WAV/MP3 file as a sample instrument in the library.
+  Future<void> _import() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final file = await openFile(
+        acceptedTypeGroups: const [
+          XTypeGroup(
+            label: 'Audio (WAV, MP3)',
+            extensions: kAudioImportExtensions,
+          ),
+        ],
+      );
+      if (file == null) return;
+      final imported = importAudioMono(await file.readAsBytes());
+      if (imported == null || imported.pcm.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.mySamplesImportFailed)),
+        );
+        return;
+      }
+      final taken = {for (final s in _items) s.name};
+      var name = _cleanName(file.name);
+      if (taken.contains(name)) {
+        var i = 2;
+        while (taken.contains('$name $i')) {
+          i++;
+        }
+        name = '$name $i';
+      }
+      await widget.store.save(
+        SavedInstrument.fromSampleClip(
+          SampleClip(
+            name: name,
+            sampleRate: imported.sampleRate,
+            pcm: imported.pcm,
+            source: 'Imported',
+          ),
+        ),
+      );
+      await _reload();
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.mySamplesImportFailed)),
+      );
+    }
+  }
+
+  /// Filename → a clean sample name (basename, no extension, safe characters).
+  String _cleanName(String filename) {
+    var s = filename;
+    final slash = s.lastIndexOf(RegExp(r'[/\\]'));
+    if (slash >= 0) s = s.substring(slash + 1);
+    final dot = s.lastIndexOf('.');
+    if (dot > 0) s = s.substring(0, dot);
+    s = s.replaceAll(RegExp(r'[^A-Za-z0-9 _-]'), '').trim();
+    return s.isEmpty ? 'sample' : s;
   }
 
   Future<void> _reload() async {
@@ -180,15 +251,23 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const Spacer(),
-                  TextButton.icon(
-                    icon: const Icon(Icons.auto_awesome, size: 18),
-                    label: Text(l10n.soundLibraryNewFx),
-                    onPressed: _generateFx,
-                  ),
+                  if (widget.restrictToCategory == null ||
+                      widget.restrictToCategory == 'Samples')
+                    IconButton(
+                      icon: const Icon(Icons.file_upload_outlined, size: 20),
+                      tooltip: l10n.mySamplesImport,
+                      onPressed: _import,
+                    ),
+                  if (widget.restrictToCategory == null)
+                    TextButton.icon(
+                      icon: const Icon(Icons.auto_awesome, size: 18),
+                      label: Text(l10n.soundLibraryNewFx),
+                      onPressed: _generateFx,
+                    ),
                 ],
               ),
             ),
-            if (tabs.length > 1)
+            if (widget.restrictToCategory == null && tabs.length > 1)
               SizedBox(
                 height: 40,
                 child: ListView(

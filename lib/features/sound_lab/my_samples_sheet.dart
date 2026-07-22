@@ -9,6 +9,7 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
@@ -18,22 +19,22 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-/// Shows the library. Resolves to the picked clip, or null (cancelled, or the
-/// sheet was opened with [pickable] false).
+/// Shows the sample library. Now a thin ADAPTER over the one unified Sound
+/// Library sheet (restricted to the Samples rubric): the two libraries are one,
+/// so a "pick a sample" host opens the same dialog and gets the chosen sample
+/// back as a [SampleClip]. Resolves to the picked clip, or null (cancelled, or
+/// [pickable] false). [store] is ignored — the unified store is shared backing.
 Future<SampleClip?> showMySamplesSheet(
   BuildContext context, {
   SampleClipStore? store,
   bool pickable = true,
-}) {
-  return showModalBottomSheet<SampleClip>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (_) => MySamplesSheet(
-      store: store ?? SampleClipStore(),
-      pickable: pickable,
-    ),
+}) async {
+  final picked = await showMyInstrumentsSheet(
+    context,
+    pickable: pickable,
+    restrictToCategory: 'Samples',
   );
+  return picked == null ? null : sampleClipFromSaved(picked);
 }
 
 /// Test seam — drive the sheet without tapping through the UI.

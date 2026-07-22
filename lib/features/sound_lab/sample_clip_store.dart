@@ -135,7 +135,7 @@ class SampleClipStore {
   Future<List<SampleClip>> load() async {
     return [
       for (final s in await _lib.load())
-        if (_toClip(s) case final c?) c,
+        if (sampleClipFromSaved(s) case final c?) c,
     ];
   }
 
@@ -154,7 +154,9 @@ class SampleClipStore {
 
 /// A `kind == 'sample'` library item back as a [SampleClip] (its PCM restored
 /// from the embedded [SampleInstrument]); null for anything that isn't a sample.
-SampleClip? _toClip(SavedInstrument s) {
+/// Lets the unified sheet hand a picked sample back to callers that still speak
+/// [SampleClip]/PCM (the Tracker, DAW, Perform).
+SampleClip? sampleClipFromSaved(SavedInstrument s) {
   if (s.kind != 'sample') return null;
   final inst = s.instrument;
   if (inst is! SampleInstrument) return null;
