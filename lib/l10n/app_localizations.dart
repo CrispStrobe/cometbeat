@@ -4142,6 +4142,72 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get myInstrumentsDelete;
 
+  /// No description provided for @soundLibraryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound Library'**
+  String get soundLibraryTitle;
+
+  /// No description provided for @soundLibraryAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get soundLibraryAll;
+
+  /// No description provided for @soundLibraryCatInstruments.
+  ///
+  /// In en, this message translates to:
+  /// **'Instruments'**
+  String get soundLibraryCatInstruments;
+
+  /// No description provided for @soundLibraryCatSamples.
+  ///
+  /// In en, this message translates to:
+  /// **'Samples'**
+  String get soundLibraryCatSamples;
+
+  /// No description provided for @soundLibraryCatFx.
+  ///
+  /// In en, this message translates to:
+  /// **'FX'**
+  String get soundLibraryCatFx;
+
+  /// No description provided for @soundLibraryCatSoundfonts.
+  ///
+  /// In en, this message translates to:
+  /// **'SoundFonts'**
+  String get soundLibraryCatSoundfonts;
+
+  /// No description provided for @soundLibraryCatDrums.
+  ///
+  /// In en, this message translates to:
+  /// **'Drums'**
+  String get soundLibraryCatDrums;
+
+  /// No description provided for @soundLibraryNewFx.
+  ///
+  /// In en, this message translates to:
+  /// **'New FX'**
+  String get soundLibraryNewFx;
+
+  /// No description provided for @soundLibraryFxTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a sound effect'**
+  String get soundLibraryFxTitle;
+
+  /// No description provided for @soundLibraryFxHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a type, then tap Save to add it to your library.'**
+  String get soundLibraryFxHint;
+
+  /// No description provided for @soundLibraryAttribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit required'**
+  String get soundLibraryAttribution;
+
   /// No description provided for @voiceLabSaveInstrument.
   ///
   /// In en, this message translates to:

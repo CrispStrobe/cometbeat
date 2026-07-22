@@ -2196,6 +2196,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myInstrumentsDelete => 'Delete';
 
   @override
+  String get soundLibraryTitle => 'Sound Library';
+
+  @override
+  String get soundLibraryAll => 'All';
+
+  @override
+  String get soundLibraryCatInstruments => 'Instruments';
+
+  @override
+  String get soundLibraryCatSamples => 'Samples';
+
+  @override
+  String get soundLibraryCatFx => 'FX';
+
+  @override
+  String get soundLibraryCatSoundfonts => 'SoundFonts';
+
+  @override
+  String get soundLibraryCatDrums => 'Drums';
+
+  @override
+  String get soundLibraryNewFx => 'New FX';
+
+  @override
+  String get soundLibraryFxTitle => 'Generate a sound effect';
+
+  @override
+  String get soundLibraryFxHint =>
+      'Pick a type, then tap Save to add it to your library.';
+
+  @override
+  String get soundLibraryAttribution => 'Credit required';
+
+  @override
   String get voiceLabSaveInstrument => 'Save as instrument';
 
   @override

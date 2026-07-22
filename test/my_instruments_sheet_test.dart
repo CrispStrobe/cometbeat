@@ -5,6 +5,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
@@ -112,5 +113,47 @@ void main() {
 
     expect(find.byType(InstrumentPlayScreen), findsOneWidget);
     expect(find.byType(PianoKeyboard), findsOneWidget);
+  });
+
+  testWidgets('New FX generates and saves an sfxr instrument into the library',
+      (tester) async {
+    final store = InstrumentLibraryStore();
+    await pumpGame(tester, _hosted(MyInstrumentsSheet(store: store)));
+    await tester.pumpAndSettle();
+
+    // Open the FX generator, pick a preset (which previews it), then save.
+    await tester.tap(find.byIcon(Icons.auto_awesome));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'laser'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    final fx = (await store.load()).where((s) => s.kind == 'sfxr').toList();
+    expect(fx, isNotEmpty);
+    expect(fx.any((s) => s.name == 'laser' && s.category == 'FX'), isTrue);
+  });
+
+  testWidgets('rubric tabs filter the list by category', (tester) async {
+    final store = InstrumentLibraryStore();
+    await store.save(_saved('bell')); // kind sample -> Samples
+    await store.save(SavedInstrument(
+      name: 'blip',
+      json: instrumentToJsonString(
+        SfxrInstrument('blip', kSfxrPresets['blip']!(math.Random(1))),
+      ),
+      source: 'FX',
+    ));
+    await pumpGame(tester, _hosted(MyInstrumentsSheet(store: store)));
+    await tester.pumpAndSettle();
+
+    // Both visible under "All".
+    expect(find.text('bell'), findsOneWidget);
+    expect(find.text('blip'), findsOneWidget);
+    // Tapping the FX tab hides the sample.
+    await tester.tap(find.widgetWithText(ChoiceChip, 'FX'));
+    await tester.pumpAndSettle();
+    expect(find.text('blip'), findsOneWidget);
+    expect(find.text('bell'), findsNothing);
   });
 }

@@ -1,12 +1,16 @@
-// The shared "My Instruments" browser over [InstrumentLibraryStore] — the
-// instrument sibling of "My Samples". Lists the playable instruments you've
-// saved (a shaped Voice Lab voice, later a SoundFont preset, …), auditions one
-// by rendering a note, and deletes. Opened for management, or as a picker that
-// resolves to the chosen instrument.
+// The unified "Sound Library" browser over [InstrumentLibraryStore] — the old
+// "My Instruments" + "My Samples" in one place. Lists every saved playable item
+// (a shaped Voice Lab voice, a recorded sample, a SoundFont preset, a generated
+// FX…), grouped into rubric tabs by [SavedInstrument.category]; auditions one by
+// rendering a note; deletes; and can GENERATE a new sfxr sound effect straight
+// into the library. Opened for management, or as a picker.
 
+import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
@@ -46,6 +50,16 @@ abstract class MyInstrumentsTester {
   Future<void> deleteAt(int index);
 }
 
+/// The localized label for a rubric [category].
+String _categoryLabel(AppLocalizations l10n, String category) =>
+    switch (category) {
+      'Samples' => l10n.soundLibraryCatSamples,
+      'FX' => l10n.soundLibraryCatFx,
+      'SoundFonts' => l10n.soundLibraryCatSoundfonts,
+      'Drums' => l10n.soundLibraryCatDrums,
+      _ => l10n.soundLibraryCatInstruments,
+    };
+
 @visibleForTesting
 class MyInstrumentsSheet extends StatefulWidget {
   const MyInstrumentsSheet({
@@ -66,25 +80,44 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
   List<SavedInstrument> _items = const [];
   bool _loading = true;
 
+  /// Selected rubric; null = All.
+  String? _category;
+
   @override
   void initState() {
     super.initState();
-    widget.store.load().then((list) {
-      if (mounted) {
-        setState(() {
-          _items = list;
-          _loading = false;
-        });
-      }
-    });
+    _reload();
+  }
+
+  Future<void> _reload() async {
+    final list = await widget.store.load();
+    if (mounted) {
+      setState(() {
+        _items = list;
+        _loading = false;
+      });
+    }
   }
 
   @override
   List<SavedInstrument> get instruments => _items;
 
+  List<SavedInstrument> get _visible => _category == null
+      ? _items
+      : [
+          for (final s in _items)
+            if (s.category == _category) s,
+        ];
+
   @override
   Future<void> deleteAt(int index) async {
+    // deleteAt indexes the FULL list (test seam); the UI deletes by name.
     final list = await widget.store.delete(_items[index].name);
+    if (mounted) setState(() => _items = list);
+  }
+
+  Future<void> _deleteByName(String name) async {
+    final list = await widget.store.delete(name);
     if (mounted) setState(() => _items = list);
   }
 
@@ -110,37 +143,81 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
     );
   }
 
+  /// Generates a new sfxr sound effect and, on save, adds it to the library.
+  Future<void> _generateFx() async {
+    final saved = await showModalBottomSheet<SavedInstrument>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => _FxGeneratorSheet(store: widget.store),
+    );
+    if (saved != null) await _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final present = {for (final s in _items) s.category};
+    final tabs = [
+      for (final c in kLibraryCategories)
+        if (present.contains(c)) c,
+    ];
+    final visible = _visible;
     return SafeArea(
       child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
+        height: MediaQuery.of(context).size.height * 0.62,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 8, 4),
               child: Row(
                 children: [
-                  const Icon(Icons.piano_outlined, size: 20),
+                  const Icon(Icons.library_music_outlined, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    l10n.myInstrumentsTitle,
+                    l10n.soundLibraryTitle,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const Spacer(),
-                  if (_items.isNotEmpty)
-                    Text(
-                      '${_items.length}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.auto_awesome, size: 18),
+                    label: Text(l10n.soundLibraryNewFx),
+                    onPressed: _generateFx,
+                  ),
                 ],
               ),
             ),
+            if (tabs.length > 1)
+              SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(l10n.soundLibraryAll),
+                        selected: _category == null,
+                        onSelected: (_) => setState(() => _category = null),
+                      ),
+                    ),
+                    for (final c in tabs)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ChoiceChip(
+                          label: Text(_categoryLabel(l10n, c)),
+                          selected: _category == c,
+                          onSelected: (_) => setState(() => _category = c),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             if (_loading) const LinearProgressIndicator(),
             Expanded(
-              child: _items.isEmpty && !_loading
+              child: visible.isEmpty && !_loading
                   ? Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
@@ -149,15 +226,31 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                       ),
                     )
                   : ListView.builder(
-                      itemCount: _items.length,
+                      itemCount: visible.length,
                       itemBuilder: (ctx, i) {
-                        final s = _items[i];
+                        final s = visible[i];
                         final subtitle = [
                           if (s.source != null) s.source!,
-                          s.kind,
+                          _categoryLabel(l10n, s.category),
                         ].join(' · ');
                         return ListTile(
-                          title: Text(s.name),
+                          title: Row(
+                            children: [
+                              Flexible(child: Text(s.name)),
+                              if (s.needsAttribution) ...[
+                                const SizedBox(width: 6),
+                                Tooltip(
+                                  message: l10n.soundLibraryAttribution,
+                                  child: Icon(
+                                    Icons.copyright_outlined,
+                                    size: 15,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                           subtitle: Text(subtitle),
                           onTap: widget.pickable
                               ? () => Navigator.of(context).pop(s)
@@ -181,13 +274,150 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
                                 tooltip: l10n.myInstrumentsDelete,
-                                onPressed: () => deleteAt(i),
+                                onPressed: () => _deleteByName(s.name),
                               ),
                             ],
                           ),
                         );
                       },
                     ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A compact sfxr sound-effect generator: pick a preset (which previews it),
+/// tweak by re-rolling, name it, and save it into the library as `kind='sfxr'`.
+class _FxGeneratorSheet extends StatefulWidget {
+  const _FxGeneratorSheet({required this.store});
+
+  final InstrumentLibraryStore store;
+
+  @override
+  State<_FxGeneratorSheet> createState() => _FxGeneratorSheetState();
+}
+
+class _FxGeneratorSheetState extends State<_FxGeneratorSheet> {
+  final _rng = Random();
+  final _nameCtrl = TextEditingController();
+  String? _preset;
+  SfxrParams? _params;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  void _pick(String preset, {bool keepName = false}) {
+    final params = kSfxrPresets[preset]!(_rng);
+    setState(() {
+      _preset = preset;
+      _params = params;
+      if (!keepName || _nameCtrl.text.trim().isEmpty) _nameCtrl.text = preset;
+    });
+    _preview(params);
+  }
+
+  void _preview(SfxrParams params) {
+    final pcm = renderInstrumentNote(SfxrInstrument('preview', params));
+    if (pcm.isEmpty) return;
+    context.read<AudioService>().playWavBytes(pcmFloatToWav(pcm));
+  }
+
+  Future<void> _save() async {
+    final params = _params;
+    if (params == null) return;
+    final name = _nameCtrl.text.trim().isEmpty
+        ? (_preset ?? 'fx')
+        : _nameCtrl.text.trim();
+    final inst = SfxrInstrument(name, params);
+    final saved = SavedInstrument(
+      name: name,
+      json: instrumentToJsonString(inst),
+      source: 'FX',
+    );
+    await widget.store.save(saved);
+    if (mounted) Navigator.of(context).pop(saved);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          0,
+          16,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.soundLibraryFxTitle,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l10n.soundLibraryFxHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final preset in kSfxrPresets.keys)
+                  ChoiceChip(
+                    label: Text(preset),
+                    selected: _preset == preset,
+                    onSelected: (_) => _pick(preset),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nameCtrl,
+                    decoration: InputDecoration(
+                      labelText: l10n.soundLabSaveName,
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  icon: const Icon(Icons.casino_outlined),
+                  tooltip: l10n.soundLabRandomize,
+                  onPressed: _preset == null
+                      ? null
+                      : () => _pick(_preset!, keepName: true),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.soundLabCancel),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _params == null ? null : _save,
+                  child: Text(l10n.soundLabSave),
+                ),
+              ],
             ),
           ],
         ),
