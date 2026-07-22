@@ -167,6 +167,9 @@ flutter:
     # their glyph metadata + license, loaded at runtime by the notation-font
     # setting. (Bravura, the default, is bundled by crisp_notation.)
     - assets/smufl/
+    # CC0 GregoBase Gregorian-chant index (id/title/office/mode) for the
+    # "Gregorian Chant" library source; each .gabc is fetched on import.
+    - assets/library/gregobase_index.json
 
   fonts:
     - family: Petaluma

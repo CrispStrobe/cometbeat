@@ -13,9 +13,12 @@ import 'package:comet_beat/features/library/content_source.dart';
 import 'package:comet_beat/features/library/license_policy.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
+        MultiPartScore,
+        StaffSystem,
         multiPartScoreFromMscx,
         multiPartToMusicXml,
         readMusicXmlFromMxl,
+        scoreFromGabc,
         scoreFromMusicXml;
 
 /// Decodes fetched [bytes] of the given [format] into a MusicXML string. Throws
@@ -29,6 +32,12 @@ String bytesToMusicXml(String format, Uint8List bytes) => switch (format) {
       'musicxml' || 'xml' => utf8.decode(bytes),
       'mscx' => multiPartToMusicXml(multiPartScoreFromMscx(utf8.decode(bytes))),
       'midi' || 'mid' => multiPartToMusicXml(multiTrackMidiToMultiPart(bytes)),
+      // GABC (Gregorio chant, e.g. the CC0 GregoBase corpus): single staff.
+      'gabc' => multiPartToMusicXml(
+          MultiPartScore.fromStaffSystem(
+            StaffSystem([scoreFromGabc(utf8.decode(bytes))]),
+          ),
+        ),
       _ => throw FormatException('Cannot import format: $format'),
     };
 
