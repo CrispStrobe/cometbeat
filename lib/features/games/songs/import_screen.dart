@@ -19,6 +19,7 @@ import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
         Score,
+        StaffSystem,
         multiPartScoreFromAbc,
         multiPartScoreFromKern,
         multiPartScoreFromMei,
@@ -26,6 +27,7 @@ import 'package:crisp_notation/crisp_notation.dart'
         multiPartScoreFromMusicXml,
         multiPartToMusicXml,
         readMusicXmlFromMxl,
+        scoreFromGabc,
         scoreFromMusicXml;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -110,6 +112,7 @@ class _ImportScreenState extends State<ImportScreen> {
               'xml',
               'mxl',
               'abc',
+              'gabc',
               'mei',
               'krn',
               'mid',
@@ -126,6 +129,10 @@ class _ImportScreenState extends State<ImportScreen> {
       final mp = switch (ext) {
         'mid' || 'midi' => multiTrackMidiToMultiPart(bytes),
         'abc' => multiPartScoreFromAbc(utf8.decode(bytes)),
+        // GABC (Gregorio chant, e.g. the CC0 GregoBase corpus): single staff.
+        'gabc' => MultiPartScore.fromStaffSystem(
+            StaffSystem([scoreFromGabc(utf8.decode(bytes))]),
+          ),
         'mei' => multiPartScoreFromMei(utf8.decode(bytes)),
         'krn' => multiPartScoreFromKern(utf8.decode(bytes)),
         'mxl' => multiPartScoreFromMusicXml(readMusicXmlFromMxl(bytes)),

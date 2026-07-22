@@ -16,7 +16,12 @@ import 'package:comet_beat/features/games/songs/tune_quiz_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart'
-    show MultiSystemView, multiPartToMusicXml;
+    show
+        MultiPartScore,
+        MultiSystemView,
+        StaffSystem,
+        multiPartToMusicXml,
+        scoreFromGabc;
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -154,6 +159,19 @@ Widget _wrap(
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+  });
+
+  test('GABC (Gregorio chant) imports via the same pipeline as the Song Book',
+      () {
+    // Exactly what import_screen's `'gabc' =>` case does with a CC0 GregoBase
+    // chant: parse → single-staff system → MusicXML for storage.
+    const gabc = 'name:Test Alleluia;\n%%\n(c4) Al(f)le(g)lú(h)ia(g.)';
+    final mp = MultiPartScore.fromStaffSystem(
+      StaffSystem([scoreFromGabc(gabc)]),
+    );
+    final xml = multiPartToMusicXml(mp);
+    expect(xml, contains('<note'), reason: 'chant notes survive to MusicXML');
+    expect(xml, contains('<lyric'), reason: 'syllables carried through');
   });
 
   test('every song parses: lyrics align with notes, playback is sane', () {
