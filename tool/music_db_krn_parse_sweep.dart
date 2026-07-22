@@ -11,8 +11,8 @@ void main(List<String> a) {
     final rel = f.path.replaceFirst('$dir/', '');
     try {
       final mp = multiPartScoreFromKern(f.readAsStringSync());
-      final has = mp.parts
-          .any((p) => p.measures.any((m) => m.elements.any((e) => e is NoteElement)));
+      final has = mp.parts.any((p) =>
+          p.measures.any((m) => m.elements.any((e) => e is NoteElement)));
       if (has) {
         ok++;
       } else {
