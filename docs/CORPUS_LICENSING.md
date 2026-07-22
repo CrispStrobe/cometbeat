@@ -470,11 +470,24 @@ vcsl/`, 5.8 GB) — **per-SFZ** rows (`kind:"instrument"`), CC0-1.0 (repo SPDX).
 `sfz` branch is self-contained (SFZ + all WAVs), so one download; SFZ reference
 samples relative to their own folder (verified: 22/22 resolve). Families: drums 85
 / pipe 51 / strings 23 / reed 8 / bass 7 / piano 7 / synth 2.
-**Assets total: 223** (1 soundfont + 222 instruments). Folded in by **append**
+**Assets total: 223** (1 soundfont + 222 instruments), folded in by **append**
 (`bin/append_manifest.py`), not a full rebuild, to avoid the Mutopia/Lieder
-path-truncation defect; append preserves concurrent score additions.
-Next: **VSCO 2 CE** (~3 GB CC0, needs the Versilian direct link) + an OpenGameArt
-Music harvester (CC0 → A / CC BY-family → B).
+path-truncation defect; append reads the live db.json so it preserves concurrent
+score additions. **db.json = 18,484, 0 dangling.** VSCO 2 CE skipped as largely
+subsumed by VCSL (Versilian call it "the broader expansion to the VSCO 2 CE
+sample set").
+
+**⚠️ CONTENT POLICY — music is SYMBOLIC; audio only as sample payloads
+(maintainer, 2026-07-22).** The registry admits **rendered audio (mp3/ogg/wav/
+flac) ONLY as an instrument/sample payload** (SFZ samples, soundfonts). For
+*music/tracks* it takes **symbolic data only** — MIDI / MusicXML / kern / ABC (the
+existing 18k-score corpus IS this), plus **tracker modules** (`.xm/.it/.mod` —
+symbolic pattern data + samples). An OpenGameArt CC0 harvest (`bin/oga_harvest.py`)
+pulled 130 finished-audio tracks and was **reverted** under this rule; **finding:**
+OGA's CC0 set is ~all finished ogg/mp3 (0 modules in the top ~170 nodes), so OGA
+is **not** a symbolic-music source. For clean CC0 tracker *modules*, target
+concentrated sources (the itch "Big MOD Music Pack" = per-file CC0/CC-BY `.xm`);
+`bin/oga_harvest.py` is retained but should be run module-only if used at all.
 
 ---
 
