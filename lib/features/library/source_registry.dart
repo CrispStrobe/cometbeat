@@ -8,6 +8,7 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/features/library/content_source.dart';
+import 'package:comet_beat/features/library/sources/cometbeat_catalog_source.dart';
 import 'package:comet_beat/features/library/sources/commons_source.dart';
 import 'package:comet_beat/features/library/sources/freepats_source.dart';
 import 'package:comet_beat/features/library/sources/gregobase_source.dart';
@@ -61,4 +62,13 @@ List<ContentSource> buildSampleSources({HttpGet http = defaultHttpGet}) => [
 /// Licences vary per instrument here, so the policy gate does real work.
 List<ContentSource> buildSamplePackSources({HttpGet http = defaultHttpGet}) => [
       FreepatsSource(http),
+    ];
+
+/// OUR curated, rights-verified catalog (SoundFonts + SFZ instruments +
+/// samples), published from the music-db pipeline to a Hugging Face dataset.
+/// The Sound Library's "Browse catalog" reads this — one vetted index instead
+/// of scraping each upstream, everything already CC0/CC-BY/PD/MIT. Preferred
+/// over the raw upstream sources; those stay as fallbacks/discovery.
+List<ContentSource> buildCatalogSources({HttpGet http = defaultHttpGet}) => [
+      CometbeatCatalogSource.sounds(http),
     ];
