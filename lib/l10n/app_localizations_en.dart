@@ -6409,6 +6409,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get textbookTitle => 'Textbook';
 
   @override
+  String get textbookTabRead => 'Read';
+
+  @override
   String get textbookIntro =>
       'Work through music from the very start. Each topic has a short lesson (see it, hear it) and games to practise it.';
 

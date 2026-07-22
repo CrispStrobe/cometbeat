@@ -13,8 +13,26 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+/// The standalone "Topics by grade" screen. Now a thin wrapper over
+/// [CurriculumView] so the same body can be embedded as a Textbook tab.
 class CurriculumScreen extends StatelessWidget {
   const CurriculumScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.curriculumTitle)),
+      body: const CurriculumView(),
+    );
+  }
+}
+
+/// The curriculum levels list (readiness bars + topic drill-down), without a
+/// Scaffold — hosted standalone by [CurriculumScreen] and as the "Topics by
+/// grade" tab inside the Textbook.
+class CurriculumView extends StatelessWidget {
+  const CurriculumView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,41 +42,38 @@ class CurriculumScreen extends StatelessWidget {
     int stars(String id) => progress.starsFor(id);
     double? mastery(String prefix) => sri.masteryUnder(prefix);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.curriculumTitle)),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            for (final curriculum in kCurricula) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
-                child: Text(
-                  curriculum.name(l10n),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          for (final curriculum in kCurricula) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+              child: Text(
+                curriculum.name(l10n),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
-              for (final level in curriculum.levels)
-                _LevelCard(
-                  level: level,
-                  readiness: levelReadiness(level, stars, mastery),
-                  recommended:
-                      level == recommendedLevel(curriculum, stars, mastery),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CurriculumLevelScreen(level: level),
-                    ),
+            ),
+            for (final level in curriculum.levels)
+              _LevelCard(
+                level: level,
+                readiness: levelReadiness(level, stars, mastery),
+                recommended:
+                    level == recommendedLevel(curriculum, stars, mastery),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CurriculumLevelScreen(level: level),
                   ),
                 ),
-            ],
-            const SizedBox(height: 12),
-            Text(
-              l10n.curGuideNote,
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
+              ),
           ],
-        ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.curGuideNote,
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

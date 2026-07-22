@@ -11714,6 +11714,12 @@ abstract class AppLocalizations {
   /// **'Textbook'**
   String get textbookTitle;
 
+  /// No description provided for @textbookTabRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get textbookTabRead;
+
   /// No description provided for @textbookIntro.
   ///
   /// In en, this message translates to:

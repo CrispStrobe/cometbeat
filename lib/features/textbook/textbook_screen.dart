@@ -13,6 +13,8 @@
 // concepts are grouped by area with a sub-header, so it reads like a book.
 
 import 'package:comet_beat/core/curriculum/concept_map.dart';
+import 'package:comet_beat/features/curriculum/screens/curriculum_screen.dart'
+    show CurriculumView;
 import 'package:comet_beat/features/games/composition/form_analysis_view.dart';
 import 'package:comet_beat/features/games/game_registry.dart';
 import 'package:comet_beat/features/games/tutorial_gate.dart';
@@ -53,76 +55,106 @@ List<ConceptArea> _areasInBand(GradeBand band) {
   return seen;
 }
 
+/// The Textbook hub: the read-through lessons ("Read") and the curriculum
+/// levels ("Topics by grade"), united under one screen with two tabs. Topics by
+/// grade used to be its own home tile; it now lives here as a view mode.
 class TextbookScreen extends StatelessWidget {
   const TextbookScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.textbookTitle)),
-      body: ListView(
-        children: [
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.textbookTitle),
+          bottom: TabBar(
+            tabs: [
+              Tab(
+                icon: const Icon(Icons.menu_book),
+                text: l10n.textbookTabRead,
+              ),
+              Tab(icon: const Icon(Icons.school), text: l10n.curriculumTitle),
+            ],
+          ),
+        ),
+        body: const TabBarView(
+          children: [_ReadTab(), CurriculumView()],
+        ),
+      ),
+    );
+  }
+}
+
+/// The read-through lessons tab (the original Textbook body).
+class _ReadTab extends StatelessWidget {
+  const _ReadTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+          child: Text(
+            l10n.textbookIntro,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        for (final band in GradeBand.values) ...[
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
             child: Text(
-              l10n.textbookIntro,
-              style: Theme.of(context).textTheme.bodyMedium,
+              bandLabel(l10n, band),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
           ),
-          for (final band in GradeBand.values) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              bandIntro(l10n, band),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
+          // Group the band's concepts by area, in first-appearance order, with
+          // a small area sub-header before each run.
+          for (final area in _areasInBand(band)) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
-              child: Text(
-                bandLabel(l10n, band),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+              child: Row(
+                children: [
+                  Icon(
+                    _areaIcon(area),
+                    size: 16,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    areaName(l10n, area).toUpperCase(),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.6,
+                        ),
+                  ),
+                ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text(
-                bandIntro(l10n, band),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontStyle: FontStyle.italic,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-            ),
-            // Group the band's concepts by area, in first-appearance order, with
-            // a small area sub-header before each run.
-            for (final area in _areasInBand(band)) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
-                child: Row(
-                  children: [
-                    Icon(
-                      _areaIcon(area),
-                      size: 16,
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      areaName(l10n, area).toUpperCase(),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.secondary,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.6,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              for (final c
-                  in kConcepts.where((c) => c.band == band && c.area == area))
-                _ConceptTile(concept: c),
-            ],
+            for (final c
+                in kConcepts.where((c) => c.band == band && c.area == area))
+              _ConceptTile(concept: c),
           ],
-          const SizedBox(height: 24),
         ],
-      ),
+        const SizedBox(height: 24),
+      ],
     );
   }
 }

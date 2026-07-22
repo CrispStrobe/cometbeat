@@ -11,7 +11,6 @@ import 'package:comet_beat/core/services/debug_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/tuning.dart';
-import 'package:comet_beat/features/curriculum/screens/curriculum_screen.dart';
 import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
@@ -168,13 +167,6 @@ class HomeScreen extends StatelessWidget {
             onPressed: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const TextbookScreen())),
-          ),
-          IconButton(
-            icon: const Icon(Icons.school),
-            tooltip: l10n.curriculumTooltip,
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const CurriculumScreen())),
           ),
           // Workshop: tap opens the Score editor (default mode); the dropdown
           // also offers the Advanced Tracker (the pattern-editor mode) and the
