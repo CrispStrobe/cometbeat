@@ -11,8 +11,9 @@ void main(List<String> a) {
     final rel = f.path.replaceFirst('$dir/', '');
     try {
       final mp = multiPartScoreFromKern(f.readAsStringSync());
-      final has = mp.parts.any((p) =>
-          p.measures.any((m) => m.elements.any((e) => e is NoteElement)));
+      final has = mp.parts.any(
+        (p) => p.measures.any((m) => m.elements.any((e) => e is NoteElement)),
+      );
       if (has) {
         ok++;
       } else {
@@ -27,5 +28,5 @@ void main(List<String> a) {
     }
   }
   failLog.close();
-  print('parseable=$ok fail=$fail no_notes=$nonotes');
+  stdout.writeln('parseable=$ok fail=$fail no_notes=$nonotes');
 }
