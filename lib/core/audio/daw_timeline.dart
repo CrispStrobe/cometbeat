@@ -16,6 +16,9 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
+    show delayFx;
+import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 
@@ -111,11 +114,15 @@ class Clip {
       );
 }
 
+/// A per-track insert effect applied to the lane's summed audio at bake time.
+enum TrackEffect { none, reverb, echo }
+
 /// One DAW track — a lane of clips with its own [gain]/[muted]/[soloed]. An
 /// optional [instrument] is the lane's default voice: engraved (score) clips
 /// added to it adopt it, so the track behaves like an instrument lane. Baked
-/// audio / drum / groove clips ignore it. Not serialized (saved projects bake
-/// each clip's sound in), so this is a live-session convenience.
+/// audio / drum / groove clips ignore it. An [effect] insert (reverb / echo) is
+/// applied to the lane's whole mix. Neither is serialized (saved projects bake
+/// each clip's sound in), so both are live-session conveniences.
 class DawTrack {
   DawTrack({
     this.name = '',
@@ -123,6 +130,7 @@ class DawTrack {
     this.muted = false,
     this.soloed = false,
     this.instrument,
+    this.effect = TrackEffect.none,
     List<Clip>? clips,
   }) : clips = clips ?? [];
 
@@ -135,8 +143,24 @@ class DawTrack {
 
   /// The lane's default instrument voice (null = default synth).
   TrackerInstrument? instrument;
+
+  /// The lane's insert effect (applied to its summed audio at bake time).
+  TrackEffect effect;
   final List<Clip> clips;
 }
+
+/// Apply a track's insert [effect] to its (full-length) summed [buf].
+Float64List applyTrackEffect(
+  TrackEffect effect,
+  Float64List buf,
+  int sampleRate,
+) =>
+    switch (effect) {
+      TrackEffect.none => buf,
+      TrackEffect.reverb =>
+        reverbFx(buf, roomSize: 0.7, sampleRate: sampleRate),
+      TrackEffect.echo => delayFx(buf, delayMs: 300, sampleRate: sampleRate),
+    };
 
 /// A DAW arrangement: an ordered list of tracks.
 class DawTimeline {
@@ -158,9 +182,13 @@ Float64List renderTimeline(
 }) {
   final store = cache ?? <Object, Float64List>{};
 
-  // Resolve every audible clip to a placement, tracking the length.
-  final placed =
-      <({int start, Float64List pcm, double gain, int fadeIn, int fadeOut})>[];
+  // Resolve every audible clip to a placement, grouped by its track (so a
+  // per-track insert effect can process that lane's whole mix). Tracks the
+  // total length across all lanes.
+  final perTrack = <(
+    DawTrack,
+    List<({int start, Float64List pcm, double gain, int fadeIn, int fadeOut})>
+  )>[];
   var totalSamples = 0;
   // Solo is timeline-wide: if any track is soloed, non-soloed tracks fall
   // silent (a muted track stays silent regardless).
@@ -168,6 +196,13 @@ Float64List renderTimeline(
   for (final track in timeline.tracks) {
     if (track.muted) continue;
     if (anySolo && !track.soloed) continue;
+    final places = <({
+      int start,
+      Float64List pcm,
+      double gain,
+      int fadeIn,
+      int fadeOut
+    })>[];
     for (final clip in track.clips) {
       if (clip.muted) continue;
       final rendered = store.putIfAbsent(
@@ -181,7 +216,7 @@ Float64List renderTimeline(
       final pcm = _trimView(rendered, clip, sampleRate);
       if (pcm.isEmpty) continue;
       final start = (clip.startMs * sampleRate / 1000).round();
-      placed.add(
+      places.add(
         (
           start: start,
           pcm: pcm,
@@ -193,22 +228,47 @@ Float64List renderTimeline(
       final end = start + pcm.length;
       if (end > totalSamples) totalSamples = end;
     }
+    if (places.isNotEmpty) perTrack.add((track, places));
   }
   if (totalSamples == 0) return Float64List(0);
 
+  // Sum each lane's clips (into the master directly when it has no effect, or
+  // into a lane buffer that the effect processes over the FULL length — so a
+  // reverb/echo tail rings out past the last clip — before adding to master).
+  // With no effects this is bit-identical to a single flat sum (addition is
+  // associative), so it doesn't change the existing bake.
   final master = Float64List(totalSamples);
-  for (final p in placed) {
-    final n = p.pcm.length;
-    for (var i = 0; i < n; i++) {
-      // Fade envelope: ramp up over fadeIn, down over fadeOut; if they overlap
-      // (a clip shorter than its fades), the smaller ramp wins.
-      var env = 1.0;
-      if (p.fadeIn > 0 && i < p.fadeIn) env = i / p.fadeIn;
-      if (p.fadeOut > 0 && i >= n - p.fadeOut) {
-        final down = (n - i) / p.fadeOut;
-        if (down < env) env = down;
+  void mix(
+    Float64List buf,
+    List<({int start, Float64List pcm, double gain, int fadeIn, int fadeOut})>
+        places,
+  ) {
+    for (final p in places) {
+      final n = p.pcm.length;
+      for (var i = 0; i < n; i++) {
+        // Fade envelope: ramp up over fadeIn, down over fadeOut; if they overlap
+        // (a clip shorter than its fades), the smaller ramp wins.
+        var env = 1.0;
+        if (p.fadeIn > 0 && i < p.fadeIn) env = i / p.fadeIn;
+        if (p.fadeOut > 0 && i >= n - p.fadeOut) {
+          final down = (n - i) / p.fadeOut;
+          if (down < env) env = down;
+        }
+        buf[p.start + i] += p.pcm[i] * p.gain * env;
       }
-      master[p.start + i] += p.pcm[i] * p.gain * env;
+    }
+  }
+
+  for (final (track, places) in perTrack) {
+    if (track.effect == TrackEffect.none) {
+      mix(master, places);
+    } else {
+      final lane = Float64List(totalSamples);
+      mix(lane, places);
+      final wet = applyTrackEffect(track.effect, lane, sampleRate);
+      for (var i = 0; i < totalSamples; i++) {
+        master[i] += wet[i];
+      }
     }
   }
 

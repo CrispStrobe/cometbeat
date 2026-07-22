@@ -1658,6 +1658,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawTrackInstrument => 'Spur-Instrument…';
 
   @override
+  String get dawEffect => 'Effekt';
+
+  @override
+  String get dawEffectNone => 'Keiner';
+
+  @override
+  String get dawEffectReverb => 'Hall';
+
+  @override
+  String get dawEffectEcho => 'Echo';
+
+  @override
   String get dawInstrument => 'Instrument';
 
   @override

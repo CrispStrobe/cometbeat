@@ -59,6 +59,7 @@ class DawService extends ChangeNotifier {
               muted: t.muted,
               soloed: t.soloed,
               instrument: t.instrument,
+              effect: t.effect,
               clips: [...t.clips],
             ),
         ],
@@ -599,6 +600,17 @@ class DawService extends ChangeNotifier {
         lane.clips[i] = _reSource(lane.clips[i], src.withInstrument(inst));
       }
     }
+    notifyListeners();
+  }
+
+  /// The lane's insert effect (reverb / echo / none).
+  TrackEffect trackEffect(int track) => timeline.tracks[track].effect;
+
+  /// Set [track]'s insert effect. Applied to the lane's summed audio at bake.
+  void setTrackEffect(int track, TrackEffect effect) {
+    if (timeline.tracks[track].effect == effect) return;
+    _record();
+    timeline.tracks[track].effect = effect;
     notifyListeners();
   }
 

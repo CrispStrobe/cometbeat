@@ -277,11 +277,37 @@ class _DawScreenState extends State<DawScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.dawTrackTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(labelText: l10n.dawTrackName),
-          onSubmitted: (_) => Navigator.of(ctx).pop('rename'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              decoration: InputDecoration(labelText: l10n.dawTrackName),
+              onSubmitted: (_) => Navigator.of(ctx).pop('rename'),
+            ),
+            const SizedBox(height: 16),
+            Text(l10n.dawEffect, style: Theme.of(ctx).textTheme.labelMedium),
+            const SizedBox(height: 6),
+            // The lane insert effect — applied live (its own undo entry).
+            StatefulBuilder(
+              builder: (ctx, setChips) => Wrap(
+                spacing: 6,
+                children: [
+                  for (final e in TrackEffect.values)
+                    ChoiceChip(
+                      label: Text(_effectLabel(l10n, e)),
+                      selected: _daw.trackEffect(i) == e,
+                      onSelected: (_) {
+                        setTrackEffect(i, e);
+                        setChips(() {});
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -444,6 +470,18 @@ class _DawScreenState extends State<DawScreen>
     _daw.setTrackInstrument(track, inst);
     if (_playing) play();
   }
+
+  /// Set the lane's insert effect (reverb / echo / none) and re-bake if playing.
+  void setTrackEffect(int track, TrackEffect effect) {
+    _daw.setTrackEffect(track, effect);
+    if (_playing) play();
+  }
+
+  String _effectLabel(AppLocalizations l10n, TrackEffect e) => switch (e) {
+        TrackEffect.none => l10n.dawEffectNone,
+        TrackEffect.reverb => l10n.dawEffectReverb,
+        TrackEffect.echo => l10n.dawEffectEcho,
+      };
 
   /// Opens the assets Instruments/Samples library and returns the picked
   /// instrument SOUND (a `TrackerInstrument`), or null if cancelled / the pick

@@ -3110,6 +3110,30 @@ abstract class AppLocalizations {
   /// **'Track instrument…'**
   String get dawTrackInstrument;
 
+  /// No description provided for @dawEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect'**
+  String get dawEffect;
+
+  /// No description provided for @dawEffectNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get dawEffectNone;
+
+  /// No description provided for @dawEffectReverb.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverb'**
+  String get dawEffectReverb;
+
+  /// No description provided for @dawEffectEcho.
+  ///
+  /// In en, this message translates to:
+  /// **'Echo'**
+  String get dawEffectEcho;
+
   /// No description provided for @dawInstrument.
   ///
   /// In en, this message translates to:

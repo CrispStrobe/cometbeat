@@ -567,6 +567,49 @@ void main() {
       expect(s.clipInstrument(0, 0)?.id, 'piano');
     });
   });
+
+  group('track insert effect', () {
+    test('defaults to none and is undoable', () {
+      final s = DawService()..addClip(_tone(0.5, 4410));
+      expect(s.trackEffect(0), TrackEffect.none);
+      s.setTrackEffect(0, TrackEffect.reverb);
+      expect(s.trackEffect(0), TrackEffect.reverb);
+      s.undo();
+      expect(s.trackEffect(0), TrackEffect.none);
+    });
+
+    test('reverb rings a tail into the silence after the click', () {
+      // A click at t=0 in an otherwise-silent 1 s buffer defines the length.
+      final s = DawService()
+        ..addClip(SampleSource(Float64List(44100)..[0] = 1.0));
+      final dry = s.bake();
+      // dry: silent tail after the click.
+      expect(dry.sublist(5000).every((x) => x.abs() < 1e-9), isTrue);
+      s.setTrackEffect(0, TrackEffect.reverb);
+      final wet = s.bake();
+      expect(wet.length, dry.length); // same length…
+      // …but the reverb tail is now audible well past the click.
+      expect(wet.sublist(5000).any((x) => x.abs() > 1e-6), isTrue);
+    });
+
+    test('echo repeats the click ~300 ms later', () {
+      final s = DawService()
+        ..addClip(SampleSource(Float64List(44100)..[0] = 1.0));
+      s.setTrackEffect(0, TrackEffect.echo);
+      final out = s.bake();
+      // 300 ms at 44100 Hz ≈ sample 13230 → the delayed repeat of the click.
+      expect(out[13230].abs() > 1e-6 || out[13231].abs() > 1e-6, isTrue);
+    });
+
+    test('with no effect the per-lane bake equals a flat sum (unchanged)', () {
+      // Two lanes, both effect-free → identical to the old single-pass mix.
+      final s = DawService()
+        ..addClip(_tone(0.3, 1000))
+        ..addClip(_tone(0.4, 1000), track: 1);
+      final baked = s.bake();
+      expect(baked[0], closeTo(0.3, 1e-9)); // only lane 0 sounds at t=0
+    });
+  });
 }
 
 /// A live source whose render reflects a mutable buffer — a stand-in for a
