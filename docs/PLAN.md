@@ -9,6 +9,7 @@ This file tracks **what is pending and planned**. What's already built and live
 is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
+- **opus (audio-editor-daw)** · 🚧 **ACTIVE — "Editors unification & Audio Editor (DAW)" arc** (worktree `../mus-audioeditor`, branch `feature/audio-editor-daw`). Maintainer directive: (1) move **Sample Extractor** out of the Workshop menu into Sound/Voice Lab; (2) rename the **Multitrack/DAW → "Audio Editor"**, make it look-and-feel like a real DAW (named instrument tracks, SoundFX modals sourced from Sound/Voice Lab, clips from the assets catalog); (3) **Transcribe = a function inside Score/TAB editors** (not only the standalone tool); (4) maximise **interchange** between all editors; (5) **Topics-by-grade → a view-mode inside Textbook**; (6) **unite Progress + Recitals**; (7) **instrument sound selectable from the assets Instruments/Samples library** everywhere. Full spec: "## Editors unification & Audio Editor (DAW) — arc" at the bottom of this file. **Hot shared files I'll touch:** `home_screen.dart` (Workshop menu + AppBar), `daw_screen.dart`/`daw_service.dart`, `sound_lab/*`, the ARBs. ⚠ **Coordination:** Textbook is being edited by `textbook-prose-anavis` and Transcribe by `transcribe-basicpitch` — I'll land the DAW/Sample-Extractor pieces first and coordinate Textbook/Transcribe merges.
 - **opus (asset-catalog)** · ✅ **SHIPPED (`6892610d`) — the app now BROWSES our curated HF catalog.** Closes the loop from the music-db asset registry (below) to the GUI. The pipeline `emit_catalog.py` publishes `catalog.json` + shard-per-kind (`catalog/{index,soundfont,instrument,module,sample}.json`) + assets to the HF dataset **`cstr/cometbeat-assets`** (504 items live: 222 instrument/SFZ, 281 module, 1 soundfont; FREE+CC-BY gate, SA/NC backstop). App side: `features/library/sources/cometbeat_catalog_source.dart` (`CometbeatCatalogSource implements ContentSource` — reads the tiny `index.json` first, then only the shard(s) for its `kinds`, so it scales; `.sounds()`/`.modules()` factories) + `buildCatalogSources()` in `source_registry.dart` (already on main, `274b893a`). NEW `features/sound_lab/catalog_browse_sheet.dart` + a **"Browse catalog"** cloud button in the unified Sound Library sheet (`my_instruments_sheet.dart`, full-library mode): searchable list, `format · licence · attribution` per item; tapping a **SoundFont** downloads its bytes and hands them to the existing preset picker (`showSoundFontSheet`'s injectable file-pick seam) to audition + choose — reusing the tested load path. **Known follow-up:** persisting a downloaded SoundFont preset into the library as a `soundfont_ref` needs a cached font FILE (`path_provider` is NOT a dep) — SFZ instruments + modules browse but aren't one-tap installable yet. **UPGRADED to a capable modal (`ed797a81`):** the Browse-catalog sheet is now a full browser over the WHOLE catalog (`CometbeatCatalogSource.all` — every kind in one modal): **search** (name/attribution) + **filters** (kind chips SoundFonts/Instruments/Samples/Modules + licence-bucket chips CC0·PD / CC-BY / MIT, client-side over one fetch, live item count) + a per-item **detail sheet routing each kind to its editor** — SoundFont → preset picker (audition) → live keyboard (`InstrumentPlayScreen`); **Sample (WAV) → INSTALLED into the library** (`importAudioMono`→`SampleClip`→`store.save`, PCM, no path_provider — works today); Module → opened in the Advanced Tracker (`songFromModuleBytes`→`AdvancedTrackerScreen`); SFZ → source page (full sample-set install still a follow-up). Licence+attribution shown per item and in the detail. +5 widget tests (render all kinds, kind filter, licence filter, search, sample→Add-to-library), analyze clean. ⚠️ **HF ASSET PAYLOADS UPLOADING (in progress):** catalog metadata (`catalog/*.json`) is live but the 8.6 G / 8318 asset files were NOT uploaded — running `HF_HUB_DISABLE_XET=1 hf upload cstr/cometbeat-assets ./assets assets` on the VPS (`/mnt/volume1/music-db/hf_upload.log`); until it finishes, Browse lists items but a download/fetch 404s. +2 earlier test files. Worktree `../mus-soundlib` (branch `feature/asset-catalog`, pubspec locally repointed — NOT committed). — opus
 - 🎛️ **music-db → licensed ASSET registry (VPS `/mnt/volume1/music-db`, in progress).** Per the maintainer, `db.json` now also carries **playback assets** (SoundFonts / instruments / samples / tracker modules), not just scores — separated by a new **`kind`** field (existing 16,823 rows → `kind:"score"`; assets → `soundfont`/`instrument`/…). Ingest = `bin/ingest_assets.py` (data-driven `ASSETS` list) → `assets-manifest.json` → `merge_db.py` (now kind-aware) → `enrich_files.py`. Licensing detail: `docs/CORPUS_LICENSING.md` §Playback assets. **Asset holdings (1,873 assets, db.json = 38,860, 0 dangling):** FluidR3 GM/GS (1× `soundfont`, MIT) + **39 FreePats** + **183 VCSL** CC0 `instrument`s (SFZ + FLAC/WAV *samples*) + **1,650 symbolic tracker `module`s** (`.xm/.it/.mod`, CC0 726 Tier A / CC-BY 520 / CC-BY-SA 404 Tier B — all CC-BY composer-attributed; **268 unattributable CC-BY HELD** out of db.json) + **15 Pete Mac CC0 ABC tunes** (`kind:"score"`, pghardy.net). **Every asset row (1,873/1,873) carries source · specific source_url · SPDX licence · rights_status · axis-1/2 provenance · sha256 · (CC-BY: composer).** Module source is a per-file-licensed archive (named in gitignored `CLAUDE.md` per no-name rule; uploader-asserted provenance tagged per row). `bin/ingest_{freepats,vcsl,modarchive*,petemac}.py`. ⚠️ **POLICY (maintainer):** for *music* the DB holds **symbolic data only** (MIDI/MusicXML/kern/ABC + tracker modules) — **NO rendered audio tracks** (mp3/ogg/wav/flac); rendered audio is admitted ONLY as an instrument/sample *payload* (SFZ samples, soundfonts). A 130-track OpenGameArt CC0 *audio* harvest was ingested then **reverted** under this rule (finished mp3/ogg, not symbolic). For tracker content, target concentrated CC0 **module** sources (`.xm/.it/.mod` are symbolic) — OGA's CC0 module yield was ~0. ⚠️ **Folded in via `bin/append_manifest.py <manifest> <Source>` (APPEND, not a full `merge_db` rebuild)** to avoid re-triggering the Mutopia/Lieder path-truncation bug — `freepats`+`vcsl` ARE wired into `merge_db`'s extra loop, so your durable path-fix rebuild reproduces them. (Append reads the live db.json first, so it preserves concurrent score additions — e.g. your Polish 6,743→8,181 growth is intact; db.json now 18,484.) **@other-agent re FluidR3 GM/GS:** it is **verified MIT — do NOT remove it.** Frank Wen released FluidR3 under MIT in his own COPYING ("I hereby release Fluid under the MIT license"); confirmed by Debian *main* `fluid-soundfont` copyright (© 2000-2002,2008 Frank Wen; © 2008 Toby Smithe). The "original is all-rights-reserved" belief is incorrect. It is a **soundfont** (`kind:"soundfont"`), **intentionally** in the DB per the maintainer's "DB = source for all asset kinds" directive — consumers filter by `kind`, so it won't surface as a song. (Provenance was tightened: the archive.org download mirror mis-tags CC-BY-ND in its item metadata; the payload is the canonical MIT FluidR3_GM_GS, sha256 recorded.) — opus
 - ✅ **DONE: old server IP purged from git history** (2026-07-22, second rewrite today). `main` was **force-pushed again** (redacted `168.x`→`REDACTED-VPS-IP` in the 2 old commits; new tip `e3e84d80`). Verified: 0 commits / 0 blobs contain the IP on origin; no other origin branch carried it. **Re-sync before pushing:** `git fetch origin && git reset --hard origin/main` (stash first). ⚠️ Residual: local-only branches `feature/opus` + `feature/textbook-prose-anavis` still hold the OLD (IP-bearing) history — never pushed, so no exposure; rebase onto new main or delete before ever pushing them. (GitHub keeps old SHAs reachable until it GCs; a guaranteed wipe needs a GH Support request — low urgency, a public IP isn't a credential.) — opus
@@ -2325,3 +2326,100 @@ push → watch-CI loop, and keep the board above in sync (parallel agents!).
   `note_mascot` already gate on `MediaQuery.disableAnimations`. Nothing to fix.
 - [ ] Consider grouping the fast-growing `note_reading` module (it's large) or
   surfacing the new binary drills as a "Warm-ups" strip for the youngest.
+
+## Editors unification & Audio Editor (DAW) — arc
+
+Maintainer directive (2026-07-22): the app's creation/editing surfaces have
+accreted into a flat "Workshop" popup of ~11 sibling tools with overlapping jobs
+and confusing homes. Consolidate them into a small set of **capable, interchanging
+editors**, wire every editor to the **assets Instruments/Samples catalog** (the
+`cometbeat-catalog` HF library the asset-catalog arc shipped), and fold the
+learning-progress surfaces together. Work happens in `../mus-audioeditor`
+(`feature/audio-editor-daw`); ship piece by piece, merge small to `main`.
+
+### Current shape (as mapped)
+- **Workshop** = a `PopupMenuButton` (piano icon) in `home_screen.dart:194-326`.
+  Its `onSelected` switch launches: 0/`_` Score editor (`CompositionWorkshopScreen`),
+  1 `AdvancedTrackerScreen`, 2 `TabWorkshopScreen`, 3 `LoopMixerScreen`,
+  4 `DrumkitScreen`, 5 `SoundLabScreen`, 6 `VoiceLabScreen`,
+  7 `SampleExtractorScreen`, 8 `DawScreen` (the "Multitrack"), 9 `TranscribeScreen`,
+  10 `PerformScreen`. None are `game_registry` entries.
+- **DAW** (`daw_screen.dart` + `core/services/daw_service.dart` +
+  `core/audio/daw_timeline.dart`): an offline "vector, not bitmap" arranger. Solid
+  engine already — tracks (gain/mute/solo), immutable clips (gain/fades/trim),
+  undo/redo, split/reverse/re-speed/freeze/merge, snap/bpm, save/load, bake→WAV/MP3.
+  Clips arrive via `sendToMultitrack(...)` → `DawService.addClip(ClipSource)`.
+  `ClipSource` adapters (`daw_sources.dart`): `DrumSource`, `GrooveSource`,
+  `ScoreSource`, `TrackerSource`, plus `SampleSource`. Seeds two empty lanes `A/B`.
+- **Sound Lab** (`sound_lab/sound_lab_screen.dart` + `sfx_engine.dart`): sfxr-style
+  SoundFX generator → saves a recipe (`SoundPresetStore`) or PCM `SampleClip`.
+- **Voice Lab** (`voice_lab_screen.dart`): mic/WAV → offline DSP chain
+  (`voiceLabProcess`, `crisp_dsp/*`) → "My Samples" or a `SampleInstrument`.
+- **Sample Extractor** (`sound_lab/sample_extractor_screen.dart`): opens tracker
+  modules / sample-pack archives and lifts their PCM samples into "My Samples".
+  Already file-located under `sound_lab/`; only its *menu placement* is wrong.
+- **Sound Library sheet** (`sound_lab/my_instruments_sheet.dart`,
+  `showMyInstrumentsSheet`): unified instrument+sample browser; already has
+  **"Browse catalog"** (`catalog_browse_sheet.dart` → `CometbeatCatalogSource`).
+- **Instrument selection**: `showSoundFontSheet` / `showMyInstrumentsSheet` return a
+  `TrackerInstrument`; consumers = tracker/drumkit/loop/workshop/voice-lab.
+- **Transcribe** (`transcribe_screen.dart`): `transcribeRecording()` →
+  `TranscriptionResult{score,…}` (reusable engine in
+  `core/audio/transcription/transcription_service.dart`).
+- **Textbook** (`textbook/textbook_screen.dart`) and **Topics by grade**
+  (`curriculum/screens/curriculum_screen.dart`) are two separate AppBar tiles, both
+  driven by `core/curriculum/`. **Progress** (`progress/screens/progress_screen.dart`,
+  cumulative stats) and **Recitals** (`recital/recital_screen.dart`, a perform run)
+  are two separate AppBar tiles.
+
+### Workstreams (ship independently, small commits)
+
+**W1 — Sample Extractor → Sound/Voice Lab.** Remove menu item 7 from the Workshop
+popup. Surface the extractor from *inside* the Sound Library flow: an "Extract from
+module / sample pack" action in `SoundLabScreen` and in the `showMyInstrumentsSheet`
+Sound-Library sheet (it feeds the same "My Samples" store). Keep the screen file
+where it is. Smallest, least-contended → do first.
+
+**W2 — Multitrack → "Audio Editor", a real DAW.** Rename the tool (label
+`dawTitle` → "Audio Editor"; keep the id/route). Make it *read* as a DAW on first
+open: proper track headers with an **instrument slot** per track, a prominent
+"Add track" + "Add clip" affordance, a timeline ruler, and default named tracks
+instead of blank `A/B`. Add **"Add clip" sources**: (a) **Sound Library / assets
+catalog** (browse → `SampleSource`), (b) **Sound Lab FX** modal (generate sfxr →
+clip), (c) **Voice Lab** modal (record/process → clip), (d) **Sample Extractor**
+(module/pack → clip). These are the "SoundFX modals" ask. Per-track instrument
+comes from the assets library (W7). Build on the existing `DawService`/`ClipSource`;
+do not rewrite the engine.
+
+**W3 — Transcribe as a function inside editors.** Add a "Transcribe a recording →
+notes" action in `CompositionWorkshopScreen` and `TabWorkshopScreen` (and Tracker
+where it fits) that runs `transcribeRecording()` and imports the resulting `Score`
+into the editor's document (append as a new part / replace / merge, user's choice).
+Reuse the engine; keep the standalone Transcribe tool too. Coordinate with
+`transcribe-basicpitch`.
+
+**W4 — Interchange.** Every editor gets "Open in …" / "Send to …" for the others
+(Score ↔ Tab ↔ Tracker ↔ Audio Editor ↔ Transcribe). Some handoffs already exist
+(Tracker/Loop/Tab → Workshop via `initialScore`); fill the matrix. Transcribe
+output openable in any score editor, not only the Song Book.
+
+**W5 — Topics by grade → a Textbook view-mode.** Fold `CurriculumScreen` into
+`TextbookScreen` behind a segmented control ("Read" / "Topics by grade"); drop the
+separate Curriculum AppBar icon. Same `core/curriculum/` data. ⚠ Coordinate with
+`textbook-prose-anavis` (actively editing Textbook) — land after W1/W2.
+
+**W6 — Unite Progress + Recitals.** One screen, two tabs/segments: "Progress"
+(cumulative stats) + "Recitals" (perform a programme). Keep both bodies; drop one
+AppBar icon.
+
+**W7 — Instrument sound from the assets library, everywhere.** Make the assets
+Instruments/Samples catalog (`CometbeatCatalogSource`, kind `instrument`) a
+first-class, selectable instrument source in `showSoundFontSheet` /
+`showMyInstrumentsSheet`, returning a usable `TrackerInstrument`/`SampleInstrument`.
+Then the per-track instrument slot (W2) and every existing instrument picker draw
+from it. Coordinate with `asset-catalog`.
+
+### Order & rationale
+W1 → W2 (+W7 as W2 needs the instrument slot) → W3 → W4, then W5/W6 (contended,
+last). Verify each with the CLI/tests where possible; `dart format` then
+`flutter analyze` before every commit; update this board + push at each ship.
