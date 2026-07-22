@@ -16,6 +16,9 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/tracker_engine.dart'
+    show TrackerInstrument;
+
 /// The default render rate (matches `synth.kSampleRate`), kept inline so this
 /// core stays dependency-light.
 const int kDawSampleRate = 44100;
@@ -108,13 +111,18 @@ class Clip {
       );
 }
 
-/// One DAW track — a lane of clips with its own [gain]/[muted]/[soloed].
+/// One DAW track — a lane of clips with its own [gain]/[muted]/[soloed]. An
+/// optional [instrument] is the lane's default voice: engraved (score) clips
+/// added to it adopt it, so the track behaves like an instrument lane. Baked
+/// audio / drum / groove clips ignore it. Not serialized (saved projects bake
+/// each clip's sound in), so this is a live-session convenience.
 class DawTrack {
   DawTrack({
     this.name = '',
     this.gain = 1.0,
     this.muted = false,
     this.soloed = false,
+    this.instrument,
     List<Clip>? clips,
   }) : clips = clips ?? [];
 
@@ -124,6 +132,9 @@ class DawTrack {
 
   /// When ANY track is soloed, only soloed (and unmuted) tracks are heard.
   bool soloed;
+
+  /// The lane's default instrument voice (null = default synth).
+  TrackerInstrument? instrument;
   final List<Clip> clips;
 }
 

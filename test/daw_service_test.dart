@@ -549,6 +549,22 @@ void main() {
       s.setTrackInstrument(0, _cello);
       expect(s.clipInstrument(0, 0)?.id, 'cello');
       expect(s.clipInstrument(0, 1)?.id, 'cello');
+      expect(s.trackInstrument(0)?.id, 'cello');
+    });
+
+    test('a new score clip adopts the lane instrument; a sample clip does not',
+        () {
+      final s = DawService()..setTrackInstrument(0, _cello);
+      s.addClip(_scoreClip()); // → track 0, should adopt cello
+      expect(s.clipInstrument(0, 0)?.id, 'cello');
+      s.addClip(_tone(0.3, 100)); // baked audio: unaffected
+      expect(s.clipInstrument(0, 1), isNull);
+    });
+
+    test("a clip's own instrument is not overridden by the lane default", () {
+      final s = DawService()..setTrackInstrument(0, _cello);
+      s.addClip(_scoreClip().withInstrument(_piano)); // explicit voice wins
+      expect(s.clipInstrument(0, 0)?.id, 'piano');
     });
   });
 }

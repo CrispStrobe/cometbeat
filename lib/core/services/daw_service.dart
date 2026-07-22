@@ -58,6 +58,7 @@ class DawService extends ChangeNotifier {
               gain: t.gain,
               muted: t.muted,
               soloed: t.soloed,
+              instrument: t.instrument,
               clips: [...t.clips],
             ),
         ],
@@ -115,8 +116,16 @@ class DawService extends ChangeNotifier {
     while (timeline.tracks.length <= track) {
       timeline.tracks.add(DawTrack(name: '${timeline.tracks.length + 1}'));
     }
-    timeline.tracks[track].clips
-        .add(Clip(source: source, startMs: _nextStartMs));
+    // An engraved clip with no voice of its own adopts the lane's instrument, so
+    // a track behaves like an instrument lane.
+    final lane = timeline.tracks[track];
+    var placed = source;
+    if (lane.instrument != null &&
+        source is ScoreSource &&
+        source.instrument == null) {
+      placed = source.withInstrument(lane.instrument);
+    }
+    lane.clips.add(Clip(source: placed, startMs: _nextStartMs));
     _nextStartMs += 2000;
     notifyListeners();
   }
@@ -573,16 +582,21 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Voice EVERY score clip on [track] through [inst] (null = default synth) —
-  /// the track's instrument sound. No-op if the track has no score clips.
+  /// The lane's default instrument voice (null = default synth).
+  TrackerInstrument? trackInstrument(int track) =>
+      timeline.tracks[track].instrument;
+
+  /// Set [track]'s instrument sound: it becomes the lane default (so new score
+  /// clips adopt it) AND re-voices every score clip already on the lane. Baked
+  /// audio / drum / groove / tracker clips are unaffected.
   void setTrackInstrument(int track, TrackerInstrument? inst) {
-    final clips = timeline.tracks[track].clips;
-    if (!clips.any((c) => c.source is ScoreSource)) return;
     _record();
-    for (var i = 0; i < clips.length; i++) {
-      final src = clips[i].source;
+    final lane = timeline.tracks[track];
+    lane.instrument = inst;
+    for (var i = 0; i < lane.clips.length; i++) {
+      final src = lane.clips[i].source;
       if (src is ScoreSource) {
-        clips[i] = _reSource(clips[i], src.withInstrument(inst));
+        lane.clips[i] = _reSource(lane.clips[i], src.withInstrument(inst));
       }
     }
     notifyListeners();

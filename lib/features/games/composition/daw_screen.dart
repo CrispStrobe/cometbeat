@@ -1215,6 +1215,13 @@ class _DawScreenState extends State<DawScreen>
         children: [
           Row(
             children: [
+              // A small badge when the lane has a voice — new clips adopt it.
+              if (track.instrument != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 2),
+                  child:
+                      Icon(Icons.music_note, size: 12, color: scheme.primary),
+                ),
               Expanded(
                 child: InkWell(
                   onTap: () => _trackMenu(i),
