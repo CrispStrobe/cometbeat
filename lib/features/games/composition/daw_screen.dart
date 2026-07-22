@@ -742,6 +742,22 @@ class _DawScreenState extends State<DawScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // The clip's current voice, for engraved clips.
+                  if (_daw.isScoreClip(track, index))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.music_note, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            _daw.clipInstrument(track, index)?.id ??
+                                l10n.dawInstrumentDefault,
+                            style: Theme.of(sheetCtx).textTheme.labelLarge,
+                          ),
+                        ],
+                      ),
+                    ),
                   slider(
                     l10n.dawGain,
                     _daw.clipGain(track, index),
