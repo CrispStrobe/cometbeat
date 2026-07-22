@@ -144,7 +144,12 @@ abstract class VoiceLabTester {
 }
 
 class VoiceLabScreen extends StatefulWidget {
-  const VoiceLabScreen({super.key});
+  const VoiceLabScreen({super.key, this.asPicker = false});
+
+  /// When true (opened from the Audio Editor), the app bar offers an "Add to
+  /// timeline" action that pops a [SampleClip] of the shaped voice, so Voice Lab
+  /// acts as a modal that drops a recorded/processed clip straight onto the DAW.
+  final bool asPicker;
 
   @override
   State<VoiceLabScreen> createState() => _VoiceLabScreenState();
@@ -516,6 +521,21 @@ class _VoiceLabScreenState extends State<VoiceLabScreen>
       appBar: AppBar(
         title: Text(l10n.voiceLabTitle),
         actions: [
+          if (widget.asPicker)
+            IconButton(
+              icon: const Icon(Icons.playlist_add),
+              tooltip: l10n.dawAddToTimeline,
+              onPressed: (_out ?? _clip) == null
+                  ? null
+                  : () => Navigator.of(context).pop(
+                        SampleClip(
+                          name: 'Voice',
+                          sampleRate: _sr,
+                          pcm: (_out ?? _clip)!,
+                          source: 'Voice Lab',
+                        ),
+                      ),
+            ),
           IconButton(
             icon: const Icon(Icons.undo),
             tooltip: l10n.voiceLabUndo,

@@ -641,6 +641,7 @@
   "dawAddSample": "Add sample",
   "dawAddTune": "Add tune",
   "dawAddClip": "Add clip",
+  "dawAddToTimeline": "Add to timeline",
   "dawAddFromLibrary": "From Sound Library",
   "dawAddFx": "Generate FX (Sound Lab)",
   "dawAddVoice": "Shape a voice (Voice Lab)",

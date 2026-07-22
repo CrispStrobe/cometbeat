@@ -568,6 +568,7 @@
   "dawAddSample": "Sample hinzufügen",
   "dawAddTune": "Melodie hinzufügen",
   "dawAddClip": "Clip hinzufügen",
+  "dawAddToTimeline": "Zur Timeline hinzufügen",
   "dawAddFromLibrary": "Aus der Klangbibliothek",
   "dawAddFx": "FX erzeugen (Sound Lab)",
   "dawAddVoice": "Stimme formen (Voice Lab)",

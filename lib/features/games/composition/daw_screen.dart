@@ -402,23 +402,31 @@ class _DawScreenState extends State<DawScreen>
     addSampleClip(clip);
   }
 
-  /// Opens one of the Sound/Voice Lab creation tools full-screen; whatever the
-  /// user saves lands in the shared "My Samples" library, so on return we open
-  /// the sample picker to drop the fresh sound straight onto the timeline. This
-  /// is how the Audio Editor consumes the Sound Lab (generate FX), Voice Lab
-  /// (shape a voice) and Sample Extractor (lift a module sample) as clip sources.
-  Future<void> _createThenPick(Widget tool) async {
+  /// Opens a Sound/Voice Lab tool as a modal that RETURNS a [SampleClip], and
+  /// drops it straight onto the timeline — the Sound Lab (generate FX) and Voice
+  /// Lab (record/shape a voice) are the Audio Editor's SoundFX modals.
+  Future<void> _addFromModal(Widget tool) async {
+    final clip = await Navigator.of(context).push<SampleClip>(
+      MaterialPageRoute<SampleClip>(builder: (_) => tool),
+    );
+    if (clip == null || clip.pcm.isEmpty || !mounted) return;
+    addSampleClip(clip);
+  }
+
+  Future<void> _addFromSoundLab() =>
+      _addFromModal(const SoundLabScreen(asPicker: true));
+  Future<void> _addFromVoiceLab() =>
+      _addFromModal(const VoiceLabScreen(asPicker: true));
+
+  /// The Sample Extractor lifts many samples into the shared library at once, so
+  /// it stays a library flow: extract, then pick which one to arrange.
+  Future<void> _addFromExtractor() async {
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => tool),
+      MaterialPageRoute<void>(builder: (_) => const SampleExtractorScreen()),
     );
     if (!mounted) return;
     await addSample();
   }
-
-  Future<void> _addFromSoundLab() => _createThenPick(const SoundLabScreen());
-  Future<void> _addFromVoiceLab() => _createThenPick(const VoiceLabScreen());
-  Future<void> _addFromExtractor() =>
-      _createThenPick(const SampleExtractorScreen());
 
   @override
   void clear() => _daw.clear();

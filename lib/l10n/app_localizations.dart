@@ -3074,6 +3074,12 @@ abstract class AppLocalizations {
   /// **'Add clip'**
   String get dawAddClip;
 
+  /// No description provided for @dawAddToTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to timeline'**
+  String get dawAddToTimeline;
+
   /// No description provided for @dawAddFromLibrary.
   ///
   /// In en, this message translates to:

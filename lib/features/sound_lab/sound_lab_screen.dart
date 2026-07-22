@@ -55,7 +55,12 @@ abstract class SoundLabTester {
 }
 
 class SoundLabScreen extends StatefulWidget {
-  const SoundLabScreen({super.key});
+  const SoundLabScreen({super.key, this.asPicker = false});
+
+  /// When true (opened from the Audio Editor), the app bar offers an "Add to
+  /// timeline" action that pops a [SampleClip] of the current sound, so the
+  /// Sound Lab acts as a SoundFX modal that drops a clip straight onto the DAW.
+  final bool asPicker;
 
   @override
   State<SoundLabScreen> createState() => _SoundLabScreenState();
@@ -86,9 +91,9 @@ class _SoundLabScreenState extends State<SoundLabScreen>
       sfxRender(_params, sampleRate: kSampleRate.toDouble());
 
   void _update(SfxParams p) => setState(() {
-    _params = p;
-    _pcm = _render();
-  });
+        _params = p;
+        _pcm = _render();
+      });
 
   // ── Tester seam ──────────────────────────────────────────────────────────
   @override
@@ -125,13 +130,13 @@ class _SoundLabScreenState extends State<SoundLabScreen>
 
   @override
   Future<void> saveToSamples(String name) => _sampleStore.save(
-    SampleClip(
-      name: name,
-      sampleRate: kSampleRate,
-      pcm: _pcm,
-      source: 'Sound Lab',
-    ),
-  );
+        SampleClip(
+          name: name,
+          sampleRate: kSampleRate,
+          pcm: _pcm,
+          source: 'Sound Lab',
+        ),
+      );
 
   // ── Actions ──────────────────────────────────────────────────────────────
   Uint8List _wav() {
@@ -268,6 +273,19 @@ class _SoundLabScreenState extends State<SoundLabScreen>
       appBar: AppBar(
         title: Text(l10n.soundLabTitle),
         actions: [
+          if (widget.asPicker)
+            IconButton(
+              icon: const Icon(Icons.playlist_add),
+              tooltip: l10n.dawAddToTimeline,
+              onPressed: () => Navigator.of(context).pop(
+                SampleClip(
+                  name: 'FX',
+                  sampleRate: kSampleRate,
+                  pcm: _pcm,
+                  source: 'Sound Lab',
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.play_arrow),
             tooltip: l10n.soundLabPlay,
@@ -432,11 +450,11 @@ class _SoundLabScreenState extends State<SoundLabScreen>
   }
 
   String _waveLabel(AppLocalizations l10n, SfxWave w) => switch (w) {
-    SfxWave.square => l10n.soundLabSquare,
-    SfxWave.sawtooth => l10n.soundLabSaw,
-    SfxWave.sine => l10n.soundLabSine,
-    SfxWave.noise => l10n.soundLabNoise,
-  };
+        SfxWave.square => l10n.soundLabSquare,
+        SfxWave.sawtooth => l10n.soundLabSaw,
+        SfxWave.sine => l10n.soundLabSine,
+        SfxWave.noise => l10n.soundLabNoise,
+      };
 }
 
 /// Paints the rendered PCM as a filled waveform.

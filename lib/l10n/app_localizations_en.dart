@@ -1633,6 +1633,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawAddClip => 'Add clip';
 
   @override
+  String get dawAddToTimeline => 'Add to timeline';
+
+  @override
   String get dawAddFromLibrary => 'From Sound Library';
 
   @override

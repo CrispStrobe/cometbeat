@@ -1640,6 +1640,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawAddClip => 'Clip hinzufügen';
 
   @override
+  String get dawAddToTimeline => 'Zur Timeline hinzufügen';
+
+  @override
   String get dawAddFromLibrary => 'Aus der Klangbibliothek';
 
   @override
