@@ -27,6 +27,9 @@ import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/sound_lab/my_samples_sheet.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
+import 'package:comet_beat/features/sound_lab/sample_extractor_screen.dart';
+import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
+import 'package:comet_beat/features/sound_lab/voice_lab_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
@@ -354,6 +357,24 @@ class _DawScreenState extends State<DawScreen>
     if (clip == null || clip.pcm.isEmpty || !mounted) return;
     addSampleClip(clip);
   }
+
+  /// Opens one of the Sound/Voice Lab creation tools full-screen; whatever the
+  /// user saves lands in the shared "My Samples" library, so on return we open
+  /// the sample picker to drop the fresh sound straight onto the timeline. This
+  /// is how the Audio Editor consumes the Sound Lab (generate FX), Voice Lab
+  /// (shape a voice) and Sample Extractor (lift a module sample) as clip sources.
+  Future<void> _createThenPick(Widget tool) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => tool),
+    );
+    if (!mounted) return;
+    await addSample();
+  }
+
+  Future<void> _addFromSoundLab() => _createThenPick(const SoundLabScreen());
+  Future<void> _addFromVoiceLab() => _createThenPick(const VoiceLabScreen());
+  Future<void> _addFromExtractor() =>
+      _createThenPick(const SampleExtractorScreen());
 
   @override
   void clear() => _daw.clear();
@@ -840,20 +861,28 @@ class _DawScreenState extends State<DawScreen>
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(
-              child: daw.clipCount == 0
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          l10n.dawEmpty,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
+            // A DAW look from the first frame: the lanes/ruler are always shown
+            // (even empty), with a gentle hint banner until the first clip lands.
+            if (daw.clipCount == 0)
+              Container(
+                width: double.infinity,
+                color: scheme.surfaceContainerHighest,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.dawEmpty,
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
-                    )
-                  : _timeline(daw, scheme),
-            ),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(child: _timeline(daw, scheme)),
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.all(12),
@@ -862,20 +891,50 @@ class _DawScreenState extends State<DawScreen>
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  FilledButton.tonalIcon(
-                    onPressed: addDemoBeat,
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.dawAddBeat),
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: addDemoTune,
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.dawAddTune),
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: addSample,
-                    icon: const Icon(Icons.graphic_eq),
-                    label: Text(l10n.dawAddSample),
+                  // One "Add clip" menu gathers every clip source: the demo
+                  // beat/tune, the Sound Library, and the Sound/Voice Lab +
+                  // Sample Extractor creation tools (the "SoundFX modals").
+                  MenuAnchor(
+                    menuChildren: [
+                      MenuItemButton(
+                        leadingIcon: const Icon(Icons.graphic_eq),
+                        onPressed: addSample,
+                        child: Text(l10n.dawAddFromLibrary),
+                      ),
+                      MenuItemButton(
+                        leadingIcon: const Icon(Icons.auto_awesome),
+                        onPressed: _addFromSoundLab,
+                        child: Text(l10n.dawAddFx),
+                      ),
+                      MenuItemButton(
+                        leadingIcon: const Icon(Icons.record_voice_over),
+                        onPressed: _addFromVoiceLab,
+                        child: Text(l10n.dawAddVoice),
+                      ),
+                      MenuItemButton(
+                        leadingIcon: const Icon(Icons.colorize),
+                        onPressed: _addFromExtractor,
+                        child: Text(l10n.dawExtractSample),
+                      ),
+                      const Divider(height: 1),
+                      MenuItemButton(
+                        leadingIcon: const Icon(Icons.music_note),
+                        onPressed: addDemoBeat,
+                        child: Text(l10n.dawAddBeat),
+                      ),
+                      MenuItemButton(
+                        leadingIcon: const Icon(Icons.piano),
+                        onPressed: addDemoTune,
+                        child: Text(l10n.dawAddTune),
+                      ),
+                    ],
+                    builder: (context, controller, _) => FilledButton.icon(
+                      onPressed: () => controller.isOpen
+                          ? controller.close()
+                          : controller.open(),
+                      icon: const Icon(Icons.add),
+                      label: Text(l10n.dawAddClip),
+                    ),
                   ),
                   FilledButton.tonalIcon(
                     onPressed: daw.clipCount < 2 ? null : _mergeAllWithToast,

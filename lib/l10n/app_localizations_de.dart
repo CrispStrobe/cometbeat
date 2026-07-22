@@ -1619,7 +1619,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get dawTitle => 'Mehrspur';
+  String get dawTitle => 'Audio-Editor';
 
   @override
   String get dawAddBeat => 'Beat hinzufügen';
@@ -1631,14 +1631,35 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawAddTune => 'Melodie hinzufügen';
 
   @override
+  String get dawAddClip => 'Clip hinzufügen';
+
+  @override
+  String get dawAddFromLibrary => 'Aus der Klangbibliothek';
+
+  @override
+  String get dawAddFx => 'FX erzeugen (Sound Lab)';
+
+  @override
+  String get dawAddVoice => 'Stimme formen (Voice Lab)';
+
+  @override
+  String get dawExtractSample => 'Aus Modul / Paket extrahieren';
+
+  @override
+  String get dawAddFromCatalog => 'Aus dem Asset-Katalog';
+
+  @override
+  String get dawTrackInstrument => 'Spur-Instrument';
+
+  @override
   String get dawEmpty =>
-      'Füge einen Beat oder eine Melodie hinzu und drücke Play — sie überlagern sich.';
+      'Deine Spuren sind bereit — tippe auf „Clip hinzufügen“, um einen Beat, eine Melodie, ein Sample oder einen Effekt einzufügen, dann drücke Play.';
 
   @override
-  String get dawSend => 'Zur Mehrspur';
+  String get dawSend => 'Zum Audio-Editor';
 
   @override
-  String get dawSent => 'Zur Mehrspur hinzugefügt';
+  String get dawSent => 'Zum Audio-Editor hinzugefügt';
 
   @override
   String get drumkitBars => 'Takte';

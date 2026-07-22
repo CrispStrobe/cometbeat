@@ -3035,7 +3035,7 @@ abstract class AppLocalizations {
   /// No description provided for @dawTitle.
   ///
   /// In en, this message translates to:
-  /// **'Multitrack'**
+  /// **'Audio Editor'**
   String get dawTitle;
 
   /// No description provided for @dawAddBeat.
@@ -3056,22 +3056,64 @@ abstract class AppLocalizations {
   /// **'Add tune'**
   String get dawAddTune;
 
+  /// No description provided for @dawAddClip.
+  ///
+  /// In en, this message translates to:
+  /// **'Add clip'**
+  String get dawAddClip;
+
+  /// No description provided for @dawAddFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'From Sound Library'**
+  String get dawAddFromLibrary;
+
+  /// No description provided for @dawAddFx.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate FX (Sound Lab)'**
+  String get dawAddFx;
+
+  /// No description provided for @dawAddVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Shape a voice (Voice Lab)'**
+  String get dawAddVoice;
+
+  /// No description provided for @dawExtractSample.
+  ///
+  /// In en, this message translates to:
+  /// **'Extract from module / pack'**
+  String get dawExtractSample;
+
+  /// No description provided for @dawAddFromCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'From assets catalog'**
+  String get dawAddFromCatalog;
+
+  /// No description provided for @dawTrackInstrument.
+  ///
+  /// In en, this message translates to:
+  /// **'Track instrument'**
+  String get dawTrackInstrument;
+
   /// No description provided for @dawEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Add a beat or a tune, then press play — they layer together.'**
+  /// **'Your tracks are ready — tap Add clip to drop in a beat, a tune, a sample or an effect, then press play.'**
   String get dawEmpty;
 
   /// No description provided for @dawSend.
   ///
   /// In en, this message translates to:
-  /// **'To Multitrack'**
+  /// **'To Audio Editor'**
   String get dawSend;
 
   /// No description provided for @dawSent.
   ///
   /// In en, this message translates to:
-  /// **'Added to the Multitrack'**
+  /// **'Added to the Audio Editor'**
   String get dawSent;
 
   /// No description provided for @drumkitBars.

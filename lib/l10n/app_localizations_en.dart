@@ -1612,7 +1612,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dawTitle => 'Multitrack';
+  String get dawTitle => 'Audio Editor';
 
   @override
   String get dawAddBeat => 'Add beat';
@@ -1624,14 +1624,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawAddTune => 'Add tune';
 
   @override
+  String get dawAddClip => 'Add clip';
+
+  @override
+  String get dawAddFromLibrary => 'From Sound Library';
+
+  @override
+  String get dawAddFx => 'Generate FX (Sound Lab)';
+
+  @override
+  String get dawAddVoice => 'Shape a voice (Voice Lab)';
+
+  @override
+  String get dawExtractSample => 'Extract from module / pack';
+
+  @override
+  String get dawAddFromCatalog => 'From assets catalog';
+
+  @override
+  String get dawTrackInstrument => 'Track instrument';
+
+  @override
   String get dawEmpty =>
-      'Add a beat or a tune, then press play — they layer together.';
+      'Your tracks are ready — tap Add clip to drop in a beat, a tune, a sample or an effect, then press play.';
 
   @override
-  String get dawSend => 'To Multitrack';
+  String get dawSend => 'To Audio Editor';
 
   @override
-  String get dawSent => 'Added to the Multitrack';
+  String get dawSent => 'Added to the Audio Editor';
 
   @override
   String get drumkitBars => 'Bars';
