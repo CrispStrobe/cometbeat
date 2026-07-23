@@ -377,6 +377,16 @@ void main() {
     expect(editor.noteCount, 1);
   });
 
+  testWidgets('Studio editing controls explain voice and insert modes',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await _enterStudio(tester);
+
+    expect(find.byTooltip(l10n.workshopVoiceSelectorHelp), findsOneWidget);
+    expect(find.byTooltip(l10n.workshopInsertModeHelp), findsOneWidget);
+  });
+
   testWidgets('the Studio inspector is off by default and toggles on',
       (tester) async {
     await pump(tester);

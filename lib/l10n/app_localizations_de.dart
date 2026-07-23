@@ -192,6 +192,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopVoice2 => 'St.2';
 
   @override
+  String get workshopVoiceSelectorHelp =>
+      'Wähle die Stimme, in die neue Noten eingefügt werden';
+
+  @override
   String get workshopZoomIn => 'Vergrößern';
 
   @override
@@ -397,6 +401,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get workshopInsertMode => 'Einfügen';
+
+  @override
+  String get workshopInsertModeHelp =>
+      'Im Einfügen-Modus werden neue Noten gesetzt; im Auswahl-Modus kannst du Noten auswählen und prüfen, ohne neue einzufügen';
 
   @override
   String get workshopSelectMode => 'Auswählen';
