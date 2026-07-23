@@ -102,6 +102,19 @@ Float64List timeStretch(
   return Float64List.sublistView(out, 0, targetLen);
 }
 
+/// Time-stretches both channels with identical WSOLA settings so a stereo
+/// recording keeps its authored duration and shared timing relationship.
+({Float64List left, Float64List right}) timeStretchStereo(
+  Float64List left,
+  Float64List right,
+  double factor, {
+  int sampleRate = kSampleRate,
+}) =>
+    (
+      left: timeStretch(left, factor, sampleRate: sampleRate),
+      right: timeStretch(right, factor, sampleRate: sampleRate),
+    );
+
 /// Finds the input offset in [nominal - tolerance, nominal + tolerance]
 /// (clamped) whose leading [_overlap] samples best cross-correlate (normalized
 /// dot product) with the natural continuation beginning at [targetStart].

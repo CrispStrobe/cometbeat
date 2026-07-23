@@ -547,6 +547,33 @@ void main() {
     expect(stereo.left, isNot(equals(stereo.right)));
   });
 
+  test('stereo pitch and time FX process linked channel pairs', () {
+    final left = _sine(12000, sampleRate: 1000);
+    for (final effect in [
+      defaultDawClipEffect(DawClipEffectType.pitchShift),
+      defaultDawClipEffect(DawClipEffectType.timeStretch),
+    ]) {
+      final stereo = renderTimelineStereo(
+        DawTimeline(
+          tracks: [
+            DawTrack(
+              pan: -1,
+              clips: [Clip(source: SampleSource(left))],
+            ),
+            DawTrack(
+              pan: 1,
+              clips: [Clip(source: SampleSource(left))],
+            ),
+          ],
+          effects: [effect],
+        ),
+        sampleRate: 1000,
+      );
+      expect(stereo.left.length, stereo.right.length);
+      expect(stereo.left.any((sample) => sample.abs() > 0.001), isTrue);
+    }
+  });
+
   test('gain FX scales audio and preserves length', () {
     final dry = Float64List.fromList([0.25, -0.5, 0.75]);
     final bypassed = applyClipEffectChain(

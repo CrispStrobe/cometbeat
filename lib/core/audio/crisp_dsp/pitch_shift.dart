@@ -70,3 +70,28 @@ Float64List granularPitchShift(
   }
   return output;
 }
+
+/// Applies the same deterministic grain schedule to a stereo pair. Keeping
+/// this as one DSP operation makes the channel contract explicit and prevents
+/// future channel-specific pitch settings from silently widening the image.
+({Float64List left, Float64List right}) granularPitchShiftStereo(
+  Float64List left,
+  Float64List right,
+  double semitones, {
+  int grainSize = 2048,
+  double overlap = 0.75,
+}) =>
+    (
+      left: granularPitchShift(
+        left,
+        semitones,
+        grainSize: grainSize,
+        overlap: overlap,
+      ),
+      right: granularPitchShift(
+        right,
+        semitones,
+        grainSize: grainSize,
+        overlap: overlap,
+      ),
+    );

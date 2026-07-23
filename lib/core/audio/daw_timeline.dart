@@ -31,14 +31,14 @@ import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
         flangerFx,
         flangerFxStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart'
-    show granularPitchShift;
+    show granularPitchShift, granularPitchShiftStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
     show resampleCubic;
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart'
     show reverbFx, reverbFxStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart' show ringModFx;
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
-    show timeStretch;
+    show timeStretch, timeStretchStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
     show VoiceEffect, applyVoiceEffect, voiceShapeFx, voiceShapeFxStereo;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
@@ -753,6 +753,19 @@ Float64List applyClipEffectChain(
           rangeDb: p('rangeDb', -60),
           mix: p('mix', 1),
         ),
+      DawClipEffectType.pitchShift => _pitchShiftFxStereo(
+          outLeft,
+          outRight,
+          semitones: p('semitones', 12),
+          mix: p('mix', 1),
+        ),
+      DawClipEffectType.timeStretch => _timeStretchFxStereo(
+          outLeft,
+          outRight,
+          speed: p('speed', 0.75),
+          mix: p('mix', 1),
+          sampleRate: sampleRate,
+        ),
       _ => (
           left: _applyClipEffect(outLeft, fx, sampleRate),
           right: _applyClipEffect(outRight, fx, sampleRate),
@@ -940,6 +953,38 @@ Float64List _gainFx(
     out[i] = input[i] * (dry + gain * wet);
   }
   return out;
+}
+
+({Float64List left, Float64List right}) _pitchShiftFxStereo(
+  Float64List left,
+  Float64List right, {
+  required double semitones,
+  required double mix,
+}) {
+  final shifted = granularPitchShiftStereo(left, right, semitones);
+  return (
+    left: _blendWetDry(left, _fitLength(shifted.left, left.length), mix),
+    right: _blendWetDry(right, _fitLength(shifted.right, right.length), mix),
+  );
+}
+
+({Float64List left, Float64List right}) _timeStretchFxStereo(
+  Float64List left,
+  Float64List right, {
+  required double speed,
+  required double mix,
+  required int sampleRate,
+}) {
+  final stretched = timeStretchStereo(
+    left,
+    right,
+    1 / speed.clamp(0.1, 4.0),
+    sampleRate: sampleRate,
+  );
+  return (
+    left: _blendWetDry(left, _fitLength(stretched.left, left.length), mix),
+    right: _blendWetDry(right, _fitLength(stretched.right, right.length), mix),
+  );
 }
 
 Float64List _applyAutomatedClipEffect(
