@@ -14,12 +14,27 @@ import 'package:crisp_notation/crisp_notation.dart'
         Clef,
         DurationBase,
         Measure,
+        MultiPartScore,
         NoteDuration,
         NoteElement,
         Pitch,
         Score,
         Step;
 import 'package:flutter_test/flutter_test.dart';
+
+MultiPartScore _editedScore() => MultiPartScore([
+      Score(
+        clef: Clef.treble,
+        measures: [
+          Measure([
+            NoteElement.note(
+              const Pitch(Step.d),
+              const NoteDuration(DurationBase.half),
+            ),
+          ]),
+        ],
+      ),
+    ]);
 
 SampleSource _tone(double level, int samples) =>
     SampleSource(Float64List(samples)..fillRange(0, samples, level));
@@ -549,6 +564,26 @@ void main() {
       expect(score, isNotNull);
       expect(score!.parts, isNotEmpty); // round-trips back to a MultiPartScore
       expect(s.clipScore(1, 0), isNull); // a baked sample has no score
+    });
+
+    test('replaceScoreClipSource updates the SAME clip in place, keeping voice',
+        () {
+      final s = DawService()..setTrackInstrument(0, _cello);
+      s.addClip(_scoreClip()); // score clip on track 0, adopts the cello voice
+      final src = s.clipSourceAt(0, 0);
+      final edited = _editedScore();
+      s.replaceScoreClipSource(src, edited);
+      expect(s.timeline.tracks[0].clips.length, 1); // replaced, not duplicated
+      expect(s.clipScore(0, 0), same(edited)); // now the edited score
+      expect(s.clipInstrument(0, 0)?.id, 'cello'); // voice preserved
+    });
+
+    test('replaceScoreClipSource adds a new clip when the source is gone', () {
+      final s = DawService()..addClip(_scoreClip());
+      final src = s.clipSourceAt(0, 0);
+      s.removeClip(0, 0); // the clip vanished while "editing"
+      s.replaceScoreClipSource(src, _editedScore());
+      expect(s.clipCount, 1); // the edit still lands — nothing lost
     });
 
     test('setClipInstrument re-voices the clip, changing its source + cacheKey',

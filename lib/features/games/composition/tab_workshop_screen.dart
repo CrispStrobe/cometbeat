@@ -235,6 +235,11 @@ class TabWorkshopScreen extends StatefulWidget {
   /// Optional per-part track names, aligned with [initialParts].parts.
   final List<String>? initialNames;
 
+  /// When set (opened to edit an Audio Editor music clip), "Send to Audio Editor"
+  /// calls this with the edited band score and pops back — an IN-PLACE round-trip
+  /// that updates the source clip instead of adding a new one.
+  final void Function(MultiPartScore edited)? onReturnToDaw;
+
   /// Test seam: overrides the audio→tab transcription (default
   /// [audioToTabDocument], which downloads + runs the TabCNN model). Tests inject
   /// a fake so `openAudioRecording` is exercised without the model / network.
@@ -249,6 +254,7 @@ class TabWorkshopScreen extends StatefulWidget {
     this.initialScore,
     this.initialParts,
     this.initialNames,
+    this.onReturnToDaw,
     this.debugAudioToTab,
   });
 
@@ -1268,7 +1274,16 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   }
 
   @override
-  void sendToDaw() => sendToMultitrack(context, ScoreSource(_bandScore()));
+  void sendToDaw() {
+    final mp = _bandScore();
+    // In-place round-trip: update the source Audio Editor clip and go back.
+    if (widget.onReturnToDaw != null) {
+      widget.onReturnToDaw!(mp);
+      Navigator.of(context).pop();
+    } else {
+      sendToMultitrack(context, ScoreSource(mp));
+    }
+  }
 
   Future<void> _saveBytes(
     Uint8List bytes,

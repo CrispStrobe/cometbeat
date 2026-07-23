@@ -1528,14 +1528,20 @@ class _DawScreenState extends State<DawScreen>
                               icon: const Icon(Icons.music_off),
                               label: Text(l10n.dawInstrumentDefault),
                             ),
-                          // Take this music to a symbolic editor (and back via the
-                          // editor's Send to Audio Editor).
+                          // Take this music to a symbolic editor; "Send to Audio
+                          // Editor" there updates THIS clip in place (round-trip).
                           TextButton.icon(
                             onPressed: () {
                               final score = _daw.clipScore(track, index);
+                              final source = _daw.clipSourceAt(track, index);
                               Navigator.of(sheetCtx).pop();
                               if (score != null) {
-                                showScoreDestinations(context, score);
+                                showScoreDestinations(
+                                  context,
+                                  score,
+                                  onReturn: (edited) => _daw
+                                      .replaceScoreClipSource(source, edited),
+                                );
                               }
                             },
                             icon: const Icon(Icons.open_in_new),

@@ -615,6 +615,34 @@ class DawService extends ChangeNotifier {
     return src is ScoreSource ? src.score : null;
   }
 
+  /// The raw source of a clip — captured before opening it in an editor so the
+  /// edit can be routed back to the SAME clip via [replaceScoreClipSource],
+  /// robustly against the clip being moved/reordered meanwhile.
+  ClipSource clipSourceAt(int track, int index) =>
+      timeline.tracks[track].clips[index].source;
+
+  /// Replace (in place) the clip whose source is [oldSource] with the edited
+  /// [score], preserving its placement/gain/fades/trim and its voice — the "send
+  /// back" half of an in-editor round-trip. If that clip is gone, the edit lands
+  /// as a new clip so nothing is lost.
+  void replaceScoreClipSource(ClipSource oldSource, MultiPartScore score) {
+    final inst = oldSource is ScoreSource ? oldSource.instrument : null;
+    for (final t in timeline.tracks) {
+      for (var i = 0; i < t.clips.length; i++) {
+        if (identical(t.clips[i].source, oldSource)) {
+          _record();
+          t.clips[i] = _reSource(
+            t.clips[i],
+            ScoreSource(score, instrument: inst),
+          );
+          notifyListeners();
+          return;
+        }
+      }
+    }
+    addClip(ScoreSource(score, instrument: inst));
+  }
+
   /// Re-source [clip] onto [source], preserving placement/gain/mute/fades/trim.
   Clip _reSource(Clip clip, ScoreSource source) => Clip(
         source: source,

@@ -412,6 +412,7 @@ class CompositionWorkshopScreen extends StatefulWidget {
     super.key,
     this.initialScore,
     this.initialNames,
+    this.onReturnToDaw,
     this.debugScanImage,
   });
 
@@ -422,6 +423,11 @@ class CompositionWorkshopScreen extends StatefulWidget {
   /// Advanced Tracker's "Open in Workshop".
   final MultiPartScore? initialScore;
   final List<String>? initialNames;
+
+  /// When set (opened to edit an Audio Editor music clip), "Send to Audio Editor"
+  /// calls this with the edited multi-part score and pops back — an IN-PLACE
+  /// round-trip that updates the source clip instead of adding a new one.
+  final void Function(MultiPartScore edited)? onReturnToDaw;
 
   /// Test seam for "Scan sheet music" (OMR): given the picked image bytes,
   /// returns a recognised [Score] (or null). Production uses the shared
@@ -772,8 +778,16 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   }
 
   @override
-  void sendToDaw() =>
-      sendToMultitrack(context, ScoreSource(_mpd.buildMultiPart()));
+  void sendToDaw() {
+    final mp = _mpd.buildMultiPart();
+    // In-place round-trip: update the source Audio Editor clip and go back.
+    if (widget.onReturnToDaw != null) {
+      widget.onReturnToDaw!(mp);
+      Navigator.of(context).pop();
+    } else {
+      sendToMultitrack(context, ScoreSource(mp));
+    }
+  }
 
   @override
   bool get debugHoverCardShown => _inspect && _hoverInfo != null;
@@ -3514,10 +3528,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                         ),
                       );
                     case 'daw':
-                      sendToMultitrack(
-                        context,
-                        ScoreSource(_mpd.buildMultiPart()),
-                      );
+                      sendToDaw();
                     case 'loadTune':
                       loadSharedMelody();
                     case 'shareTune':
