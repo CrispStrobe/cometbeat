@@ -12,8 +12,10 @@ import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/game_test_support.dart';
@@ -35,6 +37,24 @@ MyInstrumentsTester _sheet(WidgetTester tester) =>
         as MyInstrumentsTester;
 
 Widget _hosted(Widget child) => Scaffold(body: child);
+
+class _FakeFileSelector extends FileSelectorPlatform
+    with MockPlatformInterfaceMixin {
+  _FakeFileSelector(this.file);
+
+  final XFile file;
+  bool opened = false;
+
+  @override
+  Future<XFile?> openFile({
+    List<XTypeGroup>? acceptedTypeGroups,
+    String? initialDirectory,
+    String? confirmButtonText,
+  }) async {
+    opened = true;
+    return file;
+  }
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -134,6 +154,38 @@ void main() {
     final fx = (await store.load()).where((s) => s.kind == 'sfxr').toList();
     expect(fx, isNotEmpty);
     expect(fx.any((s) => s.name == 'laser' && s.category == 'FX'), isTrue);
+  });
+
+  testWidgets('Tracker module import uses the caller module destination',
+      (tester) async {
+    final previous = FileSelectorPlatform.instance;
+    addTearDown(() => FileSelectorPlatform.instance = previous);
+    final moduleBytes = Uint8List.fromList(const [1, 2, 3]);
+    FileSelectorPlatform.instance = _FakeFileSelector(
+      XFile.fromData(moduleBytes, path: 'lesson.xm'),
+    );
+    Uint8List? received;
+
+    await pumpGame(
+      tester,
+      _hosted(
+        MyInstrumentsSheet(
+          store: InstrumentLibraryStore(),
+          onModuleSelected: (bytes) async => received = bytes,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.file_upload_outlined));
+    await tester.pumpAndSettle();
+
+    expect((FileSelectorPlatform.instance as _FakeFileSelector).opened, isTrue);
+    expect(
+      (FileSelectorPlatform.instance as _FakeFileSelector).file.name,
+      'lesson.xm',
+    );
+    expect(received, orderedEquals(moduleBytes));
   });
 
   testWidgets('rubric tabs filter the list by category', (tester) async {
