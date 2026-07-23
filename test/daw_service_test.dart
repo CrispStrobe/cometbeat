@@ -552,6 +552,19 @@ void main() {
     expect(trimmed.first, greaterThan(peaks.first));
   });
 
+  test('clipPeaks uses the louder side of a stereo source', () {
+    final s = DawService()
+      ..addClip(
+        StereoSampleSource(
+          Float64List.fromList([0.1, 0.1, 0.1, 0.1]),
+          Float64List.fromList([0.8, 0.8, 0.8, 0.8]),
+        ),
+      );
+    final peaks = s.clipPeaks(0, 0, buckets: 2);
+    expect(peaks[0], closeTo(0.8, 1e-9));
+    expect(peaks[1], closeTo(0.8, 1e-9));
+  });
+
   test('loadProject rejects a bad file without wrecking the arrangement', () {
     final s = DawService()..addClip(_tone(0.5, 100));
     expect(() => s.loadProject('garbage{'), throwsFormatException);

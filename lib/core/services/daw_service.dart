@@ -489,18 +489,36 @@ class DawService extends ChangeNotifier {
         () => clip.source.render(kDawSampleRate),
       );
       final dry = trimmedPcm(clip, rendered);
-      final pcm = clip.effects.isEmpty
-          ? dry
-          : applyClipEffectChain(dry, clip.effects, kDawSampleRate);
+      final rightRendered = clip.source is StereoSampleSource
+          ? (clip.source as StereoSampleSource).right
+          : rendered;
+      final rightDry = trimmedPcm(clip, rightRendered);
+      final stereo = clip.source is StereoSampleSource;
+      final effected = clip.effects.isEmpty
+          ? (left: dry, right: rightDry)
+          : stereo
+              ? applyStereoClipEffectChain(
+                  dry,
+                  rightDry,
+                  clip.effects,
+                  kDawSampleRate,
+                )
+              : (
+                  left: applyClipEffectChain(dry, clip.effects, kDawSampleRate),
+                  right: dry,
+                );
       final out = List<double>.filled(n, 0);
-      if (pcm.isEmpty) return out;
+      if (effected.left.isEmpty) return out;
       for (var b = 0; b < n; b++) {
-        final lo = pcm.length * b ~/ n;
-        final hi = pcm.length * (b + 1) ~/ n;
+        final lo = effected.left.length * b ~/ n;
+        final hi = effected.left.length * (b + 1) ~/ n;
         var peak = 0.0;
         for (var i = lo; i < hi; i++) {
-          final a = pcm[i].abs();
-          if (a > peak) peak = a;
+          final leftPeak = effected.left[i].abs();
+          final rightPeak =
+              i < effected.right.length ? effected.right[i].abs() : 0.0;
+          if (leftPeak > peak) peak = leftPeak;
+          if (rightPeak > peak) peak = rightPeak;
         }
         out[b] = peak > 1 ? 1 : peak;
       }

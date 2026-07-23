@@ -785,6 +785,16 @@ Float64List applyClipEffectChain(
   return (left: outLeft, right: outRight);
 }
 
+/// Applies an ordered FX chain to stereo analysis buffers using the same path
+/// as timeline rendering.
+({Float64List left, Float64List right}) applyStereoClipEffectChain(
+  Float64List left,
+  Float64List right,
+  List<DawClipEffect> effects,
+  int sampleRate,
+) =>
+    _applyStereoClipEffectChain(left, right, effects, sampleRate);
+
 Float64List _applyClipEffect(
   Float64List input,
   DawClipEffect fx,
