@@ -202,6 +202,54 @@ void main() {
     final uncapped = arrangeTab([cMajor], guitar, maxFret: 24, maxSpan: null);
     expect(_sounding(uncapped, guitar)..sort(), cMajor);
   });
+
+  test('the shared model applies TabArranger.sharedSpanCost (compact shapes)',
+      () {
+    addTearDown(() {
+      TabArranger.shared = null;
+      TabArranger.sharedSpanCost = 0.5;
+    });
+    // The tuned default the app relies on to hit the 84% / span-1.47 benchmark.
+    expect(TabArranger.sharedSpanCost, 0.5);
+
+    // A model that scores EVERY reachable position equally leaves span the only
+    // differentiator, so the span penalty alone decides the voicing. A large
+    // penalty must never widen the shape vs none (monotonic), and for a chord
+    // with both a tight and a spread option it strictly tightens it.
+    const cMajor = [60, 64, 67, 72];
+    TabArranger.shared = _FlatModel();
+
+    TabArranger.sharedSpanCost = 0.0;
+    final loose = arrangeTab([cMajor], guitar);
+    TabArranger.sharedSpanCost = 5.0;
+    final tight = arrangeTab([cMajor], guitar);
+
+    expect(_span(tight.single), lessThanOrEqualTo(_span(loose.single)));
+    expect(_sounding(tight, guitar)..sort(), cMajor); // still the same chord
+  });
+}
+
+/// Scores every reachable position of every column equally — so the arranger's
+/// span term (not the emission) picks the voicing. Lets a test isolate the span
+/// penalty from the model's own preferences.
+class _FlatModel implements TabPositionModel {
+  @override
+  List<Map<(int, int), double>?>? score(
+    List<List<int>> columns,
+    Tuning tuning, {
+    int capo = 0,
+    int maxFret = 20,
+  }) =>
+      [
+        for (final col in columns)
+          {
+            for (final midi in col)
+              for (var s = 0; s < tuning.strings.length; s++)
+                if (midi - tuning.strings[s].midiNumber - capo
+                    case final int fret when fret >= 0 && fret <= maxFret)
+                  (s, fret): 0.0,
+          },
+      ];
 }
 
 /// A stand-in [TabPositionModel] that lavishes score on one position and stays

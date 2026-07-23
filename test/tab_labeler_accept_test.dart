@@ -69,8 +69,14 @@ void main() {
             (col) => (col as List).map((p) => (p as List).cast<int>()).toList(),
           )
           .toList();
+      // Heuristic (no model), then the REAL app path: the model installed as
+      // TabArranger.shared, arranged with no explicit args — so it picks up
+      // TabArranger.sharedSpanCost (0.5), exactly what users get.
+      TabArranger.shared = null;
       final h = _score(arrangeTab(columns, tuning), human);
-      final m = _score(arrangeTab(columns, tuning, model: model!), human);
+      TabArranger.shared = model;
+      final m = _score(arrangeTab(columns, tuning), human);
+      TabArranger.shared = null;
       hM += h.match;
       hT += h.total;
       hMove += h.move;

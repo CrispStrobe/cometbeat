@@ -60,6 +60,14 @@ class TabArranger {
   TabArranger._();
 
   static TabPositionModel? shared;
+
+  /// Span penalty re-applied on top of the app-loaded [shared] model's emission
+  /// so arranged shapes stay as compact as a human's. The model alone picks the
+  /// right position but slightly OVER-spans (1.68 vs human 1.43); the measured
+  /// sweet spot 0.5 pulls span to 1.47 AND lifts agreement to 84% (they align —
+  /// humans finger compact). Only used when [shared] drives the arrange; an
+  /// explicit `arrangeTab(modelSpanCost:)` overrides it (e.g. benchmarks).
+  static double sharedSpanCost = 0.5;
 }
 
 /// The weights of the arranger's cost function. Defaults are tuned so hand
@@ -276,6 +284,11 @@ List<Fretting> arrangeTab(
   // (transition/hand-movement stays ours). A missing score for a candidate's
   // position falls back to the heuristic, so partial models work.
   final m = model ?? TabArranger.shared;
+  // An explicit modelSpanCost wins; otherwise the app-loaded shared model brings
+  // its tuned default so the in-app arrange matches the 84%/span-1.47 benchmark.
+  final effModelSpanCost = modelSpanCost > 0
+      ? modelSpanCost
+      : (model == null && m != null ? TabArranger.sharedSpanCost : 0.0);
   final scores = m?.score(columns, tuning, capo: capo, maxFret: maxFret);
   double local(int i, Fretting f) {
     final col = (scores != null && i < scores.length) ? scores[i] : null;
@@ -290,8 +303,10 @@ List<Fretting> arrangeTab(
         }
       }
       if (any) {
-        // higher model score → lower cost; + optional span penalty (default 0)
-        return -sum + (modelSpanCost > 0 ? _spanOf(f) * modelSpanCost : 0);
+        // higher model score → lower cost; + span penalty (explicit, or the
+        // shared model's tuned default) to keep shapes human-compact.
+        return -sum +
+            (effModelSpanCost > 0 ? _spanOf(f) * effModelSpanCost : 0);
       }
     }
     return _localCost(f, cost);
