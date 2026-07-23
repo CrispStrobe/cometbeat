@@ -48,6 +48,7 @@ const _defaultSpatium = 6.0;
 /// rasterizes through `dart:ui`.
 Future<Uint8List> exportScoreToPdf(
   Score score, {
+  String? title,
   CrispNotationTheme theme = CrispNotationTheme.standard,
   PdfPageFormat pageFormat = _a4,
   double spatium = _defaultSpatium,
@@ -59,10 +60,12 @@ Future<Uint8List> exportScoreToPdf(
   final settings = LayoutSettings(metadata: metadata);
 
   // The page box, expressed in staff spaces for the engine.
+  final titleText = title?.trim() ?? '';
+  final titleGap = titleText.isEmpty ? 0.0 : 18.0;
   final metrics = PageMetrics(
     width: pageFormat.width / spatium,
     height: pageFormat.height / spatium,
-    marginTop: margin,
+    marginTop: margin + titleGap,
     marginBottom: margin,
     marginLeft: margin,
     marginRight: margin,
@@ -88,7 +91,8 @@ Future<Uint8List> exportScoreToPdf(
   }
 
   final doc = pw.Document();
-  for (final rendered in pages) {
+  for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    final rendered = pages[pageIndex];
     doc.addPage(
       pw.Page(
         pageFormat: pageFormat,
@@ -96,6 +100,18 @@ Future<Uint8List> exportScoreToPdf(
         margin: pw.EdgeInsets.zero,
         build: (context) => pw.Stack(
           children: [
+            if (pageIndex == 0 && titleText.isNotEmpty)
+              pw.Positioned(
+                left: metrics.marginLeft * spatium,
+                top: margin * spatium,
+                child: pw.Text(
+                  titleText,
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
             for (final (positioned, png) in rendered)
               pw.Positioned(
                 left: metrics.marginLeft * spatium,
@@ -122,6 +138,7 @@ Future<Uint8List> exportScoreToPdf(
 /// `renderStaffSystemLayoutToPng`, both already in crisp_notation).
 Future<Uint8List> exportMultiPartToPdf(
   MultiPartScore multiPart, {
+  String? title,
   CrispNotationTheme theme = CrispNotationTheme.standard,
   PdfPageFormat pageFormat = _a4,
   double spatium = _defaultSpatium,
@@ -134,6 +151,7 @@ Future<Uint8List> exportMultiPartToPdf(
           ? const Score(clef: Clef.treble, measures: [])
           : multiPart.parts.first,
       theme: theme,
+      title: title,
       pageFormat: pageFormat,
       spatium: spatium,
       rasterScale: rasterScale,
@@ -145,10 +163,12 @@ Future<Uint8List> exportMultiPartToPdf(
       await MusicFonts.load(theme.musicFont);
   final settings = LayoutSettings(metadata: metadata);
 
+  final titleText = title?.trim() ?? '';
+  final titleGap = titleText.isEmpty ? 0.0 : 18.0;
   final metrics = PageMetrics(
     width: pageFormat.width / spatium,
     height: pageFormat.height / spatium,
-    marginTop: margin,
+    marginTop: margin + titleGap,
     marginBottom: margin,
     marginLeft: margin,
     marginRight: margin,
@@ -171,13 +191,26 @@ Future<Uint8List> exportMultiPartToPdf(
   }
 
   final doc = pw.Document();
-  for (final rendered in pages) {
+  for (var pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    final rendered = pages[pageIndex];
     doc.addPage(
       pw.Page(
         pageFormat: pageFormat,
         margin: pw.EdgeInsets.zero,
         build: (context) => pw.Stack(
           children: [
+            if (pageIndex == 0 && titleText.isNotEmpty)
+              pw.Positioned(
+                left: metrics.marginLeft * spatium,
+                top: margin * spatium,
+                child: pw.Text(
+                  titleText,
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
             for (final (positioned, png) in rendered)
               pw.Positioned(
                 left: metrics.marginLeft * spatium,

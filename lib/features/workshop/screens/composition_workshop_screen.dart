@@ -3072,9 +3072,14 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           await (_mpd.partCount > 1
               ? exportMultiPartToPdf(
                   _mpd.buildMultiPart(),
+                  title: _scoreTitle,
                   theme: kidsScoreTheme,
                 )
-              : exportScoreToPdf(score, theme: kidsScoreTheme)),
+              : exportScoreToPdf(
+                  score,
+                  title: _scoreTitle,
+                  theme: kidsScoreTheme,
+                )),
           null,
         );
       default:
