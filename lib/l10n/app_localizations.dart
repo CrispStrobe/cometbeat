@@ -434,6 +434,12 @@ abstract class AppLocalizations {
   /// **'Set score title'**
   String get workshopSetTitle;
 
+  /// No description provided for @workshopMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More score actions'**
+  String get workshopMoreActions;
+
   /// No description provided for @workshopZoomIn.
   ///
   /// In en, this message translates to:

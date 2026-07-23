@@ -83,6 +83,7 @@
   "workshopVoice2": "V2",
   "workshopVoiceSelectorHelp": "Choose which melodic voice receives newly inserted notes",
   "workshopSetTitle": "Set score title",
+  "workshopMoreActions": "More score actions",
   "workshopZoomIn": "Zoom in",
   "workshopZoomOut": "Zoom out",
   "workshopOpen": "Open a file…",

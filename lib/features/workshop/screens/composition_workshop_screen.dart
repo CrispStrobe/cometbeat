@@ -1952,6 +1952,73 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     );
   }
 
+  Future<void> _showNarrowActions() async {
+    final l10n = AppLocalizations.of(context)!;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.file_open_outlined),
+              title: Text(l10n.workshopOpen),
+              onTap: () => Navigator.of(ctx).pop('open'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.save_outlined),
+              title: Text(l10n.myMelodySave),
+              enabled: !_doc.isEmpty,
+              onTap: () => Navigator.of(ctx).pop('save'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.ios_share_outlined),
+              title: Text(l10n.workshopExportChoose),
+              enabled: !_doc.isEmpty,
+              onTap: () => Navigator.of(ctx).pop('export'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.undo),
+              title: Text(l10n.myMelodyUndo),
+              enabled: _doc.canUndo,
+              onTap: () => Navigator.of(ctx).pop('undo'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.redo),
+              title: Text(l10n.workshopRedo),
+              enabled: _doc.canRedo,
+              onTap: () => Navigator.of(ctx).pop('redo'),
+            ),
+            ListTile(
+              leading: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+              title: Text(
+                _isPlaying ? l10n.workshopStop : l10n.myMelodyPlay,
+              ),
+              enabled: _hasPlayableContent || _isPlaying,
+              onTap: () => Navigator.of(ctx).pop('play'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (action) {
+      case 'open':
+        await _open();
+      case 'save':
+        await _save();
+      case 'export':
+        await _showExportSheet();
+      case 'undo':
+        setState(_doc.undo);
+      case 'redo':
+        setState(_doc.redo);
+      case 'play':
+        _togglePlay();
+    }
+  }
+
   Future<void> _setScoreTitle() async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(
@@ -3391,6 +3458,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = kidsScoreTheme;
+    final narrow = MediaQuery.sizeOf(context).width < 600;
     final selectedIds = _doc.selectedIds;
     // Live harmonic analysis of the active part (Analysis toggle): tints each
     // note by its chord's function. Computed from the built score so it sees
@@ -3437,318 +3505,369 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           appBar: AppBar(
             toolbarHeight: 48,
             titleSpacing: 4,
-            // The score settings live inline in the top bar (one row).
-            title: _TopBar(
-              mode: _mode,
-              inputMode: _inputMode,
-              showInputMode: _studio,
-              onToggleInputMode: () => setState(
-                () => _inputMode =
-                    _selectMode ? _InputMode.insert : _InputMode.select,
-              ),
-              timeSignature: _doc.timeSignature,
-              fifths: _doc.keySignature.fifths,
-              pickup: _doc.pickup,
-              armedGlyph:
-                  _values.firstWhere((v) => v.base == _pendingBase).glyph,
-              dotted: _dotted,
-              status: _statusText(context, l10n),
-              onMode: _setMode,
-              onTime: (t) => setState(() => _doc.setTimeSignature(t)),
-              onKey: (f) =>
-                  setState(() => _doc.setKeySignature(KeySignature(f))),
-              onPickup: (p) => setState(() => _doc.setPickup(p)),
-              onZoomIn: () => _zoomBy(3),
-              onZoomOut: () => _zoomBy(-3),
-            ),
+            // The settings strip is rendered in the body below so it can own
+            // the full-width horizontal viewport on narrow screens.
+            title: narrow
+                ? const SizedBox.shrink()
+                : _TopBar(
+                    mode: _mode,
+                    inputMode: _inputMode,
+                    showInputMode: _studio,
+                    onToggleInputMode: () => setState(
+                      () => _inputMode =
+                          _selectMode ? _InputMode.insert : _InputMode.select,
+                    ),
+                    timeSignature: _doc.timeSignature,
+                    fifths: _doc.keySignature.fifths,
+                    pickup: _doc.pickup,
+                    armedGlyph:
+                        _values.firstWhere((v) => v.base == _pendingBase).glyph,
+                    dotted: _dotted,
+                    status: _statusText(context, l10n),
+                    onMode: _setMode,
+                    onTime: (t) => setState(() => _doc.setTimeSignature(t)),
+                    onKey: (f) => setState(
+                      () => _doc.setKeySignature(KeySignature(f)),
+                    ),
+                    onPickup: (p) => setState(() => _doc.setPickup(p)),
+                    onZoomIn: () => _zoomBy(3),
+                    onZoomOut: () => _zoomBy(-3),
+                  ),
             actions: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Which voice note-entry targets (crisp_notation engraves two).
-                    // Studio-only — the Sandbox surface stays single-voice.
-                    if (_studio)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Tooltip(
-                          message: l10n.workshopVoiceSelectorHelp,
-                          child: SegmentedButton<int>(
-                            style: const ButtonStyle(
-                              visualDensity: VisualDensity.compact,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            showSelectedIcon: false,
-                            segments: [
-                              ButtonSegment(
-                                value: 0,
-                                label: Text(l10n.workshopVoice1),
-                              ),
-                              ButtonSegment(
-                                value: 1,
-                                label: Text(l10n.workshopVoice2),
-                              ),
-                            ],
-                            selected: {_doc.activeVoice},
-                            onSelectionChanged: (s) =>
-                                setState(() => _doc.setActiveVoice(s.first)),
-                          ),
-                        ),
-                      ),
-                    IconButton(
-                      icon: const Icon(Icons.undo),
-                      tooltip: l10n.myMelodyUndo,
-                      onPressed:
-                          _doc.canUndo ? () => setState(_doc.undo) : null,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.title),
-                      tooltip: l10n.workshopSetTitle,
-                      onPressed: _setScoreTitle,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.redo),
-                      tooltip: l10n.workshopRedo,
-                      onPressed:
-                          _doc.canRedo ? () => setState(_doc.redo) : null,
-                    ),
-                    IconButton(
-                      icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
-                      tooltip:
-                          _isPlaying ? l10n.workshopStop : l10n.myMelodyPlay,
-                      // Stay enabled while playing so the user can always stop, even
-                      // if they emptied the document mid-playback.
-                      onPressed: (!_hasPlayableContent && !_isPlaying)
-                          ? null
-                          : _togglePlay,
-                    ),
-                    // Hear the whole piece rendered with a saved "My Instruments"
-                    // voice (a preview — separate from the highlighting transport).
-                    IconButton(
-                      icon: const Icon(Icons.piano_outlined),
-                      tooltip: l10n.workshopPlayWithInstrument,
-                      onPressed:
-                          _hasPlayableContent ? _playWithInstrument : null,
-                    ),
-                    // Practice speed — the number reads as a chip; picking a slower
-                    // speed makes the next Play stretch (same pitch) for slow practice.
-                    PopupMenuButton<double>(
-                      tooltip: l10n.workshopPlaybackSpeed,
-                      initialValue: _playSpeed,
-                      onSelected: (s) => setState(() => _playSpeed = s),
-                      itemBuilder: (ctx) => [
-                        for (final s in _playSpeeds)
-                          CheckedPopupMenuItem<double>(
-                            value: s,
-                            checked: _playSpeed == s,
-                            child: Text(_speedLabel(s)),
-                          ),
-                      ],
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Text(
-                            _speedLabel(_playSpeed),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.info_outline),
-                      tooltip: l10n.workshopShortcuts,
-                      onPressed: () => _showShortcuts(l10n),
-                    ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      onSelected: (v) {
-                        switch (v) {
-                          case 'open':
-                            _open();
-                          case 'paste':
-                            _pasteTokens();
-                          case 'scan':
-                            _scanImage();
-                          case 'transcribe':
-                            _transcribeRecording();
-                          case 'barnums':
-                            setState(() => _barNumbers = !_barNumbers);
-                          case 'notenames':
-                            setState(() => _noteNames = !_noteNames);
-                          case 'analysis':
-                            setState(() => _showAnalysis = !_showAnalysis);
-                          case 'inspect':
-                            setState(() => _inspect = !_inspect);
-                          case 'studio':
-                            _setShelf(_studio ? _Shelf.sandbox : _Shelf.studio);
-                          case 'inspector':
-                            setState(() => _inspector = !_inspector);
-                          case 'split':
-                            setState(() {
-                              _doc.rhythmPolicy =
-                                  _doc.rhythmPolicy == RhythmPolicy.split
-                                      ? RhythmPolicy.spill
-                                      : RhythmPolicy.split;
-                            });
-                          case 'tempo':
-                            _showInitialTempoDialog();
-                          case 'countin':
-                            setState(() => _countIn = !_countIn);
-                          case 'loop':
-                            setState(() => _loopSelection = !_loopSelection);
-                          case 'save':
-                            _save();
-                          case 'export':
-                            _showExportSheet();
-                          case 'clear':
-                            setState(_doc.clearAll);
-                          case 'daw':
-                            sendToDaw();
-                          case 'loadTune':
-                            loadSharedMelody();
-                          case 'shareTune':
-                            shareMelody();
-                        }
-                      },
-                      itemBuilder: (ctx) => [
-                        _menuItem(
-                          'open',
-                          Icons.file_open_outlined,
-                          l10n.workshopOpen,
-                          true,
-                        ),
-                        _menuItem(
-                          'paste',
-                          Icons.content_paste_go_outlined,
-                          l10n.workshopPasteTokens,
-                          true,
-                        ),
-                        _menuItem(
-                          'scan',
-                          Icons.document_scanner_outlined,
-                          l10n.workshopScanImage,
-                          true,
-                        ),
-                        _menuItem(
-                          'transcribe',
-                          Icons.graphic_eq,
-                          l10n.workshopTranscribe,
-                          true,
-                        ),
-                        CheckedPopupMenuItem<String>(
-                          value: 'barnums',
-                          checked: _barNumbers,
-                          child: Text(l10n.workshopBarNumbers),
-                        ),
-                        CheckedPopupMenuItem<String>(
-                          value: 'notenames',
-                          checked: _noteNames,
-                          child: Text(l10n.workshopNoteNames),
-                        ),
-                        CheckedPopupMenuItem<String>(
-                          value: 'analysis',
-                          checked: _showAnalysis,
-                          child: _menuDescription(
-                            l10n.workshopAnalysis,
-                            l10n.workshopAnalysisHelp,
-                          ),
-                        ),
-                        CheckedPopupMenuItem<String>(
-                          value: 'inspect',
-                          checked: _inspect,
-                          child: Text(l10n.inspectMode),
-                        ),
-                        const PopupMenuDivider(),
-                        CheckedPopupMenuItem<String>(
-                          value: 'studio',
-                          checked: _studio,
-                          child: Text(l10n.workshopStudioMode),
-                        ),
-                        // The inspector lives inside Studio — hidden on the Sandbox
-                        // shelf so the kid surface stays a glyph strip + piano.
-                        if (_studio)
-                          CheckedPopupMenuItem<String>(
-                            value: 'inspector',
-                            checked: _inspector,
-                            child: Text(l10n.workshopInspector),
-                          ),
-                        CheckedPopupMenuItem<String>(
-                          value: 'split',
-                          checked: _doc.rhythmPolicy == RhythmPolicy.split,
-                          child: Text(l10n.workshopSplitNotes),
-                        ),
-                        const PopupMenuDivider(),
-                        _menuItem(
-                          'daw',
-                          Icons.library_add,
-                          l10n.dawSend,
-                          !_doc.isEmpty,
-                        ),
-                        // Trade a tune with the Loop Mixer / Tracker / Live Looper
-                        // (MelodyBridge): pull one in as notes, or hand this melody out
-                        // to drive a groove layer there.
-                        _menuItem(
-                          'shareTune',
-                          Icons.upload,
-                          l10n.tuneShare,
-                          !_doc.isEmpty,
-                        ),
-                        _menuItem(
-                          'loadTune',
-                          Icons.download,
-                          l10n.tuneLoadShared,
-                          MelodyBridge.instance.hasMelody,
-                        ),
-                        const PopupMenuDivider(),
-                        _menuItem(
-                          'tempo',
-                          Icons.speed,
-                          l10n.workshopInitialTempo,
-                          true,
-                        ),
-                        // Playback options — a lead-in click, and looping the
-                        // selection to drill a hard bar.
-                        CheckedPopupMenuItem<String>(
-                          value: 'countin',
-                          checked: _countIn,
-                          child: Text(l10n.workshopCountIn),
-                        ),
-                        CheckedPopupMenuItem<String>(
-                          value: 'loop',
-                          checked: _loopSelection,
-                          child: _menuDescription(
-                            l10n.workshopLoopSelection,
-                            l10n.workshopLoopSelectionHelp,
-                          ),
-                        ),
-                        _menuItem(
-                          'save',
-                          Icons.bookmark_add_outlined,
-                          l10n.myMelodySave,
-                          !_doc.isEmpty,
-                        ),
-                        _menuItem(
-                          'export',
-                          Icons.ios_share,
-                          l10n.workshopExport,
-                          !_doc.isEmpty,
-                        ),
-                        _menuItem(
-                          'clear',
-                          Icons.delete_sweep_outlined,
-                          l10n.myMelodyClear,
-                          !_doc.isEmpty,
-                        ),
-                      ],
-                    ),
-                  ],
+              if (narrow) ...[
+                IconButton(
+                  icon: const Icon(Icons.title),
+                  tooltip: l10n.workshopSetTitle,
+                  onPressed: _setScoreTitle,
                 ),
-              ),
+                IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: l10n.workshopMoreActions,
+                  onPressed: _showNarrowActions,
+                ),
+              ] else
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Which voice note-entry targets (crisp_notation engraves two).
+                      // Studio-only — the Sandbox surface stays single-voice.
+                      if (_studio)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Tooltip(
+                            message: l10n.workshopVoiceSelectorHelp,
+                            child: SegmentedButton<int>(
+                              style: const ButtonStyle(
+                                visualDensity: VisualDensity.compact,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              showSelectedIcon: false,
+                              segments: [
+                                ButtonSegment(
+                                  value: 0,
+                                  label: Text(l10n.workshopVoice1),
+                                ),
+                                ButtonSegment(
+                                  value: 1,
+                                  label: Text(l10n.workshopVoice2),
+                                ),
+                              ],
+                              selected: {_doc.activeVoice},
+                              onSelectionChanged: (s) => setState(
+                                () => _doc.setActiveVoice(s.first),
+                              ),
+                            ),
+                          ),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.undo),
+                        tooltip: l10n.myMelodyUndo,
+                        onPressed:
+                            _doc.canUndo ? () => setState(_doc.undo) : null,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.title),
+                        tooltip: l10n.workshopSetTitle,
+                        onPressed: _setScoreTitle,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.redo),
+                        tooltip: l10n.workshopRedo,
+                        onPressed:
+                            _doc.canRedo ? () => setState(_doc.redo) : null,
+                      ),
+                      IconButton(
+                        icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                        tooltip:
+                            _isPlaying ? l10n.workshopStop : l10n.myMelodyPlay,
+                        // Stay enabled while playing so the user can always stop, even
+                        // if they emptied the document mid-playback.
+                        onPressed: (!_hasPlayableContent && !_isPlaying)
+                            ? null
+                            : _togglePlay,
+                      ),
+                      // Hear the whole piece rendered with a saved "My Instruments"
+                      // voice (a preview — separate from the highlighting transport).
+                      IconButton(
+                        icon: const Icon(Icons.piano_outlined),
+                        tooltip: l10n.workshopPlayWithInstrument,
+                        onPressed:
+                            _hasPlayableContent ? _playWithInstrument : null,
+                      ),
+                      // Practice speed — the number reads as a chip; picking a slower
+                      // speed makes the next Play stretch (same pitch) for slow practice.
+                      PopupMenuButton<double>(
+                        tooltip: l10n.workshopPlaybackSpeed,
+                        initialValue: _playSpeed,
+                        onSelected: (s) => setState(() => _playSpeed = s),
+                        itemBuilder: (ctx) => [
+                          for (final s in _playSpeeds)
+                            CheckedPopupMenuItem<double>(
+                              value: s,
+                              checked: _playSpeed == s,
+                              child: Text(_speedLabel(s)),
+                            ),
+                        ],
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              _speedLabel(_playSpeed),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.info_outline),
+                        tooltip: l10n.workshopShortcuts,
+                        onPressed: () => _showShortcuts(l10n),
+                      ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (v) {
+                          switch (v) {
+                            case 'open':
+                              _open();
+                            case 'paste':
+                              _pasteTokens();
+                            case 'scan':
+                              _scanImage();
+                            case 'transcribe':
+                              _transcribeRecording();
+                            case 'barnums':
+                              setState(() => _barNumbers = !_barNumbers);
+                            case 'notenames':
+                              setState(() => _noteNames = !_noteNames);
+                            case 'analysis':
+                              setState(() => _showAnalysis = !_showAnalysis);
+                            case 'inspect':
+                              setState(() => _inspect = !_inspect);
+                            case 'studio':
+                              _setShelf(
+                                _studio ? _Shelf.sandbox : _Shelf.studio,
+                              );
+                            case 'inspector':
+                              setState(() => _inspector = !_inspector);
+                            case 'split':
+                              setState(() {
+                                _doc.rhythmPolicy =
+                                    _doc.rhythmPolicy == RhythmPolicy.split
+                                        ? RhythmPolicy.spill
+                                        : RhythmPolicy.split;
+                              });
+                            case 'tempo':
+                              _showInitialTempoDialog();
+                            case 'countin':
+                              setState(() => _countIn = !_countIn);
+                            case 'loop':
+                              setState(
+                                () => _loopSelection = !_loopSelection,
+                              );
+                            case 'save':
+                              _save();
+                            case 'export':
+                              _showExportSheet();
+                            case 'clear':
+                              setState(_doc.clearAll);
+                            case 'daw':
+                              sendToDaw();
+                            case 'loadTune':
+                              loadSharedMelody();
+                            case 'shareTune':
+                              shareMelody();
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          _menuItem(
+                            'open',
+                            Icons.file_open_outlined,
+                            l10n.workshopOpen,
+                            true,
+                          ),
+                          _menuItem(
+                            'paste',
+                            Icons.content_paste_go_outlined,
+                            l10n.workshopPasteTokens,
+                            true,
+                          ),
+                          _menuItem(
+                            'scan',
+                            Icons.document_scanner_outlined,
+                            l10n.workshopScanImage,
+                            true,
+                          ),
+                          _menuItem(
+                            'transcribe',
+                            Icons.graphic_eq,
+                            l10n.workshopTranscribe,
+                            true,
+                          ),
+                          CheckedPopupMenuItem<String>(
+                            value: 'barnums',
+                            checked: _barNumbers,
+                            child: Text(l10n.workshopBarNumbers),
+                          ),
+                          CheckedPopupMenuItem<String>(
+                            value: 'notenames',
+                            checked: _noteNames,
+                            child: Text(l10n.workshopNoteNames),
+                          ),
+                          CheckedPopupMenuItem<String>(
+                            value: 'analysis',
+                            checked: _showAnalysis,
+                            child: _menuDescription(
+                              l10n.workshopAnalysis,
+                              l10n.workshopAnalysisHelp,
+                            ),
+                          ),
+                          CheckedPopupMenuItem<String>(
+                            value: 'inspect',
+                            checked: _inspect,
+                            child: Text(l10n.inspectMode),
+                          ),
+                          const PopupMenuDivider(),
+                          CheckedPopupMenuItem<String>(
+                            value: 'studio',
+                            checked: _studio,
+                            child: Text(l10n.workshopStudioMode),
+                          ),
+                          // The inspector lives inside Studio — hidden on the Sandbox
+                          // shelf so the kid surface stays a glyph strip + piano.
+                          if (_studio)
+                            CheckedPopupMenuItem<String>(
+                              value: 'inspector',
+                              checked: _inspector,
+                              child: Text(l10n.workshopInspector),
+                            ),
+                          CheckedPopupMenuItem<String>(
+                            value: 'split',
+                            checked: _doc.rhythmPolicy == RhythmPolicy.split,
+                            child: Text(l10n.workshopSplitNotes),
+                          ),
+                          const PopupMenuDivider(),
+                          _menuItem(
+                            'daw',
+                            Icons.library_add,
+                            l10n.dawSend,
+                            !_doc.isEmpty,
+                          ),
+                          // Trade a tune with the Loop Mixer / Tracker / Live Looper
+                          // (MelodyBridge): pull one in as notes, or hand this melody out
+                          // to drive a groove layer there.
+                          _menuItem(
+                            'shareTune',
+                            Icons.upload,
+                            l10n.tuneShare,
+                            !_doc.isEmpty,
+                          ),
+                          _menuItem(
+                            'loadTune',
+                            Icons.download,
+                            l10n.tuneLoadShared,
+                            MelodyBridge.instance.hasMelody,
+                          ),
+                          const PopupMenuDivider(),
+                          _menuItem(
+                            'tempo',
+                            Icons.speed,
+                            l10n.workshopInitialTempo,
+                            true,
+                          ),
+                          // Playback options — a lead-in click, and looping the
+                          // selection to drill a hard bar.
+                          CheckedPopupMenuItem<String>(
+                            value: 'countin',
+                            checked: _countIn,
+                            child: Text(l10n.workshopCountIn),
+                          ),
+                          CheckedPopupMenuItem<String>(
+                            value: 'loop',
+                            checked: _loopSelection,
+                            child: _menuDescription(
+                              l10n.workshopLoopSelection,
+                              l10n.workshopLoopSelectionHelp,
+                            ),
+                          ),
+                          _menuItem(
+                            'save',
+                            Icons.bookmark_add_outlined,
+                            l10n.myMelodySave,
+                            !_doc.isEmpty,
+                          ),
+                          _menuItem(
+                            'export',
+                            Icons.ios_share,
+                            l10n.workshopExport,
+                            !_doc.isEmpty,
+                          ),
+                          _menuItem(
+                            'clear',
+                            Icons.delete_sweep_outlined,
+                            l10n.myMelodyClear,
+                            !_doc.isEmpty,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
           body: Column(
             children: [
+              if (narrow)
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: _TopBar(
+                    mode: _mode,
+                    inputMode: _inputMode,
+                    showInputMode: _studio,
+                    onToggleInputMode: () => setState(
+                      () => _inputMode =
+                          _selectMode ? _InputMode.insert : _InputMode.select,
+                    ),
+                    timeSignature: _doc.timeSignature,
+                    fifths: _doc.keySignature.fifths,
+                    pickup: _doc.pickup,
+                    armedGlyph:
+                        _values.firstWhere((v) => v.base == _pendingBase).glyph,
+                    dotted: _dotted,
+                    status: _statusText(context, l10n),
+                    onMode: _setMode,
+                    onTime: (t) => setState(() => _doc.setTimeSignature(t)),
+                    onKey: (f) =>
+                        setState(() => _doc.setKeySignature(KeySignature(f))),
+                    onPickup: (p) => setState(() => _doc.setPickup(p)),
+                    onZoomIn: () => _zoomBy(3),
+                    onZoomOut: () => _zoomBy(-3),
+                  ),
+                ),
               // G6: instrument parts strip (add · select · clef/transposition/
               // brace/remove). One part = the classic single-instrument editor.
               _partsStrip(l10n),
@@ -4103,6 +4222,7 @@ class _TopBar extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _dropdown<_StaffMode>(
               value: mode,

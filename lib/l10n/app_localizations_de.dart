@@ -199,6 +199,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopSetTitle => 'Titel der Partitur festlegen';
 
   @override
+  String get workshopMoreActions => 'Weitere Partituraktionen';
+
+  @override
   String get workshopZoomIn => 'Vergrößern';
 
   @override

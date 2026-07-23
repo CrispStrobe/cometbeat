@@ -199,6 +199,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopSetTitle => 'Set score title';
 
   @override
+  String get workshopMoreActions => 'More score actions';
+
+  @override
   String get workshopZoomIn => 'Zoom in';
 
   @override

@@ -411,6 +411,25 @@ void main() {
     );
   });
 
+  testWidgets('narrow workshop keeps title and menu actions reachable',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _appHome(
+        const MediaQuery(
+          data: MediaQueryData(size: Size(320, 640)),
+          child: CompositionWorkshopScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Set score title'), findsOneWidget);
+    expect(find.byIcon(Icons.more_vert), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the Studio inspector is off by default and toggles on',
       (tester) async {
     await pump(tester);
