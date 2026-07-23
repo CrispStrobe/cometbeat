@@ -177,6 +177,19 @@ void main() {
     await tester.tap(find.text('Kyrie'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Open this music in…'), findsOneWidget);
+    expect(find.text('Open in Tracker'), findsOneWidget);
+  });
+
+  testWidgets('a catalog module offers both Tracker and score editor paths',
+      (tester) async {
+    await tester.pumpWidget(_host(_FakeSource(_fixture)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Chiptune'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Open in Tracker'), findsOneWidget);
     expect(find.text('Open in Score Workshop'), findsOneWidget);
   });
 

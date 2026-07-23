@@ -46,4 +46,11 @@ void main() {
       isNotEmpty,
     );
   });
+
+  test('tracker songs convert back to score parts in pattern order', () {
+    final song = trackerSongFromMultiPart(MultiPartScore([melody()]));
+    final score = multiPartScoreFromTrackerSong(song);
+    expect(score.parts, hasLength(1));
+    expect(score.parts.single.measures, isNotEmpty);
+  });
 }

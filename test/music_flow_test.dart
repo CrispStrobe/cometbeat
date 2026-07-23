@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart' show kSongs;
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
@@ -115,7 +116,8 @@ void main() {
     expect(_ws(tester).partCount, 2);
   });
 
-  testWidgets('showScoreDestinations offers Score + Tab; Tab opens the editor',
+  testWidgets(
+      'showScoreDestinations offers Score + Tab + Tracker; Tracker opens editor',
       (tester) async {
     await _host(tester, (ctx) => showScoreDestinations(ctx, _score()));
     await tester.tap(find.text('go'));
@@ -124,9 +126,11 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     expect(find.text(l10n.workshopModeScore), findsOneWidget);
     expect(find.text(l10n.workshopModeTab), findsOneWidget);
-    await tester.tap(find.text(l10n.workshopModeTab));
-    await tester.pumpAndSettle();
-    expect(find.byType(TabWorkshopScreen), findsOneWidget);
+    expect(find.text(l10n.trackerAdvancedTitle), findsOneWidget);
+    await tester.tap(find.text(l10n.trackerAdvancedTitle));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(AdvancedTrackerScreen), findsOneWidget);
   });
 
   testWidgets('Tab onReturnToDaw sends the edit back and pops (in place)',

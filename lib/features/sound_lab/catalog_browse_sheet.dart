@@ -21,6 +21,8 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
+import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
+    show multiPartScoreFromTrackerSong;
 import 'package:comet_beat/features/library/content_source.dart';
 import 'package:comet_beat/features/library/instrument_installer.dart';
 import 'package:comet_beat/features/library/soundfont_sheet.dart';
@@ -33,7 +35,7 @@ import 'package:comet_beat/features/sound_lab/soundfont_persist.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music/music_picker.dart' show decodeMusicFile;
 import 'package:comet_beat/shared/music/score_router.dart'
-    show showScoreDestinations;
+    show openScoreInTracker, showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -288,6 +290,26 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
     );
   }
 
+  Future<void> _openModuleInScore(LibraryItem item) async {
+    final bytes = await _download(item);
+    if (bytes == null || !mounted) return;
+    try {
+      final score = multiPartScoreFromTrackerSong(songFromModuleBytes(bytes));
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      navigator.pop();
+      await showScoreDestinations(navigator.context, score);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.libraryImportFailed),
+          ),
+        );
+      }
+    }
+  }
+
   /// Score → decode every supported notation format and open the full editor.
   Future<void> _openScore(LibraryItem item) async {
     final bytes = await _download(item);
@@ -298,6 +320,25 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
       final navigator = Navigator.of(context);
       navigator.pop();
       await showScoreDestinations(navigator.context, score);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.libraryImportFailed),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openScoreInTracker(LibraryItem item) async {
+    final bytes = await _download(item);
+    if (bytes == null || !mounted) return;
+    try {
+      final score = decodeMusicFile('x.${item.format}', bytes);
+      final navigator = Navigator.of(context);
+      navigator.pop();
+      openScoreInTracker(navigator.context, score);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -454,7 +495,7 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
           ),
         'score' => (
             icon: Icons.music_note,
-            label: l10n.trackerOpenWorkshop,
+            label: l10n.scoreRouterTitle,
             run: () => _openScore(item),
           ),
         'instrument' when instrumentInstallSupported => (
@@ -468,6 +509,18 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
             run: () {},
           ),
       },
+      if (item.collection == 'module')
+        (
+          icon: Icons.edit_note,
+          label: l10n.trackerOpenWorkshop,
+          run: () => _openModuleInScore(item),
+        ),
+      if (item.collection == 'score')
+        (
+          icon: Icons.grid_on,
+          label: l10n.catalogOpenInTracker,
+          run: () => _openScoreInTracker(item),
+        ),
       if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty)
         (
           icon: Icons.open_in_new,

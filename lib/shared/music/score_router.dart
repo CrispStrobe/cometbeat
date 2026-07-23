@@ -7,6 +7,9 @@
 // clip — so opening a DAW music clip and sending back updates that SAME clip
 // in place. With no [onReturn] the editors keep their normal add-a-new-clip send.
 
+import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
+import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
+    show trackerSongFromMultiPart;
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart'
     show TabWorkshopScreen;
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart'
@@ -57,8 +60,19 @@ void openScoreInTab(
   );
 }
 
+/// Open [score] in the Advanced Tracker using the lossy chromatic bridge.
+void openScoreInTracker(BuildContext context, MultiPartScore score) {
+  final song = trackerSongFromMultiPart(score);
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => AdvancedTrackerScreen(initialSong: song),
+    ),
+  );
+}
+
 /// A bottom sheet that lets the user open [score] in a chosen editor (Score
-/// Workshop or Tab Workshop). Pops itself, then pushes the editor. When
+/// Workshop, Tab Workshop, or Advanced Tracker). Pops itself, then pushes the
+/// editor. When
 /// [onReturn] is set, edits sent back from the editor route through it.
 Future<void> showScoreDestinations(
   BuildContext context,
@@ -106,6 +120,14 @@ Future<void> showScoreDestinations(
             onTap: () {
               Navigator.of(sheetCtx).pop();
               openScoreInTab(context, score, names: names, onReturn: onReturn);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.grid_on),
+            title: Text(l10n.trackerAdvancedTitle),
+            onTap: () {
+              Navigator.of(sheetCtx).pop();
+              openScoreInTracker(context, score);
             },
           ),
         ],
