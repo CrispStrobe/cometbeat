@@ -4592,125 +4592,133 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     return Container(
       color: scheme.surfaceContainerLow,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          // Patterns: which one is being edited (+ add / clone).
-          Text('${l10n.trackerPattern}: '),
-          Expanded(
-            child: SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (var i = 0; i < _song.patterns.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: GestureDetector(
-                        // Long-press a pattern to rename it (a song section).
-                        onLongPress: () => _promptRenamePattern(i),
-                        child: ChoiceChip(
-                          label: Text(_song.patterns[i].name),
-                          selected: i == _song.currentIndex,
-                          onSelected: (_) => selectPattern(i),
-                        ),
-                      ),
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    tooltip: l10n.trackerRenamePattern,
-                    onPressed: () => _promptRenamePattern(_song.currentIndex),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add, size: 20),
-                    tooltip: l10n.trackerPatternNew,
-                    onPressed: _addEmptyPattern,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy, size: 18),
-                    tooltip: l10n.trackerPatternClone,
-                    onPressed: _clonePattern,
-                  ),
-                  if (_song.patterns.length > 1)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                      tooltip: l10n.trackerRemoveTrack,
-                      onPressed: () => setState(
-                        () => _song.removePattern(_song.currentIndex),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Order list: the play sequence; the sounding entry lights up, the
-          // selected slot (for reorder/retarget) is outlined.
-          Text('${l10n.trackerSong}: '),
-          Expanded(
-            child: SizedBox(
-              height: 36,
-              child: ValueListenableBuilder<int>(
-                valueListenable: _playingOrder,
-                builder: (context, playing, _) => ListView(
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Patterns: which one is being edited (+ add / clone).
+            Text('${l10n.trackerPattern}: '),
+            SizedBox(
+              width: 360,
+              child: SizedBox(
+                height: 36,
+                child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    for (var i = 0; i < _song.order.length; i++)
+                    for (var i = 0; i < _song.patterns.length; i++)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: InputChip(
-                          label: Text(_song.patterns[_song.order[i]].name),
-                          selected:
-                              playing >= 0 ? i == playing : i == _orderCursor,
-                          side: (playing < 0 && i == _orderCursor)
-                              ? BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 1.5,
-                                )
-                              : null,
-                          onPressed: () {
-                            setState(() => _orderCursor = i);
-                            selectPattern(_song.order[i]);
-                          },
-                          onDeleted: () => _orderDelete(i),
+                        child: GestureDetector(
+                          // Long-press a pattern to rename it (a song section).
+                          onLongPress: () => _promptRenamePattern(i),
+                          child: ChoiceChip(
+                            label: Text(_song.patterns[i].name),
+                            selected: i == _song.currentIndex,
+                            onSelected: (_) => selectPattern(i),
+                          ),
                         ),
                       ),
-                    ActionChip(
-                      avatar: const Icon(Icons.add, size: 16),
-                      label: Text(_song.current.name),
-                      onPressed: () => addToOrder(_song.currentIndex),
-                    ),
-                    // Order-slot edit cluster (retarget · move · insert).
                     IconButton(
-                      icon: const Icon(Icons.expand_more, size: 18),
-                      tooltip: l10n.trackerOrderPrevPat,
-                      onPressed: () => _orderRetarget(-1),
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      tooltip: l10n.trackerRenamePattern,
+                      onPressed: () => _promptRenamePattern(_song.currentIndex),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.expand_less, size: 18),
-                      tooltip: l10n.trackerOrderNextPat,
-                      onPressed: () => _orderRetarget(1),
+                      icon: const Icon(Icons.add, size: 20),
+                      tooltip: l10n.trackerPatternNew,
+                      onPressed: _addEmptyPattern,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.chevron_left, size: 20),
-                      tooltip: l10n.trackerOrderMoveLeft,
-                      onPressed: () => _orderMove(-1),
+                      icon: const Icon(Icons.copy, size: 18),
+                      tooltip: l10n.trackerPatternClone,
+                      onPressed: _clonePattern,
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right, size: 20),
-                      tooltip: l10n.trackerOrderMoveRight,
-                      onPressed: () => _orderMove(1),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.control_point_duplicate, size: 18),
-                      tooltip: l10n.trackerOrderInsert,
-                      onPressed: _orderInsert,
-                    ),
+                    if (_song.patterns.length > 1)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        tooltip: l10n.trackerRemoveTrack,
+                        onPressed: () => setState(
+                          () => _song.removePattern(_song.currentIndex),
+                        ),
+                      ),
                   ],
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            // Order list: the play sequence; the sounding entry lights up, the
+            // selected slot (for reorder/retarget) is outlined.
+            Text('${l10n.trackerSong}: '),
+            SizedBox(
+              width: 360,
+              child: SizedBox(
+                height: 36,
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _playingOrder,
+                  builder: (context, playing, _) => ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (var i = 0; i < _song.order.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: InputChip(
+                            label: Text(_song.patterns[_song.order[i]].name),
+                            selected:
+                                playing >= 0 ? i == playing : i == _orderCursor,
+                            side: (playing < 0 && i == _orderCursor)
+                                ? BorderSide(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    width: 1.5,
+                                  )
+                                : null,
+                            onPressed: () {
+                              setState(() => _orderCursor = i);
+                              selectPattern(_song.order[i]);
+                            },
+                            onDeleted: () => _orderDelete(i),
+                          ),
+                        ),
+                      ActionChip(
+                        avatar: const Icon(Icons.add, size: 16),
+                        label: Text(_song.current.name),
+                        onPressed: () => addToOrder(_song.currentIndex),
+                      ),
+                      // Order-slot edit cluster (retarget · move · insert).
+                      IconButton(
+                        icon: const Icon(Icons.expand_more, size: 18),
+                        tooltip: l10n.trackerOrderPrevPat,
+                        onPressed: () => _orderRetarget(-1),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.expand_less, size: 18),
+                        tooltip: l10n.trackerOrderNextPat,
+                        onPressed: () => _orderRetarget(1),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left, size: 20),
+                        tooltip: l10n.trackerOrderMoveLeft,
+                        onPressed: () => _orderMove(-1),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right, size: 20),
+                        tooltip: l10n.trackerOrderMoveRight,
+                        onPressed: () => _orderMove(1),
+                      ),
+                      IconButton(
+                        icon:
+                            const Icon(Icons.control_point_duplicate, size: 18),
+                        tooltip: l10n.trackerOrderInsert,
+                        onPressed: _orderInsert,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
