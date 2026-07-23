@@ -1,4 +1,4 @@
-// A persistent "My Samples" library: short audio clips (mono PCM + a sample
+// A persistent "My Samples" library: short audio clips (mono or stereo PCM + a sample
 // rate) saved across sessions. The Voice Lab saves the voice you record and
 // shape here; the module Sample Extractor drops the samples it pulls out of
 // tracker files here. Both then recall them without a round-trip through disk.
@@ -21,6 +21,7 @@ class SampleClip {
     required this.name,
     required this.sampleRate,
     required this.pcm,
+    this.right,
     this.source,
     this.license,
     this.sourceUrl,
@@ -29,6 +30,7 @@ class SampleClip {
   final String name;
   final int sampleRate;
   final Float64List pcm;
+  final Float64List? right;
 
   /// Where it came from (e.g. a module title or "Freepats") — may be null.
   final String? source;
@@ -56,6 +58,7 @@ class SampleClip {
         if (license != null) 'license': license,
         if (sourceUrl != null) 'sourceUrl': sourceUrl,
         'pcm': base64Encode(_floatToInt16Bytes(pcm)),
+        if (right != null) 'right': base64Encode(_floatToInt16Bytes(right!)),
       };
 
   static SampleClip? fromJson(Map<String, dynamic> j) {
@@ -69,6 +72,9 @@ class SampleClip {
         name: name,
         sampleRate: rate,
         pcm: _int16BytesToFloat(base64Decode(pcm)),
+        right: j['right'] is String
+            ? _int16BytesToFloat(base64Decode(j['right'] as String))
+            : null,
         source: str(j['source']),
         license: str(j['license']),
         sourceUrl: str(j['sourceUrl']),

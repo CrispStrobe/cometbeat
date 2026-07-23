@@ -39,7 +39,7 @@ import 'package:comet_beat/shared/music/score_router.dart'
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
 import 'package:comet_beat/shared/music_io/audio_import.dart'
-    show importAudioMono, kAudioImportExtensions;
+    show importAudio, kAudioImportExtensions;
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
@@ -1835,9 +1835,16 @@ class _DawScreenState extends State<DawScreen>
     final pcm = clip.sampleRate == kDawSampleRate
         ? clip.pcm
         : resampleCubic(clip.pcm, clip.sampleRate / kDawSampleRate);
+    final right = clip.right == null
+        ? null
+        : clip.sampleRate == kDawSampleRate
+            ? clip.right
+            : resampleCubic(clip.right!, clip.sampleRate / kDawSampleRate);
     // A fresh lane so a dropped-in sample never lands on top of another clip.
     _daw.addClip(
-      SampleSource(pcm, key: 'sample:${clip.name}'),
+      right == null
+          ? SampleSource(pcm, key: 'sample:${clip.name}')
+          : StereoSampleSource(pcm, right, key: 'sample:${clip.name}'),
       track: _daw.timeline.tracks.length,
     );
   }
@@ -1866,7 +1873,7 @@ class _DawScreenState extends State<DawScreen>
         ],
       );
       if (file == null || !mounted) return;
-      final imported = importAudioMono(await file.readAsBytes());
+      final imported = importAudio(await file.readAsBytes());
       if (imported == null) {
         messenger.showSnackBar(
           SnackBar(content: Text(l10n.mySamplesImportFailed)),
@@ -1878,6 +1885,7 @@ class _DawScreenState extends State<DawScreen>
           name: _clipNameFromFile(file),
           sampleRate: imported.sampleRate,
           pcm: imported.pcm,
+          right: imported.right,
         ),
       );
     } catch (_) {

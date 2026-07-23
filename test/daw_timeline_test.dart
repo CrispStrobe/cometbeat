@@ -574,6 +574,28 @@ void main() {
     }
   });
 
+  test('stereo sample sources preserve both channels in the timeline', () {
+    final stereo = renderTimelineStereo(
+      DawTimeline(
+        tracks: [
+          DawTrack(
+            clips: [
+              Clip(
+                source: StereoSampleSource(
+                  Float64List.fromList(List<double>.filled(100, 0.2)),
+                  Float64List.fromList(List<double>.filled(100, 0.6)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      sampleRate: 1000,
+    );
+    expect(stereo.left.length, 100);
+    expect(stereo.left.first, isNot(closeTo(stereo.right.first, 1e-6)));
+  });
+
   test('gain FX scales audio and preserves length', () {
     final dry = Float64List.fromList([0.25, -0.5, 0.75]);
     final bypassed = applyClipEffectChain(

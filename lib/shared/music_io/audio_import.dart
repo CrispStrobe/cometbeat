@@ -13,19 +13,21 @@
 // in pure/headless code too (e.g. the sample-pack extractor). Screens build
 // their own file-picker `XTypeGroup` from [kAudioImportExtensions].
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mp3/mp3_decoder.dart';
 import 'package:comet_beat/core/audio/sf2/flac_capability.dart';
-import 'package:comet_beat/core/audio/wav_io.dart';
+import 'package:comet_beat/core/audio/wav_io.dart' show readWavPcm16;
 
 /// Mono float PCM (−1..1) plus its sample rate — the common currency the Sound
 /// Lab tools work in.
 class ImportedAudio {
-  const ImportedAudio(this.pcm, this.sampleRate);
+  const ImportedAudio(this.pcm, this.sampleRate, {this.right});
 
   final Float64List pcm;
   final int sampleRate;
+  final Float64List? right;
 }
 
 /// Importable audio file extensions (for a picker `XTypeGroup`). Kept as a plain
@@ -65,45 +67,48 @@ bool _isFlac(Uint8List b) =>
     b[2] == 0x61 &&
     b[3] == 0x43; // "fLaC"
 
-/// Decodes [bytes] (WAV or MP3, detected by content) to mono float PCM.
+/// Decodes [bytes] (WAV, MP3, or FLAC, detected by content) to float PCM.
 /// Returns null if the format is unrecognised or decoding fails.
-ImportedAudio? importAudioMono(
+ImportedAudio? importAudio(
   Uint8List bytes, {
   FlacDecode? flacDecode,
 }) {
   try {
     if (_isWav(bytes)) {
       final wav = readWavPcm16(bytes);
-      final pcm = wavToMonoFloat(wav);
-      if (pcm.isEmpty) return null;
-      return ImportedAudio(pcm, wav.sampleRate > 0 ? wav.sampleRate : 44100);
+      final channels = wav.channels < 1 ? 1 : wav.channels;
+      final interleaved = Float64List.fromList([
+        for (final sample in wav.samples) sample / 32768.0,
+      ]);
+      final left = _channel(interleaved, channels, 0);
+      final right = channels > 1 ? _channel(interleaved, channels, 1) : null;
+      if (left.isEmpty) return null;
+      return ImportedAudio(
+        left,
+        wav.sampleRate > 0 ? wav.sampleRate : 44100,
+        right: right,
+      );
     }
     if (_isMp3(bytes)) {
       final decoded = mp3Decode(bytes);
-      final mono = _deinterleaveMono(decoded.samples, decoded.channels);
-      if (mono.isEmpty) return null;
+      final channels = decoded.channels < 1 ? 1 : decoded.channels;
+      final left = _channel(decoded.samples, channels, 0);
+      final right =
+          channels > 1 ? _channel(decoded.samples, channels, 1) : null;
+      if (left.isEmpty) return null;
       return ImportedAudio(
-        mono,
+        left,
         decoded.sampleRate > 0 ? decoded.sampleRate : 44100,
+        right: right,
       );
     }
     if (_isFlac(bytes)) {
       final decoded = (flacDecode ?? loadGlintFlac())?.call(bytes);
       if (decoded == null || decoded.left.isEmpty) return null;
-      final mono = decoded.right == null
-          ? decoded.left
-          : _deinterleaveMono(
-              Float64List.fromList([
-                for (var i = 0; i < decoded.left.length; i++) ...[
-                  decoded.left[i],
-                  i < decoded.right!.length ? decoded.right![i] : 0,
-                ],
-              ]),
-              2,
-            );
       return ImportedAudio(
-        mono,
+        decoded.left,
         decoded.sampleRate > 0 ? decoded.sampleRate : 44100,
+        right: decoded.right,
       );
     }
   } catch (_) {
@@ -112,17 +117,27 @@ ImportedAudio? importAudioMono(
   return null;
 }
 
-/// Downmix interleaved [samples] (`channels` per frame) to mono by averaging.
-Float64List _deinterleaveMono(Float64List samples, int channels) {
-  if (channels <= 1) return samples;
-  final frames = samples.length ~/ channels;
+/// Decodes an audio file and folds stereo to mono for instruments and legacy
+/// callers that only accept one channel.
+ImportedAudio? importAudioMono(
+  Uint8List bytes, {
+  FlacDecode? flacDecode,
+}) {
+  final imported = importAudio(bytes, flacDecode: flacDecode);
+  if (imported == null || imported.right == null) return imported;
+  final frames = math.min(imported.pcm.length, imported.right!.length);
+  final mono = Float64List(frames);
+  for (var i = 0; i < frames; i++) {
+    mono[i] = (imported.pcm[i] + imported.right![i]) * 0.5;
+  }
+  return ImportedAudio(mono, imported.sampleRate);
+}
+
+Float64List _channel(Float64List interleaved, int channels, int channel) {
+  final frames = interleaved.length ~/ channels;
   final out = Float64List(frames);
-  for (var f = 0; f < frames; f++) {
-    var sum = 0.0;
-    for (var c = 0; c < channels; c++) {
-      sum += samples[f * channels + c];
-    }
-    out[f] = sum / channels;
+  for (var i = 0; i < frames; i++) {
+    out[i] = interleaved[i * channels + channel];
   }
   return out;
 }

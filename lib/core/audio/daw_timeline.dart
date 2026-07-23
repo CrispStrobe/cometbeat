@@ -76,6 +76,14 @@ class SampleSource implements ClipSource {
   Float64List render(int sampleRate) => pcm;
 }
 
+/// A persistent stereo sample source. Mono callers still receive the left
+/// channel through [render], while the stereo timeline preserves both sides.
+class StereoSampleSource extends SampleSource {
+  StereoSampleSource(super.left, this.right, {super.key});
+
+  final Float64List right;
+}
+
 /// Identity wrapper so an un-keyed [SampleSource] caches by buffer identity.
 class _Ref {
   _Ref(this.target);
@@ -1240,7 +1248,9 @@ DawStereoMix renderTimelineStereo(
     List<
         ({
           int start,
-          Float64List pcm,
+          Float64List pcmLeft,
+          Float64List pcmRight,
+          bool stereo,
           double gain,
           double pan,
           int fadeIn,
@@ -1258,7 +1268,9 @@ DawStereoMix renderTimelineStereo(
     if (anySolo && !track.soloed) continue;
     final places = <({
       int start,
-      Float64List pcm,
+      Float64List pcmLeft,
+      Float64List pcmRight,
+      bool stereo,
       double gain,
       double pan,
       int fadeIn,
@@ -1276,16 +1288,33 @@ DawStereoMix renderTimelineStereo(
       // Non-destructive trim: view the [trimStart, trimEnd) window of the
       // (cached) render. The cache still holds the full source, so a trim
       // change is free and reversible.
+      final sourceRight = clip.source is StereoSampleSource
+          ? (clip.source as StereoSampleSource).right
+          : rendered;
       final pcm = _trimView(rendered, clip, sampleRate);
+      final rightPcm = _trimView(sourceRight, clip, sampleRate);
       if (pcm.isEmpty) continue;
+      final isStereo = clip.source is StereoSampleSource;
       final effected = clip.effects.isEmpty
-          ? pcm
-          : applyClipEffectChain(pcm, clip.effects, sampleRate);
+          ? (left: pcm, right: rightPcm)
+          : isStereo
+              ? _applyStereoClipEffectChain(
+                  pcm,
+                  rightPcm,
+                  clip.effects,
+                  sampleRate,
+                )
+              : (
+                  left: applyClipEffectChain(pcm, clip.effects, sampleRate),
+                  right: rightPcm,
+                );
       final start = (clip.startMs * sampleRate / 1000).round();
       places.add(
         (
           start: start,
-          pcm: effected,
+          pcmLeft: effected.left,
+          pcmRight: effected.right,
+          stereo: isStereo,
           gain: clip.gain * track.gain,
           pan: track.pan.clamp(-1.0, 1.0),
           fadeIn: (clip.fadeInMs * sampleRate / 1000).round(),
@@ -1294,7 +1323,7 @@ DawStereoMix renderTimelineStereo(
           fadeOutCurve: clip.fadeOutCurve,
         ),
       );
-      final end = start + effected.length;
+      final end = start + effected.left.length;
       if (end > totalSamples) totalSamples = end;
     }
     if (places.isNotEmpty) perTrack.add((track, places));
@@ -1314,7 +1343,9 @@ DawStereoMix renderTimelineStereo(
     List<
             ({
               int start,
-              Float64List pcm,
+              Float64List pcmLeft,
+              Float64List pcmRight,
+              bool stereo,
               double gain,
               double pan,
               int fadeIn,
@@ -1325,7 +1356,7 @@ DawStereoMix renderTimelineStereo(
         places,
   ) {
     for (final p in places) {
-      final n = p.pcm.length;
+      final n = p.pcmLeft.length;
       for (var i = 0; i < n; i++) {
         // Fade envelope: ramp up over fadeIn, down over fadeOut; if they overlap
         // (a clip shorter than its fades), the smaller ramp wins.
@@ -1337,10 +1368,18 @@ DawStereoMix renderTimelineStereo(
           final down = _fadeCurveValue((n - i) / p.fadeOut, p.fadeOutCurve);
           if (down < env) env = down;
         }
-        final sample = p.pcm[i] * p.gain * env;
-        final angle = (p.pan + 1) * math.pi / 4;
-        left[p.start + i] += sample * math.cos(angle);
-        right[p.start + i] += sample * math.sin(angle);
+        final gain = p.gain * env;
+        if (p.stereo) {
+          final leftGain = p.pan <= 0 ? 1.0 : math.cos(p.pan * math.pi / 2);
+          final rightGain = p.pan >= 0 ? 1.0 : math.cos(p.pan * math.pi / 2);
+          left[p.start + i] += p.pcmLeft[i] * gain * leftGain;
+          right[p.start + i] += p.pcmRight[i] * gain * rightGain;
+        } else {
+          final sample = p.pcmLeft[i] * gain;
+          final angle = (p.pan + 1) * math.pi / 4;
+          left[p.start + i] += sample * math.cos(angle);
+          right[p.start + i] += sample * math.sin(angle);
+        }
       }
     }
   }

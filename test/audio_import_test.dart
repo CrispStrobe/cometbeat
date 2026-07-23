@@ -49,6 +49,18 @@ void main() {
     expect(imported!.pcm.isNotEmpty, isTrue);
   });
 
+  test('importAudio preserves stereo channels for DAW insertion', () {
+    final l = Float64List.fromList([0.5, 0.25, 0.0]);
+    final r = Float64List.fromList([-0.5, 0.75, 0.25]);
+    final imported = importAudio(pcmFloatToWav(l, right: r));
+    expect(imported, isNotNull);
+    expect(imported!.right, isNotNull);
+    expect(imported.pcm.length, 3);
+    expect(imported.right![0], closeTo(-0.5, 1e-4));
+    expect(imported.right![1], closeTo(0.75, 1e-4));
+    expect(imported.right![2], closeTo(0.25, 1e-4));
+  });
+
   test('detection is by content, not extension: raw junk returns null', () {
     final junk = Uint8List.fromList(List<int>.generate(2048, (i) => i % 256));
     expect(importAudioMono(junk), isNull);
