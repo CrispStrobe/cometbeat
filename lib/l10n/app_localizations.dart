@@ -728,6 +728,12 @@ abstract class AppLocalizations {
   /// **'Loop selection'**
   String get workshopLoopSelection;
 
+  /// No description provided for @workshopLoopSelectionHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat the selected range during playback; with no selection, the whole piece plays normally'**
+  String get workshopLoopSelectionHelp;
+
   /// No description provided for @workshopArticulations.
   ///
   /// In en, this message translates to:
@@ -787,6 +793,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Analysis (colour by harmony)'**
   String get workshopAnalysis;
+
+  /// No description provided for @workshopAnalysisHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tint notes by tonic, subdominant, or dominant function and show the detected harmony'**
+  String get workshopAnalysisHelp;
 
   /// No description provided for @workshopInspector.
   ///

@@ -363,6 +363,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopLoopSelection => 'Loop selection';
 
   @override
+  String get workshopLoopSelectionHelp =>
+      'Repeat the selected range during playback; with no selection, the whole piece plays normally';
+
+  @override
   String get workshopArticulations => 'Articulations & ties';
 
   @override
@@ -391,6 +395,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workshopAnalysis => 'Analysis (colour by harmony)';
+
+  @override
+  String get workshopAnalysisHelp =>
+      'Tint notes by tonic, subdominant, or dominant function and show the detected harmony';
 
   @override
   String get workshopInspector => 'Inspector';
