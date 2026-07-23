@@ -35,6 +35,7 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
   String? restrictToCategory,
   bool includeBuiltIns = false,
   Future<void> Function(SampleClip clip)? onCatalogSampleInsert,
+  bool preferCatalogSampleInsert = false,
 }) {
   return showModalBottomSheet<SavedInstrument>(
     context: context,
@@ -46,6 +47,7 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
       restrictToCategory: restrictToCategory,
       includeBuiltIns: includeBuiltIns,
       onCatalogSampleInsert: onCatalogSampleInsert,
+      preferCatalogSampleInsert: preferCatalogSampleInsert,
     ),
   );
 }
@@ -87,6 +89,7 @@ class MyInstrumentsSheet extends StatefulWidget {
     this.restrictToCategory,
     this.includeBuiltIns = false,
     this.onCatalogSampleInsert,
+    this.preferCatalogSampleInsert = false,
     super.key,
   });
 
@@ -103,6 +106,7 @@ class MyInstrumentsSheet extends StatefulWidget {
   /// tests/screens keep the saved-only default.
   final bool includeBuiltIns;
   final Future<void> Function(SampleClip clip)? onCatalogSampleInsert;
+  final bool preferCatalogSampleInsert;
 
   @override
   State<MyInstrumentsSheet> createState() => _MyInstrumentsSheetState();
@@ -284,6 +288,7 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
       store: widget.store,
       initialKind: _catalogKindFor(widget.restrictToCategory),
       onInsertSample: widget.onCatalogSampleInsert,
+      preferSampleInsert: widget.preferCatalogSampleInsert,
     );
     if (inserted == true && mounted) {
       Navigator.of(context).pop();

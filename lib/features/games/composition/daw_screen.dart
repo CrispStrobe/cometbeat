@@ -1431,6 +1431,7 @@ class _DawScreenState extends State<DawScreen>
     final clip = await showMySamplesSheet(
       context,
       onCatalogSampleInsert: (clip) async => addSampleClip(clip),
+      preferCatalogSampleInsert: true,
     );
     if (clip == null || clip.pcm.isEmpty || !mounted) return;
     addSampleClip(clip);

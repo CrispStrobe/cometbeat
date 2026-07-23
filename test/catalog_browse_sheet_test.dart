@@ -62,6 +62,7 @@ final _fixture = [
 Widget _host(
   ContentSource src, {
   Future<void> Function(SampleClip clip)? onInsertSample,
+  bool preferSampleInsert = false,
 }) =>
     MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -71,6 +72,7 @@ Widget _host(
           source: src,
           store: InstrumentLibraryStore(),
           onInsertSample: onInsertSample,
+          preferSampleInsert: preferSampleInsert,
         ),
       ),
     );
@@ -192,5 +194,36 @@ void main() {
     expect(inserted!.name, 'Snare hit');
     expect(inserted!.sampleRate, 22050);
     expect(inserted!.pcm, hasLength(4));
+  });
+
+  testWidgets('DAW mode puts "Insert in audio track" before library install',
+      (tester) async {
+    final wav = pcmFloatToWav(
+      Float64List.fromList(const [0.0, 0.25, -0.25, 0.0]),
+      sampleRate: 22050,
+    );
+    await tester.pumpWidget(
+      _host(
+        _FakeSource(_fixture, bytes: wav),
+        onInsertSample: (_) async {},
+        preferSampleInsert: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Snare hit'));
+    await tester.pumpAndSettle();
+
+    final actionLabels = [
+      for (final tile in tester.widgetList<ListTile>(find.byType(ListTile)))
+        if (tile.title case final Text title)
+          if (title.data == 'Insert in audio track' ||
+              title.data == 'Add to library')
+            title.data!,
+    ];
+    expect(actionLabels.take(2), [
+      'Insert in audio track',
+      'Add to library',
+    ]);
   });
 }

@@ -59,6 +59,7 @@ Future<bool?> showCatalogBrowseSheet(
   InstrumentLibraryStore? store,
   String? initialKind,
   Future<void> Function(SampleClip clip)? onInsertSample,
+  bool preferSampleInsert = false,
 }) {
   return showModalBottomSheet<bool>(
     context: context,
@@ -69,6 +70,7 @@ Future<bool?> showCatalogBrowseSheet(
       store: store ?? InstrumentLibraryStore(),
       initialKind: initialKind,
       onInsertSample: onInsertSample,
+      preferSampleInsert: preferSampleInsert,
     ),
   );
 }
@@ -80,6 +82,7 @@ class CatalogBrowseSheet extends StatefulWidget {
     required this.store,
     this.initialKind,
     this.onInsertSample,
+    this.preferSampleInsert = false,
     super.key,
   });
 
@@ -87,6 +90,7 @@ class CatalogBrowseSheet extends StatefulWidget {
   final InstrumentLibraryStore store;
   final String? initialKind;
   final Future<void> Function(SampleClip clip)? onInsertSample;
+  final bool preferSampleInsert;
 
   @override
   State<CatalogBrowseSheet> createState() => _CatalogBrowseSheetState();
@@ -387,17 +391,37 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
     LibraryItem item,
     AppLocalizations l10n,
   ) {
+    if (item.collection == 'sample') {
+      final add = (
+        icon: Icons.library_add,
+        label: l10n.catalogAddToLibrary,
+        run: () => _installSample(item),
+      );
+      final insert = widget.onInsertSample == null
+          ? null
+          : (
+              icon: Icons.playlist_add,
+              label: l10n.catalogInsertInAudioTrack,
+              run: () => _insertSample(item),
+            );
+      return [
+        if (widget.preferSampleInsert && insert != null) insert,
+        add,
+        if (!widget.preferSampleInsert && insert != null) insert,
+        if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty)
+          (
+            icon: Icons.open_in_new,
+            label: l10n.catalogOpenSource,
+            run: () => _openSource(item),
+          ),
+      ];
+    }
     return [
       switch (item.collection) {
         'soundfont' => (
             icon: Icons.piano,
             label: l10n.catalogAudition,
             run: () => _openSoundFont(item),
-          ),
-        'sample' => (
-            icon: Icons.library_add,
-            label: l10n.catalogAddToLibrary,
-            run: () => _installSample(item),
           ),
         'module' => (
             icon: Icons.grid_on,
@@ -415,12 +439,6 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
             run: () {},
           ),
       },
-      if (item.collection == 'sample' && widget.onInsertSample != null)
-        (
-          icon: Icons.playlist_add,
-          label: l10n.catalogInsertInAudioTrack,
-          run: () => _insertSample(item),
-        ),
       if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty)
         (
           icon: Icons.open_in_new,
