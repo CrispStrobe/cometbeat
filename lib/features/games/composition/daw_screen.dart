@@ -2157,6 +2157,7 @@ class _DawScreenState extends State<DawScreen>
                   max: 1000,
                   step: 10
                 ),
+                (key: 'kneeDb', label: 'Knee dB', min: 0, max: 24, step: 1),
                 (key: 'makeupDb', label: 'Makeup dB', min: 0, max: 24, step: 1),
                 (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
               ],

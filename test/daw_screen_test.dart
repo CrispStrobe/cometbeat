@@ -440,6 +440,26 @@ void main() {
     expect(find.textContaining('Mix'), findsOneWidget);
   });
 
+  testWidgets('compressor FX exposes its soft knee control', (tester) async {
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+
+    await tester.tap(find.text('Master FX'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Compressor').last);
+    await tester.pumpAndSettle();
+
+    expect(service.masterEffects().single.type, DawClipEffectType.compressor);
+    await tester.tap(find.text('Compressor'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Knee dB'), findsOneWidget);
+  });
+
   testWidgets('FX slider auto writes marked-range automation points',
       (tester) async {
     await _pumpDaw(tester);
