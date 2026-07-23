@@ -362,7 +362,7 @@ finding. So the shippable *tab* corpus is exactly this shippable *score* corpus.
 | Source | →reach | Why rejected |
 |---|---|---|
 | craigsapp kern (Bach 370 chorales, Mozart sonatas, Joplin) | krn | **CC BY-NC-SA** (LICENSE.txt, verbatim) — NC |
-| DCML (ABC, Mozart, Beethoven sonatas) | ABC/mscx | **CC BY-NC-SA** (LICENSE, verbatim) — NC |
+| DCML (ABC, Mozart/Beethoven sonatas, Chopin, Schumann… — **52 score corpora**) | ABC/mscx | **CC BY-NC-SA** (`.zenodo.json`, verified across the org) — NC. **ONE exception:** `DCMLab/bach_chorales` = **CC0-1.0** (`.zenodo.json` authoritative) → both-axes clean (Bach d.1750). **Ingested: 361 chorales (mscx) + 722 CC0 note/measure TSVs** as `DCML Bach Chorales`. The DCML *corpus-initiative* moved bach_chorales to CC0; the rest stay NC. Swept all 127 DCMLab repos: only bach_chorales is clean. |
 | **JRP (Josquin Research Project)** | krn | **CONFLICTED** — LICENSE.txt header says "CC-BY-SA 4.0" but the URL beneath is `by-nc`. Unsafe → treat as NC. |
 | **PrIMuS / Camera-PrIMuS** | MEI (already!) / semantic | **UNSTATED = all rights reserved**. RISM-derived, 87,678 incipits. (Ships MEI, so never a filter problem — a licence problem.) |
 | **GOAT** (Guitar On Audio and Tablatures) | tab/MIDI/audio | **CC BY-NC 4.0**, restricted files, Zenodo 10.5281/zenodo.15690894; description says research-only, not for commercial products. Tempting (paired string+fret supervision) but NC. |
