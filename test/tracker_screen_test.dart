@@ -48,6 +48,21 @@ void main() {
     MelodyBridge.instance.clear();
   });
 
+  testWidgets('offers a one-tap starter groove on an empty tracker',
+      (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+    final game = _game(tester);
+    expect(game.noteCount, 0);
+    expect(
+        find.byKey(const ValueKey('tracker-starter-groove')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('tracker-starter-groove')));
+    await tester.pump();
+
+    expect(game.noteCount, greaterThan(0));
+    expect(find.byKey(const ValueKey('tracker-starter-groove')), findsNothing);
+  });
+
   testWidgets('shares the drum channel out and loads a shared beat in',
       (tester) async {
     await pumpGame(tester, const TrackerScreen());
