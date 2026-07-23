@@ -422,6 +422,12 @@ abstract class AppLocalizations {
   /// **'V2'**
   String get workshopVoice2;
 
+  /// No description provided for @workshopVoiceSelectorHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which melodic voice receives newly inserted notes'**
+  String get workshopVoiceSelectorHelp;
+
   /// No description provided for @workshopZoomIn.
   ///
   /// In en, this message translates to:
@@ -799,6 +805,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Insert'**
   String get workshopInsertMode;
+
+  /// No description provided for @workshopInsertModeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert mode places new notes; Select mode lets you select and inspect notes without adding them'**
+  String get workshopInsertModeHelp;
 
   /// No description provided for @workshopSelectMode.
   ///

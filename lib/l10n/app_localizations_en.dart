@@ -192,6 +192,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopVoice2 => 'V2';
 
   @override
+  String get workshopVoiceSelectorHelp =>
+      'Choose which melodic voice receives newly inserted notes';
+
+  @override
   String get workshopZoomIn => 'Zoom in';
 
   @override
@@ -396,6 +400,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workshopInsertMode => 'Insert';
+
+  @override
+  String get workshopInsertModeHelp =>
+      'Insert mode places new notes; Select mode lets you select and inspect notes without adding them';
 
   @override
   String get workshopSelectMode => 'Select';

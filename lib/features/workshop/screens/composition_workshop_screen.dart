@@ -3415,25 +3415,28 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     if (_studio)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: SegmentedButton<int>(
-                          style: const ButtonStyle(
-                            visualDensity: VisualDensity.compact,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        child: Tooltip(
+                          message: l10n.workshopVoiceSelectorHelp,
+                          child: SegmentedButton<int>(
+                            style: const ButtonStyle(
+                              visualDensity: VisualDensity.compact,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            showSelectedIcon: false,
+                            segments: [
+                              ButtonSegment(
+                                value: 0,
+                                label: Text(l10n.workshopVoice1),
+                              ),
+                              ButtonSegment(
+                                value: 1,
+                                label: Text(l10n.workshopVoice2),
+                              ),
+                            ],
+                            selected: {_doc.activeVoice},
+                            onSelectionChanged: (s) =>
+                                setState(() => _doc.setActiveVoice(s.first)),
                           ),
-                          showSelectedIcon: false,
-                          segments: [
-                            ButtonSegment(
-                              value: 0,
-                              label: Text(l10n.workshopVoice1),
-                            ),
-                            ButtonSegment(
-                              value: 1,
-                              label: Text(l10n.workshopVoice2),
-                            ),
-                          ],
-                          selected: {_doc.activeVoice},
-                          onSelectionChanged: (s) =>
-                              setState(() => _doc.setActiveVoice(s.first)),
                         ),
                       ),
                     IconButton(
@@ -4077,21 +4080,24 @@ class _TopBar extends StatelessWidget {
             if (showInputMode) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: TextButton.icon(
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  onPressed: onToggleInputMode,
-                  icon: Icon(
-                    inputMode == _InputMode.select
-                        ? Icons.near_me_outlined
-                        : Icons.edit_outlined,
-                    size: 18,
-                  ),
-                  label: Text(
-                    inputMode == _InputMode.select
-                        ? l10n.workshopSelectMode
-                        : l10n.workshopInsertMode,
+                child: Tooltip(
+                  message: l10n.workshopInsertModeHelp,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onPressed: onToggleInputMode,
+                    icon: Icon(
+                      inputMode == _InputMode.select
+                          ? Icons.near_me_outlined
+                          : Icons.edit_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      inputMode == _InputMode.select
+                          ? l10n.workshopSelectMode
+                          : l10n.workshopInsertMode,
+                    ),
                   ),
                 ),
               ),
