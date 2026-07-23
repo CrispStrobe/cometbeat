@@ -226,6 +226,22 @@ void main() {
     expect(s.clipPan(0, 0), 0);
   });
 
+  test('setClipWidth changes stereo separation and undoes', () {
+    final s = DawService()
+      ..addClip(
+        StereoSampleSource(
+          Float64List.fromList([0.8]),
+          Float64List.fromList([0.2]),
+        ),
+      );
+    s.setClipWidth(0, 0, 0);
+    expect(s.clipWidth(0, 0), 0);
+    final mono = s.bakeStereo();
+    expect(mono.left.first, closeTo(mono.right.first, 1e-9));
+    s.undo();
+    expect(s.clipWidth(0, 0), 1);
+  });
+
   test('setClipFades sets each side independently and clamps', () {
     final s = DawService()..addClip(_tone(0.4, 44100));
     s.setClipFades(0, 0, fadeInMs: 100);

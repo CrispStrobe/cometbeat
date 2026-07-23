@@ -410,6 +410,7 @@ class Clip {
     this.startMs = 0,
     this.gain = 1.0,
     this.pan = 0.0,
+    this.width = 1.0,
     this.muted = false,
     this.fadeInMs = 0,
     this.fadeOutMs = 0,
@@ -426,6 +427,9 @@ class Clip {
 
   /// Constant-power clip pan: -1 hard left, 0 centre, +1 hard right.
   final double pan;
+
+  /// Stereo width in mid/side space: 0 mono, 1 unchanged, 2 widened.
+  final double width;
   final bool muted;
   final double fadeInMs;
   final double fadeOutMs;
@@ -446,6 +450,7 @@ class Clip {
     double? startMs,
     double? gain,
     double? pan,
+    double? width,
     bool? muted,
     double? fadeInMs,
     double? fadeOutMs,
@@ -460,6 +465,7 @@ class Clip {
         startMs: startMs ?? this.startMs,
         gain: gain ?? this.gain,
         pan: pan ?? this.pan,
+        width: width ?? this.width,
         muted: muted ?? this.muted,
         fadeInMs: fadeInMs ?? this.fadeInMs,
         fadeOutMs: fadeOutMs ?? this.fadeOutMs,
@@ -800,6 +806,30 @@ Float64List applyClipEffectChain(
   int sampleRate,
 ) =>
     _applyStereoClipEffectChain(left, right, effects, sampleRate);
+
+({Float64List left, Float64List right}) _applyStereoWidth(
+  ({Float64List left, Float64List right}) input,
+  double width,
+) {
+  final w = width.clamp(0.0, 2.0).toDouble();
+  if ((w - 1).abs() < 1e-12) return input;
+  final frames = math.min(input.left.length, input.right.length);
+  final left = Float64List(input.left.length);
+  final right = Float64List(input.right.length);
+  for (var i = 0; i < frames; i++) {
+    final mid = (input.left[i] + input.right[i]) * 0.5;
+    final side = (input.left[i] - input.right[i]) * 0.5 * w;
+    left[i] = mid + side;
+    right[i] = mid - side;
+  }
+  for (var i = frames; i < left.length; i++) {
+    left[i] = input.left[i];
+  }
+  for (var i = frames; i < right.length; i++) {
+    right[i] = input.right[i];
+  }
+  return (left: left, right: right);
+}
 
 Float64List _applyClipEffect(
   Float64List input,
@@ -1324,12 +1354,14 @@ DawStereoMix renderTimelineStereo(
                   left: applyClipEffectChain(pcm, clip.effects, sampleRate),
                   right: rightPcm,
                 );
+      final stereoPositioned =
+          isStereo ? _applyStereoWidth(effected, clip.width) : effected;
       final start = (clip.startMs * sampleRate / 1000).round();
       places.add(
         (
           start: start,
-          pcmLeft: effected.left,
-          pcmRight: effected.right,
+          pcmLeft: stereoPositioned.left,
+          pcmRight: stereoPositioned.right,
           stereo: isStereo,
           gain: clip.gain * track.gain,
           pan: (track.pan + clip.pan).clamp(-1.0, 1.0),
@@ -1339,7 +1371,7 @@ DawStereoMix renderTimelineStereo(
           fadeOutCurve: clip.fadeOutCurve,
         ),
       );
-      final end = start + effected.left.length;
+      final end = start + stereoPositioned.left.length;
       if (end > totalSamples) totalSamples = end;
     }
     if (places.isNotEmpty) perTrack.add((track, places));

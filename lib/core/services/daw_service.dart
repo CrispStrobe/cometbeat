@@ -429,6 +429,16 @@ class DawService extends ChangeNotifier {
   double clipPan(int track, int index) =>
       timeline.tracks[track].clips[index].pan;
 
+  void setClipWidth(int track, int index, double width) {
+    _coalesced(('width', track, index));
+    final clips = timeline.tracks[track].clips;
+    clips[index] = clips[index].copyWith(width: width.clamp(0.0, 2.0));
+    notifyListeners();
+  }
+
+  double clipWidth(int track, int index) =>
+      timeline.tracks[track].clips[index].width;
+
   /// Set a clip's fade-in / fade-out ramp length in ms (each clamped to ≥ 0).
   /// Pass only the one you're changing; a slider sweep coalesces per side.
   void setClipFades(
@@ -641,6 +651,7 @@ class DawService extends ChangeNotifier {
       startMs: clip.startMs,
       gain: clip.gain,
       pan: clip.pan,
+      width: clip.width,
       muted: clip.muted,
       fadeInMs: clip.fadeInMs,
       fadeOutMs: clip.fadeOutMs,
@@ -684,6 +695,7 @@ class DawService extends ChangeNotifier {
       startMs: clip.startMs,
       gain: clip.gain,
       pan: clip.pan,
+      width: clip.width,
       muted: clip.muted,
       fadeInMs: clip.fadeInMs,
       fadeOutMs: clip.fadeOutMs,
@@ -742,6 +754,7 @@ class DawService extends ChangeNotifier {
       startMs: clip.startMs,
       gain: clip.gain,
       pan: clip.pan,
+      width: clip.width,
       muted: clip.muted,
       fadeInMs: clip.fadeInMs,
       fadeOutMs: clip.fadeOutMs,
@@ -873,6 +886,7 @@ class DawService extends ChangeNotifier {
         startMs: clip.startMs,
         gain: clip.gain,
         pan: clip.pan,
+        width: clip.width,
         muted: clip.muted,
         fadeInMs: clip.fadeInMs,
         fadeOutMs: clip.fadeOutMs,

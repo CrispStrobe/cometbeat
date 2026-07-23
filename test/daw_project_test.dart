@@ -47,6 +47,7 @@ void main() {
               startMs: 250,
               gain: 0.7,
               pan: 0.25,
+              width: 1.4,
               fadeInMs: 40,
               fadeOutMs: 60,
               fadeInCurve: DawFadeCurve.exponential,
@@ -106,6 +107,7 @@ void main() {
     expect(clip.startMs, 250);
     expect(clip.gain, closeTo(0.7, 1e-9));
     expect(clip.pan, closeTo(0.25, 1e-9));
+    expect(clip.width, closeTo(1.4, 1e-9));
     expect(clip.fadeInMs, 40);
     expect(clip.fadeOutMs, 60);
     expect(clip.fadeInCurve, DawFadeCurve.exponential);

@@ -640,16 +640,16 @@ void main() {
     expect(daw.clipGain(0, 0), 1.0);
 
     // Tap the clip box → the inspector sheet. Besides the gutter track faders
-    // in the body, the inspector adds 6 sliders (gain, pan, 2 fades, 2 trims); the
-    // modal renders after the body, so those are the LAST 6.
+    // in the body, the inspector adds 7 sliders (gain, pan, width, 2 fades, 2 trims); the
+    // modal renders after the body, so those are the LAST 7.
     await tester.tap(find.text('🥁'));
     await tester.pumpAndSettle();
     final sliders = find.byType(Slider);
     final total = tester.widgetList(sliders).length;
-    expect(total, greaterThanOrEqualTo(6));
+    expect(total, greaterThanOrEqualTo(7));
 
-    // Drag the gain slider (first of the inspector's 6) down; gain drops.
-    await tester.drag(sliders.at(total - 6), const Offset(-80, 0));
+    // Drag the gain slider (first of the inspector's 7) down; gain drops.
+    await tester.drag(sliders.at(total - 7), const Offset(-80, 0));
     await tester.pump();
     expect(daw.clipGain(0, 0), lessThan(1.0));
   });
