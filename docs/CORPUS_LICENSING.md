@@ -109,7 +109,7 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > sample 97 · soundfont 1). Scores by source: GregoBase 18,710 · NIFC Polish 8,181 ·
 > **PDMX 10,799** (74 is_original + 3,352 classical MXL shippable; see below) ·
 > OpenScore Lieder 1,350 · NIFC Chopin 512 · Mutopia 510 · DCML Bach Chorales 361 ·
-> OpenScore SQ 122 · OpenEWLD 103 · **Wikimedia Commons (Gerloff) 1,062** · Kinder
+> OpenScore SQ 122 · OpenEWLD 103 · **Wikimedia Commons (Gerloff) 1,073** · Kinder
 > wollen singen 155 · Musikpiraten Season Songs 52 · Pete Mac 15 · EGSet12 12.
 > Assets: VCSL 183 · ModArchive 166 · FreePats 39 · Salamander Grand Piano V3 1 ·
 > FluidR3 1.
@@ -121,7 +121,7 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > **Exact tiers of the 1,136 files: A (CC0/PD) 1,083 · B (CC-BY) 16 · C (CC-BY-SA) 37.**
 > Ship gate = Tier A ∩ axis-2-PD (the melody source is traditional/origin, Gerloff's
 > own CC0-original, or a named composer the shared `wikidata_deaths` verdict confirms
-> died ≤1955) → **1,062 ingested** — MIDI-only (Commons hosts these as `.mid`; Gerloff
+> died ≤1955) → **1,073 ingested** — MIDI-only (Commons hosts these as `.mid`; Gerloff
 > is a priest/composer who makes a "Satz und Tondatei" for German Wikipedia articles
 > and publishes **no notation source** — for richer formats use the kinder-wollen-singen
 > `.mscz`/`.musicxml` or self-engraving). Tooling: `bin/commons_gerloff_{ingest,reverify,
@@ -136,8 +136,11 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > Williams ×2 (d.1958)** hiding behind descriptor labels (genuinely copyrighted in the
 > EU); (5) a thorough pass death-checked **every** 1-3-word name in **every** kept row's
 > source → **−14, fail-closed** (Sibelius/VW + namesake false-flags like "Curtis"→De
-> Curtis, "Francisco"→*Pope Francis*). **Final: 1,062 soundly Tier A** — 990
-> traditional/origin (no named recent) · 36 named-PD-verified · 36 Gerloff-CC0-original;
+> Curtis, "Francisco"→*Pope Francis*). (6) **Manual promote:** re-fetched the 14
+> demoted files' REAL source and promoted the **11 namesake false-flags** whose actual
+> composer is verified PD (De Curtis d.1937, M. Greiter d.1550, Nicholson d.1947, F. de
+> Lacerda d.1934, S. Cohen d.1940, medieval/trad); only **3 genuinely-recent stay held**
+> (Sibelius d.1957, Vaughan Williams ×2 d.1958). **Final: 1,073 soundly Tier A** — traditional/origin · named-PD-verified · Gerloff-CC0-original;
 > **0 recent composers, 0 embedded recent years survive**. The copyrighted Sibelius MIDI
 > was in the first upload → **deleted from HF HEAD** (`delete_file`; a purged file is
 > 404 at `main`. ⚠ old commit SHAs may still serve it — a full history purge was NOT
