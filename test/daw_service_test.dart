@@ -628,6 +628,18 @@ void main() {
       s.undo();
       expect(s.timeline.tracks[0].clips[0].source, same(src));
     });
+
+    test('preserves both channels when reversing a stereo source', () {
+      final src = StereoSampleSource(
+        Float64List.fromList([0.1, 0.2, 0.3]),
+        Float64List.fromList([0.7, 0.8, 0.9]),
+      );
+      final s = DawService()..addClip(src);
+      s.reverseClip(0, 0);
+      final out = s.timeline.tracks[0].clips[0].source as StereoSampleSource;
+      expect(out.render(kDawSampleRate), [0.3, 0.2, 0.1]);
+      expect(out.right, [0.9, 0.8, 0.7]);
+    });
   });
 
   group('resampleClip', () {
@@ -663,6 +675,35 @@ void main() {
       s.undo();
       expect(s.timeline.tracks[0].clips[0].source, same(src));
     });
+
+    test('respeed preserves both channels when the source is stereo', () {
+      final src = StereoSampleSource(
+        Float64List.fromList([0.1, 0.2, 0.3, 0.4]),
+        Float64List.fromList([0.9, 0.8, 0.7, 0.6]),
+      );
+      final s = DawService()..addClip(src);
+      s.resampleClip(0, 0, 2);
+      final out = s.timeline.tracks[0].clips[0].source as StereoSampleSource;
+      expect(out.render(kDawSampleRate).length, 2);
+      expect(out.right.length, 2);
+      expect(out.right.first, closeTo(0.9, 1e-9));
+    });
+  });
+
+  test('mergeTrack preserves stereo output for stereo sources', () {
+    final s = DawService()
+      ..addClip(
+        StereoSampleSource(
+          Float64List.fromList([0.1, 0.2]),
+          Float64List.fromList([0.8, 0.9]),
+        ),
+      );
+    s.mergeTrack(0);
+    final out = s.timeline.tracks[0].clips.single.source as StereoSampleSource;
+    expect(
+      out.right.first,
+      isNot(closeTo(out.render(kDawSampleRate).first, 1e-6)),
+    );
   });
 
   group('instrument sound (score clips)', () {

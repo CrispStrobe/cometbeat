@@ -585,9 +585,13 @@ class DawService extends ChangeNotifier {
       () => clip.source.render(kDawSampleRate),
     );
     if (pcm.isEmpty) return;
+    final right = clip.source is StereoSampleSource
+        ? (clip.source as StereoSampleSource).right
+        : null;
     _record();
     timeline.tracks[track].clips[index] = Clip(
-      source: SampleSource(pcm),
+      source:
+          right == null ? SampleSource(pcm) : StereoSampleSource(pcm, right),
       startMs: clip.startMs,
       gain: clip.gain,
       muted: clip.muted,
@@ -615,13 +619,21 @@ class DawService extends ChangeNotifier {
     );
     final window = trimmedPcm(clip, rendered); // what actually plays
     if (window.isEmpty) return;
+    final rightRendered = _renderedRight(clip, rendered);
+    final rightWindow = trimmedPcm(clip, rightRendered);
     _record();
     final flipped = Float64List(window.length);
+    final flippedRight = Float64List(rightWindow.length);
     for (var i = 0; i < window.length; i++) {
       flipped[i] = window[window.length - 1 - i];
     }
+    for (var i = 0; i < rightWindow.length; i++) {
+      flippedRight[i] = rightWindow[rightWindow.length - 1 - i];
+    }
     timeline.tracks[track].clips[index] = Clip(
-      source: SampleSource(flipped),
+      source: clip.source is StereoSampleSource
+          ? StereoSampleSource(flipped, flippedRight)
+          : SampleSource(flipped),
       startMs: clip.startMs,
       gain: clip.gain,
       muted: clip.muted,
@@ -648,11 +660,14 @@ class DawService extends ChangeNotifier {
     );
     final window = trimmedPcm(clip, rendered);
     if (window.isEmpty) return;
+    final rightRendered = _renderedRight(clip, rendered);
+    final rightWindow = trimmedPcm(clip, rightRendered);
     final outLen = (window.length / factor).round();
     if (outLen < 1) return;
     _record();
     // Linear-interpolated resample: out[i] samples the source at i * factor.
     final out = Float64List(outLen);
+    final rightOut = Float64List(outLen);
     for (var i = 0; i < outLen; i++) {
       final pos = i * factor;
       final j = pos.floor();
@@ -662,9 +677,20 @@ class DawService extends ChangeNotifier {
       } else {
         out[i] = window[window.length - 1];
       }
+      final rightPos = i * factor;
+      final rightIndex = rightPos.floor();
+      if (rightIndex + 1 < rightWindow.length) {
+        final frac = rightPos - rightIndex;
+        rightOut[i] = rightWindow[rightIndex] * (1 - frac) +
+            rightWindow[rightIndex + 1] * frac;
+      } else {
+        rightOut[i] = rightWindow[rightWindow.length - 1];
+      }
     }
     timeline.tracks[track].clips[index] = Clip(
-      source: SampleSource(out),
+      source: clip.source is StereoSampleSource
+          ? StereoSampleSource(out, rightOut)
+          : SampleSource(out),
       startMs: clip.startMs,
       gain: clip.gain,
       muted: clip.muted,
@@ -691,14 +717,32 @@ class DawService extends ChangeNotifier {
     final shifted = [
       for (final c in live) c.copyWith(startMs: c.startMs - minStart),
     ];
-    final pcm = renderTimeline(
+    final hasStereo = live.any((clip) => clip.source is StereoSampleSource);
+    if (!hasStereo) {
+      final pcm = renderTimeline(
+        DawTimeline(tracks: [DawTrack(clips: shifted)]),
+        cache: _cache,
+        limit: false,
+      );
+      if (pcm.isEmpty) return null;
+      return Clip(source: SampleSource(pcm), startMs: minStart);
+    }
+    final stereo = renderTimelineStereo(
       DawTimeline(tracks: [DawTrack(clips: shifted)]),
       cache: _cache,
       limit: false,
     );
-    if (pcm.isEmpty) return null;
-    return Clip(source: SampleSource(pcm), startMs: minStart);
+    if (stereo.left.isEmpty) return null;
+    return Clip(
+      source: StereoSampleSource(stereo.left, stereo.right),
+      startMs: minStart,
+    );
   }
+
+  Float64List _renderedRight(Clip clip, Float64List rendered) =>
+      clip.source is StereoSampleSource
+          ? (clip.source as StereoSampleSource).right
+          : rendered;
 
   /// Merge one track's clips into a single audio take on that track.
   void mergeTrack(int track) {
