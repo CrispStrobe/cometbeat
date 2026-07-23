@@ -28,6 +28,7 @@ import 'package:comet_beat/features/library/sources/cometbeat_catalog_source.dar
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
+import 'package:comet_beat/features/sound_lab/soundfont_persist.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:flutter/material.dart';
@@ -178,9 +179,26 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
   Future<void> _openSoundFont(LibraryItem item) async {
     final bytes = await _download(item);
     if (bytes == null || !mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final inst = await showSoundFontSheet(
       context,
       pick: () async => (bytes: bytes, name: item.title),
+      // Confirming a preset also saves it as a reusable library voice (a tiny
+      // soundfont_ref; the font is cached once). Native only — a no-op on web.
+      onPresetChosen: (fontBytes, preset) async {
+        final saved = await persistSoundFontPreset(
+          fontBytes: fontBytes,
+          bank: preset.bank,
+          program: preset.program,
+          presetName: preset.name,
+          saveName: item.title,
+          store: widget.store,
+        );
+        if (saved != null && mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(l10n.catalogAdded)));
+        }
+      },
     );
     if (inst != null && mounted) _play(inst, item.title);
   }

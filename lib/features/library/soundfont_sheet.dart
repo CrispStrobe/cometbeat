@@ -51,12 +51,17 @@ Future<TrackerInstrument?> showSoundFontSheet(
   SoundFontPicker pick = _defaultPick,
   VorbisDecode? vorbis,
   SoundFontBytesDownloader download = downloadGmSoundFontBytes,
+  void Function(Uint8List fontBytes, Sf2Preset preset)? onPresetChosen,
 }) {
   return showModalBottomSheet<TrackerInstrument>(
     context: context,
     isScrollControlled: true,
-    builder: (_) =>
-        _SoundFontSheet(pick: pick, vorbis: vorbis, download: download),
+    builder: (_) => _SoundFontSheet(
+      pick: pick,
+      vorbis: vorbis,
+      download: download,
+      onPresetChosen: onPresetChosen,
+    ),
   );
 }
 
@@ -65,6 +70,7 @@ class _SoundFontSheet extends StatefulWidget {
     required this.pick,
     this.vorbis,
     required this.download,
+    this.onPresetChosen,
   });
 
   final SoundFontPicker pick;
@@ -74,12 +80,18 @@ class _SoundFontSheet extends StatefulWidget {
   /// tests; defaults to the real HTTP+disk downloader.
   final SoundFontBytesDownloader download;
 
+  /// Fired when the user confirms a preset, with the raw font bytes + the picked
+  /// preset — so a caller can persist it as a reusable library voice. Optional;
+  /// the Tracker "load a voice now" path leaves it null.
+  final void Function(Uint8List fontBytes, Sf2Preset preset)? onPresetChosen;
+
   @override
   State<_SoundFontSheet> createState() => _SoundFontSheetState();
 }
 
 class _SoundFontSheetState extends State<_SoundFontSheet> {
   LoadedSoundFont? _font;
+  Uint8List? _fontBytes; // retained so a confirmed preset can be persisted
   String? _fontName;
   Sf2Preset? _selected;
   TrackerInstrument? _selectedInst;
@@ -101,6 +113,7 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
       final loaded = loadSoundFont(picked.bytes, vorbis: widget.vorbis);
       setState(() {
         _font = loaded;
+        _fontBytes = picked.bytes;
         _fontName = picked.name;
         _selected = null;
         _selectedInst = null;
@@ -136,6 +149,7 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
       if (!mounted) return;
       setState(() {
         _font = loaded;
+        _fontBytes = bytes;
         _fontName = source.name;
         _selected = null;
         _selectedInst = null;
@@ -399,7 +413,13 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
             FilledButton(
               onPressed: _selectedInst == null
                   ? null
-                  : () => Navigator.of(context).pop(_selectedInst),
+                  : () {
+                      final bytes = _fontBytes, preset = _selected;
+                      if (bytes != null && preset != null) {
+                        widget.onPresetChosen?.call(bytes, preset);
+                      }
+                      Navigator.of(context).pop(_selectedInst);
+                    },
               child: const Text('Use this sound'),
             ),
           ],
