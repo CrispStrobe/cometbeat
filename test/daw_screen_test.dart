@@ -285,11 +285,36 @@ void main() {
     await tester.tap(find.text('Add bus'));
     await tester.pumpAndSettle();
     expect(find.text('1 selected send'), findsOneWidget);
+    expect(find.text('Mixer'), findsOneWidget);
 
-    await tester.drag(find.byType(Slider).last, const Offset(160, 0));
+    await tester.drag(
+      find.byKey(const ValueKey('bus-send-1-0')),
+      const Offset(160, 0),
+    );
     await tester.pumpAndSettle();
 
     expect(service.trackSend(1, 0), greaterThan(0));
+  });
+
+  testWidgets('bus mixer matrix routes individual tracks', (tester) async {
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+
+    await tester.tap(find.text('Buses'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add bus'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('bus-route-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bus 1').last);
+    await tester.pumpAndSettle();
+
+    expect(service.trackBus(0), 0);
+    expect(service.trackBus(1), isNull);
   });
 
   testWidgets('tapping a clip opens the inspector; gain slider changes gain',

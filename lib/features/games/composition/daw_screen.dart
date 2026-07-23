@@ -659,6 +659,10 @@ class _DawScreenState extends State<DawScreen>
                       'No buses',
                       style: Theme.of(ctx).textTheme.bodySmall,
                     ),
+                  if (_daw.buses().isNotEmpty) ...[
+                    _busMixerMatrix(ctx, setDialog),
+                    const SizedBox(height: 12),
+                  ],
                   for (var bus = 0; bus < _daw.buses().length; bus++)
                     _busEditor(ctx, bus, setDialog),
                 ],
@@ -676,13 +680,115 @@ class _DawScreenState extends State<DawScreen>
     );
   }
 
+  Widget _busMixerMatrix(BuildContext ctx, StateSetter setDialog) {
+    final buses = _daw.buses();
+    final tracks = _daw.timeline.tracks;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Mixer', style: Theme.of(ctx).textTheme.labelLarge),
+        const SizedBox(height: 6),
+        for (var track = 0; track < tracks.length; track++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Theme.of(ctx).colorScheme.outlineVariant,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            tracks[track].name,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(ctx).textTheme.labelMedium,
+                          ),
+                        ),
+                        DropdownButton<int?>(
+                          key: ValueKey('bus-route-$track'),
+                          value: _validRouteValue(tracks[track].busIndex),
+                          onChanged: (route) {
+                            _daw.setTrackBus(track, route);
+                            setDialog(() {});
+                            setState(() {});
+                            if (_playing) play();
+                          },
+                          items: [
+                            const DropdownMenuItem<int?>(
+                              child: Text('Master'),
+                            ),
+                            for (var bus = 0; bus < buses.length; bus++)
+                              DropdownMenuItem<int?>(
+                                value: bus,
+                                child: Text(_busDisplayName(bus)),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    for (var bus = 0; bus < buses.length; bus++)
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              _busDisplayName(bus),
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(ctx).textTheme.bodySmall,
+                            ),
+                          ),
+                          Expanded(
+                            child: Slider(
+                              key: ValueKey('bus-send-$track-$bus'),
+                              value: _daw.trackSend(track, bus),
+                              max: 1.5,
+                              divisions: 30,
+                              label:
+                                  _daw.trackSend(track, bus).toStringAsFixed(2),
+                              onChanged: (value) {
+                                setDialog(() {
+                                  _daw.setTrackSend(track, bus, value);
+                                });
+                                setState(() {});
+                                if (_playing) play();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  int? _validRouteValue(int? route) =>
+      route != null && route >= 0 && route < _daw.buses().length ? route : null;
+
+  String _busDisplayName(int bus) {
+    final buses = _daw.buses();
+    if (bus < 0 || bus >= buses.length) return 'Bus ${bus + 1}';
+    return buses[bus].name.isEmpty ? 'Bus ${bus + 1}' : buses[bus].name;
+  }
+
   Widget _busEditor(BuildContext ctx, int bus, StateSetter setDialog) {
     final buses = _daw.buses();
     final routeTargets = _explicitSelectedTracks();
     if (bus < 0 || bus >= buses.length) return const SizedBox.shrink();
     final routeCount =
         _daw.timeline.tracks.where((track) => track.busIndex == bus).length;
-    final name = buses[bus].name.isEmpty ? 'Bus ${bus + 1}' : buses[bus].name;
+    final name = _busDisplayName(bus);
     final effects = _daw.busEffects(bus);
     return Padding(
       padding: const EdgeInsets.only(top: 10),
