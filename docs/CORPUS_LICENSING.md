@@ -103,14 +103,30 @@ repos below. Reachable, but dev/test only.
 The direct answer to "what have we covered / what could we still safely add."
 Every line here is a *licence/coverage* statement; detail per source follows.
 
-> **▶ Live DB snapshot (2026-07-23): `db.json` = 41,120 rows** — 40,730 scores +
+> **▶ Live DB snapshot (2026-07-23): `db.json` = 42,118 rows** — 41,728 scores +
 > 390 playback assets (223 instruments · 166 modules · 1 soundfont). The app-facing
-> **HF catalog ships 33,814 items** (score 33,354 · instrument 223 · module 139 ·
+> **HF catalog ships 34,814 items** (score 34,354 · instrument 223 · module 139 ·
 > sample 97 · soundfont 1). Scores by source: GregoBase 18,710 · NIFC Polish 8,181 ·
-> **PDMX 10,799** (see below) · OpenScore Lieder 1,350 · NIFC Chopin 512 · Mutopia
-> 510 · DCML Bach Chorales 361 · OpenScore SQ 122 · OpenEWLD 103 · Musikpiraten
-> Season Songs 52 · Pete Mac 15 · EGSet12 12 · Kinder wollen singen 3. Assets: VCSL
-> 183 · ModArchive 166 · FreePats 39 · Salamander Grand Piano V3 1 · FluidR3 1.
+> **PDMX 10,799** (74 is_original + 3,352 classical MXL shippable; see below) ·
+> OpenScore Lieder 1,350 · NIFC Chopin 512 · Mutopia 510 · DCML Bach Chorales 361 ·
+> OpenScore SQ 122 · OpenEWLD 103 · **Wikimedia Commons (Gerloff) 846** · Kinder
+> wollen singen 155 · Musikpiraten Season Songs 52 · Pete Mac 15 · EGSet12 12.
+> Assets: VCSL 183 · ModArchive 166 · FreePats 39 · Salamander Grand Piano V3 1 ·
+> FluidR3 1.
+
+> **🇩🇪 Wikimedia Commons — Peter Gerloff CC0 MIDI settings (German folk + hymns),
+> ingested 2026-07-23.** The **Rabanus Flavus** uploads of Peter Gerloff's MIDI
+> settings (`Category:MIDI files of melody settings by Peter Gerloff (secular|sacred)`)
+> — a real German-folk/hymn source, per-file licence verified via the Commons API.
+> **Exact tiers of the 1,136 files: A (CC0/PD) 1,083 · B (CC-BY) 16 · C (CC-BY-SA) 37.**
+> Ship gate = Tier A ∩ axis-2-PD (the `Melodie:` source is traditional/old, or a named
+> composer the shared `wikidata_deaths` verdict confirms died ≤1955) → **846 ingested**
+> (CC0, `kind:score`, MIDI; `bin/commons_gerloff_ingest.py`; per-file axis-2 note).
+> **HELD** (`commons-gerloff-held.json`): 16 Tier-B (need attribution wiring), 37 Tier-C
+> (need SA-propagation), 235 axis-2-UNKNOWN (obscure hymn composers → manual death-check),
+> 2 axis-2-RECENT (correctly excluded). ⚠ Wikimedia rate-limits bots (HTTP 429) — the
+> downloader paces 1.2 s/file with 60 s backoff. Its `Category` API path generalises to
+> other Commons CC0 music contributors.
 
 > **⚠️ PDMX OVERHAUL (2026-07-23) — copyright incident + composer_name fix + classical
 > recovery.** A title scan caught **25 in-copyright holiday songs** (White Christmas,
