@@ -160,6 +160,13 @@ enum DawClipEffectType {
   voiceRadio,
 }
 
+enum DawClipEffectPreset {
+  vocalPolish,
+  lofiCrunch,
+  wideSpace,
+  robotVoice,
+}
+
 DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
       DawClipEffectType.reverb => const DawClipEffect(
           type: DawClipEffectType.reverb,
@@ -221,6 +228,63 @@ DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
         const DawClipEffect(type: DawClipEffectType.voiceRobot),
       DawClipEffectType.voiceRadio =>
         const DawClipEffect(type: DawClipEffectType.voiceRadio),
+    };
+
+List<DawClipEffect> dawClipEffectPresetChain(DawClipEffectPreset preset) =>
+    switch (preset) {
+      DawClipEffectPreset.vocalPolish => [
+          defaultDawClipEffect(DawClipEffectType.highpass).copyWith(
+            params: {'freq': 120, 'q': 0.707, 'mix': 1},
+          ),
+          defaultDawClipEffect(DawClipEffectType.compressor).copyWith(
+            params: {
+              'thresholdDb': -22,
+              'ratio': 3,
+              'attackMs': 8,
+              'releaseMs': 160,
+              'kneeDb': 6,
+              'makeupDb': 3,
+              'mix': 1,
+            },
+          ),
+          defaultDawClipEffect(DawClipEffectType.reverb).copyWith(
+            params: {'roomSize': 0.42, 'damping': 0.55, 'mix': 0.18},
+          ),
+        ],
+      DawClipEffectPreset.lofiCrunch => [
+          defaultDawClipEffect(DawClipEffectType.highpass).copyWith(
+            params: {'freq': 180, 'q': 0.707, 'mix': 1},
+          ),
+          defaultDawClipEffect(DawClipEffectType.lowpass).copyWith(
+            params: {'freq': 4200, 'q': 0.8, 'mix': 1},
+          ),
+          defaultDawClipEffect(DawClipEffectType.bitCrush).copyWith(
+            params: {'bits': 7, 'mix': 0.38},
+          ),
+          defaultDawClipEffect(DawClipEffectType.distortion).copyWith(
+            params: {'drive': 2.2, 'mix': 0.28},
+          ),
+        ],
+      DawClipEffectPreset.wideSpace => [
+          defaultDawClipEffect(DawClipEffectType.chorus).copyWith(
+            params: {'rateHz': 0.8, 'depthMs': 9, 'mix': 0.35},
+          ),
+          defaultDawClipEffect(DawClipEffectType.delay).copyWith(
+            params: {'delayMs': 260, 'feedback': 0.28, 'mix': 0.24},
+          ),
+          defaultDawClipEffect(DawClipEffectType.reverb).copyWith(
+            params: {'roomSize': 0.78, 'damping': 0.38, 'mix': 0.32},
+          ),
+        ],
+      DawClipEffectPreset.robotVoice => [
+          const DawClipEffect(type: DawClipEffectType.voiceRobot),
+          defaultDawClipEffect(DawClipEffectType.ringMod).copyWith(
+            params: {'carrierHz': 92, 'mix': 0.34},
+          ),
+          defaultDawClipEffect(DawClipEffectType.highpass).copyWith(
+            params: {'freq': 220, 'q': 0.707, 'mix': 1},
+          ),
+        ],
     };
 
 /// A placed clip: its [source], where it starts ([startMs]), a linear [gain],

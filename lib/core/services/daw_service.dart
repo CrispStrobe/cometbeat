@@ -639,12 +639,49 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void applyClipEffectPreset(
+    int track,
+    int index,
+    DawClipEffectPreset preset, {
+    bool append = false,
+  }) {
+    _record();
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    final chain = dawClipEffectPresetChain(preset);
+    clips[index] = clip.copyWith(
+      effects: append ? [...clip.effects, ...chain] : chain,
+    );
+    _peaks.clear();
+    notifyListeners();
+  }
+
   void removeClipEffect(int track, int index, int effectIndex) {
     final clips = timeline.tracks[track].clips;
     final clip = clips[index];
     if (effectIndex < 0 || effectIndex >= clip.effects.length) return;
     _record();
     final effects = [...clip.effects]..removeAt(effectIndex);
+    clips[index] = clip.copyWith(effects: effects);
+    _peaks.clear();
+    notifyListeners();
+  }
+
+  void moveClipEffect(int track, int index, int effectIndex, int delta) {
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    final to = effectIndex + delta;
+    if (effectIndex < 0 ||
+        effectIndex >= clip.effects.length ||
+        to < 0 ||
+        to >= clip.effects.length ||
+        delta == 0) {
+      return;
+    }
+    _record();
+    final effects = [...clip.effects];
+    final fx = effects.removeAt(effectIndex);
+    effects.insert(to, fx);
     clips[index] = clip.copyWith(effects: effects);
     _peaks.clear();
     notifyListeners();

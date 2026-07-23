@@ -627,6 +627,75 @@ void main() {
       expect(baked[0], closeTo(0.3, 1e-9)); // only lane 0 sounds at t=0
     });
   });
+
+  group('clip effect chains', () {
+    test('presets replace or append reusable ordered chains', () {
+      final s = DawService()..addClip(_tone(0.4, 100));
+
+      s.applyClipEffectPreset(0, 0, DawClipEffectPreset.vocalPolish);
+      expect(
+        s.clipEffects(0, 0).map((fx) => fx.type),
+        [
+          DawClipEffectType.highpass,
+          DawClipEffectType.compressor,
+          DawClipEffectType.reverb,
+        ],
+      );
+
+      s.applyClipEffectPreset(0, 0, DawClipEffectPreset.robotVoice);
+      expect(s.clipEffects(0, 0), hasLength(3));
+      expect(s.clipEffects(0, 0).first.type, DawClipEffectType.voiceRobot);
+
+      s.applyClipEffectPreset(
+        0,
+        0,
+        DawClipEffectPreset.wideSpace,
+        append: true,
+      );
+      expect(s.clipEffects(0, 0), hasLength(6));
+      expect(s.clipEffects(0, 0).last.type, DawClipEffectType.reverb);
+    });
+
+    test('moveClipEffect reorders the chain, clamps invalid moves and undoes',
+        () {
+      final s = DawService()..addClip(_tone(0.4, 100));
+      s
+        ..addClipEffect(0, 0, DawClipEffectType.highpass)
+        ..addClipEffect(0, 0, DawClipEffectType.distortion)
+        ..addClipEffect(0, 0, DawClipEffectType.reverb);
+
+      s.moveClipEffect(0, 0, 1, -1);
+      expect(
+        s.clipEffects(0, 0).map((fx) => fx.type),
+        [
+          DawClipEffectType.distortion,
+          DawClipEffectType.highpass,
+          DawClipEffectType.reverb,
+        ],
+      );
+
+      s.moveClipEffect(0, 0, 0, -1);
+      s.moveClipEffect(0, 0, 2, 1);
+      expect(
+        s.clipEffects(0, 0).map((fx) => fx.type),
+        [
+          DawClipEffectType.distortion,
+          DawClipEffectType.highpass,
+          DawClipEffectType.reverb,
+        ],
+      );
+
+      s.undo();
+      expect(
+        s.clipEffects(0, 0).map((fx) => fx.type),
+        [
+          DawClipEffectType.highpass,
+          DawClipEffectType.distortion,
+          DawClipEffectType.reverb,
+        ],
+      );
+    });
+  });
 }
 
 /// A live source whose render reflects a mutable buffer — a stand-in for a

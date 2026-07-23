@@ -551,6 +551,13 @@ class _DawScreenState extends State<DawScreen>
         DawClipEffectType.voiceRadio => 'Voice: Radio',
       };
 
+  String _clipEffectPresetLabel(DawClipEffectPreset preset) => switch (preset) {
+        DawClipEffectPreset.vocalPolish => 'Vocal Polish',
+        DawClipEffectPreset.lofiCrunch => 'Lo-fi Crunch',
+        DawClipEffectPreset.wideSpace => 'Wide Space',
+        DawClipEffectPreset.robotVoice => 'Robot Voice',
+      };
+
   List<({String key, String label, double min, double max, double step})>
       _clipEffectParams(DawClipEffectType type) => switch (type) {
             DawClipEffectType.reverb => const [
@@ -1037,6 +1044,22 @@ class _DawScreenState extends State<DawScreen>
                         style: Theme.of(sheetCtx).textTheme.labelLarge,
                       ),
                       const Spacer(),
+                      PopupMenuButton<DawClipEffectPreset>(
+                        tooltip: 'Apply preset',
+                        icon: const Icon(Icons.auto_fix_high),
+                        onSelected: (preset) {
+                          _daw.applyClipEffectPreset(track, index, preset);
+                          setSheet(() {});
+                          if (_playing) play();
+                        },
+                        itemBuilder: (_) => [
+                          for (final preset in DawClipEffectPreset.values)
+                            PopupMenuItem(
+                              value: preset,
+                              child: Text(_clipEffectPresetLabel(preset)),
+                            ),
+                        ],
+                      ),
                       PopupMenuButton<DawClipEffectType>(
                         tooltip: 'Add effect',
                         icon: const Icon(Icons.add_circle_outline),
@@ -1081,14 +1104,53 @@ class _DawScreenState extends State<DawScreen>
                             },
                           ),
                           title: Text(_clipEffectLabel(fx.type)),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Remove effect',
-                            onPressed: () {
-                              _daw.removeClipEffect(track, index, fxIndex);
-                              setSheet(() {});
-                              if (_playing) play();
-                            },
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_upward),
+                                tooltip: 'Move up',
+                                onPressed: fxIndex == 0
+                                    ? null
+                                    : () {
+                                        _daw.moveClipEffect(
+                                          track,
+                                          index,
+                                          fxIndex,
+                                          -1,
+                                        );
+                                        setSheet(() {});
+                                        if (_playing) play();
+                                      },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_downward),
+                                tooltip: 'Move down',
+                                onPressed: fxIndex ==
+                                        _daw.clipEffects(track, index).length -
+                                            1
+                                    ? null
+                                    : () {
+                                        _daw.moveClipEffect(
+                                          track,
+                                          index,
+                                          fxIndex,
+                                          1,
+                                        );
+                                        setSheet(() {});
+                                        if (_playing) play();
+                                      },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Remove effect',
+                                onPressed: () {
+                                  _daw.removeClipEffect(track, index, fxIndex);
+                                  setSheet(() {});
+                                  if (_playing) play();
+                                },
+                              ),
+                            ],
                           ),
                           children: [
                             for (final spec in specs)
