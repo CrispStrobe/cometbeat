@@ -1973,7 +1973,6 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         ],
       ),
     );
-    controller.dispose();
     if (!mounted || title == null) return;
     setState(() => _scoreTitle = title.trim());
   }
