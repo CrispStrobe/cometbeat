@@ -3140,6 +3140,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerOpenWorkshop => 'Open in Score Workshop';
 
   @override
+  String get trackerMenuOpenLibrary => 'Open and Library';
+
+  @override
+  String get trackerMenuSaveExport => 'Save and Export';
+
+  @override
+  String get trackerMenuShareSend => 'Share and Send';
+
+  @override
   String get trackerSavedSong => 'Saved to the Song Book';
 
   @override

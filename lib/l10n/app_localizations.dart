@@ -5894,6 +5894,24 @@ abstract class AppLocalizations {
   /// **'Open in Score Workshop'**
   String get trackerOpenWorkshop;
 
+  /// No description provided for @trackerMenuOpenLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Open and Library'**
+  String get trackerMenuOpenLibrary;
+
+  /// No description provided for @trackerMenuSaveExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and Export'**
+  String get trackerMenuSaveExport;
+
+  /// No description provided for @trackerMenuShareSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Share and Send'**
+  String get trackerMenuShareSend;
+
   /// No description provided for @trackerSavedSong.
   ///
   /// In en, this message translates to:

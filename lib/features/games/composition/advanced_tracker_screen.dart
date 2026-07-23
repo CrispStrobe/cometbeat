@@ -4233,6 +4233,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               }
             },
             itemBuilder: (ctx) => [
+              _menuSection(l10n.trackerMenuOpenLibrary),
               _menuRow('import', Icons.library_music, l10n.trackerImportMod),
               _menuRow(
                 'modArchive',
@@ -4261,6 +4262,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 l10n.trackerLoadSoundFont,
               ),
               const PopupMenuDivider(),
+              _menuSection(l10n.trackerMenuSaveExport),
               _menuRow(
                 'saveSong',
                 Icons.bookmark_add_outlined,
@@ -4286,6 +4288,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               ),
               _menuRow('exportAudio', Icons.download, l10n.audioExportTitle),
               _menuRow('daw', Icons.library_add, l10n.dawSend),
+              _menuSection(l10n.trackerMenuShareSend),
               _menuRow('shareBeat', Icons.upload, l10n.beatShare),
               _menuRow('loadBeat', Icons.download, l10n.beatLoadShared),
               _menuRow(
@@ -4351,6 +4354,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             const SizedBox(width: 12),
             Text(label),
           ],
+        ),
+      );
+
+  PopupMenuItem<String> _menuSection(String label) => PopupMenuItem<String>(
+        enabled: false,
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium,
         ),
       );
 

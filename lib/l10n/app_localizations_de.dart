@@ -3150,6 +3150,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerOpenWorkshop => 'In der Notenwerkstatt öffnen';
 
   @override
+  String get trackerMenuOpenLibrary => 'Öffnen und Bibliothek';
+
+  @override
+  String get trackerMenuSaveExport => 'Speichern und Exportieren';
+
+  @override
+  String get trackerMenuShareSend => 'Teilen und Senden';
+
+  @override
   String get trackerSavedSong => 'Im Liederbuch gespeichert';
 
   @override
