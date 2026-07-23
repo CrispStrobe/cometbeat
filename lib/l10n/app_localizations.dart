@@ -5636,6 +5636,12 @@ abstract class AppLocalizations {
   /// **'Samples'**
   String get libraryCreditsSamples;
 
+  /// No description provided for @libraryCreditsMusicSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Music sources'**
+  String get libraryCreditsMusicSources;
+
   /// No description provided for @libraryCreditsIntro.
   ///
   /// In en, this message translates to:

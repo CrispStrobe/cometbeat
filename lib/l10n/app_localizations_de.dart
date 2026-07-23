@@ -3017,6 +3017,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get libraryCreditsSamples => 'Samples';
 
   @override
+  String get libraryCreditsMusicSources => 'Musikquellen';
+
+  @override
   String get libraryCreditsIntro =>
       'Aus freien Musik-Bibliotheken importierte Werke mit ihren Lizenzen.';
 

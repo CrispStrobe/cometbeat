@@ -3007,6 +3007,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryCreditsSamples => 'Samples';
 
   @override
+  String get libraryCreditsMusicSources => 'Music sources';
+
+  @override
   String get libraryCreditsIntro =>
       'Works imported from open music libraries, with their licenses.';
 

@@ -15,6 +15,7 @@ import 'package:comet_beat/features/library/donation.dart';
 import 'package:comet_beat/features/library/library_browser_screen.dart';
 import 'package:comet_beat/features/library/library_import.dart';
 import 'package:comet_beat/features/library/license_policy.dart';
+import 'package:comet_beat/features/library/music_source_credits.dart';
 import 'package:comet_beat/features/library/sample_library_sheet.dart';
 import 'package:comet_beat/features/library/sources/commons_source.dart';
 import 'package:comet_beat/features/library/sources/openscore_source.dart';
@@ -398,6 +399,25 @@ void main() {
     expect(find.text('by loop'), findsOneWidget); // credited
     expect(find.textContaining('Freepats'), findsOneWidget);
     expect(find.text('freebie'), findsNothing); // CC0 creates no obligation
+  });
+
+  testWidgets(
+      'credits screen shows standing source credits even with no '
+      'imports', (tester) async {
+    // Nothing imported, no attribution-required samples: the source-level
+    // credits (attribution-bearing catalogs) must still be listed.
+    await tester.pumpWidget(
+      _wrap(AttributionScreen(store: SampleClipStore()), UserSongsService()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(kMusicSourceCredits, isNotEmpty);
+    expect(find.textContaining('Musikpiraten'), findsOneWidget);
+    expect(
+      find.textContaining('CC BY-SA 4.0'),
+      findsOneWidget,
+    ); // Auld Lang Syne
+    expect(find.byIcon(Icons.library_music), findsWidgets);
   });
 
   testWidgets('sample sheet: picking a sound returns decoded PCM',

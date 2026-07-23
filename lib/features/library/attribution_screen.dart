@@ -7,6 +7,7 @@
 
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/library/donation.dart';
+import 'package:comet_beat/features/library/music_source_credits.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -59,7 +60,11 @@ class AttributionScreen extends StatelessWidget {
               .where((c) => c.needsAttribution)
               .toList();
 
-          if (songCredits.isEmpty && sampleCredits.isEmpty) {
+          // Standing source-level credits (attribution-bearing catalogs) are
+          // always shown, so browse-only users still satisfy the obligation.
+          if (songCredits.isEmpty &&
+              sampleCredits.isEmpty &&
+              kMusicSourceCredits.isEmpty) {
             return _empty(context, l10n);
           }
 
@@ -73,6 +78,30 @@ class AttributionScreen extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
+              if (kMusicSourceCredits.isNotEmpty) ...[
+                _sectionHeader(context, l10n.libraryCreditsMusicSources),
+                for (final src in kMusicSourceCredits)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.library_music),
+                      title: Text(src.name),
+                      subtitle: Text(src.description),
+                      isThreeLine: true,
+                      trailing: const Icon(Icons.open_in_new, size: 18),
+                      onTap: () => _open(src.url),
+                    ),
+                  ),
+              ],
+              if (songCredits.isEmpty && sampleCredits.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    l10n.libraryNoCredits,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
               if (songCredits.isNotEmpty) ...[
                 _sectionHeader(context, l10n.libraryCreditsSongs),
                 for (final song in songCredits)
