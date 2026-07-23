@@ -103,16 +103,41 @@ repos below. Reachable, but dev/test only.
 The direct answer to "what have we covered / what could we still safely add."
 Every line here is a *licence/coverage* statement; detail per source follows.
 
-> **▶ Live DB snapshot (2026-07-23): `db.json` = 37,768 rows** — 37,378 scores +
-> 390 playback assets (223 instruments · 166 modules · 1 soundfont). Scores by
-> source: GregoBase 18,710 · NIFC Polish 8,181 · PDMX 7,447 · OpenScore Lieder
-> 1,350 · NIFC Chopin 512 · Mutopia 510 · **DCML Bach Chorales 361** · OpenScore SQ
-> 122 · OpenEWLD 103 · **Musikpiraten Season Songs 52** · Pete Mac 15 · EGSet12 12 ·
-> **Kinder wollen singen 3**. Assets: VCSL 183 · **ModArchive 166 (post-clearance
-> whitelist)** · FreePats 39 · **Salamander Grand Piano V3 1 (⭐ ingested this pass)**
-> · FluidR3 1. Bold = added since the "16,800" snapshot below (GregoBase chants,
-> DCML Bach CC0, the first self-engraved German Kinderlieder, the ModArchive corpus
-> trimmed 1,650 → 166 cleared modules, and the Salamander grand piano).
+> **▶ Live DB snapshot (2026-07-23): `db.json` = 41,120 rows** — 40,730 scores +
+> 390 playback assets (223 instruments · 166 modules · 1 soundfont). The app-facing
+> **HF catalog ships 33,814 items** (score 33,354 · instrument 223 · module 139 ·
+> sample 97 · soundfont 1). Scores by source: GregoBase 18,710 · NIFC Polish 8,181 ·
+> **PDMX 10,799** (see below) · OpenScore Lieder 1,350 · NIFC Chopin 512 · Mutopia
+> 510 · DCML Bach Chorales 361 · OpenScore SQ 122 · OpenEWLD 103 · Musikpiraten
+> Season Songs 52 · Pete Mac 15 · EGSet12 12 · Kinder wollen singen 3. Assets: VCSL
+> 183 · ModArchive 166 · FreePats 39 · Salamander Grand Piano V3 1 · FluidR3 1.
+
+> **⚠️ PDMX OVERHAUL (2026-07-23) — copyright incident + composer_name fix + classical
+> recovery.** A title scan caught **25 in-copyright holiday songs** (White Christmas,
+> Frosty, Feliz Navidad, Mary Did You Know…) that slipped in via PDMX's self-attested
+> `is_original` slice — CC0 engravings of copyrighted songs with a blank/uploader
+> composer field, invisible to the composer-name pass. **Root cause + fix:** PDMX is
+> the only source whose axis-2 is self-attested; we had been resolving the uploader
+> `author`, when the dataset provides a dedicated **`composer_name`** field + a
+> **`license_conflict`** flag. New gate: **a PDMX row ships iff `composer_name`
+> (cleaned of arranger markers) resolves via Wikidata to a musician dead ≤1955 AND
+> `license_conflict==False`** (`bin/pdmx_pd_composer.py` + shared
+> `bin/wikidata_deaths.py` raw-fact cache; `emit_catalog.py` gates PDMX unless
+> `pdmx_clearance=="pd_composer"`). **Recovery:** our original ingest filtered to
+> `is_original=True` (amateur originals — where `composer_name` is the uploader), so
+> it *both* let copyrighted songs in *and* excluded the PD-classical repertoire, which
+> lives in the `is_original=False` arrangement subset. Recovered **3,352 cc-zero
+> PD-classical arrangements** (Bach 1,004 · Mozart 225 · Beethoven 204 · Chopin 148 ·
+> Satie · Handel · Vivaldi · Tchaikovsky…), **MusicXML-primary** (the format PDMX is
+> built on; `files={mxl,midi}`), curated-PD-surname-verified + derivative/namesake
+> filtered. **PDMX catalog contribution: 74 → 3,426.** A local 3-format test corpus
+> (`pdmx_classical_test_manifest.json`: mxl+midi+pdf per piece) feeds an
+> importer/exporter/OMR round-trip harness. **HF hard-purge done + verified:** repo
+> set private → `delete_repo`+`create_repo` → re-uploaded only clean dirs → public;
+> a purged copyrighted MIDI is **404 at `main` AND the oldest commit SHA**.
+> **Reusable lesson:** for any self-attested corpus, resolve the dataset's own
+> composer field (not the uploader) and honour its internal license-conflict flag —
+> the uploader's "is this original?" self-claim is unsafe in *both* directions.
 
 > **⚠ Title-based copyright quarantine (2026-07-23): 25 in-copyright holiday songs
 > removed.** A title scan (the axis-2 trap the PDMX notes warned about — works
