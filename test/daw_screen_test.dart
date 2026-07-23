@@ -460,6 +460,37 @@ void main() {
     );
   });
 
+  testWidgets('copy and paste selected clips preserves lane timing',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    daw
+      ..addDemoBeat()
+      ..addDemoTune();
+    daw.seekTo(10000);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Select clip for FX').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Select clip for FX').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Copy selected clips'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Paste clips at playhead'));
+    await tester.pumpAndSettle();
+
+    expect(service.timeline.tracks[0].clips, hasLength(2));
+    expect(service.timeline.tracks[1].clips, hasLength(2));
+    expect(service.clipStartMs(0, 1), closeTo(10000, 0.1));
+    expect(service.clipStartMs(1, 1), closeTo(12000, 0.1));
+    expect(find.byTooltip('Deselect clip for FX'), findsNWidgets(2));
+  });
+
   testWidgets('range FX splits and effects the marked clip segment',
       (tester) async {
     await _pumpDaw(tester);

@@ -17,6 +17,7 @@ import 'package:crisp_notation_core/crisp_notation_core.dart'
 import 'package:flutter/foundation.dart';
 
 typedef DawClipTarget = ({int track, int index});
+typedef DawClipCopy = ({int track, Clip clip});
 
 class DawService extends ChangeNotifier {
   /// The arrangement — starts with two empty named lanes.
@@ -219,6 +220,37 @@ class DawService extends ChangeNotifier {
     final dur = trimmedDurationMs(clip, pcm);
     clips.insert(index + 1, clip.copyWith(startMs: clip.startMs + dur));
     notifyListeners();
+  }
+
+  List<DawClipTarget> pasteClipCopies(
+    Iterable<DawClipCopy> copies,
+    double atMs,
+  ) {
+    final valid = [
+      for (final copy in copies)
+        if (copy.track >= 0 && copy.track < timeline.tracks.length) copy,
+    ];
+    if (valid.isEmpty) return const [];
+    final minStart = valid.fold<double>(
+      double.infinity,
+      (min, copy) => math.min(min, copy.clip.startMs),
+    );
+    final offset = (atMs < 0 ? 0.0 : atMs) - minStart;
+    _record();
+    final pasted = <DawClipTarget>[];
+    for (final copy in valid) {
+      final clips = timeline.tracks[copy.track].clips;
+      final newIndex = clips.length;
+      clips.add(
+        copy.clip.copyWith(
+          startMs: math.max(0, copy.clip.startMs + offset),
+          effects: _cloneEffectChain(copy.clip.effects),
+        ),
+      );
+      pasted.add((track: copy.track, index: newIndex));
+    }
+    notifyListeners();
+    return pasted;
   }
 
   /// Whether the clip spans [atTimelineMs] with room to split on both sides —

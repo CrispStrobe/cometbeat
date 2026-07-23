@@ -324,6 +324,29 @@ void main() {
     expect(s.clipCount, 1);
   });
 
+  test('pasteClipCopies preserves relative starts and original lanes', () {
+    final s = DawService()
+      ..addClip(_tone(0.5, 44100))
+      ..addClip(_tone(0.4, 44100), track: 1);
+    s.moveClip(1, 0, 3000);
+    final copies = [
+      (track: 0, clip: s.timeline.tracks[0].clips[0]),
+      (track: 1, clip: s.timeline.tracks[1].clips[0]),
+    ];
+
+    final pasted = s.pasteClipCopies(copies, 10000);
+
+    expect(pasted, [(track: 0, index: 1), (track: 1, index: 1)]);
+    expect(s.timeline.tracks[0].clips, hasLength(2));
+    expect(s.timeline.tracks[1].clips, hasLength(2));
+    expect(s.clipStartMs(0, 1), closeTo(10000, 0.1));
+    expect(s.clipStartMs(1, 1), closeTo(13000, 0.1));
+
+    s.undo();
+    expect(s.timeline.tracks[0].clips, hasLength(1));
+    expect(s.timeline.tracks[1].clips, hasLength(1));
+  });
+
   test('crossfadeWithNext overlaps adjacent clips with opposing fades', () {
     final s = DawService()
       ..addClip(_tone(0.5, 44100))

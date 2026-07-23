@@ -188,6 +188,7 @@ class _DawScreenState extends State<DawScreen>
   bool _playing = false;
   final Set<int> _selectedTracks = <int>{};
   final Set<DawClipTarget> _selectedClips = <DawClipTarget>{};
+  final List<DawClipCopy> _clipClipboard = <DawClipCopy>[];
   double? _rangeInMs;
   double? _rangeOutMs;
 
@@ -1036,6 +1037,37 @@ class _DawScreenState extends State<DawScreen>
         : targets;
   }
 
+  bool get _hasSelectedClips => _selectedClips.any(_validClipSelection);
+
+  void _copySelectedClips() {
+    final copies = [
+      for (final target in _selectedClips)
+        if (_validClipSelection(target))
+          (
+            track: target.track,
+            clip: _daw.timeline.tracks[target.track].clips[target.index],
+          ),
+    ];
+    if (copies.isEmpty) return;
+    setState(() {
+      _clipClipboard
+        ..clear()
+        ..addAll(copies);
+    });
+  }
+
+  void _pasteClipClipboard() {
+    if (_clipClipboard.isEmpty) return;
+    final pasted = _daw.pasteClipCopies(_clipClipboard, playheadMs);
+    if (pasted.isEmpty) return;
+    setState(() {
+      _selectedClips
+        ..clear()
+        ..addAll(pasted);
+    });
+    if (_playing) play();
+  }
+
   bool get _hasFxRange =>
       _rangeInMs != null &&
       _rangeOutMs != null &&
@@ -1391,6 +1423,7 @@ class _DawScreenState extends State<DawScreen>
   void clear() {
     _selectedTracks.clear();
     _selectedClips.clear();
+    _clipClipboard.clear();
     _daw.clear();
   }
 
@@ -2484,6 +2517,16 @@ class _DawScreenState extends State<DawScreen>
             icon: const Icon(Icons.redo),
             tooltip: l10n.dawRedo,
             onPressed: daw.canRedo ? redo : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.content_copy),
+            tooltip: 'Copy selected clips',
+            onPressed: _hasSelectedClips ? _copySelectedClips : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.content_paste),
+            tooltip: 'Paste clips at playhead',
+            onPressed: _clipClipboard.isEmpty ? null : _pasteClipClipboard,
           ),
           IconButton(
             icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
