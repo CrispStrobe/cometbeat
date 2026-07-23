@@ -233,136 +233,149 @@ Future<void> showAudioExportSheet(
     messenger.showSnackBar(SnackBar(content: Text(l10n.audioExportEmpty)));
     return;
   }
-  final choices = <({
-    AudioExportFormat format,
-    String label,
-    int exportSampleRate,
-    int? wavBitDepth,
-    int? mp3Bitrate,
-  })>[
-    (
-      format: AudioExportFormat.wav,
-      label: l10n.audioExportWav,
-      exportSampleRate: sampleRate,
-      wavBitDepth: 16,
-      mp3Bitrate: null,
-    ),
-    (
-      format: AudioExportFormat.wav,
-      label: 'WAV 48 kHz',
-      exportSampleRate: 48000,
-      wavBitDepth: 16,
-      mp3Bitrate: null,
-    ),
-    (
-      format: AudioExportFormat.wav,
-      label: 'WAV 32 kHz',
-      exportSampleRate: 32000,
-      wavBitDepth: 16,
-      mp3Bitrate: null,
-    ),
-    (
-      format: AudioExportFormat.wav,
-      label: 'WAV 8-bit',
-      exportSampleRate: sampleRate,
-      wavBitDepth: 8,
-      mp3Bitrate: null,
-    ),
-    (
-      format: AudioExportFormat.wav,
-      label: 'WAV 24-bit',
-      exportSampleRate: sampleRate,
-      wavBitDepth: 24,
-      mp3Bitrate: null,
-    ),
-    (
-      format: AudioExportFormat.wav,
-      label: 'WAV 32-bit',
-      exportSampleRate: sampleRate,
-      wavBitDepth: 32,
-      mp3Bitrate: null,
-    ),
-    (
-      format: AudioExportFormat.mp3,
-      label: l10n.audioExportMp3,
-      exportSampleRate: sampleRate,
-      wavBitDepth: null,
-      mp3Bitrate: 128,
-    ),
-    (
-      format: AudioExportFormat.mp3,
-      label: 'MP3 48 kHz',
-      exportSampleRate: 48000,
-      wavBitDepth: null,
-      mp3Bitrate: 128,
-    ),
-    (
-      format: AudioExportFormat.mp3,
-      label: 'MP3 32 kHz',
-      exportSampleRate: 32000,
-      wavBitDepth: null,
-      mp3Bitrate: 128,
-    ),
-    (
-      format: AudioExportFormat.mp3,
-      label: 'MP3 192 kbps',
-      exportSampleRate: sampleRate,
-      wavBitDepth: null,
-      mp3Bitrate: 192,
-    ),
-    (
-      format: AudioExportFormat.mp3,
-      label: 'MP3 320 kbps',
-      exportSampleRate: sampleRate,
-      wavBitDepth: null,
-      mp3Bitrate: 320,
-    ),
-  ];
+  var selectedFormat = AudioExportFormat.wav;
+  var selectedRate = sampleRate;
+  var selectedWavBitDepth = 16;
+  var selectedMp3Bitrate = 128;
+  final rateChoices = _uniqueRates([sampleRate, kSampleRate, 48000, 32000]);
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.audioExportTitle,
-              style: Theme.of(ctx).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final choice in choices)
-                  ActionChip(
-                    label: Text(choice.label),
-                    onPressed: () async {
-                      Navigator.of(ctx).pop();
-                      await _exportAs(
-                        context,
-                        choice.format,
-                        pcm,
-                        baseName,
-                        sampleRate,
-                        rightPcm,
-                        choice.exportSampleRate,
-                        choice.wavBitDepth,
-                        choice.mp3Bitrate,
-                        shortBlocks,
-                      );
-                    },
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheetState) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.audioExportTitle,
+                style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              _ExportChoiceRow<AudioExportFormat>(
+                label: 'Format',
+                values: AudioExportFormat.values,
+                selected: selectedFormat,
+                labelFor: (format) => switch (format) {
+                  AudioExportFormat.wav => l10n.audioExportWav,
+                  AudioExportFormat.mp3 => l10n.audioExportMp3,
+                },
+                onSelected: (format) =>
+                    setSheetState(() => selectedFormat = format),
+              ),
+              const SizedBox(height: 10),
+              _ExportChoiceRow<int>(
+                label: 'Sample rate',
+                values: rateChoices,
+                selected: selectedRate,
+                labelFor: _sampleRateLabel,
+                onSelected: (rate) => setSheetState(() => selectedRate = rate),
+              ),
+              const SizedBox(height: 10),
+              if (selectedFormat == AudioExportFormat.wav)
+                _ExportChoiceRow<int>(
+                  label: 'Bit depth',
+                  values: const [8, 16, 24, 32],
+                  selected: selectedWavBitDepth,
+                  labelFor: (depth) => '$depth-bit',
+                  onSelected: (depth) =>
+                      setSheetState(() => selectedWavBitDepth = depth),
+                )
+              else
+                _ExportChoiceRow<int>(
+                  label: 'Bitrate',
+                  values: const [128, 192, 320],
+                  selected: selectedMp3Bitrate,
+                  labelFor: (bitrate) => '$bitrate kbps',
+                  onSelected: (bitrate) =>
+                      setSheetState(() => selectedMp3Bitrate = bitrate),
+                ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.ios_share),
+                  label: Text(
+                    selectedFormat == AudioExportFormat.wav
+                        ? 'Export WAV'
+                        : 'Export MP3',
                   ),
-              ],
-            ),
-          ],
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    await _exportAs(
+                      context,
+                      selectedFormat,
+                      pcm,
+                      baseName,
+                      sampleRate,
+                      rightPcm,
+                      selectedRate,
+                      selectedWavBitDepth,
+                      selectedMp3Bitrate,
+                      shortBlocks,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
   );
+}
+
+List<int> _uniqueRates(List<int> rates) {
+  final out = <int>[];
+  for (final rate in rates) {
+    if (rate > 0 && !out.contains(rate)) out.add(rate);
+  }
+  return out;
+}
+
+String _sampleRateLabel(int sampleRate) => sampleRate % 1000 == 0
+    ? '${sampleRate ~/ 1000} kHz'
+    : '${sampleRate / 1000} kHz';
+
+class _ExportChoiceRow<T> extends StatelessWidget {
+  const _ExportChoiceRow({
+    required this.label,
+    required this.values,
+    required this.selected,
+    required this.labelFor,
+    required this.onSelected,
+  });
+
+  final String label;
+  final List<T> values;
+  final T selected;
+  final String Function(T value) labelFor;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final value in values)
+              ChoiceChip(
+                label: Text(labelFor(value)),
+                selected: value == selected,
+                onSelected: (_) => onSelected(value),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> _exportAs(

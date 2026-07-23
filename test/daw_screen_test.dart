@@ -182,17 +182,27 @@ void main() {
 
     await tester.tap(find.text('Choose format'));
     await tester.pumpAndSettle();
+    expect(find.text('Format'), findsOneWidget);
     expect(find.text('WAV (uncompressed)'), findsOneWidget);
-    expect(find.text('WAV 48 kHz'), findsOneWidget);
-    expect(find.text('WAV 32 kHz'), findsOneWidget);
-    expect(find.text('WAV 8-bit'), findsOneWidget);
-    expect(find.text('WAV 24-bit'), findsOneWidget);
-    expect(find.text('WAV 32-bit'), findsOneWidget);
     expect(find.text('MP3 (smaller)'), findsOneWidget);
-    expect(find.text('MP3 48 kHz'), findsOneWidget);
-    expect(find.text('MP3 32 kHz'), findsOneWidget);
-    expect(find.text('MP3 192 kbps'), findsOneWidget);
-    expect(find.text('MP3 320 kbps'), findsOneWidget);
+    expect(find.text('Sample rate'), findsOneWidget);
+    expect(find.text('44.1 kHz'), findsOneWidget);
+    expect(find.text('48 kHz'), findsOneWidget);
+    expect(find.text('32 kHz'), findsOneWidget);
+    expect(find.text('Bit depth'), findsOneWidget);
+    expect(find.text('8-bit'), findsOneWidget);
+    expect(find.text('16-bit'), findsOneWidget);
+    expect(find.text('24-bit'), findsOneWidget);
+    expect(find.text('32-bit'), findsOneWidget);
+    expect(find.text('Export WAV'), findsOneWidget);
+
+    await tester.tap(find.text('MP3 (smaller)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bitrate'), findsOneWidget);
+    expect(find.text('128 kbps'), findsOneWidget);
+    expect(find.text('192 kbps'), findsOneWidget);
+    expect(find.text('320 kbps'), findsOneWidget);
+    expect(find.text('Export MP3'), findsOneWidget);
     expect(daw.canExport, isTrue);
   });
 
