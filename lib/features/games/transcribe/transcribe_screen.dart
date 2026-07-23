@@ -16,6 +16,8 @@ import 'package:comet_beat/core/audio/transcription/stems.dart'
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
+import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart'
+    show TabWorkshopScreen;
 import 'package:comet_beat/features/games/songs/song_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/transcribe/crepe_provider.dart';
@@ -23,6 +25,8 @@ import 'package:comet_beat/features/games/transcribe/harmony_provider.dart';
 import 'package:comet_beat/features/games/transcribe/neural_provider.dart';
 import 'package:comet_beat/features/games/transcribe/rmvpe_provider.dart';
 import 'package:comet_beat/features/games/transcribe/transcribe_engines.dart';
+import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart'
+    show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart'
     show MultiPartScore, Score, multiPartToMusicXml;
@@ -237,6 +241,28 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
     );
   }
 
+  /// Open a transcription in the full Score Workshop (editable notation). Takes a
+  /// [MultiPartScore] so both a single recording (wrapped) and a whole-song
+  /// (multi-part) transcription can be edited there.
+  void _openInScoreEditor(MultiPartScore score, [List<String>? names]) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CompositionWorkshopScreen(
+          initialScore: score,
+          initialNames: names,
+        ),
+      ),
+    );
+  }
+
+  /// Open a transcription in the Tab Workshop (it engraves the [score] to a
+  /// guitar tab via its own arranger).
+  void _openInTabEditor(Score score) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => TabWorkshopScreen(initialScore: score)),
+    );
+  }
+
   /// Persist a whole-song transcription to the Song Book as a multi-part song
   /// (every voice kept via MusicXML — the same store the Tracker/Workshop use).
   void _saveSongToBook(
@@ -339,9 +365,17 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               )
             else if (_songResult != null)
-              Expanded(child: _songCard(_songResult!, l10n))
+              Expanded(
+                child: SingleChildScrollView(
+                  child: _songCard(_songResult!, l10n),
+                ),
+              )
             else if (_result != null)
-              Expanded(child: _resultCard(_result!, l10n)),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: _resultCard(_result!, l10n),
+                ),
+              ),
           ],
         ),
       ),
@@ -374,6 +408,11 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
                 runSpacing: 8,
                 children: [
                   FilledButton.tonalIcon(
+                    onPressed: () => _openInScoreEditor(score, song.partNames),
+                    icon: const Icon(Icons.edit_note),
+                    label: Text(l10n.transcribeOpenScore),
+                  ),
+                  OutlinedButton.icon(
                     onPressed: () =>
                         _saveSongToBook(score, song.partNames, l10n),
                     icon: const Icon(Icons.library_add),
@@ -408,10 +447,28 @@ class _TranscribeScreenState extends State<TranscribeScreen> {
             if (r.notes.isEmpty)
               Text(l10n.transcribeNoNotes)
             else
-              FilledButton.tonalIcon(
-                onPressed: () => _openInSongBook(r.score, l10n),
-                icon: const Icon(Icons.menu_book),
-                label: Text(l10n.transcribeOpenSongBook),
+              // Open the transcription in any editor — the notes interchange.
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: () =>
+                        _openInScoreEditor(MultiPartScore([r.score])),
+                    icon: const Icon(Icons.edit_note),
+                    label: Text(l10n.transcribeOpenScore),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _openInTabEditor(r.score),
+                    icon: const Icon(Icons.straighten),
+                    label: Text(l10n.transcribeOpenTab),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _openInSongBook(r.score, l10n),
+                    icon: const Icon(Icons.menu_book),
+                    label: Text(l10n.transcribeOpenSongBook),
+                  ),
+                ],
               ),
           ],
         ),

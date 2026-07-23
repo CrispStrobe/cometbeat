@@ -1637,6 +1637,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get transcribeOpenSongBook => 'Im Liederbuch öffnen';
 
   @override
+  String get transcribeOpenScore => 'Im Noten-Editor öffnen';
+
+  @override
+  String get transcribeOpenTab => 'Im Tab-Editor öffnen';
+
+  @override
   String get transcribeNoNotes =>
       'Keine Noten gefunden – versuche eine klarere Solo-Aufnahme.';
 

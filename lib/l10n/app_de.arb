@@ -561,6 +561,8 @@
     }
   },
   "transcribeOpenSongBook": "Im Liederbuch öffnen",
+  "transcribeOpenScore": "Im Noten-Editor öffnen",
+  "transcribeOpenTab": "Im Tab-Editor öffnen",
   "transcribeNoNotes": "Keine Noten gefunden – versuche eine klarere Solo-Aufnahme.",
   "transcribeError": "Konnte nicht notieren: {message}",
   "@transcribeError": {

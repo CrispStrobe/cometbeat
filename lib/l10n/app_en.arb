@@ -634,6 +634,8 @@
     }
   },
   "transcribeOpenSongBook": "Open in Song Book",
+  "transcribeOpenScore": "Open in Score editor",
+  "transcribeOpenTab": "Open in Tab editor",
   "transcribeNoNotes": "No notes found — try a clearer solo recording.",
   "transcribeError": "Couldn't transcribe: {message}",
   "@transcribeError": {

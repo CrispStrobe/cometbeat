@@ -3074,6 +3074,18 @@ abstract class AppLocalizations {
   /// **'Open in Song Book'**
   String get transcribeOpenSongBook;
 
+  /// No description provided for @transcribeOpenScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Score editor'**
+  String get transcribeOpenScore;
+
+  /// No description provided for @transcribeOpenTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Tab editor'**
+  String get transcribeOpenTab;
+
   /// No description provided for @transcribeNoNotes.
   ///
   /// In en, this message translates to:

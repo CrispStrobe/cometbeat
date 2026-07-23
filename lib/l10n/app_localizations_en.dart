@@ -1630,6 +1630,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transcribeOpenSongBook => 'Open in Song Book';
 
   @override
+  String get transcribeOpenScore => 'Open in Score editor';
+
+  @override
+  String get transcribeOpenTab => 'Open in Tab editor';
+
+  @override
   String get transcribeNoNotes =>
       'No notes found — try a clearer solo recording.';
 
