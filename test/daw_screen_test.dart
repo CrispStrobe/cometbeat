@@ -356,6 +356,37 @@ void main() {
     expect(find.textContaining('Mix'), findsWidgets);
   });
 
+  testWidgets('pitch and time FX expose CrispAudio-style sliders',
+      (tester) async {
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+
+    await tester.tap(find.text('Master FX'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pitch Shift').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Time Stretch').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      service.masterEffects().map((fx) => fx.type),
+      [DawClipEffectType.pitchShift, DawClipEffectType.timeStretch],
+    );
+    await tester.tap(find.text('Pitch Shift'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Semitones'), findsOneWidget);
+    await tester.tap(find.text('Time Stretch'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Speed'), findsOneWidget);
+  });
+
   testWidgets('bus dialog routes selected tracks and edits bus FX',
       (tester) async {
     await _pumpDaw(tester);

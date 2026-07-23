@@ -375,6 +375,59 @@ void main() {
     expect(shaped, isNot(equals(dry)));
   });
 
+  test('pitch and time FX process audio while preserving DAW span', () {
+    final dry = _sine(4410);
+    final pitchBypassed = applyClipEffectChain(
+      dry,
+      [
+        defaultDawClipEffect(DawClipEffectType.pitchShift).copyWith(
+          params: {'semitones': 12, 'mix': 0},
+        ),
+      ],
+      44100,
+    );
+    final pitched = applyClipEffectChain(
+      dry,
+      [
+        defaultDawClipEffect(DawClipEffectType.pitchShift).copyWith(
+          params: {'semitones': 12, 'mix': 1},
+        ),
+      ],
+      44100,
+    );
+    final stretched = applyClipEffectChain(
+      dry,
+      [
+        defaultDawClipEffect(DawClipEffectType.timeStretch).copyWith(
+          params: {'speed': 0.6, 'mix': 1},
+        ),
+      ],
+      44100,
+    );
+
+    expect(pitchBypassed, equals(dry));
+    expect(pitched.length, dry.length);
+    expect(stretched.length, dry.length);
+    expect(pitched, isNot(equals(dry)));
+    expect(stretched, isNot(equals(dry)));
+  });
+
+  test('pitch and time FX are safe on the master bus', () {
+    final t = DawTimeline(
+      effects: [
+        defaultDawClipEffect(DawClipEffectType.pitchShift),
+        defaultDawClipEffect(DawClipEffectType.timeStretch),
+      ],
+      tracks: [
+        DawTrack(clips: [Clip(source: _ToneSource(0.2, 100))]),
+      ],
+    );
+
+    final out = renderTimeline(t, sampleRate: _sr, limit: false);
+    expect(out.length, 100);
+    expect(out.every((v) => v.isFinite), isTrue);
+  });
+
   test('master FX process the full mix before limiting', () {
     final src = _ToneSource(0.4, 100);
     final dryTimeline = DawTimeline(

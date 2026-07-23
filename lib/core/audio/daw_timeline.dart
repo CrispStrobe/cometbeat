@@ -24,8 +24,14 @@ import 'package:comet_beat/core/audio/crisp_dsp/dynamics.dart'
     show compressorFx, gateFx;
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
     show chorusFx, delayFx, flangerFx;
+import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart'
+    show granularPitchShift;
+import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
+    show resampleCubic;
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
 import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart' show ringModFx;
+import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
+    show timeStretch;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
     show VoiceEffect, applyVoiceEffect, voiceShapeFx;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
@@ -154,6 +160,8 @@ enum DawClipEffectType {
   highpass,
   compressor,
   gate,
+  pitchShift,
+  timeStretch,
   voiceShape,
   voiceChipmunk,
   voiceDeep,
@@ -220,6 +228,14 @@ DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
       DawClipEffectType.gate => const DawClipEffect(
           type: DawClipEffectType.gate,
           params: {'thresholdDb': -40, 'ratio': 4, 'rangeDb': -60, 'mix': 1},
+        ),
+      DawClipEffectType.pitchShift => const DawClipEffect(
+          type: DawClipEffectType.pitchShift,
+          params: {'semitones': 12, 'mix': 1},
+        ),
+      DawClipEffectType.timeStretch => const DawClipEffect(
+          type: DawClipEffectType.timeStretch,
+          params: {'speed': 0.75, 'mix': 1},
         ),
       DawClipEffectType.voiceShape => const DawClipEffect(
           type: DawClipEffectType.voiceShape,
@@ -629,6 +645,26 @@ Float64List _applyClipEffect(
         rangeDb: p('rangeDb', -60),
         mix: p('mix', 1),
       ),
+    DawClipEffectType.pitchShift => _blendWetDry(
+        input,
+        _fitLength(
+          granularPitchShift(input, p('semitones', 12)),
+          input.length,
+        ),
+        p('mix', 1),
+      ),
+    DawClipEffectType.timeStretch => _blendWetDry(
+        input,
+        _fitLength(
+          timeStretch(
+            input,
+            1 / p('speed', 0.75).clamp(0.1, 4.0),
+            sampleRate: sampleRate,
+          ),
+          input.length,
+        ),
+        p('mix', 1),
+      ),
     DawClipEffectType.voiceShape => voiceShapeFx(
         input,
         sampleRate: sampleRate,
@@ -679,6 +715,17 @@ Float64List _blendWetDry(Float64List dry, Float64List wet, double mix) {
     final w = i < wet.length ? wet[i] : 0.0;
     out[i] = (1 - m) * d + m * w;
   }
+  return out;
+}
+
+Float64List _fitLength(Float64List input, int length) {
+  if (input.length == length) return input;
+  if (length <= 0) return Float64List(0);
+  if (input.isEmpty) return Float64List(length);
+  final resized = resampleCubic(input, input.length / length);
+  if (resized.length == length) return resized;
+  final out = Float64List(length);
+  out.setRange(0, math.min(length, resized.length), resized);
   return out;
 }
 
