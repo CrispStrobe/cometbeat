@@ -428,6 +428,12 @@ abstract class AppLocalizations {
   /// **'Choose which melodic voice receives newly inserted notes'**
   String get workshopVoiceSelectorHelp;
 
+  /// No description provided for @workshopSetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set score title'**
+  String get workshopSetTitle;
+
   /// No description provided for @workshopZoomIn.
   ///
   /// In en, this message translates to:

@@ -584,6 +584,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   bool _chordMode = false; // placed pitches stack onto the selected note
   bool _barNumbers = false; // label each wrapped system with its bar number
   bool _noteNames = false; // draw each note's name below the staff
+  String _scoreTitle = '';
+  String get _fileStem {
+    final stem = _scoreTitle.trim().replaceAll(RegExp(r'[^a-zA-Z0-9 _-]'), '');
+    return stem.trim().isEmpty ? 'score' : stem.trim().replaceAll(' ', '_');
+  }
+
   bool _showAnalysis = false; // live harmonic analysis: tint notes by function
   bool _inspect = false; // 🔍 Looking Glass: tap a note to see what it is
   // Studio: an opt-in selection-driven inspector panel (Cause 3). Off by default,
@@ -1940,6 +1946,38 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     );
   }
 
+  Future<void> _setScoreTitle() async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(
+      text: _scoreTitle.isEmpty ? l10n.myMelodyDefaultName : _scoreTitle,
+    );
+    final title = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.workshopSetTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (value) => Navigator.of(ctx).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || title == null) return;
+    setState(() => _scoreTitle = title.trim());
+  }
+
   /// Open any supported score file — one picker for every format; the type is
   /// detected from the extension by [importScore].
   Future<void> _open() async {
@@ -3045,14 +3083,17 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       final data = bytes ?? Uint8List.fromList(utf8.encode(text!));
       try {
         final location = await getSaveLocation(
-          suggestedName: 'score.${fmt.ext}',
+          suggestedName: '$_fileStem.${fmt.ext}',
           acceptedTypeGroups: [
             XTypeGroup(label: fmt.label, extensions: [fmt.ext]),
           ],
         );
         if (location == null) return; // cancelled
-        await XFile.fromData(data, mimeType: fmt.mime, name: 'score.${fmt.ext}')
-            .saveTo(location.path);
+        await XFile.fromData(
+          data,
+          mimeType: fmt.mime,
+          name: '$_fileStem.${fmt.ext}',
+        ).saveTo(location.path);
         if (!mounted) return;
         messenger.showSnackBar(
           SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
@@ -3293,7 +3334,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final messenger = ScaffoldMessenger.of(context);
     final songs = context.read<UserSongsService>();
 
-    final controller = TextEditingController(text: l10n.myMelodyDefaultName);
+    final controller = TextEditingController(
+      text: _scoreTitle.isEmpty ? l10n.myMelodyDefaultName : _scoreTitle,
+    );
     final title = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -3318,6 +3361,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     );
     if (title == null) return;
     final name = title.trim().isEmpty ? l10n.myMelodyDefaultName : title.trim();
+    if (_scoreTitle != name) setState(() => _scoreTitle = name);
     songs.addSong(
       ImportedSong(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -3444,6 +3488,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       tooltip: l10n.myMelodyUndo,
                       onPressed:
                           _doc.canUndo ? () => setState(_doc.undo) : null,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.title),
+                      tooltip: l10n.workshopSetTitle,
+                      onPressed: _setScoreTitle,
                     ),
                     IconButton(
                       icon: const Icon(Icons.redo),
