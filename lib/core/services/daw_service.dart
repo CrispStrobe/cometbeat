@@ -31,7 +31,7 @@ class DawService extends ChangeNotifier {
 
   // Downsampled peaks per (source, trim, resolution) for drawing a clip's
   // waveform without re-scanning the PCM on every rebuild.
-  final Map<String, List<double>> _peaks = {};
+  final Map<String, Object> _peaks = {};
 
   // Where the next sent clip lands, so successive sends lay out along the
   // timeline rather than stacking at 0.
@@ -479,11 +479,25 @@ class DawService extends ChangeNotifier {
   /// a rebuild is O(1) after the first scan; recomputed only when the source or
   /// trim changes (its key changes).
   List<double> clipPeaks(int track, int index, {int buckets = 120}) {
+    final stereo = clipStereoPeaks(track, index, buckets: buckets);
+    return [
+      for (var i = 0; i < stereo.left.length; i++)
+        math.max(stereo.left[i], stereo.right[i]),
+    ];
+  }
+
+  /// Separate channel peaks for the DAW stereo waveform renderer. Mono clips
+  /// return the same data for both lanes, keeping callers simple.
+  ({List<double> left, List<double> right}) clipStereoPeaks(
+    int track,
+    int index, {
+    int buckets = 120,
+  }) {
     final clip = timeline.tracks[track].clips[index];
     final n = buckets < 1 ? 1 : buckets;
-    final key = '${clip.source.cacheKey}|${clip.trimStartMs}|${clip.trimEndMs}|'
-        '${Object.hashAll(clip.effects.map((e) => e.cacheKey))}|$n';
-    return _peaks.putIfAbsent(key, () {
+    final baseKey = '${clip.source.cacheKey}|${clip.trimStartMs}|'
+        '${clip.trimEndMs}|${Object.hashAll(clip.effects.map((e) => e.cacheKey))}|$n';
+    return _peaks.putIfAbsent('$baseKey|stereo', () {
       final rendered = _cache.putIfAbsent(
         clip.source.cacheKey,
         () => clip.source.render(kDawSampleRate),
@@ -507,23 +521,25 @@ class DawService extends ChangeNotifier {
                   left: applyClipEffectChain(dry, clip.effects, kDawSampleRate),
                   right: dry,
                 );
-      final out = List<double>.filled(n, 0);
-      if (effected.left.isEmpty) return out;
+      final left = List<double>.filled(n, 0);
+      final right = List<double>.filled(n, 0);
+      if (effected.left.isEmpty) return (left: left, right: right);
       for (var b = 0; b < n; b++) {
         final lo = effected.left.length * b ~/ n;
         final hi = effected.left.length * (b + 1) ~/ n;
-        var peak = 0.0;
+        var leftPeak = 0.0;
+        var rightPeak = 0.0;
         for (var i = lo; i < hi; i++) {
-          final leftPeak = effected.left[i].abs();
-          final rightPeak =
-              i < effected.right.length ? effected.right[i].abs() : 0.0;
-          if (leftPeak > peak) peak = leftPeak;
-          if (rightPeak > peak) peak = rightPeak;
+          leftPeak = math.max(leftPeak, effected.left[i].abs());
+          if (i < effected.right.length) {
+            rightPeak = math.max(rightPeak, effected.right[i].abs());
+          }
         }
-        out[b] = peak > 1 ? 1 : peak;
+        left[b] = leftPeak > 1 ? 1 : leftPeak;
+        right[b] = rightPeak > 1 ? 1 : rightPeak;
       }
-      return out;
-    });
+      return (left: left, right: right);
+    }) as ({List<double> left, List<double> right});
   }
 
   /// A clip's current gain / fade lengths.

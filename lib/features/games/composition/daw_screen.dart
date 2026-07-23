@@ -3791,6 +3791,12 @@ class _DawScreenState extends State<DawScreen>
     final fg = frozen ? scheme.onSecondaryContainer : scheme.onPrimaryContainer;
     final target = (track: i, index: j);
     final selected = _selectedClips.contains(target);
+    final stereoPeaks = daw.clipStereoPeaks(
+      i,
+      j,
+      buckets: math.max(8, widthPx ~/ 2),
+    );
+    final isStereo = clip.source is StereoSampleSource;
 
     return Positioned(
       left: startPx,
@@ -3824,8 +3830,9 @@ class _DawScreenState extends State<DawScreen>
                 Positioned.fill(
                   child: CustomPaint(
                     painter: _ClipWaveformPainter(
-                      daw.clipPeaks(i, j, buckets: math.max(8, widthPx ~/ 2)),
+                      stereoPeaks.left,
                       fg.withValues(alpha: 0.35),
+                      rightPeaks: isStereo ? stereoPeaks.right : null,
                     ),
                   ),
                 ),
@@ -3918,26 +3925,43 @@ class _BeatGridPainter extends CustomPainter {
 /// Draws a clip's downsampled [peaks] (0..1) as a centre-line waveform that
 /// fills the clip box. Repaints only when the peak list identity changes.
 class _ClipWaveformPainter extends CustomPainter {
-  _ClipWaveformPainter(this.peaks, this.color);
+  _ClipWaveformPainter(this.peaks, this.color, {this.rightPeaks});
   final List<double> peaks;
   final Color color;
+  final List<double>? rightPeaks;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (peaks.isEmpty) return;
     final paint = Paint()..color = color;
-    final mid = size.height / 2;
-    final dx = size.width / peaks.length;
-    for (var i = 0; i < peaks.length; i++) {
-      final h = (peaks[i] * size.height).clamp(1.0, size.height);
-      canvas.drawRect(
-        Rect.fromLTWH(i * dx, mid - h / 2, dx <= 1 ? 1 : dx - 0.5, h),
-        paint,
-      );
+    void drawLane(List<double> lane, double center, double laneHeight) {
+      final dx = size.width / lane.length;
+      for (var i = 0; i < lane.length; i++) {
+        final h = (lane[i] * laneHeight).clamp(1.0, laneHeight);
+        canvas.drawRect(
+          Rect.fromLTWH(
+            i * dx,
+            center - h / 2,
+            dx <= 1 ? 1 : dx - 0.5,
+            h,
+          ),
+          paint,
+        );
+      }
+    }
+
+    final right = rightPeaks;
+    if (right == null) {
+      drawLane(peaks, size.height / 2, size.height);
+    } else {
+      drawLane(peaks, size.height / 4, size.height / 2);
+      drawLane(right, size.height * 3 / 4, size.height / 2);
     }
   }
 
   @override
   bool shouldRepaint(_ClipWaveformPainter old) =>
-      !identical(old.peaks, peaks) || old.color != color;
+      !identical(old.peaks, peaks) ||
+      !identical(old.rightPeaks, rightPeaks) ||
+      old.color != color;
 }
