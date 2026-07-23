@@ -1194,10 +1194,11 @@ void main() {
   test('exactly the multi-part-capable formats claim multi-part support', () {
     // Guards the flag against a new format being added without deciding.
     // MusicXML/mxl via the library; MIDI/ABC via our own multi-part writers;
-    // GP tab via multiPartToGpif (one track per part).
+    // GP tab via multiPartToGpif (one track per part); LilyPond via
+    // multiPartToLilyPond (a StaffGroup per part).
     expect(
       kExportFormats.where((f) => f.multiPart).map((f) => f.ext),
-      ['musicxml', 'mxl', 'mid', 'abc', 'gp'],
+      ['musicxml', 'mxl', 'mid', 'abc', 'gp', 'ly'],
     );
   });
 
