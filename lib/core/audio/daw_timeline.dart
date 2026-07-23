@@ -591,8 +591,13 @@ Float64List _bitCrushFx(
 
 /// A DAW arrangement: an ordered list of tracks.
 class DawTimeline {
-  DawTimeline({List<DawTrack>? tracks}) : tracks = tracks ?? [];
+  DawTimeline({List<DawTrack>? tracks, List<DawClipEffect>? effects})
+      : tracks = tracks ?? [],
+        effects = effects ?? [];
   final List<DawTrack> tracks;
+
+  /// Ordered output-bus FX applied to the full mix before final limiting.
+  List<DawClipEffect> effects;
 }
 
 /// Render [timeline] to one mono PCM buffer: every unmuted clip on an unmuted
@@ -704,17 +709,21 @@ Float64List renderTimeline(
     }
   }
 
+  final out = timeline.effects.isEmpty
+      ? master
+      : applyClipEffectChain(master, timeline.effects, sampleRate);
+
   if (limit) {
-    for (var i = 0; i < master.length; i++) {
-      final x = master[i];
+    for (var i = 0; i < out.length; i++) {
+      final x = out[i];
       // Soft-knee: transparent below ~0.6, tanh-limited toward the rails so
       // overlapping clips round off instead of hard-clipping.
       if (x.abs() > 0.6) {
-        master[i] = x.sign * (0.6 + _tanh((x.abs() - 0.6) / 0.4) * 0.4);
+        out[i] = x.sign * (0.6 + _tanh((x.abs() - 0.6) / 0.4) * 0.4);
       }
     }
   }
-  return master;
+  return out;
 }
 
 double _tanh(double x) {

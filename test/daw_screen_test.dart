@@ -217,6 +217,29 @@ void main() {
     );
   });
 
+  testWidgets('master FX dialog edits the output bus chain', (tester) async {
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+
+    await tester.tap(find.text('Master FX'));
+    await tester.pumpAndSettle();
+    expect(find.text('Output bus'), findsOneWidget);
+    expect(find.text('No master effects'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Distortion').last);
+    await tester.pumpAndSettle();
+
+    expect(service.masterEffects().single.type, DawClipEffectType.distortion);
+    await tester.tap(find.text('Distortion'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Drive'), findsOneWidget);
+  });
+
   testWidgets('tapping a clip opens the inspector; gain slider changes gain',
       (tester) async {
     await _pumpDaw(tester);

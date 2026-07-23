@@ -767,6 +767,33 @@ void main() {
       );
       expect(s.trackEffects(1)[1].params['drive'], 7);
     });
+
+    test('master output FX chain has params, reorder and undo', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      s
+        ..addMasterEffect(DawClipEffectType.highpass)
+        ..addMasterEffect(DawClipEffectType.distortion)
+        ..setMasterEffectParam(1, 'drive', 8);
+
+      expect(
+        s.masterEffects().map((fx) => fx.type),
+        [DawClipEffectType.highpass, DawClipEffectType.distortion],
+      );
+      expect(s.masterEffects()[1].params['drive'], 8);
+
+      s.moveMasterEffect(1, -1);
+      expect(
+        s.masterEffects().map((fx) => fx.type),
+        [DawClipEffectType.distortion, DawClipEffectType.highpass],
+      );
+
+      s.toggleMasterEffect(0);
+      expect(s.masterEffects().first.enabled, isFalse);
+      s.undo();
+      expect(s.masterEffects().first.enabled, isTrue);
+      s.removeMasterEffect(0);
+      expect(s.masterEffects().single.type, DawClipEffectType.highpass);
+    });
   });
 
   group('clip effect chains', () {

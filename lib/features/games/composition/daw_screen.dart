@@ -509,6 +509,109 @@ class _DawScreenState extends State<DawScreen>
     );
   }
 
+  Future<void> _masterFxMenu() async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Master FX'),
+        content: StatefulBuilder(
+          builder: (ctx, setDialog) => SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: _masterFxEditor(ctx, setDialog),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(AppLocalizations.of(ctx)!.dawCancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _masterFxEditor(BuildContext ctx, StateSetter setDialog) {
+    final effects = _daw.masterEffects();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Output bus', style: Theme.of(ctx).textTheme.labelLarge),
+            const Spacer(),
+            PopupMenuButton<DawClipEffectPreset>(
+              tooltip: 'Apply preset',
+              icon: const Icon(Icons.auto_fix_high),
+              onSelected: (preset) {
+                _daw.applyMasterEffectPreset(preset);
+                setDialog(() {});
+                if (_playing) play();
+              },
+              itemBuilder: (_) => [
+                for (final preset in DawClipEffectPreset.values)
+                  PopupMenuItem(
+                    value: preset,
+                    child: Text(_clipEffectPresetLabel(preset)),
+                  ),
+              ],
+            ),
+            PopupMenuButton<DawClipEffectType>(
+              tooltip: 'Add effect',
+              icon: const Icon(Icons.add_circle_outline),
+              onSelected: (type) {
+                _daw.addMasterEffect(type);
+                setDialog(() {});
+                if (_playing) play();
+              },
+              itemBuilder: (_) => [
+                for (final type in _clipEffectTypes)
+                  PopupMenuItem(
+                    value: type,
+                    child: Text(_clipEffectLabel(type)),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        if (effects.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'No master effects',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+          ),
+        for (var fxIndex = 0; fxIndex < effects.length; fxIndex++)
+          _fxTile(
+            ctx,
+            effects: effects,
+            fxIndex: fxIndex,
+            onToggle: () {
+              _daw.toggleMasterEffect(fxIndex);
+              setDialog(() {});
+              if (_playing) play();
+            },
+            onMove: (delta) {
+              _daw.moveMasterEffect(fxIndex, delta);
+              setDialog(() {});
+              if (_playing) play();
+            },
+            onRemove: () {
+              _daw.removeMasterEffect(fxIndex);
+              setDialog(() {});
+              if (_playing) play();
+            },
+            onParam: (key, value) {
+              setDialog(() => _daw.setMasterEffectParam(fxIndex, key, value));
+              if (_playing) play();
+            },
+          ),
+      ],
+    );
+  }
+
   List<int> _selectedTrackTargets(int fallbackTrack) {
     final targets = [
       for (final i in _selectedTracks)
@@ -1828,6 +1931,11 @@ class _DawScreenState extends State<DawScreen>
                     onPressed: addTrack,
                     icon: const Icon(Icons.add_road),
                     label: Text(l10n.dawAddTrack),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _masterFxMenu,
+                    icon: const Icon(Icons.graphic_eq),
+                    label: const Text('Master FX'),
                   ),
                   OutlinedButton.icon(
                     onPressed: daw.clipCount == 0 ? null : _markRangeIn,

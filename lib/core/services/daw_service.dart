@@ -57,6 +57,7 @@ class DawService extends ChangeNotifier {
   }
 
   _Snapshot _capture() => _Snapshot(
+        effects: _cloneEffectChain(timeline.effects),
         tracks: [
           for (final t in timeline.tracks)
             DawTrack(
@@ -74,6 +75,7 @@ class DawService extends ChangeNotifier {
       );
 
   void _restore(_Snapshot s) {
+    timeline.effects = _cloneEffectChain(s.effects);
     timeline.tracks
       ..clear()
       ..addAll(s.tracks);
@@ -830,6 +832,71 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<DawClipEffect> masterEffects() => timeline.effects;
+
+  void addMasterEffect(DawClipEffectType type) {
+    _record();
+    timeline.effects.add(defaultDawClipEffect(type));
+    notifyListeners();
+  }
+
+  void applyMasterEffectPreset(
+    DawClipEffectPreset preset, {
+    bool append = false,
+  }) {
+    _record();
+    final chain = dawClipEffectPresetChain(preset);
+    timeline.effects = append
+        ? [...timeline.effects, ..._cloneEffectChain(chain)]
+        : _cloneEffectChain(chain);
+    notifyListeners();
+  }
+
+  void removeMasterEffect(int effectIndex) {
+    if (effectIndex < 0 || effectIndex >= timeline.effects.length) return;
+    _record();
+    timeline.effects = [...timeline.effects]..removeAt(effectIndex);
+    notifyListeners();
+  }
+
+  void moveMasterEffect(int effectIndex, int delta) {
+    final to = effectIndex + delta;
+    if (effectIndex < 0 ||
+        effectIndex >= timeline.effects.length ||
+        to < 0 ||
+        to >= timeline.effects.length ||
+        delta == 0) {
+      return;
+    }
+    _record();
+    final effects = [...timeline.effects];
+    final fx = effects.removeAt(effectIndex);
+    effects.insert(to, fx);
+    timeline.effects = effects;
+    notifyListeners();
+  }
+
+  void toggleMasterEffect(int effectIndex) {
+    if (effectIndex < 0 || effectIndex >= timeline.effects.length) return;
+    _record();
+    final effects = [...timeline.effects];
+    effects[effectIndex] = effects[effectIndex].copyWith(
+      enabled: !effects[effectIndex].enabled,
+    );
+    timeline.effects = effects;
+    notifyListeners();
+  }
+
+  void setMasterEffectParam(int effectIndex, String key, double value) {
+    if (effectIndex < 0 || effectIndex >= timeline.effects.length) return;
+    _coalesced(('masterFxParam', effectIndex, key));
+    final effects = [...timeline.effects];
+    final fx = effects[effectIndex];
+    effects[effectIndex] = fx.copyWith(params: {...fx.params, key: value});
+    timeline.effects = effects;
+    notifyListeners();
+  }
+
   List<int> _validTrackIndices(Iterable<int> tracks) {
     final seen = <int>{};
     final out = <int>[];
@@ -1144,6 +1211,7 @@ class DawService extends ChangeNotifier {
   /// a bad file; on success the timeline, cache and undo history are reset.
   void loadProject(String json) {
     final loaded = projectFromJson(json); // may throw before we mutate anything
+    timeline.effects = _cloneEffectChain(loaded.effects);
     timeline.tracks
       ..clear()
       ..addAll(loaded.tracks);
@@ -1162,7 +1230,12 @@ class DawService extends ChangeNotifier {
 
 /// A structural snapshot of the arrangement for undo/redo.
 class _Snapshot {
-  _Snapshot({required this.tracks, required this.nextStartMs});
+  _Snapshot({
+    required this.effects,
+    required this.tracks,
+    required this.nextStartMs,
+  });
+  final List<DawClipEffect> effects;
   final List<DawTrack> tracks;
   final double nextStartMs;
 }

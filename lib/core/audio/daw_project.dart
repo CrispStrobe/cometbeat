@@ -36,6 +36,8 @@ String projectToJson(
   return jsonEncode({
     'v': _kProjectVersion,
     'sampleRate': sampleRate,
+    if (timeline.effects.isNotEmpty)
+      'effects': [for (final fx in timeline.effects) fx.toJson()],
     'tracks': [
       for (final track in timeline.tracks)
         {
@@ -94,6 +96,11 @@ DawTimeline projectFromJson(String json) {
     return TrackEffect.none;
   }
 
+  final timelineEffects = [
+    if (decoded['effects'] case final effects? when effects is List)
+      for (final fx in effects)
+        if (DawClipEffect.fromJson(fx) case final parsed?) parsed,
+  ];
   final tracks = <DawTrack>[];
   for (final t in tracksJson) {
     if (t is! Map) continue;
@@ -151,7 +158,7 @@ DawTimeline projectFromJson(String json) {
       }(),
     );
   }
-  return DawTimeline(tracks: tracks);
+  return DawTimeline(tracks: tracks, effects: timelineEffects);
 }
 
 Uint8List _floatToInt16(Float64List pcm) {

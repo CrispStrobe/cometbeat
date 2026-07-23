@@ -278,4 +278,28 @@ void main() {
     final out = renderTimeline(t, sampleRate: _sr, limit: false);
     expect(out.every((v) => (v - 0.5).abs() < 1e-9), isTrue);
   });
+
+  test('master FX process the full mix before limiting', () {
+    final src = _ToneSource(0.4, 100);
+    final dryTimeline = DawTimeline(
+      tracks: [
+        DawTrack(clips: [Clip(source: src)]),
+      ],
+    );
+    final wetTimeline = DawTimeline(
+      effects: [
+        defaultDawClipEffect(DawClipEffectType.distortion).copyWith(
+          params: {'drive': 9, 'mix': 1},
+        ),
+      ],
+      tracks: [
+        DawTrack(clips: [Clip(source: _ToneSource(0.4, 100))]),
+      ],
+    );
+
+    final dry = renderTimeline(dryTimeline, sampleRate: _sr, limit: false);
+    final wet = renderTimeline(wetTimeline, sampleRate: _sr, limit: false);
+    expect(wet.length, dry.length);
+    expect(wet[0], isNot(closeTo(dry[0], 1e-6)));
+  });
 }

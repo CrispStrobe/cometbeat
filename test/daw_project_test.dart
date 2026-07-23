@@ -14,6 +14,11 @@ SampleSource _tone(double level, int n) =>
 void main() {
   test('round-trips tracks, clips and every placement field', () {
     final timeline = DawTimeline(
+      effects: [
+        defaultDawClipEffect(DawClipEffectType.compressor).copyWith(
+          params: {'thresholdDb': -18, 'ratio': 3},
+        ),
+      ],
       tracks: [
         DawTrack(
           name: 'Drums',
@@ -49,6 +54,8 @@ void main() {
     final back = projectFromJson(projectToJson(timeline));
 
     expect(back.tracks.length, 2);
+    expect(back.effects.single.type, DawClipEffectType.compressor);
+    expect(back.effects.single.params['thresholdDb'], -18);
     expect(back.tracks[0].name, 'Drums');
     expect(back.tracks[0].gain, closeTo(0.8, 1e-9));
     expect(back.tracks[0].effect, TrackEffect.echo);
