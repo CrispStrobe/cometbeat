@@ -2073,6 +2073,7 @@ class _DawScreenState extends State<DawScreen>
             DawClipEffectType.reverb => const [
                 (key: 'roomSize', label: 'Size', min: 0, max: 1, step: 0.01),
                 (key: 'damping', label: 'Damping', min: 0, max: 1, step: 0.01),
+                (key: 'decay', label: 'Decay s', min: 0.1, max: 10, step: 0.1),
                 (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
               ],
             DawClipEffectType.delay => const [

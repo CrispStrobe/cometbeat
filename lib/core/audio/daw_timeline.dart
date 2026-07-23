@@ -244,7 +244,12 @@ DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
         ),
       DawClipEffectType.reverb => const DawClipEffect(
           type: DawClipEffectType.reverb,
-          params: {'roomSize': 0.7, 'damping': 0.4, 'mix': 0.35},
+          params: {
+            'roomSize': 0.7,
+            'damping': 0.4,
+            'decay': 1.5,
+            'mix': 0.35,
+          },
         ),
       DawClipEffectType.delay => const DawClipEffect(
           type: DawClipEffectType.delay,
@@ -751,6 +756,7 @@ Float64List applyClipEffectChain(
           outRight,
           roomSize: p('roomSize', 0.7),
           damping: p('damping', 0.4),
+          decay: p('decay', 1.5),
           mix: p('mix', 0.35),
           sampleRate: sampleRate,
         ),
@@ -877,6 +883,7 @@ Float64List _applyClipEffect(
         input,
         roomSize: p('roomSize', 0.7),
         damping: p('damping', 0.4),
+        decay: p('decay', 1.5),
         mix: p('mix', 0.35),
         sampleRate: sampleRate,
       ),

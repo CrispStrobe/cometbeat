@@ -98,6 +98,7 @@ Float64List reverbFx(
   Float64List input, {
   double roomSize = 0.6,
   double damping = 0.4,
+  double? decay,
   double mix = 0.3,
   int stereoSpread = 0,
   int sampleRate = kSampleRate,
@@ -112,7 +113,12 @@ Float64List reverbFx(
     return out;
   }
 
-  final room = _clamp01(roomSize);
+  // CrispAudio exposes decay in seconds while older CometBeat callers use
+  // roomSize. Keep roomSize as the fallback and map the explicit timing
+  // control onto the same stable feedback range.
+  final room = decay == null
+      ? _clamp01(roomSize)
+      : _clamp01((decay.clamp(0.1, 10.0) - 0.1) / 9.9);
   final damp = 0.2 + 0.6 * _clamp01(damping);
   final feedback = 0.7 + 0.28 * room; // < 1
 
@@ -156,6 +162,7 @@ Float64List reverbFx(
   Float64List right, {
   double roomSize = 0.6,
   double damping = 0.4,
+  double? decay,
   double mix = 0.3,
   int sampleRate = kSampleRate,
 }) {
@@ -164,6 +171,7 @@ Float64List reverbFx(
       left,
       roomSize: roomSize,
       damping: damping,
+      decay: decay,
       mix: mix,
       sampleRate: sampleRate,
     ),
@@ -171,6 +179,7 @@ Float64List reverbFx(
       right,
       roomSize: roomSize,
       damping: damping,
+      decay: decay,
       mix: mix,
       stereoSpread: 23,
       sampleRate: sampleRate,

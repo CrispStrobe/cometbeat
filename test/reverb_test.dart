@@ -72,5 +72,16 @@ void main() {
       expect(_peak(a), lessThan(4.0));
       expect(_differs(a, b), isFalse);
     });
+
+    test('explicit decay controls the feedback tail', () {
+      final s = _impulse(12000);
+      final shortTail = reverbFx(s, decay: 0.2, mix: 1);
+      final longTail = reverbFx(s, decay: 8, mix: 1);
+      expect(_differs(shortTail, longTail), isTrue);
+      expect(
+        _energy(longTail, 8000, 12000),
+        greaterThan(_energy(shortTail, 8000, 12000)),
+      );
+    });
   });
 }
