@@ -44,6 +44,7 @@ Future<InstalledInstrument?> installSfzInstrument({
   required HttpGet http,
   void Function(int done, int total)? onProgress,
   String? cacheDirOverride,
+  FlacDecode? flacDecode,
 }) async {
   final text = utf8.decode(await http(Uri.parse(sfzUrl)));
 
@@ -91,12 +92,15 @@ Future<InstalledInstrument?> installSfzInstrument({
   // loadSfz — which parses WAV — can build a voice from them. If glint isn't
   // available (e.g. tests / a platform without the plugin) FLAC regions are
   // simply skipped, same as any unresolved sample.
-  final FlacDecode? flac = loadGlintFlac();
+  final FlacDecode? flac = flacDecode ?? loadGlintFlac();
   Uint8List? readCached(String p) {
     final f = File('$dir/$p');
     if (!f.existsSync()) return null;
     final bytes = f.readAsBytesSync();
-    if (flac != null && p.toLowerCase().endsWith('.flac')) {
+    if (p.toLowerCase().endsWith('.flac')) {
+      // No decoder on this platform → skip the region (rather than hand raw
+      // FLAC to the WAV parser).
+      if (flac == null) return null;
       final pcm = flac(bytes);
       if (pcm == null) return null;
       return pcmFloatToWav(
