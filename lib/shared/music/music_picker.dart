@@ -35,6 +35,7 @@ import 'package:crisp_notation_core/crisp_notation_core.dart'
         readMusicXmlFromMxl,
         scoreFromGabc,
         scoreFromGpif,
+        scoreFromLilyPond,
         scoreFromMscx;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +60,9 @@ MultiPartScore decodeMusicFile(String fileName, Uint8List bytes) {
     'mscz' => MultiPartScore([scoreFromMscx(readMscxFromMscz(bytes))]),
     'gp' => MultiPartScore([scoreFromGpif(readGpifFromGp(bytes))]),
     'gpx' => MultiPartScore([scoreFromGpif(readGpifFromGpx(bytes))]),
+    'ly' || 'lilypond' => MultiPartScore.fromStaffSystem(
+        StaffSystem([scoreFromLilyPond(text())]),
+      ),
     'gabc' =>
       MultiPartScore.fromStaffSystem(StaffSystem([scoreFromGabc(text())])),
     _ => throw FormatException('Unsupported music format: .$ext'),
@@ -81,6 +85,8 @@ const _kMusicExtensions = [
   'gp',
   'gpx',
   'gabc',
+  'ly',
+  'lilypond',
 ];
 
 /// Shows the music picker. Resolves to the chosen music as a [MultiPartScore],

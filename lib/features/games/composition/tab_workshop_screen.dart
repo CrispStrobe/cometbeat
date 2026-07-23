@@ -81,6 +81,7 @@ const List<String> tabImportExtensions = <String>[
   'mid',
   'midi',
   'abc',
+  'ly',
 ];
 
 /// Parses an opened file into a [Score] by its extension — the tab editor's own
@@ -98,6 +99,7 @@ Score parseTabFile(String fileName, Uint8List bytes) {
     'mxl' => scoreFromMusicXml(readMusicXmlFromMxl(bytes)),
     'mid' || 'midi' => scoreFromMidi(bytes),
     'abc' => scoreFromAbc(text()),
+    'ly' => scoreFromLilyPond(text()),
     _ => throw FormatException('Unsupported file type: .$ext'),
   };
 }

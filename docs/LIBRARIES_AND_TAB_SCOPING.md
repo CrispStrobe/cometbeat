@@ -59,8 +59,7 @@ Full cited licensing report is recorded below and in this branch's commit histor
 
 **Do NOT connect** (all-rights-reserved / no license grant / no sanctioned API /
 active anti-scraping): **general musescore.com uploads**, **Ultimate Guitar**,
-**mySongBook / GPIF tab store**, **abcnotation.com** (as an import backend — a
-discovery tool only), 8notes, Songsterr, Delcamp, FreeMIDI, BitMidi, VGMusic,
+**mySongBook / GPIF tab store**, **abcnotation.com** (Uploader-Asserted/NC; composers retain rights), **Nottingham Music Database** (All Rights Reserved/NC), **Zenodo ABC Dataset 10k** (17694747; scraped without commercial rights), **IFDO kern2abc** (Densmore/Shanahan Native American; CC BY-NC-SA 4.0), 8notes, Songsterr, Delcamp, FreeMIDI, BitMidi, VGMusic,
 archive.org MIDI dumps, unlicensed KernScores. **Avoid for a donation-funded app
 (NonCommercial clause):** DCML corpora, MAESTRO, Kunst der Fuge.
 

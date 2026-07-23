@@ -31,6 +31,14 @@ that split is the trap that sinks most candidates. The two clean shapes are:
 (a) a permissive transcription of a **long-PD** work, or (b) audio/notation
 **created for the dataset itself** (no third-party work underneath).
 
+### Official Licensing Tiers (Enforced for all assets & scores)
+We classify all content strictly according to these definitions:
+- **Tier A** = CC0 / Public Domain (PD) / MIT / etc. (No attribution, totally unrestricted).
+- **Tier B** = CC BY 4.0 and other licenses that **require attribution**.
+- **Tier C** = Share-Alike (e.g., CC BY-SA, ODbL). 
+- **Tier D** = NC (Non-Commercial). We cannot ship these.
+- **Rest** = Defer totally (Unstated, All Rights Reserved, etc.).
+
 ## Our import reach — format is rarely the blocker; LICENCE is
 
 App import filters (verified in code, `import_screen.dart` /
@@ -128,7 +136,7 @@ IDMT tab-training (NC/ND → eval-only). PrIMuS / RISM MEI (unstated licence).
 
 ---
 
-## VERIFIED — shippable (Tier A)
+## VERIFIED — shippable
 
 All licences below read verbatim from the source's own LICENSE file / legal page
 (or, for PDMX, its metadata), this effort.
@@ -368,6 +376,10 @@ finding. So the shippable *tab* corpus is exactly this shippable *score* corpus.
 | **GOAT** (Guitar On Audio and Tablatures) | tab/MIDI/audio | **CC BY-NC 4.0**, restricted files, Zenodo 10.5281/zenodo.15690894; description says research-only, not for commercial products. Tempting (paired string+fret supervision) but NC. |
 | DadaGP + all GP tab archives | gp | research-access-only, UG scrape of in-copyright songs |
 | **thesession.org** (+ folk-rnn, folk-rnn-webapp, themachinefolksession) | ABC | dump is **ODbL + anti-LLM clause** (2025-10, tightened 2026-06). folk-rnn's MIT is code-only; it scraped thesession ~2015 when the dump had **no licence at all**. ODbL on a bundle → share-alike (§4.4) + source-offer (§4.6) + attribution (§4.3); §2.4 disclaims rights in the transcriptions, which vest in each **transcriber**. |
+| **abcnotation.com** | ABC | **UPLOADER-ASSERTED / NC**. Search engine aggregator. Transcriptions lack a CC0 grant. Its consent list explicitly states composers retain copyright and forbids commercial use (NC). |
+| **Zenodo ABC Dataset 10k** (17694747) | ABC | **UPLOADER-ASSERTED**. Blanket "CC-BY 4.0" over massive web scrape of abcnotation, Nottingham, etc. The Zenodo author does not own the commercial rights to the underlying transcriptions. |
+| **Nottingham Music Database** | ABC | **All Rights Reserved / NC**. IPR held by Mick Peat / Eric Foxley. Often used academically under fair use or explicitly CC BY-NC. |
+| **IFDO kern2abc** (Densmore/Shanahan Native American) | ABC | **CC BY-NC-SA 4.0**. Converted by Seymour Shlien from `humdrum-data` modules (`craigsapp`, `shanahdt`) which explicitly use Non-Commercial licenses. |
 | German folk-song sites (4) | — | volksliederarchiv.de (private/non-commercial, notation walled off in robots.txt); lieder-archiv.de (copyright on its Notensätze; commercial/DB/republish forbidden — but offers a PAID licence); liederlexikon.de (all-rights-reserved, NOT CC, named living engraver + in-copyright 20th-c. works); ZPKM Freiburg (catalogues only). |
 | **Essen Folksong Collection** (ccarh/essen-folksong-collection) | krn ✅ | **CCARH MuseData licence** (license.txt, verbatim): *"this license does not authorize the use of the enclosed MuseData files in the production of derivative editions intended for commercial distribution, nor for public performance (including broadcast), nor for sound recording."* NC + no-recording → dev/test only. ~20k folk melodies, German-relevant, but blocked. |
 | **Battle of the Bits** (battleofthebits.com) | .xm/.it/.mod + rendered | **CC BY-NC-SA** to third parties (BotB CC License, verified) — NC. Original chiptune/tracker compo entries (axis-2 clean), but the NC axis-1 blocks it. Control/eval only. *Corrects an earlier "BotB is clean" note.* |
@@ -409,26 +421,35 @@ BY-SA carry a credit** (the "save extra" case).
 | **Selekt Audio — CC0/PD catalog** | 100k+ cleared one-shots/loops, per-sample cert | **CC0 + US-PD** | fingerprint-screened; PD tier = pre-1926 US recs + Library-of-Congress field recs ✅ (US-PD ≠ EU-PD — recheck axis 2 for the PD tier) |
 | **freesound (CC0 filter)** | individual sounds | **CC0** (must filter) | per-sample check |
 
-### Tier B — "CA": permissive but attribution / notice required
+### Tier B — "NA" (Needs Attribution): permissive but attribution / notice required
 
 Non-NC, commercial-OK, but oblige a credit or a bundled licence file →
 `needsAttribution` + drop a `LICENSE.txt` beside the asset (as the percussion
-folder already does).
+folder already does). Does NOT include ShareAlike/copyleft licenses.
 
 | Asset | Axis 1 | Obligation |
 |---|---|---|
 | **FluidR3_GM** (Frank Wen) — full GM SoundFont | **MIT** | bundle copyright/README; no per-render credit. **Best full-GM candidate** for `gm_song_render.dart`. |
 | **GeneralUser GS** — low-footprint full GM | permissive (no attribution *required*) | ⚠ author admits some legacy sample origins uncertain (project began 2000). Low practical risk, but FluidR3's clean MIT is the safer ship. |
-| **OpenGameArt — CC BY / BY-SA / OGA-BY / GPL** | CC BY(-SA) / OGA-BY / GPL | attribution (+ SA/GPL copyleft where applicable). |
-| **Big MOD Music Pack** (itch) | mixed CC0 / CC BY / CC BY-SA / PD | per-file — CC0 → Tier A, rest → credit. .xm, handled by the MOD loader. |
-| **JummBox SoundFont fork V11** (stgiga) | **CC BY-SA 4.0** | attribution **+ ShareAlike** (derivative banks stay BY-SA). Base BeepBox/JummBox engine is MIT. |
+| **OpenGameArt — CC BY / OGA-BY** | CC BY / OGA-BY | attribution. |
+| **Big MOD Music Pack** (itch) | mixed CC0 / CC BY / PD | per-file — CC0 → Tier A, rest → credit. .xm, handled by the MOD loader. |
 | **FreePats MuldjorKit** | CC BY 4.0 | attribution |
+
+### Tier C — "SA" (ShareAlike): copyleft, attribution required
+
+Non-NC, commercial-OK, but carries a ShareAlike or GPL copyleft clause.
+
+| Asset | Axis 1 | Obligation |
+|---|---|---|
+| **OpenGameArt — CC BY-SA / GPL** | CC BY-SA / GPL | attribution + SA/GPL copyleft. |
+| **Big MOD Music Pack** (itch) | CC BY-SA | attribution + SA copyleft. |
+| **JummBox SoundFont fork V11** (stgiga) | **CC BY-SA 4.0** | attribution **+ ShareAlike** (derivative banks stay BY-SA). Base BeepBox/JummBox engine is MIT. |
 | **FreePats Colombo Drumkit** | GPL-2.0 | GPL notice (awkward to embed; fine standalone) |
 
 **OpenGameArt is the spine for tracker music.** It **structurally forbids NC** —
 every OGA asset is CC0 / CC BY / CC BY-SA / GPL / OGA-BY, all commercial-OK — so
 the licence gate is done for you: filter Music + license checkboxes, split
-CC0 → Tier A / CC BY-family → Tier B. Original compositions → axis-2 clean.
+CC0 → Tier A / CC BY / OGA-BY → Tier B / CC BY-SA / GPL → Tier C. Original compositions → axis-2 clean.
 
 ### Excluded — NC or unverifiable provenance
 
@@ -448,10 +469,10 @@ CC0 → Tier A / CC BY-family → Tier B. Original compositions → axis-2 clean
 Generalising `db.json` means each row answers the same axes. Extend the manifest:
 `kind` (soundfont|instrument|sample|module|score|track|example), `format`
 (sf2|sf3|sfz|wav|xm/it/mod/s3m|mid|musicxml|krn|json), `license` (**SPDX**),
-`tier` (A | B/"CA"), `attribution` (credit + URL; null for Tier A), `axis2`
+`tier` (A | B/"NA" | C/"SA"), `attribution` (credit + URL; null for Tier A), `axis2`
 (original-recording | long-PD | sampled-risk), `provenance`
 (**author-asserted vs uploader-asserted** — the module-archive trap).
-**Ship gate:** `tier==A ∨ (tier==B ∧ attribution≠null)` **∧** licence≠NC **∧**
+**Ship gate:** `tier==A ∨ ((tier==B ∨ tier==C) ∧ attribution≠null)` **∧** licence≠NC **∧**
 `axis2≠sampled-risk`. Anything failing = control/eval only, exactly as the score
 corpus already treats its HELD/quarantine rows.
 

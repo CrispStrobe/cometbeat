@@ -103,7 +103,8 @@ import 'package:crisp_notation/crisp_notation.dart'
         multiPartScoreFromMei,
         multiPartScoreFromMusicXml,
         multiPartToMusicXml,
-        readMusicXmlFromMxl;
+        readMusicXmlFromMxl,
+        scoreFromLilyPond;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -4067,6 +4068,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               'krn',
               'mid',
               'midi',
+              'ly',
             ],
           ),
         ],
@@ -4081,6 +4083,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         'mei' => multiPartScoreFromMei(utf8.decode(bytes)),
         'krn' => multiPartScoreFromKern(utf8.decode(bytes)),
         'mxl' => multiPartScoreFromMusicXml(readMusicXmlFromMxl(bytes)),
+        'ly' => MultiPartScore.fromStaffSystem(
+            StaffSystem([scoreFromLilyPond(utf8.decode(bytes))]),
+          ),
         _ => multiPartScoreFromMusicXml(utf8.decode(bytes)),
       };
       _replaceSong(_songFromMultiPart(mp));

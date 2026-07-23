@@ -29,6 +29,7 @@ import 'package:crisp_notation/crisp_notation.dart'
         multiPartToMusicXml,
         readMusicXmlFromMxl,
         scoreFromGabc,
+        scoreFromLilyPond,
         scoreFromMusicXml;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -119,6 +120,8 @@ class _ImportScreenState extends State<ImportScreen> {
               'mid',
               'midi',
               'json',
+              'ly',
+              'lilypond',
             ],
           ),
         ],
@@ -137,6 +140,9 @@ class _ImportScreenState extends State<ImportScreen> {
         'mei' => multiPartScoreFromMei(utf8.decode(bytes)),
         'krn' => multiPartScoreFromKern(utf8.decode(bytes)),
         'mxl' => multiPartScoreFromMusicXml(readMusicXmlFromMxl(bytes)),
+        'ly' || 'lilypond' => MultiPartScore.fromStaffSystem(
+            StaffSystem([scoreFromLilyPond(utf8.decode(bytes))]),
+          ),
         // muspy / PDMX "MusicRender" JSON (MuseScore's own JSON export).
         'json' => multiPartScoreFromMusicRender(utf8.decode(bytes)),
         _ => multiPartScoreFromMusicXml(utf8.decode(bytes)),
