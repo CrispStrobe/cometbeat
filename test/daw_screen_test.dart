@@ -483,9 +483,17 @@ void main() {
     await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();
     expect(find.text('Edit Rate Hz automation'), findsOneWidget);
+    await tester.tap(find.text('Linear').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('S-Curve').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(service.masterEffects().single.automation['rateHz'], hasLength(2));
+    expect(
+      service.masterEffects().single.automation['rateHz']!.first.curve,
+      DawFadeCurve.sCurve,
+    );
 
     await tester.tap(find.text('Clear'));
     await tester.pumpAndSettle();

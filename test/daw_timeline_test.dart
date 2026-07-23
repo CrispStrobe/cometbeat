@@ -80,6 +80,29 @@ void main() {
     expect(mix[90], closeTo(1, 1e-9));
   });
 
+  test('automation points can shape ramps with curves', () {
+    final t = DawTimeline(
+      tracks: [
+        DawTrack(
+          clips: [Clip(source: _ToneSource(1, 120))],
+          gainAutomation: const [
+            DawAutomationPoint(
+              ms: 0,
+              value: 0,
+              curve: DawFadeCurve.exponential,
+            ),
+            DawAutomationPoint(ms: 100, value: 1),
+          ],
+        ),
+      ],
+    );
+
+    final mix = renderTimeline(t, sampleRate: 1000, limit: false);
+
+    expect(mix[50], closeTo(0.25, 1e-9));
+    expect(mix[100], closeTo(1, 1e-9));
+  });
+
   test('overlapping clips sum sample-accurately', () {
     final a = _ToneSource(0.2, 10);
     final b = _ToneSource(0.3, 10);

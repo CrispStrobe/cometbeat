@@ -478,24 +478,48 @@ List<DawClipEffect> trackEffectChainForLegacy(TrackEffect effect) {
 /// A track-level gain automation breakpoint. Values are linear gain
 /// multipliers; outside the authored point span the automation multiplier is 1.
 class DawAutomationPoint {
-  const DawAutomationPoint({required this.ms, required this.value});
+  const DawAutomationPoint({
+    required this.ms,
+    required this.value,
+    this.curve = DawFadeCurve.linear,
+  });
 
   final double ms;
   final double value;
+  final DawFadeCurve curve;
 
-  DawAutomationPoint copyWith({double? ms, double? value}) =>
-      DawAutomationPoint(ms: ms ?? this.ms, value: value ?? this.value);
+  DawAutomationPoint copyWith({
+    double? ms,
+    double? value,
+    DawFadeCurve? curve,
+  }) =>
+      DawAutomationPoint(
+        ms: ms ?? this.ms,
+        value: value ?? this.value,
+        curve: curve ?? this.curve,
+      );
 
-  Map<String, dynamic> toJson() => {'ms': ms, 'value': value};
+  Map<String, dynamic> toJson() => {
+        'ms': ms,
+        'value': value,
+        if (curve != DawFadeCurve.linear) 'curve': curve.name,
+      };
 
   static DawAutomationPoint? fromJson(Object? raw) {
     if (raw is! Map) return null;
     final ms = raw['ms'];
     final value = raw['value'];
     if (ms is! num || value is! num) return null;
+    final curveName = raw['curve'];
+    final curve = curveName is String
+        ? DawFadeCurve.values
+            .where((curve) => curve.name == curveName)
+            .firstOrNull
+        : null;
     return DawAutomationPoint(
       ms: ms.toDouble(),
       value: value.toDouble(),
+      curve: curve ?? DawFadeCurve.linear,
     );
   }
 }
@@ -855,7 +879,7 @@ double _paramAutomationValue(
     final b = points[i + 1];
     if (ms < a.ms || ms > b.ms) continue;
     if (b.ms <= a.ms) return b.value;
-    final t = ((ms - a.ms) / (b.ms - a.ms)).clamp(0.0, 1.0);
+    final t = _fadeCurveValue((ms - a.ms) / (b.ms - a.ms), a.curve);
     return a.value + (b.value - a.value) * t;
   }
   return points.last.value;
@@ -1187,6 +1211,7 @@ void _applyTrackGainAutomation(
         DawAutomationPoint(
           ms: point.ms < 0 ? 0 : point.ms,
           value: point.value < 0 ? 0 : point.value,
+          curve: point.curve,
         ),
   ]..sort((a, b) => a.ms.compareTo(b.ms));
   if (points.isEmpty) return;
@@ -1206,7 +1231,7 @@ double _trackAutomationValue(List<DawAutomationPoint> points, double ms) {
     final b = points[i + 1];
     if (ms < a.ms || ms > b.ms) continue;
     if (b.ms <= a.ms) return b.value;
-    final t = ((ms - a.ms) / (b.ms - a.ms)).clamp(0.0, 1.0);
+    final t = _fadeCurveValue((ms - a.ms) / (b.ms - a.ms), a.curve);
     return a.value + (b.value - a.value) * t;
   }
   return points.last.value;

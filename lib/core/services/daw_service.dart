@@ -1302,7 +1302,11 @@ class DawService extends ChangeNotifier {
   ) =>
       [
         for (final point in points)
-          DawAutomationPoint(ms: point.ms, value: point.value),
+          DawAutomationPoint(
+            ms: point.ms,
+            value: point.value,
+            curve: point.curve,
+          ),
       ];
 
   List<DawBus> _cloneBuses(List<DawBus> buses) => [

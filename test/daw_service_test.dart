@@ -914,11 +914,19 @@ void main() {
         0,
         'drive',
         const [
-          DawAutomationPoint(ms: 0, value: 2),
+          DawAutomationPoint(
+            ms: 0,
+            value: 2,
+            curve: DawFadeCurve.exponential,
+          ),
           DawAutomationPoint(ms: 500, value: 8),
         ],
       );
       expect(s.masterEffects().first.automation['drive'], hasLength(2));
+      expect(
+        s.masterEffects().first.automation['drive']!.first.curve,
+        DawFadeCurve.exponential,
+      );
       s.undo();
       expect(s.masterEffects().first.automation['drive'], isNull);
       s.removeMasterEffect(0);

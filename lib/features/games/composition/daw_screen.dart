@@ -1483,6 +1483,7 @@ class _DawScreenState extends State<DawScreen>
     var startValue = sorted.first.value.clamp(min, max).toDouble();
     var endMs = sorted.last.ms;
     var endValue = sorted.last.value.clamp(min, max).toDouble();
+    var curve = sorted.first.curve;
     final timeMax = math
         .max(
           math.max(startMs, endMs),
@@ -1534,6 +1535,21 @@ class _DawScreenState extends State<DawScreen>
                   step,
                   (value) => setDialog(() => endValue = value),
                 ),
+                DropdownButtonFormField<DawFadeCurve>(
+                  initialValue: curve,
+                  decoration: const InputDecoration(labelText: 'Curve'),
+                  items: [
+                    for (final curve in DawFadeCurve.values)
+                      DropdownMenuItem(
+                        value: curve,
+                        child: Text(_fadeCurveLabel(curve)),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setDialog(() => curve = value);
+                  },
+                ),
               ],
             ),
           ),
@@ -1550,6 +1566,7 @@ class _DawScreenState extends State<DawScreen>
                   DawAutomationPoint(
                     ms: from,
                     value: startMs <= endMs ? startValue : endValue,
+                    curve: curve,
                   ),
                   DawAutomationPoint(
                     ms: to,
@@ -1641,6 +1658,8 @@ class _DawScreenState extends State<DawScreen>
         step >= 1 ? v.round().toString() : v.toStringAsFixed(2);
     String fmtMs(double v) => '${v.round()} ms';
     final automatedPoints = automation.length;
+    final automationCurve =
+        automation.isEmpty ? DawFadeCurve.linear : automation.first.curve;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1687,7 +1706,8 @@ class _DawScreenState extends State<DawScreen>
                       child: Text(
                         '$label automation: '
                         '${fmtMs(automation.first.ms)} ${fmt(automation.first.value)}'
-                        ' → ${fmtMs(automation.last.ms)} ${fmt(automation.last.value)}',
+                        ' → ${fmtMs(automation.last.ms)} ${fmt(automation.last.value)}'
+                        ' · ${_fadeCurveLabel(automationCurve)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
