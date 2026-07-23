@@ -1797,6 +1797,15 @@ class _TrackerScreenState extends State<TrackerScreen>
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
+              if (_engine.isEmpty) ...[
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  key: const ValueKey('tracker-starter-groove'),
+                  onPressed: importDemo,
+                  icon: const Icon(Icons.auto_awesome),
+                  label: Text(l10n.trackerDemoTune),
+                ),
+              ],
               const SizedBox(height: 10),
               // Instrument tabs — pick the channel you're editing.
               Wrap(
