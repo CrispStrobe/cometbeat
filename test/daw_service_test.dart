@@ -910,6 +910,17 @@ void main() {
       expect(s.masterEffects().first.enabled, isFalse);
       s.undo();
       expect(s.masterEffects().first.enabled, isTrue);
+      s.setMasterEffectAutomation(
+        0,
+        'drive',
+        const [
+          DawAutomationPoint(ms: 0, value: 2),
+          DawAutomationPoint(ms: 500, value: 8),
+        ],
+      );
+      expect(s.masterEffects().first.automation['drive'], hasLength(2));
+      s.undo();
+      expect(s.masterEffects().first.automation['drive'], isNull);
       s.removeMasterEffect(0);
       expect(s.masterEffects().single.type, DawClipEffectType.highpass);
     });

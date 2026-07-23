@@ -466,6 +466,29 @@ void main() {
     expect(vocoder.every((v) => v.isFinite), isTrue);
   });
 
+  test('effect parameter automation is rendered over time', () {
+    final dry = _sine(220);
+    final automated = applyClipEffectChain(
+      dry,
+      [
+        defaultDawClipEffect(DawClipEffectType.tremolo).copyWith(
+          params: {'rateHz': 5, 'depth': 0, 'mix': 1},
+          automation: const {
+            'depth': [
+              DawAutomationPoint(ms: 0, value: 0),
+              DawAutomationPoint(ms: 128, value: 1),
+            ],
+          },
+        ),
+      ],
+      1000,
+    );
+
+    expect(automated.length, dry.length);
+    expect(automated[10], closeTo(dry[10], 1e-9));
+    expect(automated[180], isNot(closeTo(dry[180], 1e-4)));
+  });
+
   test('master FX process the full mix before limiting', () {
     final src = _ToneSource(0.4, 100);
     final dryTimeline = DawTimeline(

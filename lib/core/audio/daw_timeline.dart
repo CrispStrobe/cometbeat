@@ -88,21 +88,25 @@ class DawClipEffect {
     required this.type,
     this.enabled = true,
     this.params = const {},
+    this.automation = const {},
   });
 
   final DawClipEffectType type;
   final bool enabled;
   final Map<String, double> params;
+  final Map<String, List<DawAutomationPoint>> automation;
 
   DawClipEffect copyWith({
     DawClipEffectType? type,
     bool? enabled,
     Map<String, double>? params,
+    Map<String, List<DawAutomationPoint>>? automation,
   }) =>
       DawClipEffect(
         type: type ?? this.type,
         enabled: enabled ?? this.enabled,
         params: params ?? this.params,
+        automation: automation ?? this.automation,
       );
 
   Object get cacheKey => (
@@ -116,12 +120,31 @@ class DawClipEffect {
               Object.hash(e.key, e.value),
           ],
         ),
+        Object.hashAll(
+          [
+            for (final e
+                in automation.entries.toList()
+                  ..sort((a, b) => a.key.compareTo(b.key)))
+              Object.hash(
+                e.key,
+                Object.hashAll([
+                  for (final p in e.value) Object.hash(p.ms, p.value),
+                ]),
+              ),
+          ],
+        ),
       );
 
   Map<String, dynamic> toJson() => {
         'type': type.name,
         'enabled': enabled,
         'params': params,
+        if (automation.isNotEmpty)
+          'automation': {
+            for (final entry in automation.entries)
+              if (entry.value.isNotEmpty)
+                entry.key: [for (final p in entry.value) p.toJson()],
+          },
       };
 
   static DawClipEffect? fromJson(Object? raw) {
@@ -140,10 +163,25 @@ class DawClipEffect {
         if (k is String && v is num) p[k] = v.toDouble();
       }
     }
+    final automation = <String, List<DawAutomationPoint>>{};
+    final rawAutomation = raw['automation'];
+    if (rawAutomation is Map) {
+      for (final e in rawAutomation.entries) {
+        final key = e.key;
+        final value = e.value;
+        if (key is! String || value is! List) continue;
+        final points = [
+          for (final point in value)
+            if (DawAutomationPoint.fromJson(point) case final parsed?) parsed,
+        ]..sort((a, b) => a.ms.compareTo(b.ms));
+        if (points.isNotEmpty) automation[key] = points;
+      }
+    }
     return DawClipEffect(
       type: type,
       enabled: raw['enabled'] != false,
       params: p,
+      automation: automation,
     );
   }
 }
@@ -452,7 +490,7 @@ class DawAutomationPoint {
     if (ms is! num || value is! num) return null;
     return DawAutomationPoint(
       ms: ms.toDouble(),
-      value: value.toDouble() < 0 ? 0 : value.toDouble(),
+      value: value.toDouble(),
     );
   }
 }
@@ -574,6 +612,9 @@ Float64List _applyClipEffect(
   DawClipEffect fx,
   int sampleRate,
 ) {
+  if (fx.automation.isNotEmpty) {
+    return _applyAutomatedClipEffect(input, fx, sampleRate);
+  }
   double p(String key, double fallback) => fx.params[key] ?? fallback;
   return switch (fx.type) {
     DawClipEffectType.reverb => reverbFx(
@@ -722,6 +763,77 @@ Float64List _applyClipEffect(
         p('mix', 1),
       ),
   };
+}
+
+Float64List _applyAutomatedClipEffect(
+  Float64List input,
+  DawClipEffect fx,
+  int sampleRate,
+) {
+  if (input.isEmpty) return input;
+  final automation = <String, List<DawAutomationPoint>>{};
+  for (final entry in fx.automation.entries) {
+    final points = [
+      for (final point in entry.value)
+        if (point.ms.isFinite && point.value.isFinite)
+          DawAutomationPoint(
+            ms: point.ms < 0 ? 0 : point.ms,
+            value: point.value,
+          ),
+    ]..sort((a, b) => a.ms.compareTo(b.ms));
+    if (points.isNotEmpty) automation[entry.key] = points;
+  }
+  if (automation.isEmpty) {
+    return _applyClipEffect(
+      input,
+      fx.copyWith(automation: const {}),
+      sampleRate,
+    );
+  }
+  final block = math.max(64, (sampleRate / 50).round());
+  final out = Float64List(input.length);
+  for (var start = 0; start < input.length; start += block) {
+    final end = math.min(input.length, start + block);
+    final ms = start * 1000 / sampleRate;
+    final params = {...fx.params};
+    for (final entry in automation.entries) {
+      params[entry.key] = _paramAutomationValue(
+        entry.value,
+        ms,
+        fx.params[entry.key] ?? 0,
+      );
+    }
+    final processed = _fitLength(
+      _applyClipEffect(
+        Float64List.sublistView(input, start, end),
+        fx.copyWith(params: params, automation: const {}),
+        sampleRate,
+      ),
+      end - start,
+    );
+    out.setRange(start, end, processed);
+  }
+  return out;
+}
+
+double _paramAutomationValue(
+  List<DawAutomationPoint> points,
+  double ms,
+  double fallback,
+) {
+  if (points.length == 1) {
+    return (ms - points.single.ms).abs() < 0.5 ? points.single.value : fallback;
+  }
+  if (ms < points.first.ms || ms > points.last.ms) return fallback;
+  for (var i = 0; i < points.length - 1; i++) {
+    final a = points[i];
+    final b = points[i + 1];
+    if (ms < a.ms || ms > b.ms) continue;
+    if (b.ms <= a.ms) return b.value;
+    final t = ((ms - a.ms) / (b.ms - a.ms)).clamp(0.0, 1.0);
+    return a.value + (b.value - a.value) * t;
+  }
+  return points.last.value;
 }
 
 Float64List _blendWetDry(Float64List dry, Float64List wet, double mix) {

@@ -419,6 +419,46 @@ void main() {
     expect(find.textContaining('Depth'), findsWidgets);
   });
 
+  testWidgets('FX slider auto writes marked-range automation points',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    daw.addDemoBeat();
+    await tester.pump();
+
+    daw.seekTo(250);
+    await tester.pump();
+    await tester.tap(find.text('Mark In'));
+    await tester.pumpAndSettle();
+    daw.seekTo(750);
+    await tester.pump();
+    await tester.tap(find.text('Mark Out'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Master FX'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tremolo').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tremolo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Auto').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Automate Rate Hz'), findsOneWidget);
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    final points = service.masterEffects().single.automation['rateHz'];
+    expect(points, hasLength(2));
+    expect(points!.first.ms, 250);
+    expect(points.last.ms, 750);
+  });
+
   testWidgets('bus dialog routes selected tracks and edits bus FX',
       (tester) async {
     await _pumpDaw(tester);

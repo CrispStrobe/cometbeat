@@ -951,6 +951,27 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setTrackEffectAutomation(
+    int track,
+    int effectIndex,
+    String key,
+    List<DawAutomationPoint> points,
+  ) {
+    final lane = timeline.tracks[track];
+    if (effectIndex < 0 || effectIndex >= lane.effects.length) return;
+    _record();
+    final effects = [...lane.effects];
+    effects[effectIndex] = _effectWithAutomation(
+      effects[effectIndex],
+      key,
+      points,
+    );
+    lane
+      ..effect = TrackEffect.none
+      ..effects = effects;
+    notifyListeners();
+  }
+
   List<DawClipEffect> masterEffects() => timeline.effects;
 
   List<DawBus> buses() => timeline.buses;
@@ -1105,6 +1126,22 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setBusEffectAutomation(
+    int bus,
+    int effectIndex,
+    String key,
+    List<DawAutomationPoint> points,
+  ) {
+    if (bus < 0 || bus >= timeline.buses.length) return;
+    final effects = timeline.buses[bus].effects;
+    if (effectIndex < 0 || effectIndex >= effects.length) return;
+    _record();
+    final next = [...effects];
+    next[effectIndex] = _effectWithAutomation(next[effectIndex], key, points);
+    timeline.buses[bus].effects = next;
+    notifyListeners();
+  }
+
   void addMasterEffect(DawClipEffectType type) {
     _record();
     timeline.effects.add(defaultDawClipEffect(type));
@@ -1168,6 +1205,20 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setMasterEffectAutomation(
+    int effectIndex,
+    String key,
+    List<DawAutomationPoint> points,
+  ) {
+    if (effectIndex < 0 || effectIndex >= timeline.effects.length) return;
+    _record();
+    final effects = [...timeline.effects];
+    effects[effectIndex] =
+        _effectWithAutomation(effects[effectIndex], key, points);
+    timeline.effects = effects;
+    notifyListeners();
+  }
+
   List<int> _validTrackIndices(Iterable<int> tracks) {
     final seen = <int>{};
     final out = <int>[];
@@ -1214,8 +1265,37 @@ class DawService extends ChangeNotifier {
   }
 
   List<DawClipEffect> _cloneEffectChain(List<DawClipEffect> chain) => [
-        for (final fx in chain) fx.copyWith(params: {...fx.params}),
+        for (final fx in chain)
+          fx.copyWith(
+            params: {...fx.params},
+            automation: _cloneEffectAutomation(fx.automation),
+          ),
       ];
+
+  DawClipEffect _effectWithAutomation(
+    DawClipEffect fx,
+    String key,
+    List<DawAutomationPoint> points,
+  ) {
+    final automation = _cloneEffectAutomation(fx.automation);
+    final clean = _cloneAutomation(points)
+      ..removeWhere((point) => !point.ms.isFinite || !point.value.isFinite)
+      ..sort((a, b) => a.ms.compareTo(b.ms));
+    if (clean.isEmpty) {
+      automation.remove(key);
+    } else {
+      automation[key] = clean;
+    }
+    return fx.copyWith(automation: automation);
+  }
+
+  Map<String, List<DawAutomationPoint>> _cloneEffectAutomation(
+    Map<String, List<DawAutomationPoint>> automation,
+  ) =>
+      {
+        for (final entry in automation.entries)
+          entry.key: _cloneAutomation(entry.value),
+      };
 
   List<DawAutomationPoint> _cloneAutomation(
     List<DawAutomationPoint> points,
@@ -1543,6 +1623,28 @@ class DawService extends ChangeNotifier {
     final effects = [...clip.effects];
     final fx = effects[effectIndex];
     effects[effectIndex] = fx.copyWith(params: {...fx.params, key: value});
+    clips[index] = clip.copyWith(effects: effects);
+    _peaks.clear();
+    notifyListeners();
+  }
+
+  void setClipEffectAutomation(
+    int track,
+    int index,
+    int effectIndex,
+    String key,
+    List<DawAutomationPoint> points,
+  ) {
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    if (effectIndex < 0 || effectIndex >= clip.effects.length) return;
+    _record();
+    final effects = [...clip.effects];
+    effects[effectIndex] = _effectWithAutomation(
+      effects[effectIndex],
+      key,
+      points,
+    );
     clips[index] = clip.copyWith(effects: effects);
     _peaks.clear();
     notifyListeners();

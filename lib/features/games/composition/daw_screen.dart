@@ -509,6 +509,17 @@ class _DawScreenState extends State<DawScreen>
               });
               if (_playing) play();
             },
+            onAutomate: (key, startValue, endValue) async {
+              setDialog(() {
+                _daw.setTrackEffectAutomation(
+                  track,
+                  fxIndex,
+                  key,
+                  _projectRangeAutomationPoints(startValue, endValue),
+                );
+              });
+              if (_playing) play();
+            },
           ),
       ],
     );
@@ -610,6 +621,16 @@ class _DawScreenState extends State<DawScreen>
             },
             onParam: (key, value) {
               setDialog(() => _daw.setMasterEffectParam(fxIndex, key, value));
+              if (_playing) play();
+            },
+            onAutomate: (key, startValue, endValue) async {
+              setDialog(() {
+                _daw.setMasterEffectAutomation(
+                  fxIndex,
+                  key,
+                  _projectRangeAutomationPoints(startValue, endValue),
+                );
+              });
               if (_playing) play();
             },
           ),
@@ -985,6 +1006,17 @@ class _DawScreenState extends State<DawScreen>
                     );
                     if (_playing) play();
                   },
+                  onAutomate: (key, startValue, endValue) async {
+                    setDialog(() {
+                      _daw.setBusEffectAutomation(
+                        bus,
+                        fxIndex,
+                        key,
+                        _projectRangeAutomationPoints(startValue, endValue),
+                      );
+                    });
+                    if (_playing) play();
+                  },
                 ),
             ],
           ),
@@ -1289,6 +1321,32 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
+  List<DawAutomationPoint> _projectRangeAutomationPoints(
+    double startValue,
+    double endValue,
+  ) =>
+      [
+        DawAutomationPoint(ms: _rangeStartMs, value: startValue),
+        DawAutomationPoint(ms: _rangeEndMs, value: endValue),
+      ];
+
+  List<DawAutomationPoint> _clipRangeAutomationPoints(
+    int track,
+    int index,
+    double startValue,
+    double endValue,
+  ) {
+    final clipStart = _daw.clipStartMs(track, index);
+    final clipEnd = clipStart + _daw.clipDurationMs(track, index);
+    final from = math.max(_rangeStartMs, clipStart);
+    final to = math.min(_rangeEndMs, clipEnd);
+    if (to <= from) return const [];
+    return [
+      DawAutomationPoint(ms: from - clipStart, value: startValue),
+      DawAutomationPoint(ms: to - clipStart, value: endValue),
+    ];
+  }
+
   Widget _fxTile(
     BuildContext ctx, {
     required List<DawClipEffect> effects,
@@ -1297,6 +1355,8 @@ class _DawScreenState extends State<DawScreen>
     required void Function(int delta) onMove,
     required VoidCallback onRemove,
     required void Function(String key, double value) onParam,
+    Future<void> Function(String key, double startValue, double endValue)?
+        onAutomate,
   }) {
     final fx = effects[fxIndex];
     final specs = _clipEffectParams(fx.type);
@@ -1340,9 +1400,92 @@ class _DawScreenState extends State<DawScreen>
             spec.min,
             spec.max,
             spec.step,
+            automatedPoints: fx.automation[spec.key]?.length ?? 0,
             (v) => onParam(spec.key, v),
+            onAutomate: onAutomate == null || !_hasFxRange
+                ? null
+                : () async {
+                    final current = fx.params[spec.key] ??
+                        defaultDawClipEffect(fx.type).params[spec.key] ??
+                        spec.min;
+                    final values = await _fxAutomationDialog(
+                      ctx,
+                      label: spec.label,
+                      min: spec.min,
+                      max: spec.max,
+                      step: spec.step,
+                      startValue: current,
+                      endValue: current,
+                    );
+                    if (values == null) return;
+                    await onAutomate(
+                      spec.key,
+                      values.startValue,
+                      values.endValue,
+                    );
+                  },
           ),
       ],
+    );
+  }
+
+  Future<({double startValue, double endValue})?> _fxAutomationDialog(
+    BuildContext ctx, {
+    required String label,
+    required double min,
+    required double max,
+    required double step,
+    required double startValue,
+    required double endValue,
+  }) async {
+    var start = startValue.clamp(min, max).toDouble();
+    var end = endValue.clamp(min, max).toDouble();
+    return showDialog<({double startValue, double endValue})>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setDialog) => AlertDialog(
+          title: Text('Automate $label'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_rangeLabel()),
+                const SizedBox(height: 8),
+                _effectParamSlider(
+                  'Start',
+                  start,
+                  min,
+                  max,
+                  step,
+                  (value) => setDialog(() => start = value),
+                ),
+                _effectParamSlider(
+                  'End',
+                  end,
+                  min,
+                  max,
+                  step,
+                  (value) => setDialog(() => end = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: Text(AppLocalizations.of(dialogCtx)!.dawCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(
+                (startValue: start, endValue: end),
+              ),
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1352,14 +1495,31 @@ class _DawScreenState extends State<DawScreen>
     double min,
     double max,
     double step,
-    ValueChanged<double> onChanged,
-  ) {
+    ValueChanged<double> onChanged, {
+    int automatedPoints = 0,
+    VoidCallback? onAutomate,
+  }) {
     String fmt(double v) =>
         step >= 1 ? v.round().toString() : v.toStringAsFixed(2);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('$label — ${fmt(value)}'),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                automatedPoints > 0
+                    ? '$label — ${fmt(value)} · $automatedPoints auto'
+                    : '$label — ${fmt(value)}',
+              ),
+            ),
+            if (onAutomate != null)
+              TextButton(
+                onPressed: onAutomate,
+                child: const Text('Auto'),
+              ),
+          ],
+        ),
         Slider(
           value: value.clamp(min, max),
           min: min,
@@ -2522,6 +2682,25 @@ class _DawScreenState extends State<DawScreen>
                               fxIndex,
                               key,
                               value,
+                            );
+                          });
+                          if (_playing) play();
+                        },
+                        onAutomate: (key, startValue, endValue) async {
+                          final points = _clipRangeAutomationPoints(
+                            track,
+                            index,
+                            startValue,
+                            endValue,
+                          );
+                          if (points.isEmpty) return;
+                          setSheet(() {
+                            _daw.setClipEffectAutomation(
+                              track,
+                              index,
+                              fxIndex,
+                              key,
+                              points,
                             );
                           });
                           if (_playing) play();

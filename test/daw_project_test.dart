@@ -55,6 +55,12 @@ void main() {
                 defaultDawClipEffect(DawClipEffectType.delay).copyWith(
                   enabled: false,
                   params: {'delayMs': 120, 'feedback': 0.2, 'mix': 0.4},
+                  automation: const {
+                    'mix': [
+                      DawAutomationPoint(ms: 0, value: 0.1),
+                      DawAutomationPoint(ms: 250, value: 0.8),
+                    ],
+                  },
                 ),
               ],
             ),
@@ -101,6 +107,11 @@ void main() {
     expect(clip.effects.single.type, DawClipEffectType.delay);
     expect(clip.effects.single.enabled, isFalse);
     expect(clip.effects.single.params['delayMs'], 120);
+    expect(clip.effects.single.automation['mix'], hasLength(2));
+    expect(
+      clip.effects.single.automation['mix']!.last.value,
+      closeTo(0.8, 1e-9),
+    );
     expect(clip.source, isA<SampleSource>()); // baked to audio
     expect((clip.source as SampleSource).pcm.length, 64);
     // PCM survives the 16-bit round-trip within a quantization step.
