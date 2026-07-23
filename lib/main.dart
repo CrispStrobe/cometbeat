@@ -13,6 +13,7 @@ import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/tutorial_gate.dart';
 import 'package:comet_beat/features/home/screens/home_screen.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
+import 'package:comet_beat/features/sound_lab/soundfont_persist.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/theme.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Bravura;
@@ -125,7 +126,9 @@ void _ensureLibraryVoiceResolved(SettingsService settings) {
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     final items = await InstrumentLibraryStore().load();
     final matches = items.where((s) => s.name == name);
-    final inst = matches.isEmpty ? null : matches.first.instrument;
+    if (matches.isEmpty) return;
+    final inst =
+        await resolveSavedVoice(matches.first); // handles soundfont_ref
     if (inst != null) {
       await settings.setVoiceId(settings.voiceId, resolvedVoice: inst);
     }

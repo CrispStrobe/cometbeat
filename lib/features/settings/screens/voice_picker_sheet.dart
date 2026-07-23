@@ -10,11 +10,14 @@
 // themselves (main.dart / SettingsService), a library voice carries its
 // already-built TrackerInstrument so it plays without a store round-trip.
 
+import 'dart:async';
+
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/voice_options.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/sound_lab/catalog_browse_sheet.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
+import 'package:comet_beat/features/sound_lab/soundfont_persist.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show pcmFloatToWav;
@@ -91,12 +94,24 @@ class _Voice {
     required this.icon,
     required this.build,
     this.isLibrary = false,
+    this.saved,
   });
   final String id; // 'blip' or 'lib:My Cello'
   final String label;
   final IconData icon;
   final TrackerInstrument? Function() build;
   final bool isLibrary;
+
+  /// For a library voice, the saved record — resolved async (a soundfont_ref
+  /// re-reads its cached font file) when [build] returns null.
+  final SavedInstrument? saved;
+
+  /// Builds the voice, resolving a soundfont_ref library voice if needed.
+  Future<TrackerInstrument?> resolve() async {
+    final direct = build();
+    if (direct != null || saved == null) return direct;
+    return resolveSavedVoice(saved!);
+  }
 }
 
 @visibleForTesting
@@ -129,12 +144,14 @@ class _VoicePickerSheetState extends State<VoicePickerSheet> {
   Future<void> _loadLibrary() async {
     final items = await widget.store.load();
     if (mounted) {
-      // Only voices we can actually build synchronously (a soundfont_ref needs
-      // async byte loading — skipped here).
+      // Voices we can play: an embedded instrument, or (on native) a
+      // soundfont_ref we can re-read from its cached font file.
       setState(
         () => _library = [
           for (final s in items)
-            if (s.instrument != null) s,
+            if (s.instrument != null ||
+                (s.isReference && soundFontPersistSupported))
+              s,
         ],
       );
     }
@@ -174,6 +191,7 @@ class _VoicePickerSheetState extends State<VoicePickerSheet> {
               icon: Icons.library_music,
               build: () => s.instrument,
               isLibrary: true,
+              saved: s,
             ),
       ];
 
@@ -185,21 +203,21 @@ class _VoicePickerSheetState extends State<VoicePickerSheet> {
     ];
   }
 
-  void _preview(_Voice v) {
-    final inst = v.build();
-    if (inst == null) return;
+  Future<void> _preview(_Voice v) async {
+    final inst = await v.resolve();
+    if (inst == null || !mounted) return;
     final pcm = inst.renderChannel(
       [const TrackerCell(midi: 67)],
       const TrackerTiming(rows: 6),
     );
     if (pcm.isEmpty) return;
-    context.read<AudioService>().playWavBytes(pcmFloatToWav(pcm));
+    unawaited(context.read<AudioService>().playWavBytes(pcmFloatToWav(pcm)));
   }
 
-  void _choose(_Voice v) {
-    Navigator.of(context).pop<VoiceChoice>(
-      (id: v.id, resolved: v.isLibrary ? v.build() : null),
-    );
+  Future<void> _choose(_Voice v) async {
+    final resolved = v.isLibrary ? await v.resolve() : null;
+    if (!mounted) return;
+    Navigator.of(context).pop<VoiceChoice>((id: v.id, resolved: resolved));
   }
 
   Future<void> _browseCatalog() async {
