@@ -187,6 +187,7 @@ class DawClipEffect {
 }
 
 enum DawClipEffectType {
+  gain,
   reverb,
   delay,
   chorus,
@@ -217,6 +218,10 @@ enum DawClipEffectPreset {
 }
 
 DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
+      DawClipEffectType.gain => const DawClipEffect(
+          type: DawClipEffectType.gain,
+          params: {'gainDb': 0, 'mix': 1},
+        ),
       DawClipEffectType.reverb => const DawClipEffect(
           type: DawClipEffectType.reverb,
           params: {'roomSize': 0.7, 'damping': 0.4, 'mix': 0.35},
@@ -617,6 +622,11 @@ Float64List _applyClipEffect(
   }
   double p(String key, double fallback) => fx.params[key] ?? fallback;
   return switch (fx.type) {
+    DawClipEffectType.gain => _gainFx(
+        input,
+        gainDb: p('gainDb', 0),
+        mix: p('mix', 1),
+      ),
     DawClipEffectType.reverb => reverbFx(
         input,
         roomSize: p('roomSize', 0.7),
@@ -763,6 +773,21 @@ Float64List _applyClipEffect(
         p('mix', 1),
       ),
   };
+}
+
+Float64List _gainFx(
+  Float64List input, {
+  required double gainDb,
+  required double mix,
+}) {
+  final gain = math.pow(10, gainDb.clamp(-80.0, 48.0) / 20).toDouble();
+  final wet = mix.clamp(0.0, 1.0);
+  final dry = 1 - wet;
+  final out = Float64List(input.length);
+  for (var i = 0; i < input.length; i++) {
+    out[i] = input[i] * (dry + gain * wet);
+  }
+  return out;
 }
 
 Float64List _applyAutomatedClipEffect(

@@ -1916,6 +1916,7 @@ class _DawScreenState extends State<DawScreen>
   }
 
   static const _clipEffectTypes = [
+    DawClipEffectType.gain,
     DawClipEffectType.reverb,
     DawClipEffectType.delay,
     DawClipEffectType.chorus,
@@ -1939,6 +1940,7 @@ class _DawScreenState extends State<DawScreen>
   ];
 
   String _clipEffectLabel(DawClipEffectType type) => switch (type) {
+        DawClipEffectType.gain => 'Gain',
         DawClipEffectType.reverb => 'Reverb',
         DawClipEffectType.delay => 'Delay',
         DawClipEffectType.chorus => 'Chorus',
@@ -1970,6 +1972,10 @@ class _DawScreenState extends State<DawScreen>
 
   List<({String key, String label, double min, double max, double step})>
       _clipEffectParams(DawClipEffectType type) => switch (type) {
+            DawClipEffectType.gain => const [
+                (key: 'gainDb', label: 'Gain dB', min: -60, max: 24, step: 1),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
             DawClipEffectType.reverb => const [
                 (key: 'roomSize', label: 'Size', min: 0, max: 1, step: 0.01),
                 (key: 'damping', label: 'Damping', min: 0, max: 1, step: 0.01),

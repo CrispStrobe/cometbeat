@@ -466,6 +466,33 @@ void main() {
     expect(vocoder.every((v) => v.isFinite), isTrue);
   });
 
+  test('gain FX scales audio and preserves length', () {
+    final dry = Float64List.fromList([0.25, -0.5, 0.75]);
+    final bypassed = applyClipEffectChain(
+      dry,
+      [
+        defaultDawClipEffect(DawClipEffectType.gain).copyWith(
+          params: {'gainDb': 12, 'mix': 0},
+        ),
+      ],
+      44100,
+    );
+    final boosted = applyClipEffectChain(
+      dry,
+      [
+        defaultDawClipEffect(DawClipEffectType.gain).copyWith(
+          params: {'gainDb': 6, 'mix': 1},
+        ),
+      ],
+      44100,
+    );
+
+    expect(bypassed, equals(dry));
+    expect(boosted.length, dry.length);
+    expect(boosted[0], closeTo(0.25 * math.pow(10, 6 / 20), 1e-9));
+    expect(boosted[1], closeTo(-0.5 * math.pow(10, 6 / 20), 1e-9));
+  });
+
   test('effect parameter automation is rendered over time', () {
     final dry = _sine(220);
     final automated = applyClipEffectChain(

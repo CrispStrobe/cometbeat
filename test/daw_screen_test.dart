@@ -419,6 +419,27 @@ void main() {
     expect(find.textContaining('Depth'), findsWidgets);
   });
 
+  testWidgets('gain FX exposes output gain sliders', (tester) async {
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+
+    await tester.tap(find.text('Master FX'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gain').last);
+    await tester.pumpAndSettle();
+
+    expect(service.masterEffects().single.type, DawClipEffectType.gain);
+    await tester.tap(find.text('Gain'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Gain dB'), findsOneWidget);
+    expect(find.textContaining('Mix'), findsOneWidget);
+  });
+
   testWidgets('FX slider auto writes marked-range automation points',
       (tester) async {
     await _pumpDaw(tester);
