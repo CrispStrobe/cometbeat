@@ -1397,12 +1397,6 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             onPressed: _toggleMic,
           ),
           IconButton(
-            icon: Icon(_inspect ? Icons.search_off : Icons.search),
-            isSelected: _inspect,
-            tooltip: l10n.inspectMode,
-            onPressed: () => setState(() => _inspect = !_inspect),
-          ),
-          IconButton(
             icon: const Icon(Icons.folder_open),
             tooltip: l10n.tabImport,
             onPressed: openScoreFile,
@@ -1422,21 +1416,6 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             icon: const Icon(Icons.library_music_outlined),
             tooltip: l10n.tabOpenSongBook,
             onPressed: _openFromSongBook,
-          ),
-          IconButton(
-            icon: const Icon(Icons.content_paste),
-            tooltip: l10n.tabPasteAscii,
-            onPressed: _promptPasteAscii,
-          ),
-          IconButton(
-            icon: const Icon(Icons.bookmark_add_outlined),
-            tooltip: l10n.tabSaveSongBook,
-            onPressed: _promptSave,
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit_note),
-            tooltip: l10n.tabOpenWorkshop,
-            onPressed: _openInScoreWorkshop,
           ),
           // Shared-tune bridge: hand the tab's melody to the Loop Mixer /
           // Tracker / Score Editor, or pull a tune they shared in as tab.
@@ -1477,9 +1456,17 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             icon: const Icon(Icons.more_vert),
             tooltip: l10n.tabMenu,
             onSelected: (value) {
-              if (value == 'clear') _clearAll();
-              if (value == 'inspect') {
-                setState(() => _inspect = !_inspect);
+              switch (value) {
+                case 'clear':
+                  _clearAll();
+                case 'inspect':
+                  setState(() => _inspect = !_inspect);
+                case 'paste':
+                  _promptPasteAscii();
+                case 'save':
+                  _promptSave();
+                case 'workshop':
+                  _openInScoreWorkshop();
               }
             },
             itemBuilder: (_) => [
@@ -1487,6 +1474,18 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 value: 'inspect',
                 checked: _inspect,
                 child: Text(l10n.inspectMode),
+              ),
+              PopupMenuItem(
+                value: 'paste',
+                child: Text(l10n.tabPasteAscii),
+              ),
+              PopupMenuItem(
+                value: 'save',
+                child: Text(l10n.tabSaveSongBook),
+              ),
+              PopupMenuItem(
+                value: 'workshop',
+                child: Text(l10n.tabOpenWorkshop),
               ),
               PopupMenuItem(value: 'clear', child: Text(l10n.tabClear)),
             ],

@@ -22,6 +22,7 @@ import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_patterns.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -287,6 +288,26 @@ void main() {
     tab.deleteCell();
     await tester.pump();
     expect(tab.fretAt(0, 0), isNull);
+  });
+
+  testWidgets('the Tab Editor overflow menu owns utility actions',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    expect(find.byTooltip(l10n.tabMenu), findsOneWidget);
+    await tester.tap(find.byTooltip(l10n.tabMenu));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.inspectMode), findsOneWidget);
+    expect(find.text(l10n.tabPasteAscii), findsOneWidget);
+    expect(find.text(l10n.tabSaveSongBook), findsOneWidget);
+    expect(find.text(l10n.tabOpenWorkshop), findsOneWidget);
+    expect(find.text(l10n.tabClear), findsOneWidget);
+
+    await tester.tap(find.text(l10n.inspectMode));
+    await tester.pump();
+    expect(_tab(tester).inspectMode, isTrue);
   });
 
   testWidgets('🔍 Inspect mode: a cell reports its fretted note',
