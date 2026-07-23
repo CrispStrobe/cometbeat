@@ -16,6 +16,8 @@ import 'package:comet_beat/core/audio/tracker_song_module.dart'
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
     show multiPartScoreFromTrackerSong;
+import 'package:comet_beat/features/library/modarchive_sheet.dart';
+import 'package:comet_beat/features/library/soundfont_sheet.dart';
 import 'package:comet_beat/features/sound_lab/catalog_browse_sheet.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
@@ -63,6 +65,8 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
   bool includeBuiltIns = false,
   Future<void> Function(SampleClip clip)? onCatalogSampleInsert,
   bool preferCatalogSampleInsert = false,
+  Future<void> Function(Uint8List bytes)? onModuleSelected,
+  Future<void> Function(TrackerInstrument instrument)? onSoundFontSelected,
 }) {
   return showModalBottomSheet<SavedInstrument>(
     context: context,
@@ -75,6 +79,8 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
       includeBuiltIns: includeBuiltIns,
       onCatalogSampleInsert: onCatalogSampleInsert,
       preferCatalogSampleInsert: preferCatalogSampleInsert,
+      onModuleSelected: onModuleSelected,
+      onSoundFontSelected: onSoundFontSelected,
     ),
   );
 }
@@ -117,6 +123,8 @@ class MyInstrumentsSheet extends StatefulWidget {
     this.includeBuiltIns = false,
     this.onCatalogSampleInsert,
     this.preferCatalogSampleInsert = false,
+    this.onModuleSelected,
+    this.onSoundFontSelected,
     super.key,
   });
 
@@ -134,6 +142,9 @@ class MyInstrumentsSheet extends StatefulWidget {
   final bool includeBuiltIns;
   final Future<void> Function(SampleClip clip)? onCatalogSampleInsert;
   final bool preferCatalogSampleInsert;
+  final Future<void> Function(Uint8List bytes)? onModuleSelected;
+  final Future<void> Function(TrackerInstrument instrument)?
+      onSoundFontSelected;
 
   @override
   State<MyInstrumentsSheet> createState() => _MyInstrumentsSheetState();
@@ -352,6 +363,20 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
     if (mounted) await _reload(); // surface anything installed from the catalog
   }
 
+  Future<void> _browseModArchive() async {
+    final bytes = await showModArchiveSheet(context);
+    if (bytes == null || !mounted) return;
+    Navigator.of(context).pop();
+    await widget.onModuleSelected?.call(bytes);
+  }
+
+  Future<void> _loadSoundFont() async {
+    final instrument = await showSoundFontSheet(context);
+    if (instrument == null || !mounted) return;
+    Navigator.of(context).pop();
+    await widget.onSoundFontSelected?.call(instrument);
+  }
+
   /// Opens the Sample Extractor (lift PCM samples out of a tracker module or a
   /// sample-pack archive into "My Samples"); refreshes on return.
   Future<void> _extractSamples() async {
@@ -430,6 +455,20 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                       icon: const Icon(Icons.cloud_outlined, size: 20),
                       tooltip: l10n.soundLibraryBrowseCatalog,
                       onPressed: _browseCatalog,
+                    ),
+                  if (widget.restrictToCategory == null &&
+                      widget.onModuleSelected != null)
+                    IconButton(
+                      icon: const Icon(Icons.travel_explore, size: 20),
+                      tooltip: l10n.trackerModArchive,
+                      onPressed: _browseModArchive,
+                    ),
+                  if (widget.restrictToCategory == null &&
+                      widget.onSoundFontSelected != null)
+                    IconButton(
+                      icon: const Icon(Icons.piano, size: 20),
+                      tooltip: l10n.trackerLoadSoundFont,
+                      onPressed: _loadSoundFont,
                     ),
                   if (widget.restrictToCategory == null ||
                       widget.restrictToCategory == 'Samples')

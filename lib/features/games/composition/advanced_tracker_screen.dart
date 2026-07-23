@@ -77,7 +77,6 @@ import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
-import 'package:comet_beat/features/library/modarchive_sheet.dart';
 import 'package:comet_beat/features/library/sample_library_sheet.dart';
 import 'package:comet_beat/features/library/soundfont_sheet.dart';
 import 'package:comet_beat/features/library/starter_pattern.dart';
@@ -2486,7 +2485,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   Future<void> _pickFromUnifiedSoundLibrary({
     void Function(TrackerInstrument)? onPick,
   }) async {
-    final saved = await showMyInstrumentsSheet(context, includeBuiltIns: true);
+    final saved = await showMyInstrumentsSheet(
+      context,
+      includeBuiltIns: true,
+      onModuleSelected: (bytes) async => importModuleBytes(bytes),
+      onSoundFontSelected: (instrument) async => _addPoolInstrument(instrument),
+    );
     if (saved == null || !mounted) return;
     final inst = saved.instrument;
     if (inst == null) {
@@ -3705,21 +3709,6 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     }
   }
 
-  /// BYOK browse of The Mod Archive's CC0/Public-Domain modules → import the
-  /// picked one via the same [importModuleBytes] seam as file/module import.
-  Future<void> _browseModArchive() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final failed = AppLocalizations.of(context)!.trackerModFailed;
-    try {
-      final bytes = await showModArchiveSheet(context);
-      if (bytes == null || !mounted) return;
-      importModuleBytes(bytes);
-    } catch (_) {
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text(failed)));
-    }
-  }
-
   Future<void> _importModule() async {
     final messenger = ScaffoldMessenger.of(context);
     final failed = AppLocalizations.of(context)!.trackerModFailed;
@@ -4190,16 +4179,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               switch (v) {
                 case 'import':
                   _importModule();
-                case 'modArchive':
-                  _browseModArchive();
                 case 'importScore':
                   _importScore();
                 case 'demo':
                   _loadDemo();
                 case 'starterBeat':
                   _applyStarterBeat();
-                case 'loadSoundFont':
-                  _loadSoundFont();
                 case 'soundLibrary':
                   _showSoundLibrary();
                 case 'shareSong':
@@ -4236,11 +4221,6 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               _menuSection(l10n.trackerMenuOpenLibrary),
               _menuRow('import', Icons.library_music, l10n.trackerImportMod),
               _menuRow(
-                'modArchive',
-                Icons.travel_explore,
-                l10n.trackerModArchive,
-              ),
-              _menuRow(
                 'importScore',
                 Icons.file_open_outlined,
                 l10n.trackerImportScore,
@@ -4255,11 +4235,6 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 'soundLibrary',
                 Icons.library_music,
                 l10n.trackerSoundLibrary,
-              ),
-              _menuRow(
-                'loadSoundFont',
-                Icons.piano,
-                l10n.trackerLoadSoundFont,
               ),
               const PopupMenuDivider(),
               _menuSection(l10n.trackerMenuSaveExport),
