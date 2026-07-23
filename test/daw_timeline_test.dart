@@ -668,6 +668,63 @@ void main() {
     expect(left.right.first, closeTo(0, 1e-9));
   });
 
+  test('Pan FX applies constant-power attenuation to stereo channels', () {
+    final source = StereoSampleSource(
+      Float64List.fromList([1, 1]),
+      Float64List.fromList([1, 1]),
+    );
+    final mix = renderTimelineStereo(
+      DawTimeline(
+        tracks: [
+          DawTrack(
+            effects: [
+              defaultDawClipEffect(DawClipEffectType.pan).copyWith(
+                params: {'pan': 1},
+              ),
+            ],
+            clips: [Clip(source: source)],
+          ),
+        ],
+      ),
+      sampleRate: _sr,
+      limit: false,
+    );
+    expect(mix.left.first, closeTo(0, 1e-9));
+    expect(mix.right.first, closeTo(1, 1e-9));
+  });
+
+  test('Pan FX automation moves a stereo lane between sides', () {
+    final source = StereoSampleSource(
+      Float64List.fromList(List<double>.filled(200, 1)),
+      Float64List.fromList(List<double>.filled(200, 1)),
+    );
+    final mix = renderTimelineStereo(
+      DawTimeline(
+        tracks: [
+          DawTrack(
+            effects: [
+              defaultDawClipEffect(DawClipEffectType.pan).copyWith(
+                automation: const {
+                  'pan': [
+                    DawAutomationPoint(ms: 0, value: -1),
+                    DawAutomationPoint(ms: 192, value: 1),
+                  ],
+                },
+              ),
+            ],
+            clips: [Clip(source: source)],
+          ),
+        ],
+      ),
+      sampleRate: _sr,
+      limit: false,
+    );
+    expect(mix.left.first, closeTo(1, 1e-9));
+    expect(mix.right.first, closeTo(0, 1e-9));
+    expect(mix.left[192], closeTo(0, 1e-9));
+    expect(mix.right[192], closeTo(1, 1e-9));
+  });
+
   test('stereo delay spreads a panned echo across channels', () {
     final source = SampleSource(Float64List.fromList([1, 0, 0, 0, 0]));
     final mix = renderTimelineStereo(

@@ -203,6 +203,7 @@ class DawClipEffect {
 
 enum DawClipEffectType {
   gain,
+  pan,
   reverb,
   delay,
   chorus,
@@ -236,6 +237,10 @@ DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
       DawClipEffectType.gain => const DawClipEffect(
           type: DawClipEffectType.gain,
           params: {'gainDb': 0, 'mix': 1},
+        ),
+      DawClipEffectType.pan => const DawClipEffect(
+          type: DawClipEffectType.pan,
+          params: {'pan': 0},
         ),
       DawClipEffectType.reverb => const DawClipEffect(
           type: DawClipEffectType.reverb,
@@ -698,12 +703,23 @@ Float64List applyClipEffectChain(
   for (final fx in effects) {
     if (!fx.enabled) continue;
     if (fx.automation.isNotEmpty) {
-      outLeft = _applyAutomatedClipEffect(outLeft, fx, sampleRate);
-      outRight = _applyAutomatedClipEffect(outRight, fx, sampleRate);
+      final automated = _applyAutomatedStereoClipEffect(
+        outLeft,
+        outRight,
+        fx,
+        sampleRate,
+      );
+      outLeft = automated.left;
+      outRight = automated.right;
       continue;
     }
     double p(String key, double fallback) => fx.params[key] ?? fallback;
     final processed = switch (fx.type) {
+      DawClipEffectType.pan => _panFxStereo(
+          outLeft,
+          outRight,
+          pan: p('pan', 0),
+        ),
       DawClipEffectType.delay => delayFxStereo(
           outLeft,
           outRight,
@@ -855,6 +871,8 @@ Float64List _applyClipEffect(
         gainDb: p('gainDb', 0),
         mix: p('mix', 1),
       ),
+    // The mono wrapper folds the stereo render after the full FX graph.
+    DawClipEffectType.pan => Float64List.fromList(input),
     DawClipEffectType.reverb => reverbFx(
         input,
         roomSize: p('roomSize', 0.7),
@@ -1103,6 +1121,39 @@ Float64List _applyAutomatedClipEffect(
   return out;
 }
 
+({Float64List left, Float64List right}) _applyAutomatedStereoClipEffect(
+  Float64List left,
+  Float64List right,
+  DawClipEffect fx,
+  int sampleRate,
+) {
+  if (left.isEmpty && right.isEmpty) return (left: left, right: right);
+  final block = math.max(64, (sampleRate / 50).round());
+  final outLeft = Float64List(left.length);
+  final outRight = Float64List(right.length);
+  for (var start = 0; start < left.length; start += block) {
+    final end = math.min(left.length, start + block);
+    final ms = start * 1000 / sampleRate;
+    final params = {...fx.params};
+    for (final entry in fx.automation.entries) {
+      params[entry.key] = _paramAutomationValue(
+        entry.value,
+        ms,
+        fx.params[entry.key] ?? 0,
+      );
+    }
+    final processed = _applyStereoClipEffectChain(
+      Float64List.sublistView(left, start, end),
+      Float64List.sublistView(right, start, end),
+      [fx.copyWith(params: params, automation: const {})],
+      sampleRate,
+    );
+    outLeft.setRange(start, end, processed.left);
+    outRight.setRange(start, end, processed.right);
+  }
+  return (left: outLeft, right: outRight);
+}
+
 double _paramAutomationValue(
   List<DawAutomationPoint> points,
   double ms,
@@ -1139,6 +1190,25 @@ Float64List _blendWetDry(Float64List dry, Float64List wet, double mix) {
     out[i] = (1 - m) * d + m * w;
   }
   return out;
+}
+
+({Float64List left, Float64List right}) _panFxStereo(
+  Float64List left,
+  Float64List right, {
+  required double pan,
+}) {
+  final p = pan.clamp(-1.0, 1.0).toDouble();
+  final leftGain = p <= 0 ? 1.0 : math.cos(p * math.pi / 2);
+  final rightGain = p >= 0 ? 1.0 : math.cos(p * math.pi / 2);
+  final outLeft = Float64List(left.length);
+  final outRight = Float64List(right.length);
+  for (var i = 0; i < left.length; i++) {
+    outLeft[i] = left[i] * leftGain;
+  }
+  for (var i = 0; i < right.length; i++) {
+    outRight[i] = right[i] * rightGain;
+  }
+  return (left: outLeft, right: outRight);
 }
 
 Float64List _tremoloFx(
