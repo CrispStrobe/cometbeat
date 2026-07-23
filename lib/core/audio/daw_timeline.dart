@@ -354,12 +354,33 @@ enum TrackEffect {
   voiceRadio,
 }
 
+DawClipEffect? clipEffectForTrackEffect(TrackEffect effect) => switch (effect) {
+      TrackEffect.none => null,
+      TrackEffect.reverb => defaultDawClipEffect(DawClipEffectType.reverb),
+      TrackEffect.echo => defaultDawClipEffect(DawClipEffectType.delay),
+      TrackEffect.voiceChipmunk =>
+        defaultDawClipEffect(DawClipEffectType.voiceChipmunk),
+      TrackEffect.voiceDeep =>
+        defaultDawClipEffect(DawClipEffectType.voiceDeep),
+      TrackEffect.voiceRobot =>
+        defaultDawClipEffect(DawClipEffectType.voiceRobot),
+      TrackEffect.voiceRadio =>
+        defaultDawClipEffect(DawClipEffectType.voiceRadio),
+    };
+
+List<DawClipEffect> trackEffectChainForLegacy(TrackEffect effect) {
+  final fx = clipEffectForTrackEffect(effect);
+  return fx == null ? const [] : [fx];
+}
+
 /// One DAW track — a lane of clips with its own [gain]/[muted]/[soloed]. An
 /// optional [instrument] is the lane's default voice: engraved (score) clips
 /// added to it adopt it, so the track behaves like an instrument lane. Baked
-/// audio / drum / groove clips ignore it. An [effect] insert is applied to the
-/// lane's whole mix and survives saved-project reloads; [instrument] is still a
-/// live-session default because saved projects bake each clip's sound in.
+/// audio / drum / groove clips ignore it. The lane's ordered [effects] chain is
+/// applied to the whole lane mix and survives saved-project reloads;
+/// [instrument] is still a live-session default because saved projects bake each
+/// clip's sound in. [effect] is the older single-insert field kept for backwards
+/// compatibility with existing projects/API callers.
 class DawTrack {
   DawTrack({
     this.name = '',
@@ -368,8 +389,10 @@ class DawTrack {
     this.soloed = false,
     this.instrument,
     this.effect = TrackEffect.none,
+    List<DawClipEffect>? effects,
     List<Clip>? clips,
-  }) : clips = clips ?? [];
+  })  : effects = effects ?? [],
+        clips = clips ?? [];
 
   String name;
   double gain;
@@ -383,6 +406,10 @@ class DawTrack {
 
   /// The lane's insert effect (applied to its summed audio at bake time).
   TrackEffect effect;
+
+  /// Ordered lane insert FX. Uses the same module model as clip/segment FX.
+  List<DawClipEffect> effects;
+
   final List<Clip> clips;
 }
 
@@ -663,12 +690,14 @@ Float64List renderTimeline(
   }
 
   for (final (track, places) in perTrack) {
-    if (track.effect == TrackEffect.none) {
+    if (track.effects.isEmpty && track.effect == TrackEffect.none) {
       mix(master, places);
     } else {
       final lane = Float64List(totalSamples);
       mix(lane, places);
-      final wet = applyTrackEffect(track.effect, lane, sampleRate);
+      final wet = track.effects.isNotEmpty
+          ? applyClipEffectChain(lane, track.effects, sampleRate)
+          : applyTrackEffect(track.effect, lane, sampleRate);
       for (var i = 0; i < totalSamples; i++) {
         master[i] += wet[i];
       }

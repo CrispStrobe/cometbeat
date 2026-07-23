@@ -327,6 +327,7 @@ void main() {
     final fresh = DawService()..loadProject(json);
     expect(fresh.clipCount, 2);
     expect(fresh.trackEffect(0), TrackEffect.echo);
+    expect(fresh.trackEffects(0).single.type, DawClipEffectType.delay);
     expect(fresh.clipTrimStartMs(0, 0), 10);
     expect(fresh.clipTrimEndMs(0, 0), 90);
     expect(fresh.isClipFrozen(0, 0), isTrue); // reopened clips are baked takes
@@ -605,10 +606,13 @@ void main() {
     test('defaults to none and is undoable', () {
       final s = DawService()..addClip(_tone(0.5, 4410));
       expect(s.trackEffect(0), TrackEffect.none);
+      expect(s.trackEffects(0), isEmpty);
       s.setTrackEffect(0, TrackEffect.reverb);
       expect(s.trackEffect(0), TrackEffect.reverb);
+      expect(s.trackEffects(0).single.type, DawClipEffectType.reverb);
       s.undo();
       expect(s.trackEffect(0), TrackEffect.none);
+      expect(s.trackEffects(0), isEmpty);
     });
 
     test('reverb rings a tail into the silence after the click', () {
@@ -658,6 +662,57 @@ void main() {
         ..addClip(_tone(0.4, 1000), track: 1);
       final baked = s.bake();
       expect(baked[0], closeTo(0.3, 1e-9)); // only lane 0 sounds at t=0
+    });
+
+    test('ordered track FX chains have params, reorder and undo', () {
+      final s = DawService()..addClip(_tone(0.4, 44100));
+      s
+        ..addTrackEffect(0, DawClipEffectType.highpass)
+        ..addTrackEffect(0, DawClipEffectType.distortion)
+        ..setTrackEffectParam(0, 1, 'drive', 8);
+
+      expect(
+        s.trackEffects(0).map((fx) => fx.type),
+        [DawClipEffectType.highpass, DawClipEffectType.distortion],
+      );
+      expect(s.trackEffects(0)[1].params['drive'], 8);
+
+      s.moveTrackEffect(0, 1, -1);
+      expect(
+        s.trackEffects(0).map((fx) => fx.type),
+        [DawClipEffectType.distortion, DawClipEffectType.highpass],
+      );
+
+      s.toggleTrackEffect(0, 0);
+      expect(s.trackEffects(0).first.enabled, isFalse);
+      s.undo();
+      expect(
+        s.trackEffects(0).map((fx) => fx.type),
+        [DawClipEffectType.distortion, DawClipEffectType.highpass],
+      );
+      expect(s.trackEffects(0).first.enabled, isTrue);
+    });
+
+    test('presets can be applied to several tracks at once', () {
+      final s = DawService()
+        ..addClip(_tone(0.3, 100))
+        ..addClip(_tone(0.2, 100), track: 1);
+
+      s.applyTrackEffectPresetToTracks(
+        [0, 1],
+        DawClipEffectPreset.wideSpace,
+      );
+
+      for (final track in [0, 1]) {
+        expect(
+          s.trackEffects(track).map((fx) => fx.type),
+          [
+            DawClipEffectType.chorus,
+            DawClipEffectType.delay,
+            DawClipEffectType.reverb,
+          ],
+        );
+      }
     });
   });
 

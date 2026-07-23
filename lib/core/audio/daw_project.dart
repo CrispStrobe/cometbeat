@@ -44,6 +44,8 @@ String projectToJson(
           'muted': track.muted,
           'soloed': track.soloed,
           'effect': track.effect.name,
+          if (track.effects.isNotEmpty)
+            'effects': [for (final fx in track.effects) fx.toJson()],
           'clips': [
             for (final clip in track.clips)
               {
@@ -128,14 +130,25 @@ DawTimeline projectFromJson(String json) {
       }
     }
     tracks.add(
-      DawTrack(
-        name: t['name'] is String ? t['name'] as String : '',
-        gain: t['gain'] is num ? num_(t['gain']) : 1.0,
-        muted: t['muted'] == true,
-        soloed: t['soloed'] == true,
-        effect: effect_(t['effect']),
-        clips: clips,
-      ),
+      () {
+        final legacyEffect = effect_(t['effect']);
+        final effects = [
+          if (t['effects'] case final trackEffects? when trackEffects is List)
+            for (final fx in trackEffects)
+              if (DawClipEffect.fromJson(fx) case final parsed?) parsed,
+        ];
+        return DawTrack(
+          name: t['name'] is String ? t['name'] as String : '',
+          gain: t['gain'] is num ? num_(t['gain']) : 1.0,
+          muted: t['muted'] == true,
+          soloed: t['soloed'] == true,
+          effect: legacyEffect,
+          effects: effects.isNotEmpty
+              ? effects
+              : trackEffectChainForLegacy(legacyEffect),
+          clips: clips,
+        );
+      }(),
     );
   }
   return DawTimeline(tracks: tracks);

@@ -282,59 +282,26 @@ class _DawScreenState extends State<DawScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.dawTrackTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: InputDecoration(labelText: l10n.dawTrackName),
-              onSubmitted: (_) => Navigator.of(ctx).pop('rename'),
-            ),
-            const SizedBox(height: 16),
-            Text(l10n.dawEffect, style: Theme.of(ctx).textTheme.labelMedium),
-            const SizedBox(height: 6),
-            // The lane insert effect — applied live (its own undo entry).
-            StatefulBuilder(
-              builder: (ctx, setChips) => Wrap(
-                spacing: 6,
+        content: StatefulBuilder(
+          builder: (ctx, setDialog) => SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final e in _spaceEffects)
-                    ChoiceChip(
-                      label: Text(_effectLabel(l10n, e)),
-                      selected: _daw.trackEffect(i) == e,
-                      onSelected: (_) {
-                        setTrackEffect(i, e);
-                        setChips(() {});
-                      },
-                    ),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    decoration: InputDecoration(labelText: l10n.dawTrackName),
+                    onSubmitted: (_) => Navigator.of(ctx).pop('rename'),
+                  ),
+                  const SizedBox(height: 16),
+                  _trackFxEditor(ctx, i, setDialog),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.dawVoiceShaping,
-              style: Theme.of(ctx).textTheme.labelMedium,
-            ),
-            const SizedBox(height: 6),
-            StatefulBuilder(
-              builder: (ctx, setChips) => Wrap(
-                spacing: 6,
-                children: [
-                  for (final e in _voiceShapeEffects)
-                    ChoiceChip(
-                      label: Text(_effectLabel(l10n, e)),
-                      selected: _daw.trackEffect(i) == e,
-                      onSelected: (_) {
-                        setTrackEffect(i, e);
-                        setChips(() {});
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
@@ -367,6 +334,176 @@ class _DawScreenState extends State<DawScreen>
     } else if (action == 'instrument') {
       await _assignTrackInstrument(i);
     }
+  }
+
+  Widget _trackFxEditor(
+    BuildContext ctx,
+    int track,
+    StateSetter setDialog,
+  ) {
+    final effects = _daw.trackEffects(track);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Track FX', style: Theme.of(ctx).textTheme.labelLarge),
+            const Spacer(),
+            PopupMenuButton<DawClipEffectPreset>(
+              tooltip: 'Apply preset',
+              icon: const Icon(Icons.auto_fix_high),
+              onSelected: (preset) {
+                _daw.applyTrackEffectPreset(track, preset);
+                setDialog(() {});
+                if (_playing) play();
+              },
+              itemBuilder: (_) => [
+                for (final preset in DawClipEffectPreset.values)
+                  PopupMenuItem(
+                    value: preset,
+                    child: Text(_clipEffectPresetLabel(preset)),
+                  ),
+              ],
+            ),
+            PopupMenuButton<DawClipEffectType>(
+              tooltip: 'Add effect',
+              icon: const Icon(Icons.add_circle_outline),
+              onSelected: (type) {
+                _daw.addTrackEffect(track, type);
+                setDialog(() {});
+                if (_playing) play();
+              },
+              itemBuilder: (_) => [
+                for (final type in _clipEffectTypes)
+                  PopupMenuItem(
+                    value: type,
+                    child: Text(_clipEffectLabel(type)),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        if (effects.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'No track effects',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+          ),
+        for (var fxIndex = 0; fxIndex < effects.length; fxIndex++)
+          _fxTile(
+            ctx,
+            effects: effects,
+            fxIndex: fxIndex,
+            onToggle: () {
+              _daw.toggleTrackEffect(track, fxIndex);
+              setDialog(() {});
+              if (_playing) play();
+            },
+            onMove: (delta) {
+              _daw.moveTrackEffect(track, fxIndex, delta);
+              setDialog(() {});
+              if (_playing) play();
+            },
+            onRemove: () {
+              _daw.removeTrackEffect(track, fxIndex);
+              setDialog(() {});
+              if (_playing) play();
+            },
+            onParam: (key, value) {
+              setDialog(() {
+                _daw.setTrackEffectParam(track, fxIndex, key, value);
+              });
+              if (_playing) play();
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _fxTile(
+    BuildContext ctx, {
+    required List<DawClipEffect> effects,
+    required int fxIndex,
+    required VoidCallback onToggle,
+    required void Function(int delta) onMove,
+    required VoidCallback onRemove,
+    required void Function(String key, double value) onParam,
+  }) {
+    final fx = effects[fxIndex];
+    final specs = _clipEffectParams(fx.type);
+    return ExpansionTile(
+      dense: true,
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      leading: IconButton(
+        icon: Icon(fx.enabled ? Icons.power_settings_new : Icons.power_off),
+        tooltip: fx.enabled ? 'Bypass' : 'Enable',
+        onPressed: onToggle,
+      ),
+      title: Text(_clipEffectLabel(fx.type)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_upward),
+            tooltip: 'Move up',
+            onPressed: fxIndex == 0 ? null : () => onMove(-1),
+          ),
+          IconButton(
+            icon: const Icon(Icons.arrow_downward),
+            tooltip: 'Move down',
+            onPressed: fxIndex == effects.length - 1 ? null : () => onMove(1),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Remove effect',
+            onPressed: onRemove,
+          ),
+        ],
+      ),
+      children: [
+        for (final spec in specs)
+          _effectParamSlider(
+            spec.label,
+            fx.params[spec.key] ??
+                defaultDawClipEffect(fx.type).params[spec.key] ??
+                spec.min,
+            spec.min,
+            spec.max,
+            spec.step,
+            (v) => onParam(spec.key, v),
+          ),
+      ],
+    );
+  }
+
+  Widget _effectParamSlider(
+    String label,
+    double value,
+    double min,
+    double max,
+    double step,
+    ValueChanged<double> onChanged,
+  ) {
+    String fmt(double v) =>
+        step >= 1 ? v.round().toString() : v.toStringAsFixed(2);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('$label — ${fmt(value)}'),
+        Slider(
+          value: value.clamp(min, max),
+          min: min,
+          max: max,
+          divisions:
+              step > 0 ? ((max - min) / step).round().clamp(1, 1000) : null,
+          label: fmt(value),
+          onChanged: onChanged,
+        ),
+      ],
+    );
   }
 
   DrumRowsPattern _demoBeat() {
@@ -550,35 +687,6 @@ class _DawScreenState extends State<DawScreen>
     _daw.setTrackInstrument(track, inst);
     if (_playing) play();
   }
-
-  /// Set the lane's insert effect and re-bake if playing.
-  void setTrackEffect(int track, TrackEffect effect) {
-    _daw.setTrackEffect(track, effect);
-    if (_playing) play();
-  }
-
-  static const _spaceEffects = [
-    TrackEffect.none,
-    TrackEffect.reverb,
-    TrackEffect.echo,
-  ];
-
-  static const _voiceShapeEffects = [
-    TrackEffect.voiceChipmunk,
-    TrackEffect.voiceDeep,
-    TrackEffect.voiceRobot,
-    TrackEffect.voiceRadio,
-  ];
-
-  String _effectLabel(AppLocalizations l10n, TrackEffect e) => switch (e) {
-        TrackEffect.none => l10n.dawEffectNone,
-        TrackEffect.reverb => l10n.dawEffectReverb,
-        TrackEffect.echo => l10n.dawEffectEcho,
-        TrackEffect.voiceChipmunk => l10n.dawEffectVoiceChipmunk,
-        TrackEffect.voiceDeep => l10n.dawEffectVoiceDeep,
-        TrackEffect.voiceRobot => l10n.dawEffectVoiceRobot,
-        TrackEffect.voiceRadio => l10n.dawEffectVoiceRadio,
-      };
 
   static const _clipEffectTypes = [
     DawClipEffectType.reverb,
@@ -1146,103 +1254,36 @@ class _DawScreenState extends State<DawScreen>
                   for (var fxIndex = 0;
                       fxIndex < _daw.clipEffects(track, index).length;
                       fxIndex++)
-                    Builder(
-                      builder: (_) {
-                        final fx = _daw.clipEffects(track, index)[fxIndex];
-                        final specs = _clipEffectParams(fx.type);
-                        return ExpansionTile(
-                          dense: true,
-                          tilePadding: EdgeInsets.zero,
-                          childrenPadding:
-                              const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                          leading: IconButton(
-                            icon: Icon(
-                              fx.enabled
-                                  ? Icons.power_settings_new
-                                  : Icons.power_off,
-                            ),
-                            tooltip: fx.enabled ? 'Bypass' : 'Enable',
-                            onPressed: () {
-                              _daw.toggleClipEffect(track, index, fxIndex);
-                              setSheet(() {});
-                              if (_playing) play();
-                            },
-                          ),
-                          title: Text(_clipEffectLabel(fx.type)),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_upward),
-                                tooltip: 'Move up',
-                                onPressed: fxIndex == 0
-                                    ? null
-                                    : () {
-                                        _daw.moveClipEffect(
-                                          track,
-                                          index,
-                                          fxIndex,
-                                          -1,
-                                        );
-                                        setSheet(() {});
-                                        if (_playing) play();
-                                      },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.arrow_downward),
-                                tooltip: 'Move down',
-                                onPressed: fxIndex ==
-                                        _daw.clipEffects(track, index).length -
-                                            1
-                                    ? null
-                                    : () {
-                                        _daw.moveClipEffect(
-                                          track,
-                                          index,
-                                          fxIndex,
-                                          1,
-                                        );
-                                        setSheet(() {});
-                                        if (_playing) play();
-                                      },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                tooltip: 'Remove effect',
-                                onPressed: () {
-                                  _daw.removeClipEffect(track, index, fxIndex);
-                                  setSheet(() {});
-                                  if (_playing) play();
-                                },
-                              ),
-                            ],
-                          ),
-                          children: [
-                            for (final spec in specs)
-                              slider(
-                                spec.label,
-                                fx.params[spec.key] ??
-                                    defaultDawClipEffect(
-                                      fx.type,
-                                    ).params[spec.key] ??
-                                    spec.min,
-                                spec.max,
-                                (v) => spec.step >= 1
-                                    ? v.round().toString()
-                                    : v.toStringAsFixed(2),
-                                (v) {
-                                  _daw.setClipEffectParam(
-                                    track,
-                                    index,
-                                    fxIndex,
-                                    spec.key,
-                                    v,
-                                  );
-                                  if (_playing) play();
-                                },
-                              ),
-                          ],
-                        );
+                    _fxTile(
+                      sheetCtx,
+                      effects: _daw.clipEffects(track, index),
+                      fxIndex: fxIndex,
+                      onToggle: () {
+                        _daw.toggleClipEffect(track, index, fxIndex);
+                        setSheet(() {});
+                        if (_playing) play();
+                      },
+                      onMove: (delta) {
+                        _daw.moveClipEffect(track, index, fxIndex, delta);
+                        setSheet(() {});
+                        if (_playing) play();
+                      },
+                      onRemove: () {
+                        _daw.removeClipEffect(track, index, fxIndex);
+                        setSheet(() {});
+                        if (_playing) play();
+                      },
+                      onParam: (key, value) {
+                        setSheet(() {
+                          _daw.setClipEffectParam(
+                            track,
+                            index,
+                            fxIndex,
+                            key,
+                            value,
+                          );
+                        });
+                        if (_playing) play();
                       },
                     ),
                   const SizedBox(height: 8),

@@ -5,7 +5,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/daw_timeline.dart' show kDawSampleRate;
+import 'package:comet_beat/core/audio/daw_timeline.dart'
+    show DawClipEffectType, kDawSampleRate;
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
@@ -172,6 +173,29 @@ void main() {
 
     expect(daw.clipCount, 1);
     expect(daw.debugBakeLength(), 4410);
+  });
+
+  testWidgets('track menu edits an ordered FX chain with sliders',
+      (tester) async {
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+
+    await tester.tap(find.text('A').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Track FX'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Distortion').last);
+    await tester.pumpAndSettle();
+
+    expect(service.trackEffects(0).single.type, DawClipEffectType.distortion);
+    await tester.tap(find.text('Distortion'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Drive'), findsOneWidget);
   });
 
   testWidgets('tapping a clip opens the inspector; gain slider changes gain',

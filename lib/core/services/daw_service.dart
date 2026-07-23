@@ -64,6 +64,7 @@ class DawService extends ChangeNotifier {
               soloed: t.soloed,
               instrument: t.instrument,
               effect: t.effect,
+              effects: [...t.effects],
               clips: [...t.clips],
             ),
         ],
@@ -656,15 +657,145 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The lane's insert effect (reverb / echo / none).
+  /// The lane's legacy single insert. Prefer [trackEffects] for new UI.
   TrackEffect trackEffect(int track) => timeline.tracks[track].effect;
 
-  /// Set [track]'s insert effect. Applied to the lane's summed audio at bake.
+  /// Set [track]'s legacy insert effect. Applied as a one-module track chain.
   void setTrackEffect(int track, TrackEffect effect) {
-    if (timeline.tracks[track].effect == effect) return;
+    final chain = trackEffectChainForLegacy(effect);
+    if (timeline.tracks[track].effect == effect &&
+        _sameEffectChain(timeline.tracks[track].effects, chain)) {
+      return;
+    }
     _record();
-    timeline.tracks[track].effect = effect;
+    final lane = timeline.tracks[track];
+    lane.effect = effect;
+    lane.effects = chain;
     notifyListeners();
+  }
+
+  List<DawClipEffect> trackEffects(int track) => timeline.tracks[track].effects;
+
+  void addTrackEffect(int track, DawClipEffectType type) {
+    addTrackEffectToTracks([track], type);
+  }
+
+  void addTrackEffectToTracks(Iterable<int> tracks, DawClipEffectType type) {
+    final indices = _validTrackIndices(tracks);
+    if (indices.isEmpty) return;
+    _record();
+    for (final i in indices) {
+      final lane = timeline.tracks[i];
+      lane
+        ..effect = TrackEffect.none
+        ..effects = [...lane.effects, defaultDawClipEffect(type)];
+    }
+    notifyListeners();
+  }
+
+  void applyTrackEffectPreset(
+    int track,
+    DawClipEffectPreset preset, {
+    bool append = false,
+  }) {
+    applyTrackEffectPresetToTracks([track], preset, append: append);
+  }
+
+  void applyTrackEffectPresetToTracks(
+    Iterable<int> tracks,
+    DawClipEffectPreset preset, {
+    bool append = false,
+  }) {
+    final indices = _validTrackIndices(tracks);
+    if (indices.isEmpty) return;
+    _record();
+    final chain = dawClipEffectPresetChain(preset);
+    for (final i in indices) {
+      final lane = timeline.tracks[i];
+      lane
+        ..effect = TrackEffect.none
+        ..effects = append ? [...lane.effects, ...chain] : [...chain];
+    }
+    notifyListeners();
+  }
+
+  void removeTrackEffect(int track, int effectIndex) {
+    final lane = timeline.tracks[track];
+    if (effectIndex < 0 || effectIndex >= lane.effects.length) return;
+    _record();
+    lane
+      ..effect = TrackEffect.none
+      ..effects = ([...lane.effects]..removeAt(effectIndex));
+    notifyListeners();
+  }
+
+  void moveTrackEffect(int track, int effectIndex, int delta) {
+    final lane = timeline.tracks[track];
+    final to = effectIndex + delta;
+    if (effectIndex < 0 ||
+        effectIndex >= lane.effects.length ||
+        to < 0 ||
+        to >= lane.effects.length ||
+        delta == 0) {
+      return;
+    }
+    _record();
+    final effects = [...lane.effects];
+    final fx = effects.removeAt(effectIndex);
+    effects.insert(to, fx);
+    lane
+      ..effect = TrackEffect.none
+      ..effects = effects;
+    notifyListeners();
+  }
+
+  void toggleTrackEffect(int track, int effectIndex) {
+    final lane = timeline.tracks[track];
+    if (effectIndex < 0 || effectIndex >= lane.effects.length) return;
+    _record();
+    final effects = [...lane.effects];
+    effects[effectIndex] = effects[effectIndex].copyWith(
+      enabled: !effects[effectIndex].enabled,
+    );
+    lane
+      ..effect = TrackEffect.none
+      ..effects = effects;
+    notifyListeners();
+  }
+
+  void setTrackEffectParam(
+    int track,
+    int effectIndex,
+    String key,
+    double value,
+  ) {
+    final lane = timeline.tracks[track];
+    if (effectIndex < 0 || effectIndex >= lane.effects.length) return;
+    _coalesced(('trackFxParam', track, effectIndex, key));
+    final effects = [...lane.effects];
+    final fx = effects[effectIndex];
+    effects[effectIndex] = fx.copyWith(params: {...fx.params, key: value});
+    lane
+      ..effect = TrackEffect.none
+      ..effects = effects;
+    notifyListeners();
+  }
+
+  List<int> _validTrackIndices(Iterable<int> tracks) {
+    final seen = <int>{};
+    final out = <int>[];
+    for (final i in tracks) {
+      if (i >= 0 && i < timeline.tracks.length && seen.add(i)) out.add(i);
+    }
+    return out;
+  }
+
+  bool _sameEffectChain(List<DawClipEffect> a, List<DawClipEffect> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].cacheKey != b[i].cacheKey) return false;
+    }
+    return true;
   }
 
   List<DawClipEffect> clipEffects(int track, int index) =>
