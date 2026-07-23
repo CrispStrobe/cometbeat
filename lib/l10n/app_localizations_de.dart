@@ -363,6 +363,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopLoopSelection => 'Auswahl wiederholen';
 
   @override
+  String get workshopLoopSelectionHelp =>
+      'Den ausgewählten Bereich bei der Wiedergabe wiederholen; ohne Auswahl läuft das Stück normal';
+
+  @override
   String get workshopArticulations => 'Artikulation & Bindebögen';
 
   @override
@@ -391,6 +395,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get workshopAnalysis => 'Analyse (nach Harmonie einfärben)';
+
+  @override
+  String get workshopAnalysisHelp =>
+      'Noten nach Tonika-, Subdominant- oder Dominantfunktion einfärben und die Harmonie anzeigen';
 
   @override
   String get workshopInspector => 'Inspektor';

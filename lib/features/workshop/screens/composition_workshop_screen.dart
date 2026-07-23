@@ -3644,7 +3644,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                         CheckedPopupMenuItem<String>(
                           value: 'analysis',
                           checked: _showAnalysis,
-                          child: Text(l10n.workshopAnalysis),
+                          child: _menuDescription(
+                            l10n.workshopAnalysis,
+                            l10n.workshopAnalysisHelp,
+                          ),
                         ),
                         CheckedPopupMenuItem<String>(
                           value: 'inspect',
@@ -3709,7 +3712,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                         CheckedPopupMenuItem<String>(
                           value: 'loop',
                           checked: _loopSelection,
-                          child: Text(l10n.workshopLoopSelection),
+                          child: _menuDescription(
+                            l10n.workshopLoopSelection,
+                            l10n.workshopLoopSelectionHelp,
+                          ),
                         ),
                         _menuItem(
                           'save',
@@ -4020,6 +4026,18 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             Flexible(child: Text(label)),
           ],
         ),
+      );
+
+  Widget _menuDescription(String label, String description) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          Text(
+            description,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       );
 
   String _statusText(BuildContext context, AppLocalizations l10n) {
