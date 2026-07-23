@@ -33,6 +33,7 @@ class MultiPartCanvas extends StatefulWidget {
     this.onElementDragUpdate,
     this.onElementDragEnd,
     this.controller,
+    this.onMarquee,
     this.caret,
     this.showMeasureNumbers = false,
     this.showNoteNames = false,
@@ -82,6 +83,11 @@ class MultiPartCanvas extends StatefulWidget {
 
   /// Binds this page's element hit-regions for marquee / cross-part selection.
   final ElementRegionController? controller;
+
+  /// Reports a rubber-band rectangle in the same local coordinates as
+  /// [controller]. The overlay lives inside the scrollable page so the two
+  /// coordinate spaces stay aligned while the full score is scrolled.
+  final void Function(Rect rect)? onMarquee;
 
   /// An insertion caret drawn before its (global) `beforeElementId`.
   final EditorCaret? caret;
@@ -206,29 +212,39 @@ class _MultiPartCanvasState extends State<MultiPartCanvas> {
                 child: SizedBox(
                   width: widthSpaces * widget.staffSpace,
                   height: heightSpaces * widget.staffSpace,
-                  child: InteractiveMultiPartView(
-                    document: doc,
-                    metrics: geom.metrics,
-                    theme: theme,
-                    staffSpace: widget.staffSpace,
-                    // staffGap (4) / systemGap (10) match the view's own defaults;
-                    // the probe below mirrors them so heights agree.
-                    highlightedIds: widget.highlightedIds,
-                    suppressElementIds: widget.suppressElementIds,
-                    ghostPart: widget.ghostPart,
-                    ghostTarget: widget.ghostTarget,
-                    ghostDuration: widget.ghostDuration,
-                    onElementTap: widget.onElementTap,
-                    onStaffTap: widget.onStaffTap,
-                    onHover: widget.onHover,
-                    onElementDragStart: widget.onElementDragStart,
-                    onElementDragUpdate: widget.onElementDragUpdate,
-                    onElementDragEnd: widget.onElementDragEnd,
-                    controller: widget.controller,
-                    caret: widget.caret,
-                    showMeasureNumbers: widget.showMeasureNumbers,
-                    showNoteNames: widget.showNoteNames,
-                    noteNameStyle: widget.noteNameStyle,
+                  child: Stack(
+                    children: [
+                      InteractiveMultiPartView(
+                        document: doc,
+                        metrics: geom.metrics,
+                        theme: theme,
+                        staffSpace: widget.staffSpace,
+                        // staffGap (4) / systemGap (10) match the view's own defaults;
+                        // the probe below mirrors them so heights agree.
+                        highlightedIds: widget.highlightedIds,
+                        suppressElementIds: widget.suppressElementIds,
+                        ghostPart: widget.ghostPart,
+                        ghostTarget: widget.ghostTarget,
+                        ghostDuration: widget.ghostDuration,
+                        onElementTap: widget.onElementTap,
+                        onStaffTap: widget.onStaffTap,
+                        onHover: widget.onHover,
+                        onElementDragStart: widget.onElementDragStart,
+                        onElementDragUpdate: widget.onElementDragUpdate,
+                        onElementDragEnd: widget.onElementDragEnd,
+                        controller: widget.controller,
+                        caret: widget.caret,
+                        showMeasureNumbers: widget.showMeasureNumbers,
+                        showNoteNames: widget.showNoteNames,
+                        noteNameStyle: widget.noteNameStyle,
+                      ),
+                      if (widget.onMarquee != null)
+                        Positioned.fill(
+                          child: _CanvasMarqueeOverlay(
+                            onSelect: widget.onMarquee!,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -281,4 +297,75 @@ class _MultiPartCanvasState extends State<MultiPartCanvas> {
     // Add both margins; guard a minimum so an empty score still shows a staff.
     return (content + 2 * _margin).clamp(12.0, 100000.0).toDouble();
   }
+}
+
+class _CanvasMarqueeOverlay extends StatefulWidget {
+  const _CanvasMarqueeOverlay({required this.onSelect});
+
+  final ValueChanged<Rect> onSelect;
+
+  @override
+  State<_CanvasMarqueeOverlay> createState() => _CanvasMarqueeOverlayState();
+}
+
+class _CanvasMarqueeOverlayState extends State<_CanvasMarqueeOverlay> {
+  Offset? _start;
+  Offset? _current;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: (details) => setState(() {
+        _start = details.localPosition;
+        _current = details.localPosition;
+      }),
+      onPanUpdate: (details) =>
+          setState(() => _current = details.localPosition),
+      onPanEnd: (_) {
+        final start = _start;
+        final current = _current;
+        if (start != null && current != null) {
+          widget.onSelect(Rect.fromPoints(start, current));
+        }
+        setState(() {
+          _start = null;
+          _current = null;
+        });
+      },
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: _CanvasMarqueePainter(_start, _current, color),
+      ),
+    );
+  }
+}
+
+class _CanvasMarqueePainter extends CustomPainter {
+  _CanvasMarqueePainter(this.start, this.current, this.color);
+
+  final Offset? start;
+  final Offset? current;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final start = this.start;
+    final current = this.current;
+    if (start == null || current == null) return;
+    final rect = Rect.fromPoints(start, current);
+    canvas.drawRect(rect, Paint()..color = color.withValues(alpha: 0.12));
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CanvasMarqueePainter oldDelegate) =>
+      oldDelegate.start != start || oldDelegate.current != current;
 }

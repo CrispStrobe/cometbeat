@@ -15,6 +15,7 @@ import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
+import 'package:comet_beat/features/workshop/widgets/multi_part_canvas.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart'
@@ -1361,6 +1362,10 @@ void main() {
     await tester.tap(find.byIcon(Icons.highlight_alt)); // toggle marquee
     await tester.pump();
     expect(find.byType(InteractiveMultiPartView), findsOneWidget);
+    expect(
+      tester.widget<MultiPartCanvas>(find.byType(MultiPartCanvas)).onMarquee,
+      isNotNull,
+    );
     expect(tester.takeException(), isNull);
   });
 

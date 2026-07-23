@@ -9,7 +9,7 @@ This file tracks **what is pending and planned**. What's already built and live
 is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
-- **codex (score-editor-web)** · 🚧 **ACTIVE — Score Workshop web/mobile usability baseline.** Fix visible bar numbers and octave-qualified note names, marquee selection hit-testing, narrow-width toolbar reachability, and unclear Insert/voice controls; remove Advanced Tracker from the Score Workshop menu. Follow with import/export, metadata, lyrics, analysis, and Sound Library web fixes listed below. — codex
+- **codex (score-editor-web)** · 🚧 **ACTIVE — Score Workshop web/mobile usability baseline.** Octave-qualified note names, narrow-width toolbar reachability, and the remaining import/export, metadata, lyrics, analysis, and Sound Library web fixes are still open. Marquee selection now stays aligned in the scrollable multi-part canvas; Advanced Tracker has been removed from the Score Workshop menu. — codex
 - **codex (score-editor-web)** · 📋 **BACKLOG — Score Workshop and web parity gaps.**
   - Score rendering: bar-number setting has no visible result; note names must include octave (for example `F2`) and remain legible at compact sizes.
   - Responsive layout: upper action/settings rows must scroll or reflow at narrow widths; every control must remain reachable on web/mobile.

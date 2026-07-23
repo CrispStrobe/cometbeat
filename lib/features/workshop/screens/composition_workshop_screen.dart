@@ -31,7 +31,6 @@ import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
-import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_gp_plan.dart'
     show gpFretPlanFor;
@@ -3523,12 +3522,6 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       _showExportSheet();
                     case 'clear':
                       setState(_doc.clearAll);
-                    case 'tracker':
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const AdvancedTrackerScreen(),
-                        ),
-                      );
                     case 'daw':
                       sendToDaw();
                     case 'loadTune':
@@ -3602,14 +3595,6 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     child: Text(l10n.workshopSplitNotes),
                   ),
                   const PopupMenuDivider(),
-                  // Open the Advanced Tracker (classic pattern sequencer) — a
-                  // grid-based alternative composing surface to the staff editor.
-                  _menuItem(
-                    'tracker',
-                    Icons.grid_view,
-                    l10n.trackerOpenAdvanced,
-                    true,
-                  ),
                   _menuItem(
                     'daw',
                     Icons.library_add,
@@ -3724,17 +3709,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                       onElementDragUpdate: _onMpDragUpdate,
                                       onElementDragEnd: _onMpDragEnd,
                                       controller: _regions,
+                                      onMarquee:
+                                          _marquee ? _applyMpMarquee : null,
                                       caret: _mpCaret,
                                       showMeasureNumbers: _barNumbers,
                                       showNoteNames: _noteNames,
                                       noteNameStyle: _noteNameStyle,
                                     ),
-                                    if (_marquee)
-                                      Positioned.fill(
-                                        child: _MarqueeOverlay(
-                                          onSelect: _applyMpMarquee,
-                                        ),
-                                      ),
                                     if (_inspect && _hoverInfo != null)
                                       _hoverInspectCard(),
                                   ],
