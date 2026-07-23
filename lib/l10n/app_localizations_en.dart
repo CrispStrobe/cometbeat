@@ -1693,6 +1693,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawAddFromLibrary => 'From Sound Library';
 
   @override
+  String get dawImportAudioFile => 'Import audio file';
+
+  @override
   String get dawAddFx => 'Generate FX (Sound Lab)';
 
   @override

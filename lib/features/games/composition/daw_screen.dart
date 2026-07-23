@@ -10,7 +10,7 @@
 // clips are drawn at their render duration and dragged along the lane to
 // reposition in time (with optional grid-snapping); per-track mute; tap a clip
 // for its inspector (volume + fades, freeze, remove), ✕ to remove; Merge-all,
-// undo/redo, and WAV/MP3 export.
+// undo/redo, project save/load, direct audio import, and WAV/MP3 export.
 
 import 'dart:convert';
 import 'dart:math' as math;
@@ -35,6 +35,8 @@ import 'package:comet_beat/features/sound_lab/sample_extractor_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
+import 'package:comet_beat/shared/music_io/audio_import.dart'
+    show importAudioMono, kAudioImportExtensions;
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
@@ -425,6 +427,48 @@ class _DawScreenState extends State<DawScreen>
     );
     if (clip == null || clip.pcm.isEmpty || !mounted) return;
     addSampleClip(clip);
+  }
+
+  Future<void> _importAudioFile() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final file = await openFile(
+        acceptedTypeGroups: [
+          XTypeGroup(
+            label: l10n.dawImportAudioFile,
+            extensions: kAudioImportExtensions,
+          ),
+        ],
+      );
+      if (file == null || !mounted) return;
+      final imported = importAudioMono(await file.readAsBytes());
+      if (imported == null) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.mySamplesImportFailed)),
+        );
+        return;
+      }
+      addSampleClip(
+        SampleClip(
+          name: _clipNameFromFile(file),
+          sampleRate: imported.sampleRate,
+          pcm: imported.pcm,
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.mySamplesImportFailed)),
+      );
+    }
+  }
+
+  String _clipNameFromFile(XFile file) {
+    final raw = file.name.isNotEmpty
+        ? file.name
+        : file.path.split(RegExp(r'[/\\]')).last;
+    final dot = raw.lastIndexOf('.');
+    return dot > 0 ? raw.substring(0, dot) : raw;
   }
 
   /// The Sample Extractor lifts many samples into the shared library at once, so
@@ -1403,6 +1447,11 @@ class _DawScreenState extends State<DawScreen>
                         child: Text(l10n.dawAddFromLibrary),
                       ),
                       MenuItemButton(
+                        leadingIcon: const Icon(Icons.file_upload_outlined),
+                        onPressed: _importAudioFile,
+                        child: Text(l10n.dawImportAudioFile),
+                      ),
+                      MenuItemButton(
                         leadingIcon: const Icon(Icons.colorize),
                         onPressed: _addFromExtractor,
                         child: Text(l10n.dawExtractSample),
@@ -1735,23 +1784,25 @@ class _DawScreenState extends State<DawScreen>
                   padding: const EdgeInsets.only(left: 6),
                   child: Row(
                     children: [
-                      if (frozen)
+                      if (frozen && widthPx >= 48)
                         Padding(
                           padding: const EdgeInsets.only(right: 2),
                           child: Icon(Icons.lock, size: 14, color: fg),
                         ),
-                      Expanded(
-                        child: Text(
-                          _clipKind(clip),
-                          overflow: TextOverflow.clip,
-                          softWrap: false,
-                          style: TextStyle(color: fg),
+                      if (widthPx >= 36)
+                        Expanded(
+                          child: Text(
+                            _clipKind(clip),
+                            overflow: TextOverflow.clip,
+                            softWrap: false,
+                            style: TextStyle(color: fg),
+                          ),
                         ),
-                      ),
-                      InkWell(
-                        onTap: () => removeClip(i, j),
-                        child: Icon(Icons.close, size: 16, color: fg),
-                      ),
+                      if (widthPx >= 48)
+                        InkWell(
+                          onTap: () => removeClip(i, j),
+                          child: Icon(Icons.close, size: 16, color: fg),
+                        ),
                     ],
                   ),
                 ),

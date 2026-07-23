@@ -3194,6 +3194,12 @@ abstract class AppLocalizations {
   /// **'From Sound Library'**
   String get dawAddFromLibrary;
 
+  /// No description provided for @dawImportAudioFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Import audio file'**
+  String get dawImportAudioFile;
+
   /// No description provided for @dawAddFx.
   ///
   /// In en, this message translates to:

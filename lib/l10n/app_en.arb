@@ -661,6 +661,7 @@
   "dawAddClip": "Add clip",
   "dawAddToTimeline": "Add to timeline",
   "dawAddFromLibrary": "From Sound Library",
+  "dawImportAudioFile": "Import audio file",
   "dawAddFx": "Generate FX (Sound Lab)",
   "dawAddVoice": "Shape a voice (Voice Lab)",
   "dawExtractSample": "Extract from module / pack",

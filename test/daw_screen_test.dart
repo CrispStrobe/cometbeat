@@ -9,8 +9,11 @@ import 'package:comet_beat/core/audio/daw_timeline.dart' show kDawSampleRate;
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
+import 'package:comet_beat/shared/music_io/audio_export.dart';
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,6 +27,26 @@ Future<void> _pumpDaw(WidgetTester tester) => pumpGame(
       const DawScreen(),
       extraProviders: [ChangeNotifierProvider(create: (_) => DawService())],
     );
+
+class _FakeFileSelector extends FileSelectorPlatform
+    with MockPlatformInterfaceMixin {
+  _FakeFileSelector(this._file);
+
+  final XFile? _file;
+
+  @override
+  Future<XFile?> openFile({
+    List<XTypeGroup>? acceptedTypeGroups,
+    String? initialDirectory,
+    String? confirmButtonText,
+  }) async =>
+      _file;
+}
+
+Float64List _tone(int n) => Float64List.fromList([
+      for (var i = 0; i < n; i++)
+        0.4 * math.sin(2 * math.pi * 220 * i / kDawSampleRate),
+    ]);
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -133,6 +156,22 @@ void main() {
     daw.addDemoBeat();
     await tester.pump();
     expect(daw.canExport, isTrue);
+  });
+
+  testWidgets('Add clip can import an audio file directly', (tester) async {
+    FileSelectorPlatform.instance = _FakeFileSelector(
+      XFile.fromData(pcmFloatToWav(_tone(4410)), name: 'Direct Loop.wav'),
+    );
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+
+    await tester.tap(find.text('Add clip'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import audio file'));
+    await tester.pumpAndSettle();
+
+    expect(daw.clipCount, 1);
+    expect(daw.debugBakeLength(), 4410);
   });
 
   testWidgets('tapping a clip opens the inspector; gain slider changes gain',

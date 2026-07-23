@@ -588,6 +588,7 @@
   "dawAddClip": "Clip hinzufügen",
   "dawAddToTimeline": "Zur Timeline hinzufügen",
   "dawAddFromLibrary": "Aus der Klangbibliothek",
+  "dawImportAudioFile": "Audiodatei importieren",
   "dawAddFx": "FX erzeugen (Sound Lab)",
   "dawAddVoice": "Stimme formen (Voice Lab)",
   "dawExtractSample": "Aus Modul / Paket extrahieren",
