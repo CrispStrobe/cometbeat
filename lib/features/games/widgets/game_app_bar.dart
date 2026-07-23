@@ -43,9 +43,22 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
       // the app-bar row on a narrow phone (e.g. the Tracker on an iPhone SE).
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       actions: [
-        ...actions,
-        const SoundToggle(),
-        if (tutorial != null) TutorialButton(builder: tutorial!),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...actions,
+                const SoundToggle(),
+                if (tutorial != null) TutorialButton(builder: tutorial!),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
