@@ -4,11 +4,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/sf2/flac_glint_ffi.dart';
 import 'package:comet_beat/core/audio/sf2/sfz.dart';
 import 'package:comet_beat/core/audio/sf2/soundfont_loader.dart'
     show soundFontInstrument;
 import 'package:comet_beat/features/library/content_source.dart' show HttpGet;
 import 'package:comet_beat/features/library/instrument_installer_types.dart';
+import 'package:comet_beat/shared/music_io/audio_export.dart'
+    show pcmFloatToWav;
 
 bool get instrumentInstallSupported => true;
 
@@ -31,8 +34,10 @@ String _dirOf(String url) {
 }
 
 /// Downloads [sfzUrl] and its whole sample tree, caches them under
-/// `instruments/<id>/`, and loads a playable voice. Returns null on web, if the
-/// SFZ has no samples, or if nothing decodes (e.g. an all-FLAC instrument).
+/// `instruments/<id>/`, and loads a playable voice. WAV and (via the native
+/// glint decoder) FLAC samples are supported. Returns null on web, if the SFZ
+/// has no samples, or if nothing decodes (e.g. an all-FLAC instrument on a
+/// platform where the glint FLAC decoder isn't available).
 Future<InstalledInstrument?> installSfzInstrument({
   required String sfzUrl,
   required String name,
@@ -81,10 +86,26 @@ Future<InstalledInstrument?> installSfzInstrument({
     onProgress?.call(done, wanted.length);
   }
 
-  // Pass 2: load for real, reading samples from the cache.
+  // Pass 2: load for real, reading samples from the cache. FLAC samples (VCSL,
+  // VSCO2, …) are decoded to WAV on the fly via the native glint decoder, so
+  // loadSfz — which parses WAV — can build a voice from them. If glint isn't
+  // available (e.g. tests / a platform without the plugin) FLAC regions are
+  // simply skipped, same as any unresolved sample.
+  final FlacDecode? flac = loadGlintFlac();
   Uint8List? readCached(String p) {
     final f = File('$dir/$p');
-    return f.existsSync() ? f.readAsBytesSync() : null;
+    if (!f.existsSync()) return null;
+    final bytes = f.readAsBytesSync();
+    if (flac != null && p.toLowerCase().endsWith('.flac')) {
+      final pcm = flac(bytes);
+      if (pcm == null) return null;
+      return pcmFloatToWav(
+        pcm.left,
+        sampleRate: pcm.sampleRate,
+        right: pcm.right,
+      );
+    }
+    return bytes;
   }
 
   try {

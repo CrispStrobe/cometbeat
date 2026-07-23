@@ -238,6 +238,16 @@ void* glint_vorbis_decode_ex(const uint8_t* ogg, int len, int out_rate,
                              int want_int16, int* out_sr, int* out_ch,
                              int* out_frames);
 
+// Decode a complete native FLAC stream ("fLaC" marker + metadata + frames) to
+// a malloc'd buffer of out_frames*out_ch interleaved floats (+-1.0) — free with
+// glint_free. NULL on error / not a FLAC stream. _ex adds an optional output
+// rate (0 = native) and an int16 output option (buffer is int16_t* then).
+float* glint_flac_decode(const uint8_t* flac, int len, int* out_sr,
+                         int* out_ch, int* out_frames);
+void* glint_flac_decode_ex(const uint8_t* flac, int len, int out_rate,
+                           int want_int16, int* out_sr, int* out_ch,
+                           int* out_frames);
+
 glint_mp3_dec_t glint_mp3_dec_create(void);
 // Decode ONE frame at data[0]. pcm must hold samples*channels floats
 // (1152*2 is always enough for MP3, 1024*2 for AAC). Returns samples per

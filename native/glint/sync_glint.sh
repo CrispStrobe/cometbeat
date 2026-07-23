@@ -10,11 +10,13 @@ if [ ! -d "$GLINT/src" ]; then echo "glint repo not found at $GLINT (set GLINT_D
 
 # .cpp compiled into the app (glint_free's real def is entangled with the AAC/MP3
 # decoder, so we ship a 2-line shim instead — see glint_free_shim.cpp).
-for f in vorbis_c_api.cpp vorbis_decoder.cpp opus_ogg.cpp resample.cpp; do
+# flac_c_api.cpp is OUR minimal wrapper (mirrors vorbis_c_api.cpp) — it is NOT
+# vendored from glint, so it is intentionally absent from this copy list.
+for f in vorbis_c_api.cpp vorbis_decoder.cpp opus_ogg.cpp resample.cpp flac_decoder.cpp; do
   cp "$GLINT/src/$f" "$DST/$f"
 done
 # headers reached src-relative (#include "vorbis_decoder.hpp") + the public ABI.
-for h in vorbis_decoder.hpp vorbis_bits.hpp vorbis_imdct.hpp vorbis_ogg.hpp opus_ogg.hpp resample.hpp; do
+for h in vorbis_decoder.hpp vorbis_bits.hpp vorbis_imdct.hpp vorbis_ogg.hpp opus_ogg.hpp resample.hpp flac_decoder.hpp; do
   cp "$GLINT/src/$h" "$DST/$h"
 done
 cp "$GLINT/include/glint/glint.h" "$DST/glint/glint.h"

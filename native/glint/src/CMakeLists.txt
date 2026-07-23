@@ -14,9 +14,11 @@ add_library(glint_vorbis SHARED
   vorbis_decoder.cpp
   opus_ogg.cpp
   resample.cpp
+  flac_c_api.cpp
+  flac_decoder.cpp
   glint_free_shim.cpp
 )
-# "vorbis_decoder.hpp" and "glint/glint.h" both resolve from src/.
+# "vorbis_decoder.hpp"/"flac_decoder.hpp" and "glint/glint.h" resolve from src/.
 target_include_directories(glint_vorbis PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(glint_vorbis PROPERTIES OUTPUT_NAME "glint_vorbis")
 target_compile_definitions(glint_vorbis PUBLIC DART_SHARED_LIB)
