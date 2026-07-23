@@ -53,7 +53,8 @@ List<Score> _loadParts(String path, String? from) {
 /// explicit voicing; Rest → {}. Returns null if the part isn't a standard-tuning
 /// 6-string guitar with enough voiced, in-range notes (skip bass / weird tunings).
 ({List<List<int>> columns, List<List<List<int>>> human})? _extract(
-    Score score,) {
+  Score score,
+) {
   final tuning = Tuning.standardGuitar;
   final voiced = {for (final v in score.tabVoicings) v.noteId: v.strings};
   final columns = <List<int>>[];
@@ -79,7 +80,8 @@ List<Score> _loadParts(String path, String? from) {
       }
       if (placed.isEmpty) continue; // skip unvoiced / out-of-range columns
       columns.add(
-          [for (final p in placed) tuning.strings[p[0]].midiNumber + p[1]],);
+        [for (final p in placed) tuning.strings[p[0]].midiNumber + p[1]],
+      );
       human.add(placed);
     }
   }
