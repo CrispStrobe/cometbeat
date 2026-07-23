@@ -102,6 +102,31 @@ void main() {
     expect(sample.declaredLicense, 'CC0 1.0');
   });
 
+  test('a scores source fetches ONLY the score shard (not the sound kinds)',
+      () async {
+    const indexWithScore =
+        '{"version":"t","baseUrl":"https://h/","count":2,"shards":['
+        '{"kind":"soundfont","count":1,"url":"catalog/soundfont.json"},'
+        '{"kind":"score","count":1,"url":"catalog/score.json"}'
+        '],"full":"catalog.json"}';
+    const scoreShard = '{"version":"t","baseUrl":"https://h/","kind":"score",'
+        '"items":[{"id":"g1","name":"Kyrie","kind":"score","format":"gabc",'
+        '"license":"CC0 1.0","attribution":"GregoBase",'
+        '"path":"gregobase/kyrie.gabc","bytes":42}]}';
+    final scored = CometbeatCatalogSource(
+      _fakeHttp({
+        indexUrl: indexWithScore,
+        'https://h/catalog/score.json': scoreShard,
+      }),
+      kinds: const {'score'}, // what scores() targets
+      indexUrl: indexUrl,
+    );
+    final items = await scored.browse();
+    expect(items, hasLength(1)); // the soundfont shard is NOT fetched
+    expect(items.single.title, 'Kyrie');
+    expect(items.single.format, 'gabc');
+  });
+
   test('a modules source fetches only the module shard', () async {
     final src = CometbeatCatalogSource(
       _fakeHttp({

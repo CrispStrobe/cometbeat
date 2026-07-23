@@ -38,6 +38,10 @@ Future<Uint8List> defaultHttpGet(Uri url) async {
 /// Builds the list of connected sources, using [http] for all I/O (defaults to
 /// the real network; tests pass a fake).
 List<ContentSource> buildSources({HttpGet http = defaultHttpGet}) => [
+      // Our own curated, rights-clean symbolic corpus first — the ~37k-score HF
+      // catalog (NIFC / PDMX / Mutopia / OpenScore Lieder & Quartets / OpenEWLD /
+      // GregoBase / …), everything already licence-verified in one lane.
+      CometbeatCatalogSource.scores(http),
       OpenScoreSource.lieder(http),
       OpenScoreSource.stringQuartets(http),
       CommonsSource(http),

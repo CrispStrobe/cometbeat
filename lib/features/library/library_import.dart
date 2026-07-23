@@ -15,8 +15,12 @@ import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
         StaffSystem,
+        multiPartScoreFromAbc,
+        multiPartScoreFromGpif,
+        multiPartScoreFromKern,
         multiPartScoreFromMscx,
         multiPartToMusicXml,
+        readGpifFromGp,
         readMusicXmlFromMxl,
         scoreFromGabc,
         scoreFromMusicXml;
@@ -32,6 +36,14 @@ String bytesToMusicXml(String format, Uint8List bytes) => switch (format) {
       'musicxml' || 'xml' => utf8.decode(bytes),
       'mscx' => multiPartToMusicXml(multiPartScoreFromMscx(utf8.decode(bytes))),
       'midi' || 'mid' => multiPartToMusicXml(multiTrackMidiToMultiPart(bytes)),
+      // Humdrum **kern (e.g. the NIFC / KernScores corpus): multi-spine → parts.
+      'krn' ||
+      'kern' =>
+        multiPartToMusicXml(multiPartScoreFromKern(utf8.decode(bytes))),
+      // ABC (tunebooks) and Guitar Pro (.gp) — both multi-part readers.
+      'abc' => multiPartToMusicXml(multiPartScoreFromAbc(utf8.decode(bytes))),
+      'gp' =>
+        multiPartToMusicXml(multiPartScoreFromGpif(readGpifFromGp(bytes))),
       // GABC (Gregorio chant, e.g. the CC0 GregoBase corpus): single staff.
       'gabc' => multiPartToMusicXml(
           MultiPartScore.fromStaffSystem(

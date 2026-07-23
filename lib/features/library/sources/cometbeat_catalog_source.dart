@@ -46,11 +46,19 @@ class CometbeatCatalogSource implements ContentSource {
   factory CometbeatCatalogSource.modules(HttpGet http) =>
       CometbeatCatalogSource(http, kinds: const {'module'});
 
-  /// Every kind — the capable browser filters client-side by kind chip.
+  /// Every playable-asset kind — the capable browser filters client-side by
+  /// kind chip. (Not scores — those are their own library-browser lane.)
   factory CometbeatCatalogSource.all(HttpGet http) => CometbeatCatalogSource(
         http,
         kinds: const {'soundfont', 'instrument', 'sample', 'module'},
       );
+
+  /// Our curated symbolic SCORE corpus (GregoBase / NIFC / PDMX / Mutopia /
+  /// Lieder / …) — browsed + imported by the Song Book's library browser, kept
+  /// separate from the sound-library kinds so a sounds browse never fetches the
+  /// (large) score shard.
+  factory CometbeatCatalogSource.scores(HttpGet http) =>
+      CometbeatCatalogSource(http, kinds: const {'score'});
 
   final HttpGet _http;
   final Set<String> kinds;
