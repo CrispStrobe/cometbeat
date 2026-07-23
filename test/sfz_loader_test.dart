@@ -10,6 +10,8 @@ import 'package:comet_beat/core/audio/midi_render.dart';
 import 'package:comet_beat/core/audio/sf2/sfz.dart';
 import 'package:comet_beat/core/audio/sf2/soundfont_loader.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
+import 'package:comet_beat/shared/music_io/audio_export.dart'
+    show pcmFloatToMp3;
 import 'package:flutter_test/flutter_test.dart';
 
 /// A little 44.1 kHz mono sine WAV to stand in for a real sample.
@@ -19,6 +21,14 @@ Uint8List _sineWav(double hz, int frames, {int rate = 44100}) {
     s[i] = (16000 * math.sin(2 * math.pi * hz * i / rate)).round();
   }
   return wavBytes(s, sampleRate: rate);
+}
+
+Float64List _sinePcm(double hz, int frames, {int rate = 44100}) {
+  final s = Float64List(frames);
+  for (var i = 0; i < frames; i++) {
+    s[i] = 0.5 * math.sin(2 * math.pi * hz * i / rate);
+  }
+  return s;
 }
 
 void main() {
@@ -144,6 +154,37 @@ void main() {
     final loaded = loadSfz(sfz, readSample: reader);
     expect(loaded.presets.single.zones, hasLength(2));
     expect(loaded.font.samples, hasLength(1)); // deduped
+  });
+
+  test('MP3-backed regions decode through the core audio decoders', () {
+    final mp3 = pcmFloatToMp3(_sinePcm(330, 4608));
+    Uint8List? mp3Reader(String p) => p == 'samples/note.mp3' ? mp3 : null;
+
+    const sfz = '<region> sample=samples/note.mp3 key=60';
+    final loaded = loadSfz(sfz, readSample: mp3Reader);
+    final sample = loaded.font.samples.single;
+
+    expect(loaded.presets.single.zones, hasLength(1));
+    expect(sample.name, 'samples/note.mp3');
+    expect(sample.sampleRate, 44100);
+    expect(sample.pcm, isNotEmpty);
+  });
+
+  test('unsupported sample codecs warn and skip the region', () {
+    Uint8List? badReader(String p) =>
+        p == 'samples/note.flac' ? Uint8List.fromList('fLaC'.codeUnits) : null;
+    final warnings = <String>[];
+
+    expect(
+      () => loadSfz(
+        '<region> sample=samples/note.flac key=60',
+        readSample: badReader,
+        onWarn: warnings.add,
+      ),
+      throwsA(isA<SoundFontLoadException>()),
+    );
+    expect(warnings.single, contains('unsupported audio sample'));
+    expect(warnings.single, contains('note.flac'));
   });
 
   test('no regions → a clear load exception', () {

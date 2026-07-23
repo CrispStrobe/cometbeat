@@ -3,9 +3,9 @@
 // `midi_render.dart` already plays. An `.sfz` file is a little text document of
 // `<global>` / `<group>` / `<region>` headers, each carrying `opcode=value`
 // pairs (inherited global → group → region), plus a `<control>` `default_path`.
-// Every `<region>` names a `sample=` (a WAV on disk) and a key/velocity window;
-// we load each referenced WAV once (via the [SfzSampleReader] seam so this file
-// stays Flutter-free and unit-testable), translate its opcodes to SF2 generators
+// Every `<region>` names a `sample=` and a key/velocity window; we load each
+// referenced audio file once (via the [SfzSampleReader] seam so this file stays
+// Flutter-free and unit-testable), translate its opcodes to SF2 generators
 // (key/vel range, root key, tune, volume, pan, DAHDSR, low-pass, loop mode), and
 // hand back a browsable [LoadedSoundFont] — so the CLI and synth need no new
 // playback path. Unknown opcodes are ignored; a region whose sample can't be
@@ -14,6 +14,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mp3/mp3_decoder.dart';
 import 'package:comet_beat/core/audio/sf2/sf2.dart';
 import 'package:comet_beat/core/audio/sf2/soundfont_loader.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
@@ -28,8 +29,9 @@ typedef SfzSampleReader = Uint8List? Function(String samplePath);
 double _log2(double x) => log(x) / ln2;
 
 /// Parse SFZ [text] into a [LoadedSoundFont]. [readSample] resolves each region's
-/// `sample=` (with `default_path` already prepended) to WAV bytes. [name] labels
-/// the single preset produced. [onWarn] receives a line for each skipped region.
+/// `sample=` (with `default_path` already prepended) to audio bytes. [name]
+/// labels the single preset produced. [onWarn] receives a line for each skipped
+/// region.
 /// Throws [SoundFontLoadException] if no region yields a playable sample.
 LoadedSoundFont loadSfz(
   String text, {
@@ -42,7 +44,7 @@ LoadedSoundFont loadSfz(
     throw SoundFontLoadException('No <region> blocks found in this .sfz file.');
   }
 
-  // Decode each distinct WAV once; a zone references its sample by shdr index.
+  // Decode each distinct audio file once; a zone references its sample by shdr.
   final samples = <Sf2Sample?>[];
   final byKey = <String, int>{}; // "path|loopStart|loopEnd" → shdr index
   final pcmCache = <String, (Float64List, int)>{}; // path → (mono pcm, rate)
@@ -62,10 +64,14 @@ LoadedSoundFont loadSfz(
         continue;
       }
       try {
-        final wav = readWavPcm16(bytes);
-        decoded = (wavToMonoFloat(wav), wav.sampleRate);
+        final decodedSample = _decodeSampleAudio(bytes);
+        if (decodedSample == null) {
+          onWarn?.call('skipped region: unsupported audio sample: $path');
+          continue;
+        }
+        decoded = (decodedSample.$1, decodedSample.$2);
       } on FormatException catch (e) {
-        onWarn?.call('skipped region: bad WAV $path (${e.message})');
+        onWarn?.call('skipped region: bad audio $path (${e.message})');
         continue;
       }
       pcmCache[path] = decoded;
@@ -113,6 +119,56 @@ LoadedSoundFont loadSfz(
   final preset = Sf2Preset(name: name, bank: 0, program: 0, zones: playable);
   final font = Sf2SoundFont(samples, [preset]);
   return LoadedSoundFont(font, compressed: false);
+}
+
+(Float64List, int)? _decodeSampleAudio(Uint8List bytes) {
+  if (_isWav(bytes)) {
+    final wav = readWavPcm16(bytes);
+    return (wavToMonoFloat(wav), wav.sampleRate > 0 ? wav.sampleRate : 44100);
+  }
+  if (_isMp3(bytes)) {
+    final decoded = mp3Decode(bytes);
+    return (
+      _deinterleaveMono(decoded.samples, decoded.channels),
+      decoded.sampleRate > 0 ? decoded.sampleRate : 44100,
+    );
+  }
+  return null;
+}
+
+bool _isWav(Uint8List b) =>
+    b.length >= 12 &&
+    b[0] == 0x52 &&
+    b[1] == 0x49 &&
+    b[2] == 0x46 &&
+    b[3] == 0x46 &&
+    b[8] == 0x57 &&
+    b[9] == 0x41 &&
+    b[10] == 0x56 &&
+    b[11] == 0x45;
+
+bool _isMp3(Uint8List b) {
+  if (b.length < 3) return false;
+  if (b[0] == 0x49 && b[1] == 0x44 && b[2] == 0x33) return true;
+  final end = b.length - 1 < 4096 ? b.length - 1 : 4096;
+  for (var i = 0; i < end; i++) {
+    if (b[i] == 0xFF && (b[i + 1] & 0xE0) == 0xE0) return true;
+  }
+  return false;
+}
+
+Float64List _deinterleaveMono(Float64List samples, int channels) {
+  if (channels <= 1) return samples;
+  final frames = samples.length ~/ channels;
+  final out = Float64List(frames);
+  for (var f = 0; f < frames; f++) {
+    var sum = 0.0;
+    for (var c = 0; c < channels; c++) {
+      sum += samples[f * channels + c];
+    }
+    out[f] = sum / channels;
+  }
+  return out;
 }
 
 /// Translate one region's opcode map to an [Sf2Zone] over sample [shdr].
