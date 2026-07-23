@@ -330,6 +330,32 @@ void main() {
     expect(find.textContaining('Mix'), findsOneWidget);
   });
 
+  testWidgets('voice shape FX exposes adjustable shaping sliders',
+      (tester) async {
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+
+    await tester.tap(find.text('Master FX'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Voice Shape').last);
+    await tester.pumpAndSettle();
+
+    expect(service.masterEffects().single.type, DawClipEffectType.voiceShape);
+    await tester.tap(find.text('Voice Shape'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Formant'), findsOneWidget);
+    expect(find.textContaining('Robot Hz'), findsOneWidget);
+    expect(find.textContaining('Robot Mix'), findsOneWidget);
+    expect(find.textContaining('Grit'), findsOneWidget);
+    expect(find.textContaining('Radio Mix'), findsOneWidget);
+    expect(find.textContaining('Mix'), findsWidgets);
+  });
+
   testWidgets('bus dialog routes selected tracks and edits bus FX',
       (tester) async {
     await _pumpDaw(tester);

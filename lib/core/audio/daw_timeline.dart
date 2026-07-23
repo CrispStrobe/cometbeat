@@ -27,7 +27,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
 import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart' show ringModFx;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
-    show VoiceEffect, applyVoiceEffect;
+    show VoiceEffect, applyVoiceEffect, voiceShapeFx;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 
@@ -154,6 +154,7 @@ enum DawClipEffectType {
   highpass,
   compressor,
   gate,
+  voiceShape,
   voiceChipmunk,
   voiceDeep,
   voiceRobot,
@@ -219,6 +220,19 @@ DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
       DawClipEffectType.gate => const DawClipEffect(
           type: DawClipEffectType.gate,
           params: {'thresholdDb': -40, 'ratio': 4, 'rangeDb': -60, 'mix': 1},
+        ),
+      DawClipEffectType.voiceShape => const DawClipEffect(
+          type: DawClipEffectType.voiceShape,
+          params: {
+            'formant': 0,
+            'carrierHz': 80,
+            'carrierMix': 0,
+            'grit': 0,
+            'radioLowHz': 300,
+            'radioHighHz': 3200,
+            'radioMix': 0,
+            'mix': 1,
+          },
         ),
       DawClipEffectType.voiceChipmunk => const DawClipEffect(
           type: DawClipEffectType.voiceChipmunk,
@@ -613,6 +627,18 @@ Float64List _applyClipEffect(
         thresholdDb: p('thresholdDb', -40),
         ratio: p('ratio', 4),
         rangeDb: p('rangeDb', -60),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.voiceShape => voiceShapeFx(
+        input,
+        sampleRate: sampleRate,
+        formant: p('formant', 0),
+        carrierHz: p('carrierHz', 80),
+        carrierMix: p('carrierMix', 0),
+        grit: p('grit', 0),
+        radioLowHz: p('radioLowHz', 300),
+        radioHighHz: p('radioHighHz', 3200),
+        radioMix: p('radioMix', 0),
         mix: p('mix', 1),
       ),
     DawClipEffectType.voiceChipmunk => _blendWetDry(

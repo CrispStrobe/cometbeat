@@ -1587,6 +1587,7 @@ class _DawScreenState extends State<DawScreen>
     DawClipEffectType.highpass,
     DawClipEffectType.compressor,
     DawClipEffectType.gate,
+    DawClipEffectType.voiceShape,
     DawClipEffectType.voiceChipmunk,
     DawClipEffectType.voiceDeep,
     DawClipEffectType.voiceRobot,
@@ -1605,6 +1606,7 @@ class _DawScreenState extends State<DawScreen>
         DawClipEffectType.highpass => 'High Pass',
         DawClipEffectType.compressor => 'Compressor',
         DawClipEffectType.gate => 'Noise Gate',
+        DawClipEffectType.voiceShape => 'Voice Shape',
         DawClipEffectType.voiceChipmunk => 'Voice: Chipmunk',
         DawClipEffectType.voiceDeep => 'Voice: Deep',
         DawClipEffectType.voiceRobot => 'Voice: Robot',
@@ -1730,6 +1732,52 @@ class _DawScreenState extends State<DawScreen>
                 ),
                 (key: 'ratio', label: 'Ratio', min: 1, max: 20, step: 0.5),
                 (key: 'rangeDb', label: 'Range dB', min: -80, max: 0, step: 1),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.voiceShape => const [
+                (
+                  key: 'formant',
+                  label: 'Formant',
+                  min: -0.8,
+                  max: 0.8,
+                  step: 0.01
+                ),
+                (
+                  key: 'carrierHz',
+                  label: 'Robot Hz',
+                  min: 1,
+                  max: 600,
+                  step: 1
+                ),
+                (
+                  key: 'carrierMix',
+                  label: 'Robot Mix',
+                  min: 0,
+                  max: 1,
+                  step: 0.01
+                ),
+                (key: 'grit', label: 'Grit', min: 0, max: 1, step: 0.01),
+                (
+                  key: 'radioLowHz',
+                  label: 'Low Hz',
+                  min: 20,
+                  max: 3000,
+                  step: 10
+                ),
+                (
+                  key: 'radioHighHz',
+                  label: 'High Hz',
+                  min: 1000,
+                  max: 12000,
+                  step: 10
+                ),
+                (
+                  key: 'radioMix',
+                  label: 'Radio Mix',
+                  min: 0,
+                  max: 1,
+                  step: 0.01
+                ),
                 (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
               ],
             DawClipEffectType.voiceChipmunk ||

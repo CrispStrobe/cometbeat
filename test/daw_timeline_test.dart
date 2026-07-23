@@ -333,6 +333,48 @@ void main() {
     expect(wet, isNot(equals(dry)));
   });
 
+  test('adjustable voice shape FX exposes real shaping parameters', () {
+    final dry = _sine(4410);
+    final bypassed = applyClipEffectChain(
+      dry,
+      [
+        defaultDawClipEffect(DawClipEffectType.voiceShape).copyWith(
+          params: {
+            'formant': 0.4,
+            'carrierHz': 90,
+            'carrierMix': 0.5,
+            'grit': 0.3,
+            'radioMix': 0.4,
+            'mix': 0,
+          },
+        ),
+      ],
+      44100,
+    );
+    final shaped = applyClipEffectChain(
+      dry,
+      [
+        defaultDawClipEffect(DawClipEffectType.voiceShape).copyWith(
+          params: {
+            'formant': -0.4,
+            'carrierHz': 90,
+            'carrierMix': 0.5,
+            'grit': 0.3,
+            'radioLowHz': 400,
+            'radioHighHz': 2400,
+            'radioMix': 0.4,
+            'mix': 1,
+          },
+        ),
+      ],
+      44100,
+    );
+
+    expect(bypassed, equals(dry));
+    expect(shaped.length, dry.length);
+    expect(shaped, isNot(equals(dry)));
+  });
+
   test('master FX process the full mix before limiting', () {
     final src = _ToneSource(0.4, 100);
     final dryTimeline = DawTimeline(

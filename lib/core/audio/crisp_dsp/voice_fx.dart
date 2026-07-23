@@ -108,6 +108,51 @@ Float64List applyVoiceEffect(
   }
 }
 
+/// Adjustable voice-shaping module for DAW effect chains. It combines the
+/// building blocks behind the preset voices into one same-length processor.
+Float64List voiceShapeFx(
+  Float64List sample, {
+  double formant = 0,
+  double carrierHz = 80,
+  double carrierMix = 0,
+  double grit = 0,
+  double radioLowHz = 300,
+  double radioHighHz = 3200,
+  double radioMix = 0,
+  double mix = 1,
+  int sampleRate = kSampleRate,
+}) {
+  var wet = Float64List.fromList(sample);
+  final f = formant.clamp(-0.8, 0.8).toDouble();
+  if (f.abs() > 1e-9) {
+    wet = formantShift(wet, f);
+  }
+
+  final rMix = radioMix.clamp(0.0, 1.0).toDouble();
+  if (rMix > 0) {
+    final low = radioLowHz.clamp(20.0, sampleRate / 2 - 20).toDouble();
+    final high = radioHighHz.clamp(low + 20, sampleRate / 2).toDouble();
+    wet = _blendBuffers(wet, _bandpass(wet, sampleRate, low, high), rMix);
+  }
+
+  final cMix = carrierMix.clamp(0.0, 1.0).toDouble();
+  if (cMix > 0) {
+    wet = ringModFx(
+      wet,
+      carrierHz: carrierHz.clamp(1.0, sampleRate / 2).toDouble(),
+      mix: cMix,
+      sampleRate: sampleRate,
+    );
+  }
+
+  final g = grit.clamp(0.0, 1.0).toDouble();
+  if (g > 0) {
+    wet = distortionFx(wet, drive: 1 + g * 11, mix: g);
+  }
+
+  return _blendBuffers(sample, wet, mix.clamp(0.0, 1.0).toDouble());
+}
+
 /// A cheap band-pass ([lowHz]..[highHz]) — a 1-pole high-pass into a 1-pole
 /// low-pass. Length-preserving. Used for the "radio" voice.
 Float64List _bandpass(
@@ -125,6 +170,19 @@ Float64List _bandpass(
     final hp = s[i] - hpState; // …subtracted = high-pass
     lp += aLp * (hp - lp); // then low-pass → band-pass
     out[i] = lp;
+  }
+  return out;
+}
+
+Float64List _blendBuffers(Float64List dry, Float64List wet, double mix) {
+  if (mix <= 0) return Float64List.fromList(dry);
+  if (mix >= 1 && dry.length == wet.length) return wet;
+  final n = max(dry.length, wet.length);
+  final out = Float64List(n);
+  for (var i = 0; i < n; i++) {
+    final d = i < dry.length ? dry[i] : 0.0;
+    final w = i < wet.length ? wet[i] : 0.0;
+    out[i] = d * (1 - mix) + w * mix;
   }
   return out;
 }
