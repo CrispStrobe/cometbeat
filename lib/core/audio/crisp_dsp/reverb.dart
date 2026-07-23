@@ -147,3 +147,33 @@ Float64List reverbFx(
 
   return out;
 }
+
+/// Stereo Freeverb wrapper with a decorrelated right-channel tail.
+/// Existing mono callers continue using [reverbFx] unchanged; the stereo path
+/// offsets the right comb/allpass bank to widen the wet field.
+({Float64List left, Float64List right}) reverbFxStereo(
+  Float64List left,
+  Float64List right, {
+  double roomSize = 0.6,
+  double damping = 0.4,
+  double mix = 0.3,
+  int sampleRate = kSampleRate,
+}) {
+  return (
+    left: reverbFx(
+      left,
+      roomSize: roomSize,
+      damping: damping,
+      mix: mix,
+      sampleRate: sampleRate,
+    ),
+    right: reverbFx(
+      right,
+      roomSize: roomSize,
+      damping: damping,
+      mix: mix,
+      stereoSpread: 23,
+      sampleRate: sampleRate,
+    ),
+  );
+}

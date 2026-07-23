@@ -615,6 +615,37 @@ void main() {
     }
   });
 
+  test('stereo reverb decorrelates the wet tail', () {
+    final source = SampleSource(_sine(3000));
+    final mix = renderTimelineStereo(
+      DawTimeline(
+        tracks: [
+          DawTrack(
+            effects: [
+              defaultDawClipEffect(DawClipEffectType.reverb).copyWith(
+                params: {
+                  'roomSize': 0.7,
+                  'damping': 0.4,
+                  'mix': 1,
+                },
+              ),
+            ],
+            clips: [Clip(source: source)],
+          ),
+        ],
+      ),
+      sampleRate: _sr,
+      limit: false,
+    );
+    expect(
+      List.generate(
+        mix.left.length,
+        (i) => (mix.left[i] - mix.right[i]).abs(),
+      ).any((difference) => difference > 1e-7),
+      isTrue,
+    );
+  });
+
   test('effect parameter automation is rendered over time', () {
     final dry = _sine(220);
     final automated = applyClipEffectChain(

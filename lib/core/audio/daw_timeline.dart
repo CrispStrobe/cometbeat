@@ -34,7 +34,8 @@ import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart'
     show granularPitchShift;
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
     show resampleCubic;
-import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
+import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart'
+    show reverbFx, reverbFxStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart' show ringModFx;
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
     show timeStretch;
@@ -700,6 +701,14 @@ Float64List applyClipEffectChain(
           depthMs: p('depthMs', 3),
           feedback: p('feedback', 0.5),
           mix: p('mix', 0.5),
+          sampleRate: sampleRate,
+        ),
+      DawClipEffectType.reverb => reverbFxStereo(
+          outLeft,
+          outRight,
+          roomSize: p('roomSize', 0.7),
+          damping: p('damping', 0.4),
+          mix: p('mix', 0.35),
           sampleRate: sampleRate,
         ),
       DawClipEffectType.compressor => compressorFxStereo(
