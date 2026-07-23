@@ -1,59 +1,21 @@
-"""Life+70 for polish-scores composers (441 unique). Reuses the OS classifier's
-Wikidata logic. 'Anonim'/'Anonymous' -> NO_AUTHOR (no death clock -> clear)."""
-import json, re, time, urllib.request, urllib.parse, urllib.error
-API="https://www.wikidata.org/w/api.php"
-UA="cometbeat-corpus/1.0 (music-education PD verification; stc.akrs@gmail.com)"
-ARTS={"Q36834","Q639669","Q486748","Q1259917","Q753110","Q158852","Q177220",
-      "Q49757","Q482980","Q36180","Q170790","Q214917","Q1259917","Q1622272","Q486748"}
-CUTOFF=1955
-ANON={"anonim","anonymous","anon","anon.","traditional","trad.","incerti auctoris",""}
-def api(params):
-    url=API+"?"+urllib.parse.urlencode({**params,"format":"json","maxlag":"5"})
-    req=urllib.request.Request(url,headers={"User-Agent":UA}); last=None
-    for a in range(6):
-        try:
-            with urllib.request.urlopen(req,timeout=30) as r: return json.load(r)
-        except urllib.error.HTTPError as e:
-            last=e; time.sleep(min(int(e.headers.get("Retry-After") or 0) or 2**a,30))
-        except Exception as e:
-            last=e; time.sleep(2**a)
-    raise last
-def yr(cl):
-    try: return int(re.sub(r"^[+-]","",cl[0]["mainsnak"]["datavalue"]["value"]["time"])[:4])
-    except Exception: return None
-def classify(name):
-    if name.strip().lower() in ANON: return ("NO_AUTHOR",None,None,None,None)
-    hits=api({"action":"wbsearchentities","search":name,"language":"en","limit":6}).get("search",[])
-    if not hits: return ("UNKNOWN",None,None,None,None)
-    ents=api({"action":"wbgetentities","ids":"|".join(h["id"] for h in hits),
-              "props":"claims|labels","languages":"en"}).get("entities",{})
-    best=None
-    for qid,ent in ents.items():
-        cl=ent.get("claims",{})
-        occ={o["mainsnak"].get("datavalue",{}).get("value",{}).get("id") for o in cl.get("P106",[])}
-        if not (occ & ARTS): continue
-        d=yr(cl.get("P570",[])); b=yr(cl.get("P569",[])); lab=ent.get("labels",{}).get("en",{}).get("value",name)
-        sc=(d is not None)+(b is not None)
-        if best is None or sc>best[0]: best=(sc,qid,lab,b,d)
-    if best is None: return ("UNKNOWN",None,None,None,None)
-    _,qid,lab,b,d=best
-    st=("PD" if d<=CUTOFF else "RECENT") if d is not None else ("ALIVE" if (b and b>=1900) else "PD" if b else "UNKNOWN")
-    return (st,qid,lab,b,d)
-names=json.load(open("/tmp/polish_composers.json"))
-try: out=json.load(open("/tmp/polish_classify.json"))
-except Exception: out={}
-todo=[n for n in names if n not in out or out[n].get("status") in ("ERROR",None)]
-print(f"classifying {len(todo)} of {len(names)}",flush=True)
-for i,nm in enumerate(todo,1):
-    try:
-        st,qid,lab,b,d=classify(nm); out[nm]={"count":names[nm],"status":st,"qid":qid,"label":lab,"birth":b,"death":d}
-    except Exception as e:
-        out[nm]={"count":names[nm],"status":"ERROR","err":str(e)[:40]}
-    if i%40==0: json.dump(out,open("/tmp/polish_classify.json","w"),ensure_ascii=False); print(f"...{i}/{len(todo)}",flush=True)
-    time.sleep(0.35)
-json.dump(out,open("/tmp/polish_classify.json","w"),ensure_ascii=False)
+"""Polish-scores composer life+70 — thin wrapper over shared wikidata_deaths.
+'Anonim'/'Anonymous'/... -> NO_AUTHOR (no death clock)."""
+import json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import wikidata_deaths as wd
+ANON = {"anonim", "anonymous", "anon", "anon.", "traditional", "trad.", "incerti auctoris", ""}
+names = json.load(open("/tmp/polish_composers.json"))
+try: out = json.load(open("/tmp/polish_classify.json"))
+except Exception: out = {}
+todo = [n for n in names if n not in out or out[n].get("status") in ("ERROR", None)]
+print(f"classifying {len(todo)} of {len(names)} (shared cache)", flush=True)
+for i, nm in enumerate(todo, 1):
+    if nm.strip().lower() in ANON:
+        out[nm] = {"count": names[nm], "status": "NO_AUTHOR", "qid": None, "label": None, "birth": None, "death": None}
+    else:
+        st, qid, lab, b, d = wd.verdict(nm, occ_bar=wd.ARTS)
+        out[nm] = {"count": names[nm], "status": st, "qid": qid, "label": lab, "birth": b, "death": d}
+    if i % 40 == 0: wd.save(); json.dump(out, open("/tmp/polish_classify.json", "w"), ensure_ascii=False)
+wd.save(); json.dump(out, open("/tmp/polish_classify.json", "w"), ensure_ascii=False)
 from collections import Counter
-byname=Counter(v["status"] for v in out.values()); byentry=Counter()
-for v in out.values(): byentry[v["status"]]+=v["count"]
-print("POLISH CLASSIFY DONE names:",dict(byname),flush=True)
-print("by entry:",dict(byentry),flush=True)
+print("POLISH DONE:", dict(Counter(v["status"] for v in out.values())), flush=True)
