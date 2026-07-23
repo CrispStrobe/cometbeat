@@ -14,7 +14,8 @@ import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
 import 'package:comet_beat/core/audio/tracker_song_module.dart'
     show songFromModuleBytes;
 import 'package:comet_beat/core/services/audio_service.dart';
-import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
+import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
+    show multiPartScoreFromTrackerSong;
 import 'package:comet_beat/features/sound_lab/catalog_browse_sheet.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
@@ -179,14 +180,12 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
           : '';
       if (_kModuleLibraryExtensions.contains(ext)) {
         final song = songFromModuleBytes(bytes);
+        final score = multiPartScoreFromTrackerSong(song);
         if (!mounted) return;
         final navigator = Navigator.of(context);
         navigator.pop();
-        await navigator.push<void>(
-          MaterialPageRoute(
-            builder: (_) => AdvancedTrackerScreen(initialSong: song),
-          ),
-        );
+        if (score.parts.isEmpty) return;
+        await showScoreDestinations(navigator.context, score);
         return;
       }
       if (_kMusicLibraryExtensions.contains(ext)) {
