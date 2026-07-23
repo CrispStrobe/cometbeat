@@ -141,6 +141,8 @@ abstract interface class DawTester {
   /// Per-clip gain + fade lengths.
   void setClipGain(int track, int index, double gain);
   double clipGain(int track, int index);
+  void setClipPan(int track, int index, double pan);
+  double clipPan(int track, int index);
   void setClipFades(
     int track,
     int index, {
@@ -2338,6 +2340,13 @@ class _DawScreenState extends State<DawScreen>
   double clipGain(int track, int index) => _daw.clipGain(track, index);
 
   @override
+  void setClipPan(int track, int index, double pan) =>
+      _daw.setClipPan(track, index, pan);
+
+  @override
+  double clipPan(int track, int index) => _daw.clipPan(track, index);
+
+  @override
   void setClipFades(
     int track,
     int index, {
@@ -2779,6 +2788,17 @@ class _DawScreenState extends State<DawScreen>
                       1.5,
                       (v) => '${(v * 100).round()}%',
                       (v) => setClipGain(track, index, v),
+                    ),
+                    slider(
+                      'Clip Pan',
+                      (_daw.clipPan(track, index) + 1) / 2,
+                      1,
+                      (v) => (v * 2 - 1).abs() < 0.01
+                          ? 'Centre'
+                          : v < 0.5
+                              ? 'L ${((0.5 - v) * 200).round()}%'
+                              : 'R ${((v - 0.5) * 200).round()}%',
+                      (v) => _daw.setClipPan(track, index, v * 2 - 1),
                     ),
                     slider(
                       l10n.dawFadeIn,

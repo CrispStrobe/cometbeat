@@ -417,6 +417,18 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set a clip's constant-power pan. Track pan and clip pan are summed and
+  /// clamped at render time; this edit remains non-destructive and undoable.
+  void setClipPan(int track, int index, double pan) {
+    _coalesced(('pan', track, index));
+    final clips = timeline.tracks[track].clips;
+    clips[index] = clips[index].copyWith(pan: pan.clamp(-1.0, 1.0));
+    notifyListeners();
+  }
+
+  double clipPan(int track, int index) =>
+      timeline.tracks[track].clips[index].pan;
+
   /// Set a clip's fade-in / fade-out ramp length in ms (each clamped to ≥ 0).
   /// Pass only the one you're changing; a slider sweep coalesces per side.
   void setClipFades(
@@ -628,6 +640,7 @@ class DawService extends ChangeNotifier {
           right == null ? SampleSource(pcm) : StereoSampleSource(pcm, right),
       startMs: clip.startMs,
       gain: clip.gain,
+      pan: clip.pan,
       muted: clip.muted,
       fadeInMs: clip.fadeInMs,
       fadeOutMs: clip.fadeOutMs,
@@ -670,6 +683,7 @@ class DawService extends ChangeNotifier {
           : SampleSource(flipped),
       startMs: clip.startMs,
       gain: clip.gain,
+      pan: clip.pan,
       muted: clip.muted,
       fadeInMs: clip.fadeInMs,
       fadeOutMs: clip.fadeOutMs,
@@ -727,6 +741,7 @@ class DawService extends ChangeNotifier {
           : SampleSource(out),
       startMs: clip.startMs,
       gain: clip.gain,
+      pan: clip.pan,
       muted: clip.muted,
       fadeInMs: clip.fadeInMs,
       fadeOutMs: clip.fadeOutMs,
@@ -857,6 +872,7 @@ class DawService extends ChangeNotifier {
         source: source,
         startMs: clip.startMs,
         gain: clip.gain,
+        pan: clip.pan,
         muted: clip.muted,
         fadeInMs: clip.fadeInMs,
         fadeOutMs: clip.fadeOutMs,

@@ -46,6 +46,7 @@ void main() {
               source: _tone(0.5, 64),
               startMs: 250,
               gain: 0.7,
+              pan: 0.25,
               fadeInMs: 40,
               fadeOutMs: 60,
               fadeInCurve: DawFadeCurve.exponential,
@@ -104,6 +105,7 @@ void main() {
     final clip = back.tracks[0].clips.single;
     expect(clip.startMs, 250);
     expect(clip.gain, closeTo(0.7, 1e-9));
+    expect(clip.pan, closeTo(0.25, 1e-9));
     expect(clip.fadeInMs, 40);
     expect(clip.fadeOutMs, 60);
     expect(clip.fadeInCurve, DawFadeCurve.exponential);

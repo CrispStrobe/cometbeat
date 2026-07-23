@@ -73,6 +73,7 @@ String projectToJson(
               {
                 'startMs': clip.startMs,
                 'gain': clip.gain,
+                if (clip.pan != 0) 'pan': clip.pan,
                 'muted': clip.muted,
                 'fadeInMs': clip.fadeInMs,
                 'fadeOutMs': clip.fadeOutMs,
@@ -177,6 +178,7 @@ DawTimeline projectFromJson(String json) {
                 : StereoSampleSource(pcm, right),
             startMs: num_(c['startMs']),
             gain: c['gain'] is num ? num_(c['gain']) : 1.0,
+            pan: c['pan'] is num ? num_(c['pan']).clamp(-1.0, 1.0) : 0.0,
             muted: c['muted'] == true,
             fadeInMs: num_(c['fadeInMs']),
             fadeOutMs: num_(c['fadeOutMs']),
