@@ -103,13 +103,13 @@ repos below. Reachable, but dev/test only.
 The direct answer to "what have we covered / what could we still safely add."
 Every line here is a *licence/coverage* statement; detail per source follows.
 
-> **▶ Live DB snapshot (2026-07-23): `db.json` = 42,108 rows** — 41,718 scores +
+> **▶ Live DB snapshot (2026-07-23): `db.json` = 42,334 rows** — 41,944 scores +
 > 390 playback assets (223 instruments · 166 modules · 1 soundfont). The app-facing
-> **HF catalog ships 34,804 items** (score 34,344 · instrument 223 · module 139 ·
+> **HF catalog ships 35,183 items** (score 34,723 · instrument 223 · module 139 ·
 > sample 97 · soundfont 1). Scores by source: GregoBase 18,710 · NIFC Polish 8,181 ·
 > **PDMX 10,799** (74 is_original + 3,352 classical MXL shippable; see below) ·
 > OpenScore Lieder 1,350 · NIFC Chopin 512 · Mutopia 510 · DCML Bach Chorales 361 ·
-> OpenScore SQ 122 · OpenEWLD 103 · **Wikimedia Commons (Gerloff) 836** · Kinder
+> OpenScore SQ 122 · OpenEWLD 103 · **Wikimedia Commons (Gerloff) 1,062** · Kinder
 > wollen singen 155 · Musikpiraten Season Songs 52 · Pete Mac 15 · EGSet12 12.
 > Assets: VCSL 183 · ModArchive 166 · FreePats 39 · Salamander Grand Piano V3 1 ·
 > FluidR3 1.
@@ -121,19 +121,33 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > **Exact tiers of the 1,136 files: A (CC0/PD) 1,083 · B (CC-BY) 16 · C (CC-BY-SA) 37.**
 > Ship gate = Tier A ∩ axis-2-PD (the melody source is traditional/origin, Gerloff's
 > own CC0-original, or a named composer the shared `wikidata_deaths` verdict confirms
-> died ≤1955) → **836 ingested** (CC0, `kind:score`, MIDI; `bin/commons_gerloff_ingest.py`
-> + `bin/commons_gerloff_reverify.py`; per-file axis-2 note).
-> **⚠ AUDIT + RE-VERIFY (2026-07-23):** a spot-check of 10 rows found the first-pass
-> melody parser only matched German `Melodie:` and missed `Melody:/Music:/Kanon:` — so
-> ~401 rows had defaulted to "traditional" **unverified** (e.g. "Woodlands tune" is
-> actually Walter Greatorex d.1949 — PD by luck, not by check). Fixed by re-fetching
-> every file's live `Artist` field, extracting the melody source with a broad
-> multilingual pattern, and **death-checking every named composer**: **836 confirmed
-> soundly Tier A** (0 recent/copyrighted composers survive a final scan), **10 demoted**
-> (also PD — medieval/anon/liturgical/obscure-19th-c — but held fail-closed).
+> died ≤1955) → **1,062 ingested** — MIDI-only (Commons hosts these as `.mid`; Gerloff
+> is a priest/composer who makes a "Satz und Tondatei" for German Wikipedia articles
+> and publishes **no notation source** — for richer formats use the kinder-wollen-singen
+> `.mscz`/`.musicxml` or self-engraving). Tooling: `bin/commons_gerloff_{ingest,reverify,
+> reconcile,demote}.py`.
+> **⚠ FIVE VERIFICATION PASSES (2026-07-23) — each caught what the prior missed:**
+> (1) ingest 846; (2) a spot-check of 10 found the parser only matched German `Melodie:`,
+> missing English `Melody:/Music:/Kanon:` → ~401 rows had defaulted to "traditional"
+> **unverified** ("Woodlands tune" is Walter Greatorex d.1949) → re-verify to 836 by
+> death-checking every named composer; (3) reconcile recovered +240 genuinely-PD held
+> rows via a broad multilingual descriptor set; (4) **but descriptor-matching bypassed
+> the death-check** — a safety scan caught **Sibelius "Finlandia" (d.1957) and Vaughan
+> Williams ×2 (d.1958)** hiding behind descriptor labels (genuinely copyrighted in the
+> EU); (5) a thorough pass death-checked **every** 1-3-word name in **every** kept row's
+> source → **−14, fail-closed** (Sibelius/VW + namesake false-flags like "Curtis"→De
+> Curtis, "Francisco"→*Pope Francis*). **Final: 1,062 soundly Tier A** — 990
+> traditional/origin (no named recent) · 36 named-PD-verified · 36 Gerloff-CC0-original;
+> **0 recent composers, 0 embedded recent years survive**. The copyrighted Sibelius MIDI
+> was in the first upload → **deleted from HF HEAD** (`delete_file`; a purged file is
+> 404 at `main`. ⚠ old commit SHAs may still serve it — a full history purge was NOT
+> done for one file; flagged for the maintainer).
 > **HELD** (`commons-gerloff-held.json`): 16 Tier-B (attribution), 37 Tier-C
-> (SA-propagation), ~245 axis-2-not-provably-PD (obscure composers → manual check), 3
-> axis-2-recent/alive (correctly excluded). **Lesson:** a self-attested "traditional"
+> (SA-propagation), the axis-2-not-provably-PD + the 14 axis-2-recent/namesake demotes.
+> **Lessons:** (a) never default to "traditional" — read the melody source in every
+> language; (b) **a descriptor keyword must not short-circuit the composer death-check**
+> — a "traditional English hymn tune by X" can still hide a d.1958 composer. **Lesson:**
+> a self-attested "traditional"
 > default is unsafe — read the actual melody-source field and death-check named
 > composers; the parser must cover every language the source uses. ⚠ Wikimedia
 > rate-limits bots (HTTP 429) — the downloader paces 1.2 s/file + 60 s backoff.
