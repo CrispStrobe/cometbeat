@@ -105,6 +105,7 @@ import 'package:crisp_notation/crisp_notation.dart'
         multiPartToMusicXml,
         readMusicXmlFromMxl,
         scoreFromLilyPond;
+import 'package:crisp_notation_core/crisp_notation_core.dart' show StaffSystem;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
