@@ -574,6 +574,24 @@ void main() {
     }
   });
 
+  test('gate defaults and renders attack/release timing controls', () {
+    final fx = defaultDawClipEffect(DawClipEffectType.gate);
+    expect(fx.params['attackMs'], 1);
+    expect(fx.params['releaseMs'], 100);
+    final input = Float64List.fromList(List<double>.filled(500, 0.2));
+    final output = applyClipEffectChain(
+      input,
+      [
+        fx.copyWith(
+          params: {'thresholdDb': -10, 'attackMs': 20, 'releaseMs': 200},
+        ),
+      ],
+      1000,
+    );
+    expect(output.length, input.length);
+    expect(output, isNot(equals(input)));
+  });
+
   test('stereo sample sources preserve both channels in the timeline', () {
     final stereo = renderTimelineStereo(
       DawTimeline(

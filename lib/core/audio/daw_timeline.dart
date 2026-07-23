@@ -292,7 +292,14 @@ DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
         ),
       DawClipEffectType.gate => const DawClipEffect(
           type: DawClipEffectType.gate,
-          params: {'thresholdDb': -40, 'ratio': 4, 'rangeDb': -60, 'mix': 1},
+          params: {
+            'thresholdDb': -40,
+            'ratio': 4,
+            'rangeDb': -60,
+            'attackMs': 1,
+            'releaseMs': 100,
+            'mix': 1,
+          },
         ),
       DawClipEffectType.pitchShift => const DawClipEffect(
           type: DawClipEffectType.pitchShift,
@@ -771,6 +778,8 @@ Float64List applyClipEffectChain(
           thresholdDb: p('thresholdDb', -40),
           ratio: p('ratio', 4),
           rangeDb: p('rangeDb', -60),
+          attackMs: p('attackMs', 1),
+          releaseMs: p('releaseMs', 100),
           mix: p('mix', 1),
         ),
       DawClipEffectType.pitchShift => _pitchShiftFxStereo(
@@ -923,6 +932,8 @@ Float64List _applyClipEffect(
         thresholdDb: p('thresholdDb', -40),
         ratio: p('ratio', 4),
         rangeDb: p('rangeDb', -60),
+        attackMs: p('attackMs', 1),
+        releaseMs: p('releaseMs', 100),
         mix: p('mix', 1),
       ),
     DawClipEffectType.pitchShift => _blendWetDry(

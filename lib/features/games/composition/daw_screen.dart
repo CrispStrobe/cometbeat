@@ -2183,6 +2183,20 @@ class _DawScreenState extends State<DawScreen>
                 ),
                 (key: 'ratio', label: 'Ratio', min: 1, max: 20, step: 0.5),
                 (key: 'rangeDb', label: 'Range dB', min: -80, max: 0, step: 1),
+                (
+                  key: 'attackMs',
+                  label: 'Attack ms',
+                  min: 0,
+                  max: 200,
+                  step: 1
+                ),
+                (
+                  key: 'releaseMs',
+                  label: 'Release ms',
+                  min: 10,
+                  max: 1000,
+                  step: 10
+                ),
                 (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
               ],
             DawClipEffectType.pitchShift => const [

@@ -460,6 +460,25 @@ void main() {
     expect(find.textContaining('Knee dB'), findsOneWidget);
   });
 
+  testWidgets('noise gate exposes attack and release controls', (tester) async {
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    await tester.tap(find.text('Master FX'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Noise Gate').last);
+    await tester.pumpAndSettle();
+    expect(service.masterEffects().single.type, DawClipEffectType.gate);
+    await tester.tap(find.text('Noise Gate'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Attack ms'), findsOneWidget);
+    expect(find.textContaining('Release ms'), findsOneWidget);
+  });
+
   testWidgets('FX slider auto writes marked-range automation points',
       (tester) async {
     await _pumpDaw(tester);
