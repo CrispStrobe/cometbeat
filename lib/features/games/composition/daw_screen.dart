@@ -1189,6 +1189,66 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
+  Future<void> _trackAutomationDialog() async {
+    if (!_hasFxRange) return;
+    var startGain = 1.0;
+    var endGain = 0.5;
+    final applied = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: const Text('Track Automation'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_rangeLabel()),
+                const SizedBox(height: 8),
+                Text('Start ${(startGain * 100).round()}%'),
+                Slider(
+                  value: startGain,
+                  max: 2,
+                  divisions: 40,
+                  label: '${(startGain * 100).round()}%',
+                  onChanged: (value) => setDialog(() => startGain = value),
+                ),
+                Text('End ${(endGain * 100).round()}%'),
+                Slider(
+                  value: endGain,
+                  max: 2,
+                  divisions: 40,
+                  label: '${(endGain * 100).round()}%',
+                  onChanged: (value) => setDialog(() => endGain = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(AppLocalizations.of(ctx)!.dawCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (applied != true) return;
+    _daw.setTrackGainAutomationInRange(
+      _rangeTargetTracks(),
+      _rangeStartMs,
+      _rangeEndMs,
+      startGain,
+      endGain,
+    );
+    if (_playing) play();
+  }
+
   String _fadeCurveLabel(DawFadeCurve curve) => switch (curve) {
         DawFadeCurve.linear => 'Linear',
         DawFadeCurve.exponential => 'Exponential',
@@ -2752,6 +2812,11 @@ class _DawScreenState extends State<DawScreen>
                     onPressed: _hasFxRange ? _rangeGainDialog : null,
                     icon: const Icon(Icons.tune),
                     label: const Text('Range Gain'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _hasFxRange ? _trackAutomationDialog : null,
+                    icon: const Icon(Icons.timeline),
+                    label: const Text('Track Auto'),
                   ),
                   MenuAnchor(
                     menuChildren: [

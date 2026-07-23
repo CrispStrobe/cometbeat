@@ -63,6 +63,10 @@ String projectToJson(
           'effect': track.effect.name,
           if (track.effects.isNotEmpty)
             'effects': [for (final fx in track.effects) fx.toJson()],
+          if (track.gainAutomation.isNotEmpty)
+            'gainAutomation': [
+              for (final point in track.gainAutomation) point.toJson(),
+            ],
           'clips': [
             for (final clip in track.clips)
               {
@@ -197,6 +201,12 @@ DawTimeline projectFromJson(String json) {
           effects: effects.isNotEmpty
               ? effects
               : trackEffectChainForLegacy(legacyEffect),
+          gainAutomation: [
+            if (t['gainAutomation'] case final points? when points is List)
+              for (final point in points)
+                if (DawAutomationPoint.fromJson(point) case final parsed?)
+                  parsed,
+          ]..sort((a, b) => a.ms.compareTo(b.ms)),
           clips: clips,
         );
       }(),

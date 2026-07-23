@@ -392,11 +392,38 @@ List<DawClipEffect> trackEffectChainForLegacy(TrackEffect effect) {
   return fx == null ? const [] : [fx];
 }
 
+/// A track-level gain automation breakpoint. Values are linear gain
+/// multipliers; outside the authored point span the automation multiplier is 1.
+class DawAutomationPoint {
+  const DawAutomationPoint({required this.ms, required this.value});
+
+  final double ms;
+  final double value;
+
+  DawAutomationPoint copyWith({double? ms, double? value}) =>
+      DawAutomationPoint(ms: ms ?? this.ms, value: value ?? this.value);
+
+  Map<String, dynamic> toJson() => {'ms': ms, 'value': value};
+
+  static DawAutomationPoint? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final ms = raw['ms'];
+    final value = raw['value'];
+    if (ms is! num || value is! num) return null;
+    return DawAutomationPoint(
+      ms: ms.toDouble(),
+      value: value.toDouble() < 0 ? 0 : value.toDouble(),
+    );
+  }
+}
+
 /// One DAW track — a lane of clips with its own [gain]/[muted]/[soloed]. An
 /// optional [instrument] is the lane's default voice: engraved (score) clips
 /// added to it adopt it, so the track behaves like an instrument lane. Baked
 /// audio / drum / groove clips ignore it. The lane's ordered [effects] chain is
-/// applied to the whole lane mix and survives saved-project reloads;
+/// applied to the whole lane mix and survives saved-project reloads. The
+/// [gainAutomation] points multiply the rendered lane over time, so a range can
+/// swell or duck across clips without destructively changing the clips;
 /// [instrument] is still a live-session default because saved projects bake each
 /// clip's sound in. [effect] is the older single-insert field kept for backwards
 /// compatibility with existing projects/API callers.
@@ -411,9 +438,11 @@ class DawTrack {
     Map<int, double>? busSends,
     this.effect = TrackEffect.none,
     List<DawClipEffect>? effects,
+    List<DawAutomationPoint>? gainAutomation,
     List<Clip>? clips,
   })  : busSends = busSends ?? {},
         effects = effects ?? [],
+        gainAutomation = gainAutomation ?? [],
         clips = clips ?? [];
 
   String name;
@@ -437,6 +466,9 @@ class DawTrack {
 
   /// Ordered lane insert FX. Uses the same module model as clip/segment FX.
   List<DawClipEffect> effects;
+
+  /// Track-level gain automation breakpoints.
+  List<DawAutomationPoint> gainAutomation;
 
   final List<Clip> clips;
 }
@@ -807,6 +839,9 @@ Float64List renderTimeline(
           : applyTrackEffect(track.effect, lane, sampleRate);
       lane.setAll(0, wet);
     }
+    if (track.gainAutomation.isNotEmpty) {
+      _applyTrackGainAutomation(lane, track.gainAutomation, sampleRate);
+    }
     for (final send in track.busSends.entries) {
       final sendBus = send.key;
       if (sendBus < 0 || sendBus >= timeline.buses.length) continue;
@@ -859,6 +894,42 @@ double _fadeCurveValue(double value, DawFadeCurve curve) {
     DawFadeCurve.exponential => t * t,
     DawFadeCurve.sCurve => t * t * (3 - 2 * t),
   };
+}
+
+void _applyTrackGainAutomation(
+  Float64List lane,
+  List<DawAutomationPoint> automation,
+  int sampleRate,
+) {
+  final points = [
+    for (final point in automation)
+      if (point.ms.isFinite && point.value.isFinite)
+        DawAutomationPoint(
+          ms: point.ms < 0 ? 0 : point.ms,
+          value: point.value < 0 ? 0 : point.value,
+        ),
+  ]..sort((a, b) => a.ms.compareTo(b.ms));
+  if (points.isEmpty) return;
+  for (var i = 0; i < lane.length; i++) {
+    final ms = i * 1000 / sampleRate;
+    lane[i] *= _trackAutomationValue(points, ms);
+  }
+}
+
+double _trackAutomationValue(List<DawAutomationPoint> points, double ms) {
+  if (points.length == 1) {
+    return (ms - points.single.ms).abs() < 0.5 ? points.single.value : 1.0;
+  }
+  if (ms < points.first.ms || ms > points.last.ms) return 1.0;
+  for (var i = 0; i < points.length - 1; i++) {
+    final a = points[i];
+    final b = points[i + 1];
+    if (ms < a.ms || ms > b.ms) continue;
+    if (b.ms <= a.ms) return b.value;
+    final t = ((ms - a.ms) / (b.ms - a.ms)).clamp(0.0, 1.0);
+    return a.value + (b.value - a.value) * t;
+  }
+  return points.last.value;
 }
 
 double _tanh(double x) {

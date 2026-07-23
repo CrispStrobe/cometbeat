@@ -627,6 +627,44 @@ void main() {
     expect(service.clipGain(0, 2), closeTo(1, 1e-9));
   });
 
+  testWidgets('track automation writes gain ramp points over the marked range',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    daw.addDemoBeat();
+    await tester.pump();
+
+    daw.seekTo(250);
+    await tester.pump();
+    await tester.tap(find.text('Mark In'));
+    await tester.pumpAndSettle();
+    daw.seekTo(750);
+    await tester.pump();
+    await tester.tap(find.text('Mark Out'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Track Auto'));
+    await tester.pumpAndSettle();
+    expect(find.text('Track Automation'), findsOneWidget);
+    expect(find.text('Start 100%'), findsOneWidget);
+    expect(find.text('End 50%'), findsOneWidget);
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(service.timeline.tracks[0].gainAutomation, hasLength(2));
+    expect(service.timeline.tracks[0].gainAutomation.first.ms, 250);
+    expect(service.timeline.tracks[0].gainAutomation.last.ms, 750);
+    expect(
+      service.timeline.tracks[0].gainAutomation.last.value,
+      closeTo(0.5, 1e-9),
+    );
+    expect(service.timeline.tracks[1].gainAutomation, hasLength(2));
+  });
+
   testWidgets('range fade applies a curve to the marked clip segment',
       (tester) async {
     await _pumpDaw(tester);

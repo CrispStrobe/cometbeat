@@ -456,6 +456,40 @@ void main() {
     expect(s.trackGain(0), 1.0);
   });
 
+  test('setTrackGainAutomationInRange writes breakpoints and undoes', () {
+    final s = DawService()
+      ..addClip(_tone(1, 100))
+      ..addClip(_tone(1, 100), track: 1);
+
+    final changed = s.setTrackGainAutomationInRange([0], 20, 80, 1, 0.25);
+    expect(changed, 1);
+    expect(s.trackGainAutomation(0), hasLength(2));
+    expect(s.trackGainAutomation(0).first.ms, 20);
+    expect(s.trackGainAutomation(0).first.value, closeTo(1, 1e-9));
+    expect(s.trackGainAutomation(0).last.ms, 80);
+    expect(s.trackGainAutomation(0).last.value, closeTo(0.25, 1e-9));
+    expect(s.trackGainAutomation(1), isEmpty);
+
+    final trackOnly = renderTimeline(
+      DawTimeline(
+        tracks: [
+          DawTrack(
+            clips: s.timeline.tracks[0].clips,
+            gainAutomation: s.trackGainAutomation(0),
+          ),
+        ],
+      ),
+      sampleRate: 1000,
+      limit: false,
+    );
+    expect(trackOnly[0], closeTo(1, 1e-9));
+    expect(trackOnly[80], closeTo(0.25, 1e-9));
+
+    s.undo();
+    expect(s.trackGainAutomation(0), isEmpty);
+    expect(s.trackGainAutomation(1), isEmpty);
+  });
+
   test('add / remove / rename track', () {
     final s = DawService(); // starts with 2 tracks (A, B)
     expect(s.timeline.tracks.length, 2);

@@ -72,6 +72,7 @@ class DawService extends ChangeNotifier {
               busSends: {...t.busSends},
               effect: t.effect,
               effects: [...t.effects],
+              gainAutomation: _cloneAutomation(t.gainAutomation),
               clips: [...t.clips],
             ),
         ],
@@ -188,6 +189,44 @@ class DawService extends ChangeNotifier {
   }
 
   double trackGain(int track) => timeline.tracks[track].gain;
+
+  List<DawAutomationPoint> trackGainAutomation(int track) =>
+      List.unmodifiable(timeline.tracks[track].gainAutomation);
+
+  int setTrackGainAutomationInRange(
+    Iterable<int> tracks,
+    double startMs,
+    double endMs,
+    double startGain,
+    double endGain,
+  ) {
+    final from = math.min(startMs, endMs);
+    final to = math.max(startMs, endMs);
+    if (to <= from) return 0;
+    final targets = tracks
+        .where((track) => track >= 0 && track < timeline.tracks.length)
+        .toSet()
+        .toList()
+      ..sort();
+    if (targets.isEmpty) return 0;
+    final startValue = startGain < 0 ? 0.0 : startGain;
+    final endValue = endGain < 0 ? 0.0 : endGain;
+    _record();
+    for (final track in targets) {
+      final lane = timeline.tracks[track];
+      final kept = [
+        for (final point in lane.gainAutomation)
+          if (point.ms < from || point.ms > to) point,
+      ];
+      kept
+        ..add(DawAutomationPoint(ms: from, value: startValue))
+        ..add(DawAutomationPoint(ms: to, value: endValue))
+        ..sort((a, b) => a.ms.compareTo(b.ms));
+      lane.gainAutomation = kept;
+    }
+    notifyListeners();
+    return targets.length;
+  }
 
   /// Solo / unsolo a track. While any track is soloed, only soloed tracks are
   /// heard — the quickest way to isolate one lane.
@@ -1176,6 +1215,14 @@ class DawService extends ChangeNotifier {
 
   List<DawClipEffect> _cloneEffectChain(List<DawClipEffect> chain) => [
         for (final fx in chain) fx.copyWith(params: {...fx.params}),
+      ];
+
+  List<DawAutomationPoint> _cloneAutomation(
+    List<DawAutomationPoint> points,
+  ) =>
+      [
+        for (final point in points)
+          DawAutomationPoint(ms: point.ms, value: point.value),
       ];
 
   List<DawBus> _cloneBuses(List<DawBus> buses) => [

@@ -36,6 +36,10 @@ void main() {
           effect: TrackEffect.echo,
           busIndex: 0,
           busSends: {0: 0.35},
+          gainAutomation: const [
+            DawAutomationPoint(ms: 100, value: 1),
+            DawAutomationPoint(ms: 400, value: 0.4),
+          ],
           clips: [
             Clip(
               source: _tone(0.5, 64),
@@ -79,6 +83,9 @@ void main() {
     expect(back.tracks[0].busSends[0], closeTo(0.35, 1e-9));
     expect(back.tracks[0].effect, TrackEffect.echo);
     expect(back.tracks[0].effects.single.type, DawClipEffectType.delay);
+    expect(back.tracks[0].gainAutomation, hasLength(2));
+    expect(back.tracks[0].gainAutomation.first.ms, 100);
+    expect(back.tracks[0].gainAutomation.last.value, closeTo(0.4, 1e-9));
     expect(back.tracks[1].muted, isTrue);
     expect(back.tracks[1].soloed, isTrue);
 
@@ -109,6 +116,10 @@ void main() {
             defaultDawClipEffect(DawClipEffectType.delay).copyWith(
               params: {'delayMs': 120, 'feedback': 0.2, 'mix': 0.4},
             ),
+          ],
+          gainAutomation: const [
+            DawAutomationPoint(ms: 20, value: 1),
+            DawAutomationPoint(ms: 80, value: 0.5),
           ],
           clips: [Clip(source: _tone(0.4, 100), startMs: 20)],
         ),

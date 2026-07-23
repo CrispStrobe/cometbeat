@@ -58,6 +58,28 @@ void main() {
     expect(mix[14], closeTo(0.125, 1e-9));
   });
 
+  test('track gain automation ramps within its authored span only', () {
+    final src = _ToneSource(1, 100);
+    final t = DawTimeline(
+      tracks: [
+        DawTrack(
+          clips: [Clip(source: src)],
+          gainAutomation: const [
+            DawAutomationPoint(ms: 20, value: 0),
+            DawAutomationPoint(ms: 80, value: 1),
+          ],
+        ),
+      ],
+    );
+
+    final mix = renderTimeline(t, sampleRate: _sr, limit: false);
+    expect(mix[0], closeTo(1, 1e-9));
+    expect(mix[20], closeTo(0, 1e-9));
+    expect(mix[50], closeTo(0.5, 1e-9));
+    expect(mix[80], closeTo(1, 1e-9));
+    expect(mix[90], closeTo(1, 1e-9));
+  });
+
   test('overlapping clips sum sample-accurately', () {
     final a = _ToneSource(0.2, 10);
     final b = _ToneSource(0.3, 10);
