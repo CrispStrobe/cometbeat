@@ -190,6 +190,16 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
           ? file.name.split('.').last.toLowerCase()
           : '';
       if (_kModuleLibraryExtensions.contains(ext)) {
+        // Tracker callers need the original module bytes so they can preserve
+        // the native pattern data. Score Workshop remains the general fallback.
+        final onModuleSelected = widget.onModuleSelected;
+        if (onModuleSelected != null) {
+          if (!mounted) return;
+          final navigator = Navigator.of(context);
+          navigator.pop();
+          await onModuleSelected(bytes);
+          return;
+        }
         final song = songFromModuleBytes(bytes);
         final score = multiPartScoreFromTrackerSong(song);
         if (!mounted) return;
