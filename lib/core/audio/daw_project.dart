@@ -83,6 +83,10 @@ String projectToJson(
                 if (clip.effects.isNotEmpty)
                   'effects': [for (final fx in clip.effects) fx.toJson()],
                 'pcm': base64Encode(_floatToInt16(r(clip.source))),
+                if (clip.source is StereoSampleSource)
+                  'rightPcm': base64Encode(
+                    _floatToInt16((clip.source as StereoSampleSource).right),
+                  ),
               },
           ],
         },
@@ -156,14 +160,21 @@ DawTimeline projectFromJson(String json) {
         final pcmB64 = c['pcm'];
         if (pcmB64 is! String) continue;
         final Float64List pcm;
+        Float64List? right;
         try {
           pcm = _int16ToFloat(base64Decode(pcmB64));
+          final rightB64 = c['rightPcm'];
+          if (rightB64 is String) {
+            right = _int16ToFloat(base64Decode(rightB64));
+          }
         } catch (_) {
           continue; // skip an unreadable clip rather than fail the whole load
         }
         clips.add(
           Clip(
-            source: SampleSource(pcm),
+            source: right == null
+                ? SampleSource(pcm)
+                : StereoSampleSource(pcm, right),
             startMs: num_(c['startMs']),
             gain: c['gain'] is num ? num_(c['gain']) : 1.0,
             muted: c['muted'] == true,

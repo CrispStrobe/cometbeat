@@ -177,6 +177,29 @@ void main() {
     expect(calls, 1);
   });
 
+  test('round-trips an optional stereo sample channel', () {
+    final timeline = DawTimeline(
+      tracks: [
+        DawTrack(
+          clips: [
+            Clip(
+              source: StereoSampleSource(
+                Float64List.fromList([0.1, 0.2, 0.3]),
+                Float64List.fromList([0.7, 0.8, 0.9]),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+    final restored = projectFromJson(projectToJson(timeline));
+    final source = restored.tracks.single.clips.single.source;
+    expect(source, isA<StereoSampleSource>());
+    final stereo = source as StereoSampleSource;
+    expect(stereo.right.first, closeTo(0.7, 1 / 24000));
+    expect(stereo.right.last, closeTo(0.9, 1 / 24000));
+  });
+
   group('malformed input throws FormatException, never a raw error', () {
     test('not JSON', () {
       expect(() => projectFromJson('nope{'), throwsFormatException);
