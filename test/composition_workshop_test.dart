@@ -387,6 +387,23 @@ void main() {
     expect(find.byTooltip(l10n.workshopInsertModeHelp), findsOneWidget);
   });
 
+  testWidgets('score title can be set before saving', (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byTooltip(l10n.workshopSetTitle));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Morning Demo');
+    await tester.tap(find.text(
+        MaterialLocalizations.of(tester.element(find.byType(AlertDialog)))
+            .okButtonLabel));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip(l10n.workshopSetTitle));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'Morning Demo'), findsOneWidget);
+  });
+
   testWidgets('the Studio inspector is off by default and toggles on',
       (tester) async {
     await pump(tester);
