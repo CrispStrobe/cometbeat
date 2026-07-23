@@ -31,8 +31,7 @@ class TabColumn {
   final NoteDuration duration;
   final Set<TabTechnique> techniques;
 
-  /// An optional chord diagram shown above this column (display-only — it does
-  /// not affect [TabDocument.toScore]).
+  /// The selected chord diagram, kept alongside the playable fret voicing.
   final ChordDiagram? chord;
 
   const TabColumn({
@@ -246,6 +245,26 @@ class TabDocument {
   void setChord(int col, ChordDiagram? chord) {
     _ensure(col);
     columns[col] = columns[col].withChord(chord);
+  }
+
+  /// Replaces the selected column's frets with the playable strings in
+  /// [chord]. Muted strings are omitted; open strings remain at fret 0.
+  void setChordVoicing(int col, ChordDiagram? chord) {
+    _ensure(col);
+    final current = columns[col];
+    final frets = <int, int>{};
+    if (chord != null) {
+      for (var string = 0; string < chord.frets.length; string++) {
+        final fret = chord.frets[string];
+        if (fret >= 0 && string < tuning.stringCount) frets[string] = fret;
+      }
+    }
+    columns[col] = TabColumn(
+      frets: frets,
+      duration: current.duration,
+      techniques: current.techniques,
+      chord: chord,
+    );
   }
 
   /// Inserts an empty column at [col].

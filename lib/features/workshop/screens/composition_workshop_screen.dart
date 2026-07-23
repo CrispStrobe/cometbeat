@@ -2424,6 +2424,45 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     );
   }
 
+  Widget _voiceLegend(AppLocalizations l10n) {
+    const v1 = Color(0xFF1565C0);
+    const v2 = Color(0xFFE65100);
+    return Tooltip(
+      message: l10n.workshopVoiceOverlapHelp,
+      child: Container(
+        width: double.infinity,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 5),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              l10n.workshopVoiceLegend,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            _voiceLegendChip(l10n.workshopVoice1Long, v1),
+            _voiceLegendChip(l10n.workshopVoice2Long, v2),
+            Text(
+              l10n.workshopVoiceOverlapHelp,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _voiceLegendChip(String label, Color color) => Chip(
+        avatar: CircleAvatar(backgroundColor: color, radius: 6),
+        label: Text(label),
+        visualDensity: VisualDensity.compact,
+      );
+
   Widget _inspectorPanel(AppLocalizations l10n) {
     final theme = Theme.of(context);
     // The selected NOTES (rests carry none of these properties). The controls
@@ -3460,12 +3499,22 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final theme = kidsScoreTheme;
     final narrow = MediaQuery.sizeOf(context).width < 600;
     final selectedIds = _doc.selectedIds;
+    final score = _doc.buildScore();
     // Live harmonic analysis of the active part (Analysis toggle): tints each
     // note by its chord's function. Computed from the built score so it sees
     // ties/rests/voices; small scores make this cheap enough per rebuild.
-    final ScoreAnalysis? analysis =
-        _showAnalysis ? analyze(_doc.buildScore()) : null;
+    final ScoreAnalysis? analysis = _showAnalysis ? analyze(score) : null;
     final elementColors = <String, Color>{
+      // Two voices share one staff by design. Keep their noteheads/stems
+      // distinguishable so aligned pitches do not look like duplicate entry.
+      if (_doc.hasVoice2) ...{
+        for (final measure in score.measures)
+          for (final element in measure.elements)
+            if (element.id != null) element.id!: const Color(0xFF1565C0),
+        for (final measure in score.measures)
+          for (final element in measure.voice2)
+            if (element.id != null) element.id!: const Color(0xFFE65100),
+      },
       // Analysis is the base layer; selection + playback override it below.
       if (analysis != null)
         for (final seg in analysis.segments)
@@ -3868,6 +3917,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                     onZoomOut: () => _zoomBy(-3),
                   ),
                 ),
+              if (_studio && _doc.hasVoice2) _voiceLegend(l10n),
               // G6: instrument parts strip (add · select · clef/transposition/
               // brace/remove). One part = the classic single-instrument editor.
               _partsStrip(l10n),
@@ -3961,7 +4011,6 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                                       staffSpace: _zoom,
                                                       showMeasureNumbers:
                                                           _barNumbers,
-                                                      showNoteNames: _noteNames,
                                                       noteNameStyle:
                                                           _noteNameStyle,
                                                       controller: _regions,
@@ -3990,7 +4039,6 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                                       staffSpace: _zoom,
                                                       showMeasureNumbers:
                                                           _barNumbers,
-                                                      showNoteNames: _noteNames,
                                                       noteNameStyle:
                                                           _noteNameStyle,
                                                       controller: _regions,
@@ -4013,6 +4061,27 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                                       onElementDragEnd:
                                                           _onElementDragEnd,
                                                     ),
+                                              if (_barNumbers || _noteNames)
+                                                Positioned.fill(
+                                                  child: IgnorePointer(
+                                                    child: CustomPaint(
+                                                      painter:
+                                                          _WorkshopNotationOverlayPainter(
+                                                        regions: _regions,
+                                                        score: score,
+                                                        showBarNumbers:
+                                                            _barNumbers,
+                                                        showNoteNames:
+                                                            _noteNames,
+                                                        naming: context
+                                                            .read<
+                                                                SettingsService>()
+                                                            .noteNaming,
+                                                        l10n: l10n,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
                                               if (_marquee)
                                                 Positioned.fill(
                                                   child: _MarqueeOverlay(
@@ -4177,6 +4246,91 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 }
 
 /// Row A — compact clef/time/key/zoom dropdowns + a status readout.
+class _WorkshopNotationOverlayPainter extends CustomPainter {
+  _WorkshopNotationOverlayPainter({
+    required this.regions,
+    required this.score,
+    required this.showBarNumbers,
+    required this.showNoteNames,
+    required this.naming,
+    required this.l10n,
+  });
+
+  final ElementRegionController regions;
+  final Score score;
+  final bool showBarNumbers;
+  final bool showNoteNames;
+  final NoteNaming naming;
+  final AppLocalizations l10n;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final byId = <String, MusicElement>{
+      for (final measure in score.measures)
+        for (final element in [...measure.elements, ...measure.voice2])
+          if (element.id != null) element.id!: element,
+    };
+    const textColor = Color(0xFF455A64);
+    final regionsByMeasure =
+        <int, List<({String id, Rect bounds, int measureIndex})>>{};
+    for (final region in regions.elementRegions) {
+      regionsByMeasure.putIfAbsent(region.measureIndex, () => []).add(region);
+      final element = byId[region.id];
+      if (!showNoteNames || element is! NoteElement) continue;
+      final label = element.pitches
+          .map((p) => spelledMidiNameWith(l10n, naming, p.midiNumber))
+          .join(' ');
+      _paintLabel(
+        canvas,
+        label,
+        Offset(region.bounds.center.dx, region.bounds.bottom + 2),
+        color: textColor,
+        fontSize: 0.72 * (region.bounds.height.clamp(12.0, 20.0)),
+      );
+    }
+    if (!showBarNumbers) return;
+    for (final entry in regionsByMeasure.entries) {
+      final measure = entry.key;
+      final number = score.barNumberAt(measure) ?? measure + 1;
+      final first = entry.value.reduce(
+        (a, b) => a.bounds.left <= b.bounds.left ? a : b,
+      );
+      _paintLabel(
+        canvas,
+        '$number',
+        Offset(first.bounds.left + 2, first.bounds.top - 14),
+        color: textColor,
+        fontSize: 11,
+      );
+    }
+  }
+
+  void _paintLabel(
+    Canvas canvas,
+    String text,
+    Offset center, {
+    required Color color,
+    required double fontSize,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: fontSize.clamp(8.0, 13.0),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(canvas, center - Offset(painter.width / 2, 0));
+  }
+
+  @override
+  bool shouldRepaint(covariant _WorkshopNotationOverlayPainter oldDelegate) =>
+      true;
+}
+
 class _TopBar extends StatelessWidget {
   const _TopBar({
     required this.mode,

@@ -538,10 +538,15 @@ void main() {
     tab.setChordByName('G');
     await tester.pump();
     expect(tab.chordNameAt(2), 'G');
+    expect(tab.fretAt(2, 0), 3);
+    expect(tab.fretAt(2, 1), 0);
+    expect(tab.fretAt(2, 4), 2);
+    expect(tab.fretAt(2, 5), 3);
 
     tab.setChordByName(null);
     await tester.pump();
     expect(tab.chordNameAt(2), isNull);
+    expect(tab.fretAt(2, 0), isNull);
   });
 
   testWidgets('Save to Song Book stores the tab as a song', (tester) async {

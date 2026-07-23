@@ -192,59 +192,66 @@ class _MultiPartCanvasState extends State<MultiPartCanvas> {
             final geom = _geometry(doc, metadata, widthSpaces);
             final heightSpaces = geom.heightSpaces;
             return SingleChildScrollView(
-              child: MouseRegion(
-                onHover: widget.onElementHover == null
-                    ? null
-                    : (e) {
-                        final ids = widget.controller?.elementIdsIn(
-                              Rect.fromCenter(
-                                center: e.localPosition,
-                                width: 6,
-                                height: 6,
-                              ),
-                            ) ??
-                            const [];
-                        widget.onElementHover!(ids.isEmpty ? null : ids.first);
-                      },
-                onExit: widget.onElementHover == null
-                    ? null
-                    : (_) => widget.onElementHover!(null),
-                child: SizedBox(
-                  width: widthSpaces * widget.staffSpace,
-                  height: heightSpaces * widget.staffSpace,
-                  child: Stack(
-                    children: [
-                      InteractiveMultiPartView(
-                        document: doc,
-                        metrics: geom.metrics,
-                        theme: theme,
-                        staffSpace: widget.staffSpace,
-                        // staffGap (4) / systemGap (10) match the view's own defaults;
-                        // the probe below mirrors them so heights agree.
-                        highlightedIds: widget.highlightedIds,
-                        suppressElementIds: widget.suppressElementIds,
-                        ghostPart: widget.ghostPart,
-                        ghostTarget: widget.ghostTarget,
-                        ghostDuration: widget.ghostDuration,
-                        onElementTap: widget.onElementTap,
-                        onStaffTap: widget.onStaffTap,
-                        onHover: widget.onHover,
-                        onElementDragStart: widget.onElementDragStart,
-                        onElementDragUpdate: widget.onElementDragUpdate,
-                        onElementDragEnd: widget.onElementDragEnd,
-                        controller: widget.controller,
-                        caret: widget.caret,
-                        showMeasureNumbers: widget.showMeasureNumbers,
-                        showNoteNames: widget.showNoteNames,
-                        noteNameStyle: widget.noteNameStyle,
-                      ),
-                      if (widget.onMarquee != null)
-                        Positioned.fill(
-                          child: _CanvasMarqueeOverlay(
-                            onSelect: widget.onMarquee!,
-                          ),
+              // Keep a reachable escape hatch for an unusually wide system.
+              // The layout normally line-breaks to [widthSpaces], but a font
+              // or loaded score can still produce ink beyond that page box.
+              scrollDirection: Axis.horizontal,
+              child: SingleChildScrollView(
+                child: MouseRegion(
+                  onHover: widget.onElementHover == null
+                      ? null
+                      : (e) {
+                          final ids = widget.controller?.elementIdsIn(
+                                Rect.fromCenter(
+                                  center: e.localPosition,
+                                  width: 6,
+                                  height: 6,
+                                ),
+                              ) ??
+                              const [];
+                          widget
+                              .onElementHover!(ids.isEmpty ? null : ids.first);
+                        },
+                  onExit: widget.onElementHover == null
+                      ? null
+                      : (_) => widget.onElementHover!(null),
+                  child: SizedBox(
+                    width: widthSpaces * widget.staffSpace,
+                    height: heightSpaces * widget.staffSpace,
+                    child: Stack(
+                      children: [
+                        InteractiveMultiPartView(
+                          document: doc,
+                          metrics: geom.metrics,
+                          theme: theme,
+                          staffSpace: widget.staffSpace,
+                          // staffGap (4) / systemGap (10) match the view's own defaults;
+                          // the probe below mirrors them so heights agree.
+                          highlightedIds: widget.highlightedIds,
+                          suppressElementIds: widget.suppressElementIds,
+                          ghostPart: widget.ghostPart,
+                          ghostTarget: widget.ghostTarget,
+                          ghostDuration: widget.ghostDuration,
+                          onElementTap: widget.onElementTap,
+                          onStaffTap: widget.onStaffTap,
+                          onHover: widget.onHover,
+                          onElementDragStart: widget.onElementDragStart,
+                          onElementDragUpdate: widget.onElementDragUpdate,
+                          onElementDragEnd: widget.onElementDragEnd,
+                          controller: widget.controller,
+                          caret: widget.caret,
+                          showMeasureNumbers: widget.showMeasureNumbers,
+                          showNoteNames: widget.showNoteNames,
+                          noteNameStyle: widget.noteNameStyle,
                         ),
-                    ],
+                        if (widget.onMarquee != null)
+                          Positioned.fill(
+                            child: _CanvasMarqueeOverlay(
+                              onSelect: widget.onMarquee!,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

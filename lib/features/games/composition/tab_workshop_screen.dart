@@ -594,7 +594,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   void setChordByName(String? name) {
     _snapshot();
     setState(
-      () => _doc.setChord(_selCol, name == null ? null : kGuitarChords[name]),
+      () => _doc.setChordVoicing(
+        _selCol,
+        name == null ? null : kGuitarChords[name],
+      ),
     );
   }
 
@@ -1132,14 +1135,6 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     openSongMusicXml(picked.title, picked.musicXml);
   }
 
-  void _loadDemo() => setState(() {
-        _tracks[_active].doc =
-            TabDocument.fromScore(asciiTabToScore(_demoTab), _doc.tuning);
-        _sourceName = null;
-        _selCol = 0;
-        _selString = 0;
-      });
-
   void _clearAll() => setState(() {
         _tracks[_active].doc = TabDocument.blank(_doc.tuning);
         _sourceName = null;
@@ -1478,15 +1473,23 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
               PopupMenuItem(value: 'daw', child: Text(l10n.dawSend)),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.music_note),
-            tooltip: l10n.tabDemo,
-            onPressed: _loadDemo,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            tooltip: l10n.tabClear,
-            onPressed: _clearAll,
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: l10n.tabMenu,
+            onSelected: (value) {
+              if (value == 'clear') _clearAll();
+              if (value == 'inspect') {
+                setState(() => _inspect = !_inspect);
+              }
+            },
+            itemBuilder: (_) => [
+              CheckedPopupMenuItem(
+                value: 'inspect',
+                checked: _inspect,
+                child: Text(l10n.inspectMode),
+              ),
+              PopupMenuItem(value: 'clear', child: Text(l10n.tabClear)),
+            ],
           ),
         ],
       ),

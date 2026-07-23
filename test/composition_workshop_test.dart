@@ -1522,8 +1522,11 @@ void main() {
     await tester.tap(find.text(l10n.workshopNoteNames));
     await tester.pumpAndSettle();
 
-    expect(view().showNoteNames, isTrue);
-    // EN locale + auto naming → English letters.
+    // Names are painted by the app overlay so octave numbers (for example F2)
+    // are available even when the notation package's letter-only labels are
+    // enabled internally.
+    expect(view().showNoteNames, isFalse);
+    // EN locale + auto naming → English letters in the overlay.
     expect(view().noteNameStyle, NoteNameStyle.letter);
   });
 

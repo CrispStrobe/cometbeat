@@ -192,8 +192,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopVoice2 => 'St.2';
 
   @override
+  String get workshopVoice1Long => 'Stimme 1';
+
+  @override
+  String get workshopVoice2Long => 'Stimme 2';
+
+  @override
   String get workshopVoiceSelectorHelp =>
-      'Wähle die Stimme, in die neue Noten eingefügt werden';
+      'Wähle die unabhängige Melodielinie, in die neue Noten eingefügt werden';
+
+  @override
+  String get workshopVoiceLegend => 'Unabhängige Stimmen';
+
+  @override
+  String get workshopVoiceOverlapHelp =>
+      'Noten, die in V1 und V2 aufeinanderliegen, erklingen gemeinsam. Mit Akkord kannst du beliebig viele Noten in einer Stimme stapeln.';
 
   @override
   String get workshopSetTitle => 'Titel der Partitur festlegen';
@@ -489,7 +502,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopDynamicNone => 'Keine';
 
   @override
-  String get workshopChord => 'Akkord (Töne stapeln)';
+  String get workshopChord => 'Akkord: beliebig viele Töne stapeln';
 
   @override
   String get workshopSlur => 'Legatobogen (Auswahl phrasieren)';
@@ -2062,7 +2075,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabImport => 'Datei öffnen';
 
   @override
-  String get tabDemo => 'Demo-Riff';
+  String get tabMenu => 'Tab-Editor-Menü';
 
   @override
   String get tabTuning => 'Stimmung';

@@ -30,6 +30,16 @@ Sound Library creation tools.
   section in track inserts; later it can grow clip/segment modules and more FX
   sections without changing the instrument picker model.
 
+## Tab Editor navigation (TODO)
+
+- Add a three-dot overflow menu to the Tab Editor and move lower-frequency
+  actions out of the crowded top bar.
+- Keep transport, import, save, and primary editing controls immediately
+  reachable; put inspect mode, clear/reset, and future utility actions in the
+  overflow menu.
+- Ensure every menu action has an explicit effect in the editable tab document,
+  rather than only changing a label or preview.
+
 ## Architecture (done, `feature/pitch-detection-spike`)
 
 ```

@@ -422,11 +422,35 @@ abstract class AppLocalizations {
   /// **'V2'**
   String get workshopVoice2;
 
+  /// No description provided for @workshopVoice1Long.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice 1'**
+  String get workshopVoice1Long;
+
+  /// No description provided for @workshopVoice2Long.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice 2'**
+  String get workshopVoice2Long;
+
   /// No description provided for @workshopVoiceSelectorHelp.
   ///
   /// In en, this message translates to:
-  /// **'Choose which melodic voice receives newly inserted notes'**
+  /// **'Choose which independent melodic line receives newly inserted notes'**
   String get workshopVoiceSelectorHelp;
+
+  /// No description provided for @workshopVoiceLegend.
+  ///
+  /// In en, this message translates to:
+  /// **'Independent voices'**
+  String get workshopVoiceLegend;
+
+  /// No description provided for @workshopVoiceOverlapHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes aligned in V1 and V2 sound together. Use Chord to stack any number of notes in one voice.'**
+  String get workshopVoiceOverlapHelp;
 
   /// No description provided for @workshopSetTitle.
   ///
@@ -971,7 +995,7 @@ abstract class AppLocalizations {
   /// No description provided for @workshopChord.
   ///
   /// In en, this message translates to:
-  /// **'Chord (stack notes)'**
+  /// **'Chord: stack any number of notes'**
   String get workshopChord;
 
   /// No description provided for @workshopSlur.
@@ -3890,11 +3914,11 @@ abstract class AppLocalizations {
   /// **'Open a file'**
   String get tabImport;
 
-  /// No description provided for @tabDemo.
+  /// No description provided for @tabMenu.
   ///
   /// In en, this message translates to:
-  /// **'Demo riff'**
-  String get tabDemo;
+  /// **'Tab editor menu'**
+  String get tabMenu;
 
   /// No description provided for @tabTuning.
   ///

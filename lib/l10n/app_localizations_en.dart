@@ -192,8 +192,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopVoice2 => 'V2';
 
   @override
+  String get workshopVoice1Long => 'Voice 1';
+
+  @override
+  String get workshopVoice2Long => 'Voice 2';
+
+  @override
   String get workshopVoiceSelectorHelp =>
-      'Choose which melodic voice receives newly inserted notes';
+      'Choose which independent melodic line receives newly inserted notes';
+
+  @override
+  String get workshopVoiceLegend => 'Independent voices';
+
+  @override
+  String get workshopVoiceOverlapHelp =>
+      'Notes aligned in V1 and V2 sound together. Use Chord to stack any number of notes in one voice.';
 
   @override
   String get workshopSetTitle => 'Set score title';
@@ -488,7 +501,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopDynamicNone => 'None';
 
   @override
-  String get workshopChord => 'Chord (stack notes)';
+  String get workshopChord => 'Chord: stack any number of notes';
 
   @override
   String get workshopSlur => 'Slur (phrase the selected notes)';
@@ -2055,7 +2068,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabImport => 'Open a file';
 
   @override
-  String get tabDemo => 'Demo riff';
+  String get tabMenu => 'Tab editor menu';
 
   @override
   String get tabTuning => 'Tuning';
