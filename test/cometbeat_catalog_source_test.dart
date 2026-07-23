@@ -16,10 +16,11 @@ const _index = '{"version":"t","baseUrl":"https://h/","count":2,"shards":['
     '],"full":"catalog.json"}';
 
 // An index carrying every kind — used by the all-kinds browser test.
-const _indexAll = '{"version":"t","baseUrl":"https://h/","count":3,"shards":['
+const _indexAll = '{"version":"t","baseUrl":"https://h/","count":4,"shards":['
     '{"kind":"soundfont","count":1,"url":"catalog/soundfont.json"},'
     '{"kind":"module","count":1,"url":"catalog/module.json"},'
-    '{"kind":"sample","count":1,"url":"catalog/sample.json"}'
+    '{"kind":"sample","count":1,"url":"catalog/sample.json"},'
+    '{"kind":"score","count":1,"url":"catalog/score.json"}'
     '],"full":"catalog.json"}';
 
 const _sampleShard = '{"version":"t","baseUrl":"https://h/","kind":"sample",'
@@ -36,6 +37,9 @@ const _soundfontShard =
 const _moduleShard = '{"version":"t","baseUrl":"https://h/","kind":"module",'
     '"items":[{"id":"m","name":"Chiptune","kind":"module","format":"xm",'
     '"license":"CC0 / Public Domain","path":"assets/mod/chip.xm","bytes":9}]}';
+const _scoreShard = '{"version":"t","baseUrl":"https://h/","kind":"score",'
+    '"items":[{"id":"sc","name":"Kyrie","kind":"score","format":"gabc",'
+    '"license":"CC0 / Public Domain","path":"assets/scores/kyrie.gabc","bytes":9}]}';
 
 Uint8List _b(String s) => Uint8List.fromList(utf8.encode(s));
 
@@ -81,7 +85,7 @@ void main() {
     expect(utf8.decode(await src.fetch(item)), 'SF2');
   });
 
-  test('an all-kinds source fetches soundfont + module + sample shards',
+  test('an all-kinds source fetches soundfont + module + sample + score shards',
       () async {
     final src = CometbeatCatalogSource(
       _fakeHttp({
@@ -89,13 +93,17 @@ void main() {
         'https://h/catalog/soundfont.json': _soundfontShard,
         'https://h/catalog/module.json': _moduleShard,
         'https://h/catalog/sample.json': _sampleShard,
+        'https://h/catalog/score.json': _scoreShard,
       }),
-      kinds: const {'soundfont', 'instrument', 'sample', 'module'},
+      kinds: const {'soundfont', 'instrument', 'sample', 'module', 'score'},
       indexUrl: indexUrl,
     );
     final items = await src.browse(limit: 100);
     final kinds = {for (final i in items) i.collection};
-    expect(kinds, containsAll(<String>['soundfont', 'module', 'sample']));
+    expect(
+      kinds,
+      containsAll(<String>['soundfont', 'module', 'sample', 'score']),
+    );
     final sample = items.firstWhere((i) => i.collection == 'sample');
     expect(sample.title, 'Ocean Drum');
     expect(sample.format, 'wav'); // decodable → one-tap install

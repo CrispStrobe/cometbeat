@@ -30,7 +30,7 @@ const _kIndexUrl =
 /// Browses the curated CometBeat catalog for the given [kinds] (each maps to one
 /// published shard). Defaults to the playable "sounds" — SoundFonts, SFZ
 /// instruments, and samples — for the Sound Library; a module browser passes
-/// `{'module'}`.
+/// `{'module'}` or `{'score'}`.
 class CometbeatCatalogSource implements ContentSource {
   CometbeatCatalogSource(
     this._http, {
@@ -46,11 +46,11 @@ class CometbeatCatalogSource implements ContentSource {
   factory CometbeatCatalogSource.modules(HttpGet http) =>
       CometbeatCatalogSource(http, kinds: const {'module'});
 
-  /// Every playable-asset kind — the capable browser filters client-side by
-  /// kind chip. (Not scores — those are their own library-browser lane.)
+  /// Every catalog kind — the capable browser filters client-side by kind
+  /// chip. This includes playable assets, tracker modules, and scores.
   factory CometbeatCatalogSource.all(HttpGet http) => CometbeatCatalogSource(
         http,
-        kinds: const {'soundfont', 'instrument', 'sample', 'module'},
+        kinds: const {'soundfont', 'instrument', 'sample', 'module', 'score'},
       );
 
   /// Our curated symbolic SCORE corpus (GregoBase / NIFC / PDMX / Mutopia /

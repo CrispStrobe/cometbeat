@@ -31,12 +31,15 @@ import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/features/sound_lab/soundfont_persist.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music/music_picker.dart' show decodeMusicFile;
+import 'package:comet_beat/shared/music/score_router.dart'
+    show showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// The kind filter (matches LibraryItem.collection = the catalog `kind`).
-enum _Kind { all, soundfont, instrument, sample, module }
+enum _Kind { all, soundfont, instrument, sample, module, score }
 
 /// A coarse licence bucket for filtering (the raw string stays visible).
 enum _Lic { all, cc0, ccby, mit }
@@ -285,6 +288,27 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
     );
   }
 
+  /// Score → decode every supported notation format and open the full editor.
+  Future<void> _openScore(LibraryItem item) async {
+    final bytes = await _download(item);
+    if (bytes == null || !mounted) return;
+    try {
+      final score = decodeMusicFile('x.${item.format}', bytes);
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      navigator.pop();
+      await showScoreDestinations(navigator.context, score);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.libraryImportFailed),
+          ),
+        );
+      }
+    }
+  }
+
   Future<SampleClip?> _sampleClipFromCatalog(LibraryItem item) async {
     final bytes = await _download(item);
     if (bytes == null || !mounted) return null;
@@ -428,6 +452,11 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
             label: l10n.catalogOpenInTracker,
             run: () => _openModule(item),
           ),
+        'score' => (
+            icon: Icons.music_note,
+            label: l10n.trackerOpenWorkshop,
+            run: () => _openScore(item),
+          ),
         'instrument' when instrumentInstallSupported => (
             icon: Icons.download_for_offline_outlined,
             label: l10n.catalogInstallInstrument,
@@ -534,6 +563,7 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
               kindChip(_Kind.instrument, l10n.catalogKindInstruments),
               kindChip(_Kind.sample, l10n.catalogKindSamples),
               kindChip(_Kind.module, l10n.catalogKindModules),
+              kindChip(_Kind.score, l10n.workshopModeScore),
             ],
           ),
         ),
@@ -591,6 +621,7 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
   IconData _iconFor(String kind) => switch (kind) {
         'soundfont' => Icons.piano,
         'module' => Icons.grid_on,
+        'score' => Icons.library_music,
         'sample' => Icons.graphic_eq,
         _ => Icons.music_note,
       };

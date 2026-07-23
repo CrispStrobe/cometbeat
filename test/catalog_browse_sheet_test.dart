@@ -57,6 +57,7 @@ final _fixture = [
   _item('Cello VCSL', 'instrument', 'sfz', 'CC0 / Public Domain'),
   _item('Snare hit', 'sample', 'wav', 'CC0 / Public Domain'),
   _item('Chiptune', 'module', 'xm', 'CC BY 4.0'),
+  _item('Kyrie', 'score', 'gabc', 'CC0 / Public Domain'),
 ];
 
 Widget _host(
@@ -89,12 +90,14 @@ void main() {
     expect(find.text('Cello VCSL'), findsOneWidget);
     expect(find.text('Snare hit'), findsOneWidget);
     expect(find.text('Chiptune'), findsOneWidget);
+    expect(find.text('Kyrie'), findsOneWidget);
     expect(find.textContaining('MIT License'), findsOneWidget);
     expect(find.textContaining('Alice'), findsWidgets); // attribution
     // per-kind icons in the list
     expect(find.byIcon(Icons.piano), findsOneWidget); // soundfont
     expect(find.byIcon(Icons.grid_on), findsOneWidget); // module
     expect(find.byIcon(Icons.graphic_eq), findsOneWidget); // sample
+    expect(find.byIcon(Icons.library_music), findsOneWidget); // score
   });
 
   testWidgets('kind chip filters to one kind', (tester) async {
@@ -152,6 +155,7 @@ void main() {
     expect(find.text('Snare hit'), findsOneWidget);
     expect(find.text('FluidR3 GM'), findsNothing);
     expect(find.text('Chiptune'), findsNothing);
+    expect(find.text('Kyrie'), findsNothing);
   });
 
   testWidgets('a sample opens a detail sheet offering "Add to library"',
@@ -164,6 +168,16 @@ void main() {
 
     // detail sheet shows the sample's action route
     expect(find.text('Add to library'), findsOneWidget);
+  });
+
+  testWidgets('a catalog score opens the score editor path', (tester) async {
+    await tester.pumpWidget(_host(_FakeSource(_fixture)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Kyrie'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Open in Score Workshop'), findsOneWidget);
   });
 
   testWidgets('a sample can be inserted directly into the audio track',

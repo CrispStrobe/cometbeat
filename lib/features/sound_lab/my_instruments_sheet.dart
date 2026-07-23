@@ -11,7 +11,10 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
+import 'package:comet_beat/core/audio/tracker_song_module.dart'
+    show songFromModuleBytes;
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/sound_lab/catalog_browse_sheet.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
@@ -20,11 +23,34 @@ import 'package:comet_beat/features/sound_lab/sample_extractor_screen.dart';
 import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
 import 'package:comet_beat/features/sound_lab/voice_lab_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music/music_picker.dart' show decodeMusicFile;
+import 'package:comet_beat/shared/music/score_router.dart'
+    show showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+const _kMusicLibraryExtensions = [
+  'musicxml',
+  'xml',
+  'mxl',
+  'abc',
+  'mei',
+  'krn',
+  'kern',
+  'mid',
+  'midi',
+  'mscx',
+  'mscz',
+  'gp',
+  'gpx',
+  'gabc',
+  'ly',
+  'lilypond',
+];
+const _kModuleLibraryExtensions = ['mod', 'xm', 's3m', 'it'];
 
 /// Shows the library. Resolves to the picked [SavedInstrument], or null
 /// (cancelled, or opened with [pickable] false).
@@ -127,7 +153,9 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
     _reload();
   }
 
-  /// Imports a WAV/MP3 file as a sample instrument in the library.
+  /// Imports audio into the sound library, or opens notation/modules in their
+  /// native editors. Sound Library is the entry point, not an audio-only file
+  /// picker.
   Future<void> _import() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
@@ -135,13 +163,41 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
       final file = await openFile(
         acceptedTypeGroups: const [
           XTypeGroup(
-            label: 'Audio (WAV, MP3)',
-            extensions: kAudioImportExtensions,
+            label: 'Audio, scores, and modules',
+            extensions: [
+              ...kAudioImportExtensions,
+              ..._kMusicLibraryExtensions,
+              ..._kModuleLibraryExtensions,
+            ],
           ),
         ],
       );
       if (file == null) return;
-      final imported = importAudioMono(await file.readAsBytes());
+      final bytes = await file.readAsBytes();
+      final ext = file.name.split('.').length > 1
+          ? file.name.split('.').last.toLowerCase()
+          : '';
+      if (_kModuleLibraryExtensions.contains(ext)) {
+        final song = songFromModuleBytes(bytes);
+        if (!mounted) return;
+        final navigator = Navigator.of(context);
+        navigator.pop();
+        await navigator.push<void>(
+          MaterialPageRoute(
+            builder: (_) => AdvancedTrackerScreen(initialSong: song),
+          ),
+        );
+        return;
+      }
+      if (_kMusicLibraryExtensions.contains(ext)) {
+        final score = decodeMusicFile(file.name, bytes);
+        if (!mounted) return;
+        final navigator = Navigator.of(context);
+        navigator.pop();
+        await showScoreDestinations(navigator.context, score);
+        return;
+      }
+      final imported = importAudioMono(bytes);
       if (imported == null || imported.pcm.isEmpty) {
         messenger.showSnackBar(
           SnackBar(content: Text(l10n.mySamplesImportFailed)),
