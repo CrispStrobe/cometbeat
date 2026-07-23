@@ -530,6 +530,9 @@ abstract interface class CompositionWorkshopTester {
   /// Test seam: drive the hover-inspect path for element [id] as if the mouse
   /// were over it (bypasses pixel→region hit-testing). Pass null to clear.
   void debugHoverElement(String? id);
+
+  /// Test seam: return the current MusicXML export without opening a save picker.
+  String debugMusicXmlExport();
 }
 
 class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
@@ -589,6 +592,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final stem = _scoreTitle.trim().replaceAll(RegExp(r'[^a-zA-Z0-9 _-]'), '');
     return stem.trim().isEmpty ? 'score' : stem.trim().replaceAll(' ', '_');
   }
+
+  @override
+  String debugMusicXmlExport() => _musicXmlExport();
 
   bool _showAnalysis = false; // live harmonic analysis: tint notes by function
   bool _inspect = false; // 🔍 Looking Glass: tap a note to see what it is
@@ -2939,7 +2945,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// (crisp_notation C11 `multiPartToMusicXml`), else the single active part.
   String _musicXmlExport() => _mpd.partCount > 1
       ? multiPartToMusicXml(_mpd.buildMultiPart(), partNames: _mpd.names)
-      : scoreToMusicXml(_doc.buildScore());
+      : scoreToMusicXml(
+          _doc.buildScore(),
+          partName: _scoreTitle.trim().isEmpty ? 'Music' : _scoreTitle.trim(),
+        );
 
   Future<(Uint8List?, String?)> _generateExport(ExportFormat fmt) async {
     final score = _doc.buildScore();
@@ -3365,7 +3374,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       ImportedSong(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: name,
-        musicXml: scoreToMusicXml(_doc.buildScore()),
+        musicXml: _musicXmlExport(),
       ),
     );
     messenger.showSnackBar(SnackBar(content: Text(l10n.myMelodySaved)));

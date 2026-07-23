@@ -394,14 +394,21 @@ void main() {
     await tester.tap(find.byTooltip(l10n.workshopSetTitle));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Morning Demo');
-    await tester.tap(find.text(
+    await tester.tap(
+      find.text(
         MaterialLocalizations.of(tester.element(find.byType(AlertDialog)))
-            .okButtonLabel));
+            .okButtonLabel,
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip(l10n.workshopSetTitle));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'Morning Demo'), findsOneWidget);
+    expect(
+      _editor(tester).debugMusicXmlExport(),
+      contains('<part-name>Morning Demo</part-name>'),
+    );
   });
 
   testWidgets('the Studio inspector is off by default and toggles on',
