@@ -171,7 +171,7 @@ void main() {
       expect(peak, greaterThan(0.05));
       expect(peak, lessThanOrEqualTo(1.0));
     });
-  }, skip: skip);
+  }, skip: skip,);
 
   group('glint FLAC decode — malformed input is null, never a crash', () {
     late FlacDecode decode;
@@ -193,7 +193,7 @@ void main() {
       // crash / no throw.
       expect(() => decode(cut), returnsNormally);
     });
-  }, skip: skip);
+  }, skip: skip,);
 
   group('installer decodes a FLAC-sampled SFZ into a playable voice (live)',
       () {
@@ -229,7 +229,7 @@ lokey=0 hikey=127
       );
 
       expect(installed, isNotNull,
-          reason: 'a decodable FLAC region should yield a voice');
+          reason: 'a decodable FLAC region should yield a voice',);
       expect(installed!.instrument, isNotNull);
       // the raw .flac is kept on disk (Downloads manager can free it)
       expect(
@@ -238,5 +238,5 @@ lokey=0 hikey=127
         isTrue,
       );
     });
-  }, skip: skip);
+  }, skip: skip,);
 }

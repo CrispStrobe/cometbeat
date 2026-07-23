@@ -49,7 +49,7 @@ void main() {
 
     expect(saved, isNotNull);
     expect(
-        saved!.isReference, isTrue); // saved as a soundfont_ref, not embedded
+        saved!.isReference, isTrue,); // saved as a soundfont_ref, not embedded
     expect(saved.category, 'SoundFonts');
     // it landed in the library
     expect((await store.load()).any((s) => s.name == 'My SoundFont'), isTrue);
@@ -66,7 +66,7 @@ void main() {
       SampleClip(
           name: 'clip',
           sampleRate: 22050,
-          pcm: Float64List.fromList(const [0.0, 0.2, -0.2, 0.0])),
+          pcm: Float64List.fromList(const [0.0, 0.2, -0.2, 0.0]),),
     );
     expect(saved.isReference, isFalse);
     expect(await resolveSavedVoice(saved), isNotNull);

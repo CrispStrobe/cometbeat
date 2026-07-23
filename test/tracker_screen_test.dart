@@ -54,7 +54,7 @@ void main() {
     final game = _game(tester);
     expect(game.noteCount, 0);
     expect(
-        find.byKey(const ValueKey('tracker-starter-groove')), findsOneWidget);
+        find.byKey(const ValueKey('tracker-starter-groove')), findsOneWidget,);
     expect(
       tester
           .widget<FilledButton>(
