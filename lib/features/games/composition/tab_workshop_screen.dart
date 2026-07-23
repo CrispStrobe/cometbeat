@@ -511,7 +511,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   /// Pick a saved "My Instruments" voice and hear the whole tab through it — a
   /// preview, separate from the highlighting transport.
   Future<void> _playWithInstrument() async {
-    final saved = await showMyInstrumentsSheet(context);
+    final saved = await showMyInstrumentsSheet(context, includeBuiltIns: true);
     if (saved == null || !mounted) return;
     final inst = saved.instrument;
     if (inst != null) {

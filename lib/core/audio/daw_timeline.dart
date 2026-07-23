@@ -16,9 +16,18 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart'
+    show BiquadKind, biquadFx;
+import 'package:comet_beat/core/audio/crisp_dsp/distortion.dart'
+    show distortionFx;
+import 'package:comet_beat/core/audio/crisp_dsp/dynamics.dart'
+    show compressorFx, gateFx;
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
-    show delayFx;
+    show chorusFx, delayFx, flangerFx;
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
+import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart' show ringModFx;
+import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
+    show VoiceEffect, applyVoiceEffect;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 
@@ -65,6 +74,155 @@ class _Ref {
   int get hashCode => identityHashCode(target);
 }
 
+/// A typed per-clip effect, matching CrispAudio's segment-effect-chain model:
+/// each clip can carry an ordered list of same-length DSP transforms, each with
+/// its own params and bypass state.
+class DawClipEffect {
+  const DawClipEffect({
+    required this.type,
+    this.enabled = true,
+    this.params = const {},
+  });
+
+  final DawClipEffectType type;
+  final bool enabled;
+  final Map<String, double> params;
+
+  DawClipEffect copyWith({
+    DawClipEffectType? type,
+    bool? enabled,
+    Map<String, double>? params,
+  }) =>
+      DawClipEffect(
+        type: type ?? this.type,
+        enabled: enabled ?? this.enabled,
+        params: params ?? this.params,
+      );
+
+  Object get cacheKey => (
+        type.name,
+        enabled,
+        Object.hashAll(
+          [
+            for (final e
+                in params.entries.toList()
+                  ..sort((a, b) => a.key.compareTo(b.key)))
+              Object.hash(e.key, e.value),
+          ],
+        ),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'type': type.name,
+        'enabled': enabled,
+        'params': params,
+      };
+
+  static DawClipEffect? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final typeName = raw['type'];
+    if (typeName is! String) return null;
+    final type =
+        DawClipEffectType.values.where((t) => t.name == typeName).firstOrNull;
+    if (type == null) return null;
+    final p = <String, double>{};
+    final params = raw['params'];
+    if (params is Map) {
+      for (final e in params.entries) {
+        final k = e.key;
+        final v = e.value;
+        if (k is String && v is num) p[k] = v.toDouble();
+      }
+    }
+    return DawClipEffect(
+      type: type,
+      enabled: raw['enabled'] != false,
+      params: p,
+    );
+  }
+}
+
+enum DawClipEffectType {
+  reverb,
+  delay,
+  chorus,
+  flanger,
+  ringMod,
+  distortion,
+  bitCrush,
+  lowpass,
+  highpass,
+  compressor,
+  gate,
+  voiceChipmunk,
+  voiceDeep,
+  voiceRobot,
+  voiceRadio,
+}
+
+DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
+      DawClipEffectType.reverb => const DawClipEffect(
+          type: DawClipEffectType.reverb,
+          params: {'roomSize': 0.7, 'damping': 0.4, 'mix': 0.35},
+        ),
+      DawClipEffectType.delay => const DawClipEffect(
+          type: DawClipEffectType.delay,
+          params: {'delayMs': 300, 'feedback': 0.35, 'mix': 0.35},
+        ),
+      DawClipEffectType.chorus => const DawClipEffect(
+          type: DawClipEffectType.chorus,
+          params: {'rateHz': 1.5, 'depthMs': 6, 'mix': 0.45},
+        ),
+      DawClipEffectType.flanger => const DawClipEffect(
+          type: DawClipEffectType.flanger,
+          params: {'rateHz': 0.35, 'depthMs': 3, 'feedback': 0.5, 'mix': 0.5},
+        ),
+      DawClipEffectType.ringMod => const DawClipEffect(
+          type: DawClipEffectType.ringMod,
+          params: {'carrierHz': 180, 'mix': 0.5},
+        ),
+      DawClipEffectType.distortion => const DawClipEffect(
+          type: DawClipEffectType.distortion,
+          params: {'drive': 4, 'mix': 0.55},
+        ),
+      DawClipEffectType.bitCrush => const DawClipEffect(
+          type: DawClipEffectType.bitCrush,
+          params: {'bits': 8, 'mix': 0.55},
+        ),
+      DawClipEffectType.lowpass => const DawClipEffect(
+          type: DawClipEffectType.lowpass,
+          params: {'freq': 8000, 'q': 0.707, 'mix': 1},
+        ),
+      DawClipEffectType.highpass => const DawClipEffect(
+          type: DawClipEffectType.highpass,
+          params: {'freq': 180, 'q': 0.707, 'mix': 1},
+        ),
+      DawClipEffectType.compressor => const DawClipEffect(
+          type: DawClipEffectType.compressor,
+          params: {
+            'thresholdDb': -18,
+            'ratio': 4,
+            'attackMs': 10,
+            'releaseMs': 120,
+            'kneeDb': 6,
+            'makeupDb': 0,
+            'mix': 1,
+          },
+        ),
+      DawClipEffectType.gate => const DawClipEffect(
+          type: DawClipEffectType.gate,
+          params: {'thresholdDb': -40, 'ratio': 4, 'rangeDb': -60, 'mix': 1},
+        ),
+      DawClipEffectType.voiceChipmunk =>
+        const DawClipEffect(type: DawClipEffectType.voiceChipmunk),
+      DawClipEffectType.voiceDeep =>
+        const DawClipEffect(type: DawClipEffectType.voiceDeep),
+      DawClipEffectType.voiceRobot =>
+        const DawClipEffect(type: DawClipEffectType.voiceRobot),
+      DawClipEffectType.voiceRadio =>
+        const DawClipEffect(type: DawClipEffectType.voiceRadio),
+    };
+
 /// A placed clip: its [source], where it starts ([startMs]), a linear [gain],
 /// whether it's [muted], and optional fade-in/out ramps ([fadeInMs]/
 /// [fadeOutMs]) applied at render time.
@@ -78,6 +236,7 @@ class Clip {
     this.fadeOutMs = 0,
     this.trimStartMs = 0,
     this.trimEndMs = 0,
+    this.effects = const [],
   });
 
   final ClipSource source;
@@ -93,6 +252,10 @@ class Clip {
   final double trimStartMs;
   final double trimEndMs;
 
+  /// Ordered per-clip effect chain. Effects process the trimmed source audio
+  /// before clip gain/fades and before the track insert.
+  final List<DawClipEffect> effects;
+
   Clip copyWith({
     double? startMs,
     double? gain,
@@ -101,6 +264,7 @@ class Clip {
     double? fadeOutMs,
     double? trimStartMs,
     double? trimEndMs,
+    List<DawClipEffect>? effects,
   }) =>
       Clip(
         source: source,
@@ -111,11 +275,20 @@ class Clip {
         fadeOutMs: fadeOutMs ?? this.fadeOutMs,
         trimStartMs: trimStartMs ?? this.trimStartMs,
         trimEndMs: trimEndMs ?? this.trimEndMs,
+        effects: effects ?? this.effects,
       );
 }
 
 /// A per-track insert effect applied to the lane's summed audio at bake time.
-enum TrackEffect { none, reverb, echo }
+enum TrackEffect {
+  none,
+  reverb,
+  echo,
+  voiceChipmunk,
+  voiceDeep,
+  voiceRobot,
+  voiceRadio,
+}
 
 /// One DAW track — a lane of clips with its own [gain]/[muted]/[soloed]. An
 /// optional [instrument] is the lane's default voice: engraved (score) clips
@@ -160,7 +333,170 @@ Float64List applyTrackEffect(
       TrackEffect.reverb =>
         reverbFx(buf, roomSize: 0.7, sampleRate: sampleRate),
       TrackEffect.echo => delayFx(buf, delayMs: 300, sampleRate: sampleRate),
+      TrackEffect.voiceChipmunk => applyVoiceEffect(
+          buf,
+          VoiceEffect.chipmunk,
+          sampleRate: sampleRate,
+        ),
+      TrackEffect.voiceDeep => applyVoiceEffect(
+          buf,
+          VoiceEffect.deep,
+          sampleRate: sampleRate,
+        ),
+      TrackEffect.voiceRobot => applyVoiceEffect(
+          buf,
+          VoiceEffect.robot,
+          sampleRate: sampleRate,
+        ),
+      TrackEffect.voiceRadio => applyVoiceEffect(
+          buf,
+          VoiceEffect.radio,
+          sampleRate: sampleRate,
+        ),
     };
+
+Float64List applyClipEffectChain(
+  Float64List input,
+  List<DawClipEffect> effects,
+  int sampleRate,
+) {
+  var out = input;
+  for (final fx in effects) {
+    if (!fx.enabled) continue;
+    out = _applyClipEffect(out, fx, sampleRate);
+  }
+  return out;
+}
+
+Float64List _applyClipEffect(
+  Float64List input,
+  DawClipEffect fx,
+  int sampleRate,
+) {
+  double p(String key, double fallback) => fx.params[key] ?? fallback;
+  return switch (fx.type) {
+    DawClipEffectType.reverb => reverbFx(
+        input,
+        roomSize: p('roomSize', 0.7),
+        damping: p('damping', 0.4),
+        mix: p('mix', 0.35),
+        sampleRate: sampleRate,
+      ),
+    DawClipEffectType.delay => delayFx(
+        input,
+        delayMs: p('delayMs', 300),
+        feedback: p('feedback', 0.35),
+        mix: p('mix', 0.35),
+        sampleRate: sampleRate,
+      ),
+    DawClipEffectType.chorus => chorusFx(
+        input,
+        rateHz: p('rateHz', 1.5),
+        depthMs: p('depthMs', 6),
+        mix: p('mix', 0.45),
+        sampleRate: sampleRate,
+      ),
+    DawClipEffectType.flanger => flangerFx(
+        input,
+        rateHz: p('rateHz', 0.35),
+        depthMs: p('depthMs', 3),
+        feedback: p('feedback', 0.5),
+        mix: p('mix', 0.5),
+        sampleRate: sampleRate,
+      ),
+    DawClipEffectType.ringMod => ringModFx(
+        input,
+        carrierHz: p('carrierHz', 180),
+        mix: p('mix', 0.5),
+        sampleRate: sampleRate,
+      ),
+    DawClipEffectType.distortion => distortionFx(
+        input,
+        drive: p('drive', 4),
+        mix: p('mix', 0.55),
+      ),
+    DawClipEffectType.bitCrush => _bitCrushFx(
+        input,
+        bits: p('bits', 8),
+        mix: p('mix', 0.55),
+      ),
+    DawClipEffectType.lowpass => biquadFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 8000),
+        q: p('q', 0.707),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.highpass => biquadFx(
+        input,
+        kind: BiquadKind.highpass,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 180),
+        q: p('q', 0.707),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.compressor => compressorFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        thresholdDb: p('thresholdDb', -18),
+        ratio: p('ratio', 4),
+        attackMs: p('attackMs', 10),
+        releaseMs: p('releaseMs', 120),
+        kneeDb: p('kneeDb', 6),
+        makeupDb: p('makeupDb', 0),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.gate => gateFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        thresholdDb: p('thresholdDb', -40),
+        ratio: p('ratio', 4),
+        rangeDb: p('rangeDb', -60),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.voiceChipmunk => applyVoiceEffect(
+        input,
+        VoiceEffect.chipmunk,
+        sampleRate: sampleRate,
+      ),
+    DawClipEffectType.voiceDeep => applyVoiceEffect(
+        input,
+        VoiceEffect.deep,
+        sampleRate: sampleRate,
+      ),
+    DawClipEffectType.voiceRobot => applyVoiceEffect(
+        input,
+        VoiceEffect.robot,
+        sampleRate: sampleRate,
+      ),
+    DawClipEffectType.voiceRadio => applyVoiceEffect(
+        input,
+        VoiceEffect.radio,
+        sampleRate: sampleRate,
+      ),
+  };
+}
+
+Float64List _bitCrushFx(
+  Float64List input, {
+  double bits = 8,
+  double mix = 0.55,
+}) {
+  final m = mix.clamp(0.0, 1.0);
+  final out = Float64List(input.length);
+  if (m == 0) {
+    out.setAll(0, input);
+    return out;
+  }
+  final b = bits.round().clamp(1, 16);
+  final levels = math.pow(2, b - 1).toDouble();
+  for (var i = 0; i < input.length; i++) {
+    final dry = input[i];
+    final wet = (dry * levels).floorToDouble() / levels;
+    out[i] = (1 - m) * dry + m * wet;
+  }
+  return out;
+}
 
 /// A DAW arrangement: an ordered list of tracks.
 class DawTimeline {
@@ -215,17 +551,20 @@ Float64List renderTimeline(
       // change is free and reversible.
       final pcm = _trimView(rendered, clip, sampleRate);
       if (pcm.isEmpty) continue;
+      final effected = clip.effects.isEmpty
+          ? pcm
+          : applyClipEffectChain(pcm, clip.effects, sampleRate);
       final start = (clip.startMs * sampleRate / 1000).round();
       places.add(
         (
           start: start,
-          pcm: pcm,
+          pcm: effected,
           gain: clip.gain * track.gain,
           fadeIn: (clip.fadeInMs * sampleRate / 1000).round(),
           fadeOut: (clip.fadeOutMs * sampleRate / 1000).round(),
         ),
       );
-      final end = start + pcm.length;
+      final end = start + effected.length;
       if (end > totalSamples) totalSamples = end;
     }
     if (places.isNotEmpty) perTrack.add((track, places));

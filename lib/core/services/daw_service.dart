@@ -353,14 +353,17 @@ class DawService extends ChangeNotifier {
   List<double> clipPeaks(int track, int index, {int buckets = 120}) {
     final clip = timeline.tracks[track].clips[index];
     final n = buckets < 1 ? 1 : buckets;
-    final key =
-        '${clip.source.cacheKey}|${clip.trimStartMs}|${clip.trimEndMs}|$n';
+    final key = '${clip.source.cacheKey}|${clip.trimStartMs}|${clip.trimEndMs}|'
+        '${Object.hashAll(clip.effects.map((e) => e.cacheKey))}|$n';
     return _peaks.putIfAbsent(key, () {
       final rendered = _cache.putIfAbsent(
         clip.source.cacheKey,
         () => clip.source.render(kDawSampleRate),
       );
-      final pcm = trimmedPcm(clip, rendered);
+      final dry = trimmedPcm(clip, rendered);
+      final pcm = clip.effects.isEmpty
+          ? dry
+          : applyClipEffectChain(dry, clip.effects, kDawSampleRate);
       final out = List<double>.filled(n, 0);
       if (pcm.isEmpty) return out;
       for (var b = 0; b < n; b++) {
@@ -425,6 +428,11 @@ class DawService extends ChangeNotifier {
       startMs: clip.startMs,
       gain: clip.gain,
       muted: clip.muted,
+      fadeInMs: clip.fadeInMs,
+      fadeOutMs: clip.fadeOutMs,
+      trimStartMs: clip.trimStartMs,
+      trimEndMs: clip.trimEndMs,
+      effects: clip.effects,
     );
     notifyListeners();
   }
@@ -454,6 +462,7 @@ class DawService extends ChangeNotifier {
       muted: clip.muted,
       fadeInMs: clip.fadeInMs,
       fadeOutMs: clip.fadeOutMs,
+      effects: clip.effects,
     );
     notifyListeners();
   }
@@ -494,6 +503,7 @@ class DawService extends ChangeNotifier {
       muted: clip.muted,
       fadeInMs: clip.fadeInMs,
       fadeOutMs: clip.fadeOutMs,
+      effects: clip.effects,
     );
     notifyListeners();
   }
@@ -570,6 +580,7 @@ class DawService extends ChangeNotifier {
         fadeOutMs: clip.fadeOutMs,
         trimStartMs: clip.trimStartMs,
         trimEndMs: clip.trimEndMs,
+        effects: clip.effects,
       );
 
   /// Voice one score clip through [inst] (null = default synth). No-op on a
@@ -611,6 +622,64 @@ class DawService extends ChangeNotifier {
     if (timeline.tracks[track].effect == effect) return;
     _record();
     timeline.tracks[track].effect = effect;
+    notifyListeners();
+  }
+
+  List<DawClipEffect> clipEffects(int track, int index) =>
+      timeline.tracks[track].clips[index].effects;
+
+  void addClipEffect(int track, int index, DawClipEffectType type) {
+    _record();
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    clips[index] = clip.copyWith(
+      effects: [...clip.effects, defaultDawClipEffect(type)],
+    );
+    _peaks.clear();
+    notifyListeners();
+  }
+
+  void removeClipEffect(int track, int index, int effectIndex) {
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    if (effectIndex < 0 || effectIndex >= clip.effects.length) return;
+    _record();
+    final effects = [...clip.effects]..removeAt(effectIndex);
+    clips[index] = clip.copyWith(effects: effects);
+    _peaks.clear();
+    notifyListeners();
+  }
+
+  void toggleClipEffect(int track, int index, int effectIndex) {
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    if (effectIndex < 0 || effectIndex >= clip.effects.length) return;
+    _record();
+    final effects = [...clip.effects];
+    effects[effectIndex] = effects[effectIndex].copyWith(
+      enabled: !effects[effectIndex].enabled,
+    );
+    clips[index] = clip.copyWith(effects: effects);
+    _peaks.clear();
+    notifyListeners();
+  }
+
+  void setClipEffectParam(
+    int track,
+    int index,
+    int effectIndex,
+    String key,
+    double value,
+  ) {
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    if (effectIndex < 0 || effectIndex >= clip.effects.length) return;
+    _coalesced(('clipFxParam', track, index, effectIndex, key));
+    final effects = [...clip.effects];
+    final fx = effects[effectIndex];
+    effects[effectIndex] = fx.copyWith(params: {...fx.params, key: value});
+    clips[index] = clip.copyWith(effects: effects);
+    _peaks.clear();
     notifyListeners();
   }
 

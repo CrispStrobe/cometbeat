@@ -53,6 +53,8 @@ String projectToJson(
                 'fadeOutMs': clip.fadeOutMs,
                 'trimStartMs': clip.trimStartMs,
                 'trimEndMs': clip.trimEndMs,
+                if (clip.effects.isNotEmpty)
+                  'effects': [for (final fx in clip.effects) fx.toJson()],
                 'pcm': base64Encode(_floatToInt16(r(clip.source))),
               },
           ],
@@ -107,6 +109,11 @@ DawTimeline projectFromJson(String json) {
             fadeOutMs: num_(c['fadeOutMs']),
             trimStartMs: num_(c['trimStartMs']),
             trimEndMs: num_(c['trimEndMs']),
+            effects: [
+              if (c['effects'] case final effects? when effects is List)
+                for (final fx in effects)
+                  if (DawClipEffect.fromJson(fx) case final parsed?) parsed,
+            ],
           ),
         );
       }

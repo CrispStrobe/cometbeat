@@ -1673,6 +1673,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawEffectEcho => 'Echo';
 
   @override
+  String get dawVoiceShaping => 'Stimmformung';
+
+  @override
+  String get dawEffectVoiceChipmunk => 'Chipmunk';
+
+  @override
+  String get dawEffectVoiceDeep => 'Tief';
+
+  @override
+  String get dawEffectVoiceRobot => 'Roboter';
+
+  @override
+  String get dawEffectVoiceRadio => 'Radio';
+
+  @override
   String get dawInstrument => 'Instrument';
 
   @override
@@ -2288,6 +2303,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get catalogAddToLibrary => 'Zur Bibliothek';
+
+  @override
+  String get catalogInsertInAudioTrack => 'In Audiospur einfügen';
 
   @override
   String get catalogPlay => 'Spielen';

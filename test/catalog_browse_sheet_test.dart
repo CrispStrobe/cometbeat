@@ -10,14 +10,17 @@ import 'dart:typed_data';
 import 'package:comet_beat/features/library/content_source.dart';
 import 'package:comet_beat/features/sound_lab/catalog_browse_sheet.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
+import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeSource implements ContentSource {
-  _FakeSource(this._items);
+  _FakeSource(this._items, {Uint8List? bytes}) : _bytes = bytes;
   final List<LibraryItem> _items;
+  final Uint8List? _bytes;
 
   @override
   String get id => 'fake';
@@ -33,7 +36,7 @@ class _FakeSource implements ContentSource {
       _items;
 
   @override
-  Future<Uint8List> fetch(LibraryItem item) async => Uint8List(0);
+  Future<Uint8List> fetch(LibraryItem item) async => _bytes ?? Uint8List(0);
 }
 
 LibraryItem _item(String title, String kind, String fmt, String lic) =>
@@ -56,11 +59,19 @@ final _fixture = [
   _item('Chiptune', 'module', 'xm', 'CC BY 4.0'),
 ];
 
-Widget _host(ContentSource src) => MaterialApp(
+Widget _host(
+  ContentSource src, {
+  Future<void> Function(SampleClip clip)? onInsertSample,
+}) =>
+    MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
-        body: CatalogBrowseSheet(source: src, store: InstrumentLibraryStore()),
+        body: CatalogBrowseSheet(
+          source: src,
+          store: InstrumentLibraryStore(),
+          onInsertSample: onInsertSample,
+        ),
       ),
     );
 
@@ -151,5 +162,35 @@ void main() {
 
     // detail sheet shows the sample's action route
     expect(find.text('Add to library'), findsOneWidget);
+  });
+
+  testWidgets('a sample can be inserted directly into the audio track',
+      (tester) async {
+    SampleClip? inserted;
+    final wav = pcmFloatToWav(
+      Float64List.fromList(const [0.0, 0.25, -0.25, 0.0]),
+      sampleRate: 22050,
+    );
+    await tester.pumpWidget(
+      _host(
+        _FakeSource(_fixture, bytes: wav),
+        onInsertSample: (clip) async => inserted = clip,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Snare hit'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add to library'), findsOneWidget);
+    expect(find.text('Insert in audio track'), findsOneWidget);
+
+    await tester.tap(find.text('Insert in audio track'));
+    await tester.pumpAndSettle();
+
+    expect(inserted, isNotNull);
+    expect(inserted!.name, 'Snare hit');
+    expect(inserted!.sampleRate, 22050);
+    expect(inserted!.pcm, hasLength(4));
   });
 }

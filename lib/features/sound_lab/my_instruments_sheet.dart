@@ -33,6 +33,8 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
   InstrumentLibraryStore? store,
   bool pickable = true,
   String? restrictToCategory,
+  bool includeBuiltIns = false,
+  Future<void> Function(SampleClip clip)? onCatalogSampleInsert,
 }) {
   return showModalBottomSheet<SavedInstrument>(
     context: context,
@@ -42,6 +44,8 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
       store: store ?? InstrumentLibraryStore(),
       pickable: pickable,
       restrictToCategory: restrictToCategory,
+      includeBuiltIns: includeBuiltIns,
+      onCatalogSampleInsert: onCatalogSampleInsert,
     ),
   );
 }
@@ -66,12 +70,23 @@ String _categoryLabel(AppLocalizations l10n, String category) =>
       _ => l10n.soundLibraryCatInstruments,
     };
 
+String _instrumentLabel(String id) {
+  final spaced = id.replaceAll(RegExp(r'[_-]+'), ' ');
+  return spaced
+      .split(' ')
+      .where((p) => p.isNotEmpty)
+      .map((p) => '${p[0].toUpperCase()}${p.substring(1)}')
+      .join(' ');
+}
+
 @visibleForTesting
 class MyInstrumentsSheet extends StatefulWidget {
   const MyInstrumentsSheet({
     required this.store,
     this.pickable = true,
     this.restrictToCategory,
+    this.includeBuiltIns = false,
+    this.onCatalogSampleInsert,
     super.key,
   });
 
@@ -82,6 +97,12 @@ class MyInstrumentsSheet extends StatefulWidget {
   /// tabs, only its items. Used so the old sample-only pickers become thin
   /// adapters over this one dialog.
   final String? restrictToCategory;
+
+  /// When true, the picker includes the built-in [kTrackerInstruments] palette
+  /// before saved user/library items. Instrument selectors use this; management
+  /// tests/screens keep the saved-only default.
+  final bool includeBuiltIns;
+  final Future<void> Function(SampleClip clip)? onCatalogSampleInsert;
 
   @override
   State<MyInstrumentsSheet> createState() => _MyInstrumentsSheetState();
@@ -165,10 +186,33 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
     final list = await widget.store.load();
     if (mounted) {
       setState(() {
-        _items = list;
+        _items = [..._builtInItems(), ...list];
         _loading = false;
       });
     }
+  }
+
+  List<SavedInstrument> _builtInItems() {
+    if (!widget.includeBuiltIns) return const [];
+    if (widget.restrictToCategory != null &&
+        widget.restrictToCategory != 'Instruments' &&
+        widget.restrictToCategory != 'Drums') {
+      return const [];
+    }
+    final out = <SavedInstrument>[];
+    for (final opt in kTrackerInstruments) {
+      final inst = opt.build();
+      final saved = SavedInstrument(
+        name: _instrumentLabel(opt.id),
+        json: instrumentToJsonString(inst),
+        source: 'Built-in',
+      );
+      if (widget.restrictToCategory == null ||
+          saved.category == widget.restrictToCategory) {
+        out.add(saved);
+      }
+    }
+    return out;
   }
 
   @override
@@ -184,13 +228,16 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
   @override
   Future<void> deleteAt(int index) async {
     // deleteAt indexes the FULL list (test seam); the UI deletes by name.
+    if (_items[index].source == 'Built-in') return;
     final list = await widget.store.delete(_items[index].name);
-    if (mounted) setState(() => _items = list);
+    if (mounted) setState(() => _items = [..._builtInItems(), ...list]);
   }
 
   Future<void> _deleteByName(String name) async {
+    final item = _items.where((s) => s.name == name).firstOrNull;
+    if (item?.source == 'Built-in') return;
     final list = await widget.store.delete(name);
-    if (mounted) setState(() => _items = list);
+    if (mounted) setState(() => _items = [..._builtInItems(), ...list]);
   }
 
   void _playNote(TrackerInstrument inst, int midi) {
@@ -232,11 +279,16 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
   /// Browses OUR curated Hugging Face catalog (SoundFonts / instruments /
   /// samples), pre-filtered to the current rubric; installs land in this store.
   Future<void> _browseCatalog() async {
-    await showCatalogBrowseSheet(
+    final inserted = await showCatalogBrowseSheet(
       context,
       store: widget.store,
       initialKind: _catalogKindFor(widget.restrictToCategory),
+      onInsertSample: widget.onCatalogSampleInsert,
     );
+    if (inserted == true && mounted) {
+      Navigator.of(context).pop();
+      return;
+    }
     if (mounted) await _reload(); // surface anything installed from the catalog
   }
 
@@ -470,7 +522,9 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
                                 tooltip: l10n.myInstrumentsDelete,
-                                onPressed: () => _deleteByName(s.name),
+                                onPressed: s.source == 'Built-in'
+                                    ? null
+                                    : () => _deleteByName(s.name),
                               ),
                             ],
                           ),

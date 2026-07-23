@@ -4,6 +4,32 @@ Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
 on one pure-Dart detection core so it stays testable headlessly and from a CLI.
 
+## Sound Library / Instrument / FX unification (IN PROGRESS)
+
+Unify the places that currently drift apart: the Tracker instrument selector,
+Workshop Score "Play with an instrument", Audio Editor track/clip voicing, and
+Sound Library creation tools.
+
+- **One Sound Library surface for instruments.** Built-in Tracker voices
+  (Tonal / Plucked / Chiptune / Drums / Recorded), saved instruments/samples,
+  SoundFont-backed voices, catalog installs, and generated FX must all be
+  available from the same picker. Any screen that says "choose an instrument"
+  should open that picker, not a separate chip-only palette.
+- **Generate FX creates instruments.** SFXR/FX generation belongs inside the
+  Sound Library creation menu so generated FX can become playable instruments in
+  Tracker, Workshop Score playback, and Audio Editor score/track voicing. It
+  should not be hidden behind Audio Editor > Add clip as a one-off timeline
+  source.
+- **Add clip adds timeline material.** Audio Editor > Add clip should stay about
+  arranging clips: samples from the library, extracted/imported material, and
+  demo beat/tune. Sound design tools live in the Sound Library when the goal is
+  creating/selecting an instrument.
+- **Voice Shaping is an audio FX module.** Shape a Voice is no longer an "add a
+  clip" action. The voice-shaping DSP should be exposed under Audio Editor FX so
+  it can process any WAV/sample/track/segment. Today that means a Voice Shaping
+  section in track inserts; later it can grow clip/segment modules and more FX
+  sections without changing the instrument picker model.
+
 ## Architecture (done, `feature/pitch-detection-spike`)
 
 ```

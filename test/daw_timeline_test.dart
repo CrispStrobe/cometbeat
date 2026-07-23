@@ -231,4 +231,51 @@ void main() {
       100,
     );
   });
+
+  test('per-clip effect chains process the trimmed segment before mixing', () {
+    final src = _ToneSource(0.5, 20);
+    final t = DawTimeline(
+      tracks: [
+        DawTrack(
+          clips: [
+            Clip(
+              source: src,
+              trimStartMs: 5,
+              trimEndMs: 15,
+              effects: [
+                defaultDawClipEffect(DawClipEffectType.ringMod).copyWith(
+                  params: {'carrierHz': 50, 'mix': 1},
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+    final out = renderTimeline(t, sampleRate: _sr, limit: false);
+    expect(out.length, 10);
+    expect(out.any((v) => (v - 0.5).abs() > 0.1), isTrue);
+  });
+
+  test('disabled clip effects are bypassed', () {
+    final src = _ToneSource(0.5, 10);
+    final t = DawTimeline(
+      tracks: [
+        DawTrack(
+          clips: [
+            Clip(
+              source: src,
+              effects: [
+                defaultDawClipEffect(DawClipEffectType.distortion).copyWith(
+                  enabled: false,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+    final out = renderTimeline(t, sampleRate: _sr, limit: false);
+    expect(out.every((v) => (v - 0.5).abs() < 1e-9), isTrue);
+  });
 }

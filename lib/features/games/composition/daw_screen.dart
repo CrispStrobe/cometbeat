@@ -32,8 +32,6 @@ import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
 import 'package:comet_beat/features/sound_lab/my_samples_sheet.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/features/sound_lab/sample_extractor_screen.dart';
-import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
-import 'package:comet_beat/features/sound_lab/voice_lab_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
@@ -295,7 +293,29 @@ class _DawScreenState extends State<DawScreen>
               builder: (ctx, setChips) => Wrap(
                 spacing: 6,
                 children: [
-                  for (final e in TrackEffect.values)
+                  for (final e in _spaceEffects)
+                    ChoiceChip(
+                      label: Text(_effectLabel(l10n, e)),
+                      selected: _daw.trackEffect(i) == e,
+                      onSelected: (_) {
+                        setTrackEffect(i, e);
+                        setChips(() {});
+                      },
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.dawVoiceShaping,
+              style: Theme.of(ctx).textTheme.labelMedium,
+            ),
+            const SizedBox(height: 6),
+            StatefulBuilder(
+              builder: (ctx, setChips) => Wrap(
+                spacing: 6,
+                children: [
+                  for (final e in _voiceShapeEffects)
                     ChoiceChip(
                       label: Text(_effectLabel(l10n, e)),
                       selected: _daw.trackEffect(i) == e,
@@ -397,26 +417,13 @@ class _DawScreenState extends State<DawScreen>
 
   /// Picks a sample from the shared "My Samples" library and arranges it.
   Future<void> addSample() async {
-    final clip = await showMySamplesSheet(context);
-    if (clip == null || clip.pcm.isEmpty || !mounted) return;
-    addSampleClip(clip);
-  }
-
-  /// Opens a Sound/Voice Lab tool as a modal that RETURNS a [SampleClip], and
-  /// drops it straight onto the timeline — the Sound Lab (generate FX) and Voice
-  /// Lab (record/shape a voice) are the Audio Editor's SoundFX modals.
-  Future<void> _addFromModal(Widget tool) async {
-    final clip = await Navigator.of(context).push<SampleClip>(
-      MaterialPageRoute<SampleClip>(builder: (_) => tool),
+    final clip = await showMySamplesSheet(
+      context,
+      onCatalogSampleInsert: (clip) async => addSampleClip(clip),
     );
     if (clip == null || clip.pcm.isEmpty || !mounted) return;
     addSampleClip(clip);
   }
-
-  Future<void> _addFromSoundLab() =>
-      _addFromModal(const SoundLabScreen(asPicker: true));
-  Future<void> _addFromVoiceLab() =>
-      _addFromModal(const VoiceLabScreen(asPicker: true));
 
   /// The Sample Extractor lifts many samples into the shared library at once, so
   /// it stays a library flow: extract, then pick which one to arrange.
@@ -479,23 +486,193 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
-  /// Set the lane's insert effect (reverb / echo / none) and re-bake if playing.
+  /// Set the lane's insert effect and re-bake if playing.
   void setTrackEffect(int track, TrackEffect effect) {
     _daw.setTrackEffect(track, effect);
     if (_playing) play();
   }
 
+  static const _spaceEffects = [
+    TrackEffect.none,
+    TrackEffect.reverb,
+    TrackEffect.echo,
+  ];
+
+  static const _voiceShapeEffects = [
+    TrackEffect.voiceChipmunk,
+    TrackEffect.voiceDeep,
+    TrackEffect.voiceRobot,
+    TrackEffect.voiceRadio,
+  ];
+
   String _effectLabel(AppLocalizations l10n, TrackEffect e) => switch (e) {
         TrackEffect.none => l10n.dawEffectNone,
         TrackEffect.reverb => l10n.dawEffectReverb,
         TrackEffect.echo => l10n.dawEffectEcho,
+        TrackEffect.voiceChipmunk => l10n.dawEffectVoiceChipmunk,
+        TrackEffect.voiceDeep => l10n.dawEffectVoiceDeep,
+        TrackEffect.voiceRobot => l10n.dawEffectVoiceRobot,
+        TrackEffect.voiceRadio => l10n.dawEffectVoiceRadio,
       };
+
+  static const _clipEffectTypes = [
+    DawClipEffectType.reverb,
+    DawClipEffectType.delay,
+    DawClipEffectType.chorus,
+    DawClipEffectType.flanger,
+    DawClipEffectType.ringMod,
+    DawClipEffectType.distortion,
+    DawClipEffectType.bitCrush,
+    DawClipEffectType.lowpass,
+    DawClipEffectType.highpass,
+    DawClipEffectType.compressor,
+    DawClipEffectType.gate,
+    DawClipEffectType.voiceChipmunk,
+    DawClipEffectType.voiceDeep,
+    DawClipEffectType.voiceRobot,
+    DawClipEffectType.voiceRadio,
+  ];
+
+  String _clipEffectLabel(DawClipEffectType type) => switch (type) {
+        DawClipEffectType.reverb => 'Reverb',
+        DawClipEffectType.delay => 'Delay',
+        DawClipEffectType.chorus => 'Chorus',
+        DawClipEffectType.flanger => 'Flanger',
+        DawClipEffectType.ringMod => 'Ring Mod',
+        DawClipEffectType.distortion => 'Distortion',
+        DawClipEffectType.bitCrush => 'Bit Crush',
+        DawClipEffectType.lowpass => 'Low Pass',
+        DawClipEffectType.highpass => 'High Pass',
+        DawClipEffectType.compressor => 'Compressor',
+        DawClipEffectType.gate => 'Noise Gate',
+        DawClipEffectType.voiceChipmunk => 'Voice: Chipmunk',
+        DawClipEffectType.voiceDeep => 'Voice: Deep',
+        DawClipEffectType.voiceRobot => 'Voice: Robot',
+        DawClipEffectType.voiceRadio => 'Voice: Radio',
+      };
+
+  List<({String key, String label, double min, double max, double step})>
+      _clipEffectParams(DawClipEffectType type) => switch (type) {
+            DawClipEffectType.reverb => const [
+                (key: 'roomSize', label: 'Size', min: 0, max: 1, step: 0.01),
+                (key: 'damping', label: 'Damping', min: 0, max: 1, step: 0.01),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.delay => const [
+                (key: 'delayMs', label: 'Time ms', min: 0, max: 2000, step: 10),
+                (
+                  key: 'feedback',
+                  label: 'Feedback',
+                  min: 0,
+                  max: 0.95,
+                  step: 0.01
+                ),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.chorus => const [
+                (key: 'rateHz', label: 'Rate Hz', min: 0.1, max: 8, step: 0.1),
+                (key: 'depthMs', label: 'Depth ms', min: 0, max: 20, step: 0.5),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.flanger => const [
+                (
+                  key: 'rateHz',
+                  label: 'Rate Hz',
+                  min: 0.05,
+                  max: 5,
+                  step: 0.05
+                ),
+                (
+                  key: 'depthMs',
+                  label: 'Depth ms',
+                  min: 0,
+                  max: 10,
+                  step: 0.25
+                ),
+                (
+                  key: 'feedback',
+                  label: 'Feedback',
+                  min: 0,
+                  max: 0.95,
+                  step: 0.01
+                ),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.ringMod => const [
+                (
+                  key: 'carrierHz',
+                  label: 'Freq Hz',
+                  min: 1,
+                  max: 2000,
+                  step: 1
+                ),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.distortion => const [
+                (key: 'drive', label: 'Drive', min: 0, max: 12, step: 0.1),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.bitCrush => const [
+                (key: 'bits', label: 'Bits', min: 1, max: 16, step: 1),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.lowpass || DawClipEffectType.highpass => const [
+                (
+                  key: 'freq',
+                  label: 'Cutoff Hz',
+                  min: 20,
+                  max: 20000,
+                  step: 10
+                ),
+                (key: 'q', label: 'Q', min: 0.1, max: 20, step: 0.1),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.compressor => const [
+                (
+                  key: 'thresholdDb',
+                  label: 'Threshold dB',
+                  min: -60,
+                  max: 0,
+                  step: 1
+                ),
+                (key: 'ratio', label: 'Ratio', min: 1, max: 20, step: 0.5),
+                (
+                  key: 'attackMs',
+                  label: 'Attack ms',
+                  min: 0,
+                  max: 200,
+                  step: 1
+                ),
+                (
+                  key: 'releaseMs',
+                  label: 'Release ms',
+                  min: 10,
+                  max: 1000,
+                  step: 10
+                ),
+                (key: 'makeupDb', label: 'Makeup dB', min: 0, max: 24, step: 1),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.gate => const [
+                (
+                  key: 'thresholdDb',
+                  label: 'Threshold dB',
+                  min: -80,
+                  max: 0,
+                  step: 1
+                ),
+                (key: 'ratio', label: 'Ratio', min: 1, max: 20, step: 0.5),
+                (key: 'rangeDb', label: 'Range dB', min: -80, max: 0, step: 1),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            _ => const [],
+          };
 
   /// Opens the assets Instruments/Samples library and returns the picked
   /// instrument SOUND (a `TrackerInstrument`), or null if cancelled / the pick
   /// still needs its SoundFont resolved (a bare reference has no playable voice).
   Future<TrackerInstrument?> _pickInstrument() async {
-    final picked = await showMyInstrumentsSheet(context);
+    final picked = await showMyInstrumentsSheet(context, includeBuiltIns: true);
     if (picked == null || !mounted) return null;
     final inst = picked.instrument;
     if (inst == null) {
@@ -852,6 +1029,95 @@ class _DawScreenState extends State<DawScreen>
                       ),
                     ];
                   }(),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Text(
+                        'Clip FX',
+                        style: Theme.of(sheetCtx).textTheme.labelLarge,
+                      ),
+                      const Spacer(),
+                      PopupMenuButton<DawClipEffectType>(
+                        tooltip: 'Add effect',
+                        icon: const Icon(Icons.add_circle_outline),
+                        onSelected: (type) {
+                          _daw.addClipEffect(track, index, type);
+                          setSheet(() {});
+                          if (_playing) play();
+                        },
+                        itemBuilder: (_) => [
+                          for (final type in _clipEffectTypes)
+                            PopupMenuItem(
+                              value: type,
+                              child: Text(_clipEffectLabel(type)),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  for (var fxIndex = 0;
+                      fxIndex < _daw.clipEffects(track, index).length;
+                      fxIndex++)
+                    Builder(
+                      builder: (_) {
+                        final fx = _daw.clipEffects(track, index)[fxIndex];
+                        final specs = _clipEffectParams(fx.type);
+                        return ExpansionTile(
+                          dense: true,
+                          tilePadding: EdgeInsets.zero,
+                          childrenPadding:
+                              const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                          leading: IconButton(
+                            icon: Icon(
+                              fx.enabled
+                                  ? Icons.power_settings_new
+                                  : Icons.power_off,
+                            ),
+                            tooltip: fx.enabled ? 'Bypass' : 'Enable',
+                            onPressed: () {
+                              _daw.toggleClipEffect(track, index, fxIndex);
+                              setSheet(() {});
+                              if (_playing) play();
+                            },
+                          ),
+                          title: Text(_clipEffectLabel(fx.type)),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            tooltip: 'Remove effect',
+                            onPressed: () {
+                              _daw.removeClipEffect(track, index, fxIndex);
+                              setSheet(() {});
+                              if (_playing) play();
+                            },
+                          ),
+                          children: [
+                            for (final spec in specs)
+                              slider(
+                                spec.label,
+                                fx.params[spec.key] ??
+                                    defaultDawClipEffect(
+                                      fx.type,
+                                    ).params[spec.key] ??
+                                    spec.min,
+                                spec.max,
+                                (v) => spec.step >= 1
+                                    ? v.round().toString()
+                                    : v.toStringAsFixed(2),
+                                (v) {
+                                  _daw.setClipEffectParam(
+                                    track,
+                                    index,
+                                    fxIndex,
+                                    spec.key,
+                                    v,
+                                  );
+                                  if (_playing) play();
+                                },
+                              ),
+                          ],
+                        );
+                      },
+                    ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 4,
@@ -1045,25 +1311,14 @@ class _DawScreenState extends State<DawScreen>
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  // One "Add clip" menu gathers every clip source: the demo
-                  // beat/tune, the Sound Library, and the Sound/Voice Lab +
-                  // Sample Extractor creation tools (the "SoundFX modals").
+                  // Add clip is timeline material only. Instrument generation
+                  // lives in the Sound Library; voice shaping lives in track FX.
                   MenuAnchor(
                     menuChildren: [
                       MenuItemButton(
                         leadingIcon: const Icon(Icons.graphic_eq),
                         onPressed: addSample,
                         child: Text(l10n.dawAddFromLibrary),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: const Icon(Icons.auto_awesome),
-                        onPressed: _addFromSoundLab,
-                        child: Text(l10n.dawAddFx),
-                      ),
-                      MenuItemButton(
-                        leadingIcon: const Icon(Icons.record_voice_over),
-                        onPressed: _addFromVoiceLab,
-                        child: Text(l10n.dawAddVoice),
                       ),
                       MenuItemButton(
                         leadingIcon: const Icon(Icons.colorize),

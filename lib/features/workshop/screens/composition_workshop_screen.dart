@@ -1631,7 +1631,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// through it — a preview, kept separate from the highlighting transport so
   /// it doesn't touch the count-in / loop / selection machinery.
   Future<void> _playWithInstrument() async {
-    final saved = await showMyInstrumentsSheet(context);
+    final saved = await showMyInstrumentsSheet(context, includeBuiltIns: true);
     if (saved == null || !mounted) return;
     // SoundFont references need font bytes — skip; embedded voices resolve.
     final inst = saved.instrument;

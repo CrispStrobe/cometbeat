@@ -601,6 +601,23 @@ void main() {
       expect(out[13230].abs() > 1e-6 || out[13231].abs() > 1e-6, isTrue);
     });
 
+    test('voice shaping processes any track audio at bake time', () {
+      final sample = Float64List(4410)..fillRange(0, 4410, 0.4);
+      final s = DawService()..addClip(SampleSource(sample));
+      final dry = s.bake();
+      s.setTrackEffect(0, TrackEffect.voiceRobot);
+      final shaped = s.bake();
+
+      expect(shaped.length, dry.length);
+      expect(
+        List.generate(
+          shaped.length,
+          (i) => (shaped[i] - dry[i]).abs(),
+        ).reduce((a, b) => a > b ? a : b),
+        greaterThan(0.05),
+      );
+    });
+
     test('with no effect the per-lane bake equals a flat sum (unchanged)', () {
       // Two lanes, both effect-free → identical to the old single-pass mix.
       final s = DawService()

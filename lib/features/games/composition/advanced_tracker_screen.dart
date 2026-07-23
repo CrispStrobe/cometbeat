@@ -33,6 +33,7 @@
 // rectangle (Shift+arrows / tap-mark / select-track / select-pattern) then copy/
 // cut/paste/paste-mix/transpose/clear, via a Block menu AND keyboard shortcuts.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -47,7 +48,6 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show convertDocTo;
 import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
 import 'package:comet_beat/core/audio/sample_pitch.dart';
-import 'package:comet_beat/core/audio/sound_library.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
@@ -2467,56 +2467,6 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _samplePreview.playLoop(wavBytes(i16));
   }
 
-  String _categoryLabel(AppLocalizations l10n, SoundCategory c) => switch (c) {
-        SoundCategory.tonal => l10n.trackerLibTonal,
-        SoundCategory.plucked => l10n.trackerLibPlucked,
-        SoundCategory.chiptune => l10n.trackerLibChiptune,
-        SoundCategory.drum => l10n.trackerLibDrum,
-        SoundCategory.recorded => l10n.trackerLibRecorded,
-      };
-
-  /// Load a bundled CC0 percussion sample (from assets) → hand it to [onPick]
-  /// (defaults to appending it to the pool).
-  Future<void> _addBundledPercussion(
-    BundledSampleInfo info, {
-    void Function(TrackerInstrument)? onPick,
-  }) async {
-    final data = await rootBundle.load(info.assetPath);
-    if (!mounted) return;
-    final bytes = data.buffer.asUint8List();
-    (onPick ?? _addPoolInstrument)(bundledSampleInstrument(info, bytes));
-  }
-
-  Widget _libraryHeader(BuildContext ctx, String label) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        child: Text(
-          label,
-          style: Theme.of(ctx).textTheme.labelLarge?.copyWith(
-                color: Theme.of(ctx).colorScheme.primary,
-              ),
-        ),
-      );
-
-  Widget _libraryTile(
-    BuildContext ctx,
-    String label, {
-    VoidCallback? audition,
-    required VoidCallback onAdd,
-  }) =>
-      ListTile(
-        dense: true,
-        leading: audition == null
-            ? const Icon(Icons.music_note)
-            : IconButton(
-                icon: const Icon(Icons.volume_up),
-                tooltip: AppLocalizations.of(ctx)!.trackerPreview,
-                onPressed: audition,
-              ),
-        title: Text(label),
-        trailing: const Icon(Icons.add),
-        onTap: onAdd,
-      );
-
   @override
   void debugShowSoundLibrary() => _showSoundLibrary();
 
@@ -2524,61 +2474,28 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void debugRemovePoolInstrument(int poolIndex) =>
       _removePoolInstrument(poolIndex);
 
-  /// Browse the built-in Sound Library (procedural voices by category + CC0
-  /// percussion). Tap ▶ to audition, tap the row to pick a voice — by default it
-  /// is added to the shared pool; [onPick] overrides that (e.g. to set a
-  /// channel's default instrument).
+  /// Browse the unified Sound Library: built-in voices, saved/catalog
+  /// instruments, SoundFonts, samples, and generated FX. By default a pick is
+  /// added to the shared pool; [onPick] overrides that for channel assignment.
   void _showSoundLibrary({void Function(TrackerInstrument)? onPick}) {
-    final l10n = AppLocalizations.of(context)!;
-    final add = onPick ?? _addPoolInstrument;
-    final byCat = soundLibraryByCategory();
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: DraggableScrollableSheet(
-          expand: false,
-          maxChildSize: 0.85,
-          builder: (sheetCtx, scroll) => ListView(
-            controller: scroll,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: Text(
-                  l10n.trackerSoundLibrary,
-                  style: Theme.of(ctx).textTheme.titleLarge,
-                ),
-              ),
-              for (final cat in SoundCategory.values)
-                if ((byCat[cat] ?? const []).isNotEmpty) ...[
-                  _libraryHeader(ctx, _categoryLabel(l10n, cat)),
-                  for (final o in byCat[cat]!)
-                    _libraryTile(
-                      ctx,
-                      _instrumentLabel(o.id),
-                      audition: () => _auditionInstrument(o.build()),
-                      onAdd: () {
-                        add(o.build());
-                        Navigator.of(ctx).pop();
-                      },
-                    ),
-                ],
-              _libraryHeader(ctx, l10n.trackerLibPercussion),
-              for (final info in kBundledPercussion)
-                _libraryTile(
-                  ctx,
-                  info.id,
-                  onAdd: () async {
-                    await _addBundledPercussion(info, onPick: onPick);
-                    if (ctx.mounted) Navigator.of(ctx).pop();
-                  },
-                ),
-            ],
-          ),
+    unawaited(_pickFromUnifiedSoundLibrary(onPick: onPick));
+  }
+
+  Future<void> _pickFromUnifiedSoundLibrary({
+    void Function(TrackerInstrument)? onPick,
+  }) async {
+    final saved = await showMyInstrumentsSheet(context, includeBuiltIns: true);
+    if (saved == null || !mounted) return;
+    final inst = saved.instrument;
+    if (inst == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.drumkitSoundUnavailable),
         ),
-      ),
-    );
+      );
+      return;
+    }
+    (onPick ?? _addPoolInstrument)(inst);
   }
 
   /// Audition an edited sample before assigning it — plays its PCM (voice fx +

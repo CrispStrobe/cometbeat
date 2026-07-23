@@ -27,6 +27,12 @@ void main() {
               fadeOutMs: 60,
               trimStartMs: 10,
               trimEndMs: 30,
+              effects: [
+                defaultDawClipEffect(DawClipEffectType.delay).copyWith(
+                  enabled: false,
+                  params: {'delayMs': 120, 'feedback': 0.2, 'mix': 0.4},
+                ),
+              ],
             ),
           ],
         ),
@@ -54,6 +60,9 @@ void main() {
     expect(clip.fadeOutMs, 60);
     expect(clip.trimStartMs, 10);
     expect(clip.trimEndMs, 30);
+    expect(clip.effects.single.type, DawClipEffectType.delay);
+    expect(clip.effects.single.enabled, isFalse);
+    expect(clip.effects.single.params['delayMs'], 120);
     expect(clip.source, isA<SampleSource>()); // baked to audio
     expect((clip.source as SampleSource).pcm.length, 64);
     // PCM survives the 16-bit round-trip within a quantization step.

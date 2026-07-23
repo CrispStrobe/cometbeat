@@ -3140,6 +3140,36 @@ abstract class AppLocalizations {
   /// **'Echo'**
   String get dawEffectEcho;
 
+  /// No description provided for @dawVoiceShaping.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice Shaping'**
+  String get dawVoiceShaping;
+
+  /// No description provided for @dawEffectVoiceChipmunk.
+  ///
+  /// In en, this message translates to:
+  /// **'Chipmunk'**
+  String get dawEffectVoiceChipmunk;
+
+  /// No description provided for @dawEffectVoiceDeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep'**
+  String get dawEffectVoiceDeep;
+
+  /// No description provided for @dawEffectVoiceRobot.
+  ///
+  /// In en, this message translates to:
+  /// **'Robot'**
+  String get dawEffectVoiceRobot;
+
+  /// No description provided for @dawEffectVoiceRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio'**
+  String get dawEffectVoiceRadio;
+
   /// No description provided for @dawInstrument.
   ///
   /// In en, this message translates to:
@@ -4309,6 +4339,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add to library'**
   String get catalogAddToLibrary;
+
+  /// No description provided for @catalogInsertInAudioTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert in audio track'**
+  String get catalogInsertInAudioTrack;
 
   /// No description provided for @catalogPlay.
   ///

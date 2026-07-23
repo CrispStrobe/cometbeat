@@ -51,13 +51,14 @@ _Lic _licBucket(String raw) {
 /// tests; [store] receives installed samples (defaults to a fresh store).
 /// [initialKind] pre-selects a kind chip (e.g. 'sample' when opened from the
 /// Samples rubric) — one of soundfont/instrument/sample/module, else all.
-Future<void> showCatalogBrowseSheet(
+Future<bool?> showCatalogBrowseSheet(
   BuildContext context, {
   ContentSource? source,
   InstrumentLibraryStore? store,
   String? initialKind,
+  Future<void> Function(SampleClip clip)? onInsertSample,
 }) {
-  return showModalBottomSheet<void>(
+  return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -65,6 +66,7 @@ Future<void> showCatalogBrowseSheet(
       source: source ?? CometbeatCatalogSource.all(defaultHttpGet),
       store: store ?? InstrumentLibraryStore(),
       initialKind: initialKind,
+      onInsertSample: onInsertSample,
     ),
   );
 }
@@ -75,12 +77,14 @@ class CatalogBrowseSheet extends StatefulWidget {
     required this.source,
     required this.store,
     this.initialKind,
+    this.onInsertSample,
     super.key,
   });
 
   final ContentSource source;
   final InstrumentLibraryStore store;
   final String? initialKind;
+  final Future<void> Function(SampleClip clip)? onInsertSample;
 
   @override
   State<CatalogBrowseSheet> createState() => _CatalogBrowseSheetState();
@@ -209,33 +213,45 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
     );
   }
 
-  /// WAV sample → decode to mono PCM + persist into the library (no file needed).
-  Future<void> _installSample(LibraryItem item) async {
+  Future<SampleClip?> _sampleClipFromCatalog(LibraryItem item) async {
     final bytes = await _download(item);
-    if (bytes == null || !mounted) return;
+    if (bytes == null || !mounted) return null;
     final l10n = AppLocalizations.of(context)!;
     final imported = importAudioMono(bytes);
     if (imported == null || imported.pcm.isEmpty) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.libraryImportFailed)));
-      return;
+      return null;
     }
+    return SampleClip(
+      name: item.title,
+      sampleRate: imported.sampleRate,
+      pcm: imported.pcm,
+      source: item.sourceName,
+      license: item.declaredLicense,
+      sourceUrl: item.sourceUrl,
+    );
+  }
+
+  /// WAV sample → decode to mono PCM + persist into the library (no file needed).
+  Future<void> _installSample(LibraryItem item) async {
+    final clip = await _sampleClipFromCatalog(item);
+    if (clip == null || !mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     await widget.store.save(
-      SavedInstrument.fromSampleClip(
-        SampleClip(
-          name: item.title,
-          sampleRate: imported.sampleRate,
-          pcm: imported.pcm,
-          source: item.sourceName,
-          license: item.declaredLicense,
-          sourceUrl: item.sourceUrl,
-        ),
-      ),
+      SavedInstrument.fromSampleClip(clip),
     );
     if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.catalogAdded)));
     }
+  }
+
+  Future<void> _insertSample(LibraryItem item) async {
+    final clip = await _sampleClipFromCatalog(item);
+    if (clip == null || !mounted) return;
+    await widget.onInsertSample?.call(clip);
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   void _play(TrackerInstrument inst, String name) {
@@ -326,6 +342,12 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
             run: () {},
           ),
       },
+      if (item.collection == 'sample' && widget.onInsertSample != null)
+        (
+          icon: Icons.playlist_add,
+          label: l10n.catalogInsertInAudioTrack,
+          run: () => _insertSample(item),
+        ),
       if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty)
         (
           icon: Icons.open_in_new,
