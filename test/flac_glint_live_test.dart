@@ -105,138 +105,153 @@ void main() {
           'macOS/Linux)'
       : false;
 
-  group('glint FLAC decode — bit-exact vs the reference flac CLI', () {
-    late FlacDecode decode;
+  group(
+    'glint FLAC decode — bit-exact vs the reference flac CLI',
+    () {
+      late FlacDecode decode;
 
-    setUpAll(() {
-      if (libPath != null) decode = loadGlintFlac(libraryPath: libPath)!;
-    });
+      setUpAll(() {
+        if (libPath != null) decode = loadGlintFlac(libraryPath: libPath)!;
+      });
 
-    final fixtures = <String>[
-      'mono_44100_16', // LPC tone, mono, 16-bit
-      'stereo_48000_16', // L≠R stereo decorrelation, small block size
-      'mono_22050_16', // sample-rate variety
-      'mono_44100_24', // 24-bit path
-      'silence_44100_16', // constant subframe
-      'noise_44100_16', // verbatim / high-residual subframe
-    ];
+      final fixtures = <String>[
+        'mono_44100_16', // LPC tone, mono, 16-bit
+        'stereo_48000_16', // L≠R stereo decorrelation, small block size
+        'mono_22050_16', // sample-rate variety
+        'mono_44100_24', // 24-bit path
+        'silence_44100_16', // constant subframe
+        'noise_44100_16', // verbatim / high-residual subframe
+      ];
 
-    for (final name in fixtures) {
-      test('$name decodes to the exact reference samples', () {
-        final base = '$_repoRoot/test/fixtures/flac/$name';
-        final flac = File('$base.flac').readAsBytesSync();
-        final ref = _readWav(File('$base.wav').readAsBytesSync());
+      for (final name in fixtures) {
+        test('$name decodes to the exact reference samples', () {
+          final base = '$_repoRoot/test/fixtures/flac/$name';
+          final flac = File('$base.flac').readAsBytesSync();
+          final ref = _readWav(File('$base.wav').readAsBytesSync());
 
-        final pcm = decode(flac);
-        expect(pcm, isNotNull, reason: '$name failed to decode');
+          final pcm = decode(flac);
+          expect(pcm, isNotNull, reason: '$name failed to decode');
 
-        final gch = pcm!.right == null ? 1 : 2;
-        expect(pcm.sampleRate, ref.sr, reason: 'sample rate');
-        expect(gch, ref.ch, reason: 'channel count');
-        expect(pcm.left.length, ref.chans[0].length, reason: 'frame count');
+          final gch = pcm!.right == null ? 1 : 2;
+          expect(pcm.sampleRate, ref.sr, reason: 'sample rate');
+          expect(gch, ref.ch, reason: 'channel count');
+          expect(pcm.left.length, ref.chans[0].length, reason: 'frame count');
 
-        // Re-quantize glint's float PCM back to the reference bit depth and
-        // require an exact (±0) match on every sample of every channel.
-        final scale = (1 << (ref.bits - 1)).toDouble();
-        final gchans = [pcm.left, if (pcm.right != null) pcm.right!];
-        var maxErr = 0;
-        for (var c = 0; c < gch; c++) {
-          for (var i = 0; i < pcm.left.length; i++) {
-            final q = (gchans[c][i] * scale).round();
-            final e = (q - ref.chans[c][i]).abs();
-            if (e > maxErr) maxErr = e;
+          // Re-quantize glint's float PCM back to the reference bit depth and
+          // require an exact (±0) match on every sample of every channel.
+          final scale = (1 << (ref.bits - 1)).toDouble();
+          final gchans = [pcm.left, if (pcm.right != null) pcm.right!];
+          var maxErr = 0;
+          for (var c = 0; c < gch; c++) {
+            for (var i = 0; i < pcm.left.length; i++) {
+              final q = (gchans[c][i] * scale).round();
+              final e = (q - ref.chans[c][i]).abs();
+              if (e > maxErr) maxErr = e;
+            }
           }
-        }
-        expect(maxErr, 0, reason: '$name: max sample error in LSBs');
-      });
-    }
-
-    test('silence really is all-zero', () {
-      final pcm = decode(
-        File('$_repoRoot/test/fixtures/flac/silence_44100_16.flac')
-            .readAsBytesSync(),
-      )!;
-      expect(pcm.left.every((s) => s == 0.0), isTrue);
-    });
-
-    test('a real tone has meaningful energy (not silence)', () {
-      final pcm = decode(
-        File('$_repoRoot/test/fixtures/flac/mono_44100_16.flac')
-            .readAsBytesSync(),
-      )!;
-      var peak = 0.0;
-      for (final s in pcm.left) {
-        if (s.abs() > peak) peak = s.abs();
+          expect(maxErr, 0, reason: '$name: max sample error in LSBs');
+        });
       }
-      expect(peak, greaterThan(0.05));
-      expect(peak, lessThanOrEqualTo(1.0));
-    });
-  }, skip: skip,);
 
-  group('glint FLAC decode — malformed input is null, never a crash', () {
-    late FlacDecode decode;
-    setUpAll(() {
-      if (libPath != null) decode = loadGlintFlac(libraryPath: libPath)!;
-    });
-
-    test('empty input → null', () {
-      expect(decode(Uint8List(0)), isNull);
-    });
-    test('non-FLAC bytes → null', () {
-      expect(decode(Uint8List.fromList(List.filled(64, 0x42))), isNull);
-    });
-    test('a truncated FLAC stream → null (no crash)', () {
-      final full = File('$_repoRoot/test/fixtures/flac/mono_44100_16.flac')
-          .readAsBytesSync();
-      final cut = Uint8List.sublistView(full, 0, full.length ~/ 3);
-      // Either null or a short partial decode is acceptable; the point is no
-      // crash / no throw.
-      expect(() => decode(cut), returnsNormally);
-    });
-  }, skip: skip,);
-
-  group('installer decodes a FLAC-sampled SFZ into a playable voice (live)',
-      () {
-    test('a FLAC region builds a voice; the .flac is cached', () async {
-      if (libPath == null) return; // skipped group would still enter here
-      final decode = loadGlintFlac(libraryPath: libPath)!;
-      final cache = Directory.systemTemp.createTempSync('flac_inst');
-      addTearDown(() {
-        if (cache.existsSync()) cache.deleteSync(recursive: true);
+      test('silence really is all-zero', () {
+        final pcm = decode(
+          File('$_repoRoot/test/fixtures/flac/silence_44100_16.flac')
+              .readAsBytesSync(),
+        )!;
+        expect(pcm.left.every((s) => s == 0.0), isTrue);
       });
 
-      const sfz = '''
+      test('a real tone has meaningful energy (not silence)', () {
+        final pcm = decode(
+          File('$_repoRoot/test/fixtures/flac/mono_44100_16.flac')
+              .readAsBytesSync(),
+        )!;
+        var peak = 0.0;
+        for (final s in pcm.left) {
+          if (s.abs() > peak) peak = s.abs();
+        }
+        expect(peak, greaterThan(0.05));
+        expect(peak, lessThanOrEqualTo(1.0));
+      });
+    },
+    skip: skip,
+  );
+
+  group(
+    'glint FLAC decode — malformed input is null, never a crash',
+    () {
+      late FlacDecode decode;
+      setUpAll(() {
+        if (libPath != null) decode = loadGlintFlac(libraryPath: libPath)!;
+      });
+
+      test('empty input → null', () {
+        expect(decode(Uint8List(0)), isNull);
+      });
+      test('non-FLAC bytes → null', () {
+        expect(decode(Uint8List.fromList(List.filled(64, 0x42))), isNull);
+      });
+      test('a truncated FLAC stream → null (no crash)', () {
+        final full = File('$_repoRoot/test/fixtures/flac/mono_44100_16.flac')
+            .readAsBytesSync();
+        final cut = Uint8List.sublistView(full, 0, full.length ~/ 3);
+        // Either null or a short partial decode is acceptable; the point is no
+        // crash / no throw.
+        expect(() => decode(cut), returnsNormally);
+      });
+    },
+    skip: skip,
+  );
+
+  group(
+    'installer decodes a FLAC-sampled SFZ into a playable voice (live)',
+    () {
+      test('a FLAC region builds a voice; the .flac is cached', () async {
+        if (libPath == null) return; // skipped group would still enter here
+        final decode = loadGlintFlac(libraryPath: libPath)!;
+        final cache = Directory.systemTemp.createTempSync('flac_inst');
+        addTearDown(() {
+          if (cache.existsSync()) cache.deleteSync(recursive: true);
+        });
+
+        const sfz = '''
 <region>
 sample=samples/tone.flac
 pitch_keycenter=60
 lokey=0 hikey=127
 ''';
-      final flacBytes = File('$_repoRoot/test/fixtures/flac/mono_44100_16.flac')
-          .readAsBytesSync();
-      Future<Uint8List> http(Uri url) async {
-        final u = url.toString();
-        if (u.endsWith('.sfz')) return Uint8List.fromList(sfz.codeUnits);
-        if (u.endsWith('samples/tone.flac')) return flacBytes;
-        throw Exception('404 $u');
-      }
+        final flacBytes =
+            File('$_repoRoot/test/fixtures/flac/mono_44100_16.flac')
+                .readAsBytesSync();
+        Future<Uint8List> http(Uri url) async {
+          final u = url.toString();
+          if (u.endsWith('.sfz')) return Uint8List.fromList(sfz.codeUnits);
+          if (u.endsWith('samples/tone.flac')) return flacBytes;
+          throw Exception('404 $u');
+        }
 
-      final installed = await installSfzInstrument(
-        sfzUrl: 'https://h/vcsl/FlacInst.sfz',
-        name: 'Flac Inst',
-        http: http,
-        cacheDirOverride: cache.path,
-        flacDecode: decode, // inject the live decoder
-      );
+        final installed = await installSfzInstrument(
+          sfzUrl: 'https://h/vcsl/FlacInst.sfz',
+          name: 'Flac Inst',
+          http: http,
+          cacheDirOverride: cache.path,
+          flacDecode: decode, // inject the live decoder
+        );
 
-      expect(installed, isNotNull,
-          reason: 'a decodable FLAC region should yield a voice',);
-      expect(installed!.instrument, isNotNull);
-      // the raw .flac is kept on disk (Downloads manager can free it)
-      expect(
-        File('${cache.path}/instruments/Flac_Inst/samples/tone.flac')
-            .existsSync(),
-        isTrue,
-      );
-    });
-  }, skip: skip,);
+        expect(
+          installed,
+          isNotNull,
+          reason: 'a decodable FLAC region should yield a voice',
+        );
+        expect(installed!.instrument, isNotNull);
+        // the raw .flac is kept on disk (Downloads manager can free it)
+        expect(
+          File('${cache.path}/instruments/Flac_Inst/samples/tone.flac')
+              .existsSync(),
+          isTrue,
+        );
+      });
+    },
+    skip: skip,
+  );
 }

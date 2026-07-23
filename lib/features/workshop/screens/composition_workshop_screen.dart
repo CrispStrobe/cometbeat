@@ -3423,9 +3423,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                           showSelectedIcon: false,
                           segments: [
                             ButtonSegment(
-                                value: 0, label: Text(l10n.workshopVoice1),),
+                              value: 0,
+                              label: Text(l10n.workshopVoice1),
+                            ),
                             ButtonSegment(
-                                value: 1, label: Text(l10n.workshopVoice2),),
+                              value: 1,
+                              label: Text(l10n.workshopVoice2),
+                            ),
                           ],
                           selected: {_doc.activeVoice},
                           onSelectionChanged: (s) =>
