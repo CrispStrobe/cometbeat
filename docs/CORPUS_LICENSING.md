@@ -103,15 +103,16 @@ repos below. Reachable, but dev/test only.
 The direct answer to "what have we covered / what could we still safely add."
 Every line here is a *licence/coverage* statement; detail per source follows.
 
-> **▶ Live DB snapshot (2026-07-23): `db.json` = 37,792 rows** — 37,403 scores +
-> 389 playback assets (222 instruments · 166 modules · 1 soundfont). Scores by
+> **▶ Live DB snapshot (2026-07-23): `db.json` = 37,793 rows** — 37,403 scores +
+> 390 playback assets (223 instruments · 166 modules · 1 soundfont). Scores by
 > source: GregoBase 18,711 · NIFC Polish 8,181 · PDMX 7,471 · OpenScore Lieder
 > 1,350 · NIFC Chopin 512 · Mutopia 510 · **DCML Bach Chorales 361** · OpenScore SQ
 > 122 · OpenEWLD 103 · **Musikpiraten Season Songs 52** · Pete Mac 15 · EGSet12 12 ·
 > **Kinder wollen singen 3**. Assets: VCSL 183 · **ModArchive 166 (post-clearance
-> whitelist)** · FreePats 39 · FluidR3 1. Bold = added since the "16,800" snapshot
-> below (GregoBase chants, DCML Bach CC0, the first self-engraved German Kinderlieder,
-> and the ModArchive corpus trimmed 1,650 → 166 cleared modules).
+> whitelist)** · FreePats 39 · **Salamander Grand Piano V3 1 (⭐ ingested this pass)**
+> · FluidR3 1. Bold = added since the "16,800" snapshot below (GregoBase chants,
+> DCML Bach CC0, the first self-engraved German Kinderlieder, the ModArchive corpus
+> trimmed 1,650 → 166 cleared modules, and the Salamander grand piano).
 
 ### Covered now — assessed, licence-cleared, in hand
 
@@ -499,7 +500,7 @@ folder already does). Does NOT include ShareAlike/copyleft licenses.
 | **OpenGameArt — CC BY / OGA-BY** | CC BY / OGA-BY | attribution. |
 | **Big MOD Music Pack** (itch) | mixed CC0 / CC BY / PD | per-file — CC0 → Tier A, rest → credit. .xm, handled by the MOD loader. |
 | **FreePats MuldjorKit** | CC BY 4.0 | attribution |
-| **Salamander Grand Piano V3** (Alexander Holm) ⭐**NEW** ⚠ | **CC BY 3.0** — **NOT public domain** (a widespread misconception; verified against the SFZ repo + Musical-Artifacts page). | attribution. **Best free acoustic grand** (Yamaha C5, 16 velocity layers, SFZ + FLAC). This is a **Tier-B** correction — do NOT ship it as CC0/PD. |
+| **Salamander Grand Piano V3** (Alexander Holm) ✅**INGESTED** ⚠ | **CC BY 3.0** — **NOT public domain** (repo `LICENSE` = CC-BY-3.0 verbatim; a widespread misconception). | attribution. **Best free acoustic grand** (Yamaha C5, 16 vel layers, 641 FLAC + one SFZ). Now in `db.json` (`kind:instrument`, source *Salamander Grand Piano*, `bin/ingest_salamander.py`, wired into `merge_db`). ⚠ the SFZ uses ARIA/sforzando opcodes → the CC-BY FLAC set is the durable asset; in-app playback via our SFZ loader may need a simplified mapping (app-side). Do NOT ship as CC0/PD. |
 
 ### Tier C — "SA" (ShareAlike): copyleft, attribution required
 
