@@ -55,12 +55,28 @@ void main() {
     expect(game.noteCount, 0);
     expect(
         find.byKey(const ValueKey('tracker-starter-groove')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('tracker-play-song')),
+          )
+          .onPressed,
+      isNull,
+    );
 
     await tester.tap(find.byKey(const ValueKey('tracker-starter-groove')));
     await tester.pump();
 
     expect(game.noteCount, greaterThan(0));
     expect(find.byKey(const ValueKey('tracker-starter-groove')), findsNothing);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('tracker-play-song')),
+          )
+          .onPressed,
+      isNotNull,
+    );
   });
 
   testWidgets('shares the drum channel out and loads a shared beat in',

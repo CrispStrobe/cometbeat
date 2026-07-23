@@ -1882,6 +1882,13 @@ class _TrackerScreenState extends State<TrackerScreen>
                 ],
               ),
               const SizedBox(height: 8),
+              FilledButton.icon(
+                key: const ValueKey('tracker-play-song'),
+                onPressed: songHasContent ? _playSong : null,
+                icon: const Icon(Icons.play_arrow),
+                label: Text(l10n.trackerPlaySong),
+              ),
+              const SizedBox(height: 8),
               _Playhead(step: _step, steps: _engine.rows),
               const SizedBox(height: 8),
               // The selected channel's grid: pentatonic pitch rows, or drum rows.
