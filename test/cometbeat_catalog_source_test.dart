@@ -85,6 +85,28 @@ void main() {
     expect(utf8.decode(await src.fetch(item)), 'SF2');
   });
 
+  test('encodes special characters in asset paths', () async {
+    const shard = '{"version":"t","baseUrl":"https://h/",'
+        '"items":[{"id":"s","name":"Glass #4",'
+        '"kind":"sample","format":"wav",'
+        '"license":"CC0","path":"assets/Wine Glasses/glass#4.wav"}]}';
+    final src = CometbeatCatalogSource(
+      _fakeHttp({
+        indexUrl: '{"baseUrl":"https://h/","shards":[{"kind":"sample",'
+            '"url":"catalog/sample.json"}]}',
+        'https://h/catalog/sample.json': shard,
+      }),
+      kinds: const {'sample'},
+      indexUrl: indexUrl,
+    );
+
+    final item = (await src.browse()).single;
+    expect(
+      item.downloadUrl.toString(),
+      'https://h/assets/Wine%20Glasses/glass%234.wav',
+    );
+  });
+
   test('an all-kinds source fetches soundfont + module + sample + score shards',
       () async {
     final src = CometbeatCatalogSource(

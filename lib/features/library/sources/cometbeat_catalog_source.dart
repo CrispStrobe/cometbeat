@@ -67,6 +67,15 @@ class CometbeatCatalogSource implements ContentSource {
   /// Fetched once per instance (the needed shards, flattened).
   List<LibraryItem>? _catalog;
 
+  /// Resolve a catalog-relative path as URI path segments. Catalog assets may
+  /// contain spaces, `#`, or other filename characters; concatenating the raw
+  /// path lets `Uri.parse` treat `#` as a fragment and produces a broken URL.
+  Uri _assetUrl(String baseUrl, String path) {
+    final base = Uri.parse(baseUrl);
+    final encoded = path.split('/').map(Uri.encodeComponent).join('/');
+    return base.resolve(encoded);
+  }
+
   @override
   String get id => 'cometbeat-catalog';
 
@@ -115,7 +124,7 @@ class CometbeatCatalogSource implements ContentSource {
             collection: (raw['kind'] as String?) ?? '',
             declaredLicense: (raw['license'] as String?) ?? '',
             sourceUrl: raw['sourceUrl'] as String?,
-            downloadUrl: Uri.parse(baseUrl + path),
+            downloadUrl: _assetUrl(baseUrl, path),
             format: (raw['format'] as String?) ?? '',
           ),
         );
