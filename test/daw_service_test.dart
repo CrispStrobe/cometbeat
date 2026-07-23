@@ -216,6 +216,16 @@ void main() {
     expect(s.clipGain(0, 0), 0);
   });
 
+  test('setClipPan clamps, renders, and undoes', () {
+    final s = DawService()..addClip(_tone(0.4, 100));
+    s.setClipPan(0, 0, 2);
+    expect(s.clipPan(0, 0), 1);
+    final right = s.bakeStereo().right;
+    expect(right.first, greaterThan(0));
+    s.undo();
+    expect(s.clipPan(0, 0), 0);
+  });
+
   test('setClipFades sets each side independently and clamps', () {
     final s = DawService()..addClip(_tone(0.4, 44100));
     s.setClipFades(0, 0, fadeInMs: 100);

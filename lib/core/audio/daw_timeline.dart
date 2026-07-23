@@ -409,6 +409,7 @@ class Clip {
     required this.source,
     this.startMs = 0,
     this.gain = 1.0,
+    this.pan = 0.0,
     this.muted = false,
     this.fadeInMs = 0,
     this.fadeOutMs = 0,
@@ -422,6 +423,9 @@ class Clip {
   final ClipSource source;
   final double startMs;
   final double gain;
+
+  /// Constant-power clip pan: -1 hard left, 0 centre, +1 hard right.
+  final double pan;
   final bool muted;
   final double fadeInMs;
   final double fadeOutMs;
@@ -441,6 +445,7 @@ class Clip {
   Clip copyWith({
     double? startMs,
     double? gain,
+    double? pan,
     bool? muted,
     double? fadeInMs,
     double? fadeOutMs,
@@ -454,6 +459,7 @@ class Clip {
         source: source,
         startMs: startMs ?? this.startMs,
         gain: gain ?? this.gain,
+        pan: pan ?? this.pan,
         muted: muted ?? this.muted,
         fadeInMs: fadeInMs ?? this.fadeInMs,
         fadeOutMs: fadeOutMs ?? this.fadeOutMs,
@@ -1326,7 +1332,7 @@ DawStereoMix renderTimelineStereo(
           pcmRight: effected.right,
           stereo: isStereo,
           gain: clip.gain * track.gain,
-          pan: track.pan.clamp(-1.0, 1.0),
+          pan: (track.pan + clip.pan).clamp(-1.0, 1.0),
           fadeIn: (clip.fadeInMs * sampleRate / 1000).round(),
           fadeOut: (clip.fadeOutMs * sampleRate / 1000).round(),
           fadeInCurve: clip.fadeInCurve,
