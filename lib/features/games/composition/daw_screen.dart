@@ -101,6 +101,8 @@ abstract interface class DawTester {
   /// only when the cut falls strictly inside the clip.
   void splitClip(int track, int index, double atMs);
   bool canSplitClip(int track, int index, double atMs);
+  void crossfadeWithNext(int track, int index);
+  bool canCrossfadeWithNext(int track, int index);
 
   /// Reverse the clip's audio (bakes it to a backwards take).
   void reverseClip(int track, int index);
@@ -463,6 +465,14 @@ class _DawScreenState extends State<DawScreen>
   @override
   bool canSplitClip(int track, int index, double atMs) =>
       _daw.canSplitClip(track, index, atMs);
+
+  @override
+  void crossfadeWithNext(int track, int index) =>
+      _daw.crossfadeWithNext(track, index);
+
+  @override
+  bool canCrossfadeWithNext(int track, int index) =>
+      _daw.canCrossfadeWithNext(track, index);
 
   @override
   void reverseClip(int track, int index) => _daw.reverseClip(track, index);
@@ -1233,6 +1243,16 @@ class _DawScreenState extends State<DawScreen>
                             : null,
                         icon: const Icon(Icons.content_cut),
                         label: Text(l10n.dawSplit),
+                      ),
+                      TextButton.icon(
+                        onPressed: canCrossfadeWithNext(track, index)
+                            ? () {
+                                Navigator.of(sheetCtx).pop();
+                                crossfadeWithNext(track, index);
+                              }
+                            : null,
+                        icon: const Icon(Icons.compare_arrows),
+                        label: const Text('Crossfade next'),
                       ),
                       TextButton.icon(
                         onPressed: () {

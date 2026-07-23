@@ -5,6 +5,8 @@
 // Provider), so a clip sent from the DrumKit or Song Book is still there when
 // you open the arranger, and successive sends accumulate into one project.
 
+import 'dart:math' as math;
+
 import 'package:comet_beat/core/audio/daw_project.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
@@ -402,6 +404,37 @@ class DawService extends ChangeNotifier {
       () => clip.source.render(kDawSampleRate),
     );
     return trimmedDurationMs(clip, pcm); // to-scale even when trimmed
+  }
+
+  bool canCrossfadeWithNext(int track, int index) {
+    if (track < 0 || track >= timeline.tracks.length) return false;
+    final clips = timeline.tracks[track].clips;
+    return index >= 0 && index + 1 < clips.length;
+  }
+
+  /// Create a same-track crossfade from clip [index] into the following clip.
+  /// The next clip is moved left so it overlaps the selected clip by [overlapMs],
+  /// then the selected clip gets a fade-out and the next clip gets a fade-in of
+  /// the same length. This is non-destructive: sources/trims stay untouched.
+  void crossfadeWithNext(int track, int index, {double overlapMs = 250}) {
+    if (!canCrossfadeWithNext(track, index)) return;
+    final clips = timeline.tracks[track].clips;
+    final a = clips[index];
+    final b = clips[index + 1];
+    final aDur = clipDurationMs(track, index);
+    final bDur = clipDurationMs(track, index + 1);
+    if (aDur <= 0 || bDur <= 0) return;
+    final maxOverlap = math.min(aDur, bDur);
+    final minOverlap = math.min(5.0, maxOverlap);
+    final overlap = overlapMs.clamp(minOverlap, maxOverlap).toDouble();
+    _record();
+    final aEnd = a.startMs + aDur;
+    clips[index] = a.copyWith(fadeOutMs: overlap);
+    clips[index + 1] = b.copyWith(
+      startMs: math.max(0, aEnd - overlap),
+      fadeInMs: overlap,
+    );
+    notifyListeners();
   }
 
   /// Whether a clip is already a baked audio take (a [SampleSource]) rather than

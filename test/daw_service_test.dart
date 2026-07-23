@@ -268,6 +268,27 @@ void main() {
     expect(s.clipCount, 1);
   });
 
+  test('crossfadeWithNext overlaps adjacent clips with opposing fades', () {
+    final s = DawService()
+      ..addClip(_tone(0.5, 44100))
+      ..addClip(_tone(0.5, 44100));
+    expect(s.canCrossfadeWithNext(0, 0), isTrue);
+    expect(s.canCrossfadeWithNext(0, 1), isFalse);
+
+    s.crossfadeWithNext(0, 0);
+    expect(s.clipFadeOutMs(0, 0), 250);
+    expect(s.clipFadeInMs(0, 1), 250);
+    expect(s.clipStartMs(0, 1), closeTo(750, 1));
+
+    s.crossfadeWithNext(0, 1); // no following clip
+    expect(s.clipStartMs(0, 1), closeTo(750, 1));
+
+    s.undo();
+    expect(s.clipFadeOutMs(0, 0), 0);
+    expect(s.clipFadeInMs(0, 1), 0);
+    expect(s.clipStartMs(0, 1), closeTo(2000, 1));
+  });
+
   test('undo restores after clear', () {
     final s = DawService()
       ..addClip(_tone(0.3, 100))
