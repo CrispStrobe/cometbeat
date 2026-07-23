@@ -2,20 +2,21 @@
 //
 // The read side of the shared audio I/O. Where `audio_export.dart` writes WAV/
 // MP3, this reads them back: any screen that loads a user audio file (Voice Lab,
-// sample import) can accept **WAV or MP3** from one place instead of a WAV-only
-// picker. WAV goes through `readWavPcm16`; MP3 through our pure-Dart `mp3Decode`
-// (all block types), so this is web-safe and needs no native decoder.
+// sample import) can accept **WAV, MP3, or FLAC** from one place instead of a
+// WAV-only picker. WAV goes through `readWavPcm16`; MP3 through our pure-Dart
+// `mp3Decode`; FLAC uses the platform-safe glint capability seam.
 //
 // Format is detected by MAGIC BYTES, not the extension, so a mislabelled file
 // still decodes (or fails cleanly to null rather than mis-parsing).
 //
-// This file is deliberately Flutter-free (only mp3_decoder + wav_io) so it works
+// This file is deliberately Flutter-free so it works
 // in pure/headless code too (e.g. the sample-pack extractor). Screens build
 // their own file-picker `XTypeGroup` from [kAudioImportExtensions].
 
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mp3/mp3_decoder.dart';
+import 'package:comet_beat/core/audio/sf2/flac_capability.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
 
 /// Mono float PCM (−1..1) plus its sample rate — the common currency the Sound
@@ -29,7 +30,7 @@ class ImportedAudio {
 
 /// Importable audio file extensions (for a picker `XTypeGroup`). Kept as a plain
 /// list so this stays Flutter-free; screens wrap it in an `XTypeGroup`.
-const List<String> kAudioImportExtensions = ['wav', 'mp3'];
+const List<String> kAudioImportExtensions = ['wav', 'mp3', 'flac'];
 
 /// True if [bytes] looks like a RIFF/WAVE file.
 bool _isWav(Uint8List b) =>
@@ -57,9 +58,19 @@ bool _isMp3(Uint8List b) {
   return false;
 }
 
+bool _isFlac(Uint8List b) =>
+    b.length >= 4 &&
+    b[0] == 0x66 &&
+    b[1] == 0x4C &&
+    b[2] == 0x61 &&
+    b[3] == 0x43; // "fLaC"
+
 /// Decodes [bytes] (WAV or MP3, detected by content) to mono float PCM.
 /// Returns null if the format is unrecognised or decoding fails.
-ImportedAudio? importAudioMono(Uint8List bytes) {
+ImportedAudio? importAudioMono(
+  Uint8List bytes, {
+  FlacDecode? flacDecode,
+}) {
   try {
     if (_isWav(bytes)) {
       final wav = readWavPcm16(bytes);
@@ -71,6 +82,25 @@ ImportedAudio? importAudioMono(Uint8List bytes) {
       final decoded = mp3Decode(bytes);
       final mono = _deinterleaveMono(decoded.samples, decoded.channels);
       if (mono.isEmpty) return null;
+      return ImportedAudio(
+        mono,
+        decoded.sampleRate > 0 ? decoded.sampleRate : 44100,
+      );
+    }
+    if (_isFlac(bytes)) {
+      final decoded = (flacDecode ?? loadGlintFlac())?.call(bytes);
+      if (decoded == null || decoded.left.isEmpty) return null;
+      final mono = decoded.right == null
+          ? decoded.left
+          : _deinterleaveMono(
+              Float64List.fromList([
+                for (var i = 0; i < decoded.left.length; i++) ...[
+                  decoded.left[i],
+                  i < decoded.right!.length ? decoded.right![i] : 0,
+                ],
+              ]),
+              2,
+            );
       return ImportedAudio(
         mono,
         decoded.sampleRate > 0 ? decoded.sampleRate : 44100,

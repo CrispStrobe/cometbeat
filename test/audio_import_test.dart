@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart';
+import 'package:comet_beat/core/audio/sf2/flac_capability.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,7 +58,21 @@ void main() {
     expect(importAudioMono(Uint8List(0)), isNull);
   });
 
-  test('the shared extensions list offers wav + mp3', () {
-    expect(kAudioImportExtensions, containsAll(['wav', 'mp3']));
+  test('FLAC detection preserves native rate and downmixes stereo', () {
+    final imported = importAudioMono(
+      Uint8List.fromList('fLaCfixture'.codeUnits),
+      flacDecode: (_) => FlacPcm(
+        left: Float64List.fromList([0.5, 0.25]),
+        right: Float64List.fromList([-0.5, 0.75]),
+        sampleRate: 48000,
+      ),
+    );
+    expect(imported, isNotNull);
+    expect(imported!.sampleRate, 48000);
+    expect(imported.pcm, [0, 0.5]);
+  });
+
+  test('the shared extensions list offers wav, mp3, and flac', () {
+    expect(kAudioImportExtensions, containsAll(['wav', 'mp3', 'flac']));
   });
 }
