@@ -964,6 +964,26 @@ void main() {
       expect(s.clipGain(0, 0), closeTo(1, 1e-9));
     });
 
+    test('range fades split clips and affect only the marked segment', () {
+      final s = DawService()..addClip(_tone(0.4, kDawSampleRate));
+
+      final changed = s.applyFadeInToRange([0], 250, 750);
+
+      expect(changed, 1);
+      expect(s.timeline.tracks[0].clips, hasLength(3));
+      expect(s.clipFadeInMs(0, 0), 0);
+      expect(s.clipFadeInMs(0, 1), closeTo(500, 0.1));
+      expect(s.clipFadeInMs(0, 2), 0);
+
+      s.applyFadeOutToRange([0], 250, 750);
+      expect(s.clipFadeOutMs(0, 1), closeTo(500, 0.1));
+
+      s.undo();
+      expect(s.clipFadeOutMs(0, 1), 0);
+      s.undo();
+      expect(s.timeline.tracks[0].clips, hasLength(1));
+    });
+
     test('moveClipEffect reorders the chain, clamps invalid moves and undoes',
         () {
       final s = DawService()..addClip(_tone(0.4, 100));

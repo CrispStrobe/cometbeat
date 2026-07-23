@@ -1136,6 +1136,24 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
+  void _applyRangeFade({required bool fadeIn}) {
+    if (!_hasFxRange) return;
+    if (fadeIn) {
+      _daw.applyFadeInToRange(
+        _rangeTargetTracks(),
+        _rangeStartMs,
+        _rangeEndMs,
+      );
+    } else {
+      _daw.applyFadeOutToRange(
+        _rangeTargetTracks(),
+        _rangeStartMs,
+        _rangeEndMs,
+      );
+    }
+    if (_playing) play();
+  }
+
   Widget _fxTile(
     BuildContext ctx, {
     required List<DawClipEffect> effects,
@@ -2582,6 +2600,33 @@ class _DawScreenState extends State<DawScreen>
                     onPressed: _hasFxRange ? _rangeGainDialog : null,
                     icon: const Icon(Icons.tune),
                     label: const Text('Range Gain'),
+                  ),
+                  MenuAnchor(
+                    menuChildren: [
+                      MenuItemButton(
+                        onPressed: _hasFxRange
+                            ? () => _applyRangeFade(fadeIn: true)
+                            : null,
+                        leadingIcon: const Icon(Icons.trending_up),
+                        child: const Text('Fade In'),
+                      ),
+                      MenuItemButton(
+                        onPressed: _hasFxRange
+                            ? () => _applyRangeFade(fadeIn: false)
+                            : null,
+                        leadingIcon: const Icon(Icons.trending_down),
+                        child: const Text('Fade Out'),
+                      ),
+                    ],
+                    builder: (context, controller, _) => OutlinedButton.icon(
+                      onPressed: _hasFxRange
+                          ? () => controller.isOpen
+                              ? controller.close()
+                              : controller.open()
+                          : null,
+                      icon: const Icon(Icons.show_chart),
+                      label: const Text('Range Fade'),
+                    ),
                   ),
                   // Project tempo — defines the beat snap grid.
                   Row(

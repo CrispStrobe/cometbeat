@@ -1256,9 +1256,33 @@ class DawService extends ChangeNotifier {
       tracks,
       startMs,
       endMs,
-      (clip) => clip.copyWith(gain: clip.gain * gain),
+      (clip, _) => clip.copyWith(gain: clip.gain * gain),
     );
   }
+
+  int applyFadeInToRange(
+    Iterable<int> tracks,
+    double startMs,
+    double endMs,
+  ) =>
+      _applyClipTransformToRange(
+        tracks,
+        startMs,
+        endMs,
+        (clip, durationMs) => clip.copyWith(fadeInMs: durationMs),
+      );
+
+  int applyFadeOutToRange(
+    Iterable<int> tracks,
+    double startMs,
+    double endMs,
+  ) =>
+      _applyClipTransformToRange(
+        tracks,
+        startMs,
+        endMs,
+        (clip, durationMs) => clip.copyWith(fadeOutMs: durationMs),
+      );
 
   int _applyClipEffectsToRange(
     Iterable<int> tracks,
@@ -1270,14 +1294,14 @@ class DawService extends ChangeNotifier {
         tracks,
         startMs,
         endMs,
-        (clip) => clip.copyWith(effects: effectsFor(clip)),
+        (clip, _) => clip.copyWith(effects: effectsFor(clip)),
       );
 
   int _applyClipTransformToRange(
     Iterable<int> tracks,
     double startMs,
     double endMs,
-    Clip Function(Clip clip) transform,
+    Clip Function(Clip clip, double durationMs) transform,
   ) {
     final indices = _validTrackIndices(tracks);
     final rangeStart = math.min(startMs, endMs);
@@ -1308,7 +1332,7 @@ class DawService extends ChangeNotifier {
           _splitClipAt(track, index, rangeEnd);
         }
         final target = clips[index];
-        clips[index] = transform(target);
+        clips[index] = transform(target, clipDurationMs(track, index));
         changed++;
         index++;
       }
