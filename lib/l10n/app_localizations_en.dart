@@ -196,6 +196,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose which melodic voice receives newly inserted notes';
 
   @override
+  String get workshopSetTitle => 'Set score title';
+
+  @override
   String get workshopZoomIn => 'Zoom in';
 
   @override

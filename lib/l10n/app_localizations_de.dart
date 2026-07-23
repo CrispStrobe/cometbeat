@@ -196,6 +196,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wähle die Stimme, in die neue Noten eingefügt werden';
 
   @override
+  String get workshopSetTitle => 'Titel der Partitur festlegen';
+
+  @override
   String get workshopZoomIn => 'Vergrößern';
 
   @override
