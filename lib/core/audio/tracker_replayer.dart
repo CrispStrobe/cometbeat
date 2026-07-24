@@ -707,6 +707,48 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
   return false;
 }
 
+double? _readLoopedSample(
+  Float64List sample,
+  double readPos,
+  bool loops,
+  bool pingPong,
+  int loopStart,
+  int loopLen,
+) {
+  if (sample.isEmpty) return null;
+  var src = readPos;
+  if (loops && loopLen > 0) {
+    if (pingPong) {
+      src = foldLoopPosition(readPos, loopStart, loopLen, pingPong: true);
+    } else {
+      final loopEnd = loopStart + loopLen;
+      if (src >= loopEnd || src < loopStart) {
+        src = loopStart + ((src - loopStart) % loopLen);
+      }
+    }
+  }
+
+  var idx = src.floor();
+  if (!loops) {
+    if (idx >= sample.length - 1) return null;
+  } else {
+    if (idx < 0 || idx >= sample.length) {
+      final span = loopLen > 0 ? loopLen : sample.length;
+      final start = loopLen > 0 ? loopStart : 0;
+      idx = start + ((idx - start) % span);
+    }
+    idx = idx.clamp(0, sample.length - 1).toInt();
+  }
+
+  final frac = src - src.floor();
+  final next = idx + 1 < sample.length
+      ? sample[idx + 1]
+      : loops
+          ? sample[loopStart.clamp(0, sample.length - 1).toInt()]
+          : 0.0;
+  return sample[idx] * (1 - frac) + next * frac;
+}
+
 /// Renders a SAMPLE channel through a per-tick voice: a fractional resampling
 /// read-pointer whose advance follows the tick voice's instantaneous PITCH
 /// (porta/vibrato/arpeggio) and whose amplitude follows its VOLUME (tremolo/Cxx/
@@ -779,20 +821,12 @@ void _renderSampleChannelInto(
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume;
       for (var i = ts; i < te && i < stem.length; i++) {
-        // Forward loop wraps readPos in place (byte-identical); a ping-pong loop
-        // keeps readPos monotonic and folds it into a bouncing read position.
-        if (loops && !pingPong && readPos >= loopEnd) {
+        if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
           readPos = loopStart + ((readPos - loopStart) % loopLen);
         }
-        final src = loops && pingPong
-            ? foldLoopPosition(readPos, loopStart, loopLen, pingPong: true)
-            : readPos;
-        final idx = src.floor();
-        if (idx >= s.length - 1 && !loops) break; // one-shot: sample exhausted
-        final frac = src - idx;
-        final next =
-            idx + 1 < s.length ? s[idx + 1] : (loops ? s[loopStart] : 0.0);
-        final sampleVal = s[idx] * (1 - frac) + next * frac;
+        final sampleVal =
+            _readLoopedSample(s, readPos, loops, pingPong, loopStart, loopLen);
+        if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
         final el = hasEnv ? env.levelAt(t * 1000) : 1.0;
@@ -885,20 +919,12 @@ void _renderSampleChannelIntoVariable(
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume;
       for (var i = ts; i < te && i < stem.length; i++) {
-        // Forward loop wraps readPos in place (byte-identical); a ping-pong loop
-        // keeps readPos monotonic and folds it into a bouncing read position.
-        if (loops && !pingPong && readPos >= loopEnd) {
+        if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
           readPos = loopStart + ((readPos - loopStart) % loopLen);
         }
-        final src = loops && pingPong
-            ? foldLoopPosition(readPos, loopStart, loopLen, pingPong: true)
-            : readPos;
-        final idx = src.floor();
-        if (idx >= s.length - 1 && !loops) break; // one-shot: sample exhausted
-        final frac = src - idx;
-        final next =
-            idx + 1 < s.length ? s[idx + 1] : (loops ? s[loopStart] : 0.0);
-        final sampleVal = s[idx] * (1 - frac) + next * frac;
+        final sampleVal =
+            _readLoopedSample(s, readPos, loops, pingPong, loopStart, loopLen);
+        if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
         final el = hasEnv ? env.levelAt(t * 1000) : 1.0;
@@ -1496,51 +1522,40 @@ bool _songHasFxx(TrackerSong song) => song.patterns.any(
 /// used unchanged (byte-identical). The caller is expected to have synced the
 /// live pattern (like [songUsesFlow]).
 bool songUsesVariableTiming(TrackerSong song) {
-  if (!_songHasFxx(song)) return false;
+  final initialSpeed =
+      song.initialSpeed > 0 ? song.initialSpeed : kDefaultTicksPerRow;
+  if (!_songHasFxx(song) && initialSpeed == kDefaultTicksPerRow) return false;
   final played = walkFlow(song);
   if (played.length < 2) return false;
-  final tempo0 = played.first.tempoBpm;
-  final speed0 = played.first.ticksPerRow;
   for (final p in played) {
-    if (p.tempoBpm != tempo0 || p.ticksPerRow != speed0) return true;
+    if (p.ticksPerRow != kDefaultTicksPerRow) return true;
+  }
+  final tempo0 = played.first.tempoBpm;
+  for (final p in played) {
+    if (p.tempoBpm != tempo0) return true;
   }
   return false;
 }
 
-/// The step (row) duration in ms at [tempoBpm], matching [TrackerTiming.stepMs]
-/// for the same tempo — the per-row timebase of the variable render.
-int _stepMsForTempo(int tempoBpm, int stepsPerBeat) =>
-    (60000 / tempoBpm) ~/ stepsPerBeat;
-
 /// The wall-clock duration (ms) of a played row, honouring BOTH its tempo and
-/// its SPEED (ticks/row). In a real tracker a row lasts `speed × tickDuration`;
-/// our musical grid pins the INITIAL speed [speed0] to the tempo-derived step,
-/// so a later speed change scales the row proportionally (`ticks/speed0`) —
-/// matching openmpt's relative behaviour. Speed == speed0 ⇒ the plain tempo step
-/// (byte-identical to before for tempo-only changes).
-int _rowMsFor(int tempoBpm, int stepsPerBeat, int ticks, int speed0) {
-  final base = _stepMsForTempo(tempoBpm, stepsPerBeat);
-  if (speed0 <= 0 || ticks <= 0 || ticks == speed0) return base;
-  return (base * ticks / speed0).round();
-}
+/// its SPEED (ticks/row). Classic tracker tick duration is `2500 / BPM` ms, so
+/// a row is `speed * 2500 / BPM`. At speed 6 this matches the app's default
+/// 4-steps-per-beat grid: `6 * 2500 / BPM == 60000 / BPM / 4`.
+int _rowMsFor(int tempoBpm, int ticks) =>
+    ((ticks <= 0 ? kDefaultTicksPerRow : ticks) * 2500 / tempoBpm).round();
 
 /// The accumulated onset (ms) of each played row, honouring per-row tempo. Entry
 /// `i` is the ms offset where played row `i` begins; the sum of all step
 /// durations is the song length ([variableSongTotalMs]).
 List<int> _variableRowStartMs(TrackerSong song, List<PlayedRow> played) {
-  final spb = song.timing.stepsPerBeat;
   final def = song.timing.tempoBpm;
-  final speed0 =
-      played.isEmpty ? kDefaultTicksPerRow : played.first.ticksPerRow;
   final starts = List<int>.filled(played.length, 0);
   var acc = 0;
   for (var i = 0; i < played.length; i++) {
     starts[i] = acc;
     acc += _rowMsFor(
       played[i].tempoBpm > 0 ? played[i].tempoBpm : def,
-      spb,
       played[i].ticksPerRow,
-      speed0,
     );
   }
   return starts;
@@ -1550,17 +1565,12 @@ List<int> _variableRowStartMs(TrackerSong song, List<PlayedRow> played) {
 /// tempo change — used by [TrackerSong.songTotalMs] when [songUsesVariableTiming].
 int variableSongTotalMs(TrackerSong song) {
   final played = walkFlow(song);
-  final spb = song.timing.stepsPerBeat;
   final def = song.timing.tempoBpm;
-  final speed0 =
-      played.isEmpty ? kDefaultTicksPerRow : played.first.ticksPerRow;
   var ms = 0;
   for (final p in played) {
     ms += _rowMsFor(
       p.tempoBpm > 0 ? p.tempoBpm : def,
-      spb,
       p.ticksPerRow,
-      speed0,
     );
   }
   return ms;
@@ -1570,18 +1580,20 @@ int variableSongTotalMs(TrackerSong song) {
 /// break, E6x pattern loop) into the flat sequence of rows actually played. Bxx
 /// wins the order, Dxx sets the landing row; both on one row ⇒ jump order + break
 /// row. E60 marks a loop start, E6x (x>0) repeats the marked span x extra times.
-/// Guarded by [maxRows] so a backward loop terminates (documented cap, not an
-/// error).
-List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
+/// Guarded by [maxRows] as a last resort. A Bxx/Dxx landing on an order-row that
+/// already played is treated as the module's intentional song loop and stops the
+/// offline render instead of unrolling to the cap.
+List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 65536}) {
   final order = song.order;
   final played = <PlayedRow>[];
+  final visitedOrderRows = <(int, int)>{};
   var oi = 0;
   var row = 0;
   var loopStartRow = 0; // E6x pattern-loop start (defaults to row 0)
   var loopCount = 0; // remaining E6x repeats
   // Fxx state carried across rows: speed (ticks/row) + tempo (BPM). A value takes
   // effect ON its own row and persists until the next Fxx of that kind.
-  var curSpeed = kDefaultTicksPerRow;
+  var curSpeed = song.initialSpeed;
   var curTempo = song.timing.tempoBpm;
   while (oi >= 0 && oi < order.length && played.length < maxRows) {
     final patternIndex = order[oi];
@@ -1594,6 +1606,7 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
     } else if (row >= rows) {
       row = rows - 1;
     }
+    visitedOrderRows.add((oi, row));
 
     // Apply any Fxx (set-speed/tempo) or Txx (tempo SLIDE) on this row BEFORE
     // recording it (effect is on its own row): Fxx param < 0x20 → speed (min 1),
@@ -1661,10 +1674,24 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 4096}) {
       }
     }
 
+    bool wouldReplayOrderRow(int targetOrder, int targetRow) {
+      if (targetOrder < 0 || targetOrder >= order.length) return false;
+      final targetPattern = order[targetOrder];
+      if (targetPattern < 0 || targetPattern >= song.patterns.length) {
+        return false;
+      }
+      final targetRows = song.patterns[targetPattern].rows;
+      final clampedRow = targetRow.clamp(0, targetRows - 1);
+      return visitedOrderRows.contains((targetOrder, clampedRow));
+    }
+
     if (jumpToOrder != null) {
+      final targetRow = breakToRow ?? 0;
+      if (wouldReplayOrderRow(jumpToOrder, targetRow)) break;
       oi = jumpToOrder;
-      row = breakToRow ?? 0;
+      row = targetRow;
     } else if (breakToRow != null) {
+      if (wouldReplayOrderRow(oi + 1, breakToRow)) break;
       oi += 1;
       row = breakToRow;
     } else if (loopValue == 0) {
@@ -1715,10 +1742,8 @@ int _firstFxx(
 /// The speed ([TrackerTiming]-independent ticks/row) a song should replay at: the
 /// first `Fxx` set-speed command in play order, else [fallback]. Applied by
 /// [replaySong] so an imported/authored module's authored speed sets the effect
-/// granularity. The INITIAL speed subdivides the row (effect granularity) and is
-/// pinned to the tempo-derived grid step, so it alone doesn't change the song
-/// length. A MID-SONG speed CHANGE, however, scales that row's duration relative
-/// to the initial speed (see [_rowMsFor]) — matching real trackers/openmpt.
+/// granularity. Tracker rows last `speed * 2500 / bpm` ms, so imported module
+/// speed affects both duration and per-tick effect cadence.
 int songInitialSpeed(TrackerSong song, {int fallback = kDefaultTicksPerRow}) {
   for (final oi in song.order) {
     if (oi < 0 || oi >= song.patterns.length) continue;
@@ -1840,7 +1865,8 @@ ReplayResult replaySong(
   if (songUsesVariableTiming(song)) return _replayVariable(song);
   // An Fxx set-speed command overrides the default ticks/row (effect
   // granularity); timing-safe (speed subdivides the row, not its duration).
-  final ticks = songInitialSpeed(song, fallback: ticksPerRow);
+  final initialTicks = song.initialSpeed > 0 ? song.initialSpeed : ticksPerRow;
+  final ticks = songInitialSpeed(song, fallback: initialTicks);
   // Flow OR variable-length patterns both flatten the played sequence.
   if (songNeedsWalkRender(song)) return _replayFlow(song, ticks);
 
@@ -1896,7 +1922,8 @@ ReplayResult replaySongStereo(
   int ticksPerRow = kDefaultTicksPerRow,
 }) {
   song.syncCurrent();
-  final ticks = songInitialSpeed(song, fallback: ticksPerRow);
+  final initialTicks = song.initialSpeed > 0 ? song.initialSpeed : ticksPerRow;
+  final ticks = songInitialSpeed(song, fallback: initialTicks);
   // Mirror the mono replaySong routing: mid-song tempo/speed → the per-row
   // stereo render; flow OR variable-length → the flattened stereo render.
   if (songUsesVariableTiming(song)) return _replayVariableStereo(song);
@@ -2049,13 +2076,10 @@ ReplayResult _replayFlowStereo(TrackerSong song, int ticksPerRow) {
 ReplayResult _replayVariable(TrackerSong song) {
   final played = walkFlow(song);
   final channels = song.channels;
-  final spb = song.timing.stepsPerBeat;
   final def = song.timing.tempoBpm;
   final n = played.length;
 
   // Per-row sample boundaries: rowStart[i]..rowStart[i+1] is played row i.
-  final speed0 =
-      played.isEmpty ? kDefaultTicksPerRow : played.first.ticksPerRow;
   final rowStart = List<int>.filled(n + 1, 0);
   final ticks = List<int>.filled(n, kDefaultTicksPerRow);
   var acc = 0;
@@ -2063,7 +2087,7 @@ ReplayResult _replayVariable(TrackerSong song) {
     rowStart[i] = acc;
     ticks[i] = played[i].ticksPerRow;
     final tempo = played[i].tempoBpm > 0 ? played[i].tempoBpm : def;
-    final stepMs = _rowMsFor(tempo, spb, played[i].ticksPerRow, speed0);
+    final stepMs = _rowMsFor(tempo, played[i].ticksPerRow);
     acc += (stepMs * kSampleRate / 1000).round();
   }
   rowStart[n] = acc;
@@ -2079,14 +2103,14 @@ ReplayResult _replayVariable(TrackerSong song) {
       flatCells,
       rowStart,
       ticks,
-      spb,
+      song.timing.stepsPerBeat,
       pool: song.instruments,
     );
   }
 
   final (gvRows, gvStarts) =
       _flatRowScan(played, song, channels.length, (i) => rowStart[i]);
-  _applyGlobalVolumeMix(mix, gvRows, gvStarts, speed0);
+  _applyGlobalVolumeMix(mix, gvRows, gvStarts, song.initialSpeed);
 
   final starts = _variableRowStartMs(song, played);
   final timingMap = [
@@ -2273,12 +2297,9 @@ void _renderNonAdditiveVariable(
 ReplayResult _replayVariableStereo(TrackerSong song) {
   final played = walkFlow(song);
   final channels = song.channels;
-  final spb = song.timing.stepsPerBeat;
   final def = song.timing.tempoBpm;
   final n = played.length;
 
-  final speed0 =
-      played.isEmpty ? kDefaultTicksPerRow : played.first.ticksPerRow;
   final rowStart = List<int>.filled(n + 1, 0);
   final ticks = List<int>.filled(n, kDefaultTicksPerRow);
   var acc = 0;
@@ -2286,10 +2307,8 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
     rowStart[i] = acc;
     ticks[i] = played[i].ticksPerRow;
     final tempo = played[i].tempoBpm > 0 ? played[i].tempoBpm : def;
-    acc += (_rowMsFor(tempo, spb, played[i].ticksPerRow, speed0) *
-            kSampleRate /
-            1000)
-        .round();
+    acc +=
+        (_rowMsFor(tempo, played[i].ticksPerRow) * kSampleRate / 1000).round();
   }
   rowStart[n] = acc;
 
@@ -2306,7 +2325,7 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
       flatCells,
       rowStart,
       ticks,
-      spb,
+      song.timing.stepsPerBeat,
       pool: song.instruments,
     );
     final penv = channels[c].panEnvelope;
@@ -2333,7 +2352,7 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
         channels[c].pan,
         flatCells,
         rowStart,
-        ticksPerRow: speed0,
+        ticksPerRow: song.initialSpeed,
       )) {
         final theta = (reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
         final lGain = cos(theta);
@@ -2349,7 +2368,7 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
 
   final (gvRows, gvStarts) =
       _flatRowScan(played, song, channels.length, (i) => rowStart[i]);
-  _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, speed0);
+  _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, song.initialSpeed);
 
   final starts = _variableRowStartMs(song, played);
   final timingMap = [
