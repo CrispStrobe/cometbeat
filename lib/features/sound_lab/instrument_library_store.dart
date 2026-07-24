@@ -39,6 +39,7 @@ class SavedInstrument {
   const SavedInstrument({
     required this.name,
     required this.json,
+    this.sampleRate,
     this.source,
     this.license,
     this.sourceUrl,
@@ -48,6 +49,10 @@ class SavedInstrument {
 
   /// The [instrumentToJsonString] payload — the authoritative record.
   final String json;
+
+  /// Original PCM rate for embedded sample instruments. Older records omit it
+  /// and are interpreted at the engine's default rate when recalled.
+  final int? sampleRate;
 
   final String? source;
 
@@ -107,6 +112,7 @@ class SavedInstrument {
   factory SavedInstrument.fromSampleClip(SampleClip clip) => SavedInstrument(
         name: clip.name,
         json: instrumentToJsonString(SampleInstrument(clip.name, clip.pcm)),
+        sampleRate: clip.sampleRate,
         source: clip.source ?? 'Sample',
         license: clip.license,
         sourceUrl: clip.sourceUrl,
@@ -115,6 +121,7 @@ class SavedInstrument {
   Map<String, dynamic> toJson() => {
         'name': name,
         'json': json,
+        if (sampleRate != null) 'rate': sampleRate,
         if (source != null) 'source': source,
         if (license != null) 'license': license,
         if (sourceUrl != null) 'sourceUrl': sourceUrl,
@@ -124,10 +131,12 @@ class SavedInstrument {
     final name = j['name'];
     final json = j['json'];
     if (name is! String || json is! String) return null;
+    final rate = j['rate'];
     String? str(Object? v) => v is String ? v : null;
     return SavedInstrument(
       name: name,
       json: json,
+      sampleRate: rate is int && rate > 0 ? rate : null,
       source: str(j['source']),
       license: str(j['license']),
       sourceUrl: str(j['sourceUrl']),

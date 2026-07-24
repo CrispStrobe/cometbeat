@@ -290,10 +290,16 @@ void main() {
       });
     }
 
-    test('LilyPond is write-only (text out, no reader)', () {
+    test('LilyPond round-trips through the text reader', () {
       expect(moduleToTextNotation(doc, TextNotation.lilypond), isNotEmpty);
-      expect(textNotationToScore('x', TextNotation.lilypond), isNull);
-      expect(textNotationReadable(TextNotation.lilypond), isFalse);
+      expect(
+        textNotationToScore(
+          moduleToTextNotation(doc, TextNotation.lilypond),
+          TextNotation.lilypond,
+        ),
+        isNotNull,
+      );
+      expect(textNotationReadable(TextNotation.lilypond), isTrue);
       expect(textNotationReadable(TextNotation.abc), isTrue);
     });
   });

@@ -62,7 +62,7 @@ void main() {
 
   test('an unsupported extension throws FormatException', () {
     expect(
-      () => decodeMusicFile('song.ly', Uint8List(0)),
+      () => decodeMusicFile('song.xyz', Uint8List(0)),
       throwsA(isA<FormatException>()),
     );
   });
