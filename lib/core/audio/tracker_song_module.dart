@@ -197,7 +197,15 @@ TrackerPattern _patternFromDoc(
       // A volume COLUMN reduction (0..63) — carried even without a note, so a
       // mid-note volume change isn't dropped at import.
       final hasVol = dc.volume >= 0 && dc.volume < 64;
-      if (dc.note >= 0 || hasFx || dc.instrument != 0 || hasVol) {
+      if (dc.noteOff) {
+        // If there's an explicit note-off event, preserve it as a noteCut.
+        cells[c][r] = TrackerCell.noteCut.copyWith(
+          volume: hasVol ? (dc.volume / 64).clamp(0.0, 1.0) : null,
+          fxCmd: dc.effect,
+          fxParam: dc.effectParam,
+          instrument: dc.instrument,
+        );
+      } else if (dc.note >= 0 || hasFx || dc.instrument != 0 || hasVol) {
         cells[c][r] = TrackerCell(
           midi: dc.note >= 0 ? dc.note : null,
           volume: hasVol ? (dc.volume / 64).clamp(0.0, 1.0) : null,
@@ -211,8 +219,6 @@ TrackerPattern _patternFromDoc(
           instrument: dc.instrument,
         );
       }
-      // noteOff cells stop a ring in real trackers; our model rings until the
-      // next trigger, so a key-off simply leaves the cell empty.
     }
   }
   return TrackerPattern(name: index.toString().padLeft(2, '0'), cells: cells);

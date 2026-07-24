@@ -81,14 +81,20 @@ ModImport modToTracker(ModModule mod, {int rows = 8, int stepsPerBeat = 2}) {
         // Note: The TrackerEngine does not yet support sub-row tick timing for key-offs.
         // Therefore, ANY Note Cut (ECx) regardless of tick offset 'x' is normalized
         // to an immediate Note Cut (EC0) upon import.
-        if (cell != null &&
-            cell.effect == 0xE &&
-            (cell.effectParam & 0xF0) == 0xC0) {
-          cells.add(TrackerCell.noteCut);
-        } else if (cell == null || cell.period <= 0) {
+        if (cell == null) {
           cells.add(TrackerCell.empty);
+          continue;
+        }
+        
+        final isCut = cell.effect == 0xE && (cell.effectParam & 0xF0) == 0xC0;
+        final midi = cell.period > 0 ? periodToMidi(cell.period) : null;
+        
+        if (isCut && midi == null) {
+          cells.add(TrackerCell.noteCut);
+        } else if (midi != null) {
+          cells.add(TrackerCell(midi: midi, keyOff: isCut));
         } else {
-          cells.add(TrackerCell(midi: periodToMidi(cell.period)));
+          cells.add(TrackerCell.empty);
         }
       }
       snapshot.add(cells);
