@@ -1766,6 +1766,33 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   }
 
   Widget _simpleTools(AppLocalizations l10n) {
+    if (MediaQuery.sizeOf(context).width < 420) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton.filledTonal(
+              tooltip: l10n.loopMixerBeatEdit,
+              icon: Icon(_showBeatEdit ? Icons.close : Icons.grid_on),
+              onPressed: toggleBeatEdit,
+            ),
+            IconButton.filledTonal(
+              tooltip: l10n.loopMixerTuneEdit,
+              icon: Icon(_showTuneEdit ? Icons.close : Icons.piano),
+              onPressed: toggleTuneEdit,
+            ),
+            IconButton.filledTonal(
+              tooltip: l10n.loopMixerScore,
+              icon: Icon(
+                _showScore ? Icons.library_music : Icons.library_music_outlined,
+              ),
+              onPressed: toggleScorePanel,
+            ),
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Wrap(
@@ -3268,7 +3295,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                       child: Row(
                         children: [
                           Text(
-                            'BPM ${_engine.tempoBpm}',
+                            'BPM',
                             style: Theme.of(context).textTheme.labelLarge,
                           ),
                           Expanded(
