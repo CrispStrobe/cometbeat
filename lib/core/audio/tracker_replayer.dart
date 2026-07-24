@@ -819,7 +819,8 @@ void _renderSampleChannelInto(
       }
       if (!voice.active) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
-      final vol = (state.volume / kMaxVolume) * voice.noteVolume;
+      final vol =
+          (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
         if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
           readPos = loopStart + ((readPos - loopStart) % loopLen);
@@ -841,7 +842,10 @@ void _renderSampleChannelInto(
     if (v.abs() > peak) peak = v.abs();
   }
   if (peak == 0) return;
-  final scale = channel.gain / peak;
+  final scale = channel.instrument is SampleInstrument &&
+          !(channel.instrument as SampleInstrument).normalize
+      ? channel.gain
+      : channel.gain / peak;
   final n = min(stem.length, mix.length - sampleOffset);
   for (var i = 0; i < n; i++) {
     mix[sampleOffset + i] += stem[i] * scale;
@@ -917,7 +921,8 @@ void _renderSampleChannelIntoVariable(
       }
       if (!voice.active) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
-      final vol = (state.volume / kMaxVolume) * voice.noteVolume;
+      final vol =
+          (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
         if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
           readPos = loopStart + ((readPos - loopStart) % loopLen);
@@ -939,7 +944,10 @@ void _renderSampleChannelIntoVariable(
     if (v.abs() > peak) peak = v.abs();
   }
   if (peak == 0) return;
-  final scale = channel.gain / peak;
+  final scale = channel.instrument is SampleInstrument &&
+          !(channel.instrument as SampleInstrument).normalize
+      ? channel.gain
+      : channel.gain / peak;
   final n = min(stem.length, mix.length);
   for (var i = 0; i < n; i++) {
     mix[i] += stem[i] * scale;
@@ -1019,7 +1027,10 @@ void _renderChannelInto(
       if (v.abs() > peak) peak = v.abs();
     }
     if (peak == 0) return;
-    final scale = channel.gain / peak;
+    final scale = channel.instrument is SampleInstrument &&
+            !(channel.instrument as SampleInstrument).normalize
+        ? channel.gain
+        : channel.gain / peak;
     final n = min(stem.length, mix.length - sampleOffset);
     for (var i = 0; i < n; i++) {
       mix[sampleOffset + i] += stem[i] * scale;
@@ -2281,7 +2292,9 @@ void _renderNonAdditiveVariable(
     if (v.abs() > peak) peak = v.abs();
   }
   if (peak == 0) return;
-  final scale = channel.gain / peak;
+  final scale = curInst is SampleInstrument && !curInst.normalize
+      ? channel.gain
+      : channel.gain / peak;
   final n = min(stem.length, mix.length);
   for (var i = 0; i < n; i++) {
     mix[i] += stem[i] * scale;
