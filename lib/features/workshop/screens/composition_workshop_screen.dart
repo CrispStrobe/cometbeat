@@ -3531,6 +3531,24 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     // ties/rests/voices; small scores make this cheap enough per rebuild.
     final ScoreAnalysis? analysis = _showAnalysis ? analyze(score) : null;
     final elementColors = <String, Color>{
+      // Give every pitched element a readable fallback first. The analysis
+      // pass below then replaces this with the authoritative chord function
+      // wherever the theory engine found a harmonic segment.
+      if (analysis != null)
+        for (final measure in score.measures)
+          for (final voice in [
+            measure.elements,
+            measure.voice2,
+            measure.voice3,
+            measure.voice4,
+          ])
+            for (final element in voice)
+              if (element case NoteElement(:final id, :final pitches))
+                if (id != null && pitches.isNotEmpty)
+                  id: _functionTint(
+                    _fallbackFunction(pitches.first, analysis.key) ??
+                        HarmonicFunction.subdominant,
+                  ),
       // Two voices share one staff by design. Keep their noteheads/stems
       // distinguishable so aligned pitches do not look like duplicate entry.
       if (_doc.hasVoice2) ...{
@@ -3549,20 +3567,6 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         for (final seg in analysis.segments)
           if (seg.function case final function?)
             for (final id in seg.elementIds) id: _functionTint(function),
-        for (final measure in score.measures)
-          for (final voice in [
-            measure.elements,
-            measure.voice2,
-            measure.voice3,
-            measure.voice4,
-          ])
-            for (final element in voice)
-              if (element case NoteElement(:final id, :final pitches))
-                if (id != null && pitches.isNotEmpty)
-                  id: _functionTint(
-                    _fallbackFunction(pitches.first, analysis.key) ??
-                        HarmonicFunction.subdominant,
-                  ),
       },
       for (final id in selectedIds) id: Colors.amber,
       // The playback cursor paints the sounding notes green, overriding any
@@ -4337,7 +4341,12 @@ class _WorkshopNotationOverlayPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final byId = <String, MusicElement>{
       for (final measure in score.measures)
-        for (final element in [...measure.elements, ...measure.voice2])
+        for (final element in [
+          ...measure.elements,
+          ...measure.voice2,
+          ...measure.voice3,
+          ...measure.voice4,
+        ])
           if (element.id != null) element.id!: element,
     };
     const textColor = Color(0xFF455A64);

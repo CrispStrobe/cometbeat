@@ -208,6 +208,27 @@ void main() {
     expect(find.text('C Major'), findsNothing);
   });
 
+  testWidgets('Analysis tints note elements, not only the banner',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopAnalysis));
+    await tester.pumpAndSettle();
+
+    final view = tester.widget<MultiSystemView>(find.byType(MultiSystemView));
+    final note = view.score.measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .first;
+    expect(view.elementColors[note.id], const Color(0xFF59A14F));
+  });
+
   testWidgets('🔍 Inspect mode: tapping a note opens its Looking-Glass card',
       (tester) async {
     await pump(tester);
