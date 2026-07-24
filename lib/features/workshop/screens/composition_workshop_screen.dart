@@ -3503,34 +3503,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final songs = context.read<UserSongsService>();
-
-    final controller = TextEditingController(
-      text: _scoreTitle.isEmpty ? l10n.myMelodyDefaultName : _scoreTitle,
-    );
-    final title = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.myMelodySaveTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (v) => Navigator.of(ctx).pop(v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: Text(l10n.myMelodySave),
-          ),
-        ],
-      ),
-    );
-    if (title == null) return;
-    final name = title.trim().isEmpty ? l10n.myMelodyDefaultName : title.trim();
+    final name = _scoreTitle.trim().isEmpty
+        ? l10n.myMelodyDefaultName
+        : _scoreTitle.trim();
     if (_scoreTitle != name) setState(() => _scoreTitle = name);
     songs.addSong(
       ImportedSong(

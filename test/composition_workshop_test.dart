@@ -414,6 +414,36 @@ void main() {
     );
   });
 
+  testWidgets('save uses the editor title without asking for it again',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(_pianoKey());
+    await tester.pump();
+
+    await tester.tap(find.byTooltip(l10n.workshopSetTitle));
+    await tester.pumpAndSettle();
+    final titleField = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(titleField, 'No Prompt Save');
+    await tester.tap(
+      find.text(
+        MaterialLocalizations.of(tester.element(find.byType(AlertDialog)))
+            .okButtonLabel,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.more_vert).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.myMelodySave));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text(l10n.myMelodySaved), findsOneWidget);
+  });
+
   testWidgets('narrow workshop keeps title and menu actions reachable',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));
