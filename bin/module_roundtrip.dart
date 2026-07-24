@@ -64,13 +64,14 @@ Future<void> main(List<String> args) async {
   _printDiff('source -> X1', d01);
   _printDiff('X1 -> X2', d12);
 
-  final openmpt = _value(args, '--openmpt') ?? 'openmpt123';
-  final audioCheck = await _renderExternal(
-    openmpt,
-    sourcePath,
-    x1Path,
-    outputDir.path,
-  );
+  final audioCheck = args.contains('--no-external')
+      ? null
+      : await _renderExternal(
+          _value(args, '--openmpt') ?? 'openmpt123',
+          sourcePath,
+          x1Path,
+          outputDir.path,
+        );
   if (d01.isNotEmpty || d12.isNotEmpty || audioCheck == false) exitCode = 1;
 }
 
@@ -90,7 +91,7 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
     if (!condition && out.length < 20) out.add(message);
   }
 
-  check(a.title == b.title, 'title "${a.title}" != "${b.title}"');
+  check(a.title.trim() == b.title.trim(), 'title "${a.title}" != "${b.title}"');
   check(a.channelCount == b.channelCount,
       'channels ${a.channelCount} != ${b.channelCount}');
   check(a.initialSpeed == b.initialSpeed,
@@ -111,7 +112,10 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
       final cells = math.min(pa.rows[r].length, pb.rows[r].length);
       for (var c = 0; c < cells; c++) {
         if (pa.rows[r][c] != pb.rows[r][c]) {
-          check(false, 'cell p$p r$r c$c differs');
+          check(
+              false,
+              'cell p$p r$r c$c ${_cellText(pa.rows[r][c])} != '
+              '${_cellText(pb.rows[r][c])}');
         }
       }
     }
@@ -139,6 +143,10 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
   }
   return out;
 }
+
+String _cellText(DocCell c) =>
+    '(n${c.note},i${c.instrument},v${c.volume},off${c.noteOff},'
+    'f${c.effect.toRadixString(16)}:${c.effectParam.toRadixString(16)})';
 
 List<int> _validOrder(ModuleDoc d) =>
     d.order.where((i) => i >= 0 && i < d.patterns.length).toList();

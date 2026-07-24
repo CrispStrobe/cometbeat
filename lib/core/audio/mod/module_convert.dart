@@ -700,7 +700,12 @@ ModModule docToMod(ModuleDoc doc) {
     title: doc.title,
     restart: 0,
     samples: samples,
-    order: List<int>.from(doc.order),
+    // IT/XM order lists may carry 0xFF as an explicit end marker. MOD has no
+    // end-marker value; copying it would make a reader allocate pattern 255.
+    order: doc.order
+        .where((pattern) => pattern >= 0 && pattern < doc.patterns.length)
+        .take(128)
+        .toList(),
     patterns: patterns,
   );
 }
