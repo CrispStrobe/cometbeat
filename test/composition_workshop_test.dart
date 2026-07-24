@@ -196,6 +196,9 @@ void main() {
 
     // The banner appears with the detected key (empty score → C major default).
     expect(find.text('C Major'), findsOneWidget);
+    expect(find.text('Home (tonic)'), findsOneWidget);
+    expect(find.text('Away (subdominant)'), findsOneWidget);
+    expect(find.text('Tension (dominant)'), findsOneWidget);
 
     // Toggling it off removes the banner again.
     await tester.tap(find.byIcon(Icons.more_vert));

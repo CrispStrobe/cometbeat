@@ -30,7 +30,7 @@ Sound Library creation tools.
   section in track inserts; later it can grow clip/segment modules and more FX
   sections without changing the instrument picker model.
 
-## Tab Editor navigation (TODO)
+## Tab Editor navigation (DONE)
 
 - Add a three-dot overflow menu to the Tab Editor and move lower-frequency
   actions out of the crowded top bar.
@@ -39,6 +39,10 @@ Sound Library creation tools.
   overflow menu.
 - Ensure every menu action has an explicit effect in the editable tab document,
   rather than only changing a label or preview.
+
+Implemented in `7e05bd55`, `62efa301` and covered by `test/tab_workshop_test.dart`:
+the overflow menu owns utility actions, chord picking changes voicing/playback,
+and the no-op Demo riff action was removed.
 
 ## Architecture (done, `feature/pitch-detection-spike`)
 
