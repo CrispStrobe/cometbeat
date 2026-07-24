@@ -53,6 +53,25 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('authoring menu exposes the five product modes', (tester) async {
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    await tester.pumpWidget(_wrap(const HomeScreen(), sri));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.piano));
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    expect(find.text(l10n.workshopModeScore), findsOneWidget);
+    expect(find.text(l10n.workshopModeTracker), findsOneWidget);
+    expect(find.text(l10n.workshopModeLoopStudio), findsOneWidget);
+    expect(find.text(l10n.workshopModeTab), findsOneWidget);
+    expect(find.text(l10n.dawTitle), findsOneWidget);
+    expect(find.text(l10n.workshopModePerform), findsNothing);
+    expect(find.text(l10n.workshopModeDrums), findsNothing);
+    expect(find.text(l10n.workshopModeTranscribe), findsNothing);
+  });
+
   testWidgets('seven taps on the title reveal the debug settings',
       (tester) async {
     final sri = SriService(getNow: () => DateTime(2026, 7, 11));
