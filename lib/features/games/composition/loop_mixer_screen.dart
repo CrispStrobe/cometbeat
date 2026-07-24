@@ -2586,7 +2586,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   void _stopAll() {
     _paused = false;
-    setState(_engine.enabled.clear);
+    setState(() {
+      _engine.enabled.clear();
+      _soloTrack = null;
+      _enabledBeforeSolo = null;
+    });
     _syncPlayback();
   }
 

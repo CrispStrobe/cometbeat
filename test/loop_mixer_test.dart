@@ -228,6 +228,19 @@ void main() {
     await tester.pump();
     expect(game.soloTrack, isNull);
     expect(game.enabledTracks, {'melody', 'bass'});
+
+    game.toggleSolo('melody');
+    await tester.pump();
+    game.stopAll();
+    await tester.pump();
+    expect(game.soloTrack, isNull);
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, {'bass'});
+
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, isEmpty);
   });
 
   testWidgets('BPM slider retunes the groove', (tester) async {
