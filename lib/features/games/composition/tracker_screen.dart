@@ -53,6 +53,8 @@ import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 
+import 'oscilloscope_widget.dart';
+
 class TrackerScreen extends StatefulWidget {
   const TrackerScreen({super.key, this.initialSong});
 
@@ -231,6 +233,7 @@ class _TrackerScreenState extends State<TrackerScreen>
 
   late final Ticker _ticker;
   final _step = ValueNotifier<int>(-1);
+  final _progress = ValueNotifier<double>(-1.0);
 
   int _selected = 0;
   bool _isRecording = false;
@@ -296,11 +299,17 @@ class _TrackerScreenState extends State<TrackerScreen>
         final pos = _clock.elapsedMilliseconds % songMs;
         _playingOrder.value = pos ~/ t.totalMs;
         _step.value = (pos % t.totalMs) ~/ t.stepMs;
+        _progress.value = (pos % t.totalMs) / t.totalMs;
       } else {
         _playingOrder.value = -1;
-        _step.value = _clock.isRunning
-            ? (_clock.elapsedMilliseconds % t.totalMs) ~/ t.stepMs
-            : -1;
+        if (_clock.isRunning) {
+          final pos = _clock.elapsedMilliseconds % t.totalMs;
+          _step.value = pos ~/ t.stepMs;
+          _progress.value = pos / t.totalMs;
+        } else {
+          _step.value = -1;
+          _progress.value = -1.0;
+        }
       }
     })
       ..start();
@@ -310,6 +319,7 @@ class _TrackerScreenState extends State<TrackerScreen>
   void dispose() {
     _ticker.dispose();
     _step.dispose();
+    _progress.dispose();
     _playingOrder.dispose();
     _loop.dispose();
     _recorder.dispose();
@@ -1769,19 +1779,49 @@ class _TrackerScreenState extends State<TrackerScreen>
               ],
               const SizedBox(height: 10),
               // Instrument tabs — pick the channel you're editing.
-              Wrap(
-                spacing: 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  for (var i = 0; i < _engine.channels.length; i++)
-                    _ChannelChip(
-                      label: _channelLabel(l10n, _engine.channels[i].id),
-                      icon: _channelIcons[_engine.channels[i].id]!,
-                      selected: i == _selected,
-                      hasNotes: _engine.channels[i].hasAnyNote,
-                      onTap: () => setState(() => _selected = i),
-                    ),
-                ],
+              ValueListenableBuilder<double>(
+                valueListenable: _progress,
+                builder: (context, progress, _) => Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (var i = 0; i < _engine.channels.length; i++)
+                      Column(
+                        children: [
+                          _ChannelChip(
+                            label: _channelLabel(l10n, _engine.channels[i].id),
+                            icon: _channelIcons[_engine.channels[i].id]!,
+                            selected: i == _selected,
+                            hasNotes: _engine.channels[i].hasAnyNote,
+                            onTap: () => setState(() => _selected = i),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 80,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: OscilloscopeWidget(
+                                pcm: _engine.getStem(i),
+                                progress: progress,
+                                waveColor: i == _selected 
+                                    ? Theme.of(context).colorScheme.primary 
+                                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                                backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               // Pattern slots (A–D) — build a few patterns, then Play song.

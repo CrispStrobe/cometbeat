@@ -92,6 +92,7 @@ import 'package:comet_beat/shared/music_io/audio_export.dart'
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
+import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
@@ -525,6 +526,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// The sounding row (0-based), or -1 when stopped. Drives the playhead without
   /// a full rebuild.
   final _row = ValueNotifier<int>(-1);
+  final _progress = ValueNotifier<double>(-1.0);
 
   /// Which order-list position is sounding in song mode (else -1).
   final _playingOrder = ValueNotifier<int>(-1);
@@ -688,6 +690,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       if (_paused) return; // freeze the playhead where it is
       if (!_clock.isRunning) {
         if (_row.value != -1) _row.value = -1;
+        if (_progress.value != -1.0) _progress.value = -1.0;
         if (_playingOrder.value != -1) _playingOrder.value = -1;
         if (_levels.value.isNotEmpty) _levels.value = const [];
         return;
@@ -733,6 +736,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           _maybeTick(step);
         }
       }
+      _progress.value = posInPattern / t.totalMs;
       _updateLevels(posInPattern);
     })
       ..start();
@@ -748,6 +752,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void dispose() {
     _ticker.dispose();
     _row.dispose();
+    _progress.dispose();
     _playingOrder.dispose();
     _levels.dispose();
     _vScroll.dispose();
@@ -5054,7 +5059,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             ],
           ),
           // VU meter — lights up with the channel's live level during playback.
-          _ChannelMeter(levels: _levels, channel: c, muted: muted),
+          _ChannelMeter(
+            levels: _levels, 
+            channel: c, 
+            muted: muted,
+            progress: _progress,
+            pcm: _song.engine.getStem(c),
+          ),
         ],
       ),
     );
@@ -5653,11 +5664,15 @@ class _ChannelMeter extends StatelessWidget {
     required this.levels,
     required this.channel,
     required this.muted,
+    required this.progress,
+    required this.pcm,
   });
 
   final ValueNotifier<List<double>> levels;
+  final ValueNotifier<double> progress;
   final int channel;
   final bool muted;
+  final Float64List pcm;
 
   @override
   Widget build(BuildContext context) {
@@ -5669,15 +5684,37 @@ class _ChannelMeter extends StatelessWidget {
             (channel < values.length && !muted) ? values[channel] : 0.0;
         return Padding(
           padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: level,
-              minHeight: 4,
-              backgroundColor: scheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation(
-                Color.lerp(scheme.primary, scheme.error, level) ??
-                    scheme.primary,
+          child: Container(
+            height: 12,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: Stack(
+                children: [
+                  // VU Meter Background
+                  FractionallySizedBox(
+                    widthFactor: level,
+                    heightFactor: 1.0,
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      color: Color.lerp(scheme.primary, scheme.error, level) ??
+                          scheme.primary,
+                    ),
+                  ),
+                  // Oscilloscope overlay
+                  ValueListenableBuilder<double>(
+                    valueListenable: progress,
+                    builder: (context, prog, _) => OscilloscopeWidget(
+                      pcm: pcm,
+                      progress: prog,
+                      waveColor: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      backgroundColor: Colors.transparent,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

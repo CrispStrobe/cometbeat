@@ -1,8 +1,7 @@
 # Automatic Play-Along — plan & status
 
-🚧 **Actively working on (Agent checkpoint)**
-- Starting work on Tracker Keyboard Navigation (Visual Excellence & Workflow).
-- Touching: `lib/features/games/composition/tracker_screen.dart` and `test/tracker_screen_test.dart`.
+🚧 **Idle / Last-shipped (Agent checkpoint)**
+- Shipped: Real-time Oscilloscopes & Meters per-channel in Tracker (Beginner + Advanced).
 
 Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
@@ -234,7 +233,7 @@ We have `tracker_notation.dart` bridging Tracker ↔ Score Workshop. However, de
 The Studio UI (`tracker_screen.dart`) is functional but lacks the slick, real-time visual feedback and rapid navigation of elite modern trackers.
 
 **Implementation Steps:**
-1. **Real-time Oscilloscopes & Meters:** Tap the `_stem(channel)` cache in `TrackerEngine`. Pass this data to an `OscilloscopeWidget` using `CustomPainter` to draw vivid, real-time waveforms and VU meters per channel, exactly like DefleMask.
+1. ~~**Real-time Oscilloscopes & Meters:**~~ Tap the `_stem(channel)` cache in `TrackerEngine`. Pass this data to an `OscilloscopeWidget` using `CustomPainter` to draw vivid, real-time waveforms and VU meters per channel, exactly like DefleMask. (DONE)
 2. **Smooth Scrolling Matrix:** Evolve the grid rendering to support pixel-smooth playhead scrolling (rather than rigid row-by-row jumping) and a dynamic pattern matrix where channel loops can be visualized block-by-block.
 3. **Advanced Keyboard Handling:** Add `FocusNode` and `KeyEvent` handlers for lightning-fast multi-cell selection (shift+arrows), cross-channel copy/paste, and value interpolation directly in the grid.
 

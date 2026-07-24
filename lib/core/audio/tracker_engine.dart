@@ -1181,6 +1181,9 @@ class TrackerEngine {
   Float64List _stem(int channel) =>
       _stemCache[channel] ??= _renderWithDynamics(channel);
 
+  /// The raw PCM waveform of a channel for visualization (oscilloscopes).
+  Float64List getStem(int channel) => _stem(channel);
+
   /// Renders a channel, then scales each note's sample range by that note's
   /// [TrackerCell.volume] (a soft/ghost note) — a renderer-agnostic volume
   /// column: additive, sfxr, sampled and percussion voices all honour it.
