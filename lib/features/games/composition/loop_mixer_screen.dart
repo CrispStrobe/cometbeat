@@ -1183,7 +1183,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   bool loadGrooveToken(String token) {
     final spec = decodeGrooveToken(token);
     if (spec == null) return false;
-    setState(() => _engine.applySpec(spec));
+    setState(() {
+      _engine.applySpec(spec);
+      _soloTrack = null;
+      _enabledBeforeSolo = null;
+    });
     _restartGroove();
     return true;
   }
@@ -2342,6 +2346,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// it never sounds empty. A gentle swing roll varies the feel.
   void _roll() {
     setState(() {
+      _soloTrack = null;
+      _enabledBeforeSolo = null;
       final ids = _engine.tracks.map((t) => t.id).toSet();
       _engine.enabled.clear();
       if (ids.contains('drums')) _engine.enabled.add('drums');
