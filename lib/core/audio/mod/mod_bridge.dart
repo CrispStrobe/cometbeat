@@ -85,14 +85,18 @@ ModImport modToTracker(ModModule mod, {int rows = 8, int stepsPerBeat = 2}) {
           cells.add(TrackerCell.empty);
           continue;
         }
-        
         final isCut = cell.effect == 0xE && (cell.effectParam & 0xF0) == 0xC0;
         final midi = cell.period > 0 ? periodToMidi(cell.period) : null;
-        
-        if (isCut && midi == null) {
+
+        // ECx is a sub-row event in the source format. The tracker grid has
+        // row-level events only, so normalize every ECx to an immediate cut.
+        // A source cell may also carry a note, but that note is cut at the
+        // same normalized instant and must not become a second render-path
+        // interpretation of the event.
+        if (isCut) {
           cells.add(TrackerCell.noteCut);
         } else if (midi != null) {
-          cells.add(TrackerCell(midi: midi, keyOff: isCut));
+          cells.add(TrackerCell(midi: midi));
         } else {
           cells.add(TrackerCell.empty);
         }

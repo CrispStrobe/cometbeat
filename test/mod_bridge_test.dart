@@ -116,6 +116,7 @@ void main() {
 
       // The EC5 cell should be translated to TrackerCell.noteCut
       expect(patterns[0][0][0].isNoteCut, isTrue);
+      expect(patterns[0][0][0].midi, isNull);
     });
   });
 }
