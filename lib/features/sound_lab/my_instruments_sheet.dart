@@ -65,6 +65,7 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
   bool includeBuiltIns = false,
   Future<void> Function(SampleClip clip)? onCatalogSampleInsert,
   bool preferCatalogSampleInsert = false,
+  Future<void> Function(SampleClip clip)? onSampleInsert,
   Future<void> Function(Uint8List bytes)? onModuleSelected,
   Future<void> Function(TrackerInstrument instrument)? onSoundFontSelected,
 }) {
@@ -79,6 +80,7 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
       includeBuiltIns: includeBuiltIns,
       onCatalogSampleInsert: onCatalogSampleInsert,
       preferCatalogSampleInsert: preferCatalogSampleInsert,
+      onSampleInsert: onSampleInsert,
       onModuleSelected: onModuleSelected,
       onSoundFontSelected: onSoundFontSelected,
     ),
@@ -123,6 +125,7 @@ class MyInstrumentsSheet extends StatefulWidget {
     this.includeBuiltIns = false,
     this.onCatalogSampleInsert,
     this.preferCatalogSampleInsert = false,
+    this.onSampleInsert,
     this.onModuleSelected,
     this.onSoundFontSelected,
     super.key,
@@ -142,6 +145,10 @@ class MyInstrumentsSheet extends StatefulWidget {
   final bool includeBuiltIns;
   final Future<void> Function(SampleClip clip)? onCatalogSampleInsert;
   final bool preferCatalogSampleInsert;
+
+  /// Adds a saved sample directly to the host timeline. When set, sample rows
+  /// expose the same explicit insertion action as catalog sample rows.
+  final Future<void> Function(SampleClip clip)? onSampleInsert;
   final Future<void> Function(Uint8List bytes)? onModuleSelected;
   final Future<void> Function(TrackerInstrument instrument)?
       onSoundFontSelected;
@@ -340,6 +347,13 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
         builder: (_) => InstrumentPlayScreen(instrument: inst, name: s.name),
       ),
     );
+  }
+
+  Future<void> _insertSample(SavedInstrument s) async {
+    final clip = sampleClipFromSaved(s);
+    if (clip == null || widget.onSampleInsert == null) return;
+    Navigator.of(context).pop();
+    await widget.onSampleInsert!(clip);
   }
 
   /// The catalog kind a library rubric maps to (null category → all kinds),
@@ -628,6 +642,13 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                                     ? null
                                     : () => _showKeyboard(s),
                               ),
+                              if (s.category == 'Samples' &&
+                                  widget.onSampleInsert != null)
+                                IconButton(
+                                  icon: const Icon(Icons.playlist_add),
+                                  tooltip: l10n.catalogInsertInAudioTrack,
+                                  onPressed: () => _insertSample(s),
+                                ),
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
                                 tooltip: l10n.myInstrumentsDelete,

@@ -581,8 +581,8 @@ ModuleDoc msczToModuleDoc(
 // ─── Module ↔ the single-Score text notations (ABC / MEI / kern / MuseScore /
 //     LilyPond) — one channel each, through crisp_notation_core's codecs ───────
 
-/// The text notation formats crisp_notation_core carries. All are readable
-/// except [lilypond] (write-only in the library).
+/// The text notation formats crisp_notation_core carries. Every listed format
+/// has both a writer and a reader, including LilyPond.
 enum TextNotation { abc, kern, mei, musescore, lilypond }
 
 /// True if this format can be parsed back to a Score.

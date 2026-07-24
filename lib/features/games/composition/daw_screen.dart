@@ -1859,6 +1859,7 @@ class _DawScreenState extends State<DawScreen>
       context,
       onCatalogSampleInsert: (clip) async => addSampleClip(clip),
       preferCatalogSampleInsert: true,
+      onSampleInsert: (clip) async => addSampleClip(clip),
     );
     if (clip == null || clip.pcm.isEmpty || !mounted) return;
     addSampleClip(clip);

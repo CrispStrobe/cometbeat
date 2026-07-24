@@ -30,6 +30,7 @@ Future<SampleClip?> showMySamplesSheet(
   bool pickable = true,
   Future<void> Function(SampleClip clip)? onCatalogSampleInsert,
   bool preferCatalogSampleInsert = false,
+  Future<void> Function(SampleClip clip)? onSampleInsert,
 }) async {
   final picked = await showMyInstrumentsSheet(
     context,
@@ -37,6 +38,7 @@ Future<SampleClip?> showMySamplesSheet(
     restrictToCategory: 'Samples',
     onCatalogSampleInsert: onCatalogSampleInsert,
     preferCatalogSampleInsert: preferCatalogSampleInsert,
+    onSampleInsert: onSampleInsert,
   );
   return picked == null ? null : sampleClipFromSaved(picked);
 }

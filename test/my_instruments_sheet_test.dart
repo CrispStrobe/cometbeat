@@ -11,6 +11,7 @@ import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart';
+import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
@@ -211,5 +212,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('blip'), findsOneWidget);
     expect(find.text('bell'), findsNothing);
+  });
+
+  testWidgets('saved samples expose an explicit audio-track insertion action',
+      (tester) async {
+    final store = InstrumentLibraryStore();
+    await store.save(_saved('voice'));
+    SampleClip? inserted;
+    await pumpGame(
+      tester,
+      _hosted(
+        MyInstrumentsSheet(
+          store: store,
+          onSampleInsert: (clip) async => inserted = clip,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.playlist_add), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.playlist_add));
+    await tester.pumpAndSettle();
+
+    expect(inserted, isNotNull);
+    expect(inserted!.name, 'voice');
+    expect(find.byType(MyInstrumentsSheet), findsNothing);
   });
 }
