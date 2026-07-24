@@ -1263,6 +1263,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopStudioAdvanced => 'Erweitert';
 
   @override
+  String get loopStudioClose => 'Schließen';
+
+  @override
   String get loopVoiceWithInstrument => 'Mit gespeichertem Instrument spielen';
 
   @override

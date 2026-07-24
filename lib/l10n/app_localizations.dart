@@ -2384,6 +2384,12 @@ abstract class AppLocalizations {
   /// **'Advanced'**
   String get loopStudioAdvanced;
 
+  /// No description provided for @loopStudioClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get loopStudioClose;
+
   /// Loop Mixer: long-press a pitched track to voice it with a saved instrument
   ///
   /// In en, this message translates to:

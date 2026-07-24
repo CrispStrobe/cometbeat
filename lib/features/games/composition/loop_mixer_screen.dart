@@ -1751,6 +1751,40 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     );
   }
 
+  Widget _simpleTools(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 6,
+        children: [
+          FilledButton.tonalIcon(
+            icon: Icon(_showBeatEdit ? Icons.close : Icons.grid_on),
+            label: Text(
+              _showBeatEdit ? l10n.loopStudioClose : l10n.loopMixerBeatEdit,
+            ),
+            onPressed: toggleBeatEdit,
+          ),
+          FilledButton.tonalIcon(
+            icon: Icon(_showTuneEdit ? Icons.close : Icons.piano),
+            label: Text(
+              _showTuneEdit ? l10n.loopStudioClose : l10n.loopMixerTuneEdit,
+            ),
+            onPressed: toggleTuneEdit,
+          ),
+          OutlinedButton.icon(
+            icon: Icon(
+              _showScore ? Icons.library_music : Icons.library_music_outlined,
+            ),
+            label: Text(l10n.loopMixerScore),
+            onPressed: toggleScorePanel,
+          ),
+        ],
+      ),
+    );
+  }
+
   /// LM-UX4: a tappable kick/snare/hat × step grid that builds/edits the beat.
   Widget _buildBeatEditor(AppLocalizations l10n) {
     final steps = _beatSteps;
@@ -2733,129 +2767,131 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 // Wrapping to a second run keeps every control reachable —
                 // a horizontal scroller would hide them behind an invisible
                 // affordance.
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  children: [
-                    IconButton.filledTonal(
-                      icon: const Icon(Icons.casino),
-                      tooltip: l10n.loopMixerRoll,
-                      onPressed: _roll,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        _showScore
-                            ? Icons.library_music
-                            : Icons.library_music_outlined,
+                if (widget.simpleLayout) _simpleTools(l10n),
+                if (!widget.simpleLayout)
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    children: [
+                      IconButton.filledTonal(
+                        icon: const Icon(Icons.casino),
+                        tooltip: l10n.loopMixerRoll,
+                        onPressed: _roll,
+                        visualDensity: VisualDensity.compact,
                       ),
-                      tooltip: l10n.loopMixerScore,
-                      onPressed: toggleScorePanel,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    // LM-UX4: the tappable beat step-editor.
-                    IconButton(
-                      icon: Icon(
-                        _showBeatEdit ? Icons.grid_on : Icons.grid_view,
-                      ),
-                      tooltip: l10n.loopMixerBeatEdit,
-                      onPressed: toggleBeatEdit,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    // LM-UX4b: the tappable tune (pitched) step-editor.
-                    IconButton(
-                      icon: Icon(
-                        _showTuneEdit ? Icons.piano : Icons.piano_outlined,
-                      ),
-                      tooltip: l10n.loopMixerTuneEdit,
-                      onPressed: toggleTuneEdit,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.all_inclusive,
-                        color: _infinite
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: _infinite,
-                      tooltip: l10n.loopMixerInfinite,
-                      onPressed: toggleInfinite,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.grid_4x4,
-                        color: _quantize
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: _quantize,
-                      tooltip: l10n.loopMixerQuantize,
-                      onPressed: _toggleQuantize,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.gesture,
-                        color: _showSmear
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: _showSmear,
-                      tooltip: l10n.loopMixerSolo,
-                      onPressed: _toggleSmearPad,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.surround_sound,
-                        color: send != LoopSend.none
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: send != LoopSend.none,
-                      tooltip: l10n.loopMixerSend,
-                      onPressed: () => setSend(
-                        LoopSend
-                            .values[(send.index + 1) % LoopSend.values.length],
-                      ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.hearing,
-                        color: _jamming
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: _jamming,
-                      tooltip: l10n.loopMixerJam,
-                      onPressed: toggleJam,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    // Follow the melody: grade the player against the leading
-                    // track. Only offered while jamming with a tune on screen.
-                    if (_jamming && _engravedTrackId != null)
                       IconButton(
                         icon: Icon(
-                          Icons.track_changes,
-                          color: isFollowing
+                          _showScore
+                              ? Icons.library_music
+                              : Icons.library_music_outlined,
+                        ),
+                        tooltip: l10n.loopMixerScore,
+                        onPressed: toggleScorePanel,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      // LM-UX4: the tappable beat step-editor.
+                      IconButton(
+                        icon: Icon(
+                          _showBeatEdit ? Icons.grid_on : Icons.grid_view,
+                        ),
+                        tooltip: l10n.loopMixerBeatEdit,
+                        onPressed: toggleBeatEdit,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      // LM-UX4b: the tappable tune (pitched) step-editor.
+                      IconButton(
+                        icon: Icon(
+                          _showTuneEdit ? Icons.piano : Icons.piano_outlined,
+                        ),
+                        tooltip: l10n.loopMixerTuneEdit,
+                        onPressed: toggleTuneEdit,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.all_inclusive,
+                          color: _infinite
                               ? Theme.of(context).colorScheme.primary
                               : null,
                         ),
-                        isSelected: isFollowing,
-                        tooltip: l10n.loopMixerFollow,
-                        onPressed: toggleFollow,
+                        isSelected: _infinite,
+                        tooltip: l10n.loopMixerInfinite,
+                        onPressed: toggleInfinite,
                         visualDensity: VisualDensity.compact,
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.ios_share),
-                      tooltip: l10n.loopMixerShare,
-                      onPressed: _openShareSheet,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.grid_4x4,
+                          color: _quantize
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        isSelected: _quantize,
+                        tooltip: l10n.loopMixerQuantize,
+                        onPressed: _toggleQuantize,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.gesture,
+                          color: _showSmear
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        isSelected: _showSmear,
+                        tooltip: l10n.loopMixerSolo,
+                        onPressed: _toggleSmearPad,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.surround_sound,
+                          color: send != LoopSend.none
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        isSelected: send != LoopSend.none,
+                        tooltip: l10n.loopMixerSend,
+                        onPressed: () => setSend(
+                          LoopSend.values[
+                              (send.index + 1) % LoopSend.values.length],
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.hearing,
+                          color: _jamming
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        isSelected: _jamming,
+                        tooltip: l10n.loopMixerJam,
+                        onPressed: toggleJam,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      // Follow the melody: grade the player against the leading
+                      // track. Only offered while jamming with a tune on screen.
+                      if (_jamming && _engravedTrackId != null)
+                        IconButton(
+                          icon: Icon(
+                            Icons.track_changes,
+                            color: isFollowing
+                                ? Theme.of(context).colorScheme.primary
+                                : null,
+                          ),
+                          isSelected: isFollowing,
+                          tooltip: l10n.loopMixerFollow,
+                          onPressed: toggleFollow,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.ios_share),
+                        tooltip: l10n.loopMixerShare,
+                        onPressed: _openShareSheet,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
                 // Jam feedback: the live note, coloured by how it fits the
                 // sounding chord (green = chord tone, amber = scale, red = out).
                 if (_jamming)

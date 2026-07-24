@@ -424,6 +424,7 @@
   "loopStudioSubtitle": "Loops in einer Werkstatt erstellen, bearbeiten und arrangieren",
   "loopStudioSimple": "Einfach",
   "loopStudioAdvanced": "Erweitert",
+  "loopStudioClose": "Schließen",
   "loopVoiceWithInstrument": "Mit gespeichertem Instrument spielen",
   "loopVoiceReset": "Auf Originalklang zurücksetzen",
   "loopVoiceUnavailable": "Für diese Stimme fehlt die SoundFont-Datei – hier nicht nutzbar.",
