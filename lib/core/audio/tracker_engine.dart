@@ -614,6 +614,70 @@ class PercussionInstrument implements TrackerInstrument {
   }
 }
 
+/// An instrument composed of multiple sub-instruments mapped across the keyboard.
+/// Essential for drum kits (where each key triggers a distinct sample) or realistic
+/// acoustic patches (where samples are mapped to ranges of notes).
+class MultiSampleInstrument implements TrackerInstrument {
+  const MultiSampleInstrument(this.id, this.zones);
+
+  @override
+  final String id;
+
+  /// Maps a base MIDI note to the [TrackerInstrument] representing that zone.
+  final Map<int, TrackerInstrument> zones;
+
+  TrackerInstrument? _closestZone(int midi) {
+    if (zones.isEmpty) return null;
+    if (zones.containsKey(midi)) return zones[midi]!;
+    
+    int bestDist = 9999;
+    TrackerInstrument? best;
+    for (final key in zones.keys) {
+      final dist = (key - midi).abs();
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = zones[key];
+      }
+    }
+    return best;
+  }
+
+  @override
+  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
+    final out = Float64List(timing.totalSamples);
+    if (zones.isEmpty) return out;
+
+    var startStep = 0;
+    for (final (midi, steps) in cellRuns(cells)) {
+      if (midi != null) {
+        final zone = _closestZone(midi);
+        if (zone != null) {
+          // Isolate this note run so the sub-instrument accurately envelopes it
+          // without bleeding into the next note.
+          final dummyCells = List.generate(timing.rows, (i) => const TrackerCell());
+          dummyCells[startStep] = cells[startStep];
+          if (startStep + steps < timing.rows) {
+            // A dummy note explicitly cuts off the run for the sub-instrument.
+            dummyCells[startStep + steps] = const TrackerCell(midi: 0);
+          }
+
+          final zoneStem = zone.renderChannel(dummyCells, timing);
+
+          final startSample = timing.stepStartSample(startStep);
+          final endSample = timing.stepStartSample(startStep + steps);
+          final maxSample = min(endSample, out.length);
+
+          for (var i = startSample; i < maxSample; i++) {
+            out[i] = zoneStem[i];
+          }
+        }
+      }
+      startStep += steps;
+    }
+    return out;
+  }
+}
+
 /// An optional insert effect applied to a channel's stem (before mixStems).
 enum TrackerChannelEffect {
   none,
