@@ -205,6 +205,27 @@ void main() {
     expect(game.isPlaying, isTrue);
   });
 
+  testWidgets('solo isolates a track and restores the previous mix',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    game.toggleTrack('melody');
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, {'melody', 'bass'});
+
+    game.toggleSolo('melody');
+    await tester.pump();
+    expect(game.soloTrack, 'melody');
+    expect(game.enabledTracks, {'melody'});
+
+    game.toggleSolo('melody');
+    await tester.pump();
+    expect(game.soloTrack, isNull);
+    expect(game.enabledTracks, {'melody', 'bass'});
+  });
+
   testWidgets('BPM slider retunes the groove', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
