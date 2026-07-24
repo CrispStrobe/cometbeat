@@ -36,6 +36,7 @@ import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
+import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/note_reading/note_colors.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart';
@@ -52,8 +53,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
-
-import 'oscilloscope_widget.dart';
 
 class TrackerScreen extends StatefulWidget {
   const TrackerScreen({super.key, this.initialSong});
@@ -1465,7 +1464,16 @@ class _TrackerScreenState extends State<TrackerScreen>
     );
     if (saved == null || !mounted) return;
     final instrument = saved.instrument;
-    if (instrument == null) return;
+    if (instrument == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.drumkitSoundUnavailable,
+          ),
+        ),
+      );
+      return;
+    }
     _engine.setChannelInstrument(_selected, instrument);
     setState(() {});
     _syncPlayback();
@@ -1811,10 +1819,14 @@ class _TrackerScreenState extends State<TrackerScreen>
                               child: OscilloscopeWidget(
                                 pcm: _engine.getStem(i),
                                 progress: progress,
-                                waveColor: i == _selected 
-                                    ? Theme.of(context).colorScheme.primary 
-                                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                                backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+                                waveColor: i == _selected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerLowest,
                               ),
                             ),
                           ),

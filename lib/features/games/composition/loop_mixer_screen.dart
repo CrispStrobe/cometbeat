@@ -30,9 +30,9 @@ import 'package:comet_beat/core/audio/beat_capture.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
 import 'package:comet_beat/core/audio/groove_capture.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart'
     show crossfadePcm16Seam;
-import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
@@ -2581,12 +2581,6 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         'voice' => l10n.loopMixerTrackVoice,
         'beat' => l10n.loopMixerTrackBeat,
         _ => l10n.loopMixerTrackSparkle,
-      };
-
-  String _tempoLabel(AppLocalizations l10n, int bpm) => switch (bpm) {
-        75 => l10n.loopMixerTempoChill,
-        120 => l10n.loopMixerTempoFast,
-        _ => l10n.loopMixerTempoGroove,
       };
 
   String _kitLabel(AppLocalizations l10n, String id) => switch (id) {

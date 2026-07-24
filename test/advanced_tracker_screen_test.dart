@@ -17,8 +17,8 @@ import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
-import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart' show kSongs;
+import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show MultiPartScore, multiPartScoreFromMusicXml;

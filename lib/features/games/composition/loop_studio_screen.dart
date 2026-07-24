@@ -30,12 +30,12 @@ class _LoopStudioScreenState extends State<LoopStudioScreen> {
               segments: [
                 ButtonSegment<bool>(
                   value: true,
-                  icon: Icon(Icons.auto_awesome),
+                  icon: const Icon(Icons.auto_awesome),
                   label: Text(l10n.loopStudioSimple),
                 ),
                 ButtonSegment<bool>(
                   value: false,
-                  icon: Icon(Icons.tune),
+                  icon: const Icon(Icons.tune),
                   label: Text(l10n.loopStudioAdvanced),
                 ),
               ],

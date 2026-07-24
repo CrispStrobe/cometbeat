@@ -1264,14 +1264,7 @@ class TrackerEngine {
     setCell(
       channel,
       row,
-      TrackerCell(
-        midi: cur.midi,
-        volume: cur.volume,
-        effect: effect,
-        fxCmd: cur.fxCmd,
-        fxParam: cur.fxParam,
-        instrument: cur.instrument,
-      ),
+      cur.copyWith(effect: effect),
     );
   }
 
@@ -1284,14 +1277,7 @@ class TrackerEngine {
     setCell(
       channel,
       row,
-      TrackerCell(
-        midi: cur.midi,
-        volume: cur.volume,
-        effect: cur.effect,
-        fxCmd: cur.fxCmd,
-        fxParam: cur.fxParam,
-        instrument: instrument,
-      ),
+      cur.copyWith(instrument: instrument),
     );
   }
 

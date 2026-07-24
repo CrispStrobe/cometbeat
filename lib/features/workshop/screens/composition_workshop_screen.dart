@@ -608,7 +608,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       instrument: old.instrument,
       midiProgram: old.midiProgram,
       isPercussion: old.isPercussion,
-    ));
+    ),);
   }
 
   String get _fileStem {

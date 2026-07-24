@@ -71,8 +71,11 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/features/games/composition/instrument_editor.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
+import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
+import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
@@ -87,16 +90,12 @@ import 'package:comet_beat/features/workshop/screens/composition_workshop_screen
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
+import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
-import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
-import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
-import 'package:comet_beat/features/games/composition/instrument_editor.dart';
-
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
-import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,

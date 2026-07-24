@@ -13,7 +13,7 @@ void main() {
       72: zoneB,
     });
 
-    final timing = TrackerTiming(tempoBpm: 120, rows: 8, stepsPerBeat: 4); // each step is 125ms = 5512.5 samples
+    const timing = TrackerTiming(rows: 8); // each step is 125ms = 5512.5 samples
     final stepSamples = timing.stepStartSample(1);
 
     final cells = List.generate(8, (_) => const TrackerCell());

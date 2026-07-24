@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -58,7 +57,7 @@ class _OscilloscopePainter extends CustomPainter {
     final wavePaint = Paint()
       ..color = wave
       ..strokeWidth = 1;
-    
+
     // Draw the waveform (peak-per-column)
     final cols = size.width.round().clamp(1, 4000);
     final n = pcm.length;
