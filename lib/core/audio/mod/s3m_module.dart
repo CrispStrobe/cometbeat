@@ -141,6 +141,11 @@ class S3mModule {
     this.title = '',
     this.channelCount = 0,
     this.globalVolume = 64,
+    this.masterVolume = 48,
+    this.ultraClick = 0,
+    this.defaultPan = 0,
+    this.channelSettings = const [],
+    this.sampleFormat = 1,
     this.initialSpeed = 6,
     this.initialTempo = 125,
     required this.order,
@@ -150,7 +155,10 @@ class S3mModule {
 
   final String title;
   final int channelCount;
-  final int globalVolume, initialSpeed, initialTempo;
+  final int globalVolume, masterVolume, ultraClick, defaultPan;
+  final int initialSpeed, initialTempo;
+  final List<int> channelSettings;
+  final int sampleFormat;
   final List<int> order; // pattern indices (254/255 markers removed)
   final List<S3mSample> samples;
   final List<S3mPattern> patterns;

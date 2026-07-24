@@ -249,6 +249,11 @@ class ModuleDoc {
     this.initialSpeed = 6,
     this.initialTempo = 125,
     this.globalVolume = 128,
+    this.s3mMasterVolume = 48,
+    this.s3mUltraClick = 0,
+    this.s3mDefaultPan = 0,
+    this.s3mChannelSettings = const [],
+    this.s3mSampleFormat = 1,
     this.itFlags = 9,
     this.itMixVolume = 48,
     this.itPanSeparation = 128,
@@ -273,6 +278,9 @@ class ModuleDoc {
 
   /// Container global volume normalized to the IT 0..128 scale.
   final int globalVolume;
+  final int s3mMasterVolume, s3mUltraClick, s3mDefaultPan;
+  final List<int> s3mChannelSettings;
+  final int s3mSampleFormat;
 
   /// Original IT header flags, including instrument mode and slide mode.
   final int itFlags;

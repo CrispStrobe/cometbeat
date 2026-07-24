@@ -49,10 +49,15 @@ S3mModule parseS3m(Uint8List bytes) {
   final globalVolume = bytes[0x30];
   final initialSpeed = bytes[0x31];
   final initialTempo = bytes[0x32];
+  final masterVolume = bytes[0x33];
+  final ultraClick = bytes[0x34];
+  final defaultPan = bytes[0x35];
 
   // Channel settings: 32 bytes @ 0x40, value < 128 = enabled.
   var channelCount = 0;
+  final channelSettings = <int>[];
   for (var i = 0; i < 32; i++) {
+    channelSettings.add(bytes[0x40 + i]);
     if (bytes[0x40 + i] < 128) channelCount++;
   }
   if (channelCount == 0) channelCount = 1; // defensive; must be > 0.
@@ -108,6 +113,11 @@ S3mModule parseS3m(Uint8List bytes) {
     title: title,
     channelCount: channelCount,
     globalVolume: globalVolume,
+    masterVolume: masterVolume,
+    ultraClick: ultraClick,
+    defaultPan: defaultPan,
+    channelSettings: channelSettings,
+    sampleFormat: sampleFormat,
     initialSpeed: initialSpeed,
     initialTempo: initialTempo,
     order: order,

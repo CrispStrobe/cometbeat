@@ -114,20 +114,22 @@ Uint8List writeS3m(S3mModule module) {
   u16(patNum); // 0x24
   u16(0); // 0x26 flags
   u16(0x1320); // 0x28 version
-  u16(1); // 0x2A sample format = signed
+  u16(module.sampleFormat); // 0x2A sample format (1 signed / 2 unsigned)
   asciiFixed('SCRM', 4); // 0x2C
   u8(module.globalVolume); // 0x30
   u8(module.initialSpeed); // 0x31
   u8(module.initialTempo); // 0x32
-  u8(48); // 0x33 master volume
-  u8(0); // 0x34 ultra-click
-  u8(0); // 0x35 default pan (not 252 → no pan block)
+  u8(module.masterVolume); // 0x33 master volume
+  u8(module.ultraClick); // 0x34 ultra-click
+  u8(module.defaultPan); // 0x35 default pan (252 → pan block)
   for (var i = 0x36; i < 0x40; i++) {
     u8(0); // 0x36..0x3F
   }
   // 0x40 channel settings (32 bytes).
   for (var i = 0; i < 32; i++) {
-    u8(i < channelCount ? i : 255);
+    u8(i < module.channelSettings.length
+        ? module.channelSettings[i]
+        : (i < channelCount ? i : 255));
   }
 
   // ── Order list (ordNum bytes, pad with 255) ────────────────────────────────
@@ -249,13 +251,14 @@ Uint8List writeS3m(S3mModule module) {
     if (sample.sixteenBit) {
       for (var i = 0; i < pcmLen; i++) {
         final q = (sample.pcm[i] * 32768).round().clamp(-32768, 32767);
-        u8(q & 0xFF);
-        u8((q >> 8) & 0xFF);
+        final encoded = module.sampleFormat == 2 ? q + 32768 : q;
+        u8(encoded & 0xFF);
+        u8((encoded >> 8) & 0xFF);
       }
     } else {
       for (var i = 0; i < pcmLen; i++) {
         final q = (sample.pcm[i] * 128).round().clamp(-128, 127);
-        u8(q & 0xFF);
+        u8(module.sampleFormat == 2 ? q + 128 : q);
       }
     }
   }
