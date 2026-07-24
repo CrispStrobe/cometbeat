@@ -14,7 +14,7 @@ import 'package:comet_beat/core/tuning.dart';
 import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
-import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/features/games/composition/loop_studio_screen.dart';
 import 'package:comet_beat/features/games/composition/perform_screen.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
 import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
@@ -177,7 +177,7 @@ class HomeScreen extends StatelessWidget {
                 builder: (_) => switch (v) {
                   1 => const AdvancedTrackerScreen(),
                   2 => const TabWorkshopScreen(),
-                  3 => const LoopMixerScreen(),
+                  3 => const LoopStudioScreen(),
                   4 => const DrumkitScreen(),
                   8 => const DawScreen(),
                   9 => const TranscribeScreen(),
@@ -223,7 +223,7 @@ class HomeScreen extends StatelessWidget {
                   children: [
                     const Icon(Icons.queue_music, size: 20),
                     const SizedBox(width: 12),
-                    Text(l10n.workshopModeLoop),
+                    Text(l10n.workshopModeLoopStudio),
                   ],
                 ),
               ),

@@ -86,12 +86,25 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoopMixerScreen extends StatefulWidget {
-  const LoopMixerScreen({super.key, this.aecFactory, this.initialSpec});
+  const LoopMixerScreen({
+    super.key,
+    this.aecFactory,
+    this.initialSpec,
+    this.showAppBar = true,
+    this.simpleLayout = false,
+  });
 
   /// An optional groove to open with — lets another Workshop mode hand a
   /// [GrooveSpec] over (e.g. a tracker pattern → a groove). Null = the default
   /// starter groove.
   final GrooveSpec? initialSpec;
+
+  /// The Loop Studio shell owns the app bar when embedding this editor.
+  final bool showAppBar;
+
+  /// Hide arrangement and production controls while retaining the same
+  /// editable tracks, transport, BPM, and beat/tune editors.
+  final bool simpleLayout;
 
   /// Builds the native Tier-3b [AecEngine] for graded jam mode, or returns null
   /// when the platform has no full-duplex plugin (web / not built) — then jam
@@ -2671,7 +2684,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
     return Scaffold(
       // LM-UX6: the "?" opens the concept + what-each-control-does primer.
-      appBar: GameAppBar(title: l10n.gameLoopMixer, tutorial: loopMixerPrimer),
+      appBar: widget.showAppBar
+          ? GameAppBar(title: l10n.gameLoopMixer, tutorial: loopMixerPrimer)
+          : null,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -2994,160 +3009,171 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                     ),
                   ),
                 // Section grid: capture/launch/chain scenes into an arrangement.
-                _sceneRow(l10n),
+                if (!widget.simpleLayout) _sceneRow(l10n),
                 // A gentle band challenge (no score) to nudge exploration.
-                _challengeBanner(l10n),
+                if (!widget.simpleLayout) _challengeBanner(l10n),
                 // Style: a whole-band flavour preset (re-points every card).
-                _optionRow(
-                  l10n.loopMixerStyle,
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      for (final style in kGrooveStyles)
-                        ChoiceChip(
-                          label: Text(_styleLabel(l10n, style.id)),
-                          selected: _engine.styleId == style.id,
-                          onSelected: (_) => _setStyle(style.id),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerStyle,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        for (final style in kGrooveStyles)
+                          ChoiceChip(
+                            label: Text(_styleLabel(l10n, style.id)),
+                            selected: _engine.styleId == style.id,
+                            onSelected: (_) => _setStyle(style.id),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
+                    ),
                   ),
-                ),
                 // The harmony lane: free vamp, or a 4-chord song progression.
-                _optionRow(
-                  l10n.loopMixerHarmony,
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      ChoiceChip(
-                        label: Text(l10n.loopMixerHarmonyOff),
-                        selected: _engine.progression == null,
-                        onSelected: (_) => _setProgression(null),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      for (final p in kProgressions)
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerHarmony,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
                         ChoiceChip(
-                          label: Text(p.label),
-                          selected: _engine.progression?.id == p.id,
-                          onSelected: (_) => _setProgression(p),
+                          label: Text(l10n.loopMixerHarmonyOff),
+                          selected: _engine.progression == null,
+                          onSelected: (_) => _setProgression(null),
                           visualDensity: VisualDensity.compact,
                         ),
-                      // LM-UX7: the kid's own saved harmonies (deletable).
-                      for (final p in _customProgressions)
-                        InputChip(
-                          label: Text(p.label),
-                          selected: _engine.progression?.id == p.id,
-                          onSelected: (_) => _setProgression(p),
-                          onDeleted: () => _deleteCustomProgression(p),
+                        for (final p in kProgressions)
+                          ChoiceChip(
+                            label: Text(p.label),
+                            selected: _engine.progression?.id == p.id,
+                            onSelected: (_) => _setProgression(p),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        // LM-UX7: the kid's own saved harmonies (deletable).
+                        for (final p in _customProgressions)
+                          InputChip(
+                            label: Text(p.label),
+                            selected: _engine.progression?.id == p.id,
+                            onSelected: (_) => _setProgression(p),
+                            onDeleted: () => _deleteCustomProgression(p),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ActionChip(
+                          avatar: const Icon(Icons.add, size: 16),
+                          label: Text(l10n.loopMixerHarmonyMake),
+                          onPressed: () => _makeCustomProgression(l10n),
                           visualDensity: VisualDensity.compact,
                         ),
-                      ActionChip(
-                        avatar: const Icon(Icons.add, size: 16),
-                        label: Text(l10n.loopMixerHarmonyMake),
-                        onPressed: () => _makeCustomProgression(l10n),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 // AnaVis: the selected progression, coloured by harmonic function.
-                if (_engine.progression != null)
+                if (!widget.simpleLayout && _engine.progression != null)
                   _progressionFunctionStrip(_engine.progression!),
                 // Key: rigidly transpose every pitched stem to a new root.
-                _optionRow(
-                  l10n.loopMixerKey,
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: [
-                      for (var k = 0; k < LoopMixerScreen._keyNames.length; k++)
-                        ChoiceChip(
-                          label: Text(LoopMixerScreen._keyNames[k]),
-                          selected: _engine.key == k,
-                          onSelected: (_) => _setKey(k),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
-                ),
-                // Scale: major = bright, minor = darker (relative-minor set).
-                _optionRow(
-                  l10n.loopMixerScale,
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      ChoiceChip(
-                        label: Text(l10n.loopMixerScaleMajor),
-                        selected: _engine.scale == GrooveScale.majorPentatonic,
-                        onSelected: (_) =>
-                            _setScale(GrooveScale.majorPentatonic),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      ChoiceChip(
-                        label: Text(l10n.loopMixerScaleMinor),
-                        selected: _engine.scale == GrooveScale.minorPentatonic,
-                        onSelected: (_) =>
-                            _setScale(GrooveScale.minorPentatonic),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ],
-                  ),
-                ),
-                // Drum kit: same beat, different timbre (clean/deep/warm/lo-fi).
-                _optionRow(
-                  l10n.loopMixerKit,
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      for (final kit in kDrumKits)
-                        ChoiceChip(
-                          label: Text(_kitLabel(l10n, kit.id)),
-                          selected: _engine.kitId == kit.id,
-                          onSelected: (_) => _setKit(kit.id),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
-                ),
-                _optionRow(
-                  l10n.loopMixerSwing,
-                  _captionedSlider(
-                    low: l10n.loopMixerSwingStraight,
-                    high: l10n.loopMixerSwingShuffle,
-                    slider: Slider(
-                      value: _engine.swing,
-                      max: 0.6,
-                      // Discrete stops: the engine snaps the swing offset to the
-                      // 10 ms sample grid anyway (LoopTiming._swingMs), so a
-                      // continuous slider only offered identical values.
-                      divisions: 12,
-                      onChanged: _setSwing,
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerKey,
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        for (var k = 0;
+                            k < LoopMixerScreen._keyNames.length;
+                            k++)
+                          ChoiceChip(
+                            label: Text(LoopMixerScreen._keyNames[k]),
+                            selected: _engine.key == k,
+                            onSelected: (_) => _setKey(k),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
                     ),
                   ),
-                ),
+                // Scale: major = bright, minor = darker (relative-minor set).
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerScale,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        ChoiceChip(
+                          label: Text(l10n.loopMixerScaleMajor),
+                          selected:
+                              _engine.scale == GrooveScale.majorPentatonic,
+                          onSelected: (_) =>
+                              _setScale(GrooveScale.majorPentatonic),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        ChoiceChip(
+                          label: Text(l10n.loopMixerScaleMinor),
+                          selected:
+                              _engine.scale == GrooveScale.minorPentatonic,
+                          onSelected: (_) =>
+                              _setScale(GrooveScale.minorPentatonic),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                // Drum kit: same beat, different timbre (clean/deep/warm/lo-fi).
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerKit,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        for (final kit in kDrumKits)
+                          ChoiceChip(
+                            label: Text(_kitLabel(l10n, kit.id)),
+                            selected: _engine.kitId == kit.id,
+                            onSelected: (_) => _setKit(kit.id),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
+                    ),
+                  ),
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerSwing,
+                    _captionedSlider(
+                      low: l10n.loopMixerSwingStraight,
+                      high: l10n.loopMixerSwingShuffle,
+                      slider: Slider(
+                        value: _engine.swing,
+                        max: 0.6,
+                        // Discrete stops: the engine snaps the swing offset to the
+                        // 10 ms sample grid anyway (LoopTiming._swingMs), so a
+                        // continuous slider only offered identical values.
+                        divisions: 12,
+                        onChanged: _setSwing,
+                      ),
+                    ),
+                  ),
                 // One-knob master filter: left = low-pass (dark), right =
                 // high-pass (thin); centred = off. A big breakdown/drop gesture.
-                _optionRow(
-                  l10n.loopMixerFilter,
-                  _captionedSlider(
-                    low: l10n.loopMixerFilterDark,
-                    high: l10n.loopMixerFilterThin,
-                    slider: Slider(
-                      value: _engine.masterFilter,
-                      min: -1,
-                      divisions: 20,
-                      onChanged: _setMasterFilter,
-                      onChangeEnd: (v) {
-                        // Snap back to "off" near the centre detent.
-                        if (v.abs() < 0.06) _setMasterFilter(0);
-                      },
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerFilter,
+                    _captionedSlider(
+                      low: l10n.loopMixerFilterDark,
+                      high: l10n.loopMixerFilterThin,
+                      slider: Slider(
+                        value: _engine.masterFilter,
+                        min: -1,
+                        divisions: 20,
+                        onChanged: _setMasterFilter,
+                        onChangeEnd: (v) {
+                          // Snap back to "off" near the centre detent.
+                          if (v.abs() < 0.06) _setMasterFilter(0);
+                        },
+                      ),
                     ),
                   ),
-                ),
                 Row(
                   children: [
                     Expanded(

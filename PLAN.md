@@ -67,10 +67,10 @@ not a second playback engine.
 The product has five top-level authoring modes. They are different musical
 mental models over one shared project/document model, not five unrelated apps:
 
-1. **Tracker** — the DefleMask/FamiTracker/FastTracker successor: pattern
-   matrix, rows/channels, instruments, ticks, effect commands, macros, sample
+1. **Tracker** — a classic pattern-sequencer successor: pattern matrix,
+   rows/channels, instruments, ticks, effect commands, macros, sample
    playback, pattern order, and tracker interchange (MOD/XM/S3M/IT/MIDI).
-2. **Loop Studio** — the Kiffness-to-Pro-Tools loop workflow: record, capture,
+2. **Loop Studio** — a creator-to-professional loop workflow: record, capture,
    quantize, overdub, arrange sections, edit every voice, choose instruments,
    mix, and perform over loops. Simple and Advanced layouts edit the same loop
    document; they are not separate modes.
@@ -321,7 +321,10 @@ SpeexDSP echo canceller (BSD, port/FFI) · WebRTC AEC3 / webrtc-audio-processing
 
 ## Advanced Tracker module: Feature Gap Analysis & Roadmap
 
-To evolve our tracker into a world-class, perfect UX environment (drawing visual and workflow inspiration from DefleMask, but avoiding the rigid hardware-emulator path), we must focus on universal instrument support, seamless ecosystem interchangeability, and power-user ergonomics.
+To evolve our tracker into a world-class, perfect UX environment (drawing on
+classic pattern-editor conventions without adopting a rigid hardware-emulator
+path), we must focus on universal instrument support, seamless ecosystem
+interchangeability, and power-user ergonomics.
 
 ### 1. Universal Instrument Ecosystem & Editing
 **Current State:** 
@@ -342,12 +345,12 @@ We have `tracker_notation.dart` bridging Tracker ↔ Score Workshop. However, de
 2. **DrumKit Bridge:** Ensure `PercussionInstrument` directly reads from/writes to the same model used by the standalone DrumKit view. A beat tapped out physically in the DrumKit must instantly populate the Tracker's percussion channel.
 3. **Tab Editor Translation:** Expand `tracker_notation.dart` to support translating plucked string channels (`KarplusInstrument`) into Tab Editor strings, mapping MIDI pitches to string/fret combinations based on tuning.
 
-### 3. Visual Excellence & Workflow (The "DefleMask" Feel)
+### 3. Visual Excellence & Workflow (classic tracker ergonomics)
 **Current State:**
 The Studio UI (`tracker_screen.dart`) is functional but lacks the slick, real-time visual feedback and rapid navigation of elite modern trackers.
 
 **Implementation Steps:**
-1. ~~**Real-time Oscilloscopes & Meters:**~~ Tap the `_stem(channel)` cache in `TrackerEngine`. Pass this data to an `OscilloscopeWidget` using `CustomPainter` to draw vivid, real-time waveforms and VU meters per channel, exactly like DefleMask. (DONE)
+1. ~~**Real-time Oscilloscopes & Meters:**~~ Tap the `_stem(channel)` cache in `TrackerEngine`. Pass this data to an `OscilloscopeWidget` using `CustomPainter` to draw vivid, real-time waveforms and VU meters per channel. (DONE)
 2. **Smooth Scrolling Matrix:** Evolve the grid rendering to support pixel-smooth playhead scrolling (rather than rigid row-by-row jumping) and a dynamic pattern matrix where channel loops can be visualized block-by-block.
 3. **Advanced Keyboard Handling:** Add `FocusNode` and `KeyEvent` handlers for lightning-fast multi-cell selection (shift+arrows), cross-channel copy/paste, and value interpolation directly in the grid.
 

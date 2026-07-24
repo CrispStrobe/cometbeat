@@ -30,7 +30,7 @@ import 'package:comet_beat/features/games/composition/form_analysis_view.dart';
 import 'package:comet_beat/features/games/composition/form_read_screen.dart';
 import 'package:comet_beat/features/games/composition/free_sing_screen.dart';
 import 'package:comet_beat/features/games/composition/grid_composer_screen.dart';
-import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
+import 'package:comet_beat/features/games/composition/loop_studio_screen.dart';
 import 'package:comet_beat/features/games/composition/melody_doodle_screen.dart';
 import 'package:comet_beat/features/games/composition/my_melody_screen.dart';
 import 'package:comet_beat/features/games/composition/question_answer_screen.dart';
@@ -1246,15 +1246,13 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameAnalysisViewSubtitle,
       builder: (_) => const AnalysisHubScreen(),
     ),
-    // Loop-mixer toy — cards layer synced 2-bar loops (drums/bass/chords/
-    // melody/sparkle, all C-pentatonic so any combo grooves). A sandbox,
-    // no stars.
+    // Loop Studio: the shared loop document with simple and advanced views.
     GameInfo(
       id: 'loop_mixer',
       icon: Icons.queue_music,
-      title: (l) => l.gameLoopMixer,
-      subtitle: (l) => l.gameLoopMixerSubtitle,
-      builder: (_) => const LoopMixerScreen(),
+      title: (l) => l.loopStudioTitle,
+      subtitle: (l) => l.loopStudioSubtitle,
+      builder: (_) => const LoopStudioScreen(),
     ),
     // Touch-first pattern sequencer (a kid-friendly tracker): pick an
     // instrument, tap a pentatonic grid, layers loop together. A sandbox,

@@ -1246,6 +1246,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Layer looping grooves — you are the band';
 
   @override
+  String get loopStudioTitle => 'Loop Studio';
+
+  @override
+  String get loopStudioSubtitle =>
+      'Create, edit, and arrange loops in one workspace';
+
+  @override
+  String get loopStudioSimple => 'Simple';
+
+  @override
+  String get loopStudioAdvanced => 'Advanced';
+
+  @override
   String get loopVoiceWithInstrument => 'Play with a saved instrument';
 
   @override
@@ -1630,6 +1643,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workshopModeLoop => 'Loop Mixer';
+
+  @override
+  String get workshopModeLoopStudio => 'Loop Studio';
 
   @override
   String get workshopModeDrums => 'Drum Kit';

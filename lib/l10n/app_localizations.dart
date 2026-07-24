@@ -2360,6 +2360,30 @@ abstract class AppLocalizations {
   /// **'Layer looping grooves — you are the band'**
   String get gameLoopMixerSubtitle;
 
+  /// No description provided for @loopStudioTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Studio'**
+  String get loopStudioTitle;
+
+  /// No description provided for @loopStudioSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create, edit, and arrange loops in one workspace'**
+  String get loopStudioSubtitle;
+
+  /// No description provided for @loopStudioSimple.
+  ///
+  /// In en, this message translates to:
+  /// **'Simple'**
+  String get loopStudioSimple;
+
+  /// No description provided for @loopStudioAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced'**
+  String get loopStudioAdvanced;
+
   /// Loop Mixer: long-press a pitched track to voice it with a saved instrument
   ///
   /// In en, this message translates to:
@@ -3085,6 +3109,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loop Mixer'**
   String get workshopModeLoop;
+
+  /// No description provided for @workshopModeLoopStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Studio'**
+  String get workshopModeLoopStudio;
 
   /// No description provided for @workshopModeDrums.
   ///

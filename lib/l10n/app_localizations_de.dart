@@ -1250,6 +1250,19 @@ class AppLocalizationsDe extends AppLocalizations {
       'Staple Grooves übereinander — du bist die Band';
 
   @override
+  String get loopStudioTitle => 'Loop Studio';
+
+  @override
+  String get loopStudioSubtitle =>
+      'Loops in einer Werkstatt erstellen, bearbeiten und arrangieren';
+
+  @override
+  String get loopStudioSimple => 'Einfach';
+
+  @override
+  String get loopStudioAdvanced => 'Erweitert';
+
+  @override
   String get loopVoiceWithInstrument => 'Mit gespeichertem Instrument spielen';
 
   @override
@@ -1637,6 +1650,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get workshopModeLoop => 'Loop-Mixer';
+
+  @override
+  String get workshopModeLoopStudio => 'Loop Studio';
 
   @override
   String get workshopModeDrums => 'Schlagzeug';

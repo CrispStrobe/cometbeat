@@ -458,6 +458,10 @@
   "gridComposerClear": "Clear",
   "gameLoopMixer": "Loop Mixer",
   "gameLoopMixerSubtitle": "Layer looping grooves — you are the band",
+  "loopStudioTitle": "Loop Studio",
+  "loopStudioSubtitle": "Create, edit, and arrange loops in one workspace",
+  "loopStudioSimple": "Simple",
+  "loopStudioAdvanced": "Advanced",
   "loopVoiceWithInstrument": "Play with a saved instrument",
   "@loopVoiceWithInstrument": {
     "description": "Loop Mixer: long-press a pitched track to voice it with a saved instrument"
@@ -606,6 +610,7 @@
   "workshopModeTab": "Guitar Tab",
   "workshopModePerform": "Live Looper",
   "workshopModeLoop": "Loop Mixer",
+  "workshopModeLoopStudio": "Loop Studio",
   "workshopModeDrums": "Drum Kit",
   "workshopModeTranscribe": "Transcribe",
   "transcribeTitle": "Transcribe a recording",
