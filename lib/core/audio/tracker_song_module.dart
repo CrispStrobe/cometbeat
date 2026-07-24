@@ -46,6 +46,9 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
         id: 'ch${c + 1}',
         instrument: _instrumentForChannel(doc, rep[c], c),
         rows: rows,
+        // Keep the four-channel tracker default, but provide headroom for
+        // wide modules whose channels are mixed into the same stereo bus.
+        gain: 0.6 * min(1.0, 4 / channelCount),
         // The channel's dominant sample carries the module's default pan +
         // envelopes (XM/IT); convert them onto the channel so the imported
         // module plays — and shows in the editor — with its shaping intact.
