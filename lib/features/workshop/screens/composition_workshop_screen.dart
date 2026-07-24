@@ -3607,10 +3607,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       final caretId = _doc.caretBeforeId;
       caret = caretId != null
           ? EditorCaret(beforeElementId: caretId)
-          : EditorCaret(
-              measureIndex: 0,
-              staffPosition: pitchFromMidi(60).staffPosition(_doc.clef),
-            );
+          : _doc.isEmpty
+              ? EditorCaret(
+                  measureIndex: 0,
+                  staffPosition: pitchFromMidi(60).staffPosition(_doc.clef),
+                )
+              : null;
     }
 
     return PopScope(
@@ -4140,7 +4142,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                                       onElementDragEnd:
                                                           _onElementDragEnd,
                                                     ),
-                                              if (_barNumbers || _noteNames)
+                                              if (_barNumbers ||
+                                                  _noteNames ||
+                                                  (_doc.caretBeforeId == null &&
+                                                      !_doc.isEmpty))
                                                 Positioned.fill(
                                                   child: IgnorePointer(
                                                     child: CustomPaint(
@@ -4152,6 +4157,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                                             _barNumbers,
                                                         showNoteNames:
                                                             _noteNames,
+                                                        showEndCaret:
+                                                            _doc.caretBeforeId ==
+                                                                    null &&
+                                                                !_doc.isEmpty,
                                                         naming: context
                                                             .read<
                                                                 SettingsService>()
@@ -4331,6 +4340,7 @@ class _WorkshopNotationOverlayPainter extends CustomPainter {
     required this.score,
     required this.showBarNumbers,
     required this.showNoteNames,
+    required this.showEndCaret,
     required this.naming,
     required this.l10n,
   });
@@ -4339,6 +4349,7 @@ class _WorkshopNotationOverlayPainter extends CustomPainter {
   final Score score;
   final bool showBarNumbers;
   final bool showNoteNames;
+  final bool showEndCaret;
   final NoteNaming naming;
   final AppLocalizations l10n;
 
@@ -4367,19 +4378,37 @@ class _WorkshopNotationOverlayPainter extends CustomPainter {
         fontSize: 0.72 * (region.bounds.height.clamp(12.0, 20.0)),
       );
     }
-    if (!showBarNumbers) return;
-    for (final entry in regionsByMeasure.entries) {
-      final measure = entry.key;
-      final number = score.barNumberAt(measure) ?? measure + 1;
-      final first = entry.value.reduce(
-        (a, b) => a.bounds.left <= b.bounds.left ? a : b,
+    if (showBarNumbers) {
+      for (final entry in regionsByMeasure.entries) {
+        final measure = entry.key;
+        final number = score.barNumberAt(measure) ?? measure + 1;
+        final first = entry.value.reduce(
+          (a, b) => a.bounds.left <= b.bounds.left ? a : b,
+        );
+        _paintLabel(
+          canvas,
+          '$number',
+          Offset(first.bounds.left + 2, first.bounds.top - 14),
+          color: textColor,
+          fontSize: 11,
+        );
+      }
+    }
+    if (showEndCaret && regions.elementRegions.isNotEmpty) {
+      final last = regions.elementRegions.reduce(
+        (a, b) => a.measureIndex > b.measureIndex ||
+                (a.measureIndex == b.measureIndex &&
+                    a.bounds.right > b.bounds.right)
+            ? a
+            : b,
       );
-      _paintLabel(
-        canvas,
-        '$number',
-        Offset(first.bounds.left + 2, first.bounds.top - 14),
-        color: textColor,
-        fontSize: 11,
+      final paint = Paint()
+        ..color = const Color(0xFFD32F2F)
+        ..strokeWidth = 2;
+      canvas.drawLine(
+        Offset(last.bounds.right + 10, last.bounds.top - 24),
+        Offset(last.bounds.right + 10, last.bounds.bottom + 24),
+        paint,
       );
     }
   }
