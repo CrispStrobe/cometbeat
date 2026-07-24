@@ -131,6 +131,9 @@ class TrackerCell {
   bool get hasCommand => fxCmd != 0 || fxParam != 0;
 
   static const empty = TrackerCell();
+  /// A Note Cut command that instructs the instrument to enter its release phase.
+  static const noteCut = TrackerCell(midi: -1);
+  bool get isNoteCut => midi == -1;
 
   @override
   bool operator ==(Object other) =>
@@ -152,21 +155,46 @@ class TrackerCell {
 /// immediately-following empty cell (until the next trigger); leading empties
 /// are a rest. Each run is `(midi?, steps)` — `midi == null` is a rest. Runs sum
 /// to exactly [TrackerTiming.rows] steps.
-List<(int?, int)> cellRuns(List<TrackerCell> cells) {
-  final runs = <(int?, int)>[];
-  for (final cell in cells) {
-    if (cell.isEmpty) {
-      if (runs.isEmpty) {
-        runs.add((null, 1)); // leading rest
-      } else {
-        final (m, s) = runs.last;
-        runs[runs.length - 1] = (m, s + 1); // extend previous note or rest
-      }
-    } else {
-      runs.add((cell.midi, 1));
+/// Like [cellRuns], but separates the run into a sustain phase (up to a Note Cut
+/// or New Note) and a release phase (from Note Cut to the New Note).
+/// Returns `(midi, sustainSteps, releaseSteps)`.
+List<(int?, int, int)> noteRuns(List<TrackerCell> cells) {
+  final runs = <(int?, int, int)>[];
+  int? currentMidi;
+  int sustain = 0;
+  int release = 0;
+  bool inRelease = false;
+
+  void push() {
+    if (sustain > 0 || release > 0) {
+      runs.add((currentMidi, sustain, release));
     }
   }
+
+  for (final cell in cells) {
+    if (cell.isNoteCut) {
+      if (!inRelease) inRelease = true;
+      release++;
+    } else if (cell.midi != null) {
+      push();
+      currentMidi = cell.midi;
+      sustain = 1;
+      release = 0;
+      inRelease = false;
+    } else {
+      if (inRelease) {
+        release++;
+      } else {
+        sustain++;
+      }
+    }
+  }
+  push();
   return runs;
+}
+
+List<(int?, int)> cellRuns(List<TrackerCell> cells) {
+  return noteRuns(cells).map((r) => (r.$1, r.$2 + r.$3)).toList();
 }
 
 /// The runs of [cells] as back-to-back [Segment]s (for the additive voices).
@@ -515,7 +543,12 @@ class SampleInstrument implements TrackerInstrument {
     if (sample.isEmpty) return out;
     final baseFreq = midiToFrequency(baseMidi);
     var startStep = 0;
-    for (final (midi, steps) in cellRuns(cells)) {
+    for (final run in noteRuns(cells)) {
+      final midi = run.$1;
+      final sustainSteps = run.$2;
+      final releaseSteps = run.$3;
+      final steps = sustainSteps + releaseSteps;
+
       // 9xx sample offset (classic MOD): start the sample at param×256. Read from
       // the triggering cell's effect column; the cells already carry it here.
       final trigger = cells[startStep];
@@ -528,6 +561,8 @@ class SampleInstrument implements TrackerInstrument {
         final startSample = timing.stepStartSample(startStep);
         final runSamples =
             timing.stepStartSample(startStep + steps) - startSample;
+        final sustainSamples =
+            timing.stepStartSample(startStep + sustainSteps) - startSample;
         final baseRatio = midiToFrequency(midi) / baseFreq;
         final maxOut = min(runSamples, out.length - startSample);
         // Looping sample → a wrapping read-pointer fills the whole run (so a
@@ -546,11 +581,12 @@ class SampleInstrument implements TrackerInstrument {
                 : resampleCubic(src, baseRatio);
         final n = min(min(buf.length, runSamples), out.length - startSample);
         if (n > 0) {
-          // Envelope only the played portion, so the release fades at the note's
-          // end (not the end of the resampled sample).
+          // Envelope only the played portion, triggering the release at the Note Cut
+          // (if present), otherwise sustaining until the next note chops it.
           final voiced = applyEnvelope(
             Float64List.sublistView(buf, 0, n),
             envelope,
+            sustainSamples: loops || releaseSteps > 0 ? sustainSamples : null,
           );
           // A per-cell volume column scales the note (null = full, unchanged).
           final vol = trigger.volume ?? 1.0;
@@ -616,12 +652,14 @@ class PercussionInstrument implements TrackerInstrument {
 
 /// An instrument composed of multiple sub-instruments mapped across the keyboard.
 /// Essential for drum kits (where each key triggers a distinct sample) or realistic
-/// acoustic patches (where samples are mapped to ranges of notes).
 class MultiSampleInstrument implements TrackerInstrument {
-  const MultiSampleInstrument(this.id, this.zones);
+  const MultiSampleInstrument(this.id, this.zones, {this.polyphonic = false});
 
   @override
   final String id;
+  
+  /// If true, notes are not choked by subsequent notes on the channel (drum kit mode).
+  final bool polyphonic;
 
   /// Maps a base MIDI note to the [TrackerInstrument] representing that zone.
   final Map<int, TrackerInstrument> zones;
@@ -648,32 +686,44 @@ class MultiSampleInstrument implements TrackerInstrument {
     if (zones.isEmpty) return out;
 
     var startStep = 0;
-    for (final (midi, steps) in cellRuns(cells)) {
+    for (final run in noteRuns(cells)) {
+      final midi = run.$1;
+      final sustainSteps = run.$2;
+      final releaseSteps = run.$3;
+      final totalSteps = sustainSteps + releaseSteps;
+
       if (midi != null) {
         final zone = _closestZone(midi);
         if (zone != null) {
           // Isolate this note run so the sub-instrument accurately envelopes it
-          // without bleeding into the next note.
           final dummyCells =
               List.generate(timing.rows, (i) => const TrackerCell());
           dummyCells[startStep] = cells[startStep];
-          if (startStep + steps < timing.rows) {
-            // A dummy note explicitly cuts off the run for the sub-instrument.
-            dummyCells[startStep + steps] = const TrackerCell(midi: 0);
+          
+          if (!polyphonic) {
+            if (startStep + sustainSteps < timing.rows) {
+              // Properly trigger the release phase in the sub-instrument.
+              dummyCells[startStep + sustainSteps] = TrackerCell.noteCut;
+            }
           }
 
           final zoneStem = zone.renderChannel(dummyCells, timing);
 
           final startSample = timing.stepStartSample(startStep);
-          final endSample = timing.stepStartSample(startStep + steps);
-          final maxSample = min(endSample, out.length);
+          final maxSample = polyphonic
+              ? out.length
+              : min(timing.stepStartSample(startStep + totalSteps), out.length);
 
           for (var i = startSample; i < maxSample; i++) {
-            out[i] = zoneStem[i];
+            if (polyphonic) {
+              out[i] += zoneStem[i];
+            } else {
+              out[i] = zoneStem[i];
+            }
           }
         }
       }
-      startStep += steps;
+      startStep += totalSteps;
     }
     return out;
   }
