@@ -26,11 +26,14 @@ import 'package:comet_beat/features/sound_lab/sample_extractor_screen.dart';
 import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
 import 'package:comet_beat/features/sound_lab/voice_lab_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
-import 'package:comet_beat/shared/music/music_picker.dart' show decodeMusicFile;
+import 'package:comet_beat/shared/music/music_picker.dart'
+    show decodeMusicFile, showMusicPicker;
 import 'package:comet_beat/shared/music/score_router.dart'
     show showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
+import 'package:crisp_notation_core/crisp_notation_core.dart'
+    show MultiPartScore;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -66,6 +69,7 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
   Future<void> Function(SampleClip clip)? onCatalogSampleInsert,
   bool preferCatalogSampleInsert = false,
   Future<void> Function(SampleClip clip)? onSampleInsert,
+  Future<void> Function(MultiPartScore score)? onMusicSelected,
   Future<void> Function(Uint8List bytes)? onModuleSelected,
   Future<void> Function(TrackerInstrument instrument)? onSoundFontSelected,
 }) {
@@ -81,6 +85,7 @@ Future<SavedInstrument?> showMyInstrumentsSheet(
       onCatalogSampleInsert: onCatalogSampleInsert,
       preferCatalogSampleInsert: preferCatalogSampleInsert,
       onSampleInsert: onSampleInsert,
+      onMusicSelected: onMusicSelected,
       onModuleSelected: onModuleSelected,
       onSoundFontSelected: onSoundFontSelected,
     ),
@@ -126,6 +131,7 @@ class MyInstrumentsSheet extends StatefulWidget {
     this.onCatalogSampleInsert,
     this.preferCatalogSampleInsert = false,
     this.onSampleInsert,
+    this.onMusicSelected,
     this.onModuleSelected,
     this.onSoundFontSelected,
     super.key,
@@ -149,6 +155,7 @@ class MyInstrumentsSheet extends StatefulWidget {
   /// Adds a saved sample directly to the host timeline. When set, sample rows
   /// expose the same explicit insertion action as catalog sample rows.
   final Future<void> Function(SampleClip clip)? onSampleInsert;
+  final Future<void> Function(MultiPartScore score)? onMusicSelected;
   final Future<void> Function(Uint8List bytes)? onModuleSelected;
   final Future<void> Function(TrackerInstrument instrument)?
       onSoundFontSelected;
@@ -387,6 +394,13 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
     if (mounted) await _reload(); // surface anything installed from the catalog
   }
 
+  Future<void> _browseMusicLibrary() async {
+    final score = await showMusicPicker(context);
+    if (score == null || !mounted || widget.onMusicSelected == null) return;
+    Navigator.of(context).pop();
+    await widget.onMusicSelected!(score);
+  }
+
   Future<void> _browseModArchive() async {
     final bytes = await showModArchiveSheet(context);
     if (bytes == null || !mounted) return;
@@ -479,6 +493,13 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                       icon: const Icon(Icons.cloud_outlined, size: 20),
                       tooltip: l10n.soundLibraryBrowseCatalog,
                       onPressed: _browseCatalog,
+                    ),
+                  if (widget.restrictToCategory == null &&
+                      widget.onMusicSelected != null)
+                    IconButton(
+                      icon: const Icon(Icons.library_music, size: 20),
+                      tooltip: l10n.musicPickerTitle,
+                      onPressed: _browseMusicLibrary,
                     ),
                   if (widget.restrictToCategory == null &&
                       widget.onModuleSelected != null)
