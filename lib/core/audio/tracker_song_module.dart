@@ -7,10 +7,8 @@
 // (sampleInstrumentFromDoc), so nothing about the codecs is re-implemented here.
 //
 // Two lossy adaptations (documented, unavoidable given the Advanced model):
-//   * Per-CELL instrument columns collapse to ONE instrument per channel — we
-//     pick the sample each channel plays most often. (A channel that swaps
-//     samples mid-pattern keeps its notes but plays them with its dominant
-//     sample.)
+//   * The channel instrument is a dominant-sample fallback; per-CELL instrument
+//     columns are retained in the shared pool and used by the replayer.
 //   * The model uses a uniform row count across patterns, so every pattern is
 //     fitted to the module's most common pattern length (MOD/S3M are all 64
 //     rows -> lossless; XM/IT with mixed lengths are padded/truncated).
@@ -88,6 +86,7 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
     order: order,
     instruments: pool,
     initialSpeed: doc.initialSpeed,
+    stereoOutput: true,
   );
 }
 

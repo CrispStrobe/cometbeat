@@ -338,11 +338,14 @@ XmEnvelope _xmEnvFromDoc(DocEnvelope e) => XmEnvelope(
 
 ModuleDoc docFromXm(XmModule m) {
   final samples = <DocSample>[];
+  final sampleOffsets = <int>[];
   for (final inst in m.instruments) {
-    if (inst.samples.isEmpty || inst.samples.first.isEmpty) {
-      samples.add(DocSample.empty());
-    } else {
-      final s = inst.samples.first;
+    sampleOffsets.add(samples.length);
+    for (final s in inst.samples) {
+      if (s.isEmpty) {
+        samples.add(DocSample.empty());
+        continue;
+      }
       final ds = DocSample(
         name: s.name,
         volume: s.volume,
@@ -374,11 +377,20 @@ ModuleDoc docFromXm(XmModule m) {
         // don't fit a nibble and use different semantics — drop them for now
         // (the cross-format table is a follow-up).
         final carryFx = c.effect <= 0xF;
+        var instrument = c.instrument;
+        if (c.instrument > 0 && c.instrument <= m.instruments.length) {
+          final inst = m.instruments[c.instrument - 1];
+          final key = c.note >= 1 && c.note <= 96 ? c.note - 1 : 0;
+          final sample = inst.keymap.length > key ? inst.keymap[key] : 0;
+          if (sample >= 0 && sample < inst.samples.length) {
+            instrument = sampleOffsets[c.instrument - 1] + sample + 1;
+          }
+        }
         cells.add(
           DocCell(
             note: xmNoteToMidi(c.note),
             noteOff: c.note == XmCell.noteOff,
-            instrument: c.instrument,
+            instrument: instrument,
             volume: vol,
             effect: carryFx ? c.effect : 0,
             effectParam: carryFx ? c.effectParam : 0,

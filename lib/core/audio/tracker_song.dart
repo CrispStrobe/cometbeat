@@ -89,6 +89,7 @@ class TrackerSong {
     this._current,
     this.instruments,
     this.initialSpeed,
+    this.stereoOutput,
   );
 
   /// A new song with the default band ([defaultTrackerChannels]) and one empty
@@ -119,6 +120,7 @@ class TrackerSong {
       0,
       instruments ?? defaultInstrumentPool(),
       initialSpeed < 1 ? kDefaultTicksPerRow : initialSpeed,
+      false,
     );
   }
 
@@ -133,6 +135,7 @@ class TrackerSong {
     required List<int> order,
     List<TrackerInstrument>? instruments,
     int initialSpeed = kDefaultTicksPerRow,
+    bool stereoOutput = false,
   }) {
     final engine = TrackerEngine(channels: channels, timing: timing);
     final pats = patterns.isEmpty
@@ -153,6 +156,7 @@ class TrackerSong {
       0,
       instruments ?? defaultInstrumentPool(),
       initialSpeed < 1 ? kDefaultTicksPerRow : initialSpeed,
+      stereoOutput,
     );
   }
 
@@ -175,6 +179,10 @@ class TrackerSong {
   /// Authored app songs default to the classic 6; imported S3M/XM/IT files carry
   /// their header speed here.
   final int initialSpeed;
+
+  /// Some imported trackers are conventionally rendered as stereo even when
+  /// no explicit pan command occurs. Authored songs retain the mono default.
+  final bool stereoOutput;
 
   int _current;
 
@@ -693,7 +701,7 @@ class TrackerSong {
           (col) => col.any((c) => c.hasCommand || c.instrument != 0),
         );
     if (needsReplayer) {
-      return usesPan
+      return (usesPan || stereoOutput)
           ? wavBytesStereo(
               replayPatternStereo(
                 channels,
@@ -707,7 +715,9 @@ class TrackerSong {
                   .pcm,
             );
     }
-    if (usesPan) return wavBytesStereo(_engine.renderLoopPcmStereo());
+    if (usesPan || stereoOutput) {
+      return wavBytesStereo(_engine.renderLoopPcmStereo());
+    }
     return _engine.renderLoop();
   }
 
