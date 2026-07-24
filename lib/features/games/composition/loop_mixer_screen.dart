@@ -144,6 +144,7 @@ abstract interface class LoopMixerTester {
   void cycleTrackVariant(String id);
   void rollTrackVariant(String id);
   void setTrackLevel(String id, double level);
+  void pauseOrResume();
 
   /// Whether track [id] can be voiced by a saved instrument (pitched tracks
   /// only), the id of its current voice (null = built-in timbre), and a setter
@@ -334,6 +335,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   int _iteration = 0;
   int _lastPhaseMs = 0;
+  bool _paused = false;
 
   /// What the loop player is currently looping (identity-compared against
   /// the engine's cached renders to decide whether a seam swap is needed).
@@ -349,7 +351,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       if (mounted) setState(() => _customProgressions = ps);
     });
     _ticker = createTicker((_) {
-      if (!_clock.isRunning) {
+      if (!_clock.isRunning && !_paused) {
         _step.value = -1;
         _progress.value = -1;
         _hlStep.value = -1;
@@ -457,6 +459,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   @override
   void stopAll() => _stopAll();
+  @override
+  void pauseOrResume() => _pauseOrResume();
   @override
   void debugLoopWrap() => _onLoopWrap();
 
@@ -2509,6 +2513,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   /// A new grid (tempo or bar count changed) — restart from the top.
   void _restartGroove() {
+    _paused = false;
     _clock
       ..stop()
       ..reset();
@@ -2520,8 +2525,28 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   }
 
   void _stopAll() {
+    _paused = false;
     setState(_engine.enabled.clear);
     _syncPlayback();
+  }
+
+  /// Pause/resume the audio player and musical clock together. Stopwatch keeps
+  /// its elapsed value while stopped, so resume re-enters the same loop phase.
+  void _pauseOrResume() {
+    if (_engine.enabled.isEmpty) return;
+    if (_clock.isRunning) {
+      _paused = true;
+      _clock.stop();
+      unawaited(_loop.pause());
+      return;
+    }
+    if (!_paused) {
+      _syncPlayback();
+      return;
+    }
+    _paused = false;
+    _clock.start();
+    unawaited(_loop.resume());
   }
 
   /// Restarts/stops/swaps the looping mix to match the groove state, keeping
@@ -2546,7 +2571,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     }
     if (!context.read<AudioService>().soundOn) return; // master mute
     final wav = _engine.renderLoop(fill: _fillDue);
-    if (!_clock.isRunning) {
+    if (!_clock.isRunning && !_paused) {
       _clock
         ..reset()
         ..start();
@@ -3244,6 +3269,14 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                       ),
                     ),
                     const SizedBox(width: 8),
+                    IconButton(
+                      onPressed:
+                          _engine.enabled.isEmpty ? null : _pauseOrResume,
+                      icon: Icon(
+                        _clock.isRunning ? Icons.pause : Icons.play_arrow,
+                      ),
+                      tooltip: _clock.isRunning ? 'Pause' : 'Play',
+                    ),
                     OutlinedButton.icon(
                       onPressed: _engine.enabled.isEmpty ? null : _stopAll,
                       icon: const Icon(Icons.stop),

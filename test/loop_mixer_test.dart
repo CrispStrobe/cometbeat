@@ -179,6 +179,26 @@ void main() {
     expect(game.isPlaying, isFalse);
   });
 
+  testWidgets('transport pauses and resumes without clearing the groove',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    game.toggleTrack('melody');
+    await tester.pump();
+    expect(game.isPlaying, isTrue);
+
+    game.pauseOrResume();
+    await tester.pump();
+    expect(game.enabledTracks, {'melody'});
+    expect(game.isPlaying, isFalse);
+
+    game.pauseOrResume();
+    await tester.pump();
+    expect(game.enabledTracks, {'melody'});
+    expect(game.isPlaying, isTrue);
+  });
+
   testWidgets('BPM slider retunes the groove', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
