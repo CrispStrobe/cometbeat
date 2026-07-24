@@ -168,7 +168,7 @@ SampleClip? sampleClipFromSaved(SavedInstrument s) {
   if (inst is! SampleInstrument) return null;
   return SampleClip(
     name: s.name,
-    sampleRate: kSampleRate,
+    sampleRate: s.sampleRate ?? kSampleRate,
     pcm: inst.sample,
     source: s.source,
     license: s.license,
