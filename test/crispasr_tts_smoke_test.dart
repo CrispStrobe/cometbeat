@@ -64,7 +64,8 @@ void main() {
       if (!present) {
         // ignore: avoid_print
         print(
-            'SKIP: libcrispasr/model/de voice not on this machine — dev-only smoke.');
+          'SKIP: libcrispasr/model/de voice not on this machine — dev-only smoke.',
+        );
         return;
       }
       final pcm = synthesizeKokoroPcm16(
