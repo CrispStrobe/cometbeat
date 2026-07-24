@@ -30,6 +30,8 @@ import 'package:comet_beat/core/audio/beat_capture.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
 import 'package:comet_beat/core/audio/groove_capture.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/loop_stack_render.dart'
+    show crossfadePcm16Seam;
 import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
@@ -310,6 +312,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   /// Smooth loop phase 0..1 for the sweeping playhead; -1 while stopped.
   final _progress = ValueNotifier<double>(-1);
+  final _tempoController = TextEditingController(text: '100');
 
   /// Current eighth-step index across the loop (LM-UX3) for the sheet-music
   /// note highlight; -1 while stopped. Changes ~8×/bar (not every frame), so
@@ -327,6 +330,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void initState() {
     super.initState();
     if (widget.initialSpec != null) _engine.applySpec(widget.initialSpec!);
+    _tempoController.text = _engine.tempoBpm.toString();
     // LM-UX7: load the kid's saved harmonies (best-effort).
     _progStore.load().then((ps) {
       if (mounted) setState(() => _customProgressions = ps);
@@ -354,6 +358,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _ticker.dispose();
     _step.dispose();
     _progress.dispose();
+    _tempoController.dispose();
     _hlStep.dispose();
     _loop.dispose();
     _countInTimer?.cancel();
@@ -1631,7 +1636,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       Score? score;
       Clef clef = Clef.treble;
       if (cells != null) {
-        clef = track.id == 'bass' ? Clef.bass : Clef.treble;
+        clef = clefForGrooveCells(cells);
         score = grooveScore(cells, clef: clef);
       } else {
         // Unpitched (drums / beatbox): a one-staff rhythm reduction.
@@ -1976,11 +1981,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       return;
     }
     _loop.playLoop(
-      wanted,
+      _seamSafeWav(wanted),
       position: Duration(
         milliseconds: _clock.elapsedMilliseconds % _engine.timing.totalMs,
       ),
     );
+  }
+
+  /// Audio elements can expose a tiny discontinuity when their native loop
+  /// callback fires. Repair the finite WAV at the last possible boundary while
+  /// keeping the engine's symbolic/render cache byte-stable for editing/tests.
+  Uint8List _seamSafeWav(Uint8List wav) {
+    final pcm = readWavPcm16(wav);
+    final fixed = crossfadePcm16Seam(pcm.samples);
+    return identical(fixed, pcm.samples) ? wav : wavBytes(fixed);
   }
 
   void _toggle(String id) {
@@ -2281,6 +2295,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void _setTempo(int bpm) {
     if (bpm == _engine.tempoBpm) return;
     setState(() => _engine.tempoBpm = bpm);
+    _tempoController.value = TextEditingValue(
+      text: _engine.tempoBpm.toString(),
+      selection: TextSelection.collapsed(
+        offset: _engine.tempoBpm.toString().length,
+      ),
+    );
     _restartGroove();
   }
 
@@ -2487,7 +2507,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     }
     _currentWav = wav;
     _loop.playLoop(
-      wav,
+      _seamSafeWav(wav),
       position: Duration(
         milliseconds: _clock.elapsedMilliseconds % _engine.timing.totalMs,
       ),
@@ -3131,15 +3151,39 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 Row(
                   children: [
                     Expanded(
-                      child: Wrap(
-                        spacing: 8,
+                      child: Row(
                         children: [
-                          for (final bpm in LoopMixerScreen.tempos)
-                            ChoiceChip(
-                              label: Text(_tempoLabel(l10n, bpm)),
-                              selected: _engine.tempoBpm == bpm,
-                              onSelected: (_) => _setTempo(bpm),
+                          Text(
+                            'BPM ${_engine.tempoBpm}',
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          Expanded(
+                            child: Slider(
+                              key: const ValueKey('loop-mixer-tempo'),
+                              min: 60,
+                              max: 180,
+                              divisions: 120,
+                              value: _engine.tempoBpm.toDouble(),
+                              label: '${_engine.tempoBpm} BPM',
+                              onChanged: (v) => _setTempo(v.round()),
                             ),
+                          ),
+                          SizedBox(
+                            width: 64,
+                            child: TextField(
+                              controller: _tempoController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                suffixText: 'BPM',
+                              ),
+                              onSubmitted: (value) {
+                                final bpm = int.tryParse(value);
+                                if (bpm != null) _setTempo(bpm);
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),

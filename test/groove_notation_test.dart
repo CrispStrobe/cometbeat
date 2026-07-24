@@ -29,6 +29,28 @@ void main() {
     expect(pitchFromMidi(61), const Pitch(Step.c, alter: 1));
   });
 
+  test('clef follows the actual voice range, not its track label', () {
+    expect(
+      clefForGrooveCells(const [
+        (midis: [36], steps: 1)
+      ]),
+      Clef.bass,
+    );
+    expect(
+      clefForGrooveCells(const [
+        (midis: [72], steps: 1)
+      ]),
+      Clef.treble,
+    );
+    expect(
+      clefForGrooveCells(const [
+        (midis: [36], steps: 1),
+        (midis: [72], steps: 1),
+      ]),
+      Clef.treble,
+    );
+  });
+
   test('drumGrooveScore reduces a beat to one rhythm staff', () {
     // Kick + hat together on step 0; snare on step 4; silent after.
     final pattern = _pattern({

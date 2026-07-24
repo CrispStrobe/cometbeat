@@ -34,6 +34,34 @@ Sound Library creation tools.
   section in track inserts; later it can grow clip/segment modules and more FX
   sections without changing the instrument picker model.
 
+## Loop Studio consolidation (IN PROGRESS)
+
+Live Looper / Perform, Loop Mixer, and Beginner Tracker currently expose three
+overlapping but incompatible editing experiences. They must converge on one
+musical loop document and one transport; the beginner view is a simpler skin,
+not a second playback engine.
+
+- **One loop document.** Every audible voice/track must have editable symbolic
+  events (drums, pitched notes, chords, and imported material) plus its selected
+  instrument. Editing a beat/tune must change those events and re-render the
+  exact voice, never a black-box baked stem.
+- **One transport.** Start, pause, stop, loop length, BPM, and playhead phase
+  are shared. Loop swaps happen at a musical boundary without stopping and
+  restarting the audio player. The loop buffer must be periodic and seam-safe.
+- **One primary workflow.** Loop Studio opens in a focused beginner layout with
+  direct track controls; an Advanced view reveals the full matrix, per-track
+  instruments, sends, effects, and arrangement. Remove redundant mode choices
+  where they only lead to different non-editable copies of the same groove.
+- **Controls must be scannable.** Replace Chill/Groove/Fast tempo buttons with a
+  BPM slider plus numeric field. Group key, scale, swing, loop length, and sound
+  choices in the same compact settings bar pattern used by Score Workshop.
+- **Notation is a view of the document.** Show one or more voices/parts,
+  choosing treble, bass, or grand staff per range; notation follows the actual
+  selected tracks and has Start/Pause/Stop transport.
+- **Verification.** Add pure tests for periodic loop rendering, boundary swaps,
+  editable per-track events, and clef selection; add widget tests for the
+  beginner/advanced workflow and transport states before removing old surfaces.
+
 ## Tab Editor navigation (DONE)
 
 - Add a three-dot overflow menu to the Tab Editor and move lower-frequency

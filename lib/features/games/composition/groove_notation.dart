@@ -85,6 +85,23 @@ Score grooveScore(List<PatternCell> cells, {Clef clef = Clef.treble}) {
   return Score(clef: clef, measures: measures);
 }
 
+/// Selects a practical single staff for a pitched groove voice. A low median
+/// with a clear majority below middle C belongs on bass; mixed or upper-range
+/// material stays on treble so isolated low notes do not force a whole voice
+/// into ledger lines.
+Clef clefForGrooveCells(List<PatternCell> cells) {
+  final midis = [
+    for (final cell in cells)
+      if (cell.midis case final values?) ...values,
+  ]..sort();
+  if (midis.isEmpty) return Clef.treble;
+  final median = midis[midis.length ~/ 2];
+  final low = midis.where((m) => m <= 60).length;
+  return low * 100 >= midis.length * 60 && median <= 60
+      ? Clef.bass
+      : Clef.treble;
+}
+
 /// Steps a [grooveScore] element occupies (reverse of the [_durations] grid).
 int _durationSteps(NoteDuration d) {
   for (final (s, dur) in _durations) {
@@ -179,9 +196,7 @@ const grooveTrackOrder = ['voice', 'melody', 'chords', 'sparkle', 'bass'];
     // Transposed to the current key/scale, so the saved score matches the sound.
     final cells = engine.engravedCellsFor(id);
     if (cells == null) continue; // defensive: an unpitched id in the order
-    parts.add(
-      grooveScore(cells, clef: id == 'bass' ? Clef.bass : Clef.treble),
-    );
+    parts.add(grooveScore(cells, clef: clefForGrooveCells(cells)));
     partNames.add(nameOf(id));
   }
   if (parts.isEmpty) return null;

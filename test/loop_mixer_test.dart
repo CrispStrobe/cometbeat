@@ -179,7 +179,7 @@ void main() {
     expect(game.isPlaying, isFalse);
   });
 
-  testWidgets('tempo chips retune the groove', (tester) async {
+  testWidgets('BPM slider retunes the groove', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
     expect(game.tempoBpm, 100);
@@ -187,7 +187,10 @@ void main() {
     game.toggleTrack('chords');
     await tester.pump();
 
-    await tester.tap(find.text('Fast'));
+    final tempo = tester.widget<Slider>(
+      find.byKey(const ValueKey('loop-mixer-tempo')),
+    );
+    tempo.onChanged!(120);
     await tester.pump();
     expect(game.tempoBpm, 120);
     expect(game.isPlaying, isTrue, reason: 'groove restarts at the new tempo');
