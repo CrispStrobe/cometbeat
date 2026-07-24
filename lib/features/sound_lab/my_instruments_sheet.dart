@@ -732,6 +732,37 @@ class _FxGeneratorSheetState extends State<_FxGeneratorSheet> {
     context.read<AudioService>().playWavBytes(pcmFloatToWav(pcm));
   }
 
+  Widget _slider(
+    String label,
+    double value,
+    double min,
+    double max,
+    SfxrParams Function(SfxrParams, double) update,
+  ) {
+    return Row(
+      children: [
+        SizedBox(width: 92, child: Text(label)),
+        Expanded(
+          child: Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            label: value.toStringAsFixed(2),
+            onChanged: (next) {
+              final params = update(_params!, next);
+              setState(() => _params = params);
+              _preview(params);
+            },
+          ),
+        ),
+        SizedBox(
+          width: 38,
+          child: Text(value.toStringAsFixed(2), textAlign: TextAlign.end),
+        ),
+      ],
+    );
+  }
+
   Future<void> _save() async {
     final params = _params;
     if (params == null) return;
@@ -759,71 +790,173 @@ class _FxGeneratorSheetState extends State<_FxGeneratorSheet> {
           16,
           16 + MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.soundLibraryFxTitle,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              l10n.soundLibraryFxHint,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final preset in kSfxrPresets.keys)
-                  ChoiceChip(
-                    label: Text(preset),
-                    selected: _preset == preset,
-                    onSelected: (_) => _pick(preset),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _nameCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.soundLabSaveName,
-                      isDense: true,
-                      border: const OutlineInputBorder(),
+                Text(
+                  l10n.soundLibraryFxTitle,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.soundLibraryFxHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final preset in kSfxrPresets.keys)
+                      ChoiceChip(
+                        label: Text(preset),
+                        selected: _preset == preset,
+                        onSelected: (_) => _pick(preset),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (_params case final params?)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 280),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _slider(
+                            'Attack',
+                            params.attack,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(attack: v),
+                          ),
+                          _slider(
+                            'Sustain',
+                            params.sustain,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(sustain: v),
+                          ),
+                          _slider(
+                            'Punch',
+                            params.punch,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(punch: v),
+                          ),
+                          _slider(
+                            'Decay',
+                            params.decay,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(decay: v),
+                          ),
+                          _slider(
+                            'Pitch',
+                            params.baseFreq,
+                            0.05,
+                            1,
+                            (p, v) => p.copyWith(baseFreq: v),
+                          ),
+                          _slider(
+                            'Pitch slide',
+                            params.freqRamp,
+                            -1,
+                            1,
+                            (p, v) => p.copyWith(freqRamp: v),
+                          ),
+                          _slider(
+                            'Low-pass',
+                            params.lpfFreq,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(lpfFreq: v),
+                          ),
+                          _slider(
+                            'High-pass',
+                            params.hpfFreq,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(hpfFreq: v),
+                          ),
+                          _slider(
+                            'Distortion',
+                            params.distortion,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(distortion: v),
+                          ),
+                          _slider(
+                            'Bit crush',
+                            params.bitCrush,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(bitCrush: v),
+                          ),
+                          _slider(
+                            'FM depth',
+                            params.fmDepth,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(fmDepth: v),
+                          ),
+                          _slider(
+                            'LFO depth',
+                            params.lfoDepth,
+                            0,
+                            1,
+                            (p, v) => p.copyWith(lfoDepth: v),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _nameCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.soundLabSaveName,
+                          isDense: true,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.casino_outlined),
+                      tooltip: l10n.soundLabRandomize,
+                      onPressed: _preset == null
+                          ? null
+                          : () => _pick(_preset!, keepName: true),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  icon: const Icon(Icons.casino_outlined),
-                  tooltip: l10n.soundLabRandomize,
-                  onPressed: _preset == null
-                      ? null
-                      : () => _pick(_preset!, keepName: true),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(l10n.soundLabCancel),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: _params == null ? null : _save,
+                      child: Text(l10n.soundLabSave),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.soundLabCancel),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _params == null ? null : _save,
-                  child: Text(l10n.soundLabSave),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
