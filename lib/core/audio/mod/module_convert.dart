@@ -564,6 +564,7 @@ ModuleDoc docFromIt(ItModule m) {
     initialSpeed: m.initialSpeed,
     initialTempo: m.initialTempo,
     globalVolume: m.globalVolume,
+    itFlags: m.flags,
     channelPans: List<int>.from(m.channelPans),
     channelVolumes: List<int>.from(m.channelVolumes),
     itInstrumentHeaders: [
@@ -1137,6 +1138,7 @@ ItModule docToIt(ModuleDoc doc) {
     initialSpeed: doc.initialSpeed,
     initialTempo: doc.initialTempo,
     globalVolume: doc.globalVolume.clamp(0, 128),
+    flags: doc.itFlags,
     channelPans: doc.sourceFormat == ModuleFormat.it
         ? List<int>.from(doc.channelPans)
         : const [],

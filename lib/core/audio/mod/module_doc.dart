@@ -238,6 +238,7 @@ class ModuleDoc {
     this.initialSpeed = 6,
     this.initialTempo = 125,
     this.globalVolume = 128,
+    this.itFlags = 9,
     this.linearFrequency = false,
     this.channelPans = const [],
     this.channelVolumes = const [],
@@ -255,6 +256,9 @@ class ModuleDoc {
 
   /// Container global volume normalized to the IT 0..128 scale.
   final int globalVolume;
+
+  /// Original IT header flags, including instrument mode and slide mode.
+  final int itFlags;
   final bool linearFrequency;
 
   /// Optional native channel state. IT uses pan 0..64 and volume 0..64.

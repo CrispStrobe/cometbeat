@@ -99,7 +99,7 @@ Uint8List writeIt(ItModule module) {
   u16(patNum); // 0x26 PatNum
   u16(0x0214); // 0x28 Cwt/v
   u16(0x0200); // 0x2A Cmwt
-  u16(0x0009 | (module.instruments.isNotEmpty ? 0x0004 : 0)); // flags
+  u16(module.flags | (module.instruments.isNotEmpty ? 0x0004 : 0)); // flags
   u16(0); // 0x2E Special
   u8(module.globalVolume); // 0x30 global volume
   u8(48); // 0x31 mix volume
