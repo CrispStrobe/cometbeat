@@ -94,12 +94,12 @@ Uint8List writeIt(ItModule module) {
   writeString(module.name, 26); // 0x04
   u16(0); // 0x1E
   u16(ordNum); // 0x20 OrdNum
-  u16(0); // 0x22 InsNum
+  u16(module.instruments.length); // 0x22 InsNum
   u16(smpNum); // 0x24 SmpNum
   u16(patNum); // 0x26 PatNum
   u16(0x0214); // 0x28 Cwt/v
   u16(0x0200); // 0x2A Cmwt
-  u16(0x0009); // 0x2C Flags (bit2 clear)
+  u16(0x0009 | (module.instruments.isNotEmpty ? 0x0004 : 0)); // flags
   u16(0); // 0x2E Special
   u8(module.globalVolume); // 0x30 global volume
   u8(48); // 0x31 mix volume
@@ -122,6 +122,11 @@ Uint8List writeIt(ItModule module) {
     u8(order[i]);
   }
 
+  // instrument-header offset table (zeros; patched later)
+  final insTableOffset = out.length;
+  for (var i = 0; i < module.instruments.length; i++) {
+    u32(0);
+  }
   // sample-header offset table (zeros; patched later)
   final smpTableOffset = out.length;
   for (var i = 0; i < smpNum; i++) {
@@ -131,6 +136,22 @@ Uint8List writeIt(ItModule module) {
   final patTableOffset = out.length;
   for (var i = 0; i < patNum; i++) {
     u32(0);
+  }
+
+  // ── INSTRUMENT HEADERS ──
+  final instrumentHeaderOffsets = <int>[];
+  for (final instrument in module.instruments) {
+    instrumentHeaderOffsets.add(out.length);
+    if (instrument.rawHeader.length >= 554) {
+      out.addAll(instrument.rawHeader.take(554));
+    } else {
+      final header = List<int>.filled(554, 0);
+      header[0] = 0x49; // IMP I
+      header[1] = 0x4D;
+      header[2] = 0x50;
+      header[3] = 0x49;
+      out.addAll(header);
+    }
   }
 
   // ── SAMPLE HEADERS ──
@@ -168,7 +189,6 @@ Uint8List writeIt(ItModule module) {
     u32(0); // 0x48 sample pointer (patched)
     u32(0); // 0x4C vibrato
   }
-
   // ── SAMPLE DATA ──
   final sampleDataOffsets = List<int>.filled(smpNum, 0);
   for (var i = 0; i < smpNum; i++) {
@@ -235,6 +255,13 @@ Uint8List writeIt(ItModule module) {
   // ── convert + patch the offset tables ──
   final bytes = Uint8List.fromList(out);
   final bd = ByteData.sublistView(bytes);
+  for (var i = 0; i < instrumentHeaderOffsets.length; i++) {
+    bd.setUint32(
+      insTableOffset + i * 4,
+      instrumentHeaderOffsets[i],
+      Endian.little,
+    );
+  }
   for (var i = 0; i < smpNum; i++) {
     bd.setUint32(smpTableOffset + i * 4, sampleHeaderOffsets[i], Endian.little);
     bd.setUint32(

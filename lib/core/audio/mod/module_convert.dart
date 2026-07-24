@@ -540,6 +540,8 @@ ModuleDoc docFromIt(ItModule m) {
             nativeEffect:
                 c.command == 0 && c.commandValue == 0 ? -1 : c.command,
             nativeEffectParam: c.commandValue,
+            nativeInstrument: c.instrument,
+            nativeNote: c.note,
           ),
         );
       }
@@ -556,6 +558,10 @@ ModuleDoc docFromIt(ItModule m) {
     globalVolume: m.globalVolume,
     channelPans: List<int>.from(m.channelPans),
     channelVolumes: List<int>.from(m.channelVolumes),
+    itInstrumentHeaders: [
+      for (final instrument in m.instruments)
+        List<int>.from(instrument.rawHeader),
+    ],
     sourceFormat: ModuleFormat.it,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -944,8 +950,12 @@ ItCell _itCellFrom(DocCell c, {required bool preserveNative}) {
       : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: true);
   return ItCell(
     // IT note 255 = note-off (writeIt emits it since it != -1).
-    note: c.noteOff ? 255 : (c.note < 0 ? -1 : c.note.clamp(0, 119)),
-    instrument: c.instrument.clamp(0, 255),
+    note: preserveNative && c.nativeNote >= 0
+        ? c.nativeNote
+        : (c.noteOff ? 255 : (c.note < 0 ? -1 : c.note.clamp(0, 119))),
+    instrument: preserveNative && c.nativeInstrument > 0
+        ? c.nativeInstrument
+        : c.instrument.clamp(0, 255),
     volpan: vol,
     command: command,
     commandValue: value,
@@ -1012,6 +1022,14 @@ ItModule docToIt(ModuleDoc doc) {
     channelVolumes: doc.sourceFormat == ModuleFormat.it
         ? List<int>.from(doc.channelVolumes)
         : const [],
+    instruments: [
+      for (final header in doc.itInstrumentHeaders)
+        ItInstrument(
+          keymap: const [],
+          noteMap: const [],
+          rawHeader: List<int>.from(header),
+        ),
+    ],
     order: List<int>.from(doc.order),
     patterns: patterns,
     samples: samples,

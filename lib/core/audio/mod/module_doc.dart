@@ -105,6 +105,8 @@ class DocCell {
     this.effectParam = 0,
     this.nativeEffect = -1,
     this.nativeEffectParam = 0,
+    this.nativeInstrument = 0,
+    this.nativeNote = -1,
   });
 
   /// A key-off cell: stops the ringing note (the formats' note-off / note-cut).
@@ -119,7 +121,9 @@ class DocCell {
         effect = 0,
         effectParam = 0,
         nativeEffect = -1,
-        nativeEffectParam = 0;
+        nativeEffectParam = 0,
+        nativeInstrument = 0,
+        nativeNote = -1;
 
   static const empty = DocCell();
 
@@ -141,6 +145,8 @@ class DocCell {
   /// equivalent, such as IT Q/V/W/Y commands.
   final int nativeEffect; // -1 when unavailable
   final int nativeEffectParam;
+  final int nativeInstrument; // original IT instrument number, or 0
+  final int nativeNote; // original IT note byte, or -1
 
   bool get isEmpty =>
       note == -1 &&
@@ -149,7 +155,9 @@ class DocCell {
       !noteOff &&
       effect == 0 &&
       effectParam == 0 &&
-      nativeEffect == -1;
+      nativeEffect == -1 &&
+      nativeInstrument == 0 &&
+      nativeNote == -1;
 
   @override
   bool operator ==(Object other) =>
@@ -161,11 +169,23 @@ class DocCell {
       other.effect == effect &&
       other.effectParam == effectParam &&
       other.nativeEffect == nativeEffect &&
-      other.nativeEffectParam == nativeEffectParam;
+      other.nativeEffectParam == nativeEffectParam &&
+      other.nativeInstrument == nativeInstrument &&
+      other.nativeNote == nativeNote;
 
   @override
-  int get hashCode => Object.hash(note, instrument, volume, noteOff, effect,
-      effectParam, nativeEffect, nativeEffectParam);
+  int get hashCode => Object.hash(
+        note,
+        instrument,
+        volume,
+        noteOff,
+        effect,
+        effectParam,
+        nativeEffect,
+        nativeEffectParam,
+        nativeInstrument,
+        nativeNote,
+      );
 }
 
 /// A pattern: [numRows] rows × [channelCount] cells.
@@ -187,6 +207,7 @@ class ModuleDoc {
     this.linearFrequency = false,
     this.channelPans = const [],
     this.channelVolumes = const [],
+    this.itInstrumentHeaders = const [],
     required this.sourceFormat,
     required this.order,
     required this.patterns,
@@ -203,6 +224,9 @@ class ModuleDoc {
 
   /// Optional native channel state. IT uses pan 0..64 and volume 0..64.
   final List<int> channelPans, channelVolumes;
+
+  /// Original IT instrument headers for lossless IT -> IT conversion.
+  final List<List<int>> itInstrumentHeaders;
   final ModuleFormat sourceFormat;
   final List<int> order; // pattern indices
   final List<DocPattern> patterns;

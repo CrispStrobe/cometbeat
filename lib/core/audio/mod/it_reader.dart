@@ -191,7 +191,14 @@ ItInstrument _parseInstrument(Uint8List bytes, int base) {
       keymap[n] = bytes[table + n * 2 + 1]; // 1-based sample number (0 = none)
     }
   }
-  return ItInstrument(keymap: keymap, noteMap: noteMap);
+  final rawHeader = base >= 0 && base + 554 <= bytes.length
+      ? List<int>.from(bytes.sublist(base, base + 554))
+      : const <int>[];
+  return ItInstrument(
+    keymap: keymap,
+    noteMap: noteMap,
+    rawHeader: rawHeader,
+  );
 }
 
 // ── sample parsing ────────────────────────────────────────────────────────────

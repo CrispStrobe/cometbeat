@@ -162,13 +162,21 @@ class ItPattern {
 /// these, and the PLAYED note indexes [keymap] to pick the actual sample (and
 /// [noteMap] the note to sound). Sample-mode files have none.
 class ItInstrument {
-  const ItInstrument({required this.keymap, required this.noteMap});
+  const ItInstrument({
+    required this.keymap,
+    required this.noteMap,
+    this.rawHeader = const [],
+  });
 
   /// 120 entries: the 1-based sample number for each input note (0 = no sample).
   final List<int> keymap;
 
   /// 120 entries: the note actually played for each input note (usually 1:1).
   final List<int> noteMap;
+
+  /// Original 554-byte IMPI header, when available. This preserves IT
+  /// envelopes and instrument behavior for same-format roundtrips.
+  final List<int> rawHeader;
 
   factory ItInstrument.identity() => ItInstrument(
         keymap: List<int>.filled(120, 0),
