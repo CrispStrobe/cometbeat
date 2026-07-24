@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
+import 'package:comet_beat/features/games/songs/song_book.dart' show kSongs;
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart';
@@ -237,5 +238,29 @@ void main() {
     expect(inserted, isNotNull);
     expect(inserted!.name, 'voice');
     expect(find.byType(MyInstrumentsSheet), findsNothing);
+  });
+
+  testWidgets('Sound Library exposes the music browser for Songs',
+      (tester) async {
+    var selected = false;
+    await pumpGame(
+      tester,
+      _hosted(
+        MyInstrumentsSheet(
+          store: InstrumentLibraryStore(),
+          onMusicSelected: (_) async => selected = true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.library_music), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.library_music));
+    await tester.pumpAndSettle();
+    expect(find.text('Add music'), findsOneWidget);
+
+    await tester.tap(find.text(kSongs.first.title));
+    await tester.pumpAndSettle();
+    expect(selected, isTrue);
   });
 }

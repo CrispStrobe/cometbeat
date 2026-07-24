@@ -139,7 +139,11 @@ class _MusicPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     // Read once — a modal doesn't need to track later library edits.
-    final yours = context.read<UserSongsService>().songs;
+    // Some embedders (notably the Sound Library bottom sheet) are mounted
+    // outside the Song Book provider. Built-ins, catalog, and file import are
+    // still useful there, so treat the saved-song section as empty instead of
+    // crashing the whole picker.
+    final yours = context.read<UserSongsService?>()?.songs ?? const [];
     return SafeArea(
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.7,
