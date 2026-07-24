@@ -20,6 +20,7 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/s3m_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_reader.dart';
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Uint8List _read(String path) => File(path).readAsBytesSync();
@@ -29,6 +30,36 @@ Float64List _norm8(List<int> v) =>
     Float64List.fromList([for (final b in v) b / 128]);
 
 void main() {
+  test('docFromXm preserves the instrument keymap for multi-sample instruments',
+      () {
+    final module = XmModule(
+      name: 'MULTI',
+      channelCount: 1,
+      order: const [0],
+      patterns: [
+        XmPattern([
+          [
+            const XmCell(note: 1, instrument: 1),
+          ],
+        ]),
+      ],
+      instruments: [
+        XmInstrument(
+          samples: [
+            XmSample(pcm: Float64List.fromList([0.1])),
+            XmSample(pcm: Float64List.fromList([0.9])),
+          ],
+          keymap: List<int>.filled(96, 1),
+        ),
+      ],
+    );
+
+    final doc = docFromXm(module);
+    expect(doc.samples, hasLength(2));
+    expect(doc.patterns.first.rows.first.first.instrument, 2);
+    expect(doc.samples[1].pcm.first, closeTo(0.9, 1e-9));
+  });
+
   group('sniffModuleFormat — each golden detected correctly', () {
     test('signatures', () {
       expect(
