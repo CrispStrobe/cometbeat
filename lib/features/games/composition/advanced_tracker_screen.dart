@@ -1075,12 +1075,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _song.engine.setCell(
         _cursorChannel,
         row,
-        TrackerCell(
+        cur.copyWith(
           midi: midi,
-          volume: cur.volume,
-          effect: cur.effect,
-          fxCmd: cur.fxCmd,
-          fxParam: cur.fxParam,
           instrument: _activeInstrument,
         ),
       );
@@ -2628,14 +2624,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _song.engine.setCell(
         channel,
         row,
-        TrackerCell(
-          midi: cur.midi,
-          volume: cur.volume,
-          effect: cur.effect,
-          fxCmd: cmd,
-          fxParam: param,
-          instrument: cur.instrument,
-        ),
+        cur.copyWith(fxCmd: cmd, fxParam: param),
       );
     });
     _syncPlayback();
@@ -3486,13 +3475,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       () => _song.engine.setCell(
         channel,
         row,
-        TrackerCell(
-          midi: cur.midi,
-          volume: cur.volume,
-          effect: cur.effect,
+        cur.copyWith(
           fxCmd: cmd,
           fxParam: param,
-          instrument: cur.instrument, // don't drop the per-cell instrument
         ),
       ),
     );
