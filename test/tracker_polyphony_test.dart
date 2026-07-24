@@ -31,7 +31,10 @@ void main() {
       );
 
       const fastTiming = TrackerTiming(
-          tempoBpm: 60000, rows: 4, stepsPerBeat: 1); // 1 step = 44 samples!
+        tempoBpm: 60000,
+        rows: 4,
+        stepsPerBeat: 1,
+      ); // 1 step = 44 samples!
 
       final cells = [
         const TrackerCell(midi: 60),
@@ -80,12 +83,16 @@ void main() {
       );
 
       const fastTiming = TrackerTiming(
-          tempoBpm: 60000, rows: 4, stepsPerBeat: 1); // 1 step = 44 samples
+        tempoBpm: 60000,
+        rows: 4,
+        stepsPerBeat: 1,
+      ); // 1 step = 44 samples
 
       final cells = [
         const TrackerCell(midi: 60), // Crash
         const TrackerCell(
-            midi: 62), // Kick hits while crash is still ringing out
+          midi: 62,
+        ), // Kick hits while crash is still ringing out
         TrackerCell.empty,
         TrackerCell.empty,
       ];

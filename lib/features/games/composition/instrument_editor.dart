@@ -4,7 +4,6 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
 import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
-import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:flutter/material.dart';
@@ -69,7 +68,6 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Container(
         height: MediaQuery.of(context).size.height * 0.8,

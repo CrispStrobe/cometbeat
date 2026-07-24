@@ -28,8 +28,10 @@ void main() {
       expect(voiced[22050], 1.0); // 0.5s sustain finishes
 
       // Release check
-      expect(voiced[26460],
-          closeTo(0.5, 0.01)); // 0.6s (0.5 + 0.1 half release), approx 0.5
+      expect(
+        voiced[26460],
+        closeTo(0.5, 0.01),
+      ); // 0.6s (0.5 + 0.1 half release), approx 0.5
       expect(voiced[30870], 0.0); // 0.7s (0.5 + 0.2 release), reaches 0
     });
 

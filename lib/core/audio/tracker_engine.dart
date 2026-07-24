@@ -104,7 +104,9 @@ class TrackerCell {
 
   TrackerCell copyWith({
     int? midi,
+    bool clearMidi = false,
     double? volume,
+    bool clearVolume = false,
     TrackerEffect? effect,
     int? fxCmd,
     int? fxParam,
@@ -112,8 +114,8 @@ class TrackerCell {
     bool? keyOff,
   }) {
     return TrackerCell(
-      midi: midi ?? this.midi,
-      volume: volume ?? this.volume,
+      midi: clearMidi ? null : (midi ?? this.midi),
+      volume: clearVolume ? null : (volume ?? this.volume),
       effect: effect ?? this.effect,
       fxCmd: fxCmd ?? this.fxCmd,
       fxParam: fxParam ?? this.fxParam,
@@ -614,12 +616,21 @@ class SampleInstrument implements TrackerInstrument {
                 : resampleCubic(src, baseRatio);
         final n = min(min(buf.length, runSamples), out.length - startSample);
         if (n > 0) {
-          // Envelope only the played portion, triggering the release at the Note Cut
-          // (if present), otherwise fitting the release at the end of the run to declick.
-          final isTruncated = releaseSteps == 0;
+          // - explicit key-off: use sustainSamples (enter ADSR release)
+          // - normal retrigger: use n (sustain until boundary, then hard choke)
+          // - natural pattern end / sample end: fit release at end (declick)
           final rSamples = (envelope.release * kSampleRate).round();
-          final effectiveSustain =
-              isTruncated ? max(0, n - rSamples) : sustainSamples;
+          final isPatternEnd = (startSample + runSamples) > out.length;
+          final naturallyEnds = !loops && buf.length <= runSamples;
+
+          int? effectiveSustain;
+          if (releaseSteps > 0) {
+            effectiveSustain = sustainSamples;
+          } else if (isPatternEnd || naturallyEnds) {
+            effectiveSustain = max(0, n - rSamples);
+          } else {
+            effectiveSustain = n;
+          }
 
           final voiced = applyEnvelope(
             Float64List.sublistView(buf, 0, n),

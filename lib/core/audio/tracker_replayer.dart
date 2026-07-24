@@ -666,9 +666,10 @@ Float64List renderChannelPerNote(
       final capRow = startStep + sustainSteps; // Cut where the sustain ends
       final one = List<TrackerCell>.filled(rows, TrackerCell.empty)
         ..[startStep] = trigger;
-      if (capRow < rows)
+      if (capRow < rows) {
         one[capRow] =
             TrackerCell.noteCut; // Trigger release in the rendering instrument
+      }
       final buf = curInst.renderChannel(one, timing);
       final s = timing.stepStartSample(startStep);
       final endRow = startStep + steps;

@@ -6,11 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('MultiSampleInstrument routes notes and chops them properly', () {
     final zoneA = SampleInstrument(
-        'zoneA', Float64List(44100)..fillRange(0, 44100, 1.0),
-        envelope: Envelope.none); // DC offset of 1
+      'zoneA',
+      Float64List(44100)..fillRange(0, 44100, 1.0),
+      envelope: Envelope.none,
+    ); // DC offset of 1
     final zoneB = SampleInstrument(
-        'zoneB', Float64List(44100)..fillRange(0, 44100, -1.0),
-        envelope: Envelope.none); // DC offset of -1
+      'zoneB',
+      Float64List(44100)..fillRange(0, 44100, -1.0),
+      envelope: Envelope.none,
+    ); // DC offset of -1
 
     final multi = MultiSampleInstrument('multi', {
       60: zoneA,

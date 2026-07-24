@@ -21,10 +21,14 @@ void main() {
 
     expect(doc.columns.length, 4);
     expect(
-        doc.columns[0].frets, {5: 0}); // 6th string (index 5), open fret (E2)
+      doc.columns[0].frets,
+      {5: 0},
+    ); // 6th string (index 5), open fret (E2)
     expect(doc.columns[1].frets, isEmpty);
     expect(
-        doc.columns[2].frets, {4: 0}); // 5th string (index 4), open fret (A2)
+      doc.columns[2].frets,
+      {4: 0},
+    ); // 5th string (index 4), open fret (A2)
     expect(doc.columns[3].frets, isEmpty);
   });
 }

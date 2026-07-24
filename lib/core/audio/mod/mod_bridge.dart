@@ -78,7 +78,12 @@ ModImport modToTracker(ModModule mod, {int rows = 8, int stepsPerBeat = 2}) {
       for (var s = 0; s < rows; s++) {
         final modRow = (s * 64) ~/ rows;
         final cell = _cellAt(pattern, modRow, c);
-        if (cell != null && cell.effect == 0xE && (cell.effectParam & 0xF0) == 0xC0) {
+        // Note: The TrackerEngine does not yet support sub-row tick timing for key-offs.
+        // Therefore, ANY Note Cut (ECx) regardless of tick offset 'x' is normalized
+        // to an immediate Note Cut (EC0) upon import.
+        if (cell != null &&
+            cell.effect == 0xE &&
+            (cell.effectParam & 0xF0) == 0xC0) {
           cells.add(TrackerCell.noteCut);
         } else if (cell == null || cell.period <= 0) {
           cells.add(TrackerCell.empty);

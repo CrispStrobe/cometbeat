@@ -5,7 +5,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart' show TrackerCell;
 class DrumKitBridge {
   static Map<Drum, List<bool>> toDrumRows(List<TrackerCell> cells, int steps) {
     final rows = {
-      for (final d in Drum.values) d: List<bool>.filled(steps, false)
+      for (final d in Drum.values) d: List<bool>.filled(steps, false),
     };
     for (var i = 0; i < cells.length && i < steps; i++) {
       final m = cells[i].midi;

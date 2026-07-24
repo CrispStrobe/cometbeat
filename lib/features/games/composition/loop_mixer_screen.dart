@@ -2583,12 +2583,6 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         _ => l10n.loopMixerTrackSparkle,
       };
 
-  String _tempoLabel(AppLocalizations l10n, int bpm) => switch (bpm) {
-        75 => l10n.loopMixerTempoChill,
-        120 => l10n.loopMixerTempoFast,
-        _ => l10n.loopMixerTempoGroove,
-      };
-
   String _kitLabel(AppLocalizations l10n, String id) => switch (id) {
         'deep' => l10n.loopMixerKitDeep,
         'warm' => l10n.loopMixerKitWarm,
