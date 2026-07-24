@@ -2546,7 +2546,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     }
     _paused = false;
     _clock.start();
-    unawaited(_loop.resume());
+    // Edits made while paused may have replaced the buffer, so resume through
+    // the normal swap path instead of resuming a stale player source.
+    _syncPlayback();
   }
 
   /// Restarts/stops/swaps the looping mix to match the groove state, keeping
@@ -2578,6 +2580,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       _lastPhaseMs = 0;
     }
     _currentWav = wav;
+    if (_paused) return;
     _loop.playLoop(
       _seamSafeWav(wav),
       position: Duration(
