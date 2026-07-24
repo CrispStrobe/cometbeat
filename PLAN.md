@@ -62,6 +62,91 @@ not a second playback engine.
   editable per-track events, and clef selection; add widget tests for the
   beginner/advanced workflow and transport states before removing old surfaces.
 
+## Five-mode product architecture (DECIDED)
+
+The product has five top-level authoring modes. They are different musical
+mental models over one shared project/document model, not five unrelated apps:
+
+1. **Tracker** — the DefleMask/FamiTracker/FastTracker successor: pattern
+   matrix, rows/channels, instruments, ticks, effect commands, macros, sample
+   playback, pattern order, and tracker interchange (MOD/XM/S3M/IT/MIDI).
+2. **Loop Studio** — the Kiffness-to-Pro-Tools loop workflow: record, capture,
+   quantize, overdub, arrange sections, edit every voice, choose instruments,
+   mix, and perform over loops. Simple and Advanced layouts edit the same loop
+   document; they are not separate modes.
+3. **Score** — multi-part conventional notation and engraving: voices, chords,
+   lyrics, clefs, analysis, playback, and print/interchange exports.
+4. **Tab** — guitar/bass/cello/string-instrument notation: tuning, strings,
+   frets, fingering, chord diagrams, notation, and instrument-aware playback.
+5. **Audio** — the DAW: clips, regions, recording, buses, automation, inserts,
+   Voice Shaping and future FX, mixing, and final export.
+
+### Loop Studio UX contract
+
+Loop Studio opens directly into an audible, editable project. The first screen
+must make the following obvious without tutorials: what is playing, which tracks
+are active, where the playhead is, how long the loop is, the BPM, and where the
+user can change the actual notes/hits.
+
+- The top transport bar is shared and stable: Start/Pause, Stop, loop length,
+  BPM slider plus numeric field, undo/redo, Save, and Export.
+- The first content band is the track lane. Each track exposes play/mute/solo,
+  level, instrument, record/overdub, and an Edit button. Editing opens the
+  actual symbolic events for that track, not a decorative preview or a baked
+  audio blob.
+- Simple layout shows one friendly event lane per track with large cells,
+  piano/pad input, quantize, and a small number of safe controls. It is suitable
+  for a child copying a performance video.
+- Advanced layout adds the full matrix, exact event durations, velocity,
+  per-track instruments, effects, sends, automation, section scenes, and
+  arrangement. It remains the same project and transport.
+- Settings use compact grouped bars like Score Workshop: BPM/loop, key/scale,
+  swing, quantize, sound, and arrangement. Preset words such as Chill/Groove/
+  Fast may remain as named starting points, but never as the only tempo control.
+- Sheet Music is a synchronized projection of selected Loop Studio tracks:
+  multiple voices are visible, clefs follow pitch range, grand staff is used
+  for a genuinely mixed voice, and the same transport controls it.
+- Record, import, and play-in actions always create editable track events first;
+  rendering to audio is an explicit bounce operation into Audio mode.
+
+### Integration and retirement map
+
+- **Keep and integrate:** `LoopEngine` timing/pattern model, `LoopStack` undo /
+  mute primitives, `BeatBridge` / `MelodyBridge`, groove capture and quantize,
+  per-track instrument voicing, scene/arrangement concepts, periodic rendering,
+  groove notation, and the shared Sound Library.
+- **Refactor into Loop Studio:** Perform's recording/overdub flow, Loop Mixer's
+  track cards, beat editor, tune editor, scene launcher, jam/follow tools, and
+  the transport. Their symbolic data must become one editable track model.
+- **Use as Tracker interop:** Beginner Tracker's approachable keyboard/grid
+  ideas and Advanced Tracker's precise pattern/effect concepts. Tracker remains
+  a separate top-level mode because tick/pattern authoring is a different job.
+- **Replace:** duplicate Loop Mixer/Perform playback clocks, restart-based loop
+  swaps, black-box tune/beat previews, hard-coded clef choices, and separate
+  beginner/advanced persistence formats.
+- **Archive behind a branch until parity is proven:** the current standalone
+  Perform screen, current Loop Mixer screen, and Beginner Tracker screen. Do not
+  delete them until Loop Studio passes transport, recording, editable-track,
+  import/export, notation, and web smoke tests; then keep their useful pure
+  primitives but remove their redundant navigation entries.
+
+### Shared project boundaries
+
+```
+Project
+├── Tracker patterns / instruments / effect commands
+├── Loop Studio tracks / symbolic events / sections
+├── Score parts / voices / metadata
+├── Tab arrangements / tunings / fingerings
+├── Audio tracks / clips / regions / automation
+└── shared instruments, samples, FX, and export references
+```
+
+Interop is explicit: Tracker patterns can become Loop Studio tracks; Loop
+Studio tracks can open in Tracker, Score, Tab, or Audio; Score and Tab can feed
+pitched Loop Studio tracks; Audio can receive any mode as a clip and can return
+through transcription/analysis with documented losses.
+
 ## Tab Editor navigation (DONE)
 
 - Add a three-dot overflow menu to the Tab Editor and move lower-frequency
