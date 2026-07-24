@@ -220,6 +220,10 @@ void main() {
     expect(game.soloTrack, 'melody');
     expect(game.enabledTracks, {'melody'});
 
+    game.toggleTrack('chords');
+    await tester.pump();
+    expect(game.enabledTracks, {'melody'});
+
     game.toggleSolo('melody');
     await tester.pump();
     expect(game.soloTrack, isNull);
