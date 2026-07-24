@@ -101,11 +101,16 @@ class XmInstrument {
   const XmInstrument({
     this.name = '',
     required this.samples,
+    this.keymap = const [],
     this.volumeEnvelope = const XmEnvelope(),
     this.panEnvelope = const XmEnvelope(),
   });
   final String name;
   final List<XmSample> samples;
+
+  /// Per-key sample selection, 96 entries for C-0..B-7. Values are zero-based
+  /// indices into [samples]. Empty means the legacy single-sample default.
+  final List<int> keymap;
   final XmEnvelope volumeEnvelope, panEnvelope;
 }
 

@@ -170,6 +170,10 @@ XmModule parseXm(Uint8List bytes) {
     // headers omit it — guard on the declared header size + bounds.
     var volEnv = const XmEnvelope();
     var panEnv = const XmEnvelope();
+    final keymap = <int>[
+      for (var i = 0; i < 96; i++)
+        instrumentStart + 33 + i < len ? bytes[instrumentStart + 33 + i] : 0,
+    ];
     if (instrumentHeaderSize >= 235 && instrumentStart + 235 <= len) {
       volEnv = _readXmEnvelope(
         bd,
@@ -249,6 +253,7 @@ XmModule parseXm(Uint8List bytes) {
       XmInstrument(
         name: insName,
         samples: samples,
+        keymap: keymap,
         volumeEnvelope: volEnv,
         panEnvelope: panEnv,
       ),
