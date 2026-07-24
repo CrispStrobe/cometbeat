@@ -264,8 +264,16 @@ class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
 
   Future<void> _load() async {
     try {
-      final items = await _source.browse();
-      if (mounted) setState(() => _items = items);
+      final items = await _source.browse(limit: 1000);
+      if (mounted) {
+        setState(
+          () => _items = [
+            for (final item in items)
+              if (item.collection == 'score' || item.collection == 'module')
+                item,
+          ],
+        );
+      }
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     }

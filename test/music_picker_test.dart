@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToMidi;
+import 'package:comet_beat/features/library/content_source.dart'
+    show LibraryItem;
 import 'package:comet_beat/shared/music/music_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -69,6 +71,38 @@ void main() {
       score.parts.expand((part) => part.measures.expand((m) => m.elements)),
       isNotEmpty,
     );
+  });
+
+  test('music catalog kinds are limited to songs and modules', () {
+    final items = <LibraryItem>[
+      LibraryItem(
+        sourceId: 'test',
+        sourceName: 'Test',
+        id: 'score',
+        title: 'Song',
+        composer: '',
+        collection: 'score',
+        declaredLicense: 'CC0',
+        downloadUrl: Uri.parse('https://example.com/song.abc'),
+        format: 'abc',
+      ),
+      LibraryItem(
+        sourceId: 'test',
+        sourceName: 'Test',
+        id: 'sample',
+        title: 'Kick',
+        composer: '',
+        collection: 'sample',
+        declaredLicense: 'CC0',
+        downloadUrl: Uri.parse('https://example.com/kick.wav'),
+        format: 'wav',
+      ),
+    ];
+    final music = [
+      for (final item in items)
+        if (item.collection == 'score' || item.collection == 'module') item,
+    ];
+    expect(music.map((item) => item.title), ['Song']);
   });
 
   test('an unsupported extension throws FormatException', () {
