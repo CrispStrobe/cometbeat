@@ -17,12 +17,29 @@ import 'package:flutter/foundation.dart';
 class GaplessLoopPlayer {
   final List<AudioPlayer?> _players = [null, null];
   int _active = 0;
+  Future<void> _queue = Future<void>.value();
+  bool _disposed = false;
+
+  Future<void> _enqueue(Future<void> Function() operation) {
+    final result = _queue.then((_) => operation());
+    // Keep the queue usable after a backend operation fails. The individual
+    // operations already log and swallow expected audio errors.
+    _queue = result.then<void>((_) {}, onError: (_, __) {});
+    return result;
+  }
 
   /// Swaps to [wav] looping forever from [position], seamlessly.
   Future<void> playLoop(
     Uint8List wav, {
     Duration position = Duration.zero,
+  }) =>
+      _enqueue(() => _playLoop(wav, position: position));
+
+  Future<void> _playLoop(
+    Uint8List wav, {
+    required Duration position,
   }) async {
+    if (_disposed) return;
     try {
       final next = 1 - _active;
       final incoming = _players[next] ??= AudioPlayer();
@@ -50,7 +67,9 @@ class GaplessLoopPlayer {
     }
   }
 
-  Future<void> stop() async {
+  Future<void> stop() => _enqueue(_stop);
+
+  Future<void> _stop() async {
     for (final p in _players) {
       try {
         await p?.stop();
@@ -62,7 +81,10 @@ class GaplessLoopPlayer {
 
   /// Pauses the sounding loop in place (keeps the buffer + position, so [resume]
   /// continues from the same phase). Guarded like [stop].
-  Future<void> pause() async {
+  Future<void> pause() => _enqueue(_pause);
+
+  Future<void> _pause() async {
+    if (_disposed) return;
     try {
       await _players[_active]?.pause();
     } catch (e) {
@@ -71,7 +93,10 @@ class GaplessLoopPlayer {
   }
 
   /// Resumes a [pause]d loop from where it stopped.
-  Future<void> resume() async {
+  Future<void> resume() => _enqueue(_resume);
+
+  Future<void> _resume() async {
+    if (_disposed) return;
     try {
       await _players[_active]?.resume();
     } catch (e) {
@@ -80,6 +105,7 @@ class GaplessLoopPlayer {
   }
 
   void dispose() {
+    _disposed = true;
     for (final p in _players) {
       p?.dispose();
     }
