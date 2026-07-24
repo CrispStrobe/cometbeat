@@ -1,7 +1,8 @@
 # Automatic Play-Along — plan & status
 
-🚧 **Idle / Last-shipped (Agent checkpoint)**
-- Shipped: Real-time Oscilloscopes & Meters per-channel in Tracker (Beginner + Advanced).
+🚧 **Actively working on (Agent checkpoint)**
+- Starting work on Instrument Editor Overlay (`instrument_editor.dart`).
+- Embedding Sound Lab UI for synths and adding real-time testing keyboard.
 
 Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
