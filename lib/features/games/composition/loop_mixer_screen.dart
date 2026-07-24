@@ -3628,6 +3628,7 @@ class _TrackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = active ? Colors.white : color;
+    final compact = MediaQuery.sizeOf(context).width < 420;
     return GestureDetector(
       onTap: onTap,
       onLongPress: onVoice,
@@ -3695,20 +3696,10 @@ class _TrackCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Icon(Icons.piano, size: 18, color: foreground),
                 ],
-                IconButton(
-                  tooltip: soloed ? 'Unsolo' : 'Solo',
-                  onPressed: onSolo,
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: Icon(
-                    Icons.headphones,
-                    size: 18,
-                    color: soloed ? Colors.amber : foreground,
-                  ),
-                ),
+                if (!compact) _soloButton(foreground),
               ],
             ),
+            if (compact) _soloButton(foreground),
             // Per-card level, only offered while the layer sounds.
             if (active)
               SizedBox(
@@ -3733,4 +3724,17 @@ class _TrackCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _soloButton(Color foreground) => IconButton(
+        tooltip: soloed ? 'Unsolo' : 'Solo',
+        onPressed: onSolo,
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        icon: Icon(
+          Icons.headphones,
+          size: 18,
+          color: soloed ? Colors.amber : foreground,
+        ),
+      );
 }
