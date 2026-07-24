@@ -29,6 +29,8 @@ import 'package:comet_beat/core/audio/loop_instrument_render.dart'
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/audio/tracker_instrument_codec.dart'
+    show instrumentFromJson, instrumentToJson, isSerializableInstrument;
 import 'package:comet_beat/core/audio/wav_io.dart';
 
 /// An optional master send effect on the whole Loop Mixer output.
@@ -349,6 +351,7 @@ class GrooveSpec {
     this.userInstrument,
     this.beatRows,
     this.trackOverrides,
+    this.trackVoices,
   });
 
   final Set<String> enabled;
@@ -387,6 +390,10 @@ class GrooveSpec {
   /// save slots and share tokens just like the captured user tracks.
   final Map<String, List<PatternCell>>? trackOverrides;
 
+  /// Serializable per-track instrument overrides. SoundFont references are
+  /// intentionally omitted because their source file is not embedded here.
+  final Map<String, TrackerInstrument>? trackVoices;
+
   factory GrooveSpec.fromJson(Map<String, dynamic> json) => GrooveSpec(
         enabled: {...(json['e'] as List? ?? const []).cast<String>()},
         variants: {
@@ -419,6 +426,7 @@ class GrooveSpec {
             json['u'] is Map ? (json['u'] as Map)['i'] as String? : null,
         beatRows: _beatRowsFromJson(json['b']),
         trackOverrides: _trackOverridesFromJson(json['o']),
+        trackVoices: _trackVoicesFromJson(json['iv']),
       );
 
   /// Compact json (defaults omitted) — the share token payload.
@@ -456,6 +464,11 @@ class GrooveSpec {
           'o': {
             for (final id in trackOverrides!.keys.toList()..sort())
               id: _cellsToJson(trackOverrides![id]!),
+          },
+        if (trackVoices != null && trackVoices!.isNotEmpty)
+          'iv': {
+            for (final id in trackVoices!.keys.toList()..sort())
+              id: instrumentToJson(trackVoices![id]!),
           },
       };
 
@@ -503,6 +516,23 @@ Map<String, List<PatternCell>>? _trackOverridesFromJson(dynamic json) {
     if (cells != null) overrides[key] = cells;
   }
   return overrides.isEmpty ? null : overrides;
+}
+
+/// Parses embedded track voices defensively. Unsupported or malformed voices
+/// are skipped; a share token must remain usable even if it came from a newer
+/// app version with an instrument type this build cannot decode.
+Map<String, TrackerInstrument>? _trackVoicesFromJson(dynamic json) {
+  if (json is! Map) return null;
+  final voices = <String, TrackerInstrument>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    if (key is! String || key.isEmpty || value is! Map) continue;
+    try {
+      voices[key] = instrumentFromJson(value.cast<String, dynamic>());
+    } catch (_) {
+      // Ignore one unavailable voice rather than rejecting the whole groove.
+    }
+  }
+  return voices.isEmpty ? null : voices;
 }
 
 /// Parses beat rows from token json; null on any structural violation.
@@ -1341,6 +1371,10 @@ class LoopEngine {
           for (final entry in _cellOverrides.entries)
             entry.key: List<PatternCell>.of(entry.value),
         },
+        trackVoices: {
+          for (final entry in _trackVoices.entries)
+            if (isSerializableInstrument(entry.value)) entry.key: entry.value,
+        },
       );
 
   /// Restores a snapshot (unknown track ids are dropped defensively).
@@ -1377,6 +1411,14 @@ class LoopEngine {
               entry.key != userTrackId &&
               entry.key != beatTrackId)
             entry.key: List<PatternCell>.of(entry.value),
+      });
+    _trackVoices
+      ..clear()
+      ..addAll({
+        for (final entry in next.trackVoices?.entries ??
+            const <MapEntry<String, TrackerInstrument>>[])
+          if (known.contains(entry.key) && entry.key != beatTrackId)
+            entry.key: entry.value,
       });
     enabled
       ..clear()

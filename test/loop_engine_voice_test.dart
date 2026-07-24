@@ -45,4 +45,25 @@ void main() {
     engine.setTrackVoice('drums', _voice());
     expect(engine.renderLoop(), before);
   });
+
+  test('serializable track voices survive a groove share roundtrip', () {
+    final engine = LoopEngine()
+      ..toggle('bass')
+      ..setTrackVoice('bass', _voice());
+
+    final decoded = decodeGrooveToken(encodeGrooveToken(engine.spec));
+    expect(decoded?.trackVoices?['bass'], isNotNull);
+
+    final restored = LoopEngine()..applySpec(decoded!);
+    expect(restored.trackVoice('bass'), isNotNull);
+    final originalPcm = Int16List.sublistView(engine.renderLoop(), 44);
+    final restoredPcm = Int16List.sublistView(restored.renderLoop(), 44);
+    expect(restoredPcm.length, originalPcm.length);
+    var maxError = 0;
+    for (var i = 0; i < originalPcm.length; i++) {
+      final error = (originalPcm[i] - restoredPcm[i]).abs();
+      if (error > maxError) maxError = error;
+    }
+    expect(maxError, lessThanOrEqualTo(2));
+  });
 }
