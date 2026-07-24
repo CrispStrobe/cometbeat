@@ -2625,6 +2625,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// the musical phase: the new mix starts exactly where the clock says the
   /// groove is, so the beat never resets when something changes.
   void _syncPlayback() {
+    if (_soloTrack case final id?) {
+      // Editors and capture callbacks can add tracks directly to the engine;
+      // reassert solo at the shared audio boundary.
+      _engine.enabled
+        ..clear()
+        ..add(id);
+    }
     // AEC jam owns audio: a live edit (variant/level/swing) re-feeds the
     // reference scheduler; the loop player stays silent until jam ends.
     if (_jamAec != null) {
