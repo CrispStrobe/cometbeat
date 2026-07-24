@@ -10,7 +10,7 @@
 // every 4th loop, applied at the loop seam.
 //
 // Audio: LoopEngine mixes the enabled tracks offline into ONE looping WAV
-// (sample-accurate sync for free) played on a dedicated LoopPlayerService.
+// (sample-accurate sync for free) played on a dedicated GaplessLoopPlayer.
 // The screen owns the musical clock (a Stopwatch); user changes swap the
 // fresh mix at the clock's phase (`play(position: …)`), so layers and feel
 // change without the bar ever restarting. Seam-timed changes (the fill) are
@@ -50,7 +50,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
-import 'package:comet_beat/core/services/loop_player_service.dart';
+import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/custom_progressions.dart';
@@ -309,7 +309,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     with SingleTickerProviderStateMixin
     implements LoopMixerTester {
   final _engine = LoopEngine();
-  final _loop = LoopPlayerService();
+  final _loop = GaplessLoopPlayer();
 
   /// The groove's musical clock: playback phase is derived from it, never
   /// from the player, so swaps can re-enter the loop in phase.
