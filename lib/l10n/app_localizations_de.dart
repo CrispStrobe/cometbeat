@@ -224,6 +224,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopOpen => 'Datei öffnen…';
 
   @override
+  String get workshopLoadFromLibrary => 'Aus Musikbibliothek laden';
+
+  @override
   String get workshopExport => 'Exportieren…';
 
   @override
@@ -2436,6 +2439,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get catalogKindModules => 'Module';
+
+  @override
+  String get catalogKindSongs => 'Lieder';
 
   @override
   String get catalogLicenseAll => 'Alle Lizenzen';

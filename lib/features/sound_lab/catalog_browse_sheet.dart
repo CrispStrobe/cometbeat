@@ -616,7 +616,7 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
               kindChip(_Kind.instrument, l10n.catalogKindInstruments),
               kindChip(_Kind.sample, l10n.catalogKindSamples),
               kindChip(_Kind.module, l10n.catalogKindModules),
-              kindChip(_Kind.score, l10n.workshopModeScore),
+              kindChip(_Kind.score, l10n.catalogKindSongs),
             ],
           ),
         ),

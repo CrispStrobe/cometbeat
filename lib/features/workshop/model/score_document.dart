@@ -1157,7 +1157,7 @@ class ScoreDocument {
   /// Still dropped, because the flat element stream cannot represent them:
   /// voices 2–4. Those are unblocked by the measure-spine work, not here —
   /// see docs/WORKSHOP_PARITY.md.
-  void loadScore(Score score) {
+  void loadScore(Score score, {Clef? clefOverride}) {
     _snapshot();
     _v1.clear();
     _v2.clear();
@@ -1175,7 +1175,7 @@ class ScoreDocument {
     _navigation.clear();
     _tuplets.clear();
     _inlineClefs.clear();
-    clef = score.clef;
+    clef = clefOverride ?? score.clef;
     keySignature = score.keySignature;
     timeSignature = score.timeSignature ?? TimeSignature.fourFour;
     tempo = score.tempo;
