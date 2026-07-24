@@ -193,9 +193,15 @@ void main() {
     expect(game.enabledTracks, {'melody'});
     expect(game.isPlaying, isFalse);
 
+    // An edit while paused updates the document but must not restart audio.
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, {'melody', 'bass'});
+    expect(game.isPlaying, isFalse);
+
     game.pauseOrResume();
     await tester.pump();
-    expect(game.enabledTracks, {'melody'});
+    expect(game.enabledTracks, {'melody', 'bass'});
     expect(game.isPlaying, isTrue);
   });
 
