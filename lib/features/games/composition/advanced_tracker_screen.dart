@@ -89,6 +89,7 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
+import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/games/composition/instrument_editor.dart';
@@ -339,6 +340,9 @@ abstract interface class AdvancedTrackerTester {
   /// Import a Humdrum **kern string as a new tracker song (the multi-part path
   /// the file picker uses, minus the picker).
   void debugImportKern(String kern);
+
+  /// Import a decoded score through the shared music picker bridge.
+  void debugImportMusic(MultiPartScore score);
 
   /// Export the whole song as a module file of [format] ('mod'/'xm'/'s3m'/'it').
   Uint8List? debugExportModule(String format);
@@ -2244,7 +2248,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             onPressed: () async {
-              final newInst = await showInstrumentEditor(context, ch.instrument);
+              final newInst =
+                  await showInstrumentEditor(context, ch.instrument);
               if (newInst != null && mounted) {
                 // Update the instrument in the song and rebuild
                 setState(() => _song.setChannelInstrument(c, newInst));
@@ -2510,6 +2515,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     final saved = await showMyInstrumentsSheet(
       context,
       includeBuiltIns: true,
+      onMusicSelected: (score) async => _replaceSong(_songFromMultiPart(score)),
       onModuleSelected: (bytes) async => importModuleBytes(bytes),
       onSoundFontSelected: (instrument) async => _addPoolInstrument(instrument),
     );
@@ -3751,6 +3757,23 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     }
   }
 
+  /// One entry point for built-in songs, saved songs, local files, and the
+  /// online catalog. All sources return a decoded score and use the same bridge.
+  Future<void> _addMusic() async {
+    try {
+      final score = await showMusicPicker(context);
+      if (!mounted || score == null) return;
+      _replaceSong(_songFromMultiPart(score));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.musicPickerFailed),
+        ),
+      );
+    }
+  }
+
   /// The WHOLE SONG's pitched channels as one multi-part score: each channel's
   /// cells are concatenated across the order list (not just the current pattern
   /// — that was the "place some notes first" bug when notes lived on another
@@ -3837,6 +3860,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   void debugImportKern(String kern) =>
       _replaceSong(_songFromMultiPart(multiPartScoreFromKern(kern)));
+
+  @override
+  void debugImportMusic(MultiPartScore score) =>
+      _replaceSong(_songFromMultiPart(score));
 
   @override
   Uint8List? debugExportModule(String format) {
@@ -4199,6 +4226,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               switch (v) {
+                case 'addMusic':
+                  _addMusic();
                 case 'import':
                   _importModule();
                 case 'importScore':
@@ -4241,6 +4270,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             },
             itemBuilder: (ctx) => [
               _menuSection(l10n.trackerMenuOpenLibrary),
+              _menuRow(
+                'addMusic',
+                Icons.library_music_outlined,
+                l10n.musicPickerTitle,
+              ),
               _menuRow('import', Icons.library_music, l10n.trackerImportMod),
               _menuRow(
                 'importScore',
@@ -5077,8 +5111,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           ),
           // VU meter — lights up with the channel's live level during playback.
           _ChannelMeter(
-            levels: _levels, 
-            channel: c, 
+            levels: _levels,
+            channel: c,
             muted: muted,
             progress: _progress,
             pcm: _song.engine.getStem(c),

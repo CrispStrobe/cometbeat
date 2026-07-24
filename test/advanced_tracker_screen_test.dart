@@ -18,9 +18,10 @@ import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/games/songs/song_book.dart' show kSongs;
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:crisp_notation/crisp_notation.dart'
-    show multiPartScoreFromMusicXml;
+    show MultiPartScore, multiPartScoreFromMusicXml;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -38,6 +39,18 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     BeatBridge.instance.clear();
     MelodyBridge.instance.clear();
+  });
+
+  testWidgets('imports a built-in song through the shared music bridge',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+
+    game.debugImportMusic(MultiPartScore([kSongs.first.score]));
+    await tester.pump();
+
+    expect(game.noteCount, greaterThan(0));
+    expect(game.channelCount, 1);
   });
 
   testWidgets('shares the melody channel out and loads a shared tune in',
