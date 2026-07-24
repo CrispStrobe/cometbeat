@@ -245,10 +245,12 @@ class ModuleDoc {
     this.title = '',
     this.xmTrackerName = '',
     this.xmVersion = 0x0104,
+    this.xmRestart = 0,
     this.channelCount = 0,
     this.initialSpeed = 6,
     this.initialTempo = 125,
     this.globalVolume = 128,
+    this.itCreatedWith = 0x0214,
     this.s3mMasterVolume = 48,
     this.s3mUltraClick = 0,
     this.s3mDefaultPan = 0,
@@ -264,6 +266,7 @@ class ModuleDoc {
     this.itInstrumentHeaders = const [],
     this.itInstruments = const [],
     this.xmInstruments = const [],
+    this.xmPatterns = const [],
     required this.sourceFormat,
     required this.order,
     required this.patterns,
@@ -273,11 +276,13 @@ class ModuleDoc {
   final String title;
   final String xmTrackerName;
   final int xmVersion;
+  final int xmRestart;
   final int channelCount;
   final int initialSpeed, initialTempo;
 
   /// Container global volume normalized to the IT 0..128 scale.
   final int globalVolume;
+  final int itCreatedWith;
   final int s3mMasterVolume, s3mUltraClick, s3mDefaultPan;
   final List<int> s3mChannelSettings;
   final int s3mSampleFormat;
@@ -297,6 +302,7 @@ class ModuleDoc {
   /// Native XM instruments retained for lossless XM -> XM conversion. The
   /// neutral sample list remains available for cross-format conversion.
   final List<XmInstrument> xmInstruments;
+  final List<XmPattern> xmPatterns;
   final ModuleFormat sourceFormat;
   final List<int> order; // pattern indices
   final List<DocPattern> patterns;

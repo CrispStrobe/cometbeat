@@ -97,7 +97,7 @@ Uint8List writeIt(ItModule module) {
   u16(module.instruments.length); // 0x22 InsNum
   u16(smpNum); // 0x24 SmpNum
   u16(patNum); // 0x26 PatNum
-  u16(0x0214); // 0x28 Cwt/v
+  u16(module.createdWith); // 0x28 Cwt/v
   u16(0x0200); // 0x2A Cmwt
   u16(module.flags | (module.instruments.isNotEmpty ? 0x0004 : 0)); // flags
   u16(0); // 0x2E Special

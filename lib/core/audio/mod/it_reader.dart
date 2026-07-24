@@ -170,6 +170,7 @@ ItModule parseIt(Uint8List bytes) {
     initialSpeed: initialSpeed,
     initialTempo: initialTempo,
     globalVolume: globalVolume,
+    createdWith: cwtv,
     flags: flags,
     mixVolume: u8(0x31),
     panSeparation: u8(0x34),

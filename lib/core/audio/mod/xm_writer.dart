@@ -133,7 +133,7 @@ Uint8List writeXm(XmModule module) {
 
   final songLength = module.order.length > 256 ? 256 : module.order.length;
   hb.setUint16(0x40, songLength, Endian.little);
-  hb.setUint16(0x42, 0, Endian.little); // restart
+  hb.setUint16(0x42, module.restart, Endian.little); // restart
   hb.setUint16(0x44, module.channelCount, Endian.little);
   hb.setUint16(0x46, module.patterns.length, Endian.little);
   hb.setUint16(0x48, module.instruments.length, Endian.little);
