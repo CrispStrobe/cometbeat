@@ -433,6 +433,10 @@ void main() {
       _editor(tester).debugMusicXmlExport(),
       contains('<part-name>Morning Demo</part-name>'),
     );
+    expect(
+      _editor(tester).debugMusicXmlExport(),
+      contains('<work><work-title>Morning Demo</work-title></work>'),
+    );
   });
 
   testWidgets('save uses the editor title without asking for it again',
