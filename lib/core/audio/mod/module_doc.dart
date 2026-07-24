@@ -94,6 +94,40 @@ class DocSample {
   bool get isEmpty => pcm.isEmpty;
 }
 
+/// A tracker instrument independent of its sample storage. IT's NNA/DCT/DCA,
+/// fadeout, tuning, gain, randomization, and keymap live here rather than on
+/// a flattened sample. Envelopes use the shared [DocEnvelope] representation.
+class DocInstrument {
+  const DocInstrument({
+    this.name = '',
+    this.nna = 0,
+    this.dct = 0,
+    this.dca = 0,
+    this.fadeout = 0,
+    this.pps = 0,
+    this.ppc = 0,
+    this.globalVolume = 128,
+    this.defaultPan = 32,
+    this.randomVolume = 0,
+    this.randomPan = 0,
+    this.keymap = const [],
+    this.noteMap = const [],
+    this.volumeEnvelope = const DocEnvelope(),
+    this.panEnvelope = const DocEnvelope(),
+    this.pitchEnvelope = const DocEnvelope(),
+    this.rawHeader = const [],
+  });
+
+  final String name;
+  final int nna, dct, dca, fadeout, pps, ppc;
+  final int globalVolume, defaultPan, randomVolume, randomPan;
+  final List<int> keymap, noteMap;
+  final DocEnvelope volumeEnvelope, panEnvelope, pitchEnvelope;
+
+  /// Compatibility bytes for fields not yet interpreted by the neutral model.
+  final List<int> rawHeader;
+}
+
 /// One cell in the neutral model. Absent fields use sentinels.
 class DocCell {
   const DocCell({
@@ -208,6 +242,7 @@ class ModuleDoc {
     this.channelPans = const [],
     this.channelVolumes = const [],
     this.itInstrumentHeaders = const [],
+    this.itInstruments = const [],
     required this.sourceFormat,
     required this.order,
     required this.patterns,
@@ -227,6 +262,7 @@ class ModuleDoc {
 
   /// Original IT instrument headers for lossless IT -> IT conversion.
   final List<List<int>> itInstrumentHeaders;
+  final List<DocInstrument> itInstruments;
   final ModuleFormat sourceFormat;
   final List<int> order; // pattern indices
   final List<DocPattern> patterns;

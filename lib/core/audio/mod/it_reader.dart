@@ -194,9 +194,65 @@ ItInstrument _parseInstrument(Uint8List bytes, int base) {
   final rawHeader = base >= 0 && base + 554 <= bytes.length
       ? List<int>.from(bytes.sublist(base, base + 554))
       : const <int>[];
+  int u8(int offset) =>
+      base >= 0 && base + offset < bytes.length ? bytes[base + offset] : 0;
+  int u16(int offset) => base >= 0 && base + offset + 2 <= bytes.length
+      ? bytes[base + offset] | (bytes[base + offset + 1] << 8)
+      : 0;
+  int signed8(int offset) {
+    final value = u8(offset);
+    return value >= 128 ? value - 256 : value;
+  }
+
+  String name() {
+    final codes = <int>[];
+    for (var i = 0; i < 26; i++) {
+      final value = u8(0x1C + i);
+      if (value == 0) break;
+      codes.add(value);
+    }
+    return String.fromCharCodes(codes).trim();
+  }
+
+  ItEnvelope envelope(int offset, {required bool signedValue}) {
+    final flags = u8(offset);
+    final count = u8(offset + 1).clamp(0, 25);
+    final points = <(int, int)>[];
+    for (var i = 0; i < count; i++) {
+      final p = base + offset + 6 + i * 3;
+      if (p + 3 > bytes.length) break;
+      final rawValue = bytes[p];
+      final value = signedValue && rawValue >= 128 ? rawValue - 256 : rawValue;
+      final tick = bytes[p + 1] | (bytes[p + 2] << 8);
+      points.add((tick, value));
+    }
+    return ItEnvelope(
+      points: points,
+      enabled: (flags & 1) != 0,
+      loopStart: u8(offset + 2),
+      loopEnd: u8(offset + 3),
+      sustainStart: u8(offset + 4),
+      sustainEnd: u8(offset + 5),
+    );
+  }
+
   return ItInstrument(
     keymap: keymap,
     noteMap: noteMap,
+    name: name(),
+    nna: u8(0x11),
+    dct: u8(0x12),
+    dca: u8(0x13),
+    fadeout: u16(0x14),
+    pps: signed8(0x16),
+    ppc: signed8(0x17),
+    globalVolume: u8(0x18),
+    defaultPan: u8(0x19),
+    randomVolume: u8(0x1A),
+    randomPan: u8(0x1B),
+    volumeEnvelope: envelope(0x130, signedValue: false),
+    panEnvelope: envelope(0x182, signedValue: true),
+    pitchEnvelope: envelope(0x1D4, signedValue: true),
     rawHeader: rawHeader,
   );
 }

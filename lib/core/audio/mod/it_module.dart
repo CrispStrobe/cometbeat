@@ -148,6 +148,21 @@ class ItCell {
       Object.hash(note, instrument, volpan, command, commandValue);
 }
 
+class ItEnvelope {
+  const ItEnvelope({
+    this.points = const [],
+    this.enabled = false,
+    this.loopStart,
+    this.loopEnd,
+    this.sustainStart,
+    this.sustainEnd,
+  });
+
+  final List<(int, int)> points; // (tick, value)
+  final bool enabled;
+  final int? loopStart, loopEnd, sustainStart, sustainEnd;
+}
+
 /// A pattern: [numRows] rows × [channelCount] cells (padded to the highest
 /// channel index actually used, +1).
 class ItPattern {
@@ -165,6 +180,20 @@ class ItInstrument {
   const ItInstrument({
     required this.keymap,
     required this.noteMap,
+    this.name = '',
+    this.nna = 0,
+    this.dct = 0,
+    this.dca = 0,
+    this.fadeout = 0,
+    this.pps = 0,
+    this.ppc = 0,
+    this.globalVolume = 128,
+    this.defaultPan = 32,
+    this.randomVolume = 0,
+    this.randomPan = 0,
+    this.volumeEnvelope = const ItEnvelope(),
+    this.panEnvelope = const ItEnvelope(),
+    this.pitchEnvelope = const ItEnvelope(),
     this.rawHeader = const [],
   });
 
@@ -173,6 +202,10 @@ class ItInstrument {
 
   /// 120 entries: the note actually played for each input note (usually 1:1).
   final List<int> noteMap;
+  final String name;
+  final int nna, dct, dca, fadeout, pps, ppc;
+  final int globalVolume, defaultPan, randomVolume, randomPan;
+  final ItEnvelope volumeEnvelope, panEnvelope, pitchEnvelope;
 
   /// Original 554-byte IMPI header, when available. This preserves IT
   /// envelopes and instrument behavior for same-format roundtrips.

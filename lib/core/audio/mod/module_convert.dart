@@ -334,6 +334,14 @@ DocEnvelope _docEnvFromXm(XmEnvelope e) => DocEnvelope(
       enabled: e.enabled,
     );
 
+DocEnvelope _docEnvFromIt(ItEnvelope e) => DocEnvelope(
+      points: List<(int, int)>.from(e.points),
+      enabled: e.enabled,
+      loopStart: e.loopStart,
+      loopEnd: e.loopEnd,
+      sustain: e.sustainStart,
+    );
+
 XmEnvelope _xmEnvFromDoc(DocEnvelope e) => XmEnvelope(
       points: e.points,
       sustain: e.sustain,
@@ -561,6 +569,28 @@ ModuleDoc docFromIt(ItModule m) {
     itInstrumentHeaders: [
       for (final instrument in m.instruments)
         List<int>.from(instrument.rawHeader),
+    ],
+    itInstruments: [
+      for (final instrument in m.instruments)
+        DocInstrument(
+          name: instrument.name,
+          nna: instrument.nna,
+          dct: instrument.dct,
+          dca: instrument.dca,
+          fadeout: instrument.fadeout,
+          pps: instrument.pps,
+          ppc: instrument.ppc,
+          globalVolume: instrument.globalVolume,
+          defaultPan: instrument.defaultPan,
+          randomVolume: instrument.randomVolume,
+          randomPan: instrument.randomPan,
+          keymap: List<int>.from(instrument.keymap),
+          noteMap: List<int>.from(instrument.noteMap),
+          volumeEnvelope: _docEnvFromIt(instrument.volumeEnvelope),
+          panEnvelope: _docEnvFromIt(instrument.panEnvelope),
+          pitchEnvelope: _docEnvFromIt(instrument.pitchEnvelope),
+          rawHeader: List<int>.from(instrument.rawHeader),
+        ),
     ],
     sourceFormat: ModuleFormat.it,
     order: List<int>.from(m.order),
@@ -962,6 +992,97 @@ ItCell _itCellFrom(DocCell c, {required bool preserveNative}) {
   );
 }
 
+void _writeItEnvelope(
+  List<int> raw,
+  int offset,
+  DocEnvelope envelope, {
+  required bool signedValue,
+}) {
+  var flags = envelope.enabled ? 1 : 0;
+  if (envelope.loopStart != null && envelope.loopEnd != null) flags |= 2;
+  if (envelope.sustain != null) flags |= 4;
+  raw[offset] = flags;
+  raw[offset + 1] = envelope.points.length.clamp(0, 25);
+  raw[offset + 2] = (envelope.loopStart ?? 0).clamp(0, 24);
+  raw[offset + 3] = (envelope.loopEnd ?? 0).clamp(0, 24);
+  raw[offset + 4] = (envelope.sustain ?? 0).clamp(0, 24);
+  raw[offset + 5] = (envelope.sustain ?? 0).clamp(0, 24);
+  for (var i = 0; i < envelope.points.length && i < 25; i++) {
+    final p = offset + 6 + i * 3;
+    final (tick, pointValue) = envelope.points[i];
+    final value =
+        signedValue ? pointValue.clamp(-32, 32) : pointValue.clamp(0, 64);
+    raw[p] = value & 0xFF;
+    raw[p + 1] = tick.clamp(0, 9999) & 0xFF;
+    raw[p + 2] = (tick.clamp(0, 9999) >> 8) & 0xFF;
+  }
+}
+
+ItInstrument _itInstrumentFromDoc(DocInstrument d, List<int> rawHeader) {
+  final raw = rawHeader.length >= 554
+      ? List<int>.from(rawHeader.take(554))
+      : List<int>.filled(554, 0);
+  if (rawHeader.length < 554) {
+    raw.setAll(0, const [0x49, 0x4D, 0x50, 0x49]);
+    void u16(int offset, int value) {
+      raw[offset] = value & 0xFF;
+      raw[offset + 1] = (value >> 8) & 0xFF;
+    }
+
+    raw[0x11] = d.nna.clamp(0, 255);
+    raw[0x12] = d.dct.clamp(0, 255);
+    raw[0x13] = d.dca.clamp(0, 255);
+    u16(0x14, d.fadeout.clamp(0, 65535));
+    raw[0x16] = d.pps & 0xFF;
+    raw[0x17] = d.ppc & 0xFF;
+    raw[0x18] = d.globalVolume.clamp(0, 255);
+    raw[0x19] = d.defaultPan.clamp(0, 255);
+    raw[0x1A] = d.randomVolume.clamp(0, 255);
+    raw[0x1B] = d.randomPan.clamp(0, 255);
+    final name = d.name.codeUnits;
+    for (var i = 0; i < 26 && i < name.length; i++) {
+      raw[0x1C + i] = name[i] & 0xFF;
+    }
+  }
+  raw[0x11] = d.nna.clamp(0, 255);
+  raw[0x12] = d.dct.clamp(0, 255);
+  raw[0x13] = d.dca.clamp(0, 255);
+  raw[0x14] = d.fadeout.clamp(0, 65535) & 0xFF;
+  raw[0x15] = (d.fadeout.clamp(0, 65535) >> 8) & 0xFF;
+  raw[0x16] = d.pps & 0xFF;
+  raw[0x17] = d.ppc & 0xFF;
+  raw[0x18] = d.globalVolume.clamp(0, 255);
+  raw[0x19] = d.defaultPan.clamp(0, 255);
+  raw[0x1A] = d.randomVolume.clamp(0, 255);
+  raw[0x1B] = d.randomPan.clamp(0, 255);
+  _writeItEnvelope(raw, 0x130, d.volumeEnvelope, signedValue: false);
+  _writeItEnvelope(raw, 0x182, d.panEnvelope, signedValue: true);
+  _writeItEnvelope(raw, 0x1D4, d.pitchEnvelope, signedValue: true);
+  final keymap = d.keymap.isEmpty ? List<int>.filled(120, 0) : d.keymap;
+  final noteMap =
+      d.noteMap.isEmpty ? [for (var i = 0; i < 120; i++) i] : d.noteMap;
+  for (var i = 0; i < 120; i++) {
+    raw[0x40 + i * 2] = noteMap[i.clamp(0, noteMap.length - 1)] & 0xFF;
+    raw[0x41 + i * 2] = keymap[i.clamp(0, keymap.length - 1)] & 0xFF;
+  }
+  return ItInstrument(
+    keymap: List<int>.from(keymap),
+    noteMap: List<int>.from(noteMap),
+    name: d.name,
+    nna: d.nna,
+    dct: d.dct,
+    dca: d.dca,
+    fadeout: d.fadeout,
+    pps: d.pps,
+    ppc: d.ppc,
+    globalVolume: d.globalVolume,
+    defaultPan: d.defaultPan,
+    randomVolume: d.randomVolume,
+    randomPan: d.randomPan,
+    rawHeader: raw,
+  );
+}
+
 ItModule docToIt(ModuleDoc doc) {
   final samples = <ItSample>[];
   for (final ds in doc.samples) {
@@ -1023,12 +1144,20 @@ ItModule docToIt(ModuleDoc doc) {
         ? List<int>.from(doc.channelVolumes)
         : const [],
     instruments: [
-      for (final header in doc.itInstrumentHeaders)
-        ItInstrument(
-          keymap: const [],
-          noteMap: const [],
-          rawHeader: List<int>.from(header),
+      for (var i = 0; i < doc.itInstruments.length; i++)
+        _itInstrumentFromDoc(
+          doc.itInstruments[i],
+          i < doc.itInstrumentHeaders.length
+              ? doc.itInstrumentHeaders[i]
+              : const [],
         ),
+      if (doc.itInstruments.isEmpty)
+        for (final header in doc.itInstrumentHeaders)
+          ItInstrument(
+            keymap: const [],
+            noteMap: const [],
+            rawHeader: List<int>.from(header),
+          ),
     ],
     order: List<int>.from(doc.order),
     patterns: patterns,
