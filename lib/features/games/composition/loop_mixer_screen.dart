@@ -2107,6 +2107,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   }
 
   void _toggleSolo(String id) {
+    if (!_engine.tracks.any((track) => track.id == id)) return;
     setState(() {
       if (_soloTrack == id) {
         _engine.enabled

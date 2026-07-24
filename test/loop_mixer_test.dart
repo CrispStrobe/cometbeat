@@ -243,6 +243,17 @@ void main() {
     expect(game.enabledTracks, isEmpty);
   });
 
+  testWidgets('solo ignores an unknown track id', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    game.toggleSolo('not-a-track');
+    await tester.pump();
+
+    expect(game.soloTrack, isNull);
+    expect(game.enabledTracks, isEmpty);
+  });
+
   testWidgets('BPM slider retunes the groove', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
