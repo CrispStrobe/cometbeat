@@ -359,6 +359,29 @@ void main() {
     expect(decodeGrooveToken('KU1.aGVsbG8'), isNull, reason: 'not json');
   });
 
+  test('share tokens preserve symbolic edits to built-in pitched tracks', () {
+    final edited = <PatternCell>[
+      (midis: const [60], steps: 8),
+      (midis: const [62], steps: 8),
+    ];
+    final engine = LoopEngine()
+      ..setTrackCells('melody', edited)
+      ..enabled.add('melody');
+
+    final token = encodeGrooveToken(engine.spec);
+    final decoded = decodeGrooveToken(token);
+    expect(decoded, isNotNull);
+    expect(decoded!.trackOverrides, isNotNull);
+    expect(decoded.trackOverrides!['melody']!.map((c) => c.midis).toList(), [
+      [60],
+      [62],
+    ]);
+
+    final restored = LoopEngine()..applySpec(decoded);
+    expect(restored.trackCellsOverride('melody'), isNotNull);
+    expect(restored.renderLoop(), equals(engine.renderLoop()));
+  });
+
   // Regression: a share token is user-pasteable free text, and every spec field
   // is validated on the way in EXCEPT tempo, which passed through raw into
   // `beatMs = 60000 ~/ tempoBpm`. These tokens are all structurally valid, so

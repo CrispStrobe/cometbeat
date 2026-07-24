@@ -348,6 +348,7 @@ class GrooveSpec {
     this.userCells,
     this.userInstrument,
     this.beatRows,
+    this.trackOverrides,
   });
 
   final Set<String> enabled;
@@ -382,6 +383,10 @@ class GrooveSpec {
   /// by drum name — a share token carries the captured beat too.
   final Map<Drum, List<bool>>? beatRows;
 
+  /// Symbolic edits replacing built-in pitched tracks. These must travel with
+  /// save slots and share tokens just like the captured user tracks.
+  final Map<String, List<PatternCell>>? trackOverrides;
+
   factory GrooveSpec.fromJson(Map<String, dynamic> json) => GrooveSpec(
         enabled: {...(json['e'] as List? ?? const []).cast<String>()},
         variants: {
@@ -413,6 +418,7 @@ class GrooveSpec {
         userInstrument:
             json['u'] is Map ? (json['u'] as Map)['i'] as String? : null,
         beatRows: _beatRowsFromJson(json['b']),
+        trackOverrides: _trackOverridesFromJson(json['o']),
       );
 
   /// Compact json (defaults omitted) — the share token payload.
@@ -445,6 +451,11 @@ class GrooveSpec {
         if (beatRows != null)
           'b': {
             for (final e in beatRows!.entries) e.key.name: rowToString(e.value),
+          },
+        if (trackOverrides != null && trackOverrides!.isNotEmpty)
+          'o': {
+            for (final id in trackOverrides!.keys.toList()..sort())
+              id: _cellsToJson(trackOverrides![id]!),
           },
       };
 
@@ -479,6 +490,19 @@ List<PatternCell>? _cellsFromJson(dynamic json) {
     total += steps;
   }
   return total == kPatternSteps ? cells : null;
+}
+
+/// Parses built-in track overrides; malformed individual entries are ignored
+/// so a damaged optional edit cannot invalidate an otherwise usable token.
+Map<String, List<PatternCell>>? _trackOverridesFromJson(dynamic json) {
+  if (json is! Map) return null;
+  final overrides = <String, List<PatternCell>>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    if (key is! String || key.isEmpty) continue;
+    final cells = _cellsFromJson(value);
+    if (cells != null) overrides[key] = cells;
+  }
+  return overrides.isEmpty ? null : overrides;
 }
 
 /// Parses beat rows from token json; null on any structural violation.
@@ -1313,6 +1337,10 @@ class LoopEngine {
             ? null
             : (_userTrack!.variants.first as MelodicPattern).instrument.name,
         beatRows: (_userBeatTrack?.variants.first as DrumRowsPattern?)?.rows,
+        trackOverrides: {
+          for (final entry in _cellOverrides.entries)
+            entry.key: List<PatternCell>.of(entry.value),
+        },
       );
 
   /// Restores a snapshot (unknown track ids are dropped defensively).
@@ -1339,6 +1367,17 @@ class LoopEngine {
       _userBeatTrack = null;
     }
     final known = tracks.map((t) => t.id).toSet();
+    final overrideEntries = next.trackOverrides?.entries ??
+        const <MapEntry<String, List<PatternCell>>>[];
+    _cellOverrides
+      ..clear()
+      ..addAll({
+        for (final entry in overrideEntries)
+          if (known.contains(entry.key) &&
+              entry.key != userTrackId &&
+              entry.key != beatTrackId)
+            entry.key: List<PatternCell>.of(entry.value),
+      });
     enabled
       ..clear()
       ..addAll(next.enabled.where(known.contains));
