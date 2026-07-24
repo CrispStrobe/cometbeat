@@ -2086,6 +2086,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   }
 
   void _toggle(String id) {
+    // Solo is an explicit isolation mode. Do not let a normal card tap mutate
+    // the saved mix underneath it; leaving solo restores that exact mix.
+    if (_soloTrack != null) return;
     // Quantized launch: while a groove is playing, arm the change and apply it
     // at the next seam instead of firing instantly.
     if (_quantize && _clock.isRunning && _engine.enabled.isNotEmpty) {
