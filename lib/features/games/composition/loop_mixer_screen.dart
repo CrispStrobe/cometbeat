@@ -133,6 +133,7 @@ class LoopMixerScreen extends StatefulWidget {
 @visibleForTesting
 abstract interface class LoopMixerTester {
   Set<String> get enabledTracks;
+  String? get soloTrack;
   bool get isPlaying;
   int get tempoBpm;
   double get swing;
@@ -141,6 +142,7 @@ abstract interface class LoopMixerTester {
   int variantOf(String id);
   double levelOf(String id);
   void toggleTrack(String id);
+  void toggleSolo(String id);
   void cycleTrackVariant(String id);
   void rollTrackVariant(String id);
   void setTrackLevel(String id, double level);
@@ -390,6 +392,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   Set<String> get enabledTracks => Set.unmodifiable(_engine.enabled);
   @override
+  String? get soloTrack => _soloTrack;
+  @override
   bool get isPlaying => _clock.isRunning;
   @override
   int get tempoBpm => _engine.tempoBpm;
@@ -405,6 +409,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   double levelOf(String id) => _engine.levels[id] ?? 1.0;
   @override
   void toggleTrack(String id) => _toggle(id);
+  @override
+  void toggleSolo(String id) => _toggleSolo(id);
   @override
   void cycleTrackVariant(String id) => _cycleVariant(id);
   @override
@@ -641,6 +647,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   // the next loop seam (it "arms") so layers always drop in on the beat.
   bool _quantize = false;
   final Set<String> _pendingLaunches = {};
+  String? _soloTrack;
+  Set<String>? _enabledBeforeSolo;
 
   // Section/scene grid (§G-1): 4 snapshot slots of the live layer set. Tap a
   // filled scene to relaunch it; a chain plays them in sequence at each seam.
@@ -1714,6 +1722,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         onCycleVariant: () => _cycleVariant(track.id),
         onRollVariant: () => _rollVariant(track.id),
         onLevel: (v) => _setLevel(track.id, v),
+        soloed: _soloTrack == track.id,
+        onSolo: () => _toggleSolo(track.id),
         voiced: _engine.trackVoice(track.id) != null,
         onVoice:
             _trackIsPitched(track) ? () => _pickVoice(l10n, track.id) : null,
@@ -2058,6 +2068,26 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       return;
     }
     setState(() => _engine.toggle(id));
+    _syncPlayback();
+    _checkCombo();
+  }
+
+  void _toggleSolo(String id) {
+    setState(() {
+      if (_soloTrack == id) {
+        _engine.enabled
+          ..clear()
+          ..addAll(_enabledBeforeSolo ?? const <String>{});
+        _soloTrack = null;
+        _enabledBeforeSolo = null;
+      } else {
+        _enabledBeforeSolo ??= Set<String>.from(_engine.enabled);
+        _engine.enabled
+          ..clear()
+          ..add(id);
+        _soloTrack = id;
+      }
+    });
     _syncPlayback();
     _checkCombo();
   }
@@ -3540,6 +3570,8 @@ class _TrackCard extends StatelessWidget {
     required this.onCycleVariant,
     required this.onRollVariant,
     required this.onLevel,
+    required this.onSolo,
+    required this.soloed,
     this.onVoice,
     this.voiced = false,
   });
@@ -3556,6 +3588,8 @@ class _TrackCard extends StatelessWidget {
   final VoidCallback onCycleVariant;
   final VoidCallback onRollVariant;
   final ValueChanged<double> onLevel;
+  final VoidCallback onSolo;
+  final bool soloed;
 
   /// Long-press a pitched track to voice it with a saved "My Instruments"
   /// sound (null for unpitched tracks — drums have no notes to voice).
@@ -3634,6 +3668,18 @@ class _TrackCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Icon(Icons.piano, size: 18, color: foreground),
                 ],
+                IconButton(
+                  tooltip: soloed ? 'Unsolo' : 'Solo',
+                  onPressed: onSolo,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(
+                    Icons.headphones,
+                    size: 18,
+                    color: soloed ? Colors.amber : foreground,
+                  ),
+                ),
               ],
             ),
             // Per-card level, only offered while the layer sounds.
