@@ -666,7 +666,9 @@ Float64List renderChannelPerNote(
       final capRow = startStep + sustainSteps; // Cut where the sustain ends
       final one = List<TrackerCell>.filled(rows, TrackerCell.empty)
         ..[startStep] = trigger;
-      if (capRow < rows) one[capRow] = TrackerCell.noteCut; // Trigger release in the rendering instrument
+      if (capRow < rows)
+        one[capRow] =
+            TrackerCell.noteCut; // Trigger release in the rendering instrument
       final buf = curInst.renderChannel(one, timing);
       final s = timing.stepStartSample(startStep);
       final endRow = startStep + steps;
@@ -2235,7 +2237,7 @@ void _renderNonAdditiveVariable(
     final sustainSteps = run.$2;
     final releaseSteps = run.$3;
     final steps = sustainSteps + releaseSteps;
-    
+
     final trigger = cells[startStep];
     if (trigger.instrument > 0 &&
         pool != null &&
@@ -2254,12 +2256,12 @@ void _renderNonAdditiveVariable(
             (runMs <= 0 ? 240 : (60000 / runMs).round()).clamp(1, 1 << 20);
         final noteTiming =
             TrackerTiming(tempoBpm: tempo, rows: steps, stepsPerBeat: steps);
-            
+
         final capRow = sustainSteps;
         final one = List<TrackerCell>.filled(steps, TrackerCell.empty)
           ..[0] = trigger;
         if (capRow < steps) one[capRow] = TrackerCell.noteCut;
-        
+
         final buf = curInst.renderChannel(one, noteTiming);
         final lim = min(runSamples, min(buf.length, stem.length - s));
         for (var i = 0; i < lim; i++) {

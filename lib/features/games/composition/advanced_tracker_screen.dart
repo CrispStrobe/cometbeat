@@ -71,8 +71,11 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/features/games/composition/instrument_editor.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
+import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
+import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
@@ -90,12 +93,8 @@ import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
-import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
-import 'package:comet_beat/features/games/composition/instrument_editor.dart';
-
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
-import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
@@ -2245,7 +2244,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             onPressed: () async {
               final newInst = await showInstrumentEditor(
-                context, 
+                context,
                 ch.instrument,
                 cells: _song.engine.channels[c].cells,
                 onCellsChanged: (cells) {
@@ -5086,8 +5085,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           ),
           // VU meter — lights up with the channel's live level during playback.
           _ChannelMeter(
-            levels: _levels, 
-            channel: c, 
+            levels: _levels,
+            channel: c,
             muted: muted,
             progress: _progress,
             pcm: _song.engine.getStem(c),

@@ -102,6 +102,26 @@ class TrackerCell {
     this.keyOff = false,
   });
 
+  TrackerCell copyWith({
+    int? midi,
+    double? volume,
+    TrackerEffect? effect,
+    int? fxCmd,
+    int? fxParam,
+    int? instrument,
+    bool? keyOff,
+  }) {
+    return TrackerCell(
+      midi: midi ?? this.midi,
+      volume: volume ?? this.volume,
+      effect: effect ?? this.effect,
+      fxCmd: fxCmd ?? this.fxCmd,
+      fxParam: fxParam ?? this.fxParam,
+      instrument: instrument ?? this.instrument,
+      keyOff: keyOff ?? this.keyOff,
+    );
+  }
+
   final int? midi;
   final double? volume;
 
@@ -142,6 +162,7 @@ class TrackerCell {
   bool get hasCommand => fxCmd != 0 || fxParam != 0;
 
   static const empty = TrackerCell();
+
   /// A Note Cut command that instructs the instrument to enter its release phase.
   static const noteCut = TrackerCell(keyOff: true);
   bool get isNoteCut => keyOff;
@@ -594,11 +615,16 @@ class SampleInstrument implements TrackerInstrument {
         final n = min(min(buf.length, runSamples), out.length - startSample);
         if (n > 0) {
           // Envelope only the played portion, triggering the release at the Note Cut
-          // (if present), otherwise sustaining until the next note chops it.
+          // (if present), otherwise fitting the release at the end of the run to declick.
+          final isTruncated = releaseSteps == 0;
+          final rSamples = (envelope.release * kSampleRate).round();
+          final effectiveSustain =
+              isTruncated ? max(0, n - rSamples) : sustainSamples;
+
           final voiced = applyEnvelope(
             Float64List.sublistView(buf, 0, n),
             envelope,
-            sustainSamples: sustainSamples,
+            sustainSamples: effectiveSustain,
           );
           // A per-cell volume column scales the note (null = full, unchanged).
           final vol = trigger.volume ?? 1.0;
@@ -669,7 +695,7 @@ class MultiSampleInstrument implements TrackerInstrument {
 
   @override
   final String id;
-  
+
   /// If true, notes are not choked by subsequent notes on the channel (drum kit mode).
   final bool polyphonic;
 
@@ -711,7 +737,7 @@ class MultiSampleInstrument implements TrackerInstrument {
           final dummyCells =
               List.generate(timing.rows, (i) => const TrackerCell());
           dummyCells[startStep] = cells[startStep];
-          
+
           if (!polyphonic) {
             if (startStep + sustainSteps < timing.rows) {
               // Properly trigger the release phase in the sub-instrument.

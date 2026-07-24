@@ -4,7 +4,9 @@ import 'package:comet_beat/core/audio/tracker_engine.dart' show TrackerCell;
 /// Syncs a Tracker channel's monophonic cells with a polyphonic Drumkit model.
 class DrumKitBridge {
   static Map<Drum, List<bool>> toDrumRows(List<TrackerCell> cells, int steps) {
-    final rows = { for (final d in Drum.values) d: List<bool>.filled(steps, false) };
+    final rows = {
+      for (final d in Drum.values) d: List<bool>.filled(steps, false)
+    };
     for (var i = 0; i < cells.length && i < steps; i++) {
       final m = cells[i].midi;
       if (m != null && m >= 0 && m < Drum.values.length) {

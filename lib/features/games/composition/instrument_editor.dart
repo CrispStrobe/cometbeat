@@ -1,11 +1,9 @@
-import 'dart:typed_data';
-
+import 'package:comet_beat/core/audio/drumkit_bridge.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
-import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
 import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
-import 'package:comet_beat/core/audio/drumkit_bridge.dart';
+import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
@@ -56,10 +54,10 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
     // Generate a short note run to audition the instrument.
     final pcm = _inst.renderChannel(
       [TrackerCell(midi: midi, volume: 1.0), const TrackerCell()],
-      const TrackerTiming(tempoBpm: 120, rows: 2),
+      const TrackerTiming(rows: 2),
     );
     if (pcm.isEmpty) return;
-    
+
     // We could use context.read<AudioService>() if available, but
     // since AudioService is often accessed globally or passed around...
     // Wait, let me just check how AudioService is retrieved.
@@ -81,7 +79,7 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
             Row(
               children: [
                 Text(
-                  "Edit Instrument",
+                  'Edit Instrument',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const Spacer(),
@@ -126,7 +124,8 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
         onChanged: (rows) {
           if (widget.onCellsChanged != null && widget.cells != null) {
             widget.onCellsChanged!(
-                DrumKitBridge.toCells(rows, widget.cells!.length));
+              DrumKitBridge.toCells(rows, widget.cells!.length),
+            );
           }
         },
       );
@@ -139,7 +138,6 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
             _inst = SampleInstrument(
               _inst.id,
               pcm,
-              baseMidi: 60,
             );
           });
         },

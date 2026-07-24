@@ -60,7 +60,7 @@ Float64List applyEnvelope(
   var a = (env.attack * sampleRate).round().clamp(0, n);
   var d = (env.decay * sampleRate).round().clamp(0, n);
   var r = (env.release * sampleRate).round();
-  
+
   int relStart;
   if (sustainSamples != null) {
     // Synthesizer behavior: sustain until Note Cut

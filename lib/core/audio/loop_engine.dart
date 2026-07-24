@@ -136,7 +136,9 @@ class StemPattern extends LoopPattern {
     if (stem.length == timing.totalSamples) return stem;
     final out = Float64List(timing.totalSamples);
     final n = min(stem.length, out.length);
-    for (var i = 0; i < n; i++) out[i] = stem[i];
+    for (var i = 0; i < n; i++) {
+      out[i] = stem[i];
+    }
     return out;
   }
 }

@@ -30,9 +30,9 @@ import 'package:comet_beat/core/audio/beat_capture.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
 import 'package:comet_beat/core/audio/groove_capture.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart'
     show crossfadePcm16Seam;
-import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/play_along.dart';

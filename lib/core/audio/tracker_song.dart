@@ -276,14 +276,7 @@ class TrackerSong {
           final c = col[r];
           if (c.instrument == 0 || c.instrument < removed) continue;
           final newInst = c.instrument == removed ? 0 : c.instrument - 1;
-          col[r] = TrackerCell(
-            midi: c.midi,
-            volume: c.volume,
-            effect: c.effect,
-            fxCmd: c.fxCmd,
-            fxParam: c.fxParam,
-            instrument: newInst,
-          );
+          col[r] = c.copyWith(instrument: newInst);
         }
       }
     }
@@ -481,14 +474,7 @@ class TrackerSong {
         _engine.setCell(
           c,
           r,
-          TrackerCell(
-            midi: (cur.midi! + semitones).clamp(0, 127),
-            volume: cur.volume,
-            effect: cur.effect,
-            fxCmd: cur.fxCmd,
-            fxParam: cur.fxParam,
-            instrument: cur.instrument,
-          ),
+          cur.copyWith(midi: (cur.midi! + semitones).clamp(0, 127)),
         );
       }
     }
@@ -515,14 +501,7 @@ class TrackerSong {
         _engine.setCell(
           c,
           r,
-          TrackerCell(
-            midi: midi,
-            volume: top.volume,
-            effect: top.effect,
-            fxCmd: top.fxCmd,
-            fxParam: top.fxParam,
-            instrument: top.instrument,
-          ),
+          top.copyWith(midi: midi),
         );
       }
     }

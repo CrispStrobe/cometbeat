@@ -1,81 +1,103 @@
 import 'dart:typed_data';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:comet_beat/core/audio/tracker_engine.dart';
+
 import 'package:comet_beat/core/audio/crisp_dsp/envelope.dart';
-import 'package:comet_beat/core/audio/synth.dart';
-
-// A mock tracker instrument that just outputs a constant DC signal for its length
-class MockDcInstrument extends TrackerInstrument {
-  final int samples;
-  MockDcInstrument(this.samples);
-  
-  @override
-  String get id => 'mock_dc';
-
-  @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
-    final buf = Float64List(samples);
-    for (var i = 0; i < samples; i++) buf[i] = 1.0;
-    return buf;
-  }
-}
+import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('Polyphony and Choke Semantics', () {
+  group('Polyphony and Choke Semantics with SampleInstrument', () {
     test('MultiSampleInstrument (Monophonic) strictly chokes tails', () {
-      final kick = MockDcInstrument(1000); // Kick is 1000 samples long
-      final snare = MockDcInstrument(1000); // Snare is 1000 samples long
-      
+      final sampleBuf = Float64List(44100);
+      for (var i = 0; i < sampleBuf.length; i++) {
+        sampleBuf[i] = 1.0;
+      }
+
+      final kick = SampleInstrument(
+        'kick',
+        sampleBuf,
+        envelope: const Envelope(attack: 0.0, release: 0.2),
+      );
+
+      final snare = SampleInstrument(
+        'snare',
+        sampleBuf,
+        baseMidi: 62,
+        envelope: const Envelope(attack: 0.0, release: 0.2),
+      );
+
       final drumKit = MultiSampleInstrument(
         'kit',
-        { 60: kick, 62: snare },
-        polyphonic: false, // Monophonic (choke)
+        {60: kick, 62: snare},
       );
-      
-      final fastTiming = TrackerTiming(tempoBpm: 60000, rows: 4, stepsPerBeat: 1); // 1 step = 44 samples!
-      
+
+      const fastTiming = TrackerTiming(
+          tempoBpm: 60000, rows: 4, stepsPerBeat: 1); // 1 step = 44 samples!
+
       final cells = [
-        TrackerCell(midi: 60), // Kick
-        TrackerCell(midi: 62), // Snare chokes Kick after 44 samples
+        const TrackerCell(midi: 60),
+        const TrackerCell(midi: 62),
         TrackerCell.empty,
         TrackerCell.empty,
       ];
-      
+
       final out = drumKit.renderChannel(cells, fastTiming);
-      
-      // Kick starts at 0. At sample 44, snare starts.
-      // If monophonic, the kick should NOT continue past sample 44!
-      // Out buffer size = 44 * 4 = 176 samples.
-      
+
       // Kick amplitude is 1.0. Snare amplitude is 1.0.
-      // Overlap would mean amplitude 2.0. Choke means amplitude 1.0.
-      expect(out[45], 1.0); // Snare only!
+      // At sample 45, snare is playing. Because monophonic, kick should have faded out or choked.
+      // Wait, because we added a 0.2s release to the kick, and it is truncated at 44 samples,
+      // it applies its release inside the last 0.2s of the 44-sample run. 44 samples is ~0.001s.
+      // Since 0.2s > 0.001s, the envelope scales release down to 44 samples.
+      // Thus, at sample 44 (when snare starts), the kick is perfectly 0.0.
+      // So at sample 45, out[45] should be 1.0 (snare only).
+
+      expect(out[45], closeTo(1.0, 0.01));
     });
 
-    test('MultiSampleInstrument (Polyphonic) allows overlapping drum tails', () {
-      final crash = MockDcInstrument(1000); 
-      final kick = MockDcInstrument(1000); 
-      
+    test('MultiSampleInstrument (Polyphonic) allows overlapping drum tails',
+        () {
+      final sampleBuf = Float64List(44100);
+      for (var i = 0; i < sampleBuf.length; i++) {
+        sampleBuf[i] = 1.0;
+      }
+
+      final crash = SampleInstrument(
+        'crash',
+        sampleBuf,
+        envelope: const Envelope(attack: 0.0, release: 0.2),
+      );
+
+      final kick = SampleInstrument(
+        'kick',
+        sampleBuf,
+        baseMidi: 62,
+        envelope: const Envelope(attack: 0.0, release: 0.2),
+      );
+
       final drumKit = MultiSampleInstrument(
         'kit',
-        { 60: crash, 62: kick },
-        polyphonic: true, // Polyphonic!
+        {60: crash, 62: kick},
+        polyphonic: true,
       );
-      
-      final fastTiming = TrackerTiming(tempoBpm: 60000, rows: 4, stepsPerBeat: 1); // 1 step = 44 samples
-      
+
+      const fastTiming = TrackerTiming(
+          tempoBpm: 60000, rows: 4, stepsPerBeat: 1); // 1 step = 44 samples
+
       final cells = [
-        TrackerCell(midi: 60), // Crash
-        TrackerCell(midi: 62), // Kick hits while crash is still ringing out
+        const TrackerCell(midi: 60), // Crash
+        const TrackerCell(
+            midi: 62), // Kick hits while crash is still ringing out
         TrackerCell.empty,
         TrackerCell.empty,
       ];
-      
+
       final out = drumKit.renderChannel(cells, fastTiming);
-      
-      // Crash starts at 0. At sample 44, Kick starts.
-      // Because it's polyphonic, crash (1.0) + kick (1.0) = 2.0 at sample 45!
-      expect(out[45], 2.0); 
+
+      // Because it's polyphonic, crash should NOT be truncated at 44 samples.
+      // It will continue ringing out past sample 44.
+      // Kick also starts at sample 44.
+      // At sample 45, crash is still 1.0 (sustaining) and kick is 1.0.
+      // 1.0 + 1.0 = 2.0!
+      expect(out[45], closeTo(2.0, 0.01));
     });
   });
 }

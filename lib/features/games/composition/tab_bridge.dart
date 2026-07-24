@@ -1,6 +1,6 @@
 import 'package:comet_beat/core/audio/tracker_engine.dart';
-import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart';
+import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart';
 
 /// Translates a monophonic [TrackerChannel] into a [TabDocument] by resolving
@@ -12,8 +12,8 @@ TabDocument trackerChannelToTab(TrackerChannel channel, Tuning tuning) {
   }).toList();
 
   final frettings = arrangeTab(midiColumns, tuning);
-  
+
   final tabColumns = frettings.map((f) => TabColumn(frets: f)).toList();
-  
+
   return TabDocument(tuning: tuning, columns: tabColumns);
 }

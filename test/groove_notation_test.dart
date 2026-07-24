@@ -32,13 +32,13 @@ void main() {
   test('clef follows the actual voice range, not its track label', () {
     expect(
       clefForGrooveCells(const [
-        (midis: [36], steps: 1)
+        (midis: [36], steps: 1),
       ]),
       Clef.bass,
     );
     expect(
       clefForGrooveCells(const [
-        (midis: [72], steps: 1)
+        (midis: [72], steps: 1),
       ]),
       Clef.treble,
     );
