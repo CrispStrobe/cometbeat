@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
+import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
@@ -102,10 +103,20 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
         inst: _inst as SampleInstrument,
         onChanged: (newInst) => setState(() => _inst = newInst),
       );
-    } else if (_inst is SfxrInstrument) {
-      return const Center(child: Text('Sfxr Editor (coming soon)'));
     } else {
-      return const Center(child: Text('Preset Instrument (Not editable)'));
+      return SoundLabScreen(
+        embedded: true,
+        onChanged: (pcm) {
+          setState(() {
+            // Replace the instrument with a sample instrument of the new sound
+            _inst = SampleInstrument(
+              _inst.id,
+              pcm,
+              baseMidi: 60,
+            );
+          });
+        },
+      );
     }
   }
 }

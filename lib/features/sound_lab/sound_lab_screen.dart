@@ -55,12 +55,23 @@ abstract class SoundLabTester {
 }
 
 class SoundLabScreen extends StatefulWidget {
-  const SoundLabScreen({super.key, this.asPicker = false});
+  const SoundLabScreen({
+    super.key,
+    this.asPicker = false,
+    this.embedded = false,
+    this.onChanged,
+  });
 
   /// When true (opened from the Audio Editor), the app bar offers an "Add to
   /// timeline" action that pops a [SampleClip] of the current sound, so the
   /// Sound Lab acts as a SoundFX modal that drops a clip straight onto the DAW.
   final bool asPicker;
+
+  /// When true, renders just the editor body (no Scaffold/AppBar).
+  final bool embedded;
+
+  /// Callback when the parameters or generated PCM change.
+  final void Function(Float64List pcm)? onChanged;
 
   @override
   State<SoundLabScreen> createState() => _SoundLabScreenState();
@@ -90,10 +101,13 @@ class _SoundLabScreenState extends State<SoundLabScreen>
   Float64List _render() =>
       sfxRender(_params, sampleRate: kSampleRate.toDouble());
 
-  void _update(SfxParams p) => setState(() {
-        _params = p;
-        _pcm = _render();
-      });
+  void _update(SfxParams p) {
+    setState(() {
+      _params = p;
+      _pcm = _render();
+    });
+    widget.onChanged?.call(_pcm);
+  }
 
   // ── Tester seam ──────────────────────────────────────────────────────────
   @override
@@ -268,6 +282,7 @@ class _SoundLabScreenState extends State<SoundLabScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) return _buildBody(context);
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
@@ -326,7 +341,13 @@ class _SoundLabScreenState extends State<SoundLabScreen>
           ),
         ],
       ),
-      body: ListView(
+      body: _buildBody(context),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return ListView(
         padding: const EdgeInsets.all(12),
         children: [
           // Waveform preview.
@@ -427,8 +448,7 @@ class _SoundLabScreenState extends State<SoundLabScreen>
               style: Theme.of(context).textTheme.bodySmall,
             ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _slider(

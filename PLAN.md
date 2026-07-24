@@ -1,8 +1,7 @@
 # Automatic Play-Along — plan & status
 
-🚧 **Idle / Last-shipped (Agent checkpoint)**
-- Shipped: Instrument Editor Overlay (`instrument_editor.dart`) for SampleInstrument with interactive waveform looping.
-- Embedded Sound Lab UI for synths (TODO next if requested).
+🚧 **Actively working on (Agent checkpoint)**
+- Embedding Sound Lab UI for synths (Synth & FX Editor).
 
 Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
