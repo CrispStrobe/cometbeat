@@ -332,6 +332,10 @@ class ReplayVoice {
     _retriggered = false;
     _pendingDelayTick = null;
 
+    if (cell.noteCut) {
+      active = false;
+    }
+
     // EDx note delay: defer the trigger to tick x instead of triggering now.
     final noteDelay =
         _cmd == kFxExtended && _exSub == kExNoteDelay && cell.midi != null;
@@ -819,8 +823,7 @@ void _renderSampleChannelInto(
       }
       if (!voice.active) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
-      final vol =
-          (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
         if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
           readPos = loopStart + ((readPos - loopStart) % loopLen);
@@ -921,8 +924,7 @@ void _renderSampleChannelIntoVariable(
       }
       if (!voice.active) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
-      final vol =
-          (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
         if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
           readPos = loopStart + ((readPos - loopStart) % loopLen);

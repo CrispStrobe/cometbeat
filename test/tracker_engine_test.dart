@@ -48,6 +48,16 @@ void main() {
       expect(segs[1].ms, 1 * t.stepMs);
     });
 
+    test('note-cut cells terminate a ringing note', () {
+      final segs = cellsToSegments([
+        const TrackerCell(midi: 60),
+        const TrackerCell(noteCut: true),
+        const TrackerCell(midi: 62),
+        const TrackerCell(),
+      ], t);
+      expect(segs.map((s) => s.freqs.isEmpty), [false, true, false]);
+    });
+
     test('a leading empty is a rest (no freqs)', () {
       final segs = cellsToSegments(cells([null, 60, null, null]), t);
       expect(segs.first.freqs, isEmpty); // rest

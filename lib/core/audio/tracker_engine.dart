@@ -94,6 +94,7 @@ class TrackerTiming {
 class TrackerCell {
   const TrackerCell({
     this.midi,
+    this.noteCut = false,
     this.volume,
     this.effect = TrackerEffect.none,
     this.fxCmd = 0,
@@ -102,6 +103,7 @@ class TrackerCell {
   });
 
   final int? midi;
+  final bool noteCut;
   final double? volume;
 
   /// The per-cell INSTRUMENT number (the classic tracker sample/instrument
@@ -125,7 +127,7 @@ class TrackerCell {
   final int fxCmd;
   final int fxParam;
 
-  bool get isEmpty => midi == null;
+  bool get isEmpty => midi == null && !noteCut;
 
   /// Whether an effect-column command is present (any non-zero cmd/param).
   bool get hasCommand => fxCmd != 0 || fxParam != 0;
@@ -136,6 +138,7 @@ class TrackerCell {
   bool operator ==(Object other) =>
       other is TrackerCell &&
       other.midi == midi &&
+      other.noteCut == noteCut &&
       other.volume == volume &&
       other.effect == effect &&
       other.fxCmd == fxCmd &&
@@ -144,7 +147,7 @@ class TrackerCell {
 
   @override
   int get hashCode =>
-      Object.hash(midi, volume, effect, fxCmd, fxParam, instrument);
+      Object.hash(midi, noteCut, volume, effect, fxCmd, fxParam, instrument);
 }
 
 /// Collapses a channel's cells into runs using the classic tracker rule: a
@@ -155,6 +158,10 @@ class TrackerCell {
 List<(int?, int)> cellRuns(List<TrackerCell> cells) {
   final runs = <(int?, int)>[];
   for (final cell in cells) {
+    if (cell.noteCut) {
+      runs.add((null, 1));
+      continue;
+    }
     if (cell.isEmpty) {
       if (runs.isEmpty) {
         runs.add((null, 1)); // leading rest

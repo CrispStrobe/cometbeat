@@ -200,9 +200,10 @@ TrackerPattern _patternFromDoc(
       // A volume COLUMN reduction (0..63) — carried even without a note, so a
       // mid-note volume change isn't dropped at import.
       final hasVol = dc.volume >= 0 && dc.volume < 64;
-      if (dc.note >= 0 || hasFx || dc.instrument != 0 || hasVol) {
+      if (dc.note >= 0 || dc.noteOff || hasFx || dc.instrument != 0 || hasVol) {
         cells[c][r] = TrackerCell(
           midi: dc.note >= 0 ? dc.note : null,
+          noteCut: dc.noteOff,
           volume: hasVol ? (dc.volume / 64).clamp(0.0, 1.0) : null,
           // MOD effect column → the replayer's classic effect column. An
           // effect-only cell (no note) is how porta/vibrato continue on a
@@ -214,8 +215,6 @@ TrackerPattern _patternFromDoc(
           instrument: dc.instrument,
         );
       }
-      // noteOff cells stop a ring in real trackers; our model rings until the
-      // next trigger, so a key-off simply leaves the cell empty.
     }
   }
   return TrackerPattern(name: index.toString().padLeft(2, '0'), cells: cells);
