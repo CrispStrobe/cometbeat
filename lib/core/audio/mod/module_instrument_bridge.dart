@@ -59,6 +59,8 @@ SampleInstrument sampleInstrumentFromDoc(
     loopStart: loopStart,
     loopLength: loopLength,
     pingPong: sample.pingPong,
+    volume: sample.volume.clamp(0, 64) / 64.0,
+    normalize: false,
     // A 9xx offset is in original-sample units → same 1/ratio scale as the loop.
     offsetScale: 1 / ratio,
   );

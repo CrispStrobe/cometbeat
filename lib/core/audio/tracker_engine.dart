@@ -459,6 +459,8 @@ class SampleInstrument implements TrackerInstrument {
     this.loopLength = 0,
     this.offsetScale = 1.0,
     this.pingPong = false,
+    this.volume = 1.0,
+    this.normalize = true,
   });
 
   /// Records-once: applies [fx] to [raw] and keeps the result as the sample.
@@ -503,6 +505,13 @@ class SampleInstrument implements TrackerInstrument {
   /// deeper — the bridge sets this to that factor. `1.0` (default) for a sample
   /// already at the engine rate (byte-identical to before).
   final double offsetScale;
+
+  /// Native module/sample volume, normalized from the format's 0..64 field.
+  final double volume;
+
+  /// Imported module samples retain their native amplitude instead of being
+  /// peak-normalized as user-recorded samples are.
+  final bool normalize;
 
   bool get loops =>
       loopLength > 0 &&
@@ -555,7 +564,7 @@ class SampleInstrument implements TrackerInstrument {
           // A per-cell volume column scales the note (null = full, unchanged).
           final vol = trigger.volume ?? 1.0;
           for (var i = 0; i < n; i++) {
-            out[startSample + i] = voiced[i] * vol;
+            out[startSample + i] = voiced[i] * vol * volume;
           }
         }
       }
