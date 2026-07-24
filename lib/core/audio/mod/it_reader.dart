@@ -396,9 +396,7 @@ Float64List _decodeCompressed(
         final bit = (byteIndex < blockEnd)
             ? ((bytes[byteIndex] >> (bitPos & 7)) & 1)
             : 0;
-        // IT's packed sample stream presents the first bit as the most
-        // significant bit of the decoded value.
-        value = (value << 1) | bit;
+        value |= bit << i;
         bitPos++;
       }
       return value;
