@@ -34,7 +34,11 @@ void main() {
     '/Users/christianstrobele/Documents/models/whisper_cpp/kokoro-voice-df_eva.gguf',
   );
 
-  final present = File(lib).existsSync() && File(model).existsSync();
+  // The native backend needs the locale voice pack as well as the base model.
+  // A developer machine can have the first two files from an earlier setup
+  // without the voice, so treat that as an unavailable smoke-test fixture.
+  final present =
+      File(lib).existsSync() && File(model).existsSync() && File(voiceDe).existsSync();
 
   test('the kokoro registry resolves to the published download URL', () {
     if (!File(lib).existsSync()) {
@@ -58,7 +62,7 @@ void main() {
     () {
       if (!present) {
         // ignore: avoid_print
-        print('SKIP: libcrispasr/model not on this machine — dev-only smoke.');
+        print('SKIP: libcrispasr/model/de voice not on this machine — dev-only smoke.');
         return;
       }
       final pcm = synthesizeKokoroPcm16(

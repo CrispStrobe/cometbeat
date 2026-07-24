@@ -348,107 +348,106 @@ class _SoundLabScreenState extends State<SoundLabScreen>
   Widget _buildBody(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
-          // Waveform preview.
-          SizedBox(
-            height: 90,
-            child: CustomPaint(
-              painter: _WavePainter(
-                _pcm,
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.surfaceContainerHighest,
-              ),
-              size: Size.infinite,
+      padding: const EdgeInsets.all(12),
+      children: [
+        // Waveform preview.
+        SizedBox(
+          height: 90,
+          child: CustomPaint(
+            painter: _WavePainter(
+              _pcm,
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.surfaceContainerHighest,
             ),
+            size: Size.infinite,
           ),
-          const SizedBox(height: 8),
-          // Presets.
-          Wrap(
-            spacing: 6,
-            children: [
-              for (final name in kSfxPresets.keys)
-                ActionChip(
-                  label: Text(name),
-                  onPressed: () => loadPreset(name),
-                ),
-            ],
-          ),
-          const Divider(),
-          // Waveform + generate row.
-          Wrap(
-            spacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              for (final w in SfxWave.values)
-                ChoiceChip(
-                  label: Text(_waveLabel(l10n, w)),
-                  selected: _params.wave == w,
-                  onSelected: (_) =>
-                      _update(_params.copyWith({'wave': w.index})),
-                ),
-              const SizedBox(width: 12),
-              FilledButton.tonalIcon(
-                icon: const Icon(Icons.casino),
-                label: Text(l10n.soundLabRandomize),
-                onPressed: randomizeSound,
+        ),
+        const SizedBox(height: 8),
+        // Presets.
+        Wrap(
+          spacing: 6,
+          children: [
+            for (final name in kSfxPresets.keys)
+              ActionChip(
+                label: Text(name),
+                onPressed: () => loadPreset(name),
               ),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.auto_fix_high),
-                label: Text(l10n.soundLabMutate),
-                onPressed: () => _update(mutate(_params, seed: _seed++)),
+          ],
+        ),
+        const Divider(),
+        // Waveform + generate row.
+        Wrap(
+          spacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            for (final w in SfxWave.values)
+              ChoiceChip(
+                label: Text(_waveLabel(l10n, w)),
+                selected: _params.wave == w,
+                onSelected: (_) => _update(_params.copyWith({'wave': w.index})),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Sliders.
-          for (final k in _knobs)
-            _slider(
-              k.label(l10n),
-              (_params.toJson()[k.key] as num).toDouble(),
-              k.min,
-              k.max,
-              (v) => setKnob(k.key, v),
+            const SizedBox(width: 12),
+            FilledButton.tonalIcon(
+              icon: const Icon(Icons.casino),
+              label: Text(l10n.soundLabRandomize),
+              onPressed: randomizeSound,
             ),
-          const Divider(),
-          // A/B morph: snapshot the current sound into slot A or B, then blend.
-          Wrap(
-            spacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              OutlinedButton(
-                onPressed: () => setState(() => _slotA = _params),
-                child: Text(l10n.soundLabSetA),
-              ),
-              OutlinedButton(
-                onPressed: () => setState(() => _slotB = _params),
-                child: Text(l10n.soundLabSetB),
-              ),
-            ],
-          ),
-          if (_slotA != null && _slotB != null)
-            Row(
-              children: [
-                const Text('A'),
-                Expanded(
-                  child: Slider(
-                    value: _morph,
-                    onChanged: (v) {
-                      _morph = v;
-                      _update(_slotA!.morph(_slotB!, v));
-                    },
-                  ),
-                ),
-                const Text('B'),
-              ],
-            )
-          else
-            Text(
-              l10n.soundLabMorphHint,
-              style: Theme.of(context).textTheme.bodySmall,
+            OutlinedButton.icon(
+              icon: const Icon(Icons.auto_fix_high),
+              label: Text(l10n.soundLabMutate),
+              onPressed: () => _update(mutate(_params, seed: _seed++)),
             ),
-        ],
-      );
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Sliders.
+        for (final k in _knobs)
+          _slider(
+            k.label(l10n),
+            (_params.toJson()[k.key] as num).toDouble(),
+            k.min,
+            k.max,
+            (v) => setKnob(k.key, v),
+          ),
+        const Divider(),
+        // A/B morph: snapshot the current sound into slot A or B, then blend.
+        Wrap(
+          spacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton(
+              onPressed: () => setState(() => _slotA = _params),
+              child: Text(l10n.soundLabSetA),
+            ),
+            OutlinedButton(
+              onPressed: () => setState(() => _slotB = _params),
+              child: Text(l10n.soundLabSetB),
+            ),
+          ],
+        ),
+        if (_slotA != null && _slotB != null)
+          Row(
+            children: [
+              const Text('A'),
+              Expanded(
+                child: Slider(
+                  value: _morph,
+                  onChanged: (v) {
+                    _morph = v;
+                    _update(_slotA!.morph(_slotB!, v));
+                  },
+                ),
+              ),
+              const Text('B'),
+            ],
+          )
+        else
+          Text(
+            l10n.soundLabMorphHint,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
+    );
   }
 
   Widget _slider(

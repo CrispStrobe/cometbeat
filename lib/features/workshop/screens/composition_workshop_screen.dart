@@ -600,15 +600,17 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   void _setDocumentTitle(String value) {
     final title = value.trim();
     final old = _doc.metadata;
-    _doc.setMetadata(ScoreMetadata(
-      title: title.isEmpty ? null : title,
-      composer: old.composer,
-      lyricist: old.lyricist,
-      copyright: old.copyright,
-      instrument: old.instrument,
-      midiProgram: old.midiProgram,
-      isPercussion: old.isPercussion,
-    ),);
+    _doc.setMetadata(
+      ScoreMetadata(
+        title: title.isEmpty ? null : title,
+        composer: old.composer,
+        lyricist: old.lyricist,
+        copyright: old.copyright,
+        instrument: old.instrument,
+        midiProgram: old.midiProgram,
+        isPercussion: old.isPercussion,
+      ),
+    );
   }
 
   String get _fileStem {

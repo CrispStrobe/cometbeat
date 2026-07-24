@@ -61,7 +61,10 @@ void main() {
 
     test('noteRuns handles same-cell note and keyOff correctly', () {
       final cells = [
-        const TrackerCell(midi: 60, keyOff: true), // Trigger and cut immediately
+        const TrackerCell(
+          midi: 60,
+          keyOff: true,
+        ), // Trigger and cut immediately
         const TrackerCell(), // Release continues
       ];
 
