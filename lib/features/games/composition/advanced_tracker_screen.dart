@@ -2510,8 +2510,25 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     final saved = await showMyInstrumentsSheet(
       context,
       includeBuiltIns: true,
-      onMusicSelected: (score) async => _replaceSong(_songFromMultiPart(score)),
-      onModuleSelected: (bytes) async => importModuleBytes(bytes),
+      onMusicSelected: (score) async {
+        if (!_replaceMusicScore(score)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.musicPickerFailed),
+            ),
+          );
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.importDone)),
+        );
+      },
+      onModuleSelected: (bytes) async {
+        importModuleBytes(bytes);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.importDone)),
+        );
+      },
       onSoundFontSelected: (instrument) async => _addPoolInstrument(instrument),
     );
     if (saved == null || !mounted) return;
@@ -3526,6 +3543,16 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     });
   }
 
+  /// Replaces the document from a notation selection and reports whether it
+  /// produced actual tracker notes. An empty decoded container otherwise looks
+  /// like a no-op after the Sound Library sheet closes.
+  bool _replaceMusicScore(MultiPartScore score) {
+    final song = _songFromMultiPart(score);
+    if (song.isEmpty) return false;
+    _replaceSong(song);
+    return true;
+  }
+
   @override
   void importModuleBytes(Uint8List bytes) =>
       _replaceSong(songFromModuleBytes(bytes));
@@ -3744,10 +3771,21 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// One entry point for built-in songs, saved songs, local files, and the
   /// online catalog. All sources return a decoded score and use the same bridge.
   Future<void> _addMusic() async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final score = await showMusicPicker(context);
       if (!mounted || score == null) return;
-      _replaceSong(_songFromMultiPart(score));
+      if (!_replaceMusicScore(score)) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.musicPickerFailed),
+          ),
+        );
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.importDone)),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
