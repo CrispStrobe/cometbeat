@@ -95,5 +95,27 @@ void main() {
         periodToMidi(428),
       );
     });
+
+    test('modToTracker normalizes nonzero ECx tick offsets to immediate keyOff',
+        () {
+      // Construct a ModModule with an EC5 (Note Cut at tick 5)
+      final modRows =
+          List.generate(64, (_) => List<ModCell>.filled(1, ModCell.empty));
+      modRows[0][0] =
+          const ModCell(sample: 1, period: 428, effect: 0xE, effectParam: 0xC5);
+      final mod = ModModule(
+        title: 'TEST',
+        channelCount: 1,
+        samples: List.filled(31, ModSample.empty()), // Fix: ModSample.empty()
+        order: [0],
+        patterns: [ModPattern(modRows)],
+      );
+
+      final import = modToTracker(mod, rows: 64);
+      final patterns = import.patterns;
+
+      // The EC5 cell should be translated to TrackerCell.noteCut
+      expect(patterns[0][0][0].isNoteCut, isTrue);
+    });
   });
 }

@@ -78,7 +78,14 @@ ModImport modToTracker(ModModule mod, {int rows = 8, int stepsPerBeat = 2}) {
       for (var s = 0; s < rows; s++) {
         final modRow = (s * 64) ~/ rows;
         final cell = _cellAt(pattern, modRow, c);
-        if (cell == null || cell.period <= 0) {
+        // Note: The TrackerEngine does not yet support sub-row tick timing for key-offs.
+        // Therefore, ANY Note Cut (ECx) regardless of tick offset 'x' is normalized
+        // to an immediate Note Cut (EC0) upon import.
+        if (cell != null &&
+            cell.effect == 0xE &&
+            (cell.effectParam & 0xF0) == 0xC0) {
+          cells.add(TrackerCell.noteCut);
+        } else if (cell == null || cell.period <= 0) {
           cells.add(TrackerCell.empty);
         } else {
           cells.add(TrackerCell(midi: periodToMidi(cell.period)));
@@ -170,15 +177,17 @@ ModModule trackerToMod(
       final cells = c < snapshot.length ? snapshot[c] : const <TrackerCell>[];
       for (var s = 0; s < cells.length; s++) {
         final cell = cells[s];
-        final midi = cell.midi;
-        if (midi == null) continue;
         final modRow = (s * 64) ~/ rows;
         if (modRow < 0 || modRow >= 64) continue;
-        // sample number = the channel's 1-based instrument index.
-        modRows[modRow][c] = ModCell(
-          sample: c + 1,
-          period: midiToPeriod(midi),
-        );
+        if (cell.isNoteCut) {
+          modRows[modRow][c] = const ModCell(effect: 0xE, effectParam: 0xC0);
+        } else if (cell.midi != null) {
+          // sample number = the channel's 1-based instrument index.
+          modRows[modRow][c] = ModCell(
+            sample: c + 1,
+            period: midiToPeriod(cell.midi!),
+          );
+        }
       }
     }
     modPatterns.add(ModPattern(modRows));

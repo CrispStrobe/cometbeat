@@ -340,6 +340,8 @@ class ReplayVoice {
       _pendingNote = cell.midi!.toDouble();
       _pendingNoteVolume = cell.volume ?? 1.0;
       _pendingDelayTick = _exVal;
+    } else if (cell.keyOff) {
+      active = false;
     } else if (cell.midi != null) {
       final m = cell.midi!.toDouble();
       if (_isTonePorta) {
@@ -650,20 +652,29 @@ Float64List renderChannelPerNote(
   final rows = cells.length;
   var curInst = channelInstrument;
   var startStep = 0;
-  for (final (midi, steps) in cellRuns(cells)) {
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final sustainSteps = run.$2;
+    final releaseSteps = run.$3;
+    final steps = sustainSteps + releaseSteps;
+
     final trigger = cells[startStep];
     if (trigger.instrument > 0 && trigger.instrument - 1 < pool.length) {
       curInst = pool[trigger.instrument - 1];
     }
     if (midi != null) {
-      final capRow = startStep + steps;
+      final capRow = startStep + sustainSteps; // Cut where the sustain ends
       final one = List<TrackerCell>.filled(rows, TrackerCell.empty)
         ..[startStep] = trigger;
-      if (capRow < rows) one[capRow] = TrackerCell(midi: midi); // cap the run
+      if (capRow < rows) {
+        one[capRow] =
+            TrackerCell.noteCut; // Trigger release in the rendering instrument
+      }
       final buf = curInst.renderChannel(one, timing);
       final s = timing.stepStartSample(startStep);
+      final endRow = startStep + steps;
       final e =
-          capRow < rows ? timing.stepStartSample(capRow) : timing.totalSamples;
+          endRow < rows ? timing.stepStartSample(endRow) : timing.totalSamples;
       final lim = min(e, min(buf.length, stem.length));
       if (envelope == null) {
         for (var i = s; i < lim; i++) {
@@ -2222,7 +2233,12 @@ void _renderNonAdditiveVariable(
   final hasEnv = env != null && !env.isEmpty;
   var curInst = channel.instrument;
   var startStep = 0;
-  for (final (midi, steps) in cellRuns(cells)) {
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final sustainSteps = run.$2;
+    final releaseSteps = run.$3;
+    final steps = sustainSteps + releaseSteps;
+
     final trigger = cells[startStep];
     if (trigger.instrument > 0 &&
         pool != null &&
@@ -2240,8 +2256,14 @@ void _renderNonAdditiveVariable(
         final tempo =
             (runMs <= 0 ? 240 : (60000 / runMs).round()).clamp(1, 1 << 20);
         final noteTiming =
-            TrackerTiming(tempoBpm: tempo, rows: 1, stepsPerBeat: 1);
-        final buf = curInst.renderChannel([trigger], noteTiming);
+            TrackerTiming(tempoBpm: tempo, rows: steps, stepsPerBeat: steps);
+
+        final capRow = sustainSteps;
+        final one = List<TrackerCell>.filled(steps, TrackerCell.empty)
+          ..[0] = trigger;
+        if (capRow < steps) one[capRow] = TrackerCell.noteCut;
+
+        final buf = curInst.renderChannel(one, noteTiming);
         final lim = min(runSamples, min(buf.length, stem.length - s));
         for (var i = 0; i < lim; i++) {
           final el = hasEnv ? env.levelAt(i / kSampleRate * 1000) : 1.0;
