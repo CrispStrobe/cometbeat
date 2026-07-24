@@ -463,7 +463,18 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
       isScrollControlled: true,
       builder: (_) => _FxGeneratorSheet(store: widget.store),
     );
-    if (saved != null) await _reload();
+    if (saved != null && mounted) {
+      // Refresh immediately from the modal result so the newly generated sound
+      // is visible even when the library sheet was opened from another picker.
+      setState(() {
+        _items = [
+          ..._builtInItems(),
+          ..._items.where((item) => item.name != saved.name),
+          saved,
+        ];
+        _loading = false;
+      });
+    }
   }
 
   @override
