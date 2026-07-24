@@ -3244,9 +3244,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                           Expanded(
                             child: Slider(
                               key: const ValueKey('loop-mixer-tempo'),
-                              min: 60,
-                              max: 180,
-                              divisions: 120,
+                              min: kMinTempoBpm.toDouble(),
+                              max: kMaxTempoBpm.toDouble(),
+                              divisions: kMaxTempoBpm - kMinTempoBpm,
                               value: _engine.tempoBpm.toDouble(),
                               label: '${_engine.tempoBpm} BPM',
                               onChanged: (v) => _setTempo(v.round()),

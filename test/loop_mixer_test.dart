@@ -222,6 +222,17 @@ void main() {
     expect(game.isPlaying, isTrue, reason: 'groove restarts at the new tempo');
   });
 
+  testWidgets('BPM slider exposes the engine-safe tempo range', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+
+    final slider = tester.widget<Slider>(
+      find.byKey(const ValueKey('loop-mixer-tempo')),
+    );
+    expect(slider.min, kMinTempoBpm);
+    expect(slider.max, kMaxTempoBpm);
+    expect(slider.divisions, kMaxTempoBpm - kMinTempoBpm);
+  });
+
   testWidgets('variant badge, level slider and swing drive the engine',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
