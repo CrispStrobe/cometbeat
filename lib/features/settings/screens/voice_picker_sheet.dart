@@ -234,6 +234,7 @@ class _VoicePickerSheetState extends State<VoicePickerSheet> {
   Future<void> _openSoundLibrary() async {
     final saved = await showMyInstrumentsSheet(
       context,
+      store: widget.store,
       includeBuiltIns: true,
     );
     if (saved == null || !mounted) return;
