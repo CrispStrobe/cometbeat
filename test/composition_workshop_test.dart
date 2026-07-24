@@ -622,7 +622,21 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('en'));
     // One unified Open and one unified Export (not one item per file type).
     expect(find.text(l10n.workshopOpen), findsOneWidget);
+    expect(find.text(l10n.workshopLoadFromLibrary), findsOneWidget);
     expect(find.text(l10n.workshopExport), findsOneWidget);
+  });
+
+  testWidgets('Play with an instrument is available before note entry',
+      (tester) async {
+    await pump(tester);
+    final button = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(Icons.piano_outlined),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(button.onPressed, isNotNull);
+    expect(_editor(tester).noteCount, 0);
   });
 
   testWidgets('the note palette offers articulations and dynamics',

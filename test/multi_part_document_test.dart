@@ -23,6 +23,26 @@ void main() {
     expect(doc.activePart, same(doc.parts.first));
   });
 
+  test('suggested import clef follows the part range', () {
+    final low = Score.simple(notes: 'c2:q d2 e2 f2');
+    final high = Score.simple(notes: 'c5:q d5 e5 f5');
+    final explicitBass = Score.simple(clef: Clef.bass, notes: 'c4:q d4');
+
+    expect(suggestedClefForScore(low), Clef.bass);
+    expect(suggestedClefForScore(high), Clef.treble);
+    expect(suggestedClefForScore(explicitBass), Clef.bass);
+  });
+
+  test('clearAll clears every part', () {
+    final doc = MultiPartDocument()..addPart();
+    doc.parts[0].insertNote(_p(Step.c), _quarter);
+    doc.parts[1].insertNote(_p(Step.g), _quarter);
+
+    doc.clearAll();
+
+    expect(doc.parts.every((part) => part.isEmpty), isTrue);
+  });
+
   test('addPart appends, names, and makes the new part active', () {
     final doc = MultiPartDocument();
     final i = doc.addPart(clef: Clef.bass);

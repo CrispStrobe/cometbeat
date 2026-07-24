@@ -26,6 +26,32 @@ import 'package:comet_beat/features/workshop/model/score_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/foundation.dart';
 
+/// Selects a practical single-staff clef for an imported part when its source
+/// clef is the generic treble default. A part is bass-led when most sounding
+/// pitches sit at or below middle C and its median is in the bass register;
+/// isolated low notes in a treble melody do not flip the staff.
+Clef suggestedClefForScore(Score score) {
+  if (score.clef != Clef.treble) return score.clef;
+  final pitches = [
+    for (final measure in score.measures)
+      for (final voice in [
+        measure.elements,
+        measure.voice2,
+        measure.voice3,
+        measure.voice4,
+      ])
+        for (final element in voice)
+          if (element case NoteElement(:final pitches)) ...pitches,
+  ];
+  if (pitches.isEmpty) return score.clef;
+  final sorted = pitches.map((p) => p.diatonicIndex).toList()..sort();
+  final median = sorted[sorted.length ~/ 2];
+  final low = sorted.where((index) => index <= 28).length;
+  return low * 100 >= sorted.length * 60 && median <= 28
+      ? Clef.bass
+      : Clef.treble;
+}
+
 /// A whole piece as an ordered list of instrument [parts], plus the layout
 /// grouping (brackets/braces and barline connections) drawn down the left edge.
 ///
@@ -66,10 +92,15 @@ class MultiPartDocument extends ChangeNotifier {
     MultiPartScore score, {
     List<String>? names,
     List<Transposition?>? transpositions,
+    bool autoClef = false,
   }) {
     final parts = <ScoreDocument>[];
     for (final part in score.parts) {
-      final doc = ScoreDocument()..loadScore(part);
+      final doc = ScoreDocument()
+        ..loadScore(
+          part,
+          clefOverride: autoClef ? suggestedClefForScore(part) : null,
+        );
       parts.add(doc);
     }
     return MultiPartDocument(
@@ -317,6 +348,14 @@ class MultiPartDocument extends ChangeNotifier {
   void setActive(int i) {
     if (i < 0 || i >= _parts.length || i == _active) return;
     _active = i;
+    notifyListeners();
+  }
+
+  /// Clears every instrument part, not only the currently selected row.
+  void clearAll() {
+    for (final part in _parts) {
+      part.clearAll();
+    }
     notifyListeners();
   }
 

@@ -482,6 +482,12 @@ abstract class AppLocalizations {
   /// **'Open a file…'**
   String get workshopOpen;
 
+  /// No description provided for @workshopLoadFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Load from music library'**
+  String get workshopLoadFromLibrary;
+
   /// No description provided for @workshopExport.
   ///
   /// In en, this message translates to:
@@ -4585,6 +4591,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Modules'**
   String get catalogKindModules;
+
+  /// No description provided for @catalogKindSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get catalogKindSongs;
 
   /// No description provided for @catalogLicenseAll.
   ///

@@ -47,13 +47,14 @@ import 'package:comet_beat/features/workshop/widgets/multi_part_canvas.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
+import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 // Material's Stepper also exports a `Step`; crisp_notation's pitch Step wins here.
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/material.dart' hide Step;
+import 'package:flutter/material.dart' hide Key, Step;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -548,6 +549,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       : MultiPartDocument.fromMultiPartScore(
           widget.initialScore!,
           names: widget.initialNames,
+          autoClef: true,
         );
 
   /// The part the toolbar edits — every existing command reads/writes this.
@@ -1203,7 +1205,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     if (_dragId != null) return null; // the moving ghost already shows intent
     final id = _doc.caretBeforeId;
     return id == null
-        ? null
+        ? EditorCaret(
+            measureIndex: 0,
+            staffPosition: pitchFromMidi(60).staffPosition(_doc.clef),
+          )
         : EditorCaret(
             beforeElementId: '${MultiPartDocument.prefixFor(_mpd.active)}$id',
           );
@@ -2078,6 +2083,25 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     }
   }
 
+  /// Loads a melody from the shared music library (built-ins, saved songs,
+  /// catalog, or an imported notation file) into this editor.
+  Future<void> _loadFromMusicLibrary() async {
+    final score = await showMusicPicker(context);
+    if (score == null || !mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      if (score.parts.length > 1) {
+        _mpd.loadMultiPart(score);
+      } else {
+        final part = score.parts.first;
+        _doc.loadScore(part, clefOverride: suggestedClefForScore(part));
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.importDone)),
+    );
+  }
+
   /// Paste **bekern** tokens (the OMR model's text output) and load them as a
   /// playable score — a no-file, web-safe "text → notation" path. Multi-spine
   /// bekern seeds one instrument part per spine (reusing the G6 multi-part
@@ -2376,6 +2400,16 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           const Color(0xFFF28E2B), // orange — tension
       };
 
+  HarmonicFunction? _fallbackFunction(Pitch pitch, Key key) {
+    final interval = (pitch.midiNumber - key.tonic.midiNumber) % 12;
+    return switch (interval) {
+      0 => HarmonicFunction.tonic,
+      5 => HarmonicFunction.subdominant,
+      7 => HarmonicFunction.dominant,
+      _ => null,
+    };
+  }
+
   String _cadenceLabel(AppLocalizations l10n, CadenceType t) => switch (t) {
         CadenceType.authentic => l10n.cadenceAuthentic,
         CadenceType.half => l10n.cadenceHalf,
@@ -2417,12 +2451,27 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               style: theme.textTheme.titleSmall
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
+          _analysisLegendChip(l10n.funcTonic, HarmonicFunction.tonic),
+          _analysisLegendChip(
+            l10n.funcSubdominant,
+            HarmonicFunction.subdominant,
+          ),
+          _analysisLegendChip(l10n.funcDominant, HarmonicFunction.dominant),
           for (final c in cadences)
             Text('• $c', style: theme.textTheme.bodySmall),
         ],
       ),
     );
   }
+
+  Widget _analysisLegendChip(String label, HarmonicFunction function) => Chip(
+        avatar: CircleAvatar(
+          backgroundColor: _functionTint(function),
+          radius: 6,
+        ),
+        label: Text(label),
+        visualDensity: VisualDensity.compact,
+      );
 
   Widget _voiceLegend(AppLocalizations l10n) {
     const v1 = Color(0xFF1565C0);
@@ -3516,10 +3565,28 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             if (element.id != null) element.id!: const Color(0xFFE65100),
       },
       // Analysis is the base layer; selection + playback override it below.
-      if (analysis != null)
+      // Chord segments provide the authoritative function. For a single-note
+      // passage, colour tonic/subdominant/dominant scale degrees as a useful
+      // fallback so the toggle never degenerates into a text-only banner.
+      if (analysis != null) ...{
         for (final seg in analysis.segments)
-          if (seg.function != null)
-            for (final id in seg.elementIds) id: _functionTint(seg.function!),
+          if (seg.function case final function?)
+            for (final id in seg.elementIds) id: _functionTint(function),
+        for (final measure in score.measures)
+          for (final voice in [
+            measure.elements,
+            measure.voice2,
+            measure.voice3,
+            measure.voice4,
+          ])
+            for (final element in voice)
+              if (element case NoteElement(:final id, :final pitches))
+                if (id != null && pitches.isNotEmpty)
+                  id: _functionTint(
+                    _fallbackFunction(pitches.first, analysis.key) ??
+                        HarmonicFunction.subdominant,
+                  ),
+      },
       for (final id in selectedIds) id: Colors.amber,
       // The playback cursor paints the sounding notes green, overriding any
       // selection tint underneath so the moving highlight always reads.
@@ -3538,7 +3605,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           : null;
     } else {
       final caretId = _doc.caretBeforeId;
-      caret = caretId != null ? EditorCaret(beforeElementId: caretId) : null;
+      caret = caretId != null
+          ? EditorCaret(beforeElementId: caretId)
+          : EditorCaret(
+              measureIndex: 0,
+              staffPosition: pitchFromMidi(60).staffPosition(_doc.clef),
+            );
     }
 
     return PopScope(
@@ -3662,8 +3734,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       IconButton(
                         icon: const Icon(Icons.piano_outlined),
                         tooltip: l10n.workshopPlayWithInstrument,
-                        onPressed:
-                            _hasPlayableContent ? _playWithInstrument : null,
+                        onPressed: _playWithInstrument,
                       ),
                       // Practice speed — the number reads as a chip; picking a slower
                       // speed makes the next Play stretch (same pitch) for slow practice.
@@ -3702,6 +3773,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                           switch (v) {
                             case 'open':
                               _open();
+                            case 'loadLibrary':
+                              _loadFromMusicLibrary();
                             case 'paste':
                               _pasteTokens();
                             case 'scan':
@@ -3742,7 +3815,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                             case 'export':
                               _showExportSheet();
                             case 'clear':
-                              setState(_doc.clearAll);
+                              setState(_mpd.clearAll);
                             case 'daw':
                               sendToDaw();
                             case 'loadTune':
@@ -3756,6 +3829,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                             'open',
                             Icons.file_open_outlined,
                             l10n.workshopOpen,
+                            true,
+                          ),
+                          _menuItem(
+                            'loadLibrary',
+                            Icons.library_music_outlined,
+                            l10n.workshopLoadFromLibrary,
                             true,
                           ),
                           _menuItem(
