@@ -185,6 +185,8 @@ class ItModule {
     this.initialSpeed = 6,
     this.initialTempo = 125,
     this.globalVolume = 128,
+    this.channelPans = const [],
+    this.channelVolumes = const [],
     required this.order,
     required this.patterns,
     required this.samples,
@@ -195,6 +197,9 @@ class ItModule {
   final int channelCount; // max used across patterns
   final int instrumentCount; // InsNum
   final int initialSpeed, initialTempo, globalVolume;
+
+  /// IT header channel state, indexed by channel (pan 0..64, volume 0..64).
+  final List<int> channelPans, channelVolumes;
   final List<int> order; // OrdNum entries (0xFF end, 0xFE skip)
   final List<ItPattern> patterns;
   final List<ItSample> samples;

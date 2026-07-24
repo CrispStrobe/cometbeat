@@ -132,7 +132,7 @@ Uint8List writeXm(XmModule module) {
   hb.setUint16(0x44, module.channelCount, Endian.little);
   hb.setUint16(0x46, module.patterns.length, Endian.little);
   hb.setUint16(0x48, module.instruments.length, Endian.little);
-  hb.setUint16(0x4A, 1, Endian.little); // flags (linear)
+  hb.setUint16(0x4A, module.linearFrequency ? 1 : 0, Endian.little);
   hb.setUint16(0x4C, module.defaultTempo, Endian.little);
   hb.setUint16(0x4E, module.defaultBpm, Endian.little);
 

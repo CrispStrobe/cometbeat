@@ -185,27 +185,6 @@ Uint8List writeS3m(S3mModule module) {
     }
     asciiFixed(sample.name, 28); // 0x30 name
     asciiFixed('SCRS', 4); // 0x4C
-
-    if (!isEmpty) {
-      align16();
-      final pcmOff = len();
-      insMemsegs[s] = pcmOff ~/ 16;
-      // Quantize the normalized float PCM back to signed 8- or 16-bit (×128 /
-      // ×32768 inverts the reader's /128 / /32768, so a parsed sample round-trips
-      // byte-exactly). 16-bit is a signed LE word each.
-      if (sample.sixteenBit) {
-        for (var i = 0; i < pcmLen; i++) {
-          final q = (sample.pcm[i] * 32768).round().clamp(-32768, 32767);
-          u8(q & 0xFF);
-          u8((q >> 8) & 0xFF);
-        }
-      } else {
-        for (var i = 0; i < pcmLen; i++) {
-          final q = (sample.pcm[i] * 128).round().clamp(-128, 127);
-          u8(q & 0xFF);
-        }
-      }
-    }
   }
 
   // ── PATTERNS ───────────────────────────────────────────────────────────────
@@ -254,6 +233,31 @@ Uint8List writeS3m(S3mModule module) {
     final total = packed.length + 2; // includes the length word itself
     u16(total);
     out.add(packed);
+  }
+
+  // Sample memory segments are 24-bit, but pattern parapointers are only
+  // 16-bit paragraphs. Keep patterns before large sample payloads so a module
+  // with megabytes of PCM does not wrap its pattern pointers and become
+  // unreadable on the next parse.
+  for (var s = 0; s < insNum; s++) {
+    final sample = samples[s];
+    if (sample.isEmpty) continue;
+    align16();
+    final pcmOff = len();
+    insMemsegs[s] = pcmOff ~/ 16;
+    final pcmLen = sample.pcm.length;
+    if (sample.sixteenBit) {
+      for (var i = 0; i < pcmLen; i++) {
+        final q = (sample.pcm[i] * 32768).round().clamp(-32768, 32767);
+        u8(q & 0xFF);
+        u8((q >> 8) & 0xFF);
+      }
+    } else {
+      for (var i = 0; i < pcmLen; i++) {
+        final q = (sample.pcm[i] * 128).round().clamp(-128, 127);
+        u8(q & 0xFF);
+      }
+    }
   }
 
   // ── PATCH the tables + memseg fields ───────────────────────────────────────

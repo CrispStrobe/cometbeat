@@ -180,6 +180,8 @@ ModuleDoc docFromMod(ModModule m) {
             // MOD's effect nibble maps 1:1 onto the replayer's fxCmd/fxParam.
             effect: c.effect,
             effectParam: c.effectParam,
+            nativeEffect: c.effect == 0 && c.effectParam == 0 ? -1 : c.effect,
+            nativeEffectParam: c.effectParam,
           ),
         );
       }
@@ -191,6 +193,7 @@ ModuleDoc docFromMod(ModModule m) {
   return ModuleDoc(
     title: m.title,
     channelCount: m.channelCount,
+    globalVolume: 128,
     sourceFormat: ModuleFormat.mod,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -299,6 +302,8 @@ ModuleDoc docFromS3m(S3mModule m) {
             volume: c.volume == S3mCell.noVolume ? -1 : c.volume,
             effect: fxCmd,
             effectParam: fxParam,
+            nativeEffect: c.command == 0 && c.info == 0 ? -1 : c.command,
+            nativeEffectParam: c.info,
           ),
         );
       }
@@ -312,6 +317,7 @@ ModuleDoc docFromS3m(S3mModule m) {
     channelCount: m.channelCount,
     initialSpeed: m.initialSpeed,
     initialTempo: m.initialTempo,
+    globalVolume: m.globalVolume * 2,
     sourceFormat: ModuleFormat.s3m,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -372,11 +378,6 @@ ModuleDoc docFromXm(XmModule m) {
       for (final c in row) {
         final vol =
             (c.volume >= 0x10 && c.volume <= 0x50) ? c.volume - 0x10 : -1;
-        // XM's main effect column shares MOD's 0x0–0xF numbering, so those map
-        // 1:1 onto our fxCmd/fxParam. XM's letter effects (G+ = 0x10 and up)
-        // don't fit a nibble and use different semantics — drop them for now
-        // (the cross-format table is a follow-up).
-        final carryFx = c.effect <= 0xF;
         var instrument = c.instrument;
         if (c.instrument > 0 && c.instrument <= m.instruments.length) {
           final inst = m.instruments[c.instrument - 1];
@@ -392,8 +393,13 @@ ModuleDoc docFromXm(XmModule m) {
             noteOff: c.note == XmCell.noteOff,
             instrument: instrument,
             volume: vol,
-            effect: carryFx ? c.effect : 0,
-            effectParam: carryFx ? c.effectParam : 0,
+            // Keep the full XM command byte in the neutral model. Cross-format
+            // writers may still degrade commands without an equivalent, but a
+            // same-format XM round-trip must not erase G+ effects.
+            effect: c.effect,
+            effectParam: c.effectParam,
+            nativeEffect: c.effect == 0 && c.effectParam == 0 ? -1 : c.effect,
+            nativeEffectParam: c.effectParam,
           ),
         );
       }
@@ -407,6 +413,8 @@ ModuleDoc docFromXm(XmModule m) {
     channelCount: m.channelCount,
     initialSpeed: m.defaultTempo,
     initialTempo: m.defaultBpm,
+    globalVolume: 128,
+    linearFrequency: m.linearFrequency,
     sourceFormat: ModuleFormat.xm,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -471,6 +479,7 @@ ModuleDoc docFromIt(ItModule m) {
       final looped = s.loop && s.loopEnd > s.loopStart;
       final ds = DocSample(
         name: s.name,
+        globalVolume: s.globalVolume,
         volume: s.defaultVolume,
         loopStart: s.loopStart,
         loopLength: looped ? (s.loopEnd - s.loopStart) : 0,
@@ -528,6 +537,9 @@ ModuleDoc docFromIt(ItModule m) {
             volume: vol,
             effect: fxCmd,
             effectParam: fxParam,
+            nativeEffect:
+                c.command == 0 && c.commandValue == 0 ? -1 : c.command,
+            nativeEffectParam: c.commandValue,
           ),
         );
       }
@@ -541,6 +553,9 @@ ModuleDoc docFromIt(ItModule m) {
     channelCount: m.channelCount,
     initialSpeed: m.initialSpeed,
     initialTempo: m.initialTempo,
+    globalVolume: m.globalVolume,
+    channelPans: List<int>.from(m.channelPans),
+    channelVolumes: List<int>.from(m.channelVolumes),
     sourceFormat: ModuleFormat.it,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -657,7 +672,10 @@ ModModule docToMod(ModuleDoc doc) {
           // the volume column, or C00 from a note-off (MOD has neither — Cxx sets
           // the volume, C00 silences the note as a rest). Effects > 0xF are our
           // internal extended commands, which MOD can't represent → dropped.
-          final (eff, param) = _modEffectFor(c);
+          final (eff, param) =
+              doc.sourceFormat == ModuleFormat.mod && c.nativeEffect >= 0
+                  ? (c.nativeEffect, c.nativeEffectParam)
+                  : _modEffectFor(c);
           cells.add(
             ModCell(
               sample: c.instrument.clamp(0, 31),
@@ -767,11 +785,13 @@ XmModule docToXm(ModuleDoc doc) {
                   : (c.note < 0 ? 0 : (c.note - 11).clamp(1, 96)),
               instrument: c.instrument.clamp(0, 255),
               volume: c.volume < 0 ? 0 : (0x10 + c.volume).clamp(0x10, 0x50),
-              // XM's main effect column shares MOD's 0x0–0xF numbering, so the
-              // doc effect carries 1:1 (matching docFromXm's cap). Extended
-              // (>0xF) internal effects are dropped, as the reader drops them.
-              effect: c.effect <= 0xF ? c.effect : 0,
-              effectParam: c.effect <= 0xF ? c.effectParam & 0xFF : 0,
+              effect: doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
+                  ? c.nativeEffect & 0xFF
+                  : c.effect & 0xFF,
+              effectParam:
+                  doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
+                      ? c.nativeEffectParam & 0xFF
+                      : c.effectParam & 0xFF,
             ),
           );
         } else {
@@ -788,6 +808,7 @@ XmModule docToXm(ModuleDoc doc) {
     channelCount: doc.channelCount,
     defaultTempo: doc.initialSpeed,
     defaultBpm: doc.initialTempo,
+    linearFrequency: doc.linearFrequency,
     order: List<int>.from(doc.order),
     patterns: patterns,
     instruments: instruments,
@@ -815,12 +836,13 @@ int _midiToS3mNote(int midi) {
 /// A doc cell → an [S3mCell]: note/instrument, the volume column (a MOD `Cxx`
 /// set-volume effect routes here, since S3M keeps volume in the column), and the
 /// translated effect command/info.
-S3mCell _s3mCellFrom(DocCell c) {
+S3mCell _s3mCellFrom(DocCell c, {required bool preserveNative}) {
   final vol = c.volume >= 0
       ? c.volume.clamp(0, 64)
       : (c.effect == 0xC ? c.effectParam.clamp(0, 64) : S3mCell.noVolume);
-  final (command, info) =
-      _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: false);
+  final (command, info) = preserveNative && c.nativeEffect >= 0
+      ? (c.nativeEffect, c.nativeEffectParam)
+      : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: false);
   return S3mCell(
     note: c.noteOff ? S3mCell.noteOff : _midiToS3mNote(c.note),
     instrument: c.instrument.clamp(0, 255),
@@ -861,7 +883,10 @@ S3mModule docToS3m(ModuleDoc doc) {
         if (ch < srcRow.length) {
           final c = srcRow[ch];
           cells.add(
-            _s3mCellFrom(c),
+            _s3mCellFrom(
+              c,
+              preserveNative: doc.sourceFormat == ModuleFormat.s3m,
+            ),
           );
         } else {
           cells.add(S3mCell.empty);
@@ -892,6 +917,7 @@ S3mModule docToS3m(ModuleDoc doc) {
     channelCount: doc.channelCount,
     initialSpeed: doc.initialSpeed,
     initialTempo: doc.initialTempo,
+    globalVolume: (doc.globalVolume / 2).round().clamp(0, 64),
     order: List<int>.from(doc.order),
     samples: samples,
     patterns: patterns,
@@ -909,12 +935,13 @@ Uint8List convertToS3m(ModuleDoc doc) => writeS3m(docToS3m(doc));
 /// A doc cell → an [ItCell]: note/instrument, the volume-column (a MOD `Cxx` set-
 /// volume routes here), and the translated effect command/value (IT X pan is
 /// direct 0x00–0xFF).
-ItCell _itCellFrom(DocCell c) {
+ItCell _itCellFrom(DocCell c, {required bool preserveNative}) {
   final vol = c.volume >= 0
       ? c.volume.clamp(0, 64)
       : (c.effect == 0xC ? c.effectParam.clamp(0, 64) : -1);
-  final (command, value) =
-      _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: true);
+  final (command, value) = preserveNative && c.nativeEffect >= 0
+      ? (c.nativeEffect, c.nativeEffectParam)
+      : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: true);
   return ItCell(
     // IT note 255 = note-off (writeIt emits it since it != -1).
     note: c.noteOff ? 255 : (c.note < 0 ? -1 : c.note.clamp(0, 119)),
@@ -935,6 +962,7 @@ ItModule docToIt(ModuleDoc doc) {
     samples.add(
       ItSample(
         name: ds.name,
+        globalVolume: ds.globalVolume.clamp(0, 64),
         defaultVolume: ds.volume.clamp(0, 64),
         length: ds.pcm.length,
         loopStart: ds.loopStart,
@@ -958,7 +986,10 @@ ItModule docToIt(ModuleDoc doc) {
         if (ch < srcRow.length) {
           final c = srcRow[ch];
           cells.add(
-            _itCellFrom(c),
+            _itCellFrom(
+              c,
+              preserveNative: doc.sourceFormat == ModuleFormat.it,
+            ),
           );
         } else {
           cells.add(ItCell.empty);
@@ -974,6 +1005,13 @@ ItModule docToIt(ModuleDoc doc) {
     channelCount: doc.channelCount,
     initialSpeed: doc.initialSpeed,
     initialTempo: doc.initialTempo,
+    globalVolume: doc.globalVolume.clamp(0, 128),
+    channelPans: doc.sourceFormat == ModuleFormat.it
+        ? List<int>.from(doc.channelPans)
+        : const [],
+    channelVolumes: doc.sourceFormat == ModuleFormat.it
+        ? List<int>.from(doc.channelVolumes)
+        : const [],
     order: List<int>.from(doc.order),
     patterns: patterns,
     samples: samples,

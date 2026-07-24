@@ -107,6 +107,8 @@ ItModule parseIt(Uint8List bytes) {
   final initialSpeed = u8(0x32);
   final initialTempo = u8(0x33);
   final it215 = cwtv >= 0x0215;
+  final channelPans = [for (var i = 0; i < 64; i++) u8(0x40 + i)];
+  final channelVolumes = [for (var i = 0; i < 64; i++) u8(0x80 + i)];
 
   // order list @ 0xC0, OrdNum bytes
   final order = <int>[];
@@ -168,6 +170,8 @@ ItModule parseIt(Uint8List bytes) {
     initialSpeed: initialSpeed,
     initialTempo: initialTempo,
     globalVolume: globalVolume,
+    channelPans: channelPans,
+    channelVolumes: channelVolumes,
     order: order,
     patterns: patterns,
     samples: samples,
@@ -250,14 +254,15 @@ ItSample _parseSample(
   if (!hasSample || length == 0) {
     pcm = Float64List(0);
   } else if (compressed) {
-    // IT 2.15 double-delta compression is selected per sample by Cvt bit 2;
-    // the module creation version alone is not sufficient.
+    // IT 2.15 double-delta compression is selected by the module creation
+    // version. The sample Cvt flags describe the stored sample representation,
+    // not whether the compressed stream uses the IT215 delta stage.
     pcm = _decodeCompressed(
       bytes,
       dataPtr,
       length,
       sixteenBit,
-      it215 && (cvt & 0x04) != 0,
+      it215,
     );
   } else {
     pcm = _decodeUncompressed(bytes, dataPtr, length, sixteenBit, cvt);

@@ -109,6 +109,7 @@ XmModule parseXm(Uint8List bytes) {
   final numInstruments = rawInstruments > 256 ? 256 : rawInstruments;
   final defaultTempo = bd.getUint16(0x4C, Endian.little);
   final defaultBpm = bd.getUint16(0x4E, Endian.little);
+  final linearFrequency = (bd.getUint16(0x4A, Endian.little) & 1) != 0;
 
   final order = <int>[];
   for (var i = 0; i < songLength; i++) {
@@ -266,6 +267,7 @@ XmModule parseXm(Uint8List bytes) {
     channelCount: numChannels,
     defaultTempo: defaultTempo,
     defaultBpm: defaultBpm,
+    linearFrequency: linearFrequency,
     restart: restart,
     order: order,
     patterns: patterns,

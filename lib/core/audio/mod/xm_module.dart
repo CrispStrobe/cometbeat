@@ -168,6 +168,7 @@ class XmModule {
     this.channelCount = 0,
     this.defaultTempo = 6,
     this.defaultBpm = 125,
+    this.linearFrequency = false,
     this.restart = 0,
     required this.order,
     required this.patterns,
@@ -177,6 +178,7 @@ class XmModule {
   final String name;
   final int channelCount;
   final int defaultTempo, defaultBpm, restart;
+  final bool linearFrequency;
   final List<int> order; // pattern indices (song length entries)
   final List<XmPattern> patterns;
   final List<XmInstrument> instruments;

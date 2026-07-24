@@ -50,6 +50,7 @@ class DocEnvelope {
 class DocSample {
   const DocSample({
     this.name = '',
+    this.globalVolume = 64,
     this.volume = 64,
     this.loopStart = 0,
     this.loopLength = 0,
@@ -65,6 +66,9 @@ class DocSample {
   factory DocSample.empty() => DocSample(pcm: Float64List(0));
 
   final String name;
+
+  /// Native per-sample gain where supported (IT 0..64).
+  final int globalVolume;
   final int volume; // 0..64 default volume
   final int loopStart; // in samples
   final int loopLength; // in samples (0 = no loop)
@@ -99,6 +103,8 @@ class DocCell {
     this.noteOff = false,
     this.effect = 0,
     this.effectParam = 0,
+    this.nativeEffect = -1,
+    this.nativeEffectParam = 0,
   });
 
   /// A key-off cell: stops the ringing note (the formats' note-off / note-cut).
@@ -111,7 +117,9 @@ class DocCell {
         volume = -1,
         noteOff = true,
         effect = 0,
-        effectParam = 0;
+        effectParam = 0,
+        nativeEffect = -1,
+        nativeEffectParam = 0;
 
   static const empty = DocCell();
 
@@ -128,13 +136,20 @@ class DocCell {
   final int effect; // 0 = none (0/0), else the format's effect command
   final int effectParam; // 0..255
 
+  /// Original command encoding for lossless same-format writes. [effect] is
+  /// the mapped neutral command; this retains commands without a common
+  /// equivalent, such as IT Q/V/W/Y commands.
+  final int nativeEffect; // -1 when unavailable
+  final int nativeEffectParam;
+
   bool get isEmpty =>
       note == -1 &&
       instrument == 0 &&
       volume == -1 &&
       !noteOff &&
       effect == 0 &&
-      effectParam == 0;
+      effectParam == 0 &&
+      nativeEffect == -1;
 
   @override
   bool operator ==(Object other) =>
@@ -144,11 +159,13 @@ class DocCell {
       other.volume == volume &&
       other.noteOff == noteOff &&
       other.effect == effect &&
-      other.effectParam == effectParam;
+      other.effectParam == effectParam &&
+      other.nativeEffect == nativeEffect &&
+      other.nativeEffectParam == nativeEffectParam;
 
   @override
-  int get hashCode =>
-      Object.hash(note, instrument, volume, noteOff, effect, effectParam);
+  int get hashCode => Object.hash(note, instrument, volume, noteOff, effect,
+      effectParam, nativeEffect, nativeEffectParam);
 }
 
 /// A pattern: [numRows] rows × [channelCount] cells.
@@ -166,6 +183,10 @@ class ModuleDoc {
     this.channelCount = 0,
     this.initialSpeed = 6,
     this.initialTempo = 125,
+    this.globalVolume = 128,
+    this.linearFrequency = false,
+    this.channelPans = const [],
+    this.channelVolumes = const [],
     required this.sourceFormat,
     required this.order,
     required this.patterns,
@@ -175,6 +196,13 @@ class ModuleDoc {
   final String title;
   final int channelCount;
   final int initialSpeed, initialTempo;
+
+  /// Container global volume normalized to the IT 0..128 scale.
+  final int globalVolume;
+  final bool linearFrequency;
+
+  /// Optional native channel state. IT uses pan 0..64 and volume 0..64.
+  final List<int> channelPans, channelVolumes;
   final ModuleFormat sourceFormat;
   final List<int> order; // pattern indices
   final List<DocPattern> patterns;

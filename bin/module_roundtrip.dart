@@ -71,6 +71,7 @@ Future<void> main(List<String> args) async {
           sourcePath,
           x1Path,
           outputDir.path,
+          seconds: double.tryParse(_value(args, '--seconds') ?? ''),
         );
   if (d01.isNotEmpty || d12.isNotEmpty || audioCheck == false) exitCode = 1;
 }
@@ -161,16 +162,13 @@ void _printDiff(String label, List<String> diff) {
 }
 
 Future<bool?> _renderExternal(
-  String executable,
-  String sourcePath,
-  String x1Path,
-  String outputDir,
-) async {
+    String executable, String sourcePath, String x1Path, String outputDir,
+    {double? seconds}) async {
   final rendered = <({double duration, double peak, double rms})>[];
   for (final input in [sourcePath, x1Path]) {
     final copied = '$outputDir/external_${input.split('/').last}';
     File(copied).writeAsBytesSync(File(input).readAsBytesSync());
-    final result = await Process.run(executable, [
+    final command = <String>[
       '--render',
       '--samplerate',
       '44100',
@@ -182,7 +180,12 @@ Future<bool?> _renderExternal(
       '--force',
       '--quiet',
       copied,
-    ]);
+    ];
+    if (seconds != null && seconds > 0) {
+      command.insert(command.length - 1, '--end-time');
+      command.insert(command.length - 1, seconds.toString());
+    }
+    final result = await Process.run(executable, command);
     if (result.exitCode != 0) {
       stdout
           .writeln('external render: SKIP ($executable unavailable or failed)');

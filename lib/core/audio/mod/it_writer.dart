@@ -111,10 +111,10 @@ Uint8List writeIt(ItModule module) {
   u32(0); // 0x38 message offset
   u32(0); // 0x3C reserved
   for (var i = 0; i < 64; i++) {
-    u8(32); // 0x40 channel pan
+    u8(i < module.channelPans.length ? module.channelPans[i] : 32);
   }
   for (var i = 0; i < 64; i++) {
-    u8(64); // 0x80 channel volume
+    u8(i < module.channelVolumes.length ? module.channelVolumes[i] : 64);
   }
 
   // 0xC0 order list
@@ -151,7 +151,7 @@ Uint8List writeIt(ItModule module) {
     writeString('IMPS', 4); // 0x00
     writeString('', 12); // 0x04 filename
     u8(0); // 0x10
-    u8(64); // 0x11 global volume
+    u8(s.globalVolume.clamp(0, 64)); // 0x11 global volume
     u8(flg); // 0x12 Flg
     u8(s.defaultVolume); // 0x13 default volume
     writeString(s.name, 26); // 0x14 name
