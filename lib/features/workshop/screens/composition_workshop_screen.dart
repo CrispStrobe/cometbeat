@@ -1205,10 +1205,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     if (_dragId != null) return null; // the moving ghost already shows intent
     final id = _doc.caretBeforeId;
     return id == null
-        ? EditorCaret(
-            measureIndex: 0,
-            staffPosition: pitchFromMidi(60).staffPosition(_doc.clef),
-          )
+        ? _doc.isEmpty
+            ? EditorCaret(
+                measureIndex: 0,
+                staffPosition: pitchFromMidi(60).staffPosition(_doc.clef),
+              )
+            : null
         : EditorCaret(
             beforeElementId: '${MultiPartDocument.prefixFor(_mpd.active)}$id',
           );
@@ -4052,6 +4054,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                       onMarquee:
                                           _marquee ? _applyMpMarquee : null,
                                       caret: _mpCaret,
+                                      showEndCaret:
+                                          _doc.caretBeforeId == null &&
+                                              !_doc.isEmpty,
                                       showMeasureNumbers: _barNumbers,
                                       showNoteNames: _noteNames,
                                       noteNameStyle: _noteNameStyle,

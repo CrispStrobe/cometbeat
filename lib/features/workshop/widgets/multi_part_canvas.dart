@@ -35,6 +35,7 @@ class MultiPartCanvas extends StatefulWidget {
     this.controller,
     this.onMarquee,
     this.caret,
+    this.showEndCaret = false,
     this.showMeasureNumbers = false,
     this.showNoteNames = false,
     this.noteNameStyle = NoteNameStyle.letter,
@@ -91,6 +92,11 @@ class MultiPartCanvas extends StatefulWidget {
 
   /// An insertion caret drawn before its (global) `beforeElementId`.
   final EditorCaret? caret;
+
+  /// Draw an app-owned append marker when the active part's caret is at the
+  /// end, since the shared renderer only exposes before-element/start-of-bar
+  /// anchors.
+  final bool showEndCaret;
 
   /// Whether to label each wrapped system's first bar with its measure number.
   final bool showMeasureNumbers;
@@ -244,6 +250,17 @@ class _MultiPartCanvasState extends State<MultiPartCanvas> {
                           showNoteNames: widget.showNoteNames,
                           noteNameStyle: widget.noteNameStyle,
                         ),
+                        if (widget.showEndCaret && widget.controller != null)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: CustomPaint(
+                                painter: _MultiPartEndCaretPainter(
+                                  controller: widget.controller!,
+                                  part: widget.document.active,
+                                ),
+                              ),
+                            ),
+                          ),
                         if (widget.onMarquee != null)
                           Positioned.fill(
                             child: _CanvasMarqueeOverlay(
@@ -304,6 +321,42 @@ class _MultiPartCanvasState extends State<MultiPartCanvas> {
     // Add both margins; guard a minimum so an empty score still shows a staff.
     return (content + 2 * _margin).clamp(12.0, 100000.0).toDouble();
   }
+}
+
+class _MultiPartEndCaretPainter extends CustomPainter {
+  const _MultiPartEndCaretPainter({
+    required this.controller,
+    required this.part,
+  });
+
+  final ElementRegionController controller;
+  final int part;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final regions = controller.elementRegions
+        .where((r) => MultiPartDocument.partIndexOf(r.id) == part)
+        .toList();
+    if (regions.isEmpty) return;
+    final last = regions.reduce(
+      (a, b) => a.measureIndex > b.measureIndex ||
+              (a.measureIndex == b.measureIndex &&
+                  a.bounds.right > b.bounds.right)
+          ? a
+          : b,
+    );
+    final paint = Paint()
+      ..color = const Color(0xFFD32F2F)
+      ..strokeWidth = 2;
+    canvas.drawLine(
+      Offset(last.bounds.right + 10, last.bounds.top - 24),
+      Offset(last.bounds.right + 10, last.bounds.bottom + 24),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _MultiPartEndCaretPainter oldDelegate) => true;
 }
 
 class _CanvasMarqueeOverlay extends StatefulWidget {
