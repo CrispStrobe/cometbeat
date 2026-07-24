@@ -1,5 +1,9 @@
 # Automatic Play-Along — plan & status
 
+🚧 **Actively working on (Agent checkpoint)**
+- Starting work on Tracker Keyboard Navigation (Visual Excellence & Workflow).
+- Touching: `lib/features/games/composition/tracker_screen.dart` and `test/tracker_screen_test.dart`.
+
 Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
 on one pure-Dart detection core so it stays testable headlessly and from a CLI.
@@ -201,3 +205,52 @@ SpeexDSP echo canceller (BSD, port/FFI) · WebRTC AEC3 / webrtc-audio-processing
 - `dart run bin/listen.dart --selftest --chords` — headless smoke test.
 - `dart run bin/listen.dart --stdin` fed from `sox`/`ffmpeg` — live mic.
 - macOS/iOS builds need the GEM-env wrapper (see CLAUDE.md / appstore.md).
+
+## Advanced Tracker module: Feature Gap Analysis & Roadmap
+
+To evolve our tracker into a world-class, perfect UX environment (drawing visual and workflow inspiration from DefleMask, but avoiding the rigid hardware-emulator path), we must focus on universal instrument support, seamless ecosystem interchangeability, and power-user ergonomics.
+
+### 1. Universal Instrument Ecosystem & Editing
+**Current State:** 
+Our `TrackerInstrument` hierarchy (`AdditiveInstrument`, `SfxrInstrument`, `SampleInstrument`) is robust but lacks a unified, deep editing UI. We want to support all kinds of sounds interchangeably without forcing hardware constraints.
+
+**Implementation Steps:**
+1. **Instrument Editor Overlay:** Create `instrument_editor.dart` inside the Studio UI with a real-time testing keyboard.
+2. **Sample Editor:** For `SampleInstrument`, build a waveform viewer with draggable handles for `loopStart`/`loopLength`, ping-pong toggles, and base MIDI tuning.
+3. **Synth & FX Editor:** For `SfxrInstrument` or FM models, embed the existing `lib/features/sound_lab/sound_lab_screen.dart` to expose its rich slider UI directly in the tracker.
+4. **Multi-Sample Groundwork:** Enable `MultiSampleInstrument` to map different sample IDs across the keyboard (essential for complex DrumKits and realistic acoustic patches).
+
+### 2. Ecosystem Interchangeability (Workshop, Looper, DrumKit, Tab)
+**Current State:**
+We have `tracker_notation.dart` bridging Tracker ↔ Score Workshop. However, deep integration with other DAW tools (Looper, Tab Editor, DrumKit) is missing. 
+
+**Implementation Steps:**
+1. **Looper / Loop Mixer Bridge:** Implement a function to bake a Tracker pattern directly into a `LoopTrack` stem (`Float64List`) so it can be dropped into the Loop Mixer as a perfectly-timed, loopable clip.
+2. **DrumKit Bridge:** Ensure `PercussionInstrument` directly reads from/writes to the same model used by the standalone DrumKit view. A beat tapped out physically in the DrumKit must instantly populate the Tracker's percussion channel.
+3. **Tab Editor Translation:** Expand `tracker_notation.dart` to support translating plucked string channels (`KarplusInstrument`) into Tab Editor strings, mapping MIDI pitches to string/fret combinations based on tuning.
+
+### 3. Visual Excellence & Workflow (The "DefleMask" Feel)
+**Current State:**
+The Studio UI (`tracker_screen.dart`) is functional but lacks the slick, real-time visual feedback and rapid navigation of elite modern trackers.
+
+**Implementation Steps:**
+1. **Real-time Oscilloscopes & Meters:** Tap the `_stem(channel)` cache in `TrackerEngine`. Pass this data to an `OscilloscopeWidget` using `CustomPainter` to draw vivid, real-time waveforms and VU meters per channel, exactly like DefleMask.
+2. **Smooth Scrolling Matrix:** Evolve the grid rendering to support pixel-smooth playhead scrolling (rather than rigid row-by-row jumping) and a dynamic pattern matrix where channel loops can be visualized block-by-block.
+3. **Advanced Keyboard Handling:** Add `FocusNode` and `KeyEvent` handlers for lightning-fast multi-cell selection (shift+arrows), cross-channel copy/paste, and value interpolation directly in the grid.
+
+### 4. Deep Instrument Modulation (Macros & Envelopes)
+**Current State:**
+Instruments are static per note run, lacking tick-level modulators.
+
+**Implementation Steps:**
+1. **Macro Data Model:** Create a `MacroSequence` class for Volume, Panning, Pitch, and Arpeggio envelopes.
+2. **Tick-level Rendering:** Transition `mixStems` and `renderChannel` to evaluate notes tick-by-tick, updating the instrument's active frequency and amplitude based on the `MacroSequence`.
+
+### 5. Comprehensive Effect Command Set & Flow Control
+**Current State:**
+`TrackerCell` holds hex `fxCmd/fxParam`, but we currently only process volume commands. 
+
+**Implementation Steps:**
+1. **Unify Pitch Effects:** Move arpeggio/porta/vibrato from the `TrackerEffect` enum into the hex pipeline, evaluating them tick-by-tick during `renderChannel`.
+2. **Flow & Groove Commands:** Support Speed (`Fxx`), Pattern Break (`Dxx`), and Position Jump (`Bxx`). Rewrite `renderSong` as a dynamic state machine that respects these navigation commands.
+3. **Sub-row Timing:** Implement Note Delay (`EDx`) and Note Cut (`ECx`) directly in the offline renderer to allow complex swing and ghost notes.
