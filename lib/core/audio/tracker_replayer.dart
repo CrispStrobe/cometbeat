@@ -663,12 +663,16 @@ Float64List renderChannelPerNote(
       curInst = pool[trigger.instrument - 1];
     }
     if (midi != null) {
-      final capRow = startStep + sustainSteps; // Cut where the sustain ends
+      final capRow = startStep + sustainSteps;
       final one = List<TrackerCell>.filled(rows, TrackerCell.empty)
         ..[startStep] = trigger;
       if (capRow < rows) {
+        // An isolated run needs the same boundary semantics as the source
+        // channel. A following note is a tracker choke, not a key-off: use a
+        // dummy retrigger so SampleInstrument keeps full sustain through the
+        // boundary. Only an explicit release run should enter ADSR release.
         one[capRow] =
-            TrackerCell.noteCut; // Trigger release in the rendering instrument
+            releaseSteps > 0 ? TrackerCell.noteCut : TrackerCell(midi: midi);
       }
       final buf = curInst.renderChannel(one, timing);
       final s = timing.stepStartSample(startStep);
