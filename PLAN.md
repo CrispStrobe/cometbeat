@@ -335,7 +335,7 @@ Our `TrackerInstrument` hierarchy (`AdditiveInstrument`, `SfxrInstrument`, `Samp
 2. ~~**Sample Editor:** For `SampleInstrument`, build a waveform viewer with draggable handles for `loopStart`/`loopLength`, ping-pong toggles, and base MIDI tuning.~~ (DONE)
 3. ~~**Synth & FX Editor:** For `SfxrInstrument` or FM models, embed the existing `lib/features/sound_lab/sound_lab_screen.dart` to expose its rich slider UI directly in the tracker.~~ (DONE)
 4. ~~**Multi-Sample Groundwork:** Enable `MultiSampleInstrument` to map different sample IDs across the keyboard (essential for complex DrumKits and realistic acoustic patches).~~ (DONE)
-5. **Synthesizer Envelope & Polyphony Fix:** Redesign `applyEnvelope` and `TrackerInstrument.renderChannel` to not force ADSR releases inside the gap between notes. Introduce a Key Off command (`TrackerEffect.keyOff` or `TrackerCell.noteCut`) to trigger releases naturally, allow notes to sustain to the end if not cut off, and provide a polyphonic "bleed" toggle in `MultiSampleInstrument` so drum kits can correctly let crash cymbals ring over kick drums.
+5. ~~**Synthesizer Envelope & Polyphony Fix:** Redesign `applyEnvelope` and `TrackerInstrument.renderChannel` to not force ADSR releases inside the gap between notes. Introduce a Key Off command (`TrackerEffect.keyOff` or `TrackerCell.noteCut`) to trigger releases naturally, allow notes to sustain to the end if not cut off, and provide a polyphonic "bleed" toggle in `MultiSampleInstrument` so drum kits can correctly let crash cymbals ring over kick drums.~~ (DONE)
 
 ### 2. Ecosystem Interchangeability (Workshop, Looper, DrumKit, Tab)
 **Current State:**
