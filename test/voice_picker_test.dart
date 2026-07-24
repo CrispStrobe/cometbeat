@@ -100,6 +100,20 @@ void main() {
       expect(find.byType(ListTile).evaluate().length, greaterThan(4));
     });
 
+    testWidgets('instrument selector reaches Generate FX through Sound Library',
+        (t) async {
+      await t.pumpWidget(host());
+      await t.pumpAndSettle();
+
+      await t.tap(find.byIcon(Icons.library_music_outlined));
+      await t.pumpAndSettle();
+      expect(find.text('Sound Library'), findsOneWidget);
+
+      await t.tap(find.byIcon(Icons.add));
+      await t.pumpAndSettle();
+      expect(find.text('New FX'), findsOneWidget);
+    });
+
     testWidgets('the Chiptune filter narrows to chiptune voices', (t) async {
       await t.pumpWidget(host());
       await t.pumpAndSettle();

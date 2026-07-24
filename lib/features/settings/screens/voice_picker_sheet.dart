@@ -17,6 +17,8 @@ import 'package:comet_beat/core/audio/voice_options.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/sound_lab/catalog_browse_sheet.dart';
 import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
+import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
+    show showMyInstrumentsSheet;
 import 'package:comet_beat/features/sound_lab/soundfont_persist.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart'
@@ -229,6 +231,19 @@ class _VoicePickerSheetState extends State<VoicePickerSheet> {
     await _loadLibrary(); // surface anything installed
   }
 
+  Future<void> _openSoundLibrary() async {
+    final saved = await showMyInstrumentsSheet(
+      context,
+      includeBuiltIns: true,
+    );
+    if (saved == null || !mounted) return;
+    final resolved = saved.instrument;
+    if (resolved == null) return;
+    Navigator.of(context).pop<VoiceChoice>(
+      (id: libraryVoiceId(saved.name), resolved: resolved),
+    );
+  }
+
   Widget _chip(String key, String label) => Padding(
         padding: const EdgeInsets.only(right: 6),
         child: ChoiceChip(
@@ -265,6 +280,11 @@ class _VoicePickerSheetState extends State<VoicePickerSheet> {
                   icon: const Icon(Icons.cloud_outlined, size: 18),
                   label: Text(l10n.soundLibraryBrowseCatalog),
                   onPressed: _browseCatalog,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.library_music_outlined),
+                  tooltip: l10n.soundLibraryTitle,
+                  onPressed: _openSoundLibrary,
                 ),
               ],
             ),
