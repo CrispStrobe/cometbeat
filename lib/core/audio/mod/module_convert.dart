@@ -156,7 +156,9 @@ ModuleDoc docFromMod(ModModule m) {
         name: s.name,
         volume: s.volume,
         loopStart: s.repeatPoint,
-        loopLength: s.repeatLength <= 1 ? 0 : s.repeatLength,
+        // ModSample.repeatLength is stored in bytes, while the MOD header
+        // stores words. A one-word (two-byte) repeat is the no-loop sentinel.
+        loopLength: s.repeatLength <= 2 ? 0 : s.repeatLength,
         c5speed: finetuneToC5speed(s.finetune),
         pcm: _normInt8(s.pcm),
       );
