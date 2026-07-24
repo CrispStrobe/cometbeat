@@ -15,16 +15,13 @@ import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/games/composition/loop_studio_screen.dart';
-import 'package:comet_beat/features/games/composition/perform_screen.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
-import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
 import 'package:comet_beat/features/games/harmony/function_ear_screen.dart';
 import 'package:comet_beat/features/games/harmony/harmony_quiz_screen.dart';
 import 'package:comet_beat/features/games/note_reading/note_reading_quiz_screen.dart';
 import 'package:comet_beat/features/games/note_values/note_value_quiz_screen.dart';
 import 'package:comet_beat/features/games/scales/scale_detective_screen.dart';
 import 'package:comet_beat/features/games/screens/module_screen.dart';
-import 'package:comet_beat/features/games/transcribe/transcribe_screen.dart';
 import 'package:comet_beat/features/progress/screens/progress_screen.dart';
 import 'package:comet_beat/features/settings/screens/settings_screen.dart';
 import 'package:comet_beat/features/textbook/textbook_screen.dart';
@@ -166,9 +163,9 @@ class HomeScreen extends StatelessWidget {
               context,
             ).push(MaterialPageRoute(builder: (_) => const TextbookScreen())),
           ),
-          // Workshop: tap opens the Score editor (default mode); the dropdown
-          // also offers the Advanced Tracker (the pattern-editor mode) and the
-          // Guitar Tab viewer.
+          // Authoring: one menu exposes the five product modes. Legacy
+          // Perform/Drumkit/Transcribe screens remain internal integration
+          // surfaces while their workflows move into Loop Studio and Audio.
           PopupMenuButton<int>(
             icon: const Icon(Icons.piano),
             tooltip: l10n.workshopTitle,
@@ -178,10 +175,7 @@ class HomeScreen extends StatelessWidget {
                   1 => const AdvancedTrackerScreen(),
                   2 => const TabWorkshopScreen(),
                   3 => const LoopStudioScreen(),
-                  4 => const DrumkitScreen(),
                   8 => const DawScreen(),
-                  9 => const TranscribeScreen(),
-                  10 => const PerformScreen(),
                   _ => const CompositionWorkshopScreen(),
                 },
               ),
@@ -228,42 +222,12 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               PopupMenuItem(
-                value: 10,
-                child: Row(
-                  children: [
-                    const Icon(Icons.multitrack_audio, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.workshopModePerform),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 4,
-                child: Row(
-                  children: [
-                    const Icon(Icons.album, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.workshopModeDrums),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
                 value: 8,
                 child: Row(
                   children: [
                     const Icon(Icons.view_agenda, size: 20),
                     const SizedBox(width: 12),
                     Text(l10n.dawTitle),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 9,
-                child: Row(
-                  children: [
-                    const Icon(Icons.lyrics, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.transcribeTitle),
                   ],
                 ),
               ),
