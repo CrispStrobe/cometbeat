@@ -396,9 +396,13 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
 
   Future<void> _browseMusicLibrary() async {
     final score = await showMusicPicker(context);
-    if (score == null || !mounted || widget.onMusicSelected == null) return;
+    if (score == null || !mounted) return;
     Navigator.of(context).pop();
-    await widget.onMusicSelected!(score);
+    if (widget.onMusicSelected case final onMusicSelected?) {
+      await onMusicSelected(score);
+    } else if (mounted) {
+      await showScoreDestinations(context, score);
+    }
   }
 
   Future<void> _browseModArchive() async {
@@ -494,8 +498,7 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
                       tooltip: l10n.soundLibraryBrowseCatalog,
                       onPressed: _browseCatalog,
                     ),
-                  if (widget.restrictToCategory == null &&
-                      widget.onMusicSelected != null)
+                  if (widget.restrictToCategory == null)
                     IconButton(
                       icon: const Icon(Icons.library_music, size: 20),
                       tooltip: l10n.musicPickerTitle,
