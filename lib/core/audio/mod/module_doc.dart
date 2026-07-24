@@ -21,6 +21,8 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
+
 /// The source container format a [ModuleDoc] was read from.
 enum ModuleFormat { mod, s3m, xm, it }
 
@@ -241,6 +243,8 @@ class DocPattern {
 class ModuleDoc {
   const ModuleDoc({
     this.title = '',
+    this.xmTrackerName = '',
+    this.xmVersion = 0x0104,
     this.channelCount = 0,
     this.initialSpeed = 6,
     this.initialTempo = 125,
@@ -254,6 +258,7 @@ class ModuleDoc {
     this.channelVolumes = const [],
     this.itInstrumentHeaders = const [],
     this.itInstruments = const [],
+    this.xmInstruments = const [],
     required this.sourceFormat,
     required this.order,
     required this.patterns,
@@ -261,6 +266,8 @@ class ModuleDoc {
   });
 
   final String title;
+  final String xmTrackerName;
+  final int xmVersion;
   final int channelCount;
   final int initialSpeed, initialTempo;
 
@@ -278,6 +285,10 @@ class ModuleDoc {
   /// Original IT instrument headers for lossless IT -> IT conversion.
   final List<List<int>> itInstrumentHeaders;
   final List<DocInstrument> itInstruments;
+
+  /// Native XM instruments retained for lossless XM -> XM conversion. The
+  /// neutral sample list remains available for cross-format conversion.
+  final List<XmInstrument> xmInstruments;
   final ModuleFormat sourceFormat;
   final List<int> order; // pattern indices
   final List<DocPattern> patterns;

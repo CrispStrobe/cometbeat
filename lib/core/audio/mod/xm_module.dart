@@ -104,6 +104,11 @@ class XmInstrument {
     this.keymap = const [],
     this.volumeEnvelope = const XmEnvelope(),
     this.panEnvelope = const XmEnvelope(),
+    this.vibratoType = 0,
+    this.vibratoSweep = 0,
+    this.vibratoDepth = 0,
+    this.vibratoRate = 0,
+    this.fadeout = 0,
   });
   final String name;
   final List<XmSample> samples;
@@ -112,6 +117,8 @@ class XmInstrument {
   /// indices into [samples]. Empty means the legacy single-sample default.
   final List<int> keymap;
   final XmEnvelope volumeEnvelope, panEnvelope;
+  final int vibratoType, vibratoSweep, vibratoDepth, vibratoRate;
+  final int fadeout;
 }
 
 /// One note cell. `note == 0` empty, `note == 97` note-off.
@@ -165,6 +172,8 @@ class XmPattern {
 class XmModule {
   const XmModule({
     this.name = '',
+    this.trackerName = '',
+    this.version = 0x0104,
     this.channelCount = 0,
     this.defaultTempo = 6,
     this.defaultBpm = 125,
@@ -176,6 +185,8 @@ class XmModule {
   });
 
   final String name;
+  final String trackerName;
+  final int version;
   final int channelCount;
   final int defaultTempo, defaultBpm, restart;
   final bool linearFrequency;

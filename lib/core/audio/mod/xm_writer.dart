@@ -121,9 +121,14 @@ Uint8List writeXm(XmModule module) {
   // Module name + separator + tracker name.
   _writeName(header, 0x11, 20, module.name);
   header[0x25] = 0x1A;
-  _writeName(header, 0x26, 20, _kTrackerName);
+  _writeName(
+    header,
+    0x26,
+    20,
+    module.trackerName.isEmpty ? _kTrackerName : module.trackerName,
+  );
 
-  hb.setUint16(0x3A, 0x0104, Endian.little); // version
+  hb.setUint16(0x3A, module.version, Endian.little); // version
   hb.setUint32(0x3C, 276, Endian.little); // header size
 
   final songLength = module.order.length > 256 ? 256 : module.order.length;
@@ -200,8 +205,15 @@ Uint8List writeXm(XmModule module) {
     ih[26] = 0; // type
     ihb.setUint16(27, numSamples, Endian.little);
     ihb.setUint32(29, 40, Endian.little); // sampleHeaderSize
-    // Keymap (33..128) stays zero (every note → sample 0). Emit the volume/pan
-    // envelope block from the instrument's envelopes (left zeroed = disabled).
+    // Keymap (33..128) selects the instrument sample for each C-0..B-7 key.
+    // Empty keymaps retain the XM convention of selecting sample zero.
+    for (var key = 0; key < 96; key++) {
+      ih[33 + key] = key < instrument.keymap.length
+          ? instrument.keymap[key].clamp(0, 255)
+          : 0;
+    }
+    // Emit the volume/pan envelope block from the instrument's envelopes
+    // (left zeroed = disabled).
     _writeXmEnvelope(
       ihb,
       instrument.volumeEnvelope,
@@ -222,6 +234,11 @@ Uint8List writeXm(XmModule module) {
       loopEndAt: 232,
       typeAt: 234,
     );
+    ih[235] = instrument.vibratoType.clamp(0, 255);
+    ih[236] = instrument.vibratoSweep.clamp(0, 255);
+    ih[237] = instrument.vibratoDepth.clamp(0, 255);
+    ih[238] = instrument.vibratoRate.clamp(0, 255);
+    ihb.setUint16(239, instrument.fadeout.clamp(0, 0xFFFF), Endian.little);
     out.add(ih);
 
     // Sample headers, then sample data blocks (same order).

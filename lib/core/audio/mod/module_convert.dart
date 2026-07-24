@@ -408,6 +408,9 @@ ModuleDoc docFromXm(XmModule m) {
             effectParam: c.effectParam,
             nativeEffect: c.effect == 0 && c.effectParam == 0 ? -1 : c.effect,
             nativeEffectParam: c.effectParam,
+            nativeInstrument: c.instrument,
+            nativeInstrumentSet: c.instrument != 0,
+            nativeNote: c.note,
           ),
         );
       }
@@ -418,11 +421,14 @@ ModuleDoc docFromXm(XmModule m) {
 
   return ModuleDoc(
     title: m.name,
+    xmTrackerName: m.trackerName,
+    xmVersion: m.version,
     channelCount: m.channelCount,
     initialSpeed: m.defaultTempo,
     initialTempo: m.defaultBpm,
     globalVolume: 128,
     linearFrequency: m.linearFrequency,
+    xmInstruments: List<XmInstrument>.from(m.instruments),
     sourceFormat: ModuleFormat.xm,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -782,6 +788,20 @@ Uint8List convertToMod(ModuleDoc doc) => writeMod(docToMod(doc));
 /// v1 writes 8-bit samples (the neutral model doesn't carry bit depth); notes,
 /// instruments, the volume column, samples, loops and structure convert.
 XmModule docToXm(ModuleDoc doc) {
+  if (doc.sourceFormat == ModuleFormat.xm && doc.xmInstruments.isNotEmpty) {
+    return XmModule(
+      name: doc.title,
+      trackerName: doc.xmTrackerName,
+      version: doc.xmVersion,
+      channelCount: doc.channelCount,
+      defaultTempo: doc.initialSpeed,
+      defaultBpm: doc.initialTempo,
+      linearFrequency: doc.linearFrequency,
+      order: List<int>.from(doc.order),
+      patterns: _docPatternsToXm(doc, preserveNativeInstruments: true),
+      instruments: List<XmInstrument>.from(doc.xmInstruments),
+    );
+  }
   final instruments = <XmInstrument>[];
   for (final ds in doc.samples) {
     if (ds.isEmpty) {
@@ -812,6 +832,25 @@ XmModule docToXm(ModuleDoc doc) {
     );
   }
 
+  final patterns = _docPatternsToXm(doc);
+  return XmModule(
+    name: doc.title,
+    trackerName: doc.xmTrackerName,
+    version: doc.xmVersion,
+    channelCount: doc.channelCount,
+    defaultTempo: doc.initialSpeed,
+    defaultBpm: doc.initialTempo,
+    linearFrequency: doc.linearFrequency,
+    order: List<int>.from(doc.order),
+    patterns: patterns,
+    instruments: instruments,
+  );
+}
+
+List<XmPattern> _docPatternsToXm(
+  ModuleDoc doc, {
+  bool preserveNativeInstruments = false,
+}) {
   final patterns = <XmPattern>[];
   for (final dp in doc.patterns) {
     final rows = <List<XmCell>>[];
@@ -822,10 +861,15 @@ XmModule docToXm(ModuleDoc doc) {
           final c = srcRow[ch];
           cells.add(
             XmCell(
-              note: c.noteOff
-                  ? XmCell.noteOff
-                  : (c.note < 0 ? 0 : (c.note - 11).clamp(1, 96)),
-              instrument: c.instrument.clamp(0, 255),
+              note: preserveNativeInstruments && c.nativeNote >= 0
+                  ? c.nativeNote
+                  : (c.noteOff
+                      ? XmCell.noteOff
+                      : (c.note < 0 ? 0 : (c.note - 11).clamp(1, 96))),
+              instrument: (preserveNativeInstruments && c.nativeInstrumentSet
+                      ? c.nativeInstrument
+                      : c.instrument)
+                  .clamp(0, 255),
               volume: c.volume < 0 ? 0 : (0x10 + c.volume).clamp(0x10, 0x50),
               effect: doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
                   ? c.nativeEffect & 0xFF
@@ -844,17 +888,7 @@ XmModule docToXm(ModuleDoc doc) {
     }
     patterns.add(XmPattern(rows));
   }
-
-  return XmModule(
-    name: doc.title,
-    channelCount: doc.channelCount,
-    defaultTempo: doc.initialSpeed,
-    defaultBpm: doc.initialTempo,
-    linearFrequency: doc.linearFrequency,
-    order: List<int>.from(doc.order),
-    patterns: patterns,
-    instruments: instruments,
-  );
+  return patterns;
 }
 
 /// Convenience: convert a neutral module straight to `.xm` bytes.

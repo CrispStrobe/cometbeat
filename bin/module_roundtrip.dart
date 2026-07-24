@@ -103,6 +103,24 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
   check(orderA.toString() == orderB.toString(), 'order $orderA != $orderB');
   check(a.patterns.length == b.patterns.length,
       'patterns ${a.patterns.length} != ${b.patterns.length}');
+  check(a.linearFrequency == b.linearFrequency,
+      'linear frequency ${a.linearFrequency} != ${b.linearFrequency}');
+  check(a.xmInstruments.length == b.xmInstruments.length,
+      'XM instruments ${a.xmInstruments.length} != ${b.xmInstruments.length}');
+  final xmInstruments =
+      math.min(a.xmInstruments.length, b.xmInstruments.length);
+  for (var i = 0; i < xmInstruments; i++) {
+    final ia = a.xmInstruments[i], ib = b.xmInstruments[i];
+    check(ia.keymap.toString() == ib.keymap.toString(),
+        'XM instrument ${i + 1} keymap differs');
+    check(
+        ia.vibratoType == ib.vibratoType &&
+            ia.vibratoSweep == ib.vibratoSweep &&
+            ia.vibratoDepth == ib.vibratoDepth &&
+            ia.vibratoRate == ib.vibratoRate &&
+            ia.fadeout == ib.fadeout,
+        'XM instrument ${i + 1} playback fields differ');
+  }
 
   final patternCount = math.min(a.patterns.length, b.patterns.length);
   for (var p = 0; p < patternCount; p++) {

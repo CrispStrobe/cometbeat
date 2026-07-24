@@ -92,6 +92,8 @@ XmModule parseXm(Uint8List bytes) {
 
   // 2. Header.
   final name = _readName(bytes, 0x11, 0x25);
+  final trackerName = _readName(bytes, 0x26, 0x3A);
+  final version = bd.getUint16(0x3A, Endian.little);
   final headerSize = bd.getUint32(0x3C, Endian.little);
   final songLength = bd.getUint16(0x40, Endian.little);
   final restart = bd.getUint16(0x42, Endian.little);
@@ -171,6 +173,8 @@ XmModule parseXm(Uint8List bytes) {
     // headers omit it — guard on the declared header size + bounds.
     var volEnv = const XmEnvelope();
     var panEnv = const XmEnvelope();
+    var vibratoType = 0, vibratoSweep = 0, vibratoDepth = 0, vibratoRate = 0;
+    var fadeout = 0;
     final keymap = <int>[
       for (var i = 0; i < 96; i++)
         instrumentStart + 33 + i < len ? bytes[instrumentStart + 33 + i] : 0,
@@ -194,6 +198,11 @@ XmModule parseXm(Uint8List bytes) {
         loopEndAt: instrumentStart + 232,
         typeAt: instrumentStart + 234,
       );
+      vibratoType = bytes[instrumentStart + 235];
+      vibratoSweep = bytes[instrumentStart + 236];
+      vibratoDepth = bytes[instrumentStart + 237];
+      vibratoRate = bytes[instrumentStart + 238];
+      fadeout = bd.getUint16(instrumentStart + 239, Endian.little);
     }
 
     // Sample headers begin at instrumentStart + instrumentHeaderSize.
@@ -257,6 +266,11 @@ XmModule parseXm(Uint8List bytes) {
         keymap: keymap,
         volumeEnvelope: volEnv,
         panEnvelope: panEnv,
+        vibratoType: vibratoType,
+        vibratoSweep: vibratoSweep,
+        vibratoDepth: vibratoDepth,
+        vibratoRate: vibratoRate,
+        fadeout: fadeout,
       ),
     );
     instrumentStart = dataCursor;
@@ -264,6 +278,8 @@ XmModule parseXm(Uint8List bytes) {
 
   return XmModule(
     name: name,
+    trackerName: trackerName,
+    version: version,
     channelCount: numChannels,
     defaultTempo: defaultTempo,
     defaultBpm: defaultBpm,
