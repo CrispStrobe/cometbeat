@@ -147,7 +147,9 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.text('laser'));
       await t.pumpAndSettle();
-      await t.tap(find.widgetWithText(FilledButton, 'Save'));
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await t.ensureVisible(save);
+      await t.tap(save);
       await t.pumpAndSettle();
 
       expect((await store.load()).map((s) => s.name), contains('laser'));
