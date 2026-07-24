@@ -119,7 +119,16 @@ abstract interface class DrumkitTester {
 }
 
 class DrumkitScreen extends StatefulWidget {
-  const DrumkitScreen({super.key});
+  const DrumkitScreen({
+    super.key,
+    this.embedded = false,
+    this.initialRows,
+    this.onChanged,
+  });
+
+  final bool embedded;
+  final Map<Drum, List<bool>>? initialRows;
+  final ValueChanged<Map<Drum, List<bool>>>? onChanged;
 
   static const tempos = [80, 100, 120, 140];
 
@@ -134,10 +143,7 @@ class DrumkitScreen extends StatefulWidget {
 class _DrumkitScreenState extends State<DrumkitScreen>
     with SingleTickerProviderStateMixin
     implements DrumkitTester {
-  // One boolean row per drum voice; each row is kPatternSteps (16 = 2 bars).
-  final Map<Drum, List<bool>> _rows = {
-    for (final d in Drum.values) d: List<bool>.filled(kPatternSteps, false),
-  };
+  late final Map<Drum, List<bool>> _rows;
 
   // Per-drum sound override: a library instrument (incl. SoundFont-backed
   // voices) replacing the built-in synth voice. Null = the synth drum. The
@@ -186,6 +192,12 @@ class _DrumkitScreenState extends State<DrumkitScreen>
 
   @override
   void initState() {
+    _rows = {
+      for (final d in Drum.values)
+        d: widget.initialRows != null
+            ? List<bool>.from(widget.initialRows![d]!)
+            : List<bool>.filled(kPatternSteps, false),
+    };
     super.initState();
     _ticker = createTicker((_) {
       if (!_clock.isRunning) {
@@ -269,6 +281,7 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   /// Re-render + re-swap the loop IN PHASE after an edit (so the beat doesn't
   /// restart) — the same trick the Loop Mixer / Tracker use.
   void _syncPlayback() {
+    widget.onChanged?.call(_snapshot());
     if (!_clock.isRunning) return;
     if (!context.read<AudioService>().soundOn) return;
     final pos =

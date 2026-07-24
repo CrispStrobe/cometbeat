@@ -341,9 +341,9 @@ Our `TrackerInstrument` hierarchy (`AdditiveInstrument`, `SfxrInstrument`, `Samp
 We have `tracker_notation.dart` bridging Tracker ↔ Score Workshop. However, deep integration with other DAW tools (Looper, Tab Editor, DrumKit) is missing. 
 
 **Implementation Steps:**
-1. **Looper / Loop Mixer Bridge:** Implement a function to bake a Tracker pattern directly into a `LoopTrack` stem (`Float64List`) so it can be dropped into the Loop Mixer as a perfectly-timed, loopable clip.
-2. **DrumKit Bridge:** Ensure `PercussionInstrument` directly reads from/writes to the same model used by the standalone DrumKit view. A beat tapped out physically in the DrumKit must instantly populate the Tracker's percussion channel.
-3. **Tab Editor Translation:** Expand `tracker_notation.dart` to support translating plucked string channels (`KarplusInstrument`) into Tab Editor strings, mapping MIDI pitches to string/fret combinations based on tuning.
+1. - [x] **Looper / Loop Mixer Bridge:** Bake Tracker pattern directly into a `LoopTrack` stem (`Float64List`) so it can be dropped into the Loop Mixer as a perfectly-timed, loopable clip.
+2. - [x] **DrumKit Bridge:** Ensure `PercussionInstrument` directly reads from/writes to the same model used by the standalone DrumKit view. A beat tapped out physically in the DrumKit must instantly populate the Tracker's percussion channel.
+3. - [x] **Tab Editor Translation:** Create an interface/utility that takes a TrackerChannel holding a plucked string instrument (like Guitar/Bass) and translates its active MIDI notes into string/fret positions for Tab Editor notation.
 
 ### 3. Visual Excellence & Workflow (classic tracker ergonomics)
 **Current State:**

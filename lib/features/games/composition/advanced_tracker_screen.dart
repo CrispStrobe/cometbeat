@@ -2244,7 +2244,16 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             onPressed: () async {
-              final newInst = await showInstrumentEditor(context, ch.instrument);
+              final newInst = await showInstrumentEditor(
+                context, 
+                ch.instrument,
+                cells: _song.engine.channels[c].cells,
+                onCellsChanged: (cells) {
+                  setState(() => _song.engine.setChannelCells(c, cells));
+                  _syncPlayback();
+                  // Re-render grid if needed, though setState on AdvancedTrackerScreen handles it.
+                },
+              );
               if (newInst != null && mounted) {
                 // Update the instrument in the song and rebuild
                 setState(() => _song.setChannelInstrument(c, newInst));

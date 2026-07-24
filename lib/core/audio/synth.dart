@@ -174,6 +174,23 @@ Int16List mixStems(List<MixStem> stems, {required int totalSamples}) {
   return samples;
 }
 
+Float64List mixStemsFloat(List<MixStem> stems, {required int totalSamples}) {
+  final mix = Float64List(totalSamples);
+  for (final stem in stems) {
+    var peak = 0.0;
+    for (final v in stem.samples) {
+      if (v.abs() > peak) peak = v.abs();
+    }
+    if (peak == 0) continue;
+    final scale = stem.gain / peak;
+    final n = min(stem.samples.length, totalSamples);
+    for (var i = 0; i < n; i++) {
+      mix[i] += stem.samples[i] * scale;
+    }
+  }
+  return mix;
+}
+
 // --- Stereo mixing + panning (Tracker Feature C) -----------------------------
 //
 // The mono [mixStems]/[wavBytes] above stay the canonical path; these are their

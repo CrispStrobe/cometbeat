@@ -28,7 +28,7 @@ import 'package:comet_beat/core/audio/loop_instrument_render.dart'
     show renderCellsWithInstrument;
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
-    show TrackerInstrument;
+    show TrackerInstrument, TrackerEngine, TrackerCell;
 import 'package:comet_beat/core/audio/wav_io.dart';
 
 /// An optional master send effect on the whole Loop Mixer output.
@@ -119,6 +119,45 @@ class MelodicPattern extends LoopPattern {
     );
     return renderCells(cells, instrument, timing, transpose: transpose);
   }
+}
+
+/// A pattern that holds a pre-rendered, loop-ready PCM stem.
+class StemPattern extends LoopPattern {
+  const StemPattern(this.stem);
+
+  final Float64List stem;
+
+  @override
+  Float64List render(
+    LoopTiming timing, {
+    int transpose = 0,
+    DrumKit kit = kDrumKitClean,
+  }) {
+    if (stem.length == timing.totalSamples) return stem;
+    final out = Float64List(timing.totalSamples);
+    final n = min(stem.length, out.length);
+    for (var i = 0; i < n; i++) out[i] = stem[i];
+    return out;
+  }
+}
+
+/// Bakes a Tracker pattern directly into a [LoopTrack] stem ([Float64List]) so it
+/// can be dropped into the Loop Mixer as a perfectly-timed, loopable clip.
+LoopTrack bakeTrackerToLoopTrack(
+  String id,
+  TrackerEngine engine,
+  List<List<TrackerCell>> cells, {
+  double gain = 1.0,
+}) {
+  final saved = engine.exportCells();
+  engine.importCells(cells);
+  final stem = engine.renderLoopFloat();
+  engine.importCells(saved);
+  return LoopTrack(
+    id: id,
+    gain: gain,
+    variants: [StemPattern(stem)],
+  );
 }
 
 /// Renders pitched [cells] back-to-back on [timing]'s step grid (any length —

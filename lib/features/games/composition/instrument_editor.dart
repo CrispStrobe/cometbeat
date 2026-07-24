@@ -4,6 +4,8 @@ import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
+import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
+import 'package:comet_beat/core/audio/drumkit_bridge.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
@@ -12,18 +14,30 @@ import 'package:provider/provider.dart';
 
 Future<TrackerInstrument?> showInstrumentEditor(
   BuildContext context,
-  TrackerInstrument initial,
-) async {
+  TrackerInstrument initial, {
+  List<TrackerCell>? cells,
+  ValueChanged<List<TrackerCell>>? onCellsChanged,
+}) async {
   return showModalBottomSheet<TrackerInstrument>(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => _InstrumentEditorSheet(initial: initial),
+    builder: (ctx) => _InstrumentEditorSheet(
+      initial: initial,
+      cells: cells,
+      onCellsChanged: onCellsChanged,
+    ),
   );
 }
 
 class _InstrumentEditorSheet extends StatefulWidget {
-  const _InstrumentEditorSheet({required this.initial});
+  const _InstrumentEditorSheet({
+    required this.initial,
+    this.cells,
+    this.onCellsChanged,
+  });
   final TrackerInstrument initial;
+  final List<TrackerCell>? cells;
+  final ValueChanged<List<TrackerCell>>? onCellsChanged;
 
   @override
   State<_InstrumentEditorSheet> createState() => _InstrumentEditorSheetState();
@@ -102,6 +116,19 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
       return _SampleEditor(
         inst: _inst as SampleInstrument,
         onChanged: (newInst) => setState(() => _inst = newInst),
+      );
+    } else if (_inst is PercussionInstrument) {
+      return DrumkitScreen(
+        embedded: true,
+        initialRows: widget.cells == null
+            ? null
+            : DrumKitBridge.toDrumRows(widget.cells!, widget.cells!.length),
+        onChanged: (rows) {
+          if (widget.onCellsChanged != null && widget.cells != null) {
+            widget.onCellsChanged!(
+                DrumKitBridge.toCells(rows, widget.cells!.length));
+          }
+        },
       );
     } else {
       return SoundLabScreen(

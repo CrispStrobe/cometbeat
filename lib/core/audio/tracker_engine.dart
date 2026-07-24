@@ -629,7 +629,7 @@ class MultiSampleInstrument implements TrackerInstrument {
   TrackerInstrument? _closestZone(int midi) {
     if (zones.isEmpty) return null;
     if (zones.containsKey(midi)) return zones[midi]!;
-    
+
     int bestDist = 9999;
     TrackerInstrument? best;
     for (final key in zones.keys) {
@@ -654,7 +654,8 @@ class MultiSampleInstrument implements TrackerInstrument {
         if (zone != null) {
           // Isolate this note run so the sub-instrument accurately envelopes it
           // without bleeding into the next note.
-          final dummyCells = List.generate(timing.rows, (i) => const TrackerCell());
+          final dummyCells =
+              List.generate(timing.rows, (i) => const TrackerCell());
           dummyCells[startStep] = cells[startStep];
           if (startStep + steps < timing.rows) {
             // A dummy note explicitly cuts off the run for the sub-instrument.
@@ -1271,6 +1272,17 @@ class TrackerEngine {
     final withVol = applyVolumeColumn(buf, ch.cells, _timing);
     return applyChannelEffects(withVol, ch.effects);
   }
+
+  /// The current pattern mixed to a raw Float64List buffer, used for baking the Tracker
+  /// into a LoopTrack stem without clipping or applying 16-bit PCM quantization.
+  Float64List renderLoopFloat() => mixStemsFloat(
+        [
+          for (var i = 0; i < channels.length; i++)
+            if (channels[i].hasAnyNote && !channels[i].muted)
+              (samples: _stem(i), gain: channels[i].gain),
+        ],
+        totalSamples: _timing.totalSamples,
+      );
 
   /// The current pattern mixed to PCM16 (one loop's worth). Used by [renderLoop]
   /// and by [renderSong] (which concatenates one per order-list entry).
