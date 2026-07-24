@@ -58,5 +58,20 @@ void main() {
       expect(runs[1].$2, 2); // Sustain
       expect(runs[1].$3, 0); // Release
     });
+
+    test('noteRuns handles same-cell note and keyOff correctly', () {
+      final cells = [
+        const TrackerCell(midi: 60, keyOff: true), // Trigger and cut immediately
+        const TrackerCell(), // Release continues
+      ];
+
+      final runs = noteRuns(cells);
+
+      expect(runs.length, 1);
+      // Run: C-4, sustains for 0 steps, releases for 2 steps
+      expect(runs[0].$1, 60);
+      expect(runs[0].$2, 0); // Sustain (0 steps)
+      expect(runs[0].$3, 2); // Release (cell 0 and 1)
+    });
   });
 }

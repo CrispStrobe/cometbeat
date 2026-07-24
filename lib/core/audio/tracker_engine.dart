@@ -207,15 +207,21 @@ List<(int?, int, int)> noteRuns(List<TrackerCell> cells) {
   }
 
   for (final cell in cells) {
-    if (cell.isNoteCut) {
-      if (!inRelease) inRelease = true;
-      release++;
-    } else if (cell.midi != null) {
+    if (cell.midi != null) {
       push();
       currentMidi = cell.midi;
-      sustain = 1;
-      release = 0;
-      inRelease = false;
+      if (cell.keyOff) {
+        sustain = 0;
+        release = 1;
+        inRelease = true;
+      } else {
+        sustain = 1;
+        release = 0;
+        inRelease = false;
+      }
+    } else if (cell.keyOff) {
+      if (!inRelease) inRelease = true;
+      release++;
     } else {
       if (inRelease) {
         release++;
