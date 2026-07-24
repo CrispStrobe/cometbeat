@@ -9,8 +9,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/tracker_song_module.dart'
+    show songFromModuleBytes;
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiTrackMidiToMultiPart;
+import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
+    show multiPartScoreFromTrackerSong;
 import 'package:comet_beat/features/games/songs/song_book.dart' show kSongs;
 import 'package:comet_beat/features/games/songs/user_songs_service.dart'
     show UserSongsService;
@@ -69,6 +73,20 @@ MultiPartScore decodeMusicFile(String fileName, Uint8List bytes) {
   };
 }
 
+/// Decodes either a notation score or a tracker module from a catalog item.
+/// Catalog metadata carries the collection because module extensions overlap
+/// with the broader music browser's destination model.
+MultiPartScore decodeMusicAsset(
+  String fileName,
+  Uint8List bytes, {
+  String? collection,
+}) {
+  if (collection == 'module') {
+    return multiPartScoreFromTrackerSong(songFromModuleBytes(bytes));
+  }
+  return decodeMusicFile(fileName, bytes);
+}
+
 /// The notation formats the file importer accepts (the ones with a reader).
 const _kMusicExtensions = [
   'musicxml',
@@ -123,14 +141,14 @@ class _MusicPickerSheet extends StatelessWidget {
     }
   }
 
-  /// Browse the curated CometBeat catalog's SCORES (CC0/PD kern/ABC/GP), fetch a
-  /// chosen one and decode it — then pop the whole music picker with the score.
+  /// Browse the curated CometBeat catalog's Songs and Modules, fetch a chosen
+  /// item, and convert it into a score for the caller's destination.
   Future<void> _browseCatalog(BuildContext context) async {
     final score = await showModalBottomSheet<MultiPartScore>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => const _CatalogScoresSheet(),
+      builder: (_) => const _CatalogMusicSheet(),
     );
     if (score != null && context.mounted) Navigator.of(context).pop(score);
   }
@@ -225,15 +243,15 @@ class _MusicPickerSheet extends StatelessWidget {
 
 /// Lists the CometBeat catalog's CC0/PD scores; tapping one fetches + decodes it
 /// and pops with the [MultiPartScore]. Network-backed, so it loads lazily.
-class _CatalogScoresSheet extends StatefulWidget {
-  const _CatalogScoresSheet();
+class _CatalogMusicSheet extends StatefulWidget {
+  const _CatalogMusicSheet();
 
   @override
-  State<_CatalogScoresSheet> createState() => _CatalogScoresSheetState();
+  State<_CatalogMusicSheet> createState() => _CatalogMusicSheetState();
 }
 
-class _CatalogScoresSheetState extends State<_CatalogScoresSheet> {
-  final _source = CometbeatCatalogSource.scores(defaultHttpGet);
+class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
+  final _source = CometbeatCatalogSource.all(defaultHttpGet);
   List<LibraryItem>? _items;
   bool _failed = false;
   bool _fetching = false;
@@ -261,7 +279,11 @@ class _CatalogScoresSheetState extends State<_CatalogScoresSheet> {
     final navigator = Navigator.of(context);
     try {
       final bytes = await _source.fetch(item);
-      final score = decodeMusicFile('x.${item.format}', bytes);
+      final score = decodeMusicAsset(
+        'x.${item.format}',
+        bytes,
+        collection: item.collection,
+      );
       navigator.pop(score);
     } catch (_) {
       if (mounted) setState(() => _fetching = false);
@@ -305,7 +327,11 @@ class _CatalogScoresSheetState extends State<_CatalogScoresSheet> {
                                 final it = items[i];
                                 return ListTile(
                                   dense: true,
-                                  leading: const Icon(Icons.music_note),
+                                  leading: Icon(
+                                    it.collection == 'module'
+                                        ? Icons.grid_on
+                                        : Icons.music_note,
+                                  ),
                                   title: Text(it.title),
                                   subtitle: Text(
                                     [

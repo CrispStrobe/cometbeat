@@ -1,5 +1,6 @@
 // The music picker's pure decoder: notation bytes → MultiPartScore by extension.
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/notation/multi_part_export.dart'
@@ -58,6 +59,16 @@ void main() {
     const kern = '**kern\n4c\n*-\n';
     final score = decodeMusicFile('tune.kern', _b(kern));
     expect(score.parts, isNotEmpty);
+  });
+
+  test('catalog modules convert into a multi-part score', () {
+    final bytes = File('test/fixtures/golden.mod').readAsBytesSync();
+    final score = decodeMusicAsset('golden.mod', bytes, collection: 'module');
+    expect(score.parts, isNotEmpty);
+    expect(
+      score.parts.expand((part) => part.measures.expand((m) => m.elements)),
+      isNotEmpty,
+    );
   });
 
   test('an unsupported extension throws FormatException', () {
