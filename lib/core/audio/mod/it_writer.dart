@@ -165,6 +165,7 @@ Uint8List writeIt(ItModule module) {
         ? 0
         : (0x01 |
             (s.sixteenBit ? 0x02 : 0) |
+            (s.pcmRight != null ? 0x04 : 0) |
             (loop ? 0x10 : 0) |
             (loop && s.pingPong ? 0x40 : 0)); // 0x40 = bidirectional loop
     final length = empty ? 0 : s.pcm.length;
@@ -204,6 +205,19 @@ Uint8List writeIt(ItModule module) {
       for (final v in s.pcm) {
         final q = (v * 128).round().clamp(-128, 127);
         u8(q & 0xFF);
+      }
+    }
+    if (s.pcmRight != null) {
+      if (s.sixteenBit) {
+        for (final v in s.pcmRight!) {
+          final q = (v * 32768).round().clamp(-32768, 32767);
+          u16(q & 0xFFFF);
+        }
+      } else {
+        for (final v in s.pcmRight!) {
+          final q = (v * 128).round().clamp(-128, 127);
+          u8(q & 0xFF);
+        }
       }
     }
   }

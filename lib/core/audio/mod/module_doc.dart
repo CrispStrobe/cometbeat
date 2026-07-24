@@ -61,6 +61,7 @@ class DocSample {
     this.volumeEnvelope = const DocEnvelope(),
     this.panEnvelope = const DocEnvelope(),
     required this.pcm,
+    this.pcmRight,
   });
 
   factory DocSample.empty() => DocSample(pcm: Float64List(0));
@@ -90,6 +91,7 @@ class DocSample {
   final DocEnvelope volumeEnvelope, panEnvelope;
 
   final Float64List pcm;
+  final Float64List? pcmRight;
 
   bool get isEmpty => pcm.isEmpty;
 }
@@ -140,6 +142,7 @@ class DocCell {
     this.nativeEffect = -1,
     this.nativeEffectParam = 0,
     this.nativeInstrument = 0,
+    this.nativeInstrumentSet = false,
     this.nativeNote = -1,
   });
 
@@ -157,6 +160,7 @@ class DocCell {
         nativeEffect = -1,
         nativeEffectParam = 0,
         nativeInstrument = 0,
+        nativeInstrumentSet = false,
         nativeNote = -1;
 
   static const empty = DocCell();
@@ -180,6 +184,7 @@ class DocCell {
   final int nativeEffect; // -1 when unavailable
   final int nativeEffectParam;
   final int nativeInstrument; // original IT instrument number, or 0
+  final bool nativeInstrumentSet;
   final int nativeNote; // original IT note byte, or -1
 
   bool get isEmpty =>
@@ -205,6 +210,7 @@ class DocCell {
       other.nativeEffect == nativeEffect &&
       other.nativeEffectParam == nativeEffectParam &&
       other.nativeInstrument == nativeInstrument &&
+      other.nativeInstrumentSet == nativeInstrumentSet &&
       other.nativeNote == nativeNote;
 
   @override
@@ -218,6 +224,7 @@ class DocCell {
         nativeEffect,
         nativeEffectParam,
         nativeInstrument,
+        nativeInstrumentSet,
         nativeNote,
       );
 }

@@ -496,6 +496,7 @@ ModuleDoc docFromIt(ItModule m) {
         pingPong: looped && s.pingPong,
         sixteenBit: s.sixteenBit,
         pcm: Float64List.fromList(s.pcm),
+        pcmRight: s.pcmRight == null ? null : Float64List.fromList(s.pcmRight!),
       );
       samples.add(ds);
     }
@@ -549,6 +550,7 @@ ModuleDoc docFromIt(ItModule m) {
                 c.command == 0 && c.commandValue == 0 ? -1 : c.command,
             nativeEffectParam: c.commandValue,
             nativeInstrument: c.instrument,
+            nativeInstrumentSet: true,
             nativeNote: c.note,
           ),
         );
@@ -984,7 +986,7 @@ ItCell _itCellFrom(DocCell c, {required bool preserveNative}) {
     note: preserveNative && c.nativeNote >= 0
         ? c.nativeNote
         : (c.noteOff ? 255 : (c.note < 0 ? -1 : c.note.clamp(0, 119))),
-    instrument: preserveNative && c.nativeInstrument > 0
+    instrument: preserveNative && c.nativeInstrumentSet
         ? c.nativeInstrument
         : c.instrument.clamp(0, 255),
     volpan: vol,
@@ -1045,26 +1047,28 @@ ItInstrument _itInstrumentFromDoc(DocInstrument d, List<int> rawHeader) {
       raw[0x1C + i] = name[i] & 0xFF;
     }
   }
-  raw[0x11] = d.nna.clamp(0, 255);
-  raw[0x12] = d.dct.clamp(0, 255);
-  raw[0x13] = d.dca.clamp(0, 255);
-  raw[0x14] = d.fadeout.clamp(0, 65535) & 0xFF;
-  raw[0x15] = (d.fadeout.clamp(0, 65535) >> 8) & 0xFF;
-  raw[0x16] = d.pps & 0xFF;
-  raw[0x17] = d.ppc & 0xFF;
-  raw[0x18] = d.globalVolume.clamp(0, 255);
-  raw[0x19] = d.defaultPan.clamp(0, 255);
-  raw[0x1A] = d.randomVolume.clamp(0, 255);
-  raw[0x1B] = d.randomPan.clamp(0, 255);
-  _writeItEnvelope(raw, 0x130, d.volumeEnvelope, signedValue: false);
-  _writeItEnvelope(raw, 0x182, d.panEnvelope, signedValue: true);
-  _writeItEnvelope(raw, 0x1D4, d.pitchEnvelope, signedValue: true);
   final keymap = d.keymap.isEmpty ? List<int>.filled(120, 0) : d.keymap;
   final noteMap =
       d.noteMap.isEmpty ? [for (var i = 0; i < 120; i++) i] : d.noteMap;
-  for (var i = 0; i < 120; i++) {
-    raw[0x40 + i * 2] = noteMap[i.clamp(0, noteMap.length - 1)] & 0xFF;
-    raw[0x41 + i * 2] = keymap[i.clamp(0, keymap.length - 1)] & 0xFF;
+  if (rawHeader.length < 554) {
+    raw[0x11] = d.nna.clamp(0, 255);
+    raw[0x12] = d.dct.clamp(0, 255);
+    raw[0x13] = d.dca.clamp(0, 255);
+    raw[0x14] = d.fadeout.clamp(0, 65535) & 0xFF;
+    raw[0x15] = (d.fadeout.clamp(0, 65535) >> 8) & 0xFF;
+    raw[0x16] = d.pps & 0xFF;
+    raw[0x17] = d.ppc & 0xFF;
+    raw[0x18] = d.globalVolume.clamp(0, 255);
+    raw[0x19] = d.defaultPan.clamp(0, 255);
+    raw[0x1A] = d.randomVolume.clamp(0, 255);
+    raw[0x1B] = d.randomPan.clamp(0, 255);
+    _writeItEnvelope(raw, 0x130, d.volumeEnvelope, signedValue: false);
+    _writeItEnvelope(raw, 0x182, d.panEnvelope, signedValue: true);
+    _writeItEnvelope(raw, 0x1D4, d.pitchEnvelope, signedValue: true);
+    for (var i = 0; i < 120; i++) {
+      raw[0x40 + i * 2] = noteMap[i.clamp(0, noteMap.length - 1)] & 0xFF;
+      raw[0x41 + i * 2] = keymap[i.clamp(0, keymap.length - 1)] & 0xFF;
+    }
   }
   return ItInstrument(
     keymap: List<int>.from(keymap),
@@ -1105,6 +1109,8 @@ ItModule docToIt(ModuleDoc doc) {
         pingPong: ds.pingPong,
         sixteenBit: ds.sixteenBit,
         pcm: Float64List.fromList(ds.pcm),
+        pcmRight:
+            ds.pcmRight == null ? null : Float64List.fromList(ds.pcmRight!),
       ),
     );
   }

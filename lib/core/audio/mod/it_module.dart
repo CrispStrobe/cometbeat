@@ -75,6 +75,7 @@ class ItSample {
     this.globalVolume = 64,
     this.defaultVolume = 64,
     this.sixteenBit = false,
+    this.stereo = false,
     this.compressed = false,
     this.length = 0,
     this.loopStart = 0,
@@ -84,6 +85,7 @@ class ItSample {
     this.pan = 128,
     this.pingPong = false,
     required this.pcm,
+    this.pcmRight,
   });
 
   factory ItSample.empty() => ItSample(pcm: Float64List(0));
@@ -91,6 +93,7 @@ class ItSample {
   final String name, filename;
   final int globalVolume, defaultVolume; // 0..64
   final bool sixteenBit;
+  final bool stereo;
   final bool compressed; // whether the SOURCE was IT214/215 compressed
   final int length; // declared length in samples
   final int loopStart, loopEnd;
@@ -103,6 +106,7 @@ class ItSample {
 
   final bool pingPong; // Flg 0x40 — bidirectional loop
   final Float64List pcm;
+  final Float64List? pcmRight;
 
   bool get isEmpty => pcm.isEmpty;
 }

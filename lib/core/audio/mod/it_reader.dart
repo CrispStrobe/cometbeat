@@ -315,6 +315,7 @@ ItSample _parseSample(
   final loop = (flg & 0x10) != 0;
 
   Float64List pcm;
+  Float64List? pcmRight;
   if (!hasSample || length == 0) {
     pcm = Float64List(0);
   } else if (compressed) {
@@ -330,6 +331,16 @@ ItSample _parseSample(
     );
   } else {
     pcm = _decodeUncompressed(bytes, dataPtr, length, sixteenBit, cvt);
+    if ((flg & 0x04) != 0) {
+      final stride = sixteenBit ? 2 : 1;
+      pcmRight = _decodeUncompressed(
+        bytes,
+        dataPtr + length * stride,
+        length,
+        sixteenBit,
+        cvt,
+      );
+    }
   }
 
   return ItSample(
@@ -338,6 +349,7 @@ ItSample _parseSample(
     globalVolume: globalVol,
     defaultVolume: defaultVol,
     sixteenBit: sixteenBit,
+    stereo: (flg & 0x04) != 0,
     compressed: compressed,
     length: length,
     loopStart: loopStart,
@@ -347,6 +359,7 @@ ItSample _parseSample(
     pan: pan,
     pingPong: pingPong,
     pcm: pcm,
+    pcmRight: pcmRight,
   );
 }
 
