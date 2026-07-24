@@ -41,6 +41,8 @@ import 'package:comet_beat/features/games/note_reading/note_colors.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
+    show showMyInstrumentsSheet;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -1444,60 +1446,19 @@ class _TrackerScreenState extends State<TrackerScreen>
         VoiceEffect.demon => l10n.trackerVoiceDemon,
       };
 
-  String _instrumentLabel(AppLocalizations l10n, String id) => switch (id) {
-        'piano' => l10n.instrumentPiano,
-        'cello' => l10n.instrumentCello,
-        'flute' => l10n.instrumentFlute,
-        'musicBox' => l10n.instrumentMusicBox,
-        'zap' => l10n.trackerSfxrZap,
-        'blip' => l10n.trackerSfxrBlip,
-        'laser' => l10n.trackerSfxrLaser,
-        'coin' => l10n.trackerSfxrCoin,
-        'bell' => l10n.trackerSfxrBell,
-        _ => l10n.trackerSfxrExplosion,
-      };
-
-  /// The per-channel instrument picker (additive voices + chiptune presets).
-  void _showInstrumentSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) {
-        final l10n = AppLocalizations.of(sheetContext)!;
-        final currentId = _engine.channels[_selected].instrument.id;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.trackerChangeInstrument,
-                  style: Theme.of(sheetContext).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (final option in kTrackerInstruments)
-                      ChoiceChip(
-                        label: Text(_instrumentLabel(l10n, option.id)),
-                        selected: option.id == currentId,
-                        onSelected: (_) {
-                          Navigator.pop(sheetContext);
-                          setInstrument(option.id);
-                        },
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  /// The per-channel instrument picker uses the shared Sound Library, so the
+  /// Beginner Tracker can select built-ins, saved samples, and generated FX.
+  Future<void> _showInstrumentSheet() async {
+    final saved = await showMyInstrumentsSheet(
+      context,
+      includeBuiltIns: true,
     );
+    if (saved == null || !mounted) return;
+    final instrument = saved.instrument;
+    if (instrument == null) return;
+    _engine.setChannelInstrument(_selected, instrument);
+    setState(() {});
+    _syncPlayback();
   }
 
   String _channelEffectLabel(AppLocalizations l10n, TrackerChannelEffect fx) =>

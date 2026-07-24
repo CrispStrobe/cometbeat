@@ -81,6 +81,16 @@ void main() {
     );
   });
 
+  testWidgets('instrument picker opens the unified Sound Library',
+      (tester) async {
+    await pumpGame(tester, const TrackerScreen());
+
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Sound Library'), findsOneWidget);
+  });
+
   testWidgets('shares the drum channel out and loads a shared beat in',
       (tester) async {
     await pumpGame(tester, const TrackerScreen());
