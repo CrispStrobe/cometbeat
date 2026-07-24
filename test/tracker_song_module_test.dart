@@ -15,6 +15,8 @@ import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/s3m_module.dart';
 import 'package:comet_beat/core/audio/mod/s3m_writer.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
+import 'package:comet_beat/core/audio/tracker_replayer.dart'
+    show replaySong, songUsesVariableTiming;
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -211,6 +213,39 @@ void main() {
         expect(songInst, greaterThan(0));
         expect(song.usesInstruments, isTrue);
       }
+    });
+
+    test('imported speed affects row duration relative to tracker speed 6', () {
+      final doc = ModuleDoc(
+        sourceFormat: ModuleFormat.mod,
+        channelCount: 1,
+        order: [0],
+        patterns: [
+          const DocPattern(
+            [
+              [
+                DocCell(
+                  note: 60,
+                  instrument: 1,
+                  effect: 0xF,
+                  effectParam: 0x03,
+                ),
+              ],
+              [DocCell()],
+              [DocCell()],
+              [DocCell()],
+            ],
+            1,
+          ),
+        ],
+        samples: [DocSample.empty()],
+      );
+
+      final song = songFromModuleDoc(doc);
+      expect(song.initialSpeed, 6);
+      expect(songUsesVariableTiming(song), isTrue);
+      expect(song.songTotalMs, 240); // 4 rows * (120 ms * 3/6)
+      expect(replaySong(song).pcm.length, kSampleRate * 240 ~/ 1000);
     });
 
     test('S3M letter-commands map to the right fxCmd/fxParam on import', () {

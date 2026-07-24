@@ -333,7 +333,7 @@ void main() {
       expect(p[1].row, 3); // Dxx → row 3
     });
 
-    test('a backward Bxx loop terminates at the guard cap', () {
+    test('a backward Bxx song loop stops before replaying prior rows', () {
       final s = flowSong(
         patternCount: 1,
         order: [0],
@@ -342,7 +342,19 @@ void main() {
           s.engine.setCell(0, 3, fx(kFxPositionJump, 0x00)); // → order 0 row 0
         },
       );
-      expect(walkFlow(s, maxRows: 20).length, 20);
+      expect(
+        seq(walkFlow(s, maxRows: 20)),
+        ['0:0:0', '0:0:1', '0:0:2', '0:0:3'],
+      );
+    });
+
+    test('long linear songs are not truncated by the default walk cap', () {
+      final s = TrackerSong(timing: const TrackerTiming(rows: 128));
+      s.order
+        ..clear()
+        ..addAll(List<int>.filled(80, 0));
+      s.syncCurrent();
+      expect(walkFlow(s).length, 80 * 128);
     });
 
     test('flow render: PCM length + songTotalMs match the played sequence', () {
@@ -646,12 +658,13 @@ void main() {
       expect(songInitialSpeed(speedSong(null), fallback: 4), 4);
     });
 
-    test('the speed changes the render (finer granularity ≠ default)', () {
+    test('the speed changes row duration and effect granularity', () {
       final fast = replaySong(speedSong(0x03)).pcm; // 3 ticks/row
       final slow = replaySong(speedSong(0x0C)).pcm; // 12 ticks/row
-      expect(fast.length, slow.length); // speed never changes duration
+      expect(fast.length, lessThan(slow.length));
+      expect(slow.length / fast.length, closeTo(4.0, 0.1));
       var diff = false;
-      for (var i = 0; i < fast.length; i++) {
+      for (var i = 0; i < fast.length && i < slow.length; i++) {
         if (fast[i] != slow[i]) {
           diff = true;
           break;
@@ -1036,6 +1049,42 @@ void main() {
       expect(pcm.fold<int>(0, (m, v) => max(m, v.abs())), greaterThan(1000));
       // Porta applied on the variable path → still rising (more crossings late).
       expect(crossings(n ~/ 2, n), greaterThan(crossings(0, n ~/ 2)));
+    });
+
+    test('variable path handles a full-length ping-pong sample loop', () {
+      final sample = Float64List.fromList([0.0, 1.0, 0.0, -1.0]);
+      final cells = List<TrackerCell>.filled(4, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60);
+      final tempoCells = List<TrackerCell>.filled(4, TrackerCell.empty)
+        ..[2] = fx(kFxSetSpeed, 0x50);
+      final sampleCh = TrackerChannel(
+        id: 's',
+        instrument: SampleInstrument(
+          's',
+          sample,
+          loopLength: sample.length,
+          pingPong: true,
+        ),
+        gain: 0.9,
+        rows: 4,
+      );
+      final tempoCh = TrackerChannel(
+        id: 't',
+        instrument: const AdditiveInstrument('p', Instrument.piano),
+        rows: 4,
+      );
+      final song = TrackerSong.fromParts(
+        channels: [sampleCh, tempoCh],
+        timing: const TrackerTiming(rows: 4),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells, tempoCells]),
+        ],
+        order: [0],
+      );
+      expect(songUsesVariableTiming(song), isTrue);
+
+      final pcm = replaySong(song).pcm;
+      expect(pcm.fold<int>(0, (m, v) => max(m, v.abs())), greaterThan(1000));
     });
   });
 

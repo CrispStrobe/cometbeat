@@ -29,6 +29,8 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/synth.dart'
     show Instrument, kSampleRate, wavBytes, wavBytesStereo;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/tracker_replay.dart'
+    show kDefaultTicksPerRow;
 import 'package:comet_beat/core/audio/tracker_replayer.dart';
 
 /// One pattern: a named, channel-major grid of cells (`cells[channel][row]`).
@@ -86,6 +88,7 @@ class TrackerSong {
     this.order,
     this._current,
     this.instruments,
+    this.initialSpeed,
   );
 
   /// A new song with the default band ([defaultTrackerChannels]) and one empty
@@ -95,6 +98,7 @@ class TrackerSong {
     TrackerTiming? timing,
     int patternCount = 1,
     List<TrackerInstrument>? instruments,
+    int initialSpeed = kDefaultTicksPerRow,
   }) {
     final t = timing ?? const TrackerTiming(rows: 32);
     final band = channels ?? defaultTrackerChannels(rows: t.rows);
@@ -114,6 +118,7 @@ class TrackerSong {
       [0],
       0,
       instruments ?? defaultInstrumentPool(),
+      initialSpeed < 1 ? kDefaultTicksPerRow : initialSpeed,
     );
   }
 
@@ -127,6 +132,7 @@ class TrackerSong {
     required List<TrackerPattern> patterns,
     required List<int> order,
     List<TrackerInstrument>? instruments,
+    int initialSpeed = kDefaultTicksPerRow,
   }) {
     final engine = TrackerEngine(channels: channels, timing: timing);
     final pats = patterns.isEmpty
@@ -146,6 +152,7 @@ class TrackerSong {
       ord,
       0,
       instruments ?? defaultInstrumentPool(),
+      initialSpeed < 1 ? kDefaultTicksPerRow : initialSpeed,
     );
   }
 
@@ -163,6 +170,11 @@ class TrackerSong {
   /// module's instruments. The channel's own instrument is the fallback for a
   /// cell with instrument 0.
   final List<TrackerInstrument> instruments;
+
+  /// The module/tracker speed in effect before any Fxx command (ticks per row).
+  /// Authored app songs default to the classic 6; imported S3M/XM/IT files carry
+  /// their header speed here.
+  final int initialSpeed;
 
   int _current;
 

@@ -84,6 +84,7 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
     patterns: patterns,
     order: order,
     instruments: pool,
+    initialSpeed: doc.initialSpeed,
   );
 }
 
@@ -317,6 +318,7 @@ ModuleDoc moduleDocFromSong(
     channelCount: channelCount,
     sourceFormat: ModuleFormat.mod,
     initialTempo: song.timing.tempoBpm.clamp(32, 255),
+    initialSpeed: song.initialSpeed.clamp(1, 31),
     order: List<int>.of(song.order),
     patterns: patterns,
     samples: [
