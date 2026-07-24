@@ -300,6 +300,7 @@ class MultiPartDocument extends ChangeNotifier {
       clef: s.clef,
       keySignature: s.keySignature,
       timeSignature: s.timeSignature,
+      metadata: s.metadata,
       measures: measures,
       dynamics: [
         for (final d in s.dynamics)

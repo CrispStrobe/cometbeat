@@ -590,6 +590,27 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   bool _barNumbers = false; // label each wrapped system with its bar number
   bool _noteNames = false; // draw each note's name below the staff
   String _scoreTitle = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _scoreTitle = widget.initialScore?.parts.first.metadata.title ?? '';
+  }
+
+  void _setDocumentTitle(String value) {
+    final title = value.trim();
+    final old = _doc.metadata;
+    _doc.setMetadata(ScoreMetadata(
+      title: title.isEmpty ? null : title,
+      composer: old.composer,
+      lyricist: old.lyricist,
+      copyright: old.copyright,
+      instrument: old.instrument,
+      midiProgram: old.midiProgram,
+      isPercussion: old.isPercussion,
+    ));
+  }
+
   String get _fileStem {
     final stem = _scoreTitle.trim().replaceAll(RegExp(r'[^a-zA-Z0-9 _-]'), '');
     return stem.trim().isEmpty ? 'score' : stem.trim().replaceAll(' ', '_');
@@ -2054,7 +2075,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       ),
     );
     if (!mounted || title == null) return;
-    setState(() => _scoreTitle = title.trim());
+    setState(() {
+      _scoreTitle = title.trim();
+      _setDocumentTitle(_scoreTitle);
+    });
   }
 
   /// Open any supported score file — one picker for every format; the type is
