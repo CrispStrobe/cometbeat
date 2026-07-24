@@ -468,7 +468,7 @@ ModuleDoc docFromIt(ItModule m) {
     if (s.isEmpty) {
       samples.add(DocSample.empty());
     } else {
-      final looped = s.loopEnd > s.loopStart;
+      final looped = s.loop && s.loopEnd > s.loopStart;
       final ds = DocSample(
         name: s.name,
         volume: s.defaultVolume,

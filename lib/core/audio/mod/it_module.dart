@@ -79,6 +79,7 @@ class ItSample {
     this.length = 0,
     this.loopStart = 0,
     this.loopEnd = 0,
+    this.loop = false,
     this.c5speed = 8363,
     this.pan = 128,
     this.pingPong = false,
@@ -93,6 +94,7 @@ class ItSample {
   final bool compressed; // whether the SOURCE was IT214/215 compressed
   final int length; // declared length in samples
   final int loopStart, loopEnd;
+  final bool loop;
   final int c5speed; // playback rate at C-5
 
   /// Default stereo position 0 left … 128 centre … 255 right, from the sample
