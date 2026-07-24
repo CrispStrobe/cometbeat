@@ -496,7 +496,8 @@ Map<String, dynamic>? _cellToJson(TrackerCell c) {
       c.effect == TrackerEffect.none &&
       c.fxCmd == 0 &&
       c.fxParam == 0 &&
-      c.instrument == 0) {
+      c.instrument == 0 &&
+      !c.keyOff) {
     return null;
   }
   return {
@@ -506,6 +507,7 @@ Map<String, dynamic>? _cellToJson(TrackerCell c) {
     if (c.fxCmd != 0) 'c': c.fxCmd,
     if (c.fxParam != 0) 'p': c.fxParam,
     if (c.instrument != 0) 'i': c.instrument,
+    if (c.keyOff) 'k': true,
   };
 }
 
@@ -518,6 +520,7 @@ TrackerCell _cellFromJson(Map<String, dynamic>? m) {
     fxCmd: (m['c'] as num?)?.toInt() ?? 0,
     fxParam: (m['p'] as num?)?.toInt() ?? 0,
     instrument: (m['i'] as num?)?.toInt() ?? 0,
+    keyOff: m['k'] == true,
   );
 }
 

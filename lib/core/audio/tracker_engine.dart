@@ -99,6 +99,7 @@ class TrackerCell {
     this.fxCmd = 0,
     this.fxParam = 0,
     this.instrument = 0,
+    this.keyOff = false,
   });
 
   final int? midi;
@@ -125,15 +126,25 @@ class TrackerCell {
   final int fxCmd;
   final int fxParam;
 
-  bool get isEmpty => midi == null;
+  /// Explicit command to trigger the release phase of the sounding instrument.
+  final bool keyOff;
+
+  /// Whether the cell is completely empty (no note, no volume, no effects).
+  bool get isEmpty =>
+      midi == null &&
+      volume == null &&
+      effect == TrackerEffect.none &&
+      !hasCommand &&
+      instrument == 0 &&
+      !keyOff;
 
   /// Whether an effect-column command is present (any non-zero cmd/param).
   bool get hasCommand => fxCmd != 0 || fxParam != 0;
 
   static const empty = TrackerCell();
   /// A Note Cut command that instructs the instrument to enter its release phase.
-  static const noteCut = TrackerCell(midi: -1);
-  bool get isNoteCut => midi == -1;
+  static const noteCut = TrackerCell(keyOff: true);
+  bool get isNoteCut => keyOff;
 
   @override
   bool operator ==(Object other) =>
@@ -143,11 +154,12 @@ class TrackerCell {
       other.effect == effect &&
       other.fxCmd == fxCmd &&
       other.fxParam == fxParam &&
-      other.instrument == instrument;
+      other.instrument == instrument &&
+      other.keyOff == keyOff;
 
   @override
   int get hashCode =>
-      Object.hash(midi, volume, effect, fxCmd, fxParam, instrument);
+      Object.hash(midi, volume, effect, fxCmd, fxParam, instrument, keyOff);
 }
 
 /// Collapses a channel's cells into runs using the classic tracker rule: a
@@ -586,7 +598,7 @@ class SampleInstrument implements TrackerInstrument {
           final voiced = applyEnvelope(
             Float64List.sublistView(buf, 0, n),
             envelope,
-            sustainSamples: loops || releaseSteps > 0 ? sustainSamples : null,
+            sustainSamples: sustainSamples,
           );
           // A per-cell volume column scales the note (null = full, unchanged).
           final vol = trigger.volume ?? 1.0;
