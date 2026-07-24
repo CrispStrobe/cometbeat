@@ -138,4 +138,33 @@ void main() {
       expect(s16.pcm[3], closeTo(0.9, 1e-4));
     });
   });
+
+  test('doc-to-IT round-trip preserves an active sample loop', () {
+    final src = ItModule(
+      name: 'LOOPIT',
+      channelCount: 1,
+      order: const [0],
+      patterns: [
+        ItPattern(
+          [
+            const [ItCell(note: 60, instrument: 1)]
+          ],
+          1,
+        ),
+      ],
+      samples: [
+        ItSample(
+          length: 32,
+          loop: true,
+          loopStart: 8,
+          loopEnd: 24,
+          pcm: Float64List.fromList(List.filled(32, 0.25)),
+        ),
+      ],
+    );
+    final back = parseIt(writeIt(src));
+    expect(back.samples.single.loop, isTrue);
+    expect(back.samples.single.loopStart, 8);
+    expect(back.samples.single.loopEnd, 24);
+  });
 }

@@ -934,6 +934,7 @@ ItModule docToIt(ModuleDoc doc) {
         length: ds.pcm.length,
         loopStart: ds.loopStart,
         loopEnd: ds.loopStart + ds.loopLength,
+        loop: ds.loopLength > 0,
         c5speed: ds.c5speed,
         pan: ds.pan,
         pingPong: ds.pingPong,
