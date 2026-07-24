@@ -2070,7 +2070,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         // A true multi-part file replaces the whole document; a single-part
         // file loads into the active part (keeping any other instruments).
         if (score.parts.length > 1) {
-          _mpd.loadMultiPart(score);
+          _mpd.loadMultiPart(score, autoClef: true);
         } else {
           _doc.loadScore(score.parts.first);
         }
@@ -2091,7 +2091,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final l10n = AppLocalizations.of(context)!;
     setState(() {
       if (score.parts.length > 1) {
-        _mpd.loadMultiPart(score);
+        _mpd.loadMultiPart(score, autoClef: true);
       } else {
         final part = score.parts.first;
         _doc.loadScore(part, clefOverride: suggestedClefForScore(part));
@@ -2141,7 +2141,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       final score = importBekern(text);
       setState(() {
         if (score.parts.length > 1) {
-          _mpd.loadMultiPart(score);
+          _mpd.loadMultiPart(score, autoClef: true);
         } else {
           _doc.loadScore(score.parts.first);
         }

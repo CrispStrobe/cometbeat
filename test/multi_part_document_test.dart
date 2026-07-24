@@ -43,6 +43,20 @@ void main() {
     expect(doc.parts.every((part) => part.isEmpty), isTrue);
   });
 
+  test('loadMultiPart can select bass clef independently per imported part',
+      () {
+    final doc = MultiPartDocument();
+    final score = MultiPartScore([
+      Score.simple(notes: 'c2:q d2 e2 f2'),
+      Score.simple(notes: 'c5:q d5 e5 f5'),
+    ]);
+
+    doc.loadMultiPart(score, autoClef: true);
+
+    expect(doc.clefOf(0), Clef.bass);
+    expect(doc.clefOf(1), Clef.treble);
+  });
+
   test('addPart appends, names, and makes the new part active', () {
     final doc = MultiPartDocument();
     final i = doc.addPart(clef: Clef.bass);

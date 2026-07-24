@@ -117,10 +117,21 @@ class MultiPartDocument extends ChangeNotifier {
   /// [ScoreDocument] per part), resetting the active part to the first and
   /// notifying. Used by the multi-part "open file" flow for a score that has
   /// more than one part; a single-part file loads into the active part instead.
-  void loadMultiPart(MultiPartScore score, {List<String>? names}) {
+  void loadMultiPart(
+    MultiPartScore score, {
+    List<String>? names,
+    bool autoClef = false,
+  }) {
     _parts
       ..clear()
-      ..addAll([for (final p in score.parts) ScoreDocument()..loadScore(p)]);
+      ..addAll([
+        for (final p in score.parts)
+          ScoreDocument()
+            ..loadScore(
+              p,
+              clefOverride: autoClef ? suggestedClefForScore(p) : null,
+            ),
+      ]);
     _names = List.generate(
       _parts.length,
       (i) => names != null && i < names.length ? names[i] : 'Part ${i + 1}',
