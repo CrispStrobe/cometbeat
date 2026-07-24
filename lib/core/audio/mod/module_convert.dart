@@ -567,6 +567,9 @@ ModuleDoc docFromIt(ItModule m) {
     initialTempo: m.initialTempo,
     globalVolume: m.globalVolume,
     itFlags: m.flags,
+    itMixVolume: m.mixVolume,
+    itPanSeparation: m.panSeparation,
+    itPitchWheelDepth: m.pitchWheelDepth,
     channelPans: List<int>.from(m.channelPans),
     channelVolumes: List<int>.from(m.channelVolumes),
     itInstrumentHeaders: [
@@ -1145,6 +1148,9 @@ ItModule docToIt(ModuleDoc doc) {
     initialTempo: doc.initialTempo,
     globalVolume: doc.globalVolume.clamp(0, 128),
     flags: doc.itFlags,
+    mixVolume: doc.itMixVolume,
+    panSeparation: doc.itPanSeparation,
+    pitchWheelDepth: doc.itPitchWheelDepth,
     channelPans: doc.sourceFormat == ModuleFormat.it
         ? List<int>.from(doc.channelPans)
         : const [],

@@ -102,11 +102,11 @@ Uint8List writeIt(ItModule module) {
   u16(module.flags | (module.instruments.isNotEmpty ? 0x0004 : 0)); // flags
   u16(0); // 0x2E Special
   u8(module.globalVolume); // 0x30 global volume
-  u8(48); // 0x31 mix volume
+  u8(module.mixVolume); // 0x31 mix volume
   u8(module.initialSpeed); // 0x32 initial speed
   u8(module.initialTempo); // 0x33 initial tempo
-  u8(128); // 0x34 pan separation
-  u8(0); // 0x35 pitch-wheel depth
+  u8(module.panSeparation); // 0x34 pan separation
+  u8(module.pitchWheelDepth); // 0x35 pitch-wheel depth
   u16(0); // 0x36 message length
   u32(0); // 0x38 message offset
   u32(0); // 0x3C reserved
