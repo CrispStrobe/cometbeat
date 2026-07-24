@@ -728,7 +728,7 @@ class TrackerSong {
     syncCurrent();
     // Panned songs render in STEREO; the stereo replayer handles commands /
     // per-cell instruments / flow / variable-length via the same walk.
-    if (usesPan) {
+    if (usesPan || stereoOutput) {
       return wavBytesStereo(replaySongStereo(this).pcm);
     }
     // Else route through the mono tick replayer for commands, per-cell
