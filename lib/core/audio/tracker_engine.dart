@@ -559,7 +559,7 @@ class SampleInstrument implements TrackerInstrument {
                     glideSamples: (envelope.pitchTime * kSampleRate).round(),
                     outLen: maxOut,
                   )
-                : resampleCubic(src, baseRatio);
+                : resampleLinear(src, baseRatio);
         final n = min(min(buf.length, runSamples), out.length - startSample);
         if (n > 0) {
           // Envelope only the played portion, so the release fades at the note's

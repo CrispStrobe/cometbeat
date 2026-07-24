@@ -250,7 +250,15 @@ ItSample _parseSample(
   if (!hasSample || length == 0) {
     pcm = Float64List(0);
   } else if (compressed) {
-    pcm = _decodeCompressed(bytes, dataPtr, length, sixteenBit, it215);
+    // IT 2.15 double-delta compression is selected per sample by Cvt bit 2;
+    // the module creation version alone is not sufficient.
+    pcm = _decodeCompressed(
+      bytes,
+      dataPtr,
+      length,
+      sixteenBit,
+      it215 && (cvt & 0x04) != 0,
+    );
   } else {
     pcm = _decodeUncompressed(bytes, dataPtr, length, sixteenBit, cvt);
   }
@@ -388,7 +396,9 @@ Float64List _decodeCompressed(
         final bit = (byteIndex < blockEnd)
             ? ((bytes[byteIndex] >> (bitPos & 7)) & 1)
             : 0;
-        value |= bit << i;
+        // IT's packed sample stream presents the first bit as the most
+        // significant bit of the decoded value.
+        value = (value << 1) | bit;
         bitPos++;
       }
       return value;
