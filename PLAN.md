@@ -448,10 +448,25 @@ live-loop surface (quick start, layer parts, record a voice, arrange sections).
   slides (need a source-format flag); `Gxx`/`Hxy`/`Mxx`/`Nxy` global/channel volume
   (need a mix-stage scalar); `Pxy`/`Kxx`/`Lxx`/`Xxx` + XM volume-column mini-commands;
   `E0x`/`E8x`/`EFx` (rare).
-- **Tracker format fidelity** → [mod_pending.md](mod_pending.md): block-streaming
-  renderer + range/streaming export; cross-format effect-table widening; S3M DP30
-  ADPCM + OPL/AdLib synthesis; MOD FLT8/OCTA alias preservation; native
-  tracker-state editors; per-sample gain/pan; envelope release/curve timing.
+- **Tracker format fidelity** → [mod_pending.md](mod_pending.md).
+  **🚨 ACTIVE / HARD REQUIREMENT: the module renderer must NEVER exceed 500 MB
+  RAM** for any render (long native IT/XM included). The DEFAULT render must
+  produce output in bounded time-blocks streamed to a sink — never hold a
+  whole-song `Float64List` mix. Verify peak RSS with `bin/bench_render.dart`.
+  - **Shipped (feature/tracker-complete, 2026-07-25):** render benchmark;
+    per-note buffer reuse + native-NNA two-pass render (byte-identical);
+    native IT/XM fadeout release; S3M stereo/AdLib/packed + DP30 ADPCM decode +
+    OPL/AdLib FM-approximation synthesis; MOD `M!K!`; XM 16-bit; cross-format
+    `S1x/S2x/S3x/S4x` mapping; bounded streaming/range export
+    (`--stream/--from-order/--to-order/--chunk-orders`); export-loss report;
+    native flow/order timeline view.
+  - **Remaining:** the **≤500 MB bounded DEFAULT renderer** (block-streaming with
+    byte-identical cross-block voice state — the big rewrite; the current
+    `--stream` bounds memory but resets voice state at chunk boundaries);
+    remaining unmapped cross-format effects (`S0/S5/S7/S9/SA/Z`); MOD FLT8/OCTA
+    alias preservation; cycle-exact OPL; deeper native editors (raw
+    effect-memory, native S3M header, velocity zones, in-place flow editing);
+    per-sample gain/pan; exact envelope release curves.
 - **Tracker GUI + interop ideas** → [docs/TRACKER_GUI_HANDOFF_IDEAS.md](docs/TRACKER_GUI_HANDOFF_IDEAS.md)
   and [docs/TRACKER_IDEAS.md](docs/TRACKER_IDEAS.md): envelope editor UI, per-pattern
   length UI, shared `MusicIoMenu` import/export, groove↔Tracker↔Loop-Mixer bridges,
