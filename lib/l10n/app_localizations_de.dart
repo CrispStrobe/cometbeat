@@ -2016,6 +2016,58 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawSnap => 'Am Raster ausrichten';
 
   @override
+  String get dawHelpTooltip => 'Anleitung';
+
+  @override
+  String get dawHelpTitle => 'Audio-Editor – Anleitung';
+
+  @override
+  String get dawHelpIntro =>
+      'Der Audio-Editor ist ein Mehrspur-Studio: Lege Clips auf Spuren übereinander, bearbeite sie, füge Effekte hinzu und spiele dann ab oder exportiere. Tippe auf einen Clip, um ihn zu bearbeiten.';
+
+  @override
+  String get dawHelpToolbarTitle => 'Obere Werkzeugleiste';
+
+  @override
+  String get dawHelpToolbarBody =>
+      'Mache jede Änderung rückgängig oder wiederhole sie. Bei ausgewählten Clips kannst du sie kopieren, ausschneiden, an der Abspielposition einfügen oder über alle Spuren hinweg löschen. Abspielen oder stoppen, Schleife umschalten, am Raster ausrichten umschalten, den Mix exportieren oder alles leeren.';
+
+  @override
+  String get dawHelpBuildTitle => 'Eine Spur aufbauen';
+
+  @override
+  String get dawHelpBuildBody =>
+      'Über Clip hinzufügen fügst du einen Klang ein: ein Sample aus der Klangbibliothek, eine importierte Audiodatei, ein Lied oder eine Partitur (Musik hinzufügen), ein Sample aus einem Modul oder Pack oder einen fertigen Beat bzw. Groove. Spur hinzufügen erstellt eine neue Spur; ziehe einen Clip entlang der Spur, um ihn zeitlich zu verschieben.';
+
+  @override
+  String get dawHelpClipsTitle => 'Einen Clip bearbeiten';
+
+  @override
+  String get dawHelpClipsBody =>
+      'Tippe auf einen Clip, um seinen Inspektor zu öffnen: Lautstärke einstellen, ein- und ausblenden, Anfang und Ende beschneiden, an der Abspielposition teilen, duplizieren, umkehren, Tempo ändern (langsamer oder schneller), in den nächsten Clip überblenden, zu einer reinen Audioaufnahme einfrieren oder entfernen. Über das kleine Kästchen auf einem Clip wählst du mehrere für Sammelaktionen aus.';
+
+  @override
+  String get dawHelpFxTitle => 'Effekte und Mischung';
+
+  @override
+  String get dawHelpFxBody =>
+      'Effekte liegen in Ketten auf vier Ebenen: einem einzelnen Clip, einer ganzen Spur, einem Bus oder dem Master-Ausgang. Füge Effekte wie Hall, Delay, Kompressor, Gate, Chorus, Panorama oder Gain hinzu und automatisiere jeden Regler mit Stützpunkten über die Zeit. Jede Spur hat eigene Lautstärke und Panorama.';
+
+  @override
+  String get dawHelpRoundTripTitle => 'Verknüpfte Editoren';
+
+  @override
+  String get dawHelpRoundTripBody =>
+      'Ein Musik-Clip (mit Noten-Symbol) bleibt mit den Noten-Editoren verknüpft. Im Editor öffnen bringt ihn in die Partitur- oder Tabulatur-Werkstatt; wenn du dort An Audio-Editor senden wählst, wird genau dieser Clip aktualisiert. Du kannst ihn auch einmalig an den erweiterten Tracker senden.';
+
+  @override
+  String get dawClipLinked => 'Mit Editor verknüpft';
+
+  @override
+  String get dawClipLinkedHint =>
+      'Aus der Partitur- oder Tabulatur-Werkstatt zurückgesendete Änderungen aktualisieren diesen Clip direkt.';
+
+  @override
   String get drumkitTitle => 'Schlagzeug';
 
   @override

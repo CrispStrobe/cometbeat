@@ -3794,6 +3794,96 @@ abstract class AppLocalizations {
   /// **'Snap to grid'**
   String get dawSnap;
 
+  /// No description provided for @dawHelpTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Guide'**
+  String get dawHelpTooltip;
+
+  /// No description provided for @dawHelpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Editor guide'**
+  String get dawHelpTitle;
+
+  /// No description provided for @dawHelpIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'The Audio Editor is a multitrack studio: stack clips on lanes, shape them, add effects, then play or export. Tap any clip to edit it.'**
+  String get dawHelpIntro;
+
+  /// No description provided for @dawHelpToolbarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Top toolbar'**
+  String get dawHelpToolbarTitle;
+
+  /// No description provided for @dawHelpToolbarBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo and redo every edit. With clips selected, copy, cut, paste at the playhead, or delete them across lanes. Play or stop, toggle Loop, toggle Snap to grid, export the mix, or clear everything.'**
+  String get dawHelpToolbarBody;
+
+  /// No description provided for @dawHelpBuildTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Building a track'**
+  String get dawHelpBuildTitle;
+
+  /// No description provided for @dawHelpBuildBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Add clip to drop in a sound: a sample from the Sound Library, an imported audio file, a song or score (Add music), a sample lifted from a module or pack, or a ready-made beat or groove. Add track makes a new lane; drag a clip along a lane to move it in time.'**
+  String get dawHelpBuildBody;
+
+  /// No description provided for @dawHelpClipsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing a clip'**
+  String get dawHelpClipsTitle;
+
+  /// No description provided for @dawHelpClipsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a clip to open its inspector: set volume, fade in and out, trim the start and end, then Split at the playhead, Duplicate, Reverse, change speed (Slower or Faster), Crossfade into the next clip, Freeze to a plain audio take, or Remove it. Use the small check on a clip to select several for batch actions.'**
+  String get dawHelpClipsBody;
+
+  /// No description provided for @dawHelpFxTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects and mixing'**
+  String get dawHelpFxTitle;
+
+  /// No description provided for @dawHelpFxBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects live in chains at four scopes: a single clip, a whole track, a bus, or the master output. Add effects like Reverb, Delay, Compressor, Gate, Chorus, Pan or Gain, and automate any control with breakpoints over time. Each track has its own volume and pan.'**
+  String get dawHelpFxBody;
+
+  /// No description provided for @dawHelpRoundTripTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked editors'**
+  String get dawHelpRoundTripTitle;
+
+  /// No description provided for @dawHelpRoundTripBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A music clip (shown with a note badge) stays linked to the notation editors. Open in editor takes it to the Score or Tab Workshop; when you Send to Audio Editor there, it updates this same clip in place. You can also send it one way to the Advanced Tracker.'**
+  String get dawHelpRoundTripBody;
+
+  /// No description provided for @dawClipLinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked to editor'**
+  String get dawClipLinked;
+
+  /// No description provided for @dawClipLinkedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Edits sent back from the Score or Tab editor update this clip in place.'**
+  String get dawClipLinkedHint;
+
   /// No description provided for @drumkitTitle.
   ///
   /// In en, this message translates to:

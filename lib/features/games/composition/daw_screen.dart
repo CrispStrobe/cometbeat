@@ -26,6 +26,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
     show showMyInstrumentsSheet;
@@ -2812,6 +2813,52 @@ class _DawScreenState extends State<DawScreen>
                           ],
                         ),
                       ),
+                    // Make the editor round-trip explicit: this clip is linked to
+                    // the notation editors, so edits sent back update it in place.
+                    if (_daw.isScoreClip(track, index))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.link,
+                              size: 15,
+                              color: Theme.of(sheetCtx).colorScheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.dawClipLinked,
+                                    style: Theme.of(sheetCtx)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: Theme.of(sheetCtx)
+                                              .colorScheme
+                                              .primary,
+                                        ),
+                                  ),
+                                  Text(
+                                    l10n.dawClipLinkedHint,
+                                    style: Theme.of(sheetCtx)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(sheetCtx)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     slider(
                       l10n.dawGain,
                       _daw.clipGain(track, index),
@@ -3214,6 +3261,11 @@ class _DawScreenState extends State<DawScreen>
       appBar: GameAppBar(
         title: l10n.dawTitle,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: l10n.dawHelpTooltip,
+            onPressed: () => showDawHelpSheet(context),
+          ),
           IconButton(
             icon: const Icon(Icons.undo),
             tooltip: l10n.dawUndo,
@@ -3905,6 +3957,14 @@ class _DawScreenState extends State<DawScreen>
                         Padding(
                           padding: const EdgeInsets.only(right: 2),
                           child: Icon(Icons.lock, size: 14, color: fg),
+                        ),
+                      // A music clip stays linked to the notation editors: open
+                      // it in Score/Tab and "Send to Audio Editor" updates it in
+                      // place. The badge makes that round-trip discoverable.
+                      if (!frozen && daw.isScoreClip(i, j) && widthPx >= 48)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 2),
+                          child: Icon(Icons.link, size: 14, color: fg),
                         ),
                       if (widthPx >= 36)
                         Expanded(
