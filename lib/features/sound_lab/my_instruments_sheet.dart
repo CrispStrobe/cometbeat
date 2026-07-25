@@ -373,6 +373,16 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
         _ => 'none', // FX / Drums: no catalog kind → button hidden
       };
 
+  /// The catalog kinds a rubric scopes the browser to. A rubric shows ONLY its
+  /// own kind; the full library shows every sound kind but never modules/songs.
+  static Set<String> _catalogKindsFor(String? category) => switch (category) {
+        null => kSoundLibraryKinds, // full library → all sound kinds
+        'Samples' => const {'sample'},
+        'SoundFonts' => const {'soundfont'},
+        'Instruments' => const {'instrument'},
+        _ => const {}, // FX / Drums: no catalog kind → button hidden
+      };
+
   /// Whether the Browse-catalog button shows for the current rubric.
   bool get _canBrowseCatalog =>
       _catalogKindFor(widget.restrictToCategory) != 'none';
@@ -384,6 +394,7 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
       context,
       store: widget.store,
       initialKind: _catalogKindFor(widget.restrictToCategory),
+      kinds: _catalogKindsFor(widget.restrictToCategory),
       onInsertSample: widget.onCatalogSampleInsert,
       preferSampleInsert: widget.preferCatalogSampleInsert,
     );

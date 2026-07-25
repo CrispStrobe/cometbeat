@@ -60,10 +60,15 @@ final _fixture = [
   _item('Kyrie', 'score', 'gabc', 'CC0 / Public Domain'),
 ];
 
+// The capable all-kinds browser (soundfonts + instruments + samples + modules +
+// songs) — the shape the Song Book / catalog surface opens.
+const _allKinds = {'soundfont', 'instrument', 'sample', 'module', 'score'};
+
 Widget _host(
   ContentSource src, {
   Future<void> Function(SampleClip clip)? onInsertSample,
   bool preferSampleInsert = false,
+  Set<String> kinds = _allKinds,
 }) =>
     MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -72,6 +77,7 @@ Widget _host(
         body: CatalogBrowseSheet(
           source: src,
           store: InstrumentLibraryStore(),
+          kinds: kinds,
           onInsertSample: onInsertSample,
           preferSampleInsert: preferSampleInsert,
         ),
@@ -110,6 +116,41 @@ void main() {
     expect(find.text('Chiptune'), findsOneWidget);
     expect(find.text('FluidR3 GM'), findsNothing);
     expect(find.text('Snare hit'), findsNothing);
+  });
+
+  testWidgets('a sound-library scope hides Modules/Songs (chips AND items)',
+      (tester) async {
+    await tester.pumpWidget(
+      _host(_FakeSource(_fixture), kinds: kSoundLibraryKinds),
+    );
+    await tester.pumpAndSettle();
+
+    // Sound kinds are listed…
+    expect(find.text('FluidR3 GM'), findsOneWidget); // soundfont
+    expect(find.text('Cello VCSL'), findsOneWidget); // instrument
+    expect(find.text('Snare hit'), findsOneWidget); // sample
+    // …but a module and a song are NOT, even though the source returned them.
+    expect(find.text('Chiptune'), findsNothing); // module
+    expect(find.text('Kyrie'), findsNothing); // score
+    // …and there are no Modules/Songs filter chips.
+    expect(find.widgetWithText(ChoiceChip, 'Modules'), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, 'Songs'), findsNothing);
+  });
+
+  testWidgets('a single-kind scope hides the whole kind-filter row',
+      (tester) async {
+    await tester.pumpWidget(
+      _host(_FakeSource(_fixture), kinds: const {'instrument'}),
+    );
+    await tester.pumpAndSettle();
+
+    // Only the instrument shows.
+    expect(find.text('Cello VCSL'), findsOneWidget);
+    expect(find.text('FluidR3 GM'), findsNothing);
+    expect(find.text('Snare hit'), findsNothing);
+    // No kind chips at all (not even "All") — there is nothing to filter.
+    expect(find.widgetWithText(ChoiceChip, 'All'), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, 'Instruments'), findsNothing);
   });
 
   testWidgets('licence chip filters by bucket', (tester) async {

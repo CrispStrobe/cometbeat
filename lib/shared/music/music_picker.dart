@@ -251,7 +251,10 @@ class _CatalogMusicSheet extends StatefulWidget {
 }
 
 class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
-  final _source = CometbeatCatalogSource.all(defaultHttpGet);
+  // A MUSIC picker: only songs + tracker modules, so it never fetches the
+  // instrument/sample/soundfont shards (the display already filters to these).
+  final _source =
+      CometbeatCatalogSource(defaultHttpGet, kinds: const {'score', 'module'});
   List<LibraryItem>? _items;
   bool _failed = false;
   bool _fetching = false;

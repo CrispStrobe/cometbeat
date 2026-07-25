@@ -54,15 +54,24 @@ _Lic _licBucket(String raw) {
   return _Lic.all; // unbucketed → only shows under "all"
 }
 
-/// Opens the capable catalog browser. [source] and [store] are injectable for
-/// tests; [store] receives installed samples (defaults to a fresh store).
-/// [initialKind] pre-selects a kind chip (e.g. 'sample' when opened from the
-/// Samples rubric) — one of soundfont/instrument/sample/module, else all.
+/// The catalog kinds a sound/instrument browser is scoped to. Deliberately
+/// EXCLUDES `module` and `score` — a "choose an instrument" surface must not
+/// list (or fetch the shards for) songs and tracker modules. Music browsers pass
+/// their own {'score','module'} set.
+const kSoundLibraryKinds = <String>{'soundfont', 'instrument', 'sample'};
+
+/// Opens the capable catalog browser, scoped to [kinds] (defaults to the
+/// sound-library kinds). [kinds] controls BOTH which shards are fetched (so an
+/// instrument browse never downloads the large score shard) AND which kind
+/// filter chips are shown; a single-kind browse hides the chip row entirely.
+/// [source] and [store] are injectable for tests; [store] receives installed
+/// samples. [initialKind] pre-selects a chip (must be one of [kinds]).
 Future<bool?> showCatalogBrowseSheet(
   BuildContext context, {
   ContentSource? source,
   InstrumentLibraryStore? store,
   String? initialKind,
+  Set<String> kinds = kSoundLibraryKinds,
   Future<void> Function(SampleClip clip)? onInsertSample,
   bool preferSampleInsert = false,
 }) {
@@ -71,9 +80,10 @@ Future<bool?> showCatalogBrowseSheet(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (_) => CatalogBrowseSheet(
-      source: source ?? CometbeatCatalogSource.all(defaultHttpGet),
+      source: source ?? CometbeatCatalogSource(defaultHttpGet, kinds: kinds),
       store: store ?? InstrumentLibraryStore(),
       initialKind: initialKind,
+      kinds: kinds,
       onInsertSample: onInsertSample,
       preferSampleInsert: preferSampleInsert,
     ),
@@ -86,6 +96,7 @@ class CatalogBrowseSheet extends StatefulWidget {
     required this.source,
     required this.store,
     this.initialKind,
+    this.kinds = kSoundLibraryKinds,
     this.onInsertSample,
     this.preferSampleInsert = false,
     super.key,
@@ -94,6 +105,10 @@ class CatalogBrowseSheet extends StatefulWidget {
   final ContentSource source;
   final InstrumentLibraryStore store;
   final String? initialKind;
+
+  /// The catalog kinds this browser lists; the kind filter chips are limited to
+  /// these and the row is hidden when there is only one.
+  final Set<String> kinds;
   final Future<void> Function(SampleClip clip)? onInsertSample;
   final bool preferSampleInsert;
 
@@ -157,7 +172,10 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
     final q = _search.text.trim().toLowerCase();
     return [
       for (final i in _all)
-        if ((_kind == _Kind.all || i.collection == _kind.name) &&
+        // Scope is authoritative: never show a kind outside this browser's set
+        // (e.g. a stray module/score) even if the source over-returns.
+        if (widget.kinds.contains(i.collection) &&
+            (_kind == _Kind.all || i.collection == _kind.name) &&
             (_lic == _Lic.all || _licBucket(i.declaredLicense) == _lic) &&
             (q.isEmpty ||
                 i.title.toLowerCase().contains(q) ||
@@ -611,23 +629,35 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
             onSelected: (_) => setState(() => _lic = _lic == v ? _Lic.all : v),
           ),
         );
+    // Only the kinds this browser is scoped to — a "choose an instrument"
+    // surface never shows Modules/Songs chips. With a single kind there is
+    // nothing to filter, so the whole row (including "All") is hidden.
+    final kindChips = <Widget>[
+      for (final (k, label) in <(_Kind, String)>[
+        (_Kind.soundfont, l10n.catalogKindSoundFonts),
+        (_Kind.instrument, l10n.catalogKindInstruments),
+        (_Kind.sample, l10n.catalogKindSamples),
+        (_Kind.module, l10n.catalogKindModules),
+        (_Kind.score, l10n.catalogKindSongs),
+      ])
+        if (widget.kinds.contains(k.name)) kindChip(k, label),
+    ];
+    final showKindRow = widget.kinds.length > 1;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              kindChip(_Kind.all, l10n.catalogKindAll),
-              kindChip(_Kind.soundfont, l10n.catalogKindSoundFonts),
-              kindChip(_Kind.instrument, l10n.catalogKindInstruments),
-              kindChip(_Kind.sample, l10n.catalogKindSamples),
-              kindChip(_Kind.module, l10n.catalogKindModules),
-              kindChip(_Kind.score, l10n.catalogKindSongs),
-            ],
+        if (showKindRow) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                kindChip(_Kind.all, l10n.catalogKindAll),
+                ...kindChips,
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
+          const SizedBox(height: 6),
+        ],
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
