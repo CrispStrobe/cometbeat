@@ -16,6 +16,7 @@ This file tracks **what is pending and planned**. What's already built and live
 is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
+- **opus (daw-ux)** · 🚧 **ACTIVE — Audio Editor Ocenaudio-parity ladder (see "## Audio Editor — Ocenaudio-parity ladder" section below).** Closing O1→O16 one at a time (destructive clip processing, generation, zoom, loop-selection, stats, EQ/filters, meters, markers, record, spectrogram, more formats). Additive bake-methods in `daw_service.dart` + inspector items in `daw_screen.dart` (rebase-before-edit; O11 FX-enum is codex/crispaudio-parity's turf — coordinate). worktree `../mus-daw-ux`. — opus
 - **opus (daw-ux)** · ✅ **DONE (idle) — worked ALL open DAW/UX items (§A/§B/§D) EXCEPT §C Tracker (another agent's scope).** Shipped, each with tests: §D help/guide overlay + linked-clip affordance (`8de608a5`); §D responsive toolbar + narrow-body scroll (`ec9d74c3`); §A4 editable composer/lyricist + metadata into PDF (`7c070ff0`); §A6 analysis colour-by-harmony in multi-part canvas (`a63cbc73`); §A8 export web-download fallback (`c6d7b829`); §A3 info-button conceptual help + §A7 Copy/Paste-tune rename (`9f33b842`); §A5 lyric field no longer loses keystrokes to note entry (`790c8a85`); §A1 narrow-width layout verified (`72cf3552`); §B1 accurate web instrument-install reason + working fallback (`f42e2dcc`); §D4 touch multi-select verified (`ef045814`); §D1c DAW keyboard shortcuts + help (`d19c01cb`); §A2 bar-number label clip fix (`18544363`); §B2/§D3 unified Sound Library guarded + audit (`8a25c3e4`). **Both follow-ups now closed:** (1) §A2 grand-staff/multi-part bar-numbers-on-first-system → DONE: crisp_notation now numbers the first system too (crisp `fe39bc6`, pixel-tested) + app wiring so single-part (overlay) and grand/multi-part (engine) don't double-draw (`235edfbe`). (2) §B2 remaining consolidation → the unified browser is complete (codex `061e7924`/`832e749e`, guarded by my test); the only surviving parallel entries are in the **Advanced Tracker** (§C — excluded, already on codex-score-editor's backlog line above) + intentionally-distinct context sample-pickers; `LibraryBrowserScreen` is the intentional Song Book score browser (opus `catalog-scores`), not redundant → nothing non-tracker left to safely retire. ⚠ heads-up: the SHARED main clone hit a concurrent-agent stash-pop conflict mid-session; I shipped everything via worktree ff-push and left it untouched for its owner. — opus
 - **opus (lilypond-multipart)** · ✅ **SHIPPED (`ef3331cf` + crisp_notation `05f5f0e`) — full multi-part `.ly` import.** `.ly` no longer collapses a multi-staff score to one staff. New **`multiPartFromLilyPond`** in crisp_notation_core (one part per staff; `\score{ \new StaffGroup << \new Staff … >> }`, PianoStaff/ChoirStaff/GrandStaff, `\header`→first part, per-staff `\with{instrumentName}` + `\addlyrics`, `\new Staff \soprano` variables; <2 staves degrades to one part). Sequential AST walk needed because the parser splits `\new Staff \with{s}{music}` into a bare `\new Staff` + a sibling `\with` that grabbed both blocks (same for `\header{…}`). Wired all 3 app `.ly` paths (`library_import.bytesToMusicXml`, Song Book `import_screen`, Workshop `importMultiPart`). +11 core tests + 3 app tests; core suite 1797 green, mus analyze clean. Now idle. — opus
 - **opus (daw-ux)** · ✅ **SHIPPED (`8de608a5`) — Audio Editor (DAW) discoverability (§D).** New self-contained **DAW help/guide overlay** (`lib/features/games/composition/daw_help_sheet.dart`, `showDawHelpSheet`) reachable from one help IconButton in the daw_screen app bar — responsive, scrollable, explains the toolbar, clip building/editing, the four FX scopes, and the linked-editor round-trip. Plus a visible **"linked to editor" affordance** on editor-linked (ScoreSource) clips: a link badge on the timeline clip box (mirrors the frozen-lock badge, reuses `isScoreClip`) + a labelled hint in the clip inspector. l10n EN+DE. New file + thin additive wiring only — did NOT touch FX logic (codex/crispaudio-parity's turf). Verified: new `daw_help_sheet_test.dart` (5 green — guide shows every section without overflow at phone AND desktop widths in EN+DE; link badge/hint only on score clips) + daw_screen (51) + music_flow regression green; full-project analyze clean. Now idle. — opus
@@ -207,6 +208,50 @@ Each slice adds generator parsing to `sf2/sf2.dart` and applies it in
 - Higher sample rates + output dithering (cosmetic).
 
 Order: T1a → T1b → T1c → T1d → T1e → T1f → Tier 2 → SFZ.
+
+## Audio Editor ("Multitrack") — Ocenaudio-parity ladder (opus, 2026-07-25)
+
+The DAW is already a strong **non-destructive multitrack** engine: stereo
+throughout; per-clip/track/bus/master FX chains + breakpoint automation (reverb,
+delay, chorus, flanger, ring-mod, distortion, bit-crush, low/high-pass,
+compressor, gate, pitch-shift, time-stretch, tremolo, vocoder, voice-shape, gain,
+pan); split/trim/fade(linear·exp·s-curve)/gain/pan/width/reverse/respeed/freeze/
+merge/crossfade; per-clip + per-track + marked-range selection with range
+FX/gain/fade/mute/track-automation; WAV/MP3/FLAC import (mono/stereo, magic-byte);
+WAV(8/16/24/32-bit)+MP3(128/192/320) export with sample-rate choice, whole-mix +
+marked-range, optional normalize-on-export; undo/redo depth-50; stereo waveform +
+ruler + beat grid; snap; whole-arrangement loop; `.cbdaw` save/load; Space/Delete
+keys.
+
+Gaps vs a single-file editor (**Ocenaudio**), to close in order. Most DSP already
+exists in `crisp_dsp/` (`sample_edit.dart`: `normalizePcm`/`removeDcOffset`/
+`trimSilence`/`trimPcm`/`peakMagnitude`; `biquad.dart` full filter set;
+`sfxr.dart` tone/noise) — the work is wiring it as DAW clip ops (bake pattern like
+`reverseClip`) + inspector UI + tests.
+
+**Tier 1 — destructive clip processing (bake to SampleSource; DSP exists):**
+- [ ] **O1** Normalize clip — peak (and RMS) to a target dBFS (`normalizePcm`).
+- [ ] **O2** Invert phase (×−1) — a bake op + inspector item.
+- [ ] **O3** Remove DC offset (`removeDcOffset`).
+- [ ] **O4** Trim silence from clip edges (`trimSilence`); crop clip to the marked range.
+- [ ] **O5** Silence the marked range (replace with silence, keeping timing).
+- [ ] **O6** Amplify by dB (bake) — optional; clip Gain FX already covers most.
+
+**Tier 2 — generation + precise editing:**
+- [ ] **O7** Generate clip: tone (sine/square/…) / noise (white/pink) / silence → new lane (`sfxr`).
+- [ ] **O8** Zoom in/out/fit (pixels-per-second control; timeline is fixed-scale today).
+- [ ] **O9** Loop the marked selection (loop-region), not just the whole arrangement.
+- [ ] **O10** Clip statistics in the inspector (peak dBFS · RMS · duration · clipping).
+
+**Tier 3 — filters/EQ + analysis + markers:**
+- [ ] **O11** Expose the full biquad set as FX (band-pass · notch · low/high shelf · peaking EQ) + Phaser. ⚠ touches `DawClipEffectType` = codex/crispaudio-parity's core FX area — coordinate.
+- [ ] **O12** Level meters (peak/RMS) during playback.
+- [ ] **O13** Markers/regions with labels on the timeline.
+
+**Tier 4 — bigger (assess feasibility as reached):**
+- [ ] **O14** Record mic → new lane (infra exists: `voice_clip_recorder.dart`/`loop_record.dart`).
+- [ ] **O15** Spectrogram view.
+- [ ] **O16** More formats: OGG/AIFF import (glint decodes Vorbis; AIFF ≈ WAV) + FLAC/OGG export.
 
 ## MIDI renderer — SOTA roadmap"). **S1** master **reverb** send (`reverbFx`, `--reverb 0..1`, default 0.16; `00f4308e`). **S2** **ADSR release tail** in the render bridge — a ~140 ms quadratic fade per note (velocity gain folded in); universal, helps every format + the app's Workshop/Tab preview; unmarked scores unchanged (`1fb41b3b`). **S3** NEW `lib/core/audio/midi_render.dart` `renderMidiFile(smf, font)` → the **event-accurate MIDI synth**: parse all tracks to absolute ticks, schedule on a SAMPLE clock — **exact timing** (no 16th-grid quantization), **tempo map**, per-channel **program+bank** (mid-song changes), **CC7/10/11** volume/expression/pan, **sustain pedal (CC64)**, ch10→drums; each note voiced by its SF2 preset + release, panned constant-power → stereo. Default for MIDI+`--sf2` (`--notation` forces the old quantized route). Verified: 3-track MIDI (piano L / bass R / drums) @ 100-BPM meta → correct pitches, stereo, tempo (`a2e0b359`). **S4** velocity→cutoff **low-pass filter** per voice (~900 Hz pp … 16 kHz ff; drums exempt) — the timbral half of dynamics (`27015c05`). +tests each slice; full analyze clean. **S5** (`79555cbb`) replaced the synth voice with a **resampling SF2 voice** — reads `font.sampleAt(zone.sampleIndex)` at a per-sample fractional rate (linear-interp), loops the zone for sustain, applies rootKey/tune/attenuation — unlocking **continuous pitch-bend** (per-channel bend curve, ±2 st) + **CC1 mod-wheel LFO vibrato**; verified a C-major scale resamples to the exact pitches through FluidR3. **S6** real-time playback (`--play` → afplay/ffplay/…; temp output optional; `df04594b`). **S7** the last of the list (`2b02bb61`): **RPN pitch-bend range** (CC101/100 + CC6/38, per channel), **`--chorus`** master send, **`--bits 24`** WAV (pure 24-bit LE writer), **`.flac`** output (via external flac/ffmpeg). **⇒ the entire SOTA MIDI-renderer roadmap (S1–S7) is SHIPPED**; a genuine FluidSynth/BASSMIDI-class renderer — resampling SF2 synthesis, event-accurate scheduling, full CC/pedal/bend/RPN, tempo map, per-part GM, stereo+reverb+chorus, 16/24-bit WAV·MP3·FLAC, and play-it-now. Now idle.
 - **opus (rendersong-velocity)** · ✅ **SHIPPED — honor MIDI note velocity end-to-end** (`crisp_notation@4792748` + mus `4d1fe394`). Was: the core `scoreFromMidi` DROPPED per-note velocity, so a MIDI's performed dynamics were lost before rendering. Now `NoteElement.velocity` (int? 0..127, additive/backward-compat) is threaded through the MIDI reader (pending→_Note→group→_Ev→NoteElement; a chord takes its loudest) and written back by `scoreToMidi` (explicit velocity > dynamics-derived), so a MIDI's dynamics round-trip (+2 core tests; 300-score sustain-grid + dynamics→velocity suites stay green). mus `renderScoreWithInstrument` voices a note by velocity/127 when present (precedence: velocity > notated DynamicMarkings > full level; no-velocity byte-identical), so rendersong's GM MIDI mixes AND the app's Workshop/Tab "play with instrument" now hear per-note dynamics (114 render/gm/workshop/tab tests green). +mus test. Now idle. **⇒ render quality: correct tempo · notated dynamics · MIDI velocity · stereo · soft-master · per-part GM voicing — all shipped.**
