@@ -1765,6 +1765,17 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                               refresh();
                             },
                           ),
+                        // Tie: this note sustains into the next column.
+                        FilterChip(
+                          avatar: const Icon(Icons.link, size: 18),
+                          label: const Text('Tie'),
+                          selected: _selCol < _doc.columns.length &&
+                              _doc.columns[_selCol].tieToNext,
+                          onSelected: (v) {
+                            setState(() => _doc.setTie(_selCol, v));
+                            refresh();
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),

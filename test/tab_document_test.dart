@@ -453,4 +453,49 @@ void main() {
       expect(back.duration.base, DurationBase.sixteenth);
     });
   });
+
+  group('A2 — ties', () {
+    TabDocument twoTiedQuarters() => TabDocument(
+          tuning: Tuning.standardGuitar,
+          columns: [
+            const TabColumn(frets: {0: 3}, tieToNext: true),
+            const TabColumn(frets: {0: 3}),
+          ],
+        );
+
+    test('toScore ties the first note into the next', () {
+      final notes = twoTiedQuarters()
+          .toScore()
+          .measures
+          .expand((m) => m.elements)
+          .whereType<NoteElement>()
+          .toList();
+      expect(notes.first.tieToNext, isTrue);
+      expect(notes.last.tieToNext, isFalse);
+    });
+
+    test('playback merges a tied pair into one sound of the summed length', () {
+      final events = twoTiedQuarters().toPlaybackEvents(); // @120bpm default
+      expect(events.length, 1); // the two columns sound as one note
+      expect(events.single.$2, 1000); // 500 + 500 ms
+    });
+
+    test('a tie survives the import→edit→export round-trip', () {
+      final src = twoTiedQuarters().toScore();
+      final cols = TabDocument.fromScore(src, Tuning.standardGuitar).columns;
+      expect(cols.first.tieToNext, isTrue);
+    });
+
+    test('setTie / withTie toggle the flag', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [const TabColumn(frets: {0: 0})],
+      );
+      expect(doc.columns[0].tieToNext, isFalse);
+      doc.setTie(0, true);
+      expect(doc.columns[0].tieToNext, isTrue);
+      // Duplicating a column preserves the tie.
+      expect(doc.columns[0].copy().tieToNext, isTrue);
+    });
+  });
 }

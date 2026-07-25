@@ -34,11 +34,17 @@ class TabColumn {
   /// The selected chord diagram, kept alongside the playable fret voicing.
   final ChordDiagram? chord;
 
+  /// When true, this note sustains INTO the next column (a tie): the next
+  /// column doesn't re-attack — it prolongs this one. Notation draws a tie and
+  /// playback sums the durations. Set on a noteful column only.
+  final bool tieToNext;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
     this.techniques = const {},
     this.chord,
+    this.tieToNext = false,
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -48,6 +54,7 @@ class TabColumn {
         duration: duration,
         techniques: techniques,
         chord: chord,
+        tieToNext: tieToNext,
       );
 
   TabColumn withoutString(int string) => TabColumn(
@@ -58,6 +65,7 @@ class TabColumn {
         duration: duration,
         techniques: techniques,
         chord: chord,
+        tieToNext: tieToNext,
       );
 
   TabColumn withDuration(NoteDuration d) => TabColumn(
@@ -65,6 +73,7 @@ class TabColumn {
         duration: d,
         techniques: techniques,
         chord: chord,
+        tieToNext: tieToNext,
       );
 
   /// Adds [t] if absent, else removes it.
@@ -75,6 +84,7 @@ class TabColumn {
             ? ({...techniques}..remove(t))
             : {...techniques, t},
         chord: chord,
+        tieToNext: tieToNext,
       );
 
   /// Sets (or clears, when null) this column's chord diagram.
@@ -83,6 +93,16 @@ class TabColumn {
         duration: duration,
         techniques: techniques,
         chord: c,
+        tieToNext: tieToNext,
+      );
+
+  /// Sets whether this note ties into the next column.
+  TabColumn withTie(bool tie) => TabColumn(
+        frets: frets,
+        duration: duration,
+        techniques: techniques,
+        chord: chord,
+        tieToNext: tie,
       );
 
   /// A deep copy (fresh frets/techniques collections) — for duplicating columns.
@@ -91,6 +111,7 @@ class TabColumn {
         duration: duration,
         techniques: {...techniques},
         chord: chord,
+        tieToNext: tieToNext,
       );
 }
 
@@ -252,6 +273,12 @@ class TabDocument {
     columns[col] = columns[col].toggleTechnique(t);
   }
 
+  /// Sets whether the note at [col] ties into the next column.
+  void setTie(int col, bool tie) {
+    _ensure(col);
+    columns[col] = columns[col].withTie(tie);
+  }
+
   /// Sets (or clears, when null) the chord diagram on the column at [col].
   void setChord(int col, ChordDiagram? chord) {
     _ensure(col);
@@ -394,7 +421,14 @@ class TabDocument {
             pitchFromMidi(tuning.strings[e.key].midiNumber + e.value + capo),
         ];
         final id = 't$c';
-        bar.add(NoteElement(pitches: pitches, duration: col.duration, id: id));
+        bar.add(
+          NoteElement(
+            pitches: pitches,
+            duration: col.duration,
+            id: id,
+            tieToNext: col.tieToNext,
+          ),
+        );
         voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
         for (final t in col.techniques) {
           switch (t) {
@@ -445,18 +479,29 @@ class TabDocument {
     // it is exact for every value — a quarter is exactly 60000/bpm, no rounding
     // drift from the 32nd-step grid.
     final wholeMs = 60000 / bpm * 4;
-    return [
-      for (final col in columns)
-        (
-          [
-            for (final e
-                in (col.frets.entries.toList()
-                  ..sort((a, b) => a.key.compareTo(b.key))))
-              tuning.strings[e.key].midiNumber + e.value + capo,
-          ],
-          (col.duration.toFraction().toDouble() * wholeMs).round(),
-        ),
-    ];
+    int ms(TabColumn c) => (c.duration.toFraction().toDouble() * wholeMs).round();
+    List<int> midis(TabColumn c) => [
+          for (final e
+              in (c.frets.entries.toList()
+                ..sort((a, b) => a.key.compareTo(b.key))))
+            tuning.strings[e.key].midiNumber + e.value + capo,
+        ];
+    final out = <(List<int>, int)>[];
+    var c = 0;
+    while (c < columns.length) {
+      // A tie sustains one note across columns: emit ONE sound (the attacking
+      // column's pitches) whose length is the whole tied chain — the following
+      // columns don't re-attack.
+      final start = c;
+      var dur = ms(columns[c]);
+      while (columns[c].tieToNext && c + 1 < columns.length) {
+        c++;
+        dur += ms(columns[c]);
+      }
+      out.add((midis(columns[start]), dur));
+      c++;
+    }
+    return out;
   }
 
   /// Builds an editable document from an arbitrary [score]. Notes the score
@@ -505,6 +550,7 @@ class TabDocument {
     final midiCols = <List<int>>[];
     final durations = <NoteDuration>[];
     final ids = <String?>[]; // per-column source note id (null for a rest)
+    final ties = <bool>[]; // per-column: does this note tie into the next?
     final pinned = <int, Fretting>{}; // column index → explicit fingering
     var idx = 0;
     for (final measure in score.measures) {
@@ -525,11 +571,13 @@ class TabDocument {
           midiCols.add(midis);
           durations.add(el.duration);
           ids.add(el.id);
+          ties.add(el.tieToNext);
           idx++;
         } else if (el is RestElement) {
           midiCols.add(const []);
           durations.add(el.duration);
           ids.add(null);
+          ties.add(false);
           idx++;
         }
       }
@@ -546,6 +594,7 @@ class TabDocument {
             frets: pinned[i] ?? arranged[i],
             duration: durations[i],
             techniques: {...?tech[ids[i]]},
+            tieToNext: ties[i],
           ),
       ],
     );

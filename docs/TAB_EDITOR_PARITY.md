@@ -206,7 +206,11 @@ parametric technique end-to-end.
   any imported value tiles + plays exactly (no more quarter fallback). Explicit
   rests already work (an empty column of a chosen duration → `RestElement`).
   Tests in `test/tab_document_test.dart` (group A1).
-- [ ] A2 … E2 — pending (scoped above)
+- [x] **A2** ties — `TabColumn.tieToNext`; `toScore` sets `NoteElement.tieToNext`;
+  playback merges a tied chain into one sound of the summed length; `fromScore`
+  reads ties back (round-trip); `setTie`/`withTie` + a Tie chip in the settings
+  sheet. Tests in `test/tab_document_test.dart` (group A2).
+- [ ] A3 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.
