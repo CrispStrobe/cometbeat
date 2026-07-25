@@ -1156,9 +1156,15 @@ Uint8List convertToS3m(ModuleDoc doc) => writeS3m(docToS3m(doc));
 /// volume routes here), and the translated effect command/value (IT X pan is
 /// direct 0x00–0xFF).
 ItCell _itCellFrom(DocCell c, {required bool preserveNative}) {
-  final vol = c.volume >= 0
-      ? c.volume.clamp(0, 64)
-      : (c.effect == 0xC ? c.effectParam.clamp(0, 64) : -1);
+  // Imported IT M/V commands normalize to the neutral C/G command space for
+  // playback, but their original command must remain the only volume control.
+  // Do not synthesize an IT volume-column value when the native source had no
+  // vol/pan byte; doing so doubles the command on native export.
+  final vol = preserveNative && c.nativeEffect >= 0 && c.nativeVolpan < 0
+      ? -1
+      : c.volume >= 0
+          ? c.volume.clamp(0, 64)
+          : (c.effect == 0xC ? c.effectParam.clamp(0, 64) : -1);
   final (command, value) = preserveNative && c.nativeEffect >= 0
       ? (c.nativeEffect, c.nativeEffectParam)
       : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: true);

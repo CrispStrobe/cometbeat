@@ -30,6 +30,36 @@ Float64List _norm8(List<int> v) =>
     Float64List.fromList([for (final b in v) b / 128]);
 
 void main() {
+  test('IT native volume commands do not synthesize a volume-column byte', () {
+    final doc = ModuleDoc(
+      sourceFormat: ModuleFormat.it,
+      channelCount: 1,
+      order: const [0],
+      patterns: [
+        const DocPattern([
+          [
+            DocCell(
+              note: 60,
+              effect: 0xC,
+              effectParam: 0x20,
+              nativeEffect: 13, // IT Mxx: set channel volume
+              nativeEffectParam: 0x20,
+              nativeVolpan: -1,
+            ),
+          ],
+        ], 1),
+      ],
+      samples: [
+        DocSample(pcm: Float64List.fromList([0.2, 0.2, 0.2])),
+      ],
+    );
+
+    final cell = parseIt(convertToIt(doc)).patterns.first.rows.first.first;
+    expect(cell.command, 13);
+    expect(cell.commandValue, 0x20);
+    expect(cell.volpan, -1);
+  });
+
   test('IT sustain-loop sample metadata survives neutral round-trip', () {
     final doc = ModuleDoc(
       sourceFormat: ModuleFormat.mod,
