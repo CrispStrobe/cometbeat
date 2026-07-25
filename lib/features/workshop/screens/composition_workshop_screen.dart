@@ -4240,8 +4240,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                                       score: _doc.buildScore(),
                                                       theme: theme,
                                                       staffSpace: _zoom,
-                                                      showMeasureNumbers:
-                                                          _barNumbers,
+                                                      // Single-part bar numbers
+                                                      // come from the app overlay
+                                                      // (every measure), so the
+                                                      // engine's stay off (the
+                                                      // default) to avoid drawing
+                                                      // them twice.
                                                       noteNameStyle:
                                                           _noteNameStyle,
                                                       controller: _regions,
