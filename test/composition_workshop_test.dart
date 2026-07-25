@@ -257,6 +257,38 @@ void main() {
     );
   });
 
+  testWidgets('bar-numbers toggle drives the on-staff overlay (visible effect)',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // A couple of notes so the notation overlay has element regions to label.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
+    await tester.pump();
+
+    dynamic overlayPainter() => tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((cp) => cp.painter)
+        .firstWhere(
+          (p) => p.runtimeType.toString().contains('WorkshopNotationOverlay'),
+          orElse: () => null,
+        );
+
+    // Off by default.
+    expect(overlayPainter()?.showBarNumbers, isFalse);
+
+    // Toggle Bar numbers from the ⋮ menu.
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopBarNumbers));
+    await tester.pumpAndSettle();
+
+    // Now the overlay is configured to paint bar numbers (the toggle has a real
+    // effect on the render, not a no-op).
+    expect(overlayPainter()?.showBarNumbers, isTrue);
+  });
+
   testWidgets('the info button explains controls, not only shortcuts',
       (tester) async {
     await pump(tester);

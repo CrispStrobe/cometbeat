@@ -4515,7 +4515,13 @@ class _WorkshopNotationOverlayPainter extends CustomPainter {
         _paintLabel(
           canvas,
           '$number',
-          Offset(first.bounds.left + 2, first.bounds.top - 14),
+          // Keep the label on-canvas: on a one-system score the first staff can
+          // sit within 14px of the top, which would clip the number off-screen
+          // (the reported "bar numbers have no visible effect").
+          Offset(
+            first.bounds.left + 2,
+            (first.bounds.top - 14).clamp(6.0, double.infinity).toDouble(),
+          ),
           color: textColor,
           fontSize: 11,
         );
