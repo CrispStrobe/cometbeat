@@ -31,6 +31,18 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 - **opus (fx-interop)** · 🚧 **ACTIVE — cross-mode FX + interop consolidation** (new section "## Cross-mode FX + interop consolidation" in root [PLAN.md](../PLAN.md), items A1–A6 / B1–B2 / C0–C4). Goal: one `FxSpec` rack shared by Audio/Tracker/Instrument/Loop/Tab instead of four incompatible effect enums over the same `crisp_dsp/`; one `pitchFromMidi` + one duration ladder instead of 5×/2× copies; and a complete interop matrix with a **side-car annotation bag** so conversions stop silently dropping string/fret/technique/fx-command. **Explicitly collision-safe:** every step is additive and keeps the legacy names as typedef aliases — A1 moves the FX engine out of `daw_timeline.dart` into `lib/core/audio/fx/` but **does not touch one call site** in `daw_service.dart`/`daw_screen.dart` (so it composes with daw-ux's O-ladder and codex/crispaudio-parity's FX-enum work: new `FxType` members appended by either side merge cleanly). Tracker/loop/tab items likewise add a parallel `fxChain` field rather than rewriting the existing enums. worktree `../mus-interop`, branch `feature/fx-interop`. — opus
 
+- **opus (glint-encoder)** · ✅ **SHIPPED (idle) — native Opus/AAC export.**
+  Vendored glint's ENCODER into `native/glint` and wired it on all five
+  platforms; the export sheet now offers Opus + AAC wherever the symbol
+  resolves, web unchanged. Retired `docs/GLINT_ENCODER_HANDOVER.md`; the full
+  write-up (decisions + measurements + the `/usr/local/lib/libglint.dylib`
+  gotcha) is the "✅ Opus / AAC export" section below. Shared files touched:
+  `lib/shared/music_io/audio_export.dart`, the **ARBs** (3 keys:
+  `audioExportOpus`/`audioExportAac`/`audioExportOpusRateNote`),
+  `lib/core/audio/sf2/*` — everything else is under `native/glint/`.
+  Verified: 34 native + 7 live-macOS + 17 headless assertions, 288 DAW tests,
+  `flutter analyze` clean. Worktree `../mus-glint-encoder`.
+
 - **opus (loop-suite)** · ✅ **SHIPPED (idle) — Loop Suite: genuinely gapless looping + Loop Mixer per-track editing.** (1) **Killed the loop-seam hiccup app-wide:** `GaplessLoopPlayer` looped via audioplayers `ReleaseMode.loop` (the OS media-element loop-reset = an audible gap on every wrap); it now loops via **flutter_soloud** (sample-accurate mixer loop, no OS reset) with a 12 ms crossfade on buffer swaps and audioplayers kept as the headless/unsupported fallback — one file, fixes Loop Mixer/Studio + Beginner + Advanced Tracker (all route through it). (2) **Loop Mixer editing** (previously Advanced-Tracker-only): **undo/redo** (GrooveSpec snapshots keyed by `cacheKey`, hooked at the top of `_syncPlayback`, opening state anchored in initState), **remove captured** voice/beat tracks, and **per-track stereo pan** (renders mono/byte-identical until a track is panned, then `mixStemsStereo`/`wavBytesStereo` + per-channel `_applySendStereo`; pan lives in GrooveSpec `pn`, so share tokens + undo cover it). +5 widget/engine tests, **113 loop-suite tests green**, analyze clean on all touched files. On-device SoLoud integration test added (`integration_test/gapless_loop_player_test.dart`, run `-d macos`). (3) **Full editor discoverable:** the buried Share-sheet "Open in Tracker" is now also a one-tap button in the Loop Mixer's advanced toolbar (reuses the existing `_openInTracker` bridge; disabled until there's pitched content) — the full per-track Advanced-Tracker editor is one tap from the Loop Suite. Deliberately additive on the LOOP side only (no tracker-screen/registry edits) so it doesn't collide with codex's tracker-menu restructuring. Touched only `gapless_loop_player.dart`/`loop_engine.dart`/`loop_mixer_screen.dart` + ARBs — **no tracker/registry/DAW files**, so non-colliding with daw-ux/score-editor. **116 loop-suite tests green.** (4) **UX overhaul to the Score-Editor pattern** — the advanced Loop Mixer was a wall of ~14 toolbar icons over ~8 always-visible setting rows; rebuilt as a **slim pinned action bar** (transport + undo/redo + roll/beat/tune + inspector-toggle + one grouped ⋮ menu + help), a toggleable **"Sound & Feel" inspector** holding every multi-value setting (tempo/style/harmony/key/scale/kit/swing/filter/sections — docked right ≥760px, inline card on narrow, hidden by default), and one **grouped ⋮ overflow** (View/Perform/Share sections). Track cards + transport are the focus now. Removed dead `_simpleTools`/`_optionRow`; +12 l10n keys EN/DE; tests updated to reach settings via the inspector/menu +1 inspector test → **50 loop-mixer/studio tests green**, analyze clean. Also fixed the macOS launch crash blocking all on-device tests (CrispEmbed `@rpath/libX.0.dylib` SONAME packaging — podspec+release.yml, CrispEmbed@`edfdb83`) → the on-device SoLoud test now runs green through a clean `flutter test -d macos`, and the app launches. — opus
 - **opus (loop-consolidation)** · ✅ **SHIPPED (idle) — Loop Studio consolidation §1–4 (PLAN.md root).** All four editable-everything slices landed, each with tests: **§2** DrumKit round-trip — the beat editor's "Edit drums on the pads" opens the full Drum Kit seeded from the drum grid; Done returns the edited pattern straight to the card (drums via a per-track engine drum override in GrooveSpec, or the captured beat). **§1** Beginner-Tracker parity built INTO the Loop Studio tune editor — the wide-range toggle (1→2 octaves); done on the LOOP side ONLY, **no `tracker_screen.dart`/registry-tile edits** (archival stays a coordinated follow-up, PLAN.md gates it on parity; per-note velocity/FX deferred — needs a `PatternCell` core-model extension). **§3** the Sheet Music is now an editing surface — tap a part's staff (edit-note affordance) to open that track's grid editor. **§4** Kiffness first-run flow — a 5-step start→layer→record→edit→surprise tutorial auto-shown once via the tile's `tutorial`+TutorialGate. Plus earlier this pass: per-track Edit button, drums-card editing, DrumKit re-registered (was orphaned), dozens more presets (progressions 4→16, drum grooves 11→23, kits 4→8), DrumKit German-phone overflow fix + wonderfulpain.it fixture-skip, web PWA-cache deploy fix. **116 loop-suite tests green, analyze clean.** Touched loop/mixer/engine + drumkit_screen + tutorial/registry/ARBs only — no tracker-screen/score-workshop/DAW hot files. — opus
 - **opus (loop-consolidation)** · ✅ **SHIPPED — full note-level editing (per-note velocity).** `PatternCell` promoted from a `({midis,steps})` record to a **class carrying velocity** (0..1) with value equality — the core-model change: `renderCells` scales each cell's samples by velocity (relative dynamics; a uniform velocity is a no-op after per-stem unit-peak normalization); GrooveSpec/tokens carry it (2-el `[midis,steps]`=full → pre-velocity tokens byte-identical, 3-el adds velocity); the tune grid's **long-press cycles a note soft↔normal** (Beginner-Tracker parity), soft cells draw dimmer (shared `StepGridView` gained optional `onLongPress` + `StepCell.velocity`). **287 record literals → `PatternCell(...)` across lib+test** — a cross-cutting refactor that necessarily touched every construction site incl. `groove_notation`/`tab_workshop`/`composition_workshop` (mechanical only; `transcribe.dart` uses its OWN record, untouched). 278+102 tests green across all affected loop/tracker/workshop suites; analyze clean on every changed file. ⚠ Remaining: **per-cell FX** (a loop-render FX engine — separate large effort) and **retiring the Beginner-Tracker tile** — its capability is now folded into Loop Studio, but `tracker_screen.dart` is under **active development by another agent** (oscilloscopes/unified-sound-library committed 2026-07-25), so pulling its tile now would clobber that; per PLAN.md + coordination this needs a maintainer/coordination call before removal. — opus
@@ -250,34 +262,71 @@ per-clip/track/bus/master/range FX · fade curves (linear/exp/S) already existed
 before this pass — the gap was narrower than "tiny steps", but these three were
 real and are the difference between a clip arranger and a DAW.
 
-### ⚠️ Opus export: glint HAS the encoder, this app does NOT ship it
+### ✅ Opus / AAC export — SHIPPED (2026-07-26)
 
-Corrects an earlier claim in this doc that FLAC/OGG export "needs an encoder we
-don't have". `glint.h` declares `glint_encode_audio(...)` → **MP3 / AAC-LC /
-Ogg-Opus** in one call, and `~/code/glint` implements it
-(`src/encode_audio_c_api.cpp` + a full CELT Opus encoder).
+`glint.h` declares `glint_encode_audio(...)` → **MP3 / AAC-LC / Ogg-Opus** in
+one call, and `~/code/glint` implements it (`src/encode_audio_c_api.cpp` + a
+full CELT Opus encoder). The Dart binding shipped earlier; what was missing was
+the native half — `sync_glint.sh` vendored the Ogg-Vorbis DECODE set only, so
+the header *advertised* encoders the compiled plugin didn't contain and
+`loadGlintEncoder()` returned null on every platform.
 
-**But `native/glint/sync_glint.sh` vendors the "MINIMAL glint Ogg-Vorbis DECODE
-source set" only** — the header is glint's whole public ABI, so it *advertises*
-encoders the compiled plugin doesn't contain. `glint_encode_audio` would fail to
-resolve at runtime.
+Now vendored and wired on all five platforms. The export sheet offers **Opus**
+and **AAC** wherever the encoder resolves, and web / any plugin-less platform
+sees exactly the pre-existing list (WAV + pure-Dart MP3). The batch stems sheet
+inherits it. Was `docs/GLINT_ENCODER_HANDOVER.md` (now deleted — done).
 
-Shipped now: the Dart side, done and safe — `sf2/opus_glint_ffi.dart` (FFI
-binding), `sf2/encoded_audio.dart` (dart:ffi-free types), and an
-`encode_capability` stub/ffi seam whose loader returns **null** when the symbol
-isn't there, so the export UI simply won't offer Opus rather than failing at
-save time.
+What the pass actually decided, with the measurements behind it:
 
-**→ Full handover for whoever picks this up: `docs/GLINT_ENCODER_HANDOVER.md`
-(unclaimed).** Summary: extend `sync_glint.sh` to vendor the encode closure —
-`encode_audio_c_api.cpp` + `opus_c_api.cpp` + the CELT encoder set
-(`opus_celt_encoder`, `opus_celt_enc_{bands,energy,vq}`, `opus_ec`, `opus_mdct`,
-`opus_cwrs`, `opus_laplace`, `opus_celt_rate`, …, ~20 files) — and either vendor
-the MP3/AAC encoders too or shim their entry points, since `glint_encode_audio`
-dispatches to all three. It also needs the REAL `glint_free` instead of the
-current 2-line shim. That's a native-build change on all five platforms, so it
-wants its own pass. **FLAC export stays out regardless: glint decodes FLAC and
-has no FLAC encoder.**
+- **All three codecs, not Opus-only** (the handover's option b). MP3+AAC cost
+  only **+268 KB** of dylib over Opus alone; stubbing them would have left
+  `GlintEncoder.encode(format: mp3)` silently returning null.
+- **`opus_c_api.cpp` taken VERBATIM** even though it names `OpusDecoder` and so
+  drags the Opus+SILK decoder in (**+97 KB**, measured). A hand-copied
+  `glint_opus_encode_file` would be a fork of glint's muxing logic (pre-skip,
+  frame size, packet TOC) that drifts silently into subtly wrong `.opus` files.
+  **This plugin forks no glint codec logic**, which is what makes re-running
+  `sync_glint.sh` always safe. Bonus: native Opus decode symbols come free.
+  Final library 607 KB (was 113 KB decode-only).
+- **`glint_free` — verified, not assumed** (the handover flagged it as a
+  heap-corruption risk). glint's real definition is exactly `{ std::free(p); }`
+  and every buffer reachable through it on the compiled paths is
+  `std::malloc`'d. Audit + re-check recipe recorded in `glint_free_shim.cpp`;
+  the 2-line shim is correct, not merely tolerable.
+- **`sync_glint.sh` now GENERATES** `src/glint_sources.cmake` and the
+  `macos/ios Classes/` forwarders from whatever `.cpp` landed in `src/` — a
+  vendored-but-unlisted source can no longer become a link error that only one
+  platform discovers days later.
+- **New local glue** `opus_file_c_api.cpp` (`cometbeat_opus_file_decode`), so
+  the round trip is verifiable end to end without pulling in glint's whole
+  decode closure. Deliberately NOT `glint_`-prefixed: `flac_c_api.cpp` took the
+  `glint_flac_decode` name and glint later defined that symbol itself.
+
+Verification (render → decode → assert, not "it compiled"):
+
+- `native/glint/test/encode_roundtrip_test.cpp` — 34 assertions against the real
+  plugin dylib. 440 Hz survives Opus encode+decode by **PITCH** (never sample
+  rate: Opus decodes at 48 kHz); hard-panned stereo neither collapses nor swaps;
+  MP3/AAC carry valid MPEG/ADTS sync; malformed input is rejected not crashed
+  on; 250 encode/free cycles grow RSS by 16 KB. Run it with
+  `cmake -B build -DGLINT_BUILD_TESTS=ON native/glint/src`.
+- `integration_test/glint_encoder_test.dart` — 7 live tests, **green on a real
+  macOS build**. `setUpAll` asserts BOTH loaders resolve; `loadOpusFileDecoder()`
+  is the stronger check, since that symbol exists only in our plugin.
+- `test/audio_export_format_test.dart` — 17 headless tests for the gating.
+
+**Gotcha this pass found:** a machine with glint `make install`ed has
+`/usr/local/lib/libglint.dylib`, and `loadGlintEncoder()`'s last-resort
+`DynamicLibrary.open('libglint.dylib')` **resolves it even under
+`flutter test`** — so "no encoder in headless tests" is false here. The unit
+tests therefore pin the encoder rather than trusting the ambient probe.
+
+**Remaining:** a per-platform `flutter build` on iOS/Android/Windows/Linux is
+the final confirmation (macOS is verified locally) — same standing caveat as
+`native/aec`. **FLAC export stays out: glint decodes FLAC and has no FLAC
+encoder.** Native MP3 is reachable through the binding but the export sheet
+still offers the pure-Dart MP3 writer, so web and native behave identically —
+switching that is a separate, deliberate quality call.
 
 **Tier 4 — bigger (assess feasibility as reached):**
 - [x] **O14** Record mic → new lane, via the app's single mic-facing capture

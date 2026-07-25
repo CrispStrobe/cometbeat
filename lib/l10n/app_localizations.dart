@@ -584,6 +584,24 @@ abstract class AppLocalizations {
   /// **'MP3 (smaller)'**
   String get audioExportMp3;
 
+  /// No description provided for @audioExportOpus.
+  ///
+  /// In en, this message translates to:
+  /// **'Opus (smallest, best quality)'**
+  String get audioExportOpus;
+
+  /// No description provided for @audioExportAac.
+  ///
+  /// In en, this message translates to:
+  /// **'AAC (smaller, Apple-friendly)'**
+  String get audioExportAac;
+
+  /// No description provided for @audioExportOpusRateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Opus always saves at 48 kHz.'**
+  String get audioExportOpusRateNote;
+
   /// No description provided for @audioExportEmpty.
   ///
   /// In en, this message translates to:

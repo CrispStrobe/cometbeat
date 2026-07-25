@@ -283,6 +283,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioExportMp3 => 'MP3 (smaller)';
 
   @override
+  String get audioExportOpus => 'Opus (smallest, best quality)';
+
+  @override
+  String get audioExportAac => 'AAC (smaller, Apple-friendly)';
+
+  @override
+  String get audioExportOpusRateNote => 'Opus always saves at 48 kHz.';
+
+  @override
   String get audioExportEmpty => 'Nothing to export yet';
 
   @override

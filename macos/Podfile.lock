@@ -77,7 +77,7 @@ SPEC CHECKSUMS:
   flutter_soloud: 93c20641a100d25bfbc84a8b86e867f350ef29ac
   flutter_tts: ae915565cc6948444b513acc8ee021993281e027
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
-  glint_vorbis: 02ba406919e5dce63d8ac86370b872241aabbcad
+  glint_vorbis: 27dba1bb6d744c2869fbac165bf8fdd131c9ef2d
   onnxruntime: 07de55f2042e50ef3769768feb45eb69552cff05
   package_info_plus: f0052d280d17aa382b932f399edf32507174e870
   record_macos: 2e43c16b84ce188b8137754ee648322a2dcdf7fa

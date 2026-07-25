@@ -7,3 +7,6 @@ export 'package:comet_beat/core/audio/sf2/encoded_audio.dart';
 
 /// No native encoder on this platform → null.
 EncodeAudio? loadGlintEncoder({String? libraryPath}) => null;
+
+/// ...and so nothing to decode back either.
+OpusFileDecode? loadOpusFileDecoder({String? libraryPath}) => null;

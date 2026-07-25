@@ -48,6 +48,24 @@ typedef _Encode = Pointer<Uint8> Function(
 typedef _FreeNative = Void Function(Pointer<Void>);
 typedef _Free = void Function(Pointer<Void>);
 
+// cometbeat_opus_file_decode — our glue in native/glint/src/opus_file_c_api.cpp,
+// NOT a glint symbol (hence the prefix: flac_c_api.cpp once took a glint_ name
+// and glint later defined it itself).
+typedef _OpusDecNative = Pointer<Float> Function(
+  Pointer<Uint8>,
+  Int32,
+  Pointer<Int32>,
+  Pointer<Int32>,
+  Pointer<Int32>,
+);
+typedef _OpusDec = Pointer<Float> Function(
+  Pointer<Uint8>,
+  int,
+  Pointer<Int32>,
+  Pointer<Int32>,
+  Pointer<Int32>,
+);
+
 /// glint's `glint_enc_format` values.
 const int _formatMp3 = 0;
 const int _formatAac = 1;
@@ -119,6 +137,63 @@ class GlintEncoder {
       calloc
         ..free(inPtr)
         ..free(outSize);
+    }
+  }
+}
+
+/// Decodes a complete Ogg-Opus stream back to PCM, through the plugin's
+/// `cometbeat_opus_file_decode`.
+///
+/// Lives beside the encoder because that is what it is for: verifying that what
+/// we encoded is what comes back out. Opus always decodes at 48 kHz.
+class GlintOpusFileDecoder {
+  GlintOpusFileDecoder.open(String libraryPath)
+      : this._(DynamicLibrary.open(libraryPath));
+
+  GlintOpusFileDecoder.process() : this._(DynamicLibrary.process());
+
+  GlintOpusFileDecoder._(this._lib) {
+    _decode = _lib.lookupFunction<_OpusDecNative, _OpusDec>(
+      'cometbeat_opus_file_decode',
+    );
+    _free = _lib.lookupFunction<_FreeNative, _Free>('glint_free');
+  }
+
+  final DynamicLibrary _lib;
+  late final _OpusDec _decode;
+  late final _Free _free;
+
+  OpusFileDecode get decodeOpusFile => decode;
+
+  DecodedAudio? decode(Uint8List ogg) {
+    if (ogg.isEmpty) return null;
+    final inPtr = calloc<Uint8>(ogg.length);
+    final sr = calloc<Int32>();
+    final ch = calloc<Int32>();
+    final frames = calloc<Int32>();
+    try {
+      inPtr.asTypedList(ogg.length).setAll(0, ogg);
+      final out = _decode(inPtr, ogg.length, sr, ch, frames);
+      if (out == nullptr || ch.value <= 0 || frames.value <= 0) return null;
+      final count = frames.value * ch.value;
+      // Copy out of native memory before freeing it.
+      final view = out.asTypedList(count);
+      final pcm = Float64List(count);
+      for (var i = 0; i < count; i++) {
+        pcm[i] = view[i];
+      }
+      _free(out.cast());
+      return DecodedAudio(
+        pcm: pcm,
+        channels: ch.value,
+        sampleRate: sr.value,
+      );
+    } finally {
+      calloc
+        ..free(inPtr)
+        ..free(sr)
+        ..free(ch)
+        ..free(frames);
     }
   }
 }

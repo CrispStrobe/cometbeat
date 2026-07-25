@@ -42,3 +42,34 @@ EncodeAudio? loadGlintEncoder({String? libraryPath}) {
   }
   return null;
 }
+
+/// The Ogg-Opus decoder that verifies the encoder's output, or null if the
+/// plugin isn't here. Same resolution order as [loadGlintEncoder].
+///
+/// NB: unlike the encoder, this symbol (`cometbeat_opus_file_decode`) is OURS —
+/// it exists only in native/glint, not in an upstream libglint. So a machine
+/// with glint `make install`ed will resolve the encoder from
+/// /usr/local/lib/libglint.dylib but NOT this, which is a useful tell that the
+/// plugin proper isn't linked.
+OpusFileDecode? loadOpusFileDecoder({String? libraryPath}) {
+  if (libraryPath != null) {
+    try {
+      return GlintOpusFileDecoder.open(libraryPath).decodeOpusFile;
+    } catch (_) {
+      return null;
+    }
+  }
+  try {
+    return GlintOpusFileDecoder.process().decodeOpusFile;
+  } catch (_) {
+    // Not compiled in → try a bundled library.
+  }
+  for (final name in _candidates()) {
+    try {
+      return GlintOpusFileDecoder.open(name).decodeOpusFile;
+    } catch (_) {
+      // Try the next candidate, else null.
+    }
+  }
+  return null;
+}

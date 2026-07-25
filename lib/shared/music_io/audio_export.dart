@@ -2,12 +2,20 @@
 //
 // A reusable "export this rendered audio" sheet. Any screen that holds mono
 // PCM as a Float64List (Sound Lab, Voice Lab, and — later — the trackers and
-// Loop Mixer) can offer WAV (uncompressed) or MP3 (compressed, much smaller)
-// from one place instead of copy-pasting a bespoke WAV saver.
+// Loop Mixer) can offer WAV (uncompressed), MP3, Opus or AAC from one place
+// instead of copy-pasting a bespoke WAV saver.
 //
-// Both encoders are pure Dart (`wavBytes`, `mp3EncodeMono`) so this is
-// web-safe. MP3 needs a 44100/48000/32000 Hz rate — the app renders at
-// kSampleRate (44100), so the default path always encodes.
+// WAV and MP3 are pure Dart (`wavBytes`, `mp3EncodeMono`) so this file stays
+// web-safe and must remain importable there. MP3 needs a 44100/48000/32000 Hz
+// rate — the app renders at kSampleRate (44100), so the default path always
+// encodes.
+//
+// Opus and AAC come from the native glint encoder over FFI (native/glint), and
+// are offered ONLY where that symbol resolved — see availableAudioExportFormats.
+// On web, in `flutter test`, or on any platform without the plugin, the sheet
+// shows exactly the list it showed before this existed. Opus at ~96 kbps is
+// transparent for music at a fraction of MP3's size and is the right default
+// for sharing a mix from a phone.
 //
 // Passing a second channel via [right] exports true stereo (joint M/S for MP3,
 // interleaved for WAV). MP3 export uses short/transient blocks by default —
@@ -21,6 +29,8 @@ import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
     show resampleCubic;
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart'
     show mp3EncodeMono, mp3EncodeJointStereo;
+import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
+    show EncodeAudio, EncodedAudioFormat, EncodedAudioFormatX, loadGlintEncoder;
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:file_selector/file_selector.dart';
@@ -37,11 +47,7 @@ Uint8List pcmFloatToWav(
   int bitDepth = 16,
 }) {
   if (bitDepth != 8 && bitDepth != 16 && bitDepth != 24 && bitDepth != 32) {
-    throw ArgumentError.value(
-      bitDepth,
-      'bitDepth',
-      'must be 8, 16, 24, or 32',
-    );
+    throw ArgumentError.value(bitDepth, 'bitDepth', 'must be 8, 16, 24, or 32');
   }
   final left = _resampleForExport(
     pcm,
@@ -178,14 +184,105 @@ Uint8List pcmFloatToMp3(
         );
 }
 
-/// One exportable audio format.
-enum AudioExportFormat { wav, mp3 }
+/// Encodes float PCM to Opus or AAC through the native glint encoder.
+///
+/// Unlike WAV/MP3 above this is NOT pure Dart — it needs the glint FFI plugin,
+/// so callers must have an [EncodeAudio] in hand (see [nativeAudioEncoder]).
+/// glint takes interleaved PCM and resamples internally to a rate the codec
+/// allows, so we hand it whatever we have and let it pick: **Opus always comes
+/// back at 48 kHz** no matter what was requested, which is why the sheet's
+/// sample-rate choice is advisory for these formats.
+///
+/// Throws [StateError] if the encoder refuses the input, so the caller's
+/// existing try/catch reports a failed export rather than writing a truncated
+/// file.
+Uint8List pcmFloatToNative(
+  Float64List pcm, {
+  required EncodeAudio encode,
+  required EncodedAudioFormat format,
+  int sampleRate = kSampleRate,
+  int? sourceSampleRate,
+  int bitrate = 128,
+  Float64List? right,
+}) {
+  final left = _resampleForExport(
+    pcm,
+    sourceSampleRate: sourceSampleRate,
+    exportSampleRate: sampleRate,
+  );
+  final rightAtRate = right == null
+      ? null
+      : _resampleForExport(
+          right,
+          sourceSampleRate: sourceSampleRate,
+          exportSampleRate: sampleRate,
+        );
 
-extension _Fmt on AudioExportFormat {
+  final channels = rightAtRate == null ? 1 : 2;
+  final Float64List interleaved;
+  if (rightAtRate == null) {
+    interleaved = left;
+  } else {
+    final frames =
+        left.length > rightAtRate.length ? left.length : rightAtRate.length;
+    interleaved = Float64List(frames * 2);
+    for (var i = 0; i < frames; i++) {
+      interleaved[i * 2] = i < left.length ? left[i] : 0.0;
+      interleaved[i * 2 + 1] = i < rightAtRate.length ? rightAtRate[i] : 0.0;
+    }
+  }
+
+  final bytes = encode(
+    interleaved,
+    channels: channels,
+    sampleRate: sampleRate,
+    format: format,
+    bitrateKbps: bitrate,
+  );
+  if (bytes == null || bytes.isEmpty) {
+    throw StateError('glint could not encode ${format.label}');
+  }
+  return bytes;
+}
+
+/// One exportable audio format.
+///
+/// APPEND new values — the export UI and any future persisted project field
+/// are both happier that way.
+enum AudioExportFormat { wav, mp3, opus, aac }
+
+extension AudioExportFormatX on AudioExportFormat {
   String get ext => switch (this) {
         AudioExportFormat.wav => 'wav',
         AudioExportFormat.mp3 => 'mp3',
+        AudioExportFormat.opus => 'opus',
+        AudioExportFormat.aac => 'm4a',
       };
+
+  /// Short name for buttons ("Export Opus").
+  String get shortLabel => switch (this) {
+        AudioExportFormat.wav => 'WAV',
+        AudioExportFormat.mp3 => 'MP3',
+        AudioExportFormat.opus => 'Opus',
+        AudioExportFormat.aac => 'AAC',
+      };
+
+  /// True when this format needs the native glint encoder, i.e. it is only
+  /// offered where [nativeAudioEncoder] resolved.
+  bool get needsNativeEncoder => switch (this) {
+        AudioExportFormat.wav || AudioExportFormat.mp3 => false,
+        AudioExportFormat.opus || AudioExportFormat.aac => true,
+      };
+
+  /// The glint format this maps to, or null for the pure-Dart formats.
+  EncodedAudioFormat? get nativeFormat => switch (this) {
+        AudioExportFormat.wav || AudioExportFormat.mp3 => null,
+        AudioExportFormat.opus => EncodedAudioFormat.opus,
+        AudioExportFormat.aac => EncodedAudioFormat.aac,
+      };
+
+  /// Compressed formats take a bitrate; WAV takes a bit depth.
+  bool get isCompressed => this != AudioExportFormat.wav;
 
   Uint8List build(
     Float64List pcm,
@@ -193,10 +290,27 @@ extension _Fmt on AudioExportFormat {
     Float64List? right,
     int? exportSampleRate,
     int wavBitDepth = 16,
-    int mp3Bitrate = 128,
+    int bitrate = 128,
     bool shortBlocks = true,
+    EncodeAudio? nativeEncoder,
   }) {
     final outRate = exportSampleRate ?? sampleRate;
+    final native = nativeFormat;
+    if (native != null) {
+      final encode = nativeEncoder ?? nativeAudioEncoder();
+      if (encode == null) {
+        throw StateError('no native encoder for ${native.label} on this build');
+      }
+      return pcmFloatToNative(
+        pcm,
+        encode: encode,
+        format: native,
+        sampleRate: outRate,
+        sourceSampleRate: sampleRate,
+        bitrate: bitrate,
+        right: right,
+      );
+    }
     return switch (this) {
       AudioExportFormat.wav => pcmFloatToWav(
           pcm,
@@ -209,12 +323,51 @@ extension _Fmt on AudioExportFormat {
           pcm,
           sampleRate: outRate,
           sourceSampleRate: sampleRate,
-          bitrate: mp3Bitrate,
+          bitrate: bitrate,
           right: right,
           shortBlocks: shortBlocks,
         ),
+      // Unreachable: nativeFormat != null was handled above.
+      _ => throw StateError('unhandled format $this'),
     };
   }
+}
+
+/// The formats this build can actually write.
+///
+/// Web and any platform without the glint plugin get exactly today's list
+/// (WAV + the pure-Dart MP3 writer) — the native formats are added only when
+/// the encoder resolved, so nothing can be picked that would fail at save time.
+List<AudioExportFormat> availableAudioExportFormats({EncodeAudio? encoder}) {
+  final native = encoder ?? nativeAudioEncoder();
+  return [
+    for (final f in AudioExportFormat.values)
+      if (!f.needsNativeEncoder || native != null) f,
+  ];
+}
+
+// The native encoder is resolved once per process: loadGlintEncoder() does a
+// dynamic-symbol lookup, and it cannot change at runtime.
+EncodeAudio? _nativeEncoder;
+bool _nativeEncoderProbed = false;
+
+/// The glint encoder, or null where it isn't linked in (web, `flutter test`,
+/// any platform without the plugin).
+EncodeAudio? nativeAudioEncoder() {
+  if (!_nativeEncoderProbed) {
+    _nativeEncoderProbed = true;
+    _nativeEncoder = loadGlintEncoder();
+  }
+  return _nativeEncoder;
+}
+
+/// Test seam: pin the encoder (or null to force the no-native path) so the
+/// gating logic is exercisable headless. Pass nothing to reset to a fresh
+/// probe.
+@visibleForTesting
+void debugSetNativeAudioEncoder(EncodeAudio? encoder, {bool probed = true}) {
+  _nativeEncoder = encoder;
+  _nativeEncoderProbed = probed;
 }
 
 /// Shows the audio-format picker; on pick, builds the bytes and prompts for a
@@ -236,8 +389,9 @@ Future<void> showAudioExportSheet(
   var selectedFormat = AudioExportFormat.wav;
   var selectedRate = sampleRate;
   var selectedWavBitDepth = 16;
-  var selectedMp3Bitrate = 128;
+  var selectedBitrate = 128;
   final rateChoices = _uniqueRates([sampleRate, kSampleRate, 48000, 32000]);
+  final formats = availableAudioExportFormats();
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -256,12 +410,9 @@ Future<void> showAudioExportSheet(
               const SizedBox(height: 12),
               _ExportChoiceRow<AudioExportFormat>(
                 label: 'Format',
-                values: AudioExportFormat.values,
+                values: formats,
                 selected: selectedFormat,
-                labelFor: (format) => switch (format) {
-                  AudioExportFormat.wav => l10n.audioExportWav,
-                  AudioExportFormat.mp3 => l10n.audioExportMp3,
-                },
+                labelFor: (format) => _formatLabel(l10n, format),
                 onSelected: (format) =>
                     setSheetState(() => selectedFormat = format),
               ),
@@ -273,8 +424,19 @@ Future<void> showAudioExportSheet(
                 labelFor: _sampleRateLabel,
                 onSelected: (rate) => setSheetState(() => selectedRate = rate),
               ),
+              // Opus is always 48 kHz on the wire; say so rather than let the
+              // chip above quietly lie about what lands on disk.
+              if (selectedFormat == AudioExportFormat.opus &&
+                  selectedRate != 48000)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    l10n.audioExportOpusRateNote,
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                ),
               const SizedBox(height: 10),
-              if (selectedFormat == AudioExportFormat.wav)
+              if (!selectedFormat.isCompressed)
                 _ExportChoiceRow<int>(
                   label: 'Bit depth',
                   values: const [8, 16, 24, 32],
@@ -287,21 +449,17 @@ Future<void> showAudioExportSheet(
                 _ExportChoiceRow<int>(
                   label: 'Bitrate',
                   values: const [128, 192, 320],
-                  selected: selectedMp3Bitrate,
+                  selected: selectedBitrate,
                   labelFor: (bitrate) => '$bitrate kbps',
                   onSelected: (bitrate) =>
-                      setSheetState(() => selectedMp3Bitrate = bitrate),
+                      setSheetState(() => selectedBitrate = bitrate),
                 ),
               const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton.icon(
                   icon: const Icon(Icons.ios_share),
-                  label: Text(
-                    selectedFormat == AudioExportFormat.wav
-                        ? 'Export WAV'
-                        : 'Export MP3',
-                  ),
+                  label: Text('Export ${selectedFormat.shortLabel}'),
                   onPressed: () async {
                     Navigator.of(ctx).pop();
                     await _exportAs(
@@ -313,7 +471,7 @@ Future<void> showAudioExportSheet(
                       rightPcm,
                       selectedRate,
                       selectedWavBitDepth,
-                      selectedMp3Bitrate,
+                      selectedBitrate,
                       shortBlocks,
                     );
                   },
@@ -334,6 +492,14 @@ List<int> _uniqueRates(List<int> rates) {
   }
   return out;
 }
+
+String _formatLabel(AppLocalizations l10n, AudioExportFormat format) =>
+    switch (format) {
+      AudioExportFormat.wav => l10n.audioExportWav,
+      AudioExportFormat.mp3 => l10n.audioExportMp3,
+      AudioExportFormat.opus => l10n.audioExportOpus,
+      AudioExportFormat.aac => l10n.audioExportAac,
+    };
 
 String _sampleRateLabel(int sampleRate) => sampleRate % 1000 == 0
     ? '${sampleRate ~/ 1000} kHz'
@@ -413,6 +579,7 @@ Future<void> showAudioStemsExportSheet(
   }
 
   var format = AudioExportFormat.wav;
+  final formats = availableAudioExportFormats();
   final go = await showDialog<bool>(
     context: context,
     builder: (ctx) => StatefulBuilder(
@@ -428,12 +595,9 @@ Future<void> showAudioStemsExportSheet(
               const SizedBox(height: 12),
               _ExportChoiceRow<AudioExportFormat>(
                 label: 'Format',
-                values: AudioExportFormat.values,
+                values: formats,
                 selected: format,
-                labelFor: (f) => switch (f) {
-                  AudioExportFormat.wav => 'WAV (uncompressed)',
-                  AudioExportFormat.mp3 => 'MP3 (smaller)',
-                },
+                labelFor: (f) => _formatLabel(l10n, f),
                 onSelected: (f) => setDialog(() => format = f),
               ),
               const SizedBox(height: 8),
@@ -540,7 +704,7 @@ Future<void> _exportAs(
   Float64List? right,
   int exportSampleRate,
   int? wavBitDepth,
-  int? mp3Bitrate,
+  int? bitrate,
   bool shortBlocks,
 ) async {
   final l10n = AppLocalizations.of(context)!;
@@ -552,7 +716,7 @@ Future<void> _exportAs(
       right: right,
       exportSampleRate: exportSampleRate,
       wavBitDepth: wavBitDepth ?? 16,
-      mp3Bitrate: mp3Bitrate ?? 128,
+      bitrate: bitrate ?? 128,
       shortBlocks: shortBlocks,
     );
     final suggested = '$baseName.${fmt.ext}';
