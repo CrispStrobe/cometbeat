@@ -271,6 +271,14 @@ ModuleDoc docFromMod(ModModule m) {
 (int, int) _s3mSpecialToFx(int info) {
   final sub = (info >> 4) & 0xF, val = info & 0xF;
   switch (sub) {
+    case 0x1: // S1x — glissando control → E3x (kExGlissando)
+      return (0xE, (0x3 << 4) | val);
+    case 0x2: // S2x — set finetune → E5x (kExSetFinetune)
+      return (0xE, (0x5 << 4) | val);
+    case 0x3: // S3x — set vibrato waveform → E4x (kExVibratoWaveform)
+      return (0xE, (0x4 << 4) | val);
+    case 0x4: // S4x — set tremolo waveform → E7x (kExTremoloWaveform)
+      return (0xE, (0x7 << 4) | val);
     case 0x6: // S6x — fine pattern delay; EEx is row delay in our engine
     case 0xE: // SEx — coarse pattern delay
       return (0xE, (0xE << 4) | val);
@@ -283,6 +291,9 @@ ModuleDoc docFromMod(ModModule m) {
     case 0xD: // SDx — note delay → EDx
       return (0xE, (0xD << 4) | val);
     default:
+      // S0x filter · S5x panbrello waveform · S7x NNA control · S9x sound
+      // control · SAx high-offset — no faithful replayer equivalent (dropped;
+      // covered by the export-loss report).
       return (0, 0);
   }
 }
@@ -803,15 +814,19 @@ ModuleDoc docFromIt(ItModule m) {
     case 0xD:
       return (3, param); // C pattern break
     case 0xE:
-      // Exy extended → S3M/IT `Sxy` (command 19). Only the three sub-commands
-      // our readers map back survive (E6x/ECx/EDx ↔ SBx/SCx/SDx); other Exy have
-      // no S3M/IT equivalent and are dropped (MOD/XM still carry them 1:1).
+      // Exy extended → S3M/IT `Sxy` (command 19). The sub-commands our readers
+      // round-trip survive; other Exy have no S3M/IT equivalent and are dropped
+      // (MOD/XM still carry them 1:1).
       final val = param & 0xF;
       return switch ((param >> 4) & 0xF) {
-        0x6 => (19, (0xB << 4) | val), // E6x pattern loop  → SBx
-        0xC => (19, (0xC << 4) | val), // ECx note cut      → SCx
-        0xD => (19, (0xD << 4) | val), // EDx note delay    → SDx
-        0xE => (19, (0xE << 4) | val), // EEx row delay     → SEx
+        0x3 => (19, (0x1 << 4) | val), // E3x glissando      → S1x
+        0x4 => (19, (0x3 << 4) | val), // E4x vibrato wave   → S3x
+        0x5 => (19, (0x2 << 4) | val), // E5x set finetune   → S2x
+        0x6 => (19, (0xB << 4) | val), // E6x pattern loop   → SBx
+        0x7 => (19, (0x4 << 4) | val), // E7x tremolo wave   → S4x
+        0xC => (19, (0xC << 4) | val), // ECx note cut       → SCx
+        0xD => (19, (0xD << 4) | val), // EDx note delay     → SDx
+        0xE => (19, (0xE << 4) | val), // EEx row delay      → SEx
         _ => (0, 0),
       };
     case 0x19:

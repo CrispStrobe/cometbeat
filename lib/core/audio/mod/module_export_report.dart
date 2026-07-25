@@ -83,14 +83,16 @@ const _s3mItRepresentableEffects = <int>{
 /// True if [c]'s effect would be dropped when written through the S3M/IT
 /// letter-command mapping. `0x0`/param 0 is "no command"; `0x0` with a param is
 /// arpeggio (kept); `0xC` set-volume routes to the volume column (not a loss);
-/// `0xE` extended survives only for the sub-commands S3M/IT share (6/C/D/E).
+/// `0xE` extended survives only for the sub-commands S3M/IT share
+/// (3/4/5/6/7/C/D/E ↔ S1/S3/S2/SB/S4/SC/SD/SE).
 bool _letterEffectLost(DocCell c) {
   final e = c.effect;
   if (e == 0) return false; // none, or arpeggio (0, param) which maps to J
   if (e == 0xC) return false; // set-volume → volume column
   if (e == 0xE) {
     final sub = (c.effectParam >> 4) & 0xF;
-    return !(sub == 0x6 || sub == 0xC || sub == 0xD || sub == 0xE);
+    const roundTrips = {0x3, 0x4, 0x5, 0x6, 0x7, 0xC, 0xD, 0xE};
+    return !roundTrips.contains(sub);
   }
   return !_s3mItRepresentableEffects.contains(e);
 }
