@@ -1564,6 +1564,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerPan => 'Left ↔ right (double-tap to centre)';
 
   @override
+  String get loopMixerMore => 'More';
+
+  @override
+  String get loopMixerGroupView => 'View';
+
+  @override
+  String get loopMixerGroupPerform => 'Perform';
+
+  @override
+  String get loopMixerGroupShare => 'Share & export';
+
+  @override
+  String get loopMixerShareExport => 'Share & export…';
+
+  @override
+  String get loopMixerSoundFeel => 'Sound & feel';
+
+  @override
+  String get loopMixerHelp => 'How this works';
+
+  @override
+  String get loopMixerTempo => 'Tempo';
+
+  @override
+  String get loopMixerArrange => 'Sections';
+
+  @override
+  String get loopMixerSendNone => 'off';
+
+  @override
+  String get loopMixerSendReverb => 'reverb';
+
+  @override
+  String get loopMixerSendDelay => 'delay';
+
+  @override
   String get loopMixerCopyCode => 'Copy groove code';
 
   @override

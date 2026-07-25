@@ -2942,6 +2942,78 @@ abstract class AppLocalizations {
   /// **'Left ↔ right (double-tap to centre)'**
   String get loopMixerPan;
 
+  /// No description provided for @loopMixerMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get loopMixerMore;
+
+  /// No description provided for @loopMixerGroupView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get loopMixerGroupView;
+
+  /// No description provided for @loopMixerGroupPerform.
+  ///
+  /// In en, this message translates to:
+  /// **'Perform'**
+  String get loopMixerGroupPerform;
+
+  /// No description provided for @loopMixerGroupShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share & export'**
+  String get loopMixerGroupShare;
+
+  /// No description provided for @loopMixerShareExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Share & export…'**
+  String get loopMixerShareExport;
+
+  /// No description provided for @loopMixerSoundFeel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound & feel'**
+  String get loopMixerSoundFeel;
+
+  /// No description provided for @loopMixerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'How this works'**
+  String get loopMixerHelp;
+
+  /// No description provided for @loopMixerTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo'**
+  String get loopMixerTempo;
+
+  /// No description provided for @loopMixerArrange.
+  ///
+  /// In en, this message translates to:
+  /// **'Sections'**
+  String get loopMixerArrange;
+
+  /// No description provided for @loopMixerSendNone.
+  ///
+  /// In en, this message translates to:
+  /// **'off'**
+  String get loopMixerSendNone;
+
+  /// No description provided for @loopMixerSendReverb.
+  ///
+  /// In en, this message translates to:
+  /// **'reverb'**
+  String get loopMixerSendReverb;
+
+  /// No description provided for @loopMixerSendDelay.
+  ///
+  /// In en, this message translates to:
+  /// **'delay'**
+  String get loopMixerSendDelay;
+
   /// No description provided for @loopMixerCopyCode.
   ///
   /// In en, this message translates to:

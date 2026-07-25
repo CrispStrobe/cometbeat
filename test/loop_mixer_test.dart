@@ -174,7 +174,8 @@ void main() {
     await tester.pump();
     expect(game.enabledTracks, {'drums', 'melody'});
 
-    await tester.tap(find.text('Stop'));
+    // Stop is now an icon button in the slim action bar.
+    await tester.tap(find.byTooltip('Stop'));
     await tester.pump();
     expect(game.enabledTracks, isEmpty);
     expect(game.isPlaying, isFalse);
@@ -258,6 +259,8 @@ void main() {
   testWidgets('BPM slider retunes the groove', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
+    game.toggleInspector(); // Sound & Feel settings live in the inspector.
+    await tester.pump();
     expect(game.tempoBpm, 100);
 
     game.toggleTrack('chords');
@@ -274,6 +277,8 @@ void main() {
 
   testWidgets('BPM slider exposes the engine-safe tempo range', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
+    _game(tester).toggleInspector();
+    await tester.pump();
 
     final slider = tester.widget<Slider>(
       find.byKey(const ValueKey('loop-mixer-tempo')),
@@ -324,6 +329,8 @@ void main() {
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
+    game.toggleInspector(); // Sound & Feel settings live in the inspector.
+    await tester.pump();
     expect(game.progressionId, isNull);
 
     game.toggleTrack('bass');
@@ -375,6 +382,8 @@ void main() {
   testWidgets('key & scale chips transpose the pitched stems', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
+    game.toggleInspector(); // Sound & Feel settings live in the inspector.
+    await tester.pump();
     expect(game.key, 0);
     expect(game.scale, GrooveScale.majorPentatonic);
 
@@ -458,6 +467,8 @@ void main() {
   testWidgets('style chips swap the whole-band flavour + bias', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
+    game.toggleInspector(); // Sound & Feel settings live in the inspector.
+    await tester.pump();
     expect(game.styleId, 'default');
     expect(game.tempoBpm, 100);
 
@@ -485,6 +496,8 @@ void main() {
   testWidgets('kit chips swap the drum timbre', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
+    game.toggleInspector(); // Sound & Feel settings live in the inspector.
+    await tester.pump();
     expect(game.kitId, 'clean');
 
     game.toggleTrack('drums');
@@ -568,9 +581,12 @@ void main() {
     await tester.pump();
     expect(game.hasPitchedTrack, isTrue);
 
-    // The share sheet exposes the two export entries. (The groove Ticker runs
-    // forever, so settle with a timed pump rather than pumpAndSettle.)
-    await tester.tap(find.byIcon(Icons.ios_share));
+    // Share & export now lives in the overflow (⋮) menu → the share sheet.
+    // (The groove Ticker runs forever, so settle with timed pumps.)
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Share & export…'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Save to Song Book'), findsOneWidget);
@@ -1169,6 +1185,8 @@ void main() {
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
+    game.toggleInspector(); // Sound & Feel settings live in the inspector.
+    await tester.pump();
     expect(game.customHarmonyCount, 0);
 
     game.debugAddCustomHarmony(const [
@@ -1183,6 +1201,29 @@ void main() {
     // The new harmony becomes the active progression + renders a chip.
     expect(game.progressionId, startsWith('custom'));
     expect(find.text('I–IV–V–I'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Sound & Feel inspector toggles and hosts the song settings',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    // Closed by default → the settings (e.g. the tempo slider) are not mounted.
+    expect(game.inspectorVisible, isFalse);
+    expect(find.byKey(const ValueKey('loop-mixer-tempo')), findsNothing);
+
+    // The ⚙ (tune) toggle opens the inspector and reveals the settings.
+    await tester.tap(find.byIcon(Icons.tune));
+    await tester.pump();
+    expect(game.inspectorVisible, isTrue);
+    expect(find.byKey(const ValueKey('loop-mixer-tempo')), findsOneWidget);
+    expect(find.text('TEMPO'), findsOneWidget);
+
+    // Toggling again hides it.
+    game.toggleInspector();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('loop-mixer-tempo')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -1282,23 +1323,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the full-editor button surfaces once there is pitched content',
+  testWidgets(
+      'the full-editor route lives in the overflow menu, gated on pitch',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
 
-    IconButton fullEditorButton() => tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.open_in_full),
-        );
+    // With no pitched track the "Open in Tracker" item is present but disabled.
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final disabledItem = tester.widget<PopupMenuItem<String>>(
+      find.ancestor(
+        of: find.byIcon(Icons.open_in_full),
+        matching: find.byType(PopupMenuItem<String>),
+      ),
+    );
+    expect(disabledItem.enabled, isFalse);
+    // Close the menu.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    // Present in the advanced toolbar, but disabled with no pitched track.
-    expect(find.widgetWithIcon(IconButton, Icons.open_in_full), findsOneWidget);
-    expect(fullEditorButton().onPressed, isNull);
-
-    // A pitched layer makes the route to the full track editor available.
+    // A pitched layer enables the route to the full track editor.
     game.toggleTrack('melody');
     await tester.pump();
-    expect(fullEditorButton().onPressed, isNotNull);
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final enabledItem = tester.widget<PopupMenuItem<String>>(
+      find.ancestor(
+        of: find.byIcon(Icons.open_in_full),
+        matching: find.byType(PopupMenuItem<String>),
+      ),
+    );
+    expect(enabledItem.enabled, isTrue);
     expect(tester.takeException(), isNull);
   });
 
