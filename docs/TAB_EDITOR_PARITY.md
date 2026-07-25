@@ -216,11 +216,14 @@ parametric technique end-to-end.
   settings sheet (common meters + whatever an import brought). Tests: group A4.
   (Done before A3 — it's independent and cleaner; mid-song meter changes are the
   A4b follow-up.)
-- [ ] **A3 (next)** tuplets — needs group-scaled tiling: a tuplet is a span of N
-  columns with (actual, normal); each column keeps its written duration but the
-  SPAN's bar-fill is `Σ steps × normal/actual` (e.g. a 3:2 eighth-triplet =
-  3×4×2/3 = 8 steps = one beat, still integral on the 32nd grid). `toScore`
-  emits a `Tuplet` decoration; playback scales each note's ms by normal/actual.
+- [x] **A3** tuplets — `TabColumn.tuplet: (actual, normal)?`; bar tiling now
+  accumulates FRACTIONAL scaled steps (`_scaledStepsOf` = written × normal/actual)
+  so a triplet group lands on the bar line; `toScore` emits a `TupletSpan` per
+  run of same-ratio columns; playback scales each note's ms; `fromScore` reads
+  spans back (round-trip); `setTuplet`/`makeTuplet` + a Triplet chip. Tests: A3.
+  ⚠ known limit: consecutive same-ratio columns merge into ONE span (fine for a
+  triplet or triplets separated by plain notes; two adjacent triplets would need
+  an explicit group id — a later refinement).
 - [ ] A5 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the

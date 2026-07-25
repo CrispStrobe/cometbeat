@@ -39,12 +39,19 @@ class TabColumn {
   /// playback sums the durations. Set on a noteful column only.
   final bool tieToNext;
 
+  /// The tuplet ratio (actual, normal) this column belongs to, e.g. (3, 2) for
+  /// an eighth triplet — 3 notes in the time of 2. Null = not a tuplet. Adjacent
+  /// columns with the same ratio form one printed group; each note's written
+  /// value is unchanged but its sounding length is scaled by normal/actual.
+  final (int, int)? tuplet;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
     this.techniques = const {},
     this.chord,
     this.tieToNext = false,
+    this.tuplet,
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -55,6 +62,7 @@ class TabColumn {
         techniques: techniques,
         chord: chord,
         tieToNext: tieToNext,
+        tuplet: tuplet,
       );
 
   TabColumn withoutString(int string) => TabColumn(
@@ -66,6 +74,7 @@ class TabColumn {
         techniques: techniques,
         chord: chord,
         tieToNext: tieToNext,
+        tuplet: tuplet,
       );
 
   TabColumn withDuration(NoteDuration d) => TabColumn(
@@ -74,6 +83,7 @@ class TabColumn {
         techniques: techniques,
         chord: chord,
         tieToNext: tieToNext,
+        tuplet: tuplet,
       );
 
   /// Adds [t] if absent, else removes it.
@@ -85,6 +95,7 @@ class TabColumn {
             : {...techniques, t},
         chord: chord,
         tieToNext: tieToNext,
+        tuplet: tuplet,
       );
 
   /// Sets (or clears, when null) this column's chord diagram.
@@ -94,6 +105,7 @@ class TabColumn {
         techniques: techniques,
         chord: c,
         tieToNext: tieToNext,
+        tuplet: tuplet,
       );
 
   /// Sets whether this note ties into the next column.
@@ -103,6 +115,17 @@ class TabColumn {
         techniques: techniques,
         chord: chord,
         tieToNext: tie,
+        tuplet: tuplet,
+      );
+
+  /// Sets (or clears, when null) this column's tuplet ratio.
+  TabColumn withTuplet((int, int)? ratio) => TabColumn(
+        frets: frets,
+        duration: duration,
+        techniques: techniques,
+        chord: chord,
+        tieToNext: tieToNext,
+        tuplet: ratio,
       );
 
   /// A deep copy (fresh frets/techniques collections) — for duplicating columns.
@@ -112,6 +135,7 @@ class TabColumn {
         techniques: {...techniques},
         chord: chord,
         tieToNext: tieToNext,
+        tuplet: tuplet,
       );
 }
 
@@ -142,6 +166,16 @@ const List<(NoteDuration, int)> kTabDurations = [
 int _stepsOf(NoteDuration d) {
   final steps = (d.toFraction().toDouble() * _kBarSteps).round();
   return steps < 1 ? 1 : steps;
+}
+
+/// A column's SOUNDING length in (fractional) 32nd-note steps: the written value
+/// scaled by a tuplet's normal/actual (so an eighth in a 3:2 triplet occupies
+/// 4 × 2/3 steps). Bars are tiled by these, so a whole triplet group (integral
+/// total) lands on a bar line even though each member is fractional.
+double _scaledStepsOf(TabColumn c) {
+  final base = _stepsOf(c.duration).toDouble();
+  final t = c.tuplet;
+  return t == null ? base : base * t.$2 / t.$1;
 }
 
 /// C-major natural spellings by pitch class; others take the natural below + ♯.
@@ -291,6 +325,20 @@ class TabDocument {
     columns[col] = columns[col].withTie(tie);
   }
 
+  /// Sets (or clears, when null) the tuplet ratio on the column at [col].
+  void setTuplet(int col, (int, int)? ratio) {
+    _ensure(col);
+    columns[col] = columns[col].withTuplet(ratio);
+  }
+
+  /// Marks the [count] columns starting at [start] as one tuplet of [ratio]
+  /// (default a 3:2 triplet). Grows the document if needed.
+  void makeTuplet(int start, int count, {(int, int) ratio = (3, 2)}) {
+    for (var i = 0; i < count; i++) {
+      setTuplet(start + i, ratio);
+    }
+  }
+
   /// Sets (or clears, when null) the chord diagram on the column at [col].
   void setChord(int col, ChordDiagram? chord) {
     _ensure(col);
@@ -333,10 +381,10 @@ class TabDocument {
     if (columns.isEmpty) return (0, 0);
     final target = col.clamp(0, columns.length - 1);
     var start = 0;
-    var steps = 0;
+    var steps = 0.0;
     for (var c = 0; c < columns.length; c++) {
-      final s = _stepsOf(columns[c].duration);
-      if (steps > 0 && steps + s > barCapacity) {
+      final s = _scaledStepsOf(columns[c]);
+      if (steps > 0 && steps + s > barCapacity + 1e-6) {
         if (target < c) return (start, c); // the bar [start, c) holds `col`
         start = c;
         steps = 0;
@@ -405,7 +453,32 @@ class TabDocument {
     final glissandos = <Glissando>[];
     final vibratos = <Vibrato>[];
     var bar = <MusicElement>[];
-    var barSteps = 0;
+    var barSteps = 0.0;
+    var barTuplets = <TupletSpan>[];
+    // The open tuplet group within the current bar: its bar-relative start index
+    // and (actual, normal) ratio.
+    int? tupStart;
+    (int, int)? tupRatio;
+
+    void closeTuplet(int endExclusive) {
+      final s = tupStart;
+      final r = tupRatio;
+      if (s != null && r != null && endExclusive - 1 >= s) {
+        barTuplets.add(
+          TupletSpan(s, endExclusive - 1, actual: r.$1, normal: r.$2),
+        );
+      }
+      tupStart = null;
+      tupRatio = null;
+    }
+
+    void flushBar() {
+      closeTuplet(bar.length);
+      if (bar.isNotEmpty) measures.add(Measure(bar, tuplets: barTuplets));
+      bar = <MusicElement>[];
+      barSteps = 0;
+      barTuplets = <TupletSpan>[];
+    }
 
     // Next noteful column after each index — the legato slur target for hammer.
     int? nextNoteful(int from) {
@@ -417,11 +490,19 @@ class TabDocument {
 
     for (var c = 0; c < columns.length; c++) {
       final col = columns[c];
-      final steps = _stepsOf(col.duration);
-      if (barSteps > 0 && barSteps + steps > barCapacity) {
-        measures.add(Measure(bar));
-        bar = <MusicElement>[];
-        barSteps = 0;
+      final steps = _scaledStepsOf(col);
+      if (barSteps > 0 && barSteps + steps > barCapacity + 1e-6) {
+        flushBar();
+      }
+      // Tuplet grouping: adjacent columns of the same ratio form one printed
+      // span (bar-relative indices). A change (or a plain note) closes the group.
+      final barIdx = bar.length;
+      if (col.tuplet != tupRatio) {
+        closeTuplet(barIdx);
+        if (col.tuplet != null) {
+          tupStart = barIdx;
+          tupRatio = col.tuplet;
+        }
       }
       if (col.isEmpty) {
         bar.add(RestElement(col.duration));
@@ -467,7 +548,7 @@ class TabDocument {
       }
       barSteps += steps;
     }
-    if (bar.isNotEmpty) measures.add(Measure(bar));
+    flushBar();
     if (measures.isEmpty) {
       measures.add(const Measure([RestElement(NoteDuration.whole)]));
     }
@@ -492,7 +573,11 @@ class TabDocument {
     // it is exact for every value — a quarter is exactly 60000/bpm, no rounding
     // drift from the 32nd-step grid.
     final wholeMs = 60000 / bpm * 4;
-    int ms(TabColumn c) => (c.duration.toFraction().toDouble() * wholeMs).round();
+    // Written value × wholeMs, then scaled by a tuplet's normal/actual.
+    int ms(TabColumn c) {
+      final scale = c.tuplet == null ? 1.0 : c.tuplet!.$2 / c.tuplet!.$1;
+      return (c.duration.toFraction().toDouble() * wholeMs * scale).round();
+    }
     List<int> midis(TabColumn c) => [
           for (final e
               in (c.frets.entries.toList()
@@ -564,9 +649,11 @@ class TabDocument {
     final durations = <NoteDuration>[];
     final ids = <String?>[]; // per-column source note id (null for a rest)
     final ties = <bool>[]; // per-column: does this note tie into the next?
+    final tuplets = <(int, int)?>[]; // per-column tuplet ratio (null = none)
     final pinned = <int, Fretting>{}; // column index → explicit fingering
     var idx = 0;
     for (final measure in score.measures) {
+      final measureStart = idx; // column index of this bar's first voice-1 element
       for (final el in measure.elements) {
         if (el is NoteElement) {
           final midis = [for (final p in el.pitches) p.midiNumber];
@@ -585,13 +672,23 @@ class TabDocument {
           durations.add(el.duration);
           ids.add(el.id);
           ties.add(el.tieToNext);
+          tuplets.add(null);
           idx++;
         } else if (el is RestElement) {
           midiCols.add(const []);
           durations.add(el.duration);
           ids.add(null);
           ties.add(false);
+          tuplets.add(null);
           idx++;
+        }
+      }
+      // Stamp this bar's tuplet spans (voice 1) onto their columns.
+      for (final t in measure.tuplets) {
+        if (t.voice != 0) continue; // voice 0 = elements (voice 1)
+        for (var e = t.startIndex; e <= t.endIndex; e++) {
+          final gi = measureStart + e;
+          if (gi >= 0 && gi < tuplets.length) tuplets[gi] = (t.actual, t.normal);
         }
       }
     }
@@ -613,6 +710,7 @@ class TabDocument {
             duration: durations[i],
             techniques: {...?tech[ids[i]]},
             tieToNext: ties[i],
+            tuplet: tuplets[i],
           ),
       ],
     );

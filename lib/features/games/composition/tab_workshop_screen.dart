@@ -1813,6 +1813,19 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                             refresh();
                           },
                         ),
+                        // Triplet: mark this note as a 3:2 tuplet member.
+                        FilterChip(
+                          avatar: const Icon(Icons.more_horiz, size: 18),
+                          label: const Text('Triplet'),
+                          selected: _selCol < _doc.columns.length &&
+                              _doc.columns[_selCol].tuplet == (3, 2),
+                          onSelected: (v) {
+                            setState(
+                              () => _doc.setTuplet(_selCol, v ? (3, 2) : null),
+                            );
+                            refresh();
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),

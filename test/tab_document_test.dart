@@ -536,4 +536,57 @@ void main() {
       expect(back.timeSignature.beatUnit, 4);
     });
   });
+
+  group('A3 — tuplets', () {
+    TabDocument tripletOfEighths() {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [
+          for (var i = 0; i < 3; i++)
+            const TabColumn(frets: {0: 0}, duration: NoteDuration.eighth),
+        ],
+      );
+      doc.makeTuplet(0, 3); // 3:2 triplet
+      return doc;
+    }
+
+    test('makeTuplet marks the columns with a 3:2 ratio', () {
+      final doc = tripletOfEighths();
+      expect(doc.columns.every((c) => c.tuplet == (3, 2)), isTrue);
+    });
+
+    test('a triplet of eighths fits one beat (a quarter) — one bar', () {
+      // 3 × eighth × 2/3 = one quarter = 8 of 32 steps, so a single measure.
+      final score = tripletOfEighths().toScore();
+      expect(score.measures, hasLength(1));
+    });
+
+    test('toScore emits one TupletSpan(0..2, 3:2) for the group', () {
+      final m = tripletOfEighths().toScore().measures.single;
+      expect(m.tuplets, hasLength(1));
+      final t = m.tuplets.single;
+      expect((t.startIndex, t.endIndex), (0, 2));
+      expect((t.actual, t.normal), (3, 2));
+    });
+
+    test('playback scales each note by normal/actual (three sum to a beat)', () {
+      final events = tripletOfEighths().toPlaybackEvents(); // @120bpm default
+      expect(events, hasLength(3));
+      // Each eighth (250ms) × 2/3 ≈ 167ms; the three sum to a 500ms quarter.
+      expect(events.fold<int>(0, (s, e) => s + e.$2), closeTo(500, 2));
+    });
+
+    test('a tuplet survives the import→edit→export round-trip', () {
+      final src = tripletOfEighths().toScore();
+      final cols = TabDocument.fromScore(src, Tuning.standardGuitar).columns;
+      expect(cols.first.tuplet, (3, 2));
+    });
+
+    test('withTuplet/copy preserve the ratio; clearing works', () {
+      const c = TabColumn(frets: {0: 0}, tuplet: (3, 2));
+      expect(c.copy().tuplet, (3, 2));
+      expect(c.withTuplet(null).tuplet, isNull);
+      expect(c.withTuplet((5, 4)).tuplet, (5, 4));
+    });
+  });
 }
