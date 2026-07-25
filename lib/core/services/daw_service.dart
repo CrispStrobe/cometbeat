@@ -7,8 +7,7 @@
 
 import 'dart:math' as math;
 
-import 'package:comet_beat/core/audio/crisp_dsp/sample_edit.dart'
-    show peakMagnitude, removeDcOffset, trimPcm;
+import 'package:comet_beat/core/audio/daw_edits.dart';
 import 'package:comet_beat/core/audio/daw_project.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
@@ -20,16 +19,6 @@ import 'package:flutter/foundation.dart';
 
 typedef DawClipTarget = ({int track, int index});
 typedef DawClipCopy = ({int track, Clip clip});
-
-/// What a destructive clip edit produced: the new channel data plus how far the
-/// take's start moved. `startShiftMs > 0` means audio was cut off the FRONT, so
-/// the clip slides that much later and the surviving audio keeps its place in
-/// the arrangement (see [DawService.trimSilenceFromClip]).
-typedef _BakedTake = ({
-  Float64List left,
-  Float64List? right,
-  double startShiftMs,
-});
 
 class DawService extends ChangeNotifier {
   /// The arrangement — starts with two empty named lanes.
@@ -783,10 +772,12 @@ class DawService extends ChangeNotifier {
   /// receives the left and — for a stereo clip — right windows and returns the
   /// processed pair; returning an empty left aborts. Shared by the destructive
   /// amplitude tools (normalize / invert / remove-DC / trim-silence / amplify).
+  /// The maths itself lives in `daw_edits.dart` so the CLI and headless tests
+  /// run exactly the same code; this only owns undo, the cache and notify.
   void _bakeClip(
     int track,
     int index,
-    _BakedTake Function(Float64List left, Float64List? right) transform,
+    BakedTake Function(Float64List left, Float64List? right) transform,
   ) {
     final clip = timeline.tracks[track].clips[index];
     final rendered = _cache.putIfAbsent(
@@ -821,51 +812,22 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// A baked take that stays where it is (the common case — same length, or a
-  /// length change the arrangement shouldn't compensate for).
-  static _BakedTake _take(Float64List left, Float64List? right) =>
-      (left: left, right: right, startShiftMs: 0);
-
-  static Float64List _scalePcm(Float64List pcm, double g) {
-    final out = Float64List(pcm.length);
-    for (var i = 0; i < pcm.length; i++) {
-      out[i] = pcm[i] * g;
-    }
-    return out;
-  }
-
   /// **Normalize** a clip to [targetPeak] of full scale (default 0.98) using one
   /// gain from the loudest sample across BOTH channels, so the stereo image is
   /// preserved. No-op on a silent clip.
-  void normalizeClip(int track, int index, {double targetPeak = 0.98}) {
-    _bakeClip(track, index, (left, right) {
-      final peak = math.max(
-        peakMagnitude(left),
-        right == null ? 0.0 : peakMagnitude(right),
+  void normalizeClip(int track, int index, {double targetPeak = 0.98}) =>
+      _bakeClip(
+        track,
+        index,
+        (left, right) => normalizeTake(left, right, targetPeak: targetPeak),
       );
-      if (peak == 0) return _take(left, right);
-      final g = targetPeak / peak;
-      return _take(
-        _scalePcm(left, g),
-        right == null ? null : _scalePcm(right, g),
-      );
-    });
-  }
 
   /// **Amplify** a clip by [db] (bake). Unlike the non-destructive Gain FX this
   /// rewrites the samples, so a later normalize/statistic sees the new level.
   /// Not clamped — the master limiter still catches an over-loud result.
   void amplifyClip(int track, int index, double db) {
     if (db == 0) return;
-    final g = math.pow(10, db / 20).toDouble();
-    _bakeClip(
-      track,
-      index,
-      (left, right) => _take(
-        _scalePcm(left, g),
-        right == null ? null : _scalePcm(right, g),
-      ),
-    );
+    _bakeClip(track, index, (left, right) => amplifyTake(left, right, db));
   }
 
   /// **Trim silence** from a clip's edges: everything quieter than [threshold]
@@ -873,55 +835,78 @@ class DawService extends ChangeNotifier {
   /// is removed. A stereo clip is judged on BOTH channels at once so they stay
   /// sample-aligned. The clip slides later by exactly the leading silence, so
   /// the surviving audio keeps its place in the arrangement. All-silent → no-op.
-  void trimSilenceFromClip(int track, int index, {double threshold = 0.01}) {
-    _bakeClip(track, index, (left, right) {
-      final n = left.length;
-      bool audible(int i) =>
-          left[i].abs() >= threshold ||
-          (right != null && i < right.length && right[i].abs() >= threshold);
-      var lo = 0;
-      while (lo < n && !audible(lo)) {
-        lo++;
-      }
-      // Nothing audible at all: abort (an empty left is _bakeClip's no-op).
-      if (lo == n) return _take(Float64List(0), null);
-      var hi = n;
-      while (hi > lo && !audible(hi - 1)) {
-        hi--;
-      }
-      if (lo == 0 && hi == n) return _take(left, right);
-      return (
-        left: trimPcm(left, lo, hi),
-        right: right == null ? null : trimPcm(right, lo, hi),
-        startShiftMs: lo * 1000 / kDawSampleRate,
+  void trimSilenceFromClip(int track, int index, {double threshold = 0.01}) =>
+      _bakeClip(
+        track,
+        index,
+        (left, right) => trimSilenceTake(
+          left,
+          right,
+          threshold: threshold,
+          sampleRate: kDawSampleRate,
+        ),
       );
-    });
-  }
 
   /// **Invert** a clip's phase (× −1 on every sample). Inaudible alone, but
   /// flips cancellation when layered; inverting twice restores it.
-  void invertClip(int track, int index) {
-    _bakeClip(
-      track,
-      index,
-      (left, right) => _take(
-        _scalePcm(left, -1),
-        right == null ? null : _scalePcm(right, -1),
-      ),
-    );
-  }
+  void invertClip(int track, int index) => _bakeClip(track, index, invertTake);
 
   /// **Remove the DC offset** from a clip (centre each channel on zero) — fixes
   /// an off-centre waveform and the clicks / lost headroom it causes.
-  void removeClipDcOffset(int track, int index) {
-    _bakeClip(
-      track,
-      index,
-      (left, right) => _take(
-        removeDcOffset(left),
-        right == null ? null : removeDcOffset(right),
+  void removeClipDcOffset(int track, int index) =>
+      _bakeClip(track, index, removeDcTake);
+
+  /// Peak / RMS / duration / clipped-sample count for a clip's played window —
+  /// what the inspector shows and what an export decision is made on.
+  ClipStats clipStats(int track, int index) {
+    final clip = timeline.tracks[track].clips[index];
+    final rendered = _cache.putIfAbsent(
+      clip.source.cacheKey,
+      () => clip.source.render(kDawSampleRate),
+    );
+    final left = trimmedPcm(clip, rendered);
+    final right = clip.source is StereoSampleSource
+        ? trimmedPcm(clip, _renderedRight(clip, rendered))
+        : null;
+    return clipStatsOf(left, right, sampleRate: kDawSampleRate);
+  }
+
+  /// **Generate** a steady tone / noise / silence as a new clip. It lands on its
+  /// own new lane unless [track] says otherwise, and carries a short fade so the
+  /// hard edges of a synthetic waveform don't click.
+  void addGeneratedClip({
+    required GeneratorShape shape,
+    double freq = 440,
+    double seconds = 2,
+    double amp = 0.5,
+    int seed = 0,
+    int? track,
+    double startMs = 0,
+    double fadeMs = 5,
+  }) {
+    final pcm = generateWave(
+      shape: shape,
+      samples: (seconds * kDawSampleRate).round(),
+      freq: freq,
+      sampleRate: kDawSampleRate,
+      amp: amp,
+      seed: seed,
+    );
+    if (pcm.isEmpty) return;
+    _record();
+    final lane = track ?? timeline.tracks.length;
+    while (timeline.tracks.length <= lane) {
+      timeline.tracks.add(DawTrack(name: '${timeline.tracks.length + 1}'));
+    }
+    timeline.tracks[lane].clips.add(
+      Clip(
+        source: SampleSource(pcm),
+        startMs: startMs,
+        fadeInMs: fadeMs,
+        fadeOutMs: fadeMs,
       ),
     );
+    notifyListeners();
   }
 
   /// **Merge** clips into one baked audio take, preserving their relative
@@ -1832,39 +1817,28 @@ class DawService extends ChangeNotifier {
     _record();
     var removed = 0;
     for (final track in indices) {
-      final clips = timeline.tracks[track].clips;
-      var index = 0;
-      while (index < clips.length) {
-        final clip = clips[index];
-        final duration = clipDurationMs(track, index);
-        final clipStart = clip.startMs;
-        if (clipStart + duration <= rangeStart || clipStart >= rangeEnd) {
-          index++;
-          continue;
-        }
-        if (_canSplitClipWindow(clipStart, duration, rangeStart)) {
-          _splitClipAt(track, index, rangeStart);
-          index++;
-          continue;
-        }
-        if (_canSplitClipWindow(clipStart, duration, rangeEnd)) {
-          _splitClipAt(track, index, rangeEnd);
-        }
-        index++;
-      }
-      for (var i = clips.length - 1; i >= 0; i--) {
-        final mid = clips[i].startMs + clipDurationMs(track, i) / 2;
-        final inside = mid > rangeStart && mid < rangeEnd;
-        if (inside == removeInside) {
-          clips.removeAt(i);
-          removed++;
-        }
-      }
+      removed += editClipsAroundRange(
+        timeline.tracks[track].clips,
+        rangeStart,
+        rangeEnd,
+        removeInside: removeInside,
+        durationOf: _durationOf,
+        minSplitMs: _minSplitMs,
+      );
     }
     _peaks.clear();
     notifyListeners();
     return removed;
   }
+
+  /// A clip's played length, served from the render cache.
+  double _durationOf(Clip clip) => trimmedDurationMs(
+        clip,
+        _cache.putIfAbsent(
+          clip.source.cacheKey,
+          () => clip.source.render(kDawSampleRate),
+        ),
+      );
 
   int _applyClipTransformToRange(
     Iterable<int> tracks,
