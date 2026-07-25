@@ -75,8 +75,14 @@ jobs:
       - name: Build web
         working-directory: cometbeat
         # Bake the commit + build time into the app (About screen provenance).
+        # `--pwa-strategy=none`: this is a CONTINUOUS per-commit PREVIEW, and the
+        # default Flutter service worker aggressively caches the app shell +
+        # main.dart.js, so a fresh deploy keeps serving the OLD build until the
+        # SW happens to update on a later load ("I deployed but see no change").
+        # No service worker → every load fetches the current build.
         run: |
           flutter build web --release --base-href /cometbeat/ \
+            --pwa-strategy=none \
             --dart-define=GIT_COMMIT=$(git rev-parse --short HEAD) \
             --dart-define=BUILD_TIME=$(date -u +%Y-%m-%dT%H:%MZ)
 
@@ -88,6 +94,14 @@ jobs:
           rm -rf pages_site
           mkdir -p pages_site
           rsync -a --exclude='*.symbols' build/web/ pages_site/
+          # Returning visitors still have the OLD Flutter service worker
+          # registered from before --pwa-strategy=none, which keeps serving the
+          # stale cached app. Inject a one-time cleanup that unregisters any SW
+          # and clears its caches on the next load, so the fresh build shows
+          # without the user hunting for "clear site data".
+          SNIP='<script>if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}}</script>'
+          grep -q "serviceWorker.getRegistrations" pages_site/index.html \
+            || sed -i "s#</head>#${SNIP}</head>#" pages_site/index.html
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
