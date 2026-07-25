@@ -1849,6 +1849,33 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                             refresh();
                           },
                         ),
+                        // Repeat barlines on the CURRENT bar.
+                        FilterChip(
+                          avatar: const Icon(Icons.repeat, size: 18),
+                          label: const Text('Repeat ‖:'),
+                          selected: _selCol < _doc.columns.length &&
+                              _doc
+                                  .columns[_doc.barBoundsAt(_selCol).$1]
+                                  .startRepeat,
+                          onSelected: (v) {
+                            setState(
+                              () => _doc.setBarRepeat(_selCol, start: v),
+                            );
+                            refresh();
+                          },
+                        ),
+                        FilterChip(
+                          avatar: const Icon(Icons.repeat, size: 18),
+                          label: const Text(':‖'),
+                          selected: _selCol < _doc.columns.length &&
+                              _doc
+                                  .columns[_doc.barBoundsAt(_selCol).$1]
+                                  .endRepeat,
+                          onSelected: (v) {
+                            setState(() => _doc.setBarRepeat(_selCol, end: v));
+                            refresh();
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),

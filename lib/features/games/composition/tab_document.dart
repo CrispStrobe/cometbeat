@@ -45,6 +45,11 @@ class TabColumn {
   /// value is unchanged but its sounding length is scaled by normal/actual.
   final (int, int)? tuplet;
 
+  /// Bar-level repeat barlines, anchored to the FIRST column of a bar: the bar
+  /// this column starts opens (`startRepeat`) or closes (`endRepeat`) a repeat.
+  final bool startRepeat;
+  final bool endRepeat;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
@@ -52,6 +57,8 @@ class TabColumn {
     this.chord,
     this.tieToNext = false,
     this.tuplet,
+    this.startRepeat = false,
+    this.endRepeat = false,
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -63,6 +70,8 @@ class TabColumn {
         chord: chord,
         tieToNext: tieToNext,
         tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
       );
 
   TabColumn withoutString(int string) => TabColumn(
@@ -75,6 +84,8 @@ class TabColumn {
         chord: chord,
         tieToNext: tieToNext,
         tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
       );
 
   TabColumn withDuration(NoteDuration d) => TabColumn(
@@ -84,6 +95,8 @@ class TabColumn {
         chord: chord,
         tieToNext: tieToNext,
         tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
       );
 
   /// Adds [t] if absent, else removes it.
@@ -96,6 +109,8 @@ class TabColumn {
         chord: chord,
         tieToNext: tieToNext,
         tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
       );
 
   /// Sets (or clears, when null) this column's chord diagram.
@@ -106,6 +121,8 @@ class TabColumn {
         chord: c,
         tieToNext: tieToNext,
         tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
       );
 
   /// Sets whether this note ties into the next column.
@@ -116,6 +133,8 @@ class TabColumn {
         chord: chord,
         tieToNext: tie,
         tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
       );
 
   /// Sets (or clears, when null) this column's tuplet ratio.
@@ -126,6 +145,20 @@ class TabColumn {
         chord: chord,
         tieToNext: tieToNext,
         tuplet: ratio,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
+      );
+
+  /// Sets this column's bar repeat-barline flags.
+  TabColumn withRepeat({bool? start, bool? end}) => TabColumn(
+        frets: frets,
+        duration: duration,
+        techniques: techniques,
+        chord: chord,
+        tieToNext: tieToNext,
+        tuplet: tuplet,
+        startRepeat: start ?? startRepeat,
+        endRepeat: end ?? endRepeat,
       );
 
   /// A deep copy (fresh frets/techniques collections) — for duplicating columns.
@@ -136,6 +169,8 @@ class TabColumn {
         chord: chord,
         tieToNext: tieToNext,
         tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
       );
 }
 
@@ -336,6 +371,15 @@ class TabDocument {
     columns[col] = columns[col].withTuplet(ratio);
   }
 
+  /// Sets the repeat barlines of the BAR containing [col] (anchored to that
+  /// bar's first column, which is where [toScore] reads them).
+  void setBarRepeat(int col, {bool? start, bool? end}) {
+    if (columns.isEmpty) return;
+    final (first, _) = barBoundsAt(col);
+    _ensure(first);
+    columns[first] = columns[first].withRepeat(start: start, end: end);
+  }
+
   /// Marks the [count] columns starting at [start] as one tuplet of [ratio]
   /// (default a 3:2 triplet). Grows the document if needed.
   void makeTuplet(int start, int count, {(int, int) ratio = (3, 2)}) {
@@ -459,6 +503,7 @@ class TabDocument {
     final vibratos = <Vibrato>[];
     var bar = <MusicElement>[];
     var barSteps = 0.0;
+    var barFirstCol = 0; // column index this bar began at (for its repeat flags)
     var barTuplets = <TupletSpan>[];
     // The open tuplet group within the current bar: its bar-relative start index
     // and (actual, normal) ratio.
@@ -479,7 +524,17 @@ class TabDocument {
 
     void flushBar() {
       closeTuplet(bar.length);
-      if (bar.isNotEmpty) measures.add(Measure(bar, tuplets: barTuplets));
+      if (bar.isNotEmpty) {
+        final first = barFirstCol < columns.length ? columns[barFirstCol] : null;
+        measures.add(
+          Measure(
+            bar,
+            tuplets: barTuplets,
+            startRepeat: first?.startRepeat ?? false,
+            endRepeat: first?.endRepeat ?? false,
+          ),
+        );
+      }
       bar = <MusicElement>[];
       barSteps = 0;
       barTuplets = <TupletSpan>[];
@@ -498,6 +553,7 @@ class TabDocument {
       final steps = _scaledStepsOf(col);
       if (barSteps > 0 && barSteps + steps > barCapacity + 1e-6) {
         flushBar();
+        barFirstCol = c; // this column opens the new bar
       }
       // Tuplet grouping: adjacent columns of the same ratio form one printed
       // span (bar-relative indices). A change (or a plain note) closes the group.
@@ -656,6 +712,8 @@ class TabDocument {
     final ids = <String?>[]; // per-column source note id (null for a rest)
     final ties = <bool>[]; // per-column: does this note tie into the next?
     final tuplets = <(int, int)?>[]; // per-column tuplet ratio (null = none)
+    final startReps = <bool>[]; // per-column: bar opens a repeat
+    final endReps = <bool>[]; // per-column: bar closes a repeat
     final pinned = <int, Fretting>{}; // column index → explicit fingering
     var idx = 0;
     for (final measure in score.measures) {
@@ -679,6 +737,8 @@ class TabDocument {
           ids.add(el.id);
           ties.add(el.tieToNext);
           tuplets.add(null);
+          startReps.add(false);
+          endReps.add(false);
           idx++;
         } else if (el is RestElement) {
           midiCols.add(const []);
@@ -686,6 +746,8 @@ class TabDocument {
           ids.add(null);
           ties.add(false);
           tuplets.add(null);
+          startReps.add(false);
+          endReps.add(false);
           idx++;
         }
       }
@@ -696,6 +758,12 @@ class TabDocument {
           final gi = measureStart + e;
           if (gi >= 0 && gi < tuplets.length) tuplets[gi] = (t.actual, t.normal);
         }
+      }
+      if (measure.startRepeat && measureStart < startReps.length) {
+        startReps[measureStart] = true;
+      }
+      if (measure.endRepeat && measureStart < endReps.length) {
+        endReps[measureStart] = true;
       }
     }
     if (midiCols.isEmpty) {
@@ -719,6 +787,8 @@ class TabDocument {
             techniques: {...?tech[ids[i]]},
             tieToNext: ties[i],
             tuplet: tuplets[i],
+            startRepeat: startReps[i],
+            endRepeat: endReps[i],
           ),
       ],
     );

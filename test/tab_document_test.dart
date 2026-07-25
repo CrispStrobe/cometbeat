@@ -614,4 +614,45 @@ void main() {
       expect(back.keySignature.fifths, -2);
     });
   });
+
+  group('A6 — repeats', () {
+    // Two 4/4 bars of four quarters; bar 0 opens a repeat, bar 1 closes it.
+    TabDocument twoBars() {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [for (var i = 0; i < 8; i++) const TabColumn(frets: {0: 0})],
+      );
+      doc.setBarRepeat(0, start: true); // bar 0
+      doc.setBarRepeat(4, end: true); // bar 1
+      return doc;
+    }
+
+    test('toScore stamps the repeat barlines on the right measures', () {
+      final measures = twoBars().toScore().measures;
+      expect(measures, hasLength(2));
+      expect(measures[0].startRepeat, isTrue);
+      expect(measures[0].endRepeat, isFalse);
+      expect(measures[1].startRepeat, isFalse);
+      expect(measures[1].endRepeat, isTrue);
+    });
+
+    test('repeats survive the import→edit→export round-trip', () {
+      final back = TabDocument.fromScore(
+        twoBars().toScore(),
+        Tuning.standardGuitar,
+      );
+      final m = back.toScore().measures;
+      expect(m[0].startRepeat, isTrue);
+      expect(m[1].endRepeat, isTrue);
+    });
+
+    test('setBarRepeat anchors to the bar\'s first column', () {
+      final doc = twoBars();
+      expect(doc.columns[0].startRepeat, isTrue); // bar 0, col 0
+      expect(doc.columns[4].endRepeat, isTrue); // bar 1, col 4
+      // Setting from a mid-bar column still lands on that bar's first column.
+      doc.setBarRepeat(6, start: true);
+      expect(doc.columns[4].startRepeat, isTrue);
+    });
+  });
 }
