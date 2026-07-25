@@ -3830,6 +3830,42 @@ abstract class AppLocalizations {
   /// **'Remove DC offset'**
   String get dawRemoveDc;
 
+  /// No description provided for @dawTrimSilence.
+  ///
+  /// In en, this message translates to:
+  /// **'Trim silence'**
+  String get dawTrimSilence;
+
+  /// No description provided for @dawAmplify.
+  ///
+  /// In en, this message translates to:
+  /// **'Amplify…'**
+  String get dawAmplify;
+
+  /// No description provided for @dawAmplifyApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get dawAmplifyApply;
+
+  /// No description provided for @dawRangeEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Range Edit'**
+  String get dawRangeEdit;
+
+  /// No description provided for @dawRangeSilence.
+  ///
+  /// In en, this message translates to:
+  /// **'Silence range'**
+  String get dawRangeSilence;
+
+  /// No description provided for @dawRangeCrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop to range'**
+  String get dawRangeCrop;
+
   /// No description provided for @dawSlower.
   ///
   /// In en, this message translates to:

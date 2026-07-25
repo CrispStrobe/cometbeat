@@ -1314,6 +1314,102 @@ void main() {
       s.undo();
       expect(peak(pcm(s, 0, 0)), closeTo(0.2, 1e-9));
     });
+
+    test('amplifyClip scales by decibels, and 0 dB is a no-op', () {
+      final s = DawService()..addClip(_tone(0.2, 100));
+      s.amplifyClip(0, 0, 6); // +6 dB ~= x2
+      expect(peak(pcm(s, 0, 0)), closeTo(0.2 * 1.995262, 1e-6));
+      s.amplifyClip(0, 0, -6);
+      expect(peak(pcm(s, 0, 0)), closeTo(0.2, 1e-9));
+
+      final before = s.timeline.tracks[0].clips[0];
+      s.amplifyClip(0, 0, 0);
+      expect(identical(s.timeline.tracks[0].clips[0], before), isTrue);
+    });
+
+    test('trimSilenceFromClip strips both edges and slides the clip later', () {
+      // 250 ms silence | 500 ms tone | 250 ms silence, starting at 1000 ms.
+      const quarter = kDawSampleRate ~/ 4;
+      final pcmIn = Float64List(quarter * 4)
+        ..fillRange(quarter, quarter * 3, 0.5);
+      final s = DawService()..addClip(SampleSource(pcmIn));
+      s.moveClip(0, 0, 1000);
+
+      s.trimSilenceFromClip(0, 0);
+
+      // The tone kept its place in the arrangement: it played at 1250 ms
+      // before the trim and still does after it.
+      expect(s.clipStartMs(0, 0), closeTo(1250, 0.1));
+      expect(s.clipDurationMs(0, 0), closeTo(500, 0.5));
+      final out = pcm(s, 0, 0);
+      expect(out.first, closeTo(0.5, 1e-9));
+      expect(out.last, closeTo(0.5, 1e-9));
+    });
+
+    test('trimSilenceFromClip leaves an all-silent clip alone', () {
+      final s = DawService()..addClip(_tone(0.0, 1000));
+      final before = s.timeline.tracks[0].clips[0];
+      s.trimSilenceFromClip(0, 0);
+      expect(identical(s.timeline.tracks[0].clips[0], before), isTrue);
+    });
+  });
+
+  group('range crop / silence', () {
+    test('silenceRange cuts the marked segment out, leaving a hole', () {
+      final s = DawService()..addClip(_tone(0.4, kDawSampleRate));
+
+      final removed = s.silenceRange([0], 250, 750);
+
+      expect(removed, 1);
+      expect(s.timeline.tracks[0].clips, hasLength(2));
+      expect(s.clipStartMs(0, 0), closeTo(0, 0.1));
+      expect(s.clipDurationMs(0, 0), closeTo(250, 0.1));
+      // The tail did NOT ripple left — the arrangement's timing is preserved.
+      expect(s.clipStartMs(0, 1), closeTo(750, 0.1));
+      expect(s.clipDurationMs(0, 1), closeTo(250, 0.1));
+
+      s.undo();
+      expect(s.timeline.tracks[0].clips, hasLength(1));
+      expect(s.clipDurationMs(0, 0), closeTo(1000, 0.1));
+    });
+
+    test('cropToRange keeps only the marked segment', () {
+      final s = DawService()..addClip(_tone(0.4, kDawSampleRate));
+
+      final removed = s.cropToRange([0], 250, 750);
+
+      expect(removed, 2);
+      expect(s.timeline.tracks[0].clips, hasLength(1));
+      expect(s.clipStartMs(0, 0), closeTo(250, 0.1));
+      expect(s.clipDurationMs(0, 0), closeTo(500, 0.1));
+
+      s.undo();
+      expect(s.timeline.tracks[0].clips, hasLength(1));
+      expect(s.clipDurationMs(0, 0), closeTo(1000, 0.1));
+    });
+
+    test('both leave untargeted tracks untouched', () {
+      final s = DawService()
+        ..addClip(_tone(0.4, kDawSampleRate))
+        ..addClip(_tone(0.4, kDawSampleRate), track: 1);
+      // addClip staggers each new clip by 2 s; line both lanes up at 0.
+      s.moveClip(1, 0, 0);
+
+      s.silenceRange([0], 250, 750);
+      expect(s.timeline.tracks[1].clips, hasLength(1));
+      expect(s.clipDurationMs(1, 0), closeTo(1000, 0.1));
+
+      s.cropToRange([1], 250, 750);
+      expect(s.timeline.tracks[1].clips, hasLength(1));
+      expect(s.clipDurationMs(1, 0), closeTo(500, 0.1));
+    });
+
+    test('a range that touches no clip changes nothing', () {
+      final s = DawService()..addClip(_tone(0.4, kDawSampleRate));
+      expect(s.silenceRange([0], 2000, 3000), 0);
+      expect(s.cropToRange([0], 2000, 3000), 0);
+      expect(s.timeline.tracks[0].clips, hasLength(1));
+    });
   });
 }
 

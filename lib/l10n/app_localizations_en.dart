@@ -2035,6 +2035,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawRemoveDc => 'Remove DC offset';
 
   @override
+  String get dawTrimSilence => 'Trim silence';
+
+  @override
+  String get dawAmplify => 'Amplify…';
+
+  @override
+  String get dawAmplifyApply => 'Apply';
+
+  @override
+  String get dawRangeEdit => 'Range Edit';
+
+  @override
+  String get dawRangeSilence => 'Silence range';
+
+  @override
+  String get dawRangeCrop => 'Crop to range';
+
+  @override
   String get dawSlower => 'Slower';
 
   @override

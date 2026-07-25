@@ -2042,6 +2042,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawRemoveDc => 'Gleichanteil entfernen';
 
   @override
+  String get dawTrimSilence => 'Stille abschneiden';
+
+  @override
+  String get dawAmplify => 'Verstärken…';
+
+  @override
+  String get dawAmplifyApply => 'Anwenden';
+
+  @override
+  String get dawRangeEdit => 'Bereich bearbeiten';
+
+  @override
+  String get dawRangeSilence => 'Bereich löschen';
+
+  @override
+  String get dawRangeCrop => 'Auf Bereich zuschneiden';
+
+  @override
   String get dawSlower => 'Langsamer';
 
   @override

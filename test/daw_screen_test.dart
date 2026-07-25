@@ -979,6 +979,80 @@ void main() {
     expect(daw.isClipFrozen(0, 0), isTrue); // now a baked SampleSource take
   });
 
+  testWidgets('Trim silence is reachable from the inspector and bakes',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+    expect(daw.isClipFrozen(0, 0), isFalse);
+
+    await tester.tap(find.text('🥁'));
+    await tester.pumpAndSettle();
+    final item = find.text('Trim silence');
+    await tester.ensureVisible(item);
+    await tester.pumpAndSettle();
+    await tester.tap(item);
+    await tester.pumpAndSettle();
+
+    expect(daw.clipCount, 1); // edits in place
+    expect(daw.isClipFrozen(0, 0), isTrue); // now a baked take
+  });
+
+  testWidgets('Amplify… opens a dB dialog and bakes on Apply', (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+
+    await tester.tap(find.text('🥁'));
+    await tester.pumpAndSettle();
+    final item = find.text('Amplify…');
+    await tester.ensureVisible(item);
+    await tester.pumpAndSettle();
+    await tester.tap(item);
+    await tester.pumpAndSettle();
+
+    expect(find.text('+3.0 dB'), findsOneWidget);
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(daw.clipCount, 1);
+    expect(daw.isClipFrozen(0, 0), isTrue);
+  });
+
+  testWidgets('Crop to range keeps only the marked segment', (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    daw.addDemoBeat();
+    await tester.pump();
+
+    daw.seekTo(250);
+    await tester.pump();
+    await tester.tap(find.text('Mark In'));
+    await tester.pumpAndSettle();
+    daw.seekTo(750);
+    await tester.pump();
+    await tester.tap(find.text('Mark Out'));
+    await tester.pumpAndSettle();
+
+    final menu = find.text('Range Edit');
+    await tester.ensureVisible(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crop to range'));
+    await tester.pumpAndSettle();
+
+    expect(service.timeline.tracks[0].clips, hasLength(1));
+    expect(service.clipStartMs(0, 0), closeTo(250, 0.1));
+    expect(service.clipDurationMs(0, 0), closeTo(500, 0.1));
+  });
+
   testWidgets('Faster resamples the clip to a shorter baked take',
       (tester) async {
     await _pumpDaw(tester);

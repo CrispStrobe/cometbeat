@@ -123,6 +123,17 @@ abstract interface class DawTester {
   /// Remove the clip's DC offset (bakes it).
   void removeClipDcOffset(int track, int index);
 
+  /// Strip silence from the clip's edges (bakes it; the clip slides later by
+  /// the leading silence so the audio keeps its place).
+  void trimSilenceFromClip(int track, int index);
+
+  /// Amplify the clip by [db] (bakes it).
+  void amplifyClip(int track, int index, double db);
+
+  /// Cut the marked range out of the given tracks / keep only what's inside it.
+  int silenceRange(Iterable<int> tracks, double startMs, double endMs);
+  int cropToRange(Iterable<int> tracks, double startMs, double endMs);
+
   /// Whether a clip is engraved music that can be voiced with an instrument, and
   /// the per-clip / per-track instrument assignment (null = default synth). The
   /// instrument comes from the assets Instruments/Samples library.
@@ -1254,6 +1265,51 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
+  /// Ocenaudio's "Amplify": pick a gain in dB and bake it into the clip.
+  Future<void> _amplifyClipDialog(int track, int index) async {
+    final l10n = AppLocalizations.of(context)!;
+    var db = 3.0;
+    final applied = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          title: Text(l10n.dawAmplify),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${db > 0 ? '+' : ''}${db.toStringAsFixed(1)} dB'),
+                Slider(
+                  value: db,
+                  min: -24,
+                  max: 24,
+                  divisions: 96,
+                  label: '${db.toStringAsFixed(1)} dB',
+                  onChanged: (value) => setDialog(() => db = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.dawCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.dawAmplifyApply),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (applied != true) return;
+    amplifyClip(track, index, db);
+    if (_playing) play();
+  }
+
   Future<void> _trackAutomationDialog() async {
     if (!_hasFxRange) return;
     var startGain = 1.0;
@@ -1340,6 +1396,18 @@ class _DawScreenState extends State<DawScreen>
         curve,
       );
     }
+    if (_playing) play();
+  }
+
+  void _silenceMarkedRange() {
+    if (!_hasFxRange) return;
+    silenceRange(_rangeTargetTracks(), _rangeStartMs, _rangeEndMs);
+    if (_playing) play();
+  }
+
+  void _cropToMarkedRange() {
+    if (!_hasFxRange) return;
+    cropToRange(_rangeTargetTracks(), _rangeStartMs, _rangeEndMs);
     if (_playing) play();
   }
 
@@ -2006,6 +2074,22 @@ class _DawScreenState extends State<DawScreen>
   @override
   void removeClipDcOffset(int track, int index) =>
       _daw.removeClipDcOffset(track, index);
+
+  @override
+  void trimSilenceFromClip(int track, int index) =>
+      _daw.trimSilenceFromClip(track, index);
+
+  @override
+  void amplifyClip(int track, int index, double db) =>
+      _daw.amplifyClip(track, index, db);
+
+  @override
+  int silenceRange(Iterable<int> tracks, double startMs, double endMs) =>
+      _daw.silenceRange(tracks, startMs, endMs);
+
+  @override
+  int cropToRange(Iterable<int> tracks, double startMs, double endMs) =>
+      _daw.cropToRange(tracks, startMs, endMs);
 
   @override
   bool isScoreClip(int track, int index) => _daw.isScoreClip(track, index);
@@ -3247,6 +3331,22 @@ class _DawScreenState extends State<DawScreen>
                           icon: const Icon(Icons.horizontal_rule),
                           label: Text(l10n.dawRemoveDc),
                         ),
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetCtx).pop();
+                            trimSilenceFromClip(track, index);
+                          },
+                          icon: const Icon(Icons.content_cut),
+                          label: Text(l10n.dawTrimSilence),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetCtx).pop();
+                            _amplifyClipDialog(track, index);
+                          },
+                          icon: const Icon(Icons.graphic_eq),
+                          label: Text(l10n.dawAmplify),
+                        ),
                         // Tape-style speed: slower (½×) / faster (2×).
                         TextButton.icon(
                           onPressed: () {
@@ -3708,6 +3808,34 @@ class _DawScreenState extends State<DawScreen>
                                 : null,
                             icon: const Icon(Icons.volume_off),
                             label: const Text('Range Mute'),
+                          ),
+                        ),
+                        // Destructive range edits: cut the marked segment out,
+                        // or throw away everything around it.
+                        MenuAnchor(
+                          menuChildren: [
+                            MenuItemButton(
+                              onPressed:
+                                  _hasFxRange ? _silenceMarkedRange : null,
+                              leadingIcon: const Icon(Icons.content_cut),
+                              child: Text(l10n.dawRangeSilence),
+                            ),
+                            MenuItemButton(
+                              onPressed:
+                                  _hasFxRange ? _cropToMarkedRange : null,
+                              leadingIcon: const Icon(Icons.crop),
+                              child: Text(l10n.dawRangeCrop),
+                            ),
+                          ],
+                          builder: (context, controller, _) =>
+                              OutlinedButton.icon(
+                            onPressed: _hasFxRange
+                                ? () => controller.isOpen
+                                    ? controller.close()
+                                    : controller.open()
+                                : null,
+                            icon: const Icon(Icons.crop),
+                            label: Text(l10n.dawRangeEdit),
                           ),
                         ),
                         // Project tempo — defines the beat snap grid.
