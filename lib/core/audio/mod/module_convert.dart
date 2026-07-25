@@ -265,12 +265,18 @@ ModuleDoc docFromMod(ModModule m) {
   }
 }
 
-/// S3M `Sxy` special sub-commands → our `Exy` extended (where an equivalent
-/// exists). The sub-command nibble maps: SBx→E6x loop, SCx→ECx cut, SDx→EDx
-/// delay. Other supported mini-commands use the neutral Exy/Pxy equivalents.
+/// S3M/IT `Sxy` special sub-commands → our neutral extended effects (where an
+/// equivalent exists). S6x and SEx both extend the current row in the
+/// renderer; the source command remains in nativeEffect for same-format
+/// export, so this translation only supplies playback semantics.
 (int, int) _s3mSpecialToFx(int info) {
   final sub = (info >> 4) & 0xF, val = info & 0xF;
   switch (sub) {
+    case 0x6: // S6x — fine pattern delay; EEx is row delay in our engine
+    case 0xE: // SEx — coarse pattern delay
+      return (0xE, (0xE << 4) | val);
+    case 0x8: // S8x — coarse pan (0..15) → MOD 8xx (0..255)
+      return (0x8, val * 0x11);
     case 0xB: // SBx — pattern loop → E6x
       return (0xE, (0x6 << 4) | val);
     case 0xC: // SCx — note cut → ECx
@@ -761,8 +767,9 @@ ModuleDoc docFromIt(ItModule m) {
 /// (A=1, B=2, …) and its info/value byte — the inverse of [_s3mEffectToFx] /
 /// [_itEffectToFx]. [directPan] true for IT (its X pan is 0x00–0xFF direct),
 /// false for S3M (X pan is 0x00–0x80, so halve). `0xC` set-volume routes to the
-/// volume column instead (see the writers), and `0xE` extended is not translated
-/// here; those and any unknown return `(0, 0)` (no command).
+/// volume column instead (see the writers). Supported extended commands are
+/// emitted as their S3M/IT special equivalents; unknown commands return
+/// `(0, 0)` (no command).
 (int, int) _fxToLetterEffect(int cmd, int param, {required bool directPan}) {
   switch (cmd) {
     case 0x0:
@@ -807,6 +814,7 @@ ModuleDoc docFromIt(ItModule m) {
         0x6 => (19, (0xB << 4) | val), // E6x pattern loop  → SBx
         0xC => (19, (0xC << 4) | val), // ECx note cut      → SCx
         0xD => (19, (0xD << 4) | val), // EDx note delay    → SDx
+        0xE => (19, (0xE << 4) | val), // EEx row delay     → SEx
         _ => (0, 0),
       };
     case 0x19:

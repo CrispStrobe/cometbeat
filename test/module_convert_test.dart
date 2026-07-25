@@ -19,6 +19,7 @@ import 'package:comet_beat/core/audio/mod/mod_reader.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/s3m_reader.dart';
+import 'package:comet_beat/core/audio/mod/s3m_module.dart';
 import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart' show kFxTremor;
@@ -31,6 +32,37 @@ Float64List _norm8(List<int> v) =>
     Float64List.fromList([for (final b in v) b / 128]);
 
 void main() {
+  test('S3M and IT row-delay specials map to EEx playback timing', () {
+    for (final special in const [0x61, 0xE2, 0x81]) {
+      final module = S3mModule(
+        channelCount: 1,
+        order: const [0],
+        samples: const [],
+        patterns: [
+          S3mPattern([
+            [
+              S3mCell(
+                note: 0x30,
+                instrument: 1,
+                command: 19,
+                info: special,
+              ),
+            ],
+          ]),
+        ],
+      );
+      final cell = docFromS3m(module).patterns.first.rows.first.first;
+      expect(cell.effect, special >> 4 == 0x8 ? 0x8 : 0xE,
+          reason: 'S${special.toRadixString(16)}');
+      expect(
+        cell.effectParam,
+        special >> 4 == 0x8 ? (special & 0xF) * 0x11 : 0xE0 | (special & 0xF),
+      );
+      expect(cell.nativeEffect, 19);
+      expect(cell.nativeEffectParam, special);
+    }
+  });
+
   test('XM Txy imports as the neutral tremor command', () {
     final module = XmModule(
       channelCount: 1,
