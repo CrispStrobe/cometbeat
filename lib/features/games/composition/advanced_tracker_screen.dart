@@ -2529,10 +2529,24 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         );
       },
       onModuleSelected: (bytes) async {
-        importModuleBytes(bytes);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.importDone)),
-        );
+        final l10n = AppLocalizations.of(context)!;
+        try {
+          importModuleBytes(bytes);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.importDone)),
+          );
+        } on FormatException {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.trackerModFailed)),
+          );
+        } catch (_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.trackerModFailed)),
+          );
+        }
       },
       onSoundFontSelected: (instrument) async => _addPoolInstrument(instrument),
     );
