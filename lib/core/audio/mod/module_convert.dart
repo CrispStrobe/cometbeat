@@ -527,6 +527,20 @@ ModuleDoc docFromIt(ItModule m) {
       samples.add(DocSample.empty());
     } else {
       final looped = s.loop && s.loopEnd > s.loopStart;
+      final sampleIndex = samples.length;
+      // The neutral cell model resolves IT instrument keymaps to sample
+      // numbers. Carry the first instrument envelope that references this
+      // sample along with it so the renderer does not lose envelope shaping.
+      // Files with the same sample shared by differently enveloped instruments
+      // still need a native instrument-zone model; this fixes the common case
+      // without changing the existing sample-number semantics.
+      ItInstrument? owner;
+      for (final instrument in m.instruments) {
+        if (instrument.keymap.contains(sampleIndex + 1)) {
+          owner = instrument;
+          break;
+        }
+      }
       final ds = DocSample(
         name: s.name,
         globalVolume: s.globalVolume,
@@ -539,6 +553,12 @@ ModuleDoc docFromIt(ItModule m) {
         sixteenBit: s.sixteenBit,
         pcm: Float64List.fromList(s.pcm),
         pcmRight: s.pcmRight == null ? null : Float64List.fromList(s.pcmRight!),
+        volumeEnvelope: owner == null
+            ? const DocEnvelope()
+            : _docEnvFromIt(owner.volumeEnvelope),
+        panEnvelope: owner == null
+            ? const DocEnvelope()
+            : _docEnvFromIt(owner.panEnvelope),
       );
       samples.add(ds);
     }

@@ -1504,6 +1504,13 @@ void _applyGlobalVolumeStereo(
   }
 }
 
+void _applySongGlobalVolume(Float64List mix, double gain) {
+  if (gain >= 1.0) return;
+  for (var i = 0; i < mix.length; i++) {
+    mix[i] *= gain;
+  }
+}
+
 /// Row-major channel cells + each played row's start sample for a flattened
 /// (walkFlow) sequence — the [globalVolumeEnvelope] shape for the flow/variable
 /// render paths. [rowStartOf] maps a played-row index to its start sample.
@@ -2039,6 +2046,7 @@ ReplayResult replaySong(
     gvStarts.addAll(ss);
   }
   _applyGlobalVolumeMix(mix, gvRows, gvStarts, ticks);
+  _applySongGlobalVolume(mix, song.globalVolume);
   return ReplayResult(_mixToPcm(mix), timingMap);
 }
 
@@ -2097,6 +2105,8 @@ ReplayResult replaySongStereo(
     gvStarts.addAll(ss);
   }
   _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticks);
+  _applySongGlobalVolume(left, song.globalVolume);
+  _applySongGlobalVolume(right, song.globalVolume);
   return ReplayResult(_interleaveToPcm(left, right), timingMap);
 }
 
@@ -2135,6 +2145,7 @@ ReplayResult _replayFlow(TrackerSong song, int ticksPerRow) {
     flatTiming.stepStartSample,
   );
   _applyGlobalVolumeMix(mix, gvRows, gvStarts, ticksPerRow);
+  _applySongGlobalVolume(mix, song.globalVolume);
 
   final timingMap = [
     for (var i = 0; i < played.length; i++)
@@ -2180,6 +2191,8 @@ ReplayResult _replayFlowStereo(TrackerSong song, int ticksPerRow) {
     flatTiming.stepStartSample,
   );
   _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticksPerRow);
+  _applySongGlobalVolume(left, song.globalVolume);
+  _applySongGlobalVolume(right, song.globalVolume);
   final timingMap = [
     for (var i = 0; i < played.length; i++)
       RowTiming(
@@ -2239,6 +2252,7 @@ ReplayResult _replayVariable(TrackerSong song) {
   final (gvRows, gvStarts) =
       _flatRowScan(played, song, channels.length, (i) => rowStart[i]);
   _applyGlobalVolumeMix(mix, gvRows, gvStarts, song.initialSpeed);
+  _applySongGlobalVolume(mix, song.globalVolume);
 
   final starts = _variableRowStartMs(song, played);
   final timingMap = [
@@ -2510,6 +2524,8 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
   final (gvRows, gvStarts) =
       _flatRowScan(played, song, channels.length, (i) => rowStart[i]);
   _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, song.initialSpeed);
+  _applySongGlobalVolume(left, song.globalVolume);
+  _applySongGlobalVolume(right, song.globalVolume);
 
   final starts = _variableRowStartMs(song, played);
   final timingMap = [

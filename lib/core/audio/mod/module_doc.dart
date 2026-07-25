@@ -54,7 +54,9 @@ class DocEnvelope {
 class DocSample {
   const DocSample({
     this.name = '',
-    this.globalVolume = 64,
+    // 128 is neutral in the cross-format model; IT sample global volume is
+    // normalized from its native 0..64 field when present.
+    this.globalVolume = 128,
     this.volume = 64,
     this.loopStart = 0,
     this.loopLength = 0,
@@ -72,7 +74,8 @@ class DocSample {
 
   final String name;
 
-  /// Native per-sample gain where supported (IT 0..64).
+  /// Native per-sample gain where supported. 128 is neutral; IT contributes
+  /// its native 0..64 value.
   final int globalVolume;
   final int volume; // 0..64 default volume
   final int loopStart; // in samples

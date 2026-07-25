@@ -74,7 +74,7 @@ SampleInstrument sampleInstrumentFromDoc(
     loopLength: loopLength,
     pingPong: sample.pingPong,
     volume: (sample.volume.clamp(0, 64) / 64.0) *
-        (sample.globalVolume.clamp(0, 64) / 64.0),
+        (sample.globalVolume.clamp(0, 128) / 128.0),
     normalize: false,
     sampleRight: right,
     nativeVolumeEnvelope: nativeVolumeEnvelope,

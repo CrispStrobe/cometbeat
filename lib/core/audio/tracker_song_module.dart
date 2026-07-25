@@ -99,6 +99,7 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
     instruments: pool,
     initialSpeed: doc.initialSpeed,
     stereoOutput: true,
+    globalVolume: (doc.globalVolume / 128.0).clamp(0.0, 1.0),
   );
 }
 

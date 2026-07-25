@@ -90,6 +90,7 @@ class TrackerSong {
     this.instruments,
     this.initialSpeed,
     this.stereoOutput,
+    this.globalVolume,
   );
 
   /// A new song with the default band ([defaultTrackerChannels]) and one empty
@@ -121,6 +122,7 @@ class TrackerSong {
       instruments ?? defaultInstrumentPool(),
       initialSpeed < 1 ? kDefaultTicksPerRow : initialSpeed,
       false,
+      1.0,
     );
   }
 
@@ -137,6 +139,7 @@ class TrackerSong {
     List<TrackerInstrument>? instruments,
     int initialSpeed = kDefaultTicksPerRow,
     bool stereoOutput = false,
+    double globalVolume = 1.0,
   }) {
     final engine = TrackerEngine(channels: channels, timing: timing);
     final pats = patterns.isEmpty
@@ -158,6 +161,7 @@ class TrackerSong {
       instruments ?? defaultInstrumentPool(),
       initialSpeed < 1 ? kDefaultTicksPerRow : initialSpeed,
       stereoOutput,
+      globalVolume.clamp(0.0, 1.0),
     );
   }
 
@@ -184,6 +188,10 @@ class TrackerSong {
   /// Some imported trackers are conventionally rendered as stereo even when
   /// no explicit pan command occurs. Authored songs retain the mono default.
   final bool stereoOutput;
+
+  /// Module/container global output gain, normalized to 0..1. Authored songs
+  /// use unity; imported tracker headers carry their native global volume.
+  final double globalVolume;
 
   int _current;
 
