@@ -173,9 +173,12 @@ void main() {
       expect(s.isEmpty, isFalse);
     });
 
-    test('leaves pcm empty and preserves the raw packed bytes', () {
+    test('decodes pcm and preserves the raw packed bytes', () {
       final s = parsed.samples.single;
-      expect(s.pcm, isEmpty); // no garbage PCM from misread packed bytes
+      // Since the DP30 ADPCM decoder landed, a non-degenerate packed block now
+      // decodes to PCM (previously asserted empty). The raw packed bytes are
+      // still preserved verbatim for byte-identical same-format re-export.
+      expect(s.pcm, isNotEmpty);
       expect(s.rawData, isNotNull);
       expect(s.rawData, rawPacked);
     });

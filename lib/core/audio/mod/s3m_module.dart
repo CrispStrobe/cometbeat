@@ -108,9 +108,10 @@ class S3mSample {
   /// The 12 OPL register bytes of an AdLib instrument (header 0x10..0x1B).
   final List<int> adlibData;
 
-  /// True when the on-disk sample used pack==1 (DP30 4-bit ADPCM). No decoder
-  /// is applied — [pcm] stays empty and [rawData] holds the raw packed bytes
-  /// for preservation, so packed bytes are never misread as raw PCM.
+  /// True when the on-disk sample used pack==1 (DP30 4-bit ADPCM). The reader
+  /// decodes the ADPCM stream into [pcm] (see decodeDp30Adpcm), while [rawData]
+  /// still holds the raw packed bytes for byte-identical same-format re-export.
+  /// A degenerate decode (empty/all-zero) leaves [pcm] empty (preserve-only).
   final bool packed;
 
   bool get isEmpty => pcm.isEmpty && !adlib && !packed;

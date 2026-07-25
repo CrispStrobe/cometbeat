@@ -195,18 +195,28 @@ S3mSample _readInstrument(
   final name = _readAsciiz(bytes, base + 0x30, 28);
   final bytesPerSample = sixteenBit ? 2 : 1;
 
-  // pack==1 → DP30 4-bit ADPCM. The exact ST3 delta algorithm is not verified
-  // here, so rather than misread packed bytes as raw PCM (garbage), preserve
-  // the raw packed block and leave pcm empty.
-  // TODO: DP30 ADPCM decode (ST3 4-bit nibble deltas via the step table).
+  // pack==1 → DP30 4-bit ADPCM (see [decodeDp30Adpcm]). Decode to PCM, but keep
+  // the raw packed block regardless for byte-identical same-format re-export.
   if (pack == 1) {
-    // DP30 block ≈ 16-byte adjustment table + one nibble per sample. Capture a
-    // best-effort estimate for preservation, clamped to what's present.
+    // DP30 block = 16-byte delta table + one nibble per sample (two per byte).
+    // Capture the raw block for preservation, clamped to what's present.
     var packedLen = 16 + (length + 1) ~/ 2;
     if (pcmOffset < 0 || pcmOffset >= bytes.length) {
       packedLen = 0;
     } else if (pcmOffset + packedLen > bytes.length) {
       packedLen = bytes.length - pcmOffset;
+    }
+    final rawData = packedLen > 0
+        ? Uint8List.fromList(bytes.sublist(pcmOffset, pcmOffset + packedLen))
+        : null;
+    // Decode the ADPCM stream. If the result is degenerate (empty or all-zero)
+    // fall back to preserve-only (pcm empty) rather than emitting garbage.
+    var pcm = Float64List(0);
+    if (rawData != null) {
+      final decoded = decodeDp30Adpcm(rawData, length);
+      if (decoded.isNotEmpty && decoded.any((v) => v != 0.0)) {
+        pcm = decoded;
+      }
     }
     return S3mSample(
       name: name,
@@ -216,14 +226,10 @@ S3mSample _readInstrument(
       loopEnd: loopEnd,
       loop: loop,
       sixteenBit: sixteenBit,
-      pcm: Float64List(0),
+      pcm: pcm,
       packed: true,
       rawHeader: rawHeader,
-      rawData: packedLen > 0
-          ? Uint8List.fromList(
-              bytes.sublist(pcmOffset, pcmOffset + packedLen),
-            )
-          : null,
+      rawData: rawData,
     );
   }
 
@@ -370,6 +376,51 @@ S3mPattern _emptyPattern(int channelCount) => S3mPattern(
         growable: false,
       ),
     );
+
+/// Decodes an ST3 "DP30ADPCM" packed sample block into normalized PCM in
+/// [-1, 1]. Implements the well-known ST3 4-bit ADPCM (a.k.a. delta-PCM)
+/// variant, exactly as libopenmpt's S3M ADPCM reader (`SampleIO` ADPCM path):
+///
+///   • [packed] begins with a 16-byte signed-int8 delta table.
+///   • The remaining bytes are a nibble stream — two nibbles per byte, the LOW
+///     nibble first (even sample index), then the HIGH nibble (odd index).
+///   • An 8-bit accumulator starts at 0; for each sample it is advanced by
+///     `table[nibble]` modulo 256, and the running value, reinterpreted as a
+///     signed int8, is the output sample (÷128 to normalize to [-1, 1]).
+///
+/// Returns up to [lengthSamples] samples, stopping early on a truncated stream;
+/// returns an empty list when there is no table (fewer than 16 bytes present).
+///
+/// Verification basis: proven by an internal roundtrip + a hand-computed
+/// reference vector in test/s3m_dp30_test.dart against this algorithm spec —
+/// NOT validated against a real packed `.s3m` (the corpus contains none). The
+/// caller ([_readInstrument]) applies a degenerate-result fallback: an empty or
+/// all-zero decode is discarded (pcm left empty, raw block preserved).
+Float64List decodeDp30Adpcm(Uint8List packed, int lengthSamples) {
+  if (lengthSamples <= 0 || packed.length < 16) return Float64List(0);
+  // First 16 bytes = signed delta table.
+  final table = Int8List(16);
+  for (var i = 0; i < 16; i++) {
+    final b = packed[i];
+    table[i] = b >= 128 ? b - 256 : b;
+  }
+  const nibbleBase = 16;
+  final availableNibbles = (packed.length - nibbleBase) * 2;
+  var count = lengthSamples;
+  if (count > availableNibbles) count = availableNibbles; // truncated stream
+  if (count <= 0) return Float64List(0);
+
+  final out = Float64List(count);
+  var delta = 0; // 8-bit accumulator (wraps modulo 256)
+  for (var i = 0; i < count; i++) {
+    final byte = packed[nibbleBase + (i >> 1)];
+    final nibble = (i & 1) == 0 ? (byte & 0x0F) : (byte >> 4);
+    delta = (delta + table[nibble]) & 0xFF;
+    final signed = delta >= 128 ? delta - 256 : delta;
+    out[i] = signed / 128.0;
+  }
+  return out;
+}
 
 /// Reads an ASCII string from [bytes] at [start], up to [maxLen] bytes, stopping
 /// at the first NUL. Non-printable trailing bytes are trimmed.
