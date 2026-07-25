@@ -2978,6 +2978,12 @@ abstract class AppLocalizations {
   /// **'My tune'**
   String get loopMixerTuneMine;
 
+  /// No description provided for @loopMixerTuneWide.
+  ///
+  /// In en, this message translates to:
+  /// **'Wide range'**
+  String get loopMixerTuneWide;
+
   /// Hint shown in the Loop Mixer score panel when no track is enabled to engrave.
   ///
   /// In en, this message translates to:

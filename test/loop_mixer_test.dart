@@ -1391,6 +1391,32 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('tune editor wide-range parity exposes two octaves',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    // One octave of C pentatonic + the octave = 6 rows by default.
+    expect(game.tuneWideRange, isFalse);
+    expect(game.debugTuneRowCount, 6);
+
+    game.setTuneWideRange(true);
+    await tester.pump();
+    expect(game.tuneWideRange, isTrue);
+    // Two octaves: 5 pentatonic × 2 + the top C = 11 rows.
+    expect(game.debugTuneRowCount, 11);
+
+    // A high note only reachable in wide mode edits the target's cells.
+    game.debugSetTuneTarget('melody');
+    game.debugEditTuneCell(84, 0); // C6
+    await tester.pump();
+    expect(
+      game.debugTuneCells!.any((c) => c.midis?.contains(84) ?? false),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
       'Drum Kit round-trip applies the edited pattern to the drums card',
       (tester) async {

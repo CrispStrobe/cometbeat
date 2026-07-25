@@ -233,6 +233,14 @@ abstract interface class LoopMixerTester {
   void debugEditTuneCell(int midi, int step);
   List<PatternCell>? get debugTuneCells;
   void debugSetTuneTarget(String id);
+
+  /// Wide pitch range for the tune editor (Beginner-Tracker parity): one octave
+  /// off, two octaves on.
+  bool get tuneWideRange;
+  void setTuneWideRange(bool wide);
+
+  /// The number of pitch rows the tune editor currently offers.
+  int get debugTuneRowCount;
   String get grooveToken;
   bool loadGrooveToken(String token);
   bool get isInfinite;
@@ -677,8 +685,24 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// shifts the whole pattern into the current key AND scale at render (the
   /// same `{0,2,4,7,9} + pitchTranspose` rule), so edits always fit the band and
   /// follow later key/scale changes.
-  List<int> get _tuneRows =>
-      const [0, 2, 4, 7, 9, 12].map((d) => 60 + d).toList();
+  /// Beginner-Tracker parity: a wide-range toggle. Off = one octave of C major
+  /// pentatonic (C4..C5); on = two octaves (C4..C6), so a melody can leap
+  /// like it can in the Tracker's wide mode.
+  bool _tuneWideRange = false;
+  @override
+  bool get tuneWideRange => _tuneWideRange;
+  @override
+  void setTuneWideRange(bool wide) => setState(() => _tuneWideRange = wide);
+  @override
+  int get debugTuneRowCount => _tuneRows.length;
+
+  static const _tunePentatonic = [0, 2, 4, 7, 9];
+
+  List<int> get _tuneRows => [
+        for (final octave in _tuneWideRange ? const [0, 12] : const [0])
+          for (final d in _tunePentatonic) 60 + octave + d,
+        60 + (_tuneWideRange ? 24 : 12),
+      ];
 
   /// The target's cells as grid cells (one StepCell per pitch per onset).
   List<StepCell> _tuneStepCells() {
@@ -2041,11 +2065,24 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.loopMixerTuneEditHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.loopMixerTuneEditHint,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                   ),
+                ),
+                // Beginner-Tracker parity: widen the grid to two octaves.
+                FilterChip(
+                  label: Text(l10n.loopMixerTuneWide),
+                  selected: _tuneWideRange,
+                  onSelected: setTuneWideRange,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ),
             const SizedBox(height: 4),
             // LM-UX4c: which part to edit — your own tune, or a built-in stem.
