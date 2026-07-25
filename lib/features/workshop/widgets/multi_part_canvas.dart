@@ -28,6 +28,7 @@ class MultiPartCanvas extends StatefulWidget {
     this.ghostTarget,
     this.ghostDuration = const NoteDuration(DurationBase.quarter),
     this.highlightedIds = const {},
+    this.elementColors = const {},
     this.suppressElementIds = const {},
     this.onElementDragStart,
     this.onElementDragUpdate,
@@ -69,6 +70,10 @@ class MultiPartCanvas extends StatefulWidget {
 
   /// Global ids to paint in the highlight colour (the active part's selection).
   final Set<String> highlightedIds;
+
+  /// Per-element tints keyed by **global** id (`p<part>:<rawId>`) — e.g. the
+  /// harmony-analysis colour layer. Applied beneath [highlightedIds].
+  final Map<String, Color> elementColors;
 
   /// Global ids hidden from the layout — a clean drag-source hide so the app can
   /// show the ghost following the pointer instead (live drag preview).
@@ -234,6 +239,7 @@ class _MultiPartCanvasState extends State<MultiPartCanvas> {
                           // staffGap (4) / systemGap (10) match the view's own defaults;
                           // the probe below mirrors them so heights agree.
                           highlightedIds: widget.highlightedIds,
+                          elementColors: widget.elementColors,
                           suppressElementIds: widget.suppressElementIds,
                           ghostPart: widget.ghostPart,
                           ghostTarget: widget.ghostTarget,
