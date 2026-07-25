@@ -465,7 +465,21 @@ live-loop surface (quick start, layer parts, record a voice, arrange sections).
     streamed CLI output, and direct-accumulate for the variable + native stereo
     render paths — buddhia3.it went ~2.8 GB→~440 MB, all byte-identical.
 
-  #### Renderer v2 — per-sample streaming mixer + quality (planned, HIGH priority)
+  #### Renderer v2 — per-sample streaming mixer + quality
+
+  **Status 2026-07-25:** v2.1 (streaming mixer) SHIPPED and v2.2/v2.3 quality
+  largely SHIPPED. Every song type now streams in ~65k-frame row-chunks with
+  per-voice state carried across chunks → **flat RAM at any length, byte-identical**
+  (buddhia3.it ~2.8 GB→347 MB; wonderfulpain 873→335 MB; a 20-min command song
+  1.87 GB→283 MB, flat to 40 min). Quality: resonant IT low-pass filter (initial
+  cutoff/resonance + Zxx, per-voice biquad, gated so non-filter songs stay
+  byte-identical); 4-point Catmull-Rom interpolation in the tick path (was linear);
+  MultiPLAY-style note-on soft-start + hard-cut residue anti-click. Oracle A/B
+  unchanged (no regression). **Still open:** TPDF dither at the Int16 cast (opt-in
+  — adds noise / reproducibility considerations); 2× oversampling before the filter;
+  IT filter ENVELOPE + `\x87` MIDI-macro filter; and the last non-streaming path
+  (short/mono/flow native multi-sample songs — already <500 MB, a separate
+  byte-identical follow-up). Original v2 plan retained below for reference.
 
   Reference architecture studied: **MultiPLAY** (`github.com/logiclrd/MultiPLAY`,
   cloned at `../MultiPLAY`). It plays MOD/XM/S3M/IT in a few MB of RAM with good
