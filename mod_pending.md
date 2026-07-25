@@ -1,0 +1,76 @@
+# Tracker module audit
+
+This is the current audit of the MOD, XM, S3M, and IT reader, writer, neutral
+module model, renderer, and editor. It distinguishes format preservation from
+what the application can actually play and edit.
+
+## Verification status
+
+| Item | Result | Scope and qualification |
+| --- | --- | --- |
+| Focused codec/conversion/tracker tests | PASS | 150 tests passed, including MOD, XM, S3M, IT, writers, conversion, roundtrip, and tracker replay tests. |
+| External audio comparison | PASS | 10 MOD, 10 XM, 10 S3M, and 10 IT files were rendered with OpenMPT and compared with our X1 renders in `/tmp/tracker_listen_final`. All 40 source-to-X1 comparisons passed the current automated thresholds. |
+| Same-format structural roundtrips | PASS | The tested corpus passed source -> X1 -> X2 checks, including IT compressed samples and native metadata cases. |
+| Full test suite | NOT GREEN | The full suite still has unrelated environment/UI failures, including the missing Kokoro voice pack and a tracker UI sample assertion. This audit does not claim the full suite is green. |
+| Meaning of PASS | LIMITED | The corpus is evidence against the recent regressions; it is not complete format conformance. Rare commands and unusual files still need coverage. |
+
+## Format matrix
+
+| Format | Reads correctly | Writes correctly | Renders in the app | Editable in the app | Pending / loss |
+| --- | --- | --- | --- | --- | --- |
+| MOD | Classic 4-channel and supported channel tags, 31 samples, 64-row patterns, notes, volumes, and common effects. | Canonical MOD output and same-format tested roundtrips work. | Yes for the supported sample/effect subset. | Only through the simplified tracker grid and neutral model. | Cross-format export is canonical 4-channel MOD; channels above 4, unsupported effects, stereo, envelopes, arbitrary row counts, and instrument semantics cannot survive. |
+| XM | Native headers, packed patterns, instruments, samples, raw PCM, and tracker metadata are retained for same-format conversion. | Native same-format output preserves the retained raw data; canonical XM is emitted from the neutral model. | Yes for the supported sample/effect subset. | No native XM instrument/keymap/envelope editor. | Multi-sample instruments and several XM-specific behaviors collapse to the neutral sample model during editing or cross-format conversion. |
+| S3M | Native order/header/default-pan data, pattern raw data, and PCM sample data are supported, including zero-length patterns. | Tested same-format output preserves the supported native data. | Yes for supported PCM/sample/effect behavior. | No native S3M header, channel-setting, or command editor. | Non-PCM instruments and packed sample decoding are not implemented as a complete native path; format-specific effects and metadata can be approximated or dropped. |
+| IT | Native headers, instruments, envelopes, sample blocks, compression, stereo/raw PCM metadata, and pattern semantics are read. | Native sample/header/instrument data is retained; patterns are semantically re-encoded rather than guaranteed byte-identical. | Yes for the supported sample/effect subset. | No native IT instrument behavior or command editor. | NNA/DCT/DCA, full keymap behavior, stereo playback, sustain behavior, and several IT effects are not fully modeled by the renderer/editor. |
+
+## Feature audit
+
+| Feature | Read / write state | Actual audio state | Editable state | Could be rendered? | Priority |
+| --- | --- | --- | --- | --- | --- |
+| Mono PCM samples | Read and written for all four formats in the supported paths. | Rendered. | Can be selected and borrowed through the app's sample model. | Already supported; expand edge-case encoding coverage. | Medium |
+| Stereo samples | IT/XM right-channel PCM can be parsed and written. | Not fully rendered: the sample bridge currently uses the mono `pcm` data and ignores `pcmRight`. | No stereo waveform editor. | Yes. Add stereo `SampleInstrument` or explicit left/right mixing and preserve sample pan. | High |
+| Sample volume and pan | Most native fields are retained or mapped into the neutral document. | Approximate in some paths; format-specific global/sample gain is not uniformly applied. | Basic channel/instrument controls exist, but not all native sample controls. | Yes. Apply all native gains and default pan at voice creation. | High |
+| Instrument keymaps and zones | XM/IT keymap data is read and retained in native codec data; IT lookup is used in limited import resolution. | A single resolved sample can play, but complete note-to-zone behavior is not rendered. | No zone/keymap editor. | Yes. Add a zone instrument with note/velocity ranges and per-zone samples. | High |
+| XM/IT volume and pan envelopes | Read and written in native instrument data. | A dominant/imported envelope can affect a channel, but full per-instrument, per-voice, loop, and sustain behavior is absent. | Envelope editing is absent. | Yes. Carry envelopes with each instrument/voice and evaluate loop/sustain points. | High |
+| IT NNA/DCT/DCA and fadeout | Native fields are read and written. | Not rendered with full IT voice allocation and old-note action semantics; overlaps can differ. | Not editable. | Yes. Add per-channel voice management and IT note-action rules. | High |
+| Sample loops and sustain loops | Common loop metadata is read and written. | Ordinary sample loops render; sustain-loop and format-specific edge behavior are incomplete. | Basic sample editing is not a native loop editor. | Yes. Separate playback loop and sustain loop state in the voice. | Medium |
+| Pattern lengths | Native lengths are readable/writable in codec data. | App import currently chooses a modal row count and pads/truncates other patterns, so mixed-length arrangements can change. | No per-pattern row-length editor. | Yes. Preserve and schedule each pattern's native row count. | High |
+| Order and flow | Jumps, breaks, loops, speed, and tempo are handled for the tested subset. | Tested arrangements render correctly, but unsupported flow/effect combinations can diverge. | App exposes simplified pattern slots/order, not all native flow commands. | Yes. Add a native flow timeline and remaining command semantics. | High |
+| Common tracker effects | A substantial MOD/XM/S3M/IT subset is mapped to the neutral model and replay engine. | Arpeggio, portamento, vibrato, tremolo, volume/pan changes, jumps/breaks, speed/tempo, note cut/delay/retrigger, loops, and several extended commands render. | Only a limited generic effect model is editable. | Yes. Implement remaining mappings and native effect memory. | High |
+| Format-specific effects | Raw/native information is retained in some same-format paths. | Some commands are approximated or dropped, including parts of tremor, channel/global volume, pan slide/panbrello, retrigger variants, tempo slides, MIDI, and pattern delay. | No format-aware command editor. | Mostly yes, command by command; MIDI hardware behavior is not necessarily renderable. | High |
+| Percussion and drum kits | Samples and note tracks can be imported. | Sample-based drums render, but native kit/keymap semantics are not fully preserved. | Simplified drum grid is editable. | Yes. Add native drum mappings and per-note zones. | Medium |
+| S3M non-PCM and packed samples | Non-PCM instruments are recognized but not decoded as playable samples; packed sample path is incomplete. | These cases do not render correctly. | Not editable as native data. | Yes for known encodings; otherwise preserve and report unsupported payloads. | Medium |
+| Native command bytes and effect memory | Same-format codecs preserve more raw/native information than the neutral model. | Renderer consumes the normalized subset, not every original byte/state transition. | Exact tracker command editing is absent. | Yes where playback semantics are implemented. | High |
+
+## What the current app actually edits
+
+| Editable today | Not directly editable today |
+| --- | --- |
+| Simplified notes in four pattern slots; channel selection; note volume/accent; limited generic note effects; channel instrument selection; sample borrowing; insert effect chains; simplified order/slot arrangement; tempo and swing controls; drum-grid notes. | Native MOD/XM/S3M/IT command columns and effect memory; exact pattern row lengths; native order markers and flow commands; XM/IT keymaps and multi-sample zones; IT NNA/DCT/DCA/fadeout; envelope points and sustain behavior; stereo sample channels; native S3M channel/header settings; compression/encoding flags; format-specific metadata and unsupported effects. |
+
+## Recommended implementation order
+
+| Order | Work | Reason |
+| --- | --- | --- |
+| 1 | Preserve and render stereo samples, including `pcmRight`, sample gain, and default pan. | This is a direct audible loss in otherwise readable files. |
+| 2 | Add per-instrument zones/keymaps and per-voice XM/IT envelopes. | This fixes wrong sounds and envelope behavior without collapsing native instruments. |
+| 3 | Implement IT voice allocation and NNA/DCT/DCA/fadeout. | Required for faithful overlapping-note playback. |
+| 4 | Preserve native pattern lengths and arrangement timing. | Prevents padding/truncation changes in mixed-pattern songs. |
+| 5 | Fill out effect mappings and effect-memory behavior. | Covers the remaining audible tracker-command deviations. |
+| 6 | Add a format-aware native tracker editor and export-loss report. | Makes the remaining limitations visible and actually editable. |
+| 7 | Complete S3M packed/non-PCM sample support. | Needed for broader S3M corpus coverage. |
+
+## Merge and worktree disposition
+
+| Item | Decision |
+| --- | --- |
+| Tracker render fix branch | Merged to `main` and pushed as part of merge commit `bd2295fe`. |
+| Debugging stash | Keep as a safety/reference stash. Do not merge wholesale: it mixes useful logging with behavior-changing renderer edits and incompatible intermediate APIs. |
+| `audiveris/` | Unrelated complete source tree; do not merge. |
+| Downloaded fixtures and generated WAV | Useful local audit corpus, but not application changes. Keep out of the main branch unless deliberately adding a fixture set. |
+
+The practical conclusion is that the recent regression set is addressed for the
+tested corpus, but the application is still a normalized tracker editor rather
+than a complete native MOD/XM/S3M/IT editor. The largest remaining audible gaps
+are stereo playback, native instrument zones/envelopes, IT voice actions, exact
+pattern timing, and the unmapped effect families above.
