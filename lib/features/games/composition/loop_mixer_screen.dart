@@ -179,6 +179,18 @@ abstract interface class LoopMixerTester {
   /// One-knob master filter (−1 low-pass … 0 off … +1 high-pass).
   double get masterFilter;
   void setMasterFilter(double value);
+
+  /// Editing history: undo/redo the last content edits (toggles, variants,
+  /// levels, voices, grid edits, key/scale/kit/tempo/swing/progression, captures).
+  bool get canUndo;
+  bool get canRedo;
+  void undo();
+  void redo();
+
+  /// Remove a captured (sung / beatboxed) track; built-in band cards can't be
+  /// removed. No-op for unknown/built-in ids.
+  void deleteTrack(String id);
+
   void stopAll();
   bool get scoreVisible;
   void toggleScorePanel();
@@ -343,10 +355,24 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// the engine's cached renders to decide whether a seam swap is needed).
   Uint8List? _currentWav;
 
+  /// Edit history for undo/redo. Each entry is a full GrooveSpec snapshot of the
+  /// engine; a content change is detected by the spec's canonical `cacheKey`, so
+  /// toggles, variants, levels, voices, grid edits, key/scale/kit/tempo/swing/
+  /// progression and captured tracks are all covered. The Loop Studio is a
+  /// sandbox — a kid needs to take an edit back. Capped so it never grows without
+  /// bound. `_historyBase` is the last recorded state (the point undo reverts to).
+  final List<GrooveSpec> _undoStack = [];
+  final List<GrooveSpec> _redoStack = [];
+  GrooveSpec? _historyBase;
+  static const int _maxHistory = 60;
+
   @override
   void initState() {
     super.initState();
     if (widget.initialSpec != null) _engine.applySpec(widget.initialSpec!);
+    // Anchor undo history at the opening state so the very first edit is
+    // reversible (without this, base seeds on the first change and loses it).
+    _historyBase = _engine.spec;
     _tempoController.text = _engine.tempoBpm.toString();
     // LM-UX7: load the kid's saved harmonies (best-effort).
     _progStore.load().then((ps) {
@@ -462,6 +488,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   String get styleId => _engine.styleId;
   @override
   void setStyle(String id) => _setStyle(id);
+
+  @override
+  bool get canUndo => _canUndo;
+  @override
+  bool get canRedo => _canRedo;
+  @override
+  void undo() => _undoEdit();
+  @override
+  void redo() => _redoEdit();
+  @override
+  void deleteTrack(String id) => _deleteTrack(id);
 
   @override
   void stopAll() => _stopAll();
@@ -1731,6 +1768,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         voiced: _engine.trackVoice(track.id) != null,
         onVoice:
             _trackIsPitched(track) ? () => _pickVoice(l10n, track.id) : null,
+        // Only captured layers (sung / beatboxed) can be removed; the five
+        // built-in band cards are the fixed groove.
+        onDelete: (track.id == LoopEngine.userTrackId ||
+                track.id == LoopEngine.beatTrackId)
+            ? () => _deleteTrack(track.id)
+            : null,
+        deleteTooltip: l10n.loopMixerDeleteTrack,
       ),
     );
   }
@@ -1793,6 +1837,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
               ),
               onPressed: toggleScorePanel,
             ),
+            IconButton(
+              tooltip: l10n.loopMixerUndo,
+              icon: const Icon(Icons.undo),
+              onPressed: _canUndo ? _undoEdit : null,
+            ),
+            IconButton(
+              tooltip: l10n.loopMixerRedo,
+              icon: const Icon(Icons.redo),
+              onPressed: _canRedo ? _redoEdit : null,
+            ),
           ],
         ),
       );
@@ -1804,6 +1858,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         spacing: 8,
         runSpacing: 6,
         children: [
+          IconButton(
+            tooltip: l10n.loopMixerUndo,
+            icon: const Icon(Icons.undo),
+            onPressed: _canUndo ? _undoEdit : null,
+          ),
+          IconButton(
+            tooltip: l10n.loopMixerRedo,
+            icon: const Icon(Icons.redo),
+            onPressed: _canRedo ? _redoEdit : null,
+          ),
           FilledButton.tonalIcon(
             icon: Icon(_showBeatEdit ? Icons.close : Icons.grid_on),
             label: Text(
@@ -2625,7 +2689,74 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// Restarts/stops/swaps the looping mix to match the groove state, keeping
   /// the musical phase: the new mix starts exactly where the clock says the
   /// groove is, so the beat never resets when something changes.
+  // ---------------------------------------------------------------------------
+  // Undo / redo — snapshot the engine's GrooveSpec whenever a content edit lands.
+  // ---------------------------------------------------------------------------
+
+  /// Records the pre-edit state onto the undo stack when the groove actually
+  /// changed since the last record. Called from [_syncPlayback], which nearly
+  /// every content edit funnels through, so a single hook covers them all;
+  /// pause/resume/jam-handoff calls don't change the spec, so they don't record.
+  void _recordHistory() {
+    final current = _engine.spec;
+    final base = _historyBase;
+    if (base != null && current.cacheKey == base.cacheKey) return;
+    if (base != null) {
+      _undoStack.add(base);
+      if (_undoStack.length > _maxHistory) _undoStack.removeAt(0);
+      _redoStack.clear();
+    }
+    _historyBase = current;
+  }
+
+  bool get _canUndo => _undoStack.isNotEmpty;
+  bool get _canRedo => _redoStack.isNotEmpty;
+
+  void _applyHistory(GrooveSpec target) {
+    // Solo is a transient screen mode layered over `enabled`; drop it so the
+    // restored enabled-set isn't immediately overwritten by the solo re-assert.
+    _soloTrack = null;
+    _enabledBeforeSolo = null;
+    setState(() => _engine.applySpec(target));
+    // Anchor the base to the post-apply state so _syncPlayback's own record call
+    // (applySpec may clamp/drop ids) doesn't push a spurious history entry.
+    _historyBase = _engine.spec;
+    _syncPlayback();
+    _checkCombo();
+  }
+
+  void _undoEdit() {
+    if (_undoStack.isEmpty) return;
+    _redoStack.add(_engine.spec);
+    _applyHistory(_undoStack.removeLast());
+  }
+
+  void _redoEdit() {
+    if (_redoStack.isEmpty) return;
+    _undoStack.add(_engine.spec);
+    _applyHistory(_redoStack.removeLast());
+  }
+
+  /// Removes a captured (sung / beatboxed) track. Built-in cards can't be
+  /// removed — they are the band. No-op for unknown/built-in ids.
+  void _deleteTrack(String id) {
+    if (id == LoopEngine.userTrackId) {
+      setState(_engine.clearUserTrack);
+    } else if (id == LoopEngine.beatTrackId) {
+      setState(_engine.clearUserBeatTrack);
+    } else {
+      return;
+    }
+    if (_soloTrack == id) {
+      _soloTrack = null;
+      _enabledBeforeSolo = null;
+    }
+    _syncPlayback();
+    _checkCombo();
+  }
+
   void _syncPlayback() {
+    _recordHistory();
     if (_soloTrack case final id?) {
       // Editors and capture callbacks can add tracks directly to the engine;
       // reassert solo at the shared audio boundary.
@@ -2876,6 +3007,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                         icon: const Icon(Icons.casino),
                         tooltip: l10n.loopMixerRoll,
                         onPressed: _roll,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.undo),
+                        tooltip: l10n.loopMixerUndo,
+                        onPressed: _canUndo ? _undoEdit : null,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.redo),
+                        tooltip: l10n.loopMixerRedo,
+                        onPressed: _canRedo ? _redoEdit : null,
                         visualDensity: VisualDensity.compact,
                       ),
                       IconButton(
@@ -3622,6 +3765,8 @@ class _TrackCard extends StatelessWidget {
     required this.soloed,
     this.onVoice,
     this.voiced = false,
+    this.onDelete,
+    this.deleteTooltip,
   });
 
   final Color color;
@@ -3645,6 +3790,11 @@ class _TrackCard extends StatelessWidget {
 
   /// Whether this track currently plays through a saved instrument.
   final bool voiced;
+
+  /// Removes this track (captured sung/beatboxed layers only; null for the
+  /// built-in band cards, which are the fixed groove).
+  final VoidCallback? onDelete;
+  final String? deleteTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -3718,9 +3868,18 @@ class _TrackCard extends StatelessWidget {
                   Icon(Icons.piano, size: 18, color: foreground),
                 ],
                 if (!compact) _soloButton(foreground),
+                if (!compact && onDelete != null) _deleteButton(foreground),
               ],
             ),
-            if (compact) _soloButton(foreground),
+            if (compact)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _soloButton(foreground),
+                  if (onDelete != null) _deleteButton(foreground),
+                ],
+              ),
             // Per-card level, only offered while the layer sounds.
             if (active)
               SizedBox(
@@ -3756,6 +3915,18 @@ class _TrackCard extends StatelessWidget {
           Icons.headphones,
           size: 18,
           color: soloed ? Colors.amber : foreground,
+        ),
+      );
+
+  Widget _deleteButton(Color foreground) => Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: IconButton(
+          tooltip: deleteTooltip,
+          onPressed: onDelete,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          icon: Icon(Icons.delete_outline, size: 18, color: foreground),
         ),
       );
 }

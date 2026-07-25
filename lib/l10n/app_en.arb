@@ -580,6 +580,9 @@
     "description": "Hint shown in the Loop Mixer score panel when no track is enabled to engrave."
   },
   "loopMixerShare": "Share your groove",
+  "loopMixerUndo": "Undo",
+  "loopMixerRedo": "Redo",
+  "loopMixerDeleteTrack": "Remove this track",
   "loopMixerCopyCode": "Copy groove code",
   "loopMixerPasteCode": "Paste a groove code",
   "loopMixerCodeCopied": "Groove code copied — paste it anywhere!",

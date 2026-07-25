@@ -1184,4 +1184,90 @@ void main() {
     expect(find.text('I–IV–V–I'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('undo/redo reverts and reapplies content edits', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.canUndo, isFalse);
+    expect(game.canRedo, isFalse);
+
+    game.toggleTrack('drums');
+    await tester.pump();
+    expect(game.enabledTracks, {'drums'});
+    // The opening (empty) state is captured, so the first edit is reversible.
+    expect(game.canUndo, isTrue);
+
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, {'drums', 'bass'});
+
+    game.undo();
+    await tester.pump();
+    expect(game.enabledTracks, {'drums'});
+    expect(game.canRedo, isTrue);
+
+    game.undo();
+    await tester.pump();
+    expect(game.enabledTracks, isEmpty);
+    expect(game.canUndo, isFalse);
+
+    game.redo();
+    await tester.pump();
+    expect(game.enabledTracks, {'drums'});
+
+    game.redo();
+    await tester.pump();
+    expect(game.enabledTracks, {'drums', 'bass'});
+    expect(game.canRedo, isFalse);
+
+    // A fresh edit after undo drops the redo branch.
+    game.undo();
+    await tester.pump();
+    game.toggleTrack('chords');
+    await tester.pump();
+    expect(game.enabledTracks, {'drums', 'chords'});
+    expect(game.canRedo, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('undo also covers a per-track level edit', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.toggleTrack('drums');
+    await tester.pump();
+
+    expect(game.levelOf('drums'), 1.0);
+    game.setTrackLevel('drums', 0.4);
+    await tester.pump();
+    expect(game.levelOf('drums'), closeTo(0.4, 1e-9));
+
+    game.undo();
+    await tester.pump();
+    expect(game.levelOf('drums'), 1.0);
+  });
+
+  testWidgets('a captured beat track can be removed; built-ins cannot',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    // Tapping the beat grid installs a captured (beatboxed) 'beat' layer.
+    game.debugEditBeatCell(Drum.kick, 0);
+    await tester.pump();
+    expect(game.enabledTracks, contains('beat'));
+    expect(game.debugBeatPattern, isNotNull);
+
+    game.deleteTrack('beat');
+    await tester.pump();
+    expect(game.enabledTracks, isNot(contains('beat')));
+    expect(game.debugBeatPattern, isNull);
+
+    // A built-in band card is the fixed groove — delete is a no-op for it.
+    game.toggleTrack('drums');
+    await tester.pump();
+    game.deleteTrack('drums');
+    await tester.pump();
+    expect(game.enabledTracks, contains('drums'));
+    expect(tester.takeException(), isNull);
+  });
 }
