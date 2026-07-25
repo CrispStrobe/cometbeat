@@ -207,6 +207,10 @@ class _UnsupportedInstrument implements TrackerInstrument {
   @override
   String get id => 'x';
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) =>
-      Float64List(timing.totalSamples);
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) =>
+      into ?? Float64List(timing.totalSamples);
 }
