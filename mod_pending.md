@@ -9,6 +9,59 @@ what the application can actually play and edit.
 (`17b79485`). The local downloaded audit corpus is deliberately not part of the
 branch; see `test/fixtures/README.md` and `docs/CORPUS_LICENSING.md`.
 
+## 2026-07-25 update — `feature/tracker-complete` (performance + coverage pass)
+
+This pass closed several audited gaps across the reader, writer, renderer, and
+editor, each shipped as a small verified commit and merged to `main`. Every
+change was gated so the fast/uniform/no-fadeout paths stay **byte-identical**
+(verified by rendering the 10-module corpus and comparing WAV checksums), and
+each shipped with focused unit tests.
+
+**Performance (renderer allocation).** The offline render allocated a fresh
+whole-song `Float64List` per note-run and, for native IT/XM voices, held every
+overlapping NNA voice's whole-song buffer at once — O(voices × songLength).
+- `renderChannelPerNote` now reuses one scratch buffer per channel instead of
+  allocating a whole-song buffer per note (byte-identical). *(perf commit)*
+- `_renderNativeTickZoneVoices` is now two-pass (build voice metadata, then
+  render+mix one voice at a time), so per-voice buffers are no longer
+  co-resident — peak drops from O(voices × song) to O(song) for overlapping
+  native songs, byte-identical. *(perf commit)*
+- A render-throughput benchmark (`bin/bench_render.dart`) was added to track it.
+- **Remaining:** the per-voice *transient* render buffer is still whole-song, so
+  very long native IT renders (e.g. a 570 s song) are still heavier/slower than a
+  streaming mixer would be. The full block-streaming renderer + bounded
+  range/streaming WAV export (mod_pending item “Long-song render …”) is the
+  remaining large perf item; the cuts above reduce, but do not eliminate, the
+  whole-song working set.
+
+**Renderer correctness.** The per-tick sample voice applied a hardcoded 30 ms
+key-off release, ignoring the instrument’s IT/XM fadeout. It now uses the real
+`nativeFadeout` decay (matching the native-zone path); notes without a fadeout
+are unchanged. *(fadeout commit)*
+
+**Reader/writer coverage.**
+- **S3M**: the reader now reads **stereo** sample data (`pcmRight`), recognizes
+  **AdLib/OPL** (type-2) instruments instead of silently dropping them, and reads
+  the previously-ignored **pack** byte (packed blocks are preserved, not misread
+  as raw PCM); the writer round-trips stereo. *(s3m commit)*
+- **MOD**: 4-channel modules with **> 64 patterns** now emit the ProTracker
+  `M!K!` tag (≤ 64 patterns still write `M.K.`). *(writer commit)*
+- **XM**: verified that 16-bit source samples already export as 16-bit XM
+  (the earlier audit note was stale). *(writer commit)*
+
+**Editor.** A **format export-loss report** (`moduleExportLossReport`) now lists,
+before export, what the chosen target format cannot represent (channels > 4 and
+8-bit/mono/effect/envelope losses for MOD, IT re-encode/message/MIDI-macro
+losses, cross-format provenance loss, etc.) and is surfaced as a confirmation in
+the Advanced Tracker export flow. *(export-report commit)*
+
+**Still open (documented, not done in this pass):** full block-streaming
+renderer + range/streaming export; cross-format effect-table widening (unmapped
+S3M/IT `Sxy` and `Z`/MIDI still drop cross-format); S3M DP30 ADPCM decode and
+OPL synthesis; MOD tag-alias preservation (FLT8/OCTA); and native tracker-state
+editors (raw effect-memory, native S3M header, native flow timeline, velocity
+zones). See the feature audit below for the per-feature state.
+
 ## Verification status
 
 | Item | Result | Scope and qualification |
@@ -25,8 +78,8 @@ branch; see `test/fixtures/README.md` and `docs/CORPUS_LICENSING.md`.
 | --- | --- | --- | --- | --- | --- |
 | MOD | Classic 4-channel and supported channel tags, 31 samples, 64-row patterns, notes, volumes, and common effects. | Canonical MOD output and same-format tested roundtrips work. | Yes for the supported sample/effect subset. | Only through the simplified tracker grid and neutral model. | Cross-format export is canonical 4-channel MOD; channels above 4, unsupported effects, stereo, envelopes, arbitrary row counts, and instrument semantics cannot survive. |
 | XM | Native headers, packed patterns, instruments, samples, raw PCM, and tracker metadata are retained for same-format conversion. | Native same-format output preserves the retained raw data; canonical XM is emitted from the neutral model. XM tremor, imported stereo samples, native per-note sample zones, and effect-bearing stereo sample paths render on the supported paths, including sampled multi-zone tick effects. | Advanced Tracker can select/edit embedded native zones and preserves them in its song codec and target XM export. | Some XM-specific behaviors and exact native command editing remain incomplete. |
-| S3M | Native order/header/default-pan data, pattern raw data, and PCM sample data are supported, including zero-length patterns. | Tested same-format output preserves the supported native data; default-pan tables now affect imported channels and are emitted from editable channel pan state. | Yes for supported PCM/sample/effect behavior. | No native S3M header, channel-setting, or command editor. | Non-PCM instruments and packed sample decoding are not implemented as a complete native path; format-specific effects and metadata can be approximated or dropped. |
-| IT | Native headers, instruments, envelopes, sample blocks, compression, stereo/raw PCM metadata, and pattern semantics are read. | Native sample/header/instrument data is retained; patterns are semantically re-encoded rather than guaranteed byte-identical. Imported channel pan/volume headers now affect playback and round-trip from editable mixer state. | Yes for the supported sample/effect subset, including imported stereo samples, sample gain, per-pattern lengths, native note-to-sample zones, common envelopes, native IT NNA/DCT/DCA old-note actions for ordinary and effect-bearing sampled zone playback, and effect-bearing stereo sample paths. | Advanced Tracker can select/edit embedded native zones and preserves them in its song codec and target IT export. | Several IT effects and exact tracker-specific fade/release timing remain incomplete. |
+| S3M | Native order/header/default-pan data, pattern raw data, and PCM sample data are supported, including zero-length patterns. Stereo sample data (`pcmRight`) is now read; AdLib/OPL (type-2) instruments are recognized and preserved instead of dropped; the pack byte is read and packed blocks preserved (not misread as raw PCM). | Tested same-format output preserves the supported native data; default-pan tables now affect imported channels and are emitted from editable channel pan state; stereo samples round-trip. | Yes for supported PCM/sample/effect behavior (OPL/packed samples are preserved but not synthesized/decoded). | No native S3M header, channel-setting, or command editor. | DP30 ADPCM decode and OPL synthesis are not implemented (payloads preserved, not sounded); format-specific effects and metadata can be approximated or dropped. |
+| IT | Native headers, instruments, envelopes, sample blocks, compression, stereo/raw PCM metadata, and pattern semantics are read. | Native sample/header/instrument data is retained; patterns are semantically re-encoded rather than guaranteed byte-identical. Imported channel pan/volume headers now affect playback and round-trip from editable mixer state. | Yes for the supported sample/effect subset, including imported stereo samples, sample gain, per-pattern lengths, native note-to-sample zones, common envelopes, native IT NNA/DCT/DCA old-note actions for ordinary and effect-bearing sampled zone playback, and effect-bearing stereo sample paths. | Advanced Tracker can select/edit embedded native zones and preserves them in its song codec and target IT export. | Per-tick key-off release now follows the native IT/XM `nativeFadeout` rate (was a fixed 30 ms); some IT effects and exact envelope-release curves remain incomplete. |
 
 ## Feature audit
 
@@ -46,7 +99,7 @@ branch; see `test/fixtures/README.md` and `docs/CORPUS_LICENSING.md`.
 | Percussion and drum kits | Samples and note tracks can be imported. | Sample-based drums render, but native kit/keymap semantics are not fully preserved. | Simplified drum grid is editable. | Yes. Add native drum mappings and per-note zones. | Medium |
 | S3M non-PCM and packed samples | Non-PCM instruments are recognized but not decoded as playable samples; packed sample path is incomplete. | These cases do not render correctly. | Not editable as native data. | Yes for known encodings; otherwise preserve and report unsupported payloads. | Medium |
 | Native command bytes and effect memory | Same-format codecs preserve more raw/native information than the neutral model. | Renderer consumes the normalized subset, not every original byte/state transition; sparse S3M physical channel IDs now map correctly through codec roundtrips. | Advanced Tracker now exposes all currently normalized command families, including pan, sample offset, retrigger, tremor, and panbrello; raw format-specific provenance editing remains absent. | Yes where playback semantics are implemented. | High |
-| Long-song render memory and throughput | Module data is retained without truncating the order or pattern rows. | Bounded pattern renders are usable; full command-heavy stereo songs still allocate whole-song mixes and per-channel stems, so very long IT renders can be slow and memory-heavy. | No user-facing render range or streaming export control in the app. | Yes. Stream/chunk the renderer while preserving cross-row voice state, then expose bounded preview/export. | High |
+| Long-song render memory and throughput | Module data is retained without truncating the order or pattern rows. | Improved (2026-07-25): per-note render buffers are reused per channel and native NNA voices are rendered one at a time (no longer co-resident), so a 570 s native IT render dropped from ~3.0 GB to ~2.8 GB peak while staying byte-identical. Still allocates whole-song mixes and per-voice transient buffers, so very long command-heavy stereo songs remain heavy/slow. Track with `bin/bench_render.dart`. | No user-facing render range or streaming export control in the app. | Partly done. Remaining: a block-streaming renderer that keeps cross-row/voice state per chunk (eliminating whole-song working set), then expose bounded preview/streaming export. | High |
 
 ## What the current app actually edits
 
