@@ -166,4 +166,27 @@ void main() {
     expect(inst.sample[64], closeTo(0.25, 1e-6));
     expect(inst.sampleRight![64], closeTo(-0.5, 1e-6));
   });
+
+  test('copyWith edits preserve imported sample metadata', () {
+    const volume = VolumeEnvelope([(ms: 0, level: 1.0)]);
+    const pan = PanEnvelope([(ms: 0, pan: -1.0)]);
+    final inst = SampleInstrument(
+      'stereo',
+      Float64List.fromList([0.25, 0.0]),
+      sampleRight: Float64List.fromList([-0.5, 0.0]),
+      loopStart: 1,
+      loopLength: 1,
+      volume: 0.75,
+      normalize: false,
+      nativeVolumeEnvelope: volume,
+      nativePanEnvelope: pan,
+    );
+
+    final edited = inst.copyWith(loopStart: 0, loopLength: 2);
+    expect(edited.sampleRight, same(inst.sampleRight));
+    expect(edited.volume, 0.75);
+    expect(edited.normalize, isFalse);
+    expect(edited.nativeVolumeEnvelope, same(volume));
+    expect(edited.nativePanEnvelope, same(pan));
+  });
 }

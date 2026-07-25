@@ -595,6 +595,37 @@ class SampleInstrument implements TrackerInstrument {
   /// peak-normalized as user-recorded samples are.
   final bool normalize;
 
+  SampleInstrument copyWith({
+    String? id,
+    Float64List? sample,
+    int? baseMidi,
+    Envelope? envelope,
+    int? loopStart,
+    int? loopLength,
+    double? offsetScale,
+    bool? pingPong,
+    double? volume,
+    bool? normalize,
+    Float64List? sampleRight,
+    VolumeEnvelope? nativeVolumeEnvelope,
+    PanEnvelope? nativePanEnvelope,
+  }) =>
+      SampleInstrument(
+        id ?? this.id,
+        sample ?? this.sample,
+        baseMidi: baseMidi ?? this.baseMidi,
+        envelope: envelope ?? this.envelope,
+        loopStart: loopStart ?? this.loopStart,
+        loopLength: loopLength ?? this.loopLength,
+        offsetScale: offsetScale ?? this.offsetScale,
+        pingPong: pingPong ?? this.pingPong,
+        volume: volume ?? this.volume,
+        normalize: normalize ?? this.normalize,
+        sampleRight: sampleRight ?? this.sampleRight,
+        nativeVolumeEnvelope: nativeVolumeEnvelope ?? this.nativeVolumeEnvelope,
+        nativePanEnvelope: nativePanEnvelope ?? this.nativePanEnvelope,
+      );
+
   bool get loops =>
       loopLength > 0 &&
       loopStart >= 0 &&

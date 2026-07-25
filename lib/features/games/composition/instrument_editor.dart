@@ -141,18 +141,10 @@ class _SampleEditor extends StatelessWidget {
             if (len == 0) return;
             final loopStart = (s * len).round();
             final loopEnd = (e * len).round();
-            onChanged(
-              SampleInstrument(
-                inst.id,
-                inst.sample,
-                baseMidi: inst.baseMidi,
-                envelope: inst.envelope,
-                loopStart: loopStart,
-                loopLength: loopEnd - loopStart,
-                offsetScale: inst.offsetScale,
-                pingPong: inst.pingPong,
-              ),
-            );
+            onChanged(inst.copyWith(
+              loopStart: loopStart,
+              loopLength: loopEnd - loopStart,
+            ));
           },
           wave: Theme.of(context).colorScheme.primary,
           bg: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -163,18 +155,7 @@ class _SampleEditor extends StatelessWidget {
           subtitle: const Text('Bounces forward and backward'),
           value: inst.pingPong,
           onChanged: (v) {
-            onChanged(
-              SampleInstrument(
-                inst.id,
-                inst.sample,
-                baseMidi: inst.baseMidi,
-                envelope: inst.envelope,
-                loopStart: inst.loopStart,
-                loopLength: inst.loopLength,
-                offsetScale: inst.offsetScale,
-                pingPong: v,
-              ),
-            );
+            onChanged(inst.copyWith(pingPong: v));
           },
         ),
         ListTile(
@@ -186,34 +167,33 @@ class _SampleEditor extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.remove),
                 onPressed: () => onChanged(
-                  SampleInstrument(
-                    inst.id,
-                    inst.sample,
+                  inst.copyWith(
                     baseMidi: (inst.baseMidi - 1).clamp(0, 127),
-                    envelope: inst.envelope,
-                    loopStart: inst.loopStart,
-                    loopLength: inst.loopLength,
-                    offsetScale: inst.offsetScale,
-                    pingPong: inst.pingPong,
                   ),
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.add),
                 onPressed: () => onChanged(
-                  SampleInstrument(
-                    inst.id,
-                    inst.sample,
+                  inst.copyWith(
                     baseMidi: (inst.baseMidi + 1).clamp(0, 127),
-                    envelope: inst.envelope,
-                    loopStart: inst.loopStart,
-                    loopLength: inst.loopLength,
-                    offsetScale: inst.offsetScale,
-                    pingPong: inst.pingPong,
                   ),
                 ),
               ),
             ],
+          ),
+        ),
+        ListTile(
+          title: const Text('Sample Volume'),
+          subtitle: Text('${(inst.volume * 100).round()}%'),
+          trailing: SizedBox(
+            width: 180,
+            child: Slider(
+              value: inst.volume.clamp(0.0, 1.0),
+              min: 0,
+              max: 1,
+              onChanged: (v) => onChanged(inst.copyWith(volume: v)),
+            ),
           ),
         ),
       ],
