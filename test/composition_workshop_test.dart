@@ -229,6 +229,23 @@ void main() {
     expect(view.elementColors[note.id], const Color(0xFF59A14F));
   });
 
+  testWidgets('the info button explains controls, not only shortcuts',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.ensureVisible(find.byTooltip(l10n.workshopHelpTitle));
+    await tester.tap(find.byTooltip(l10n.workshopHelpTitle));
+    await tester.pumpAndSettle();
+
+    // A "Controls" section with plain-language explanations…
+    expect(find.text(l10n.workshopHelpControls), findsOneWidget);
+    expect(find.text(l10n.workshopHelpMarquee), findsOneWidget);
+    expect(find.text(l10n.workshopHelpAnalysis), findsOneWidget);
+    // …plus the keyboard-shortcut section is still there.
+    expect(find.text(l10n.workshopShortcuts), findsOneWidget);
+  });
+
   testWidgets('Analysis tints reach the multi-part full-score canvas',
       (tester) async {
     await pump(tester);

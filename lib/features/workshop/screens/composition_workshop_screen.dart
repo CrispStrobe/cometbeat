@@ -3507,14 +3507,47 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       ('⌘/Ctrl  Z', l10n.workshopShortcutUndoRedo),
       ('⌘/Ctrl  C · X · V', l10n.workshopShortcutCopyPaste),
     ];
+    // Plain-language explanations of the main controls, so the info button
+    // teaches the surface — not only its keyboard shortcuts.
+    final concepts = <String>[
+      l10n.workshopHelpModes,
+      l10n.workshopHelpVoices,
+      l10n.workshopHelpMarquee,
+      l10n.workshopHelpLoopSel,
+      l10n.workshopHelpAnalysis,
+      l10n.workshopHelpDetails,
+    ];
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.workshopShortcuts),
+        title: Text(l10n.workshopHelpTitle),
         content: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text(
+                l10n.workshopHelpControls,
+                style: Theme.of(ctx).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              for (final line in concepts)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('•  '),
+                      Expanded(child: Text(line)),
+                    ],
+                  ),
+                ),
+              const Divider(height: 20),
+              Text(
+                l10n.workshopShortcuts,
+                style: Theme.of(ctx).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
               for (final (keys, label) in rows)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -3845,7 +3878,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                       ),
                       IconButton(
                         icon: const Icon(Icons.info_outline),
-                        tooltip: l10n.workshopShortcuts,
+                        tooltip: l10n.workshopHelpTitle,
                         onPressed: () => _showShortcuts(l10n),
                       ),
                       PopupMenuButton<String>(

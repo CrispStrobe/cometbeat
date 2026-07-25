@@ -1088,6 +1088,54 @@ abstract class AppLocalizations {
   /// **'Keyboard shortcuts'**
   String get workshopShortcuts;
 
+  /// No description provided for @workshopHelpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get workshopHelpTitle;
+
+  /// No description provided for @workshopHelpControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Controls'**
+  String get workshopHelpControls;
+
+  /// No description provided for @workshopHelpModes.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert adds notes as you tap the staff or piano; Select lets you pick notes to edit, slur, or delete.'**
+  String get workshopHelpModes;
+
+  /// No description provided for @workshopHelpVoices.
+  ///
+  /// In en, this message translates to:
+  /// **'V1 and V2 are two independent voices on one staff (V1 stems up, V2 down). Pick which voice your input writes to.'**
+  String get workshopHelpVoices;
+
+  /// No description provided for @workshopHelpMarquee.
+  ///
+  /// In en, this message translates to:
+  /// **'Marquee: drag a box across the staff to select every note inside it.'**
+  String get workshopHelpMarquee;
+
+  /// No description provided for @workshopHelpLoopSel.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop selection: with notes selected, playback repeats just that range so you can rehearse it.'**
+  String get workshopHelpLoopSel;
+
+  /// No description provided for @workshopHelpAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Analysis colours each note by its harmonic function (home / away / tension) and names the detected key.'**
+  String get workshopHelpAnalysis;
+
+  /// No description provided for @workshopHelpDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Score details set the title, composer and lyricist — they travel into PDF and MusicXML exports.'**
+  String get workshopHelpDetails;
+
   /// No description provided for @workshopShortcutPlaceNote.
   ///
   /// In en, this message translates to:
@@ -3599,25 +3647,25 @@ abstract class AppLocalizations {
   /// No description provided for @tuneShare.
   ///
   /// In en, this message translates to:
-  /// **'Share tune'**
+  /// **'Copy tune'**
   String get tuneShare;
 
   /// No description provided for @tuneLoadShared.
   ///
   /// In en, this message translates to:
-  /// **'Load shared tune'**
+  /// **'Paste tune'**
   String get tuneLoadShared;
 
   /// No description provided for @tuneShared.
   ///
   /// In en, this message translates to:
-  /// **'Tune shared — load it in the Loop Mixer, Tracker or Looper'**
+  /// **'Tune copied — paste it in the Loop Mixer, Tracker or another editor'**
   String get tuneShared;
 
   /// No description provided for @tuneLoaded.
   ///
   /// In en, this message translates to:
-  /// **'Loaded the shared tune'**
+  /// **'Pasted the copied tune'**
   String get tuneLoaded;
 
   /// No description provided for @dawBpm.

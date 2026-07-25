@@ -552,6 +552,36 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopShortcuts => 'Tastenkürzel';
 
   @override
+  String get workshopHelpTitle => 'Hilfe';
+
+  @override
+  String get workshopHelpControls => 'Bedienung';
+
+  @override
+  String get workshopHelpModes =>
+      'Einfügen setzt Noten, während du auf System oder Klaviatur tippst; Auswählen lässt dich Noten zum Bearbeiten, Binden oder Löschen markieren.';
+
+  @override
+  String get workshopHelpVoices =>
+      'V1 und V2 sind zwei unabhängige Stimmen auf einem System (V1 Hälse nach oben, V2 nach unten). Wähle, in welche Stimme deine Eingabe schreibt.';
+
+  @override
+  String get workshopHelpMarquee =>
+      'Auswahlrahmen: Ziehe ein Rechteck über das System, um alle Noten darin auszuwählen.';
+
+  @override
+  String get workshopHelpLoopSel =>
+      'Auswahl-Schleife: Bei ausgewählten Noten wiederholt die Wiedergabe nur diesen Bereich zum Üben.';
+
+  @override
+  String get workshopHelpAnalysis =>
+      'Analyse färbt jede Note nach ihrer harmonischen Funktion (Ruhe / Weg / Spannung) und benennt die erkannte Tonart.';
+
+  @override
+  String get workshopHelpDetails =>
+      'Titelangaben setzen Titel, Komponist:in und Textdichter:in — sie wandern in PDF- und MusicXML-Export.';
+
+  @override
   String get workshopShortcutPlaceNote => 'Note setzen (ihre Tonhöhe)';
 
   @override
@@ -1916,17 +1946,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get beatLoaded => 'Geteilten Beat geladen';
 
   @override
-  String get tuneShare => 'Melodie teilen';
+  String get tuneShare => 'Melodie kopieren';
 
   @override
-  String get tuneLoadShared => 'Geteilte Melodie laden';
+  String get tuneLoadShared => 'Melodie einfügen';
 
   @override
   String get tuneShared =>
-      'Melodie geteilt — lade sie im Loop-Mixer, Tracker oder Looper';
+      'Melodie kopiert — füge sie im Loop-Mixer, Tracker oder einem anderen Editor ein';
 
   @override
-  String get tuneLoaded => 'Geteilte Melodie geladen';
+  String get tuneLoaded => 'Kopierte Melodie eingefügt';
 
   @override
   String dawBpm(int n) {

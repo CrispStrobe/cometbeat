@@ -551,6 +551,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopShortcuts => 'Keyboard shortcuts';
 
   @override
+  String get workshopHelpTitle => 'Help';
+
+  @override
+  String get workshopHelpControls => 'Controls';
+
+  @override
+  String get workshopHelpModes =>
+      'Insert adds notes as you tap the staff or piano; Select lets you pick notes to edit, slur, or delete.';
+
+  @override
+  String get workshopHelpVoices =>
+      'V1 and V2 are two independent voices on one staff (V1 stems up, V2 down). Pick which voice your input writes to.';
+
+  @override
+  String get workshopHelpMarquee =>
+      'Marquee: drag a box across the staff to select every note inside it.';
+
+  @override
+  String get workshopHelpLoopSel =>
+      'Loop selection: with notes selected, playback repeats just that range so you can rehearse it.';
+
+  @override
+  String get workshopHelpAnalysis =>
+      'Analysis colours each note by its harmonic function (home / away / tension) and names the detected key.';
+
+  @override
+  String get workshopHelpDetails =>
+      'Score details set the title, composer and lyricist — they travel into PDF and MusicXML exports.';
+
+  @override
   String get workshopShortcutPlaceNote => 'Place a note (its pitch)';
 
   @override
@@ -1909,17 +1939,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get beatLoaded => 'Loaded the shared beat';
 
   @override
-  String get tuneShare => 'Share tune';
+  String get tuneShare => 'Copy tune';
 
   @override
-  String get tuneLoadShared => 'Load shared tune';
+  String get tuneLoadShared => 'Paste tune';
 
   @override
   String get tuneShared =>
-      'Tune shared — load it in the Loop Mixer, Tracker or Looper';
+      'Tune copied — paste it in the Loop Mixer, Tracker or another editor';
 
   @override
-  String get tuneLoaded => 'Loaded the shared tune';
+  String get tuneLoaded => 'Pasted the copied tune';
 
   @override
   String dawBpm(int n) {
