@@ -1004,6 +1004,11 @@ class MultiSampleInstrument implements TrackerInstrument {
     return best;
   }
 
+  /// Resolves the native note-to-zone mapping for renderer/editor bridges.
+  /// Exact-key matches win; otherwise the nearest mapped key is used, matching
+  /// the tracker import behavior for sparse XM/IT keymaps.
+  TrackerInstrument? zoneForNote(int midi) => _closestZone(midi);
+
   @override
   Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
     final out = Float64List(timing.totalSamples);

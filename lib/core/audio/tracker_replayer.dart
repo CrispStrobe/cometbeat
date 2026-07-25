@@ -1267,6 +1267,17 @@ void _renderChannelInto(
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
 
+  if (channel.instrument is MultiSampleInstrument && _hasPerTickEffect(cells)) {
+    _renderMultiSampleChannelInto(
+      mix,
+      channel,
+      cells,
+      timing,
+      ticksPerRow,
+    );
+    return;
+  }
+
   final inst = _additiveOf(channel.instrument);
   if (inst == null) {
     // A SAMPLE channel that carries per-tick pitch/volume effects (porta/
@@ -1634,6 +1645,160 @@ List<({int start, int end, double pan})> _panRegions(
   return (left: left, right: right);
 }
 
+/// Renders sampled XM/IT zones through the tick voice. The ordinary
+/// MultiSampleInstrument path already resolves zones for effect-free notes,
+/// but its generic fallback cannot apply per-tick tracker commands. Each note
+/// run is isolated so the selected zone, envelope, loop, and key-off state are
+/// all evaluated from that run's native instrument.
+void _renderMultiSampleChannelInto(
+  Float64List mix,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  TrackerTiming timing,
+  int ticksPerRow,
+) {
+  final multi = channel.instrument;
+  if (multi is! MultiSampleInstrument) return;
+  var startStep = 0;
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final steps = run.$2 + run.$3;
+    if (midi != null) {
+      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      if (zone is SampleInstrument) {
+        final isolated =
+            List<TrackerCell>.filled(cells.length, TrackerCell.empty)
+              ..setRange(startStep, min(startStep + steps, cells.length), cells,
+                  startStep);
+        final boundary = startStep + steps;
+        if (boundary < isolated.length && isolated[boundary].isEmpty) {
+          isolated[boundary] = TrackerCell.noteCut;
+        }
+        final zoneChannel = TrackerChannel(
+          id: '${channel.id}:zone',
+          instrument: zone,
+          rows: cells.length,
+          gain: channel.gain,
+          pan: channel.pan,
+          volumeEnvelope: channel.volumeEnvelope,
+          panEnvelope: channel.panEnvelope,
+        );
+        _renderSampleChannelInto(
+          mix,
+          zoneChannel,
+          isolated,
+          timing,
+          ticksPerRow,
+          0,
+        );
+      }
+    }
+    startStep += steps;
+  }
+}
+
+({Float64List left, Float64List right}) _renderMultiSampleChannelStereoTicks(
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  TrackerTiming timing,
+  int ticksPerRow,
+) {
+  final left = Float64List(timing.totalSamples);
+  final right = Float64List(timing.totalSamples);
+  final multi = channel.instrument;
+  if (multi is! MultiSampleInstrument) return (left: left, right: right);
+  final rowStart = [
+    for (var row = 0; row < cells.length; row++) timing.stepStartSample(row),
+  ]..add(timing.totalSamples);
+  var startStep = 0;
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final steps = run.$2 + run.$3;
+    if (midi != null) {
+      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      if (zone is SampleInstrument) {
+        final isolated =
+            List<TrackerCell>.filled(cells.length, TrackerCell.empty)
+              ..setRange(startStep, min(startStep + steps, cells.length), cells,
+                  startStep);
+        final boundary = startStep + steps;
+        if (boundary < isolated.length && isolated[boundary].isEmpty) {
+          isolated[boundary] = TrackerCell.noteCut;
+        }
+        final zoneChannel = TrackerChannel(
+          id: '${channel.id}:zone',
+          instrument: zone,
+          rows: cells.length,
+          gain: channel.gain,
+          pan: channel.pan,
+          volumeEnvelope: channel.volumeEnvelope,
+          panEnvelope: channel.panEnvelope,
+        );
+        final rendered = _renderSampleChannelStereoTicks(
+          zoneChannel,
+          isolated,
+          rowStart,
+          List<int>.filled(cells.length, ticksPerRow),
+          null,
+        );
+        for (var i = 0; i < left.length; i++) {
+          left[i] += rendered.left[i];
+          right[i] += rendered.right[i];
+        }
+      }
+    }
+    startStep += steps;
+  }
+  return (left: left, right: right);
+}
+
+void _renderMultiSampleChannelIntoVariable(
+  Float64List mix,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<int> ticksPerRow,
+) {
+  final multi = channel.instrument;
+  if (multi is! MultiSampleInstrument) return;
+  var startStep = 0;
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final steps = run.$2 + run.$3;
+    if (midi != null) {
+      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      if (zone is SampleInstrument) {
+        final isolated =
+            List<TrackerCell>.filled(cells.length, TrackerCell.empty)
+              ..setRange(startStep, min(startStep + steps, cells.length), cells,
+                  startStep);
+        final boundary = startStep + steps;
+        if (boundary < isolated.length && isolated[boundary].isEmpty) {
+          isolated[boundary] = TrackerCell.noteCut;
+        }
+        final zoneChannel = TrackerChannel(
+          id: '${channel.id}:zone',
+          instrument: zone,
+          rows: cells.length,
+          gain: channel.gain,
+          pan: channel.pan,
+          volumeEnvelope: channel.volumeEnvelope,
+          panEnvelope: channel.panEnvelope,
+        );
+        _renderSampleChannelIntoVariable(
+          mix,
+          zoneChannel,
+          isolated,
+          rowStart,
+          ticksPerRow,
+          null,
+        );
+      }
+    }
+    startStep += steps;
+  }
+}
+
 /// Renders one channel's [cells] mono (via [_renderChannelInto]) then pans it
 /// into the [left]/[right] stereo mixes at [sampleOffset], honouring the
 /// channel's base pan and any 8xx pan changes ([_panRegions]).
@@ -1648,6 +1813,21 @@ void _renderChannelIntoStereo(
   List<TrackerInstrument>? pool,
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
+
+  if (channel.instrument is MultiSampleInstrument && _hasPerTickEffect(cells)) {
+    final rendered = _renderMultiSampleChannelStereoTicks(
+      channel,
+      cells,
+      timing,
+      ticksPerRow,
+    );
+    final n = min(timing.totalSamples, left.length - sampleOffset);
+    for (var i = 0; i < n; i++) {
+      left[sampleOffset + i] += rendered.left[i];
+      right[sampleOffset + i] += rendered.right[i];
+    }
+    return;
+  }
 
   if (channel.instrument is SampleInstrument && _hasPerTickEffect(cells)) {
     final rowStart = [
@@ -2643,6 +2823,17 @@ void _renderChannelIntoVariable(
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
   final rows = cells.length;
+
+  if (channel.instrument is MultiSampleInstrument && _hasPerTickEffect(cells)) {
+    _renderMultiSampleChannelIntoVariable(
+      mix,
+      channel,
+      cells,
+      rowStart,
+      ticksPerRow,
+    );
+    return;
+  }
 
   final inst = _additiveOf(channel.instrument);
   if (inst == null) {

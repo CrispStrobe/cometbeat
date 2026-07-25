@@ -1071,6 +1071,49 @@ void main() {
       expect(after, greaterThan(0));
     });
 
+    test('multi-sample zones keep their selected sample through effects', () {
+      final positive = Float64List.fromList(List<double>.filled(120000, 0.2));
+      final negative = Float64List.fromList(List<double>.filled(120000, -0.4));
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60)
+        ..[1] = fx(0x4, 0x31)
+        ..[4] = const TrackerCell(midi: 72)
+        ..[5] = fx(0x4, 0x31);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'zones',
+            instrument: MultiSampleInstrument(
+              'zones',
+              {
+                60: SampleInstrument('low', positive),
+                72: SampleInstrument('high', negative),
+              },
+            ),
+            rows: 8,
+          ),
+        ],
+        timing: const TrackerTiming(rows: 8),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+
+      final rendered = replaySong(song).pcm;
+      final split = const TrackerTiming(rows: 8).stepStartSample(4);
+      var first = 0;
+      var second = 0;
+      for (var i = 0; i < split; i++) {
+        first += rendered[i];
+      }
+      for (var i = split; i < rendered.length; i++) {
+        second += rendered[i];
+      }
+      expect(first, greaterThan(0));
+      expect(second, lessThan(0));
+    });
+
     test('stereo sample channels keep the right waveform through effects', () {
       final leftSample = Float64List.fromList(
         List<double>.filled(120000, 0.25),
