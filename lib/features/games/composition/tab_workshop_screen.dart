@@ -226,10 +226,11 @@ abstract class TabWorkshopTester {
 /// engraved staff (with a synced standard staff) previews the [TabDocument];
 /// the same model round-trips to the Score Workshop and Tracker.
 ///
-/// The preview can be shown three ways: [tab] (tablature staff), [standard]
-/// (a single notation staff over the tab), and [grand] (a treble+bass grand
-/// staff — better for the low strings, which sink far below a single staff).
-enum _TabView { tab, standard, grand }
+/// The standard-notation staff shown ABOVE the tab — independent of the tab, so
+/// a user can have tab + notation together (not either/or). [off] hides it;
+/// [standard] is a single clef; [grand] is a treble+bass grand staff (better for
+/// the low strings, which sink far below a single staff).
+enum _Notation { off, standard, grand }
 
 class TabWorkshopScreen extends StatefulWidget {
   /// Optional single score to open as editable tab (e.g. from the Workshop).
@@ -340,7 +341,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   TabDocument get _doc => _tracks[_active].doc;
 
   int _capo = 0;
-  _TabView _view = _TabView.standard;
+  bool _showTab = true;
+  _Notation _notation = _Notation.standard;
   NoteDuration _dur = NoteDuration.quarter;
   int _selCol = 0;
   int _selString = 0;
@@ -1353,28 +1355,34 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final score = _doc.toScore(capo: _capo);
-    final Widget view = switch (_view) {
-      _TabView.tab => TabStaffView(
-          score: score,
-          tuning: _doc.tuning,
-          capo: _capo,
-          showTuning: true,
-          highlightedIds: _highlightedIds,
-        ),
-      _TabView.standard => NotationTabView(
-          score: score,
-          tuning: _doc.tuning,
-          capo: _capo,
-          showTuning: true,
-          highlightedIds: _highlightedIds,
-        ),
-      // Grand staff (treble + bass): the low strings sit far below a single
-      // staff, so split each note across two clefs at middle C.
-      _TabView.grand => GrandStaffView(
+    // Tab and notation are independent, stacked panes (notation on top).
+    final panes = <Widget>[
+      if (_notation == _Notation.standard)
+        StaffView(score: score, highlightedIds: _highlightedIds),
+      if (_notation == _Notation.grand)
+        GrandStaffView(
           grandStaff: grandStaffFromScore(score),
           highlightedIds: _highlightedIds,
         ),
-    };
+      if (_showTab)
+        TabStaffView(
+          score: score,
+          tuning: _doc.tuning,
+          capo: _capo,
+          showTuning: true,
+          highlightedIds: _highlightedIds,
+        ),
+    ];
+    final Widget view = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < panes.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          panes[i],
+        ],
+      ],
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -1395,64 +1403,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             tooltip: l10n.tabPlay,
             onPressed: _play,
           ),
+          // Settings belong in the top bar (they're settings, not editing tools).
           IconButton(
-            icon: const Icon(Icons.piano_outlined),
-            tooltip: l10n.workshopPlayWithInstrument,
-            onPressed: _playWithInstrument,
-          ),
-          IconButton(
-            icon: const Icon(Icons.av_timer),
-            color: _countIn ? Theme.of(context).colorScheme.primary : null,
-            tooltip: l10n.tabCountIn,
-            onPressed: () => setState(() => _countIn = !_countIn),
-          ),
-          IconButton(
-            icon: Icon(_listening ? Icons.mic : Icons.mic_none),
-            tooltip: l10n.tabMic,
-            color: _listening ? Theme.of(context).colorScheme.error : null,
-            onPressed: _toggleMic,
-          ),
-          IconButton(
-            icon: const Icon(Icons.folder_open),
-            tooltip: l10n.tabImport,
-            onPressed: openScoreFile,
-          ),
-          IconButton(
-            icon: _transcribing
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.graphic_eq),
-            tooltip: l10n.tabOpenRecording,
-            onPressed: _transcribing ? null : openAudioRecording,
-          ),
-          IconButton(
-            icon: const Icon(Icons.library_music_outlined),
-            tooltip: l10n.tabOpenSongBook,
-            onPressed: _openFromSongBook,
-          ),
-          // Shared-tune bridge: hand the tab's melody to the Loop Mixer /
-          // Tracker / Score Editor, or pull a tune they shared in as tab.
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.library_music_outlined),
-            tooltip: l10n.tuneShare,
-            enabled: canShareMelody || MelodyBridge.instance.hasMelody,
-            onSelected: (v) =>
-                v == 'share' ? shareMelody() : loadSharedMelody(),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'share',
-                enabled: canShareMelody,
-                child: Text(l10n.tuneShare),
-              ),
-              PopupMenuItem(
-                value: 'load',
-                enabled: MelodyBridge.instance.hasMelody,
-                child: Text(l10n.tuneLoadShared),
-              ),
-            ],
+            icon: const Icon(Icons.tune),
+            tooltip: l10n.settingsTitle,
+            onPressed: () => _showTabSettings(l10n),
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.ios_share),
@@ -1468,13 +1423,28 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
               PopupMenuItem(value: 'daw', child: Text(l10n.dawSend)),
             ],
           ),
+          // Everything else — the many one-off / less-frequent actions.
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             tooltip: l10n.tabMenu,
-            onSelected: (value) {
-              switch (value) {
-                case 'clear':
-                  _clearAll();
+            onSelected: (v) {
+              switch (v) {
+                case 'playInstrument':
+                  _playWithInstrument();
+                case 'countIn':
+                  setState(() => _countIn = !_countIn);
+                case 'mic':
+                  _toggleMic();
+                case 'import':
+                  openScoreFile();
+                case 'audio':
+                  openAudioRecording();
+                case 'songbook':
+                  _openFromSongBook();
+                case 'shareTune':
+                  shareMelody();
+                case 'loadTune':
+                  loadSharedMelody();
                 case 'inspect':
                   setState(() => _inspect = !_inspect);
                 case 'paste':
@@ -1483,27 +1453,61 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   _promptSave();
                 case 'workshop':
                   _openInScoreWorkshop();
+                case 'clear':
+                  _clearAll();
               }
             },
             itemBuilder: (_) => [
+              _menuItem(
+                'playInstrument',
+                Icons.piano_outlined,
+                l10n.workshopPlayWithInstrument,
+              ),
+              CheckedPopupMenuItem(
+                value: 'countIn',
+                checked: _countIn,
+                child: Text(l10n.tabCountIn),
+              ),
+              CheckedPopupMenuItem(
+                value: 'mic',
+                checked: _listening,
+                child: Text(l10n.tabMic),
+              ),
+              const PopupMenuDivider(),
+              _menuItem('import', Icons.folder_open, l10n.tabImport),
+              _menuItem('audio', Icons.graphic_eq, l10n.tabOpenRecording),
+              _menuItem(
+                'songbook',
+                Icons.library_music_outlined,
+                l10n.tabOpenSongBook,
+              ),
+              _menuItem(
+                'save',
+                Icons.bookmark_add_outlined,
+                l10n.tabSaveSongBook,
+              ),
+              _menuItem('paste', Icons.content_paste, l10n.tabPasteAscii),
+              const PopupMenuDivider(),
+              _menuItem(
+                'shareTune',
+                Icons.upload,
+                l10n.tuneShare,
+                enabled: canShareMelody,
+              ),
+              _menuItem(
+                'loadTune',
+                Icons.download,
+                l10n.tuneLoadShared,
+                enabled: MelodyBridge.instance.hasMelody,
+              ),
+              _menuItem('workshop', Icons.edit_note, l10n.tabOpenWorkshop),
+              const PopupMenuDivider(),
               CheckedPopupMenuItem(
                 value: 'inspect',
                 checked: _inspect,
                 child: Text(l10n.inspectMode),
               ),
-              PopupMenuItem(
-                value: 'paste',
-                child: Text(l10n.tabPasteAscii),
-              ),
-              PopupMenuItem(
-                value: 'save',
-                child: Text(l10n.tabSaveSongBook),
-              ),
-              PopupMenuItem(
-                value: 'workshop',
-                child: Text(l10n.tabOpenWorkshop),
-              ),
-              PopupMenuItem(value: 'clear', child: Text(l10n.tabClear)),
+              _menuItem('clear', Icons.delete_sweep_outlined, l10n.tabClear),
             ],
           ),
         ],
@@ -1542,21 +1546,73 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     );
   }
 
-  /// The band's track strip: pick the track you're editing, add or remove one.
-  /// One compact control bar: active track · note duration · view mode, plus a
-  /// Settings button. Replaces the old track strip + controls rows; tuning,
-  /// capo, tempo, transpose, techniques, chord/pattern and track management all
-  /// live in the settings sheet.
+  /// The single control bar: active track · note duration (inline on wide
+  /// screens, a dropdown when cramped) · Tab & Notation view toggles · the Insert
+  /// (pattern) and Chord tools. Everything that is a genuine *setting* (tuning,
+  /// capo, tempo, transpose, techniques, track management) lives in the app-bar
+  /// Settings sheet, not here.
+  /// An icon+label overflow-menu row.
+  PopupMenuItem<String> _menuItem(
+    String value,
+    IconData icon,
+    String label, {
+    bool enabled = true,
+  }) =>
+      PopupMenuItem<String>(
+        value: value,
+        enabled: enabled,
+        child: Row(
+          children: [
+            Icon(icon, size: 20),
+            const SizedBox(width: 12),
+            Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+          ],
+        ),
+      );
+
   Widget _toolbar(AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
+    final wide = MediaQuery.sizeOf(context).width >= 560;
+    Widget sep() => Container(
+          width: 1,
+          height: 24,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          color: scheme.outlineVariant,
+        );
+
+    Widget durChip(NoteDuration dur, int steps) {
+      final sel = dur == _dur;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        child: InkWell(
+          onTap: () => setState(() {
+            _dur = dur;
+            _doc.setDuration(_selCol, dur);
+          }),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: sel ? scheme.primaryContainer : null,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: sel ? scheme.primary : scheme.outlineVariant,
+              ),
+            ),
+            child: Text(_durLabel(steps), style: const TextStyle(fontSize: 15)),
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
-          // Active track.
-          Icon(Icons.queue_music, size: 18, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 4),
+          // Active track (name only — no decorative icon).
           DropdownButton<int>(
             value: _active,
             underline: const SizedBox.shrink(),
@@ -1568,61 +1624,75 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
               if (i != null) selectTrack(i);
             },
           ),
-          const SizedBox(width: 16),
-          // Note duration to enter.
-          Icon(Icons.music_note, size: 18, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 4),
-          DropdownButton<NoteDuration>(
-            value: kTabDurations.any((e) => e.$1 == _dur) ? _dur : null,
-            underline: const SizedBox.shrink(),
-            hint: Text(l10n.tabDuration),
-            items: [
-              for (final (dur, steps) in kTabDurations)
-                DropdownMenuItem(value: dur, child: Text(_durLabel(steps))),
-            ],
-            onChanged: (d) {
-              if (d != null) {
-                setState(() {
-                  _dur = d;
-                  _doc.setDuration(_selCol, d);
-                });
-              }
-            },
+          sep(),
+          // Note length — inline palette when there's room, else a dropdown.
+          if (wide)
+            for (final (dur, steps) in kTabDurations) durChip(dur, steps)
+          else
+            DropdownButton<NoteDuration>(
+              value: kTabDurations.any((e) => e.$1 == _dur) ? _dur : null,
+              underline: const SizedBox.shrink(),
+              hint: Text(l10n.tabDuration),
+              items: [
+                for (final (dur, steps) in kTabDurations)
+                  DropdownMenuItem(value: dur, child: Text(_durLabel(steps))),
+              ],
+              onChanged: (d) {
+                if (d != null) {
+                  setState(() {
+                    _dur = d;
+                    _doc.setDuration(_selCol, d);
+                  });
+                }
+              },
+            ),
+          sep(),
+          // Tab and Notation are independent — you can show both together.
+          FilterChip(
+            label: Text(l10n.tabTuning),
+            avatar: const Icon(Icons.grid_on, size: 18),
+            selected: _showTab,
+            onSelected: (v) => setState(() => _showTab = v),
           ),
-          const SizedBox(width: 16),
-          // View mode: tablature or standard notation. (Grand staff: follow-up.)
-          SegmentedButton<_TabView>(
+          const SizedBox(width: 6),
+          SegmentedButton<_Notation>(
             style: const ButtonStyle(
               visualDensity: VisualDensity.compact,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             showSelectedIcon: false,
             segments: [
-              ButtonSegment(
-                value: _TabView.tab,
-                icon: const Icon(Icons.grid_on, size: 18),
-                tooltip: l10n.tabTuning,
+              const ButtonSegment(
+                value: _Notation.off,
+                icon: Icon(Icons.not_interested, size: 18),
+                tooltip: 'No staff',
               ),
               ButtonSegment(
-                value: _TabView.standard,
+                value: _Notation.standard,
                 icon: const Icon(Icons.music_note, size: 18),
                 tooltip: l10n.tabShowStandard,
               ),
               const ButtonSegment(
-                value: _TabView.grand,
+                value: _Notation.grand,
                 icon: Icon(Icons.piano, size: 18),
                 tooltip: 'Grand staff',
               ),
             ],
-            selected: {_view},
-            onSelectionChanged: (s) => setState(() => _view = s.first),
+            selected: {_notation},
+            onSelectionChanged: (s) => setState(() => _notation = s.first),
           ),
-          const SizedBox(width: 16),
-          // Everything else.
+          sep(),
+          // The two most-used insert tools, directly reachable.
           OutlinedButton.icon(
-            icon: const Icon(Icons.tune, size: 18),
-            label: Text(l10n.settingsTitle),
-            onPressed: () => _showTabSettings(l10n),
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: Text(l10n.tabPattern),
+            onPressed: _pickPattern,
+          ),
+          const SizedBox(width: 6),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.grid_goldenratio, size: 18),
+            label: Text(l10n.tabChord),
+            onPressed: _pickChord,
           ),
         ],
       ),
@@ -1902,28 +1972,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.grid_goldenratio, size: 18),
-                          label: Text(l10n.tabChord),
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            _pickChord();
-                          },
-                        ),
-                        OutlinedButton.icon(
-                          icon: const Icon(Icons.auto_awesome, size: 18),
-                          label: Text(l10n.tabPattern),
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            _pickPattern();
-                          },
-                        ),
-                      ],
-                    ),
+                    // (Chord + Insert-pattern live directly in the toolbar now.)
                     const Divider(height: 20),
                     Text(l10n.tabTracks, style: labelStyle),
                     const SizedBox(height: 6),

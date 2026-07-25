@@ -213,7 +213,7 @@ void main() {
     expect(tab.capo, 0);
     // The toolbar shows the active-track dropdown; tuning moved to Settings.
     expect(find.byType(DropdownButton<int>), findsOneWidget);
-    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.tune));
+    await tester.tap(find.byIcon(Icons.tune)); // Settings, now in the app bar
     await tester.pumpAndSettle();
     expect(find.byType(DropdownButton<Tuning>), findsOneWidget);
   });
@@ -232,7 +232,6 @@ void main() {
       () => tab.debugPlayWithInstrument(SampleInstrument('v', pcm)),
       returnsNormally,
     );
-    expect(find.byIcon(Icons.piano_outlined), findsWidgets);
   });
 
   testWidgets('the capo stepper is bounded at 0 and increments',
@@ -240,9 +239,9 @@ void main() {
     await pumpGame(tester, const TabWorkshopScreen());
     final tab = _tab(tester);
 
-    // At 0 the minus button is disabled; plus raises the capo. The capo stepper
-    // lives in the Settings sheet now (its + is the first Icons.add there).
-    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.tune));
+    // The capo stepper lives in the Settings sheet (app-bar gear); its + is the
+    // first Icons.add there.
+    await tester.tap(find.byIcon(Icons.tune));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add).first);
     await tester.pump();
@@ -489,10 +488,7 @@ void main() {
     final tab = _tab(tester);
     final before = tab.columnCount;
 
-    // The pattern/chord helpers live in the Settings sheet now.
-    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.tune));
-    await tester.pumpAndSettle();
-    // Open the "Insert…" sheet (the only auto_awesome button).
+    // Insert (pattern) is directly in the toolbar now.
     await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.auto_awesome));
     await tester.pumpAndSettle();
 
@@ -516,10 +512,7 @@ void main() {
     await tester.pump();
     expect(tab.chordNameAt(0), isNull);
 
-    // The chord helper lives in the Settings sheet now.
-    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.tune));
-    await tester.pumpAndSettle();
-    // Open the chord picker and hit a chord's preview (not its diagram).
+    // Chord is directly in the toolbar now.
     await tester
         .tap(find.widgetWithIcon(OutlinedButton, Icons.grid_goldenratio));
     await tester.pumpAndSettle();
@@ -810,26 +803,34 @@ void main() {
     expect(tab.isPlaying, isFalse);
   });
 
-  testWidgets('the view toggle switches tab / standard / grand staff',
+  testWidgets('Tab and Notation are independent, combinable view toggles',
       (tester) async {
     await pumpGame(tester, const TabWorkshopScreen());
 
-    // Standard notation over the tab by default.
-    expect(find.byType(NotationTabView), findsOneWidget);
-    expect(find.byType(GrandStaffView), findsNothing);
-
-    // Grand staff: split across treble + bass.
-    await tester.tap(find.byIcon(Icons.piano));
-    await tester.pump();
-    expect(find.byType(GrandStaffView), findsOneWidget);
-    expect(find.byType(NotationTabView), findsNothing);
-    expect(tester.takeException(), isNull);
-
-    // Tablature.
-    await tester.tap(find.byIcon(Icons.grid_on));
-    await tester.pump();
+    // Default: standard notation staff + tab, together.
+    expect(find.byType(StaffView), findsOneWidget);
     expect(find.byType(TabStaffView), findsOneWidget);
     expect(find.byType(GrandStaffView), findsNothing);
+
+    // Switch Notation to grand staff — the TAB is still shown alongside it.
+    await tester.tap(find.byIcon(Icons.piano)); // grand segment
+    await tester.pump();
+    expect(find.byType(GrandStaffView), findsOneWidget);
+    expect(find.byType(StaffView), findsNothing);
+    expect(find.byType(TabStaffView), findsOneWidget); // tab still there
+    expect(tester.takeException(), isNull);
+
+    // Turn the tab off (its FilterChip) — only the grand staff remains.
+    await tester.tap(find.widgetWithIcon(FilterChip, Icons.grid_on));
+    await tester.pump();
+    expect(find.byType(TabStaffView), findsNothing);
+    expect(find.byType(GrandStaffView), findsOneWidget);
+
+    // Notation off — with tab off too, nothing but an empty pane.
+    await tester.tap(find.byIcon(Icons.not_interested));
+    await tester.pump();
+    expect(find.byType(GrandStaffView), findsNothing);
+    expect(find.byType(StaffView), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }
