@@ -66,6 +66,7 @@ import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart'
     show harmonicFunctionColor;
 import 'package:comet_beat/features/games/composition/smear_pad.dart';
+import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart';
@@ -220,6 +221,10 @@ abstract interface class LoopMixerTester {
 
   /// Which drum track the beat editor targets ('drums' card or captured 'beat').
   void debugSetBeatTarget(String id);
+
+  /// Applies a Drum Kit round-trip result to the current beat target (the pure
+  /// half of "edit drums on the Drum Kit pads", without navigation).
+  void debugApplyDrumKitEdit(DrumRowsPattern edited);
 
   /// LM-UX4b: the tappable diatonic step-grid that builds/edits the tune (the
   /// user melodic track), via the shared StepGridView + setUserTrack.
@@ -577,6 +582,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       _toggleBeatEditCell(drum, step);
   @override
   void debugSetBeatTarget(String id) => setState(() => _beatTarget = id);
+  @override
+  void debugApplyDrumKitEdit(DrumRowsPattern edited) =>
+      _applyDrumKitEdit(edited);
 
   /// Which drum track the beat grid edits: the built-in 'drums' card or the
   /// captured beatboxed layer. The 'drums' edits write a per-track drum override
@@ -1599,6 +1607,33 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     );
   }
 
+  /// Round-trip the current beat target through the full Drum Kit pad editor:
+  /// seed the kit from the drum grid, and on Done apply the edited pattern back
+  /// to this track (the 'drums' card via a drum override, or the captured beat).
+  Future<void> _openDrumsInDrumKit() async {
+    final seed = _engine.drumRowsFor(_beatTarget) ?? const DrumRowsPattern({});
+    final edited = await Navigator.of(context).push<DrumRowsPattern>(
+      MaterialPageRoute(builder: (_) => DrumkitScreen(initialBeat: seed)),
+    );
+    if (edited == null || !mounted) return;
+    _applyDrumKitEdit(edited);
+  }
+
+  /// Applies a Drum Kit round-trip result to the current beat target and makes
+  /// it audible. Pure state mutation (no navigation) so it's unit-testable.
+  void _applyDrumKitEdit(DrumRowsPattern edited) {
+    setState(() {
+      if (_beatTarget == LoopEngine.beatTrackId) {
+        _engine.setUserBeatTrack(edited);
+        _engine.enabled.add(LoopEngine.beatTrackId);
+      } else {
+        _engine.setTrackDrums(_beatTarget, edited);
+        _engine.enabled.add(_beatTarget);
+      }
+    });
+    _syncPlayback();
+  }
+
   /// Open the groove in the Score Workshop for staff editing.
   void _openInWorkshop() {
     final l10n = AppLocalizations.of(context)!;
@@ -1915,11 +1950,26 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.loopMixerBeatEditHint,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.loopMixerBeatEditHint,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                   ),
+                ),
+                // Round-trip this beat into the full Drum Kit pad editor.
+                TextButton.icon(
+                  onPressed: _openDrumsInDrumKit,
+                  icon: const Icon(Icons.grid_4x4, size: 18),
+                  label: Text(l10n.loopMixerEditDrumsInKit),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 4),
             // Which drum track to edit — the drums card, or the captured beat.

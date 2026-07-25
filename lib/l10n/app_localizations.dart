@@ -3764,6 +3764,18 @@ abstract class AppLocalizations {
   /// **'Change sound'**
   String get drumkitChangeSound;
 
+  /// No description provided for @drumkitDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done — send back to Loop Studio'**
+  String get drumkitDone;
+
+  /// No description provided for @loopMixerEditDrumsInKit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit drums on the Drum Kit pads'**
+  String get loopMixerEditDrumsInKit;
+
   /// No description provided for @drumkitResetSound.
   ///
   /// In en, this message translates to:

@@ -693,6 +693,8 @@
   "drumkitSounds": "Klänge",
   "drumkitDefaultSound": "Standard-Drum",
   "drumkitChangeSound": "Klang ändern",
+  "drumkitDone": "Fertig — zurück ans Loop Studio",
+  "loopMixerEditDrumsInKit": "Drums auf den Drum-Kit-Pads bearbeiten",
   "drumkitResetSound": "Auf Standard zurücksetzen",
   "drumkitSoundUnavailable": "Für diesen Klang muss erst sein SoundFont geladen werden",
   "drumkitPresets": "Vorlagen",

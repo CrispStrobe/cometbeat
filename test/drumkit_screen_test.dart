@@ -4,6 +4,7 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/beat_capture.dart' show BeatFrame;
+import 'package:comet_beat/core/audio/loop_engine.dart' show DrumRowsPattern;
 import 'package:comet_beat/core/audio/synth.dart' show Drum;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
@@ -29,6 +30,30 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     BeatBridge.instance.clear();
+  });
+
+  testWidgets('round-trip: seeds the grid from initialBeat + reflects edits',
+      (tester) async {
+    final seed = DrumRowsPattern({
+      Drum.kick: List<bool>.filled(16, false)
+        ..[0] = true
+        ..[8] = true,
+      Drum.snare: List<bool>.filled(16, false)..[4] = true,
+    });
+    await pumpGame(tester, DrumkitScreen(initialBeat: seed));
+    final kit = _kit(tester);
+
+    // The pads start from the incoming drums pattern.
+    expect(kit.cellAt(Drum.kick, 0), isTrue);
+    expect(kit.cellAt(Drum.kick, 8), isTrue);
+    expect(kit.cellAt(Drum.snare, 4), isTrue);
+    expect(kit.cellAt(Drum.kick, 1), isFalse);
+
+    // Editing on the pads changes what a Done round-trip would return.
+    kit.toggle(Drum.hat, 2);
+    await tester.pump();
+    expect(kit.cellAt(Drum.hat, 2), isTrue);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('shares the beat to the bridge and loads a shared one back',

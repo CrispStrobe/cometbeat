@@ -768,6 +768,8 @@
   "drumkitSounds": "Sounds",
   "drumkitDefaultSound": "Default drum",
   "drumkitChangeSound": "Change sound",
+  "drumkitDone": "Done — send back to Loop Studio",
+  "loopMixerEditDrumsInKit": "Edit drums on the Drum Kit pads",
   "drumkitResetSound": "Reset to default",
   "drumkitSoundUnavailable": "That voice needs its SoundFont loaded first",
   "drumkitPresets": "Presets",

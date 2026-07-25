@@ -1391,6 +1391,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+      'Drum Kit round-trip applies the edited pattern to the drums card',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.toggleTrack('drums');
+    await tester.pump();
+    final before = game.debugRenderLoop();
+
+    // A pattern coming back from the Drum Kit pad editor (target = 'drums').
+    final edited = DrumRowsPattern({
+      Drum.kick: List<bool>.filled(16, false)
+        ..[0] = true
+        ..[8] = true,
+      Drum.snare: List<bool>.filled(16, false)..[12] = true,
+    });
+    game.debugApplyDrumKitEdit(edited);
+    await tester.pump();
+
+    // Applied to the drums card itself (no separate 'beat' overlay) + audible.
+    expect(game.hasBeatTrack, isFalse);
+    expect(game.debugBeatPattern!.rows[Drum.kick]![8], isTrue);
+    expect(game.debugBeatPattern!.rows[Drum.snare]![12], isTrue);
+    expect(game.debugRenderLoop(), isNot(equals(before)));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('per-track Edit opens the right editor targeting that track',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

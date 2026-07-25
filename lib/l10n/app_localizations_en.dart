@@ -2002,6 +2002,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drumkitChangeSound => 'Change sound';
 
   @override
+  String get drumkitDone => 'Done — send back to Loop Studio';
+
+  @override
+  String get loopMixerEditDrumsInKit => 'Edit drums on the Drum Kit pads';
+
+  @override
   String get drumkitResetSound => 'Reset to default';
 
   @override

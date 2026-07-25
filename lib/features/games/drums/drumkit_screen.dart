@@ -119,7 +119,13 @@ abstract interface class DrumkitTester {
 }
 
 class DrumkitScreen extends StatefulWidget {
-  const DrumkitScreen({super.key});
+  const DrumkitScreen({super.key, this.initialBeat});
+
+  /// When opened as an editor for another surface's beat (e.g. the Loop
+  /// Studio's Drums card), the grid starts from this pattern and a Done action
+  /// returns the edited pattern via the Navigator result (round-trip). Null for
+  /// the standalone tile.
+  final DrumRowsPattern? initialBeat;
 
   static const tempos = [80, 100, 120, 140];
 
@@ -187,6 +193,7 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   @override
   void initState() {
     super.initState();
+    _seedFromInitialBeat();
     _ticker = createTicker((_) {
       if (!_clock.isRunning) {
         _step.value = -1;
@@ -289,6 +296,29 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   Map<Drum, List<bool>> _snapshot() => {
         for (final e in _rows.entries) e.key: [...e.value],
       };
+
+  /// The current grid as a [DrumRowsPattern] — the round-trip Done result.
+  DrumRowsPattern get currentPattern => DrumRowsPattern(_snapshot());
+
+  /// Seed the grid from [DrumkitScreen.initialBeat] (round-trip open). Sets the
+  /// bar count to fit the incoming pattern so a 4/8-bar drums card round-trips
+  /// without truncation.
+  void _seedFromInitialBeat() {
+    final seed = widget.initialBeat;
+    if (seed == null) return;
+    var maxLen = 0;
+    for (final row in seed.rows.values) {
+      if (row.length > maxLen) maxLen = row.length;
+    }
+    _bars = maxLen > 16 ? 8 : (maxLen > 8 ? 4 : 2);
+    final steps = LoopTiming.stepsPerBar * _bars;
+    for (final d in Drum.values) {
+      final src = seed.rows[d] ?? const <bool>[];
+      _rows[d] = [
+        for (var i = 0; i < steps; i++) i < src.length && src[i],
+      ];
+    }
+  }
 
   /// Record the current pattern before a mutation, and drop the redo branch.
   void _pushUndo() {
@@ -910,6 +940,14 @@ class _DrumkitScreenState extends State<DrumkitScreen>
       appBar: GameAppBar(
         title: l10n.drumkitTitle,
         actions: [
+          // Round-trip: return the edited pattern to the surface that opened us
+          // (e.g. the Loop Studio's Drums card).
+          if (widget.initialBeat != null)
+            IconButton(
+              icon: const Icon(Icons.check),
+              tooltip: l10n.drumkitDone,
+              onPressed: () => Navigator.of(context).pop(currentPattern),
+            ),
           IconButton(
             icon: const Icon(Icons.undo),
             tooltip: l10n.myMelodyUndo,
