@@ -92,15 +92,15 @@ Uint8List writeIt(ItModule module) {
   // ── HEADER (0xC0 bytes) ──
   writeString('IMPM', 4); // 0x00
   writeString(module.name, 26); // 0x04
-  u16(0); // 0x1E
+  u16(module.rowHighlight); // 0x1E
   u16(ordNum); // 0x20 OrdNum
   u16(module.instruments.length); // 0x22 InsNum
   u16(smpNum); // 0x24 SmpNum
   u16(patNum); // 0x26 PatNum
   u16(module.createdWith); // 0x28 Cwt/v
-  u16(0x0200); // 0x2A Cmwt
+  u16(module.compatibleWith); // 0x2A Cmwt
   u16(module.flags | (module.instruments.isNotEmpty ? 0x0004 : 0)); // flags
-  u16(0); // 0x2E Special
+  u16(module.special); // 0x2E Special
   u8(module.globalVolume); // 0x30 global volume
   u8(module.mixVolume); // 0x31 mix volume
   u8(module.initialSpeed); // 0x32 initial speed

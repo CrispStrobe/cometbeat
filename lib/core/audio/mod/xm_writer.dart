@@ -157,12 +157,14 @@ Uint8List writeXm(XmModule module) {
       final row = r < pattern.rows.length ? pattern.rows[r] : const <XmCell>[];
       for (var c = 0; c < numChannels; c++) {
         final cell = c < row.length ? row[c] : XmCell.empty;
-        var mask = 0;
-        if (cell.note > 0) mask |= 0x01;
-        if (cell.instrument > 0) mask |= 0x02;
-        if (cell.volume > 0) mask |= 0x04;
-        if (cell.effect > 0) mask |= 0x08;
-        if (cell.effectParam > 0) mask |= 0x10;
+        var mask = cell.presentMask >= 0 ? cell.presentMask & 0x1F : 0;
+        if (cell.presentMask < 0) {
+          if (cell.note > 0) mask |= 0x01;
+          if (cell.instrument > 0) mask |= 0x02;
+          if (cell.volume > 0) mask |= 0x04;
+          if (cell.effect > 0) mask |= 0x08;
+          if (cell.effectParam > 0) mask |= 0x10;
+        }
         packed.addByte(0x80 | mask);
         if ((mask & 0x01) != 0) packed.addByte(cell.note & 0xFF);
         if ((mask & 0x02) != 0) packed.addByte(cell.instrument & 0xFF);

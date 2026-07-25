@@ -129,6 +129,7 @@ class XmCell {
     this.volume = 0,
     this.effect = 0,
     this.effectParam = 0,
+    this.presentMask = -1,
   });
 
   static const empty = XmCell();
@@ -138,6 +139,10 @@ class XmCell {
   final int instrument;
   final int volume;
   final int effect, effectParam;
+
+  /// Original packed-field presence bits: note=1, instrument=2, volume=4,
+  /// effect=8, parameter=16. -1 means infer presence from non-zero values.
+  final int presentMask;
 
   bool get isEmpty =>
       note == 0 &&
@@ -153,11 +158,12 @@ class XmCell {
       other.instrument == instrument &&
       other.volume == volume &&
       other.effect == effect &&
-      other.effectParam == effectParam;
+      other.effectParam == effectParam &&
+      other.presentMask == presentMask;
 
   @override
   int get hashCode =>
-      Object.hash(note, instrument, volume, effect, effectParam);
+      Object.hash(note, instrument, volume, effect, effectParam, presentMask);
 }
 
 /// A pattern: [numRows] rows × [channelCount] cells.

@@ -315,8 +315,10 @@ List<List<XmCell>> _unpackPattern(
       }
       final b = bytes[cursor++];
       int note = 0, instrument = 0, volume = 0, effect = 0, param = 0;
+      var presentMask = 0;
       if ((b & 0x80) != 0) {
         final mask = b;
+        presentMask = mask & 0x1F;
         if ((mask & 0x01) != 0 && cursor < end) note = bytes[cursor++];
         if ((mask & 0x02) != 0 && cursor < end) instrument = bytes[cursor++];
         if ((mask & 0x04) != 0 && cursor < end) volume = bytes[cursor++];
@@ -324,6 +326,7 @@ List<List<XmCell>> _unpackPattern(
         if ((mask & 0x10) != 0 && cursor < end) param = bytes[cursor++];
       } else {
         note = b;
+        presentMask = 0x1F;
         if (cursor < end) instrument = bytes[cursor++];
         if (cursor < end) volume = bytes[cursor++];
         if (cursor < end) effect = bytes[cursor++];
@@ -336,6 +339,7 @@ List<List<XmCell>> _unpackPattern(
           volume: volume,
           effect: effect,
           effectParam: param,
+          presentMask: presentMask,
         ),
       );
     }

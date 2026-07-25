@@ -231,6 +231,9 @@ class ItModule {
     this.initialTempo = 125,
     this.globalVolume = 128,
     this.createdWith = 0x0214,
+    this.compatibleWith = 0x0200,
+    this.special = 0,
+    this.rowHighlight = 0,
     this.flags = 9,
     this.mixVolume = 48,
     this.panSeparation = 128,
@@ -247,6 +250,7 @@ class ItModule {
   final int channelCount; // max used across patterns
   final int instrumentCount; // InsNum
   final int initialSpeed, initialTempo, globalVolume, flags, createdWith;
+  final int compatibleWith, special, rowHighlight;
   final int mixVolume, panSeparation, pitchWheelDepth;
 
   /// IT header channel state, indexed by channel (pan 0..64, volume 0..64).

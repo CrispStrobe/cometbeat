@@ -101,7 +101,9 @@ ItModule parseIt(Uint8List bytes) {
   final smpNum = u16(0x24);
   final patNum = u16(0x26);
   final cwtv = u16(0x28);
+  final cmwt = u16(0x2A);
   final flags = u16(0x2C);
+  final special = u16(0x2E);
   final useInstruments = (flags & 0x04) != 0;
   final globalVolume = u8(0x30);
   final initialSpeed = u8(0x32);
@@ -171,6 +173,9 @@ ItModule parseIt(Uint8List bytes) {
     initialTempo: initialTempo,
     globalVolume: globalVolume,
     createdWith: cwtv,
+    compatibleWith: cmwt,
+    special: special,
+    rowHighlight: u16(0x1E),
     flags: flags,
     mixVolume: u8(0x31),
     panSeparation: u8(0x34),

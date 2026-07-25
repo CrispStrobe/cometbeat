@@ -121,6 +121,16 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
             ia.fadeout == ib.fadeout,
         'XM instrument ${i + 1} playback fields differ');
   }
+  for (var p = 0; p < math.min(a.xmPatterns.length, b.xmPatterns.length); p++) {
+    final pa = a.xmPatterns[p], pb = b.xmPatterns[p];
+    check(pa.numRows == pb.numRows, 'XM pattern $p row count differs');
+    for (var r = 0; r < math.min(pa.rows.length, pb.rows.length); r++) {
+      for (var c = 0; c < math.min(pa.rows[r].length, pb.rows[r].length); c++) {
+        final xa = pa.rows[r][c], xb = pb.rows[r][c];
+        check(xa == xb, 'XM cell p$p r$r c$c differs');
+      }
+    }
+  }
 
   final patternCount = math.min(a.patterns.length, b.patterns.length);
   for (var p = 0; p < patternCount; p++) {
