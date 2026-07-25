@@ -975,6 +975,24 @@ void main() {
   });
 
   group('sample tick voice (per-tick effects on sample channels)', () {
+    test('a held sample uses its native sustain loop', () {
+      final pcm = Float64List.fromList(
+        List<double>.generate(3000, (i) => i < 1000 ? 0.2 : -0.2),
+      );
+      final inst = SampleInstrument(
+        'sustain',
+        pcm,
+        sustainLoopStart: 1000,
+        sustainLoopLength: 1000,
+      );
+      final timing = const TrackerTiming(rows: 8);
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60);
+      final rendered = inst.renderChannel(cells, timing);
+      final afterOneShot = timing.stepStartSample(4);
+      expect(rendered.sublist(afterOneShot).any((v) => v.abs() > 0.01), isTrue);
+    });
+
     test('stereo sample channels keep the right waveform through effects', () {
       final leftSample = Float64List.fromList(
         List<double>.filled(120000, 0.25),

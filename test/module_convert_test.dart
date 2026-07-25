@@ -30,6 +30,32 @@ Float64List _norm8(List<int> v) =>
     Float64List.fromList([for (final b in v) b / 128]);
 
 void main() {
+  test('IT sustain-loop sample metadata survives neutral round-trip', () {
+    final doc = ModuleDoc(
+      sourceFormat: ModuleFormat.mod,
+      channelCount: 1,
+      order: const [0],
+      patterns: [
+        const DocPattern([
+          [DocCell(note: 60, instrument: 1)],
+        ], 1),
+      ],
+      samples: [
+        DocSample(
+          pcm: Float64List.fromList(List<double>.filled(200, 0.2)),
+          sustainLoopStart: 40,
+          sustainLoopLength: 80,
+          sustainPingPong: true,
+        ),
+      ],
+    );
+    final back = parseAnyModule(convertToIt(doc));
+    final sample = back.samples.first;
+    expect(sample.sustainLoopStart, 40);
+    expect(sample.sustainLoopLength, 80);
+    expect(sample.sustainPingPong, isTrue);
+  });
+
   test('docFromXm preserves the instrument keymap for multi-sample instruments',
       () {
     final module = XmModule(

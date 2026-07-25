@@ -315,6 +315,8 @@ ItSample _parseSample(
   final loopStart = u32(so + 0x34);
   final loopEnd = u32(so + 0x38);
   final c5speed = u32(so + 0x3C);
+  final sustainStart = u32(so + 0x40);
+  final sustainEnd = u32(so + 0x44);
   final dataPtr = u32(so + 0x48);
 
   final sixteenBit = (flg & 0x02) != 0;
@@ -322,6 +324,8 @@ ItSample _parseSample(
   final hasSample = (flg & 0x01) != 0;
   final pingPong = (flg & 0x40) != 0; // bidirectional loop
   final loop = (flg & 0x10) != 0;
+  final sustain = (flg & 0x20) != 0;
+  final sustainPingPong = (flg & 0x80) != 0;
 
   Float64List pcm;
   Float64List? pcmRight;
@@ -371,6 +375,10 @@ ItSample _parseSample(
     loopStart: loopStart,
     loopEnd: loopEnd,
     loop: loop,
+    sustainStart: sustainStart,
+    sustainEnd: sustainEnd,
+    sustain: sustain,
+    sustainPingPong: sustainPingPong,
     c5speed: c5speed == 0 ? 8363 : c5speed,
     pan: pan,
     pingPong: pingPong,

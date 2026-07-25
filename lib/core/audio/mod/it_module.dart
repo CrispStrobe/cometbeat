@@ -83,6 +83,10 @@ class ItSample {
     this.loopStart = 0,
     this.loopEnd = 0,
     this.loop = false,
+    this.sustainStart = 0,
+    this.sustainEnd = 0,
+    this.sustain = false,
+    this.sustainPingPong = false,
     this.c5speed = 8363,
     this.pan = 128,
     this.pingPong = false,
@@ -100,8 +104,10 @@ class ItSample {
   final int cvt; // original sample conversion flags
   final Uint8List? rawData; // original compressed blocks, when retained
   final int length; // declared length in samples
-  final int loopStart, loopEnd;
+  final int loopStart, loopEnd, sustainStart, sustainEnd;
   final bool loop;
+  final bool sustain;
+  final bool sustainPingPong;
   final int c5speed; // playback rate at C-5
 
   /// Default stereo position 0 left … 128 centre … 255 right, from the sample

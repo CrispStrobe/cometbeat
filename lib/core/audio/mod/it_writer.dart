@@ -168,7 +168,9 @@ Uint8List writeIt(ItModule module) {
             (s.pcmRight != null ? 0x04 : 0) |
             (s.rawData != null ? 0x08 : 0) |
             (loop ? 0x10 : 0) |
-            (loop && s.pingPong ? 0x40 : 0)); // 0x40 = bidirectional loop
+            (s.sustain ? 0x20 : 0) |
+            (loop && s.pingPong ? 0x40 : 0) |
+            (s.sustain && s.sustainPingPong ? 0x80 : 0));
     final length = empty ? 0 : s.pcm.length;
 
     writeString('IMPS', 4); // 0x00
@@ -186,8 +188,8 @@ Uint8List writeIt(ItModule module) {
     u32(s.loopStart); // 0x34 loop start
     u32(s.loopEnd); // 0x38 loop end
     u32(s.c5speed); // 0x3C C5Speed
-    u32(0); // 0x40 sustain-loop start
-    u32(0); // 0x44 sustain-loop end
+    u32(s.sustainStart); // 0x40 sustain-loop start
+    u32(s.sustainEnd); // 0x44 sustain-loop end
     u32(0); // 0x48 sample pointer (patched)
     u32(0); // 0x4C vibrato
   }

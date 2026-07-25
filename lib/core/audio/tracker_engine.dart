@@ -546,6 +546,9 @@ class SampleInstrument implements TrackerInstrument {
     this.envelope = Envelope.declick,
     this.loopStart = 0,
     this.loopLength = 0,
+    this.sustainLoopStart = 0,
+    this.sustainLoopLength = 0,
+    this.sustainPingPong = false,
     this.offsetScale = 1.0,
     this.pingPong = false,
     this.volume = 1.0,
@@ -607,6 +610,12 @@ class SampleInstrument implements TrackerInstrument {
   final int loopStart;
   final int loopLength;
 
+  /// IT sustain loop, used while a note is held. After an explicit key-off the
+  /// ordinary playback loop is used, matching IT's two-loop model.
+  final int sustainLoopStart;
+  final int sustainLoopLength;
+  final bool sustainPingPong;
+
   /// A bidirectional ("ping-pong") loop bounces forward → backward → forward
   /// through `[loopStart, loopStart+loopLength)` instead of wrapping (the IT/XM
   /// bidi-loop flag). Default false = the plain forward loop (byte-identical).
@@ -633,6 +642,9 @@ class SampleInstrument implements TrackerInstrument {
     Envelope? envelope,
     int? loopStart,
     int? loopLength,
+    int? sustainLoopStart,
+    int? sustainLoopLength,
+    bool? sustainPingPong,
     double? offsetScale,
     bool? pingPong,
     double? volume,
@@ -652,6 +664,9 @@ class SampleInstrument implements TrackerInstrument {
         envelope: envelope ?? this.envelope,
         loopStart: loopStart ?? this.loopStart,
         loopLength: loopLength ?? this.loopLength,
+        sustainLoopStart: sustainLoopStart ?? this.sustainLoopStart,
+        sustainLoopLength: sustainLoopLength ?? this.sustainLoopLength,
+        sustainPingPong: sustainPingPong ?? this.sustainPingPong,
         offsetScale: offsetScale ?? this.offsetScale,
         pingPong: pingPong ?? this.pingPong,
         volume: volume ?? this.volume,
@@ -669,6 +684,11 @@ class SampleInstrument implements TrackerInstrument {
       loopLength > 0 &&
       loopStart >= 0 &&
       loopStart + loopLength <= sample.length;
+
+  bool get sustainLoops =>
+      sustainLoopLength > 0 &&
+      sustainLoopStart >= 0 &&
+      sustainLoopStart + sustainLoopLength <= sample.length;
 
   /// Renders a native stereo sample without flattening its right channel.
   ({Float64List left, Float64List right}) renderChannelStereo(
@@ -721,8 +741,22 @@ class SampleInstrument implements TrackerInstrument {
         // Looping sample → a wrapping read-pointer fills the whole run (so a
         // sustained note doesn't cut off). Else the existing one-shot resample
         // (byte-identical): a pitch-envelope glide, or a fixed-ratio cubic.
-        final buf = loops && maxOut > 0
-            ? _resampleLooping(source, baseRatio, maxOut, offset)
+        final useSustainLoop = sustainLoops && releaseSteps == 0;
+        final playbackLoop = useSustainLoop || loops;
+        final playbackLoopStart = useSustainLoop ? sustainLoopStart : loopStart;
+        final playbackLoopLength =
+            useSustainLoop ? sustainLoopLength : loopLength;
+        final playbackPingPong = useSustainLoop ? sustainPingPong : pingPong;
+        final buf = playbackLoop && maxOut > 0
+            ? _resampleLooping(
+                source,
+                baseRatio,
+                maxOut,
+                offset,
+                loopStart: playbackLoopStart,
+                loopLength: playbackLoopLength,
+                pingPong: playbackPingPong,
+              )
             : envelope.pitchStart != 0 && maxOut > 0
                 ? resampleGlide(
                     src,
@@ -836,13 +870,23 @@ class SampleInstrument implements TrackerInstrument {
     Float64List source,
     double ratio,
     int outLen,
-    int startPos,
-  ) {
+    int startPos, {
+    int? loopStart,
+    int? loopLength,
+    bool? pingPong,
+  }) {
+    final activeLoopStart = loopStart ?? this.loopStart;
+    final activeLoopLength = loopLength ?? this.loopLength;
+    final activePingPong = pingPong ?? this.pingPong;
     final out = Float64List(outLen);
     var pos = startPos.toDouble();
     for (var i = 0; i < outLen; i++) {
-      final p =
-          foldLoopPosition(pos, loopStart, loopLength, pingPong: pingPong);
+      final p = foldLoopPosition(
+        pos,
+        activeLoopStart,
+        activeLoopLength,
+        pingPong: activePingPong,
+      );
       final idx = p.floor();
       if (idx >= source.length - 1) {
         out[i] = idx < source.length ? source[idx] : 0.0;

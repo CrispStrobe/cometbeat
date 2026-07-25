@@ -577,6 +577,11 @@ ModuleDoc docFromIt(ItModule m) {
         volume: s.defaultVolume,
         loopStart: s.loopStart,
         loopLength: looped ? (s.loopEnd - s.loopStart) : 0,
+        sustainLoopStart: s.sustainStart,
+        sustainLoopLength: s.sustain && s.sustainEnd > s.sustainStart
+            ? s.sustainEnd - s.sustainStart
+            : 0,
+        sustainPingPong: s.sustain && s.sustainPingPong,
         c5speed: s.c5speed,
         pan: s.pan,
         pingPong: looped && s.pingPong,
@@ -1280,6 +1285,10 @@ ItModule docToIt(ModuleDoc doc) {
         loopStart: ds.loopStart,
         loopEnd: ds.loopStart + ds.loopLength,
         loop: ds.loopLength > 0,
+        sustainStart: ds.sustainLoopStart,
+        sustainEnd: ds.sustainLoopStart + ds.sustainLoopLength,
+        sustain: ds.sustainLoopLength > 0,
+        sustainPingPong: ds.sustainPingPong,
         c5speed: ds.c5speed,
         pan: ds.pan,
         pingPong: ds.pingPong,

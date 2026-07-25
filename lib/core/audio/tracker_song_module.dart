@@ -716,6 +716,9 @@ DocSample _docSampleForInstrument(
       c5speed: (engineRate * ratio).round(),
       loopStart: (inst.loopStart * ratio).round(),
       loopLength: (inst.loopLength * ratio).round(),
+      sustainLoopStart: (inst.sustainLoopStart * ratio).round(),
+      sustainLoopLength: (inst.sustainLoopLength * ratio).round(),
+      sustainPingPong: inst.sustainPingPong,
       pingPong: inst.pingPong,
       // Full precision where the format allows (XM/IT/S3M); MOD stays 8-bit.
       sixteenBit: sixteenBit,

@@ -60,6 +60,9 @@ class DocSample {
     this.volume = 64,
     this.loopStart = 0,
     this.loopLength = 0,
+    this.sustainLoopStart = 0,
+    this.sustainLoopLength = 0,
+    this.sustainPingPong = false,
     this.c5speed = 8363,
     this.pan = 128,
     this.pingPong = false,
@@ -80,6 +83,8 @@ class DocSample {
   final int volume; // 0..64 default volume
   final int loopStart; // in samples
   final int loopLength; // in samples (0 = no loop)
+  final int sustainLoopStart; // IT sustain-loop start, in samples
+  final int sustainLoopLength; // IT sustain-loop length (0 = none)
   final int c5speed; // playback rate (Hz) at the C-5 reference
 
   /// Default stereo position, 0 = hard left … 128 = centre … 255 = hard right.
@@ -87,6 +92,7 @@ class DocSample {
   final int pan;
 
   final bool pingPong; // bidirectional ("ping-pong") loop (IT/XM flag)
+  final bool sustainPingPong; // IT sustain-loop direction
 
   /// Store the sample at 16-bit depth where the container supports it (XM/IT).
   /// Default false = the classic 8-bit sample (byte-identical export). MOD/S3M

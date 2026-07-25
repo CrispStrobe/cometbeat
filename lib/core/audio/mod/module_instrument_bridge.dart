@@ -70,12 +70,17 @@ SampleInstrument sampleInstrumentFromDoc(
   // index = original / ratio). loopLength 0 = no loop.
   final loopStart = (sample.loopStart / ratio).round();
   final loopLength = (sample.loopLength / ratio).round();
+  final sustainLoopStart = (sample.sustainLoopStart / ratio).round();
+  final sustainLoopLength = (sample.sustainLoopLength / ratio).round();
   return SampleInstrument(
     id,
     atEngineRate,
     baseMidi: baseMidi,
     loopStart: loopStart,
     loopLength: loopLength,
+    sustainLoopStart: sustainLoopStart,
+    sustainLoopLength: sustainLoopLength,
+    sustainPingPong: sample.sustainPingPong,
     pingPong: sample.pingPong,
     volume: (sample.volume.clamp(0, 64) / 64.0) *
         (sample.globalVolume.clamp(0, 128) / 128.0),

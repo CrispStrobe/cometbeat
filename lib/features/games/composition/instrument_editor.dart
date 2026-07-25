@@ -186,6 +186,14 @@ class _SampleEditor extends StatelessWidget {
     final len = inst.sample.length;
     final startFrac = len == 0 ? 0.0 : inst.loopStart / len;
     final endFrac = len == 0 ? 1.0 : (inst.loopStart + inst.loopLength) / len;
+    final sustainStartFrac = len == 0
+        ? 0.0
+        : (inst.sustainLoopStart.clamp(0, len) / len.toDouble()).toDouble();
+    final sustainEndFrac = inst.sustainLoopLength <= 0 || len == 0
+        ? 1.0
+        : ((inst.sustainLoopStart + inst.sustainLoopLength).clamp(0, len) /
+                len.toDouble())
+            .toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,6 +229,35 @@ class _SampleEditor extends StatelessWidget {
           onChanged: (v) {
             onChanged(inst.copyWith(pingPong: v));
           },
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'Sustain Loop Editor',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        SampleWaveform(
+          pcm: inst.sample,
+          start: sustainStartFrac,
+          end: sustainEndFrac,
+          onChanged: (s, e) {
+            if (len == 0) return;
+            final sustainStart = (s * len).round();
+            final sustainEnd = (e * len).round();
+            onChanged(inst.copyWith(
+              sustainLoopStart: sustainStart,
+              sustainLoopLength: sustainEnd - sustainStart,
+            ));
+          },
+          wave: Theme.of(context).colorScheme.secondary,
+          bg: Theme.of(context).colorScheme.surfaceContainerHighest,
+        ),
+        SwitchListTile(
+          title: const Text('Ping-Pong Sustain'),
+          subtitle: const Text('Bounces while the note is held'),
+          value: inst.sustainPingPong,
+          onChanged: (v) => onChanged(inst.copyWith(sustainPingPong: v)),
         ),
         ListTile(
           title: const Text('Base Note (Tuning)'),
