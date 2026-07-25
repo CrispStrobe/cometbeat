@@ -83,7 +83,8 @@ Future<bool?> showCatalogBrowseSheet(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720, maxHeight: 900),
         child: CatalogBrowseSheet(
-          source: source ?? CometbeatCatalogSource(defaultHttpGet, kinds: kinds),
+          source:
+              source ?? CometbeatCatalogSource(defaultHttpGet, kinds: kinds),
           store: store ?? InstrumentLibraryStore(),
           initialKind: initialKind,
           kinds: kinds,

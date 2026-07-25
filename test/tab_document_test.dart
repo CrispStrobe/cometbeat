@@ -715,7 +715,9 @@ void main() {
     test('a direction mark stamps Measure.navigation and round-trips', () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: [for (var i = 0; i < 4; i++) const TabColumn(frets: {0: 0})],
+        columns: [
+          for (var i = 0; i < 4; i++) const TabColumn(frets: {0: 0}),
+        ],
       );
       doc.setBarNavigation(0, NavigationMark.daCapo);
       expect(doc.toScore().measures.first.navigation, NavigationMark.daCapo);
@@ -726,7 +728,9 @@ void main() {
     test('a section label becomes a Score annotation and round-trips', () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: [const TabColumn(frets: {0: 0})],
+        columns: [
+          const TabColumn(frets: {0: 0}),
+        ],
       );
       doc.setSection(0, 'Verse');
       final score = doc.toScore();
