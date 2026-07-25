@@ -344,6 +344,21 @@ const List<DrumKit> kDrumKits = [
     sweep: 0.90,
     crush: 0.7,
   ),
+  // Snappy, short attack — a tight modern pop kit.
+  DrumKit('punchy', tune: 1.06, decay: 0.48, noise: 0.90, sweep: 1.10),
+  // Big sub-heavy 808-style boom.
+  DrumKit('boom', tune: 0.68, decay: 0.95, noise: 0.70, sweep: 1.55),
+  // Very short, dry and controlled.
+  DrumKit('tight', tune: 1.02, decay: 0.38, noise: 0.98, sweep: 0.70),
+  // Warm, saturated, gently crushed — a tape/vinyl flavour.
+  DrumKit(
+    'tape',
+    tune: 0.90,
+    decay: 0.92,
+    noise: 1.16,
+    sweep: 0.84,
+    crush: 0.4,
+  ),
 ];
 
 /// Resolve a kit id to its profile (unknown ids → the clean kit).

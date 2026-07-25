@@ -36,6 +36,7 @@ import 'package:comet_beat/features/games/composition/my_melody_screen.dart';
 import 'package:comet_beat/features/games/composition/question_answer_screen.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/drums/drum_read_screen.dart';
+import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
 import 'package:comet_beat/features/games/expression/articulation_ear_screen.dart';
 import 'package:comet_beat/features/games/expression/charades_screen.dart';
 import 'package:comet_beat/features/games/expression/crescendo_ear_screen.dart';
@@ -1253,6 +1254,15 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.loopStudioTitle,
       subtitle: (l) => l.loopStudioSubtitle,
       builder: (_) => const LoopStudioScreen(),
+    ),
+    // Drum Kit: tap-a-pad beat maker (swap sounds, extend bars). Shares its
+    // beat with the Loop Studio via BeatBridge.
+    GameInfo(
+      id: 'drumkit',
+      icon: Icons.grid_4x4,
+      title: (l) => l.gameDrumKit,
+      subtitle: (l) => l.gameDrumKitSubtitle,
+      builder: (_) => const DrumkitScreen(),
     ),
     // Touch-first pattern sequencer (a kid-friendly tracker): pick an
     // instrument, tap a pentatonic grid, layers loop together. A sandbox,

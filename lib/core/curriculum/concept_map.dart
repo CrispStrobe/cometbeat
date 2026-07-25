@@ -604,7 +604,7 @@ const List<Concept> kConcepts = [
     GradeBand.g56,
     ConceptArea.creating,
     'Layer and arrange loops',
-    ['loop_mixer', 'tracker'],
+    ['loop_mixer', 'tracker', 'drumkit'],
   ),
   Concept(
     'learn_songs',

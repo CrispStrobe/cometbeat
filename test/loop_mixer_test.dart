@@ -1361,6 +1361,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('per-track Edit opens the right editor targeting that track',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.toggleTrack('melody');
+    await tester.pump();
+
+    // Editing a pitched card opens the tune grid (targeting that track).
+    expect(game.tuneEditVisible, isFalse);
+    game.editTrack('melody');
+    await tester.pump();
+    expect(game.tuneEditVisible, isTrue);
+    expect(game.beatEditVisible, isFalse);
+
+    // Editing the drums card opens the beat grid instead.
+    game.editTrack('drums');
+    await tester.pump();
+    expect(game.beatEditVisible, isTrue);
+    expect(game.tuneEditVisible, isFalse);
+    // The edited track is enabled so the edit is audible.
+    expect(game.enabledTracks, contains('drums'));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a captured beat track can be removed; built-ins cannot',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

@@ -1386,6 +1386,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerKitLofi => 'Lo-fi';
 
   @override
+  String get loopMixerKitPunchy => 'Punchy';
+
+  @override
+  String get loopMixerKitBoom => 'Boom';
+
+  @override
+  String get loopMixerKitTight => 'Tight';
+
+  @override
+  String get loopMixerKitTape => 'Tape';
+
+  @override
+  String get loopMixerEditTrack => 'Edit this track\'s notes';
+
+  @override
+  String get loopMixerOpenWorkshopEditor => 'Open in Score Workshop';
+
+  @override
+  String get gameDrumKit => 'Drum Kit';
+
+  @override
+  String get gameDrumKitSubtitle =>
+      'Build a beat on the pads — swap sounds, add bars';
+
+  @override
   String get loopMixerFilter => 'Filter';
 
   @override

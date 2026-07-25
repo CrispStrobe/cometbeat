@@ -2618,6 +2618,54 @@ abstract class AppLocalizations {
   /// **'Lo-fi'**
   String get loopMixerKitLofi;
 
+  /// No description provided for @loopMixerKitPunchy.
+  ///
+  /// In en, this message translates to:
+  /// **'Punchy'**
+  String get loopMixerKitPunchy;
+
+  /// No description provided for @loopMixerKitBoom.
+  ///
+  /// In en, this message translates to:
+  /// **'Boom'**
+  String get loopMixerKitBoom;
+
+  /// No description provided for @loopMixerKitTight.
+  ///
+  /// In en, this message translates to:
+  /// **'Tight'**
+  String get loopMixerKitTight;
+
+  /// No description provided for @loopMixerKitTape.
+  ///
+  /// In en, this message translates to:
+  /// **'Tape'**
+  String get loopMixerKitTape;
+
+  /// No description provided for @loopMixerEditTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit this track\'s notes'**
+  String get loopMixerEditTrack;
+
+  /// No description provided for @loopMixerOpenWorkshopEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in Score Workshop'**
+  String get loopMixerOpenWorkshopEditor;
+
+  /// No description provided for @gameDrumKit.
+  ///
+  /// In en, this message translates to:
+  /// **'Drum Kit'**
+  String get gameDrumKit;
+
+  /// No description provided for @gameDrumKitSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a beat on the pads — swap sounds, add bars'**
+  String get gameDrumKitSubtitle;
+
   /// No description provided for @loopMixerFilter.
   ///
   /// In en, this message translates to:

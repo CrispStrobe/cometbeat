@@ -199,6 +199,10 @@ abstract interface class LoopMixerTester {
   /// removed. No-op for unknown/built-in ids.
   void deleteTrack(String id);
 
+  /// Open track [id]'s in-place event editor (beat grid for drums, tune grid
+  /// for a pitched track) targeting that track.
+  void editTrack(String id);
+
   void stopAll();
   bool get scoreVisible;
   void toggleScorePanel();
@@ -520,6 +524,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void redo() => _redoEdit();
   @override
   void deleteTrack(String id) => _deleteTrack(id);
+  @override
+  void editTrack(String id) => _editTrack(id);
 
   @override
   void stopAll() => _stopAll();
@@ -621,6 +627,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     'melody',
     'chords',
     'bass',
+    'sparkle',
   ];
 
   bool get _tuneTargetIsUser => _tuneTarget == LoopEngine.userTrackId;
@@ -1821,6 +1828,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             ? () => _deleteTrack(track.id)
             : null,
         deleteTooltip: l10n.loopMixerDeleteTrack,
+        // Per-track Edit → open this track's beat/tune grid (Loop Studio
+        // contract: edit the actual events, not a baked preview).
+        onEdit: _trackIsEditable(track) ? () => _editTrack(track.id) : null,
+        editTooltip: l10n.loopMixerEditTrack,
       ),
     );
   }
@@ -2427,6 +2438,36 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     if (_engine.enabled.contains(id)) _syncPlayback();
   }
 
+  /// Whether track [id] has an in-place event editor: drums/beat → the beat
+  /// grid, any pitched track → the tune grid.
+  bool _trackIsEditable(LoopTrack t) =>
+      t.id == 'drums' ||
+      t.id == LoopEngine.beatTrackId ||
+      _tuneTargets.contains(t.id) ||
+      _trackIsPitched(t);
+
+  /// Per-track Edit (Loop Studio contract): open the editor for THIS track's
+  /// actual events — the beat grid for a drum/beat track, or the tune grid
+  /// targeting this pitched track — and make sure it's audible while editing.
+  void _editTrack(String id) {
+    final isDrum = id == 'drums' || id == LoopEngine.beatTrackId;
+    setState(() {
+      if (isDrum) {
+        _showBeatEdit = true;
+        _showTuneEdit = false;
+      } else {
+        _tuneTarget = _tuneTargets.contains(id) ? id : LoopEngine.userTrackId;
+        _showTuneEdit = true;
+        _showBeatEdit = false;
+      }
+      if (!_engine.enabled.contains(id) &&
+          _engine.tracks.any((t) => t.id == id)) {
+        _engine.enabled.add(id);
+      }
+    });
+    _syncPlayback();
+  }
+
   void _setSwing(double value) {
     setState(() => _engine.swing = value);
     _syncPlayback();
@@ -2794,6 +2835,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         'deep' => l10n.loopMixerKitDeep,
         'warm' => l10n.loopMixerKitWarm,
         'lofi' => l10n.loopMixerKitLofi,
+        'punchy' => l10n.loopMixerKitPunchy,
+        'boom' => l10n.loopMixerKitBoom,
+        'tight' => l10n.loopMixerKitTight,
+        'tape' => l10n.loopMixerKitTape,
         _ => l10n.loopMixerKitClean,
       };
 
@@ -2867,6 +2912,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             toggleFollow();
           case 'tracker':
             _openInTracker();
+          case 'workshop':
+            _openInWorkshop();
           case 'share':
             _openShareSheet();
         }
@@ -2921,6 +2968,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
               const Icon(Icons.open_in_full, size: 18),
               const SizedBox(width: 10),
               Flexible(child: Text(l10n.loopMixerOpenTracker)),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'workshop',
+          enabled: hasPitchedTrack,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.edit_note, size: 18),
+              const SizedBox(width: 10),
+              Flexible(child: Text(l10n.loopMixerOpenWorkshopEditor)),
             ],
           ),
         ),
@@ -3861,6 +3920,8 @@ class _TrackCard extends StatelessWidget {
     this.pan = 0.0,
     this.onPan,
     this.panLabel,
+    this.onEdit,
+    this.editTooltip,
   });
 
   final Color color;
@@ -3895,6 +3956,11 @@ class _TrackCard extends StatelessWidget {
   final double pan;
   final ValueChanged<double>? onPan;
   final String? panLabel;
+
+  /// Opens this track's event editor (beat/tune grid). Null for tracks with no
+  /// editable events.
+  final VoidCallback? onEdit;
+  final String? editTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -3967,6 +4033,7 @@ class _TrackCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Icon(Icons.piano, size: 18, color: foreground),
                 ],
+                if (!compact && onEdit != null) _editButton(foreground),
                 if (!compact) _soloButton(foreground),
                 if (!compact && onDelete != null) _deleteButton(foreground),
               ],
@@ -3976,6 +4043,7 @@ class _TrackCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (onEdit != null) _editButton(foreground),
                   _soloButton(foreground),
                   if (onDelete != null) _deleteButton(foreground),
                 ],
@@ -4068,6 +4136,18 @@ class _TrackCard extends StatelessWidget {
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
           icon: Icon(Icons.delete_outline, size: 18, color: foreground),
+        ),
+      );
+
+  Widget _editButton(Color foreground) => Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: IconButton(
+          tooltip: editTooltip,
+          onPressed: onEdit,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          icon: Icon(Icons.edit_note, size: 20, color: foreground),
         ),
       );
 }
