@@ -13,6 +13,7 @@ import 'package:comet_beat/features/sound_lab/instrument_library_store.dart';
 import 'package:comet_beat/features/sound_lab/instrument_play_screen.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +61,32 @@ class _FakeFileSelector extends FileSelectorPlatform
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  // §B2/§D3 — the single Sound Library browser must gather every acquisition
+  // entry point (catalog, music library, Mod Archive, Load SoundFont, file
+  // import) so modes don't need parallel one-off menus. Guards the unification.
+  testWidgets('the unified Sound Library exposes every entry point',
+      (tester) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await pumpGame(
+      tester,
+      _hosted(
+        MyInstrumentsSheet(
+          store: InstrumentLibraryStore(),
+          onMusicSelected: (_) async {},
+          onModuleSelected: (_) async {},
+          onSoundFontSelected: (_) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip(l10n.soundLibraryBrowseCatalog), findsOneWidget);
+    expect(find.byTooltip(l10n.musicPickerTitle), findsOneWidget);
+    expect(find.byTooltip(l10n.trackerModArchive), findsOneWidget);
+    expect(find.byTooltip(l10n.trackerLoadSoundFont), findsOneWidget);
+    expect(find.byTooltip(l10n.mySamplesImport), findsOneWidget);
+  });
 
   testWidgets('lists saved instruments with source + kind', (tester) async {
     final store = InstrumentLibraryStore();
