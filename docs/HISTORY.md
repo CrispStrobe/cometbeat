@@ -876,7 +876,7 @@ Games built on crisp_notation capabilities the app didn't use before.
 **STATUS 2026-07-17: ALL SLICES SHIPPED — the ladder is complete** (slices
 1–10; slice 5 deferred to the Tracker by design). See the board + HISTORY.md.
 Follow-ups (groove→score export, native-AEC jam grading) are specced in
-[`LOOP_MIXER_FOLLOWUPS_HANDOVER.md`](LOOP_MIXER_FOLLOWUPS_HANDOVER.md).
+`LOOP_MIXER_FOLLOWUPS_HANDOVER.md`.
 
 Evolve the shipped Loop Mixer (`32ebb96`) from kid toy into something adults
 find genuinely fascinating. Guiding idea: **kids love cause-and-effect; adults
@@ -1917,7 +1917,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
   stamp, feeds playback), mid-*bar* clef changes (`inlineClefs`), voice 2, the
   **Studio shell** (input modes + inspector, Causes 2+3), and **playback** (real
   transport + moving cursor). **A fresh agent should start from
-  [`docs/WORKSHOP_NEXT_HANDOVER.md`](WORKSHOP_NEXT_HANDOVER.md)** — it scopes each
+  `docs/WORKSHOP_NEXT_HANDOVER.md`** — it scopes each
   remaining item, the id-anchor-vs-field pattern that built the batch, the
   byte-identity invariant, and the test conventions.
 
@@ -1971,7 +1971,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
   📋 **Full idea backlog —
   codecs, FX (crispaudio/CrispFXR/voicelab + OpenMPT), sampling, notation, Studio
   depth — in [`docs/TRACKER_IDEAS.md`](TRACKER_IDEAS.md); the FX effort in
-  [`docs/FX_HANDOVER.md`](FX_HANDOVER.md).**
+  `docs/FX_HANDOVER.md`.**
 - **opus (tracker)** · ✅ **idle / SHIPPED — `.mod` import/export codec.** Pure-Dart
   ProTracker codec in `lib/core/audio/mod/` (model+contract `mod_module.dart`,
   `parseMod` reader, `writeMod` writer — implemented by two sub-agents against the
@@ -1985,7 +1985,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
 - **opus (tracker)** · ✅ **idle / SHIPPED — Tracker (pattern sequencer).** Dual-audience
   tracker (ModEdit/FT2/ST3/IT spirit, touch-first, Sandbox/Studio two-skins-over-
   one-model) built ON the shipped Loop Mixer engine (`mixStems` +
-  `loop_engine.dart`). Full plan: [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
+  `loop_engine.dart`). Full plan: `docs/TRACKER_HANDOVER.md`.
   Worktree `../mus-tracker`, branch `feature/tracker`.
   ✅ **Slice 0 SHIPPED** (`98cdb05`): pure-Dart `TrackerEngine` (additive), 13
   tests. ✅ **Slice 1 SHIPPED** (`775fe03`): the Sandbox grid screen (instrument
@@ -2031,7 +2031,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
   deliberately-deferred big items remain (`.mod`/`.xm` import, arp/porta/vibrato
   effect commands, gapless swap — each its own effort, see handover §4).
   **opus (tracker) → idle.** Handover:
-  [`docs/TRACKER_HANDOVER.md`](TRACKER_HANDOVER.md).
+  `docs/TRACKER_HANDOVER.md`.
 - **opus (parity)** · ✅ **idle / SHIPPED — notation-depth batch (voltas/nav, tuplets, discontiguous selection, RhythmPolicy.split).**
   Working through the tracked roadmap in
   [`WORKSHOP_PARITY.md`](WORKSHOP_PARITY.md) §"Notation-depth roadmap": **(1)
@@ -2065,7 +2065,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
   `game_registry.dart`, `core/tuning.dart`, the ARBs, `connect_line_screen.dart`,
   `accidental_sort_screen.dart`, `key_find_screen.dart`. **Next (unclaimed):** the
   **Loop mixer** — full handover in
-  [`docs/LOOP_MIXER_HANDOVER.md`](LOOP_MIXER_HANDOVER.md).
+  `docs/LOOP_MIXER_HANDOVER.md`.
 - **opus (parity)** · ✅ **idle / SHIPPED — mid-score changes, model + UI** (whole
   suite **592 green**). The full clef/key/time mid-score-change family now works
   end-to-end on the flat model via **element-id anchors** (no bar-spine flip):
@@ -2097,7 +2097,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
   **Nothing of the ladder remains.** The two natural follow-ups (groove→
   Song Book/Workshop export · native-AEC full-duplex jam grading) are
   written up as a buildable handover:
-  [`docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md`](LOOP_MIXER_FOLLOWUPS_HANDOVER.md)
+  `docs/LOOP_MIXER_FOLLOWUPS_HANDOVER.md`
   — unclaimed, each is a session-sized effort.
 - **fable (loop-mixer)** · ✅ **SHIPPED — Loop Mixer 2.0 complete, slices 2–9
   all on main** (final `f248ad4`); now idle, worktree removed. One session:
@@ -2343,7 +2343,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
   `MultiPartScore(parts:)` → `MultiPartView`) + smaller engraving wins
   (`Measure.actualDuration`, metric-aware beaming). **Did NOT touch
   `lib/features/workshop/**`** — over to you, @workshop→games. Only edited docs.
-  **Wrote a comprehensive G6 handover → [`docs/WORKSHOP_G6_HANDOVER.md`](WORKSHOP_G6_HANDOVER.md)**
+  **Wrote a comprehensive G6 handover → `docs/WORKSHOP_G6_HANDOVER.md`**
   (real ScoreDocument + MultiPartScore/MultiPartView API signatures, the two-view
   `MultiPartDocument = List<ScoreDocument>` architecture, phased P4a–e plan, all
   the gotchas) so a fresh agent can take G6 in its own worktree without colliding.
@@ -2428,7 +2428,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
   hook + `tutorial_gate.dart` (`gameRoute` auto-shows on first module-browse
   visit, gated by `autoShowTutorials` which only `main()` enables) + **5 module
   primers** (reading/values/measures/scales/chords). **Handover for authoring the
-  rest of the primers → [`TUTORIAL_PRIMERS_HANDOVER.md`](TUTORIAL_PRIMERS_HANDOVER.md).**
+  rest of the primers → `TUTORIAL_PRIMERS_HANDOVER.md`.**
   Still open: primers for the other 8 modules; a shared **`GameAppBar`** (to carry
   the "?" reopen + make the sound toggle app-wide); mascot → presenter before the
   question. ⚠️ note: `autoShowTutorials` defaults OFF so it never disturbs widget
@@ -2542,7 +2542,7 @@ the 2026-07-17 sweep (newest at the top of this batch):_
   `composition_workshop_screen.dart`. Whole-project analyze clean, workshop
   widget tests green. **C10 (a+b) complete — no app-side drag fake remains.** ·
   **idle** (all shipped to origin/main) · detail:
-  [WORKSHOP_PLAN.md](WORKSHOP_PLAN.md).
+  WORKSHOP_PLAN.md.
 - _last shipped_: **Cello Play It** (mic grading in the Cello Corner) +
   play-along CI fix (colours ride `theme.elementColors`, not the private-only
   `MultiSystemView(elementColors:)` param); and **Workshop P0/P1/P2a** (About
@@ -2561,3 +2561,84 @@ double-talk tail is <0.7× linear (froze during double-talk). Also fixed
 whole native suite green on macOS (7/7). All inside `native/aec/` (out of app
 CI) — no app change. Remaining is now scoped in PLAN.md (wire the C DTD into
 `aec_shim.c`'s callback so jam mode uses it; port RES to C; milestone (e)).
+
+## 2026-07-25 — Documentation consolidation (doc sweep)
+
+Consolidated ~40 standalone handover/scoping/status docs down to a small set of
+living references. Pending work was relocated to the canonical **[PLAN.md](../PLAN.md)**
+(repo root); the shipped record below rolls up the coordination board and the
+completed design logs. **30 fully-shipped docs were deleted** (their content is
+preserved here and in code); the list is at the end for git-history traceability.
+
+### Coordination board — condensed shipped log (114 entries → rollup)
+The `docs/PLAN.md` "🚧 Actively working on" board had accumulated 114
+`✅ SHIPPED/idle` bullets since the 2026-07-19 sweep. Rolled up by theme:
+
+- **DAW / crispaudio-parity (codex, ~45 ships):** the full stereo pipeline end to
+  end — stereo source preservation & import (WAV/MP3/FLAC), stereo project
+  persistence, stereo-aware destructive ops (freeze/reverse/respeed/merge), stereo
+  waveform analysis + UI, per-clip pan & width (mid/side), track pan + stereo
+  export path; stereo-native FX (delay spread, chorus/flanger, reverb, vocoder,
+  Shape-a-Voice, pitch/time, linked dynamics); universal FX modules (Gain, Pan,
+  wet/dry, compressor knee, noise-gate timing, tremolo/vocoder/pitch/time voice
+  FX); dense/visible/editable FX automation with curve shapes; reverb
+  decay-seconds control; export settings (bit-depth / sample-rate / bitrate,
+  normalization); crossfades, split/merge, selected-clip cut/copy/delete, direct
+  audio import, catalog sample insert-first; FX at clip/track/bus/master scope,
+  named/aux buses, mixer matrix; cross-editor Score/Module routing; unified Sound
+  Library browser/import.
+- **DAW/Score-Workshop UX pass §A/§B/§D (opus):** help/guide overlay, linked-clip
+  affordance, responsive toolbar, editable composer/lyricist into PDF, analysis
+  colour-by-harmony, export web-download fallback, lyric-field keystroke fix,
+  bar-number label / first-system fixes, unified Sound Library guard.
+- **Tracker-complete (opus):** MOD/XM/S3M/IT performance + coverage — byte-identical
+  render corpus + `bin/bench_render.dart`, allocation cuts, native IT/XM key-off
+  fadeout, S3M stereo/AdLib/packed samples, MOD `M!K!` >64 patterns, export-loss
+  report. (Remaining tracker gaps live in `mod_pending.md`.)
+- **Multi-part `.ly` import (opus):** `multiPartFromLilyPond` — one part per staff.
+- **Instrument / FLAC (opus):** native FLAC decode via glint → FLAC-sampled SFZ
+  instruments play; batch SFZ installer; Settings → Downloads manager; voice-palette
+  slices (procedural palette + My Library / Browse-catalog voices).
+- **Corpus / catalog (opus):** Tier A/B ingest + PDMX copyright overhaul; HF catalog
+  ships Tier A+B (CC-BY, attributed); scores in the catalog; real SoundFont catalog;
+  jams corpus (ChoCo 99%+, label dialects, silent chord-corruption fix).
+- **Transcription (opus):** all 3 F0 backend paths real; Spleeter 4-stem; ByteDance
+  high-res piano transcription; SF2 fidelity + GS/XG + SFZ; SOTA MIDI-renderer S1–S7.
+- **Games (opus):** ear/reading games — Which Seventh?, Crescendo/Diminuendo (read +
+  ear), Smooth or Short?, Getting Louder or Softer?, Speeding Up or Slowing Down?;
+  expression primers; songbook built-ins + more PD songs.
+- **OMR / tab (opus):** scan→song OMR (all feasible paths), backend routing, tab
+  heuristic toggle (`smartTabFingering`), tab-arranger hand-span cap, tabconv
+  notation→GPIF, JAMS import.
+- **Voice / SVC (opus):** pure-Dart side complete, SVC seam frozen (heavy real-time
+  vocoders await CrispASR native).
+
+### Completed design logs — folded in (docs deleted)
+- **Composition Workshop phases P0–G6 / contracts C1–C10** (was `WORKSHOP_PLAN.md`
+  + `WORKSHOP_CRISP_NOTATION_CONTRACTS.md`): every phase and interactive-editor
+  contract landed and wired (tempo / grace / playback / voice-2 / PDF / count-in /
+  loop / Studio shell + `MultiPartScore`/`MultiPartView`). The design rationale is
+  kept in `WORKSHOP_PARITY.md`.
+- **Tab-arranger neural seam** (was `TAB_ARRANGER_NEURAL_HANDOFF.md`): Viterbi
+  arbiter + swappable emission cost; the `TabPositionModel` (symbolic) and
+  `TabEmissionModel` (audio) contracts are frozen in `tab_emission_decoder.dart` /
+  `tab_arranger.dart` + tests; both arms shipped (labeler wired; ONNX + ggml `--tab`
+  backends real). Further model-quality work is in `TAB_LABELER_ROADMAP.md`.
+- **Sound & DAW roadmap P0–P2** (was `SOUND_AND_DAW_ROADMAP.md`): synth/shape DSP,
+  Sound Lab + Voice Lab, MP3/FLAC export, instrument-library persistence, linear
+  arranger, automation + bus/send FX, project save/load. (Only P2.1 — the real-time
+  streaming engine — remains, now in `PLAN.md`.)
+
+### Deleted docs (all shipped; recoverable via git history)
+TRACKER_ENGINE_CONTRACTS, TRACKER_HANDOVER, TRACKER_REPLAYER_HANDOVER,
+TABCNN_GGML_HANDOVER, TABCNN_GGML_HANDBACK, TABCNN_ONNX_HANDOVER,
+TAB_SYMBOLIC_LABELER_HANDOVER, TAB_ARRANGER_NEURAL_HANDOFF,
+LIBRARIES_AND_TAB_SCOPING, DAW_SCOPING, FX_HANDOVER, CC0_SAMPLE_SOURCE_HANDOFF,
+FDN_REVERB_SPEC, LOOP_MIXER_FOLLOWUPS_HANDOVER, LOOP_MIXER_HANDOVER,
+HANDOVER_DAW_UX, TRANSCRIPTION_RMVPE_HANDOVER, TRANSCRIPTION_HARMONY_HANDOVER,
+TRANSCRIPTION_SEP_FEASIBILITY, TRANSCRIPTION_CRISPASR_STATUS,
+TRANSCRIPTION_SEP_HANDOVER, TRANSCRIPTION_HANDOFF, GLINT_VORBIS_HANDOVER,
+PDMX_JSON_TO_MIDI_HANDOVER, TUTORIAL_PRIMERS_HANDOVER, WORKSHOP_G6_HANDOVER,
+WORKSHOP_NEXT_HANDOVER, WORKSHOP_PLAN, WORKSHOP_CRISP_NOTATION_CONTRACTS,
+SOUND_AND_DAW_ROADMAP. Residual **pending** items from these were carried into
+`PLAN.md` (repo root) under "Consolidated backlog (2026-07-25 doc sweep)".

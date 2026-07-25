@@ -1,8 +1,17 @@
-# Automatic Play-Along — plan & status
+# CometBeat — canonical plan & pending work
+
+> **This is the canonical PLAN** (2026-07-25 doc consolidation). All pending and
+> planned work lives here; everything shipped is recorded in
+> [docs/HISTORY.md](docs/HISTORY.md). Detailed curriculum/roadmap planning and the
+> per-agent coordination board are in [docs/PLAN.md](docs/PLAN.md); the remaining
+> single-topic reference docs are linked from the "Consolidated backlog" section
+> at the end of this file.
 
 🚧 **Idle / Last-shipped (Agent checkpoint)**
 - Shipped: Synth & FX Editor (embeds Sound Lab directly into Tracker via `instrument_editor.dart`).
 - Shipped: Multi-Sample Groundwork (`MultiSampleInstrument` added to `tracker_engine.dart` with correct monophonic choking semantics).
+
+## Automatic play-along — live pitch detection (feature area)
 
 Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
@@ -300,7 +309,7 @@ the mic grading the speaker. Two corrections shape the design:
 - **Tier 3b — native full-duplex plugin (DESIGNED, not started in code).** One
   native audio engine that owns playback+capture on a shared clock and runs a
   real AEC. This is the production fix. Full architecture, Dart API, per-platform
-  build, CI-safety rules and verification plan: **[AEC_TIER3B.md](AEC_TIER3B.md)**.
+  build, CI-safety rules and verification plan: **[docs/AEC_TIER3B.md](docs/AEC_TIER3B.md)**.
   Stack: **miniaudio** (MIT-0, full-duplex host) + **SpeexDSP** (BSD, the AEC).
   Days–weeks; must be built in an isolated branch and kept out of the app's
   pubspec until it compiles green on all 5 CI platforms.
@@ -370,3 +379,114 @@ Instruments are static per note run, lacking tick-level modulators.
 1. **Unify Pitch Effects:** Move arpeggio/porta/vibrato from the `TrackerEffect` enum into the hex pipeline, evaluating them tick-by-tick during `renderChannel`.
 2. **Flow & Groove Commands:** Support Speed (`Fxx`), Pattern Break (`Dxx`), and Position Jump (`Bxx`). Rewrite `renderSong` as a dynamic state machine that respects these navigation commands.
 3. **Sub-row Timing:** Implement Note Delay (`EDx`) and Note Cut (`ECx`) directly in the offline renderer to allow complex swing and ghost notes.
+
+## Consolidated backlog (2026-07-25 doc sweep)
+
+Pending work carried over when ~40 handover/scoping/status docs were consolidated.
+**Group 1** items came from docs that were *deleted* (full detail preserved here).
+**Group 2** items still have a live reference doc — the pointer is authoritative;
+kept here so nothing is lost from the canonical plan.
+
+### Group 1 — residuals from deleted docs (no other home)
+
+**Tab / labeler / library** (was `TABCNN_GGML_HANDBACK`, `LIBRARIES_AND_TAB_SCOPING`):
+- CrispASR-side (external repo): ship `libcrispasr` with `@loader_path`-relative
+  rpaths (it currently bakes the CI build path, so a downloaded dylib can't find
+  `@rpath/libggml.0.dylib`); lay the libs in one flat dir (split across `src/` +
+  `ggml/src/` today); optional `CrispasrSession.tab()` wrapper in the pub package.
+- `thesession_source.dart` — Irish-trad ABC library source (specced, absent), with
+  the no-LLM flag set.
+- IMSLP + CPDL/ChoralWiki conditional, country-gated library sources (A4) — gated
+  behind the "real legal review" the scoping doc called for.
+- `DonationConfig` tile flip-on (A5) — `donation.dart` exists but stays disabled
+  until a Ko-fi/PayPal URL is set.
+
+**Audio FX** (was `FX_HANDOVER`):
+- Standalone `ring_mod`; full `distortion` set (hardClip/softClip/fuzz/wavefold);
+  restore dropped sfxr params (FM, LFO); optional FFT-convolution reverb.
+- Cubic-Hermite sample interpolation to replace linear `resample.dart` (improves
+  recorded-voice pitch-shift quality).
+- Multi-effect per-channel chain (one insert per channel today); sfxr FM/LFO into
+  the instrument picker; pitch envelope on sfxr/additive voices; reverb/delay send
+  on the Loop Mixer.
+
+**Samples** (was `CC0_SAMPLE_SOURCE_HANDOFF`):
+- Optional "starter-module generator": a pure `starterPattern(style, channels,
+  steps)` helper + a Tracker action that `setCell`-fills a beat/riff from assigned
+  CC0 samples.
+
+**DAW real-time engine** (was `SOUND_AND_DAW_ROADMAP` P2.1):
+- P2.1 real-time streaming audio engine — replace offline-render-then-play with a
+  streamed graph (live faders, live-playable instruments, input monitoring,
+  per-block insert processing, responsive automation). Unlocks the last DAW gaps;
+  overlaps the Tracker audio arc's §E3 (`flutter_soloud`) claim. Also confirm the
+  P0.1 convolution reverb landed (only biquad + dynamics verified present).
+
+**Score Workshop** (was `WORKSHOP_G6_HANDOVER`, `WORKSHOP_NEXT_HANDOVER`,
+`WORKSHOP_PLAN`):
+- Richer inspector: multi-select view, rest properties, bar-attribute editing.
+- Categorized *insertion* palettes (dynamics / lines / repeats / text), distinct
+  from the modification inspector.
+- Voice-2 v1 gaps: voice 2 carries no dynamics/lyrics/slurs; tuplets and mid-score
+  changes anchored while voice 2 is active stamp to voice-1 bars; cross-voice
+  tap-select is unwired; `buildGrandStaff` shows voice 1 only.
+- Grace-note LIST beyond a single run (a crisp_notation library ask); cross-part
+  in-place ghost/drag note entry on `MultiPartView` (the "C11" ask).
+- Wire `Measure.actualDuration` into the pickup/anacrusis path; verify rendered
+  output reflects crisp_notation's metric-aware secondary beaming.
+
+**Advanced/Beginner Tracker UX** (was `HANDOVER_DAW_UX` §C — also on the docs/PLAN.md
+codex backlog): collapse the oversized Advanced-Tracker menu into Import/Open ·
+Library · Edit · View · Playback · Export groups and align its import/save
+vocabulary with Score Workshop; make the Beginner Tracker a genuinely capable kid
+live-loop surface (quick start, layer parts, record a voice, arrange sections).
+
+### Group 2 — pointers to live reference docs (detail lives there)
+
+- **Tracker replayer effect coverage** → [docs/REPLAYER_EFFECT_COVERAGE.md](docs/REPLAYER_EFFECT_COVERAGE.md):
+  `Rxy`/`Txy` importer wiring (one line each in the `.xm` reader); fine F-nibble
+  slides (need a source-format flag); `Gxx`/`Hxy`/`Mxx`/`Nxy` global/channel volume
+  (need a mix-stage scalar); `Pxy`/`Kxx`/`Lxx`/`Xxx` + XM volume-column mini-commands;
+  `E0x`/`E8x`/`EFx` (rare).
+- **Tracker format fidelity** → [mod_pending.md](mod_pending.md): block-streaming
+  renderer + range/streaming export; cross-format effect-table widening; S3M DP30
+  ADPCM + OPL/AdLib synthesis; MOD FLT8/OCTA alias preservation; native
+  tracker-state editors; per-sample gain/pan; envelope release/curve timing.
+- **Tracker GUI + interop ideas** → [docs/TRACKER_GUI_HANDOFF_IDEAS.md](docs/TRACKER_GUI_HANDOFF_IDEAS.md)
+  and [docs/TRACKER_IDEAS.md](docs/TRACKER_IDEAS.md): envelope editor UI, per-pattern
+  length UI, shared `MusicIoMenu` import/export, groove↔Tracker↔Loop-Mixer bridges,
+  drumkit/BoomBox screen + more drum voices, VU meters + on-screen keyboard,
+  `SoundLibraryService` persistence, Song→WAV export, sample-borrow-from-module,
+  sample loop-point editing, instrument ADSR envelopes, CI module fixtures.
+- **Sound Library UI (Advanced Tracker §C)** → [docs/SOUND_LIBRARY_UI_CONTRACT.md](docs/SOUND_LIBRARY_UI_CONTRACT.md):
+  localize `soundfont_sheet.dart`; l10n the 5 new `Drum` voices; `SoundFontRef` cheap
+  persistence; route "Export module" through PCM-preserving `moduleDocFromSong`; wire
+  `SoundLibraryService` over `instrumentToJson`/`fromJson`.
+- **Neural TTS packaging** → [docs/TTS_MACOS.md](docs/TTS_MACOS.md): release
+  dylib embed + Developer-ID sign; iOS `.xcframework`; Android `jniLibs` per ABI;
+  prove the web/WASM `crispasr` path; optional CPU-only build.
+- **OMR on pure-Dart ONNX** → [docs/OMR_ONNX_HANDOVER.md](docs/OMR_ONNX_HANDOVER.md):
+  export TrOMR/SMT to ONNX + publish to HF; validate ONNX-vs-ggml parity; add
+  `omr_onnx.dart` behind `recognizeSheetMusic`, route web → onnx.
+- **Native AEC** → [docs/AEC_TIER3B.md](docs/AEC_TIER3B.md) / [native/aec/README.md](native/aec/README.md):
+  milestone (e) on-device tuning on real iOS/Android hardware; app opt-in
+  `setDtd(true)`+`setRes(true)` on a 1024-block engine when speaker-backing is on;
+  wire the adaptive learning-rate into `aec_shim`/`aec_engine`; optional SpeexDSP
+  behind a build flag only if real-room residual demands it.
+- **Transcription frontier** → [docs/TRANSCRIPTION_SOTA_HANDOFF.md](docs/TRANSCRIPTION_SOTA_HANDOFF.md):
+  W-METRE metrical quantiser (note durations/tuplets/ties via DP); W-PIANO-MT3
+  slice 2 (MT3 seq2seq multi-instrument); W-DRUMS finer kit + pattern-quantise;
+  optional W-NOTATION PM2S neural model. (Patent-free algorithm rules:
+  [docs/TRANSCRIPTION_SCOPING.md](docs/TRANSCRIPTION_SCOPING.md) appendix.)
+- **SVC/RVC determinism** → [docs/SVC_SITE_B_HANDOVER.md](docs/SVC_SITE_B_HANDOVER.md):
+  confirm the exported RVC graph contains the Site-B `RandomNormal` node; run the
+  3-way harness (Python-ref vs `rvc.dart` vs ggml) and gate on `max_abs < 1e-5`.
+- **Corpus / licensing engineering** → [docs/CORPUS_LICENSING.md](docs/CORPUS_LICENSING.md):
+  Tier-C ShareAlike/ODbL stays unshippable until the app enforces SA-propagation on
+  Editor export/save/share (not built); broader pop/film title-copyright sweep of
+  PDMX; catalog re-emit + payload purge of the 24 quarantined holiday MIDIs;
+  per-file licence verification for Iowa MIS / Discord GM SFZ / AVL / Flame.
+- **Tab-labeler quality** → [docs/TAB_LABELER_ROADMAP.md](docs/TAB_LABELER_ROADMAP.md):
+  movement-smoothness + span regularizers in training; DP-in-the-loop / CRF training
+  if >85% agreement doesn't fall out; EGSet12 ingest; string-shift augmentation;
+  model-card/HF hygiene.

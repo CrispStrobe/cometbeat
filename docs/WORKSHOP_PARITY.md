@@ -1,7 +1,8 @@
 # Workshop → editor parity — conceptual directions
 
-Companion to [WORKSHOP_PLAN.md](WORKSHOP_PLAN.md) (the phase log, G1–G7). That
-file records *what we built*. This one asks *why the remaining gaps exist* and
+Companion to the Composition Workshop phase log (G1–G7), now folded into
+[HISTORY.md](HISTORY.md). That log records *what we built*. This one asks *why
+the remaining gaps exist* and
 argues an order of attack. Ideas and directions — not a task list yet.
 
 Convention (unchanged): we do **not** name or allude to other products anywhere

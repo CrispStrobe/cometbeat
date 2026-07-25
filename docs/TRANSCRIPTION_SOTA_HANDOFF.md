@@ -20,7 +20,7 @@ parallel. Recommended ordering by leverage:
 |---|---|---|---|
 | **1** | **W-CREPE** | ✅ *adapter shell + decoder + harness PRE-BUILT* — worker only publishes the ONNX + confirms 2 tensor names | highest quality-per-effort; fixes sung-voice octave-doubling + drift |
 | **1** | **W-METRE** | ✅ *slice 1 (`estimateMeter`) SHIPPED* — remaining: metrical quantisation | correct barlines/anacrusis/meter, not assumed 4/4 |
-| **1** | **W-SEP** | ⚠️ *DO NOT export Open-Unmix — CrispASR already ships HTDemucs + Mel-Band RoFormer* ([status doc](TRANSCRIPTION_CRISPASR_STATUS.md#2--w-sep--stop-do-not-export-open-unmix)) | the single biggest jump: "transcribe a whole song" |
+| **1** | **W-SEP** | ⚠️ *DO NOT export Open-Unmix — CrispASR already ships HTDemucs + Mel-Band RoFormer (SHIPPED + Dart-bound; see HISTORY.md)* | the single biggest jump: "transcribe a whole song" |
 | **2** | **W-HARMONY** | neural chord + key estimation | lead sheets; enharmonic spelling input |
 | **2** | **W-NOTATION** | ✅ *COMPLETE* — key+spelling, clef, chords, voice+staff separation all shipped (optional PM2S later) | turns a note dump into a READABLE engraving |
 | **3** | **W-PIANO-MT3** | piano-specialist model, then seq2seq multi-instrument | near-SOTA polyphonic; frontier |
