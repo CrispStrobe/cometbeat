@@ -137,6 +137,35 @@ void main() {
     test('percussion', () {
       expectRoundTrips(const PercussionInstrument('drum'));
     });
+
+    test('native multi-sample zones preserve mapping and sample metadata', () {
+      final left = Float64List(400)..fillRange(0, 400, 0.4);
+      final right = Float64List(400)..fillRange(0, 400, -0.2);
+      final inst = MultiSampleInstrument(
+        'zones',
+        {
+          60: SampleInstrument(
+            'low',
+            left,
+            sampleRight: right,
+            volume: 0.75,
+            normalize: false,
+            nativeNna: 1,
+          ),
+          72: SampleInstrument('high', right),
+        },
+        polyphonic: true,
+      );
+      final decoded = instrumentFromJsonString(instrumentToJsonString(inst))
+          as MultiSampleInstrument;
+      expect(decoded.polyphonic, isTrue);
+      final low = decoded.zones[60] as SampleInstrument;
+      expect(low.sampleRight, isNotNull);
+      expect(low.volume, closeTo(0.75, 1e-9));
+      expect(low.normalize, isFalse);
+      expect(low.nativeNna, 1);
+      expectRoundTrips(inst, tol: 1e-5);
+    });
   });
 
   group('instrument codec errors + guards', () {

@@ -404,19 +404,25 @@ ModuleDoc docFromXm(XmModule m) {
   final patterns = <DocPattern>[];
   for (final pat in m.patterns) {
     final ch = pat.channelCount;
+    final lastInstrument = <int, int>{};
     final rows = <List<DocCell>>[];
     for (final row in pat.rows) {
       final cells = <DocCell>[];
-      for (final c in row) {
+      for (var channel = 0; channel < row.length; channel++) {
+        final c = row[channel];
         final vol =
             (c.volume >= 0x10 && c.volume <= 0x50) ? c.volume - 0x10 : -1;
-        var instrument = c.instrument;
-        if (c.instrument > 0 && c.instrument <= m.instruments.length) {
-          final inst = m.instruments[c.instrument - 1];
+        if (c.instrument > 0) lastInstrument[channel] = c.instrument;
+        final effectiveInstrument =
+            c.instrument > 0 ? c.instrument : (lastInstrument[channel] ?? 0);
+        var instrument = effectiveInstrument;
+        if (effectiveInstrument > 0 &&
+            effectiveInstrument <= m.instruments.length) {
+          final inst = m.instruments[effectiveInstrument - 1];
           final key = c.note >= 1 && c.note <= 96 ? c.note - 1 : 0;
           final sample = inst.keymap.length > key ? inst.keymap[key] : 0;
           if (sample >= 0 && sample < inst.samples.length) {
-            instrument = sampleOffsets[c.instrument - 1] + sample + 1;
+            instrument = sampleOffsets[effectiveInstrument - 1] + sample + 1;
           }
         }
         cells.add(
@@ -432,9 +438,9 @@ ModuleDoc docFromXm(XmModule m) {
             effectParam: c.effectParam,
             nativeEffect: c.effect == 0 && c.effectParam == 0 ? -1 : c.effect,
             nativeEffectParam: c.effectParam,
-            nativeInstrument: c.instrument,
-            nativeInstrumentSet: c.instrument != 0,
-            nativeNote: c.note,
+            nativeInstrument: effectiveInstrument,
+            nativeInstrumentSet: effectiveInstrument != 0,
+            nativeNote: xmNoteToMidi(c.note),
           ),
         );
       }
@@ -617,7 +623,7 @@ ModuleDoc docFromIt(ItModule m) {
             nativeEffectParam: c.commandValue,
             nativeInstrument: c.instrument,
             nativeInstrumentSet: true,
-            nativeNote: c.note,
+            nativeNote: itNoteToMidi(c.note),
             nativeVolpan: c.volpan,
           ),
         );

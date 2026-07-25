@@ -16,9 +16,9 @@
 // Robust by design: every decode path validates the format tag + version (with a
 // [ _migrate] hook for future upgrades) and raises a clear, catchable
 // [TrackerSongCodecException] instead of a raw cast error. Instruments serialize
-// via tracker_instrument_codec, so a song using a loaded SoundFont voice
-// (Sf2/MultiSample — not embeddable) reports which channel and points at the
-// reference store. Correctness is guaranteed by a render-roundtrip test (a song
+// via tracker_instrument_codec; native XM/IT multi-sample zones are embedded,
+// while loaded SoundFont voices still point at the reference store. Correctness
+// is guaranteed by a render-roundtrip test (a song
 // and its decoded twin render byte-identically). Pure Dart, no Flutter.
 
 import 'dart:convert';
@@ -508,6 +508,7 @@ TrackerPattern _patternFromJson(Map<String, dynamic> m) => TrackerPattern(
 /// A cell as a compact map of only its non-default fields, or null when empty.
 Map<String, dynamic>? _cellToJson(TrackerCell c) {
   if (c.midi == null &&
+      c.nativeNote == null &&
       c.volume == null &&
       c.effect == TrackerEffect.none &&
       c.fxCmd == 0 &&
@@ -518,6 +519,7 @@ Map<String, dynamic>? _cellToJson(TrackerCell c) {
   }
   return {
     if (c.midi != null) 'n': c.midi,
+    if (c.nativeNote != null) 'nn': c.nativeNote,
     if (c.volume != null) 'v': c.volume,
     if (c.effect != TrackerEffect.none) 'e': c.effect.name,
     if (c.fxCmd != 0) 'c': c.fxCmd,
@@ -531,6 +533,7 @@ TrackerCell _cellFromJson(Map<String, dynamic>? m) {
   if (m == null) return TrackerCell.empty;
   return TrackerCell(
     midi: (m['n'] as num?)?.toInt(),
+    nativeNote: (m['nn'] as num?)?.toInt(),
     volume: (m['v'] as num?)?.toDouble(),
     effect: _trackerEffectFromName(m['e'] as String?),
     fxCmd: (m['c'] as num?)?.toInt() ?? 0,

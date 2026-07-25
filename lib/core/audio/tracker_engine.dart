@@ -94,6 +94,7 @@ class TrackerTiming {
 class TrackerCell {
   const TrackerCell({
     this.midi,
+    this.nativeNote,
     this.volume,
     this.effect = TrackerEffect.none,
     this.fxCmd = 0,
@@ -105,6 +106,8 @@ class TrackerCell {
   TrackerCell copyWith({
     int? midi,
     bool clearMidi = false,
+    int? nativeNote,
+    bool clearNativeNote = false,
     double? volume,
     bool clearVolume = false,
     TrackerEffect? effect,
@@ -115,6 +118,9 @@ class TrackerCell {
   }) {
     return TrackerCell(
       midi: clearMidi ? null : (midi ?? this.midi),
+      nativeNote: clearNativeNote || midi != null
+          ? nativeNote
+          : (nativeNote ?? this.nativeNote),
       volume: clearVolume ? null : (volume ?? this.volume),
       effect: effect ?? this.effect,
       fxCmd: fxCmd ?? this.fxCmd,
@@ -125,6 +131,11 @@ class TrackerCell {
   }
 
   final int? midi;
+
+  /// Original module key used for native XM/IT keymap lookup. It is kept
+  /// separate from [midi], which may already include an IT note-map transpose.
+  /// Editing the MIDI note clears this provenance through [copyWith].
+  final int? nativeNote;
   final double? volume;
 
   /// The per-cell INSTRUMENT number (the classic tracker sample/instrument
@@ -173,6 +184,7 @@ class TrackerCell {
   bool operator ==(Object other) =>
       other is TrackerCell &&
       other.midi == midi &&
+      other.nativeNote == nativeNote &&
       other.volume == volume &&
       other.effect == effect &&
       other.fxCmd == fxCmd &&
@@ -181,8 +193,16 @@ class TrackerCell {
       other.keyOff == keyOff;
 
   @override
-  int get hashCode =>
-      Object.hash(midi, volume, effect, fxCmd, fxParam, instrument, keyOff);
+  int get hashCode => Object.hash(
+        midi,
+        nativeNote,
+        volume,
+        effect,
+        fxCmd,
+        fxParam,
+        instrument,
+        keyOff,
+      );
 }
 
 /// Collapses a channel's cells into runs using the classic tracker rule: a
@@ -741,7 +761,7 @@ class SampleInstrument implements TrackerInstrument {
           for (var i = 0; i < n; i++) {
             final env = nativeVol?.levelAt(
                   i / kSampleRate * 1000,
-                  released: effectiveSustain != null && i >= effectiveSustain,
+                  released: i >= effectiveSustain,
                 ) ??
                 1.0;
             out[startSample + i] = voiced[i] * vol * volume * env;
@@ -868,6 +888,17 @@ class PercussionInstrument implements TrackerInstrument {
 class MultiSampleInstrument implements TrackerInstrument {
   const MultiSampleInstrument(this.id, this.zones, {this.polyphonic = false});
 
+  MultiSampleInstrument copyWith({
+    String? id,
+    Map<int, TrackerInstrument>? zones,
+    bool? polyphonic,
+  }) =>
+      MultiSampleInstrument(
+        id ?? this.id,
+        zones ?? this.zones,
+        polyphonic: polyphonic ?? this.polyphonic,
+      );
+
   @override
   final String id;
 
@@ -906,7 +937,7 @@ class MultiSampleInstrument implements TrackerInstrument {
       final totalSteps = sustainSteps + releaseSteps;
 
       if (midi != null) {
-        final zone = _closestZone(midi);
+        final zone = _closestZone(cells[startStep].nativeNote ?? midi);
         if (zone != null) {
           // Isolate this note run so the sub-instrument accurately envelopes it
           final dummyCells =
@@ -939,6 +970,61 @@ class MultiSampleInstrument implements TrackerInstrument {
       startStep += totalSteps;
     }
     return out;
+  }
+
+  /// Stereo counterpart used by native XM/IT zone imports. A zone that owns a
+  /// right-channel sample keeps that image; procedural/mono zones are copied
+  /// to both outputs and are panned by the caller.
+  ({Float64List left, Float64List right}) renderChannelStereo(
+    List<TrackerCell> cells,
+    TrackerTiming timing,
+  ) {
+    final left = Float64List(timing.totalSamples);
+    final right = Float64List(timing.totalSamples);
+    if (zones.isEmpty) return (left: left, right: right);
+
+    var startStep = 0;
+    for (final run in noteRuns(cells)) {
+      final midi = run.$1;
+      final sustainSteps = run.$2;
+      final releaseSteps = run.$3;
+      final totalSteps = sustainSteps + releaseSteps;
+      if (midi != null) {
+        final zone = _closestZone(cells[startStep].nativeNote ?? midi);
+        if (zone != null) {
+          final dummyCells =
+              List<TrackerCell>.filled(timing.rows, TrackerCell.empty);
+          dummyCells[startStep] = cells[startStep];
+          if (!polyphonic && startStep + sustainSteps < timing.rows) {
+            dummyCells[startStep + sustainSteps] = releaseSteps > 0
+                ? TrackerCell.noteCut
+                : TrackerCell(midi: midi);
+          }
+          final zoneStereo = zone is SampleInstrument
+              ? zone.renderChannelStereo(dummyCells, timing)
+              : null;
+          final zoneLeft =
+              zoneStereo?.left ?? zone.renderChannel(dummyCells, timing);
+          final zoneRight = zoneStereo?.right;
+          final startSample = timing.stepStartSample(startStep);
+          final maxSample = polyphonic
+              ? left.length
+              : min(
+                  timing.stepStartSample(startStep + totalSteps), left.length);
+          for (var i = startSample; i < maxSample; i++) {
+            if (polyphonic) {
+              left[i] += zoneLeft[i];
+              right[i] += zoneRight?[i] ?? zoneLeft[i];
+            } else {
+              left[i] = zoneLeft[i];
+              right[i] = zoneRight?[i] ?? zoneLeft[i];
+            }
+          }
+        }
+      }
+      startStep += totalSteps;
+    }
+    return (left: left, right: right);
   }
 }
 
@@ -1113,19 +1199,22 @@ double _envelopeTime(
   required List<int> pointMs,
 }) {
   if (pointMs.isEmpty) return ms;
+  final sustainIndex = sustain;
   if (!released &&
-      sustain != null &&
-      sustain! >= 0 &&
-      sustain! < pointMs.length) {
-    ms = min(ms, pointMs[sustain!].toDouble());
+      sustainIndex != null &&
+      sustainIndex >= 0 &&
+      sustainIndex < pointMs.length) {
+    ms = min(ms, pointMs[sustainIndex].toDouble());
   }
-  if (loopStart != null &&
-      loopEnd != null &&
-      loopStart! >= 0 &&
-      loopEnd! > loopStart! &&
-      loopEnd! < pointMs.length) {
-    final start = pointMs[loopStart!].toDouble();
-    final end = pointMs[loopEnd!].toDouble();
+  final loopStartIndex = loopStart;
+  final loopEndIndex = loopEnd;
+  if (loopStartIndex != null &&
+      loopEndIndex != null &&
+      loopStartIndex >= 0 &&
+      loopEndIndex > loopStartIndex &&
+      loopEndIndex < pointMs.length) {
+    final start = pointMs[loopStartIndex].toDouble();
+    final end = pointMs[loopEndIndex].toDouble();
     final length = end - start;
     if (length > 0 && ms >= end) {
       ms = start + ((ms - start) % length);

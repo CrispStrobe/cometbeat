@@ -33,18 +33,43 @@ TrackerSong songFromModuleBytes(Uint8List bytes) =>
 /// Imports an already-parsed [ModuleDoc].
 TrackerSong songFromModuleDoc(ModuleDoc doc) {
   final channelCount = doc.channelCount < 1 ? 1 : doc.channelCount;
+  final nativeInstrumentMode = _hasNativeInstrumentMode(doc);
   // The engine needs a timing row count for the currently selected pattern;
   // individual TrackerPattern snapshots retain their own native lengths.
   final rows = doc.patterns.isEmpty || doc.patterns.first.numRows < 1
       ? 64
       : doc.patterns.first.numRows;
-  final rep = _repInstrumentPerChannel(doc, channelCount);
+  final rep = _repInstrumentPerChannel(
+    doc,
+    channelCount,
+    nativeInstrumentMode: nativeInstrumentMode,
+  );
+
+  final pool = nativeInstrumentMode
+      ? _nativeInstrumentPool(doc, doc.initialTempo)
+      : <TrackerInstrument>[
+          for (var i = 0; i < doc.samples.length; i++)
+            sampleInstrumentFromDoc(
+              'smp${i + 1}',
+              doc.samples[i],
+              nativeVolumeEnvelope:
+                  _sampleVolEnv(doc.samples[i], doc.initialTempo),
+              nativePanEnvelope:
+                  _samplePanEnv(doc.samples[i], doc.initialTempo),
+              nativeNna: _sampleOwner(doc, i)?.nna ?? 0,
+              nativeDct: _sampleOwner(doc, i)?.dct ?? 0,
+              nativeDca: _sampleOwner(doc, i)?.dca ?? 0,
+              nativeFadeout: _sampleOwner(doc, i)?.fadeout ?? 0,
+            ),
+        ];
 
   final band = <TrackerChannel>[
     for (var c = 0; c < channelCount; c++)
       TrackerChannel(
         id: 'ch${c + 1}',
-        instrument: _instrumentForChannel(doc, rep[c], c),
+        instrument: nativeInstrumentMode && rep[c] > 0 && rep[c] <= pool.length
+            ? pool[rep[c] - 1]
+            : _instrumentForChannel(doc, rep[c], c),
         rows: rows,
         // Keep the four-channel tracker default, but provide headroom for
         // wide modules whose channels are mixed into the same stereo bus.
@@ -70,29 +95,13 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
         channelCount,
         doc.patterns[pi].numRows < 1 ? rows : doc.patterns[pi].numRows,
         pi,
+        useNativeInstruments: nativeInstrumentMode,
       ),
   ];
 
   final order = [
     for (final o in doc.order)
       if (o >= 0 && o < patterns.length) o,
-  ];
-
-  // The shared instrument pool: every module sample (1-based, matching
-  // DocCell.instrument), so a note plays its OWN sample via the replayer's
-  // per-note render — real per-note sample fidelity, not one voice per channel.
-  final pool = <TrackerInstrument>[
-    for (var i = 0; i < doc.samples.length; i++)
-      sampleInstrumentFromDoc(
-        'smp${i + 1}',
-        doc.samples[i],
-        nativeVolumeEnvelope: _sampleVolEnv(doc.samples[i], doc.initialTempo),
-        nativePanEnvelope: _samplePanEnv(doc.samples[i], doc.initialTempo),
-        nativeNna: _sampleOwner(doc, i)?.nna ?? 0,
-        nativeDct: _sampleOwner(doc, i)?.dct ?? 0,
-        nativeDca: _sampleOwner(doc, i)?.dca ?? 0,
-        nativeFadeout: _sampleOwner(doc, i)?.fadeout ?? 0,
-      ),
   ];
 
   return TrackerSong.fromParts(
@@ -108,13 +117,20 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
 }
 
 /// For each channel, the 1-based sample index it triggers most often (0 = none).
-List<int> _repInstrumentPerChannel(ModuleDoc doc, int channelCount) {
+List<int> _repInstrumentPerChannel(
+  ModuleDoc doc,
+  int channelCount, {
+  required bool nativeInstrumentMode,
+}) {
   final counts = List.generate(channelCount, (_) => <int, int>{});
   for (final p in doc.patterns) {
     for (var r = 0; r < p.numRows; r++) {
       final row = p.rows[r];
       for (var c = 0; c < channelCount && c < row.length; c++) {
-        final ins = row[c].instrument;
+        final cell = row[c];
+        final ins = nativeInstrumentMode && cell.nativeInstrumentSet
+            ? cell.nativeInstrument
+            : cell.instrument;
         if (ins > 0) counts[c][ins] = (counts[c][ins] ?? 0) + 1;
       }
     }
@@ -212,6 +228,97 @@ TrackerInstrument _instrumentForChannel(ModuleDoc doc, int ins, int c) {
   return AdditiveInstrument('ch${c + 1}', voices[c % voices.length]);
 }
 
+bool _hasNativeInstrumentMode(ModuleDoc doc) =>
+    doc.xmInstruments.isNotEmpty || doc.itInstruments.isNotEmpty;
+
+/// Builds the Advanced Tracker pool from the source instrument keymaps. XM
+/// stores sample numbers relative to each instrument; IT stores global
+/// 1-based sample numbers. Every key gets an explicit zone so selection is
+/// based on the played note, not on a nearest-sample heuristic.
+List<TrackerInstrument> _nativeInstrumentPool(ModuleDoc doc, int tempo) {
+  if (doc.xmInstruments.isNotEmpty) {
+    var offset = 0;
+    final pool = <TrackerInstrument>[];
+    for (var instrumentIndex = 0;
+        instrumentIndex < doc.xmInstruments.length;
+        instrumentIndex++) {
+      final instrument = doc.xmInstruments[instrumentIndex];
+      final zones = <int, TrackerInstrument>{};
+      for (var midi = 0; midi <= 127; midi++) {
+        final key = (midi - 11).clamp(0, 95);
+        final local = instrument.keymap.isEmpty
+            ? 0
+            : instrument.keymap[key.clamp(0, instrument.keymap.length - 1)];
+        final sampleIndex = offset + local;
+        if (sampleIndex >= 0 && sampleIndex < doc.samples.length) {
+          final sample = doc.samples[sampleIndex];
+          if (!sample.isEmpty) {
+            zones[midi] = sampleInstrumentFromDoc(
+              'xm${instrumentIndex + 1}_smp${local + 1}',
+              sample,
+              nativeVolumeEnvelope: _sampleVolEnv(sample, tempo),
+              nativePanEnvelope: _samplePanEnv(sample, tempo),
+              nativeFadeout: instrument.fadeout,
+            );
+          }
+        }
+      }
+      pool.add(
+        MultiSampleInstrument(
+          'xm${instrumentIndex + 1}',
+          zones,
+          polyphonic: true,
+        ),
+      );
+      offset += instrument.samples.length;
+    }
+    return pool;
+  }
+
+  return [
+    for (var instrumentIndex = 0;
+        instrumentIndex < doc.itInstruments.length;
+        instrumentIndex++)
+      _itNativeInstrument(
+          doc, doc.itInstruments[instrumentIndex], instrumentIndex),
+  ];
+}
+
+TrackerInstrument _itNativeInstrument(
+  ModuleDoc doc,
+  DocInstrument instrument,
+  int instrumentIndex,
+) {
+  final zones = <int, TrackerInstrument>{};
+  for (var midi = 0; midi <= 119; midi++) {
+    final sampleNumber =
+        instrument.keymap.length > midi ? instrument.keymap[midi] : 0;
+    final sampleIndex = sampleNumber - 1;
+    if (sampleIndex >= 0 && sampleIndex < doc.samples.length) {
+      final sample = doc.samples[sampleIndex];
+      if (!sample.isEmpty) {
+        zones[midi] = sampleInstrumentFromDoc(
+          'it${instrumentIndex + 1}_smp$sampleNumber',
+          sample,
+          nativeVolumeEnvelope:
+              _trackerVolEnv(instrument.volumeEnvelope, doc.initialTempo),
+          nativePanEnvelope:
+              _trackerPanEnv(instrument.panEnvelope, doc.initialTempo),
+          nativeNna: instrument.nna,
+          nativeDct: instrument.dct,
+          nativeDca: instrument.dca,
+          nativeFadeout: instrument.fadeout,
+        );
+      }
+    }
+  }
+  return MultiSampleInstrument(
+    'it${instrumentIndex + 1}',
+    zones,
+    polyphonic: true,
+  );
+}
+
 DocInstrument? _sampleOwner(ModuleDoc doc, int sampleIndex) {
   if (sampleIndex < 0) return null;
   for (final instrument in doc.itInstruments) {
@@ -223,11 +330,8 @@ DocInstrument? _sampleOwner(ModuleDoc doc, int sampleIndex) {
 /// Transposes a row-major [DocPattern] into a channel-major [TrackerPattern],
 /// fitting it to [rows] (extra rows dropped; short patterns padded with empties).
 TrackerPattern _patternFromDoc(
-  DocPattern dp,
-  int channelCount,
-  int rows,
-  int index,
-) {
+    DocPattern dp, int channelCount, int rows, int index,
+    {bool useNativeInstruments = false}) {
   final cells = <List<TrackerCell>>[
     for (var c = 0; c < channelCount; c++)
       List<TrackerCell>.filled(rows, TrackerCell.empty, growable: true),
@@ -236,6 +340,11 @@ TrackerPattern _patternFromDoc(
     final row = dp.rows[r];
     for (var c = 0; c < channelCount && c < row.length; c++) {
       final dc = row[c];
+      final instrument = useNativeInstruments && dc.nativeInstrumentSet
+          ? dc.nativeInstrument
+          : dc.instrument;
+      final nativeNote =
+          useNativeInstruments && dc.nativeNote >= 0 ? dc.nativeNote : null;
       final hasFx = dc.effect != 0 || dc.effectParam != 0;
       // A volume COLUMN reduction (0..63) — carried even without a note, so a
       // mid-note volume change isn't dropped at import.
@@ -246,7 +355,8 @@ TrackerPattern _patternFromDoc(
           volume: hasVol ? (dc.volume / 64).clamp(0.0, 1.0) : null,
           fxCmd: dc.effect,
           fxParam: dc.effectParam,
-          instrument: dc.instrument,
+          instrument: instrument,
+          nativeNote: nativeNote,
         );
       } else if (dc.note >= 0 || hasFx || dc.instrument != 0 || hasVol) {
         cells[c][r] = TrackerCell(
@@ -259,7 +369,8 @@ TrackerPattern _patternFromDoc(
           fxParam: dc.effectParam,
           // The per-cell instrument (module sample number) → the pool built in
           // songFromModuleDoc, so the note plays its own sample.
-          instrument: dc.instrument,
+          instrument: instrument,
+          nativeNote: nativeNote,
         );
       }
     }

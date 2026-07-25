@@ -14,9 +14,11 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart'
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/s3m_module.dart';
 import 'package:comet_beat/core/audio/mod/s3m_writer.dart';
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show replaySong, songUsesVariableTiming;
+import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +61,79 @@ void main() {
   }
 
   group('MOD effect column import (replayer feed)', () {
+    test('XM native keymap selects the zone for the played note', () {
+      final loud = Float64List.fromList([for (var i = 0; i < 44100; i++) 0.5]);
+      final quiet =
+          Float64List.fromList([for (var i = 0; i < 44100; i++) -0.5]);
+      final doc = ModuleDoc(
+        sourceFormat: ModuleFormat.xm,
+        channelCount: 1,
+        order: const [0],
+        patterns: [
+          const DocPattern(
+            [
+              [
+                DocCell(
+                  note: 60,
+                  instrument: 1,
+                  nativeInstrument: 1,
+                  nativeInstrumentSet: true,
+                ),
+              ],
+              [
+                DocCell(
+                  note: 72,
+                  instrument: 1,
+                  nativeInstrument: 1,
+                  nativeInstrumentSet: true,
+                ),
+              ],
+            ],
+            1,
+          ),
+        ],
+        xmInstruments: [
+          XmInstrument(
+            samples: [
+              XmSample(pcm: loud),
+              XmSample(pcm: quiet),
+            ],
+            keymap: [
+              for (var i = 0; i < 96; i++) i >= 61 ? 1 : 0,
+            ],
+          ),
+        ],
+        samples: [
+          DocSample(pcm: loud),
+          DocSample(pcm: quiet),
+        ],
+      );
+      final song = songFromModuleDoc(doc);
+      expect(song.instruments, hasLength(1));
+      expect(song.instruments.single, isA<MultiSampleInstrument>());
+      final instrument = song.instruments.single as MultiSampleInstrument;
+      expect(instrument.zones[60], isA<SampleInstrument>());
+      expect(instrument.zones[72], isA<SampleInstrument>());
+      expect(
+        (instrument.zones[72]! as SampleInstrument).sample[1000],
+        lessThan(0),
+      );
+      final out = instrument.renderChannel(
+        song.patterns.first.cells.first,
+        song.timing,
+      );
+      final directCells = [
+        TrackerCell.empty,
+        song.patterns.first.cells.first[1],
+      ];
+      final direct = (instrument.zones[72]! as SampleInstrument)
+          .renderChannel(directCells, song.timing);
+      final multiDirect = instrument.renderChannel(directCells, song.timing);
+      expect(out[1000], greaterThan(0));
+      expect(direct[song.timing.stepStartSample(1) + 1000], lessThan(0));
+      expect(multiDirect[song.timing.stepStartSample(1) + 1000], lessThan(0));
+    });
+
     test('effect nibble → tracker fxCmd/fxParam (note + effect-only cells)',
         () {
       final rows = <List<DocCell>>[

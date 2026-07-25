@@ -1387,8 +1387,12 @@ void _renderChannelIntoStereo(
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
 
-  if (channel.instrument is SampleInstrument && !_hasPerTickEffect(cells)) {
-    final rendered = _renderSampleNotesStereo(channel, cells, timing, pool);
+  if (!_hasPerTickEffect(cells)) {
+    final rendered = channel.instrument is SampleInstrument
+        ? _renderSampleNotesStereo(channel, cells, timing, pool)
+        : channel.instrument is MultiSampleInstrument
+            ? _renderMultiSampleNotesStereo(channel, cells, timing)
+            : null;
     if (rendered != null) {
       final n = min(timing.totalSamples, left.length - sampleOffset);
       for (var i = 0; i < n; i++) {
@@ -1451,6 +1455,36 @@ void _renderChannelIntoStereo(
       right[o] += mono[i] * rGain;
     }
   }
+}
+
+({Float64List left, Float64List right}) _renderMultiSampleNotesStereo(
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  TrackerTiming timing,
+) {
+  final instrument = channel.instrument as MultiSampleInstrument;
+  final raw = instrument.renderChannelStereo(cells, timing);
+  final left = Float64List.fromList(raw.left);
+  final right = Float64List.fromList(raw.right);
+  final pan = channel.pan.clamp(-1.0, 1.0);
+  final hasNativeStereo = instrument.zones.values.any(
+    (zone) => zone is SampleInstrument && zone.sampleRight != null,
+  );
+  final theta = (pan + 1) / 2 * (pi / 2);
+  final leftGain = pan > 0 ? 1.0 - pan : 1.0;
+  final rightGain = pan < 0 ? 1.0 + pan : 1.0;
+  for (var i = 0; i < left.length; i++) {
+    if (hasNativeStereo) {
+      left[i] *= leftGain;
+      right[i] *= rightGain;
+    } else {
+      right[i] = left[i] * sin(theta);
+      left[i] *= cos(theta);
+    }
+    left[i] *= channel.gain;
+    right[i] *= channel.gain;
+  }
+  return (left: left, right: right);
 }
 
 /// Replays a single pattern ([cells] per channel of [channels]) at [timing],

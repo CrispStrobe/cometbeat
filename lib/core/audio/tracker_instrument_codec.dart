@@ -5,10 +5,8 @@
 //
 // Covers every instrument a user AUTHORS in the tracker: the procedural voices
 // (additive / sfxr / Karplus / FM / subtractive), a recorded [SampleInstrument]
-// (its PCM travels as base64 Float32), and [PercussionInstrument]. Loaded
-// SoundFont voices ([Sf2Instrument]/[MultiSampleInstrument]) are deliberately
-// NOT embedded here — they are megabytes of multi-sample PCM and belong in a
-// reference-based store (soundfont file + preset), a documented follow-up.
+// (its PCM travels as base64 Float32), [PercussionInstrument], and native
+// multi-sample tracker zones. Loaded SoundFont voices remain reference-based.
 //
 // Correctness is guaranteed by a render-roundtrip test (an instrument and its
 // decoded twin render a note identically), so a missed field can't ship.
@@ -40,6 +38,8 @@ bool isSerializableInstrument(TrackerInstrument instrument) =>
     instrument is FmInstrument ||
     instrument is SubtractiveInstrument ||
     instrument is SampleInstrument ||
+    (instrument is MultiSampleInstrument &&
+        instrument.zones.values.every(isSerializableInstrument)) ||
     instrument is PercussionInstrument;
 
 /// Serialize [instrument] to a JSON-safe map. Throws [InstrumentCodecException]
@@ -104,10 +104,38 @@ Map<String, dynamic> instrumentToJson(TrackerInstrument instrument) {
       'loopStart': instrument.loopStart,
       'loopLength': instrument.loopLength,
       'offsetScale': instrument.offsetScale,
+      'volume': instrument.volume,
+      'normalize': instrument.normalize,
+      'pingPong': instrument.pingPong,
+      if (instrument.sampleRight != null)
+        'pcmRight': _pcmToBase64(instrument.sampleRight!),
+      if (instrument.nativeVolumeEnvelope != null)
+        'nativeVolumeEnvelope':
+            _volumeEnvelopeToJson(instrument.nativeVolumeEnvelope!),
+      if (instrument.nativePanEnvelope != null)
+        'nativePanEnvelope': _panEnvelopeToJson(instrument.nativePanEnvelope!),
+      'nativeNna': instrument.nativeNna,
+      'nativeDct': instrument.nativeDct,
+      'nativeDca': instrument.nativeDca,
+      'nativeFadeout': instrument.nativeFadeout,
       'envelope': _envelopeToJson(instrument.envelope),
       // PCM as base64 Float32 (little-endian) — inaudibly lossy, half the size
       // of Float64 and standard for audio.
       'pcm': _pcmToBase64(instrument.sample),
+    };
+  }
+  if (instrument is MultiSampleInstrument) {
+    return {
+      'type': 'multiSample',
+      'id': instrument.id,
+      'polyphonic': instrument.polyphonic,
+      'zones': [
+        for (final entry in instrument.zones.entries)
+          {
+            'midi': entry.key,
+            'instrument': instrumentToJson(entry.value),
+          },
+      ],
     };
   }
   if (instrument is PercussionInstrument) {
@@ -175,6 +203,34 @@ TrackerInstrument instrumentFromJson(Map<String, dynamic> json) {
         loopStart: (json['loopStart'] as num?)?.toInt() ?? 0,
         loopLength: (json['loopLength'] as num?)?.toInt() ?? 0,
         offsetScale: (json['offsetScale'] as num?)?.toDouble() ?? 1.0,
+        volume: (json['volume'] as num?)?.toDouble() ?? 1.0,
+        normalize: (json['normalize'] as bool?) ?? true,
+        pingPong: (json['pingPong'] as bool?) ?? false,
+        sampleRight: json['pcmRight'] == null
+            ? null
+            : _pcmFromBase64(json['pcmRight'] as String),
+        nativeVolumeEnvelope: _volumeEnvelopeFromJson(
+          json['nativeVolumeEnvelope'] as Map<String, dynamic>?,
+        ),
+        nativePanEnvelope: _panEnvelopeFromJson(
+          json['nativePanEnvelope'] as Map<String, dynamic>?,
+        ),
+        nativeNna: (json['nativeNna'] as num?)?.toInt() ?? 0,
+        nativeDct: (json['nativeDct'] as num?)?.toInt() ?? 0,
+        nativeDca: (json['nativeDca'] as num?)?.toInt() ?? 0,
+        nativeFadeout: (json['nativeFadeout'] as num?)?.toInt() ?? 0,
+      );
+    case 'multiSample':
+      return MultiSampleInstrument(
+        id,
+        {
+          for (final rawZone in (json['zones'] as List? ?? const []))
+            ((rawZone as Map<String, dynamic>)['midi'] as num).toInt():
+                instrumentFromJson(
+              rawZone['instrument'] as Map<String, dynamic>,
+            ),
+        },
+        polyphonic: (json['polyphonic'] as bool?) ?? false,
       );
     case 'percussion':
       return PercussionInstrument(id);
@@ -270,6 +326,56 @@ Envelope _envelopeFromJson(Map<String, dynamic>? m) {
     release: _d(m, 'release', 0.012),
     pitchStart: _d(m, 'pitchStart', 0),
     pitchTime: _d(m, 'pitchTime', 0.04),
+  );
+}
+
+Map<String, dynamic> _volumeEnvelopeToJson(VolumeEnvelope e) => {
+      'points': [
+        for (final p in e.points) {'ms': p.ms, 'level': p.level},
+      ],
+      'sustain': e.sustain,
+      'loopStart': e.loopStart,
+      'loopEnd': e.loopEnd,
+    };
+
+VolumeEnvelope? _volumeEnvelopeFromJson(Map<String, dynamic>? m) {
+  if (m == null) return null;
+  return VolumeEnvelope(
+    [
+      for (final raw in (m['points'] as List? ?? const []))
+        (
+          ms: ((raw as Map<String, dynamic>)['ms'] as num).toInt(),
+          level: (raw['level'] as num).toDouble(),
+        ),
+    ],
+    sustain: (m['sustain'] as num?)?.toInt(),
+    loopStart: (m['loopStart'] as num?)?.toInt(),
+    loopEnd: (m['loopEnd'] as num?)?.toInt(),
+  );
+}
+
+Map<String, dynamic> _panEnvelopeToJson(PanEnvelope e) => {
+      'points': [
+        for (final p in e.points) {'ms': p.ms, 'pan': p.pan},
+      ],
+      'sustain': e.sustain,
+      'loopStart': e.loopStart,
+      'loopEnd': e.loopEnd,
+    };
+
+PanEnvelope? _panEnvelopeFromJson(Map<String, dynamic>? m) {
+  if (m == null) return null;
+  return PanEnvelope(
+    [
+      for (final raw in (m['points'] as List? ?? const []))
+        (
+          ms: ((raw as Map<String, dynamic>)['ms'] as num).toInt(),
+          pan: (raw['pan'] as num).toDouble(),
+        ),
+    ],
+    sustain: (m['sustain'] as num?)?.toInt(),
+    loopStart: (m['loopStart'] as num?)?.toInt(),
+    loopEnd: (m['loopEnd'] as num?)?.toInt(),
   );
 }
 

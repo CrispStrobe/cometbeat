@@ -95,6 +95,11 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
         inst: _inst as SampleInstrument,
         onChanged: (newInst) => setState(() => _inst = newInst),
       );
+    } else if (_inst is MultiSampleInstrument) {
+      return _MultiSampleEditor(
+        inst: _inst as MultiSampleInstrument,
+        onChanged: (newInst) => setState(() => _inst = newInst),
+      );
     } else {
       return SoundLabScreen(
         embedded: true,
@@ -109,6 +114,65 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
         },
       );
     }
+  }
+}
+
+class _MultiSampleEditor extends StatefulWidget {
+  const _MultiSampleEditor({required this.inst, required this.onChanged});
+  final MultiSampleInstrument inst;
+  final ValueChanged<MultiSampleInstrument> onChanged;
+
+  @override
+  State<_MultiSampleEditor> createState() => _MultiSampleEditorState();
+}
+
+class _MultiSampleEditorState extends State<_MultiSampleEditor> {
+  late int _selectedMidi;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedMidi =
+        widget.inst.zones.isEmpty ? 60 : widget.inst.zones.keys.first;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final keys = widget.inst.zones.keys.toList()..sort();
+    if (keys.isEmpty) return const Center(child: Text('No mapped zones'));
+    if (!keys.contains(_selectedMidi)) _selectedMidi = keys.first;
+    final zone = widget.inst.zones[_selectedMidi];
+    return ListView(
+      children: [
+        ListTile(
+          title: const Text('Mapped Note'),
+          trailing: DropdownButton<int>(
+            value: _selectedMidi,
+            items: [
+              for (final key in keys)
+                DropdownMenuItem(value: key, child: Text('MIDI $key')),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _selectedMidi = value);
+            },
+          ),
+        ),
+        if (zone is SampleInstrument)
+          _SampleEditor(
+            inst: zone,
+            onChanged: (edited) {
+              final updated = Map<int, TrackerInstrument>.of(widget.inst.zones)
+                ..[_selectedMidi] = edited;
+              widget.onChanged(widget.inst.copyWith(zones: updated));
+            },
+          )
+        else
+          const ListTile(
+            title: Text('This zone is procedural'),
+            subtitle: Text('Use the sound editor to replace it with a sample.'),
+          ),
+      ],
+    );
   }
 }
 
@@ -193,6 +257,61 @@ class _SampleEditor extends StatelessWidget {
               min: 0,
               max: 1,
               onChanged: (v) => onChanged(inst.copyWith(volume: v)),
+            ),
+          ),
+        ),
+        ListTile(
+          title: const Text('New Note Action'),
+          trailing: DropdownButton<int>(
+            value: inst.nativeNna.clamp(0, 3).toInt(),
+            items: const [
+              DropdownMenuItem(value: 0, child: Text('Cut')),
+              DropdownMenuItem(value: 1, child: Text('Continue')),
+              DropdownMenuItem(value: 2, child: Text('Note Off')),
+              DropdownMenuItem(value: 3, child: Text('Fade')),
+            ],
+            onChanged: (v) =>
+                v == null ? null : onChanged(inst.copyWith(nativeNna: v)),
+          ),
+        ),
+        ListTile(
+          title: const Text('Duplicate Check'),
+          trailing: DropdownButton<int>(
+            value: inst.nativeDct.clamp(0, 3).toInt(),
+            items: const [
+              DropdownMenuItem(value: 0, child: Text('None')),
+              DropdownMenuItem(value: 1, child: Text('Note')),
+              DropdownMenuItem(value: 2, child: Text('Sample')),
+              DropdownMenuItem(value: 3, child: Text('Instrument')),
+            ],
+            onChanged: (v) =>
+                v == null ? null : onChanged(inst.copyWith(nativeDct: v)),
+          ),
+        ),
+        ListTile(
+          title: const Text('Duplicate Action'),
+          trailing: DropdownButton<int>(
+            value: inst.nativeDca.clamp(0, 2).toInt(),
+            items: const [
+              DropdownMenuItem(value: 0, child: Text('Cut')),
+              DropdownMenuItem(value: 1, child: Text('Note Off')),
+              DropdownMenuItem(value: 2, child: Text('Fade')),
+            ],
+            onChanged: (v) =>
+                v == null ? null : onChanged(inst.copyWith(nativeDca: v)),
+          ),
+        ),
+        ListTile(
+          title: const Text('Fadeout'),
+          subtitle: Text('${inst.nativeFadeout} / 1024'),
+          trailing: SizedBox(
+            width: 180,
+            child: Slider(
+              value: inst.nativeFadeout.clamp(0, 1024).toDouble(),
+              min: 0,
+              max: 1024,
+              onChanged: (v) =>
+                  onChanged(inst.copyWith(nativeFadeout: v.round())),
             ),
           ),
         ),
