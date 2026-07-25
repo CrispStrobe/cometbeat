@@ -955,8 +955,12 @@ double? _readLoopedSample(
                 (channel.panEnvelope?.panAt(t * 1000) ?? 0.0) +
                 (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0))
             .clamp(-1.0, 1.0);
+        final fadeRate = cur.nativeFadeout / 1024.0;
+        final relSamples = max(0, i - releaseStartSample);
         final release = voice.released
-            ? exp(-max(0, i - releaseStartSample) / (0.03 * kSampleRate))
+            ? (fadeRate > 0
+                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
+                : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
         final amount = vol * attack * level * release;
         if (sampleRight != null) {
@@ -1099,8 +1103,12 @@ void _renderSampleChannelInto(
         final nativeEnv = cur.nativeVolumeEnvelope;
         final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
+        final fadeRate = cur.nativeFadeout / 1024.0;
+        final relSamples = max(0, i - releaseStartSample);
         final release = voice.released
-            ? exp(-max(0, i - releaseStartSample) / (0.03 * kSampleRate))
+            ? (fadeRate > 0
+                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
+                : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
         stem[i] += sampleVal * vol * attack * el * release;
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
@@ -1231,8 +1239,12 @@ void _renderSampleChannelIntoVariable(
         final nativeEnv = cur.nativeVolumeEnvelope;
         final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
+        final fadeRate = cur.nativeFadeout / 1024.0;
+        final relSamples = max(0, i - releaseStartSample);
         final release = voice.released
-            ? exp(-max(0, i - releaseStartSample) / (0.03 * kSampleRate))
+            ? (fadeRate > 0
+                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
+                : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
         stem[i] += sampleVal * vol * attack * el * release;
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
