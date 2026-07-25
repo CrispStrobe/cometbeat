@@ -106,11 +106,13 @@ void main() {
     expect(find.byIcon(Icons.library_music), findsOneWidget); // score
   });
 
-  testWidgets('kind chip filters to one kind', (tester) async {
+  testWidgets('kind dropdown filters to one kind', (tester) async {
     await tester.pumpWidget(_host(_FakeSource(_fixture)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Modules'));
+    await tester.tap(find.byKey(const ValueKey('kindFilter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Modules').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Chiptune'), findsOneWidget);
@@ -118,7 +120,7 @@ void main() {
     expect(find.text('Snare hit'), findsNothing);
   });
 
-  testWidgets('a sound-library scope hides Modules/Songs (chips AND items)',
+  testWidgets('a sound-library scope hides Modules/Songs (options AND items)',
       (tester) async {
     await tester.pumpWidget(
       _host(_FakeSource(_fixture), kinds: kSoundLibraryKinds),
@@ -132,12 +134,14 @@ void main() {
     // …but a module and a song are NOT, even though the source returned them.
     expect(find.text('Chiptune'), findsNothing); // module
     expect(find.text('Kyrie'), findsNothing); // score
-    // …and there are no Modules/Songs filter chips.
-    expect(find.widgetWithText(ChoiceChip, 'Modules'), findsNothing);
-    expect(find.widgetWithText(ChoiceChip, 'Songs'), findsNothing);
+    // …and the kind dropdown offers no Modules/Songs options.
+    await tester.tap(find.byKey(const ValueKey('kindFilter')));
+    await tester.pumpAndSettle();
+    expect(find.text('Modules'), findsNothing);
+    expect(find.text('Songs'), findsNothing);
   });
 
-  testWidgets('a single-kind scope hides the whole kind-filter row',
+  testWidgets('a single-kind scope hides the kind dropdown entirely',
       (tester) async {
     await tester.pumpWidget(
       _host(_FakeSource(_fixture), kinds: const {'instrument'}),
@@ -148,16 +152,17 @@ void main() {
     expect(find.text('Cello VCSL'), findsOneWidget);
     expect(find.text('FluidR3 GM'), findsNothing);
     expect(find.text('Snare hit'), findsNothing);
-    // No kind chips at all (not even "All") — there is nothing to filter.
-    expect(find.widgetWithText(ChoiceChip, 'All'), findsNothing);
-    expect(find.widgetWithText(ChoiceChip, 'Instruments'), findsNothing);
+    // No kind dropdown at all — there is nothing to filter.
+    expect(find.byKey(const ValueKey('kindFilter')), findsNothing);
   });
 
-  testWidgets('licence chip filters by bucket', (tester) async {
+  testWidgets('licence dropdown filters by bucket', (tester) async {
     await tester.pumpWidget(_host(_FakeSource(_fixture)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilterChip, 'MIT'));
+    await tester.tap(find.byKey(const ValueKey('licenceFilter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('MIT').last);
     await tester.pumpAndSettle();
 
     expect(find.text('FluidR3 GM'), findsOneWidget); // MIT

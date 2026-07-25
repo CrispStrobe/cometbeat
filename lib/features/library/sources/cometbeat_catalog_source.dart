@@ -67,6 +67,18 @@ class CometbeatCatalogSource implements ContentSource {
   /// Fetched once per instance (the needed shards, flattened).
   List<LibraryItem>? _catalog;
 
+  /// Process-wide cache so reopening the browser is instant instead of
+  /// re-fetching the index + shards. Keyed by the kind-set; only used for the
+  /// real published index, so test instances (custom [_indexUrl]) stay
+  /// per-instance and never see each other's fixtures.
+  static final Map<String, List<LibraryItem>> _sharedCache = {};
+
+  bool get _shareable => _indexUrl == _kIndexUrl;
+  String get _cacheKey => (kinds.toList()..sort()).join(',');
+
+  /// Drops the process-wide cache (tests / a manual "refresh").
+  static void clearSharedCache() => _sharedCache.clear();
+
   /// Resolve a catalog-relative path as URI path segments. Catalog assets may
   /// contain spaces, `#`, or other filename characters; concatenating the raw
   /// path lets `Uri.parse` treat `#` as a fragment and produces a broken URL.
@@ -99,6 +111,10 @@ class CometbeatCatalogSource implements ContentSource {
 
   Future<List<LibraryItem>> _load() async {
     if (_catalog != null) return _catalog!;
+    if (_shareable) {
+      final hit = _sharedCache[_cacheKey];
+      if (hit != null) return _catalog = hit;
+    }
     final index = _json(await _http(Uri.parse(_indexUrl)), 'catalog index');
     final baseUrl = (index['baseUrl'] as String?) ?? '';
     final shards = (index['shards'] as List? ?? const [])
@@ -130,6 +146,7 @@ class CometbeatCatalogSource implements ContentSource {
         );
       }
     }
+    if (_shareable) _sharedCache[_cacheKey] = items;
     return _catalog = items;
   }
 

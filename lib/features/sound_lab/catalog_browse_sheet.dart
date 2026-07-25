@@ -75,17 +75,22 @@ Future<bool?> showCatalogBrowseSheet(
   Future<void> Function(SampleClip clip)? onInsertSample,
   bool preferSampleInsert = false,
 }) {
-  return showModalBottomSheet<bool>(
+  return showDialog<bool>(
     context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (_) => CatalogBrowseSheet(
-      source: source ?? CometbeatCatalogSource(defaultHttpGet, kinds: kinds),
-      store: store ?? InstrumentLibraryStore(),
-      initialKind: initialKind,
-      kinds: kinds,
-      onInsertSample: onInsertSample,
-      preferSampleInsert: preferSampleInsert,
+    builder: (_) => Dialog(
+      insetPadding: const EdgeInsets.all(24),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 900),
+        child: CatalogBrowseSheet(
+          source: source ?? CometbeatCatalogSource(defaultHttpGet, kinds: kinds),
+          store: store ?? InstrumentLibraryStore(),
+          initialKind: initialKind,
+          kinds: kinds,
+          onInsertSample: onInsertSample,
+          preferSampleInsert: preferSampleInsert,
+        ),
+      ),
     ),
   );
 }
@@ -564,75 +569,58 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: 12,
-          right: 12,
+          left: 16,
+          right: 16,
+          top: 12,
           bottom: MediaQuery.of(context).viewInsets.bottom + 12,
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Row 1 — title · count · close.
             Row(
               children: [
                 const Icon(Icons.cloud_outlined, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${widget.source.name} · ${widget.source.licenseSummary}',
-                    style: Theme.of(context).textTheme.titleSmall,
+                    widget.source.name,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 if (!_loading)
-                  Text(
-                    l10n.catalogItemCount(visible.length),
-                    style: Theme.of(context).textTheme.bodySmall,
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Text(
+                      l10n.catalogItemCount(visible.length),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  tooltip: MaterialLocalizations.of(context).closeButtonLabel,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _search,
-              textInputAction: TextInputAction.search,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: l10n.librarySearchHint,
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
+            // Row 2 — search + kind & licence filters, all inline (wrapping to a
+            // second line only when truly cramped).
+            _controls(l10n),
             const SizedBox(height: 8),
-            _filters(l10n),
-            const SizedBox(height: 4),
             if (_busy) const LinearProgressIndicator(),
-            SizedBox(height: 320, child: _list(l10n, visible)),
+            Expanded(child: _list(l10n, visible)),
           ],
         ),
       ),
     );
   }
 
-  Widget _filters(AppLocalizations l10n) {
-    Widget kindChip(_Kind k, String label) => Padding(
-          padding: const EdgeInsets.only(right: 6),
-          child: ChoiceChip(
-            label: Text(label),
-            selected: _kind == k,
-            onSelected: (_) => setState(() => _kind = k),
-          ),
-        );
-    Widget licChip(_Lic v, String label) => Padding(
-          padding: const EdgeInsets.only(right: 6),
-          child: FilterChip(
-            label: Text(label),
-            selected: _lic == v,
-            onSelected: (_) => setState(() => _lic = _lic == v ? _Lic.all : v),
-          ),
-        );
-    // Only the kinds this browser is scoped to — a "choose an instrument"
-    // surface never shows Modules/Songs chips. With a single kind there is
-    // nothing to filter, so the whole row (including "All") is hidden.
-    final kindChips = <Widget>[
+  /// Search field + the kind/licence filters as compact dropdowns.
+  Widget _controls(AppLocalizations l10n) {
+    final showKind = widget.kinds.length > 1;
+    final kindItems = <DropdownMenuItem<_Kind>>[
+      DropdownMenuItem(value: _Kind.all, child: Text(l10n.catalogKindAll)),
       for (final (k, label) in <(_Kind, String)>[
         (_Kind.soundfont, l10n.catalogKindSoundFonts),
         (_Kind.instrument, l10n.catalogKindInstruments),
@@ -640,33 +628,48 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
         (_Kind.module, l10n.catalogKindModules),
         (_Kind.score, l10n.catalogKindSongs),
       ])
-        if (widget.kinds.contains(k.name)) kindChip(k, label),
+        if (widget.kinds.contains(k.name))
+          DropdownMenuItem(value: k, child: Text(label)),
     ];
-    final showKindRow = widget.kinds.length > 1;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (showKindRow) ...[
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                kindChip(_Kind.all, l10n.catalogKindAll),
-                ...kindChips,
-              ],
+        SizedBox(
+          width: 240,
+          child: TextField(
+            controller: _search,
+            textInputAction: TextInputAction.search,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: l10n.librarySearchHint,
+              prefixIcon: const Icon(Icons.search),
+              border: const OutlineInputBorder(),
+              isDense: true,
             ),
           ),
-          const SizedBox(height: 6),
-        ],
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              licChip(_Lic.cc0, 'CC0 · PD'),
-              licChip(_Lic.ccby, 'CC-BY'),
-              licChip(_Lic.mit, 'MIT'),
-            ],
+        ),
+        if (showKind)
+          DropdownButton<_Kind>(
+            key: const ValueKey('kindFilter'),
+            value: _kind,
+            items: kindItems,
+            onChanged: (k) => setState(() => _kind = k ?? _Kind.all),
           ),
+        DropdownButton<_Lic>(
+          key: const ValueKey('licenceFilter'),
+          value: _lic,
+          items: [
+            DropdownMenuItem(
+              value: _Lic.all,
+              child: Text(l10n.catalogLicenseAll),
+            ),
+            const DropdownMenuItem(value: _Lic.cc0, child: Text('CC0 · PD')),
+            const DropdownMenuItem(value: _Lic.ccby, child: Text('CC-BY')),
+            const DropdownMenuItem(value: _Lic.mit, child: Text('MIT')),
+          ],
+          onChanged: (v) => setState(() => _lic = v ?? _Lic.all),
         ),
       ],
     );
