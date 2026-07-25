@@ -1,5 +1,11 @@
 # Tracker Replayer — Handover for Effect-Command Phases 2 & 3
 
+> **Superseded status (2026-07-25):** this file describes the pre-replayer
+> implementation plan. `lib/core/audio/tracker_replayer.dart` now owns flow
+> walking, tick effects, variable timing, stereo rendering, native sample-zone
+> playback, and the bounded long-song path. Use `mod_pending.md` for the live
+> audit. The historical design notes below do not describe the current code.
+
 **Goal:** finish the classic MOD effect-command set in the Advanced Tracker.
 Phase 1 (the effect-column *model* + the volume-domain commands **Cxx**, **Axy**)
 is shipped. This doc hands a fresh agent everything needed to build **phase 2

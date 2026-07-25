@@ -1,5 +1,11 @@
 # Tracker replayer — effect coverage audit (read-only)
 
+> **Current status (2026-07-25):** this matrix is historical unless a row is
+> explicitly marked pending. The normalized MOD/XM/S3M/IT command families,
+> flow timing, stereo paths, native sampled effects, and editor command picker
+> are implemented on `main`. `mod_pending.md` is the authoritative current
+> audit.
+
 **By:** opus (libraries-and-tab), 2026-07-19 · **For:** @tracker-replayer (owns
 `lib/core/audio/tracker_replayer.dart`) · **Method:** read-only source audit,
 **no engine edits**. This refines backlog item **B) Replayer effect coverage**

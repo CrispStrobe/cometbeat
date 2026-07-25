@@ -1,5 +1,11 @@
 # Tracker engine — parallel feature CONTRACTS (orchestrated build)
 
+> **Archived contracts (2026-07-25):** these sibling-worktree instructions are
+> historical. The tempo, pan, effect, native-envelope, stereo, codec-bridge,
+> and long-render work described below has landed on `main`. New work must be
+> based on the current code and `mod_pending.md`; do not create parallel agents
+> from these stale contracts.
+
 Three remaining engine-parity features are being built **in parallel by
 capable (Opus) agents**, each in its own sibling worktree, against the contracts
 below. The **orchestrator** (opus tracker-replayer) owns these contracts and an

@@ -1,5 +1,12 @@
 # CometBeat — Curriculum & Game Plan
 
+> **Tracker documentation refresh (2026-07-25):** the historical tracker
+> entries below contain the original implementation history and may mention
+> work as active that is now shipped. The current implementation/audit is
+> `mod_pending.md`; current replayer behavior is in
+> `lib/core/audio/tracker_replayer.dart`. Do not use old “phase 2/3”, sibling
+> worktree, or “IT does not parse instruments” statements as current status.
+
 Music notation and harmony for children from primary school onwards (6+),
 decomposed into exciting minigames. EN/DE, modularly extendable, running on
 iOS/Android/Web/Windows/macOS/Linux. Notation rendering via the MIT

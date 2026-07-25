@@ -4,6 +4,11 @@ This is the current audit of the MOD, XM, S3M, and IT reader, writer, neutral
 module model, renderer, and editor. It distinguishes format preservation from
 what the application can actually play and edit.
 
+**Refreshed 2026-07-25.** Main includes the long-render fixes (`d2c1cf47`,
+`948e99b5`) and the Advanced Tracker command/stereo-editor pass
+(`17b79485`). The local downloaded audit corpus is deliberately not part of the
+branch; see `test/fixtures/README.md` and `docs/CORPUS_LICENSING.md`.
+
 ## Verification status
 
 | Item | Result | Scope and qualification |
@@ -65,10 +70,10 @@ what the application can actually play and edit.
 
 | Item | Decision |
 | --- | --- |
-| Tracker render fix branch | Merged to `main` and pushed as part of merge commit `bd2295fe`. |
-| Debugging stash | Keep as a safety/reference stash. Do not merge wholesale: it mixes useful logging with behavior-changing renderer edits and incompatible intermediate APIs. |
-| `audiveris/` | Unrelated complete source tree; do not merge. |
-| Downloaded fixtures and generated WAV | Useful local audit corpus, but not application changes. Keep out of the main branch unless deliberately adding a fixture set. |
+| Tracker render fixes | Merged to `main` and pushed as `d2c1cf47` and `948e99b5`. |
+| Advanced editor fixes | Merged to `main` and pushed as `17b79485`; documentation refresh is `c91215c1`. |
+| Debugging stash / nested clones | Do not merge. They are intermediate or unrelated worktrees, not application changes. |
+| Downloaded fixtures and generated WAV | Keep local-only. No provenance/licence record exists; do not add them to `origin/main`. |
 
 The practical conclusion is that the recent regression set is addressed for the
 tested corpus, and the renderer now preserves more native sample state. The

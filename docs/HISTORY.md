@@ -7,6 +7,17 @@ changelog it graduated from.
 
 ## Progression
 
+## Tracker module fidelity (2026-07-25)
+
+Advanced Tracker now imports, edits, live-plays, and CLI-renders MOD, XM, S3M,
+and IT content through the shared tracker song/replayer path. Recent fixes
+removed long IT render OOM/distortion, preserved variable row timing and
+per-tick effects in bounded long renders, exposed the normalized command
+families in the editor, and made native stereo samples visible and audible in
+the instrument editor. The current limitations are recorded in
+`mod_pending.md`; downloaded music used for A/B checks remains local-only until
+licensing is documented.
+
 - **Stars persist** (`ProgressService`): best stars/score and play count per
   game, shown on every game tile.
 - **Star-driven difficulty**: 2+ stars widen a game's material (reading

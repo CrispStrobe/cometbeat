@@ -14,6 +14,16 @@ source-by-source detail follows. (This is a *licensing/coverage* doc: it records
 what each source **is** and whether it clears the two axes, not how any of it is
 obtained.)
 
+### Local tracker audit corpus (2026-07-25)
+
+The downloaded MOD/XM/IT files currently in `test/fixtures/` are **not cleared
+for redistribution**. Their source URLs, checksums, and licences were not
+recorded when they were downloaded, so they remain developer-local and must not
+be committed or shipped. `golden.mod.wav` is generated reference audio and is
+also local-only. See `test/fixtures/README.md` for the exact inventory and the
+promotion requirements. This is separate from the explicitly licensed playback
+assets listed in the catalog sections below.
+
 ## The test every candidate must pass — TWO axes
 
 A dataset qualifies for **shipping** only if BOTH are clean:

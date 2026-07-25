@@ -1,5 +1,12 @@
 # Tracker — GUI, element-handoff & universal I/O idea board
 
+> **Status update (2026-07-25):** most of this idea board predates the current
+> Advanced Tracker. Basic/Advanced handoff, flow-aware playhead timing, native
+> instruments and zones, effect-column editing, envelopes, pattern lengths,
+> module import/export, stereo sample display, and live playback are now in the
+> app. Treat completed items below as historical decisions. Remaining codec and
+> editor gaps are tracked in `mod_pending.md`.
+
 Scope captured from the user (2026-07-18): **(1)** four picked GUI items;
 **(2)** hand over "elements we have in other parts of the codebase" — basic⇄
 advanced tracker, waveforms generated/modified elsewhere; **(3)** wire **all**

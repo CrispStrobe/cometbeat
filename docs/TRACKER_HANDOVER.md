@@ -1,5 +1,11 @@
 # Tracker (pattern sequencer) — handover
 
+> **Current status (2026-07-25):** this historical sandbox handover has been
+> superseded by the Advanced Tracker implementation. The live implementation
+> supports MOD/XM/S3M/IT import, edit, live playback, native sample zones and
+> envelopes, effect columns, order/flow timing, stereo samples, and CLI WAV
+> rendering. See `mod_pending.md` for the remaining fidelity audit.
+
 **Status:** Sandbox shipped and live (Slices 0–2, 4a, 4b on `origin/main`). A
 **Studio-shelf** creative surface in the spirit of ModEdit / FastTracker 2 /
 Scream Tracker 3 / Impulse Tracker, but **dual-audience** (a 10-year-old can make

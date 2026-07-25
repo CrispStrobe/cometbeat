@@ -1,5 +1,11 @@
 # libopenmpt oracle — verifying module effect import
 
+> **Current status (2026-07-25):** the MOD/XM/S3M/IT command path, native sample
+> zones, stereo samples, variable pattern timing, and long-render memory path
+> are implemented on `main`. This is now an A/B verification guide, not an
+> implementation handover. The downloaded music corpus remains local-only; see
+> `test/fixtures/README.md` before adding fixtures.
+
 `libopenmpt` (BSD-3, via the `openmpt123` CLI) is the reference implementation for
 MOD/S3M/XM/IT playback. We use it as an **A/B oracle** to verify our cross-format
 effect import (does our replayer make an imported module behave like the
@@ -38,7 +44,7 @@ OUT=/tmp/oracle
 # 1. Reference render (the oracle):
 cp module.s3m $OUT/o.s3m
 openmpt123 --render --samplerate 44100 --channels 1 --no-float \
-  --output-type wav --force --quiet $OUT/o.s3m          # → $OUT/o.s3m.wav
+  --output-type wav --force --quiet $OUT/o.s3m          # writes beside input
 
 # 2. OUR render (import → replay):
 dart run bin/render_module.dart module.s3m $OUT/mine.wav
@@ -52,7 +58,8 @@ A porta-up should read as a **rising** pitch in both; a vibrato as a wobble; a
 pattern break as a truncated section; etc. Author small tonal test modules with
 one effect each (a sine `S3mSample` + a note + the effect on following rows) via
 the format writers (`writeS3m`/`writeIt`) so the effect is isolated. Real modules
-are gitignored (copyright) — keep only license-clean fixtures committed.
+are local-only by default. Keep only fixtures with documented redistribution
+permission committed; see `test/fixtures/README.md`.
 
 ## What the oracle FOUND (2026-07-18)
 
