@@ -24,6 +24,7 @@
 //   * the engine's live channel cells ARE the current pattern's cells — editing
 //     the engine edits [current]; [selectPattern] saves/loads snapshots.
 
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart'
@@ -735,6 +736,205 @@ class TrackerSong {
   /// Total rendered song length in samples (sums each played pattern's own
   /// length under [songTotalMs]).
   int get songTotalSamples => (songTotalMs * kSampleRate) ~/ 1000;
+
+  // --- Bounded-memory streaming / range export ---------------------------
+  //
+  // The default [renderSongWav] allocates the WHOLE song's PCM at once (plus a
+  // per-order chunk list and the WAV copy) — fine for typical modules, but the
+  // peak grows with song length. The methods below render the [order] list in
+  // contiguous CHUNKS of K order entries and emit each chunk's PCM in turn, so
+  // peak memory is bounded to ~one chunk instead of the whole song. Each chunk
+  // is rendered by cloning THIS song with only a slice of the order list and
+  // running it through the SAME [renderSongWav] path, then stripping the 44-byte
+  // WAV header to recover the raw little-endian int16 PCM.
+  //
+  // FIDELITY TRADEOFF (documented, not silent):
+  //   * For a UNIFORM / non-command song (offline mixer path: not [usesCommands]
+  //     / [usesInstruments] / [usesEnvelopes] / [usesPan] / flow), the whole-song
+  //     render is already a byte-for-byte CONCATENATION of independent per-order
+  //     renders. Chunking therefore produces output that is BYTE-IDENTICAL to
+  //     [renderSongWav], at any chunk size.
+  //   * For a COMMAND-HEAVY song (commands / envelopes / pan / flow), the normal
+  //     render carries voice state (portamento, envelopes, NNA, flow position)
+  //     ACROSS order boundaries via the tick replayer. Chunked rendering RESETS
+  //     that state at every chunk boundary, so small-chunk streaming trades exact
+  //     cross-boundary continuity for bounded memory. Using
+  //     `chunkOrders >= order.length` yields a SINGLE chunk == the exact full
+  //     render (but is unbounded, like the default). The default [renderSongWav]
+  //     path is never changed.
+
+  /// Whether chunk output is stereo. A song that pans anything ([usesPan]) or is
+  /// flagged [stereoOutput] renders STEREO throughout; every chunk is forced to
+  /// the same channel count so mono and stereo chunks are never mixed (a pan
+  /// COMMAND that happens to fall only in some patterns cannot make one chunk
+  /// mono and another stereo).
+  bool get _streamStereo => usesPan || stereoOutput;
+
+  /// A standalone clone of this song containing ONLY the order slice
+  /// `[fromOrder, toOrder)` — its own band + pattern snapshots (so rendering it
+  /// never mutates this song), rendered stereo iff [_streamStereo]. Pattern grids
+  /// and channel columns are tiny relative to PCM, so the clone stays within the
+  /// bounded-memory budget.
+  TrackerSong _sliceSong(int fromOrder, int toOrder, bool stereo) {
+    final band = <TrackerChannel>[
+      for (final c in channels)
+        TrackerChannel(
+          id: c.id,
+          instrument: c.instrument,
+          rows: c.cells.length,
+          gain: c.gain,
+          pan: c.pan,
+          volumeEnvelope: c.volumeEnvelope,
+          panEnvelope: c.panEnvelope,
+          effects: c.effects, // TrackerChannel ctor copies the list
+          cells: c.cells, // ctor copies the column
+        )..muted = c.muted,
+    ];
+    return TrackerSong.fromParts(
+      channels: band,
+      timing: timing,
+      patterns: [for (final p in patterns) p.clone()],
+      order: order.sublist(fromOrder, toOrder),
+      instruments: instruments,
+      initialSpeed: initialSpeed,
+      stereoOutput: stereo,
+      globalVolume: globalVolume,
+    );
+  }
+
+  /// Renders the order slice `[fromOrder, toOrder)` and returns its raw PCM
+  /// bytes (little-endian int16, header stripped). Interleaved L,R when
+  /// [_streamStereo]. A zero-length slice yields an empty list.
+  Uint8List _renderChunkPcm(int fromOrder, int toOrder, bool stereo) {
+    if (toOrder <= fromOrder) return Uint8List(0);
+    final wav = _sliceSong(fromOrder, toOrder, stereo).renderSongWav();
+    // Both wavBytes and wavBytesStereo emit a fixed 44-byte header.
+    return Uint8List.sublistView(wav, 44);
+  }
+
+  /// Lazily yields the PCM (header-stripped, little-endian int16) of each
+  /// contiguous chunk of [chunkOrders] order entries over `[fromOrder, toOrder)`
+  /// (defaults: the whole [order] list). Pull-based (`sync*`): only one chunk is
+  /// materialised at a time, so a consumer that writes each chunk out keeps peak
+  /// memory bounded to ~one chunk. Concatenating every yielded chunk reconstructs
+  /// the song's PCM (byte-identical to [renderSongWav] for uniform songs — see
+  /// the fidelity note above).
+  Iterable<Uint8List> renderOrderChunksPcm({
+    int chunkOrders = 1,
+    int? fromOrder,
+    int? toOrder,
+  }) sync* {
+    final k = chunkOrders < 1 ? 1 : chunkOrders;
+    final lo = (fromOrder ?? 0).clamp(0, order.length);
+    final hi = (toOrder ?? order.length).clamp(lo, order.length);
+    final stereo = _streamStereo;
+    for (var start = lo; start < hi; start += k) {
+      final end = (start + k) > hi ? hi : (start + k);
+      yield _renderChunkPcm(start, end, stereo);
+    }
+  }
+
+  /// Renders ONLY the order range `[fromOrder, toOrder)` to a complete WAV
+  /// (header + PCM), produced chunk-by-chunk in [chunkOrders]-entry steps so the
+  /// render itself is bounded even though the returned buffer holds the range's
+  /// PCM. For a uniform song this equals the concatenation of exactly those
+  /// orders. Out-of-range bounds are clamped; an empty range yields a valid,
+  /// empty (0-sample) WAV.
+  Uint8List renderOrderRangeWav(
+    int fromOrder,
+    int toOrder, {
+    int chunkOrders = 1,
+  }) {
+    final stereo = _streamStereo;
+    final chunks = renderOrderChunksPcm(
+      chunkOrders: chunkOrders,
+      fromOrder: fromOrder,
+      toOrder: toOrder,
+    ).toList(growable: false);
+    final dataLen = chunks.fold<int>(0, (s, c) => s + c.length);
+    final out = Uint8List(44 + dataLen);
+    out.setRange(0, 44, _wavHeaderBytes(dataLen, stereo: stereo));
+    var offset = 44;
+    for (final c in chunks) {
+      out.setRange(offset, offset + c.length, c);
+      offset += c.length;
+    }
+    return out;
+  }
+
+  /// Streams the song (or the order range `[fromOrder, toOrder)`) to the WAV file
+  /// at [path] in [chunkOrders]-entry chunks, holding at most ~one chunk of PCM
+  /// in memory at once — the bounded-memory export. A placeholder header is
+  /// written first, each chunk's PCM is appended as it is produced, and the
+  /// RIFF/data sizes are patched at close. Returns the number of PCM data bytes
+  /// written. See the fidelity note above: byte-identical to [renderSongWav] for
+  /// uniform songs; command-heavy songs reset cross-boundary voice state at each
+  /// chunk boundary (use `chunkOrders >= order.length` for the exact full
+  /// render).
+  Future<int> streamSongWavToFile(
+    String path, {
+    int chunkOrders = 1,
+    int? fromOrder,
+    int? toOrder,
+  }) async {
+    final stereo = _streamStereo;
+    final raf = await File(path).open(mode: FileMode.write);
+    try {
+      // Placeholder header (data length patched at close).
+      await raf.writeFrom(_wavHeaderBytes(0, stereo: stereo));
+      var dataLen = 0;
+      for (final pcm in renderOrderChunksPcm(
+        chunkOrders: chunkOrders,
+        fromOrder: fromOrder,
+        toOrder: toOrder,
+      )) {
+        if (pcm.isEmpty) continue;
+        await raf.writeFrom(pcm);
+        dataLen += pcm.length;
+      }
+      // Patch RIFF chunk size (offset 4) and data chunk size (offset 40).
+      await raf.setPosition(4);
+      await raf.writeFrom(_u32le(36 + dataLen));
+      await raf.setPosition(40);
+      await raf.writeFrom(_u32le(dataLen));
+      return dataLen;
+    } finally {
+      await raf.close();
+    }
+  }
+
+  /// A 44-byte canonical PCM WAV header for [dataLen] data bytes, matching the
+  /// layout emitted by [wavBytes] (mono) / [wavBytesStereo] (stereo) so a
+  /// single-chunk stream is byte-identical to the default render.
+  static Uint8List _wavHeaderBytes(int dataLen, {required bool stereo}) {
+    final ch = stereo ? 2 : 1;
+    final bytes = ByteData(44);
+    void str(int off, String s) {
+      for (var i = 0; i < s.length; i++) {
+        bytes.setUint8(off + i, s.codeUnitAt(i));
+      }
+    }
+
+    str(0, 'RIFF');
+    bytes.setUint32(4, 36 + dataLen, Endian.little);
+    str(8, 'WAVE');
+    str(12, 'fmt ');
+    bytes.setUint32(16, 16, Endian.little); // fmt chunk size
+    bytes.setUint16(20, 1, Endian.little); // PCM
+    bytes.setUint16(22, ch, Endian.little); // channels
+    bytes.setUint32(24, kSampleRate, Endian.little);
+    bytes.setUint32(28, kSampleRate * ch * 2, Endian.little); // byte rate
+    bytes.setUint16(32, ch * 2, Endian.little); // block align
+    bytes.setUint16(34, 16, Endian.little); // bits per sample
+    str(36, 'data');
+    bytes.setUint32(40, dataLen, Endian.little);
+    return bytes.buffer.asUint8List();
+  }
+
+  static Uint8List _u32le(int v) {
+    final b = ByteData(4)..setUint32(0, v, Endian.little);
+    return b.buffer.asUint8List();
+  }
 
   // --- internals ---------------------------------------------------------
 
