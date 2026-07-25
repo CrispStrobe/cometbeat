@@ -34,6 +34,34 @@ LoopMixerTester _game(WidgetTester tester) =>
     tester.state<State<LoopMixerScreen>>(find.byType(LoopMixerScreen))
         as LoopMixerTester;
 
+/// Drive a "Sound & Feel" dropdown: open the one currently showing [current],
+/// then pick [target]. (The option groups are compact dropdowns, not chips.)
+/// Uses timed pumps, not pumpAndSettle — the screen has perpetual animations.
+Future<void> _selectDropdown(
+  WidgetTester tester,
+  String current,
+  String target,
+) async {
+  // Scope the "open" tap to the label INSIDE a DropdownButton so a same-named
+  // control elsewhere (e.g. the Sections 'C' button) can't be hit by mistake.
+  final opener = find.descendant(
+    of: find.byWidgetPredicate((w) => w is DropdownButton),
+    matching: find.text(current),
+  );
+  await tester.tap(opener.first);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400)); // open animation
+  // A long menu (e.g. Harmony's 17 options) opens scrolled to the current
+  // selection, so the target can be off-screen — bring it into view first or
+  // the tap lands on the barrier and dismisses without a change.
+  final item = find.text(target).last;
+  await tester.ensureVisible(item);
+  await tester.pump();
+  await tester.tap(item);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400)); // close animation
+}
+
 /// A stand-in for the native Tier-3b engine: records the reference PCM the
 /// screen pushes and lets the test emit synthetic cleaned near-end frames. No
 /// device, no `dart:ffi` — the graded-jam path runs entirely headless.
@@ -325,7 +353,7 @@ void main() {
     expect(game.isPlaying, isTrue);
   });
 
-  testWidgets('harmony chips switch between the vamp and a progression',
+  testWidgets('harmony dropdown switches between the vamp and a progression',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
@@ -336,12 +364,15 @@ void main() {
     game.toggleTrack('bass');
     await tester.pump();
 
-    await tester.tap(find.text('I–V–vi–IV'));
-    await tester.pump();
+    // Forward through the dropdown proves it fires the change (Free → a song).
+    await _selectDropdown(tester, 'Free', 'I–V–vi–IV');
     expect(game.progressionId, 'axis');
     expect(game.isPlaying, isTrue, reason: 'groove restarts on the song loop');
 
-    await tester.tap(find.text('Free'));
+    // Back to the free vamp via the seam (the 17-item menu opens scrolled to
+    // the selection, so the top 'Free' row is a headless-tap pain — not a
+    // product issue; a user scrolls to it fine).
+    game.setProgression(null);
     await tester.pump();
     expect(game.progressionId, isNull);
   });
@@ -370,6 +401,17 @@ void main() {
     game.toggleTrack('melody');
     await tester.pump();
     expect(find.byType(StaffView), findsNWidgets(3));
+    // Each staff is clipped to its own row so a tall staff (high notes / ledger
+    // lines) can't paint over its neighbour — the "rows totally overlap" fix.
+    for (var i = 0; i < 3; i++) {
+      expect(
+        find.ancestor(
+          of: find.byType(StaffView).at(i),
+          matching: find.byType(ClipRect),
+        ),
+        findsWidgets,
+      );
+    }
 
     // All off → back to the hint, no staves.
     game.toggleTrack('drums');
@@ -379,7 +421,8 @@ void main() {
     expect(find.byType(StaffView), findsNothing);
   });
 
-  testWidgets('key & scale chips transpose the pitched stems', (tester) async {
+  testWidgets('key & scale dropdowns transpose the pitched stems',
+      (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
     game.toggleInspector(); // Sound & Feel settings live in the inspector.
@@ -387,14 +430,12 @@ void main() {
     expect(game.key, 0);
     expect(game.scale, GrooveScale.majorPentatonic);
 
-    // Tapping the 'F' key chip sets the root to 5 (C=0 … F=5).
-    await tester.tap(find.widgetWithText(ChoiceChip, 'F'));
-    await tester.pump();
+    // Picking 'F' in the Key dropdown sets the root to 5 (C=0 … F=5).
+    await _selectDropdown(tester, 'C', 'F');
     expect(game.key, 5);
 
-    // Tapping 'Minor' switches the scale (relative-minor pentatonic set).
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Minor'));
-    await tester.pump();
+    // Picking 'Minor' switches the scale (relative-minor pentatonic set).
+    await _selectDropdown(tester, 'Major', 'Minor');
     expect(game.scale, GrooveScale.minorPentatonic);
 
     // The engraving reflects the transposition: with melody on, a staff shows
@@ -464,7 +505,8 @@ void main() {
     }
   });
 
-  testWidgets('style chips swap the whole-band flavour + bias', (tester) async {
+  testWidgets('style dropdown swaps the whole-band flavour + bias',
+      (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
     game.toggleInspector(); // Sound & Feel settings live in the inspector.
@@ -477,8 +519,7 @@ void main() {
     await tester.pump();
 
     // Picking "Lounge" re-points the band and biases tempo/kit.
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Lounge'));
-    await tester.pump();
+    await _selectDropdown(tester, 'Classic', 'Lounge');
     expect(game.styleId, 'chill');
     expect(game.tempoBpm, 75);
     expect(game.kitId, 'lofi');
@@ -493,7 +534,7 @@ void main() {
     expect(game.styleId, 'default');
   });
 
-  testWidgets('kit chips swap the drum timbre', (tester) async {
+  testWidgets('kit dropdown swaps the drum timbre', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
     game.toggleInspector(); // Sound & Feel settings live in the inspector.
@@ -503,8 +544,7 @@ void main() {
     game.toggleTrack('drums');
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Deep'));
-    await tester.pump();
+    await _selectDropdown(tester, 'Clean', 'Deep');
     expect(game.kitId, 'deep');
     expect(game.isPlaying, isTrue);
     expect(tester.takeException(), isNull);
@@ -1128,30 +1168,70 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('LM-UX4c: editing a built-in stem overrides its pattern',
+  testWidgets(
+      'LM-UX4c: a built-in stem seeds from its real notes, then edits '
+      'become an override', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    // Targeting the built-in melody stem opens the grid on the notes it
+    // ACTUALLY plays — not a blank grid ("it mostly shows empty" fix) — and
+    // seeding alone must NOT create an override yet.
+    game.debugSetTuneTarget('melody');
+    await tester.pump();
+    final seeded = game.debugTuneCells;
+    expect(seeded, isNotNull);
+    expect(
+      seeded!.any((c) => c.midis != null),
+      isTrue,
+      reason: 'seeded from the real melody, not empty',
+    );
+    expect(game.debugHasTuneOverride('melody'), isFalse);
+
+    // Any grid edit freezes it into a played override (and enables the stem).
+    game.debugEditTuneCell(72, 1); // add a note the preset lacks at this step
+    await tester.pump();
+    expect(game.enabledTracks, contains('melody'));
+    expect(game.debugHasTuneOverride('melody'), isTrue);
+    expect(
+      game.debugTuneCells!.any((c) => c.midis?.contains(72) ?? false),
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a placed note keeps its own short length (no fill-to-end bug)',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
 
-    // Target the built-in melody stem, then tap a note (authored-C 60 — the
-    // engine transposes on render).
-    game.debugSetTuneTarget('melody');
-    await tester.pump();
-    game.debugEditTuneCell(60, 0);
+    // Place a SINGLE note partway through the grid.
+    game.debugEditTuneCell(67, 8); // G4 at step 8
     await tester.pump();
 
-    // The stem now plays the override (and is enabled), not its preset.
-    expect(game.enabledTracks, contains('melody'));
+    final cells = game.debugTuneCells!;
+    // The whole 2-bar grid is still accounted for (rests fill the gaps).
+    expect(cells.fold<int>(0, (a, c) => a + c.steps), kPatternSteps);
+    // The note is short (a couple of steps), NOT sustained to the far right —
+    // the regression this guards ("the table fills from click to fully right").
+    final note = cells.firstWhere((c) => c.midis?.contains(67) ?? false);
     expect(
-      game.debugTuneCells!.any((c) => c.midis?.contains(60) ?? false),
-      isTrue,
+      note.steps,
+      lessThanOrEqualTo(4),
+      reason: 'a lone note must not stretch to the grid end',
     );
+    // The grid opens with a leading rest (note is at step 8, not step 0) and a
+    // trailing rest after the note — the old bug left neither.
+    expect(cells.first.midis, isNull);
+    expect(cells.last.midis, isNull);
 
-    // Clearing the note reverts the stem to its built-in preset.
-    game.debugEditTuneCell(60, 0);
+    // A second note further right doesn't retro-stretch the first to reach it.
+    game.debugEditTuneCell(72, 16); // C5 at step 16
     await tester.pump();
-    expect(game.debugTuneCells, isNull); // override cleared
-    expect(tester.takeException(), isNull);
+    final after = game.debugTuneCells!;
+    final g = after.firstWhere((c) => c.midis?.contains(67) ?? false);
+    expect(g.steps, lessThanOrEqualTo(4), reason: 'still bounded, gap = rest');
+    expect(after.fold<int>(0, (a, c) => a + c.steps), kPatternSteps);
   });
 
   testWidgets('MelodyBridge: share a tune, then load it back', (tester) async {
@@ -1420,9 +1500,10 @@ void main() {
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
-    game.debugSetTuneTarget('melody');
-    // Two notes so a per-note dynamic is audible relative to its neighbour
-    // (a single note would be normalized back to unit peak by the mixer).
+    // Build on the user tune (default target) — it starts blank, so the first
+    // cell is deterministically the step-0 note we cycle. Two notes so a
+    // per-note dynamic is audible relative to its neighbour (a single note
+    // would be normalized back to unit peak by the mixer).
     game.debugEditTuneCell(64, 0); // E4 at step 0
     game.debugEditTuneCell(67, 4); // G4 at step 4
     await tester.pump();

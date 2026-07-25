@@ -234,6 +234,11 @@ abstract interface class LoopMixerTester {
   List<PatternCell>? get debugTuneCells;
   void debugSetTuneTarget(String id);
 
+  /// Whether track [id] carries a hand-edited cell override (vs. still playing
+  /// its generated preset). Distinguishes "seeded from the real notes" from
+  /// "actually overridden by an edit".
+  bool debugHasTuneOverride(String id);
+
   /// Cycle the dynamics of the note(s) at [step] (soft ↔ normal) — the tune
   /// grid's long-press, for note-level velocity editing.
   void debugCycleTuneVelocity(int midi, int step);
@@ -666,6 +671,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   void debugSetTuneTarget(String id) => setState(() => _tuneTarget = id);
   @override
+  bool debugHasTuneOverride(String id) =>
+      _engine.trackCellsOverride(id) != null;
+  @override
   void debugCycleTuneVelocity(int midi, int step) =>
       _cycleTuneCellVelocity(midi, step);
 
@@ -682,10 +690,23 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   bool get _tuneTargetIsUser => _tuneTarget == LoopEngine.userTrackId;
 
-  /// The authored-C cells behind the current tune target (null = none yet).
-  List<PatternCell>? _targetCells() => _tuneTargetIsUser
-      ? _engine.userTrackCells
-      : _engine.trackCellsOverride(_tuneTarget);
+  /// The authored-C cells behind the current tune target.
+  ///
+  /// For the user track: its own cells (null until sung/tapped — an empty grid
+  /// is correct there). For a built-in stem: its live override, or — when there
+  /// is none yet — the notes it CURRENTLY plays ([cellsFor]), so tapping Edit
+  /// opens on the real tune instead of a blank grid ("it mostly shows empty").
+  /// Only when those cells fit one 2-bar editor grid; a progression can tile a
+  /// stem across more bars than this grid can represent, so that stays blank.
+  List<PatternCell>? _targetCells() {
+    if (_tuneTargetIsUser) return _engine.userTrackCells;
+    final override = _engine.trackCellsOverride(_tuneTarget);
+    if (override != null) return override;
+    final authored = _engine.cellsFor(_tuneTarget);
+    if (authored == null) return null;
+    final total = authored.fold<int>(0, (a, c) => a + c.steps);
+    return total == kPatternSteps ? authored : null;
+  }
 
   /// The tune editor's pitch rows — one octave of C major pentatonic. Cells are
   /// authored in C (like every built-in stem); the engine's `pitchTranspose`
@@ -732,32 +753,45 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     return out;
   }
 
-  /// Grid cells → a bar of [PatternCell]s (rests fill the gaps). Velocity is
-  /// per time-slice: all notes placed on a step share that step's velocity.
+  /// Grid cells → a bar of [PatternCell]s. Each note keeps its OWN length
+  /// (capped so it never runs past the next onset or the grid end); the space
+  /// before/after/between notes becomes rest cells. Velocity is per time-slice:
+  /// all notes placed on a step share that step's velocity.
+  ///
+  /// (Regression: the old version gave every note a duration of "steps until
+  /// the next note", so a single note sustained all the way to the right edge —
+  /// the "table fills from click position to fully right" bug.)
   List<PatternCell> _stepCellsToPattern(List<StepCell> cells, int steps) {
-    final byStep = <int, List<int>>{};
-    final velOf = <int, double>{};
+    final midisAt = <int, List<int>>{};
+    final velAt = <int, double>{};
+    final lenAt = <int, int>{};
     for (final c in cells) {
-      (byStep[c.step] ??= []).add(c.row);
-      velOf[c.step] = c.velocity;
+      if (c.step < 0 || c.step >= steps) continue;
+      (midisAt[c.step] ??= []).add(c.row);
+      velAt[c.step] = c.velocity;
+      lenAt[c.step] = max(lenAt[c.step] ?? 1, c.len);
     }
+    final onsets = midisAt.keys.toList()..sort();
     final out = <PatternCell>[];
     var pos = 0;
-    while (pos < steps) {
-      final midis = byStep[pos];
-      var next = pos + 1;
-      while (next < steps && !byStep.containsKey(next)) {
-        next++;
-      }
+    for (var i = 0; i < onsets.length; i++) {
+      final onset = onsets[i];
+      // A rest bridges the gap since the previous note ended.
+      if (onset > pos) out.add(PatternCell(steps: onset - pos));
+      // The note's own length, capped so it stops at the next onset / bar end.
+      final nextOnset = i + 1 < onsets.length ? onsets[i + 1] : steps;
+      final noteLen = (lenAt[onset] ?? 1).clamp(1, nextOnset - onset);
       out.add(
         PatternCell(
-          midis: midis,
-          steps: next - pos,
-          velocity: velOf[pos] ?? 1.0,
+          midis: midisAt[onset],
+          steps: noteLen,
+          velocity: velAt[onset] ?? 1.0,
         ),
       );
-      pos = next;
+      pos = onset + noteLen;
     }
+    // Trailing rest so the pattern always sums to [steps].
+    if (pos < steps) out.add(PatternCell(steps: steps - pos));
     return out;
   }
 
@@ -2224,28 +2258,34 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             // horizontally instead of shrinking the whole thing to fit.
             // LM-UX3: light up the note currently sounding, driven by the loop
             // clock's eighth-step index (rebuilds only when the note moves).
+            // Clip the staff to its own row so a tall staff (high notes / ledger
+            // lines) can't paint over the neighbouring track's row — that
+            // out-of-box bleed was the "rows totally overlap" bug.
             Expanded(
-              child: SizedBox(
-                height: _scoreRowHeight,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ValueListenableBuilder<int>(
-                    valueListenable: _hlStep,
-                    builder: (context, step, _) {
-                      final totalSteps =
-                          score.measures.length * LoopTiming.stepsPerBar;
-                      final ids = <String>{};
-                      if (step >= 0 && totalSteps > 0) {
-                        final id = grooveNoteIdAtStep(score, step % totalSteps);
-                        if (id != null) ids.add(id);
-                      }
-                      return StaffView(
-                        score: score,
-                        staffSpace: 11,
-                        theme: kidsScoreTheme,
-                        highlightedIds: ids,
-                      );
-                    },
+              child: ClipRect(
+                child: SizedBox(
+                  height: _scoreRowHeight,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _hlStep,
+                      builder: (context, step, _) {
+                        final totalSteps =
+                            score.measures.length * LoopTiming.stepsPerBar;
+                        final ids = <String>{};
+                        if (step >= 0 && totalSteps > 0) {
+                          final id =
+                              grooveNoteIdAtStep(score, step % totalSteps);
+                          if (id != null) ids.add(id);
+                        }
+                        return StaffView(
+                          score: score,
+                          staffSpace: 11,
+                          theme: kidsScoreTheme,
+                          highlightedIds: ids,
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -3316,6 +3356,108 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         ),
       );
 
+  /// A compact labelled dropdown for a single-select option group. Replaces a
+  /// Wrap of many ChoiceChips (Style / Harmony / Key / Scale / Kit) so the
+  /// "Sound & Feel" sheet fits on a phone instead of overflowing with buttons.
+  /// [below] renders extra controls under the dropdown (e.g. Harmony's custom
+  /// chips + "Make" button, or the function strip).
+  Widget _dropdownSection<T>(
+    String label,
+    T value,
+    List<(T, String)> options,
+    ValueChanged<T> onChanged, {
+    Widget? below,
+  }) {
+    return _inspectorSection(
+      label,
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InputDecorator(
+            decoration: const InputDecoration(
+              isDense: true,
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<T>(
+                value: value,
+                isExpanded: true,
+                isDense: true,
+                items: [
+                  for (final (v, l) in options)
+                    DropdownMenuItem<T>(
+                      value: v,
+                      child: Text(l, overflow: TextOverflow.ellipsis),
+                    ),
+                ],
+                onChanged: (v) {
+                  if (v != null) onChanged(v);
+                },
+              ),
+            ),
+          ),
+          if (below != null) ...[const SizedBox(height: 6), below],
+        ],
+      ),
+    );
+  }
+
+  /// Harmony as a dropdown (Off + built-in progressions) with the custom
+  /// progressions + "Make" + the function strip kept below it. A custom
+  /// progression can't be a dropdown value (it isn't in the item list), so the
+  /// dropdown falls back to Off while the custom's chip shows selected.
+  Widget _harmonySection(AppLocalizations l10n) {
+    final builtinIds = {for (final p in kProgressions) p.id};
+    final curId = _engine.progression?.id;
+    final dropdownValue =
+        (curId != null && builtinIds.contains(curId)) ? curId : null;
+    return _dropdownSection<String?>(
+      l10n.loopMixerHarmony,
+      dropdownValue,
+      [
+        (null, l10n.loopMixerHarmonyOff),
+        for (final p in kProgressions) (p.id, p.label),
+      ],
+      (id) => _setProgression(
+        id == null ? null : kProgressions.firstWhere((p) => p.id == id),
+      ),
+      below: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_customProgressions.isNotEmpty)
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final p in _customProgressions)
+                  InputChip(
+                    label: Text(p.label),
+                    selected: _engine.progression?.id == p.id,
+                    onSelected: (_) => _setProgression(p),
+                    onDeleted: () => _deleteCustomProgression(p),
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _makeCustomProgression(l10n),
+              icon: const Icon(Icons.add, size: 16),
+              label: Text(l10n.loopMixerHarmonyMake),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            ),
+          ),
+          if (_engine.progression != null) ...[
+            const SizedBox(height: 6),
+            _progressionFunctionStrip(_engine.progression!),
+          ],
+        ],
+      ),
+    );
+  }
+
   /// The "Sound & Feel" inspector body — every multi-value song setting that
   /// used to be an always-visible row now lives here (Score-Editor pattern).
   Widget _soundInspectorContent(AppLocalizations l10n) {
@@ -3356,119 +3498,39 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             ],
           ),
         ),
-        _inspectorSection(
+        _dropdownSection<String>(
           l10n.loopMixerStyle,
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              for (final style in kGrooveStyles)
-                ChoiceChip(
-                  label: Text(_styleLabel(l10n, style.id)),
-                  selected: _engine.styleId == style.id,
-                  onSelected: (_) => _setStyle(style.id),
-                  visualDensity: VisualDensity.compact,
-                ),
-            ],
-          ),
+          _engine.styleId,
+          [
+            for (final style in kGrooveStyles)
+              (style.id, _styleLabel(l10n, style.id)),
+          ],
+          _setStyle,
         ),
-        _inspectorSection(
-          l10n.loopMixerHarmony,
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  ChoiceChip(
-                    label: Text(l10n.loopMixerHarmonyOff),
-                    selected: _engine.progression == null,
-                    onSelected: (_) => _setProgression(null),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  for (final p in kProgressions)
-                    ChoiceChip(
-                      label: Text(p.label),
-                      selected: _engine.progression?.id == p.id,
-                      onSelected: (_) => _setProgression(p),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  for (final p in _customProgressions)
-                    InputChip(
-                      label: Text(p.label),
-                      selected: _engine.progression?.id == p.id,
-                      onSelected: (_) => _setProgression(p),
-                      onDeleted: () => _deleteCustomProgression(p),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ActionChip(
-                    avatar: const Icon(Icons.add, size: 16),
-                    label: Text(l10n.loopMixerHarmonyMake),
-                    onPressed: () => _makeCustomProgression(l10n),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-              if (_engine.progression != null) ...[
-                const SizedBox(height: 6),
-                _progressionFunctionStrip(_engine.progression!),
-              ],
-            ],
-          ),
-        ),
-        _inspectorSection(
+        _harmonySection(l10n),
+        _dropdownSection<int>(
           l10n.loopMixerKey,
-          Wrap(
-            spacing: 4,
-            runSpacing: 4,
-            children: [
-              for (var k = 0; k < LoopMixerScreen._keyNames.length; k++)
-                ChoiceChip(
-                  label: Text(LoopMixerScreen._keyNames[k]),
-                  selected: _engine.key == k,
-                  onSelected: (_) => _setKey(k),
-                  visualDensity: VisualDensity.compact,
-                ),
-            ],
-          ),
+          _engine.key,
+          [
+            for (var k = 0; k < LoopMixerScreen._keyNames.length; k++)
+              (k, LoopMixerScreen._keyNames[k]),
+          ],
+          _setKey,
         ),
-        _inspectorSection(
+        _dropdownSection<GrooveScale>(
           l10n.loopMixerScale,
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              ChoiceChip(
-                label: Text(l10n.loopMixerScaleMajor),
-                selected: _engine.scale == GrooveScale.majorPentatonic,
-                onSelected: (_) => _setScale(GrooveScale.majorPentatonic),
-                visualDensity: VisualDensity.compact,
-              ),
-              ChoiceChip(
-                label: Text(l10n.loopMixerScaleMinor),
-                selected: _engine.scale == GrooveScale.minorPentatonic,
-                onSelected: (_) => _setScale(GrooveScale.minorPentatonic),
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
-          ),
+          _engine.scale,
+          [
+            (GrooveScale.majorPentatonic, l10n.loopMixerScaleMajor),
+            (GrooveScale.minorPentatonic, l10n.loopMixerScaleMinor),
+          ],
+          _setScale,
         ),
-        _inspectorSection(
+        _dropdownSection<String>(
           l10n.loopMixerKit,
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              for (final kit in kDrumKits)
-                ChoiceChip(
-                  label: Text(_kitLabel(l10n, kit.id)),
-                  selected: _engine.kitId == kit.id,
-                  onSelected: (_) => _setKit(kit.id),
-                  visualDensity: VisualDensity.compact,
-                ),
-            ],
-          ),
+          _engine.kitId,
+          [for (final kit in kDrumKits) (kit.id, _kitLabel(l10n, kit.id))],
+          _setKit,
         ),
         _inspectorSection(
           l10n.loopMixerSwing,
