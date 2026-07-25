@@ -16,34 +16,18 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart'
-    show BiquadKind, biquadFx;
-import 'package:comet_beat/core/audio/crisp_dsp/distortion.dart'
-    show distortionFx;
-import 'package:comet_beat/core/audio/crisp_dsp/dynamics.dart'
-    show compressorFx, compressorFxStereo, gateFx, gateFxStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
-    show
-        chorusFx,
-        chorusFxStereo,
-        delayFx,
-        delayFxStereo,
-        flangerFx,
-        flangerFxStereo;
-import 'package:comet_beat/core/audio/crisp_dsp/phaser.dart' show phaserFx;
-import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart'
-    show granularPitchShift, granularPitchShiftStereo;
-import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
-    show resampleCubic;
-import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart'
-    show reverbFx, reverbFxStereo;
-import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart' show ringModFx;
-import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
-    show timeStretch, timeStretchStereo;
+    show delayFx;
+import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
-    show VoiceEffect, applyVoiceEffect, voiceShapeFx, voiceShapeFxStereo;
+    show VoiceEffect, applyVoiceEffect;
+import 'package:comet_beat/core/audio/fx/fx_chain.dart';
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+
+export 'package:comet_beat/core/audio/fx/fx_chain.dart';
+export 'package:comet_beat/core/audio/fx/fx_spec.dart';
 
 /// The default render rate (matches `synth.kSampleRate`), kept inline so this
 /// core stays dependency-light.
@@ -96,370 +80,42 @@ class _Ref {
   int get hashCode => identityHashCode(target);
 }
 
-/// A typed per-clip effect, matching CrispAudio's segment-effect-chain model:
-/// each clip can carry an ordered list of same-length DSP transforms, each with
-/// its own params and bypass state.
-class DawClipEffect {
-  const DawClipEffect({
-    required this.type,
-    this.enabled = true,
-    this.params = const {},
-    this.automation = const {},
-  });
+// ---------------------------------------------------------------------------
+// FX compatibility layer (A1).
+//
+// The effect model moved to `lib/core/audio/fx/` so all five modes can share it
+// (see the "Cross-mode FX + interop consolidation" section of PLAN.md). The DAW
+// names below are kept as aliases and re-exported, so every existing call site
+// in `daw_service.dart` / `daw_screen.dart` / tests keeps compiling unchanged.
+// New code should use the `Fx*` names directly.
+// ---------------------------------------------------------------------------
 
-  final DawClipEffectType type;
-  final bool enabled;
-  final Map<String, double> params;
-  final Map<String, List<DawAutomationPoint>> automation;
+/// The DAW's per-clip effect. Alias of the mode-neutral [FxSpec].
+typedef DawClipEffect = FxSpec;
 
-  DawClipEffect copyWith({
-    DawClipEffectType? type,
-    bool? enabled,
-    Map<String, double>? params,
-    Map<String, List<DawAutomationPoint>>? automation,
-  }) =>
-      DawClipEffect(
-        type: type ?? this.type,
-        enabled: enabled ?? this.enabled,
-        params: params ?? this.params,
-        automation: automation ?? this.automation,
-      );
+/// Alias of [FxType].
+typedef DawClipEffectType = FxType;
 
-  Object get cacheKey => (
-        type.name,
-        enabled,
-        Object.hashAll(
-          [
-            for (final e
-                in params.entries.toList()
-                  ..sort((a, b) => a.key.compareTo(b.key)))
-              Object.hash(e.key, e.value),
-          ],
-        ),
-        Object.hashAll(
-          [
-            for (final e
-                in automation.entries.toList()
-                  ..sort((a, b) => a.key.compareTo(b.key)))
-              Object.hash(
-                e.key,
-                Object.hashAll([
-                  for (final p in e.value) Object.hash(p.ms, p.value),
-                ]),
-              ),
-          ],
-        ),
-      );
+/// Alias of [FxPreset].
+typedef DawClipEffectPreset = FxPreset;
 
-  Map<String, dynamic> toJson() => {
-        'type': type.name,
-        'enabled': enabled,
-        'params': params,
-        if (automation.isNotEmpty)
-          'automation': {
-            for (final entry in automation.entries)
-              if (entry.value.isNotEmpty)
-                entry.key: [for (final p in entry.value) p.toJson()],
-          },
-      };
+/// Alias of [FxAutomationPoint].
+typedef DawAutomationPoint = FxAutomationPoint;
 
-  static DawClipEffect? fromJson(Object? raw) {
-    if (raw is! Map) return null;
-    final typeName = raw['type'];
-    if (typeName is! String) return null;
-    final type =
-        DawClipEffectType.values.where((t) => t.name == typeName).firstOrNull;
-    if (type == null) return null;
-    final p = <String, double>{};
-    final params = raw['params'];
-    if (params is Map) {
-      for (final e in params.entries) {
-        final k = e.key;
-        final v = e.value;
-        if (k is String && v is num) p[k] = v.toDouble();
-      }
-    }
-    final automation = <String, List<DawAutomationPoint>>{};
-    final rawAutomation = raw['automation'];
-    if (rawAutomation is Map) {
-      for (final e in rawAutomation.entries) {
-        final key = e.key;
-        final value = e.value;
-        if (key is! String || value is! List) continue;
-        final points = [
-          for (final point in value)
-            if (DawAutomationPoint.fromJson(point) case final parsed?) parsed,
-        ]..sort((a, b) => a.ms.compareTo(b.ms));
-        if (points.isNotEmpty) automation[key] = points;
-      }
-    }
-    return DawClipEffect(
-      type: type,
-      enabled: raw['enabled'] != false,
-      params: p,
-      automation: automation,
-    );
-  }
-}
+/// Alias of [FxFadeCurve].
+typedef DawFadeCurve = FxFadeCurve;
 
-enum DawClipEffectType {
-  gain,
-  pan,
-  reverb,
-  delay,
-  chorus,
-  flanger,
-  ringMod,
-  distortion,
-  bitCrush,
-  lowpass,
-  highpass,
-  compressor,
-  gate,
-  pitchShift,
-  timeStretch,
-  tremolo,
-  vocoder,
-  voiceShape,
-  voiceChipmunk,
-  voiceDeep,
-  voiceRobot,
-  voiceRadio,
-  // O11 — the rest of the biquad set plus a phaser. APPENDED deliberately:
-  // `.cbdaw` stores an effect by `name`, but keeping the existing order also
-  // keeps merges with the FX work happening in parallel clean.
-  bandpass,
-  notch,
-  peakingEq,
-  lowShelf,
-  highShelf,
-  phaser,
-}
+/// Alias of [defaultFx].
+const defaultDawClipEffect = defaultFx;
 
-enum DawClipEffectPreset {
-  vocalPolish,
-  lofiCrunch,
-  wideSpace,
-  robotVoice,
-}
+/// Alias of [fxPresetChain].
+const dawClipEffectPresetChain = fxPresetChain;
 
-DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
-      DawClipEffectType.gain => const DawClipEffect(
-          type: DawClipEffectType.gain,
-          params: {'gainDb': 0, 'mix': 1},
-        ),
-      DawClipEffectType.pan => const DawClipEffect(
-          type: DawClipEffectType.pan,
-          params: {'pan': 0},
-        ),
-      DawClipEffectType.reverb => const DawClipEffect(
-          type: DawClipEffectType.reverb,
-          params: {
-            'roomSize': 0.7,
-            'damping': 0.4,
-            'decay': 1.5,
-            'mix': 0.35,
-          },
-        ),
-      DawClipEffectType.delay => const DawClipEffect(
-          type: DawClipEffectType.delay,
-          params: {
-            'delayMs': 300,
-            'feedback': 0.35,
-            'spread': 0.2,
-            'mix': 0.35,
-          },
-        ),
-      DawClipEffectType.chorus => const DawClipEffect(
-          type: DawClipEffectType.chorus,
-          params: {'rateHz': 1.5, 'depthMs': 6, 'mix': 0.45},
-        ),
-      DawClipEffectType.flanger => const DawClipEffect(
-          type: DawClipEffectType.flanger,
-          params: {'rateHz': 0.35, 'depthMs': 3, 'feedback': 0.5, 'mix': 0.5},
-        ),
-      DawClipEffectType.ringMod => const DawClipEffect(
-          type: DawClipEffectType.ringMod,
-          params: {'carrierHz': 180, 'mix': 0.5},
-        ),
-      DawClipEffectType.distortion => const DawClipEffect(
-          type: DawClipEffectType.distortion,
-          params: {'drive': 4, 'mix': 0.55},
-        ),
-      DawClipEffectType.bitCrush => const DawClipEffect(
-          type: DawClipEffectType.bitCrush,
-          params: {'bits': 8, 'mix': 0.55},
-        ),
-      DawClipEffectType.lowpass => const DawClipEffect(
-          type: DawClipEffectType.lowpass,
-          params: {'freq': 8000, 'q': 0.707, 'mix': 1},
-        ),
-      DawClipEffectType.highpass => const DawClipEffect(
-          type: DawClipEffectType.highpass,
-          params: {'freq': 180, 'q': 0.707, 'mix': 1},
-        ),
-      // O11. Band-pass/notch want a tighter Q than the shelves; the bell and
-      // the shelves carry a gainDb because they boost/cut rather than remove.
-      DawClipEffectType.bandpass => const DawClipEffect(
-          type: DawClipEffectType.bandpass,
-          params: {'freq': 1000, 'q': 2, 'mix': 1},
-        ),
-      DawClipEffectType.notch => const DawClipEffect(
-          type: DawClipEffectType.notch,
-          params: {'freq': 1000, 'q': 4, 'mix': 1},
-        ),
-      DawClipEffectType.peakingEq => const DawClipEffect(
-          type: DawClipEffectType.peakingEq,
-          params: {'freq': 1000, 'q': 1, 'gainDb': 6, 'mix': 1},
-        ),
-      DawClipEffectType.lowShelf => const DawClipEffect(
-          type: DawClipEffectType.lowShelf,
-          params: {'freq': 200, 'q': 0.707, 'gainDb': 6, 'mix': 1},
-        ),
-      DawClipEffectType.highShelf => const DawClipEffect(
-          type: DawClipEffectType.highShelf,
-          params: {'freq': 4000, 'q': 0.707, 'gainDb': 6, 'mix': 1},
-        ),
-      DawClipEffectType.phaser => const DawClipEffect(
-          type: DawClipEffectType.phaser,
-          params: {
-            'rateHz': 0.5,
-            'depth': 0.7,
-            'feedback': 0.3,
-            'minFreq': 200,
-            'maxFreq': 2000,
-            'stages': 4,
-          },
-        ),
-      DawClipEffectType.compressor => const DawClipEffect(
-          type: DawClipEffectType.compressor,
-          params: {
-            'thresholdDb': -18,
-            'ratio': 4,
-            'attackMs': 10,
-            'releaseMs': 120,
-            'kneeDb': 6,
-            'makeupDb': 0,
-            'mix': 1,
-          },
-        ),
-      DawClipEffectType.gate => const DawClipEffect(
-          type: DawClipEffectType.gate,
-          params: {
-            'thresholdDb': -40,
-            'ratio': 4,
-            'rangeDb': -60,
-            'attackMs': 1,
-            'releaseMs': 100,
-            'mix': 1,
-          },
-        ),
-      DawClipEffectType.pitchShift => const DawClipEffect(
-          type: DawClipEffectType.pitchShift,
-          params: {'semitones': 12, 'mix': 1},
-        ),
-      DawClipEffectType.timeStretch => const DawClipEffect(
-          type: DawClipEffectType.timeStretch,
-          params: {'speed': 0.75, 'mix': 1},
-        ),
-      DawClipEffectType.tremolo => const DawClipEffect(
-          type: DawClipEffectType.tremolo,
-          params: {'rateHz': 6, 'depth': 0.6, 'mix': 1},
-        ),
-      DawClipEffectType.vocoder => const DawClipEffect(
-          type: DawClipEffectType.vocoder,
-          params: {'carrierHz': 110, 'depth': 0.75, 'mix': 0.7},
-        ),
-      DawClipEffectType.voiceShape => const DawClipEffect(
-          type: DawClipEffectType.voiceShape,
-          params: {
-            'formant': 0,
-            'carrierHz': 80,
-            'carrierMix': 0,
-            'grit': 0,
-            'radioLowHz': 300,
-            'radioHighHz': 3200,
-            'radioMix': 0,
-            'mix': 1,
-          },
-        ),
-      DawClipEffectType.voiceChipmunk => const DawClipEffect(
-          type: DawClipEffectType.voiceChipmunk,
-          params: {'mix': 1},
-        ),
-      DawClipEffectType.voiceDeep => const DawClipEffect(
-          type: DawClipEffectType.voiceDeep,
-          params: {'mix': 1},
-        ),
-      DawClipEffectType.voiceRobot => const DawClipEffect(
-          type: DawClipEffectType.voiceRobot,
-          params: {'mix': 1},
-        ),
-      DawClipEffectType.voiceRadio => const DawClipEffect(
-          type: DawClipEffectType.voiceRadio,
-          params: {'mix': 1},
-        ),
-    };
+/// Alias of [applyFxChain].
+const applyClipEffectChain = applyFxChain;
 
-List<DawClipEffect> dawClipEffectPresetChain(DawClipEffectPreset preset) =>
-    switch (preset) {
-      DawClipEffectPreset.vocalPolish => [
-          defaultDawClipEffect(DawClipEffectType.highpass).copyWith(
-            params: {'freq': 120, 'q': 0.707, 'mix': 1},
-          ),
-          defaultDawClipEffect(DawClipEffectType.compressor).copyWith(
-            params: {
-              'thresholdDb': -22,
-              'ratio': 3,
-              'attackMs': 8,
-              'releaseMs': 160,
-              'kneeDb': 6,
-              'makeupDb': 3,
-              'mix': 1,
-            },
-          ),
-          defaultDawClipEffect(DawClipEffectType.reverb).copyWith(
-            params: {'roomSize': 0.42, 'damping': 0.55, 'mix': 0.18},
-          ),
-        ],
-      DawClipEffectPreset.lofiCrunch => [
-          defaultDawClipEffect(DawClipEffectType.highpass).copyWith(
-            params: {'freq': 180, 'q': 0.707, 'mix': 1},
-          ),
-          defaultDawClipEffect(DawClipEffectType.lowpass).copyWith(
-            params: {'freq': 4200, 'q': 0.8, 'mix': 1},
-          ),
-          defaultDawClipEffect(DawClipEffectType.bitCrush).copyWith(
-            params: {'bits': 7, 'mix': 0.38},
-          ),
-          defaultDawClipEffect(DawClipEffectType.distortion).copyWith(
-            params: {'drive': 2.2, 'mix': 0.28},
-          ),
-        ],
-      DawClipEffectPreset.wideSpace => [
-          defaultDawClipEffect(DawClipEffectType.chorus).copyWith(
-            params: {'rateHz': 0.8, 'depthMs': 9, 'mix': 0.35},
-          ),
-          defaultDawClipEffect(DawClipEffectType.delay).copyWith(
-            params: {'delayMs': 260, 'feedback': 0.28, 'mix': 0.24},
-          ),
-          defaultDawClipEffect(DawClipEffectType.reverb).copyWith(
-            params: {'roomSize': 0.78, 'damping': 0.38, 'mix': 0.32},
-          ),
-        ],
-      DawClipEffectPreset.robotVoice => [
-          defaultDawClipEffect(DawClipEffectType.voiceRobot),
-          defaultDawClipEffect(DawClipEffectType.ringMod).copyWith(
-            params: {'carrierHz': 92, 'mix': 0.34},
-          ),
-          defaultDawClipEffect(DawClipEffectType.highpass).copyWith(
-            params: {'freq': 220, 'q': 0.707, 'mix': 1},
-          ),
-        ],
-    };
-
-/// Fade curve shapes for clip edges, matching CrispAudio's timeline segments.
-enum DawFadeCurve { linear, exponential, sCurve }
+/// Alias of [applyFxChainStereo].
+const applyStereoClipEffectChain = applyFxChainStereo;
 
 /// A placed clip: its [source], where it starts ([startMs]), a linear [gain],
 /// whether it's [muted], and optional fade-in/out ramps ([fadeInMs]/
@@ -552,8 +208,9 @@ DawClipEffect? clipEffectForTrackEffect(TrackEffect effect) => switch (effect) {
       TrackEffect.none => null,
       TrackEffect.reverb => defaultDawClipEffect(DawClipEffectType.reverb),
       TrackEffect.echo => defaultDawClipEffect(DawClipEffectType.delay),
-      TrackEffect.voiceChipmunk =>
-        defaultDawClipEffect(DawClipEffectType.voiceChipmunk),
+      TrackEffect.voiceChipmunk => defaultDawClipEffect(
+          DawClipEffectType.voiceChipmunk,
+        ),
       TrackEffect.voiceDeep =>
         defaultDawClipEffect(DawClipEffectType.voiceDeep),
       TrackEffect.voiceRobot =>
@@ -565,55 +222,6 @@ DawClipEffect? clipEffectForTrackEffect(TrackEffect effect) => switch (effect) {
 List<DawClipEffect> trackEffectChainForLegacy(TrackEffect effect) {
   final fx = clipEffectForTrackEffect(effect);
   return fx == null ? const [] : [fx];
-}
-
-/// A track-level gain automation breakpoint. Values are linear gain
-/// multipliers; outside the authored point span the automation multiplier is 1.
-class DawAutomationPoint {
-  const DawAutomationPoint({
-    required this.ms,
-    required this.value,
-    this.curve = DawFadeCurve.linear,
-  });
-
-  final double ms;
-  final double value;
-  final DawFadeCurve curve;
-
-  DawAutomationPoint copyWith({
-    double? ms,
-    double? value,
-    DawFadeCurve? curve,
-  }) =>
-      DawAutomationPoint(
-        ms: ms ?? this.ms,
-        value: value ?? this.value,
-        curve: curve ?? this.curve,
-      );
-
-  Map<String, dynamic> toJson() => {
-        'ms': ms,
-        'value': value,
-        if (curve != DawFadeCurve.linear) 'curve': curve.name,
-      };
-
-  static DawAutomationPoint? fromJson(Object? raw) {
-    if (raw is! Map) return null;
-    final ms = raw['ms'];
-    final value = raw['value'];
-    if (ms is! num || value is! num) return null;
-    final curveName = raw['curve'];
-    final curve = curveName is String
-        ? DawFadeCurve.values
-            .where((curve) => curve.name == curveName)
-            .firstOrNull
-        : null;
-    return DawAutomationPoint(
-      ms: ms.toDouble(),
-      value: value.toDouble(),
-      curve: curve ?? DawFadeCurve.linear,
-    );
-  }
 }
 
 /// One DAW track — a lane of clips with its own [gain]/[muted]/[soloed]. An
@@ -727,160 +335,6 @@ Float64List applyTrackEffect(
         ),
     };
 
-Float64List applyClipEffectChain(
-  Float64List input,
-  List<DawClipEffect> effects,
-  int sampleRate,
-) {
-  var out = input;
-  for (final fx in effects) {
-    if (!fx.enabled) continue;
-    out = _applyClipEffect(out, fx, sampleRate);
-  }
-  return out;
-}
-
-({Float64List left, Float64List right}) _applyStereoClipEffectChain(
-  Float64List left,
-  Float64List right,
-  List<DawClipEffect> effects,
-  int sampleRate,
-) {
-  var outLeft = left;
-  var outRight = right;
-  for (final fx in effects) {
-    if (!fx.enabled) continue;
-    if (fx.automation.isNotEmpty) {
-      final automated = _applyAutomatedStereoClipEffect(
-        outLeft,
-        outRight,
-        fx,
-        sampleRate,
-      );
-      outLeft = automated.left;
-      outRight = automated.right;
-      continue;
-    }
-    double p(String key, double fallback) => fx.params[key] ?? fallback;
-    final processed = switch (fx.type) {
-      DawClipEffectType.pan => _panFxStereo(
-          outLeft,
-          outRight,
-          pan: p('pan', 0),
-        ),
-      DawClipEffectType.delay => delayFxStereo(
-          outLeft,
-          outRight,
-          delayMs: p('delayMs', 300),
-          feedback: p('feedback', 0.35),
-          spread: p('spread', 0),
-          mix: p('mix', 0.35),
-          sampleRate: sampleRate,
-        ),
-      DawClipEffectType.chorus => chorusFxStereo(
-          outLeft,
-          outRight,
-          rateHz: p('rateHz', 1.5),
-          depthMs: p('depthMs', 6),
-          mix: p('mix', 0.45),
-          sampleRate: sampleRate,
-        ),
-      DawClipEffectType.flanger => flangerFxStereo(
-          outLeft,
-          outRight,
-          rateHz: p('rateHz', 0.35),
-          depthMs: p('depthMs', 3),
-          feedback: p('feedback', 0.5),
-          mix: p('mix', 0.5),
-          sampleRate: sampleRate,
-        ),
-      DawClipEffectType.reverb => reverbFxStereo(
-          outLeft,
-          outRight,
-          roomSize: p('roomSize', 0.7),
-          damping: p('damping', 0.4),
-          decay: p('decay', 1.5),
-          mix: p('mix', 0.35),
-          sampleRate: sampleRate,
-        ),
-      DawClipEffectType.vocoder => _vocoderFxStereo(
-          outLeft,
-          outRight,
-          sampleRate: sampleRate,
-          carrierHz: p('carrierHz', 110),
-          depth: p('depth', 0.75),
-          mix: p('mix', 0.7),
-        ),
-      DawClipEffectType.voiceShape => voiceShapeFxStereo(
-          outLeft,
-          outRight,
-          formant: p('formant', 0),
-          carrierHz: p('carrierHz', 80),
-          carrierMix: p('carrierMix', 0),
-          grit: p('grit', 0),
-          radioLowHz: p('radioLowHz', 300),
-          radioHighHz: p('radioHighHz', 3200),
-          radioMix: p('radioMix', 0),
-          mix: p('mix', 1),
-          sampleRate: sampleRate,
-        ),
-      DawClipEffectType.compressor => compressorFxStereo(
-          outLeft,
-          outRight,
-          sampleRate: sampleRate.toDouble(),
-          thresholdDb: p('thresholdDb', -18),
-          ratio: p('ratio', 4),
-          attackMs: p('attackMs', 10),
-          releaseMs: p('releaseMs', 120),
-          kneeDb: p('kneeDb', 6),
-          makeupDb: p('makeupDb', 0),
-          mix: p('mix', 1),
-        ),
-      DawClipEffectType.gate => gateFxStereo(
-          outLeft,
-          outRight,
-          sampleRate: sampleRate.toDouble(),
-          thresholdDb: p('thresholdDb', -40),
-          ratio: p('ratio', 4),
-          rangeDb: p('rangeDb', -60),
-          attackMs: p('attackMs', 1),
-          releaseMs: p('releaseMs', 100),
-          mix: p('mix', 1),
-        ),
-      DawClipEffectType.pitchShift => _pitchShiftFxStereo(
-          outLeft,
-          outRight,
-          semitones: p('semitones', 12),
-          mix: p('mix', 1),
-        ),
-      DawClipEffectType.timeStretch => _timeStretchFxStereo(
-          outLeft,
-          outRight,
-          speed: p('speed', 0.75),
-          mix: p('mix', 1),
-          sampleRate: sampleRate,
-        ),
-      _ => (
-          left: _applyClipEffect(outLeft, fx, sampleRate),
-          right: _applyClipEffect(outRight, fx, sampleRate),
-        ),
-    };
-    outLeft = processed.left;
-    outRight = processed.right;
-  }
-  return (left: outLeft, right: outRight);
-}
-
-/// Applies an ordered FX chain to stereo analysis buffers using the same path
-/// as timeline rendering.
-({Float64List left, Float64List right}) applyStereoClipEffectChain(
-  Float64List left,
-  Float64List right,
-  List<DawClipEffect> effects,
-  int sampleRate,
-) =>
-    _applyStereoClipEffectChain(left, right, effects, sampleRate);
-
 ({Float64List left, Float64List right}) _applyStereoWidth(
   ({Float64List left, Float64List right}) input,
   double width,
@@ -905,539 +359,6 @@ Float64List applyClipEffectChain(
   return (left: left, right: right);
 }
 
-Float64List _applyClipEffect(
-  Float64List input,
-  DawClipEffect fx,
-  int sampleRate,
-) {
-  if (fx.automation.isNotEmpty) {
-    return _applyAutomatedClipEffect(input, fx, sampleRate);
-  }
-  double p(String key, double fallback) => fx.params[key] ?? fallback;
-  return switch (fx.type) {
-    DawClipEffectType.gain => _gainFx(
-        input,
-        gainDb: p('gainDb', 0),
-        mix: p('mix', 1),
-      ),
-    // The mono wrapper folds the stereo render after the full FX graph.
-    DawClipEffectType.pan => Float64List.fromList(input),
-    DawClipEffectType.reverb => reverbFx(
-        input,
-        roomSize: p('roomSize', 0.7),
-        damping: p('damping', 0.4),
-        decay: p('decay', 1.5),
-        mix: p('mix', 0.35),
-        sampleRate: sampleRate,
-      ),
-    DawClipEffectType.delay => delayFx(
-        input,
-        delayMs: p('delayMs', 300),
-        feedback: p('feedback', 0.35),
-        mix: p('mix', 0.35),
-        sampleRate: sampleRate,
-      ),
-    DawClipEffectType.chorus => chorusFx(
-        input,
-        rateHz: p('rateHz', 1.5),
-        depthMs: p('depthMs', 6),
-        mix: p('mix', 0.45),
-        sampleRate: sampleRate,
-      ),
-    DawClipEffectType.flanger => flangerFx(
-        input,
-        rateHz: p('rateHz', 0.35),
-        depthMs: p('depthMs', 3),
-        feedback: p('feedback', 0.5),
-        mix: p('mix', 0.5),
-        sampleRate: sampleRate,
-      ),
-    DawClipEffectType.ringMod => ringModFx(
-        input,
-        carrierHz: p('carrierHz', 180),
-        mix: p('mix', 0.5),
-        sampleRate: sampleRate,
-      ),
-    DawClipEffectType.distortion => distortionFx(
-        input,
-        drive: p('drive', 4),
-        mix: p('mix', 0.55),
-      ),
-    DawClipEffectType.bitCrush => _bitCrushFx(
-        input,
-        bits: p('bits', 8),
-        mix: p('mix', 0.55),
-      ),
-    DawClipEffectType.lowpass => biquadFx(
-        input,
-        sampleRate: sampleRate.toDouble(),
-        freq: p('freq', 8000),
-        q: p('q', 0.707),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.highpass => biquadFx(
-        input,
-        kind: BiquadKind.highpass,
-        sampleRate: sampleRate.toDouble(),
-        freq: p('freq', 180),
-        q: p('q', 0.707),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.bandpass => biquadFx(
-        input,
-        kind: BiquadKind.bandpass,
-        sampleRate: sampleRate.toDouble(),
-        freq: p('freq', 1000),
-        q: p('q', 2),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.notch => biquadFx(
-        input,
-        kind: BiquadKind.notch,
-        sampleRate: sampleRate.toDouble(),
-        freq: p('freq', 1000),
-        q: p('q', 4),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.peakingEq => biquadFx(
-        input,
-        kind: BiquadKind.peaking,
-        sampleRate: sampleRate.toDouble(),
-        freq: p('freq', 1000),
-        q: p('q', 1),
-        gainDb: p('gainDb', 6),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.lowShelf => biquadFx(
-        input,
-        kind: BiquadKind.lowShelf,
-        sampleRate: sampleRate.toDouble(),
-        freq: p('freq', 200),
-        q: p('q', 0.707),
-        gainDb: p('gainDb', 6),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.highShelf => biquadFx(
-        input,
-        kind: BiquadKind.highShelf,
-        sampleRate: sampleRate.toDouble(),
-        freq: p('freq', 4000),
-        q: p('q', 0.707),
-        gainDb: p('gainDb', 6),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.phaser => phaserFx(
-        input,
-        sampleRate: sampleRate.toDouble(),
-        rateHz: p('rateHz', 0.5),
-        depth: p('depth', 0.7),
-        feedback: p('feedback', 0.3),
-        minFreq: p('minFreq', 200),
-        maxFreq: p('maxFreq', 2000),
-        stages: p('stages', 4).round(),
-      ),
-    DawClipEffectType.compressor => compressorFx(
-        input,
-        sampleRate: sampleRate.toDouble(),
-        thresholdDb: p('thresholdDb', -18),
-        ratio: p('ratio', 4),
-        attackMs: p('attackMs', 10),
-        releaseMs: p('releaseMs', 120),
-        kneeDb: p('kneeDb', 6),
-        makeupDb: p('makeupDb', 0),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.gate => gateFx(
-        input,
-        sampleRate: sampleRate.toDouble(),
-        thresholdDb: p('thresholdDb', -40),
-        ratio: p('ratio', 4),
-        rangeDb: p('rangeDb', -60),
-        attackMs: p('attackMs', 1),
-        releaseMs: p('releaseMs', 100),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.pitchShift => _blendWetDry(
-        input,
-        _fitLength(
-          granularPitchShift(input, p('semitones', 12)),
-          input.length,
-        ),
-        p('mix', 1),
-      ),
-    DawClipEffectType.timeStretch => _blendWetDry(
-        input,
-        _fitLength(
-          timeStretch(
-            input,
-            1 / p('speed', 0.75).clamp(0.1, 4.0),
-            sampleRate: sampleRate,
-          ),
-          input.length,
-        ),
-        p('mix', 1),
-      ),
-    DawClipEffectType.tremolo => _tremoloFx(
-        input,
-        sampleRate: sampleRate,
-        rateHz: p('rateHz', 6),
-        depth: p('depth', 0.6),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.vocoder => _vocoderFx(
-        input,
-        sampleRate: sampleRate,
-        carrierHz: p('carrierHz', 110),
-        depth: p('depth', 0.75),
-        mix: p('mix', 0.7),
-      ),
-    DawClipEffectType.voiceShape => voiceShapeFx(
-        input,
-        sampleRate: sampleRate,
-        formant: p('formant', 0),
-        carrierHz: p('carrierHz', 80),
-        carrierMix: p('carrierMix', 0),
-        grit: p('grit', 0),
-        radioLowHz: p('radioLowHz', 300),
-        radioHighHz: p('radioHighHz', 3200),
-        radioMix: p('radioMix', 0),
-        mix: p('mix', 1),
-      ),
-    DawClipEffectType.voiceChipmunk => _blendWetDry(
-        input,
-        applyVoiceEffect(input, VoiceEffect.chipmunk, sampleRate: sampleRate),
-        p('mix', 1),
-      ),
-    DawClipEffectType.voiceDeep => _blendWetDry(
-        input,
-        applyVoiceEffect(input, VoiceEffect.deep, sampleRate: sampleRate),
-        p('mix', 1),
-      ),
-    DawClipEffectType.voiceRobot => _blendWetDry(
-        input,
-        applyVoiceEffect(input, VoiceEffect.robot, sampleRate: sampleRate),
-        p('mix', 1),
-      ),
-    DawClipEffectType.voiceRadio => _blendWetDry(
-        input,
-        applyVoiceEffect(input, VoiceEffect.radio, sampleRate: sampleRate),
-        p('mix', 1),
-      ),
-  };
-}
-
-Float64List _gainFx(
-  Float64List input, {
-  required double gainDb,
-  required double mix,
-}) {
-  final gain = math.pow(10, gainDb.clamp(-80.0, 48.0) / 20).toDouble();
-  final wet = mix.clamp(0.0, 1.0);
-  final dry = 1 - wet;
-  final out = Float64List(input.length);
-  for (var i = 0; i < input.length; i++) {
-    out[i] = input[i] * (dry + gain * wet);
-  }
-  return out;
-}
-
-({Float64List left, Float64List right}) _pitchShiftFxStereo(
-  Float64List left,
-  Float64List right, {
-  required double semitones,
-  required double mix,
-}) {
-  final shifted = granularPitchShiftStereo(left, right, semitones);
-  return (
-    left: _blendWetDry(left, _fitLength(shifted.left, left.length), mix),
-    right: _blendWetDry(right, _fitLength(shifted.right, right.length), mix),
-  );
-}
-
-({Float64List left, Float64List right}) _timeStretchFxStereo(
-  Float64List left,
-  Float64List right, {
-  required double speed,
-  required double mix,
-  required int sampleRate,
-}) {
-  final stretched = timeStretchStereo(
-    left,
-    right,
-    1 / speed.clamp(0.1, 4.0),
-    sampleRate: sampleRate,
-  );
-  return (
-    left: _blendWetDry(left, _fitLength(stretched.left, left.length), mix),
-    right: _blendWetDry(right, _fitLength(stretched.right, right.length), mix),
-  );
-}
-
-Float64List _applyAutomatedClipEffect(
-  Float64List input,
-  DawClipEffect fx,
-  int sampleRate,
-) {
-  if (input.isEmpty) return input;
-  final automation = <String, List<DawAutomationPoint>>{};
-  for (final entry in fx.automation.entries) {
-    final points = [
-      for (final point in entry.value)
-        if (point.ms.isFinite && point.value.isFinite)
-          DawAutomationPoint(
-            ms: point.ms < 0 ? 0 : point.ms,
-            value: point.value,
-          ),
-    ]..sort((a, b) => a.ms.compareTo(b.ms));
-    if (points.isNotEmpty) automation[entry.key] = points;
-  }
-  if (automation.isEmpty) {
-    return _applyClipEffect(
-      input,
-      fx.copyWith(automation: const {}),
-      sampleRate,
-    );
-  }
-  final block = math.max(64, (sampleRate / 50).round());
-  final out = Float64List(input.length);
-  for (var start = 0; start < input.length; start += block) {
-    final end = math.min(input.length, start + block);
-    final ms = start * 1000 / sampleRate;
-    final params = {...fx.params};
-    for (final entry in automation.entries) {
-      params[entry.key] = _paramAutomationValue(
-        entry.value,
-        ms,
-        fx.params[entry.key] ?? 0,
-      );
-    }
-    final processed = _fitLength(
-      _applyClipEffect(
-        Float64List.sublistView(input, start, end),
-        fx.copyWith(params: params, automation: const {}),
-        sampleRate,
-      ),
-      end - start,
-    );
-    out.setRange(start, end, processed);
-  }
-  return out;
-}
-
-({Float64List left, Float64List right}) _applyAutomatedStereoClipEffect(
-  Float64List left,
-  Float64List right,
-  DawClipEffect fx,
-  int sampleRate,
-) {
-  if (left.isEmpty && right.isEmpty) return (left: left, right: right);
-  final block = math.max(64, (sampleRate / 50).round());
-  final outLeft = Float64List(left.length);
-  final outRight = Float64List(right.length);
-  for (var start = 0; start < left.length; start += block) {
-    final end = math.min(left.length, start + block);
-    final ms = start * 1000 / sampleRate;
-    final params = {...fx.params};
-    for (final entry in fx.automation.entries) {
-      params[entry.key] = _paramAutomationValue(
-        entry.value,
-        ms,
-        fx.params[entry.key] ?? 0,
-      );
-    }
-    final processed = _applyStereoClipEffectChain(
-      Float64List.sublistView(left, start, end),
-      Float64List.sublistView(right, start, end),
-      [fx.copyWith(params: params, automation: const {})],
-      sampleRate,
-    );
-    outLeft.setRange(start, end, processed.left);
-    outRight.setRange(start, end, processed.right);
-  }
-  return (left: outLeft, right: outRight);
-}
-
-double _paramAutomationValue(
-  List<DawAutomationPoint> points,
-  double ms,
-  double fallback,
-) {
-  if (points.length == 1) {
-    return (ms - points.single.ms).abs() < 0.5 ? points.single.value : fallback;
-  }
-  if (ms < points.first.ms || ms > points.last.ms) return fallback;
-  for (var i = 0; i < points.length - 1; i++) {
-    final a = points[i];
-    final b = points[i + 1];
-    if (ms < a.ms || ms > b.ms) continue;
-    if (b.ms <= a.ms) return b.value;
-    final t = _fadeCurveValue((ms - a.ms) / (b.ms - a.ms), a.curve);
-    return a.value + (b.value - a.value) * t;
-  }
-  return points.last.value;
-}
-
-Float64List _blendWetDry(Float64List dry, Float64List wet, double mix) {
-  final m = mix.clamp(0.0, 1.0);
-  if (m == 0) {
-    final out = Float64List(dry.length);
-    out.setAll(0, dry);
-    return out;
-  }
-  if (m == 1 && wet.length == dry.length) return wet;
-  final n = dry.length > wet.length ? dry.length : wet.length;
-  final out = Float64List(n);
-  for (var i = 0; i < n; i++) {
-    final d = i < dry.length ? dry[i] : 0.0;
-    final w = i < wet.length ? wet[i] : 0.0;
-    out[i] = (1 - m) * d + m * w;
-  }
-  return out;
-}
-
-({Float64List left, Float64List right}) _panFxStereo(
-  Float64List left,
-  Float64List right, {
-  required double pan,
-}) {
-  final p = pan.clamp(-1.0, 1.0).toDouble();
-  final leftGain = p <= 0 ? 1.0 : math.cos(p * math.pi / 2);
-  final rightGain = p >= 0 ? 1.0 : math.cos(p * math.pi / 2);
-  final outLeft = Float64List(left.length);
-  final outRight = Float64List(right.length);
-  for (var i = 0; i < left.length; i++) {
-    outLeft[i] = left[i] * leftGain;
-  }
-  for (var i = 0; i < right.length; i++) {
-    outRight[i] = right[i] * rightGain;
-  }
-  return (left: outLeft, right: outRight);
-}
-
-Float64List _tremoloFx(
-  Float64List input, {
-  required int sampleRate,
-  double rateHz = 6,
-  double depth = 0.6,
-  double mix = 1,
-}) {
-  final d = depth.clamp(0.0, 1.0);
-  final m = mix.clamp(0.0, 1.0);
-  if (m == 0 || input.isEmpty) return Float64List.fromList(input);
-  final hz = rateHz.clamp(0.05, sampleRate / 2).toDouble();
-  final out = Float64List(input.length);
-  for (var i = 0; i < input.length; i++) {
-    final lfo = (1 + math.sin(2 * math.pi * hz * i / sampleRate)) * 0.5;
-    final amp = 1 - d + d * lfo;
-    final wet = input[i] * amp;
-    out[i] = input[i] * (1 - m) + wet * m;
-  }
-  return out;
-}
-
-Float64List _vocoderFx(
-  Float64List input, {
-  required int sampleRate,
-  double carrierHz = 110,
-  double depth = 0.75,
-  double mix = 0.7,
-}) {
-  final d = depth.clamp(0.0, 1.0);
-  final m = mix.clamp(0.0, 1.0);
-  if (m == 0 || input.isEmpty) return Float64List.fromList(input);
-  final hz = carrierHz.clamp(20.0, sampleRate / 2).toDouble();
-  final out = Float64List(input.length);
-  var envelope = 0.0;
-  const attack = 0.18;
-  const release = 0.018;
-  for (var i = 0; i < input.length; i++) {
-    final level = input[i].abs();
-    envelope += (level - envelope) * (level > envelope ? attack : release);
-    final carrier = math.sin(2 * math.pi * hz * i / sampleRate);
-    final wet = input[i] * (1 - d) + carrier * envelope * d;
-    out[i] = input[i] * (1 - m) + wet * m;
-  }
-  return out;
-}
-
-({Float64List left, Float64List right}) _vocoderFxStereo(
-  Float64List left,
-  Float64List right, {
-  required int sampleRate,
-  double carrierHz = 110,
-  double depth = 0.75,
-  double mix = 0.7,
-}) {
-  final d = depth.clamp(0.0, 1.0);
-  final m = mix.clamp(0.0, 1.0);
-  final outLeft = Float64List(left.length);
-  final outRight = Float64List(right.length);
-  if (m == 0) {
-    outLeft.setAll(0, left);
-    outRight.setAll(0, right);
-    return (left: outLeft, right: outRight);
-  }
-  final hz = carrierHz.clamp(20.0, sampleRate / 2).toDouble();
-  const attack = 0.18;
-  const release = 0.018;
-  var envelopeLeft = 0.0;
-  var envelopeRight = 0.0;
-  final frames = math.min(left.length, right.length);
-  for (var i = 0; i < frames; i++) {
-    final levelLeft = left[i].abs();
-    final levelRight = right[i].abs();
-    envelopeLeft += (levelLeft - envelopeLeft) *
-        (levelLeft > envelopeLeft ? attack : release);
-    envelopeRight += (levelRight - envelopeRight) *
-        (levelRight > envelopeRight ? attack : release);
-    final phase = 2 * math.pi * hz * i / sampleRate;
-    final wetLeft = left[i] * (1 - d) + math.sin(phase) * envelopeLeft * d;
-    final wetRight =
-        right[i] * (1 - d) + math.sin(phase + math.pi / 2) * envelopeRight * d;
-    outLeft[i] = left[i] * (1 - m) + wetLeft * m;
-    outRight[i] = right[i] * (1 - m) + wetRight * m;
-  }
-  for (var i = frames; i < left.length; i++) {
-    outLeft[i] = left[i];
-  }
-  for (var i = frames; i < right.length; i++) {
-    outRight[i] = right[i];
-  }
-  return (left: outLeft, right: outRight);
-}
-
-Float64List _fitLength(Float64List input, int length) {
-  if (input.length == length) return input;
-  if (length <= 0) return Float64List(0);
-  if (input.isEmpty) return Float64List(length);
-  final resized = resampleCubic(input, input.length / length);
-  if (resized.length == length) return resized;
-  final out = Float64List(length);
-  out.setRange(0, math.min(length, resized.length), resized);
-  return out;
-}
-
-Float64List _bitCrushFx(
-  Float64List input, {
-  double bits = 8,
-  double mix = 0.55,
-}) {
-  final m = mix.clamp(0.0, 1.0);
-  final out = Float64List(input.length);
-  if (m == 0) {
-    out.setAll(0, input);
-    return out;
-  }
-  final b = bits.round().clamp(1, 16);
-  final levels = math.pow(2, b - 1).toDouble();
-  for (var i = 0; i < input.length; i++) {
-    final dry = input[i];
-    final wet = (dry * levels).floorToDouble() / levels;
-    out[i] = (1 - m) * dry + m * wet;
-  }
-  return out;
-}
-
 /// A DAW arrangement: an ordered list of tracks.
 /// A labelled point on the timeline — "verse 2", "fix this", the drop. Markers
 /// are navigation only: they never affect the render, so an arrangement sounds
@@ -1459,10 +380,7 @@ class DawMarker {
     final ms = raw['ms'];
     if (ms is! num || !ms.isFinite) return null;
     final label = raw['l'];
-    return DawMarker(
-      ms: ms.toDouble(),
-      label: label is String ? label : '',
-    );
+    return DawMarker(ms: ms.toDouble(), label: label is String ? label : '');
   }
 }
 
@@ -1519,7 +437,7 @@ DawStereoMix renderTimelineStereo(
           int fadeOut,
           DawFadeCurve fadeInCurve,
           DawFadeCurve fadeOutCurve,
-        })>
+        })>,
   )>[];
   var totalSamples = 0;
   // Solo is timeline-wide: if any track is soloed, non-soloed tracks fall
@@ -1560,12 +478,7 @@ DawStereoMix renderTimelineStereo(
       final effected = clip.effects.isEmpty
           ? (left: pcm, right: rightPcm)
           : isStereo
-              ? _applyStereoClipEffectChain(
-                  pcm,
-                  rightPcm,
-                  clip.effects,
-                  sampleRate,
-                )
+              ? applyFxChainStereo(pcm, rightPcm, clip.effects, sampleRate)
               : (
                   left: applyClipEffectChain(pcm, clip.effects, sampleRate),
                   right: rightPcm,
@@ -1626,10 +539,10 @@ DawStereoMix renderTimelineStereo(
         // (a clip shorter than its fades), the smaller ramp wins.
         var env = 1.0;
         if (p.fadeIn > 0 && i < p.fadeIn) {
-          env = _fadeCurveValue(i / p.fadeIn, p.fadeInCurve);
+          env = fadeCurveValue(i / p.fadeIn, p.fadeInCurve);
         }
         if (p.fadeOut > 0 && i >= n - p.fadeOut) {
-          final down = _fadeCurveValue((n - i) / p.fadeOut, p.fadeOutCurve);
+          final down = fadeCurveValue((n - i) / p.fadeOut, p.fadeOutCurve);
           if (down < env) env = down;
         }
         final gain = p.gain * env;
@@ -1671,7 +584,7 @@ DawStereoMix renderTimelineStereo(
     mix(laneLeft, laneRight, places);
     if (track.effects.isNotEmpty || track.effect != TrackEffect.none) {
       if (track.effects.isNotEmpty) {
-        final processed = _applyStereoClipEffectChain(
+        final processed = applyFxChainStereo(
           laneLeft,
           laneRight,
           track.effects,
@@ -1724,7 +637,7 @@ DawStereoMix renderTimelineStereo(
     final bus = timeline.buses[entry.key];
     final wet = bus.effects.isEmpty
         ? entry.value
-        : _applyStereoClipEffectChain(
+        : applyFxChainStereo(
             entry.value.left,
             entry.value.right,
             bus.effects,
@@ -1736,12 +649,7 @@ DawStereoMix renderTimelineStereo(
 
   final out = timeline.effects.isEmpty
       ? (left: left, right: right)
-      : _applyStereoClipEffectChain(
-          left,
-          right,
-          timeline.effects,
-          sampleRate,
-        );
+      : applyFxChainStereo(left, right, timeline.effects, sampleRate);
   final outLeft = out.left;
   final outRight = out.right;
 
@@ -1796,15 +704,6 @@ void _limitMonoBuffer(Float64List buffer) {
   }
 }
 
-double _fadeCurveValue(double value, DawFadeCurve curve) {
-  final t = value.clamp(0.0, 1.0).toDouble();
-  return switch (curve) {
-    DawFadeCurve.linear => t,
-    DawFadeCurve.exponential => t * t,
-    DawFadeCurve.sCurve => t * t * (3 - 2 * t),
-  };
-}
-
 void _applyTrackGainAutomation(
   Float64List lane,
   List<DawAutomationPoint> automation,
@@ -1836,7 +735,7 @@ double _trackAutomationValue(List<DawAutomationPoint> points, double ms) {
     final b = points[i + 1];
     if (ms < a.ms || ms > b.ms) continue;
     if (b.ms <= a.ms) return b.value;
-    final t = _fadeCurveValue((ms - a.ms) / (b.ms - a.ms), a.curve);
+    final t = fadeCurveValue((ms - a.ms) / (b.ms - a.ms), a.curve);
     return a.value + (b.value - a.value) * t;
   }
   return points.last.value;

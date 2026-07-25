@@ -31,6 +31,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart';
+import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart';
 
 // The pure-notation multi-part exporters live in core/notation so the Workshop
@@ -44,28 +45,13 @@ export 'package:comet_beat/core/notation/multi_part_export.dart'
         multiTrackMidiToMultiPart,
         multiPartToAbc;
 
+// B1 — `pitchFromMidi` used to be copy-pasted into five files (two spelled via a
+// pitch-class table, two via natural-below-plus-sharp; all four agreed with the
+// canonical one). It now lives once in `lib/shared/midi_pitch.dart` and is
+// re-exported here, so this file's existing consumers are unaffected.
+export 'package:comet_beat/shared/midi_pitch.dart' show pitchFromMidi;
+
 // ─── Pitch / duration helpers (shared with bin/notaconv.dart's port) ─────────
-
-const _pcSpelling = <(Step, int)>[
-  (Step.c, 0),
-  (Step.c, 1),
-  (Step.d, 0),
-  (Step.d, 1),
-  (Step.e, 0),
-  (Step.f, 0),
-  (Step.f, 1),
-  (Step.g, 0),
-  (Step.g, 1),
-  (Step.a, 0),
-  (Step.a, 1),
-  (Step.b, 0),
-];
-
-/// MIDI note → a spelled [Pitch] (sharps). Inverse of [Pitch.midiNumber].
-Pitch pitchFromMidi(int midi) {
-  final (step, alter) = _pcSpelling[midi % 12];
-  return Pitch(step, alter: alter, octave: (midi ~/ 12) - 1);
-}
 
 /// A [NoteDuration] as whole grid steps (rounded — off-grid values quantize).
 int durationToSteps(NoteDuration d, int stepsPerBeat) {

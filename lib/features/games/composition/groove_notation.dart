@@ -8,27 +8,14 @@
 
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum;
+import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 
-const _naturalSteps = {
-  0: Step.c,
-  2: Step.d,
-  4: Step.e,
-  5: Step.f,
-  7: Step.g,
-  9: Step.a,
-  11: Step.b,
-};
-
-/// MIDI number → [Pitch]. The groove content is all C-major naturals; a
-/// chromatic midi (future content) is spelled as a sharp.
-Pitch pitchFromMidi(int midi) {
-  final pitchClass = midi % 12;
-  final octave = midi ~/ 12 - 1;
-  final step = _naturalSteps[pitchClass];
-  if (step != null) return Pitch(step, octave: octave);
-  return Pitch(_naturalSteps[pitchClass - 1]!, alter: 1, octave: octave);
-}
+// B1 — `pitchFromMidi` used to be copy-pasted into five files (two spelled via a
+// pitch-class table, two via natural-below-plus-sharp; all four agreed with the
+// canonical one). It now lives once in `lib/shared/midi_pitch.dart` and is
+// re-exported here, so this file's existing consumers are unaffected.
+export 'package:comet_beat/shared/midi_pitch.dart' show pitchFromMidi;
 
 // Greedy decomposition of an eighth-step run into engravable durations.
 const _durations = [

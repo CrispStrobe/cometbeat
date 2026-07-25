@@ -8,7 +8,14 @@
 // Pure Dart (no Flutter) so the whole model is unit-testable.
 
 import 'package:comet_beat/features/games/composition/tab_arranger.dart';
+import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:crisp_notation/crisp_notation.dart';
+
+// B1 — `pitchFromMidi` used to be copy-pasted into five files (two spelled via a
+// pitch-class table, two via natural-below-plus-sharp; all four agreed with the
+// canonical one). It now lives once in `lib/shared/midi_pitch.dart` and is
+// re-exported here, so this file's existing consumers are unaffected.
+export 'package:comet_beat/shared/midi_pitch.dart' show pitchFromMidi;
 
 /// A playing technique attached to a tab note. Each maps to the `Score` list
 /// the tab engine renders from — and, where the GPIF writer reads the same
@@ -211,25 +218,6 @@ double _scaledStepsOf(TabColumn c) {
   final base = _stepsOf(c.duration).toDouble();
   final t = c.tuplet;
   return t == null ? base : base * t.$2 / t.$1;
-}
-
-/// C-major natural spellings by pitch class; others take the natural below + ♯.
-const Map<int, Step> _naturalSteps = {
-  0: Step.c,
-  2: Step.d,
-  4: Step.e,
-  5: Step.f,
-  7: Step.g,
-  9: Step.a,
-  11: Step.b,
-};
-
-Pitch pitchFromMidi(int midi) {
-  final pc = midi % 12;
-  final octave = midi ~/ 12 - 1;
-  final natural = _naturalSteps[pc];
-  if (natural != null) return Pitch(natural, octave: octave);
-  return Pitch(_naturalSteps[pc - 1]!, alter: 1, octave: octave);
 }
 
 /// One track in a multi-track tab "band" — a named [TabDocument] (its own
@@ -503,7 +491,8 @@ class TabDocument {
     final vibratos = <Vibrato>[];
     var bar = <MusicElement>[];
     var barSteps = 0.0;
-    var barFirstCol = 0; // column index this bar began at (for its repeat flags)
+    var barFirstCol =
+        0; // column index this bar began at (for its repeat flags)
     var barTuplets = <TupletSpan>[];
     // The open tuplet group within the current bar: its bar-relative start index
     // and (actual, normal) ratio.
@@ -525,7 +514,8 @@ class TabDocument {
     void flushBar() {
       closeTuplet(bar.length);
       if (bar.isNotEmpty) {
-        final first = barFirstCol < columns.length ? columns[barFirstCol] : null;
+        final first =
+            barFirstCol < columns.length ? columns[barFirstCol] : null;
         measures.add(
           Measure(
             bar,

@@ -12,20 +12,14 @@
 // channel + scale-snap) and is a later slice.
 
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 
-// Sharp spelling for each pitch class → (Step, alter).
-const _pcSpelling = <(Step, int)>[
-  (Step.c, 0), (Step.c, 1), (Step.d, 0), (Step.d, 1), // C C# D D#
-  (Step.e, 0), (Step.f, 0), (Step.f, 1), (Step.g, 0), // E F F# G
-  (Step.g, 1), (Step.a, 0), (Step.a, 1), (Step.b, 0), // G# A A# B
-];
-
-/// A [Pitch] for a MIDI note (sharp spelling; C4 = 60).
-Pitch pitchFromMidi(int midi) {
-  final (step, alter) = _pcSpelling[midi % 12];
-  return Pitch(step, alter: alter, octave: (midi ~/ 12) - 1);
-}
+// B1 — `pitchFromMidi` used to be copy-pasted into five files (two spelled via a
+// pitch-class table, two via natural-below-plus-sharp; all four agreed with the
+// canonical one). It now lives once in `lib/shared/midi_pitch.dart` and is
+// re-exported here, so this file's existing consumers are unaffected.
+export 'package:comet_beat/shared/midi_pitch.dart' show pitchFromMidi;
 
 /// The note values available at [stepsPerBeat] resolution, largest first, as
 /// (duration, lengthInSteps) — only those spanning a whole number of steps in
