@@ -145,7 +145,16 @@ XmModule parseXm(Uint8List bytes) {
       numChannels,
       packedSize,
     );
-    patterns.add(XmPattern(rows));
+    patterns.add(
+      XmPattern(
+        rows,
+        rawHeader: List<int>.from(bytes.sublist(fieldStart, dataStart)),
+        rawData: dataStart < len
+            ? Uint8List.fromList(
+                bytes.sublist(dataStart, dataEnd.clamp(0, len)))
+            : null,
+      ),
+    );
 
     cursor = dataEnd;
   }
@@ -163,7 +172,18 @@ XmModule parseXm(Uint8List bytes) {
     final numSamples = bd.getUint16(instrumentStart + 27, Endian.little);
 
     if (numSamples == 0) {
-      instruments.add(XmInstrument(name: insName, samples: const []));
+      instruments.add(
+        XmInstrument(
+          name: insName,
+          samples: const [],
+          rawHeader: instrumentStart + instrumentHeaderSize <= len
+              ? List<int>.from(bytes.sublist(
+                  instrumentStart,
+                  instrumentStart + instrumentHeaderSize,
+                ))
+              : const [],
+        ),
+      );
       instrumentStart += instrumentHeaderSize;
       continue;
     }
@@ -232,6 +252,8 @@ XmModule parseXm(Uint8List bytes) {
           sixteenBit: (type & 0x10) != 0,
           pingPong: (type & 0x03) == 2, // loop type: 0 none, 1 fwd, 2 pingpong
           name: sName,
+          rawHeader:
+              List<int>.from(bytes.sublist(headerCursor, headerCursor + 40)),
         ),
       );
       headerCursor += 40;
@@ -254,6 +276,13 @@ XmModule parseXm(Uint8List bytes) {
           sixteenBit: meta.sixteenBit,
           pingPong: meta.pingPong,
           pcm: pcm,
+          rawHeader: meta.rawHeader,
+          rawData: dataCursor < len
+              ? Uint8List.fromList(
+                  bytes.sublist(dataCursor,
+                      (dataCursor + meta.lengthInBytes).clamp(0, len)),
+                )
+              : null,
         ),
       );
       dataCursor += meta.lengthInBytes;
@@ -271,6 +300,12 @@ XmModule parseXm(Uint8List bytes) {
         vibratoDepth: vibratoDepth,
         vibratoRate: vibratoRate,
         fadeout: fadeout,
+        rawHeader: instrumentHeaderSize <= len - instrumentStart
+            ? List<int>.from(bytes.sublist(
+                instrumentStart,
+                instrumentStart + instrumentHeaderSize,
+              ))
+            : const [],
       ),
     );
     instrumentStart = dataCursor;
@@ -288,6 +323,7 @@ XmModule parseXm(Uint8List bytes) {
     order: order,
     patterns: patterns,
     instruments: instruments,
+    rawHeader: List<int>.from(bytes.take(_kFixedHeaderSize)),
   );
 }
 
@@ -398,6 +434,7 @@ class _SampleMeta {
     required this.sixteenBit,
     required this.pingPong,
     required this.name,
+    required this.rawHeader,
   });
 
   final int lengthInBytes;
@@ -406,4 +443,5 @@ class _SampleMeta {
   final bool sixteenBit;
   final bool pingPong;
   final String name;
+  final List<int> rawHeader;
 }

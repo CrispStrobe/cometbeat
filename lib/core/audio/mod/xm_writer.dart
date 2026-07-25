@@ -145,12 +145,20 @@ Uint8List writeXm(XmModule module) {
   for (var i = 0; i < songLength; i++) {
     header[0x50 + i] = module.order[i] & 0xFF;
   }
+  if (module.rawHeader.length >= 0x150) {
+    header.setAll(0, module.rawHeader.take(0x150));
+  }
 
   out.add(header);
 
   // ─── PATTERNS ─────────────────────────────────────────────────────────────
   final numChannels = module.channelCount;
   for (final pattern in module.patterns) {
+    if (pattern.rawHeader.isNotEmpty && pattern.rawData != null) {
+      out.add(pattern.rawHeader);
+      out.add(pattern.rawData!);
+      continue;
+    }
     final packed = BytesBuilder();
     final numRows = pattern.numRows;
     for (var r = 0; r < numRows; r++) {
@@ -189,6 +197,10 @@ Uint8List writeXm(XmModule module) {
     final numSamples = instrument.samples.length;
 
     if (numSamples == 0) {
+      if (instrument.rawHeader.isNotEmpty) {
+        out.add(instrument.rawHeader);
+        continue;
+      }
       final ih = Uint8List(29);
       final ihb = ByteData.sublistView(ih);
       ihb.setUint32(0, 29, Endian.little);
@@ -199,48 +211,55 @@ Uint8List writeXm(XmModule module) {
       continue;
     }
 
-    // Instrument header padded to 263 bytes.
-    final ih = Uint8List(263);
+    // Preserve native XM headers when available; neutral-created instruments
+    // receive the canonical 263-byte header below.
+    final ih = instrument.rawHeader.length >= 263
+        ? Uint8List.fromList(instrument.rawHeader.take(263).toList())
+        : Uint8List(263);
     final ihb = ByteData.sublistView(ih);
-    ihb.setUint32(0, 263, Endian.little);
-    _writeName(ih, 4, 22, instrument.name);
-    ih[26] = 0; // type
-    ihb.setUint16(27, numSamples, Endian.little);
-    ihb.setUint32(29, 40, Endian.little); // sampleHeaderSize
-    // Keymap (33..128) selects the instrument sample for each C-0..B-7 key.
-    // Empty keymaps retain the XM convention of selecting sample zero.
-    for (var key = 0; key < 96; key++) {
-      ih[33 + key] = key < instrument.keymap.length
-          ? instrument.keymap[key].clamp(0, 255)
-          : 0;
+    if (instrument.rawHeader.length < 263) {
+      ihb.setUint32(0, 263, Endian.little);
+      _writeName(ih, 4, 22, instrument.name);
+      ih[26] = 0; // type
+      ihb.setUint16(27, numSamples, Endian.little);
+      ihb.setUint32(29, 40, Endian.little); // sampleHeaderSize
     }
-    // Emit the volume/pan envelope block from the instrument's envelopes
-    // (left zeroed = disabled).
-    _writeXmEnvelope(
-      ihb,
-      instrument.volumeEnvelope,
-      pointsAt: 129,
-      numAt: 225,
-      sustainAt: 227,
-      loopStartAt: 228,
-      loopEndAt: 229,
-      typeAt: 233,
-    );
-    _writeXmEnvelope(
-      ihb,
-      instrument.panEnvelope,
-      pointsAt: 177,
-      numAt: 226,
-      sustainAt: 230,
-      loopStartAt: 231,
-      loopEndAt: 232,
-      typeAt: 234,
-    );
-    ih[235] = instrument.vibratoType.clamp(0, 255);
-    ih[236] = instrument.vibratoSweep.clamp(0, 255);
-    ih[237] = instrument.vibratoDepth.clamp(0, 255);
-    ih[238] = instrument.vibratoRate.clamp(0, 255);
-    ihb.setUint16(239, instrument.fadeout.clamp(0, 0xFFFF), Endian.little);
+    if (instrument.rawHeader.length < 263) {
+      // Keymap (33..128) selects the instrument sample for each C-0..B-7 key.
+      // Empty keymaps retain the XM convention of selecting sample zero.
+      for (var key = 0; key < 96; key++) {
+        ih[33 + key] = key < instrument.keymap.length
+            ? instrument.keymap[key].clamp(0, 255)
+            : 0;
+      }
+      // Emit the volume/pan envelope block from the instrument's envelopes
+      // (left zeroed = disabled).
+      _writeXmEnvelope(
+        ihb,
+        instrument.volumeEnvelope,
+        pointsAt: 129,
+        numAt: 225,
+        sustainAt: 227,
+        loopStartAt: 228,
+        loopEndAt: 229,
+        typeAt: 233,
+      );
+      _writeXmEnvelope(
+        ihb,
+        instrument.panEnvelope,
+        pointsAt: 177,
+        numAt: 226,
+        sustainAt: 230,
+        loopStartAt: 231,
+        loopEndAt: 232,
+        typeAt: 234,
+      );
+      ih[235] = instrument.vibratoType.clamp(0, 255);
+      ih[236] = instrument.vibratoSweep.clamp(0, 255);
+      ih[237] = instrument.vibratoDepth.clamp(0, 255);
+      ih[238] = instrument.vibratoRate.clamp(0, 255);
+      ihb.setUint16(239, instrument.fadeout.clamp(0, 0xFFFF), Endian.little);
+    }
     out.add(ih);
 
     // Sample headers, then sample data blocks (same order).
@@ -266,23 +285,26 @@ Uint8List writeXm(XmModule module) {
         }
       }
       final dataBytes = data.toBytes();
-      dataBlocks.add(dataBytes);
+      dataBlocks.add(sample.rawData ?? dataBytes);
 
-      final sh = Uint8List(40);
+      final sh = sample.rawHeader.length >= 40
+          ? Uint8List.fromList(sample.rawHeader.take(40).toList())
+          : Uint8List(40);
       final shb = ByteData.sublistView(sh);
-      shb.setUint32(0, dataBytes.length, Endian.little); // lengthInBytes
-      shb.setUint32(4, sample.loopStart, Endian.little);
-      shb.setUint32(8, sample.loopLength, Endian.little);
-      sh[12] = sample.volume.clamp(0, 64);
-      shb.setInt8(13, sample.finetune);
-      // Loop type: bits 0-1 (0 none / 1 forward / 2 ping-pong) | bit4 16-bit.
-      final loopType =
-          sample.loopLength > 0 ? (sample.pingPong ? 0x02 : 0x01) : 0;
-      sh[14] = loopType | (sixteen ? 0x10 : 0);
-      sh[15] = sample.pan.clamp(0, 255); // panning (128 = centre)
-      shb.setInt8(16, sample.relativeNote);
-      sh[17] = 0; // reserved
-      _writeName(sh, 18, 22, sample.name);
+      if (sample.rawHeader.length < 40) {
+        shb.setUint32(0, dataBytes.length, Endian.little); // lengthInBytes
+        shb.setUint32(4, sample.loopStart, Endian.little);
+        shb.setUint32(8, sample.loopLength, Endian.little);
+        sh[12] = sample.volume.clamp(0, 64);
+        shb.setInt8(13, sample.finetune);
+        final loopType =
+            sample.loopLength > 0 ? (sample.pingPong ? 0x02 : 0x01) : 0;
+        sh[14] = loopType | (sixteen ? 0x10 : 0);
+        sh[15] = sample.pan.clamp(0, 255);
+        shb.setInt8(16, sample.relativeNote);
+        sh[17] = 0;
+        _writeName(sh, 18, 22, sample.name);
+      }
       out.add(sh);
     }
 

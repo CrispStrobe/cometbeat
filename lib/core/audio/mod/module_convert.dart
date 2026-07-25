@@ -323,6 +323,10 @@ ModuleDoc docFromS3m(S3mModule m) {
     s3mDefaultPan: m.defaultPan,
     s3mChannelSettings: List<int>.from(m.channelSettings),
     s3mSampleFormat: m.sampleFormat,
+    s3mDefaultPans: List<int>.from(m.defaultPans),
+    s3mRawOrder: List<int>.from(m.rawOrder),
+    s3mPatterns: List<S3mPattern>.from(m.patterns),
+    s3mSamples: List<S3mSample>.from(m.samples),
     sourceFormat: ModuleFormat.s3m,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -429,6 +433,7 @@ ModuleDoc docFromXm(XmModule m) {
     xmTrackerName: m.trackerName,
     xmVersion: m.version,
     xmRestart: m.restart,
+    xmRawHeader: List<int>.from(m.rawHeader),
     channelCount: m.channelCount,
     initialSpeed: m.defaultTempo,
     initialTempo: m.defaultBpm,
@@ -615,6 +620,7 @@ ModuleDoc docFromIt(ItModule m) {
           rawHeader: List<int>.from(instrument.rawHeader),
         ),
     ],
+    itSamples: List<ItSample>.from(m.samples),
     sourceFormat: ModuleFormat.it,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -805,6 +811,7 @@ XmModule docToXm(ModuleDoc doc) {
       trackerName: doc.xmTrackerName,
       version: doc.xmVersion,
       restart: doc.xmRestart,
+      rawHeader: List<int>.from(doc.xmRawHeader),
       channelCount: doc.channelCount,
       defaultTempo: doc.initialSpeed,
       defaultBpm: doc.initialTempo,
@@ -850,6 +857,7 @@ XmModule docToXm(ModuleDoc doc) {
     trackerName: doc.xmTrackerName,
     version: doc.xmVersion,
     restart: doc.xmRestart,
+    rawHeader: List<int>.from(doc.xmRawHeader),
     channelCount: doc.channelCount,
     defaultTempo: doc.initialSpeed,
     defaultBpm: doc.initialTempo,
@@ -943,7 +951,13 @@ S3mCell _s3mCellFrom(DocCell c, {required bool preserveNative}) {
 
 S3mModule docToS3m(ModuleDoc doc) {
   final samples = <S3mSample>[];
+  if (doc.sourceFormat == ModuleFormat.s3m && doc.s3mSamples.isNotEmpty) {
+    samples.addAll(doc.s3mSamples);
+  }
   for (final ds in doc.samples) {
+    if (doc.sourceFormat == ModuleFormat.s3m && doc.s3mSamples.isNotEmpty) {
+      break;
+    }
     if (ds.isEmpty) {
       samples.add(S3mSample.empty());
       continue;
@@ -964,7 +978,13 @@ S3mModule docToS3m(ModuleDoc doc) {
   }
 
   final patterns = <S3mPattern>[];
+  if (doc.sourceFormat == ModuleFormat.s3m && doc.s3mPatterns.isNotEmpty) {
+    patterns.addAll(doc.s3mPatterns);
+  }
   for (final dp in doc.patterns) {
+    if (doc.sourceFormat == ModuleFormat.s3m && doc.s3mPatterns.isNotEmpty) {
+      break;
+    }
     final rows = <List<S3mCell>>[];
     for (final srcRow in dp.rows) {
       final cells = <S3mCell>[];
@@ -1012,6 +1032,8 @@ S3mModule docToS3m(ModuleDoc doc) {
     defaultPan: doc.s3mDefaultPan,
     channelSettings: List<int>.from(doc.s3mChannelSettings),
     sampleFormat: doc.s3mSampleFormat,
+    defaultPans: List<int>.from(doc.s3mDefaultPans),
+    rawOrder: List<int>.from(doc.s3mRawOrder),
     order: List<int>.from(doc.order),
     samples: samples,
     patterns: patterns,
@@ -1145,7 +1167,13 @@ ItInstrument _itInstrumentFromDoc(DocInstrument d, List<int> rawHeader) {
 
 ItModule docToIt(ModuleDoc doc) {
   final samples = <ItSample>[];
-  for (final ds in doc.samples) {
+  if (doc.sourceFormat == ModuleFormat.it && doc.itSamples.isNotEmpty) {
+    samples.addAll(doc.itSamples);
+  }
+  for (final ds
+      in doc.itSamples.isNotEmpty && doc.sourceFormat == ModuleFormat.it
+          ? const <DocSample>[]
+          : doc.samples) {
     if (ds.isEmpty) {
       samples.add(ItSample.empty());
       continue;

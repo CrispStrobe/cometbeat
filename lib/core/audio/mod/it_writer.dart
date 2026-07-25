@@ -160,12 +160,13 @@ Uint8List writeIt(ItModule module) {
     final s = samples[i];
     sampleHeaderOffsets.add(out.length);
     final empty = s.pcm.isEmpty;
-    final loop = s.loopEnd > s.loopStart;
+    final loop = s.loop;
     final flg = empty
         ? 0
         : (0x01 |
             (s.sixteenBit ? 0x02 : 0) |
             (s.pcmRight != null ? 0x04 : 0) |
+            (s.rawData != null ? 0x08 : 0) |
             (loop ? 0x10 : 0) |
             (loop && s.pingPong ? 0x40 : 0)); // 0x40 = bidirectional loop
     final length = empty ? 0 : s.pcm.length;
@@ -177,7 +178,7 @@ Uint8List writeIt(ItModule module) {
     u8(flg); // 0x12 Flg
     u8(s.defaultVolume); // 0x13 default volume
     writeString(s.name, 26); // 0x14 name
-    u8(0x01); // 0x2E Cvt (signed)
+    u8(s.cvt); // 0x2E Cvt
     // 0x2F default pan: centre (128) → no explicit default pan; else set bit 7
     // + the 0..64 pan (doc 0..255 → IT 0..64).
     u8(s.pan == 128 ? 32 : (0x80 | (s.pan * 64 ~/ 255).clamp(0, 64)));
@@ -196,6 +197,10 @@ Uint8List writeIt(ItModule module) {
     final s = samples[i];
     if (s.pcm.isEmpty) continue;
     sampleDataOffsets[i] = out.length;
+    if (s.rawData != null) {
+      out.addAll(s.rawData!);
+      continue;
+    }
     if (s.sixteenBit) {
       for (final v in s.pcm) {
         final q = (v * 32768).round().clamp(-32768, 32767);

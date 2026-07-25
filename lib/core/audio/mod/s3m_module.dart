@@ -66,6 +66,8 @@ class S3mSample {
     this.loopEnd = 0,
     this.loop = false,
     this.sixteenBit = false,
+    this.rawHeader = const [],
+    this.rawData,
     required this.pcm,
   });
 
@@ -80,6 +82,8 @@ class S3mSample {
   /// Store the sample at 16-bit depth (S3M flag 0x04) instead of the classic
   /// 8-bit. Default false = byte-identical 8-bit export.
   final bool sixteenBit;
+  final List<int> rawHeader;
+  final Uint8List? rawData;
 
   /// Normalized PCM in [-1, 1] (8- or 16-bit source is normalized on read;
   /// unified with [XmSample]/[ItSample]).
@@ -130,8 +134,9 @@ class S3mCell {
 
 /// A pattern: 64 rows × [channelCount] cells.
 class S3mPattern {
-  const S3mPattern(this.rows);
+  const S3mPattern(this.rows, {this.rawData});
   final List<List<S3mCell>> rows;
+  final Uint8List? rawData;
   int get channelCount => rows.isEmpty ? 0 : rows.first.length;
 }
 
@@ -146,6 +151,8 @@ class S3mModule {
     this.defaultPan = 0,
     this.channelSettings = const [],
     this.sampleFormat = 1,
+    this.defaultPans = const [],
+    this.rawOrder = const [],
     this.initialSpeed = 6,
     this.initialTempo = 125,
     required this.order,
@@ -159,6 +166,8 @@ class S3mModule {
   final int initialSpeed, initialTempo;
   final List<int> channelSettings;
   final int sampleFormat;
+  final List<int> defaultPans;
+  final List<int> rawOrder;
   final List<int> order; // pattern indices (254/255 markers removed)
   final List<S3mSample> samples;
   final List<S3mPattern> patterns;

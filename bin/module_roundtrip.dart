@@ -160,6 +160,12 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
         'sample ${i + 1} loop differs');
     check(sa.pingPong == sb.pingPong, 'sample ${i + 1} ping-pong differs');
     check(sa.volume == sb.volume, 'sample ${i + 1} volume differs');
+    check(sa.globalVolume == sb.globalVolume,
+        'sample ${i + 1} global volume differs');
+    check(sa.pan == sb.pan, 'sample ${i + 1} pan differs');
+    check(sa.sixteenBit == sb.sixteenBit, 'sample ${i + 1} bit depth differs');
+    check((sa.pcmRight == null) == (sb.pcmRight == null),
+        'sample ${i + 1} stereo differs');
     check(sa.c5speed == sb.c5speed, 'sample ${i + 1} C5 speed differs');
     final n = math.min(sa.pcm.length, sb.pcm.length);
     final tolerance = sa.sixteenBit || sb.sixteenBit ? 1e-4 : 1 / 128;

@@ -22,6 +22,8 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mod/xm_module.dart';
+import 'package:comet_beat/core/audio/mod/it_module.dart';
+import 'package:comet_beat/core/audio/mod/s3m_module.dart';
 
 /// The source container format a [ModuleDoc] was read from.
 enum ModuleFormat { mod, s3m, xm, it }
@@ -246,6 +248,7 @@ class ModuleDoc {
     this.xmTrackerName = '',
     this.xmVersion = 0x0104,
     this.xmRestart = 0,
+    this.xmRawHeader = const [],
     this.channelCount = 0,
     this.initialSpeed = 6,
     this.initialTempo = 125,
@@ -259,6 +262,10 @@ class ModuleDoc {
     this.s3mDefaultPan = 0,
     this.s3mChannelSettings = const [],
     this.s3mSampleFormat = 1,
+    this.s3mDefaultPans = const [],
+    this.s3mRawOrder = const [],
+    this.s3mPatterns = const [],
+    this.s3mSamples = const [],
     this.itFlags = 9,
     this.itMixVolume = 48,
     this.itPanSeparation = 128,
@@ -268,6 +275,7 @@ class ModuleDoc {
     this.channelVolumes = const [],
     this.itInstrumentHeaders = const [],
     this.itInstruments = const [],
+    this.itSamples = const [],
     this.xmInstruments = const [],
     this.xmPatterns = const [],
     required this.sourceFormat,
@@ -280,6 +288,7 @@ class ModuleDoc {
   final String xmTrackerName;
   final int xmVersion;
   final int xmRestart;
+  final List<int> xmRawHeader;
   final int channelCount;
   final int initialSpeed, initialTempo;
 
@@ -290,6 +299,10 @@ class ModuleDoc {
   final int s3mMasterVolume, s3mUltraClick, s3mDefaultPan;
   final List<int> s3mChannelSettings;
   final int s3mSampleFormat;
+  final List<int> s3mDefaultPans;
+  final List<int> s3mRawOrder;
+  final List<S3mPattern> s3mPatterns;
+  final List<S3mSample> s3mSamples;
 
   /// Original IT header flags, including instrument mode and slide mode.
   final int itFlags;
@@ -302,6 +315,7 @@ class ModuleDoc {
   /// Original IT instrument headers for lossless IT -> IT conversion.
   final List<List<int>> itInstrumentHeaders;
   final List<DocInstrument> itInstruments;
+  final List<ItSample> itSamples;
 
   /// Native XM instruments retained for lossless XM -> XM conversion. The
   /// neutral sample list remains available for cross-format conversion.

@@ -325,6 +325,7 @@ ItSample _parseSample(
 
   Float64List pcm;
   Float64List? pcmRight;
+  Uint8List? rawData;
   if (!hasSample || length == 0) {
     pcm = Float64List(0);
   } else if (compressed) {
@@ -338,6 +339,10 @@ ItSample _parseSample(
       sixteenBit,
       it215,
     );
+    final end = _compressedDataEnd(bytes, dataPtr, length, sixteenBit);
+    if (end > dataPtr && end <= bytes.length) {
+      rawData = Uint8List.fromList(bytes.sublist(dataPtr, end));
+    }
   } else {
     pcm = _decodeUncompressed(bytes, dataPtr, length, sixteenBit, cvt);
     if ((flg & 0x04) != 0) {
@@ -360,6 +365,8 @@ ItSample _parseSample(
     sixteenBit: sixteenBit,
     stereo: (flg & 0x04) != 0,
     compressed: compressed,
+    cvt: cvt,
+    rawData: rawData,
     length: length,
     loopStart: loopStart,
     loopEnd: loopEnd,
@@ -370,6 +377,26 @@ ItSample _parseSample(
     pcm: pcm,
     pcmRight: pcmRight,
   );
+}
+
+int _compressedDataEnd(
+  Uint8List bytes,
+  int dataPtr,
+  int length,
+  bool sixteenBit,
+) {
+  final quota = sixteenBit ? 0x4000 : 0x8000;
+  var remaining = length;
+  var pos = dataPtr;
+  while (remaining > 0 && pos + 2 <= bytes.length) {
+    final blockLen = bytes[pos] | (bytes[pos + 1] << 8);
+    pos += 2;
+    final available = math.min(blockLen, bytes.length - pos);
+    pos += available;
+    remaining -= math.min(remaining, quota);
+    if (available < blockLen) break;
+  }
+  return pos;
 }
 
 int _wrap8(int x) => ((x + 128) & 0xFF) - 128;

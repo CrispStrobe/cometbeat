@@ -77,6 +77,8 @@ class ItSample {
     this.sixteenBit = false,
     this.stereo = false,
     this.compressed = false,
+    this.cvt = 1,
+    this.rawData,
     this.length = 0,
     this.loopStart = 0,
     this.loopEnd = 0,
@@ -95,6 +97,8 @@ class ItSample {
   final bool sixteenBit;
   final bool stereo;
   final bool compressed; // whether the SOURCE was IT214/215 compressed
+  final int cvt; // original sample conversion flags
+  final Uint8List? rawData; // original compressed blocks, when retained
   final int length; // declared length in samples
   final int loopStart, loopEnd;
   final bool loop;

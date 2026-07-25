@@ -98,7 +98,9 @@ Uint8List writeS3m(S3mModule module) {
   final patNum = patterns.length;
 
   // ordNum = order length padded up to even.
-  var ordNum = module.order.length;
+  final encodedOrder =
+      module.rawOrder.isNotEmpty ? module.rawOrder : module.order;
+  var ordNum = encodedOrder.length;
   if (ordNum.isOdd) ordNum++;
   if (ordNum == 0) ordNum = 0; // an empty order stays empty (even).
 
@@ -134,7 +136,7 @@ Uint8List writeS3m(S3mModule module) {
 
   // ── Order list (ordNum bytes, pad with 255) ────────────────────────────────
   for (var i = 0; i < ordNum; i++) {
-    u8(i < module.order.length ? module.order[i] : 255);
+    u8(i < encodedOrder.length ? encodedOrder[i] : 255);
   }
 
   // ── Instrument parapointers (patched later) ────────────────────────────────
@@ -149,7 +151,11 @@ Uint8List writeS3m(S3mModule module) {
     u16(0);
   }
 
-  // No pan block.
+  if (module.defaultPan == 252) {
+    for (var i = 0; i < 32; i++) {
+      u8(i < module.defaultPans.length ? module.defaultPans[i] : 0);
+    }
+  }
 
   // Records to patch after the whole file is laid out.
   final insHeaderOffsets = List<int>.filled(insNum, 0);
@@ -166,6 +172,11 @@ Uint8List writeS3m(S3mModule module) {
     final headerOff = len();
     insHeaderOffsets[s] = headerOff;
     insParapointers[s] = headerOff ~/ 16;
+
+    if (sample.rawHeader.length >= 0x50) {
+      out.add(sample.rawHeader.take(0x50).toList());
+      continue;
+    }
 
     u8(isEmpty ? 0 : 1); // 0x00 type
     asciiFixed('', 12); // 0x01 DOS filename
@@ -195,6 +206,11 @@ Uint8List writeS3m(S3mModule module) {
     align16();
     final patOff = len();
     patParapointers[p] = patOff ~/ 16;
+
+    if (module.rawOrder.isNotEmpty && pattern.rawData != null) {
+      out.add(pattern.rawData!);
+      continue;
+    }
 
     // Pack the rows into a temporary buffer, then prefix with the length word.
     final body = BytesBuilder();
@@ -248,7 +264,9 @@ Uint8List writeS3m(S3mModule module) {
     final pcmOff = len();
     insMemsegs[s] = pcmOff ~/ 16;
     final pcmLen = sample.pcm.length;
-    if (sample.sixteenBit) {
+    if (sample.rawData != null) {
+      out.add(sample.rawData!);
+    } else if (sample.sixteenBit) {
       for (var i = 0; i < pcmLen; i++) {
         final q = (sample.pcm[i] * 32768).round().clamp(-32768, 32767);
         final encoded = module.sampleFormat == 2 ? q + 32768 : q;

@@ -50,14 +50,10 @@ void main() {
       }
     });
 
-    test('sample PCM survives (incl. compressed sources → uncompressed)', () {
+    test('sample PCM and compression survive', () {
       for (var i = 0; i < m0.samples.length; i++) {
         final s0 = m0.samples[i], s1 = m1.samples[i];
-        expect(
-          s1.compressed,
-          isFalse,
-          reason: 'sample $i written uncompressed',
-        );
+        expect(s1.compressed, s0.compressed, reason: 'sample $i compression');
         expect(s1.sixteenBit, s0.sixteenBit, reason: 'sample $i bit depth');
         expect(s1.pcm.length, s0.pcm.length, reason: 'sample $i length');
         final tol = s0.sixteenBit ? 1e-4 : 1 / 128;

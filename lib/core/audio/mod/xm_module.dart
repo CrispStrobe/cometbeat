@@ -63,6 +63,8 @@ class XmSample {
     this.loopLength = 0,
     this.sixteenBit = false,
     this.pingPong = false,
+    this.rawHeader = const [],
+    this.rawData,
     required this.pcm,
   });
 
@@ -76,6 +78,8 @@ class XmSample {
   final int loopStart, loopLength;
   final bool sixteenBit;
   final bool pingPong; // loop-type 2 (bidirectional)
+  final List<int> rawHeader;
+  final Uint8List? rawData;
   final Float64List pcm;
 
   bool get isEmpty => pcm.isEmpty;
@@ -109,6 +113,7 @@ class XmInstrument {
     this.vibratoDepth = 0,
     this.vibratoRate = 0,
     this.fadeout = 0,
+    this.rawHeader = const [],
   });
   final String name;
   final List<XmSample> samples;
@@ -119,6 +124,7 @@ class XmInstrument {
   final XmEnvelope volumeEnvelope, panEnvelope;
   final int vibratoType, vibratoSweep, vibratoDepth, vibratoRate;
   final int fadeout;
+  final List<int> rawHeader;
 }
 
 /// One note cell. `note == 0` empty, `note == 97` note-off.
@@ -168,8 +174,10 @@ class XmCell {
 
 /// A pattern: [numRows] rows × [channelCount] cells.
 class XmPattern {
-  const XmPattern(this.rows);
+  const XmPattern(this.rows, {this.rawHeader = const [], this.rawData});
   final List<List<XmCell>> rows;
+  final List<int> rawHeader;
+  final Uint8List? rawData;
   int get numRows => rows.length;
   int get channelCount => rows.isEmpty ? 0 : rows.first.length;
 }
@@ -180,6 +188,7 @@ class XmModule {
     this.name = '',
     this.trackerName = '',
     this.version = 0x0104,
+    this.rawHeader = const [],
     this.channelCount = 0,
     this.defaultTempo = 6,
     this.defaultBpm = 125,
@@ -193,6 +202,7 @@ class XmModule {
   final String name;
   final String trackerName;
   final int version;
+  final List<int> rawHeader;
   final int channelCount;
   final int defaultTempo, defaultBpm, restart;
   final bool linearFrequency;
