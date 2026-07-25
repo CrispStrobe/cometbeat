@@ -964,15 +964,16 @@ double? _readLoopedSample(
     }
   }
 
+  final nativeSample = channel.instrument is SampleInstrument &&
+      !(channel.instrument as SampleInstrument).normalize;
   var peak = 0.0;
-  for (var i = 0; i < total; i++) {
-    peak = max(peak, max(left[i].abs(), right[i].abs()));
+  if (!nativeSample) {
+    for (var i = 0; i < total; i++) {
+      peak = max(peak, max(left[i].abs(), right[i].abs()));
+    }
+    if (peak == 0) return (left: left, right: right);
   }
-  if (peak == 0) return (left: left, right: right);
-  final scale = channel.instrument is SampleInstrument &&
-          !(channel.instrument as SampleInstrument).normalize
-      ? channel.gain
-      : channel.gain / peak;
+  final scale = nativeSample ? channel.gain : channel.gain / peak;
   for (var i = 0; i < total; i++) {
     left[i] *= scale;
     right[i] *= scale;
@@ -1093,15 +1094,16 @@ void _renderSampleChannelInto(
     }
   }
 
+  final nativeSample = channel.instrument is SampleInstrument &&
+      !(channel.instrument as SampleInstrument).normalize;
   var peak = 0.0;
-  for (final v in stem) {
-    if (v.abs() > peak) peak = v.abs();
+  if (!nativeSample) {
+    for (final v in stem) {
+      if (v.abs() > peak) peak = v.abs();
+    }
+    if (peak == 0) return;
   }
-  if (peak == 0) return;
-  final scale = channel.instrument is SampleInstrument &&
-          !(channel.instrument as SampleInstrument).normalize
-      ? channel.gain
-      : channel.gain / peak;
+  final scale = nativeSample ? channel.gain : channel.gain / peak;
   final n = min(stem.length, mix.length - sampleOffset);
   for (var i = 0; i < n; i++) {
     mix[sampleOffset + i] += stem[i] * scale;
@@ -1220,15 +1222,16 @@ void _renderSampleChannelIntoVariable(
     }
   }
 
+  final nativeSample = channel.instrument is SampleInstrument &&
+      !(channel.instrument as SampleInstrument).normalize;
   var peak = 0.0;
-  for (final v in stem) {
-    if (v.abs() > peak) peak = v.abs();
+  if (!nativeSample) {
+    for (final v in stem) {
+      if (v.abs() > peak) peak = v.abs();
+    }
+    if (peak == 0) return;
   }
-  if (peak == 0) return;
-  final scale = channel.instrument is SampleInstrument &&
-          !(channel.instrument as SampleInstrument).normalize
-      ? channel.gain
-      : channel.gain / peak;
+  final scale = nativeSample ? channel.gain : channel.gain / peak;
   final n = min(stem.length, mix.length);
   for (var i = 0; i < n; i++) {
     mix[i] += stem[i] * scale;

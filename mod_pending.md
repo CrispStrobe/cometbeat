@@ -41,6 +41,7 @@ what the application can actually play and edit.
 | Percussion and drum kits | Samples and note tracks can be imported. | Sample-based drums render, but native kit/keymap semantics are not fully preserved. | Simplified drum grid is editable. | Yes. Add native drum mappings and per-note zones. | Medium |
 | S3M non-PCM and packed samples | Non-PCM instruments are recognized but not decoded as playable samples; packed sample path is incomplete. | These cases do not render correctly. | Not editable as native data. | Yes for known encodings; otherwise preserve and report unsupported payloads. | Medium |
 | Native command bytes and effect memory | Same-format codecs preserve more raw/native information than the neutral model. | Renderer consumes the normalized subset, not every original byte/state transition. | Exact tracker command editing is absent. | Yes where playback semantics are implemented. | High |
+| Long-song render memory and throughput | Module data is retained without truncating the order or pattern rows. | Bounded pattern renders are usable; full command-heavy stereo songs still allocate whole-song mixes and per-channel stems, so very long IT renders can be slow and memory-heavy. | No user-facing render range or streaming export control in the app. | Yes. Stream/chunk the renderer while preserving cross-row voice state, then expose bounded preview/export. | High |
 
 ## What the current app actually edits
 

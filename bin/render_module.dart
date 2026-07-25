@@ -25,7 +25,11 @@ void main(List<String> args) {
   final pattern = patternArg >= 0 && patternArg + 1 < args.length
       ? int.tryParse(args[patternArg + 1])
       : null;
-  if (pattern != null && pattern >= 0 && pattern < song.patterns.length) {
+  if (pattern != null) {
+    if (pattern < 0 || pattern >= song.patterns.length) {
+      stderr.writeln('pattern index out of range: $pattern');
+      exit(2);
+    }
     song.selectPattern(pattern);
   }
   final wav =
