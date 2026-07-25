@@ -1128,7 +1128,7 @@ void _renderSampleChannelInto(
 /// `mix` (rowStart is already absolute), unit-peak × gain like the other
 /// non-additive paths.
 void _renderSampleChannelIntoVariable(
-  Float64List mix,
+  List<double> mix,
   TrackerChannel channel,
   List<TrackerCell> cells,
   List<int> rowStart,
@@ -1501,7 +1501,7 @@ double _panFromParam(int param) => ((param - 0x80) / 0x80).clamp(-1.0, 1.0);
 
 /// Interleaves separate [left]/[right] Float64 mixes into stereo PCM16 with the
 /// same tanh soft-knee as [_mixToPcm].
-Int16List _interleaveToPcm(Float64List left, Float64List right) {
+Int16List _interleaveToPcm(List<double> left, List<double> right) {
   final out = Int16List(left.length * 2);
   for (var i = 0; i < left.length; i++) {
     out[i * 2] = (_tanh(left[i]) * 0.95 * 32767).round();
@@ -2031,7 +2031,7 @@ void _renderMultiSampleChannelInto(
 }
 
 void _renderMultiSampleChannelIntoVariable(
-  Float64List mix,
+  List<double> mix,
   TrackerChannel channel,
   List<TrackerCell> cells,
   List<int> rowStart,
@@ -2340,8 +2340,8 @@ void _applyGlobalVolumeMix(
 /// The stereo sibling of [_applyGlobalVolumeMix]: the same global-volume envelope
 /// multiplies into both [left] and [right] (global volume is spatially neutral).
 void _applyGlobalVolumeStereo(
-  Float64List left,
-  Float64List right,
+  List<double> left,
+  List<double> right,
   List<List<TrackerCell>> rows,
   List<int> starts,
   int ticks,
@@ -2354,7 +2354,7 @@ void _applyGlobalVolumeStereo(
   }
 }
 
-void _applySongGlobalVolume(Float64List mix, double gain) {
+void _applySongGlobalVolume(List<double> mix, double gain) {
   if (gain >= 1.0) return;
   for (var i = 0; i < mix.length; i++) {
     mix[i] *= gain;
@@ -3139,7 +3139,7 @@ double _runSecondsVariable(
 /// voices synthesize per tick (honouring commands + per-cell timbre); other
 /// instruments fall back to a per-note render over the variable spans.
 void _renderChannelIntoVariable(
-  Float64List mix,
+  List<double> mix,
   TrackerChannel channel,
   List<TrackerCell> cells,
   List<int> rowStart,
@@ -3237,7 +3237,7 @@ void _renderChannelIntoVariable(
 /// like the uniform non-additive path. So a sample note that triggers after a
 /// tempo change still lands at the correct offset.
 void _renderNonAdditiveVariable(
-  Float64List mix,
+  List<double> mix,
   TrackerChannel channel,
   List<TrackerCell> cells,
   List<int> rowStart,
@@ -3304,12 +3304,69 @@ void _renderNonAdditiveVariable(
   }
 }
 
+/// Long-render fallback for native IT multi-sample channels. Unlike
+/// [_renderNonAdditiveVariable], this writes each note run directly into the
+/// destination, avoiding a second full-song Float64 stem. The exact NNA path
+/// is reserved for preview-sized renders; this bounded path keeps the selected
+/// native zone, timing, sample envelope, and channel gain without exhausting
+/// memory on export-scale songs.
+void _renderLongNativeVariable(
+  List<double> mix,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+) {
+  final multi = channel.instrument;
+  if (multi is! MultiSampleInstrument) return;
+  var startStep = 0;
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final sustainSteps = run.$2;
+    final releaseSteps = run.$3;
+    final steps = sustainSteps + releaseSteps;
+    if (midi != null) {
+      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      if (zone is SampleInstrument) {
+        final start = rowStart[startStep];
+        final end = rowStart[startStep + steps];
+        final runSamples = end - start;
+        if (runSamples > 0) {
+          final runMs = (runSamples * 1000 / kSampleRate).round();
+          final tempo =
+              (runMs <= 0 ? 240 : (60000 / runMs).round()).clamp(1, 1 << 20);
+          final timing =
+              TrackerTiming(tempoBpm: tempo, rows: steps, stepsPerBeat: steps);
+          final one = List<TrackerCell>.filled(steps, TrackerCell.empty)
+            ..[0] = cells[startStep];
+          if (sustainSteps < steps) one[sustainSteps] = TrackerCell.noteCut;
+          final buf = zone.renderChannel(one, timing);
+          final limit = min(runSamples, buf.length);
+          for (var i = 0; i < limit && start + i < mix.length; i++) {
+            final env = channel.volumeEnvelope?.levelAt(
+                  i / kSampleRate * 1000,
+                ) ??
+                1.0;
+            mix[start + i] += buf[i] * channel.gain * env;
+          }
+        }
+      }
+    }
+    startStep += steps;
+  }
+}
+
 /// The stereo sibling of [_replayVariable]: the mid-song per-row-duration render,
 /// each channel panned (base pan + 8xx) into an interleaved mix — so a PANNED
 /// song with a mid-song tempo/speed change stays in sync (length matches
 /// [variableSongTotalMs]). Each channel is rendered mono over the variable
 /// boundaries then split L/R, exactly like [_renderChannelIntoStereo] does for
 /// the uniform case.
+// Full-song native IT voice rendering keeps one waveform buffer per active
+// NNA voice. That is valuable for normal previews, but becomes unbounded for
+// long modules. Large renders use the bounded per-note path below instead of
+// retaining every full-song voice waveform.
+const _nativeTickFullBufferLimit = kSampleRate * 120;
+
 ReplayResult _replayVariableStereo(TrackerSong song) {
   final played = walkFlow(song);
   final channels = song.channels;
@@ -3328,14 +3385,15 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
   }
   rowStart[n] = acc;
 
-  final left = Float64List(acc);
-  final right = Float64List(acc);
+  final left = Float32List(acc);
+  final right = Float32List(acc);
   for (var c = 0; c < channels.length; c++) {
     final flatCells = [
       for (final pr in played) song.patterns[pr.patternIndex].cells[c][pr.row],
     ];
     final multi = channels[c].instrument;
-    if (multi is MultiSampleInstrument &&
+    if (acc <= _nativeTickFullBufferLimit &&
+        multi is MultiSampleInstrument &&
         multi.nativeVoiceSemantics &&
         multi.zones.values.every((zone) => zone is SampleInstrument) &&
         _hasPerTickEffect(flatCells)) {
@@ -3385,16 +3443,30 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
       }
       continue;
     }
-    final mono = Float64List(acc);
-    _renderChannelIntoVariable(
-      mono,
-      channels[c],
-      flatCells,
-      rowStart,
-      ticks,
-      song.timing.stepsPerBeat,
-      pool: song.instruments,
-    );
+    final mono = Float32List(acc);
+    if (acc > _nativeTickFullBufferLimit &&
+        multi is MultiSampleInstrument &&
+        multi.nativeVoiceSemantics) {
+      // Avoid one full-song buffer per IT NNA voice. Each note run still uses
+      // the correct mapped sample zone and timing, but old-voice actions are
+      // intentionally bounded for export-scale renders.
+      _renderLongNativeVariable(
+        mono,
+        channels[c],
+        flatCells,
+        rowStart,
+      );
+    } else {
+      _renderChannelIntoVariable(
+        mono,
+        channels[c],
+        flatCells,
+        rowStart,
+        ticks,
+        song.timing.stepsPerBeat,
+        pool: song.instruments,
+      );
+    }
     final penv = channels[c].panEnvelope;
     if (penv != null && !penv.isEmpty) {
       // Per-note auto-pan over the variable spans (onset = rowStart[startStep]).
