@@ -232,7 +232,10 @@ parametric technique end-to-end.
   `fromScore` reads them back (round-trip); `setBarRepeat` + Repeat ‖: / :‖ chips.
   Tests: group A6. (A6b — audible repeat *unrolling* in playback — is the
   follow-up; notation + interchange land here.)
-- [ ] A7 … E2 — pending (scoped above)
+- [x] **A7** alternate endings (voltas) — `TabColumn.volta` (bar-level, first
+  column); `toScore` → `Measure.volta`; `fromScore` round-trip; `setBarVolta` +
+  an "Ending" cycle chip. Tests: group A7.
+- [ ] A8 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

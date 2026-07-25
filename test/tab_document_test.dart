@@ -669,4 +669,41 @@ void main() {
       expect(doc.columns[4].startRepeat, isTrue);
     });
   });
+
+  group('A7 — alternate endings (voltas)', () {
+    TabDocument twoEndings() {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [for (var i = 0; i < 8; i++) const TabColumn(frets: {0: 0})],
+      );
+      doc.setBarVolta(0, 1); // bar 0 = 1st ending
+      doc.setBarVolta(4, 2); // bar 1 = 2nd ending
+      return doc;
+    }
+
+    test('toScore brackets each bar with its volta number', () {
+      final m = twoEndings().toScore().measures;
+      expect(m[0].volta, 1);
+      expect(m[1].volta, 2);
+    });
+
+    test('voltas survive the import→edit→export round-trip', () {
+      final back = TabDocument.fromScore(
+        twoEndings().toScore(),
+        Tuning.standardGuitar,
+      );
+      final m = back.toScore().measures;
+      expect(m[0].volta, 1);
+      expect(m[1].volta, 2);
+    });
+
+    test('setBarVolta anchors to the bar start and clears with null', () {
+      final doc = twoEndings();
+      expect(doc.columns[0].volta, 1);
+      doc.setBarVolta(6, 3); // mid bar 1
+      expect(doc.columns[4].volta, 3);
+      doc.setBarVolta(4, null);
+      expect(doc.columns[4].volta, isNull);
+    });
+  });
 }

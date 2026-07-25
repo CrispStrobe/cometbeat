@@ -1877,6 +1877,29 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                             refresh();
                           },
                         ),
+                        // Alternate ending (volta) number for the current bar.
+                        Builder(
+                          builder: (_) {
+                            final cur = _selCol < _doc.columns.length
+                                ? _doc.columns[_doc.barBoundsAt(_selCol).$1].volta
+                                : null;
+                            return InputChip(
+                              avatar: const Icon(Icons.call_split, size: 18),
+                              label: Text(
+                                cur == null ? 'Ending' : 'Ending $cur',
+                              ),
+                              selected: cur != null,
+                              onPressed: () {
+                                // Cycle none → 1 → 2 → 3 → none.
+                                final next = cur == null
+                                    ? 1
+                                    : (cur >= 3 ? null : cur + 1);
+                                setState(() => _doc.setBarVolta(_selCol, next));
+                                refresh();
+                              },
+                            );
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),

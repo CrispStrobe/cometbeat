@@ -57,6 +57,10 @@ class TabColumn {
   final bool startRepeat;
   final bool endRepeat;
 
+  /// The alternate-ending (volta) number bracketed over this column's bar, or
+  /// null for none. Bar-level, anchored to the bar's first column.
+  final int? volta;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
@@ -66,6 +70,7 @@ class TabColumn {
     this.tuplet,
     this.startRepeat = false,
     this.endRepeat = false,
+    this.volta,
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -79,6 +84,7 @@ class TabColumn {
         tuplet: tuplet,
         startRepeat: startRepeat,
         endRepeat: endRepeat,
+        volta: volta,
       );
 
   TabColumn withoutString(int string) => TabColumn(
@@ -93,6 +99,7 @@ class TabColumn {
         tuplet: tuplet,
         startRepeat: startRepeat,
         endRepeat: endRepeat,
+        volta: volta,
       );
 
   TabColumn withDuration(NoteDuration d) => TabColumn(
@@ -104,6 +111,7 @@ class TabColumn {
         tuplet: tuplet,
         startRepeat: startRepeat,
         endRepeat: endRepeat,
+        volta: volta,
       );
 
   /// Adds [t] if absent, else removes it.
@@ -118,6 +126,7 @@ class TabColumn {
         tuplet: tuplet,
         startRepeat: startRepeat,
         endRepeat: endRepeat,
+        volta: volta,
       );
 
   /// Sets (or clears, when null) this column's chord diagram.
@@ -130,6 +139,7 @@ class TabColumn {
         tuplet: tuplet,
         startRepeat: startRepeat,
         endRepeat: endRepeat,
+        volta: volta,
       );
 
   /// Sets whether this note ties into the next column.
@@ -142,6 +152,7 @@ class TabColumn {
         tuplet: tuplet,
         startRepeat: startRepeat,
         endRepeat: endRepeat,
+        volta: volta,
       );
 
   /// Sets (or clears, when null) this column's tuplet ratio.
@@ -154,6 +165,7 @@ class TabColumn {
         tuplet: ratio,
         startRepeat: startRepeat,
         endRepeat: endRepeat,
+        volta: volta,
       );
 
   /// Sets this column's bar repeat-barline flags.
@@ -166,6 +178,20 @@ class TabColumn {
         tuplet: tuplet,
         startRepeat: start ?? startRepeat,
         endRepeat: end ?? endRepeat,
+        volta: volta,
+      );
+
+  /// Sets (or clears, when null) this column's bar volta number.
+  TabColumn withVolta(int? v) => TabColumn(
+        frets: frets,
+        duration: duration,
+        techniques: techniques,
+        chord: chord,
+        tieToNext: tieToNext,
+        tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
+        volta: v,
       );
 
   /// A deep copy (fresh frets/techniques collections) — for duplicating columns.
@@ -178,6 +204,7 @@ class TabColumn {
         tuplet: tuplet,
         startRepeat: startRepeat,
         endRepeat: endRepeat,
+        volta: volta,
       );
 }
 
@@ -368,6 +395,15 @@ class TabDocument {
     columns[first] = columns[first].withRepeat(start: start, end: end);
   }
 
+  /// Sets (or clears, when null) the alternate-ending (volta) number of the BAR
+  /// containing [col] (anchored to that bar's first column).
+  void setBarVolta(int col, int? volta) {
+    if (columns.isEmpty) return;
+    final (first, _) = barBoundsAt(col);
+    _ensure(first);
+    columns[first] = columns[first].withVolta(volta);
+  }
+
   /// Marks the [count] columns starting at [start] as one tuplet of [ratio]
   /// (default a 3:2 triplet). Grows the document if needed.
   void makeTuplet(int start, int count, {(int, int) ratio = (3, 2)}) {
@@ -522,6 +558,7 @@ class TabDocument {
             tuplets: barTuplets,
             startRepeat: first?.startRepeat ?? false,
             endRepeat: first?.endRepeat ?? false,
+            volta: first?.volta,
           ),
         );
       }
@@ -705,6 +742,7 @@ class TabDocument {
     final tuplets = <(int, int)?>[]; // per-column tuplet ratio (null = none)
     final startReps = <bool>[]; // per-column: bar opens a repeat
     final endReps = <bool>[]; // per-column: bar closes a repeat
+    final voltas = <int?>[]; // per-column: bar volta number
     final pinned = <int, Fretting>{}; // column index → explicit fingering
     var idx = 0;
     for (final measure in score.measures) {
@@ -731,6 +769,7 @@ class TabDocument {
           tuplets.add(null);
           startReps.add(false);
           endReps.add(false);
+          voltas.add(null);
           idx++;
         } else if (el is RestElement) {
           midiCols.add(const []);
@@ -740,6 +779,7 @@ class TabDocument {
           tuplets.add(null);
           startReps.add(false);
           endReps.add(false);
+          voltas.add(null);
           idx++;
         }
       }
@@ -758,6 +798,9 @@ class TabDocument {
       }
       if (measure.endRepeat && measureStart < endReps.length) {
         endReps[measureStart] = true;
+      }
+      if (measure.volta != null && measureStart < voltas.length) {
+        voltas[measureStart] = measure.volta;
       }
     }
     if (midiCols.isEmpty) {
@@ -783,6 +826,7 @@ class TabDocument {
             tuplet: tuplets[i],
             startRepeat: startReps[i],
             endRepeat: endReps[i],
+            volta: voltas[i],
           ),
       ],
     );
