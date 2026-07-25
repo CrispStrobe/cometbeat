@@ -3315,6 +3315,7 @@ void _renderLongNativeVariable(
   TrackerChannel channel,
   List<TrackerCell> cells,
   List<int> rowStart,
+  List<int> ticksPerRow,
 ) {
   final multi = channel.instrument;
   if (multi is! MultiSampleInstrument) return;
@@ -3331,22 +3332,33 @@ void _renderLongNativeVariable(
         final end = rowStart[startStep + steps];
         final runSamples = end - start;
         if (runSamples > 0) {
-          final runMs = (runSamples * 1000 / kSampleRate).round();
-          final tempo =
-              (runMs <= 0 ? 240 : (60000 / runMs).round()).clamp(1, 1 << 20);
-          final timing =
-              TrackerTiming(tempoBpm: tempo, rows: steps, stepsPerBeat: steps);
-          final one = List<TrackerCell>.filled(steps, TrackerCell.empty)
-            ..[0] = cells[startStep];
-          if (sustainSteps < steps) one[sustainSteps] = TrackerCell.noteCut;
-          final buf = zone.renderChannel(one, timing);
+          final runCells = cells.sublist(startStep, startStep + steps);
+          if (sustainSteps < steps) {
+            runCells[sustainSteps] = TrackerCell.noteCut;
+          }
+          final runTicks = ticksPerRow.sublist(startStep, startStep + steps);
+          final runStarts = <int>[0];
+          for (var row = 0; row < steps; row++) {
+            runStarts.add(rowStart[startStep + row + 1] - start);
+          }
+          final buf = Float64List(runSamples);
+          _renderSampleChannelIntoVariable(
+            buf,
+            TrackerChannel(
+              id: '${channel.id}:native-zone',
+              instrument: zone,
+              rows: steps,
+              gain: channel.gain,
+              volumeEnvelope: channel.volumeEnvelope,
+            ),
+            runCells,
+            runStarts,
+            runTicks,
+            null,
+          );
           final limit = min(runSamples, buf.length);
           for (var i = 0; i < limit && start + i < mix.length; i++) {
-            final env = channel.volumeEnvelope?.levelAt(
-                  i / kSampleRate * 1000,
-                ) ??
-                1.0;
-            mix[start + i] += buf[i] * channel.gain * env;
+            mix[start + i] += buf[i];
           }
         }
       }
@@ -3455,6 +3467,7 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
         channels[c],
         flatCells,
         rowStart,
+        ticks,
       );
     } else {
       _renderChannelIntoVariable(
