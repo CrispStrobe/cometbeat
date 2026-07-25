@@ -417,7 +417,9 @@ void main() {
 
     await tester.tap(find.byTooltip(l10n.workshopSetTitle));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Morning Demo');
+    // The details dialog now has title/composer/lyricist fields; the title is
+    // the first.
+    await tester.enterText(find.byType(TextField).first, 'Morning Demo');
     await tester.tap(
       find.text(
         MaterialLocalizations.of(tester.element(find.byType(AlertDialog)))
@@ -439,6 +441,40 @@ void main() {
     );
   });
 
+  testWidgets('composer + lyricist are editable and reach MusicXML export',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Place a note so the export has real content.
+    await tester.tap(_pianoKey());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip(l10n.workshopSetTitle));
+    await tester.pumpAndSettle();
+    // Fields are ordered title, composer, lyricist.
+    await tester.enterText(find.byType(TextField).at(0), 'My Piece');
+    await tester.enterText(find.byType(TextField).at(1), 'Ada Lovelace');
+    await tester.enterText(find.byType(TextField).at(2), 'Grace Hopper');
+    await tester.tap(
+      find.text(
+        MaterialLocalizations.of(tester.element(find.byType(AlertDialog)))
+            .okButtonLabel,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final xml = _editor(tester).debugMusicXmlExport();
+    expect(xml, contains('Ada Lovelace'));
+    expect(xml, contains('Grace Hopper'));
+
+    // Reopening shows the saved values.
+    await tester.tap(find.byTooltip(l10n.workshopSetTitle));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'Ada Lovelace'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Grace Hopper'), findsOneWidget);
+  });
+
   testWidgets('save uses the editor title without asking for it again',
       (tester) async {
     await pump(tester);
@@ -448,10 +484,12 @@ void main() {
 
     await tester.tap(find.byTooltip(l10n.workshopSetTitle));
     await tester.pumpAndSettle();
-    final titleField = find.descendant(
-      of: find.byType(AlertDialog),
-      matching: find.byType(TextField),
-    );
+    final titleField = find
+        .descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        )
+        .first;
     await tester.enterText(titleField, 'No Prompt Save');
     await tester.tap(
       find.text(

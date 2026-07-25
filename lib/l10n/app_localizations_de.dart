@@ -212,6 +212,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopSetTitle => 'Titel der Partitur festlegen';
 
   @override
+  String get workshopMetadata => 'Titelangaben';
+
+  @override
+  String get workshopFieldTitle => 'Titel';
+
+  @override
+  String get workshopComposer => 'Komponist:in';
+
+  @override
+  String get workshopLyricist => 'Textdichter:in';
+
+  @override
   String get workshopMoreActions => 'Weitere Partituraktionen';
 
   @override
