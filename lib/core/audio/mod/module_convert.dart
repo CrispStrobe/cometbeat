@@ -225,6 +225,14 @@ ModuleDoc docFromMod(ModModule m) {
       return (0x3, info);
     case 8: // H — vibrato
       return (0x4, info);
+    case 13: // M — set channel volume
+      return (0xC, info.clamp(0, 64));
+    case 14: // N — channel volume slide
+      return (0xA, info);
+    case 16: // P — pan slide
+      return (0x19, info);
+    case 17: // Q — retrigger + volume action
+      return (0x1B, info);
     case 10: // J — arpeggio
       return (0x0, info);
     case 11: // K — vibrato + volume slide
@@ -241,11 +249,14 @@ ModuleDoc docFromMod(ModModule m) {
       return (0xF, info < 0x20 ? 0x20 : info);
     case 21: // U — fine vibrato (approximated as vibrato)
       return (0x4, info);
+    case 22: // V — set global volume
+      return (0x10, info.clamp(0, 64));
+    case 23: // W — global volume slide
+      return (0x11, info);
     case 24: // X — set pan (0x00..0x80) → our 8xx (0x00..0xFF)
       return (0x8, (info * 2).clamp(0, 0xFF));
     default:
-      // I tremor · M/N channel-volume · P pan-slide · Q retrig+volslide ·
-      // V/W global-volume · Y panbrello · Z MIDI — no equivalent (dropped).
+      // I tremor · Y panbrello · Z MIDI — no neutral equivalent (dropped).
       return (0, 0);
   }
 }
@@ -473,6 +484,14 @@ ModuleDoc docFromXm(XmModule m) {
       return (0x3, value);
     case 8: // H — vibrato
       return (0x4, value);
+    case 13: // M — set channel volume
+      return (0xC, value.clamp(0, 64));
+    case 14: // N — channel volume slide
+      return (0xA, value);
+    case 16: // P — pan slide
+      return (0x19, value);
+    case 17: // Q — retrigger + volume action
+      return (0x1B, value);
     case 10: // J — arpeggio
       return (0x0, value);
     case 11: // K — vibrato + volume slide
@@ -489,11 +508,14 @@ ModuleDoc docFromXm(XmModule m) {
       return value >= 0x20 ? (0xF, value) : (0, 0);
     case 21: // U — fine vibrato (approximated as vibrato)
       return (0x4, value);
+    case 22: // V — set global volume
+      return (0x10, value.clamp(0, 64));
+    case 23: // W — global volume slide
+      return (0x11, value);
     case 24: // X — set panning (0x00..0xFF, direct → our 8xx)
       return (0x8, value);
     default:
-      // I tremor · M/N channel-volume · P pan-slide · Q retrig · V/W
-      // global-volume · Y panbrello · Z MIDI — no equivalent (dropped).
+      // I tremor · Y panbrello · Z MIDI — no neutral equivalent (dropped).
       return (0, 0);
   }
 }
@@ -675,6 +697,10 @@ ModuleDoc docFromIt(ItModule m) {
       return (24, directPan ? param : (param / 2).round().clamp(0, 0x80));
     case 0x9:
       return (15, param); // O sample offset
+    case 0x10:
+      return (22, param.clamp(0, 64)); // V global volume
+    case 0x11:
+      return (23, param); // W global volume slide
     case 0xA:
       return (4, param); // D volume slide
     case 0xB:
@@ -692,6 +718,10 @@ ModuleDoc docFromIt(ItModule m) {
         0xD => (19, (0xD << 4) | val), // EDx note delay    → SDx
         _ => (0, 0),
       };
+    case 0x19:
+      return (16, param); // P pan slide
+    case 0x1B:
+      return (17, param); // Q retrigger + volume action
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:

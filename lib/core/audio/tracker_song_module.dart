@@ -87,6 +87,7 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
         'smp${i + 1}',
         doc.samples[i],
         nativeVolumeEnvelope: _sampleVolEnv(doc.samples[i], doc.initialTempo),
+        nativePanEnvelope: _samplePanEnv(doc.samples[i], doc.initialTempo),
       ),
   ];
 
@@ -134,6 +135,9 @@ DocSample? _sampleFor(ModuleDoc doc, int ins) =>
 double _channelPan(ModuleDoc doc, int ins) {
   final s = _sampleFor(doc, ins);
   if (s == null) return 0.0;
+  // A native stereo waveform already carries its left/right image. Applying
+  // the sample's scalar pan again would shift that image twice.
+  if (s.pcmRight != null) return 0.0;
   return ((s.pan - 128) / 128).clamp(-1.0, 1.0);
 }
 
@@ -160,8 +164,15 @@ VolumeEnvelope? _trackerVolEnv(DocEnvelope? e, int tempo) {
 /// centred at 32, → pan −1..1). Null when there's none.
 PanEnvelope? _channelPanEnv(ModuleDoc doc, int ins) {
   final e = _sampleFor(doc, ins)?.panEnvelope;
+  return _trackerPanEnv(e, doc.initialTempo);
+}
+
+PanEnvelope? _samplePanEnv(DocSample sample, int tempo) =>
+    _trackerPanEnv(sample.panEnvelope, tempo);
+
+PanEnvelope? _trackerPanEnv(DocEnvelope? e, int tempo) {
   if (e == null || e.isEmpty) return null;
-  final ms = _tickMs(doc.initialTempo);
+  final ms = _tickMs(tempo);
   return PanEnvelope([
     for (final (t, v) in e.points)
       (ms: (t * ms).round(), pan: ((v - 32) / 32).clamp(-1.0, 1.0)),

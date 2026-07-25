@@ -20,7 +20,7 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
-    show SampleInstrument, VolumeEnvelope;
+    show PanEnvelope, SampleInstrument, VolumeEnvelope;
 
 /// Builds a [SampleInstrument] from a module [DocSample]. The PCM is resampled
 /// from the sample's native `c5speed` to [engineRate]; [baseMidi] (default 60 =
@@ -31,6 +31,7 @@ SampleInstrument sampleInstrumentFromDoc(
   int baseMidi = 60,
   int engineRate = kSampleRate,
   VolumeEnvelope? nativeVolumeEnvelope,
+  PanEnvelope? nativePanEnvelope,
 }) {
   if (sample.isEmpty) {
     return SampleInstrument(id, Float64List(0), baseMidi: baseMidi);
@@ -72,10 +73,12 @@ SampleInstrument sampleInstrumentFromDoc(
     loopStart: loopStart,
     loopLength: loopLength,
     pingPong: sample.pingPong,
-    volume: sample.volume.clamp(0, 64) / 64.0,
+    volume: (sample.volume.clamp(0, 64) / 64.0) *
+        (sample.globalVolume.clamp(0, 64) / 64.0),
     normalize: false,
     sampleRight: right,
     nativeVolumeEnvelope: nativeVolumeEnvelope,
+    nativePanEnvelope: nativePanEnvelope,
     // A 9xx offset is in original-sample units → same 1/ratio scale as the loop.
     offsetScale: 1 / ratio,
   );

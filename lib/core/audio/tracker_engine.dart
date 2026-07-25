@@ -532,6 +532,7 @@ class SampleInstrument implements TrackerInstrument {
     this.normalize = true,
     this.sampleRight,
     this.nativeVolumeEnvelope,
+    this.nativePanEnvelope,
   });
 
   /// Records-once: applies [fx] to [raw] and keeps the result as the sample.
@@ -560,6 +561,9 @@ class SampleInstrument implements TrackerInstrument {
   /// Tracker-native instrument envelope, expressed in milliseconds. It is
   /// evaluated per note so a per-cell sample switch also switches envelopes.
   final VolumeEnvelope? nativeVolumeEnvelope;
+
+  /// Tracker-native pan envelope, evaluated from each note onset.
+  final PanEnvelope? nativePanEnvelope;
   final int baseMidi;
 
   /// A per-note volume envelope (default a gentle declick attack/release).

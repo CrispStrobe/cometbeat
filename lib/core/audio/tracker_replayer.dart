@@ -1259,6 +1259,90 @@ List<({int start, int end, double pan})> _panRegions(
   return regions;
 }
 
+({Float64List left, Float64List right})? _renderSampleNotesStereo(
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  TrackerTiming timing,
+  List<TrackerInstrument>? pool,
+) {
+  if (channel.instrument is! SampleInstrument) return null;
+  final left = Float64List(timing.totalSamples);
+  final right = Float64List(timing.totalSamples);
+  var cur = channel.instrument as SampleInstrument;
+  var startStep = 0;
+  var allNative = true;
+
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final sustainSteps = run.$2;
+    final releaseSteps = run.$3;
+    final totalSteps = sustainSteps + releaseSteps;
+    final trigger = cells[startStep];
+    if (trigger.instrument > 0 &&
+        pool != null &&
+        trigger.instrument - 1 < pool.length) {
+      final selected = pool[trigger.instrument - 1];
+      if (selected is! SampleInstrument) return null;
+      cur = selected;
+    }
+    if (midi != null) {
+      final one = List<TrackerCell>.filled(cells.length, TrackerCell.empty)
+        ..[startStep] = trigger;
+      final capRow = startStep + sustainSteps;
+      if (capRow < cells.length) {
+        one[capRow] =
+            releaseSteps > 0 ? TrackerCell.noteCut : TrackerCell(midi: midi);
+      }
+      final rendered = cur.renderChannelStereo(one, timing);
+      final s = timing.stepStartSample(startStep);
+      final e = min(
+        startStep + totalSteps < cells.length
+            ? timing.stepStartSample(startStep + totalSteps)
+            : timing.totalSamples,
+        timing.totalSamples,
+      );
+      final nativePan = cur.nativePanEnvelope;
+      final hasRight = cur.sampleRight != null;
+      allNative = allNative && !cur.normalize;
+      final channelEnv = channel.volumeEnvelope;
+      for (var i = s; i < e; i++) {
+        final noteMs = (i - s) / kSampleRate * 1000;
+        final vol = cur.nativeVolumeEnvelope == null
+            ? channelEnv?.levelAt(noteMs) ?? 1.0
+            : 1.0;
+        final pan =
+            (channel.pan + (nativePan?.panAt(noteMs) ?? 0.0)).clamp(-1.0, 1.0);
+        if (hasRight) {
+          final leftGain = pan > 0 ? 1.0 - pan : 1.0;
+          final rightGain = pan < 0 ? 1.0 + pan : 1.0;
+          left[i] += rendered.left[i] * vol * leftGain;
+          right[i] += rendered.right[i] * vol * rightGain;
+        } else {
+          final theta = (pan + 1) / 2 * (pi / 2);
+          left[i] += rendered.left[i] * vol * cos(theta);
+          right[i] += rendered.left[i] * vol * sin(theta);
+        }
+      }
+    }
+    startStep += totalSteps;
+  }
+
+  var peak = 0.0;
+  for (final v in left) {
+    if (v.abs() > peak) peak = v.abs();
+  }
+  for (final v in right) {
+    if (v.abs() > peak) peak = v.abs();
+  }
+  if (peak == 0) return (left: left, right: right);
+  final scale = allNative ? channel.gain : channel.gain / peak;
+  for (var i = 0; i < left.length; i++) {
+    left[i] *= scale;
+    right[i] *= scale;
+  }
+  return (left: left, right: right);
+}
+
 /// Renders one channel's [cells] mono (via [_renderChannelInto]) then pans it
 /// into the [left]/[right] stereo mixes at [sampleOffset], honouring the
 /// channel's base pan and any 8xx pan changes ([_panRegions]).
@@ -1274,34 +1358,17 @@ void _renderChannelIntoStereo(
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
 
-  // Keep native stereo samples stereo. Command-heavy and per-cell-instrument
-  // paths still use the existing mono tick renderer below.
-  final nativeStereo = channel.instrument is SampleInstrument &&
-      (channel.instrument as SampleInstrument).sampleRight != null &&
-      !_hasPerTickEffect(cells) &&
-      !cells.any((c) => c.instrument != 0);
-  if (nativeStereo) {
-    final inst = channel.instrument as SampleInstrument;
-    final rendered = inst.renderChannelStereo(cells, timing);
-    var peak = 0.0;
-    for (final v in rendered.left) {
-      if (v.abs() > peak) peak = v.abs();
+  if (channel.instrument is SampleInstrument && !_hasPerTickEffect(cells)) {
+    final rendered = _renderSampleNotesStereo(channel, cells, timing, pool);
+    if (rendered != null) {
+      final n = min(timing.totalSamples, left.length - sampleOffset);
+      for (var i = 0; i < n; i++) {
+        left[sampleOffset + i] += rendered.left[i];
+        right[sampleOffset + i] += rendered.right[i];
+      }
+      return;
     }
-    for (final v in rendered.right) {
-      if (v.abs() > peak) peak = v.abs();
-    }
-    if (peak == 0) return;
-    final scale = inst.normalize ? channel.gain / peak : channel.gain;
-    // Balance an intrinsic stereo image without attenuating it at centre.
-    final pan = channel.pan.clamp(-1.0, 1.0);
-    final leftGain = pan > 0 ? 1.0 - pan : 1.0;
-    final rightGain = pan < 0 ? 1.0 + pan : 1.0;
-    final n = min(timing.totalSamples, left.length - sampleOffset);
-    for (var i = 0; i < n; i++) {
-      left[sampleOffset + i] += rendered.left[i] * scale * leftGain;
-      right[sampleOffset + i] += rendered.right[i] * scale * rightGain;
-    }
-    return;
+    // A non-sample pool instrument requires the existing mixed mono path.
   }
 
   final total = timing.totalSamples;
