@@ -13,6 +13,7 @@
 
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
+import 'package:comet_beat/shared/step_duration.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 
 // B1 — `pitchFromMidi` used to be copy-pasted into five files (two spelled via a
@@ -21,43 +22,12 @@ import 'package:crisp_notation/crisp_notation.dart';
 // re-exported here, so this file's existing consumers are unaffected.
 export 'package:comet_beat/shared/midi_pitch.dart' show pitchFromMidi;
 
-/// The note values available at [stepsPerBeat] resolution, largest first, as
-/// (duration, lengthInSteps) — only those spanning a whole number of steps in
-/// 4/4 (so e.g. a dotted-eighth is dropped when a step is an eighth).
-List<(NoteDuration, int)> _durationLadder(int stepsPerBeat) {
-  final stepsPerWhole = stepsPerBeat * 4; // 4/4
-  const candidates = <(NoteDuration, double)>[
-    (NoteDuration(DurationBase.whole), 1.0),
-    (NoteDuration(DurationBase.half, dots: 1), 0.75),
-    (NoteDuration(DurationBase.half), 0.5),
-    (NoteDuration(DurationBase.quarter, dots: 1), 0.375),
-    (NoteDuration(DurationBase.quarter), 0.25),
-    (NoteDuration(DurationBase.eighth, dots: 1), 0.1875),
-    (NoteDuration(DurationBase.eighth), 0.125),
-    (NoteDuration(DurationBase.sixteenth, dots: 1), 0.09375),
-    (NoteDuration(DurationBase.sixteenth), 0.0625),
-  ];
-  final out = <(NoteDuration, int)>[];
-  for (final (dur, frac) in candidates) {
-    final steps = frac * stepsPerWhole;
-    if ((steps - steps.roundToDouble()).abs() < 1e-9) {
-      out.add((dur, steps.round()));
-    }
-  }
-  return out; // already largest-first
-}
-
-/// Greedily decomposes [steps] into note values (largest first).
-List<NoteDuration> _decompose(int steps, List<(NoteDuration, int)> ladder) {
-  final out = <NoteDuration>[];
-  var rem = steps;
-  while (rem > 0) {
-    final piece = ladder.firstWhere((d) => d.$2 <= rem);
-    out.add(piece.$1);
-    rem -= piece.$2;
-  }
-  return out;
-}
+// B2 — `durationToSteps` / the duration ladder / the greedy decomposition used
+// to be a verbatim copy here and in the other step-grid mode. They live once in
+// `lib/shared/step_duration.dart` now and are re-exported so this file's
+// consumers are unaffected.
+export 'package:comet_beat/shared/step_duration.dart'
+    show decomposeSteps, durationLadder, durationToSteps;
 
 /// Builds a single-voice [Score] from [channel]'s pattern. Held runs become
 /// tied notes; notes are decomposed into standard values and split at 4/4 bar
@@ -68,7 +38,7 @@ Score trackerChannelToScore(
   TrackerTiming timing, {
   Clef clef = Clef.treble,
 }) {
-  final ladder = _durationLadder(timing.stepsPerBeat);
+  final ladder = durationLadder(timing.stepsPerBeat);
   final barSteps = timing.stepsPerBeat * 4; // 4/4
   final measures = <Measure>[];
   var current = <MusicElement>[];
@@ -85,7 +55,7 @@ Score trackerChannelToScore(
     while (rem > 0) {
       final avail = barSteps - posInBar;
       final take = rem < avail ? rem : avail;
-      final pieces = _decompose(take, ladder);
+      final pieces = decomposeSteps(take, ladder);
       for (var i = 0; i < pieces.length; i++) {
         // The run ends only when this take exhausts it AND it's the last piece.
         final lastOfRun = rem - take == 0 && i == pieces.length - 1;
@@ -114,13 +84,6 @@ Score trackerChannelToScore(
 // ---------------------------------------------------------------------------
 // Score → Tracker (the partial reverse direction)
 // ---------------------------------------------------------------------------
-
-/// A [NoteDuration] as a whole number of grid steps (rounded — off-grid values
-/// quantize, which is the "partial" in the reverse bridge).
-int durationToSteps(NoteDuration d, int stepsPerBeat) {
-  final (num, den) = d.fraction;
-  return (num * (stepsPerBeat * 4) / den).round();
-}
 
 const _pentaPcs = [0, 2, 4, 7, 9]; // C D E G A
 

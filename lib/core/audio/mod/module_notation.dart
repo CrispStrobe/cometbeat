@@ -32,6 +32,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
+import 'package:comet_beat/shared/step_duration.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart';
 
 // The pure-notation multi-part exporters live in core/notation so the Workshop
@@ -51,48 +52,14 @@ export 'package:comet_beat/core/notation/multi_part_export.dart'
 // re-exported here, so this file's existing consumers are unaffected.
 export 'package:comet_beat/shared/midi_pitch.dart' show pitchFromMidi;
 
+// B2 — `durationToSteps` / the duration ladder / the greedy decomposition used
+// to be a verbatim copy here and in the other step-grid mode. They live once in
+// `lib/shared/step_duration.dart` now and are re-exported so this file's
+// consumers are unaffected.
+export 'package:comet_beat/shared/step_duration.dart'
+    show decomposeSteps, durationLadder, durationToSteps;
+
 // ─── Pitch / duration helpers (shared with bin/notaconv.dart's port) ─────────
-
-/// A [NoteDuration] as whole grid steps (rounded — off-grid values quantize).
-int durationToSteps(NoteDuration d, int stepsPerBeat) {
-  final (num, den) = d.fraction;
-  return (num * (stepsPerBeat * 4) / den).round();
-}
-
-List<(NoteDuration, int)> _durationLadder(int stepsPerBeat) {
-  final stepsPerWhole = stepsPerBeat * 4;
-  const candidates = <(NoteDuration, double)>[
-    (NoteDuration(DurationBase.whole), 1.0),
-    (NoteDuration(DurationBase.half, dots: 1), 0.75),
-    (NoteDuration(DurationBase.half), 0.5),
-    (NoteDuration(DurationBase.quarter, dots: 1), 0.375),
-    (NoteDuration(DurationBase.quarter), 0.25),
-    (NoteDuration(DurationBase.eighth, dots: 1), 0.1875),
-    (NoteDuration(DurationBase.eighth), 0.125),
-    (NoteDuration(DurationBase.sixteenth, dots: 1), 0.09375),
-    (NoteDuration(DurationBase.sixteenth), 0.0625),
-  ];
-  final out = <(NoteDuration, int)>[];
-  for (final (dur, frac) in candidates) {
-    final steps = frac * stepsPerWhole;
-    if ((steps - steps.roundToDouble()).abs() < 1e-9) {
-      out.add((dur, steps.round()));
-    }
-  }
-  return out;
-}
-
-List<NoteDuration> _decompose(int steps, List<(NoteDuration, int)> ladder) {
-  final out = <NoteDuration>[];
-  var rem = steps;
-  while (rem > 0) {
-    final piece =
-        ladder.firstWhere((d) => d.$2 <= rem, orElse: () => ladder.last);
-    out.add(piece.$1);
-    rem -= piece.$2;
-  }
-  return out;
-}
 
 // ─── Module → notation ───────────────────────────────────────────────────────
 
@@ -149,7 +116,7 @@ List<List<MusicElement>> _runsToBars(
   int stepsPerBeat, {
   String idPrefix = 'n',
 }) {
-  final ladder = _durationLadder(stepsPerBeat);
+  final ladder = durationLadder(stepsPerBeat);
   final barSteps = stepsPerBeat * 4;
   var end = runs.length;
   while (end > 0 && runs[end - 1].$1 == null) {
@@ -173,7 +140,7 @@ List<List<MusicElement>> _runsToBars(
     while (rem > 0) {
       final avail = barSteps - posInBar;
       final take = rem < avail ? rem : avail;
-      final pieces = _decompose(take, ladder);
+      final pieces = decomposeSteps(take, ladder);
       for (var i = 0; i < pieces.length; i++) {
         final lastOfRun = rem - take == 0 && i == pieces.length - 1;
         if (midi == null) {
