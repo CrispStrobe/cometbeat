@@ -778,9 +778,18 @@ class TrackerSong {
         await streamSongWavToFile(path);
         return;
       }
-      // Variable/flow (or global-volume) stereo: the render carries cross-order
-      // state, so stream the whole-song float L/R accumulator to disk in blocks
-      // (the int16 PCM + WAV copy are still never materialised alongside it).
+      // Flow / variable-timing STEREO with only chunk-safe channels (additive or
+      // native sample tick voices): render row-chunks with carried voice state so
+      // NO whole-song L/R accumulator is ever allocated — flat RAM at any song
+      // length, byte-identical to replaySongStereo (see songCanStreamFlowVariable).
+      if (songCanStreamFlowVariable(this, stereo: true)) {
+        _streamFlowVariableWav(path, stereo: true);
+        return;
+      }
+      // Variable/flow (or global-volume, or non-chunk-safe channel) stereo: the
+      // render carries cross-order state, so stream the whole-song float L/R
+      // accumulator to disk in blocks (the int16 PCM + WAV copy are still never
+      // materialised alongside it).
       final f = songStereoFloat(this);
       await _writeStereoFloatWav(path, f.left, f.right);
       return;
@@ -789,6 +798,12 @@ class TrackerSong {
         usesInstruments ||
         usesEnvelopes ||
         songNeedsWalkRender(this)) {
+      // Flow / variable-timing MONO with only chunk-safe channels: as above but
+      // for the mono mix — no whole-song Float64 accumulator, flat RAM.
+      if (songCanStreamFlowVariable(this, stereo: false)) {
+        _streamFlowVariableWav(path, stereo: false);
+        return;
+      }
       // MONO command path: materialise the int16 PCM (compact — 2 bytes/sample)
       // and stream its bytes with a mono header, skipping the extra WAV copy.
       await _writeMonoPcmWav(path, replaySong(this).pcm);
@@ -850,6 +865,35 @@ class TrackerSong {
       }
     } finally {
       await raf.close();
+    }
+  }
+
+  /// Streams a flow / variable-timing render to a WAV file in fixed-size
+  /// row-chunks with carried voice state — NEVER allocating a whole-song mix.
+  /// The header is written from the total frame count reported up front, then
+  /// each PCM16 block is written straight to disk. Byte-identical to
+  /// [renderSongWav] (see [songCanStreamFlowVariable]); flat RAM at any length.
+  void _streamFlowVariableWav(String path, {required bool stereo}) {
+    final raf = File(path).openSync(mode: FileMode.write);
+    try {
+      void onStart(int totalFrames) {
+        final dataLen = totalFrames * (stereo ? 4 : 2);
+        raf.writeFromSync(_wavHeaderBytes(dataLen, stereo: stereo));
+      }
+
+      void onBlock(Int16List block) {
+        raf.writeFromSync(
+          block.buffer.asUint8List(block.offsetInBytes, block.lengthInBytes),
+        );
+      }
+
+      if (stereo) {
+        streamFlowVariableStereoPcm(this, onStart: onStart, onBlock: onBlock);
+      } else {
+        streamFlowVariableMonoPcm(this, onStart: onStart, onBlock: onBlock);
+      }
+    } finally {
+      raf.closeSync();
     }
   }
 

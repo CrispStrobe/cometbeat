@@ -3894,3 +3894,771 @@ List<({int start, int end, double pan})> _panRegionsVariable(
   regions.add((start: regionStart, end: total, pan: pan));
   return regions;
 }
+
+// ===========================================================================
+// Bounded-memory CHUNKED flow / variable render (flat RAM, carried voice state)
+// ===========================================================================
+//
+// The whole-song flow/variable renders ([_replayFlow], [_replayVariable] and
+// their stereo float siblings) allocate a WHOLE-SONG Float64/Float32 mix
+// accumulator — for a long command module that is the memory floor (a 20-minute
+// command song's Float64 stereo L/R is ~850 MB). The streamers below render the
+// played rows in fixed-size ROW-CHUNKS, carrying each channel's persistent voice
+// state ([ReplayVoice] + sample read-pointer / envelope cursors) ACROSS chunk
+// boundaries, so no whole-song buffer is ever held. Each chunk is quantised to
+// PCM16 and handed to [onBlock]; the concatenation is BYTE-IDENTICAL to the
+// whole-song render because it is the same per-sample computation with the same
+// carried state (mirroring MultiPLAY's per-frame streaming from per-voice state).
+//
+// SCOPE (see [songCanStreamFlowVariable]): only channels whose contribution is a
+// pure sum with NO whole-channel dependency can stream byte-identically —
+//   * ADDITIVE voices (peak-free: gain folded into the tick synthesis), and
+//   * NATIVE ([SampleInstrument.normalize] == false) sample TICK voices, whose
+//     final scale is a constant `channel.gain` (no whole-channel peak).
+// A NORMALIZED sample (scale = gain / whole-song peak), an effect-free sample
+// (whole-channel `renderChannel`), a multi-sample / NNA voice, or a Gxx/Hxy
+// global-volume command (its level persists across chunks) all need whole-song
+// information, so a song containing any of them stays on the whole-song path
+// (already < 500 MB for the corpus). The stereo/mono routing mirrors
+// [renderSongWav] exactly.
+
+/// Bytes-of-audio target per streamed chunk (~1.5 s at 44.1 kHz). Rows are
+/// greedily grouped until the chunk's sample span reaches this, so a chunk's
+/// buffers stay O(1) in song length. Chunking is byte-neutral (row-aligned).
+const int kStreamChunkFrames = 1 << 16;
+
+/// Whether any played cell carries a Gxx (set) or Hxy (slide) GLOBAL-volume
+/// command — the one cross-chunk coupling that would make a row-chunked render
+/// diverge (the level persists across chunk boundaries). Scanned over the played
+/// (flattened) rows so it matches the render's actual timeline.
+bool _flatHasGlobalVolume(TrackerSong song, List<PlayedRow> played) {
+  for (final pr in played) {
+    final cols = song.patterns[pr.patternIndex].cells;
+    for (var c = 0; c < cols.length; c++) {
+      final cell = cols[c][pr.row];
+      if (cell.fxCmd == kFxSetGlobalVolume || cell.fxCmd == kFxGlobalVolSlide) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/// Whether [channel] (over its flattened [cells]) can be rendered in resumable
+/// row-chunks with carried voice state — see the section header. A muted or
+/// silent channel is trivially safe (contributes nothing). [stereo] rejects an
+/// ADDITIVE channel carrying a pan ENVELOPE (its per-note-run auto-pan is not
+/// chunked); a native sample tick voice pans per sample internally, so it stays
+/// safe with or without a pan envelope.
+bool _channelChunkSafe(
+  TrackerChannel channel,
+  List<TrackerCell> cells, {
+  required bool stereo,
+}) {
+  if (channel.muted || !cells.any((c) => !c.isEmpty)) return true;
+  if (channel.instrument is MultiSampleInstrument && _hasPerTickEffect(cells)) {
+    return false;
+  }
+  if (_additiveOf(channel.instrument) != null) {
+    final penv = channel.panEnvelope;
+    if (stereo && penv != null && !penv.isEmpty) return false;
+    return true;
+  }
+  if (channel.instrument is SampleInstrument &&
+      !(channel.instrument as SampleInstrument).normalize &&
+      _hasPerTickEffect(cells)) {
+    return true;
+  }
+  return false;
+}
+
+/// Whether [song] renders through the flow OR variable-timing path AND every
+/// active channel is chunk-safe AND no global-volume command couples the mix —
+/// i.e. the row-chunk streamer below produces output byte-identical to the
+/// whole-song render. [stereo] selects the pan-aware channel test.
+bool songCanStreamFlowVariable(TrackerSong song, {required bool stereo}) {
+  if (!(songNeedsWalkRender(song) || songUsesVariableTiming(song))) {
+    return false;
+  }
+  final played = walkFlow(song);
+  if (played.isEmpty) return false;
+  if (_flatHasGlobalVolume(song, played)) return false;
+  final channels = song.channels;
+  for (var c = 0; c < channels.length; c++) {
+    final cells = [
+      for (final pr in played) song.patterns[pr.patternIndex].cells[c][pr.row],
+    ];
+    if (!_channelChunkSafe(channels[c], cells, stereo: stereo)) return false;
+  }
+  return true;
+}
+
+/// The per-row absolute sample boundaries ([rowStart], length `rows + 1`) and
+/// per-row tick counts ([ticks], length `rows`) of [song]'s played sequence —
+/// laid out EXACTLY as the whole-song render it mirrors: the accumulated per-row
+/// durations for a variable-timing song ([_replayVariable]), else the uniform
+/// flat timing for a flow / variable-length song ([_replayFlow]). [variable]
+/// records which layout was used (it also selects the Float32 vs Float64 mix).
+class _FlowVarLayout {
+  _FlowVarLayout(TrackerSong song, this.played)
+      : rowStart = List<int>.filled(played.length + 1, 0),
+        ticks = List<int>.filled(played.length, kDefaultTicksPerRow),
+        variable = songUsesVariableTiming(song) {
+    final n = played.length;
+    if (variable) {
+      final def = song.timing.tempoBpm;
+      var acc = 0;
+      for (var i = 0; i < n; i++) {
+        rowStart[i] = acc;
+        ticks[i] = played[i].ticksPerRow;
+        final tempo = played[i].tempoBpm > 0 ? played[i].tempoBpm : def;
+        acc += (_rowMsFor(tempo, played[i].ticksPerRow) * kSampleRate / 1000)
+            .round();
+      }
+      rowStart[n] = acc;
+    } else {
+      final base = effectiveTiming(song);
+      final flatTiming = base.copyWith(rows: n == 0 ? 1 : n);
+      final flowTicks = songInitialSpeed(
+        song,
+        fallback:
+            song.initialSpeed > 0 ? song.initialSpeed : kDefaultTicksPerRow,
+      );
+      for (var i = 0; i < n; i++) {
+        rowStart[i] = flatTiming.stepStartSample(i);
+        ticks[i] = flowTicks;
+      }
+      rowStart[n] = flatTiming.totalSamples;
+    }
+  }
+
+  final List<PlayedRow> played;
+  final List<int> rowStart;
+  final List<int> ticks;
+  final bool variable;
+
+  int get totalSamples => rowStart.isEmpty ? 0 : rowStart.last;
+}
+
+/// Persistent additive-voice state carried across chunk boundaries.
+class _AddChunkState {
+  final ReplayVoice voice = ReplayVoice();
+  ({
+    List<double> harmonics,
+    double attackSec,
+    double decay,
+    double harmNorm
+  })? tp;
+}
+
+/// Persistent sample-voice state carried across chunk boundaries (the read
+/// pointer + envelope cursors that make a note ring past a chunk edge).
+class _SampChunkState {
+  _SampChunkState(this.cur);
+  final ReplayVoice voice = ReplayVoice();
+  TrackerInstrument? cur;
+  double readPos = 0.0;
+  int noteStartSample = 0;
+  int releaseStartSample = 0;
+  double rowPan = 0.0;
+}
+
+/// Renders additive rows `[rowFrom, rowTo)` into [dest] (chunk-local, base
+/// absolute sample [sampleBase]) with the carried [st]. A LINE-FOR-LINE mirror
+/// of the additive branch of [_renderChannelIntoVariable] (which is itself
+/// byte-identical to [_renderChannelInto] under matched boundaries), restricted
+/// to a row window with state carried in/out — so the concatenation matches the
+/// whole-song render. [dest] may be Float32List or Float64List; the caller's
+/// choice reproduces the whole-song accumulator's precision.
+void _additiveRenderRows(
+  List<double> dest,
+  int sampleBase,
+  _AddChunkState st,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<int> ticks,
+  List<TrackerInstrument>? pool,
+  int rowFrom,
+  int rowTo,
+) {
+  final inst = _additiveOf(channel.instrument);
+  if (inst == null) return;
+  st.tp ??= _timbreParamsOf(inst);
+  var tp = st.tp!;
+  final gain = channel.gain;
+  final voice = st.voice;
+  final rows = cells.length;
+  for (var r = rowFrom; r < rowTo; r++) {
+    final cellInst = cells[r].instrument;
+    if (cellInst > 0 && pool != null && cellInst - 1 < pool.length) {
+      final pi = _additiveOf(pool[cellInst - 1]);
+      if (pi != null) tp = _timbreParamsOf(pi);
+    }
+    voice.armRow(cells[r]);
+    if (voice.retriggeredThisRow) {
+      voice.oscPhase = 0;
+      voice.noteStartSample = rowStart[r];
+      voice.noteSeconds = _runSecondsVariable(cells, r, rows, rowStart);
+    }
+    if (!voice.active && !voice.hasPendingNote) continue;
+
+    final rowS = rowStart[r];
+    final rowE = rowStart[r + 1];
+    final tpr = ticks[r] < 1 ? 1 : ticks[r];
+    for (var k = 0; k < tpr; k++) {
+      final ts = rowS + ((rowE - rowS) * k) ~/ tpr;
+      final te = rowS + ((rowE - rowS) * (k + 1)) ~/ tpr;
+      final state = voice.tick(k, tpr);
+      if (state.retrigger) {
+        voice.oscPhase = 0;
+        voice.noteStartSample = ts;
+        voice.noteSeconds = _runSecondsVariable(cells, r, rows, rowStart);
+      }
+      if (!voice.active) continue;
+      final freq = _freqOfMidi(state.pitch);
+      final volScale = (state.volume / kMaxVolume) * voice.noteVolume * gain;
+      final phaseInc = 2 * pi * freq / kSampleRate;
+      for (var i = ts; i < te; i++) {
+        final t = (i - voice.noteStartSample) / kSampleRate;
+        if (t < 0) continue;
+        final attack = t < tp.attackSec ? t / tp.attackSec : 1.0;
+        final env = attack * exp(-tp.decay * t / voice.noteSeconds);
+        var sample = 0.0;
+        for (var h = 0; h < tp.harmonics.length; h++) {
+          sample += tp.harmonics[h] * sin(voice.oscPhase * (h + 1));
+        }
+        final el = channel.volumeEnvelope?.levelAt(t * 1000) ?? 1.0;
+        dest[i - sampleBase] += (sample / tp.harmNorm) * env * volScale * el;
+        voice.oscPhase += phaseInc;
+      }
+    }
+  }
+  st.tp = tp;
+}
+
+/// Renders native sample rows `[rowFrom, rowTo)` MONO into [dest] (chunk-local,
+/// the per-channel stem — WITHOUT gain), carrying [st]. A mirror of the buffered
+/// branch of [_renderSampleChannelIntoVariable] restricted to a row window. The
+/// caller scales the stem by `channel.gain` once and adds it to the mix (native
+/// `scale == gain`), so the arithmetic matches the whole-song `(Σ terms) * gain`
+/// exactly (folding gain per-sample would not be bit-identical).
+void _sampleRenderRowsMono(
+  List<double> dest,
+  int sampleBase,
+  _SampChunkState st,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<int> ticks,
+  List<TrackerInstrument>? pool,
+  int rowFrom,
+  int rowTo,
+) {
+  final env = channel.volumeEnvelope;
+  final hasEnv = env != null && !env.isEmpty;
+  const declickSec = 0.003;
+  final voice = st.voice;
+  for (var r = rowFrom; r < rowTo; r++) {
+    final cellInst = cells[r].instrument;
+    if (cellInst > 0 &&
+        pool != null &&
+        cellInst - 1 < pool.length &&
+        pool[cellInst - 1] is SampleInstrument) {
+      st.cur = pool[cellInst - 1];
+    }
+    voice.armRow(cells[r]);
+    if (voice.releasedThisRow) st.releaseStartSample = rowStart[r];
+    if (voice.retriggeredThisRow) {
+      final c = cells[r];
+      final os = st.cur is SampleInstrument
+          ? (st.cur as SampleInstrument).offsetScale
+          : 1.0;
+      st.readPos =
+          c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
+      st.noteStartSample = rowStart[r];
+    }
+    final cur = st.cur;
+    if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
+        cur is! SampleInstrument ||
+        cur.sample.isEmpty) {
+      continue;
+    }
+
+    final baseMidi = cur.baseMidi;
+    final s = cur.sample;
+    final loops = cur.loops;
+    final pingPong = cur.pingPong;
+    final loopStart = cur.loopStart;
+    final loopLen = cur.loopLength;
+    final useSustainLoop = cur.sustainLoops;
+    final playbackLoopStart = useSustainLoop ? cur.sustainLoopStart : loopStart;
+    final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
+    final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
+    final playbackLoops = useSustainLoop || loops;
+    final rowS = rowStart[r];
+    final rowE = rowStart[r + 1];
+    final tpr = ticks[r] < 1 ? 1 : ticks[r];
+    for (var k = 0; k < tpr; k++) {
+      final ts = rowS + ((rowE - rowS) * k) ~/ tpr;
+      final te = rowS + ((rowE - rowS) * (k + 1)) ~/ tpr;
+      final state = voice.tick(k, tpr);
+      if (state.retrigger) {
+        st.readPos = 0.0;
+        st.noteStartSample = ts;
+      }
+      if (!voice.active && !voice.released) continue;
+      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      for (var i = ts; i < te; i++) {
+        final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
+        final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
+        final activePingPong = voice.released ? pingPong : playbackPingPong;
+        final activeLoops = voice.released ? loops : playbackLoops;
+        final activeLoopEnd = activeLoopStart + activeLoopLength;
+        if (activeLoops &&
+            !activePingPong &&
+            activeLoopLength > 0 &&
+            st.readPos >= activeLoopEnd) {
+          st.readPos = activeLoopStart +
+              ((st.readPos - activeLoopStart) % activeLoopLength);
+        }
+        final sampleVal = _readLoopedSample(
+          s,
+          st.readPos,
+          activeLoops,
+          activePingPong,
+          activeLoopStart,
+          activeLoopLength,
+        );
+        if (sampleVal == null) break;
+        final t = (i - st.noteStartSample) / kSampleRate;
+        final attack = t < declickSec ? t / declickSec : 1.0;
+        final nativeEnv = cur.nativeVolumeEnvelope;
+        final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
+            (hasEnv ? env.levelAt(t * 1000) : 1.0);
+        final fadeRate = cur.nativeFadeout / 1024.0;
+        final relSamples = max(0, i - st.releaseStartSample);
+        final release = voice.released
+            ? (fadeRate > 0
+                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
+                : exp(-relSamples / (0.03 * kSampleRate)))
+            : 1.0;
+        // Accumulate the un-gained stem; the caller applies gain once.
+        dest[i - sampleBase] += sampleVal * vol * attack * el * release;
+        final pitch = cur.nativePitchEnvelope?.semitonesAt(
+              t * 1000,
+              released: voice.released,
+            ) ??
+            0.0;
+        st.readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+      }
+    }
+  }
+}
+
+/// Renders native sample rows `[rowFrom, rowTo)` STEREO into [destL]/[destR]
+/// (chunk-local, the per-channel L/R stems — WITHOUT gain), carrying [st]. A
+/// mirror of [_renderSampleChannelStereoTicks] restricted to a row window; the
+/// caller scales the stems by `channel.gain` once and adds them to the mix
+/// (native `scale == gain`), matching the whole-song per-channel-scale-then-`+=`.
+void _sampleRenderRowsStereo(
+  List<double> destL,
+  List<double> destR,
+  int sampleBase,
+  _SampChunkState st,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<int> ticks,
+  List<TrackerInstrument>? pool,
+  int rowFrom,
+  int rowTo,
+) {
+  final env = channel.volumeEnvelope;
+  final hasEnv = env != null && !env.isEmpty;
+  const declickSec = 0.003;
+  final voice = st.voice;
+  for (var r = rowFrom; r < rowTo; r++) {
+    final cell = cells[r];
+    final cellInst = cell.instrument;
+    if (cellInst > 0 &&
+        pool != null &&
+        cellInst - 1 < pool.length &&
+        pool[cellInst - 1] is SampleInstrument) {
+      st.cur = pool[cellInst - 1];
+    }
+    if (cell.fxCmd == kFxSetPan) {
+      st.rowPan = _panFromParam(cell.fxParam);
+    } else if (cell.fxCmd == kFxPanSlide) {
+      final rightAmount = (cell.fxParam >> 4) & 0xF;
+      final leftAmount = cell.fxParam & 0xF;
+      st.rowPan = (st.rowPan + (rightAmount - leftAmount) * ticks[r] / 128.0)
+          .clamp(-1.0, 1.0);
+    }
+    voice.armRow(cell);
+    if (voice.releasedThisRow) st.releaseStartSample = rowStart[r];
+    if (voice.retriggeredThisRow) {
+      final os = st.cur is SampleInstrument
+          ? (st.cur as SampleInstrument).offsetScale
+          : 1.0;
+      st.readPos = cell.fxCmd == kFxSampleOffset
+          ? (cell.fxParam * 256 * os).toDouble()
+          : 0.0;
+      st.noteStartSample = rowStart[r];
+    }
+    final cur = st.cur;
+    if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
+        cur is! SampleInstrument ||
+        cur.sample.isEmpty) {
+      continue;
+    }
+
+    final baseMidi = cur.baseMidi;
+    final sample = cur.sample;
+    final sampleRight = cur.sampleRight;
+    final loops = cur.loops;
+    final pingPong = cur.pingPong;
+    final loopStart = cur.loopStart;
+    final loopLen = cur.loopLength;
+    final useSustainLoop = cur.sustainLoops;
+    final playbackLoopStart = useSustainLoop ? cur.sustainLoopStart : loopStart;
+    final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
+    final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
+    final playbackLoops = useSustainLoop || loops;
+    final rowS = rowStart[r];
+    final rowE = rowStart[r + 1];
+    final tpr = ticks[r] < 1 ? 1 : ticks[r];
+    for (var k = 0; k < tpr; k++) {
+      final ts = rowS + ((rowE - rowS) * k) ~/ tpr;
+      final te = rowS + ((rowE - rowS) * (k + 1)) ~/ tpr;
+      final state = voice.tick(k, tpr);
+      if (state.retrigger) {
+        st.readPos = 0.0;
+        st.noteStartSample = ts;
+      }
+      if (!voice.active && !voice.released) continue;
+      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      for (var i = ts; i < te; i++) {
+        final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
+        final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
+        final activePingPong = voice.released ? pingPong : playbackPingPong;
+        final activeLoops = voice.released ? loops : playbackLoops;
+        final activeLoopEnd = activeLoopStart + activeLoopLength;
+        if (activeLoops &&
+            !activePingPong &&
+            activeLoopLength > 0 &&
+            st.readPos >= activeLoopEnd) {
+          st.readPos = activeLoopStart +
+              ((st.readPos - activeLoopStart) % activeLoopLength);
+        }
+        final value = _readLoopedSample(
+          sample,
+          st.readPos,
+          activeLoops,
+          activePingPong,
+          activeLoopStart,
+          activeLoopLength,
+        );
+        if (value == null) break;
+        final rightValue = sampleRight == null
+            ? value
+            : _readLoopedSample(
+                  sampleRight,
+                  st.readPos,
+                  activeLoops,
+                  activePingPong,
+                  activeLoopStart,
+                  activeLoopLength,
+                ) ??
+                0.0;
+        final t = (i - st.noteStartSample) / kSampleRate;
+        final attack = t < declickSec ? t / declickSec : 1.0;
+        final nativeEnv = cur.nativeVolumeEnvelope;
+        final level = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
+            (hasEnv ? env.levelAt(t * 1000) : 1.0);
+        final pan = (st.rowPan +
+                state.pan +
+                (channel.panEnvelope?.panAt(t * 1000) ?? 0.0) +
+                (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0))
+            .clamp(-1.0, 1.0);
+        final fadeRate = cur.nativeFadeout / 1024.0;
+        final relSamples = max(0, i - st.releaseStartSample);
+        final release = voice.released
+            ? (fadeRate > 0
+                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
+                : exp(-relSamples / (0.03 * kSampleRate)))
+            : 1.0;
+        final amount = vol * attack * level * release;
+        final di = i - sampleBase;
+        if (sampleRight != null) {
+          final leftGain = pan > 0 ? 1.0 - pan : 1.0;
+          final rightGain = pan < 0 ? 1.0 + pan : 1.0;
+          destL[di] += value * amount * leftGain;
+          destR[di] += rightValue * amount * rightGain;
+        } else {
+          final theta = (pan + 1) / 2 * (pi / 2);
+          destL[di] += value * amount * cos(theta);
+          destR[di] += value * amount * sin(theta);
+        }
+        final pitch = cur.nativePitchEnvelope?.semitonesAt(
+              t * 1000,
+              released: voice.released,
+            ) ??
+            0.0;
+        st.readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+      }
+    }
+  }
+}
+
+/// One channel's chunk-render disposition, resolved once per render.
+class _ChunkChannel {
+  _ChunkChannel(
+    this.index,
+    this.channel,
+    this.cells,
+    this.additive,
+    this.state,
+  );
+  final int index;
+  final TrackerChannel channel;
+  final List<TrackerCell> cells;
+  final bool additive; // false ⇒ native sample tick voice
+  final Object state; // _AddChunkState or _SampChunkState
+  List<({int start, int end, double pan})>? panRegions; // stereo only
+}
+
+/// Builds the per-channel chunk-render plan for [song]'s played rows, skipping
+/// muted/silent channels (they contribute nothing — byte-identical to the
+/// whole-song path which renders them to zero). [stereo] arms the pan regions.
+List<_ChunkChannel> _planChunkChannels(
+  TrackerSong song,
+  _FlowVarLayout layout, {
+  required bool stereo,
+}) {
+  final out = <_ChunkChannel>[];
+  final channels = song.channels;
+  for (var c = 0; c < channels.length; c++) {
+    final ch = channels[c];
+    final cells = [
+      for (final pr in layout.played)
+        song.patterns[pr.patternIndex].cells[c][pr.row],
+    ];
+    if (ch.muted || !cells.any((x) => !x.isEmpty)) continue;
+    final additive = _additiveOf(ch.instrument) != null;
+    final cc = _ChunkChannel(
+      c,
+      ch,
+      cells,
+      additive,
+      additive ? _AddChunkState() : _SampChunkState(ch.instrument),
+    );
+    if (stereo && additive) {
+      cc.panRegions = layout.variable
+          ? _panRegionsVariable(
+              ch.pan,
+              cells,
+              layout.rowStart,
+              ticksPerRow: song.initialSpeed,
+            )
+          : _panRegions(
+              ch.pan,
+              cells,
+              effectiveTiming(song).copyWith(rows: layout.played.length),
+              layout.totalSamples,
+              ticksPerRow:
+                  layout.ticks.isEmpty ? kDefaultTicksPerRow : layout.ticks[0],
+            );
+    }
+    out.add(cc);
+  }
+  return out;
+}
+
+/// Greedily groups played rows into chunks whose sample span reaches
+/// [kStreamChunkFrames], invoking [render] with each `[rowFrom, rowTo)` window
+/// and its absolute sample bounds. Row-aligned, so a chunk boundary never splits
+/// a tick — the concatenation is exactly the whole-song timeline.
+void _forEachRowChunk(
+  _FlowVarLayout layout,
+  void Function(int rowFrom, int rowTo, int sampleFrom, int sampleTo) render,
+) {
+  final n = layout.played.length;
+  var rowFrom = 0;
+  while (rowFrom < n) {
+    final base = layout.rowStart[rowFrom];
+    var rowTo = rowFrom + 1;
+    while (rowTo < n && layout.rowStart[rowTo] - base < kStreamChunkFrames) {
+      rowTo++;
+    }
+    render(rowFrom, rowTo, base, layout.rowStart[rowTo]);
+    rowFrom = rowTo;
+  }
+}
+
+/// Streams the MONO flow/variable render of [song] to [onStart] (total frame
+/// count, once) then [onBlock] (PCM16 chunks) — byte-identical to
+/// `replaySong(song).pcm`, in flat RAM. Precondition:
+/// `songCanStreamFlowVariable(song, stereo: false)`.
+void streamFlowVariableMonoPcm(
+  TrackerSong song, {
+  required void Function(int totalFrames) onStart,
+  required void Function(Int16List block) onBlock,
+}) {
+  song.syncCurrent();
+  final layout = _FlowVarLayout(song, walkFlow(song));
+  onStart(layout.totalSamples);
+  final channels = _planChunkChannels(song, layout, stereo: false);
+  final pool = song.instruments;
+  final gv = song.globalVolume;
+  _forEachRowChunk(layout, (rowFrom, rowTo, sampleFrom, sampleTo) {
+    final frames = sampleTo - sampleFrom;
+    if (frames <= 0) return;
+    final mix = Float64List(frames);
+    Float64List? stem; // reused per-channel un-gained sample stem
+    for (final cc in channels) {
+      if (cc.additive) {
+        // Additive folds gain into volScale and writes the mix directly (matches
+        // the whole-song `_renderChannelInto`/Variable additive branch).
+        _additiveRenderRows(
+          mix,
+          sampleFrom,
+          cc.state as _AddChunkState,
+          cc.channel,
+          cc.cells,
+          layout.rowStart,
+          layout.ticks,
+          pool,
+          rowFrom,
+          rowTo,
+        );
+      } else {
+        stem ??= Float64List(frames);
+        stem.fillRange(0, frames, 0.0);
+        _sampleRenderRowsMono(
+          stem,
+          sampleFrom,
+          cc.state as _SampChunkState,
+          cc.channel,
+          cc.cells,
+          layout.rowStart,
+          layout.ticks,
+          pool,
+          rowFrom,
+          rowTo,
+        );
+        final gain = cc.channel.gain;
+        for (var j = 0; j < frames; j++) {
+          mix[j] += stem[j] * gain;
+        }
+      }
+    }
+    final out = Int16List(frames);
+    if (gv < 1.0) {
+      for (var j = 0; j < frames; j++) {
+        out[j] = pcm16Sample(mix[j] * gv);
+      }
+    } else {
+      for (var j = 0; j < frames; j++) {
+        out[j] = pcm16Sample(mix[j]);
+      }
+    }
+    onBlock(out);
+  });
+}
+
+/// Streams the STEREO flow/variable render of [song] as interleaved L,R PCM16 —
+/// byte-identical to `replaySongStereo(song).pcm`, in flat RAM. A variable-timing
+/// song accumulates in Float32 (matching [_replayVariableStereoFloat]); a flow /
+/// variable-length song in Float64 (matching [_replayFlowStereoFloat]).
+/// Precondition: `songCanStreamFlowVariable(song, stereo: true)`.
+void streamFlowVariableStereoPcm(
+  TrackerSong song, {
+  required void Function(int totalFrames) onStart,
+  required void Function(Int16List block) onBlock,
+}) {
+  song.syncCurrent();
+  final layout = _FlowVarLayout(song, walkFlow(song));
+  onStart(layout.totalSamples);
+  final channels = _planChunkChannels(song, layout, stereo: true);
+  final pool = song.instruments;
+  final gv = song.globalVolume;
+  final f32 = layout.variable;
+  _forEachRowChunk(layout, (rowFrom, rowTo, sampleFrom, sampleTo) {
+    final frames = sampleTo - sampleFrom;
+    if (frames <= 0) return;
+    // Chunk mix accumulators — Float32 for the variable path, Float64 for flow,
+    // reproducing each whole-song sibling's precision exactly.
+    final List<double> mixL = f32 ? Float32List(frames) : Float64List(frames);
+    final List<double> mixR = f32 ? Float32List(frames) : Float64List(frames);
+    // Reused per-channel scratch: additive mono (matched precision) + a Float64
+    // sample L/R pair (the stereo tick voice accumulates in Float64 before gain).
+    List<double>? mono;
+    Float64List? chL;
+    Float64List? chR;
+    for (final cc in channels) {
+      if (cc.additive) {
+        mono ??= f32 ? Float32List(frames) : Float64List(frames);
+        mono.fillRange(0, frames, 0.0);
+        _additiveRenderRows(
+          mono,
+          sampleFrom,
+          cc.state as _AddChunkState,
+          cc.channel,
+          cc.cells,
+          layout.rowStart,
+          layout.ticks,
+          pool,
+          rowFrom,
+          rowTo,
+        );
+        for (final reg in cc.panRegions!) {
+          final s = max(reg.start, sampleFrom);
+          final e = min(reg.end, sampleTo);
+          if (s >= e) continue;
+          final theta = (reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
+          final lGain = cos(theta);
+          final rGain = sin(theta);
+          for (var i = s; i < e; i++) {
+            final j = i - sampleFrom;
+            mixL[j] += mono[j] * lGain;
+            mixR[j] += mono[j] * rGain;
+          }
+        }
+      } else {
+        chL ??= Float64List(frames);
+        chR ??= Float64List(frames);
+        chL.fillRange(0, frames, 0.0);
+        chR.fillRange(0, frames, 0.0);
+        _sampleRenderRowsStereo(
+          chL,
+          chR,
+          sampleFrom,
+          cc.state as _SampChunkState,
+          cc.channel,
+          cc.cells,
+          layout.rowStart,
+          layout.ticks,
+          pool,
+          rowFrom,
+          rowTo,
+        );
+        // Scale the un-gained per-channel L/R stems by gain once, then add —
+        // matching the whole-song per-channel `left *= scale; mix += left`.
+        final gain = cc.channel.gain;
+        for (var j = 0; j < frames; j++) {
+          mixL[j] += chL[j] * gain;
+          mixR[j] += chR[j] * gain;
+        }
+      }
+    }
+    final out = Int16List(frames * 2);
+    for (var j = 0; j < frames; j++) {
+      final l = gv < 1.0 ? mixL[j] * gv : mixL[j];
+      final r = gv < 1.0 ? mixR[j] * gv : mixR[j];
+      out[j * 2] = pcm16Sample(l);
+      out[j * 2 + 1] = pcm16Sample(r);
+    }
+    onBlock(out);
+  });
+}
