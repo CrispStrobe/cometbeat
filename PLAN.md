@@ -156,6 +156,203 @@ Studio tracks can open in Tracker, Score, Tab, or Audio; Score and Tab can feed
 pitched Loop Studio tracks; Audio can receive any mode as a clip and can return
 through transcription/analysis with documented losses.
 
+## Cross-mode FX + interop consolidation (PLANNED — `feature/fx-interop`)
+
+**Why.** The five modes each grew their own FX vocabulary and their own
+converters over what is already *one* shared DSP library (`lib/core/audio/
+crisp_dsp/`, 20 modules) and *one* shared notation model (crisp_notation
+`Score`/`MultiPartScore`). The result is four incompatible effect models, five
+copies of `pitchFromMidi`, two copies of the duration ladder, and an interop
+graph with holes (no Tab↔Tracker) where every edge silently drops whatever the
+target model cannot express.
+
+**Audit (2026-07-26, measured on `origin/main`).**
+
+| FX model | Mode | Types | Params | Automation | Serialized | Chain |
+| --- | --- | --- | --- | --- | --- | --- |
+| `DawClipEffect` / `DawClipEffectType` (`daw_timeline.dart`) | Audio | 27 | ✅ `Map<String,double>` | ✅ | ✅ JSON | ✅ |
+| `TrackerChannelEffect` (`tracker_engine.dart`) | Tracker | 7 | ❌ hardcoded | ❌ | name only | ✅ |
+| `VoiceEffect` (`crisp_dsp/voice_fx.dart`) | Instrument | 9 | ❌ hardcoded | ❌ | ❌ | ❌ |
+| `TrackEffect` (`daw_timeline.dart`, legacy) | Audio | 7 | via bridge | ❌ | ❌ | ❌ |
+| — | Tab | **0** | — | — | — | — |
+| ad-hoc sends (`loop_engine.dart`) | Loop | partial | ❌ | in `GrooveSpec` | ❌ |
+
+`DawClipEffect` is a strict superset of the other three and is the only one with
+params, automation, and persistence. It is therefore the **canonical model**;
+the other enums become *preset name* lookups that resolve to a chain.
+
+**Interop edges.** Present: Score↔Tracker (`tracker_notation.dart`,
+`multipart_to_tracker.dart`), Score↔Module MOD/XM/S3M/IT (`mod/
+module_notation.dart`), Score↔Tab (`TabDocument.toScore`/`.fromScore`),
+Beat→Tracker (`beat_to_tracker.dart`), Loop→Score (`groove_notation.dart`,
+`melody_bridge.dart`). Missing: **Tab↔Tracker**, **Loop↔Tab**, and a single
+entry point with a **documented loss report**.
+
+**Two design decisions that the whole arc rests on.**
+
+1. *One FX rack.* `FxSpec { FxType type; bool enabled; Map<String,double>
+   params; Map<String,List<FxAutomationPoint>> automation }` plus
+   `applyFxChain` / `applyFxChainStereo`, living mode-neutrally in
+   `lib/core/audio/fx/`. Every mode holds `List<FxSpec>`. Legacy enums survive
+   as presets, so no persisted file breaks.
+2. *Lossless side-car.* A converter that cannot represent something in the
+   target model must not drop it. `SymbolicAnnotations` is a bag keyed by a
+   stable event address (`track/channel/part` + `step/tick` + `voice`) carrying
+   the un-representable payload (string+fret, technique, capo, tracker fx
+   command, lyric, articulation). Round-trip identity then becomes a *testable
+   property*, not a hope.
+
+### Ordered work items
+
+Each item is independently shippable and independently testable. Build in
+order; A1 and B1/B2 unblock everything else.
+
+#### A — one FX rack across all five modes
+
+- **A1. Extract the FX engine into `lib/core/audio/fx/`.** *(unblocks A2–A6)*
+  - New `fx/fx_spec.dart`: `FxType` (the 27 `DawClipEffectType` members, same
+    names, same order), `FxSpec`, `FxAutomationPoint`, `FxPreset`,
+    `defaultFx(FxType)`, `fxPresetChain(FxPreset)`, `toJson`/`fromJson`,
+    `cacheKey`.
+  - New `fx/fx_chain.dart`: `applyFxChain(Float64List, List<FxSpec>, int
+    sampleRate)` and `applyFxChainStereo(...)`, moved verbatim from
+    `daw_timeline.dart` (`applyClipEffectChain`, `_applyClipEffect`,
+    `_applyStereoClipEffectChain`, `_applyAutomated*`).
+  - `daw_timeline.dart` keeps the old names as aliases —
+    `typedef DawClipEffect = FxSpec;`, `typedef DawClipEffectType = FxType;`
+    (Dart allows typedefs to enums), `const defaultDawClipEffect = defaultFx;`,
+    `const applyClipEffectChain = applyFxChain;` — and re-exports `fx/`.
+    **No call site in `daw_service.dart` / `daw_screen.dart` changes.** This is
+    deliberate: those files are hot with parallel DAW agents.
+  - Done when: `daw_timeline.dart` contains no DSP dispatch; the DAW suite is
+    green unchanged.
+  - Tests (`test/fx_spec_test.dart`, `test/fx_chain_test.dart`): every `FxType`
+    round-trips JSON; unknown type name → `null`, not a throw; `enabled:false`
+    is bit-identical identity; an empty chain is identity; each type on a
+    1 kHz sine is finite and within ±1.0; `cacheKey` is stable across equal
+    chains and differs on any param change.
+
+- **A2. Tracker channel FX become `FxSpec` chains.**
+  - `TrackerChannel.fxChain: List<FxSpec>` alongside the existing
+    `effects: List<TrackerChannelEffect>`; `fxForChannelPreset(e)` maps each of
+    the 7 presets to the params currently hardcoded in `applyChannelEffect`.
+  - `tracker_song_codec.dart` writes `fxChain` (full params) and still reads
+    legacy `effects: ['reverb', …]`; a file written by the old codec loads to
+    the equivalent chain.
+  - Render path prefers `fxChain` when non-empty, else the legacy list.
+  - Tests: for all 7 presets `applyFxChain(stem, fxForChannelPreset(e))` is
+    **sample-identical** to `applyChannelEffect(stem, e)`; a legacy
+    `.cbtrk` fixture loads and renders identically; chain length is preserved
+    (the `mixStems` same-length invariant).
+
+- **A3. Instrument / Voice FX become `FxSpec` chains.**
+  - `fxForVoicePreset(VoiceEffect) → List<FxSpec>` for all 9 presets.
+  - Instrument Builder (`instrument_editor.dart`) gains a free-form chain on
+    top of the preset, persisted with the instrument
+    (`tracker_instrument_codec.dart`).
+  - Tests: for all 9, `applyFxChain(s, fxForVoicePreset(v))` is sample-identical
+    to `applyVoiceEffect(s, v)`; `kPitchPreservingVoiceEffects` members still
+    round-trip a pitch probe within 5 cents after the chain.
+
+- **A4. One FX rack widget.** `lib/shared/widgets/fx_rack.dart` +
+  `lib/core/audio/fx/fx_params.dart` (a descriptor table: per `FxType`, the
+  param list with min/max/default/unit/l10n label key).
+  - The rack renders add / remove / reorder / bypass plus one slider per
+    descriptor — **driven entirely by the table**, so a new `FxType` needs no
+    UI edit.
+  - Hosts: DAW inserts, Tracker channel FX, Instrument Builder, Loop Studio
+    sends, Tab track FX.
+  - Tests: `fx_params_test.dart` asserts every `FxType` has a descriptor and
+    every descriptor default equals `defaultFx(type).params`; widget test adds
+    reverb → tweaks `roomSize` → reorders → bypasses and asserts the emitted
+    chain.
+
+- **A5. Loop Studio sends become `FxSpec`.** `GrooveSpec` gains a per-track
+  chain; the `KU1.` share token stays backward compatible (absent key = no FX).
+  - Tests: token round-trip with and without FX; a spec without FX renders
+    byte-identically to today (regression guard on the seam-click invariant).
+
+- **A6. Tab gets FX.** `TabTrack.fxChain`; tab playback routes
+  `renderMultiPartWithInstrument` output through `applyFxChain`. Ship a guitar
+  preset set (clean / crunch / overdrive / chorus / spring reverb / wah) as
+  `FxPreset` entries, so this is data, not new DSP.
+  - Tests: preset chains are non-empty and length-preserving; a tab with an
+    empty chain renders byte-identically to today.
+
+#### B — symbolic core DRY
+
+- **B1. One `pitchFromMidi`.** `lib/shared/midi_pitch.dart` already holds the
+  canonical version. Delete the copies in `mod/module_notation.dart`,
+  `tracker_notation.dart`, `tab_document.dart`, `groove_notation.dart` and
+  import it. Keep a per-file re-export only where the symbol is part of that
+  file's public surface.
+  - Tests: `midi_pitch_test.dart` covers all 128 MIDI numbers (step, alter,
+    octave), and asserts the four ex-copies' call sites still spell identically.
+
+- **B2. One duration ladder.** New `lib/shared/music/step_duration.dart` with
+  `durationToSteps`, `durationLadder(stepsPerBeat)`, `decomposeSteps`. Delete
+  the verbatim copies in `mod/module_notation.dart` and `tracker_notation.dart`;
+  point `tab_document.dart`'s `kTabDurations`/`_stepsOf` at it.
+  - Tests: golden decompositions for 1..64 steps at stepsPerBeat 1/2/4/8;
+    `decomposeSteps` always sums back to the input; parity assertions against
+    the pre-refactor outputs for both ex-copies.
+
+#### C — the interop matrix
+
+- **C0. `lib/core/interop/symbolic_annotation.dart` — the side-car.**
+  - `EventAddress { int track; int step; int voice; }` (stable, comparable),
+    `SymbolicAnnotations` = `Map<EventAddress, Map<String, Object?>>` with typed
+    accessors for the known keys (`string`, `fret`, `technique`, `capo`,
+    `fxCmd`, `fxParam`, `lyric`, `articulation`, `velocity`).
+  - JSON round-trip; merge; `restrictToTrack`.
+  - Tests: round-trip, address equality/hash, unknown keys survive untouched.
+
+- **C1. Tab ↔ Tracker, direct and lossless.** `lib/core/interop/tab_tracker.dart`.
+  - `trackerSongFromTabDocument(TabDocument) → (TrackerSong, SymbolicAnnotations)`
+    — **one tracker channel per string**, which is the natural mapping and makes
+    string/fret survive *natively* rather than via the side-car.
+  - `tabDocumentFromTrackerSong(TrackerSong, {SymbolicAnnotations?}) → TabDocument`.
+  - Technique mapping where a native tracker command exists: slide →
+    portamento (`3xx`), vibrato → `4xx`, hammer/pull → legato (no retrigger),
+    bend → pitch slide; everything else rides the side-car.
+  - Tests: **round-trip identity** on a fixture `TabDocument` (columns,
+    string/fret, techniques, tuning, capo) with and without annotations; a
+    slide really becomes a portamento cell; a 6-string tab yields 6 channels.
+
+- **C2. Loop ↔ Tab.** Via `Score` + annotations, reusing C0/C1 and the existing
+  `groove_notation.dart`. Pitched loop tracks become a tab arrangement using
+  `tab_arranger.dart`'s fretting plan; a tab becomes a pitched loop track.
+  - Tests: a pitched groove → tab → groove preserves pitches and step grid.
+
+- **C3. `lib/core/interop/project_bridge.dart` — one façade + loss report.**
+  - `enum AppMode { tracker, loop, score, tab, audio }`.
+  - `ConversionResult { Object? document; SymbolicAnnotations annotations;
+    ConversionReport report; }` where `ConversionReport { List<String> lost;
+    List<String> approximated; bool lossless; }`.
+  - `convert({required AppMode from, required AppMode to, required Object doc})`
+    dispatches to the existing converters (C1, `tracker_notation`,
+    `module_notation`, `TabDocument.toScore`, `multipart_to_tracker`,
+    `daw_sources`) — it **adds no new DSP or notation logic**, it is routing
+    plus honest reporting.
+  - Tests: a matrix test over all 25 `(from,to)` pairs — each either produces a
+    document or reports `unsupported`; **no pair throws**; identity pairs are
+    lossless; every lossy pair names what it lost.
+
+- **C4. "Open in…" everywhere.** `lib/shared/widgets/open_in_menu.dart`, driven
+  by `ProjectBridge`, shown in all five mode toolbars; it previews the loss
+  report before converting ("Tab → Tracker keeps string/fret; bends become
+  pitch slides").
+  - Tests: widget test — the menu lists exactly the modes the bridge can reach
+    from the current mode, and the report text renders.
+
+### Collision policy for this arc
+
+`daw_timeline.dart`, `tracker_engine.dart`, `tracker_song_codec.dart`,
+`loop_engine.dart`, and `tab_document.dart` are all hot with parallel agents.
+Every item above is therefore **additive with legacy aliases kept**: no call
+site is rewritten in the same commit that moves code. Claim on the
+`docs/PLAN.md` board before each item, and push after each.
+
 ## Tab Editor navigation (DONE)
 
 - Add a three-dot overflow menu to the Tab Editor and move lower-frequency
