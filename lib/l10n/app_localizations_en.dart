@@ -3319,6 +3319,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Higher quality, ~2× the file size. MOD is always 8-bit.';
 
   @override
+  String get trackerExportLossTitle => 'Export limitations';
+
+  @override
+  String trackerExportLossBody(String format) {
+    return 'The $format format can’t represent everything in this song:';
+  }
+
+  @override
+  String get trackerExportLossContinue => 'Export anyway';
+
+  @override
   String get trackerOpenWorkshop => 'Open in Score Workshop';
 
   @override

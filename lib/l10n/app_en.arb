@@ -1265,6 +1265,12 @@
   "trackerExportModule": "Export module (.mod/.xm/.s3m/.it)…",
   "trackerExport16Bit": "16-bit samples",
   "trackerExport16BitHint": "Higher quality, ~2× the file size. MOD is always 8-bit.",
+  "trackerExportLossTitle": "Export limitations",
+  "trackerExportLossBody": "The {format} format can’t represent everything in this song:",
+  "@trackerExportLossBody": {
+    "placeholders": { "format": { "type": "String" } }
+  },
+  "trackerExportLossContinue": "Export anyway",
   "trackerOpenWorkshop": "Open in Score Workshop",
   "trackerMenuOpenLibrary": "Open and Library",
   "trackerMenuSaveExport": "Save and Export",

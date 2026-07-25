@@ -47,6 +47,8 @@ import 'package:comet_beat/core/audio/daw_sources.dart' show TrackerSource;
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show convertDocTo;
 import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
+import 'package:comet_beat/core/audio/mod/module_export_report.dart'
+    show moduleExportLossReport;
 import 'package:comet_beat/core/audio/sample_pitch.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -4045,14 +4047,18 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       return;
     }
     try {
-      final bytes = convertDocTo(
-        moduleDocFromSong(
-          _song,
-          sixteenBit: sixteenBit,
-          targetFormat: fmt,
-        ),
-        fmt,
+      final doc = moduleDocFromSong(
+        _song,
+        sixteenBit: sixteenBit,
+        targetFormat: fmt,
       );
+      // Show what the target format cannot represent BEFORE writing anything.
+      final losses = moduleExportLossReport(doc, fmt);
+      if (losses.isNotEmpty) {
+        final go = await _confirmExportLosses(fmt, losses);
+        if (go != true || !mounted) return;
+      }
+      final bytes = convertDocTo(doc, fmt);
       await _saveBytes(bytes, 'tracker.${fmt.name}', fmt.name.toUpperCase(), [
         fmt.name,
       ]);
@@ -4060,6 +4066,42 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l10n.trackerModFailed)));
     }
+  }
+
+  /// Confirm an export that loses information: list what the [fmt] container
+  /// can't represent (the [losses] from [moduleExportLossReport]) and let the
+  /// user proceed or cancel. Returns true to export anyway.
+  Future<bool?> _confirmExportLosses(ModuleFormat fmt, List<String> losses) {
+    final l10n = AppLocalizations.of(context)!;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.trackerExportLossTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.trackerExportLossBody('.${fmt.name}')),
+            const SizedBox(height: 12),
+            for (final line in losses)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text('•  $line'),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.trackerCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.trackerExportLossContinue),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickModuleFormat() async {

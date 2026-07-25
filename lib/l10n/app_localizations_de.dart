@@ -3329,6 +3329,17 @@ class AppLocalizationsDe extends AppLocalizations {
       'Höhere Qualität, ~2× Dateigröße. MOD ist immer 8-Bit.';
 
   @override
+  String get trackerExportLossTitle => 'Einschränkungen beim Export';
+
+  @override
+  String trackerExportLossBody(String format) {
+    return 'Das Format $format kann nicht alles in diesem Song abbilden:';
+  }
+
+  @override
+  String get trackerExportLossContinue => 'Trotzdem exportieren';
+
+  @override
   String get trackerOpenWorkshop => 'In der Notenwerkstatt öffnen';
 
   @override

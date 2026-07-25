@@ -6206,6 +6206,24 @@ abstract class AppLocalizations {
   /// **'Higher quality, ~2× the file size. MOD is always 8-bit.'**
   String get trackerExport16BitHint;
 
+  /// No description provided for @trackerExportLossTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export limitations'**
+  String get trackerExportLossTitle;
+
+  /// No description provided for @trackerExportLossBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The {format} format can’t represent everything in this song:'**
+  String trackerExportLossBody(String format);
+
+  /// No description provided for @trackerExportLossContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Export anyway'**
+  String get trackerExportLossContinue;
+
   /// No description provided for @trackerOpenWorkshop.
   ///
   /// In en, this message translates to:
