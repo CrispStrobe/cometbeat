@@ -121,6 +121,7 @@ class ModModule {
     this.title = '',
     this.channelCount = 4,
     this.restart = 127,
+    this.signature = '',
     required this.samples, // exactly 31
     required this.order, // length = song length (1..128)
     required this.patterns,
@@ -129,6 +130,14 @@ class ModModule {
   final String title; // ≤ 20 chars
   final int channelCount;
   final int restart;
+
+  /// The original 4-byte signature tag read from offset 0x438 (e.g. "OCTA",
+  /// "FLT8", "CD81", "M!K!"). Empty on a synthetically-built module, in which
+  /// case the writer computes a canonical tag from the channel/pattern count.
+  /// When non-empty the writer emits these bytes verbatim, so a same-format
+  /// read→write roundtrip reproduces the source tag byte-for-byte.
+  final String signature;
+
   final List<ModSample> samples; // exactly 31
   final List<int> order; // song positions → pattern index
   final List<ModPattern> patterns;

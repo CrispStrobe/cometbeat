@@ -34,7 +34,10 @@ ModModule parseMod(Uint8List bytes) {
     );
   }
 
-  final channelCount = _channelCountFor(_readAscii(bytes, 1080, 4));
+  // Capture the raw 4-byte signature verbatim (0x438..0x43B) so the writer can
+  // reproduce the source tag byte-for-byte; the channel count derives from it.
+  final signature = String.fromCharCodes(bytes.sublist(1080, 1084));
+  final channelCount = _channelCountFor(signature);
 
   final title = _readAscii(bytes, 0, 20);
 
@@ -128,6 +131,7 @@ ModModule parseMod(Uint8List bytes) {
     title: title,
     channelCount: channelCount,
     restart: restart,
+    signature: signature,
     samples: samples,
     order: order,
     patterns: patterns,

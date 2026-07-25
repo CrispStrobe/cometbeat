@@ -69,9 +69,14 @@ Uint8List writeMod(ModModule module) {
   // p == 1080
 
   // ── 1080: signature ────────────────────────────────────────────────────────
-  final sig = _signatureFor(channels, module.patterns.length);
+  // A module read from disk carries its original 4-byte tag; emit it verbatim so
+  // "OCTA"/"FLT8"/"CD81"/"M!K!"/… survive a same-format roundtrip. A synthetic
+  // module (no stored signature) falls back to the computed canonical tag.
+  final sig = module.signature.length == 4
+      ? module.signature
+      : _signatureFor(channels, module.patterns.length);
   for (var i = 0; i < 4; i++) {
-    out[p++] = sig.codeUnitAt(i);
+    out[p++] = sig.codeUnitAt(i) & 0xFF;
   }
   // p == 1084
 
