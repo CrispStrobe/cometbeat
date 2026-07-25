@@ -34,9 +34,28 @@ void main() {
     expect(decodeCustomProgressions(null), isEmpty);
     expect(decodeCustomProgressions(''), isEmpty);
     expect(decodeCustomProgressions('garbage;9,9,9;;'), isEmpty);
-    // A valid entry among junk survives.
-    final ok = decodeCustomProgressions('nope;0,2');
+    // A valid entry among junk survives. Names, not ordinals.
+    final ok = decodeCustomProgressions('nope;i,v');
     expect(ok, hasLength(1));
     expect(ok.first.degrees, [ChordDegree.i, ChordDegree.v]);
+  });
+
+  test('degrees round-trip by NAME, so enum insertions cannot rewrite them',
+      () {
+    const p = Progression('x', [ChordDegree.i, ChordDegree.v]);
+    final encoded = encodeCustomProgressions([p]);
+    // The wire format is names — the ordinals it used to write silently
+    // re-read as different chords when ii/iii were inserted into the enum.
+    expect(encoded, 'i,v');
+    expect(decodeCustomProgressions(encoded).first.degrees, p.degrees);
+  });
+
+  test('legacy numeric entries still load rather than being dropped', () {
+    final legacy = decodeCustomProgressions('0,3');
+    expect(legacy, hasLength(1));
+    expect(legacy.first.degrees, [
+      ChordDegree.values[0],
+      ChordDegree.values[3],
+    ]);
   });
 }
