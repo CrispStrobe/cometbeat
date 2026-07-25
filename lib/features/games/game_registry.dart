@@ -1254,6 +1254,9 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       title: (l) => l.loopStudioTitle,
       subtitle: (l) => l.loopStudioSubtitle,
       builder: (_) => const LoopStudioScreen(),
+      // Kiffness-style first-run flow, auto-shown once (start → layer → record
+      // → edit → hear it), plus the "?" help primer inside the screen.
+      tutorial: loopStudioFirstRun,
     ),
     // Drum Kit: tap-a-pad beat maker (swap sounds, extend bars). Shares its
     // beat with the Loop Studio via BeatBridge.

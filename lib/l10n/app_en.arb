@@ -589,6 +589,12 @@
   "loopMixerTuneEdit": "Edit the tune",
   "loopMixerTuneEditHint": "Tap the grid to build your own tune — every note fits the band.",
   "loopMixerTuneMine": "My tune",
+  "firstRunLoopTitle": "Make a song, live",
+  "firstRunLoopStart": "Tap a card — your band starts playing the instant you do. That's your loop, going round and round.",
+  "firstRunLoopLayer": "Stack more cards to build the groove: drums, bass, chords, melody, sparkle. Everything fits, so you can't go wrong.",
+  "firstRunLoopRecord": "Sing or Beatbox your own part — it records over two bars and joins the band as its own card.",
+  "firstRunLoopEdit": "Tap ✎ on any card (or a note on the sheet music) to change what it plays — you hear the change right away.",
+  "firstRunLoopMore": "Stuck? Roll 🎲 for a surprise. Want more? Open the beat in the Drum Kit, or the whole song in the Tracker or Score Workshop.",
   "loopMixerTuneWide": "Wide range",
   "loopMixerScoreEmpty": "Turn on a layer to see it written as notes.",
   "@loopMixerScoreEmpty": {

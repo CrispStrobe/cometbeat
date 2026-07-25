@@ -81,4 +81,25 @@ void main() {
       }
     }
   });
+
+  test('the Loop Studio carries a Kiffness first-run flow (resolves en/de)',
+      () {
+    final loop = byId['loop_mixer'];
+    expect(loop, isNotNull, reason: 'loop_mixer is registered');
+    // Wired so the TutorialGate auto-shows it once on the first visit.
+    expect(
+      loop!.tutorial,
+      isNotNull,
+      reason: 'Loop Studio should auto-show a first-run flow',
+    );
+    for (final locale in const [Locale('en'), Locale('de')]) {
+      final t = loopStudioFirstRun(lookupAppLocalizations(locale));
+      expect(t.title, isNotEmpty, reason: locale.languageCode);
+      // start → layer → record → edit → more.
+      expect(t.steps, hasLength(5), reason: locale.languageCode);
+      for (final step in t.steps) {
+        expect(step.text, isNotEmpty, reason: '${locale.languageCode} step');
+      }
+    }
+  });
 }

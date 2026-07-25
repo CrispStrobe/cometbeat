@@ -285,6 +285,20 @@ Tutorial loopMixerPrimer(AppLocalizations l10n) => Tutorial(
       ],
     );
 
+/// Loop Studio first-run: the Kiffness-style flow — land playing, layer, record,
+/// edit, hear it immediately. Auto-shown once on the first visit (via the tile's
+/// `tutorial` + the TutorialGate).
+Tutorial loopStudioFirstRun(AppLocalizations l10n) => Tutorial(
+      title: l10n.firstRunLoopTitle,
+      steps: [
+        TutorialStep(text: l10n.firstRunLoopStart),
+        TutorialStep(text: l10n.firstRunLoopLayer),
+        TutorialStep(text: l10n.firstRunLoopRecord),
+        TutorialStep(text: l10n.firstRunLoopEdit),
+        TutorialStep(text: l10n.firstRunLoopMore),
+      ],
+    );
+
 /// Filling a measure to the beat. Module: measures.
 Tutorial measuresPrimer(AppLocalizations l10n) => Tutorial(
       title: l10n.primerMeasuresTitle,

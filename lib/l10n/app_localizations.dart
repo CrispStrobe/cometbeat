@@ -2978,6 +2978,42 @@ abstract class AppLocalizations {
   /// **'My tune'**
   String get loopMixerTuneMine;
 
+  /// No description provided for @firstRunLoopTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a song, live'**
+  String get firstRunLoopTitle;
+
+  /// No description provided for @firstRunLoopStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a card — your band starts playing the instant you do. That\'s your loop, going round and round.'**
+  String get firstRunLoopStart;
+
+  /// No description provided for @firstRunLoopLayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Stack more cards to build the groove: drums, bass, chords, melody, sparkle. Everything fits, so you can\'t go wrong.'**
+  String get firstRunLoopLayer;
+
+  /// No description provided for @firstRunLoopRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Sing or Beatbox your own part — it records over two bars and joins the band as its own card.'**
+  String get firstRunLoopRecord;
+
+  /// No description provided for @firstRunLoopEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap ✎ on any card (or a note on the sheet music) to change what it plays — you hear the change right away.'**
+  String get firstRunLoopEdit;
+
+  /// No description provided for @firstRunLoopMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Stuck? Roll 🎲 for a surprise. Want more? Open the beat in the Drum Kit, or the whole song in the Tracker or Score Workshop.'**
+  String get firstRunLoopMore;
+
   /// No description provided for @loopMixerTuneWide.
   ///
   /// In en, this message translates to:

@@ -1586,6 +1586,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerTuneMine => 'My tune';
 
   @override
+  String get firstRunLoopTitle => 'Make a song, live';
+
+  @override
+  String get firstRunLoopStart =>
+      'Tap a card — your band starts playing the instant you do. That\'s your loop, going round and round.';
+
+  @override
+  String get firstRunLoopLayer =>
+      'Stack more cards to build the groove: drums, bass, chords, melody, sparkle. Everything fits, so you can\'t go wrong.';
+
+  @override
+  String get firstRunLoopRecord =>
+      'Sing or Beatbox your own part — it records over two bars and joins the band as its own card.';
+
+  @override
+  String get firstRunLoopEdit =>
+      'Tap ✎ on any card (or a note on the sheet music) to change what it plays — you hear the change right away.';
+
+  @override
+  String get firstRunLoopMore =>
+      'Stuck? Roll 🎲 for a surprise. Want more? Open the beat in the Drum Kit, or the whole song in the Tracker or Score Workshop.';
+
+  @override
   String get loopMixerTuneWide => 'Wide range';
 
   @override

@@ -1591,6 +1591,29 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerTuneMine => 'Meine Melodie';
 
   @override
+  String get firstRunLoopTitle => 'Mach live einen Song';
+
+  @override
+  String get firstRunLoopStart =>
+      'Tipp eine Karte an — deine Band spielt sofort los. Das ist dein Loop, immer im Kreis.';
+
+  @override
+  String get firstRunLoopLayer =>
+      'Stapel weitere Karten für den Groove: Drums, Bass, Akkorde, Melodie, Sparkle. Alles passt zusammen — du kannst nichts falsch machen.';
+
+  @override
+  String get firstRunLoopRecord =>
+      'Sing oder beatboxe deine eigene Spur — sie nimmt zwei Takte auf und wird zu einer eigenen Karte.';
+
+  @override
+  String get firstRunLoopEdit =>
+      'Tipp ✎ auf einer Karte (oder eine Note in den Noten), um zu ändern, was sie spielt — du hörst es sofort.';
+
+  @override
+  String get firstRunLoopMore =>
+      'Keine Idee? Würfle 🎲 für eine Überraschung. Mehr willst du? Öffne den Beat im Schlagzeug oder den ganzen Song im Tracker oder Noten-Workshop.';
+
+  @override
   String get loopMixerTuneWide => 'Großer Tonumfang';
 
   @override
