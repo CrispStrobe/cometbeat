@@ -248,6 +248,16 @@ ItInstrument _parseInstrument(Uint8List bytes, int base) {
     );
   }
 
+  // Initial filter cutoff/resonance (IMPI 0x3A/0x3B). The high bit (0x80) is the
+  // "enabled" flag; the low 7 bits are the 0..127 value. Cutoff -1 = disabled.
+  final ifc = u8(0x3A);
+  final ifr = u8(0x3B);
+  final initialFilterCutoff = (ifc & 0x80) != 0 ? (ifc & 0x7F) : -1;
+  final initialFilterResonance = (ifr & 0x80) != 0 ? (ifr & 0x7F) : 0;
+  // The pitch envelope doubles as a FILTER envelope when its flag bit 0x80 is
+  // set (IMPI 0x1D4). Recorded here; applying it is deferred (see the renderer).
+  final filterEnvelope = (u8(0x1D4) & 0x80) != 0;
+
   return ItInstrument(
     keymap: keymap,
     noteMap: noteMap,
@@ -262,6 +272,9 @@ ItInstrument _parseInstrument(Uint8List bytes, int base) {
     defaultPan: u8(0x19),
     randomVolume: u8(0x1A),
     randomPan: u8(0x1B),
+    initialFilterCutoff: initialFilterCutoff,
+    initialFilterResonance: initialFilterResonance,
+    filterEnvelope: filterEnvelope,
     volumeEnvelope: envelope(0x130, signedValue: false),
     panEnvelope: envelope(0x182, signedValue: true),
     pitchEnvelope: envelope(0x1D4, signedValue: true),

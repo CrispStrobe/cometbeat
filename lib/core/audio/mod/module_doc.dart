@@ -67,6 +67,8 @@ class DocSample {
     this.pan = 128,
     this.pingPong = false,
     this.sixteenBit = false,
+    this.filterCutoff = -1,
+    this.filterResonance = 0,
     this.volumeEnvelope = const DocEnvelope(),
     this.panEnvelope = const DocEnvelope(),
     required this.pcm,
@@ -99,6 +101,13 @@ class DocSample {
   /// ignore this (MOD is 8-bit only); the XM/IT writers honour it.
   final bool sixteenBit;
 
+  /// IT initial filter cutoff (0..127; -1 = none/disabled) and resonance
+  /// (0..127; 0 = none), carried from the owning IT instrument so a single
+  /// SampleInstrument voice can apply the resonant low-pass. Non-IT formats
+  /// leave these at their neutral defaults.
+  final int filterCutoff;
+  final int filterResonance;
+
   /// The instrument's volume / panning envelopes (XM/IT carry these on the
   /// instrument; MOD/S3M have none, so these stay empty there).
   final DocEnvelope volumeEnvelope, panEnvelope;
@@ -125,6 +134,9 @@ class DocInstrument {
     this.defaultPan = 32,
     this.randomVolume = 0,
     this.randomPan = 0,
+    this.filterCutoff = -1,
+    this.filterResonance = 0,
+    this.filterEnvelope = false,
     this.keymap = const [],
     this.noteMap = const [],
     this.volumeEnvelope = const DocEnvelope(),
@@ -136,6 +148,11 @@ class DocInstrument {
   final String name;
   final int nna, dct, dca, fadeout, pps, ppc;
   final int globalVolume, defaultPan, randomVolume, randomPan;
+
+  /// IT initial filter cutoff (0..127; -1 = none) / resonance (0..127; 0 = none)
+  /// and whether the pitch envelope is a filter envelope (deferred).
+  final int filterCutoff, filterResonance;
+  final bool filterEnvelope;
   final List<int> keymap, noteMap;
   final DocEnvelope volumeEnvelope, panEnvelope, pitchEnvelope;
 

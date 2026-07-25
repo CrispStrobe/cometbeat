@@ -71,6 +71,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_replay.dart'
@@ -148,6 +149,38 @@ const int kFxTremor = 0x1D;
 /// Yxy — panbrello: a stereo pan LFO (IT/S3M).
 const int kFxPanbrello = 0x1E;
 const double kPanbrelloDepthPerUnit = 1 / 15;
+
+/// Zxx — set the resonant low-pass FILTER (IT effect 'Z'): `Z00..Z7F` set the
+/// cutoff (the param IS the 0..127 cutoff), `Z80..ZFF` set the resonance (param
+/// `& 0x7F`). Decoded per-voice in [ReplayVoice.armRow]; applied by the sample
+/// tick voices via a stateful [Biquad] low-pass. Carried across streaming chunks
+/// with the rest of the voice state.
+const int kFxSetFilter = 0x1C;
+
+// --- IT resonant low-pass filter mapping (OpenMPT/IT formula) -----------------
+//
+// Cutoff (0..127) → corner frequency (Hz):
+//   fc = 110 · 2^(0.25 + cutoff/24)
+// This is OpenMPT's `CutOffToFrequency` with the neutral filter modifier (256,
+// i.e. no filter-envelope/cutoff-swing offset): `computedCutoff = cutoff·512`
+// and `fc = 110·2^(0.25 + computedCutoff/(24·512))`. Clamped to [120 Hz,
+// Nyquist]. cutoff 127 ≈ 5.1 kHz (near-open); low cutoffs get dark, as IT is.
+//
+// Resonance (0..127) → biquad Q:
+//   Q = 0.70710678 · 10^(1.2 · resonance/127)
+// resonance 0 → Butterworth Q≈0.707 (no resonant peak); 127 → Q≈11.2 (≈+24 dB
+// peak). This drives the RBJ low-pass [Biquad] resonance directly.
+double itFilterCutoffHz(int cutoff, {double sampleRate = kSampleRate + 0.0}) {
+  final c = cutoff.clamp(0, 127).toDouble();
+  final fc = 110.0 * pow(2.0, 0.25 + c / 24.0);
+  final nyquist = sampleRate / 2.0;
+  return fc.clamp(120.0, nyquist - 1.0);
+}
+
+double itFilterResonanceQ(int resonance) {
+  final r = resonance.clamp(0, 127).toDouble();
+  return 0.70710678 * pow(10.0, 1.2 * r / 127.0);
+}
 
 // --- Tuning constants (MUSICAL APPROXIMATIONS, not period-accurate MOD) -------
 //
@@ -294,6 +327,21 @@ class ReplayVoice {
   double _tremPhase = 0;
   double _panbrelloPhase = 0;
 
+  // --- IT resonant low-pass filter (initial cutoff/resonance + Zxx) ----------
+  // Current filter parameters: cutoff 0..127 (127 = fully open), resonance
+  // 0..127. Defaults (open, no resonance) leave the voice UNFILTERED — the
+  // biquad is never built and [filterOut] returns the sample untouched, so a
+  // no-filter voice is bit-for-bit identical to a filterless render.
+  int filterCutoff = 127;
+  int filterResonance = 0;
+  bool _filterSetThisRow = false; // a Zxx set the filter on the current row
+  Biquad? _lpf; // mono / left channel
+  Biquad? _lpfR; // right channel of a stereo sample
+  int _lpfCutoff = -1;
+  int _lpfRes = -1;
+
+  bool get _filterActive => filterCutoff < 127 || filterResonance > 0;
+
   // The command armed for the current row.
   int _cmd = 0;
   int _param = 0;
@@ -336,6 +384,60 @@ class ReplayVoice {
       cell.fxCmd != kFxTonePorta &&
       cell.fxCmd != kFxTonePortaVolSlide;
 
+  /// Arm the voice's filter from an instrument's INITIAL cutoff/resonance at a
+  /// note (re)trigger. A Zxx on the same row wins ([_filterSetThisRow]); otherwise
+  /// the instrument default replaces the current filter. The biquad memory is
+  /// always cleared — a new note starts the filter fresh (like a fresh sample
+  /// read-pointer). [instCutoff] < 0 means the instrument has no filter → open.
+  void armFilterOnTrigger(int instCutoff, int instResonance) {
+    if (!_filterSetThisRow) {
+      filterCutoff = (instCutoff < 0 || instCutoff > 127) ? 127 : instCutoff;
+      filterResonance = instResonance.clamp(0, 127);
+    }
+    _lpf?.reset();
+    _lpfR?.reset();
+    _lpfCutoff = -1;
+    _lpfRes = -1;
+  }
+
+  /// Runs one sample through the voice's (mono/left) resonant low-pass. A no-op
+  /// pass-through (returns [x] unchanged, no biquad allocated) when the voice is
+  /// unfiltered — the guarantee that a filterless voice is bit-identical.
+  double filterOut(double x) => _filter(x, false);
+
+  /// The right-channel counterpart for a stereo sample (its own biquad state).
+  double filterOutRight(double x) => _filter(x, true);
+
+  double _filter(double x, bool right) {
+    if (!_filterActive) return x;
+    // (Re)build on a resonance change (Q is fixed at construction); retune in
+    // place on a cutoff change (preserves memory → click-free sweeps).
+    if (_lpfRes != filterResonance) {
+      final f = itFilterCutoffHz(filterCutoff);
+      final q = itFilterResonanceQ(filterResonance);
+      _lpf = Biquad(
+        BiquadKind.lowpass,
+        freq: f,
+        sampleRate: kSampleRate.toDouble(),
+        q: q,
+      );
+      _lpfR = Biquad(
+        BiquadKind.lowpass,
+        freq: f,
+        sampleRate: kSampleRate.toDouble(),
+        q: q,
+      );
+      _lpfCutoff = filterCutoff;
+      _lpfRes = filterResonance;
+    } else if (_lpfCutoff != filterCutoff) {
+      final f = itFilterCutoffHz(filterCutoff);
+      _lpf!.setFreq(f);
+      _lpfR!.setFreq(f);
+      _lpfCutoff = filterCutoff;
+    }
+    return right ? _lpfR!.process(x) : _lpf!.process(x);
+  }
+
   /// Arm the row: parse the cell, (re)trigger the note if pitched, set the target
   /// for tone-porta, load the volume for Cxx, and fill effect memory. Call once
   /// at tick 0.
@@ -345,6 +447,18 @@ class ReplayVoice {
     _retriggered = false;
     _releasedThisRow = false;
     _pendingDelayTick = null;
+    _filterSetThisRow = false;
+
+    // Zxx (kFxSetFilter): Z00..Z7F set the cutoff, Z80..ZFF set the resonance.
+    // A "set", applied immediately (no per-tick slide) and carried on the voice.
+    if (_cmd == kFxSetFilter) {
+      if (_param < 0x80) {
+        filterCutoff = _param;
+      } else {
+        filterResonance = _param & 0x7F;
+      }
+      _filterSetThisRow = true;
+    }
 
     // EDx note delay: defer the trigger to tick x instead of triggering now.
     final noteDelay =
@@ -776,6 +890,7 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
         cmd == kFxRetrigVolSlide ||
         cmd == kFxTremor ||
         cmd == kFxPanbrello ||
+        cmd == kFxSetFilter ||
         cmd == kFxExtended) {
       return true;
     }
@@ -878,6 +993,9 @@ double? _readLoopedSample(
     if (voice.releasedThisRow) releaseStartSample = rowStart[r];
     if (voice.retriggeredThisRow) {
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
+      if (cur is SampleInstrument) {
+        voice.armFilterOnTrigger(cur.filterCutoff, cur.filterResonance);
+      }
       readPos = cell.fxCmd == kFxSampleOffset
           ? (cell.fxParam * 256 * os).toDouble()
           : 0.0;
@@ -951,6 +1069,11 @@ double? _readLoopedSample(
                   activeLoopLength,
                 ) ??
                 0.0;
+        // Per-voice resonant low-pass (IT initial cutoff/resonance + Zxx). A
+        // no-op pass-through when the voice is unfiltered.
+        final fValue = voice.filterOut(value);
+        final fRight =
+            sampleRight == null ? fValue : voice.filterOutRight(rightValue);
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
         final nativeEnv = cur.nativeVolumeEnvelope;
@@ -972,12 +1095,12 @@ double? _readLoopedSample(
         if (sampleRight != null) {
           final leftGain = pan > 0 ? 1.0 - pan : 1.0;
           final rightGain = pan < 0 ? 1.0 + pan : 1.0;
-          left[i] += value * amount * leftGain;
-          right[i] += rightValue * amount * rightGain;
+          left[i] += fValue * amount * leftGain;
+          right[i] += fRight * amount * rightGain;
         } else {
           final theta = (pan + 1) / 2 * (pi / 2);
-          left[i] += value * amount * cos(theta);
-          right[i] += value * amount * sin(theta);
+          left[i] += fValue * amount * cos(theta);
+          right[i] += fValue * amount * sin(theta);
         }
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,
@@ -1048,6 +1171,9 @@ void _renderSampleChannelInto(
     if (voice.retriggeredThisRow) {
       final c = cells[r];
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
+      if (cur is SampleInstrument) {
+        voice.armFilterOnTrigger(cur.filterCutoff, cur.filterResonance);
+      }
       readPos =
           c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
       noteStartSample = timing.stepStartSample(r);
@@ -1116,7 +1242,7 @@ void _renderSampleChannelInto(
                 ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
                 : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
-        stem[i] += sampleVal * vol * attack * el * release;
+        stem[i] += voice.filterOut(sampleVal) * vol * attack * el * release;
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,
               released: voice.released,
@@ -1192,6 +1318,9 @@ void _renderSampleChannelIntoVariable(
     if (voice.retriggeredThisRow) {
       final c = cells[r];
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
+      if (cur is SampleInstrument) {
+        voice.armFilterOnTrigger(cur.filterCutoff, cur.filterResonance);
+      }
       readPos =
           c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
       noteStartSample = rowStart[r];
@@ -1260,7 +1389,7 @@ void _renderSampleChannelIntoVariable(
                 ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
                 : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
-        final sv = sampleVal * vol * attack * el * release;
+        final sv = voice.filterOut(sampleVal) * vol * attack * el * release;
         if (useSink) {
           // Native (scale == channel.gain): emit the finished PCM sample value
           // directly — identical to the buffered `mix[i] += stem[i] * gain`.
@@ -1350,7 +1479,9 @@ void _renderChannelInto(
     // voice so those effects actually SOUND (the whole-channel render can't do
     // per-tick modulation). Effect-free sample channels — and sfxr/percussion —
     // keep the unchanged non-additive render below (byte-identical).
-    if (channel.instrument is SampleInstrument && _hasPerTickEffect(cells)) {
+    if (channel.instrument is SampleInstrument &&
+        (_hasPerTickEffect(cells) ||
+            (channel.instrument as SampleInstrument).hasFilter)) {
       _renderSampleChannelInto(
         mix,
         channel,
@@ -4223,9 +4354,11 @@ void _sampleRenderRowsMono(
     if (voice.releasedThisRow) st.releaseStartSample = rowStart[r];
     if (voice.retriggeredThisRow) {
       final c = cells[r];
-      final os = st.cur is SampleInstrument
-          ? (st.cur as SampleInstrument).offsetScale
-          : 1.0;
+      final scur = st.cur;
+      final os = scur is SampleInstrument ? scur.offsetScale : 1.0;
+      if (scur is SampleInstrument) {
+        voice.armFilterOnTrigger(scur.filterCutoff, scur.filterResonance);
+      }
       st.readPos =
           c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
       st.noteStartSample = rowStart[r];
@@ -4296,7 +4429,8 @@ void _sampleRenderRowsMono(
                 : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
         // Accumulate the un-gained stem; the caller applies gain once.
-        dest[i - sampleBase] += sampleVal * vol * attack * el * release;
+        dest[i - sampleBase] +=
+            voice.filterOut(sampleVal) * vol * attack * el * release;
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,
               released: voice.released,
@@ -4350,9 +4484,11 @@ void _sampleRenderRowsStereo(
     voice.armRow(cell);
     if (voice.releasedThisRow) st.releaseStartSample = rowStart[r];
     if (voice.retriggeredThisRow) {
-      final os = st.cur is SampleInstrument
-          ? (st.cur as SampleInstrument).offsetScale
-          : 1.0;
+      final scur = st.cur;
+      final os = scur is SampleInstrument ? scur.offsetScale : 1.0;
+      if (scur is SampleInstrument) {
+        voice.armFilterOnTrigger(scur.filterCutoff, scur.filterResonance);
+      }
       st.readPos = cell.fxCmd == kFxSampleOffset
           ? (cell.fxParam * 256 * os).toDouble()
           : 0.0;
@@ -4423,6 +4559,11 @@ void _sampleRenderRowsStereo(
                   activeLoopLength,
                 ) ??
                 0.0;
+        // Per-voice resonant low-pass (carried across chunk boundaries via the
+        // voice's biquad state). A no-op pass-through when unfiltered.
+        final fValue = voice.filterOut(value);
+        final fRight =
+            sampleRight == null ? fValue : voice.filterOutRight(rightValue);
         final t = (i - st.noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
         final nativeEnv = cur.nativeVolumeEnvelope;
@@ -4445,12 +4586,12 @@ void _sampleRenderRowsStereo(
         if (sampleRight != null) {
           final leftGain = pan > 0 ? 1.0 - pan : 1.0;
           final rightGain = pan < 0 ? 1.0 + pan : 1.0;
-          destL[di] += value * amount * leftGain;
-          destR[di] += rightValue * amount * rightGain;
+          destL[di] += fValue * amount * leftGain;
+          destR[di] += fRight * amount * rightGain;
         } else {
           final theta = (pan + 1) / 2 * (pi / 2);
-          destL[di] += value * amount * cos(theta);
-          destR[di] += value * amount * sin(theta);
+          destL[di] += fValue * amount * cos(theta);
+          destR[di] += fValue * amount * sin(theta);
         }
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,

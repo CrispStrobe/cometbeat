@@ -209,6 +209,9 @@ class ItInstrument {
     this.defaultPan = 32,
     this.randomVolume = 0,
     this.randomPan = 0,
+    this.initialFilterCutoff = -1,
+    this.initialFilterResonance = 0,
+    this.filterEnvelope = false,
     this.volumeEnvelope = const ItEnvelope(),
     this.panEnvelope = const ItEnvelope(),
     this.pitchEnvelope = const ItEnvelope(),
@@ -223,6 +226,19 @@ class ItInstrument {
   final String name;
   final int nna, dct, dca, fadeout, pps, ppc;
   final int globalVolume, defaultPan, randomVolume, randomPan;
+
+  /// IT initial filter cutoff (IMPI byte 0x3A). The high bit is the "enabled"
+  /// flag; the low 7 bits are the 0..127 cutoff. -1 = absent/disabled (no
+  /// filter). 127 = enabled but fully open (also effectively no filter).
+  final int initialFilterCutoff;
+
+  /// IT initial filter resonance (IMPI byte 0x3B), 0..127. 0 = none.
+  final int initialFilterResonance;
+
+  /// Whether the pitch envelope is flagged as a FILTER envelope (IMPI pitch-env
+  /// flag bit 0x80). Parsed for completeness; applying it is a documented
+  /// follow-up (see it_reader.dart / the renderer).
+  final bool filterEnvelope;
   final ItEnvelope volumeEnvelope, panEnvelope, pitchEnvelope;
 
   /// Original 554-byte IMPI header, when available. This preserves IT

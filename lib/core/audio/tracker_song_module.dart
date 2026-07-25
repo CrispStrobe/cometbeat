@@ -382,6 +382,8 @@ TrackerInstrument _itNativeInstrument(
           nativeDct: instrument.dct,
           nativeDca: instrument.dca,
           nativeFadeout: instrument.fadeout,
+          filterCutoff: instrument.filterCutoff,
+          filterResonance: instrument.filterResonance,
         );
       }
     }

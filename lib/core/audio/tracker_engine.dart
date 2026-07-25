@@ -630,6 +630,8 @@ class SampleInstrument implements TrackerInstrument {
     this.nativeDct = 0,
     this.nativeDca = 0,
     this.nativeFadeout = 0,
+    this.filterCutoff = -1,
+    this.filterResonance = 0,
   });
 
   /// Records-once: applies [fx] to [raw] and keeps the result as the sample.
@@ -671,6 +673,19 @@ class SampleInstrument implements TrackerInstrument {
   final int nativeDct;
   final int nativeDca;
   final int nativeFadeout;
+
+  /// IT initial filter cutoff (0..127; -1 = none/disabled) and resonance
+  /// (0..127; 0 = none). Armed onto the per-voice resonant low-pass at note
+  /// trigger in the replayer's sample-tick voice paths. [hasFilter] is false
+  /// (cutoff open, no resonance) for every non-IT / unfiltered sample, so those
+  /// voices are byte-identical to a filterless render.
+  final int filterCutoff;
+  final int filterResonance;
+
+  /// Whether this instrument engages the low-pass: an enabled cutoff below the
+  /// fully-open 127, or any resonance. (Cutoff 127 with no resonance = open.)
+  bool get hasFilter =>
+      (filterCutoff >= 0 && filterCutoff < 127) || filterResonance > 0;
   final int baseMidi;
 
   /// A per-note volume envelope (default a gentle declick attack/release).
@@ -730,6 +745,8 @@ class SampleInstrument implements TrackerInstrument {
     int? nativeDct,
     int? nativeDca,
     int? nativeFadeout,
+    int? filterCutoff,
+    int? filterResonance,
   }) =>
       SampleInstrument(
         id ?? this.id,
@@ -753,6 +770,8 @@ class SampleInstrument implements TrackerInstrument {
         nativeDct: nativeDct ?? this.nativeDct,
         nativeDca: nativeDca ?? this.nativeDca,
         nativeFadeout: nativeFadeout ?? this.nativeFadeout,
+        filterCutoff: filterCutoff ?? this.filterCutoff,
+        filterResonance: filterResonance ?? this.filterResonance,
       );
 
   bool get loops =>

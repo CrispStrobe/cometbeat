@@ -37,6 +37,8 @@ SampleInstrument sampleInstrumentFromDoc(
   int nativeDct = 0,
   int nativeDca = 0,
   int nativeFadeout = 0,
+  int? filterCutoff,
+  int? filterResonance,
 }) {
   if (sample.isEmpty) {
     return SampleInstrument(id, Float64List(0), baseMidi: baseMidi);
@@ -94,6 +96,8 @@ SampleInstrument sampleInstrumentFromDoc(
     nativeDct: nativeDct,
     nativeDca: nativeDca,
     nativeFadeout: nativeFadeout,
+    filterCutoff: filterCutoff ?? sample.filterCutoff,
+    filterResonance: filterResonance ?? sample.filterResonance,
     // A 9xx offset is in original-sample units → same 1/ratio scale as the loop.
     offsetScale: 1 / ratio,
   );

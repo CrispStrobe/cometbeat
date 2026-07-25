@@ -594,8 +594,12 @@ ModuleDoc docFromXm(XmModule m) {
       return (0x8, value);
     case 25: // Y — panbrello
       return (0x1E, value);
+    case 26: // Z — set filter cutoff (Z00..Z7F) / resonance (Z80..ZFF)
+      // Maps onto the replayer's kFxSetFilter (0x1C). The value carries the
+      // cutoff/resonance selector in its high bit, decoded in ReplayVoice.
+      return (0x1C, value);
     default:
-      // Y panbrello · Z MIDI — no neutral equivalent (dropped).
+      // Z MIDI-macro (\x87…) — no neutral equivalent (dropped).
       return (0, 0);
   }
 }
@@ -636,6 +640,8 @@ ModuleDoc docFromIt(ItModule m) {
         pan: s.pan,
         pingPong: looped && s.pingPong,
         sixteenBit: s.sixteenBit,
+        filterCutoff: owner?.initialFilterCutoff ?? -1,
+        filterResonance: owner?.initialFilterResonance ?? 0,
         pcm: Float64List.fromList(s.pcm),
         pcmRight: s.pcmRight == null ? null : Float64List.fromList(s.pcmRight!),
         volumeEnvelope: owner == null
@@ -742,6 +748,9 @@ ModuleDoc docFromIt(ItModule m) {
           defaultPan: instrument.defaultPan,
           randomVolume: instrument.randomVolume,
           randomPan: instrument.randomPan,
+          filterCutoff: instrument.initialFilterCutoff,
+          filterResonance: instrument.initialFilterResonance,
+          filterEnvelope: instrument.filterEnvelope,
           keymap: List<int>.from(instrument.keymap),
           noteMap: List<int>.from(instrument.noteMap),
           volumeEnvelope: _docEnvFromIt(instrument.volumeEnvelope),
