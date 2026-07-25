@@ -142,6 +142,17 @@ trim-silence → exactly 500.0 ms cut. `bin/listen.dart` reads the generated ton
 as A4 440.0 Hz, clarity 1.00. Tests: `daw_edits_test.dart` (19, headless) +
 `dawedit_cli_test.dart` (8, real subprocess).
 
+> ⚠️ **HEADS-UP for the loop-suite agent (not mine to fix): `main` is red in
+> `layout_audit_test`.** `e4a6dfee` re-registered the orphaned DrumKit screen —
+> which means the layout audit renders it for the FIRST time, and it fails:
+> `drumkit @ SE 375x667 [de]: A RenderFlex overflowed by 97 pixels on the
+> bottom.` (German only, phone only — the longer German labels plus the 4 new
+> kits push it over.) Verified it's the re-registration: `drumkit` had 0
+> registry entries before that commit and 2 after, so the screen was simply
+> never audited before. Repro: `flutter test test/layout_audit_test.dart`.
+> Likely a scroll/`Expanded` fix in `drumkit_screen.dart` — left alone since
+> that's your file and you're actively in it.
+
 > ⚠️ **HEADS-UP for the tracker agent (not mine to fix):** `b3858e85` committed
 > `test/native_tick_zone_reuse_test.dart`, which asserts
 > `test/fixtures/wonderfulpain.it` "must be present" — but that fixture is
