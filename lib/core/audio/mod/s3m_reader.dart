@@ -154,7 +154,26 @@ S3mSample _readInstrument(
   if (base < 0 || base + 0x50 > bytes.length) return S3mSample.empty();
 
   final type = bytes[base];
-  if (type != 1) return S3mSample.empty(); // non-PCM (0 = empty, 2 = AdLib…).
+  final rawHeader = List<int>.from(bytes.sublist(base, base + 0x50));
+
+  // type 2 = AdLib/OPL (melodic or percussion). No OPL synthesis (out of
+  // scope), but do NOT drop it: preserve the 12 OPL register bytes
+  // (header 0x10..0x1B) + the full header so it survives a read/write cycle.
+  if (type == 2) {
+    return S3mSample(
+      name: _readAsciiz(bytes, base + 0x30, 28),
+      volume: bytes[base + 0x1C],
+      c2spd: () {
+        final c = data.getUint32(base + 0x20, Endian.little);
+        return c == 0 ? 8363 : c;
+      }(),
+      pcm: Float64List(0),
+      adlib: true,
+      adlibData: List<int>.from(bytes.sublist(base + 0x10, base + 0x1C)),
+      rawHeader: rawHeader,
+    );
+  }
+  if (type != 1) return S3mSample.empty(); // 0 = empty; other = unsupported.
 
   // memseg: high byte @ 0x0D, low u16 @ 0x0E.
   final memsegHi = bytes[base + 0x0D];
@@ -166,38 +185,94 @@ S3mSample _readInstrument(
   final loopBegin = data.getUint32(base + 0x14, Endian.little);
   final loopEnd = data.getUint32(base + 0x18, Endian.little);
   final volume = bytes[base + 0x1C];
+  final pack = bytes[base + 0x1E]; // 0 = unpacked, 1 = DP30 ADPCM.
   final flags = bytes[base + 0x1F];
   final loop = (flags & 0x01) != 0;
+  final stereo = (flags & 0x02) != 0;
   final sixteenBit = (flags & 0x04) != 0;
   final unsigned = sampleFormat == 2;
   final c2spd = data.getUint32(base + 0x20, Endian.little);
   final name = _readAsciiz(bytes, base + 0x30, 28);
-
-  // PCM window — robust to truncation: clamp to what's actually present. [length]
-  // is in SAMPLES; a 16-bit sample is 2 bytes each. Normalize to [-1, 1] float
-  // (unified with the XM/IT readers): 8-bit /128, 16-bit /32768.
   final bytesPerSample = sixteenBit ? 2 : 1;
-  var available = length;
-  if (pcmOffset < 0 || pcmOffset >= bytes.length) {
-    available = 0;
-  } else if (pcmOffset + available * bytesPerSample > bytes.length) {
-    available = (bytes.length - pcmOffset) ~/ bytesPerSample;
+
+  // pack==1 → DP30 4-bit ADPCM. The exact ST3 delta algorithm is not verified
+  // here, so rather than misread packed bytes as raw PCM (garbage), preserve
+  // the raw packed block and leave pcm empty.
+  // TODO: DP30 ADPCM decode (ST3 4-bit nibble deltas via the step table).
+  if (pack == 1) {
+    // DP30 block ≈ 16-byte adjustment table + one nibble per sample. Capture a
+    // best-effort estimate for preservation, clamped to what's present.
+    var packedLen = 16 + (length + 1) ~/ 2;
+    if (pcmOffset < 0 || pcmOffset >= bytes.length) {
+      packedLen = 0;
+    } else if (pcmOffset + packedLen > bytes.length) {
+      packedLen = bytes.length - pcmOffset;
+    }
+    return S3mSample(
+      name: name,
+      volume: volume,
+      c2spd: c2spd == 0 ? 8363 : c2spd,
+      loopStart: loopBegin,
+      loopEnd: loopEnd,
+      loop: loop,
+      sixteenBit: sixteenBit,
+      pcm: Float64List(0),
+      packed: true,
+      rawHeader: rawHeader,
+      rawData: packedLen > 0
+          ? Uint8List.fromList(
+              bytes.sublist(pcmOffset, pcmOffset + packedLen),
+            )
+          : null,
+    );
   }
-  final pcm = Float64List(available);
-  for (var i = 0; i < available; i++) {
+
+  // PCM window — robust to truncation: clamp to what's actually present.
+  // [length] is in SAMPLES per channel; a 16-bit sample is 2 bytes each. A
+  // STEREO sample stores the LEFT channel (`length` samples) immediately
+  // followed by the RIGHT channel (`length` samples) at the same depth.
+  // Normalize to [-1, 1] float (unified with the XM/IT readers): 8-bit /128,
+  // 16-bit /32768.
+  final channels = stereo ? 2 : 1;
+  var availTotal = length * channels;
+  if (pcmOffset < 0 || pcmOffset >= bytes.length) {
+    availTotal = 0;
+  } else {
+    final maxSamples = (bytes.length - pcmOffset) ~/ bytesPerSample;
+    if (maxSamples < availTotal) availTotal = maxSamples;
+  }
+  final leftAvail = availTotal < length ? availTotal : length;
+  var rightAvail = 0;
+  if (stereo) {
+    final rem = availTotal - length; // samples after the full left channel
+    rightAvail = rem <= 0 ? 0 : (rem > length ? length : rem);
+  }
+
+  double decode(int sampleIndex) {
     if (sixteenBit) {
-      final lo = bytes[pcmOffset + i * 2];
-      final hi = bytes[pcmOffset + i * 2 + 1];
-      final w = lo | (hi << 8);
+      final o = pcmOffset + sampleIndex * 2;
+      final w = bytes[o] | (bytes[o + 1] << 8);
       final s = unsigned ? w - 32768 : (w >= 32768 ? w - 65536 : w);
-      pcm[i] = s / 32768.0;
-    } else {
-      final b = bytes[pcmOffset + i];
-      final s = unsigned ? b - 128 : (b >= 128 ? b - 256 : b);
-      pcm[i] = s / 128.0;
+      return s / 32768.0;
+    }
+    final b = bytes[pcmOffset + sampleIndex];
+    final s = unsigned ? b - 128 : (b >= 128 ? b - 256 : b);
+    return s / 128.0;
+  }
+
+  final pcm = Float64List(leftAvail);
+  for (var i = 0; i < leftAvail; i++) {
+    pcm[i] = decode(i);
+  }
+  Float64List? pcmRight;
+  if (stereo && rightAvail > 0) {
+    pcmRight = Float64List(rightAvail);
+    for (var i = 0; i < rightAvail; i++) {
+      pcmRight[i] = decode(length + i); // right channel starts after `length`
     }
   }
 
+  final rawBytes = (leftAvail + rightAvail) * bytesPerSample;
   return S3mSample(
     name: name,
     volume: volume,
@@ -207,12 +282,10 @@ S3mSample _readInstrument(
     loop: loop,
     sixteenBit: sixteenBit,
     pcm: pcm,
-    rawHeader: List<int>.from(bytes.sublist(base, base + 0x50)),
-    rawData: pcmOffset >= 0 &&
-            pcmOffset + available * bytesPerSample <= bytes.length
-        ? Uint8List.fromList(
-            bytes.sublist(pcmOffset, pcmOffset + available * bytesPerSample),
-          )
+    pcmRight: pcmRight,
+    rawHeader: rawHeader,
+    rawData: pcmOffset >= 0 && pcmOffset + rawBytes <= bytes.length
+        ? Uint8List.fromList(bytes.sublist(pcmOffset, pcmOffset + rawBytes))
         : null,
   );
 }

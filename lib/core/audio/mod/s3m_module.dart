@@ -68,6 +68,10 @@ class S3mSample {
     this.sixteenBit = false,
     this.rawHeader = const [],
     this.rawData,
+    this.pcmRight,
+    this.adlib = false,
+    this.adlibData = const [],
+    this.packed = false,
     required this.pcm,
   });
 
@@ -89,7 +93,27 @@ class S3mSample {
   /// unified with [XmSample]/[ItSample]).
   final Float64List pcm;
 
-  bool get isEmpty => pcm.isEmpty;
+  /// Right-channel PCM for a STEREO sample (S3M flag 0x02). Normalized in
+  /// [-1, 1] exactly like [pcm] (which then holds the LEFT channel). `null`
+  /// for mono samples. On disk the right channel immediately follows the left
+  /// (`length` samples each, same bit depth).
+  final Float64List? pcmRight;
+
+  /// True for a type-2 AdLib/OPL instrument. There is no OPL synthesis (out of
+  /// scope), so [pcm] stays empty; the 12 OPL register bytes are kept in
+  /// [adlibData] and the full header in [rawHeader] so the instrument is
+  /// preserved rather than silently dropped.
+  final bool adlib;
+
+  /// The 12 OPL register bytes of an AdLib instrument (header 0x10..0x1B).
+  final List<int> adlibData;
+
+  /// True when the on-disk sample used pack==1 (DP30 4-bit ADPCM). No decoder
+  /// is applied — [pcm] stays empty and [rawData] holds the raw packed bytes
+  /// for preservation, so packed bytes are never misread as raw PCM.
+  final bool packed;
+
+  bool get isEmpty => pcm.isEmpty && !adlib && !packed;
 }
 
 /// One note cell. `note == emptyNote` is blank; `note == noteOff` is a note-off.

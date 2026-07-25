@@ -200,9 +200,13 @@ Uint8List writeS3m(S3mModule module) {
     u32(sample.loopEnd); // 0x18 loopEnd
     u8(sample.volume); // 0x1C
     u8(0); // 0x1D
-    u8(0); // 0x1E pack
-    // 0x1F flags: bit0 loop, bit2 16-bit sample.
-    u8((sample.loop ? 0x01 : 0) | (sample.sixteenBit ? 0x04 : 0));
+    u8(0); // 0x1E pack (writer never packs)
+    // 0x1F flags: bit0 loop, bit1 stereo, bit2 16-bit sample.
+    u8(
+      (sample.loop ? 0x01 : 0) |
+          (sample.pcmRight != null ? 0x02 : 0) |
+          (sample.sixteenBit ? 0x04 : 0),
+    );
     u32(sample.c2spd); // 0x20 C2 speed
     // 0x24..0x2F reserved (12 bytes).
     for (var i = 0x24; i < 0x30; i++) {
@@ -277,25 +281,37 @@ Uint8List writeS3m(S3mModule module) {
   // unreadable on the next parse.
   for (var s = 0; s < insNum; s++) {
     final sample = samples[s];
-    if (sample.isEmpty) continue;
+    // Skip only samples with no data payload (truly empty or AdLib, whose OPL
+    // bytes live in the already-written header). Packed samples keep their raw
+    // block via rawData; PCM (mono or stereo) has non-empty pcm.
+    if (sample.pcm.isEmpty && sample.rawData == null) continue;
     align16();
     final pcmOff = len();
     insMemsegs[s] = pcmOff ~/ 16;
-    final pcmLen = sample.pcm.length;
     if (sample.rawData != null) {
+      // Raw bytes (already both channels for stereo; packed block for packed).
       out.add(sample.rawData!);
-    } else if (sample.sixteenBit) {
-      for (var i = 0; i < pcmLen; i++) {
-        final q = (sample.pcm[i] * 32768).round().clamp(-32768, 32767);
-        final encoded = module.sampleFormat == 2 ? q + 32768 : q;
-        u8(encoded & 0xFF);
-        u8((encoded >> 8) & 0xFF);
-      }
     } else {
-      for (var i = 0; i < pcmLen; i++) {
-        final q = (sample.pcm[i] * 128).round().clamp(-128, 127);
-        u8(module.sampleFormat == 2 ? q + 128 : q);
+      // Encode LEFT then, when present, the RIGHT channel immediately after.
+      void writeChannel(Float64List ch) {
+        if (sample.sixteenBit) {
+          for (var i = 0; i < ch.length; i++) {
+            final q = (ch[i] * 32768).round().clamp(-32768, 32767);
+            final encoded = module.sampleFormat == 2 ? q + 32768 : q;
+            u8(encoded & 0xFF);
+            u8((encoded >> 8) & 0xFF);
+          }
+        } else {
+          for (var i = 0; i < ch.length; i++) {
+            final q = (ch[i] * 128).round().clamp(-128, 127);
+            u8(module.sampleFormat == 2 ? q + 128 : q);
+          }
+        }
       }
+
+      writeChannel(sample.pcm);
+      final right = sample.pcmRight;
+      if (right != null) writeChannel(right);
     }
   }
 
