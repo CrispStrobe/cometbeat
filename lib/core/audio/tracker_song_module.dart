@@ -654,11 +654,11 @@ ModuleDoc moduleDocFromSong(
             effect: cell.fxCmd,
             effectParam: cell.fxParam,
             nativeEffect:
-                targetFormat != null && cell.nativeFormat == targetFormat?.name
+                targetFormat != null && cell.nativeFormat == targetFormat.name
                     ? cell.nativeEffect
                     : -1,
             nativeEffectParam:
-                targetFormat != null && cell.nativeFormat == targetFormat?.name
+                targetFormat != null && cell.nativeFormat == targetFormat.name
                     ? cell.nativeEffectParam
                     : 0,
             nativeVolpan: (targetFormat == ModuleFormat.it ||
