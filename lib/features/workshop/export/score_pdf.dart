@@ -36,6 +36,70 @@ const _a4 = PdfPageFormat.a4;
 /// ~99 staff spaces across an A4 width.
 const _defaultSpatium = 6.0;
 
+/// Builds the first-page title block (title / subtitle / composer / lyricist)
+/// and returns the vertical space it needs **in staff spaces** so the engine can
+/// reserve it above the first system. Title + subtitle are centred; on one row
+/// below them the lyricist sits left and the composer right (engraving
+/// convention). Any absent field is simply skipped. Shared by both exporters.
+(double gap, List<pw.Widget> widgets) _pdfHeader({
+  required String? title,
+  required String? subtitle,
+  required String? composer,
+  required String? lyricist,
+  required double spatium,
+  required double marginSp,
+  required double contentWidthPts,
+}) {
+  final t = title?.trim() ?? '';
+  final s = subtitle?.trim() ?? '';
+  final c = composer?.trim() ?? '';
+  final l = lyricist?.trim() ?? '';
+  final widgets = <pw.Widget>[];
+  final leftPts = marginSp * spatium;
+  final topStartPts = marginSp * spatium;
+  var yPts = topStartPts;
+
+  pw.Widget line(
+    String text,
+    double size,
+    pw.TextAlign align, {
+    bool bold = false,
+    bool italic = false,
+  }) =>
+      pw.Positioned(
+        left: leftPts,
+        top: yPts,
+        child: pw.SizedBox(
+          width: contentWidthPts,
+          child: pw.Text(
+            text,
+            textAlign: align,
+            style: pw.TextStyle(
+              fontSize: size,
+              fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              fontStyle: italic ? pw.FontStyle.italic : pw.FontStyle.normal,
+            ),
+          ),
+        ),
+      );
+
+  if (t.isNotEmpty) {
+    widgets.add(line(t, 15, pw.TextAlign.center, bold: true));
+    yPts += 15 * 1.6;
+  }
+  if (s.isNotEmpty) {
+    widgets.add(line(s, 11, pw.TextAlign.center, italic: true));
+    yPts += 11 * 1.6;
+  }
+  if (c.isNotEmpty || l.isNotEmpty) {
+    if (l.isNotEmpty) widgets.add(line(l, 10, pw.TextAlign.left));
+    if (c.isNotEmpty) widgets.add(line(c, 10, pw.TextAlign.right));
+    yPts += 10 * 1.6;
+  }
+  final gapPts = yPts - topStartPts;
+  return (gapPts / spatium, widgets);
+}
+
 /// Renders [score] to a paginated, print-ready PDF.
 ///
 /// Systems are line-broken to the page's content width and packed into pages by
@@ -49,6 +113,9 @@ const _defaultSpatium = 6.0;
 Future<Uint8List> exportScoreToPdf(
   Score score, {
   String? title,
+  String? subtitle,
+  String? composer,
+  String? lyricist,
   CrispNotationTheme theme = CrispNotationTheme.standard,
   PdfPageFormat pageFormat = _a4,
   double spatium = _defaultSpatium,
@@ -59,9 +126,17 @@ Future<Uint8List> exportScoreToPdf(
       await MusicFonts.load(theme.musicFont);
   final settings = LayoutSettings(metadata: metadata);
 
-  // The page box, expressed in staff spaces for the engine.
-  final titleText = title?.trim() ?? '';
-  final titleGap = titleText.isEmpty ? 0.0 : 18.0;
+  // The page box, expressed in staff spaces for the engine. The first-page
+  // title block is reserved above the top margin.
+  final (titleGap, headerWidgets) = _pdfHeader(
+    title: title,
+    subtitle: subtitle,
+    composer: composer,
+    lyricist: lyricist,
+    spatium: spatium,
+    marginSp: margin,
+    contentWidthPts: pageFormat.width - 2 * margin * spatium,
+  );
   final metrics = PageMetrics(
     width: pageFormat.width / spatium,
     height: pageFormat.height / spatium,
@@ -100,18 +175,7 @@ Future<Uint8List> exportScoreToPdf(
         margin: pw.EdgeInsets.zero,
         build: (context) => pw.Stack(
           children: [
-            if (pageIndex == 0 && titleText.isNotEmpty)
-              pw.Positioned(
-                left: metrics.marginLeft * spatium,
-                top: margin * spatium,
-                child: pw.Text(
-                  titleText,
-                  style: pw.TextStyle(
-                    fontSize: 14,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ),
+            if (pageIndex == 0) ...headerWidgets,
             for (final (positioned, png) in rendered)
               pw.Positioned(
                 left: metrics.marginLeft * spatium,
@@ -139,6 +203,9 @@ Future<Uint8List> exportScoreToPdf(
 Future<Uint8List> exportMultiPartToPdf(
   MultiPartScore multiPart, {
   String? title,
+  String? subtitle,
+  String? composer,
+  String? lyricist,
   CrispNotationTheme theme = CrispNotationTheme.standard,
   PdfPageFormat pageFormat = _a4,
   double spatium = _defaultSpatium,
@@ -152,6 +219,9 @@ Future<Uint8List> exportMultiPartToPdf(
           : multiPart.parts.first,
       theme: theme,
       title: title,
+      subtitle: subtitle,
+      composer: composer,
+      lyricist: lyricist,
       pageFormat: pageFormat,
       spatium: spatium,
       rasterScale: rasterScale,
@@ -163,8 +233,15 @@ Future<Uint8List> exportMultiPartToPdf(
       await MusicFonts.load(theme.musicFont);
   final settings = LayoutSettings(metadata: metadata);
 
-  final titleText = title?.trim() ?? '';
-  final titleGap = titleText.isEmpty ? 0.0 : 18.0;
+  final (titleGap, headerWidgets) = _pdfHeader(
+    title: title,
+    subtitle: subtitle,
+    composer: composer,
+    lyricist: lyricist,
+    spatium: spatium,
+    marginSp: margin,
+    contentWidthPts: pageFormat.width - 2 * margin * spatium,
+  );
   final metrics = PageMetrics(
     width: pageFormat.width / spatium,
     height: pageFormat.height / spatium,
@@ -199,18 +276,7 @@ Future<Uint8List> exportMultiPartToPdf(
         margin: pw.EdgeInsets.zero,
         build: (context) => pw.Stack(
           children: [
-            if (pageIndex == 0 && titleText.isNotEmpty)
-              pw.Positioned(
-                left: metrics.marginLeft * spatium,
-                top: margin * spatium,
-                child: pw.Text(
-                  titleText,
-                  style: pw.TextStyle(
-                    fontSize: 14,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-              ),
+            if (pageIndex == 0) ...headerWidgets,
             for (final (positioned, png) in rendered)
               pw.Positioned(
                 left: metrics.marginLeft * spatium,

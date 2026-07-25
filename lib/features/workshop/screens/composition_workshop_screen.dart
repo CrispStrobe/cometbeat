@@ -591,21 +591,37 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   bool _barNumbers = false; // label each wrapped system with its bar number
   bool _noteNames = false; // draw each note's name below the staff
   String _scoreTitle = '';
+  String _composer = '';
+  String _lyricist = '';
 
   @override
   void initState() {
     super.initState();
-    _scoreTitle = widget.initialScore?.parts.first.metadata.title ?? '';
+    final meta = widget.initialScore?.parts.first.metadata;
+    _scoreTitle = meta?.title ?? '';
+    _composer = meta?.composer ?? '';
+    _lyricist = meta?.lyricist ?? '';
   }
 
-  void _setDocumentTitle(String value) {
-    final title = value.trim();
+  /// Write the user-editable identity fields onto the document metadata,
+  /// preserving the non-user fields (instrument, program, …). Empty → null so a
+  /// blank field doesn't emit an empty tag in exports.
+  void _setDocumentMetadata({
+    String? title,
+    String? composer,
+    String? lyricist,
+  }) {
     final old = _doc.metadata;
+    String? norm(String? v) {
+      final t = v?.trim() ?? '';
+      return t.isEmpty ? null : t;
+    }
+
     _doc.setMetadata(
       ScoreMetadata(
-        title: title.isEmpty ? null : title,
-        composer: old.composer,
-        lyricist: old.lyricist,
+        title: title != null ? norm(title) : old.title,
+        composer: composer != null ? norm(composer) : old.composer,
+        lyricist: lyricist != null ? norm(lyricist) : old.lyricist,
         copyright: old.copyright,
         instrument: old.instrument,
         midiProgram: old.midiProgram,
@@ -2052,35 +2068,61 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   Future<void> _setScoreTitle() async {
     final l10n = AppLocalizations.of(context)!;
-    final controller = TextEditingController(
+    final titleCtrl = TextEditingController(
       text: _scoreTitle.isEmpty ? l10n.myMelodyDefaultName : _scoreTitle,
     );
-    final title = await showDialog<String>(
+    final composerCtrl = TextEditingController(text: _composer);
+    final lyricistCtrl = TextEditingController(text: _lyricist);
+    final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.workshopSetTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (value) => Navigator.of(ctx).pop(value),
+        title: Text(l10n.workshopMetadata),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                autofocus: true,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(labelText: l10n.workshopFieldTitle),
+              ),
+              TextField(
+                controller: composerCtrl,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(labelText: l10n.workshopComposer),
+              ),
+              TextField(
+                controller: lyricistCtrl,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(labelText: l10n.workshopLyricist),
+                onSubmitted: (_) => Navigator.of(ctx).pop(true),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
           ),
         ],
       ),
     );
-    if (!mounted || title == null) return;
+    if (!mounted || ok != true) return;
     setState(() {
-      _scoreTitle = title.trim();
-      _setDocumentTitle(_scoreTitle);
+      _scoreTitle = titleCtrl.text.trim();
+      _composer = composerCtrl.text.trim();
+      _lyricist = lyricistCtrl.text.trim();
+      _setDocumentMetadata(
+        title: _scoreTitle,
+        composer: _composer,
+        lyricist: _lyricist,
+      );
     });
   }
 
@@ -3257,11 +3299,15 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               ? exportMultiPartToPdf(
                   _mpd.buildMultiPart(),
                   title: _scoreTitle,
+                  composer: _composer.trim().isEmpty ? null : _composer.trim(),
+                  lyricist: _lyricist.trim().isEmpty ? null : _lyricist.trim(),
                   theme: kidsScoreTheme,
                 )
               : exportScoreToPdf(
                   score,
                   title: _scoreTitle,
+                  composer: _composer.trim().isEmpty ? null : _composer.trim(),
+                  lyricist: _lyricist.trim().isEmpty ? null : _lyricist.trim(),
                   theme: kidsScoreTheme,
                 )),
           null,

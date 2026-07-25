@@ -128,4 +128,41 @@ void main() {
       });
     });
   });
+
+  group('title block (metadata header)', () {
+    testWidgets('composer/lyricist add ink and stay a valid PDF',
+        (tester) async {
+      await tester.runAsync(() async {
+        final plain = await exportScoreToPdf(_score(4), title: 'Song');
+        final full = await exportScoreToPdf(
+          _score(4),
+          title: 'Song',
+          subtitle: 'A little study',
+          composer: 'J. S. Bach',
+          lyricist: 'Anonymous',
+        );
+        expect(String.fromCharCodes(full.take(4)), '%PDF');
+        expect(full.length, greaterThan(1000));
+        expect(
+          full,
+          isNot(equals(plain)),
+          reason: 'the extra title-block lines change the bytes',
+        );
+      });
+    });
+
+    testWidgets('multi-part export accepts and renders metadata',
+        (tester) async {
+      await tester.runAsync(() async {
+        final mp = await exportMultiPartToPdf(
+          MultiPartScore([_score(4), _score(4)]),
+          title: 'Duet',
+          composer: 'Anonymous',
+          lyricist: 'Traditional',
+        );
+        expect(String.fromCharCodes(mp.take(4)), '%PDF');
+        expect(mp.length, greaterThan(1000));
+      });
+    });
+  });
 }

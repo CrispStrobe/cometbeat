@@ -212,6 +212,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopSetTitle => 'Set score title';
 
   @override
+  String get workshopMetadata => 'Score details';
+
+  @override
+  String get workshopFieldTitle => 'Title';
+
+  @override
+  String get workshopComposer => 'Composer';
+
+  @override
+  String get workshopLyricist => 'Lyricist';
+
+  @override
   String get workshopMoreActions => 'More score actions';
 
   @override

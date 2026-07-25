@@ -458,6 +458,30 @@ abstract class AppLocalizations {
   /// **'Set score title'**
   String get workshopSetTitle;
 
+  /// No description provided for @workshopMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'Score details'**
+  String get workshopMetadata;
+
+  /// No description provided for @workshopFieldTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get workshopFieldTitle;
+
+  /// No description provided for @workshopComposer.
+  ///
+  /// In en, this message translates to:
+  /// **'Composer'**
+  String get workshopComposer;
+
+  /// No description provided for @workshopLyricist.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyricist'**
+  String get workshopLyricist;
+
   /// No description provided for @workshopMoreActions.
   ///
   /// In en, this message translates to:
