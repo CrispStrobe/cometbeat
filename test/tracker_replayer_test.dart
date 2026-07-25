@@ -1147,6 +1147,49 @@ void main() {
       expect(rendered.sublist(split).any((value) => value != 0), isTrue);
     });
 
+    test('native IT multi-sample zones apply NNA cut between notes', () {
+      final positive = Float64List(120000)..fillRange(0, 120000, 0.25);
+      final negative = Float64List(120000)..fillRange(0, 120000, -0.5);
+      final timing = const TrackerTiming(rows: 4);
+      final cells = List<TrackerCell>.filled(4, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60)
+        ..[2] = const TrackerCell(midi: 72);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'it-voices',
+            instrument: MultiSampleInstrument(
+              'it-instrument',
+              {
+                60: SampleInstrument(
+                  'low',
+                  positive,
+                  normalize: false,
+                  nativeNna: 0,
+                ),
+                72: SampleInstrument('high', negative, normalize: false),
+              },
+              polyphonic: true,
+              nativeVoiceSemantics: true,
+            ),
+            rows: 4,
+          ),
+        ],
+        timing: timing,
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+
+      final rendered = replaySong(song).pcm;
+      final split = timing.stepStartSample(2);
+      final before = rendered[split - 100];
+      final after = rendered[split + 100];
+      expect(before, greaterThan(0));
+      expect(after, lessThan(0));
+    });
+
     test('stereo sample channels keep the right waveform through effects', () {
       final leftSample = Float64List.fromList(
         List<double>.filled(120000, 0.25),

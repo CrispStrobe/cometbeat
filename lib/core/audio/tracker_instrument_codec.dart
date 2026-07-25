@@ -132,6 +132,7 @@ Map<String, dynamic> instrumentToJson(TrackerInstrument instrument) {
       'type': 'multiSample',
       'id': instrument.id,
       'polyphonic': instrument.polyphonic,
+      'nativeVoiceSemantics': instrument.nativeVoiceSemantics,
       'zones': [
         for (final entry in instrument.zones.entries)
           {
@@ -237,6 +238,7 @@ TrackerInstrument instrumentFromJson(Map<String, dynamic> json) {
             ),
         },
         polyphonic: (json['polyphonic'] as bool?) ?? false,
+        nativeVoiceSemantics: (json['nativeVoiceSemantics'] as bool?) ?? false,
       );
     case 'percussion':
       return PercussionInstrument(id);

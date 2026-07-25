@@ -966,17 +966,24 @@ class PercussionInstrument implements TrackerInstrument {
 /// An instrument composed of multiple sub-instruments mapped across the keyboard.
 /// Essential for drum kits (where each key triggers a distinct sample) or realistic
 class MultiSampleInstrument implements TrackerInstrument {
-  const MultiSampleInstrument(this.id, this.zones, {this.polyphonic = false});
+  const MultiSampleInstrument(
+    this.id,
+    this.zones, {
+    this.polyphonic = false,
+    this.nativeVoiceSemantics = false,
+  });
 
   MultiSampleInstrument copyWith({
     String? id,
     Map<int, TrackerInstrument>? zones,
     bool? polyphonic,
+    bool? nativeVoiceSemantics,
   }) =>
       MultiSampleInstrument(
         id ?? this.id,
         zones ?? this.zones,
         polyphonic: polyphonic ?? this.polyphonic,
+        nativeVoiceSemantics: nativeVoiceSemantics ?? this.nativeVoiceSemantics,
       );
 
   @override
@@ -984,6 +991,12 @@ class MultiSampleInstrument implements TrackerInstrument {
 
   /// If true, notes are not choked by subsequent notes on the channel (drum kit mode).
   final bool polyphonic;
+
+  /// Whether this zone map came from a format with IT-style NNA/DCT/DCA
+  /// instrument semantics. XM's multi-sample instruments are polyphonic but
+  /// do not have these old-voice actions, so this must be explicit rather than
+  /// inferred from [polyphonic].
+  final bool nativeVoiceSemantics;
 
   /// Maps a base MIDI note to the [TrackerInstrument] representing that zone.
   final Map<int, TrackerInstrument> zones;
@@ -1011,6 +1024,9 @@ class MultiSampleInstrument implements TrackerInstrument {
 
   @override
   Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
+    if (nativeVoiceSemantics) {
+      return _renderNativeVoices(cells, timing).left;
+    }
     final out = Float64List(timing.totalSamples);
     if (zones.isEmpty) return out;
 
@@ -1064,6 +1080,7 @@ class MultiSampleInstrument implements TrackerInstrument {
     List<TrackerCell> cells,
     TrackerTiming timing,
   ) {
+    if (nativeVoiceSemantics) return _renderNativeVoices(cells, timing);
     final left = Float64List(timing.totalSamples);
     final right = Float64List(timing.totalSamples);
     if (zones.isEmpty) return (left: left, right: right);
@@ -1110,6 +1127,187 @@ class MultiSampleInstrument implements TrackerInstrument {
       startStep += totalSteps;
     }
     return (left: left, right: right);
+  }
+
+  ({Float64List left, Float64List right}) _renderNativeVoices(
+    List<TrackerCell> cells,
+    TrackerTiming timing,
+  ) {
+    final left = Float64List(timing.totalSamples);
+    final right = Float64List(timing.totalSamples);
+    final voices = <_NativeZoneVoice>[];
+    var startStep = 0;
+
+    for (final run in noteRuns(cells)) {
+      final midi = run.$1;
+      final sustainSteps = run.$2;
+      final releaseSteps = run.$3;
+      final totalSteps = sustainSteps + releaseSteps;
+      if (midi != null) {
+        final zone = _closestZone(cells[startStep].nativeNote ?? midi);
+        if (zone != null) {
+          final trigger = cells[startStep];
+          final voiceCells = _nativeVoiceCells(
+            cells.length,
+            startStep,
+            trigger,
+            releaseSteps > 0 ? startStep + sustainSteps : null,
+          );
+          final rendered = zone is SampleInstrument
+              ? zone.renderChannelStereo(voiceCells, timing)
+              : (() {
+                  final mono = zone.renderChannel(voiceCells, timing);
+                  return (left: mono, right: Float64List.fromList(mono));
+                })();
+          final voice = _NativeZoneVoice(
+            midi: midi,
+            zone: zone,
+            startSample: timing.stepStartSample(startStep),
+            left: rendered.left,
+            right: rendered.right,
+          );
+          final newStart = voice.startSample;
+          for (final old in voices) {
+            if (old.endSample <= newStart) continue;
+            final duplicate = _isDuplicate(old, voice, nativeDctOf(zone));
+            final action =
+                duplicate ? nativeDcaOf(zone) : nativeNnaOf(old.zone);
+            switch (action) {
+              case 0:
+                old.endSample = newStart;
+              case 1:
+                old.releaseAt = newStart;
+                if (old.releaseLeft == null) {
+                  final released = _renderNativeRelease(
+                    old.zone,
+                    cells.length,
+                    old.startStep,
+                    old.trigger,
+                    startStep,
+                    timing,
+                  );
+                  old.releaseLeft = released.left;
+                  old.releaseRight = released.right;
+                }
+              case 2:
+                old.fadeAt = newStart;
+            }
+          }
+          voice.startStep = startStep;
+          voice.trigger = trigger;
+          voices.add(voice);
+        }
+      }
+      startStep += totalSteps;
+    }
+
+    for (final voice in voices) {
+      final end = voice.endSample.clamp(voice.startSample, timing.totalSamples);
+      final fadeRate = nativeFadeoutOf(voice.zone) / 1024.0;
+      for (var i = voice.startSample; i < end; i++) {
+        final released = voice.releaseAt != null && i >= voice.releaseAt!;
+        final sourceLeft = released ? voice.releaseLeft : voice.left;
+        final sourceRight = released ? voice.releaseRight : voice.right;
+        if (sourceLeft == null || i >= sourceLeft.length) continue;
+        var gain = 1.0;
+        if (voice.fadeAt != null && i >= voice.fadeAt!) {
+          gain = exp(-fadeRate * (i - voice.fadeAt!) / kSampleRate * 8.0);
+        }
+        left[i] += sourceLeft[i] * gain;
+        right[i] += (sourceRight != null && i < sourceRight.length
+                ? sourceRight[i]
+                : sourceLeft[i]) *
+            gain;
+      }
+    }
+    return (left: left, right: right);
+  }
+
+  ({Float64List left, Float64List right}) _renderNativeRelease(
+    TrackerInstrument zone,
+    int rows,
+    int startStep,
+    TrackerCell trigger,
+    int releaseStep,
+    TrackerTiming timing,
+  ) {
+    final cells = _nativeVoiceCells(
+      rows,
+      startStep,
+      trigger,
+      releaseStep,
+    );
+    if (zone is SampleInstrument) {
+      return zone.renderChannelStereo(cells, timing);
+    }
+    final mono = zone.renderChannel(cells, timing);
+    return (left: mono, right: Float64List.fromList(mono));
+  }
+}
+
+class _NativeZoneVoice {
+  _NativeZoneVoice({
+    required this.midi,
+    required this.zone,
+    required this.startSample,
+    required this.left,
+    required this.right,
+  });
+
+  final int midi;
+  final TrackerInstrument zone;
+  final int startSample;
+  final Float64List left;
+  final Float64List right;
+  late int startStep;
+  late TrackerCell trigger;
+  int endSample = 1 << 60;
+  int? releaseAt;
+  int? fadeAt;
+  Float64List? releaseLeft;
+  Float64List? releaseRight;
+}
+
+List<TrackerCell> _nativeVoiceCells(
+  int rows,
+  int startStep,
+  TrackerCell trigger,
+  int? releaseStep,
+) {
+  final cells = List<TrackerCell>.filled(rows, TrackerCell.empty);
+  cells[startStep] = trigger;
+  if (releaseStep != null && releaseStep >= 0 && releaseStep < rows) {
+    cells[releaseStep] = TrackerCell.noteCut;
+  }
+  return cells;
+}
+
+int nativeNnaOf(TrackerInstrument zone) =>
+    zone is SampleInstrument ? zone.nativeNna.clamp(0, 3).toInt() : 0;
+
+int nativeDctOf(TrackerInstrument zone) =>
+    zone is SampleInstrument ? zone.nativeDct.clamp(0, 3).toInt() : 0;
+
+int nativeDcaOf(TrackerInstrument zone) =>
+    zone is SampleInstrument ? zone.nativeDca.clamp(0, 2).toInt() : 0;
+
+int nativeFadeoutOf(TrackerInstrument zone) =>
+    zone is SampleInstrument ? zone.nativeFadeout.clamp(0, 65535).toInt() : 0;
+
+bool _isDuplicate(
+  _NativeZoneVoice old,
+  _NativeZoneVoice next,
+  int dct,
+) {
+  switch (dct) {
+    case 1:
+      return old.midi == next.midi;
+    case 2:
+      return old.zone.id == next.zone.id;
+    case 3:
+      return true;
+    default:
+      return false;
   }
 }
 

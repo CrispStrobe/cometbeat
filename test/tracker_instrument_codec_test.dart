@@ -155,10 +155,12 @@ void main() {
           72: SampleInstrument('high', right),
         },
         polyphonic: true,
+        nativeVoiceSemantics: true,
       );
       final decoded = instrumentFromJsonString(instrumentToJsonString(inst))
           as MultiSampleInstrument;
       expect(decoded.polyphonic, isTrue);
+      expect(decoded.nativeVoiceSemantics, isTrue);
       final low = decoded.zones[60] as SampleInstrument;
       expect(low.sampleRight, isNotNull);
       expect(low.volume, closeTo(0.75, 1e-9));

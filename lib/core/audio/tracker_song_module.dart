@@ -319,6 +319,7 @@ TrackerInstrument _itNativeInstrument(
     'it${instrumentIndex + 1}',
     zones,
     polyphonic: true,
+    nativeVoiceSemantics: true,
   );
 }
 
