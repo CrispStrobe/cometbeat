@@ -453,20 +453,61 @@ live-loop surface (quick start, layer parts, record a voice, arrange sections).
   RAM** for any render (long native IT/XM included). The DEFAULT render must
   produce output in bounded time-blocks streamed to a sink — never hold a
   whole-song `Float64List` mix. Verify peak RSS with `bin/bench_render.dart`.
-  - **Shipped (feature/tracker-complete, 2026-07-25):** render benchmark;
-    per-note buffer reuse + native-NNA two-pass render (byte-identical);
-    native IT/XM fadeout release; S3M stereo/AdLib/packed + DP30 ADPCM decode +
-    OPL/AdLib FM-approximation synthesis; MOD `M!K!`; XM 16-bit; cross-format
-    `S1x/S2x/S3x/S4x` mapping; bounded streaming/range export
+  - **Shipped (feature/tracker-complete, 2026-07-25):** render benchmark
+    (`bin/bench_render.dart`, reports peak RSS); per-note buffer reuse +
+    native-NNA two-pass render; native IT/XM fadeout release; S3M
+    stereo/AdLib/packed + DP30 ADPCM decode + OPL/AdLib FM-approximation
+    synthesis; MOD `M!K!`; XM 16-bit; cross-format `S1x/S2x/S3x/S4x` mapping;
+    bounded streaming/range export
     (`--stream/--from-order/--to-order/--chunk-orders`); export-loss report;
-    native flow/order timeline view.
-  - **Remaining:** the **≤500 MB bounded DEFAULT renderer** (block-streaming with
-    byte-identical cross-block voice state — the big rewrite; the current
-    `--stream` bounds memory but resets voice state at chunk boundaries);
-    remaining unmapped cross-format effects (`S0/S5/S7/S9/SA/Z`); MOD FLT8/OCTA
-    alias preservation; cycle-exact OPL; deeper native editors (raw
-    effect-memory, native S3M header, velocity zones, in-place flow editing);
-    per-sample gain/pan; exact envelope release curves.
+    native flow/order timeline view. **Memory:** importer sample-dedup (the big
+    win — the importer was cloning each sample up to ~120× across keymap slots),
+    streamed CLI output, and direct-accumulate for the variable + native stereo
+    render paths — buddhia3.it went ~2.8 GB→~440 MB, all byte-identical.
+
+  #### Renderer v2 — per-sample streaming mixer + quality (planned, HIGH priority)
+
+  Reference architecture studied: **MultiPLAY** (`github.com/logiclrd/MultiPLAY`,
+  cloned at `../MultiPLAY`). It plays MOD/XM/S3M/IT in a few MB of RAM with good
+  quality by (a) holding **one PCM copy per distinct sample** with keymaps as
+  pointer/index tables (`sample_instrument.h:47` `sample* note_sample[120]` +
+  `tone_offset[120]`; `Load_IT.cc:1331`), and (b) a **pure sample-by-sample
+  streaming mix** — one output frame accumulated from all voices, pushed to the
+  sink, no whole-song/pattern buffer (`MultiPLAY.cc:759-1014`). Its quality is not
+  a fancy interpolator (it uses 2-point **linear**, `math.h:14`) but: all mixing in
+  **double**; **anti-click** (10-sample note-on fade-in `sample_builtintype.h:402`
+  + decaying residue tail on hard cut `channel.cc:180,600`); a per-voice **2-pole
+  resonant IT filter** (`channel.cc:622`); correct **looped-neighbour**
+  interpolation; NNA via lightweight extra voices that **share PCM**
+  (`channel.cc:279-344`, `Channel_DYNAMIC.cc`).
+
+  - **v2.1 — per-sample/block streaming mixer (durable ≤500 MB at ANY length).**
+    Replace the whole-song `Float64` L/R accumulator (the last non-streaming piece,
+    ~230 MB) with a MultiPLAY-style mix: walk order→pattern→row→tick; each channel
+    is a **voice state struct** (fractional `readPos` + integer index, envelope
+    cursor, fade, filter state, effect memory); accumulate all voices into a small
+    fixed **block** (a few ms), convert to Int16, stream to the sink; reuse the
+    block. NNA/DCT/DCA = lightweight ancillary voices sharing PCM (no extra audio).
+    Envelopes = shared node shape + per-voice cursor (linear interp). RAM becomes
+    flat regardless of song length; targets ≤500 MB for the whole corpus AND
+    arbitrarily long songs, in-app playback included. Byte-identical where the math
+    already matches; any unavoidable divergence documented + oracle-verified.
+  - **v2.2 — quality parity with MultiPLAY (deliberate, documented output change,
+    oracle-gated):** double-precision mix end-to-end; **anti-click** note-on ramp +
+    hard-cut residue tail; per-voice **2-pole resonant IT filter** (Zxx / IT filter
+    envelopes); correct looped-neighbour interpolation.
+  - **v2.3 — quality BEYOND MultiPLAY (our differentiators):** 4-point
+    **cubic/Hermite** interpolation (we already use cubic on some paths — unify it),
+    optional **2× oversampling** before the filter, and **TPDF dither** at the final
+    Int16 cast (MultiPLAY does none of these). Each opt-in-verified vs the oracle.
+  - **Verification:** `bin/bench_render.dart` peak RSS < 500 MB on buddhia3.it,
+    _dont_look_back_.xm, and a synthetic multi-hour song; `bin/oracle_ab.dart`
+    A/B vs libopenmpt for quality; the acceptance suites stay green.
+
+  - **Other remaining (lower priority):** unmapped cross-format effects
+    (`S0/S5/S7/S9/SA/Z`); MOD FLT8/OCTA alias preservation; cycle-exact OPL; deeper
+    native editors (raw effect-memory, native S3M header, velocity zones, in-place
+    flow editing); per-sample gain/pan; exact envelope release curves.
 - **Tracker GUI + interop ideas** → [docs/TRACKER_GUI_HANDOFF_IDEAS.md](docs/TRACKER_GUI_HANDOFF_IDEAS.md)
   and [docs/TRACKER_IDEAS.md](docs/TRACKER_IDEAS.md): envelope editor UI, per-pattern
   length UI, shared `MusicIoMenu` import/export, groove↔Tracker↔Loop-Mixer bridges,
