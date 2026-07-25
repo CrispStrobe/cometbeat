@@ -11,6 +11,9 @@ import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/sf2/sf2.dart' show VorbisDecode;
+import 'package:comet_beat/core/audio/sf2/vorbis_pcm.dart';
+
+export 'package:comet_beat/core/audio/sf2/vorbis_pcm.dart';
 
 @JS('globalThis.glintVorbis')
 external _GlintVorbis? get _glintVorbis;
@@ -71,5 +74,34 @@ VorbisDecode? loadGlintVorbis({String? libraryPath}) {
       }
     }
     return out;
+  };
+}
+
+/// The `.ogg` FILE decoder on web: the wasm shim returns interleaved PCM and a
+/// channel count but NOT the rate, so the rate is read from the Vorbis identity
+/// header instead (pure Dart, in vorbis_pcm.dart).
+VorbisFileDecode? loadGlintVorbisFile({String? libraryPath}) {
+  final g = _glintVorbis;
+  if (g == null) return null;
+  return (Uint8List ogg) {
+    if (!g.ready()) return null;
+    final r = g.decodeSync(ogg.toJS);
+    if (r == null) return null;
+    final ch = r.channels < 1 ? 1 : r.channels;
+    final frames = r.frames;
+    if (frames <= 0) return null;
+    final flat = r.pcm.toDart; // interleaved Float32List
+    final left = Float64List(frames);
+    final right = ch > 1 ? Float64List(frames) : null;
+    for (var i = 0; i < frames; i++) {
+      left[i] = flat[i * ch];
+      if (right != null) right[i] = flat[i * ch + 1];
+    }
+    final rate = oggVorbisSampleRate(ogg);
+    return VorbisPcm(
+      left: left,
+      right: right,
+      sampleRate: rate > 0 ? rate : 44100,
+    );
   };
 }

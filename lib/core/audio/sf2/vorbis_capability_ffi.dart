@@ -9,6 +9,8 @@ import 'dart:io' show Platform;
 import 'package:comet_beat/core/audio/sf2/sf2.dart' show VorbisDecode;
 import 'package:comet_beat/core/audio/sf2/vorbis_glint_ffi.dart';
 
+export 'package:comet_beat/core/audio/sf2/vorbis_pcm.dart';
+
 /// Candidate glint library names to try, in order, per platform. When bundled
 /// in the app these resolve via the app's native search path; an override path
 /// (e.g. a dev build) can be passed to [loadGlintVorbis].
@@ -56,3 +58,28 @@ VorbisDecode? loadGlintVorbis({String? libraryPath}) {
 /// Native decode is synchronous + needs no async warm-up: ready iff the glint
 /// decoder loads. (Parity with the web seam's async loader.)
 Future<bool> ensureGlintVorbisReady() async => loadGlintVorbis() != null;
+
+/// The `.ogg` FILE decoder (keeps rate + both channels), or null if glint isn't
+/// available here. Same resolution order as [loadGlintVorbis].
+VorbisFileDecode? loadGlintVorbisFile({String? libraryPath}) {
+  if (libraryPath != null) {
+    try {
+      return GlintVorbis.open(libraryPath).vorbisFileDecode;
+    } catch (_) {
+      return null;
+    }
+  }
+  try {
+    return GlintVorbis.process().vorbisFileDecode;
+  } catch (_) {
+    // Not compiled in → try a bundled library file.
+  }
+  for (final name in _candidates()) {
+    try {
+      return GlintVorbis.open(name).vorbisFileDecode;
+    } catch (_) {
+      // Try the next candidate, else null.
+    }
+  }
+  return null;
+}

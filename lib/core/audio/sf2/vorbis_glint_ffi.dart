@@ -15,7 +15,10 @@ import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/sf2/sf2.dart' show VorbisDecode;
+import 'package:comet_beat/core/audio/sf2/vorbis_pcm.dart';
 import 'package:ffi/ffi.dart';
+
+export 'package:comet_beat/core/audio/sf2/vorbis_pcm.dart';
 
 typedef _DecodeNative = Pointer<Float> Function(
   Pointer<Uint8>,
@@ -58,6 +61,50 @@ class GlintVorbis {
 
   /// The [VorbisDecode] to pass to `Sf2SoundFont.parse(bytes, vorbis: …)`.
   VorbisDecode get vorbisDecode => decode;
+
+  /// The [VorbisFileDecode] for importing a `.ogg` FILE — unlike [decode] it
+  /// keeps the sample rate and both channels, which `.sf3` samples don't need
+  /// (their rate lives in the SF2 header and they're always mono).
+  VorbisFileDecode get vorbisFileDecode => decodeFile;
+
+  /// Decode a complete Ogg-Vorbis stream keeping rate and channels.
+  VorbisPcm? decodeFile(Uint8List ogg) {
+    if (ogg.isEmpty) return null;
+    final inPtr = calloc<Uint8>(ogg.length);
+    final sr = calloc<Int32>();
+    final ch = calloc<Int32>();
+    final fr = calloc<Int32>();
+    try {
+      inPtr.asTypedList(ogg.length).setAll(0, ogg);
+      final out = _decode(inPtr, ogg.length, sr, ch, fr);
+      if (out == nullptr) return null;
+      final frames = fr.value;
+      final channels = ch.value < 1 ? 1 : ch.value;
+      if (frames <= 0) {
+        _free(out.cast());
+        return null;
+      }
+      final interleaved = out.asTypedList(frames * channels);
+      final left = Float64List(frames);
+      final right = channels > 1 ? Float64List(frames) : null;
+      for (var i = 0; i < frames; i++) {
+        left[i] = interleaved[i * channels];
+        if (right != null) right[i] = interleaved[i * channels + 1];
+      }
+      _free(out.cast());
+      return VorbisPcm(
+        left: left,
+        right: right,
+        sampleRate: sr.value > 0 ? sr.value : 44100,
+      );
+    } finally {
+      calloc
+        ..free(inPtr)
+        ..free(sr)
+        ..free(ch)
+        ..free(fr);
+    }
+  }
 
   /// Decode ONE complete Ogg-Vorbis stream to mono PCM (±1.0), or null on error.
   Float64List? decode(Uint8List ogg) {

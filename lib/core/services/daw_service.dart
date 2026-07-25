@@ -863,16 +863,35 @@ class DawService extends ChangeNotifier {
   /// Peak / RMS / duration / clipped-sample count for a clip's played window —
   /// what the inspector shows and what an export decision is made on.
   ClipStats clipStats(int track, int index) {
+    final (left, right) = _clipWindows(track, index);
+    return clipStatsOf(left, right, sampleRate: kDawSampleRate);
+  }
+
+  /// A clip's played window as mono PCM (trim folded in, channels averaged) —
+  /// what an analysis view (spectrogram) should look at.
+  Float64List clipWindowPcm(int track, int index) {
+    final (left, right) = _clipWindows(track, index);
+    if (right == null) return left;
+    final frames = math.min(left.length, right.length);
+    final mono = Float64List(frames);
+    for (var i = 0; i < frames; i++) {
+      mono[i] = (left[i] + right[i]) * 0.5;
+    }
+    return mono;
+  }
+
+  (Float64List, Float64List?) _clipWindows(int track, int index) {
     final clip = timeline.tracks[track].clips[index];
     final rendered = _cache.putIfAbsent(
       clip.source.cacheKey,
       () => clip.source.render(kDawSampleRate),
     );
-    final left = trimmedPcm(clip, rendered);
-    final right = clip.source is StereoSampleSource
-        ? trimmedPcm(clip, _renderedRight(clip, rendered))
-        : null;
-    return clipStatsOf(left, right, sampleRate: kDawSampleRate);
+    return (
+      trimmedPcm(clip, rendered),
+      clip.source is StereoSampleSource
+          ? trimmedPcm(clip, _renderedRight(clip, rendered))
+          : null,
+    );
   }
 
   /// **Generate** a steady tone / noise / silence as a new clip. It lands on its
@@ -896,6 +915,26 @@ class DawService extends ChangeNotifier {
       amp: amp,
       seed: seed,
     );
+    _addPcmOnLane(pcm, track: track, startMs: startMs, fadeMs: fadeMs);
+  }
+
+  /// **Record** — drop a captured mic take on its own new lane (O14). Same
+  /// placement as [addGeneratedClip]; the short fade keeps the take's hard
+  /// start/stop from clicking.
+  void addRecordedClip(
+    Float64List pcm, {
+    int? track,
+    double startMs = 0,
+    double fadeMs = 5,
+  }) =>
+      _addPcmOnLane(pcm, track: track, startMs: startMs, fadeMs: fadeMs);
+
+  void _addPcmOnLane(
+    Float64List pcm, {
+    required int? track,
+    required double startMs,
+    required double fadeMs,
+  }) {
     if (pcm.isEmpty) return;
     _record();
     final lane = track ?? timeline.tracks.length;

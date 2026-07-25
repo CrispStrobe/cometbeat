@@ -23,12 +23,16 @@ import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart'
     show DrumRowsPattern, LoopTiming, kPatternSteps;
-import 'package:comet_beat/core/audio/synth.dart' show Drum, wavBytes;
+import 'package:comet_beat/core/audio/synth.dart'
+    show Drum, kSampleRate, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
+import 'package:comet_beat/features/games/composition/spectrogram_view.dart'
+    show showSpectrogramDialog;
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
     show showMyInstrumentsSheet;
@@ -162,6 +166,14 @@ abstract interface class DawTester {
   /// actually being played, post-FX.
   ({double peak, double rms}) get playbackLevel;
 
+  /// Record from the mic onto a new lane (O14). No-op without a microphone.
+  Future<void> recordClip();
+  bool get isRecording;
+
+  /// Test seam: the mic can't run under the headless binding, so tests inject
+  /// the captured audio instead of capturing it.
+  void debugAddRecordedClip(Float64List pcm);
+
   /// Whether a clip is engraved music that can be voiced with an instrument, and
   /// the per-clip / per-track instrument assignment (null = default synth). The
   /// instrument comes from the assets Instruments/Samples library.
@@ -258,6 +270,10 @@ class _DawScreenState extends State<DawScreen>
 
   /// The last baked mix, kept so the meters (O12) can measure what's playing.
   Float64List? _bakedPcm;
+
+  /// O14 — the app's one mic-facing capture path, shared with the Tracker.
+  final VoiceClipRecorder _recorder = VoiceClipRecorder();
+  bool _recording = false;
 
   @override
   void initState() {
@@ -1304,6 +1320,14 @@ class _DawScreenState extends State<DawScreen>
       multiplier,
     );
     if (_playing) play();
+  }
+
+  /// O15 — the clip's frequency content over time. Uses the clip's PLAYED
+  /// window (trim folded in), so what you see is what you hear.
+  void _showClipSpectrogram(int track, int index) {
+    final pcm = _daw.clipWindowPcm(track, index);
+    if (pcm.isEmpty) return;
+    showSpectrogramDialog(context, pcm: pcm, sampleRate: kDawSampleRate);
   }
 
   /// O13 — name a marker as it's dropped. An empty name is fine (the flag
@@ -2410,6 +2434,52 @@ class _DawScreenState extends State<DawScreen>
 
   @override
   bool get loopsMarkedRange => _loop && _hasFxRange;
+
+  @override
+  bool get isRecording => _recording;
+
+  /// O14 — capture a mic take straight onto its own lane. The recorder is the
+  /// Tracker's `VoiceClipRecorder` (the app's single mic-facing capture path);
+  /// it can't run under the headless test binding, so this is guarded and
+  /// tests go through [debugAddRecordedClip] instead.
+  @override
+  Future<void> recordClip() async {
+    if (_recording) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _recording = true);
+    try {
+      final pcm = await _recorder.record(
+        maxDuration: const Duration(seconds: 10),
+      );
+      if (!mounted) return;
+      if (pcm.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.dawRecordFailed)),
+        );
+        return;
+      }
+      debugAddRecordedClip(pcm);
+    } catch (_) {
+      // No mic, denied permission, unsupported encoder — all one message.
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.dawRecordFailed)));
+    } finally {
+      if (mounted) setState(() => _recording = false);
+    }
+  }
+
+  @override
+  void debugAddRecordedClip(Float64List pcm) {
+    if (pcm.isEmpty) return;
+    // The recorder captures at the synth rate and the timeline runs at its own.
+    // They're the same today, but converting explicitly means a future change
+    // to either constant can't silently detune every recorded take.
+    // (resampleLinear's ratio is a playback-SPEED multiplier: capture/playback.)
+    const ratio = kSampleRate / kDawSampleRate;
+    _daw.addRecordedClip(ratio == 1.0 ? pcm : resampleLinear(pcm, ratio));
+    if (_playing) play();
+  }
 
   @override
   ({double peak, double rms}) get playbackLevel {
@@ -3778,6 +3848,15 @@ class _DawScreenState extends State<DawScreen>
                           icon: const Icon(Icons.graphic_eq),
                           label: Text(l10n.dawAmplify),
                         ),
+                        // O15 — see what's IN the clip, not just how loud.
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetCtx).pop();
+                            _showClipSpectrogram(track, index);
+                          },
+                          icon: const Icon(Icons.gradient),
+                          label: Text(l10n.dawSpectrogram),
+                        ),
                         // Tape-style speed: slower (½×) / faster (2×).
                         TextButton.icon(
                           onPressed: () {
@@ -4309,6 +4388,17 @@ class _DawScreenState extends State<DawScreen>
                                 : null,
                             icon: const Icon(Icons.crop),
                             label: Text(l10n.dawRangeEdit),
+                          ),
+                        ),
+                        // O14 — capture a mic take onto a new lane.
+                        OutlinedButton.icon(
+                          onPressed: _recording ? null : recordClip,
+                          icon: Icon(
+                            Icons.fiber_manual_record,
+                            color: _recording ? scheme.error : null,
+                          ),
+                          label: Text(
+                            _recording ? l10n.dawRecording : l10n.dawRecord,
                           ),
                         ),
                         // O12 — peak/RMS of what's sounding, live.

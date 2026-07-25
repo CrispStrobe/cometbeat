@@ -4118,6 +4118,42 @@ abstract class AppLocalizations {
   /// **'Delete'**
   String get dawDelete;
 
+  /// No description provided for @dawClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get dawClose;
+
+  /// No description provided for @dawSpectrogram.
+  ///
+  /// In en, this message translates to:
+  /// **'Spectrum'**
+  String get dawSpectrogram;
+
+  /// No description provided for @dawSpectrogramEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to show'**
+  String get dawSpectrogramEmpty;
+
+  /// No description provided for @dawRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get dawRecord;
+
+  /// No description provided for @dawRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording…'**
+  String get dawRecording;
+
+  /// No description provided for @dawRecordFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t record — check the microphone'**
+  String get dawRecordFailed;
+
   /// No description provided for @dawSlower.
   ///
   /// In en, this message translates to:

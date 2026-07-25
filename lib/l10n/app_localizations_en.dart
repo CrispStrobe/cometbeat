@@ -2180,6 +2180,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawDelete => 'Delete';
 
   @override
+  String get dawClose => 'Close';
+
+  @override
+  String get dawSpectrogram => 'Spectrum';
+
+  @override
+  String get dawSpectrogramEmpty => 'Nothing to show';
+
+  @override
+  String get dawRecord => 'Record';
+
+  @override
+  String get dawRecording => 'Recording…';
+
+  @override
+  String get dawRecordFailed => 'Couldn\'t record — check the microphone';
+
+  @override
   String get dawSlower => 'Slower';
 
   @override

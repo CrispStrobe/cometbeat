@@ -1242,6 +1242,65 @@ void main() {
     expect(find.text('chorus'), findsOneWidget);
   });
 
+  testWidgets('a recorded take lands on its own new lane', (tester) async {
+    // The mic can't run under the headless binding, so the capture itself is
+    // injected; what's under test is the placement and that it's undoable.
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    final tracksBefore = daw.trackCount;
+    expect(daw.isRecording, isFalse);
+    expect(find.text('Record'), findsOneWidget);
+
+    daw.debugAddRecordedClip(_tone(kDawSampleRate ~/ 2)); // 500 ms
+    await tester.pump();
+
+    expect(daw.clipCount, 1);
+    expect(daw.trackCount, tracksBefore + 1);
+    expect(daw.clipDurationMs(tracksBefore, 0), closeTo(500, 2));
+    // It carries the short anti-click fade the generator's clips get.
+    expect(service.clipFadeInMs(tracksBefore, 0), greaterThan(0));
+
+    service.undo();
+    await tester.pump();
+    expect(daw.clipCount, 0);
+  });
+
+  testWidgets('an empty recording is ignored', (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.debugAddRecordedClip(Float64List(0));
+    await tester.pump();
+    expect(daw.clipCount, 0);
+  });
+
+  testWidgets('Spectrum opens a spectrogram of the clip', (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+
+    await tester.tap(find.text('🥁'));
+    await tester.pumpAndSettle();
+    final item = find.text('Spectrum');
+    await tester.ensureVisible(item);
+    await tester.pumpAndSettle();
+    await tester.tap(item);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CustomPaint), findsWidgets);
+    // The legend states the axes, so the picture isn't just colours.
+    expect(find.textContaining('kHz'), findsOneWidget);
+    expect(find.textContaining('dBFS'), findsOneWidget);
+
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('kHz'), findsNothing);
+  });
+
   testWidgets('Faster resamples the clip to a shorter baked take',
       (tester) async {
     await _pumpDaw(tester);

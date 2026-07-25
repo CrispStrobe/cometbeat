@@ -2,8 +2,9 @@
 //
 // The read side of the shared audio I/O. Where `audio_export.dart` writes WAV/
 // MP3, this reads them back: any screen that loads a user audio file (Voice Lab,
-// sample import) can accept **WAV, MP3, or FLAC** from one place instead of a
-// WAV-only picker. WAV goes through `readWavPcm16`; MP3 through our pure-Dart
+// sample import) can accept **WAV, AIFF, MP3, or FLAC** from one place instead
+// of a WAV-only picker. WAV goes through `readWavPcm16` and AIFF/AIFF-C through
+// `readAiff` (both pure Dart, so both work on web); MP3 through our pure-Dart
 // `mp3Decode`; FLAC uses the platform-safe glint capability seam.
 //
 // Format is detected by MAGIC BYTES, not the extension, so a mislabelled file
@@ -16,8 +17,10 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/aiff_io.dart' show isAiff, readAiff;
 import 'package:comet_beat/core/audio/mp3/mp3_decoder.dart';
 import 'package:comet_beat/core/audio/sf2/flac_capability.dart';
+import 'package:comet_beat/core/audio/sf2/vorbis_capability.dart';
 import 'package:comet_beat/core/audio/wav_io.dart' show readWavPcm16;
 
 /// Mono float PCM (−1..1) plus its sample rate — the common currency the Sound
@@ -32,7 +35,16 @@ class ImportedAudio {
 
 /// Importable audio file extensions (for a picker `XTypeGroup`). Kept as a plain
 /// list so this stays Flutter-free; screens wrap it in an `XTypeGroup`.
-const List<String> kAudioImportExtensions = ['wav', 'mp3', 'flac'];
+const List<String> kAudioImportExtensions = [
+  'wav',
+  'mp3',
+  'flac',
+  'aif',
+  'aiff',
+  'aifc',
+  'ogg',
+  'oga',
+];
 
 /// True if [bytes] looks like a RIFF/WAVE file.
 bool _isWav(Uint8List b) =>
@@ -72,10 +84,13 @@ bool _isFlac(Uint8List b) =>
 ImportedAudio? importAudio(
   Uint8List bytes, {
   FlacDecode? flacDecode,
+  VorbisFileDecode? vorbisDecode,
 }) {
   try {
-    if (_isWav(bytes)) {
-      final wav = readWavPcm16(bytes);
+    // WAV and AIFF are the same shape once parsed (interleaved PCM16 + rate),
+    // so they share one path.
+    if (_isWav(bytes) || isAiff(bytes)) {
+      final wav = _isWav(bytes) ? readWavPcm16(bytes) : readAiff(bytes);
       final channels = wav.channels < 1 ? 1 : wav.channels;
       final interleaved = Float64List.fromList([
         for (final sample in wav.samples) sample / 32768.0,
@@ -111,6 +126,21 @@ ImportedAudio? importAudio(
         right: decoded.right,
       );
     }
+    if (isOggVorbis(bytes)) {
+      // Like FLAC, this needs the native/wasm glint decoder; without it we
+      // decline the file rather than pretending.
+      final decoded = (vorbisDecode ?? loadGlintVorbisFile())?.call(bytes);
+      if (decoded == null || decoded.left.isEmpty) return null;
+      // The Ogg header is the backstop if a decoder didn't report a rate.
+      final headerRate = oggVorbisSampleRate(bytes);
+      return ImportedAudio(
+        decoded.left,
+        decoded.sampleRate > 0
+            ? decoded.sampleRate
+            : (headerRate > 0 ? headerRate : 44100),
+        right: decoded.right,
+      );
+    }
   } catch (_) {
     // fall through to null — callers show a friendly "couldn't read" message
   }
@@ -122,8 +152,13 @@ ImportedAudio? importAudio(
 ImportedAudio? importAudioMono(
   Uint8List bytes, {
   FlacDecode? flacDecode,
+  VorbisFileDecode? vorbisDecode,
 }) {
-  final imported = importAudio(bytes, flacDecode: flacDecode);
+  final imported = importAudio(
+    bytes,
+    flacDecode: flacDecode,
+    vorbisDecode: vorbisDecode,
+  );
   if (imported == null || imported.right == null) return imported;
   final frames = math.min(imported.pcm.length, imported.right!.length);
   final mono = Float64List(frames);
