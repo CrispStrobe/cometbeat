@@ -2061,6 +2061,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Edits sent back from the Score or Tab editor update this clip in place.';
 
   @override
+  String get dawCopyClips => 'Copy selected clips';
+
+  @override
+  String get dawCutClips => 'Cut selected clips';
+
+  @override
+  String get dawPasteClips => 'Paste clips at playhead';
+
+  @override
+  String get dawDeleteClips => 'Delete selected clips';
+
+  @override
+  String get dawMoreActions => 'More actions';
+
+  @override
   String get drumkitTitle => 'Drum Kit';
 
   @override

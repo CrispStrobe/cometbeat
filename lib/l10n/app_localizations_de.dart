@@ -2068,6 +2068,21 @@ class AppLocalizationsDe extends AppLocalizations {
       'Aus der Partitur- oder Tabulatur-Werkstatt zurückgesendete Änderungen aktualisieren diesen Clip direkt.';
 
   @override
+  String get dawCopyClips => 'Ausgewählte Clips kopieren';
+
+  @override
+  String get dawCutClips => 'Ausgewählte Clips ausschneiden';
+
+  @override
+  String get dawPasteClips => 'Clips an der Abspielposition einfügen';
+
+  @override
+  String get dawDeleteClips => 'Ausgewählte Clips löschen';
+
+  @override
+  String get dawMoreActions => 'Weitere Aktionen';
+
+  @override
   String get drumkitTitle => 'Schlagzeug';
 
   @override

@@ -3884,6 +3884,36 @@ abstract class AppLocalizations {
   /// **'Edits sent back from the Score or Tab editor update this clip in place.'**
   String get dawClipLinkedHint;
 
+  /// No description provided for @dawCopyClips.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy selected clips'**
+  String get dawCopyClips;
+
+  /// No description provided for @dawCutClips.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut selected clips'**
+  String get dawCutClips;
+
+  /// No description provided for @dawPasteClips.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste clips at playhead'**
+  String get dawPasteClips;
+
+  /// No description provided for @dawDeleteClips.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected clips'**
+  String get dawDeleteClips;
+
+  /// No description provided for @dawMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get dawMoreActions;
+
   /// No description provided for @drumkitTitle.
   ///
   /// In en, this message translates to:
