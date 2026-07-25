@@ -114,6 +114,15 @@ abstract interface class DawTester {
   /// Reverse the clip's audio (bakes it to a backwards take).
   void reverseClip(int track, int index);
 
+  /// Normalize the clip to a peak target (bakes it).
+  void normalizeClip(int track, int index);
+
+  /// Invert the clip's phase (bakes it).
+  void invertClip(int track, int index);
+
+  /// Remove the clip's DC offset (bakes it).
+  void removeClipDcOffset(int track, int index);
+
   /// Whether a clip is engraved music that can be voiced with an instrument, and
   /// the per-clip / per-track instrument assignment (null = default synth). The
   /// instrument comes from the assets Instruments/Samples library.
@@ -1989,6 +1998,16 @@ class _DawScreenState extends State<DawScreen>
   void reverseClip(int track, int index) => _daw.reverseClip(track, index);
 
   @override
+  void normalizeClip(int track, int index) => _daw.normalizeClip(track, index);
+
+  @override
+  void invertClip(int track, int index) => _daw.invertClip(track, index);
+
+  @override
+  void removeClipDcOffset(int track, int index) =>
+      _daw.removeClipDcOffset(track, index);
+
+  @override
   bool isScoreClip(int track, int index) => _daw.isScoreClip(track, index);
 
   @override
@@ -3201,6 +3220,32 @@ class _DawScreenState extends State<DawScreen>
                           },
                           icon: const Icon(Icons.fast_rewind),
                           label: Text(l10n.dawReverse),
+                        ),
+                        // Destructive amplitude tools (bake the clip): normalize
+                        // to a peak target, flip phase, strip a DC offset.
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetCtx).pop();
+                            normalizeClip(track, index);
+                          },
+                          icon: const Icon(Icons.vertical_align_center),
+                          label: Text(l10n.dawNormalize),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetCtx).pop();
+                            invertClip(track, index);
+                          },
+                          icon: const Icon(Icons.swap_vert),
+                          label: Text(l10n.dawInvertPhase),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(sheetCtx).pop();
+                            removeClipDcOffset(track, index);
+                          },
+                          icon: const Icon(Icons.horizontal_rule),
+                          label: Text(l10n.dawRemoveDc),
                         ),
                         // Tape-style speed: slower (½×) / faster (2×).
                         TextButton.icon(

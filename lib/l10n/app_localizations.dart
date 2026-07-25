@@ -3812,6 +3812,24 @@ abstract class AppLocalizations {
   /// **'Reverse'**
   String get dawReverse;
 
+  /// No description provided for @dawNormalize.
+  ///
+  /// In en, this message translates to:
+  /// **'Normalize'**
+  String get dawNormalize;
+
+  /// No description provided for @dawInvertPhase.
+  ///
+  /// In en, this message translates to:
+  /// **'Invert phase'**
+  String get dawInvertPhase;
+
+  /// No description provided for @dawRemoveDc.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove DC offset'**
+  String get dawRemoveDc;
+
   /// No description provided for @dawSlower.
   ///
   /// In en, this message translates to:

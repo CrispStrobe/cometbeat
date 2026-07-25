@@ -55,8 +55,11 @@ void main() {
     expect(xml, contains('<note'));
     // Two <score-part id=…> entries (not the <score-partwise> root, hence the
     // trailing space in the match).
-    expect(RegExp('<score-part ').allMatches(xml), hasLength(2),
-        reason: 'both staves survive as parts',);
+    expect(
+      RegExp('<score-part ').allMatches(xml),
+      hasLength(2),
+      reason: 'both staves survive as parts',
+    );
     expect(() => scoreFromMusicXml(xml), returnsNormally);
   });
 

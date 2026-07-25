@@ -30,7 +30,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 > mark yours idle here and push before/after touching hot shared files.
 
 - **opus (loop-suite)** · ✅ **SHIPPED (idle) — Loop Suite: genuinely gapless looping + Loop Mixer per-track editing.** (1) **Killed the loop-seam hiccup app-wide:** `GaplessLoopPlayer` looped via audioplayers `ReleaseMode.loop` (the OS media-element loop-reset = an audible gap on every wrap); it now loops via **flutter_soloud** (sample-accurate mixer loop, no OS reset) with a 12 ms crossfade on buffer swaps and audioplayers kept as the headless/unsupported fallback — one file, fixes Loop Mixer/Studio + Beginner + Advanced Tracker (all route through it). (2) **Loop Mixer editing** (previously Advanced-Tracker-only): **undo/redo** (GrooveSpec snapshots keyed by `cacheKey`, hooked at the top of `_syncPlayback`, opening state anchored in initState), **remove captured** voice/beat tracks, and **per-track stereo pan** (renders mono/byte-identical until a track is panned, then `mixStemsStereo`/`wavBytesStereo` + per-channel `_applySendStereo`; pan lives in GrooveSpec `pn`, so share tokens + undo cover it). +5 widget/engine tests, **113 loop-suite tests green**, analyze clean on all touched files. On-device SoLoud integration test added (`integration_test/gapless_loop_player_test.dart`, run `-d macos`). (3) **Full editor discoverable:** the buried Share-sheet "Open in Tracker" is now also a one-tap button in the Loop Mixer's advanced toolbar (reuses the existing `_openInTracker` bridge; disabled until there's pitched content) — the full per-track Advanced-Tracker editor is one tap from the Loop Suite. Deliberately additive on the LOOP side only (no tracker-screen/registry edits) so it doesn't collide with codex's tracker-menu restructuring. Touched only `gapless_loop_player.dart`/`loop_engine.dart`/`loop_mixer_screen.dart` + ARBs — **no tracker/registry/DAW files**, so non-colliding with daw-ux/score-editor. **116 loop-suite tests green.** ⚠ this Mac's Data volume is 100% full → macOS builds ENOSPC (the on-device SoLoud assertion couldn't run; app built+linked fine first). — opus
-- **opus (daw-ux)** · 🚧 **ACTIVE — Audio Editor Ocenaudio-parity ladder (see "## Audio Editor — Ocenaudio-parity ladder" section below).** Closing O1→O16 one at a time (destructive clip processing, generation, zoom, loop-selection, stats, EQ/filters, meters, markers, record, spectrogram, more formats). Additive bake-methods in `daw_service.dart` + inspector items in `daw_screen.dart` (rebase-before-edit; O11 FX-enum is codex/crispaudio-parity's turf — coordinate). worktree `../mus-daw-ux`. — opus
+- **opus (daw-ux)** · 🚧 **ACTIVE — Audio Editor Ocenaudio-parity ladder (see "## Audio Editor — Ocenaudio-parity ladder" section below). O1–O3 SHIPPED** (normalize · invert phase · remove DC offset — a shared `_bakeClip` helper + 3 inspector items + EN/DE keys, +5 tests; O4–O6 reuse the helper). Closing O1→O16 one at a time (destructive clip processing, generation, zoom, loop-selection, stats, EQ/filters, meters, markers, record, spectrogram, more formats). Additive bake-methods in `daw_service.dart` + inspector items in `daw_screen.dart` (rebase-before-edit; O11 FX-enum is codex/crispaudio-parity's turf — coordinate). worktree `../mus-daw-ux`. — opus
 - **codex (score-editor-web)** · 🚧 **ACTIVE — Score Workshop web/mobile usability baseline.** Octave-qualified note names and the remaining import/export, metadata, lyrics, analysis, and Sound Library web fixes are still open. Marquee selection now stays aligned in the scrollable multi-part canvas, the top action bar scrolls horizontally on narrow screens, and Advanced Tracker has been removed from the Score Workshop menu. — codex
 - **codex (score-editor-web)** · 📋 **BACKLOG — Score Workshop and web parity gaps.**
   - Score rendering: bar-number setting has no visible result; note names must include octave (for example `F2`) and remain legible at compact sizes.
@@ -103,9 +103,14 @@ exists in `crisp_dsp/` (`sample_edit.dart`: `normalizePcm`/`removeDcOffset`/
 `reverseClip`) + inspector UI + tests.
 
 **Tier 1 — destructive clip processing (bake to SampleSource; DSP exists):**
-- [ ] **O1** Normalize clip — peak (and RMS) to a target dBFS (`normalizePcm`).
-- [ ] **O2** Invert phase (×−1) — a bake op + inspector item.
-- [ ] **O3** Remove DC offset (`removeDcOffset`).
+- [x] **O1** Normalize clip — one gain from the loudest sample across BOTH channels (stereo image preserved), target 0.98 FS; no-op on silence.
+- [x] **O2** Invert phase (×−1) — a bake op + inspector item.
+- [x] **O3** Remove DC offset (`removeDcOffset`), per channel.
+  > O1–O3 share a new private `_bakeClip(track, index, transform)` in
+  > `daw_service.dart` — renders the clip's trimmed window (both channels),
+  > hands it to `transform`, and rebuilds the `Clip` preserving placement/gain/
+  > pan/width/mute/fades/effects (the `reverseClip` pattern, trim folded in).
+  > O4–O6 should reuse it. Undoable (`_record`); +5 tests.
 - [ ] **O4** Trim silence from clip edges (`trimSilence`); crop clip to the marked range.
 - [ ] **O5** Silence the marked range (replace with silence, keeping timing).
 - [ ] **O6** Amplify by dB (bake) — optional; clip Gain FX already covers most.

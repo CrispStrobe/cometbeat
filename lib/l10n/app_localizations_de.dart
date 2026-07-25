@@ -2033,6 +2033,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawReverse => 'Rückwärts';
 
   @override
+  String get dawNormalize => 'Normalisieren';
+
+  @override
+  String get dawInvertPhase => 'Phase umkehren';
+
+  @override
+  String get dawRemoveDc => 'Gleichanteil entfernen';
+
+  @override
   String get dawSlower => 'Langsamer';
 
   @override

@@ -2026,6 +2026,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawReverse => 'Reverse';
 
   @override
+  String get dawNormalize => 'Normalize';
+
+  @override
+  String get dawInvertPhase => 'Invert phase';
+
+  @override
+  String get dawRemoveDc => 'Remove DC offset';
+
+  @override
   String get dawSlower => 'Slower';
 
   @override

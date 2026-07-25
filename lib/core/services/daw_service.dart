@@ -7,6 +7,8 @@
 
 import 'dart:math' as math;
 
+import 'package:comet_beat/core/audio/crisp_dsp/sample_edit.dart'
+    show peakMagnitude, removeDcOffset;
 import 'package:comet_beat/core/audio/daw_project.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
@@ -763,6 +765,96 @@ class DawService extends ChangeNotifier {
       effects: clip.effects,
     );
     notifyListeners();
+  }
+
+  /// Bake the clip's playing window (both channels) to a fixed [SampleSource]
+  /// take produced by [transform], preserving placement/gain/pan/width/mute/
+  /// fades/effects (the trim is folded in, like [reverseClip]). [transform]
+  /// receives the left and — for a stereo clip — right windows and returns the
+  /// processed pair; returning an empty left aborts. Shared by the destructive
+  /// amplitude tools (normalize / invert / remove-DC / trim-silence).
+  void _bakeClip(
+    int track,
+    int index,
+    (Float64List, Float64List?) Function(Float64List left, Float64List? right)
+        transform,
+  ) {
+    final clip = timeline.tracks[track].clips[index];
+    final rendered = _cache.putIfAbsent(
+      clip.source.cacheKey,
+      () => clip.source.render(kDawSampleRate),
+    );
+    final left = trimmedPcm(clip, rendered);
+    if (left.isEmpty) return;
+    final stereo = clip.source is StereoSampleSource;
+    final right =
+        stereo ? trimmedPcm(clip, _renderedRight(clip, rendered)) : null;
+    final (newLeft, newRight) = transform(left, right);
+    if (newLeft.isEmpty) return;
+    _record();
+    timeline.tracks[track].clips[index] = Clip(
+      source: (stereo && newRight != null)
+          ? StereoSampleSource(newLeft, newRight)
+          : SampleSource(newLeft),
+      startMs: clip.startMs,
+      gain: clip.gain,
+      pan: clip.pan,
+      width: clip.width,
+      muted: clip.muted,
+      fadeInMs: clip.fadeInMs,
+      fadeOutMs: clip.fadeOutMs,
+      fadeInCurve: clip.fadeInCurve,
+      fadeOutCurve: clip.fadeOutCurve,
+      effects: clip.effects,
+    );
+    notifyListeners();
+  }
+
+  static Float64List _scalePcm(Float64List pcm, double g) {
+    final out = Float64List(pcm.length);
+    for (var i = 0; i < pcm.length; i++) {
+      out[i] = pcm[i] * g;
+    }
+    return out;
+  }
+
+  /// **Normalize** a clip to [targetPeak] of full scale (default 0.98) using one
+  /// gain from the loudest sample across BOTH channels, so the stereo image is
+  /// preserved. No-op on a silent clip.
+  void normalizeClip(int track, int index, {double targetPeak = 0.98}) {
+    _bakeClip(track, index, (left, right) {
+      final peak = math.max(
+        peakMagnitude(left),
+        right == null ? 0.0 : peakMagnitude(right),
+      );
+      if (peak == 0) return (left, right);
+      final g = targetPeak / peak;
+      return (_scalePcm(left, g), right == null ? null : _scalePcm(right, g));
+    });
+  }
+
+  /// **Invert** a clip's phase (× −1 on every sample). Inaudible alone, but
+  /// flips cancellation when layered; inverting twice restores it.
+  void invertClip(int track, int index) {
+    _bakeClip(
+      track,
+      index,
+      (left, right) =>
+          (_scalePcm(left, -1), right == null ? null : _scalePcm(right, -1)),
+    );
+  }
+
+  /// **Remove the DC offset** from a clip (centre each channel on zero) — fixes
+  /// an off-centre waveform and the clicks / lost headroom it causes.
+  void removeClipDcOffset(int track, int index) {
+    _bakeClip(
+      track,
+      index,
+      (left, right) => (
+        removeDcOffset(left),
+        right == null ? null : removeDcOffset(right),
+      ),
+    );
   }
 
   /// **Merge** clips into one baked audio take, preserving their relative

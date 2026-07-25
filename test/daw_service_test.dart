@@ -1267,6 +1267,54 @@ void main() {
       );
     });
   });
+
+  group('destructive amplitude tools (bake to a SampleSource)', () {
+    Float64List pcm(DawService s, int track, int index) =>
+        (s.timeline.tracks[track].clips[index].source as SampleSource)
+            .render(kDawSampleRate);
+    double peak(Float64List p) {
+      var m = 0.0;
+      for (final x in p) {
+        if (x.abs() > m) m = x.abs();
+      }
+      return m;
+    }
+
+    test('normalizeClip scales a quiet clip up to the peak target', () {
+      final s = DawService()..addClip(_tone(0.2, 200));
+      s.normalizeClip(0, 0);
+      expect(peak(pcm(s, 0, 0)), closeTo(0.98, 1e-6));
+    });
+
+    test('normalizeClip is a no-op on a silent clip', () {
+      final s = DawService()..addClip(_tone(0.0, 100));
+      s.normalizeClip(0, 0);
+      expect(peak(pcm(s, 0, 0)), 0.0);
+    });
+
+    test('invertClip flips the sign of every sample', () {
+      final s = DawService()..addClip(_tone(0.3, 100));
+      s.invertClip(0, 0);
+      final p = pcm(s, 0, 0);
+      expect(p.first, closeTo(-0.3, 1e-9));
+      expect(p.every((x) => x < 0), isTrue);
+    });
+
+    test('removeClipDcOffset centres a DC-offset clip on zero', () {
+      // A constant level is pure DC; removing the offset zeroes it.
+      final s = DawService()..addClip(_tone(0.3, 100));
+      s.removeClipDcOffset(0, 0);
+      expect(peak(pcm(s, 0, 0)), lessThan(1e-9));
+    });
+
+    test('these edits are undoable', () {
+      final s = DawService()..addClip(_tone(0.2, 100));
+      s.normalizeClip(0, 0);
+      expect(peak(pcm(s, 0, 0)), closeTo(0.98, 1e-6));
+      s.undo();
+      expect(peak(pcm(s, 0, 0)), closeTo(0.2, 1e-9));
+    });
+  });
 }
 
 /// A live source whose render reflects a mutable buffer — a stand-in for a
