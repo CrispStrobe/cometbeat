@@ -5790,165 +5790,232 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   Widget _pianoBar(AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
+    // A compact ± stepper (~2 keys wide) for the right rail.
+    Widget stepper({
+      required String tooltip,
+      String? label,
+      IconData? mid,
+      required VoidCallback onMinus,
+      required VoidCallback onPlus,
+    }) {
+      Widget tap(IconData i, VoidCallback f) => InkResponse(
+            onTap: f,
+            radius: 13,
+            child: Padding(
+              padding: const EdgeInsets.all(1),
+              child: Icon(i, size: 14),
+            ),
+          );
+      return Tooltip(
+        message: tooltip,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            tap(Icons.remove, onMinus),
+            if (mid != null)
+              Icon(mid, size: 13, color: scheme.onSurfaceVariant),
+            if (label != null)
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            tap(Icons.add, onPlus),
+          ],
+        ),
+      );
+    }
+
     return Container(
       color: scheme.surfaceContainerLow,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Row(
         children: [
-          Row(
-            children: [
-              // Which computer-keyboard scheme enters notes.
-              SegmentedButton<_NoteEntry>(
-                style: const ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                showSelectedIcon: false,
-                segments: [
-                  ButtonSegment(
-                    value: _NoteEntry.pianoKeys,
-                    label: Text(l10n.trackerEntryPiano),
-                  ),
-                  ButtonSegment(
-                    value: _NoteEntry.noteNames,
-                    label: Text(l10n.trackerEntryNames),
-                  ),
-                ],
-                selected: {_entryMode},
-                onSelectionChanged: (s) => setState(() {
-                  _entryMode = s.first;
-                  _pendingSemi = null;
-                }),
-              ),
-              const SizedBox(width: 8),
-              // Base octave for the computer keyboard (also slides the piano).
-              IconButton(
-                icon: const Icon(Icons.remove),
-                tooltip: '${l10n.trackerOctave} −',
-                onPressed: () => _setOctave(_octave - 1),
-              ),
-              Text('${l10n.trackerOctave} $_octave'),
-              IconButton(
-                icon: const Icon(Icons.add),
-                tooltip: '${l10n.trackerOctave} +',
-                onPressed: () => _setOctave(_octave + 1),
-              ),
-              // Piano key-size zoom.
-              IconButton(
-                icon: const Icon(Icons.zoom_out, size: 20),
-                tooltip: l10n.trackerZoomOut,
-                onPressed: () => setState(
-                  () => _pianoZoom = (_pianoZoom - 0.2).clamp(0.6, 2.2),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.zoom_in, size: 20),
-                tooltip: l10n.trackerZoomIn,
-                onPressed: () => setState(
-                  () => _pianoZoom = (_pianoZoom + 0.2).clamp(0.6, 2.2),
-                ),
-              ),
-              if (_pendingLabel.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Text(
-                    _pendingLabel,
-                    style: TextStyle(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w700,
+          // The sweepable multi-octave piano fills the width. Tap a key to enter
+          // that absolute note at the cursor; keys light up as the song plays.
+          Expanded(
+            child: SizedBox(
+              height: 72,
+              child: Scrollbar(
+                controller: _pianoScroll,
+                child: SingleChildScrollView(
+                  controller: _pianoScroll,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: _pianoWhiteKeys * _pianoKW,
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _row,
+                      builder: (context, _, __) => PianoKeyboard(
+                        startMidi: _pianoStartMidi,
+                        whiteKeyCount: _pianoWhiteKeys,
+                        showLabels: true,
+                        showOctaveNumbers: true,
+                        keyColors: _soundingKeys(),
+                        keyHints: _pianoKeyHints(),
+                        onKeyTap: (midi) {
+                          _enterNoteAtCursor(midi);
+                          _focus.requestFocus();
+                        },
+                      ),
                     ),
                   ),
-                ),
-              const Spacer(),
-              // The edit column (note/vol/fx) — Tab cycles it; tap for touch.
-              Tooltip(
-                message: l10n.trackerField,
-                child: OutlinedButton(
-                  onPressed: () => setState(
-                    () => _field = _CellField
-                        .values[(_field.index + 1) % _CellField.values.length],
-                  ),
-                  child: Text(
-                    switch (_field) {
-                      _CellField.note => '♪',
-                      _CellField.volume => 'vol',
-                      _CellField.effect => 'fx',
-                      _CellField.instrument => 'ins',
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              // Clear-at-cursor + advance (the "===" key on a real tracker).
-              Tooltip(
-                message: l10n.trackerClearCell,
-                child: OutlinedButton(
-                  onPressed: _clearAtCursorAndAdvance,
-                  child: const Text('···'),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.keyboard),
-                color: _showKeyHints ? scheme.primary : null,
-                tooltip: l10n.trackerShowKeys,
-                onPressed: () => setState(() => _showKeyHints = !_showKeyHints),
-              ),
-              IconButton(
-                icon: const Icon(Icons.info_outline),
-                tooltip: l10n.trackerKeyHelp,
-                onPressed: () => _showKeyHelp(l10n),
-              ),
-            ],
-          ),
-          if (_showKeyHints)
-            Padding(
-              padding: const EdgeInsets.only(top: 2, bottom: 2),
-              child: Text(
-                _entryMode == _NoteEntry.pianoKeys
-                    ? 'Z S X D C V G B H N J M ,  ·  Q 2 W 3 E R 5 T 6 Y 7 U I'
-                    : 'C D E F G A B  +  #  +  0–9   (e.g. F 2 = F2)',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ),
-          const SizedBox(height: 2),
-          // The sweepable multi-octave piano (same widget as the Workshop). Tap
-          // a key to enter that absolute note at the cursor.
+          ),
+          const SizedBox(width: 6),
+          // Compact right rail (~2 keys wide): options · octave · zoom. The
+          // options button opens a sheet with entry mode / field / show-keys /
+          // clear / help; the pending-note badge shows mid-entry feedback.
           SizedBox(
-            height: 72,
-            child: Scrollbar(
-              controller: _pianoScroll,
-              child: SingleChildScrollView(
-                controller: _pianoScroll,
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: _pianoWhiteKeys * _pianoKW,
-                  // Rebuild only the keyboard as the playhead crosses rows, so
-                  // the keys of the sounding notes light up in time.
-                  child: ValueListenableBuilder<int>(
-                    valueListenable: _row,
-                    builder: (context, _, __) => PianoKeyboard(
-                      startMidi: _pianoStartMidi,
-                      whiteKeyCount: _pianoWhiteKeys,
-                      showLabels: true,
-                      showOctaveNumbers: true,
-                      keyColors: _soundingKeys(),
-                      keyHints: _pianoKeyHints(),
-                      onKeyTap: (midi) {
-                        _enterNoteAtCursor(midi);
-                        _focus.requestFocus();
-                      },
-                    ),
+            width: 66,
+            height: 78,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Badge(
+                  isLabelVisible: _pendingLabel.isNotEmpty,
+                  label: Text(_pendingLabel),
+                  child: IconButton(
+                    icon: const Icon(Icons.keyboard_alt, size: 19),
+                    tooltip: l10n.settingsTitle,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 24, minHeight: 22),
+                    onPressed: () => _showPianoOptions(l10n),
                   ),
                 ),
-              ),
+                stepper(
+                  tooltip: l10n.trackerOctave,
+                  label: '$_octave',
+                  onMinus: () => _setOctave(_octave - 1),
+                  onPlus: () => _setOctave(_octave + 1),
+                ),
+                stepper(
+                  tooltip: l10n.trackerZoomIn,
+                  mid: Icons.search,
+                  onMinus: () => setState(
+                    () => _pianoZoom = (_pianoZoom - 0.2).clamp(0.6, 2.2),
+                  ),
+                  onPlus: () => setState(
+                    () => _pianoZoom = (_pianoZoom + 0.2).clamp(0.6, 2.2),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// The piano's option sheet (moved off the always-on strip to the right rail):
+  /// note-entry mode, the edit field, show-keys, clear-cell, and the keyboard
+  /// help. Tab still cycles the field; these are the touch equivalents.
+  void _showPianoOptions(AppLocalizations l10n) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          void refresh() => setSheet(() {});
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.keyboard, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SegmentedButton<_NoteEntry>(
+                          showSelectedIcon: false,
+                          segments: [
+                            ButtonSegment(
+                              value: _NoteEntry.pianoKeys,
+                              label: Text(l10n.trackerEntryPiano),
+                            ),
+                            ButtonSegment(
+                              value: _NoteEntry.noteNames,
+                              label: Text(l10n.trackerEntryNames),
+                            ),
+                          ],
+                          selected: {_entryMode},
+                          onSelectionChanged: (s) {
+                            setState(() {
+                              _entryMode = s.first;
+                              _pendingSemi = null;
+                            });
+                            refresh();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.trackerField,
+                    style: Theme.of(ctx).textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  SegmentedButton<_CellField>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: _CellField.note, label: Text('♪')),
+                      ButtonSegment(value: _CellField.volume, label: Text('vol')),
+                      ButtonSegment(value: _CellField.effect, label: Text('fx')),
+                      ButtonSegment(
+                        value: _CellField.instrument,
+                        label: Text('ins'),
+                      ),
+                    ],
+                    selected: {_field},
+                    onSelectionChanged: (s) {
+                      setState(() => _field = s.first);
+                      refresh();
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.trackerShowKeys),
+                    value: _showKeyHints,
+                    onChanged: (v) {
+                      setState(() => _showKeyHints = v);
+                      refresh();
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.backspace_outlined),
+                    title: Text(l10n.trackerClearCell),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _clearAtCursorAndAdvance();
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.info_outline),
+                    title: Text(l10n.trackerKeyHelp),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      _showKeyHelp(l10n);
+                    },
+                  ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
