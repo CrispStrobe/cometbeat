@@ -1750,6 +1750,29 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                         );
                       },
                     ),
+                    // Key signature (circle of fifths, −7..+7).
+                    Row(
+                      children: [
+                        const Icon(Icons.vpn_key_outlined, size: 18),
+                        const SizedBox(width: 6),
+                        const Expanded(child: Text('Key')),
+                        DropdownButton<int>(
+                          value: _doc.keySignature.fifths.clamp(-7, 7),
+                          items: [
+                            for (var f = -7; f <= 7; f++)
+                              DropdownMenuItem(
+                                value: f,
+                                child: Text(_keyLabel(f)),
+                              ),
+                          ],
+                          onChanged: (f) {
+                            if (f == null) return;
+                            setState(() => _doc.keySignature = KeySignature(f));
+                            refresh();
+                          },
+                        ),
+                      ],
+                    ),
                     stepRow(
                       l10n.tabCapo,
                       Icons.linear_scale,
@@ -2478,5 +2501,24 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         3 => '𝅘𝅥𝅯.', // dotted sixteenth
         2 => '𝅘𝅥𝅯', // sixteenth
         _ => '𝅘𝅥𝅰', // thirty-second
+      };
+
+  // Major-key name for a circle-of-fifths count.
+  String _keyLabel(int fifths) => switch (fifths) {
+        -7 => 'C♭',
+        -6 => 'G♭',
+        -5 => 'D♭',
+        -4 => 'A♭',
+        -3 => 'E♭',
+        -2 => 'B♭',
+        -1 => 'F',
+        1 => 'G',
+        2 => 'D',
+        3 => 'A',
+        4 => 'E',
+        5 => 'B',
+        6 => 'F♯',
+        7 => 'C♯',
+        _ => 'C',
       };
 }

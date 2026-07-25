@@ -267,10 +267,15 @@ class TabDocument {
   /// [barSteps] thirty-second-note steps (3/4 = 24, 6/8 = 24, 5/4 = 40, …).
   TimeSignature timeSignature;
 
+  /// The key signature (circle-of-fifths count, −7..+7; 0 = C/a). Drives the
+  /// accidental spelling on the standard/grand-staff views and exports.
+  KeySignature keySignature;
+
   TabDocument({
     required this.tuning,
     List<TabColumn>? columns,
     this.timeSignature = TimeSignature.fourFour,
+    this.keySignature = const KeySignature(0),
   }) : columns = columns ?? <TabColumn>[];
 
   /// A blank document with [initialColumns] empty columns.
@@ -555,6 +560,7 @@ class TabDocument {
     return Score(
       clef: Clef.treble,
       timeSignature: timeSignature,
+      keySignature: keySignature,
       measures: measures,
       tabVoicings: voicings,
       bends: bends,
@@ -696,6 +702,7 @@ class TabDocument {
       return TabDocument(
         tuning: tuning,
         timeSignature: score.timeSignature ?? TimeSignature.fourFour,
+        keySignature: score.keySignature,
         columns: [const TabColumn()],
       );
     }
@@ -703,6 +710,7 @@ class TabDocument {
     return TabDocument(
       tuning: tuning,
       timeSignature: score.timeSignature ?? TimeSignature.fourFour,
+      keySignature: score.keySignature,
       columns: [
         for (var i = 0; i < arranged.length; i++)
           TabColumn(

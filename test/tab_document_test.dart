@@ -589,4 +589,29 @@ void main() {
       expect(c.withTuplet((5, 4)).tuplet, (5, 4));
     });
   });
+
+  group('A5 — key signature', () {
+    test('default is C (0 fifths)', () {
+      expect(TabDocument.blank(Tuning.standardGuitar).keySignature.fifths, 0);
+    });
+
+    test('toScore stamps the key signature', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        keySignature: const KeySignature(3), // A major
+        columns: [const TabColumn(frets: {0: 0})],
+      );
+      expect(doc.toScore().keySignature.fifths, 3);
+    });
+
+    test('the key survives the import→edit→export round-trip', () {
+      final src = TabDocument(
+        tuning: Tuning.standardGuitar,
+        keySignature: const KeySignature(-2), // B♭ major
+        columns: [const TabColumn(frets: {0: 0})],
+      ).toScore();
+      final back = TabDocument.fromScore(src, Tuning.standardGuitar);
+      expect(back.keySignature.fifths, -2);
+    });
+  });
 }

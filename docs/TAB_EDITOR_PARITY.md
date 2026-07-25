@@ -224,7 +224,10 @@ parametric technique end-to-end.
   ⚠ known limit: consecutive same-ratio columns merge into ONE span (fine for a
   triplet or triplets separated by plain notes; two adjacent triplets would need
   an explicit group id — a later refinement).
-- [ ] A5 … E2 — pending (scoped above)
+- [x] **A5** key signature — `TabDocument.keySignature` (default C/0) →
+  `Score.keySignature`; `fromScore` reads it back; a Key dropdown (−7..+7) in the
+  settings sheet. Tests: group A5.
+- [ ] A6 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.
