@@ -374,6 +374,26 @@ XmEnvelope _xmEnvFromDoc(DocEnvelope e) => XmEnvelope(
       enabled: e.enabled,
     );
 
+/// Converts one neutral sample to the XM sample representation. Kept public so
+/// the song-to-module bridge can build native multi-sample instruments without
+/// duplicating the tuning and PCM conversion rules.
+XmSample xmSampleFromDoc(DocSample ds) {
+  final (rel, ft) = _c5speedToXmTuning(ds.c5speed);
+  return XmSample(
+    name: ds.name,
+    volume: ds.volume.clamp(0, 64),
+    finetune: ft,
+    relativeNote: rel,
+    pan: ds.pan,
+    loopStart: ds.loopStart,
+    loopLength: ds.loopLength,
+    pingPong: ds.pingPong,
+    sixteenBit: ds.sixteenBit,
+    pcm: Float64List.fromList(ds.pcm),
+    rawData: null,
+  );
+}
+
 ModuleDoc docFromXm(XmModule m) {
   final samples = <DocSample>[];
   final sampleOffsets = <int>[];
@@ -872,7 +892,9 @@ Uint8List convertToMod(ModuleDoc doc) => writeMod(docToMod(doc));
 /// v1 writes 8-bit samples (the neutral model doesn't carry bit depth); notes,
 /// instruments, the volume column, samples, loops and structure convert.
 XmModule docToXm(ModuleDoc doc) {
-  if (doc.sourceFormat == ModuleFormat.xm && doc.xmInstruments.isNotEmpty) {
+  if (doc.sourceFormat == ModuleFormat.xm &&
+      doc.xmInstruments.isNotEmpty &&
+      doc.xmPatterns.isNotEmpty) {
     return XmModule(
       name: doc.title,
       trackerName: doc.xmTrackerName,
@@ -888,32 +910,34 @@ XmModule docToXm(ModuleDoc doc) {
       instruments: List<XmInstrument>.from(doc.xmInstruments),
     );
   }
+  if (doc.sourceFormat == ModuleFormat.xm && doc.xmInstruments.isNotEmpty) {
+    return XmModule(
+      name: doc.title,
+      trackerName: doc.xmTrackerName,
+      version: doc.xmVersion,
+      restart: doc.xmRestart,
+      rawHeader: List<int>.from(doc.xmRawHeader),
+      channelCount: doc.channelCount,
+      defaultTempo: doc.initialSpeed,
+      defaultBpm: doc.initialTempo,
+      linearFrequency: doc.linearFrequency,
+      order: List<int>.from(doc.order),
+      patterns: _docPatternsToXm(doc, preserveNativeInstruments: true),
+      instruments: List<XmInstrument>.from(doc.xmInstruments),
+    );
+  }
   final instruments = <XmInstrument>[];
   for (final ds in doc.samples) {
     if (ds.isEmpty) {
       instruments.add(const XmInstrument(samples: []));
       continue;
     }
-    final (rel, ft) = _c5speedToXmTuning(ds.c5speed);
     instruments.add(
       XmInstrument(
         name: ds.name,
         volumeEnvelope: _xmEnvFromDoc(ds.volumeEnvelope),
         panEnvelope: _xmEnvFromDoc(ds.panEnvelope),
-        samples: [
-          XmSample(
-            name: ds.name,
-            volume: ds.volume.clamp(0, 64),
-            finetune: ft,
-            relativeNote: rel,
-            pan: ds.pan,
-            loopStart: ds.loopStart,
-            loopLength: ds.loopLength,
-            pingPong: ds.pingPong,
-            sixteenBit: ds.sixteenBit,
-            pcm: Float64List.fromList(ds.pcm),
-          ),
-        ],
+        samples: [xmSampleFromDoc(ds)],
       ),
     );
   }

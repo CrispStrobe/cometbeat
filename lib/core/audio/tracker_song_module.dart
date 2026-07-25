@@ -17,10 +17,12 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
-    show parseAnyModule;
+    show parseAnyModule, xmSampleFromDoc;
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/module_instrument_bridge.dart'
     show sampleInstrumentFromDoc;
+import 'package:comet_beat/core/audio/mod/xm_module.dart'
+    show XmEnvelope, XmInstrument;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
@@ -396,10 +398,132 @@ TrackerPattern _patternFromDoc(
 /// [sixteenBit] stores the samples at 16-bit depth where the container supports
 /// it (XM/IT/S3M — MOD is always 8-bit); default true keeps app-recorded audio
 /// at full precision. Pass false for a smaller, classic 8-bit export.
+class _NativeExportParts {
+  const _NativeExportParts({
+    required this.samples,
+    required this.xmInstruments,
+    required this.itInstruments,
+  });
+
+  final List<DocSample> samples;
+  final List<XmInstrument> xmInstruments;
+  final List<DocInstrument> itInstruments;
+}
+
+_NativeExportParts _nativeExportParts(
+  List<TrackerInstrument> insts,
+  Map<int, VolumeEnvelope> volEnvBySlot,
+  Map<int, PanEnvelope> panEnvBySlot,
+  Map<int, double> panBySlot,
+  int engineRate,
+  bool sixteenBit,
+  int tempo,
+) {
+  final samples = <DocSample>[];
+  final xm = <XmInstrument>[];
+  final it = <DocInstrument>[];
+  for (var slot = 0; slot < insts.length; slot++) {
+    final instrument = insts[slot];
+    final zones = <TrackerInstrument>[];
+    final keyZone = <int, TrackerInstrument>{};
+    if (instrument is MultiSampleInstrument) {
+      for (final key in instrument.zones.keys) {
+        final zone = instrument.zones[key];
+        if (zone != null) {
+          keyZone[key] = zone;
+          if (!zones.any((existing) => identical(existing, zone))) {
+            zones.add(zone);
+          }
+        }
+      }
+    } else {
+      zones.add(instrument);
+    }
+    if (zones.isEmpty) zones.add(instrument);
+
+    final local = <TrackerInstrument, int>{};
+    final localSamples = <DocSample>[];
+    for (final zone in zones) {
+      final ve = zone is SampleInstrument ? zone.nativeVolumeEnvelope : null;
+      final pe = zone is SampleInstrument ? zone.nativePanEnvelope : null;
+      final ds = _docSampleForInstrument(
+        zone,
+        engineRate,
+        sixteenBit,
+        pan: _docPan(panBySlot[slot]),
+        volumeEnvelope: _docVolEnv(ve, tempo),
+        panEnvelope: _docPanEnv(pe, tempo),
+      );
+      local[zone] = localSamples.length;
+      localSamples.add(ds);
+      samples.add(ds);
+    }
+    final first = zones.first;
+    final vol = volEnvBySlot[slot] ??
+        (first is SampleInstrument ? first.nativeVolumeEnvelope : null);
+    final pan = panEnvBySlot[slot] ??
+        (first is SampleInstrument ? first.nativePanEnvelope : null);
+    final volumeEnvelope = _docVolEnv(vol, tempo);
+    final panEnvelope = _docPanEnv(pan, tempo);
+    final nna = first is SampleInstrument ? first.nativeNna : 0;
+    final dct = first is SampleInstrument ? first.nativeDct : 0;
+    final dca = first is SampleInstrument ? first.nativeDca : 0;
+    final fadeout = first is SampleInstrument ? first.nativeFadeout : 0;
+    final xmKeymap = [
+      for (var key = 0; key < 96; key++) local[keyZone[key + 11] ?? first] ?? 0,
+    ];
+    xm.add(
+      XmInstrument(
+        name: instrument.id,
+        samples: [for (final ds in localSamples) xmSampleFromDoc(ds)],
+        keymap: xmKeymap,
+        volumeEnvelope: XmEnvelope(
+          points: volumeEnvelope.points,
+          sustain: volumeEnvelope.sustain,
+          loopStart: volumeEnvelope.loopStart,
+          loopEnd: volumeEnvelope.loopEnd,
+          enabled: volumeEnvelope.enabled,
+        ),
+        panEnvelope: XmEnvelope(
+          points: panEnvelope.points,
+          sustain: panEnvelope.sustain,
+          loopStart: panEnvelope.loopStart,
+          loopEnd: panEnvelope.loopEnd,
+          enabled: panEnvelope.enabled,
+        ),
+        fadeout: fadeout,
+      ),
+    );
+    final baseSample = samples.length - localSamples.length;
+    it.add(
+      DocInstrument(
+        name: instrument.id,
+        keymap: [
+          for (var key = 0; key < 120; key++)
+            baseSample + (local[keyZone[key] ?? first] ?? 0) + 1,
+        ],
+        noteMap: [for (var key = 0; key < 120; key++) key],
+        nna: nna,
+        dct: dct,
+        dca: dca,
+        fadeout: fadeout,
+        volumeEnvelope: volumeEnvelope,
+        panEnvelope: panEnvelope,
+      ),
+    );
+  }
+  return _NativeExportParts(
+    samples: samples,
+    xmInstruments: xm,
+    itInstruments: it,
+  );
+}
+
 ModuleDoc moduleDocFromSong(
   TrackerSong song, {
   int engineRate = kSampleRate,
   bool sixteenBit = true,
+  ModuleFormat? targetFormat,
 }) {
   song.syncCurrent();
   final channelCount = song.channels.length;
@@ -450,8 +574,18 @@ ModuleDoc moduleDocFromSong(
       final row = <DocCell>[];
       for (var c = 0; c < channelCount; c++) {
         final cell = pat.cells[c][r];
-        if (cell.midi == null && cell.fxCmd == 0 && cell.volume == null) {
+        if (cell.isEmpty) {
           row.add(DocCell.empty);
+          continue;
+        }
+        if (cell.keyOff && cell.midi == null) {
+          row.add(
+            DocCell(
+              noteOff: true,
+              effect: cell.fxCmd,
+              effectParam: cell.fxParam,
+            ),
+          );
           continue;
         }
         final vol =
@@ -465,6 +599,19 @@ ModuleDoc moduleDocFromSong(
             volume: vol,
             effect: cell.fxCmd,
             effectParam: cell.fxParam,
+            nativeNote: targetFormat == ModuleFormat.xm
+                ? (cell.midi == null ? -1 : (cell.midi! - 11).clamp(1, 96))
+                : targetFormat == ModuleFormat.it
+                    ? (cell.midi == null ? -1 : cell.midi!.clamp(0, 119))
+                    : -1,
+            nativeInstrument: (targetFormat == ModuleFormat.xm ||
+                        targetFormat == ModuleFormat.it) &&
+                    cell.midi != null
+                ? slotOf(effectiveInst(c, cell)) + 1
+                : 0,
+            nativeInstrumentSet: (targetFormat == ModuleFormat.xm ||
+                    targetFormat == ModuleFormat.it) &&
+                cell.midi != null,
           ),
         );
       }
@@ -473,24 +620,39 @@ ModuleDoc moduleDocFromSong(
     patterns.add(DocPattern(rows, channelCount));
   }
 
+  final native =
+      targetFormat == ModuleFormat.xm || targetFormat == ModuleFormat.it
+          ? _nativeExportParts(
+              insts,
+              volEnvBySlot,
+              panEnvBySlot,
+              panBySlot,
+              engineRate,
+              sixteenBit,
+              tempo,
+            )
+          : null;
   return ModuleDoc(
     channelCount: channelCount,
-    sourceFormat: ModuleFormat.mod,
+    sourceFormat: targetFormat ?? ModuleFormat.mod,
     initialTempo: song.timing.tempoBpm.clamp(32, 255),
     initialSpeed: song.initialSpeed.clamp(1, 31),
     order: List<int>.of(song.order),
     patterns: patterns,
-    samples: [
-      for (var k = 0; k < insts.length; k++)
-        _docSampleForInstrument(
-          insts[k],
-          engineRate,
-          sixteenBit,
-          pan: _docPan(panBySlot[k]),
-          volumeEnvelope: _docVolEnv(volEnvBySlot[k], tempo),
-          panEnvelope: _docPanEnv(panEnvBySlot[k], tempo),
-        ),
-    ],
+    samples: native?.samples ??
+        [
+          for (var k = 0; k < insts.length; k++)
+            _docSampleForInstrument(
+              insts[k],
+              engineRate,
+              sixteenBit,
+              pan: _docPan(panBySlot[k]),
+              volumeEnvelope: _docVolEnv(volEnvBySlot[k], tempo),
+              panEnvelope: _docPanEnv(panEnvBySlot[k], tempo),
+            ),
+        ],
+    xmInstruments: native?.xmInstruments ?? const [],
+    itInstruments: native?.itInstruments ?? const [],
   );
 }
 
@@ -505,6 +667,9 @@ DocEnvelope _docVolEnv(VolumeEnvelope? e, int tempo) {
       for (final p in e.points)
         ((p.ms / perTick).round(), (p.level * 64).round().clamp(0, 64)),
     ],
+    sustain: e.sustain,
+    loopStart: e.loopStart,
+    loopEnd: e.loopEnd,
   );
 }
 
@@ -519,6 +684,9 @@ DocEnvelope _docPanEnv(PanEnvelope? e, int tempo) {
       for (final p in e.points)
         ((p.ms / perTick).round(), (p.pan * 32 + 32).round().clamp(0, 64)),
     ],
+    sustain: e.sustain,
+    loopStart: e.loopStart,
+    loopEnd: e.loopEnd,
   );
 }
 
@@ -552,6 +720,10 @@ DocSample _docSampleForInstrument(
       // Full precision where the format allows (XM/IT/S3M); MOD stays 8-bit.
       sixteenBit: sixteenBit,
       pan: pan,
+      volume: (inst.volume * 64).round().clamp(0, 64),
+      pcmRight: inst.sampleRight == null
+          ? null
+          : Float64List.fromList(inst.sampleRight!),
       volumeEnvelope: volumeEnvelope,
       panEnvelope: panEnvelope,
     );

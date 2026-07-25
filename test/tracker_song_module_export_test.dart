@@ -5,7 +5,9 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
-    show convertToXm, parseAnyModule;
+    show convertToIt, convertToXm, parseAnyModule;
+import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
+import 'package:comet_beat/core/audio/mod/xm_module.dart' show XmCell;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
@@ -46,6 +48,72 @@ void main() {
   }
 
   group('moduleDocFromSong (PCM-preserving)', () {
+    test('native XM and IT exports retain edited multi-sample keymaps', () {
+      final low = SampleInstrument(
+        'low',
+        Float64List.fromList(List<double>.filled(500, 0.25)),
+      );
+      final high = SampleInstrument(
+        'high',
+        Float64List.fromList(List<double>.filled(500, -0.25)),
+      );
+      final kit = MultiSampleInstrument('kit', {60: low, 72: high});
+      final cells = List<TrackerCell>.filled(4, TrackerCell.empty);
+      cells[0] = const TrackerCell(midi: 60);
+      cells[1] = const TrackerCell(midi: 72);
+      final song = TrackerSong.fromParts(
+        channels: [TrackerChannel(id: 'kit', instrument: kit, rows: 4)],
+        instruments: [kit],
+        timing: const TrackerTiming(rows: 4),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+
+      final xm = parseAnyModule(
+        convertToXm(moduleDocFromSong(song, targetFormat: ModuleFormat.xm)),
+      );
+      expect(xm.xmInstruments.single.samples, hasLength(2));
+      expect(xm.xmInstruments.single.keymap[49], 0); // C-4 / MIDI 60
+      expect(xm.xmInstruments.single.keymap[61], 1); // C-5 / MIDI 72
+
+      final it = parseAnyModule(
+        convertToIt(moduleDocFromSong(song, targetFormat: ModuleFormat.it)),
+      );
+      expect(it.itInstruments.single.keymap[60], 1);
+      expect(it.itInstruments.single.keymap[72], 2);
+      expect(it.samples, hasLength(2));
+    });
+
+    test('explicit key-off cells survive native XM and IT export', () {
+      final sample = SampleInstrument(
+        'sample',
+        Float64List.fromList(List<double>.filled(500, 0.2)),
+      );
+      final cells = [
+        const TrackerCell(midi: 60),
+        TrackerCell.noteCut,
+      ];
+      final song = TrackerSong.fromParts(
+        channels: [TrackerChannel(id: 'sample', instrument: sample, rows: 2)],
+        instruments: [sample],
+        timing: const TrackerTiming(rows: 2),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+      final xm = parseAnyModule(
+        convertToXm(moduleDocFromSong(song, targetFormat: ModuleFormat.xm)),
+      );
+      expect(xm.xmPatterns.single.rows[1].single.note, XmCell.noteOff);
+      final it = parseAnyModule(
+        convertToIt(moduleDocFromSong(song, targetFormat: ModuleFormat.it)),
+      );
+      expect(it.patterns.single.rows[1].single.noteOff, isTrue);
+    });
+
     test('a SampleInstrument keeps its real PCM in the doc', () {
       final pcm = buzz(400);
       final doc = moduleDocFromSong(sampleSong(pcm));

@@ -15,9 +15,9 @@
 //     faithful mapping needs a cross-format effect table (a documented follow-up).
 //     Notes + instrument + volume-column + samples + song structure convert
 //     cleanly, which is what "convert & play the tune" needs.
-//   • Instruments are 1-based (matching the tracker cell convention); instrument
-//     k refers to samples[k-1]. Multi-sample XM/IT instruments collapse to their
-//     first sample in v1.
+//   • Instruments are 1-based (matching the tracker cell convention). Generic
+//     cross-format conversions flatten XM/IT keymaps, while the Advanced
+//     Tracker song export path reconstructs native XM/IT instruments.
 
 import 'dart:typed_data';
 

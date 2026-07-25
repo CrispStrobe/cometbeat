@@ -4028,7 +4028,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     }
     try {
       final bytes = convertDocTo(
-        moduleDocFromSong(_song, sixteenBit: sixteenBit),
+        moduleDocFromSong(
+          _song,
+          sixteenBit: sixteenBit,
+          targetFormat: fmt,
+        ),
         fmt,
       );
       await _saveBytes(bytes, 'tracker.${fmt.name}', fmt.name.toUpperCase(), [
