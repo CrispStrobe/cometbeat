@@ -1354,6 +1354,84 @@ void main() {
     });
   });
 
+  group('markers', () {
+    test('markers stay sorted by time however they are added', () {
+      final s = DawService()
+        ..addMarker(900, 'c')
+        ..addMarker(100, 'a')
+        ..addMarker(500, 'b');
+      expect(s.markers.map((m) => m.label), ['a', 'b', 'c']);
+      expect(s.markers.map((m) => m.ms), [100, 500, 900]);
+    });
+
+    test('rename, move and remove; moving re-sorts', () {
+      final s = DawService()
+        ..addMarker(100, 'a')
+        ..addMarker(500, 'b');
+
+      s.renameMarker(0, 'intro');
+      expect(s.markers.first.label, 'intro');
+
+      s.moveMarker(0, 800); // past 'b'
+      expect(s.markers.map((m) => m.label), ['b', 'intro']);
+
+      s.removeMarker(0);
+      expect(s.markers.map((m) => m.label), ['intro']);
+
+      // Out-of-range indices are ignored rather than throwing.
+      s
+        ..removeMarker(7)
+        ..renameMarker(-1, 'x')
+        ..moveMarker(9, 0);
+      expect(s.markers, hasLength(1));
+    });
+
+    test('a negative position is clamped to the start', () {
+      final s = DawService()..addMarker(-500, 'early');
+      expect(s.markers.single.ms, 0);
+    });
+
+    test('every marker edit is undoable', () {
+      final s = DawService()..addMarker(100, 'a');
+      s.addMarker(200, 'b');
+      expect(s.markers, hasLength(2));
+      s.undo();
+      expect(s.markers.map((m) => m.label), ['a']);
+      s.undo();
+      expect(s.markers, isEmpty);
+      s.redo();
+      expect(s.markers.map((m) => m.label), ['a']);
+    });
+
+    test('markerBefore / markerAfter navigate, and stop at the ends', () {
+      final s = DawService()
+        ..addMarker(100, 'a')
+        ..addMarker(500, 'b');
+      expect(s.markerAfter(0)?.label, 'a');
+      expect(s.markerAfter(100)?.label, 'b'); // not the one we're standing on
+      expect(s.markerAfter(500), isNull);
+      expect(s.markerBefore(500)?.label, 'a');
+      expect(s.markerBefore(0), isNull);
+    });
+
+    test('clearMarkers empties the list and is undoable', () {
+      final s = DawService()
+        ..addMarker(100, 'a')
+        ..addMarker(500, 'b');
+      s.clearMarkers();
+      expect(s.markers, isEmpty);
+      s.undo();
+      expect(s.markers, hasLength(2));
+    });
+
+    test('markers never reach the render', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      final before = renderTimeline(s.timeline, cache: {});
+      s.addMarker(10, 'x');
+      expect(renderTimeline(s.timeline, cache: {}), before);
+    });
+  });
+
   group('range crop / silence', () {
     test('silenceRange cuts the marked segment out, leaving a hole', () {
       final s = DawService()..addClip(_tone(0.4, kDawSampleRate));

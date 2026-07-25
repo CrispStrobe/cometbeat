@@ -18,7 +18,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/daw_edits.dart'
-    show ClipStats, GeneratorShape;
+    show ClipStats, GeneratorShape, clipStatsOf;
 import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart'
@@ -157,8 +157,10 @@ abstract interface class DawTester {
   /// arrangement — true when looping is on AND a range is marked.
   bool get loopsMarkedRange;
 
-  /// The playhead, in ms from the arrangement's start.
-  double get positionMs;
+  /// Peak and RMS (linear, 0..1) of what is sounding right now — 0 when
+  /// stopped. Reads the baked buffer at the playhead, so it measures the mix
+  /// actually being played, post-FX.
+  ({double peak, double rms}) get playbackLevel;
 
   /// Whether a clip is engraved music that can be voiced with an instrument, and
   /// the per-clip / per-track instrument assignment (null = default synth). The
@@ -253,6 +255,9 @@ class _DawScreenState extends State<DawScreen>
 
   /// Timeline zoom multiplier over [_basePxPerSecond] (O8).
   double _zoom = 1;
+
+  /// The last baked mix, kept so the meters (O12) can measure what's playing.
+  Float64List? _bakedPcm;
 
   @override
   void initState() {
@@ -1301,6 +1306,139 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
+  /// O13 — name a marker as it's dropped. An empty name is fine (the flag
+  /// alone is a useful "come back here"), so Add is never blocked.
+  Future<void> _addMarkerAtPlayhead() async {
+    final l10n = AppLocalizations.of(context)!;
+    final at = playheadMs;
+    // NB: TextFormField, not TextField + our own controller — a controller we
+    // dispose right after the pop is still referenced by the field while the
+    // dialog animates out, which corrupts the focus tree.
+    var text = '';
+    final label = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.dawAddMarker),
+        content: TextFormField(
+          autofocus: true,
+          decoration: InputDecoration(labelText: l10n.dawMarkerName),
+          onChanged: (v) => text = v,
+          onFieldSubmitted: (v) => Navigator.of(ctx).pop(v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.dawCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(text),
+            child: Text(l10n.dawAmplifyApply),
+          ),
+        ],
+      ),
+    );
+    if (label == null) return;
+    _daw.addMarker(at, label.trim());
+  }
+
+  /// Tap a marker flag → rename, move it here, or delete it.
+  Future<void> _markerMenu(int index) async {
+    final l10n = AppLocalizations.of(context)!;
+    final marker = _daw.markers[index];
+    var text = marker.label;
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.dawMarkers),
+        content: TextFormField(
+          autofocus: true,
+          initialValue: marker.label,
+          decoration: InputDecoration(labelText: l10n.dawMarkerName),
+          onChanged: (v) => text = v,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('delete'),
+            child: Text(l10n.dawDelete),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.dawCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop('rename'),
+            child: Text(l10n.dawAmplifyApply),
+          ),
+        ],
+      ),
+    );
+    if (action == 'delete') {
+      _daw.removeMarker(index);
+    } else if (action == 'rename') {
+      _daw.renameMarker(index, text.trim());
+    }
+  }
+
+  /// O12 — a live peak/RMS meter. The filled bar is RMS (how loud it *feels*),
+  /// the bright tick is the peak (what actually clips), on a −60…0 dBFS scale.
+  /// It repaints off the playhead notifier, so it costs nothing when stopped.
+  Widget _levelMeter(AppLocalizations l10n) {
+    double norm(double amplitude) {
+      if (amplitude <= 0) return 0;
+      final db = 20 * math.log(amplitude) / math.ln10;
+      return ((db + 60) / 60).clamp(0.0, 1.0);
+    }
+
+    return ValueListenableBuilder<double>(
+      valueListenable: _positionMs,
+      builder: (ctx, _, __) {
+        final level = playbackLevel;
+        final scheme = Theme.of(ctx).colorScheme;
+        final hot = level.peak >= 1;
+        return Tooltip(
+          message: '${l10n.dawLevel} — RMS / peak dBFS',
+          child: SizedBox(
+            width: 96,
+            height: 24,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                FractionallySizedBox(
+                  widthFactor: norm(level.rms),
+                  child: Container(
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: hot ? scheme.error : scheme.primary,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                ),
+                // The peak tick rides ahead of the RMS fill.
+                Align(
+                  alignment: Alignment(2 * norm(level.peak) - 1, 0),
+                  child: Container(
+                    width: 2,
+                    height: 14,
+                    color: level.peak <= 0
+                        ? Colors.transparent
+                        : (hot ? scheme.error : scheme.onSurface),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   String _shapeLabel(GeneratorShape shape, AppLocalizations l10n) =>
       switch (shape) {
         GeneratorShape.sine => l10n.dawShapeSine,
@@ -2274,7 +2412,23 @@ class _DawScreenState extends State<DawScreen>
   bool get loopsMarkedRange => _loop && _hasFxRange;
 
   @override
-  double get positionMs => _positionMs.value;
+  ({double peak, double rms}) get playbackLevel {
+    final pcm = _bakedPcm;
+    if (!_playing || pcm == null || pcm.isEmpty) return (peak: 0, rms: 0);
+    // Measure the ~23 ms just played: short enough to track a transient, long
+    // enough that the RMS number doesn't flicker.
+    const window = 1024;
+    final at = (_positionMs.value * kDawSampleRate / 1000).round();
+    final to = at.clamp(1, pcm.length);
+    final from = math.max(0, to - window);
+    if (to <= from) return (peak: 0, rms: 0);
+    final s = clipStatsOf(
+      Float64List.sublistView(pcm, from, to),
+      null,
+      sampleRate: kDawSampleRate,
+    );
+    return (peak: s.peak, rms: s.rms);
+  }
 
   @override
   bool isScoreClip(int track, int index) => _daw.isScoreClip(track, index);
@@ -2307,6 +2461,12 @@ class _DawScreenState extends State<DawScreen>
     DawClipEffectType.bitCrush,
     DawClipEffectType.lowpass,
     DawClipEffectType.highpass,
+    DawClipEffectType.bandpass,
+    DawClipEffectType.notch,
+    DawClipEffectType.peakingEq,
+    DawClipEffectType.lowShelf,
+    DawClipEffectType.highShelf,
+    DawClipEffectType.phaser,
     DawClipEffectType.compressor,
     DawClipEffectType.gate,
     DawClipEffectType.pitchShift,
@@ -2343,6 +2503,12 @@ class _DawScreenState extends State<DawScreen>
         DawClipEffectType.voiceDeep => 'Voice: Deep',
         DawClipEffectType.voiceRobot => 'Voice: Robot',
         DawClipEffectType.voiceRadio => 'Voice: Radio',
+        DawClipEffectType.bandpass => 'Band Pass',
+        DawClipEffectType.notch => 'Notch',
+        DawClipEffectType.peakingEq => 'Peaking EQ',
+        DawClipEffectType.lowShelf => 'Low Shelf',
+        DawClipEffectType.highShelf => 'High Shelf',
+        DawClipEffectType.phaser => 'Phaser',
       };
 
   String _clipEffectPresetLabel(DawClipEffectPreset preset) => switch (preset) {
@@ -2432,7 +2598,11 @@ class _DawScreenState extends State<DawScreen>
                 (key: 'bits', label: 'Bits', min: 1, max: 16, step: 1),
                 (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
               ],
-            DawClipEffectType.lowpass || DawClipEffectType.highpass => const [
+            DawClipEffectType.lowpass ||
+            DawClipEffectType.highpass ||
+            DawClipEffectType.bandpass ||
+            DawClipEffectType.notch =>
+              const [
                 (
                   key: 'freq',
                   label: 'Cutoff Hz',
@@ -2442,6 +2612,48 @@ class _DawScreenState extends State<DawScreen>
                 ),
                 (key: 'q', label: 'Q', min: 0.1, max: 20, step: 0.1),
                 (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            // The bell and the shelves cut/boost, so they add a gain control.
+            DawClipEffectType.peakingEq ||
+            DawClipEffectType.lowShelf ||
+            DawClipEffectType.highShelf =>
+              const [
+                (
+                  key: 'freq',
+                  label: 'Centre Hz',
+                  min: 20,
+                  max: 20000,
+                  step: 10
+                ),
+                (key: 'gainDb', label: 'Gain dB', min: -24, max: 24, step: 0.5),
+                (key: 'q', label: 'Q', min: 0.1, max: 20, step: 0.1),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            DawClipEffectType.phaser => const [
+                (
+                  key: 'rateHz',
+                  label: 'Rate Hz',
+                  min: 0.05,
+                  max: 8,
+                  step: 0.05
+                ),
+                (key: 'depth', label: 'Depth', min: 0, max: 1, step: 0.01),
+                (
+                  key: 'feedback',
+                  label: 'Feedback',
+                  min: -0.95,
+                  max: 0.95,
+                  step: 0.01
+                ),
+                (key: 'minFreq', label: 'Low Hz', min: 20, max: 4000, step: 10),
+                (
+                  key: 'maxFreq',
+                  label: 'High Hz',
+                  min: 100,
+                  max: 12000,
+                  step: 10
+                ),
+                (key: 'stages', label: 'Stages', min: 2, max: 12, step: 2),
               ],
             DawClipEffectType.compressor => const [
                 (
@@ -2757,6 +2969,7 @@ class _DawScreenState extends State<DawScreen>
   void play() {
     final pcm = _bake();
     if (pcm.isEmpty) return;
+    _bakedPcm = pcm; // O12 — the meters read the mix that's actually sounding
     _totalMs = pcm.length / kDawSampleRate * 1000;
     final from = (_seekMs.clamp(0, _totalMs) * kDawSampleRate / 1000).round();
     // Play from the seek point onward. The transport (playhead) runs whenever
@@ -3901,6 +4114,48 @@ class _DawScreenState extends State<DawScreen>
                           icon: const Icon(Icons.call_merge),
                           label: const Text('Buses'),
                         ),
+                        // O13 — drop a labelled marker at the playhead, and
+                        // hop between them.
+                        MenuAnchor(
+                          menuChildren: [
+                            MenuItemButton(
+                              onPressed: _addMarkerAtPlayhead,
+                              leadingIcon: const Icon(Icons.flag),
+                              child: Text(l10n.dawAddMarker),
+                            ),
+                            MenuItemButton(
+                              onPressed: daw.markerBefore(playheadMs) == null
+                                  ? null
+                                  : () => seekTo(
+                                        daw.markerBefore(playheadMs)!.ms,
+                                      ),
+                              leadingIcon: const Icon(Icons.skip_previous),
+                              child: Text(l10n.dawPreviousMarker),
+                            ),
+                            MenuItemButton(
+                              onPressed: daw.markerAfter(playheadMs) == null
+                                  ? null
+                                  : () =>
+                                      seekTo(daw.markerAfter(playheadMs)!.ms),
+                              leadingIcon: const Icon(Icons.skip_next),
+                              child: Text(l10n.dawNextMarker),
+                            ),
+                            MenuItemButton(
+                              onPressed:
+                                  daw.markers.isEmpty ? null : daw.clearMarkers,
+                              leadingIcon: const Icon(Icons.flag_outlined),
+                              child: Text(l10n.dawClearMarkers),
+                            ),
+                          ],
+                          builder: (context, controller, _) =>
+                              OutlinedButton.icon(
+                            onPressed: () => controller.isOpen
+                                ? controller.close()
+                                : controller.open(),
+                            icon: const Icon(Icons.flag),
+                            label: Text(l10n.dawMarkers),
+                          ),
+                        ),
                         OutlinedButton.icon(
                           onPressed: daw.clipCount == 0 ? null : _markRangeIn,
                           icon: const Icon(Icons.keyboard_tab),
@@ -4056,6 +4311,8 @@ class _DawScreenState extends State<DawScreen>
                             label: Text(l10n.dawRangeEdit),
                           ),
                         ),
+                        // O12 — peak/RMS of what's sounding, live.
+                        _levelMeter(l10n),
                         // O7 — build a tone/noise/silence clip from scratch.
                         OutlinedButton.icon(
                           onPressed: _generateClipDialog,
@@ -4234,8 +4491,20 @@ class _DawScreenState extends State<DawScreen>
   }
 
   // A second-by-second time ruler aligned with the lanes below it.
+  /// Seconds between ruler ticks. Zooming out must not produce a wall of
+  /// unreadable labels, so the step grows until ticks are ≥60 px apart.
+  int get _rulerStepSeconds {
+    const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
+    for (final s in steps) {
+      if (s * _pxPerSecond >= 60) return s;
+    }
+    return steps.last;
+  }
+
   Widget _ruler(double laneWidth, ColorScheme scheme) {
     final seconds = (laneWidth / _pxPerSecond).ceil();
+    final step = _rulerStepSeconds;
+    final markers = _daw.markers;
     return GestureDetector(
       // Click the ruler to move the playhead / play-start marker.
       behavior: HitTestBehavior.opaque,
@@ -4246,9 +4515,11 @@ class _DawScreenState extends State<DawScreen>
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
         ),
+        // NB: no `clipBehavior:` here — the DAW's own `Clip` class shadows
+        // Flutter's `Clip` enum in this file.
         child: Stack(
           children: [
-            for (var s = 0; s <= seconds; s++)
+            for (var s = 0; s <= seconds; s += step)
               Positioned(
                 left: s * _pxPerSecond,
                 top: 0,
@@ -4267,6 +4538,40 @@ class _DawScreenState extends State<DawScreen>
                       ),
                     ),
                   ],
+                ),
+              ),
+            // O13 — marker flags sit ON the ruler and take the tap themselves,
+            // so hitting one opens its menu instead of moving the playhead.
+            for (var i = 0; i < markers.length; i++)
+              Positioned(
+                left: markers[i].ms / 1000 * _pxPerSecond,
+                top: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _markerMenu(i),
+                  child: Tooltip(
+                    message: markers[i].label.isEmpty
+                        ? '${(markers[i].ms / 1000).toStringAsFixed(2)}s'
+                        : markers[i].label,
+                    child: Row(
+                      children: [
+                        Container(width: 2, color: scheme.tertiary),
+                        if (markers[i].label.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 3),
+                            color: scheme.tertiaryContainer,
+                            child: Text(
+                              markers[i].label,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: scheme.onTertiaryContainer,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
           ],

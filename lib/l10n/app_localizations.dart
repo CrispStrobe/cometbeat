@@ -4028,6 +4028,48 @@ abstract class AppLocalizations {
   /// **'Fit'**
   String get dawZoomFit;
 
+  /// No description provided for @dawMarkers.
+  ///
+  /// In en, this message translates to:
+  /// **'Markers'**
+  String get dawMarkers;
+
+  /// No description provided for @dawAddMarker.
+  ///
+  /// In en, this message translates to:
+  /// **'Add marker'**
+  String get dawAddMarker;
+
+  /// No description provided for @dawMarkerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get dawMarkerName;
+
+  /// No description provided for @dawPreviousMarker.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous marker'**
+  String get dawPreviousMarker;
+
+  /// No description provided for @dawNextMarker.
+  ///
+  /// In en, this message translates to:
+  /// **'Next marker'**
+  String get dawNextMarker;
+
+  /// No description provided for @dawClearMarkers.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all markers'**
+  String get dawClearMarkers;
+
+  /// No description provided for @dawDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get dawDelete;
+
   /// No description provided for @dawSlower.
   ///
   /// In en, this message translates to:

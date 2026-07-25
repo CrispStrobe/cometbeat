@@ -79,6 +79,7 @@ class DawService extends ChangeNotifier {
             ),
         ],
         nextStartMs: _nextStartMs,
+        markers: [...timeline.markers],
       );
 
   void _restore(_Snapshot s) {
@@ -89,6 +90,9 @@ class DawService extends ChangeNotifier {
     timeline.tracks
       ..clear()
       ..addAll(s.tracks);
+    timeline.markers
+      ..clear()
+      ..addAll(s.markers);
     _nextStartMs = s.nextStartMs;
   }
 
@@ -1971,6 +1975,69 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Markers (O13) ---------------------------------------------------------
+  // Navigation only: markers never reach the render, so adding one can't change
+  // how the arrangement sounds. Kept sorted by time and covered by undo.
+
+  List<DawMarker> get markers => List.unmodifiable(timeline.markers);
+
+  /// Add a labelled marker at [ms]. Returns its index after sorting.
+  int addMarker(double ms, [String label = '']) {
+    _record();
+    timeline.markers.add(DawMarker(ms: math.max(0, ms), label: label));
+    timeline.markers.sort((a, b) => a.ms.compareTo(b.ms));
+    notifyListeners();
+    return timeline.markers.indexWhere((m) => m.ms == math.max(0, ms));
+  }
+
+  void removeMarker(int index) {
+    if (index < 0 || index >= timeline.markers.length) return;
+    _record();
+    timeline.markers.removeAt(index);
+    notifyListeners();
+  }
+
+  void renameMarker(int index, String label) {
+    if (index < 0 || index >= timeline.markers.length) return;
+    _record();
+    timeline.markers[index] = timeline.markers[index].copyWith(label: label);
+    notifyListeners();
+  }
+
+  /// Move a marker in time; the list stays sorted, so the index may change.
+  void moveMarker(int index, double ms) {
+    if (index < 0 || index >= timeline.markers.length) return;
+    _record();
+    timeline.markers[index] =
+        timeline.markers[index].copyWith(ms: math.max(0, ms));
+    timeline.markers.sort((a, b) => a.ms.compareTo(b.ms));
+    notifyListeners();
+  }
+
+  void clearMarkers() {
+    if (timeline.markers.isEmpty) return;
+    _record();
+    timeline.markers.clear();
+    notifyListeners();
+  }
+
+  /// The nearest marker before / after [ms] — what "jump to previous/next
+  /// marker" needs. Null when there is none in that direction.
+  DawMarker? markerBefore(double ms) {
+    DawMarker? found;
+    for (final m in timeline.markers) {
+      if (m.ms < ms - 1) found = m; // 1 ms slack: don't re-find where we are
+    }
+    return found;
+  }
+
+  DawMarker? markerAfter(double ms) {
+    for (final m in timeline.markers) {
+      if (m.ms > ms + 1) return m;
+    }
+    return null;
+  }
+
   /// Drop every clip (and the render cache).
   void clear() {
     _record();
@@ -2033,9 +2100,13 @@ class _Snapshot {
     required this.buses,
     required this.tracks,
     required this.nextStartMs,
+    required this.markers,
   });
   final List<DawClipEffect> effects;
   final List<DawBus> buses;
   final List<DawTrack> tracks;
   final double nextStartMs;
+
+  /// Markers are immutable, so sharing the instances is a deep-enough copy.
+  final List<DawMarker> markers;
 }

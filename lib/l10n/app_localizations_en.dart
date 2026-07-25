@@ -2134,6 +2134,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawZoomFit => 'Fit';
 
   @override
+  String get dawMarkers => 'Markers';
+
+  @override
+  String get dawAddMarker => 'Add marker';
+
+  @override
+  String get dawMarkerName => 'Name';
+
+  @override
+  String get dawPreviousMarker => 'Previous marker';
+
+  @override
+  String get dawNextMarker => 'Next marker';
+
+  @override
+  String get dawClearMarkers => 'Clear all markers';
+
+  @override
+  String get dawDelete => 'Delete';
+
+  @override
   String get dawSlower => 'Slower';
 
   @override

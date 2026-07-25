@@ -228,4 +228,37 @@ void main() {
       expect(t.tracks.single.clips, isEmpty); // bad clip dropped
     });
   });
+
+  group('markers (O13)', () {
+    test('markers round-trip through save and load, sorted', () {
+      final timeline = DawTimeline(
+        tracks: [DawTrack(name: 'A')],
+        markers: [
+          const DawMarker(ms: 900, label: 'chorus'),
+          const DawMarker(ms: 100, label: 'intro'),
+          const DawMarker(ms: 400), // an unlabelled flag is legal
+        ],
+      );
+
+      final restored = projectFromJson(projectToJson(timeline));
+      expect(restored.markers.map((m) => m.ms), [100, 400, 900]);
+      expect(restored.markers.map((m) => m.label), ['intro', '', 'chorus']);
+    });
+
+    test('a project with no markers loads with an empty list', () {
+      final restored = projectFromJson(
+        projectToJson(DawTimeline(tracks: [DawTrack(name: 'A')])),
+      );
+      expect(restored.markers, isEmpty);
+    });
+
+    test('malformed marker entries are dropped, not fatal', () {
+      final t = projectFromJson(
+        '{"v":1,"tracks":[],"markers":['
+        '{"ms":50,"l":"ok"},{"l":"no position"},"junk",{"ms":"nan"}]}',
+      );
+      expect(t.markers, hasLength(1));
+      expect(t.markers.single.label, 'ok');
+    });
+  });
 }

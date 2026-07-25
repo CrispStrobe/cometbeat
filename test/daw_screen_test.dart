@@ -1183,9 +1183,63 @@ void main() {
     // playhead must have wrapped back inside the range rather than run on.
     await tester.pump(const Duration(milliseconds: 800));
     expect(daw.isPlaying, isTrue);
-    expect(daw.positionMs, lessThan(700));
+    expect(daw.playheadMs, lessThan(700));
 
     daw.stop();
+  });
+
+  testWidgets('the level meter reads 0 when stopped and rises when playing',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+    expect(daw.playbackLevel.peak, 0); // stopped → nothing sounding
+
+    daw.play();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    final level = daw.playbackLevel;
+    expect(level.peak, greaterThan(0));
+    expect(level.rms, greaterThan(0));
+    expect(level.rms, lessThanOrEqualTo(level.peak)); // RMS can't exceed peak
+
+    daw.stop();
+    await tester.pump();
+    expect(daw.playbackLevel.peak, 0);
+  });
+
+  testWidgets('markers can be added at the playhead and shown on the ruler',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    daw.addDemoBeat();
+    await tester.pump();
+
+    daw.seekTo(400);
+    await tester.pump();
+
+    final menu = find.text('Markers');
+    await tester.ensureVisible(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add marker'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'chorus');
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(service.markers, hasLength(1));
+    expect(service.markers.single.label, 'chorus');
+    expect(service.markers.single.ms, closeTo(400, 1));
+    // And the flag is drawn on the ruler.
+    expect(find.text('chorus'), findsOneWidget);
   });
 
   testWidgets('Faster resamples the clip to a shorter baked take',

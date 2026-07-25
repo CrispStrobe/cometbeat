@@ -30,6 +30,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
         delayFxStereo,
         flangerFx,
         flangerFxStereo;
+import 'package:comet_beat/core/audio/crisp_dsp/phaser.dart' show phaserFx;
 import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart'
     show granularPitchShift, granularPitchShiftStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
@@ -224,6 +225,15 @@ enum DawClipEffectType {
   voiceDeep,
   voiceRobot,
   voiceRadio,
+  // O11 — the rest of the biquad set plus a phaser. APPENDED deliberately:
+  // `.cbdaw` stores an effect by `name`, but keeping the existing order also
+  // keeps merges with the FX work happening in parallel clean.
+  bandpass,
+  notch,
+  peakingEq,
+  lowShelf,
+  highShelf,
+  phaser,
 }
 
 enum DawClipEffectPreset {
@@ -287,6 +297,39 @@ DawClipEffect defaultDawClipEffect(DawClipEffectType type) => switch (type) {
       DawClipEffectType.highpass => const DawClipEffect(
           type: DawClipEffectType.highpass,
           params: {'freq': 180, 'q': 0.707, 'mix': 1},
+        ),
+      // O11. Band-pass/notch want a tighter Q than the shelves; the bell and
+      // the shelves carry a gainDb because they boost/cut rather than remove.
+      DawClipEffectType.bandpass => const DawClipEffect(
+          type: DawClipEffectType.bandpass,
+          params: {'freq': 1000, 'q': 2, 'mix': 1},
+        ),
+      DawClipEffectType.notch => const DawClipEffect(
+          type: DawClipEffectType.notch,
+          params: {'freq': 1000, 'q': 4, 'mix': 1},
+        ),
+      DawClipEffectType.peakingEq => const DawClipEffect(
+          type: DawClipEffectType.peakingEq,
+          params: {'freq': 1000, 'q': 1, 'gainDb': 6, 'mix': 1},
+        ),
+      DawClipEffectType.lowShelf => const DawClipEffect(
+          type: DawClipEffectType.lowShelf,
+          params: {'freq': 200, 'q': 0.707, 'gainDb': 6, 'mix': 1},
+        ),
+      DawClipEffectType.highShelf => const DawClipEffect(
+          type: DawClipEffectType.highShelf,
+          params: {'freq': 4000, 'q': 0.707, 'gainDb': 6, 'mix': 1},
+        ),
+      DawClipEffectType.phaser => const DawClipEffect(
+          type: DawClipEffectType.phaser,
+          params: {
+            'rateHz': 0.5,
+            'depth': 0.7,
+            'feedback': 0.3,
+            'minFreq': 200,
+            'maxFreq': 2000,
+            'stages': 4,
+          },
         ),
       DawClipEffectType.compressor => const DawClipEffect(
           type: DawClipEffectType.compressor,
@@ -940,6 +983,59 @@ Float64List _applyClipEffect(
         q: p('q', 0.707),
         mix: p('mix', 1),
       ),
+    DawClipEffectType.bandpass => biquadFx(
+        input,
+        kind: BiquadKind.bandpass,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 1000),
+        q: p('q', 2),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.notch => biquadFx(
+        input,
+        kind: BiquadKind.notch,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 1000),
+        q: p('q', 4),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.peakingEq => biquadFx(
+        input,
+        kind: BiquadKind.peaking,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 1000),
+        q: p('q', 1),
+        gainDb: p('gainDb', 6),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.lowShelf => biquadFx(
+        input,
+        kind: BiquadKind.lowShelf,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 200),
+        q: p('q', 0.707),
+        gainDb: p('gainDb', 6),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.highShelf => biquadFx(
+        input,
+        kind: BiquadKind.highShelf,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 4000),
+        q: p('q', 0.707),
+        gainDb: p('gainDb', 6),
+        mix: p('mix', 1),
+      ),
+    DawClipEffectType.phaser => phaserFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        rateHz: p('rateHz', 0.5),
+        depth: p('depth', 0.7),
+        feedback: p('feedback', 0.3),
+        minFreq: p('minFreq', 200),
+        maxFreq: p('maxFreq', 2000),
+        stages: p('stages', 4).round(),
+      ),
     DawClipEffectType.compressor => compressorFx(
         input,
         sampleRate: sampleRate.toDouble(),
@@ -1343,14 +1439,43 @@ Float64List _bitCrushFx(
 }
 
 /// A DAW arrangement: an ordered list of tracks.
+/// A labelled point on the timeline — "verse 2", "fix this", the drop. Markers
+/// are navigation only: they never affect the render, so an arrangement sounds
+/// identical with or without them.
+class DawMarker {
+  const DawMarker({required this.ms, this.label = ''});
+
+  /// Position on the timeline, in ms from the start.
+  final double ms;
+  final String label;
+
+  DawMarker copyWith({double? ms, String? label}) =>
+      DawMarker(ms: ms ?? this.ms, label: label ?? this.label);
+
+  Map<String, dynamic> toJson() => {'ms': ms, if (label.isNotEmpty) 'l': label};
+
+  static DawMarker? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final ms = raw['ms'];
+    if (ms is! num || !ms.isFinite) return null;
+    final label = raw['l'];
+    return DawMarker(
+      ms: ms.toDouble(),
+      label: label is String ? label : '',
+    );
+  }
+}
+
 class DawTimeline {
   DawTimeline({
     List<DawTrack>? tracks,
     List<DawBus>? buses,
     List<DawClipEffect>? effects,
+    List<DawMarker>? markers,
   })  : tracks = tracks ?? [],
         buses = buses ?? [],
-        effects = effects ?? [];
+        effects = effects ?? [],
+        markers = markers ?? [];
   final List<DawTrack> tracks;
 
   /// Named group buses. Tracks route here via [DawTrack.busIndex].
@@ -1358,6 +1483,9 @@ class DawTimeline {
 
   /// Ordered output-bus FX applied to the full mix before final limiting.
   List<DawClipEffect> effects;
+
+  /// Labelled positions, kept sorted by [DawMarker.ms] (O13).
+  final List<DawMarker> markers;
 }
 
 /// Render [timeline] to one mono PCM buffer: every unmuted clip on an unmuted

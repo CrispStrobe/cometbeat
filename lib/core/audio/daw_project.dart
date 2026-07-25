@@ -38,6 +38,8 @@ String projectToJson(
     'sampleRate': sampleRate,
     if (timeline.effects.isNotEmpty)
       'effects': [for (final fx in timeline.effects) fx.toJson()],
+    if (timeline.markers.isNotEmpty)
+      'markers': [for (final m in timeline.markers) m.toJson()],
     if (timeline.buses.isNotEmpty)
       'buses': [
         for (final bus in timeline.buses)
@@ -229,7 +231,16 @@ DawTimeline projectFromJson(String json) {
       }(),
     );
   }
-  return DawTimeline(tracks: tracks, buses: buses, effects: timelineEffects);
+  return DawTimeline(
+    tracks: tracks,
+    buses: buses,
+    effects: timelineEffects,
+    markers: [
+      if (decoded['markers'] case final list? when list is List)
+        for (final m in list)
+          if (DawMarker.fromJson(m) case final parsed?) parsed,
+    ]..sort((a, b) => a.ms.compareTo(b.ms)),
+  );
 }
 
 Uint8List _floatToInt16(Float64List pcm) {
