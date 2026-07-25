@@ -937,230 +937,247 @@ class _DrumkitScreenState extends State<DrumkitScreen>
           ),
         ],
       ),
+      // Scrolls on a short phone (German control labels wrap the button
+      // cluster onto more rows than an SE-height screen fits); the kit + grid
+      // get fixed heights so the whole body has an intrinsic height to scroll.
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // The visual kit: tap a drawn piece to play it; it lights up as
-              // the beat plays (step clock) or is tapped/recorded. Inset by the
-              // label gutter so it aligns with the step columns below.
-              Expanded(
-                flex: 4,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: DrumkitScreen.labelGutter,
-                  ),
-                  child: DrumKitVisual(
-                    step: _step,
-                    hitAt: (drum, step) => _rows[drum]![step],
-                    controller: _visual,
-                    onHit: tapPad, // tap a drawn piece to play it (+ record it)
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // The visual kit: tap a drawn piece to play it; it lights up as
+                // the beat plays (step clock) or is tapped/recorded. Inset by the
+                // label gutter so it aligns with the step columns below.
+                SizedBox(
+                  height: 180,
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: DrumkitScreen.labelGutter,
+                    ),
+                    child: DrumKitVisual(
+                      step: _step,
+                      hitAt: (drum, step) => _rows[drum]![step],
+                      controller: _visual,
+                      onHit:
+                          tapPad, // tap a drawn piece to play it (+ record it)
+                    ),
                   ),
                 ),
-              ),
-              // Hand percussion that isn't on the drawn kit — compact pads.
-              Row(
-                children: [
-                  for (final drum in const [Drum.clap, Drum.rim, Drum.cowbell])
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: FilledButton.tonalIcon(
-                          onPressed: () => tapPad(drum),
-                          icon: Icon(_drumIcon(drum), size: 18),
-                          label: Text(_drumLabel(l10n, drum)),
+                // Hand percussion that isn't on the drawn kit — compact pads.
+                Row(
+                  children: [
+                    for (final drum in const [
+                      Drum.clap,
+                      Drum.rim,
+                      Drum.cowbell,
+                    ])
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: FilledButton.tonalIcon(
+                            onPressed: () => tapPad(drum),
+                            icon: Icon(_drumIcon(drum), size: 18),
+                            label: Text(_drumLabel(l10n, drum)),
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // The step grid: a fixed drum-label column + horizontally
-              // scrollable step cells (so 4/8-bar patterns stay tappable).
-              Expanded(
-                flex: 6,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    const labelW = DrumkitScreen.labelGutter;
-                    const minCell = 24.0;
-                    final avail = constraints.maxWidth - labelW;
-                    // Fill the width at 2 bars; shrink to minCell then scroll.
-                    final cellW = max(minCell, avail / _steps);
-                    return Row(
-                      children: [
-                        // Fixed labels column (aligned with the cell rows).
-                        SizedBox(
-                          width: labelW,
-                          child: Column(
-                            children: [
-                              for (final drum in Drum.values)
-                                Expanded(
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 3),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        _drumLabel(l10n, drum),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall,
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // The step grid: a fixed drum-label column + horizontally
+                // scrollable step cells (so 4/8-bar patterns stay tappable).
+                SizedBox(
+                  height: Drum.values.length * 36.0,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      const labelW = DrumkitScreen.labelGutter;
+                      const minCell = 24.0;
+                      final avail = constraints.maxWidth - labelW;
+                      // Fill the width at 2 bars; shrink to minCell then scroll.
+                      final cellW = max(minCell, avail / _steps);
+                      return Row(
+                        children: [
+                          // Fixed labels column (aligned with the cell rows).
+                          SizedBox(
+                            width: labelW,
+                            child: Column(
+                              children: [
+                                for (final drum in Drum.values)
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 3,
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          _drumLabel(l10n, drum),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            controller: _gridScroll,
-                            scrollDirection: Axis.horizontal,
-                            child: SizedBox(
-                              width: cellW * _steps,
-                              child: Column(
-                                children: [
-                                  for (final drum in Drum.values)
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 3,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            for (var s = 0; s < _steps; s++)
-                                              SizedBox(
-                                                width: cellW,
-                                                child: _StepCell(
-                                                  step: _step,
-                                                  on: _rows[drum]![s],
-                                                  index: s,
-                                                  scheme: scheme,
-                                                  onTap: () => toggle(drum, s),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              controller: _gridScroll,
+                              scrollDirection: Axis.horizontal,
+                              child: SizedBox(
+                                width: cellW * _steps,
+                                child: Column(
+                                  children: [
+                                    for (final drum in Drum.values)
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 3,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              for (var s = 0; s < _steps; s++)
+                                                SizedBox(
+                                                  width: cellW,
+                                                  child: _StepCell(
+                                                    step: _step,
+                                                    on: _rows[drum]![s],
+                                                    index: s,
+                                                    scheme: scheme,
+                                                    onTap: () =>
+                                                        toggle(drum, s),
+                                                  ),
                                                 ),
-                                              ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              // Transport + tempo + clear.
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  FilledButton.icon(
-                    onPressed: togglePlay,
-                    icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
-                    label: Text(isPlaying ? l10n.songStop : l10n.myMelodyPlay),
-                  ),
-                  // Starter grooves — the quickest way to see how a beat works.
-                  FilledButton.tonalIcon(
-                    onPressed: _openPresets,
-                    icon: const Icon(Icons.auto_awesome),
-                    label: Text(l10n.drumkitPresets),
-                  ),
-                  // Swap any drum's sound for a library / SoundFont voice.
-                  FilledButton.tonalIcon(
-                    onPressed: _openDrumSounds,
-                    icon: const Icon(Icons.library_music),
-                    label: Text(l10n.drumkitSounds),
-                  ),
-                  FilledButton.icon(
-                    onPressed: toggleRecord,
-                    style: _recording
-                        ? FilledButton.styleFrom(backgroundColor: scheme.error)
-                        : null,
-                    icon: Icon(
-                      _recording ? Icons.stop : Icons.fiber_manual_record,
+                const SizedBox(height: 8),
+                // Transport + tempo + clear.
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: togglePlay,
+                      icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
+                      label:
+                          Text(isPlaying ? l10n.songStop : l10n.myMelodyPlay),
                     ),
-                    label: Text(
-                      _recording
-                          ? l10n.drumkitStopRecording
-                          : l10n.drumkitRecord,
+                    // Starter grooves — the quickest way to see how a beat works.
+                    FilledButton.tonalIcon(
+                      onPressed: _openPresets,
+                      icon: const Icon(Icons.auto_awesome),
+                      label: Text(l10n.drumkitPresets),
                     ),
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: toggleBeatbox,
-                    style: _listening
-                        ? FilledButton.styleFrom(backgroundColor: scheme.error)
-                        : null,
-                    icon: Icon(_listening ? Icons.stop : Icons.mic),
-                    label: Text(
-                      _listening
-                          ? l10n.drumkitStopListening
-                          : l10n.drumkitBeatbox,
+                    // Swap any drum's sound for a library / SoundFont voice.
+                    FilledButton.tonalIcon(
+                      onPressed: _openDrumSounds,
+                      icon: const Icon(Icons.library_music),
+                      label: Text(l10n.drumkitSounds),
                     ),
-                  ),
-                  for (final bpm in DrumkitScreen.tempos)
+                    FilledButton.icon(
+                      onPressed: toggleRecord,
+                      style: _recording
+                          ? FilledButton.styleFrom(
+                              backgroundColor: scheme.error,
+                            )
+                          : null,
+                      icon: Icon(
+                        _recording ? Icons.stop : Icons.fiber_manual_record,
+                      ),
+                      label: Text(
+                        _recording
+                            ? l10n.drumkitStopRecording
+                            : l10n.drumkitRecord,
+                      ),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: toggleBeatbox,
+                      style: _listening
+                          ? FilledButton.styleFrom(
+                              backgroundColor: scheme.error,
+                            )
+                          : null,
+                      icon: Icon(_listening ? Icons.stop : Icons.mic),
+                      label: Text(
+                        _listening
+                            ? l10n.drumkitStopListening
+                            : l10n.drumkitBeatbox,
+                      ),
+                    ),
+                    for (final bpm in DrumkitScreen.tempos)
+                      ChoiceChip(
+                        label: Text('$bpm'),
+                        selected: _tempo == bpm,
+                        onSelected: (_) => setTempo(bpm),
+                      ),
+                    // Pattern length — mehr Takte (2/4/8 bars).
+                    Text(
+                      l10n.drumkitBars,
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                    for (final b in const [2, 4, 8])
+                      ChoiceChip(
+                        label: Text('$b'),
+                        selected: _bars == b,
+                        onSelected: (_) => setBars(b),
+                      ),
+                    // Groove feel: straight vs a swung off-beat.
                     ChoiceChip(
-                      label: Text('$bpm'),
-                      selected: _tempo == bpm,
-                      onSelected: (_) => setTempo(bpm),
+                      label: Text(l10n.drumkitStraight),
+                      selected: _swing == 0,
+                      onSelected: (_) => setSwing(0),
                     ),
-                  // Pattern length — mehr Takte (2/4/8 bars).
-                  Text(
-                    l10n.drumkitBars,
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  for (final b in const [2, 4, 8])
                     ChoiceChip(
-                      label: Text('$b'),
-                      selected: _bars == b,
-                      onSelected: (_) => setBars(b),
+                      label: Text(l10n.drumkitSwing),
+                      selected: _swing > 0,
+                      onSelected: (_) => setSwing(0.4),
                     ),
-                  // Groove feel: straight vs a swung off-beat.
-                  ChoiceChip(
-                    label: Text(l10n.drumkitStraight),
-                    selected: _swing == 0,
-                    onSelected: (_) => setSwing(0),
-                  ),
-                  ChoiceChip(
-                    label: Text(l10n.drumkitSwing),
-                    selected: _swing > 0,
-                    onSelected: (_) => setSwing(0.4),
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: hitCount == 0 ? null : sendToDaw,
-                    icon: const Icon(Icons.library_add),
-                    label: Text(l10n.dawSend),
-                  ),
-                  // Shared groove: publish this beat / pull the one another mode
-                  // (Loop Mixer, Tracker, Looper) shared.
-                  FilledButton.tonalIcon(
-                    onPressed: hitCount == 0 ? null : shareBeat,
-                    icon: const Icon(Icons.upload),
-                    label: Text(l10n.beatShare),
-                  ),
-                  ValueListenableBuilder<SharedBeat?>(
-                    valueListenable: BeatBridge.instance.beat,
-                    builder: (context, _, __) => FilledButton.tonalIcon(
-                      onPressed: canLoadSharedBeat ? loadSharedBeat : null,
-                      icon: const Icon(Icons.download),
-                      label: Text(l10n.beatLoadShared),
+                    FilledButton.tonalIcon(
+                      onPressed: hitCount == 0 ? null : sendToDaw,
+                      icon: const Icon(Icons.library_add),
+                      label: Text(l10n.dawSend),
                     ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: hitCount == 0 ? null : clear,
-                    icon: const Icon(Icons.clear),
-                    label: Text(l10n.trackerClear),
-                  ),
-                ],
-              ),
-            ],
+                    // Shared groove: publish this beat / pull the one another mode
+                    // (Loop Mixer, Tracker, Looper) shared.
+                    FilledButton.tonalIcon(
+                      onPressed: hitCount == 0 ? null : shareBeat,
+                      icon: const Icon(Icons.upload),
+                      label: Text(l10n.beatShare),
+                    ),
+                    ValueListenableBuilder<SharedBeat?>(
+                      valueListenable: BeatBridge.instance.beat,
+                      builder: (context, _, __) => FilledButton.tonalIcon(
+                        onPressed: canLoadSharedBeat ? loadSharedBeat : null,
+                        icon: const Icon(Icons.download),
+                        label: Text(l10n.beatLoadShared),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: hitCount == 0 ? null : clear,
+                      icon: const Icon(Icons.clear),
+                      label: Text(l10n.trackerClear),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
