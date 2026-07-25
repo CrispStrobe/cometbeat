@@ -7,6 +7,27 @@ changelog it graduated from.
 
 ## Progression
 
+## DAW & Score-Workshop UX pass (2026-07-25)
+
+A sweep across the authoring surfaces (Audio Editor, Score Workshop, Sound
+Library), web/touch-first, each slice unit/widget-tested:
+
+- **Audio Editor:** a guide/help overlay + a "linked to editor" badge on
+  round-trippable clips; a responsive app-bar toolbar that folds into a "more"
+  menu on narrow widths (with the bottom control strip bounded + scrollable);
+  keyboard shortcuts (Space play/stop, Delete selection).
+- **Score Workshop:** editable title/composer/lyricist on the details dialog,
+  carried into the PDF (title block) and MusicXML exports; the info button now
+  explains the controls, not only shortcuts; "Share/Load shared tune" renamed to
+  the honest **Copy/Paste tune**; the inline lyric field no longer loses
+  keystrokes to the A–G note-entry shortcuts; harmony "colour by analysis" now
+  paints the multi-part full-score canvas; **export downloads on the web** (was
+  desktop-save only); bar numbers show on one-system scores in every mode
+  (engine now numbers the first system too).
+- **Sound Library:** an accurate reason + working "open source" fallback for web
+  instrument install; the one unified browser (catalog · music · Mod Archive ·
+  SoundFont · import) is guarded against regressions.
+
 ## Tracker module fidelity (2026-07-25)
 
 Advanced Tracker now imports, edits, live-plays, and CLI-renders MOD, XM, S3M,

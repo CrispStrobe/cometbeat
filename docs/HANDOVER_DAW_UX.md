@@ -7,6 +7,32 @@ what's already done (do **not** redo it), and the prioritized open work.
 
 ---
 
+## STATUS UPDATE (opus, 2026-07-25) — §A/§B/§D all worked (§C Tracker excluded)
+
+The prioritized open work in §5 below is **done** (each shipped to `origin/main`
+with tests). Quick index (see `docs/PLAN.md` board + `docs/HISTORY.md` for detail):
+
+- **§A Score Workshop:** A1 narrow layout verified (`72cf3552`); A2 bar numbers —
+  overlay clip fix (`18544363`) **+** engine now numbers the first system so
+  grand-staff/multi-part show them (crisp `fe39bc6` + app `235edfbe`); A3 info
+  button explains controls (`9f33b842`); A4 editable composer/lyricist + into PDF
+  (`7c070ff0`); A5 lyric field no longer loses keystrokes to note entry
+  (`790c8a85`); A6 analysis colour-by-harmony now paints the multi-part canvas
+  (`a63cbc73`); A7 "Copy/Paste tune" rename + Loop-selection explained
+  (`9f33b842`); A8 export web-download fallback (`c6d7b829`).
+- **§B Sound Library:** B1 accurate web instrument-install reason + working
+  fallback (`f42e2dcc`); B2/D3 the one unified browser is complete (codex
+  `061e7924`/`832e749e`) and now guarded by a test (`8a25c3e4`) — the only
+  remaining parallel entries are in the Advanced Tracker (§C, excluded).
+- **§D Audio Editor:** D1a help/guide overlay + linked-clip affordance
+  (`8de608a5`); D1b responsive toolbar + narrow-body scroll (`ec9d74c3`); D1c
+  keyboard shortcuts + help (`d19c01cb`); D4 touch multi-select verified
+  (`ef045814`); D3 cross-mode audit (Sound Library shared across all modes).
+- **Remaining truly-open:** the Beginner/Advanced **Tracker** UX (§C) only —
+  another agent's scope.
+
+---
+
 ## 0. Mission
 
 Make the app's **authoring surfaces** (the five product modes + the Sound
