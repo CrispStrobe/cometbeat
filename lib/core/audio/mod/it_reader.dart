@@ -682,14 +682,20 @@ ItPattern _parsePattern(Uint8List bytes, ByteData bd, int po) {
       cmdVal = lastCmdVal[channel];
     }
 
-    grid[row][channel] = ItCell(
+    final cell = ItCell(
       note: note,
       instrument: instr,
       volpan: vol,
       command: cmd,
       commandValue: cmdVal,
     );
-    if (channel > maxCh) maxCh = channel;
+    // A zero-mask event can legally appear as padding/no-op data. It does not
+    // establish a channel in the decoded module, and retaining it here would
+    // make a native IT roundtrip grow/shrink the reported channel count.
+    if (!cell.isEmpty) {
+      grid[row][channel] = cell;
+      if (channel > maxCh) maxCh = channel;
+    }
   }
 
   final channelCount = maxCh + 1;

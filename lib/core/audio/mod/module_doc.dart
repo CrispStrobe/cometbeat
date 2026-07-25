@@ -148,6 +148,7 @@ class DocCell {
     this.nativeInstrument = 0,
     this.nativeInstrumentSet = false,
     this.nativeNote = -1,
+    this.nativeVolpan = -1,
   });
 
   /// A key-off cell: stops the ringing note (the formats' note-off / note-cut).
@@ -165,7 +166,8 @@ class DocCell {
         nativeEffectParam = 0,
         nativeInstrument = 0,
         nativeInstrumentSet = false,
-        nativeNote = -1;
+        nativeNote = -1,
+        nativeVolpan = -1;
 
   static const empty = DocCell();
 
@@ -190,6 +192,7 @@ class DocCell {
   final int nativeInstrument; // original IT instrument number, or 0
   final bool nativeInstrumentSet;
   final int nativeNote; // original IT note byte, or -1
+  final int nativeVolpan; // original IT volume/pan byte, or -1
 
   bool get isEmpty =>
       note == -1 &&
@@ -200,7 +203,8 @@ class DocCell {
       effectParam == 0 &&
       nativeEffect == -1 &&
       nativeInstrument == 0 &&
-      nativeNote == -1;
+      nativeNote == -1 &&
+      nativeVolpan == -1;
 
   @override
   bool operator ==(Object other) =>
@@ -215,7 +219,8 @@ class DocCell {
       other.nativeEffectParam == nativeEffectParam &&
       other.nativeInstrument == nativeInstrument &&
       other.nativeInstrumentSet == nativeInstrumentSet &&
-      other.nativeNote == nativeNote;
+      other.nativeNote == nativeNote &&
+      other.nativeVolpan == nativeVolpan;
 
   @override
   int get hashCode => Object.hash(
@@ -230,6 +235,7 @@ class DocCell {
         nativeInstrument,
         nativeInstrumentSet,
         nativeNote,
+        nativeVolpan,
       );
 }
 

@@ -135,4 +135,30 @@ void main() {
       expect(bass.pcm, _i8([10, 20, 30, -10, -20]));
     });
   });
+
+  test('preserves zero-length native patterns without shifting later patterns', () {
+    final src = S3mModule(
+      title: 'EMPTY-PATTERN',
+      channelCount: 1,
+      rawOrder: const [0, 1],
+      order: const [0, 1],
+      samples: const [],
+      patterns: [
+        S3mPattern(_emptyRows(1), rawData: Uint8List(0)),
+        S3mPattern(_emptyRows(1), rawData: Uint8List.fromList([2, 0])),
+      ],
+    );
+
+    final roundTrip = parseS3m(writeS3m(src));
+    expect(roundTrip.patterns[0].rawData, isEmpty);
+    expect(roundTrip.patterns[0].rows.expand((r) => r).every((c) => c.isEmpty),
+        isTrue);
+    expect(roundTrip.patterns[1].rawData, [2, 0]);
+  });
 }
+
+List<List<S3mCell>> _emptyRows(int channels) => List.generate(
+      64,
+      (_) => List<S3mCell>.filled(channels, S3mCell.empty),
+      growable: false,
+    );

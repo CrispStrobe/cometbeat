@@ -208,7 +208,11 @@ Uint8List writeS3m(S3mModule module) {
     patParapointers[p] = patOff ~/ 16;
 
     if (module.rawOrder.isNotEmpty && pattern.rawData != null) {
-      out.add(pattern.rawData!);
+      if (pattern.rawData!.isEmpty) {
+        u16(0);
+      } else {
+        out.add(pattern.rawData!);
+      }
       continue;
     }
 

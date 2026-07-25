@@ -572,6 +572,7 @@ ModuleDoc docFromIt(ItModule m) {
             nativeInstrument: c.instrument,
             nativeInstrumentSet: true,
             nativeNote: c.note,
+            nativeVolpan: c.volpan,
           ),
         );
       }
@@ -1070,7 +1071,7 @@ ItCell _itCellFrom(DocCell c, {required bool preserveNative}) {
     instrument: preserveNative && c.nativeInstrumentSet
         ? c.nativeInstrument
         : c.instrument.clamp(0, 255),
-    volpan: vol,
+    volpan: preserveNative && c.nativeVolpan >= 0 ? c.nativeVolpan : vol,
     command: command,
     commandValue: value,
   );

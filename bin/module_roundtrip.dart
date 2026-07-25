@@ -131,6 +131,17 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
       }
     }
   }
+  for (var p = 0;
+      p < math.min(a.s3mPatterns.length, b.s3mPatterns.length);
+      p++) {
+    final ra = a.s3mPatterns[p].rawData, rb = b.s3mPatterns[p].rawData;
+    check((ra == null) == (rb == null),
+        'S3M pattern $p raw data presence differs');
+    if (ra != null && rb != null) {
+      check(ra.length == rb.length && _bytesEqual(ra, rb),
+          'S3M pattern $p raw data differs (${ra.length} != ${rb.length})');
+    }
+  }
 
   final patternCount = math.min(a.patterns.length, b.patterns.length);
   for (var p = 0; p < patternCount; p++) {
@@ -185,6 +196,14 @@ String _cellText(DocCell c) =>
 
 List<int> _validOrder(ModuleDoc d) =>
     d.order.where((i) => i >= 0 && i < d.patterns.length).toList();
+
+bool _bytesEqual(Uint8List a, Uint8List b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
 
 void _printDiff(String label, List<String> diff) {
   if (diff.isEmpty) {

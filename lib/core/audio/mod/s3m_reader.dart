@@ -227,6 +227,9 @@ S3mPattern _readPattern(
     return S3mPattern(rows);
   }
   final packedLen = data.getUint16(base, Endian.little);
+  if (packedLen == 0) {
+    return S3mPattern(rows, rawData: Uint8List(0));
+  }
   // Data body starts after the length word; end is bounded by both the declared
   // length and the actual file size.
   var end = base + packedLen;
