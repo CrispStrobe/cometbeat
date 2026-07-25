@@ -533,6 +533,10 @@ class SampleInstrument implements TrackerInstrument {
     this.sampleRight,
     this.nativeVolumeEnvelope,
     this.nativePanEnvelope,
+    this.nativeNna = 0,
+    this.nativeDct = 0,
+    this.nativeDca = 0,
+    this.nativeFadeout = 0,
   });
 
   /// Records-once: applies [fx] to [raw] and keeps the result as the sample.
@@ -564,6 +568,13 @@ class SampleInstrument implements TrackerInstrument {
 
   /// Tracker-native pan envelope, evaluated from each note onset.
   final PanEnvelope? nativePanEnvelope;
+
+  /// IT/XM old-note action metadata. NNA values follow IT: 0=cut,
+  /// 1=continue, 2=note-off, 3=fade.
+  final int nativeNna;
+  final int nativeDct;
+  final int nativeDca;
+  final int nativeFadeout;
   final int baseMidi;
 
   /// A per-note volume envelope (default a gentle declick attack/release).
@@ -609,6 +620,10 @@ class SampleInstrument implements TrackerInstrument {
     Float64List? sampleRight,
     VolumeEnvelope? nativeVolumeEnvelope,
     PanEnvelope? nativePanEnvelope,
+    int? nativeNna,
+    int? nativeDct,
+    int? nativeDca,
+    int? nativeFadeout,
   }) =>
       SampleInstrument(
         id ?? this.id,
@@ -624,6 +639,10 @@ class SampleInstrument implements TrackerInstrument {
         sampleRight: sampleRight ?? this.sampleRight,
         nativeVolumeEnvelope: nativeVolumeEnvelope ?? this.nativeVolumeEnvelope,
         nativePanEnvelope: nativePanEnvelope ?? this.nativePanEnvelope,
+        nativeNna: nativeNna ?? this.nativeNna,
+        nativeDct: nativeDct ?? this.nativeDct,
+        nativeDca: nativeDca ?? this.nativeDca,
+        nativeFadeout: nativeFadeout ?? this.nativeFadeout,
       );
 
   bool get loops =>
@@ -646,10 +665,13 @@ class SampleInstrument implements TrackerInstrument {
       _renderChannelFrom(sample, cells, timing);
 
   Float64List _renderChannelFrom(
-    Float64List source,
-    List<TrackerCell> cells,
-    TrackerTiming timing,
-  ) {
+      Float64List source, List<TrackerCell> cells, TrackerTiming timing,
+      {bool applyNativeAction = true}) {
+    if (applyNativeAction &&
+        (nativeNna != 0 || nativeDct != 0) &&
+        (identical(source, sample) || identical(source, sampleRight))) {
+      return _renderWithNativeNoteAction(source, cells, timing);
+    }
     final out = Float64List(timing.totalSamples);
     if (source.isEmpty) return out;
     final baseFreq = midiToFrequency(baseMidi);
@@ -717,12 +739,71 @@ class SampleInstrument implements TrackerInstrument {
           final vol = trigger.volume ?? 1.0;
           final nativeVol = nativeVolumeEnvelope;
           for (var i = 0; i < n; i++) {
-            final env = nativeVol?.levelAt(i / kSampleRate * 1000) ?? 1.0;
+            final env = nativeVol?.levelAt(
+                  i / kSampleRate * 1000,
+                  released: effectiveSustain != null && i >= effectiveSustain,
+                ) ??
+                1.0;
             out[startSample + i] = voiced[i] * vol * volume * env;
           }
         }
       }
       startStep += steps;
+    }
+    return out;
+  }
+
+  Float64List _renderWithNativeNoteAction(
+    Float64List source,
+    List<TrackerCell> cells,
+    TrackerTiming timing,
+  ) {
+    final out = Float64List(timing.totalSamples);
+    final starts = <int>[];
+    for (var row = 0; row < cells.length; row++) {
+      final cell = cells[row];
+      if (cell.midi != null && cell.fxCmd != 0x3 && cell.fxCmd != 0x5) {
+        starts.add(row);
+      }
+    }
+    for (var n = 0; n < starts.length; n++) {
+      final row = starts[n];
+      final startSample = timing.stepStartSample(row);
+      var duplicate = -1;
+      for (var candidate = n + 1; candidate < starts.length; candidate++) {
+        final sameNote = cells[starts[candidate]].midi == cells[row].midi;
+        final matches =
+            nativeDct == 0 || nativeDct >= 2 || (nativeDct == 1 && sameNote);
+        if (matches) {
+          duplicate = candidate;
+          break;
+        }
+      }
+      final nextSample = duplicate >= 0
+          ? timing.stepStartSample(starts[duplicate])
+          : timing.totalSamples;
+      final one = List<TrackerCell>.filled(cells.length, TrackerCell.empty)
+        ..[row] = cells[row];
+      final voice = _renderChannelFrom(
+        source,
+        one,
+        timing,
+        applyNativeAction: false,
+      );
+      // Continue keeps the old voice. Note-off/cut ends it at the next trigger.
+      // Fade keeps it and applies the IT fade curve after the next trigger.
+      final action = duplicate >= 0 && nativeDct != 0 ? nativeDca : nativeNna;
+      final keep = action == 1 || action == 3;
+      final end = keep ? timing.totalSamples : nextSample;
+      for (var i = startSample; i < end && i < out.length; i++) {
+        var gain = 1.0;
+        if (action == 3 && i >= nextSample) {
+          final seconds = (i - nextSample) / kSampleRate;
+          final rate = nativeFadeout / 1024.0;
+          gain = exp(-rate * seconds * 8.0);
+        }
+        out[i] += voice[i] * gain;
+      }
     }
     return out;
   }
@@ -937,17 +1018,33 @@ Float64List applyChannelEffects(
 /// FIRST level before the first point and the LAST level after the last. Applied
 /// by the replayer's additive voice only (see [levelAt]); null/empty = no change.
 class VolumeEnvelope {
-  const VolumeEnvelope(this.points);
+  const VolumeEnvelope(
+    this.points, {
+    this.sustain,
+    this.loopStart,
+    this.loopEnd,
+  });
 
   /// `(ms, level 0..1)` breakpoints, ascending in ms.
   final List<({int ms, double level})> points;
+  final int? sustain;
+  final int? loopStart;
+  final int? loopEnd;
 
   bool get isEmpty => points.isEmpty;
 
   /// The envelope level at [ms] — linear interpolation between breakpoints,
   /// clamped/held at the ends.
-  double levelAt(double ms) {
+  double levelAt(double ms, {bool released = false}) {
     if (points.isEmpty) return 1.0;
+    ms = _envelopeTime(
+      ms,
+      released: released,
+      sustain: sustain,
+      loopStart: loopStart,
+      loopEnd: loopEnd,
+      pointMs: [for (final p in points) p.ms],
+    );
     if (ms <= points.first.ms) return points.first.level;
     for (var i = 1; i < points.length; i++) {
       final b = points[i];
@@ -967,16 +1064,32 @@ class VolumeEnvelope {
 /// [VolumeEnvelope] (linear interp, holds the ends). Honoured by the replayer's
 /// stereo render (uniform-timing path); null/empty = no auto-pan.
 class PanEnvelope {
-  const PanEnvelope(this.points);
+  const PanEnvelope(
+    this.points, {
+    this.sustain,
+    this.loopStart,
+    this.loopEnd,
+  });
 
   /// `(ms, pan −1..1)` breakpoints, ascending in ms.
   final List<({int ms, double pan})> points;
+  final int? sustain;
+  final int? loopStart;
+  final int? loopEnd;
 
   bool get isEmpty => points.isEmpty;
 
   /// The pan offset at [ms] — linear interpolation, held at the ends.
-  double panAt(double ms) {
+  double panAt(double ms, {bool released = false}) {
     if (points.isEmpty) return 0.0;
+    ms = _envelopeTime(
+      ms,
+      released: released,
+      sustain: sustain,
+      loopStart: loopStart,
+      loopEnd: loopEnd,
+      pointMs: [for (final p in points) p.ms],
+    );
     if (ms <= points.first.ms) return points.first.pan;
     for (var i = 1; i < points.length; i++) {
       final b = points[i];
@@ -989,6 +1102,36 @@ class PanEnvelope {
     }
     return points.last.pan;
   }
+}
+
+double _envelopeTime(
+  double ms, {
+  required bool released,
+  required int? sustain,
+  required int? loopStart,
+  required int? loopEnd,
+  required List<int> pointMs,
+}) {
+  if (pointMs.isEmpty) return ms;
+  if (!released &&
+      sustain != null &&
+      sustain! >= 0 &&
+      sustain! < pointMs.length) {
+    ms = min(ms, pointMs[sustain!].toDouble());
+  }
+  if (loopStart != null &&
+      loopEnd != null &&
+      loopStart! >= 0 &&
+      loopEnd! > loopStart! &&
+      loopEnd! < pointMs.length) {
+    final start = pointMs[loopStart!].toDouble();
+    final end = pointMs[loopEnd!].toDouble();
+    final length = end - start;
+    if (length > 0 && ms >= end) {
+      ms = start + ((ms - start) % length);
+    }
+  }
+  return ms;
 }
 
 class TrackerChannel {

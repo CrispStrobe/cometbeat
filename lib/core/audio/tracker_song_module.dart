@@ -88,6 +88,10 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
         doc.samples[i],
         nativeVolumeEnvelope: _sampleVolEnv(doc.samples[i], doc.initialTempo),
         nativePanEnvelope: _samplePanEnv(doc.samples[i], doc.initialTempo),
+        nativeNna: _sampleOwner(doc, i)?.nna ?? 0,
+        nativeDct: _sampleOwner(doc, i)?.dct ?? 0,
+        nativeDca: _sampleOwner(doc, i)?.dca ?? 0,
+        nativeFadeout: _sampleOwner(doc, i)?.fadeout ?? 0,
       ),
   ];
 
@@ -158,7 +162,7 @@ VolumeEnvelope? _trackerVolEnv(DocEnvelope? e, int tempo) {
   return VolumeEnvelope([
     for (final (t, v) in e.points)
       (ms: (t * ms).round(), level: (v / 64).clamp(0.0, 1.0)),
-  ]);
+  ], sustain: e.sustain, loopStart: e.loopStart, loopEnd: e.loopEnd);
 }
 
 /// The dominant sample's pan envelope as a tracker [PanEnvelope] (value 0..64,
@@ -177,7 +181,7 @@ PanEnvelope? _trackerPanEnv(DocEnvelope? e, int tempo) {
   return PanEnvelope([
     for (final (t, v) in e.points)
       (ms: (t * ms).round(), pan: ((v - 32) / 32).clamp(-1.0, 1.0)),
-  ]);
+  ], sustain: e.sustain, loopStart: e.loopStart, loopEnd: e.loopEnd);
 }
 
 /// A channel's instrument: its dominant module sample, else a rotating additive
@@ -186,7 +190,17 @@ TrackerInstrument _instrumentForChannel(ModuleDoc doc, int ins, int c) {
   if (ins >= 1 && ins - 1 < doc.samples.length) {
     final sample = doc.samples[ins - 1];
     if (!sample.isEmpty) {
-      return sampleInstrumentFromDoc('smp$ins', sample);
+      final owner = _sampleOwner(doc, ins - 1);
+      return sampleInstrumentFromDoc(
+        'smp$ins',
+        sample,
+        nativeVolumeEnvelope: _sampleVolEnv(sample, doc.initialTempo),
+        nativePanEnvelope: _samplePanEnv(sample, doc.initialTempo),
+        nativeNna: owner?.nna ?? 0,
+        nativeDct: owner?.dct ?? 0,
+        nativeDca: owner?.dca ?? 0,
+        nativeFadeout: owner?.fadeout ?? 0,
+      );
     }
   }
   const voices = [
@@ -196,6 +210,14 @@ TrackerInstrument _instrumentForChannel(ModuleDoc doc, int ins, int c) {
     Instrument.musicBox,
   ];
   return AdditiveInstrument('ch${c + 1}', voices[c % voices.length]);
+}
+
+DocInstrument? _sampleOwner(ModuleDoc doc, int sampleIndex) {
+  if (sampleIndex < 0) return null;
+  for (final instrument in doc.itInstruments) {
+    if (instrument.keymap.contains(sampleIndex + 1)) return instrument;
+  }
+  return null;
 }
 
 /// Transposes a row-major [DocPattern] into a channel-major [TrackerPattern],

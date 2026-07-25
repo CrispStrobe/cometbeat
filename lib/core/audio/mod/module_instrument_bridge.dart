@@ -32,6 +32,10 @@ SampleInstrument sampleInstrumentFromDoc(
   int engineRate = kSampleRate,
   VolumeEnvelope? nativeVolumeEnvelope,
   PanEnvelope? nativePanEnvelope,
+  int nativeNna = 0,
+  int nativeDct = 0,
+  int nativeDca = 0,
+  int nativeFadeout = 0,
 }) {
   if (sample.isEmpty) {
     return SampleInstrument(id, Float64List(0), baseMidi: baseMidi);
@@ -79,6 +83,10 @@ SampleInstrument sampleInstrumentFromDoc(
     sampleRight: right,
     nativeVolumeEnvelope: nativeVolumeEnvelope,
     nativePanEnvelope: nativePanEnvelope,
+    nativeNna: nativeNna,
+    nativeDct: nativeDct,
+    nativeDca: nativeDca,
+    nativeFadeout: nativeFadeout,
     // A 9xx offset is in original-sample units → same 1/ratio scale as the loop.
     offsetScale: 1 / ratio,
   );

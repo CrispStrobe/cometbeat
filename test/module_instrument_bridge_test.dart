@@ -16,6 +16,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/module_instrument_bridge.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
+import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -188,5 +189,47 @@ void main() {
     expect(edited.normalize, isFalse);
     expect(edited.nativeVolumeEnvelope, same(volume));
     expect(edited.nativePanEnvelope, same(pan));
+  });
+
+  test('IT continue old-note action keeps the previous sample voice ringing',
+      () {
+    final sample = Float64List.fromList([for (var i = 0; i < 88200; i++) 0.5]);
+    const timing = TrackerTiming(tempoBpm: 60, rows: 4, stepsPerBeat: 4);
+    final cells = [
+      const TrackerCell(midi: 60),
+      const TrackerCell(midi: 60),
+      TrackerCell.empty,
+      TrackerCell.empty,
+    ];
+    final cut = SampleInstrument('cut', sample);
+    final continued = SampleInstrument('continue', sample, nativeNna: 1);
+    final cutOut = cut.renderChannel(cells, timing);
+    final continueOut = continued.renderChannel(cells, timing);
+
+    // Row 1 starts at 0.5 s. At 0.75 s the cut voice has only the second
+    // note, while IT NNA=Continue has both voices.
+    final i = (0.75 * kSampleRate).round();
+    expect(continueOut[i], greaterThan(cutOut[i] * 1.5));
+  });
+
+  test('IT duplicate-note action uses DCT/DCA matching', () {
+    final sample = Float64List.fromList([for (var i = 0; i < 88200; i++) 0.5]);
+    const timing = TrackerTiming(tempoBpm: 60, rows: 4, stepsPerBeat: 4);
+    final cells = [
+      const TrackerCell(midi: 60),
+      const TrackerCell(midi: 62),
+      TrackerCell.empty,
+      TrackerCell.empty,
+    ];
+    final dctNote = SampleInstrument(
+      'dct-note',
+      sample,
+      nativeNna: 1,
+      nativeDct: 1,
+      nativeDca: 0,
+    );
+    final dctOut = dctNote.renderChannel(cells, timing);
+    final i = (0.75 * kSampleRate).round();
+    expect(dctOut[i], greaterThan(0.5));
   });
 }

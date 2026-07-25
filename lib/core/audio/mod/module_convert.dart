@@ -246,7 +246,9 @@ ModuleDoc docFromMod(ModModule m) {
     case 19: // S — special/extended: remap the sub-command nibble
       return _s3mSpecialToFx(info);
     case 20: // T — set tempo (BPM); our Fxx >= 0x20 = tempo
-      return (0xF, info < 0x20 ? 0x20 : info);
+      return info < 0x20 ? (0x1F, info) : (0xF, info);
+    case 9: // I — tremor
+      return (0x1D, info);
     case 21: // U — fine vibrato (approximated as vibrato)
       return (0x4, info);
     case 22: // V — set global volume
@@ -256,7 +258,7 @@ ModuleDoc docFromMod(ModModule m) {
     case 24: // X — set pan (0x00..0x80) → our 8xx (0x00..0xFF)
       return (0x8, (info * 2).clamp(0, 0xFF));
     default:
-      // I tremor · Y panbrello · Z MIDI — no neutral equivalent (dropped).
+      // Y panbrello · Z MIDI — no neutral equivalent (dropped).
       return (0, 0);
   }
 }
@@ -504,8 +506,10 @@ ModuleDoc docFromXm(XmModule m) {
       return (0x7, value);
     case 19: // S — special/extended (same sub-commands as S3M)
       return _s3mSpecialToFx(value);
-    case 20: // T — set tempo (T20+); T0x/T1x tempo slides have no equivalent
-      return value >= 0x20 ? (0xF, value) : (0, 0);
+    case 20: // T — set tempo (T20+); T0x/T1x are tempo slides
+      return value >= 0x20 ? (0xF, value) : (0x1F, value);
+    case 9: // I — tremor
+      return (0x1D, value);
     case 21: // U — fine vibrato (approximated as vibrato)
       return (0x4, value);
     case 22: // V — set global volume
@@ -515,7 +519,7 @@ ModuleDoc docFromXm(XmModule m) {
     case 24: // X — set panning (0x00..0xFF, direct → our 8xx)
       return (0x8, value);
     default:
-      // I tremor · Y panbrello · Z MIDI — no neutral equivalent (dropped).
+      // Y panbrello · Z MIDI — no neutral equivalent (dropped).
       return (0, 0);
   }
 }
@@ -742,6 +746,10 @@ ModuleDoc docFromIt(ItModule m) {
       return (16, param); // P pan slide
     case 0x1B:
       return (17, param); // Q retrigger + volume action
+    case 0x1D:
+      return (9, param); // I tremor
+    case 0x1F:
+      return (20, param); // T tempo slide
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:

@@ -134,15 +134,15 @@ const int kFxGlobalVolSlide = 0x11;
 /// `(x−y) × (speed) / 128`, clamped to −1..1. Stereo-only.
 const int kFxPanSlide = 0x19;
 
-/// Txy — TEMPO slide (XM effect 'T', 0x1D): high nibble 1 slides the tempo (BPM)
+/// Txy — TEMPO slide (S3M/IT effect 'T'): high nibble 1 slides the tempo (BPM)
 /// UP by the low nibble, else DOWN. Modelled at ROW granularity in [walkFlow] —
 /// each row carrying Txx steps the tempo by `amount × (speed−1)` (the per-tick
 /// slide summed over the row's non-first ticks), so it rides the existing
 /// per-row-tempo variable-timing render. Clamped to a valid BPM (32–255).
-const int kFxTempoSlide = 0x1D;
+const int kFxTempoSlide = 0x1F;
 
-/// Txy — tremor: pulse the note ON for x ticks then OFF for y, repeating. A new
-/// non-colliding command (XM effect 0x1D); importers can map XM effect T onto it.
+/// Txy — tremor: pulse the note ON for x ticks then OFF for y, repeating. XM
+/// effect T and S3M/IT effect I map here.
 const int kFxTremor = 0x1D;
 
 // --- Tuning constants (MUSICAL APPROXIMATIONS, not period-accurate MOD) -------
@@ -1266,9 +1266,33 @@ List<({int start, int end, double pan})> _panRegions(
   List<TrackerInstrument>? pool,
 ) {
   if (channel.instrument is! SampleInstrument) return null;
+  final base = channel.instrument as SampleInstrument;
+  if (!cells.any((c) => c.instrument != 0) &&
+      (base.nativeNna != 0 || base.nativeDct != 0)) {
+    final rendered = base.renderChannelStereo(cells, timing);
+    final left = Float64List.fromList(rendered.left);
+    final right = Float64List.fromList(rendered.right);
+    final pan = channel.pan.clamp(-1.0, 1.0);
+    final leftGain = pan > 0 ? 1.0 - pan : 1.0;
+    final rightGain = pan < 0 ? 1.0 + pan : 1.0;
+    final stereo = base.sampleRight != null;
+    final theta = (pan + 1) / 2 * (pi / 2);
+    for (var i = 0; i < left.length; i++) {
+      if (stereo) {
+        left[i] *= leftGain;
+        right[i] *= rightGain;
+      } else {
+        right[i] = left[i] * sin(theta);
+        left[i] *= cos(theta);
+      }
+      left[i] *= channel.gain;
+      right[i] *= channel.gain;
+    }
+    return (left: left, right: right);
+  }
   final left = Float64List(timing.totalSamples);
   final right = Float64List(timing.totalSamples);
-  var cur = channel.instrument as SampleInstrument;
+  var cur = base;
   var startStep = 0;
   var allNative = true;
 
@@ -1310,8 +1334,13 @@ List<({int start, int end, double pan})> _panRegions(
         final vol = cur.nativeVolumeEnvelope == null
             ? channelEnv?.levelAt(noteMs) ?? 1.0
             : 1.0;
-        final pan =
-            (channel.pan + (nativePan?.panAt(noteMs) ?? 0.0)).clamp(-1.0, 1.0);
+        final released = releaseSteps > 0 &&
+            i - s >=
+                timing.stepStartSample(sustainSteps) -
+                    timing.stepStartSample(0);
+        final pan = (channel.pan +
+                (nativePan?.panAt(noteMs, released: released) ?? 0.0))
+            .clamp(-1.0, 1.0);
         if (hasRight) {
           final leftGain = pan > 0 ? 1.0 - pan : 1.0;
           final rightGain = pan < 0 ? 1.0 + pan : 1.0;

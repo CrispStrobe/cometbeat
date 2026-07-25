@@ -805,6 +805,22 @@ void main() {
       expect(const VolumeEnvelope([]).levelAt(10), 1.0); // empty = no change
     });
 
+    test('native sustain holds and loop repeats until release', () {
+      const e = VolumeEnvelope(
+        [
+          (ms: 0, level: 0.0),
+          (ms: 100, level: 1.0),
+          (ms: 200, level: 0.5),
+        ],
+        sustain: 1,
+        loopStart: 1,
+        loopEnd: 2,
+      );
+      expect(e.levelAt(150), closeTo(1.0, 1e-9));
+      expect(e.levelAt(350), closeTo(1.0, 1e-9));
+      expect(e.levelAt(250, released: true), closeTo(0.75, 1e-9));
+    });
+
     test('a fade-out envelope makes the note quieter at the end', () {
       final song = TrackerSong(timing: const TrackerTiming(rows: 8));
       song.engine

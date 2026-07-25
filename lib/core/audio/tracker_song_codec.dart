@@ -444,29 +444,45 @@ Map<String, dynamic> _volEnvToJson(VolumeEnvelope e) => {
       'points': [
         for (final p in e.points) {'ms': p.ms, 'level': p.level},
       ],
+      'sustain': e.sustain,
+      'loopStart': e.loopStart,
+      'loopEnd': e.loopEnd,
     };
 
-VolumeEnvelope _volEnvFromJson(Map<String, dynamic> m) => VolumeEnvelope([
-      for (final p in (m['points'] as List? ?? const []))
-        (
-          ms: ((p as Map)['ms'] as num).toInt(),
-          level: (p['level'] as num).toDouble(),
-        ),
-    ]);
+VolumeEnvelope _volEnvFromJson(Map<String, dynamic> m) => VolumeEnvelope(
+      [
+        for (final p in (m['points'] as List? ?? const []))
+          (
+            ms: ((p as Map)['ms'] as num).toInt(),
+            level: (p['level'] as num).toDouble(),
+          ),
+      ],
+      sustain: (m['sustain'] as num?)?.toInt(),
+      loopStart: (m['loopStart'] as num?)?.toInt(),
+      loopEnd: (m['loopEnd'] as num?)?.toInt(),
+    );
 
 Map<String, dynamic> _panEnvToJson(PanEnvelope e) => {
       'points': [
         for (final p in e.points) {'ms': p.ms, 'pan': p.pan},
       ],
+      'sustain': e.sustain,
+      'loopStart': e.loopStart,
+      'loopEnd': e.loopEnd,
     };
 
-PanEnvelope _panEnvFromJson(Map<String, dynamic> m) => PanEnvelope([
-      for (final p in (m['points'] as List? ?? const []))
-        (
-          ms: ((p as Map)['ms'] as num).toInt(),
-          pan: (p['pan'] as num).toDouble(),
-        ),
-    ]);
+PanEnvelope _panEnvFromJson(Map<String, dynamic> m) => PanEnvelope(
+      [
+        for (final p in (m['points'] as List? ?? const []))
+          (
+            ms: ((p as Map)['ms'] as num).toInt(),
+            pan: (p['pan'] as num).toDouble(),
+          ),
+      ],
+      sustain: (m['sustain'] as num?)?.toInt(),
+      loopStart: (m['loopStart'] as num?)?.toInt(),
+      loopEnd: (m['loopEnd'] as num?)?.toInt(),
+    );
 
 // ── pattern + cells ──────────────────────────────────────────────────────────
 

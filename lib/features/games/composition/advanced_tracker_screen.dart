@@ -57,6 +57,7 @@ import 'package:comet_beat/core/audio/tracker_replayer.dart'
         kFxPanSlide,
         kFxSetGlobalVolume,
         kFxTempoSlide,
+        kFxTremor,
         resolveTimingMap,
         rowIndexAtMs;
 import 'package:comet_beat/core/audio/tracker_song.dart';
@@ -5844,6 +5845,7 @@ class _CommandEditorState extends State<_CommandEditor> {
     kFxGlobalVolSlide: 'Hxy  Global volume slide',
     kFxPanSlide: 'Pxy  Pan slide',
     kFxTempoSlide: 'Txy  Tempo slide',
+    kFxTremor: 'Txy  Tremor',
   };
 
   @override
