@@ -27,6 +27,8 @@ import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/subtractive.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:comet_beat/core/audio/fx/fx_chain.dart';
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_effects.dart';
 import 'package:comet_beat/core/audio/tracker_replay.dart';
@@ -1499,6 +1501,56 @@ Float64List applyChannelEffects(
   return out;
 }
 
+/// A2 — the same seven channel presets expressed in the shared [FxSpec] model,
+/// so a Tracker channel effect can travel to the Audio Editor, the Instrument
+/// Builder, Loop Studio, or Tab unchanged.
+///
+/// Each entry reproduces [applyChannelEffect]'s hardcoded params EXACTLY — the
+/// params that differ from `fx_chain`'s own fallbacks are all spelled out, so
+/// `applyFxChain(stem, [fxForChannelPreset(e)!])` is sample-identical to
+/// `applyChannelEffect(stem, e)`. `channel_fx_parity_test.dart` asserts that.
+/// [TrackerChannelEffect.none] has no spec (an empty chain is dry).
+FxSpec? fxForChannelPreset(TrackerChannelEffect preset) => switch (preset) {
+      TrackerChannelEffect.none => null,
+      TrackerChannelEffect.delay => const FxSpec(
+          type: FxType.delay,
+          params: {'delayMs': 200, 'feedback': 0.3, 'mix': 0.3},
+        ),
+      TrackerChannelEffect.chorus => const FxSpec(
+          type: FxType.chorus,
+          // depthMs is chorusFx's own default; spelled out because the FX rack
+          // would otherwise supply its own.
+          params: {'rateHz': 1.2, 'depthMs': 6, 'mix': 0.4},
+        ),
+      TrackerChannelEffect.flanger => const FxSpec(
+          type: FxType.flanger,
+          // rateHz 0.3 is flangerFx's default and differs from the rack's 0.35.
+          params: {'rateHz': 0.3, 'depthMs': 3, 'feedback': 0.5, 'mix': 0.4},
+        ),
+      TrackerChannelEffect.reverb => const FxSpec(
+          type: FxType.reverb,
+          // No 'decay' on purpose: reverbFx falls back to roomSize when decay is
+          // absent, and roomSize 0.6 / mix 0.3 are the values the tracker preset
+          // has always used (reverbFx's own defaults).
+          params: {'roomSize': 0.6, 'damping': 0.4, 'mix': 0.3},
+        ),
+      TrackerChannelEffect.ringMod => const FxSpec(
+          type: FxType.ringMod,
+          params: {'carrierHz': 110, 'mix': 0.6},
+        ),
+      TrackerChannelEffect.crunch => const FxSpec(
+          type: FxType.distortion,
+          params: {'drive': 3, 'mix': 0.7},
+        ),
+    };
+
+/// The [FxSpec] chain equivalent to a legacy [TrackerChannelEffect] list —
+/// `none` entries drop out, as they always have.
+List<FxSpec> fxChainForChannelPresets(List<TrackerChannelEffect> presets) => [
+      for (final p in presets)
+        if (fxForChannelPreset(p) case final fx?) fx,
+    ];
+
 /// One editable column: an [instrument], an authored mix [gain], and [rows]
 /// cells. Levels are combo-independent (each channel carries its gain into
 /// mixStems' unit-peak-per-stem + soft-limiter mixdown), so editing one channel
@@ -1680,10 +1732,12 @@ class TrackerChannel {
     this.volumeEnvelope,
     this.panEnvelope,
     List<TrackerChannelEffect>? effects,
+    List<FxSpec>? fxChain,
     List<TrackerCell>? cells,
   })  : effects = effects != null
             ? List<TrackerChannelEffect>.of(effects)
             : <TrackerChannelEffect>[],
+        fxChain = fxChain != null ? List<FxSpec>.of(fxChain) : <FxSpec>[],
         cells = cells != null
             ? List<TrackerCell>.of(cells)
             : List<TrackerCell>.filled(
@@ -1725,10 +1779,22 @@ class TrackerChannel {
   /// envelope [usesPan] → renders in stereo.
   PanEnvelope? panEnvelope;
 
-  /// The channel's insert-effect CHAIN, applied to its stem in order (before
-  /// mixStems). Empty = dry. Mutate via [TrackerEngine.setChannelEffects] so
-  /// caches are invalidated.
+  /// The channel's insert-effect CHAIN as legacy PRESETS, applied to its stem in
+  /// order (before mixStems). Empty = dry. Mutate via
+  /// [TrackerEngine.setChannelEffects] so caches are invalidated.
+  ///
+  /// A2: this is now the *preset* view of the chain. When [fxChain] is non-empty
+  /// it takes over at render time — see [fxChain].
   final List<TrackerChannelEffect> effects;
+
+  /// A2 — the channel's insert chain in the shared [FxSpec] model: the same
+  /// effects the Audio Editor, Instrument Builder, Loop Studio and Tab use, with
+  /// real params instead of the seven hardcoded presets.
+  ///
+  /// When non-empty this REPLACES [effects] at render time. It starts empty, so
+  /// a song that only ever used the presets renders through exactly the old path
+  /// and is byte-identical. Mutate via [TrackerEngine.setChannelFxChain].
+  final List<FxSpec> fxChain;
   final List<TrackerCell> cells;
 
   /// Muted channels are excluded from the mixdown (their stem is not summed).
@@ -1973,6 +2039,27 @@ class TrackerEngine {
       ..addAll(effects);
     // Drop `none` — an empty chain is dry.
     list.removeWhere((e) => e == TrackerChannelEffect.none);
+    // A2: presets and the FxSpec chain are two views of one thing. Setting the
+    // presets clears any hand-edited chain so the two cannot disagree about
+    // what the channel sounds like.
+    channels[channel].fxChain.clear();
+    _stemCache.remove(channel);
+    _wav = null;
+  }
+
+  /// A2 — sets a channel's insert chain in the shared [FxSpec] model (the same
+  /// effects every other mode uses), replacing both the preset list and any
+  /// previous chain. An empty [chain] returns the channel to dry.
+  ///
+  /// Use this for anything the seven [TrackerChannelEffect] presets cannot say:
+  /// tweaked params, an effect type the presets do not cover, or a chain
+  /// imported from the Audio Editor.
+  void setChannelFxChain(int channel, List<FxSpec> chain) {
+    final ch = channels[channel];
+    ch.effects.clear();
+    ch.fxChain
+      ..clear()
+      ..addAll(chain);
     _stemCache.remove(channel);
     _wav = null;
   }
@@ -2110,7 +2197,11 @@ class TrackerEngine {
     // Effect-column volume commands (Cxx/Axy) — a no-op when the channel has
     // none, so patterns without an effect column are untouched.
     final withVol = applyVolumeColumn(buf, ch.cells, _timing);
-    return applyChannelEffects(withVol, ch.effects);
+    // A2: a hand-edited FxSpec chain wins; otherwise the legacy presets render
+    // through exactly the old path, so preset-only songs stay byte-identical.
+    return ch.fxChain.isNotEmpty
+        ? applyFxChain(withVol, ch.fxChain, kSampleRate)
+        : applyChannelEffects(withVol, ch.effects);
   }
 
   /// The current pattern mixed to a raw Float64List buffer, used for baking the Tracker

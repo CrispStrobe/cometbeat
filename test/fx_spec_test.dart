@@ -133,11 +133,11 @@ void main() {
     });
 
     test('param order does not affect the key', () {
-      final a = const FxSpec(
+      const a = FxSpec(
         type: FxType.reverb,
         params: {'roomSize': 0.7, 'mix': 0.4},
       );
-      final b = const FxSpec(
+      const b = FxSpec(
         type: FxType.reverb,
         params: {'mix': 0.4, 'roomSize': 0.7},
       );

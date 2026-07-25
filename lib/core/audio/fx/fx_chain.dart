@@ -42,6 +42,13 @@ import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
     show VoiceEffect, applyVoiceEffect, voiceShapeFx, voiceShapeFxStereo;
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 
+// `decay` is deliberately read straight from the map rather than through `p()`:
+// `reverbFx` takes a NULLABLE decay and falls back to `roomSize` when it is
+// absent, and those are two alternative controls for the same internal room
+// value. Forcing a default here would make `roomSize` unreachable, which is the
+// control the Tracker's channel-reverb preset uses. `defaultFx(FxType.reverb)`
+// always supplies a decay, so every DAW-authored spec is unaffected.
+
 Float64List applyFxChain(
   Float64List input,
   List<FxSpec> effects,
@@ -110,7 +117,7 @@ Float64List applyFxChain(
           outRight,
           roomSize: p('roomSize', 0.7),
           damping: p('damping', 0.4),
-          decay: p('decay', 1.5),
+          decay: fx.params['decay'],
           mix: p('mix', 0.35),
           sampleRate: sampleRate,
         ),
@@ -205,7 +212,7 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
         input,
         roomSize: p('roomSize', 0.7),
         damping: p('damping', 0.4),
-        decay: p('decay', 1.5),
+        decay: fx.params['decay'],
         mix: p('mix', 0.35),
         sampleRate: sampleRate,
       ),

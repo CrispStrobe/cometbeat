@@ -26,6 +26,7 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart'
     show Inflate, OutputMemoryStream, ZLibEncoder;
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
@@ -405,6 +406,11 @@ Map<String, dynamic> _channelToJson(TrackerChannel c) => {
         'volumeEnvelope': _volEnvToJson(c.volumeEnvelope!),
       if (c.panEnvelope != null) 'panEnvelope': _panEnvToJson(c.panEnvelope!),
       'effects': [for (final e in c.effects) e.name],
+      // A2 — the channel's insert chain in the shared FxSpec model, with real
+      // params. Written only when non-empty, so a preset-only song produces a
+      // byte-identical file and older builds keep reading it via 'effects'.
+      if (c.fxChain.isNotEmpty)
+        'fxChain': [for (final fx in c.fxChain) fx.toJson()],
     };
 
 TrackerChannel _channelFromJson(Map<String, dynamic> m, int rows) {
@@ -424,9 +430,22 @@ TrackerChannel _channelFromJson(Map<String, dynamic> m, int rows) {
       for (final e in (m['effects'] as List? ?? const []))
         _channelEffectFromName(e as String),
     ],
+    fxChain: _fxChainFromJson(m['fxChain']),
   );
   ch.muted = (m['muted'] as bool?) ?? false;
   return ch;
+}
+
+/// A2 — an FxSpec chain. Entries that fail to parse (an effect type added by a
+/// newer build) are DROPPED rather than throwing, matching how an unknown preset
+/// name degrades below: an older build opens the song minus the effects it does
+/// not understand instead of refusing the file.
+List<FxSpec> _fxChainFromJson(Object? raw) {
+  if (raw is! List) return const [];
+  return [
+    for (final entry in raw)
+      if (FxSpec.fromJson(entry) case final fx?) fx,
+  ];
 }
 
 /// An unknown insert-effect name degrades to [TrackerChannelEffect.none] rather
