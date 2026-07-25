@@ -18,8 +18,8 @@ NoteElement _n(String id) => NoteElement(
       id: id,
     );
 
-Score _roundTrip(Score src) => TabDocument.fromScore(src, Tuning.standardGuitar)
-    .toScore();
+Score _roundTrip(Score src) =>
+    TabDocument.fromScore(src, Tuning.standardGuitar).toScore();
 
 void main() {
   group('A0 round-trip — techniques survive import→edit→export', () {

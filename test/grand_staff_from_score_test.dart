@@ -29,8 +29,14 @@ void main() {
       timeSignature: const TimeSignature(4, 4),
       measures: [
         Measure([
-          NoteElement.note(const Pitch(Step.c, octave: 5), NoteDuration.quarter),
-          NoteElement.note(const Pitch(Step.e, octave: 2), NoteDuration.quarter),
+          NoteElement.note(
+            const Pitch(Step.c, octave: 5),
+            NoteDuration.quarter,
+          ),
+          NoteElement.note(
+            const Pitch(Step.e, octave: 2),
+            NoteDuration.quarter,
+          ),
           const NoteElement(
             pitches: [
               Pitch(Step.c, octave: 3),

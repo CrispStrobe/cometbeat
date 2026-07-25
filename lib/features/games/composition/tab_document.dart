@@ -640,6 +640,7 @@ class TabDocument {
       final scale = c.tuplet == null ? 1.0 : c.tuplet!.$2 / c.tuplet!.$1;
       return (c.duration.toFraction().toDouble() * wholeMs * scale).round();
     }
+
     List<int> midis(TabColumn c) => [
           for (final e
               in (c.frets.entries.toList()
@@ -717,7 +718,8 @@ class TabDocument {
     final pinned = <int, Fretting>{}; // column index → explicit fingering
     var idx = 0;
     for (final measure in score.measures) {
-      final measureStart = idx; // column index of this bar's first voice-1 element
+      final measureStart =
+          idx; // column index of this bar's first voice-1 element
       for (final el in measure.elements) {
         if (el is NoteElement) {
           final midis = [for (final p in el.pitches) p.midiNumber];
@@ -756,7 +758,9 @@ class TabDocument {
         if (t.voice != 0) continue; // voice 0 = elements (voice 1)
         for (var e = t.startIndex; e <= t.endIndex; e++) {
           final gi = measureStart + e;
-          if (gi >= 0 && gi < tuplets.length) tuplets[gi] = (t.actual, t.normal);
+          if (gi >= 0 && gi < tuplets.length) {
+            tuplets[gi] = (t.actual, t.normal);
+          }
         }
       }
       if (measure.startRepeat && measureStart < startReps.length) {

@@ -409,7 +409,10 @@ void main() {
       expect(bases.contains((DurationBase.sixteenth, 0)), isTrue);
       expect(bases.contains((DurationBase.thirtySecond, 0)), isTrue);
       expect(bases.contains((DurationBase.eighth, 1)), isTrue); // dotted 8th
-      expect(bases.contains((DurationBase.sixteenth, 1)), isTrue); // dotted 16th
+      expect(
+        bases.contains((DurationBase.sixteenth, 1)),
+        isTrue,
+      ); // dotted 16th
     });
 
     test('sixteen 16th-notes tile into exactly one 4/4 bar', () {
@@ -426,7 +429,9 @@ void main() {
     test('a 16th plays for exactly an eighth of a beat (125ms @120bpm)', () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: const [TabColumn(frets: {0: 0}, duration: sixteenth)],
+        columns: const [
+          TabColumn(frets: {0: 0}, duration: sixteenth),
+        ],
       );
       expect(doc.toPlaybackEvents().single.$2, 125); // 2000/16 @120bpm default
     });
@@ -435,7 +440,9 @@ void main() {
         () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: const [TabColumn(frets: {0: 0})], // default quarter
+        columns: const [
+          TabColumn(frets: {0: 0}),
+        ], // default quarter
       );
       expect(doc.toPlaybackEvents().single.$2, 500);
     });
@@ -489,7 +496,9 @@ void main() {
     test('setTie / withTie toggle the flag', () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: [const TabColumn(frets: {0: 0})],
+        columns: [
+          const TabColumn(frets: {0: 0}),
+        ],
       );
       expect(doc.columns[0].tieToNext, isFalse);
       doc.setTie(0, true);
@@ -569,7 +578,8 @@ void main() {
       expect((t.actual, t.normal), (3, 2));
     });
 
-    test('playback scales each note by normal/actual (three sum to a beat)', () {
+    test('playback scales each note by normal/actual (three sum to a beat)',
+        () {
       final events = tripletOfEighths().toPlaybackEvents(); // @120bpm default
       expect(events, hasLength(3));
       // Each eighth (250ms) × 2/3 ≈ 167ms; the three sum to a 500ms quarter.
@@ -599,7 +609,9 @@ void main() {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
         keySignature: const KeySignature(3), // A major
-        columns: [const TabColumn(frets: {0: 0})],
+        columns: [
+          const TabColumn(frets: {0: 0}),
+        ],
       );
       expect(doc.toScore().keySignature.fifths, 3);
     });
@@ -608,7 +620,9 @@ void main() {
       final src = TabDocument(
         tuning: Tuning.standardGuitar,
         keySignature: const KeySignature(-2), // B♭ major
-        columns: [const TabColumn(frets: {0: 0})],
+        columns: [
+          const TabColumn(frets: {0: 0}),
+        ],
       ).toScore();
       final back = TabDocument.fromScore(src, Tuning.standardGuitar);
       expect(back.keySignature.fifths, -2);

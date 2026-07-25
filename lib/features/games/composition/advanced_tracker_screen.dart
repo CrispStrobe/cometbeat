@@ -4771,8 +4771,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     icon: const Icon(Icons.fiber_manual_record),
                     color: _recording ? scheme.error : null,
                     tooltip: l10n.trackerRecordLive,
-                    onPressed: () =>
-                        setState(() => _recording = !_recording),
+                    onPressed: () => setState(() => _recording = !_recording),
                   ),
                   IconButton(
                     icon: const Icon(Icons.playlist_play),
@@ -5028,7 +5027,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     // View + tools.
                     Row(
                       children: [
-                        Icon(Icons.zoom_out_map, size: 18, color: scheme.primary),
+                        Icon(
+                          Icons.zoom_out_map,
+                          size: 18,
+                          color: scheme.primary,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(child: Text(l10n.trackerZoomIn)),
                         IconButton(
@@ -5186,7 +5189,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                                   ? i == playing
                                   : i == _orderCursor,
                               side: (playing < 0 && i == _orderCursor)
-                                  ? BorderSide(color: scheme.primary, width: 1.5)
+                                  ? BorderSide(
+                                      color: scheme.primary,
+                                      width: 1.5,
+                                    )
                                   : null,
                               onPressed: () {
                                 setState(() => _orderCursor = i);
@@ -5934,82 +5940,88 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     Row(
                       children: [
                         const Icon(Icons.keyboard, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SegmentedButton<_NoteEntry>(
-                          showSelectedIcon: false,
-                          segments: [
-                            ButtonSegment(
-                              value: _NoteEntry.pianoKeys,
-                              label: Text(l10n.trackerEntryPiano),
-                            ),
-                            ButtonSegment(
-                              value: _NoteEntry.noteNames,
-                              label: Text(l10n.trackerEntryNames),
-                            ),
-                          ],
-                          selected: {_entryMode},
-                          onSelectionChanged: (s) {
-                            setState(() {
-                              _entryMode = s.first;
-                              _pendingSemi = null;
-                            });
-                            refresh();
-                          },
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SegmentedButton<_NoteEntry>(
+                            showSelectedIcon: false,
+                            segments: [
+                              ButtonSegment(
+                                value: _NoteEntry.pianoKeys,
+                                label: Text(l10n.trackerEntryPiano),
+                              ),
+                              ButtonSegment(
+                                value: _NoteEntry.noteNames,
+                                label: Text(l10n.trackerEntryNames),
+                              ),
+                            ],
+                            selected: {_entryMode},
+                            onSelectionChanged: (s) {
+                              setState(() {
+                                _entryMode = s.first;
+                                _pendingSemi = null;
+                              });
+                              refresh();
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.trackerField,
-                    style: Theme.of(ctx).textTheme.labelMedium,
-                  ),
-                  const SizedBox(height: 6),
-                  SegmentedButton<_CellField>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(value: _CellField.note, label: Text('♪')),
-                      ButtonSegment(value: _CellField.volume, label: Text('vol')),
-                      ButtonSegment(value: _CellField.effect, label: Text('fx')),
-                      ButtonSegment(
-                        value: _CellField.instrument,
-                        label: Text('ins'),
-                      ),
-                    ],
-                    selected: {_field},
-                    onSelectionChanged: (s) {
-                      setState(() => _field = s.first);
-                      refresh();
-                    },
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.trackerShowKeys),
-                    value: _showKeyHints,
-                    onChanged: (v) {
-                      setState(() => _showKeyHints = v);
-                      refresh();
-                    },
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.backspace_outlined),
-                    title: Text(l10n.trackerClearCell),
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      _clearAtCursorAndAdvance();
-                    },
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.info_outline),
-                    title: Text(l10n.trackerKeyHelp),
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      _showKeyHelp(l10n);
-                    },
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.trackerField,
+                      style: Theme.of(ctx).textTheme.labelMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    SegmentedButton<_CellField>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: _CellField.note, label: Text('♪')),
+                        ButtonSegment(
+                          value: _CellField.volume,
+                          label: Text('vol'),
+                        ),
+                        ButtonSegment(
+                          value: _CellField.effect,
+                          label: Text('fx'),
+                        ),
+                        ButtonSegment(
+                          value: _CellField.instrument,
+                          label: Text('ins'),
+                        ),
+                      ],
+                      selected: {_field},
+                      onSelectionChanged: (s) {
+                        setState(() => _field = s.first);
+                        refresh();
+                      },
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.trackerShowKeys),
+                      value: _showKeyHints,
+                      onChanged: (v) {
+                        setState(() => _showKeyHints = v);
+                        refresh();
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.backspace_outlined),
+                      title: Text(l10n.trackerClearCell),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _clearAtCursorAndAdvance();
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.info_outline),
+                      title: Text(l10n.trackerKeyHelp),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _showKeyHelp(l10n);
+                      },
+                    ),
                   ],
                 ),
               ),
