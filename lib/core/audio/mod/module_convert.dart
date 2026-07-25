@@ -432,6 +432,10 @@ ModuleDoc docFromXm(XmModule m) {
       final cells = <DocCell>[];
       for (var channel = 0; channel < row.length; channel++) {
         final c = row[channel];
+        // XM's Txy tremor uses effect byte 14h, while the neutral replayer
+        // reserves 1Dh for tremor so it cannot collide with MOD effects. Keep
+        // the original byte in nativeEffect for same-format export.
+        final effect = c.effect == 0x14 ? 0x1D : c.effect;
         final vol =
             (c.volume >= 0x10 && c.volume <= 0x50) ? c.volume - 0x10 : -1;
         if (c.instrument > 0) lastInstrument[channel] = c.instrument;
@@ -456,7 +460,7 @@ ModuleDoc docFromXm(XmModule m) {
             // Keep the full XM command byte in the neutral model. Cross-format
             // writers may still degrade commands without an equivalent, but a
             // same-format XM round-trip must not erase G+ effects.
-            effect: c.effect,
+            effect: effect,
             effectParam: c.effectParam,
             nativeEffect: c.effect == 0 && c.effectParam == 0 ? -1 : c.effect,
             nativeEffectParam: c.effectParam,
@@ -996,7 +1000,7 @@ List<XmPattern> _docPatternsToXm(
               volume: c.volume < 0 ? 0 : (0x10 + c.volume).clamp(0x10, 0x50),
               effect: doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
                   ? c.nativeEffect & 0xFF
-                  : c.effect & 0xFF,
+                  : (c.effect == 0x1D ? 0x14 : c.effect) & 0xFF,
               effectParam:
                   doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
                       ? c.nativeEffectParam & 0xFF

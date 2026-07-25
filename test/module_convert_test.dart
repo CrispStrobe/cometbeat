@@ -21,6 +21,7 @@ import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/s3m_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_module.dart';
+import 'package:comet_beat/core/audio/tracker_replayer.dart' show kFxTremor;
 import 'package:flutter_test/flutter_test.dart';
 
 Uint8List _read(String path) => File(path).readAsBytesSync();
@@ -30,6 +31,34 @@ Float64List _norm8(List<int> v) =>
     Float64List.fromList([for (final b in v) b / 128]);
 
 void main() {
+  test('XM Txy imports as the neutral tremor command', () {
+    final module = XmModule(
+      channelCount: 1,
+      order: const [0],
+      patterns: [
+        XmPattern([
+          [
+            const XmCell(
+              note: 49,
+              instrument: 1,
+              effect: 0x14,
+              effectParam: 0x31,
+            ),
+          ],
+        ]),
+      ],
+      instruments: [
+        XmInstrument(samples: [XmSample(pcm: Float64List(32))]),
+      ],
+    );
+    final doc = docFromXm(module);
+    final cell = doc.patterns.first.rows.first.first;
+    expect(cell.effect, kFxTremor);
+    expect(cell.effectParam, 0x31);
+    expect(cell.nativeEffect, 0x14);
+    expect(cell.nativeEffectParam, 0x31);
+  });
+
   test('IT native volume commands do not synthesize a volume-column byte', () {
     final doc = ModuleDoc(
       sourceFormat: ModuleFormat.it,
