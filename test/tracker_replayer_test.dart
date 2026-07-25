@@ -975,6 +975,103 @@ void main() {
   });
 
   group('sample tick voice (per-tick effects on sample channels)', () {
+    test('stereo sample channels keep the right waveform through effects', () {
+      final leftSample = Float64List.fromList(
+        List<double>.filled(120000, 0.25),
+      );
+      final rightSample = Float64List.fromList(
+        List<double>.filled(120000, -0.5),
+      );
+      final cells = List<TrackerCell>.filled(4, TrackerCell.empty);
+      cells[0] = const TrackerCell(midi: 60);
+      cells[1] = fx(0x4, 0x31); // vibrato: forces the stereo tick path
+      cells[2] = fx(0x4, 0x31);
+      cells[3] = fx(0x4, 0x31);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'stereo',
+            instrument: SampleInstrument(
+              'stereo',
+              leftSample,
+              sampleRight: rightSample,
+            ),
+            rows: 4,
+          ),
+        ],
+        timing: const TrackerTiming(rows: 4),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+        stereoOutput: true,
+      );
+      final wav = song.renderSongWav();
+      expect(wav[22] | (wav[23] << 8), 2);
+      final data = ByteData.sublistView(wav);
+      var leftSum = 0;
+      var rightSum = 0;
+      var rightEnergy = 0;
+      for (var o = 44; o + 3 < wav.length; o += 4) {
+        final l = data.getInt16(o, Endian.little);
+        final r = data.getInt16(o + 2, Endian.little);
+        leftSum += l;
+        rightSum += r;
+        rightEnergy += r.abs();
+      }
+      expect(rightEnergy, greaterThan(10000));
+      expect(leftSum, greaterThan(0));
+      expect(rightSum, lessThan(0));
+    });
+
+    test('variable-timing stereo sample effects keep both channels', () {
+      final leftSample = Float64List.fromList(
+        List<double>.filled(120000, 0.25),
+      );
+      final rightSample = Float64List.fromList(
+        List<double>.filled(120000, -0.5),
+      );
+      final cells = List<TrackerCell>.filled(4, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60)
+        ..[1] = fx(0x1, 0x03)
+        ..[2] = fx(0x1, 0x03)
+        ..[3] = fx(0x1, 0x03);
+      final tempoCells = List<TrackerCell>.filled(4, TrackerCell.empty)
+        ..[2] = fx(kFxSetSpeed, 0x50);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'stereo',
+            instrument: SampleInstrument(
+              'stereo',
+              leftSample,
+              sampleRight: rightSample,
+            ),
+            rows: 4,
+          ),
+          TrackerChannel(
+            id: 'tempo',
+            instrument: const AdditiveInstrument('silent', Instrument.piano),
+            rows: 4,
+          ),
+        ],
+        timing: const TrackerTiming(rows: 4),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells, tempoCells]),
+        ],
+        order: [0],
+        stereoOutput: true,
+      );
+      expect(songUsesVariableTiming(song), isTrue);
+      final wav = song.renderSongWav();
+      final data = ByteData.sublistView(wav);
+      var rightSum = 0;
+      for (var o = 44; o + 3 < wav.length; o += 4) {
+        rightSum += data.getInt16(o + 2, Endian.little);
+      }
+      expect(rightSum, lessThan(0));
+    });
+
     test('a porta-up on a SAMPLE channel raises the pitch (rising)', () {
       // A long low sine sample so a gentle porta stays within it + is measurable
       // via zero-crossings.

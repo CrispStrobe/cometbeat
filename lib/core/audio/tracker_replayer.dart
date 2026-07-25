@@ -766,6 +766,142 @@ double? _readLoopedSample(
   return sample[idx] * (1 - frac) + next * frac;
 }
 
+/// Stereo counterpart of the per-tick sample voice. It keeps the native right
+/// waveform while applying the same pitch/volume/effect state as the mono tick
+/// path. [rowStart] is absolute within the returned buffer, so this also serves
+/// variable-tempo flow renders.
+({Float64List left, Float64List right}) _renderSampleChannelStereoTicks(
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<int> ticksPerRow,
+  List<TrackerInstrument>? pool,
+) {
+  final total = rowStart.last;
+  final left = Float64List(total);
+  final right = Float64List(total);
+  final env = channel.volumeEnvelope;
+  final hasEnv = env != null && !env.isEmpty;
+  const declickSec = 0.003;
+  final rows = cells.length;
+  var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
+  final voice = ReplayVoice();
+  var readPos = 0.0;
+  var noteStartSample = 0;
+  var rowPan = channel.pan.clamp(-1.0, 1.0);
+
+  for (var r = 0; r < rows; r++) {
+    final cell = cells[r];
+    final cellInst = cell.instrument;
+    if (cellInst > 0 &&
+        pool != null &&
+        cellInst - 1 < pool.length &&
+        pool[cellInst - 1] is SampleInstrument) {
+      cur = pool[cellInst - 1];
+    }
+    if (cell.fxCmd == kFxSetPan) {
+      rowPan = _panFromParam(cell.fxParam);
+    } else if (cell.fxCmd == kFxPanSlide) {
+      final rightAmount = (cell.fxParam >> 4) & 0xF;
+      final leftAmount = cell.fxParam & 0xF;
+      rowPan = (rowPan + (rightAmount - leftAmount) * ticksPerRow[r] / 128.0)
+          .clamp(-1.0, 1.0);
+    }
+    voice.armRow(cell);
+    if (voice.retriggeredThisRow) {
+      final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
+      readPos = cell.fxCmd == kFxSampleOffset
+          ? (cell.fxParam * 256 * os).toDouble()
+          : 0.0;
+      noteStartSample = rowStart[r];
+    }
+    if ((!voice.active && !voice.hasPendingNote) ||
+        cur is! SampleInstrument ||
+        cur.sample.isEmpty) {
+      continue;
+    }
+
+    final baseMidi = cur.baseMidi;
+    final sample = cur.sample;
+    final sampleRight = cur.sampleRight;
+    final loops = cur.loops;
+    final pingPong = cur.pingPong;
+    final loopStart = cur.loopStart;
+    final loopLen = cur.loopLength;
+    final loopEnd = loopStart + loopLen;
+    final rowS = rowStart[r];
+    final rowE = rowStart[r + 1];
+    final tpr = ticksPerRow[r] < 1 ? 1 : ticksPerRow[r];
+    for (var k = 0; k < tpr; k++) {
+      final ts = rowS + ((rowE - rowS) * k) ~/ tpr;
+      final te = rowS + ((rowE - rowS) * (k + 1)) ~/ tpr;
+      final state = voice.tick(k, tpr);
+      if (state.retrigger) {
+        readPos = 0.0;
+        noteStartSample = ts;
+      }
+      if (!voice.active) continue;
+      final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
+      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      for (var i = ts; i < te && i < total; i++) {
+        if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
+          readPos = loopStart + ((readPos - loopStart) % loopLen);
+        }
+        final value = _readLoopedSample(
+            sample, readPos, loops, pingPong, loopStart, loopLen);
+        if (value == null) break;
+        final rightValue = sampleRight == null
+            ? value
+            : _readLoopedSample(
+                  sampleRight,
+                  readPos,
+                  loops,
+                  pingPong,
+                  loopStart,
+                  loopLen,
+                ) ??
+                0.0;
+        final t = (i - noteStartSample) / kSampleRate;
+        final attack = t < declickSec ? t / declickSec : 1.0;
+        final nativeEnv = cur.nativeVolumeEnvelope;
+        final level = nativeEnv?.levelAt(t * 1000) ??
+            (hasEnv ? env.levelAt(t * 1000) : 1.0);
+        final pan = (rowPan +
+                (channel.panEnvelope?.panAt(t * 1000) ?? 0.0) +
+                (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0))
+            .clamp(-1.0, 1.0);
+        final amount = vol * attack * level;
+        if (sampleRight != null) {
+          final leftGain = pan > 0 ? 1.0 - pan : 1.0;
+          final rightGain = pan < 0 ? 1.0 + pan : 1.0;
+          left[i] += value * amount * leftGain;
+          right[i] += rightValue * amount * rightGain;
+        } else {
+          final theta = (pan + 1) / 2 * (pi / 2);
+          left[i] += value * amount * cos(theta);
+          right[i] += value * amount * sin(theta);
+        }
+        readPos += ratio;
+      }
+    }
+  }
+
+  var peak = 0.0;
+  for (var i = 0; i < total; i++) {
+    peak = max(peak, max(left[i].abs(), right[i].abs()));
+  }
+  if (peak == 0) return (left: left, right: right);
+  final scale = channel.instrument is SampleInstrument &&
+          !(channel.instrument as SampleInstrument).normalize
+      ? channel.gain
+      : channel.gain / peak;
+  for (var i = 0; i < total; i++) {
+    left[i] *= scale;
+    right[i] *= scale;
+  }
+  return (left: left, right: right);
+}
+
 /// Renders a SAMPLE channel through a per-tick voice: a fractional resampling
 /// read-pointer whose advance follows the tick voice's instantaneous PITCH
 /// (porta/vibrato/arpeggio) and whose amplitude follows its VOLUME (tremolo/Cxx/
@@ -1386,6 +1522,25 @@ void _renderChannelIntoStereo(
   List<TrackerInstrument>? pool,
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
+
+  if (channel.instrument is SampleInstrument && _hasPerTickEffect(cells)) {
+    final rowStart = [
+      for (var row = 0; row < cells.length; row++) timing.stepStartSample(row),
+    ]..add(timing.totalSamples);
+    final rendered = _renderSampleChannelStereoTicks(
+      channel,
+      cells,
+      rowStart,
+      List<int>.filled(cells.length, ticksPerRow),
+      pool,
+    );
+    final n = min(timing.totalSamples, left.length - sampleOffset);
+    for (var i = 0; i < n; i++) {
+      left[sampleOffset + i] += rendered.left[i];
+      right[sampleOffset + i] += rendered.right[i];
+    }
+    return;
+  }
 
   if (!_hasPerTickEffect(cells)) {
     final rendered = channel.instrument is SampleInstrument
@@ -2536,6 +2691,21 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
     final flatCells = [
       for (final pr in played) song.patterns[pr.patternIndex].cells[c][pr.row],
     ];
+    if (channels[c].instrument is SampleInstrument &&
+        _hasPerTickEffect(flatCells)) {
+      final rendered = _renderSampleChannelStereoTicks(
+        channels[c],
+        flatCells,
+        rowStart,
+        ticks,
+        song.instruments,
+      );
+      for (var i = 0; i < acc; i++) {
+        left[i] += rendered.left[i];
+        right[i] += rendered.right[i];
+      }
+      continue;
+    }
     final mono = Float64List(acc);
     _renderChannelIntoVariable(
       mono,
