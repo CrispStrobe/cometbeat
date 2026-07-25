@@ -754,6 +754,84 @@ class TrackerSong {
     return renderSong(_engine, [for (final i in order) patterns[i].cells]);
   }
 
+  /// Renders the whole song and STREAMS it to the WAV file at [path], holding at
+  /// most the float mix accumulator (plus one small PCM block) in memory —
+  /// never the whole-song int16 PCM and WAV copy alongside it. Byte-identical to
+  /// `File(path).writeAsBytesSync(renderSongWav())`, but with a bounded peak so a
+  /// long song's full-file CLI render stays within budget. This is the default
+  /// `render_module <in> <out>` path.
+  Future<void> writeSongWavStreaming(String path) async {
+    syncCurrent();
+    if (usesPan || stereoOutput) {
+      // STEREO: stream the float L/R accumulator to disk in blocks so the
+      // whole-song int16 + WAV copy are never materialised.
+      final f = songStereoFloat(this);
+      await _writeStereoFloatWav(path, f.left, f.right);
+      return;
+    }
+    if (usesCommands ||
+        usesInstruments ||
+        usesEnvelopes ||
+        songNeedsWalkRender(this)) {
+      // MONO command path: materialise the int16 PCM (compact — 2 bytes/sample)
+      // and stream its bytes with a mono header, skipping the extra WAV copy.
+      await _writeMonoPcmWav(path, replaySong(this).pcm);
+      return;
+    }
+    // Uniform offline mono: the engine mixer already returns a complete WAV.
+    File(path).writeAsBytesSync(
+      renderSong(_engine, [for (final i in order) patterns[i].cells]),
+    );
+  }
+
+  /// Streams a float stereo mix to a 2-channel PCM16 WAV. The header + samples
+  /// match [wavBytesStereo]∘[replaySongStereo] exactly (same tanh soft-knee via
+  /// [pcm16Sample]), so a streamed render is byte-identical to the in-memory one.
+  static Future<void> _writeStereoFloatWav(
+    String path,
+    List<double> left,
+    List<double> right,
+  ) async {
+    final n = left.length;
+    final dataLen = n * 4; // 2 channels * 2 bytes
+    final raf = await File(path).open(mode: FileMode.write);
+    try {
+      await raf.writeFrom(_wavHeaderBytes(dataLen, stereo: true));
+      const frames = 1 << 15; // ~256 KB PCM block
+      final block = Uint8List(frames * 4);
+      final bd = ByteData.view(block.buffer);
+      var i = 0;
+      while (i < n) {
+        final end = i + frames < n ? i + frames : n;
+        var off = 0;
+        for (var j = i; j < end; j++) {
+          bd.setInt16(off, pcm16Sample(left[j]), Endian.little);
+          bd.setInt16(off + 2, pcm16Sample(right[j]), Endian.little);
+          off += 4;
+        }
+        await raf.writeFrom(block, 0, off);
+        i = end;
+      }
+    } finally {
+      await raf.close();
+    }
+  }
+
+  /// Streams an already-quantised mono PCM16 buffer to a 1-channel WAV — same
+  /// bytes as [wavBytes] but without allocating the whole WAV copy.
+  static Future<void> _writeMonoPcmWav(String path, Int16List pcm) async {
+    final dataLen = pcm.length * 2;
+    final raf = await File(path).open(mode: FileMode.write);
+    try {
+      await raf.writeFrom(_wavHeaderBytes(dataLen, stereo: false));
+      await raf.writeFrom(
+        pcm.buffer.asUint8List(pcm.offsetInBytes, dataLen),
+      );
+    } finally {
+      await raf.close();
+    }
+  }
+
   /// Total rendered song length in samples (sums each played pattern's own
   /// length under [songTotalMs]).
   int get songTotalSamples => (songTotalMs * kSampleRate) ~/ 1000;

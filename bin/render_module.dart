@@ -106,8 +106,11 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  // DEFAULT path — unchanged: whole song rendered in one shot.
-  File(args[1]).writeAsBytesSync(song.renderSongWav());
+  // DEFAULT path — bounded-memory streaming write (byte-identical to
+  // renderSongWav): the whole-song render is converted to PCM16 and streamed to
+  // disk in blocks, so the int16 PCM + WAV copy are never held alongside the
+  // float mix accumulator.
+  await song.writeSongWavStreaming(args[1]);
   stdout.writeln(
     'wrote ${args[1]}: ${song.channelCount} ch · ${song.patterns.length} pat · '
     'order ${song.order.length} · song · '

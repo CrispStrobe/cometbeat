@@ -835,11 +835,17 @@ double? _readLoopedSample(
   List<TrackerCell> cells,
   List<int> rowStart,
   List<int> ticksPerRow,
-  List<TrackerInstrument>? pool,
-) {
+  List<TrackerInstrument>? pool, {
+  (Float64List, Float64List)? into,
+}) {
   final total = rowStart.last;
-  final left = Float64List(total);
-  final right = Float64List(total);
+  // Optional caller-provided scratch (whole-song export): zero-fill and reuse
+  // instead of allocating a fresh per-run buffer. Peak/scale run over [0,total)
+  // exactly as before, so the result is byte-identical.
+  final left =
+      into != null ? (into.$1..fillRange(0, total, 0.0)) : Float64List(total);
+  final right =
+      into != null ? (into.$2..fillRange(0, total, 0.0)) : Float64List(total);
   final env = channel.volumeEnvelope;
   final hasEnv = env != null && !env.isEmpty;
   const declickSec = 0.003;
@@ -1152,13 +1158,21 @@ void _renderSampleChannelIntoVariable(
   List<TrackerCell> cells,
   List<int> rowStart,
   List<int> ticksPerRow,
-  List<TrackerInstrument>? pool,
-) {
+  List<TrackerInstrument>? pool, {
+  void Function(int i, double v)? nativeSink,
+}) {
+  // Bounded-memory direct path: when a NATIVE (normalize==false) run is rendered
+  // for the stereo export, [nativeSink] receives each produced sample already
+  // scaled by the channel gain (== the `mix[i] += stem[i] * gain` the buffered
+  // path would emit) so no whole-run `stem`/output buffer is allocated at all.
+  // The caller must only pass a sink when scale == channel.gain (native sample).
+  final useSink = nativeSink != null;
   final env = channel.volumeEnvelope;
   final hasEnv = env != null && !env.isEmpty;
   const declickSec = 0.003;
   final rows = cells.length;
-  final stem = Float64List(rowStart[rows]);
+  final stemLen = rowStart[rows];
+  final stem = useSink ? Float64List(0) : Float64List(stemLen);
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
   final voice = ReplayVoice();
   var readPos = 0.0;
@@ -1212,7 +1226,7 @@ void _renderSampleChannelIntoVariable(
       }
       if (!voice.active && !voice.released) continue;
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
-      for (var i = ts; i < te && i < stem.length; i++) {
+      for (var i = ts; i < te && i < stemLen; i++) {
         final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
         final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
         final activePingPong = voice.released ? pingPong : playbackPingPong;
@@ -1246,7 +1260,14 @@ void _renderSampleChannelIntoVariable(
                 ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
                 : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
-        stem[i] += sampleVal * vol * attack * el * release;
+        final sv = sampleVal * vol * attack * el * release;
+        if (useSink) {
+          // Native (scale == channel.gain): emit the finished PCM sample value
+          // directly — identical to the buffered `mix[i] += stem[i] * gain`.
+          nativeSink(i, sv * channel.gain);
+        } else {
+          stem[i] += sv;
+        }
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,
               released: voice.released,
@@ -1255,6 +1276,11 @@ void _renderSampleChannelIntoVariable(
         readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
       }
     }
+  }
+
+  // samples were streamed to the sink; no stem to mix down.
+  if (useSink) {
+    return;
   }
 
   final nativeSample = channel.instrument is SampleInstrument &&
@@ -1966,10 +1992,18 @@ void _renderMultiSampleChannelInto(
   TrackerChannel channel,
   List<TrackerCell> cells,
   TrackerTiming timing,
-  int ticksPerRow,
-) {
-  final left = Float64List(timing.totalSamples);
-  final right = Float64List(timing.totalSamples);
+  int ticksPerRow, [
+  _StereoScratch? scratch,
+]) {
+  final total = timing.totalSamples;
+  // Reuse the channel accumulator across orders/channels when a scratch set is
+  // supplied (uniform whole-song export); zero-fill first so the sum is exact.
+  final left = scratch != null
+      ? (scratch.chL..fillRange(0, total, 0.0))
+      : Float64List(total);
+  final right = scratch != null
+      ? (scratch.chR..fillRange(0, total, 0.0))
+      : Float64List(total);
   final multi = channel.instrument;
   if (multi is! MultiSampleInstrument) return (left: left, right: right);
   final rowStart = [
@@ -2060,6 +2094,7 @@ void _renderMultiSampleChannelInto(
             rowStart,
             List<int>.filled(cells.length, ticksPerRow),
             null,
+            into: scratch != null ? (scratch.runL, scratch.runR) : null,
           );
         }
         for (var i = 0; i < left.length; i++) {
@@ -2175,6 +2210,28 @@ void _renderMultiSampleChannelIntoVariable(
 /// Renders one channel's [cells] mono (via [_renderChannelInto]) then pans it
 /// into the [left]/[right] stereo mixes at [sampleOffset], honouring the
 /// channel's base pan and any 8xx pan changes ([_panRegions]).
+/// Reusable per-pattern scratch buffers for the uniform whole-song stereo render
+/// ([_replaySongStereoFloat] main branch). Every per-order channel render uses
+/// buffers of the SAME `timing.totalSamples`, so one set is cleared and reused
+/// for every channel/order instead of freshly allocating (and orphaning to the
+/// GC) a whole-pattern Float64List per channel and per note run — the churn that
+/// dominated the whole-file export peak. Reuse changes no arithmetic (buffers are
+/// zero-filled before use), so the render stays byte-identical.
+class _StereoScratch {
+  _StereoScratch(this.len)
+      : chL = Float64List(len),
+        chR = Float64List(len),
+        runL = Float64List(len),
+        runR = Float64List(len),
+        mono = Float64List(len);
+  final int len;
+  final Float64List chL; // channel-level accumulator (multi-sample tick render)
+  final Float64List chR;
+  final Float64List runL; // per-note-run sample render
+  final Float64List runR;
+  final Float64List mono; // mono pan path
+}
+
 void _renderChannelIntoStereo(
   Float64List left,
   Float64List right,
@@ -2184,6 +2241,7 @@ void _renderChannelIntoStereo(
   int ticksPerRow,
   int sampleOffset, {
   List<TrackerInstrument>? pool,
+  _StereoScratch? scratch,
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
 
@@ -2193,6 +2251,7 @@ void _renderChannelIntoStereo(
       cells,
       timing,
       ticksPerRow,
+      scratch,
     );
     final n = min(timing.totalSamples, left.length - sampleOffset);
     for (var i = 0; i < n; i++) {
@@ -2240,7 +2299,9 @@ void _renderChannelIntoStereo(
   }
 
   final total = timing.totalSamples;
-  final mono = Float64List(total);
+  final mono = scratch != null
+      ? (scratch.mono..fillRange(0, total, 0.0))
+      : Float64List(total);
   _renderChannelInto(mono, channel, cells, timing, ticksPerRow, 0, pool: pool);
 
   // A pan ENVELOPE auto-pans each note over time (base pan + the envelope offset,
@@ -2955,13 +3016,44 @@ ReplayResult replaySongStereo(
   TrackerSong song, {
   int ticksPerRow = kDefaultTicksPerRow,
 }) {
+  final f = _replaySongStereoFloat(song, ticksPerRow: ticksPerRow);
+  return ReplayResult(_interleaveToPcm(f.left, f.right), f.timingMap);
+}
+
+/// The raw float stereo mixes of [replaySongStereo] (same routing / arithmetic),
+/// BEFORE PCM16 quantisation. The bounded CLI export uses this to convert +
+/// stream the whole-song render to disk block-by-block, so the whole-song int16
+/// PCM and WAV copy are never held alongside the float accumulator.
+({List<double> left, List<double> right, List<RowTiming> timingMap})
+    songStereoFloat(
+  TrackerSong song, {
+  int ticksPerRow = kDefaultTicksPerRow,
+}) =>
+        _replaySongStereoFloat(song, ticksPerRow: ticksPerRow);
+
+/// Quantises one float mix sample to signed PCM16 with the SAME tanh soft-knee
+/// as [_interleaveToPcm] / [_mixToPcm], so a streamed conversion is byte-for-byte
+/// identical to the in-memory render.
+int pcm16Sample(double x) => (_tanh(x) * 0.95 * 32767).round();
+
+/// The float L/R core of [replaySongStereo] — same routing / arithmetic, but it
+/// returns the raw stereo float mixes (not yet quantised to PCM16). The bounded
+/// CLI export streams these to disk block-by-block ([streamSongStereoWav]) so
+/// the whole-song int16 + WAV copy are never held alongside the float
+/// accumulator; the in-memory [replaySongStereo] wraps it with [_interleaveToPcm]
+/// unchanged.
+({List<double> left, List<double> right, List<RowTiming> timingMap})
+    _replaySongStereoFloat(
+  TrackerSong song, {
+  int ticksPerRow = kDefaultTicksPerRow,
+}) {
   song.syncCurrent();
   final initialTicks = song.initialSpeed > 0 ? song.initialSpeed : ticksPerRow;
   final ticks = songInitialSpeed(song, fallback: initialTicks);
   // Mirror the mono replaySong routing: mid-song tempo/speed → the per-row
   // stereo render; flow OR variable-length → the flattened stereo render.
-  if (songUsesVariableTiming(song)) return _replayVariableStereo(song);
-  if (songNeedsWalkRender(song)) return _replayFlowStereo(song, ticks);
+  if (songUsesVariableTiming(song)) return _replayVariableStereoFloat(song);
+  if (songNeedsWalkRender(song)) return _replayFlowStereoFloat(song, ticks);
 
   final timing = effectiveTiming(song);
   final channels = song.channels;
@@ -2970,6 +3062,10 @@ ReplayResult replaySongStereo(
   final left = Float64List(patternSamples * order.length);
   final right = Float64List(patternSamples * order.length);
   final timingMap = <RowTiming>[];
+  // One reusable per-pattern scratch set for the whole render — every per-order
+  // channel render is the same `patternSamples` length, so the transient
+  // per-channel / per-run buffers are recycled instead of churned through the GC.
+  final scratch = _StereoScratch(patternSamples);
 
   for (var o = 0; o < order.length; o++) {
     final patternIndex = order[o];
@@ -2991,6 +3087,7 @@ ReplayResult replaySongStereo(
         ticks,
         sampleOffset,
         pool: song.instruments,
+        scratch: scratch,
       );
     }
   }
@@ -3005,7 +3102,7 @@ ReplayResult replaySongStereo(
   _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticks);
   _applySongGlobalVolume(left, song.globalVolume);
   _applySongGlobalVolume(right, song.globalVolume);
-  return ReplayResult(_interleaveToPcm(left, right), timingMap);
+  return (left: left, right: right, timingMap: timingMap);
 }
 
 /// The flow render: expand the order via [walkFlow], flatten the played rows into
@@ -3059,7 +3156,8 @@ ReplayResult _replayFlow(TrackerSong song, int ticksPerRow) {
 
 /// The stereo sibling of [_replayFlow]: flatten the played rows then pan each
 /// channel (per-channel [TrackerChannel.pan] + 8xx) into an interleaved mix.
-ReplayResult _replayFlowStereo(TrackerSong song, int ticksPerRow) {
+({List<double> left, List<double> right, List<RowTiming> timingMap})
+    _replayFlowStereoFloat(TrackerSong song, int ticksPerRow) {
   final played = walkFlow(song);
   final channels = song.channels;
   final base = effectiveTiming(song);
@@ -3100,7 +3198,7 @@ ReplayResult _replayFlowStereo(TrackerSong song, int ticksPerRow) {
         played[i].row,
       ),
   ];
-  return ReplayResult(_interleaveToPcm(left, right), timingMap);
+  return (left: left, right: right, timingMap: timingMap);
 }
 
 // --- Variable-timing render (mid-song tempo/speed changes) -------------------
@@ -3415,6 +3513,135 @@ void _renderLongNativeVariable(
   }
 }
 
+/// The stereo direct-accumulate sibling of [_renderLongNativeVariable]: each note
+/// run is rendered into the SAME run-length buffer, then distributed straight
+/// into [left]/[right] via the per-region pan gains [regions] and the SAME
+/// Float32 truncation the whole-song `mono` buffer applied ([left]/[right] are
+/// Float32List). This removes the whole-song per-channel `mono` buffer (the
+/// export-scale memory blow-up) while producing byte-identical PCM: every sample
+/// is written by exactly one run and lands in exactly one pan region, so the
+/// mono-store-then-region-multiply and this in-place multiply agree bit-for-bit.
+void _renderLongNativeVariableStereo(
+  Float32List left,
+  Float32List right,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<int> ticksPerRow,
+  List<({int start, int end, double pan})> regions,
+) {
+  final multi = channel.instrument;
+  if (multi is! MultiSampleInstrument) return;
+  // Constant-power gains per region — the SAME cos/sin(theta) the mono pan loop
+  // computes, precomputed once so the run walk is a plain region lookup.
+  final regGain = [
+    for (final reg in regions)
+      (
+        start: reg.start,
+        end: reg.end,
+        l: cos((reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2)),
+        r: sin((reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2)),
+      ),
+  ];
+  final f32 = Float32List(1);
+  final total = left.length;
+  // Per-sample native sink: truncate to Float32 (matching the whole-song mono
+  // store), find the pan region, and accumulate straight into L/R. [runStart] is
+  // updated before each native run so `runStart + i` is the global sample index.
+  var runStart = 0;
+  void sink(int i, double v) {
+    final g = runStart + i;
+    if (g >= total) return;
+    f32[0] = v;
+    final m = f32[0];
+    for (final rg in regGain) {
+      if (g >= rg.start && g < rg.end) {
+        left[g] += m * rg.l;
+        right[g] += m * rg.r;
+        return;
+      }
+    }
+  }
+
+  // Buffered fallback (reused, grown lazily) — only for normalize==true zones,
+  // which need the whole-run peak before scaling. Native zones never allocate.
+  Float64List? buf;
+  var startStep = 0;
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final sustainSteps = run.$2;
+    final releaseSteps = run.$3;
+    final steps = sustainSteps + releaseSteps;
+    if (midi != null) {
+      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      if (zone is SampleInstrument) {
+        final start = rowStart[startStep];
+        final end = rowStart[startStep + steps];
+        final runSamples = end - start;
+        if (runSamples > 0) {
+          final runCells = cells.sublist(startStep, startStep + steps);
+          if (sustainSteps < steps) {
+            runCells[sustainSteps] = TrackerCell.noteCut;
+          }
+          final runTicks = ticksPerRow.sublist(startStep, startStep + steps);
+          final runStarts = <int>[0];
+          for (var row = 0; row < steps; row++) {
+            runStarts.add(rowStart[startStep + row + 1] - start);
+          }
+          final zoneChannel = TrackerChannel(
+            id: '${channel.id}:native-zone',
+            instrument: zone,
+            rows: steps,
+            gain: channel.gain,
+            volumeEnvelope: channel.volumeEnvelope,
+          );
+          if (!zone.normalize) {
+            // Native run: stream each sample straight into L/R, no run buffer.
+            runStart = start;
+            _renderSampleChannelIntoVariable(
+              const <double>[],
+              zoneChannel,
+              runCells,
+              runStarts,
+              runTicks,
+              null,
+              nativeSink: sink,
+            );
+          } else {
+            var b = buf;
+            if (b == null || b.length < runSamples) {
+              b = Float64List(runSamples);
+              buf = b;
+            }
+            b.fillRange(0, runSamples, 0.0);
+            _renderSampleChannelIntoVariable(
+              b,
+              zoneChannel,
+              runCells,
+              runStarts,
+              runTicks,
+              null,
+            );
+            final limit = min(runSamples, b.length);
+            final runEnd = min(start + limit, total);
+            for (final rg in regGain) {
+              final s = max(rg.start, start);
+              final e = min(rg.end, runEnd);
+              for (var g = s; g < e; g++) {
+                f32[0] = b[g - start];
+                final m = f32[0];
+                left[g] += m * rg.l;
+                right[g] += m * rg.r;
+              }
+            }
+          }
+        }
+      }
+    }
+    startStep += steps;
+  }
+}
+
 /// The stereo sibling of [_replayVariable]: the mid-song per-row-duration render,
 /// each channel panned (base pan + 8xx) into an interleaved mix — so a PANNED
 /// song with a mid-song tempo/speed change stays in sync (length matches
@@ -3427,7 +3654,8 @@ void _renderLongNativeVariable(
 // retaining every full-song voice waveform.
 const _nativeTickFullBufferLimit = kSampleRate * 120;
 
-ReplayResult _replayVariableStereo(TrackerSong song) {
+({List<double> left, List<double> right, List<RowTiming> timingMap})
+    _replayVariableStereoFloat(TrackerSong song) {
   final played = walkFlow(song);
   final channels = song.channels;
   final def = song.timing.tempoBpm;
@@ -3503,10 +3731,43 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
       }
       continue;
     }
-    final mono = Float32List(acc);
-    if (acc > _nativeTickFullBufferLimit &&
+    final penvChk = channels[c].panEnvelope;
+    final noPenv = penvChk == null || penvChk.isEmpty;
+    final channelActive =
+        !channels[c].muted && flatCells.any((cell) => !cell.isEmpty);
+    final isNativeLong = acc > _nativeTickFullBufferLimit &&
         multi is MultiSampleInstrument &&
-        multi.nativeVoiceSemantics) {
+        multi.nativeVoiceSemantics;
+    // Export-scale bounded path: a mute/empty channel contributes an all-zero
+    // mono (adding 0.0 leaves L/R unchanged), so skip it entirely instead of
+    // allocating a whole-song mono to add nothing. Byte-identical output.
+    if (!channelActive) continue;
+    // DIRECT-ACCUMULATE (no whole-song per-channel mono): the bounded native
+    // long path writes each note run straight into L/R with the SAME per-region
+    // pan gains and the SAME Float32 truncation the mono buffer applied, so the
+    // PCM is byte-identical while the ~1 buffer/channel churn is eliminated.
+    // Only the non-pan-envelope case (pan is a per-sample region lookup) takes
+    // this route; a pan ENVELOPE still uses the mono path below.
+    if (isNativeLong && noPenv) {
+      final regions = _panRegionsVariable(
+        channels[c].pan,
+        flatCells,
+        rowStart,
+        ticksPerRow: song.initialSpeed,
+      );
+      _renderLongNativeVariableStereo(
+        left,
+        right,
+        channels[c],
+        flatCells,
+        rowStart,
+        ticks,
+        regions,
+      );
+      continue;
+    }
+    final mono = Float32List(acc);
+    if (isNativeLong) {
       // Avoid one full-song buffer per IT NNA voice. Each note run still uses
       // the correct mapped sample zone and timing, but old-voice actions are
       // intentionally bounded for export-scale renders.
@@ -3582,7 +3843,7 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
         played[i].row,
       ),
   ];
-  return ReplayResult(_interleaveToPcm(left, right), timingMap);
+  return (left: left, right: right, timingMap: timingMap);
 }
 
 /// Variable-timing pan regions: like [_panRegions] (8xx set + Pxy slide) but the

@@ -301,6 +301,10 @@ List<TrackerInstrument> _nativeInstrumentPool(ModuleDoc doc, int tempo) {
         instrumentIndex++) {
       final instrument = doc.xmInstruments[instrumentIndex];
       final zones = <int, TrackerInstrument>{};
+      // Share one SampleInstrument per distinct sample across the 128 note slots
+      // (see the IT path): the same sample would otherwise be resampled/copied
+      // once per slot, blowing up import memory. Byte-identical (same PCM + id).
+      final bySample = <int, TrackerInstrument>{};
       for (var midi = 0; midi <= 127; midi++) {
         final key = (midi - 11).clamp(0, 95);
         final local = instrument.keymap.isEmpty
@@ -310,7 +314,7 @@ List<TrackerInstrument> _nativeInstrumentPool(ModuleDoc doc, int tempo) {
         if (sampleIndex >= 0 && sampleIndex < doc.samples.length) {
           final sample = doc.samples[sampleIndex];
           if (!sample.isEmpty) {
-            zones[midi] = sampleInstrumentFromDoc(
+            zones[midi] = bySample[sampleIndex] ??= sampleInstrumentFromDoc(
               'xm${instrumentIndex + 1}_smp${local + 1}',
               sample,
               nativeVolumeEnvelope: _sampleVolEnv(sample, tempo),
@@ -350,6 +354,14 @@ TrackerInstrument _itNativeInstrument(
   int instrumentIndex,
 ) {
   final zones = <int, TrackerInstrument>{};
+  // Many of the 120 note slots map to the SAME sample number; building a fresh
+  // SampleInstrument (which resamples + copies the whole PCM) for every slot
+  // duplicated each sample up to 120× and made import allocate ~1 GB on
+  // sample-heavy IT songs. The per-instrument envelope/NNA parameters are the
+  // same for every slot, so a given sample number yields an IDENTICAL
+  // SampleInstrument — cache it and share the one object across its slots. The
+  // rendered output is byte-identical (same PCM, same id).
+  final bySample = <int, TrackerInstrument>{};
   for (var midi = 0; midi <= 119; midi++) {
     final sampleNumber =
         instrument.keymap.length > midi ? instrument.keymap[midi] : 0;
@@ -357,7 +369,7 @@ TrackerInstrument _itNativeInstrument(
     if (sampleIndex >= 0 && sampleIndex < doc.samples.length) {
       final sample = doc.samples[sampleIndex];
       if (!sample.isEmpty) {
-        zones[midi] = sampleInstrumentFromDoc(
+        zones[midi] = bySample[sampleNumber] ??= sampleInstrumentFromDoc(
           'it${instrumentIndex + 1}_smp$sampleNumber',
           sample,
           nativeVolumeEnvelope:
