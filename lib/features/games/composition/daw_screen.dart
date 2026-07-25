@@ -45,7 +45,7 @@ import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
 import 'package:comet_beat/shared/music/score_router.dart'
     show showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
-    show showAudioExportSheet;
+    show AudioStem, showAudioExportSheet, showAudioStemsExportSheet;
 import 'package:comet_beat/shared/music_io/audio_import.dart'
     show importAudio, kAudioImportExtensions;
 import 'package:crisp_notation/crisp_notation.dart'
@@ -3135,6 +3135,34 @@ class _DawScreenState extends State<DawScreen>
 
   // Bake the arrangement, choose the export window, then hand off to the shared
   // WAV/MP3 sheet.
+  /// Batch stems: one file per lane, into a folder. Which lanes depends on
+  /// [onlySelected] — the gutter selection, or everything with audio on it.
+  Future<void> _exportStems({required bool onlySelected}) async {
+    final lanes = [
+      for (var t = 0; t < _daw.timeline.tracks.length; t++)
+        if (!onlySelected || _selectedTracks.contains(t)) t,
+    ];
+    final stems = <AudioStem>[];
+    for (final t in lanes) {
+      final stereo = _daw.bakeTrackStereo(t);
+      if (stereo.left.isEmpty) continue; // silent/empty lane — nothing to write
+      stems.add(
+        AudioStem(
+          name: _daw.timeline.tracks[t].name.isEmpty
+              ? '${t + 1}'
+              : _daw.timeline.tracks[t].name,
+          pcm: stereo.left,
+          right: stereo.right,
+        ),
+      );
+    }
+    await showAudioStemsExportSheet(
+      context,
+      stems: stems,
+      baseName: _exportBaseName(),
+    );
+  }
+
   Future<void> _export() async {
     final fullMix = _daw.bakeStereo();
     if (fullMix.left.isEmpty) {
@@ -3249,6 +3277,17 @@ class _DawScreenState extends State<DawScreen>
                 onPressed: () => Navigator.of(ctx).pop(),
                 child: Text(AppLocalizations.of(ctx)!.dawCancel),
               ),
+              // Batch stems: one file per lane, in one go.
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(
+                  _selectedTracks.isEmpty ? 'stemsAll' : 'stemsSelected',
+                ),
+                child: Text(
+                  _selectedTracks.isEmpty
+                      ? AppLocalizations.of(ctx)!.dawExportStemsAll
+                      : AppLocalizations.of(ctx)!.dawExportStemsSelected,
+                ),
+              ),
               FilledButton(
                 onPressed: selected.isEmpty
                     ? null
@@ -3260,7 +3299,12 @@ class _DawScreenState extends State<DawScreen>
         },
       ),
     );
-    if (!mounted || action != 'export') return;
+    if (!mounted || action == null) return;
+    if (action == 'stemsAll' || action == 'stemsSelected') {
+      await _exportStems(onlySelected: action == 'stemsSelected');
+      return;
+    }
+    if (action != 'export') return;
     final chosen = source();
     final selected = useRange ? _exportRangePcm(chosen.left) : chosen.left;
     final selectedRight =

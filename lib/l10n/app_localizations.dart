@@ -590,6 +590,30 @@ abstract class AppLocalizations {
   /// **'Nothing to export yet'**
   String get audioExportEmpty;
 
+  /// No description provided for @audioExportStemsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export stems'**
+  String get audioExportStemsTitle;
+
+  /// No description provided for @audioExportStemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tracks, one file each'**
+  String audioExportStemsCount(int count);
+
+  /// No description provided for @audioExportStemsSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose folder'**
+  String get audioExportStemsSave;
+
+  /// No description provided for @audioExportStemsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {count} stems'**
+  String audioExportStemsSaved(int count);
+
   /// No description provided for @audioExportFailed.
   ///
   /// In en, this message translates to:
@@ -4141,6 +4165,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Full mix'**
   String get dawExportFullMix;
+
+  /// No description provided for @dawExportStemsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All as stems'**
+  String get dawExportStemsAll;
+
+  /// No description provided for @dawExportStemsSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected as stems'**
+  String get dawExportStemsSelected;
 
   /// No description provided for @dawExportTrackOnly.
   ///

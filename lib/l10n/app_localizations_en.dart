@@ -286,6 +286,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioExportEmpty => 'Nothing to export yet';
 
   @override
+  String get audioExportStemsTitle => 'Export stems';
+
+  @override
+  String audioExportStemsCount(int count) {
+    return '$count tracks, one file each';
+  }
+
+  @override
+  String get audioExportStemsSave => 'Choose folder';
+
+  @override
+  String audioExportStemsSaved(int count) {
+    return 'Saved $count stems';
+  }
+
+  @override
   String get audioExportFailed => 'Export failed';
 
   @override
@@ -2191,6 +2207,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dawExportFullMix => 'Full mix';
+
+  @override
+  String get dawExportStemsAll => 'All as stems';
+
+  @override
+  String get dawExportStemsSelected => 'Selected as stems';
 
   @override
   String dawExportTrackOnly(String track) {

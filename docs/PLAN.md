@@ -221,8 +221,17 @@ missing and are now shipped:
   down the gesture driving it — plus a "Move to lane" picker in the inspector,
   which is the reliable path on a phone. The clip keeps source/trim/gain/pan/
   fades/FX; only the lane changes.
-- [x] **Per-track (stem) export.** `bakeTrack` / `bakeTrackStereo` + a source
-  dropdown in the export sheet (full mix · or one lane). **Stems deliberately
+- [x] **Per-track (stem) export — single, selected, or all.** `bakeTrack` /
+  `bakeTrackStereo` + a source dropdown in the export sheet (full mix · or one
+  lane), **plus batch stems**: `showAudioStemsExportSheet` writes one file per
+  lane into a chosen folder, and the export dialog offers "All as stems" or
+  "Selected as stems" depending on the gutter selection. Silent lanes are
+  skipped rather than written as empty files, and one bad lane doesn't abandon
+  the rest. Picking a folder needs a directory picker, which desktop has and
+  mobile doesn't — where it's unavailable this degrades to a save prompt per
+  stem (more taps, still works) instead of hiding the feature. The path join is
+  deliberately NOT `dart:io`'s separator: `audio_export.dart` is web-safe and
+  must stay importable there. **Stems deliberately
   skip the master limiter** — limiting each stem is mastering a part, and it
   would stop stems summing back to the mix, which is the point of stems. Other
   lanes' solo is ignored (asking for lane 3 means lane 3); the lane's own mute
@@ -256,7 +265,8 @@ binding), `sf2/encoded_audio.dart` (dart:ffi-free types), and an
 isn't there, so the export UI simply won't offer Opus rather than failing at
 save time.
 
-**To actually enable it:** extend `sync_glint.sh` to vendor the encode closure —
+**→ Full handover for whoever picks this up: `docs/GLINT_ENCODER_HANDOVER.md`
+(unclaimed).** Summary: extend `sync_glint.sh` to vendor the encode closure —
 `encode_audio_c_api.cpp` + `opus_c_api.cpp` + the CELT encoder set
 (`opus_celt_encoder`, `opus_celt_enc_{bands,energy,vq}`, `opus_ec`, `opus_mdct`,
 `opus_cwrs`, `opus_laplace`, `opus_celt_rate`, …, ~20 files) — and either vendor

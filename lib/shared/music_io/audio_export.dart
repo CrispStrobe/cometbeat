@@ -378,6 +378,159 @@ class _ExportChoiceRow<T> extends StatelessWidget {
   }
 }
 
+/// One lane's audio, for a batch stems export.
+class AudioStem {
+  const AudioStem({required this.name, required this.pcm, this.right});
+
+  /// Used in the filename — the lane's name.
+  final String name;
+  final Float64List pcm;
+  final Float64List? right;
+}
+
+/// Export SEVERAL stems in one go: pick a format, pick a folder, write one file
+/// per lane. Silent lanes are skipped rather than written as empty files.
+///
+/// Picking a folder needs a directory picker, which desktop has and mobile
+/// doesn't. Where it's unavailable this degrades to a save prompt per stem —
+/// more taps, but it still works, which beats hiding the feature.
+Future<void> showAudioStemsExportSheet(
+  BuildContext context, {
+  required List<AudioStem> stems,
+  required String baseName,
+  int sampleRate = kSampleRate,
+  bool shortBlocks = true,
+}) async {
+  final l10n = AppLocalizations.of(context)!;
+  final messenger = ScaffoldMessenger.of(context);
+  final sounding = [
+    for (final s in stems)
+      if (s.pcm.isNotEmpty) s,
+  ];
+  if (sounding.isEmpty) {
+    messenger.showSnackBar(SnackBar(content: Text(l10n.audioExportEmpty)));
+    return;
+  }
+
+  var format = AudioExportFormat.wav;
+  final go = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setDialog) => AlertDialog(
+        title: Text(l10n.audioExportStemsTitle),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.audioExportStemsCount(sounding.length)),
+              const SizedBox(height: 12),
+              _ExportChoiceRow<AudioExportFormat>(
+                label: 'Format',
+                values: AudioExportFormat.values,
+                selected: format,
+                labelFor: (f) => switch (f) {
+                  AudioExportFormat.wav => 'WAV (uncompressed)',
+                  AudioExportFormat.mp3 => 'MP3 (smaller)',
+                },
+                onSelected: (f) => setDialog(() => format = f),
+              ),
+              const SizedBox(height: 8),
+              for (final s in sounding)
+                Text(
+                  '• $baseName-${_slug(s.name)}.${format.ext}',
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.dawCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.audioExportStemsSave),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (go != true || !context.mounted) return;
+
+  String? directory;
+  var perFilePrompt = false;
+  try {
+    directory = await getDirectoryPath();
+    // A null path here means the user cancelled — respect that.
+    if (directory == null) return;
+  } catch (_) {
+    // No directory picker on this platform (mobile): ask per file instead.
+    perFilePrompt = true;
+  }
+
+  var written = 0;
+  for (final stem in sounding) {
+    final name = '$baseName-${_slug(stem.name)}.${format.ext}';
+    try {
+      final bytes = format.build(
+        stem.pcm,
+        sampleRate,
+        right: stem.right,
+        shortBlocks: shortBlocks,
+      );
+      if (perFilePrompt) {
+        final location = await getSaveLocation(
+          suggestedName: name,
+          acceptedTypeGroups: [
+            XTypeGroup(
+              label: format.ext.toUpperCase(),
+              extensions: [format.ext],
+            ),
+          ],
+        );
+        if (location == null) continue; // skipped this one
+        await XFile.fromData(bytes, name: name).saveTo(location.path);
+      } else {
+        await XFile.fromData(bytes, name: name).saveTo(_join(directory!, name));
+      }
+      written++;
+    } catch (_) {
+      // Keep going: one bad lane shouldn't abandon the other stems.
+    }
+  }
+
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        written == 0
+            ? l10n.audioExportFailed
+            : l10n.audioExportStemsSaved(written),
+      ),
+    ),
+  );
+}
+
+/// Join a directory and a filename. Deliberately NOT `dart:io`'s separator —
+/// this file is web-safe and must stay importable there; a directory picker
+/// only exists on desktop anyway, and Windows accepts '/' in file paths.
+String _join(String directory, String name) {
+  final windows = directory.contains(r'\') && !directory.contains('/');
+  final sep = windows ? r'\' : '/';
+  return directory.endsWith(sep) ? '$directory$name' : '$directory$sep$name';
+}
+
+/// A filename-safe version of a lane name.
+String _slug(String name) {
+  final slug = name
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+  return slug.isEmpty ? 'track' : slug;
+}
+
 Future<void> _exportAs(
   BuildContext context,
   AudioExportFormat fmt,

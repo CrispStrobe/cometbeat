@@ -1865,7 +1865,6 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     );
   }
 
-
   Future<void> _promptSave() async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: _sourceName ?? 'My Tab');

@@ -1295,6 +1295,22 @@ void main() {
     expect(find.textContaining('This track:'), findsOneWidget);
   });
 
+  testWidgets('the export dialog offers batch stems, and per selection',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Export sound'));
+    await tester.pumpAndSettle();
+    // Nothing selected in the gutter → the action offers every lane.
+    expect(find.text('All as stems'), findsOneWidget);
+    expect(find.text('Selected as stems'), findsNothing);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('a stem holds one lane and skips the master limiter',
       (tester) async {
     await _pumpDaw(tester);
