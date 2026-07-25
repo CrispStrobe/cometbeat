@@ -809,6 +809,29 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     expect(tab.isPlaying, isFalse);
   });
+
+  testWidgets('the view toggle switches tab / standard / grand staff',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+
+    // Standard notation over the tab by default.
+    expect(find.byType(NotationTabView), findsOneWidget);
+    expect(find.byType(GrandStaffView), findsNothing);
+
+    // Grand staff: split across treble + bass.
+    await tester.tap(find.byIcon(Icons.piano));
+    await tester.pump();
+    expect(find.byType(GrandStaffView), findsOneWidget);
+    expect(find.byType(NotationTabView), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    // Tablature.
+    await tester.tap(find.byIcon(Icons.grid_on));
+    await tester.pump();
+    expect(find.byType(TabStaffView), findsOneWidget);
+    expect(find.byType(GrandStaffView), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 /// A do-nothing [TabPositionModel] — stands in for a loaded labeler so the test

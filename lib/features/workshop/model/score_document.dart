@@ -2083,6 +2083,71 @@ class Tuplet {
   Tuplet copy() => Tuplet(memberIds, actual: actual, normal: normal);
 }
 
+/// Splits a single-staff [score] into a treble+bass [GrandStaff]: each note goes
+/// to the treble staff when its pitch is at/above [splitMidi] (middle C = 60),
+/// else the bass staff, with a matching rest on the other staff so both share
+/// the same bar grid. A chord is split per-note across the two staves. This
+/// mirrors [ScoreDocument.buildGrandStaff] but works from an already-engraved
+/// [Score] (e.g. a guitar tab), which is handy when low notes — a guitar's low
+/// E, say — would sink far below a single staff. Voice 1 only; other voices are
+/// dropped from the grand-staff view.
+GrandStaff grandStaffFromScore(Score score, {int splitMidi = 60}) {
+  final upper = <MusicElement>[];
+  final lower = <MusicElement>[];
+  for (final measure in score.measures) {
+    for (final el in measure.elements) {
+      if (el is NoteElement) {
+        final hi = [
+          for (final p in el.pitches)
+            if (p.midiNumber >= splitMidi) p,
+        ];
+        final lo = [
+          for (final p in el.pitches)
+            if (p.midiNumber < splitMidi) p,
+        ];
+        upper.add(
+          hi.isEmpty
+              ? RestElement(el.duration)
+              : NoteElement(
+                  pitches: hi,
+                  duration: el.duration,
+                  tieToNext: el.tieToNext,
+                  articulations: el.articulations,
+                ),
+        );
+        lower.add(
+          lo.isEmpty
+              ? RestElement(el.duration)
+              : NoteElement(
+                  pitches: lo,
+                  duration: el.duration,
+                  tieToNext: el.tieToNext,
+                  articulations: el.articulations,
+                ),
+        );
+      } else if (el is RestElement) {
+        upper.add(RestElement(el.duration));
+        lower.add(RestElement(el.duration));
+      }
+    }
+  }
+  final ts = score.timeSignature ?? const TimeSignature(4, 4);
+  return GrandStaff(
+    upper: Score(
+      clef: Clef.treble,
+      keySignature: score.keySignature,
+      timeSignature: ts,
+      measures: reflow(upper, timeSignature: ts),
+    ),
+    lower: Score(
+      clef: Clef.bass,
+      keySignature: score.keySignature,
+      timeSignature: ts,
+      measures: reflow(lower, timeSignature: ts),
+    ),
+  );
+}
+
 List<Measure> reflow(
   List<MusicElement> elements, {
   required TimeSignature timeSignature,

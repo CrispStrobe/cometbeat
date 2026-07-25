@@ -32,6 +32,8 @@ import 'package:comet_beat/features/games/composition/tabcnn_to_document.dart'
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
     show showMyInstrumentsSheet;
+import 'package:comet_beat/features/workshop/model/score_document.dart'
+    show grandStaffFromScore;
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
@@ -1350,23 +1352,28 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final score = _doc.toScore(capo: _capo);
-    final view = _view == _TabView.tab
-        ? TabStaffView(
-            score: score,
-            tuning: _doc.tuning,
-            capo: _capo,
-            showTuning: true,
-            highlightedIds: _highlightedIds,
-          )
-        // standard + grand both show the notation staff over the tab today; the
-        // grand-staff split is a follow-up (needs a Score→GrandStaff converter).
-        : NotationTabView(
-            score: score,
-            tuning: _doc.tuning,
-            capo: _capo,
-            showTuning: true,
-            highlightedIds: _highlightedIds,
-          );
+    final Widget view = switch (_view) {
+      _TabView.tab => TabStaffView(
+          score: score,
+          tuning: _doc.tuning,
+          capo: _capo,
+          showTuning: true,
+          highlightedIds: _highlightedIds,
+        ),
+      _TabView.standard => NotationTabView(
+          score: score,
+          tuning: _doc.tuning,
+          capo: _capo,
+          showTuning: true,
+          highlightedIds: _highlightedIds,
+        ),
+      // Grand staff (treble + bass): the low strings sit far below a single
+      // staff, so split each note across two clefs at middle C.
+      _TabView.grand => GrandStaffView(
+          grandStaff: grandStaffFromScore(score),
+          highlightedIds: _highlightedIds,
+        ),
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -1600,8 +1607,13 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 icon: const Icon(Icons.music_note, size: 18),
                 tooltip: l10n.tabShowStandard,
               ),
+              const ButtonSegment(
+                value: _TabView.grand,
+                icon: Icon(Icons.piano, size: 18),
+                tooltip: 'Grand staff',
+              ),
             ],
-            selected: {_view == _TabView.grand ? _TabView.standard : _view},
+            selected: {_view},
             onSelectionChanged: (s) => setState(() => _view = s.first),
           ),
           const SizedBox(width: 16),
