@@ -265,6 +265,26 @@ class _SampleEditor extends StatelessWidget {
   final SampleInstrument inst;
   final ValueChanged<SampleInstrument> onChanged;
 
+  Future<void> _editVolumeEnvelope(BuildContext context) async {
+    final edited = await showDialog<VolumeEnvelope>(
+      context: context,
+      builder: (_) => _NativeVolumeEnvelopeDialog(
+        initial: inst.nativeVolumeEnvelope,
+      ),
+    );
+    if (edited != null) onChanged(inst.copyWith(nativeVolumeEnvelope: edited));
+  }
+
+  Future<void> _editPanEnvelope(BuildContext context) async {
+    final edited = await showDialog<PanEnvelope>(
+      context: context,
+      builder: (_) => _NativePanEnvelopeDialog(
+        initial: inst.nativePanEnvelope,
+      ),
+    );
+    if (edited != null) onChanged(inst.copyWith(nativePanEnvelope: edited));
+  }
+
   @override
   Widget build(BuildContext context) {
     final len = inst.sample.length;
@@ -279,8 +299,7 @@ class _SampleEditor extends StatelessWidget {
                 len.toDouble())
             .toDouble();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -382,6 +401,26 @@ class _SampleEditor extends StatelessWidget {
           ),
         ),
         ListTile(
+          title: const Text('Native Volume Envelope'),
+          subtitle: Text(_envelopeSummary(inst.nativeVolumeEnvelope)),
+          trailing: IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Edit native volume envelope',
+            onPressed: () => _editVolumeEnvelope(context),
+          ),
+        ),
+        ListTile(
+          title: const Text('Native Pan Envelope'),
+          subtitle: Text(
+            _envelopeSummary(inst.nativePanEnvelope),
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Edit native pan envelope',
+            onPressed: () => _editPanEnvelope(context),
+          ),
+        ),
+        ListTile(
           title: const Text('New Note Action'),
           trailing: DropdownButton<int>(
             value: inst.nativeNna.clamp(0, 3).toInt(),
@@ -439,4 +478,366 @@ class _SampleEditor extends StatelessWidget {
       ],
     );
   }
+}
+
+String _envelopeSummary(Object? envelope) {
+  if (envelope == null) return 'Disabled';
+  final points = envelope is VolumeEnvelope
+      ? envelope.points.length
+      : (envelope as PanEnvelope).points.length;
+  return points == 0 ? 'Disabled' : '$points points';
+}
+
+class _NativeVolumeEnvelopeDialog extends StatefulWidget {
+  const _NativeVolumeEnvelopeDialog({required this.initial});
+  final VolumeEnvelope? initial;
+
+  @override
+  State<_NativeVolumeEnvelopeDialog> createState() =>
+      _NativeVolumeEnvelopeDialogState();
+}
+
+class _NativeVolumeEnvelopeDialogState
+    extends State<_NativeVolumeEnvelopeDialog> {
+  late List<({TextEditingController ms, TextEditingController value})> _rows;
+  int? _sustain;
+  int? _loopStart;
+  int? _loopEnd;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    _rows = [
+      for (final point in initial?.points ?? const <({int ms, double level})>[])
+        (
+          ms: TextEditingController(text: '${point.ms}'),
+          value: TextEditingController(text: '${point.level}'),
+        ),
+    ];
+    _sustain = initial?.sustain;
+    _loopStart = initial?.loopStart;
+    _loopEnd = initial?.loopEnd;
+  }
+
+  @override
+  void dispose() {
+    for (final row in _rows) {
+      row.ms.dispose();
+      row.value.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addRow() {
+    final ms =
+        _rows.isEmpty ? 0 : (int.tryParse(_rows.last.ms.text) ?? 0) + 100;
+    setState(() {
+      _rows.add((
+        ms: TextEditingController(text: '$ms'),
+        value: TextEditingController(text: '1'),
+      ));
+    });
+  }
+
+  void _removeRow(int index) {
+    final row = _rows.removeAt(index);
+    row.ms.dispose();
+    row.value.dispose();
+    setState(() {
+      _sustain = _removePointIndex(_sustain, index);
+      _loopStart = _removePointIndex(_loopStart, index);
+      _loopEnd = _removePointIndex(_loopEnd, index);
+    });
+  }
+
+  int? _removePointIndex(int? value, int removed) {
+    if (value == null || value == removed) return null;
+    return value > removed ? value - 1 : value;
+  }
+
+  void _apply() {
+    final values = <({int index, int ms, double level})>[];
+    for (var i = 0; i < _rows.length; i++) {
+      final row = _rows[i];
+      final ms = int.tryParse(row.ms.text.trim());
+      final level = double.tryParse(row.value.text.trim());
+      if (ms == null || level == null || ms < 0) return;
+      values.add((index: i, ms: ms, level: level.clamp(0.0, 1.0)));
+    }
+    values.sort((a, b) => a.ms.compareTo(b.ms));
+    final remap = <int, int>{
+      for (var i = 0; i < values.length; i++) values[i].index: i,
+    };
+    int? mapped(int? value) => value == null ? null : remap[value];
+    Navigator.of(context).pop(VolumeEnvelope(
+      [for (final value in values) (ms: value.ms, level: value.level)],
+      sustain: mapped(_sustain),
+      loopStart: mapped(_loopStart),
+      loopEnd: mapped(_loopEnd),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Native Volume Envelope'),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < _rows.length; i++)
+                  _EnvelopePointRow(
+                    index: i,
+                    ms: _rows[i].ms,
+                    value: _rows[i].value,
+                    valueLabel: 'Level',
+                    onRemove: () => _removeRow(i),
+                  ),
+                TextButton.icon(
+                  onPressed: _addRow,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add point'),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Sustain point',
+                  value: _sustain,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _sustain = v),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Loop start',
+                  value: _loopStart,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _loopStart = v),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Loop end',
+                  value: _loopEnd,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _loopEnd = v),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          FilledButton(onPressed: _apply, child: const Text('Apply')),
+        ],
+      );
+}
+
+class _NativePanEnvelopeDialog extends StatefulWidget {
+  const _NativePanEnvelopeDialog({required this.initial});
+  final PanEnvelope? initial;
+
+  @override
+  State<_NativePanEnvelopeDialog> createState() =>
+      _NativePanEnvelopeDialogState();
+}
+
+class _NativePanEnvelopeDialogState extends State<_NativePanEnvelopeDialog> {
+  late List<({TextEditingController ms, TextEditingController value})> _rows;
+  int? _sustain;
+  int? _loopStart;
+  int? _loopEnd;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    _rows = [
+      for (final point in initial?.points ?? const <({int ms, double pan})>[])
+        (
+          ms: TextEditingController(text: '${point.ms}'),
+          value: TextEditingController(text: '${point.pan}'),
+        ),
+    ];
+    _sustain = initial?.sustain;
+    _loopStart = initial?.loopStart;
+    _loopEnd = initial?.loopEnd;
+  }
+
+  @override
+  void dispose() {
+    for (final row in _rows) {
+      row.ms.dispose();
+      row.value.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addRow() => setState(() {
+        final ms =
+            _rows.isEmpty ? 0 : (int.tryParse(_rows.last.ms.text) ?? 0) + 100;
+        _rows.add((
+          ms: TextEditingController(text: '$ms'),
+          value: TextEditingController(text: '0'),
+        ));
+      });
+
+  void _removeRow(int index) {
+    final row = _rows.removeAt(index);
+    row.ms.dispose();
+    row.value.dispose();
+    setState(() {
+      _sustain = _removePointIndex(_sustain, index);
+      _loopStart = _removePointIndex(_loopStart, index);
+      _loopEnd = _removePointIndex(_loopEnd, index);
+    });
+  }
+
+  int? _removePointIndex(int? value, int removed) {
+    if (value == null || value == removed) return null;
+    return value > removed ? value - 1 : value;
+  }
+
+  void _apply() {
+    final values = <({int index, int ms, double pan})>[];
+    for (var i = 0; i < _rows.length; i++) {
+      final row = _rows[i];
+      final ms = int.tryParse(row.ms.text.trim());
+      final pan = double.tryParse(row.value.text.trim());
+      if (ms == null || pan == null || ms < 0) return;
+      values.add((index: i, ms: ms, pan: pan.clamp(-1.0, 1.0)));
+    }
+    values.sort((a, b) => a.ms.compareTo(b.ms));
+    final remap = <int, int>{
+      for (var i = 0; i < values.length; i++) values[i].index: i,
+    };
+    int? mapped(int? value) => value == null ? null : remap[value];
+    Navigator.of(context).pop(PanEnvelope(
+      [for (final value in values) (ms: value.ms, pan: value.pan)],
+      sustain: mapped(_sustain),
+      loopStart: mapped(_loopStart),
+      loopEnd: mapped(_loopEnd),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Native Pan Envelope'),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < _rows.length; i++)
+                  _EnvelopePointRow(
+                    index: i,
+                    ms: _rows[i].ms,
+                    value: _rows[i].value,
+                    valueLabel: 'Pan (-1..1)',
+                    onRemove: () => _removeRow(i),
+                  ),
+                TextButton.icon(
+                  onPressed: _addRow,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add point'),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Sustain point',
+                  value: _sustain,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _sustain = v),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Loop start',
+                  value: _loopStart,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _loopStart = v),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Loop end',
+                  value: _loopEnd,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _loopEnd = v),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          FilledButton(onPressed: _apply, child: const Text('Apply')),
+        ],
+      );
+}
+
+class _EnvelopePointRow extends StatelessWidget {
+  const _EnvelopePointRow({
+    required this.index,
+    required this.ms,
+    required this.value,
+    required this.valueLabel,
+    required this.onRemove,
+  });
+  final int index;
+  final TextEditingController ms;
+  final TextEditingController value;
+  final String valueLabel;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          SizedBox(
+            width: 70,
+            child: TextField(
+              controller: ms,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'ms'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: value,
+              keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true, signed: true),
+              decoration: InputDecoration(labelText: valueLabel),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Remove point $index',
+            onPressed: onRemove,
+          ),
+        ],
+      );
+}
+
+class _EnvelopeIndexRow extends StatelessWidget {
+  const _EnvelopeIndexRow({
+    required this.label,
+    required this.value,
+    required this.count,
+    required this.onChanged,
+  });
+  final String label;
+  final int? value;
+  final int count;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+        dense: true,
+        title: Text(label),
+        trailing: DropdownButton<int?>(
+          value: value,
+          items: [
+            const DropdownMenuItem<int?>(value: null, child: Text('None')),
+            for (var i = 0; i < count; i++)
+              DropdownMenuItem<int?>(value: i, child: Text('$i')),
+          ],
+          onChanged: onChanged,
+        ),
+      );
 }
