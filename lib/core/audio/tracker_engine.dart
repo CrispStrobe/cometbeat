@@ -320,7 +320,17 @@ abstract class TrackerInstrument {
   /// Render [cells] onto a buffer sized ~[TrackerTiming.totalSamples] (mixStems
   /// tolerates a shorter stem and pads it). Must not normalize — mixStems sets
   /// levels.
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing);
+  ///
+  /// [into] optionally supplies a reusable whole-song output buffer (length
+  /// >= [TrackerTiming.totalSamples]). When given, the caller guarantees the
+  /// buffer's read/write window for this call is pre-zeroed; the impl must NOT
+  /// clear the whole buffer. When null, a fresh zeroed buffer is allocated as
+  /// before. Either way the (possibly reused) buffer is returned.
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  });
 }
 
 /// The Slice 0 instrument: one of the built-in additive [Instrument] voices.
@@ -332,7 +342,11 @@ class AdditiveInstrument implements TrackerInstrument {
   final Instrument instrument;
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) {
     final timbre = timbreFor(instrument);
     // Fast path: no per-note effects → the plain whole-channel additive render.
     final hasEffect =
@@ -342,7 +356,7 @@ class AdditiveInstrument implements TrackerInstrument {
     }
     // Effect path: render each note's run on its own so its effect can modulate
     // the frequency during synthesis, then place it on the timeline.
-    final out = Float64List(timing.totalSamples);
+    final out = into ?? Float64List(timing.totalSamples);
     var startStep = 0;
     for (final (midi, steps) in cellRuns(cells)) {
       if (midi != null) {
@@ -387,8 +401,12 @@ class SfxrInstrument implements TrackerInstrument {
   final int seed;
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
-    final out = Float64List(timing.totalSamples);
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) {
+    final out = into ?? Float64List(timing.totalSamples);
     final rng = Random(seed);
     var startStep = 0;
     for (final (midi, steps) in cellRuns(cells)) {
@@ -433,8 +451,12 @@ class KarplusInstrument implements TrackerInstrument {
   final int seed;
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
-    final out = Float64List(timing.totalSamples);
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) {
+    final out = into ?? Float64List(timing.totalSamples);
     var startStep = 0;
     for (final (midi, steps) in cellRuns(cells)) {
       if (midi != null) {
@@ -475,7 +497,11 @@ class FmInstrument implements TrackerInstrument {
   final FmPreset preset;
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) =>
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) =>
       _renderPerNote(
         cells,
         timing,
@@ -487,6 +513,7 @@ class FmInstrument implements TrackerInstrument {
           indexDecay: preset.indexDecay,
           ampDecay: preset.ampDecay,
         ),
+        into: into,
       );
 }
 
@@ -505,7 +532,11 @@ class SubtractiveInstrument implements TrackerInstrument {
   final SubPreset preset;
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) =>
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) =>
       _renderPerNote(
         cells,
         timing,
@@ -518,6 +549,7 @@ class SubtractiveInstrument implements TrackerInstrument {
           cutoffDecay: preset.cutoffDecay,
           ampDecay: preset.ampDecay,
         ),
+        into: into,
       );
 }
 
@@ -527,9 +559,10 @@ class SubtractiveInstrument implements TrackerInstrument {
 Float64List _renderPerNote(
   List<TrackerCell> cells,
   TrackerTiming timing,
-  Float64List Function(double freq, int samples) voice,
-) {
-  final out = Float64List(timing.totalSamples);
+  Float64List Function(double freq, int samples) voice, {
+  Float64List? into,
+}) {
+  final out = into ?? Float64List(timing.totalSamples);
   var startStep = 0;
   for (final (midi, steps) in cellRuns(cells)) {
     if (midi != null) {
@@ -743,21 +776,26 @@ class SampleInstrument implements TrackerInstrument {
       );
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) =>
-      _renderChannelFrom(sample, cells, timing);
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) =>
+      _renderChannelFrom(sample, cells, timing, into: into);
 
   Float64List _renderChannelFrom(
     Float64List source,
     List<TrackerCell> cells,
     TrackerTiming timing, {
     bool applyNativeAction = true,
+    Float64List? into,
   }) {
     if (applyNativeAction &&
         (nativeNna != 0 || nativeDct != 0) &&
         (identical(source, sample) || identical(source, sampleRight))) {
-      return _renderWithNativeNoteAction(source, cells, timing);
+      return _renderWithNativeNoteAction(source, cells, timing, into: into);
     }
-    final out = Float64List(timing.totalSamples);
+    final out = into ?? Float64List(timing.totalSamples);
     if (source.isEmpty) return out;
     final baseFreq = midiToFrequency(baseMidi);
     var startStep = 0;
@@ -866,9 +904,10 @@ class SampleInstrument implements TrackerInstrument {
   Float64List _renderWithNativeNoteAction(
     Float64List source,
     List<TrackerCell> cells,
-    TrackerTiming timing,
-  ) {
-    final out = Float64List(timing.totalSamples);
+    TrackerTiming timing, {
+    Float64List? into,
+  }) {
+    final out = into ?? Float64List(timing.totalSamples);
     final starts = <int>[];
     for (var row = 0; row < cells.length; row++) {
       final cell = cells[row];
@@ -977,7 +1016,11 @@ class PercussionInstrument implements TrackerInstrument {
   static const rows = [Drum.hat, Drum.snare, Drum.kick];
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) {
     final hits = <(int, Drum)>[];
     for (var step = 0; step < cells.length; step++) {
       final midi = cells[step].midi;
@@ -1050,11 +1093,15 @@ class MultiSampleInstrument implements TrackerInstrument {
   TrackerInstrument? zoneForNote(int midi) => _closestZone(midi);
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) {
     if (nativeVoiceSemantics) {
       return _renderNativeVoices(cells, timing).left;
     }
-    final out = Float64List(timing.totalSamples);
+    final out = into ?? Float64List(timing.totalSamples);
     if (zones.isEmpty) return out;
 
     var startStep = 0;

@@ -1099,8 +1099,12 @@ class Sf2Instrument implements TrackerInstrument {
   }
 
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
-    final out = Float64List(timing.totalSamples);
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) {
+    final out = into ?? Float64List(timing.totalSamples);
     if (_zones.isEmpty) return out;
     // The tracker's per-cell volume column (0..1, null = full) is the note's
     // MIDI velocity → it selects the velocity layer AND scales the level.

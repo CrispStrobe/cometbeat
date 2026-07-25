@@ -697,6 +697,12 @@ Float64List renderChannelPerNote(
   VolumeEnvelope? envelope,
 }) {
   final stem = Float64List(timing.totalSamples);
+  // One reusable whole-song scratch buffer for every note render on this
+  // channel — instead of a fresh Float64List(totalSamples) per note-run inside
+  // each renderChannel. Cuts allocation from O(notes × song) to O(song) per
+  // channel. Each note clears only its own run window before rendering, so the
+  // reuse is byte-identical to the fresh-buffer path (see the fillRange below).
+  final scratch = Float64List(timing.totalSamples);
   final rows = cells.length;
   var curInst = channelInstrument;
   var startStep = 0;
@@ -722,11 +728,16 @@ Float64List renderChannelPerNote(
         one[capRow] =
             releaseSteps > 0 ? TrackerCell.noteCut : TrackerCell(midi: midi);
       }
-      final buf = curInst.renderChannel(one, timing);
       final s = timing.stepStartSample(startStep);
       final endRow = startStep + steps;
       final e =
           endRow < rows ? timing.stepStartSample(endRow) : timing.totalSamples;
+      // Clear ONLY this note's run window before rendering it. Required for
+      // correctness: a previous note's NNA / release tail may have written past
+      // its own window into this one. We only ever read [s, lim) (lim <= e), and
+      // each later note clears its own window, so tails past e are never read.
+      scratch.fillRange(s, min(e, scratch.length), 0.0);
+      final buf = curInst.renderChannel(one, timing, into: scratch);
       final lim = min(e, min(buf.length, stem.length));
       final instrumentEnvelope =
           curInst is SampleInstrument ? curInst.nativeVolumeEnvelope : null;
