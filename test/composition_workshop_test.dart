@@ -229,6 +229,44 @@ void main() {
     expect(view.elementColors[note.id], const Color(0xFF59A14F));
   });
 
+  testWidgets('Analysis tints reach the multi-part full-score canvas',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Add a second instrument → the full-score multi-part canvas takes over,
+    // with the new part (index 1) active.
+    await tester.tap(find.byKey(const ValueKey('workshop-add-instrument')));
+    await tester.pump();
+    expect(find.byType(InteractiveMultiPartView), findsOneWidget);
+
+    // Place a note in the active part so there is something to colour.
+    await tester.tap(_pianoKey());
+    await tester.pumpAndSettle();
+
+    // Turn Analysis on.
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopAnalysis));
+    await tester.pumpAndSettle();
+
+    final view = tester.widget<InteractiveMultiPartView>(
+      find.byType(InteractiveMultiPartView),
+    );
+    // Previously the multi-part canvas got no colours at all; now the analysis
+    // layer reaches it, keyed by the active part's global ids (`p1:…`).
+    expect(
+      view.elementColors,
+      isNotEmpty,
+      reason: 'analysis colours must reach the multi-part canvas',
+    );
+    expect(
+      view.elementColors.keys.every((k) => k.startsWith('p1:')),
+      isTrue,
+      reason: 'colours are remapped onto the active part global ids',
+    );
+  });
+
   testWidgets('🔍 Inspect mode: tapping a note opens its Looking-Glass card',
       (tester) async {
     await pump(tester);

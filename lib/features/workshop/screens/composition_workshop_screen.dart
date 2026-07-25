@@ -3603,7 +3603,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     // note by its chord's function. Computed from the built score so it sees
     // ties/rests/voices; small scores make this cheap enough per rebuild.
     final ScoreAnalysis? analysis = _showAnalysis ? analyze(score) : null;
-    final elementColors = <String, Color>{
+    // The harmony/voice colour layer, keyed by the active part's element ids.
+    // Selection + playback are layered on top of it for the single-part views;
+    // the multi-part canvas applies those via highlightedIds instead, so it
+    // gets this analysis layer alone (remapped to global ids below).
+    final analysisColors = <String, Color>{
       // Give every pitched element a readable fallback first. The analysis
       // pass below then replaces this with the authoritative chord function
       // wherever the theory engine found a harmonic segment.
@@ -3632,7 +3636,6 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           for (final element in measure.voice2)
             if (element.id != null) element.id!: const Color(0xFFE65100),
       },
-      // Analysis is the base layer; selection + playback override it below.
       // Chord segments provide the authoritative function. For a single-note
       // passage, colour tonic/subdominant/dominant scale degrees as a useful
       // fallback so the toggle never degenerates into a text-only banner.
@@ -3641,11 +3644,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           if (seg.function case final function?)
             for (final id in seg.elementIds) id: _functionTint(function),
       },
+    };
+    final elementColors = <String, Color>{
+      ...analysisColors,
       for (final id in selectedIds) id: Colors.amber,
       // The playback cursor paints the sounding notes green, overriding any
       // selection tint underneath so the moving highlight always reads.
       for (final id in _soundingIds) id: Colors.green,
     };
+    // The multi-part canvas keys colours by GLOBAL id (`p<part>:<rawId>`); remap
+    // the analysis layer onto the active part so the Analysis toggle actually
+    // paints there too (previously it produced no colours in multi-part view).
+    final mpElementColors = analysisColors.isEmpty
+        ? const <String, Color>{}
+        : <String, Color>{
+            for (final e in analysisColors.entries)
+              '${MultiPartDocument.prefixFor(_mpd.active)}${e.key}': e.value,
+          };
     // Live drag is owned by crisp_notation (C10b `dragPreviewOpacity`): while a note
     // is dragged the view suppresses it and re-paints the *real* glyph
     // (notehead/stem/accidental/flag/ledgers) following the pointer, snapped to
@@ -4098,6 +4113,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                       highlightedIds: _isPlaying
                                           ? _soundingIds
                                           : _mpd.selectedGlobalIds,
+                                      elementColors: mpElementColors,
                                       suppressElementIds: _mpSuppressed,
                                       onElementDragStart: _onMpDragStart,
                                       onElementDragUpdate: _onMpDragUpdate,
