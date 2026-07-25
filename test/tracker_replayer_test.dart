@@ -1090,6 +1090,40 @@ void main() {
       expect(rightSum, lessThan(0));
     });
 
+    test('panbrello moves a sampled voice in the stereo render', () {
+      final sample = Float64List.fromList(List<double>.filled(120000, 0.3));
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty);
+      cells[0] = fx(kFxPanbrello, 0x4F, midi: 60);
+      for (var row = 1; row < cells.length; row++) {
+        cells[row] = fx(kFxPanbrello, 0x4F);
+      }
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'panbrello',
+            instrument: SampleInstrument('p', sample),
+            rows: 8,
+          ),
+        ],
+        timing: const TrackerTiming(rows: 8),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+        stereoOutput: true,
+      );
+      final wav = song.renderSongWav();
+      final data = ByteData.sublistView(wav);
+      var maxDifference = 0;
+      for (var o = 44; o + 3 < wav.length; o += 4) {
+        final difference = (data.getInt16(o, Endian.little) -
+                data.getInt16(o + 2, Endian.little))
+            .abs();
+        if (difference > maxDifference) maxDifference = difference;
+      }
+      expect(maxDifference, greaterThan(1000));
+    });
+
     test('a porta-up on a SAMPLE channel raises the pitch (rising)', () {
       // A long low sine sample so a gentle porta stays within it + is measurable
       // via zero-crossings.

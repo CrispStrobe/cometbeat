@@ -145,6 +145,10 @@ const int kFxTempoSlide = 0x1F;
 /// effect T and S3M/IT effect I map here.
 const int kFxTremor = 0x1D;
 
+/// Yxy — panbrello: a stereo pan LFO (IT/S3M).
+const int kFxPanbrello = 0x1E;
+const double kPanbrelloDepthPerUnit = 1 / 15;
+
 // --- Tuning constants (MUSICAL APPROXIMATIONS, not period-accurate MOD) -------
 //
 // Real MOD effects operate on Amiga period units; we model pitch in fractional
@@ -270,6 +274,8 @@ class ReplayVoice {
   int _memVolSlide = 0;
   int _memRetrig = 0; // Rxy param (x = vol code, y = tick interval)
   int _memTremor = 0; // Txy param (x = on ticks, y = off ticks)
+  int _memPanbrelloSpeed = 0;
+  int _memPanbrelloDepth = 0;
 
   // LFO waveform select (E4x/E7x) + glissando control (E3x) — persist across
   // rows like a real tracker's per-channel control state.
@@ -280,6 +286,7 @@ class ReplayVoice {
   // LFO phases (radians), reset on a new note.
   double _vibPhase = 0;
   double _tremPhase = 0;
+  double _panbrelloPhase = 0;
 
   // The command armed for the current row.
   int _cmd = 0;
@@ -353,6 +360,7 @@ class ReplayVoice {
           noteVolume = cell.volume ?? 1.0;
           _vibPhase = 0;
           _tremPhase = 0;
+          _panbrelloPhase = 0;
         }
       } else {
         pitch = m;
@@ -362,6 +370,7 @@ class ReplayVoice {
         noteVolume = cell.volume ?? 1.0;
         _vibPhase = 0;
         _tremPhase = 0;
+        _panbrelloPhase = 0;
       }
     } else if (cell.volume != null) {
       // A volume-column-only cell (no note) sets the RINGING note's volume — a
@@ -400,6 +409,10 @@ class ReplayVoice {
         if (_param != 0) _memRetrig = _param;
       case kFxTremor:
         if (_param != 0) _memTremor = _param;
+      case kFxPanbrello:
+        final x = (_param >> 4) & 0xF, y = _param & 0xF;
+        if (x != 0) _memPanbrelloSpeed = x;
+        if (y != 0) _memPanbrelloDepth = y;
       case kFxExtended:
         // One-time (tick-0) extended commands: fine porta and fine volume.
         switch (_exSub) {
@@ -434,7 +447,10 @@ class ReplayVoice {
   /// (pitch, volume0to64) to synthesize this tick. [ticksPerRow] is the row's
   /// speed. Slide-type effects act on ticks 1.. (tick 0 holds), matching classic
   /// tracker behaviour; arpeggio and the LFOs act on every tick.
-  ({double pitch, double volume, bool retrigger}) tick(int k, int ticksPerRow) {
+  ({double pitch, double volume, double pan, bool retrigger}) tick(
+    int k,
+    int ticksPerRow,
+  ) {
     var retrigger = false;
 
     // EDx note delay: the deferred note triggers at its tick.
@@ -446,11 +462,13 @@ class ReplayVoice {
       retrigger = true;
       _vibPhase = 0;
       _tremPhase = 0;
+      _panbrelloPhase = 0;
       _pendingDelayTick = null;
     }
 
     var effPitch = pitch;
     var effVol = volume.toDouble();
+    var effPan = 0.0;
 
     // Arpeggio: cycle base / base+x / base+y each tick (does not move `pitch`).
     if (_isArpeggio) {
@@ -496,6 +514,13 @@ class ReplayVoice {
       _tremPhase += _memTremSpeed * kTremoloRadPerSpeedUnit;
     }
 
+    if (_cmd == kFxPanbrello) {
+      effPan = _memPanbrelloDepth *
+          kPanbrelloDepthPerUnit *
+          trackerLfo(0, _panbrelloPhase);
+      _panbrelloPhase += _memPanbrelloSpeed * kVibratoRadPerSpeedUnit;
+    }
+
     // Volume slide (A / 5 / 6): move `volume` on ticks > 0.
     if (_isVolSlide && k > 0) {
       final x = (_memVolSlide >> 4) & 0xF, y = _memVolSlide & 0xF;
@@ -509,6 +534,7 @@ class ReplayVoice {
         retrigger = true;
         _vibPhase = 0;
         _tremPhase = 0;
+        _panbrelloPhase = 0;
       } else if (_exSub == kExNoteCut && k >= _exVal) {
         effVol = 0;
       }
@@ -521,6 +547,7 @@ class ReplayVoice {
         retrigger = true;
         _vibPhase = 0;
         _tremPhase = 0;
+        _panbrelloPhase = 0;
         volume = retrigVolume(volume, (_memRetrig >> 4) & 0xF);
         effVol = volume.toDouble();
       }
@@ -533,7 +560,12 @@ class ReplayVoice {
       if (cycle > 0 && k % cycle >= x) effVol = 0; // in the OFF phase
     }
 
-    return (pitch: effPitch, volume: effVol, retrigger: retrigger);
+    return (
+      pitch: effPitch,
+      volume: effVol,
+      pan: effPan,
+      retrigger: retrigger,
+    );
   }
 }
 
@@ -716,6 +748,7 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
         cmd == kFxSetVolume ||
         cmd == kFxRetrigVolSlide ||
         cmd == kFxTremor ||
+        cmd == kFxPanbrello ||
         cmd == kFxExtended) {
       return true;
     }
@@ -867,6 +900,7 @@ double? _readLoopedSample(
         final level = nativeEnv?.levelAt(t * 1000) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
         final pan = (rowPan +
+                state.pan +
                 (channel.panEnvelope?.panAt(t * 1000) ?? 0.0) +
                 (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0))
             .clamp(-1.0, 1.0);

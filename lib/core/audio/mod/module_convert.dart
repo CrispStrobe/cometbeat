@@ -257,6 +257,8 @@ ModuleDoc docFromMod(ModModule m) {
       return (0x11, info);
     case 24: // X — set pan (0x00..0x80) → our 8xx (0x00..0xFF)
       return (0x8, (info * 2).clamp(0, 0xFF));
+    case 25: // Y — panbrello
+      return (0x1E, info);
     default:
       // Y panbrello · Z MIDI — no neutral equivalent (dropped).
       return (0, 0);
@@ -544,6 +546,8 @@ ModuleDoc docFromXm(XmModule m) {
       return (0x11, value);
     case 24: // X — set panning (0x00..0xFF, direct → our 8xx)
       return (0x8, value);
+    case 25: // Y — panbrello
+      return (0x1E, value);
     default:
       // Y panbrello · Z MIDI — no neutral equivalent (dropped).
       return (0, 0);
@@ -779,6 +783,8 @@ ModuleDoc docFromIt(ItModule m) {
       return (17, param); // Q retrigger + volume action
     case 0x1D:
       return (9, param); // I tremor
+    case 0x1E:
+      return (25, param); // Y panbrello
     case 0x1F:
       return (20, param); // T tempo slide
     case 0xF:
