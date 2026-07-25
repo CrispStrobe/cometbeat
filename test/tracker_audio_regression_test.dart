@@ -1,3 +1,8 @@
+// This is a diagnostic harness: when a comparison fails you want the measured
+// durations and RMS deltas on stdout to see HOW it drifted, so print is the
+// right tool here rather than a lint to route around.
+// ignore_for_file: avoid_print
+
 // Regression test: renders a real module with our pipeline and with
 // OpenMPT (openmpt123), then compares the audio outputs. Catches
 // regressions in instrument handling, sample playback, effects, and
@@ -72,7 +77,7 @@ Future<Uint8List> _renderWithOpenMpt(String fixturePath) async {
     // OpenMPT creates a .wav file with the same base name
     final outputPath = '$tempFixture.wav';
     final wavFile = File(outputPath);
-    if (!await wavFile.exists()) {
+    if (!wavFile.existsSync()) {
       throw Exception(
         'OpenMPT did not create expected output file: $outputPath',
       );
@@ -166,207 +171,191 @@ void main() {
     final testModulesAvailable =
         File('test/fixtures/powerbase.mod').existsSync();
 
-    if (!testModulesAvailable) {
-      print(
-        '⚠️  Test modules not found. Run: bash tool/download_test_modules.sh',
-      );
-      print(
-        '    Skipping regression tests (will use minimal golden fixtures only)',
-      );
-    }
+    // This suite needs BOTH an external binary (openmpt123, via Homebrew) and
+    // licence-unclear modules that must never be committed. Neither exists on
+    // CI, so both are treated as "skip", never as failure — a missing optional
+    // dependency is not a regression. (This used to throw from setUpAll, which
+    // made the whole group fail on any machine without Homebrew's openmpt.)
+    final openMptAvailable = File(_kOpenMptPath).existsSync();
+    final skipReason = !testModulesAvailable
+        ? 'test modules not downloaded — run tool/download_test_modules.sh'
+        : (!openMptAvailable
+            ? 'openmpt123 not found at $_kOpenMptPath — brew install libopenmpt'
+            : null);
 
-    // Skip if OpenMPT not available
-    setUpAll(() async {
-      final file = File(_kOpenMptPath);
-      if (!await file.exists()) {
-        throw Exception(
-          'OpenMPT not found at $_kOpenMptPath. '
-          'Install with: brew install libopenmpt',
-        );
-      }
-    });
+    group(
+      'OpenMPT reference comparison',
+      () {
+        // Availability is handled by the group's `skip:` below — no early return
+        // and no warning test, which reported as a pass and hid the gap.
 
-    group('OpenMPT reference comparison', () {
-      // Only run these tests if test modules are downloaded
-      if (!testModulesAvailable) {
-        test(
-          'WARNING: Test modules not available',
-          () {
-            print(
-              'Download test modules first: bash tool/download_test_modules.sh',
-            );
-          },
-          skip: 'Test modules not downloaded',
-        );
-        return;
-      }
+        // Use real module files for comprehensive regression testing
+        // These are freely distributable modules from the Amiga Music Preservation archive
+        final testModules = [
+          'powerbase.mod', // Classic 4-channel ProTracker MOD
+          'mobile.mod', // Another classic MOD file
+          '_dont_look_back_.xm', // FastTracker 2 XM with instruments
+          'buddhia3.it', // Impulse Tracker IT with envelopes
+        ];
 
-      // Use real module files for comprehensive regression testing
-      // These are freely distributable modules from the Amiga Music Preservation archive
-      final testModules = [
-        'powerbase.mod', // Classic 4-channel ProTracker MOD
-        'mobile.mod', // Another classic MOD file
-        '_dont_look_back_.xm', // FastTracker 2 XM with instruments
-        'buddhia3.it', // Impulse Tracker IT with envelopes
-      ];
+        for (final fixtureName in testModules) {
+          test(
+            '$fixtureName matches OpenMPT reference',
+            () async {
+              // 1. Load and parse the module
+              final bytes = _fixture(fixtureName);
+              final song = songFromModuleBytes(bytes);
 
-      for (final fixtureName in testModules) {
-        test(
-          '$fixtureName matches OpenMPT reference',
-          () async {
-            // 1. Load and parse the module
-            final bytes = _fixture(fixtureName);
-            final song = songFromModuleBytes(bytes);
-
-            // 2. Render with our pipeline
-            final ourWav = song.renderSongWav();
-            expect(
-              ourWav.length,
-              greaterThan(44),
-              reason: 'Our render produced empty WAV',
-            );
-
-            // 3. Render with OpenMPT (industry standard)
-            final openmptWav =
-                await _renderWithOpenMpt('test/fixtures/$fixtureName');
-            expect(
-              openmptWav.length,
-              greaterThan(44),
-              reason: 'OpenMPT render produced empty WAV',
-            );
-
-            // 4. Extract PCM data
-            final ourPcm = _monoWavToPcm(ourWav);
-            final openmptPcm = _wavToMonoPcm(openmptWav);
-
-            // 5. Duration check: allow 10% tolerance (tempo rounding, sample length differences)
-            final ourDuration = ourPcm.length / _kSampleRate;
-            final openmptDuration = openmptPcm.length / _kSampleRate;
-            final durationRatio = ourDuration / openmptDuration;
-
-            expect(
-              durationRatio,
-              inInclusiveRange(0.90, 1.10),
-              reason: 'Duration mismatch: ours ${ourDuration}s vs '
-                  'OpenMPT ${openmptDuration}s (ratio $durationRatio)',
-            );
-
-            // 6. Downsample to 4kHz for faster comparison (removes HF details)
-            const downsampleFactor = _kSampleRate ~/ 4000;
-            final ourDownsampled = _downsample(ourPcm, downsampleFactor);
-            final openmptDownsampled =
-                _downsample(openmptPcm, downsampleFactor);
-
-            // 7. Normalize both signals
-            _normalize(ourDownsampled);
-            _normalize(openmptDownsampled);
-
-            // 8. RMS similarity check
-            final ourRms = _rms(ourDownsampled);
-            final openmptRms = _rms(openmptDownsampled);
-
-            // For minimal test fixtures, accept very low RMS (sparse notes)
-            if (ourRms < 0.001 && openmptRms < 0.001) {
-              print(
-                '  $fixtureName: Both renders are silent/sparse (minimal fixture)',
+              // 2. Render with our pipeline
+              final ourWav = song.renderSongWav();
+              expect(
+                ourWav.length,
+                greaterThan(44),
+                reason: 'Our render produced empty WAV',
               );
-              return; // Skip further checks for minimal fixtures
-            }
 
-            expect(
-              ourRms,
-              greaterThan(0.001),
-              reason: 'Our render is nearly silent',
-            );
-            expect(
-              openmptRms,
-              greaterThan(0.001),
-              reason: 'OpenMPT render is nearly silent',
-            );
+              // 3. Render with OpenMPT (industry standard)
+              final openmptWav =
+                  await _renderWithOpenMpt('test/fixtures/$fixtureName');
+              expect(
+                openmptWav.length,
+                greaterThan(44),
+                reason: 'OpenMPT render produced empty WAV',
+              );
 
-            final rmsDiff = _rmsDifference(ourDownsampled, openmptDownsampled);
-            final rmsDiffDb =
-                20 * log(rmsDiff / max(ourRms, openmptRms)) / ln10;
+              // 4. Extract PCM data
+              final ourPcm = _monoWavToPcm(ourWav);
+              final openmptPcm = _wavToMonoPcm(openmptWav);
 
-            // 9. Check for clipping
-            final ourPeak = ourPcm.reduce((a, b) => max(a.abs(), b.abs()));
-            expect(
-              ourPeak,
-              lessThan(1.0),
-              reason: 'Our render clips ($ourPeak peak)',
-            );
+              // 5. Duration check: allow 10% tolerance (tempo rounding, sample length differences)
+              final ourDuration = ourPcm.length / _kSampleRate;
+              final openmptDuration = openmptPcm.length / _kSampleRate;
+              final durationRatio = ourDuration / openmptDuration;
 
-            // 10. Report results
-            print('  $fixtureName comparison:');
-            print('    Duration: ours ${ourDuration.toStringAsFixed(2)}s, '
-                'OpenMPT ${openmptDuration.toStringAsFixed(2)}s');
-            print('    RMS: ours ${ourRms.toStringAsFixed(4)}, '
-                'OpenMPT ${openmptRms.toStringAsFixed(4)}');
-            print('    RMS difference: ${rmsDiffDb.toStringAsFixed(1)} dB');
+              expect(
+                durationRatio,
+                inInclusiveRange(0.90, 1.10),
+                reason: 'Duration mismatch: ours ${ourDuration}s vs '
+                    'OpenMPT ${openmptDuration}s (ratio $durationRatio)',
+              );
 
-            // Acceptable threshold: < 10 dB difference for minimal fixtures
-            // (Real modules should be < 3 dB; minimal fixtures have edge cases)
-            expect(
-              rmsDiffDb.abs(),
-              lessThan(10.0),
-              reason: 'Audio differs too much from OpenMPT reference '
-                  '($rmsDiffDb dB). Possible instrument or mixing regression.',
-            );
-          },
-          timeout: const Timeout(Duration(seconds: 30)),
-        );
-      }
-    });
+              // 6. Downsample to 4kHz for faster comparison (removes HF details)
+              const downsampleFactor = _kSampleRate ~/ 4000;
+              final ourDownsampled = _downsample(ourPcm, downsampleFactor);
+              final openmptDownsampled =
+                  _downsample(openmptPcm, downsampleFactor);
 
-    test('all test modules render without crashing', () {
-      if (!testModulesAvailable) {
-        print(
-          'Skipping: Test modules not available. Run: bash tool/download_test_modules.sh',
-        );
-        return;
-      }
+              // 7. Normalize both signals
+              _normalize(ourDownsampled);
+              _normalize(openmptDownsampled);
 
-      final testModules = [
-        'powerbase.mod',
-        'mobile.mod',
-        '_dont_look_back_.xm',
-        'buddhia3.it',
-        'wonderfulpain.it',
-        'mulju_the_clown.mod',
-      ];
+              // 8. RMS similarity check
+              final ourRms = _rms(ourDownsampled);
+              final openmptRms = _rms(openmptDownsampled);
 
-      for (final fixtureName in testModules) {
-        final bytes = _fixture(fixtureName);
+              // For minimal test fixtures, accept very low RMS (sparse notes)
+              if (ourRms < 0.001 && openmptRms < 0.001) {
+                print(
+                  '  $fixtureName: Both renders are silent/sparse (minimal fixture)',
+                );
+                return; // Skip further checks for minimal fixtures
+              }
 
-        expect(
-          () => songFromModuleBytes(bytes),
-          returnsNormally,
-          reason: '$fixtureName import crashed',
-        );
+              expect(
+                ourRms,
+                greaterThan(0.001),
+                reason: 'Our render is nearly silent',
+              );
+              expect(
+                openmptRms,
+                greaterThan(0.001),
+                reason: 'OpenMPT render is nearly silent',
+              );
 
-        final song = songFromModuleBytes(bytes);
-        expect(
-          song.renderSongWav,
-          returnsNormally,
-          reason: '$fixtureName render crashed',
-        );
+              final rmsDiff =
+                  _rmsDifference(ourDownsampled, openmptDownsampled);
+              final rmsDiffDb =
+                  20 * log(rmsDiff / max(ourRms, openmptRms)) / ln10;
 
-        final wav = song.renderSongWav();
-        expect(
-          wav.length,
-          greaterThan(44),
-          reason: '$fixtureName produced empty WAV',
-        );
+              // 9. Check for clipping
+              final ourPeak = ourPcm.reduce((a, b) => max(a.abs(), b.abs()));
+              expect(
+                ourPeak,
+                lessThan(1.0),
+                reason: 'Our render clips ($ourPeak peak)',
+              );
 
-        // Check that the render produced actual audio
-        final pcm = _monoWavToPcm(wav);
-        final peak = pcm.reduce((a, b) => max(a.abs(), b.abs()));
-        expect(
-          peak,
-          greaterThan(0.01),
-          reason: '$fixtureName produced nearly silent audio',
-        );
-      }
-    });
+              // 10. Report results
+              print('  $fixtureName comparison:');
+              print('    Duration: ours ${ourDuration.toStringAsFixed(2)}s, '
+                  'OpenMPT ${openmptDuration.toStringAsFixed(2)}s');
+              print('    RMS: ours ${ourRms.toStringAsFixed(4)}, '
+                  'OpenMPT ${openmptRms.toStringAsFixed(4)}');
+              print('    RMS difference: ${rmsDiffDb.toStringAsFixed(1)} dB');
+
+              // Acceptable threshold: < 10 dB difference for minimal fixtures
+              // (Real modules should be < 3 dB; minimal fixtures have edge cases)
+              expect(
+                rmsDiffDb.abs(),
+                lessThan(10.0),
+                reason: 'Audio differs too much from OpenMPT reference '
+                    '($rmsDiffDb dB). Possible instrument or mixing regression.',
+              );
+            },
+            timeout: const Timeout(Duration(seconds: 30)),
+          );
+        }
+      },
+      skip: skipReason,
+    );
+
+    test(
+      'all test modules render without crashing',
+      () {
+        final testModules = [
+          'powerbase.mod',
+          'mobile.mod',
+          '_dont_look_back_.xm',
+          'buddhia3.it',
+          'wonderfulpain.it',
+          'mulju_the_clown.mod',
+        ];
+
+        for (final fixtureName in testModules) {
+          final bytes = _fixture(fixtureName);
+
+          expect(
+            () => songFromModuleBytes(bytes),
+            returnsNormally,
+            reason: '$fixtureName import crashed',
+          );
+
+          final song = songFromModuleBytes(bytes);
+          expect(
+            song.renderSongWav,
+            returnsNormally,
+            reason: '$fixtureName render crashed',
+          );
+
+          final wav = song.renderSongWav();
+          expect(
+            wav.length,
+            greaterThan(44),
+            reason: '$fixtureName produced empty WAV',
+          );
+
+          // Check that the render produced actual audio
+          final pcm = _monoWavToPcm(wav);
+          final peak = pcm.reduce((a, b) => max(a.abs(), b.abs()));
+          expect(
+            peak,
+            greaterThan(0.01),
+            reason: '$fixtureName produced nearly silent audio',
+          );
+        }
+        // Needs the downloaded modules, but not openmpt123.
+      },
+      skip: testModulesAvailable ? null : 'test modules not downloaded',
+    );
   });
 }
