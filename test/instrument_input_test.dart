@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/composition/instrument_editor.dart'
+    show interleaveStereoPcm;
 import 'package:comet_beat/features/games/composition/my_melody_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -30,6 +34,15 @@ Widget _wrapBare(Widget child) => MaterialApp(
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  test('stereo preview pads the shorter sample channel', () {
+    final pcm = interleaveStereoPcm(
+      Float64List.fromList([1.0, -1.0, 0.5]),
+      Float64List.fromList([0.25]),
+    );
+
+    expect(pcm, [32767, 8192, -32767, 0, 16384, 0]);
+  });
 
   group('pitchFromMidi', () {
     test('spells naturals and sharps', () {

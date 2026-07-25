@@ -52,7 +52,7 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
         : null;
     final wav = right == null
         ? pcmFloatToWav(pcm)
-        : wavBytesStereo(_interleaveStereo(pcm, right));
+        : wavBytesStereo(interleaveStereoPcm(pcm, right));
     audio.playWavBytes(wav);
   }
 
@@ -508,12 +508,19 @@ class _SampleEditor extends StatelessWidget {
   }
 }
 
-Int16List _interleaveStereo(Float64List left, Float64List right) {
-  final frames = left.length < right.length ? left.length : right.length;
+/// Interleaves stereo preview samples, padding a shorter channel with silence.
+/// Imported/editable sample channels can legitimately have different lengths;
+/// truncating to the shorter side would discard valid audio from the other.
+Int16List interleaveStereoPcm(Float64List left, Float64List right) {
+  final frames = left.length > right.length ? left.length : right.length;
   final out = Int16List(frames * 2);
   for (var i = 0; i < frames; i++) {
-    out[i * 2] = (left[i].clamp(-1.0, 1.0) * 32767).round();
-    out[i * 2 + 1] = (right[i].clamp(-1.0, 1.0) * 32767).round();
+    if (i < left.length) {
+      out[i * 2] = (left[i].clamp(-1.0, 1.0) * 32767).round();
+    }
+    if (i < right.length) {
+      out[i * 2 + 1] = (right[i].clamp(-1.0, 1.0) * 32767).round();
+    }
   }
   return out;
 }
