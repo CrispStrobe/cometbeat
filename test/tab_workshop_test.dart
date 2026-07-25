@@ -211,9 +211,11 @@ void main() {
     expect(tab.sourceName, isNull); // demo, not a loaded file
     expect(tab.tuning.name, Tuning.standardGuitar.name);
     expect(tab.capo, 0);
-    // The tuning picker and the standard-notation switch are present.
+    // The toolbar shows the active-track dropdown; tuning moved to Settings.
+    expect(find.byType(DropdownButton<int>), findsOneWidget);
+    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.tune));
+    await tester.pumpAndSettle();
     expect(find.byType(DropdownButton<Tuning>), findsOneWidget);
-    expect(find.byType(Switch), findsOneWidget);
   });
 
   testWidgets('play-with-instrument renders the tab through a saved voice',
@@ -238,8 +240,11 @@ void main() {
     await pumpGame(tester, const TabWorkshopScreen());
     final tab = _tab(tester);
 
-    // At 0 the minus button is disabled; plus raises the capo.
-    await tester.tap(find.byIcon(Icons.add));
+    // At 0 the minus button is disabled; plus raises the capo. The capo stepper
+    // lives in the Settings sheet now (its + is the first Icons.add there).
+    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.tune));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.add).first);
     await tester.pump();
     expect(tab.capo, 1);
   });
@@ -484,6 +489,9 @@ void main() {
     final tab = _tab(tester);
     final before = tab.columnCount;
 
+    // The pattern/chord helpers live in the Settings sheet now.
+    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.tune));
+    await tester.pumpAndSettle();
     // Open the "Insert…" sheet (the only auto_awesome button).
     await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.auto_awesome));
     await tester.pumpAndSettle();
@@ -508,6 +516,9 @@ void main() {
     await tester.pump();
     expect(tab.chordNameAt(0), isNull);
 
+    // The chord helper lives in the Settings sheet now.
+    await tester.tap(find.widgetWithIcon(OutlinedButton, Icons.tune));
+    await tester.pumpAndSettle();
     // Open the chord picker and hit a chord's preview (not its diagram).
     await tester
         .tap(find.widgetWithIcon(OutlinedButton, Icons.grid_goldenratio));

@@ -223,6 +223,12 @@ abstract class TabWorkshopTester {
 /// and open GPIF / MusicXML / MIDI / ABC files as editable tab. The
 /// engraved staff (with a synced standard staff) previews the [TabDocument];
 /// the same model round-trips to the Score Workshop and Tracker.
+///
+/// The preview can be shown three ways: [tab] (tablature staff), [standard]
+/// (a single notation staff over the tab), and [grand] (a treble+bass grand
+/// staff — better for the low strings, which sink far below a single staff).
+enum _TabView { tab, standard, grand }
+
 class TabWorkshopScreen extends StatefulWidget {
   /// Optional single score to open as editable tab (e.g. from the Workshop).
   /// When null (and [initialParts] is null) a built-in demo riff is shown.
@@ -332,7 +338,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   TabDocument get _doc => _tracks[_active].doc;
 
   int _capo = 0;
-  bool _showStandard = true;
+  _TabView _view = _TabView.standard;
   NoteDuration _dur = NoteDuration.quarter;
   int _selCol = 0;
   int _selString = 0;
@@ -1344,15 +1350,17 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final score = _doc.toScore(capo: _capo);
-    final view = _showStandard
-        ? NotationTabView(
+    final view = _view == _TabView.tab
+        ? TabStaffView(
             score: score,
             tuning: _doc.tuning,
             capo: _capo,
             showTuning: true,
             highlightedIds: _highlightedIds,
           )
-        : TabStaffView(
+        // standard + grand both show the notation staff over the tab today; the
+        // grand-staff split is a follow-up (needs a Score→GrandStaff converter).
+        : NotationTabView(
             score: score,
             tuning: _doc.tuning,
             capo: _capo,
@@ -1498,9 +1506,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         onKeyEvent: _onKey,
         child: Column(
           children: [
-            _trackStrip(l10n),
-            const Divider(height: 1),
-            _controls(l10n),
+            _toolbar(l10n),
             const Divider(height: 1),
             Expanded(
               child: SingleChildScrollView(
@@ -1521,7 +1527,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
               ),
             ),
             const Divider(height: 1),
-            _editorPanel(l10n),
+            _keypad(l10n),
           ],
         ),
       ),
@@ -1529,139 +1535,324 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   }
 
   /// The band's track strip: pick the track you're editing, add or remove one.
-  Widget _trackStrip(AppLocalizations l10n) {
+  /// One compact control bar: active track · note duration · view mode, plus a
+  /// Settings button. Replaces the old track strip + controls rows; tuning,
+  /// capo, tempo, transpose, techniques, chord/pattern and track management all
+  /// live in the settings sheet.
+  Widget _toolbar(AppLocalizations l10n) {
+    final scheme = Theme.of(context).colorScheme;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
-          Text(l10n.tabTracks),
-          const SizedBox(width: 8),
-          for (var i = 0; i < _tracks.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+          // Active track.
+          Icon(Icons.queue_music, size: 18, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          DropdownButton<int>(
+            value: _active,
+            underline: const SizedBox.shrink(),
+            items: [
+              for (var i = 0; i < _tracks.length; i++)
+                DropdownMenuItem(value: i, child: Text(_tracks[i].name)),
+            ],
+            onChanged: (i) {
+              if (i != null) selectTrack(i);
+            },
+          ),
+          const SizedBox(width: 16),
+          // Note duration to enter.
+          Icon(Icons.music_note, size: 18, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          DropdownButton<NoteDuration>(
+            value: kTabDurations.any((e) => e.$1 == _dur) ? _dur : null,
+            underline: const SizedBox.shrink(),
+            hint: Text(l10n.tabDuration),
+            items: [
+              for (final (dur, steps) in kTabDurations)
+                DropdownMenuItem(value: dur, child: Text(_durLabel(steps))),
+            ],
+            onChanged: (d) {
+              if (d != null) {
+                setState(() {
+                  _dur = d;
+                  _doc.setDuration(_selCol, d);
+                });
+              }
+            },
+          ),
+          const SizedBox(width: 16),
+          // View mode: tablature or standard notation. (Grand staff: follow-up.)
+          SegmentedButton<_TabView>(
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: _TabView.tab,
+                icon: const Icon(Icons.grid_on, size: 18),
+                tooltip: l10n.tabTuning,
+              ),
+              ButtonSegment(
+                value: _TabView.standard,
+                icon: const Icon(Icons.music_note, size: 18),
+                tooltip: l10n.tabShowStandard,
+              ),
+            ],
+            selected: {_view == _TabView.grand ? _TabView.standard : _view},
+            onSelectionChanged: (s) => setState(() => _view = s.first),
+          ),
+          const SizedBox(width: 16),
+          // Everything else.
+          OutlinedButton.icon(
+            icon: const Icon(Icons.tune, size: 18),
+            label: Text(l10n.settingsTitle),
+            onPressed: () => _showTabSettings(l10n),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Settings sheet: tuning · capo · tempo · transpose · techniques · chord /
+  /// pattern helpers · track management — everything that used to crowd the
+  /// controls row and the editor panel.
+  void _showTabSettings(AppLocalizations l10n) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          void refresh() => setSheet(() {});
+          final labelStyle = Theme.of(ctx).textTheme.labelMedium;
+          Widget stepRow(
+            String label,
+            IconData icon,
+            String value,
+            VoidCallback? onMinus,
+            VoidCallback? onPlus,
+          ) =>
+              Row(
                 children: [
-                  ChoiceChip(
-                    label: Text(
-                      _tracks[i].name,
-                      style: _tracks[i].muted
-                          ? const TextStyle(
-                              decoration: TextDecoration.lineThrough,
-                            )
-                          : null,
-                    ),
-                    selected: i == _active,
-                    onSelected: (_) => selectTrack(i),
+                  Icon(icon, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(label)),
+                  IconButton(
+                    icon: const Icon(Icons.remove),
+                    onPressed: onMinus == null
+                        ? null
+                        : () {
+                            onMinus();
+                            refresh();
+                          },
                   ),
-                  if (i == _active) ...[
-                    _msToggle('M', _tracks[i].muted, toggleMute),
-                    _msToggle('S', _tracks[i].soloed, toggleSolo),
-                  ],
+                  Text(value),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: onPlus == null
+                        ? null
+                        : () {
+                            onPlus();
+                            refresh();
+                          },
+                  ),
                 ],
+              );
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsTitle,
+                      style: Theme.of(ctx).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.tune, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text(l10n.tabTuning)),
+                        DropdownButton<Tuning>(
+                          value: _doc.tuning,
+                          onChanged: (t) {
+                            setState(() {
+                              if (t != null) {
+                                _doc.tuning = t;
+                                _selString =
+                                    _selString.clamp(0, t.stringCount - 1);
+                              }
+                            });
+                            refresh();
+                          },
+                          items: [
+                            for (final t in tabTuningPresets)
+                              DropdownMenuItem(
+                                value: t,
+                                child: Text(_tuningLabel(t)),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    stepRow(
+                      l10n.tabCapo,
+                      Icons.linear_scale,
+                      '$_capo',
+                      _capo > 0 ? () => setState(() => _capo--) : null,
+                      _capo < 12 ? () => setState(() => _capo++) : null,
+                    ),
+                    stepRow(
+                      l10n.tabTempo,
+                      Icons.speed,
+                      '$_bpm',
+                      _bpm > 40 ? () => setState(() => _bpm -= 10) : null,
+                      _bpm < 240 ? () => setState(() => _bpm += 10) : null,
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.swap_vert, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text(l10n.tabTranspose)),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_downward),
+                          onPressed: () {
+                            transposeBy(-1);
+                            refresh();
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_upward),
+                          onPressed: () {
+                            transposeBy(1);
+                            refresh();
+                          },
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Text(l10n.tabTechnique, style: labelStyle),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        for (final t in TabTechnique.values)
+                          FilterChip(
+                            label: Text(_techLabel(l10n, t)),
+                            selected: _selCol < _doc.columns.length &&
+                                _doc.columns[_selCol].techniques.contains(t),
+                            onSelected: (_) {
+                              toggleTechnique(t);
+                              refresh();
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.grid_goldenratio, size: 18),
+                          label: Text(l10n.tabChord),
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            _pickChord();
+                          },
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.auto_awesome, size: 18),
+                          label: Text(l10n.tabPattern),
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            _pickPattern();
+                          },
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    Text(l10n.tabTracks, style: labelStyle),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (var i = 0; i < _tracks.length; i++)
+                          InputChip(
+                            label: Text(
+                              _tracks[i].name,
+                              style: _tracks[i].muted
+                                  ? const TextStyle(
+                                      decoration: TextDecoration.lineThrough,
+                                    )
+                                  : null,
+                            ),
+                            selected: i == _active,
+                            onPressed: () {
+                              selectTrack(i);
+                              refresh();
+                            },
+                            onDeleted: _tracks.length > 1 && i == _active
+                                ? () {
+                                    removeTrack();
+                                    refresh();
+                                  }
+                                : null,
+                          ),
+                        ActionChip(
+                          avatar: const Icon(
+                            Icons.library_add_outlined,
+                            size: 16,
+                          ),
+                          label: Text(l10n.tabAddTrack),
+                          onPressed: () {
+                            addTrack();
+                            refresh();
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        FilterChip(
+                          avatar: const Icon(Icons.volume_off, size: 16),
+                          label: const Text('M'),
+                          selected: _tracks[_active].muted,
+                          onSelected: (_) {
+                            toggleMute();
+                            refresh();
+                          },
+                        ),
+                        FilterChip(
+                          avatar: const Icon(Icons.hearing, size: 16),
+                          label: const Text('S'),
+                          selected: _tracks[_active].soloed,
+                          onSelected: (_) {
+                            toggleSolo();
+                            refresh();
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          IconButton(
-            icon: const Icon(Icons.library_add_outlined),
-            tooltip: l10n.tabAddTrack,
-            onPressed: addTrack,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_sweep_outlined),
-            tooltip: l10n.tabRemoveTrack,
-            onPressed: _tracks.length > 1 ? removeTrack : null,
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  /// A compact M/S toggle badge for the active track.
-  Widget _msToggle(String letter, bool on, VoidCallback onTap) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(left: 2),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          width: 22,
-          height: 22,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: on ? scheme.primary : scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            letter,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: on ? scheme.onPrimary : scheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _controls(AppLocalizations l10n) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          Text(l10n.tabTuning),
-          const SizedBox(width: 8),
-          DropdownButton<Tuning>(
-            value: _doc.tuning,
-            onChanged: (t) => setState(() {
-              if (t != null) {
-                _doc.tuning = t;
-                _selString = _selString.clamp(0, t.stringCount - 1);
-              }
-            }),
-            items: [
-              for (final t in tabTuningPresets)
-                DropdownMenuItem(value: t, child: Text(_tuningLabel(t))),
-            ],
-          ),
-          const SizedBox(width: 20),
-          Text(l10n.tabCapo),
-          IconButton(
-            icon: const Icon(Icons.remove),
-            tooltip: l10n.tabCapo,
-            onPressed: _capo > 0 ? () => setState(() => _capo--) : null,
-          ),
-          Text('$_capo'),
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: l10n.tabCapo,
-            onPressed: _capo < 12 ? () => setState(() => _capo++) : null,
-          ),
-          const SizedBox(width: 20),
-          Text(l10n.tabTempo),
-          IconButton(
-            icon: const Icon(Icons.remove_circle_outline),
-            tooltip: l10n.tabTempo,
-            onPressed: _bpm > 40 ? () => setState(() => _bpm -= 10) : null,
-          ),
-          Text('$_bpm'),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            tooltip: l10n.tabTempo,
-            onPressed: _bpm < 240 ? () => setState(() => _bpm += 10) : null,
-          ),
-          const SizedBox(width: 20),
-          Text(l10n.tabShowStandard),
-          Switch(
-            value: _showStandard,
-            onChanged: (v) => setState(() => _showStandard = v),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _promptSave() async {
     final l10n = AppLocalizations.of(context)!;
@@ -1815,109 +2006,49 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       );
 
   /// Duration palette + fret keypad + column add/remove.
-  Widget _editorPanel(AppLocalizations l10n) {
+  /// The fret keypad — the primary note-entry surface — plus column add /
+  /// remove / duplicate. Duration moved to the toolbar; techniques, transpose
+  /// and chord/pattern helpers moved to the settings sheet.
+  Widget _keypad(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Wrap(
-            spacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(l10n.tabDuration),
-              for (final (dur, steps) in kTabDurations)
-                ChoiceChip(
-                  label: Text(_durLabel(steps)),
-                  selected: _dur == dur,
-                  onSelected: (_) => setState(() {
-                    _dur = dur;
-                    _doc.setDuration(_selCol, dur);
-                  }),
+          for (int f = 0; f <= 12; f++)
+            SizedBox(
+              width: 40,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(40, 36),
                 ),
-            ],
+                onPressed: () => enterFret(f),
+                child: Text('$f'),
+              ),
+            ),
+          IconButton(
+            icon: const Icon(Icons.backspace_outlined),
+            tooltip: l10n.tabClearCell,
+            onPressed: deleteCell,
           ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 4,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              for (int f = 0; f <= 12; f++)
-                SizedBox(
-                  width: 40,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(40, 36),
-                    ),
-                    onPressed: () => enterFret(f),
-                    child: Text('$f'),
-                  ),
-                ),
-              IconButton(
-                icon: const Icon(Icons.backspace_outlined),
-                tooltip: l10n.tabClearCell,
-                onPressed: deleteCell,
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                icon: const Icon(Icons.playlist_add),
-                tooltip: l10n.tabAddColumn,
-                onPressed: addColumn,
-              ),
-              IconButton.filledTonal(
-                icon: const Icon(Icons.playlist_remove),
-                tooltip: l10n.tabRemoveColumn,
-                onPressed: removeColumnAtCursor,
-              ),
-              IconButton.filledTonal(
-                icon: const Icon(Icons.control_point_duplicate),
-                tooltip: l10n.tabDuplicateBar,
-                onPressed: duplicateBar,
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.arrow_downward),
-                tooltip: l10n.tabTransposeDown,
-                onPressed: () => transposeBy(-1),
-              ),
-              Text(
-                l10n.tabTranspose,
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_upward),
-                tooltip: l10n.tabTransposeUp,
-                onPressed: () => transposeBy(1),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.grid_goldenratio, size: 18),
-                label: Text(l10n.tabChord),
-                onPressed: _pickChord,
-              ),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.auto_awesome, size: 18),
-                label: Text(l10n.tabPattern),
-                onPressed: _pickPattern,
-              ),
-            ],
+          const SizedBox(width: 8),
+          IconButton.filledTonal(
+            icon: const Icon(Icons.playlist_add),
+            tooltip: l10n.tabAddColumn,
+            onPressed: addColumn,
           ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(l10n.tabTechnique),
-              for (final t in TabTechnique.values)
-                FilterChip(
-                  label: Text(_techLabel(l10n, t)),
-                  selected: _selCol < _doc.columns.length &&
-                      _doc.columns[_selCol].techniques.contains(t),
-                  onSelected: (_) => toggleTechnique(t),
-                ),
-            ],
+          IconButton.filledTonal(
+            icon: const Icon(Icons.playlist_remove),
+            tooltip: l10n.tabRemoveColumn,
+            onPressed: removeColumnAtCursor,
+          ),
+          IconButton.filledTonal(
+            icon: const Icon(Icons.control_point_duplicate),
+            tooltip: l10n.tabDuplicateBar,
+            onPressed: duplicateBar,
           ),
         ],
       ),
