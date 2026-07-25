@@ -342,6 +342,101 @@ class ReplayVoice {
 
   bool get _filterActive => filterCutoff < 127 || filterResonance > 0;
 
+  // --- Anti-click ramps (MultiPLAY-style) ------------------------------------
+  // Two per-voice smoothers that kill the two classic tracker clicks. They live
+  // ON the voice, so the row-chunk streamer carries them across chunk boundaries
+  // like every other voice cursor (read pointer, biquad, envelope phase).
+  //
+  //  • NOTE-ON SOFT-START: a freshly (re)triggered voice ramps its first
+  //    [softStartSamples] OUTPUT samples 0→1 linearly, so a note that starts
+  //    mid-waveform fades in instead of stepping from silence to a non-zero
+  //    sample. Mirrors MultiPLAY `SOFT_START_SAMPLES 10`
+  //    (../MultiPLAY/src/sample_builtintype.h:402). Only armed on a REAL trigger
+  //    (see [armSoftStart]) — never on a tone-porta tie / volume-column change.
+  //
+  //  • HARD-CUT RESIDUE TAIL: an instant note cut (ECx) drops the sample voice's
+  //    output to 0 in one step — a click. Instead, on a cut we decay the LAST
+  //    emitted value (plus its slope) by [residueFade] each subsequent sample —
+  //    a tiny smoothing tail, not an audible note. Mirrors MultiPLAY
+  //    `residue`/`RESIDUE_FADE 0.93` (../MultiPLAY/src/channel.cc:180-186,600-620).
+  static const int softStartSamples = 10; // MultiPLAY SOFT_START_SAMPLES
+  static const double residueFade = 0.93; // MultiPLAY RESIDUE_FADE
+  int _softStart = 0; // OUTPUT samples still remaining in the 0→1 ramp
+  double _resL = 0.0; // residue tail state (mono / left)
+  double _resR = 0.0; // residue tail state (right)
+  double _resSlopeL = 0.0; // last per-sample delta (mono / left)
+  double _resSlopeR = 0.0; // last per-sample delta (right)
+
+  /// ECx note-cut is silencing the voice on the CURRENT tick (set by [tick]).
+  bool noteCut = false;
+
+  /// Arm the note-on soft-start on a REAL (re)trigger. Clears any residue tail
+  /// (a new note supersedes the old one's decay). Called from the sample tick
+  /// renderers everywhere they (re)seed the read pointer.
+  void armSoftStart() {
+    _softStart = softStartSamples;
+    _resL = 0;
+    _resR = 0;
+    _resSlopeL = 0;
+    _resSlopeR = 0;
+  }
+
+  /// The soft-start gain for the CURRENT output sample, advancing the ramp by
+  /// one sample. Returns 1.0 once the ramp is done (the common case). Rises
+  /// 0 → 1 over [softStartSamples] samples (first sample exactly 0.0).
+  double softStartGain() {
+    if (_softStart <= 0) return 1.0;
+    final g = (softStartSamples - _softStart) / softStartSamples;
+    _softStart--;
+    return g;
+  }
+
+  /// Feed one finished MONO/left output value [v] to the residue tracker (so a
+  /// later hard cut can decay from it) and return it unchanged.
+  double keepResidue(double v) {
+    _resSlopeL = v - _resL;
+    _resL = v;
+    return v;
+  }
+
+  /// Feed one finished STEREO output pair to the residue tracker. The inputs are
+  /// the finished per-channel output (the caller uses them directly), so this is
+  /// void — returning a record here would heap-allocate per sample in the hot
+  /// streaming loop.
+  void keepResidueStereo(double l, double r) {
+    _resSlopeL = l - _resL;
+    _resSlopeR = r - _resR;
+    _resL = l;
+    _resR = r;
+  }
+
+  /// One MONO/left residue-tail sample for a hard cut: the last kept value,
+  /// then decayed (value + slope) by [residueFade]. Emits a short smoothing
+  /// tail instead of an instant discontinuity.
+  double residueStep() {
+    final out = _resL;
+    _resL = (_resL + _resSlopeL) * residueFade;
+    _resSlopeL *= residueFade;
+    return out;
+  }
+
+  /// The most recent [residueStepStereo] outputs (avoids a per-sample record
+  /// allocation in the hot loop — read after the call).
+  double resOutL = 0.0;
+  double resOutR = 0.0;
+
+  /// STEREO residue-tail step for a hard cut (both channels decayed together).
+  /// Writes the tail sample into [resOutL]/[resOutR] rather than returning a
+  /// record, so the streaming stereo loop stays allocation-free.
+  void residueStepStereo() {
+    resOutL = _resL;
+    resOutR = _resR;
+    _resL = (_resL + _resSlopeL) * residueFade;
+    _resR = (_resR + _resSlopeR) * residueFade;
+    _resSlopeL *= residueFade;
+    _resSlopeR *= residueFade;
+  }
+
   // The command armed for the current row.
   int _cmd = 0;
   int _param = 0;
@@ -505,6 +600,10 @@ class ReplayVoice {
       noteVolume = cell.volume!;
     }
 
+    // Arm the note-on soft-start on a REAL (re)trigger only — a tone-porta tie
+    // or a volume-column change leaves [_retriggered] false, so no fade-in.
+    if (_retriggered) armSoftStart();
+
     // Effect memory + immediate (tick-0) commands.
     switch (_cmd) {
       case kFxPortaUp:
@@ -581,6 +680,7 @@ class ReplayVoice {
     int ticksPerRow,
   ) {
     var retrigger = false;
+    noteCut = false;
 
     // EDx note delay: the deferred note triggers at its tick.
     if (_pendingDelayTick != null && k == _pendingDelayTick) {
@@ -667,6 +767,7 @@ class ReplayVoice {
         _panbrelloPhase = 0;
       } else if (_exSub == kExNoteCut && k >= _exVal) {
         effVol = 0;
+        noteCut = true; // hard cut → emit a residue tail, not an instant zero
       }
     }
 
@@ -689,6 +790,10 @@ class ReplayVoice {
       final cycle = x + y;
       if (cycle > 0 && k % cycle >= x) effVol = 0; // in the OFF phase
     }
+
+    // A per-tick retrigger (EDx delayed note, E9x / Rxy) is a real trigger too —
+    // fade it in with the soft-start ramp, like a fresh note.
+    if (retrigger) armSoftStart();
 
     return (
       pitch: effPitch,
@@ -899,6 +1004,49 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
   return false;
 }
 
+/// Maps a neighbour-tap integer position [j] to a valid sample index for the
+/// 4-point cubic read, resolving it CONSISTENTLY with the main read position:
+///  • a forward loop wraps a tap past the loop end back to the loop start, and
+///    clamps a tap that runs off the front of the sample (idx-1 < 0) to 0;
+///  • a ping-pong loop folds the tap through [foldLoopPosition] (the same fold
+///    the read pointer follows), so a tap on the reflected side reads the
+///    reflected sample;
+///  • a non-looping sample clamps taps to the sample bounds (like [resampleCubic]
+///    endpoint handling) — the very start of a sample repeats sample[0].
+int _wrapSampleIndex(
+  int j,
+  int len,
+  bool loops,
+  bool pingPong,
+  int loopStart,
+  int loopLen,
+) {
+  if (loops && loopLen > 0) {
+    if (pingPong) {
+      final folded =
+          foldLoopPosition(j.toDouble(), loopStart, loopLen, pingPong: true)
+              .floor();
+      return folded < 0 ? 0 : (folded >= len ? len - 1 : folded);
+    }
+    final loopEnd = loopStart + loopLen;
+    if (j >= loopEnd) {
+      final w = loopStart + ((j - loopStart) % loopLen);
+      return w < 0 ? 0 : (w >= len ? len - 1 : w);
+    }
+  }
+  return j < 0 ? 0 : (j >= len ? len - 1 : j);
+}
+
+/// Reads [sample] at the fractional position [readPos] using **4-point cubic
+/// (Catmull-Rom) interpolation** — the tick-voice analogue of the offline
+/// [resampleCubic] pitcher, so command songs get the same smoother resampling as
+/// the simple-song path instead of 2-point linear. Fetches the four neighbours
+/// `s[idx-1..idx+2]`, each mapped through [_wrapSampleIndex] so loop / ping-pong
+/// wrap is respected per tap (MultiPLAY's looped-neighbour handling,
+/// ../MultiPLAY/src/sample_builtintype.h:288-305), and blends by the fractional
+/// part. Allocation-free (top-level helper calls, no closures) for the hot
+/// streaming loop. Returns null when a one-shot (non-looping) sample is
+/// exhausted, so callers can stop the note — same signalling as before.
 double? _readLoopedSample(
   Float64List sample,
   double readPos,
@@ -933,13 +1081,36 @@ double? _readLoopedSample(
   }
 
   final frac = src - src.floor();
-  final next = idx + 1 < sample.length
-      ? sample[idx + 1]
-      : loops
-          ? sample[loopStart.clamp(0, sample.length - 1).toInt()]
-          : 0.0;
-  return sample[idx] * (1 - frac) + next * frac;
+  final len = sample.length;
+  final p0 = sample[
+      _wrapSampleIndex(idx - 1, len, loops, pingPong, loopStart, loopLen)];
+  final p1 =
+      sample[_wrapSampleIndex(idx, len, loops, pingPong, loopStart, loopLen)];
+  final p2 = sample[
+      _wrapSampleIndex(idx + 1, len, loops, pingPong, loopStart, loopLen)];
+  final p3 = sample[
+      _wrapSampleIndex(idx + 2, len, loops, pingPong, loopStart, loopLen)];
+  final t2 = frac * frac;
+  final t3 = t2 * frac;
+  return 0.5 *
+      (2 * p1 +
+          (-p0 + p2) * frac +
+          (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+          (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
 }
+
+/// Test-only handle on the private tick-voice cubic reader [_readLoopedSample],
+/// so interpolation-quality tests can exercise the exact production read. Not
+/// used by production code (see test/interpolation_quality_test.dart).
+double? readLoopedSampleForTest(
+  Float64List sample,
+  double readPos, {
+  bool loops = false,
+  bool pingPong = false,
+  int loopStart = 0,
+  int loopLen = 0,
+}) =>
+    _readLoopedSample(sample, readPos, loops, pingPong, loopStart, loopLen);
 
 /// Stereo counterpart of the per-tick sample voice. It keeps the native right
 /// waveform while applying the same pitch/volume/effect state as the mono tick
@@ -1092,16 +1263,33 @@ double? _readLoopedSample(
                 : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
         final amount = vol * attack * level * release;
-        if (sampleRight != null) {
-          final leftGain = pan > 0 ? 1.0 - pan : 1.0;
-          final rightGain = pan < 0 ? 1.0 + pan : 1.0;
-          left[i] += fValue * amount * leftGain;
-          right[i] += fRight * amount * rightGain;
+        // Anti-click: hard-cut residue tail (panned as the note was) vs. a
+        // soft-start fade-in applied equally to both channels of one output
+        // sample. Mirror this block byte-for-byte in the streaming stereo path.
+        final double outL, outR;
+        if (voice.noteCut) {
+          voice.residueStepStereo();
+          outL = voice.resOutL;
+          outR = voice.resOutR;
         } else {
-          final theta = (pan + 1) / 2 * (pi / 2);
-          left[i] += fValue * amount * cos(theta);
-          right[i] += fValue * amount * sin(theta);
+          final sg = voice.softStartGain();
+          final double cl, cr;
+          if (sampleRight != null) {
+            final leftGain = pan > 0 ? 1.0 - pan : 1.0;
+            final rightGain = pan < 0 ? 1.0 + pan : 1.0;
+            cl = fValue * amount * leftGain * sg;
+            cr = fRight * amount * rightGain * sg;
+          } else {
+            final theta = (pan + 1) / 2 * (pi / 2);
+            cl = fValue * amount * cos(theta) * sg;
+            cr = fValue * amount * sin(theta) * sg;
+          }
+          voice.keepResidueStereo(cl, cr);
+          outL = cl;
+          outR = cr;
         }
+        left[i] += outL;
+        right[i] += outR;
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,
               released: voice.released,
@@ -1242,7 +1430,16 @@ void _renderSampleChannelInto(
                 ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
                 : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
-        stem[i] += voice.filterOut(sampleVal) * vol * attack * el * release;
+        // Anti-click: a hard cut (ECx) emits a decaying residue tail instead of
+        // an instant zero; a real trigger fades in over the soft-start ramp.
+        if (voice.noteCut) {
+          stem[i] += voice.residueStep();
+        } else {
+          final sg = voice.softStartGain();
+          final out =
+              voice.filterOut(sampleVal) * vol * attack * el * release * sg;
+          stem[i] += voice.keepResidue(out);
+        }
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,
               released: voice.released,
@@ -1389,7 +1586,18 @@ void _renderSampleChannelIntoVariable(
                 ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
                 : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
-        final sv = voice.filterOut(sampleVal) * vol * attack * el * release;
+        // Anti-click: hard-cut residue tail vs. soft-start fade-in (see the
+        // buffered [_renderSampleChannelInto] emit). [sv] is the finished value
+        // BEFORE channel gain, so the residue tracks the pre-gain scalar.
+        final double sv;
+        if (voice.noteCut) {
+          sv = voice.residueStep();
+        } else {
+          final sg = voice.softStartGain();
+          final out =
+              voice.filterOut(sampleVal) * vol * attack * el * release * sg;
+          sv = voice.keepResidue(out);
+        }
         if (useSink) {
           // Native (scale == channel.gain): emit the finished PCM sample value
           // directly — identical to the buffered `mix[i] += stem[i] * gain`.
@@ -4428,9 +4636,18 @@ void _sampleRenderRowsMono(
                 ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
                 : exp(-relSamples / (0.03 * kSampleRate)))
             : 1.0;
-        // Accumulate the un-gained stem; the caller applies gain once.
-        dest[i - sampleBase] +=
-            voice.filterOut(sampleVal) * vol * attack * el * release;
+        // Accumulate the un-gained stem; the caller applies gain once. Anti-click
+        // (mirror of the buffered [_renderSampleChannelInto]): residue tail on a
+        // hard cut, soft-start fade-in on a trigger — voice state carries the
+        // ramp/residue across chunk boundaries.
+        if (voice.noteCut) {
+          dest[i - sampleBase] += voice.residueStep();
+        } else {
+          final sg = voice.softStartGain();
+          final out =
+              voice.filterOut(sampleVal) * vol * attack * el * release * sg;
+          dest[i - sampleBase] += voice.keepResidue(out);
+        }
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,
               released: voice.released,
@@ -4583,16 +4800,33 @@ void _sampleRenderRowsStereo(
             : 1.0;
         final amount = vol * attack * level * release;
         final di = i - sampleBase;
-        if (sampleRight != null) {
-          final leftGain = pan > 0 ? 1.0 - pan : 1.0;
-          final rightGain = pan < 0 ? 1.0 + pan : 1.0;
-          destL[di] += fValue * amount * leftGain;
-          destR[di] += fRight * amount * rightGain;
+        // Anti-click — byte-for-byte mirror of the buffered
+        // [_renderSampleChannelStereoTicks] emit (residue tail on a hard cut,
+        // soft-start fade-in on a trigger); voice state carries across chunks.
+        final double outL, outR;
+        if (voice.noteCut) {
+          voice.residueStepStereo();
+          outL = voice.resOutL;
+          outR = voice.resOutR;
         } else {
-          final theta = (pan + 1) / 2 * (pi / 2);
-          destL[di] += fValue * amount * cos(theta);
-          destR[di] += fValue * amount * sin(theta);
+          final sg = voice.softStartGain();
+          final double cl, cr;
+          if (sampleRight != null) {
+            final leftGain = pan > 0 ? 1.0 - pan : 1.0;
+            final rightGain = pan < 0 ? 1.0 + pan : 1.0;
+            cl = fValue * amount * leftGain * sg;
+            cr = fRight * amount * rightGain * sg;
+          } else {
+            final theta = (pan + 1) / 2 * (pi / 2);
+            cl = fValue * amount * cos(theta) * sg;
+            cr = fValue * amount * sin(theta) * sg;
+          }
+          voice.keepResidueStereo(cl, cr);
+          outL = cl;
+          outR = cr;
         }
+        destL[di] += outL;
+        destR[di] += outR;
         final pitch = cur.nativePitchEnvelope?.semitonesAt(
               t * 1000,
               released: voice.released,
@@ -4864,7 +5098,18 @@ void _zoneRunRenderChunkStereo(
                   ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
                   : exp(-relSamples / (0.03 * kSampleRate)))
               : 1.0;
-          final sv = sampleVal * vol * attack * el * release;
+          // Anti-click — mirror of the buffered [_renderSampleChannelIntoVariable]
+          // native-sink emit that [_renderLongNativeVariableStereo] drives: a
+          // hard-cut residue tail vs. a soft-start fade-in, on the pre-gain
+          // scalar. (This path is unfiltered, matching that sink's no-op filter.)
+          final double sv;
+          if (voice.noteCut) {
+            sv = voice.residueStep();
+          } else {
+            final sg = voice.softStartGain();
+            sv =
+                voice.keepResidue(sampleVal * vol * attack * el * release * sg);
+          }
           // Native sink: truncate to Float32 (× gain), then distribute into L/R
           // via the pan region covering this global sample index.
           f32[0] = sv * gain;
