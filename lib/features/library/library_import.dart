@@ -15,6 +15,7 @@ import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
         StaffSystem,
+        multiPartFromLilyPond,
         multiPartScoreFromAbc,
         multiPartScoreFromGpif,
         multiPartScoreFromKern,
@@ -23,7 +24,6 @@ import 'package:crisp_notation/crisp_notation.dart'
         readGpifFromGp,
         readMusicXmlFromMxl,
         scoreFromGabc,
-        scoreFromLilyPond,
         scoreFromMusicXml;
 
 /// Decodes fetched [bytes] of the given [format] into a MusicXML string. Throws
@@ -51,12 +51,10 @@ String bytesToMusicXml(String format, Uint8List bytes) => switch (format) {
             StaffSystem([scoreFromGabc(utf8.decode(bytes))]),
           ),
         ),
-      // LilyPond (.ly): single staff (for now).
-      'ly' || 'lilypond' => multiPartToMusicXml(
-          MultiPartScore.fromStaffSystem(
-            StaffSystem([scoreFromLilyPond(utf8.decode(bytes))]),
-          ),
-        ),
+      // LilyPond (.ly): one part per staff (StaffGroup/PianoStaff/… → parts).
+      'ly' ||
+      'lilypond' =>
+        multiPartToMusicXml(multiPartFromLilyPond(utf8.decode(bytes))),
       _ => throw FormatException('Cannot import format: $format'),
     };
 

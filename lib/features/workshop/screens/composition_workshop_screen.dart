@@ -281,6 +281,7 @@ MultiPartScore importMultiPart(String fileName, Uint8List bytes) {
     'abc' => multiPartScoreFromAbc(text()),
     'mei' => multiPartScoreFromMei(text()),
     'krn' => multiPartScoreFromKern(text()),
+    'ly' || 'lilypond' => multiPartFromLilyPond(text()),
     'mid' || 'midi' => multiTrackMidiToMultiPart(bytes),
     // MuseScore / GPIF have no multi-part reader here yet.
     _ => MultiPartScore([importScore(fileName, bytes)]),

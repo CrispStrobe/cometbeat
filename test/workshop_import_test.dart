@@ -56,6 +56,21 @@ void main() {
     expect(mps.parts.length, 2);
   });
 
+  test('importMultiPart keeps both staves of a multi-staff .ly', () {
+    const ly = r'''
+\score {
+  \new StaffGroup <<
+    \new Staff { \clef treble c'4 d' e' f' }
+    \new Staff { \clef bass c4 d e f }
+  >>
+}
+''';
+    final mps = importMultiPart('duet.ly', _bytes(ly));
+    expect(mps.parts, hasLength(2));
+    expect(mps.parts[0].clef, Clef.treble);
+    expect(mps.parts[1].clef, Clef.bass);
+  });
+
   test('importMultiPart wraps a single-part file as one part', () {
     final xml = scoreToMusicXml(Score.simple(notes: 'c4:q d4'));
     final mps = importMultiPart('tune.musicxml', _bytes(xml));

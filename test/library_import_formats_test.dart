@@ -40,6 +40,33 @@ void main() {
     expect(() => scoreFromMusicXml(xml), returnsNormally);
   });
 
+  test('lilypond (.ly) imports and keeps EVERY staff as a part', () {
+    // Two staves → the MusicXML must carry two <score-part>s, not collapse to
+    // one (the multiPartFromLilyPond wiring).
+    const ly = r'''
+\score {
+  \new StaffGroup <<
+    \new Staff { \clef treble c'4 d' e' f' }
+    \new Staff { \clef bass c4 d e f }
+  >>
+}
+''';
+    final xml = bytesToMusicXml('ly', _b(ly));
+    expect(xml, contains('<note'));
+    // Two <score-part id=…> entries (not the <score-partwise> root, hence the
+    // trailing space in the match).
+    expect(RegExp('<score-part ').allMatches(xml), hasLength(2),
+        reason: 'both staves survive as parts');
+    expect(() => scoreFromMusicXml(xml), returnsNormally);
+  });
+
+  test('a single-staff .ly still imports (one part)', () {
+    const ly = r"\new Staff { c'4 d' e' f' }";
+    final xml = bytesToMusicXml('ly', _b(ly));
+    expect(xml, contains('<note'));
+    expect(() => scoreFromMusicXml(xml), returnsNormally);
+  });
+
   test('an unknown format still throws', () {
     expect(
       () => bytesToMusicXml('xyz', _b('nope')),
