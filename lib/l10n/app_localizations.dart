@@ -3866,6 +3866,96 @@ abstract class AppLocalizations {
   /// **'Crop to range'**
   String get dawRangeCrop;
 
+  /// No description provided for @dawStatsClipping.
+  ///
+  /// In en, this message translates to:
+  /// **'clipping!'**
+  String get dawStatsClipping;
+
+  /// No description provided for @dawGenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate…'**
+  String get dawGenerate;
+
+  /// No description provided for @dawFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get dawFrequency;
+
+  /// No description provided for @dawLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Length'**
+  String get dawLength;
+
+  /// No description provided for @dawLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get dawLevel;
+
+  /// No description provided for @dawShapeSine.
+  ///
+  /// In en, this message translates to:
+  /// **'Sine tone'**
+  String get dawShapeSine;
+
+  /// No description provided for @dawShapeSquare.
+  ///
+  /// In en, this message translates to:
+  /// **'Square tone'**
+  String get dawShapeSquare;
+
+  /// No description provided for @dawShapeSaw.
+  ///
+  /// In en, this message translates to:
+  /// **'Sawtooth tone'**
+  String get dawShapeSaw;
+
+  /// No description provided for @dawShapeTriangle.
+  ///
+  /// In en, this message translates to:
+  /// **'Triangle tone'**
+  String get dawShapeTriangle;
+
+  /// No description provided for @dawShapeWhiteNoise.
+  ///
+  /// In en, this message translates to:
+  /// **'White noise'**
+  String get dawShapeWhiteNoise;
+
+  /// No description provided for @dawShapePinkNoise.
+  ///
+  /// In en, this message translates to:
+  /// **'Pink noise'**
+  String get dawShapePinkNoise;
+
+  /// No description provided for @dawShapeSilence.
+  ///
+  /// In en, this message translates to:
+  /// **'Silence'**
+  String get dawShapeSilence;
+
+  /// No description provided for @dawZoomIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get dawZoomIn;
+
+  /// No description provided for @dawZoomOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get dawZoomOut;
+
+  /// No description provided for @dawZoomFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit'**
+  String get dawZoomFit;
+
   /// No description provided for @dawSlower.
   ///
   /// In en, this message translates to:
@@ -3977,7 +4067,7 @@ abstract class AppLocalizations {
   /// No description provided for @dawHelpToolbarBody.
   ///
   /// In en, this message translates to:
-  /// **'Undo and redo every edit. With clips selected, copy, cut, paste at the playhead, or delete them across lanes. Play or stop, toggle Loop, toggle Snap to grid, export the mix, or clear everything.'**
+  /// **'Undo and redo every edit. With clips selected, copy, cut, paste at the playhead, or delete them across lanes. Play or stop, toggle Loop, toggle Snap to grid, export the mix, or clear everything. Generate… builds a fresh tone, noise or silence clip on its own lane, and the zoom buttons stretch or squeeze the timeline (Fit shows the whole arrangement at once). If you mark a range while Loop is on, playback loops just that selection instead of the whole arrangement.'**
   String get dawHelpToolbarBody;
 
   /// No description provided for @dawHelpBuildTitle.

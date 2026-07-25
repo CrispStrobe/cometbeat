@@ -17,6 +17,8 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/daw_edits.dart'
+    show ClipStats, GeneratorShape;
 import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart'
@@ -134,6 +136,30 @@ abstract interface class DawTester {
   int silenceRange(Iterable<int> tracks, double startMs, double endMs);
   int cropToRange(Iterable<int> tracks, double startMs, double endMs);
 
+  /// Measured peak/RMS/duration/clipping for a clip's played window.
+  ClipStats clipStats(int track, int index);
+
+  /// Generate a steady tone / noise / silence onto its own new lane.
+  void generateClip({
+    required GeneratorShape shape,
+    double freq,
+    double seconds,
+    double amp,
+  });
+
+  /// Timeline zoom: pixels per second, and the in/out/fit controls.
+  double get pxPerSecond;
+  void zoomIn();
+  void zoomOut();
+  void zoomToFit();
+
+  /// Whether playback loops the marked range rather than the whole
+  /// arrangement — true when looping is on AND a range is marked.
+  bool get loopsMarkedRange;
+
+  /// The playhead, in ms from the arrangement's start.
+  double get positionMs;
+
   /// Whether a clip is engraved music that can be voiced with an instrument, and
   /// the per-clip / per-track instrument assignment (null = default synth). The
   /// instrument comes from the assets Instruments/Samples library.
@@ -225,6 +251,9 @@ class _DawScreenState extends State<DawScreen>
   double _totalMs = 0;
   bool _loop = false;
 
+  /// Timeline zoom multiplier over [_basePxPerSecond] (O8).
+  double _zoom = 1;
+
   @override
   void initState() {
     super.initState();
@@ -240,6 +269,13 @@ class _DawScreenState extends State<DawScreen>
 
   void _onTick(Duration elapsed) {
     final ms = _seekMs + elapsed.inMilliseconds.toDouble();
+    // O9 — with a range marked, looping cycles THAT selection rather than the
+    // whole arrangement, so you can work on one bar over and over.
+    if (loopsMarkedRange && ms >= _rangeEndMs) {
+      seekTo(_rangeStartMs);
+      play();
+      return;
+    }
     if (_totalMs > 0 && ms >= _totalMs) {
       // Reached the end: loop restarts (from the seek point), else stop. The
       // re-bake in play() is cheap (every clip is served from the cache).
@@ -1265,6 +1301,99 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
+  String _shapeLabel(GeneratorShape shape, AppLocalizations l10n) =>
+      switch (shape) {
+        GeneratorShape.sine => l10n.dawShapeSine,
+        GeneratorShape.square => l10n.dawShapeSquare,
+        GeneratorShape.saw => l10n.dawShapeSaw,
+        GeneratorShape.triangle => l10n.dawShapeTriangle,
+        GeneratorShape.whiteNoise => l10n.dawShapeWhiteNoise,
+        GeneratorShape.pinkNoise => l10n.dawShapePinkNoise,
+        GeneratorShape.silence => l10n.dawShapeSilence,
+      };
+
+  /// O7 — build a tone / noise / silence clip from scratch onto a new lane.
+  Future<void> _generateClipDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    var shape = GeneratorShape.sine;
+    var freq = 440.0;
+    var seconds = 2.0;
+    var amp = 0.5;
+    final made = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) {
+          final pitched = shape != GeneratorShape.silence &&
+              shape != GeneratorShape.whiteNoise &&
+              shape != GeneratorShape.pinkNoise;
+          return AlertDialog(
+            title: Text(l10n.dawGenerate),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButton<GeneratorShape>(
+                    value: shape,
+                    isExpanded: true,
+                    onChanged: (v) {
+                      if (v != null) setDialog(() => shape = v);
+                    },
+                    items: [
+                      for (final s in GeneratorShape.values)
+                        DropdownMenuItem(
+                          value: s,
+                          child: Text(_shapeLabel(s, l10n)),
+                        ),
+                    ],
+                  ),
+                  // Frequency only means something for the tone shapes.
+                  if (pitched) ...[
+                    Text('${l10n.dawFrequency} ${freq.round()} Hz'),
+                    Slider(
+                      value: freq,
+                      min: 20,
+                      max: 4000,
+                      label: '${freq.round()} Hz',
+                      onChanged: (v) => setDialog(() => freq = v),
+                    ),
+                  ],
+                  Text('${l10n.dawLength} ${seconds.toStringAsFixed(1)} s'),
+                  Slider(
+                    value: seconds,
+                    min: 0.1,
+                    max: 30,
+                    onChanged: (v) => setDialog(() => seconds = v),
+                  ),
+                  if (shape != GeneratorShape.silence) ...[
+                    Text('${l10n.dawLevel} ${(amp * 100).round()}%'),
+                    Slider(
+                      value: amp,
+                      onChanged: (v) => setDialog(() => amp = v),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(l10n.dawCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(l10n.dawAmplifyApply),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (made != true) return;
+    generateClip(shape: shape, freq: freq, seconds: seconds, amp: amp);
+  }
+
   /// Ocenaudio's "Amplify": pick a gain in dB and bake it into the clip.
   Future<void> _amplifyClipDialog(int track, int index) async {
     final l10n = AppLocalizations.of(context)!;
@@ -2090,6 +2219,62 @@ class _DawScreenState extends State<DawScreen>
   @override
   int cropToRange(Iterable<int> tracks, double startMs, double endMs) =>
       _daw.cropToRange(tracks, startMs, endMs);
+
+  @override
+  ClipStats clipStats(int track, int index) => _daw.clipStats(track, index);
+
+  @override
+  void generateClip({
+    required GeneratorShape shape,
+    double freq = 440,
+    double seconds = 2,
+    double amp = 0.5,
+  }) {
+    _daw.addGeneratedClip(
+      shape: shape,
+      freq: freq,
+      seconds: seconds,
+      amp: amp,
+    );
+    if (_playing) play();
+  }
+
+  @override
+  double get pxPerSecond => _pxPerSecond;
+
+  @override
+  void zoomIn() => setState(
+        () => _zoom = math.min(_maxZoom, _zoom * _zoomStep),
+      );
+
+  @override
+  void zoomOut() => setState(
+        () => _zoom = math.max(_minZoom, _zoom / _zoomStep),
+      );
+
+  @override
+  void zoomToFit() {
+    final seconds = _arrangementMs / 1000;
+    if (seconds <= 0) {
+      setState(() => _zoom = 1);
+      return;
+    }
+    // Fit the arrangement into the lane viewport: the screen minus the track
+    // gutter and the timeline's own padding.
+    final available = MediaQuery.of(context).size.width - _gutterWidth - 48;
+    if (available <= 0) return;
+    setState(
+      () => _zoom = (available / seconds / _basePxPerSecond)
+          .clamp(_minZoom, _maxZoom)
+          .toDouble(),
+    );
+  }
+
+  @override
+  bool get loopsMarkedRange => _loop && _hasFxRange;
+
+  @override
+  double get positionMs => _positionMs.value;
 
   @override
   bool isScoreClip(int track, int index) => _daw.isScoreClip(track, index);
@@ -3044,6 +3229,39 @@ class _DawScreenState extends State<DawScreen>
                         ),
                       ];
                     }(),
+                    // O10 — what the audio actually measures. Peak/RMS are
+                    // technical units (like dBFS/Hz), so they aren't translated.
+                    const SizedBox(height: 12),
+                    Builder(
+                      builder: (statsCtx) {
+                        final s = clipStats(track, index);
+                        final small = Theme.of(statsCtx).textTheme.bodySmall;
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${(s.durationMs / 1000).toStringAsFixed(2)} s'
+                                ' · ${s.channels == 2 ? 'stereo' : 'mono'}'
+                                ' · peak ${s.peakDb.toStringAsFixed(1)} dBFS'
+                                ' · RMS ${s.rmsDb.toStringAsFixed(1)} dBFS',
+                                style: small,
+                              ),
+                            ),
+                            if (s.clippedSamples > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Text(
+                                  l10n.dawStatsClipping,
+                                  style: small?.copyWith(
+                                    color: Theme.of(statsCtx).colorScheme.error,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -3838,6 +4056,32 @@ class _DawScreenState extends State<DawScreen>
                             label: Text(l10n.dawRangeEdit),
                           ),
                         ),
+                        // O7 — build a tone/noise/silence clip from scratch.
+                        OutlinedButton.icon(
+                          onPressed: _generateClipDialog,
+                          icon: const Icon(Icons.graphic_eq),
+                          label: Text(l10n.dawGenerate),
+                        ),
+                        // O8 — timeline zoom.
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.zoom_out),
+                              tooltip: l10n.dawZoomOut,
+                              onPressed: _zoom <= _minZoom ? null : zoomOut,
+                            ),
+                            TextButton(
+                              onPressed: zoomToFit,
+                              child: Text(l10n.dawZoomFit),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.zoom_in),
+                              tooltip: l10n.dawZoomIn,
+                              onPressed: _zoom >= _maxZoom ? null : zoomIn,
+                            ),
+                          ],
+                        ),
                         // Project tempo — defines the beat snap grid.
                         Row(
                           mainAxisSize: MainAxisSize.min,
@@ -3869,7 +4113,16 @@ class _DawScreenState extends State<DawScreen>
 
   // --- Timeline (to-scale clips, draggable in time) --------------------------
 
-  static const double _pxPerSecond = 80;
+  /// Timeline scale at 1x zoom. Everything that maps time↔pixels goes through
+  /// [_pxPerSecond], so changing [_zoom] rescales the ruler, the clips, the
+  /// beat grid, the range overlay and the drag maths together.
+  static const double _basePxPerSecond = 80;
+  static const double _minZoom =
+      0.1; // ~8 px/s — a long arrangement at a glance
+  static const double _maxZoom = 20; // ~1600 px/s — sample-level detail
+  static const double _zoomStep = 1.5;
+
+  double get _pxPerSecond => _basePxPerSecond * _zoom;
   static const double _laneHeight = 108;
   static const double _gutterWidth = 112;
   static const double _rulerHeight = 20;
@@ -3877,16 +4130,22 @@ class _DawScreenState extends State<DawScreen>
   // The clip's start when a long-press drag begins (offsets are relative to it).
   double _dragOriginMs = 0;
 
-  Widget _timeline(DawService daw, ColorScheme scheme) {
-    // Total arrangement length → the shared lane width.
+  /// Where the last clip ends — the arrangement's length, which sets the lane
+  /// width and what "zoom to fit" has to fit.
+  double get _arrangementMs {
     var maxEndMs = 0.0;
-    for (var i = 0; i < daw.timeline.tracks.length; i++) {
-      for (var j = 0; j < daw.timeline.tracks[i].clips.length; j++) {
-        final end = daw.clipStartMs(i, j) + daw.clipDurationMs(i, j);
+    for (var i = 0; i < _daw.timeline.tracks.length; i++) {
+      for (var j = 0; j < _daw.timeline.tracks[i].clips.length; j++) {
+        final end = _daw.clipStartMs(i, j) + _daw.clipDurationMs(i, j);
         if (end > maxEndMs) maxEndMs = end;
       }
     }
-    final laneWidth = math.max(320.0, maxEndMs / 1000 * _pxPerSecond + 48);
+    return maxEndMs;
+  }
+
+  Widget _timeline(DawService daw, ColorScheme scheme) {
+    final laneWidth =
+        math.max(320.0, _arrangementMs / 1000 * _pxPerSecond + 48);
 
     return SingleChildScrollView(
       child: Row(

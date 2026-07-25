@@ -1053,6 +1053,141 @@ void main() {
     expect(service.clipDurationMs(0, 0), closeTo(500, 0.1));
   });
 
+  testWidgets('the inspector reports the clip\'s measured level',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+
+    await tester.tap(find.text('🥁'));
+    await tester.pumpAndSettle();
+
+    // The stats line reads "<n.nn> s · mono · peak -x.x dBFS · RMS -y.y dBFS".
+    final stats = find.textContaining('dBFS');
+    expect(stats, findsOneWidget);
+    final text = tester.widget<Text>(stats).data!;
+    expect(text, contains('peak'));
+    expect(text, contains('RMS'));
+    expect(text, contains(' s · ')); // duration first
+
+    // And it agrees with the service's own measurement.
+    final s = daw.clipStats(0, 0);
+    expect(text, contains(s.peakDb.toStringAsFixed(1)));
+  });
+
+  testWidgets('Generate… builds a tone clip on its own new lane',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final tracksBefore = daw.trackCount;
+    expect(daw.clipCount, 0);
+
+    final button = find.text('Generate…');
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    // Default is a 440 Hz sine, 2.0 s.
+    expect(find.text('Frequency 440 Hz'), findsOneWidget);
+    expect(find.text('Length 2.0 s'), findsOneWidget);
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(daw.clipCount, 1);
+    expect(daw.trackCount, tracksBefore + 1); // its own lane
+    final stats = daw.clipStats(tracksBefore, 0);
+    expect(stats.durationMs, closeTo(2000, 1));
+    expect(stats.peak, closeTo(0.5, 0.01));
+  });
+
+  testWidgets('zoom in/out/fit rescale the timeline', (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+    final base = daw.pxPerSecond;
+
+    await tester.ensureVisible(find.text('Fit'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Zoom in'));
+    await tester.pumpAndSettle();
+    expect(daw.pxPerSecond, greaterThan(base));
+
+    await tester.tap(find.byTooltip('Zoom out'));
+    await tester.pumpAndSettle();
+    expect(daw.pxPerSecond, closeTo(base, 1e-9)); // back where it started
+
+    await tester.tap(find.byTooltip('Zoom out'));
+    await tester.pumpAndSettle();
+    expect(daw.pxPerSecond, lessThan(base));
+
+    // Fit sizes the arrangement to the viewport rather than to a step.
+    await tester.tap(find.text('Fit'));
+    await tester.pumpAndSettle();
+    expect(daw.pxPerSecond, greaterThan(0));
+  });
+
+  testWidgets('a marked range turns loop into a loop-the-selection',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+    expect(daw.loopsMarkedRange, isFalse); // no range, no loop
+
+    daw.seekTo(250);
+    await tester.pump();
+    await tester.tap(find.text('Mark In'));
+    await tester.pumpAndSettle();
+    daw.seekTo(750);
+    await tester.pump();
+    await tester.tap(find.text('Mark Out'));
+    await tester.pumpAndSettle();
+    expect(daw.loopsMarkedRange, isFalse); // range marked, loop still off
+
+    daw.toggleLoop();
+    await tester.pump();
+    expect(daw.loopsMarkedRange, isTrue); // both → the range is the loop
+
+    daw.toggleLoop();
+    await tester.pump();
+    expect(daw.loopsMarkedRange, isFalse);
+  });
+
+  testWidgets(
+      'looping a marked range wraps at the range end, not the arrangement end',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+    expect(daw.clipDurationMs(0, 0), greaterThan(900)); // room to loop inside
+
+    daw.seekTo(200);
+    await tester.pump();
+    await tester.tap(find.text('Mark In'));
+    await tester.pumpAndSettle();
+    daw.seekTo(600);
+    await tester.pump();
+    await tester.tap(find.text('Mark Out'));
+    await tester.pumpAndSettle();
+    daw.toggleLoop();
+    await tester.pump();
+
+    daw.play();
+    await tester.pump();
+    // Run past the range end but well short of the arrangement end: the
+    // playhead must have wrapped back inside the range rather than run on.
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(daw.isPlaying, isTrue);
+    expect(daw.positionMs, lessThan(700));
+
+    daw.stop();
+  });
+
   testWidgets('Faster resamples the clip to a shorter baked take',
       (tester) async {
     await _pumpDaw(tester);

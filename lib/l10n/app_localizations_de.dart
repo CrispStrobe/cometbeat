@@ -2060,6 +2060,51 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawRangeCrop => 'Auf Bereich zuschneiden';
 
   @override
+  String get dawStatsClipping => 'Übersteuerung!';
+
+  @override
+  String get dawGenerate => 'Erzeugen…';
+
+  @override
+  String get dawFrequency => 'Frequenz';
+
+  @override
+  String get dawLength => 'Länge';
+
+  @override
+  String get dawLevel => 'Pegel';
+
+  @override
+  String get dawShapeSine => 'Sinuston';
+
+  @override
+  String get dawShapeSquare => 'Rechteckton';
+
+  @override
+  String get dawShapeSaw => 'Sägezahnton';
+
+  @override
+  String get dawShapeTriangle => 'Dreieckston';
+
+  @override
+  String get dawShapeWhiteNoise => 'Weißes Rauschen';
+
+  @override
+  String get dawShapePinkNoise => 'Rosa Rauschen';
+
+  @override
+  String get dawShapeSilence => 'Stille';
+
+  @override
+  String get dawZoomIn => 'Vergrößern';
+
+  @override
+  String get dawZoomOut => 'Verkleinern';
+
+  @override
+  String get dawZoomFit => 'Einpassen';
+
+  @override
   String get dawSlower => 'Langsamer';
 
   @override
@@ -2116,7 +2161,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dawHelpToolbarBody =>
-      'Mache jede Änderung rückgängig oder wiederhole sie. Bei ausgewählten Clips kannst du sie kopieren, ausschneiden, an der Abspielposition einfügen oder über alle Spuren hinweg löschen. Abspielen oder stoppen, Schleife umschalten, am Raster ausrichten umschalten, den Mix exportieren oder alles leeren.';
+      'Mache jede Änderung rückgängig oder wiederhole sie. Bei ausgewählten Clips kannst du sie kopieren, ausschneiden, an der Abspielposition einfügen oder über alle Spuren hinweg löschen. Abspielen oder stoppen, Schleife umschalten, am Raster ausrichten umschalten, den Mix exportieren oder alles leeren. „Erzeugen…“ legt einen neuen Ton-, Rausch- oder Stille-Clip auf einer eigenen Spur an, und mit den Zoom-Knöpfen dehnst oder stauchst du die Zeitleiste („Einpassen“ zeigt die ganze Anordnung auf einmal). Wenn du bei eingeschalteter Schleife einen Bereich markierst, wird nur dieser Bereich wiederholt.';
 
   @override
   String get dawHelpBuildTitle => 'Eine Spur aufbauen';

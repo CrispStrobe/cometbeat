@@ -30,7 +30,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 > mark yours idle here and push before/after touching hot shared files.
 
 - **opus (loop-suite)** · ✅ **SHIPPED (idle) — Loop Suite: genuinely gapless looping + Loop Mixer per-track editing.** (1) **Killed the loop-seam hiccup app-wide:** `GaplessLoopPlayer` looped via audioplayers `ReleaseMode.loop` (the OS media-element loop-reset = an audible gap on every wrap); it now loops via **flutter_soloud** (sample-accurate mixer loop, no OS reset) with a 12 ms crossfade on buffer swaps and audioplayers kept as the headless/unsupported fallback — one file, fixes Loop Mixer/Studio + Beginner + Advanced Tracker (all route through it). (2) **Loop Mixer editing** (previously Advanced-Tracker-only): **undo/redo** (GrooveSpec snapshots keyed by `cacheKey`, hooked at the top of `_syncPlayback`, opening state anchored in initState), **remove captured** voice/beat tracks, and **per-track stereo pan** (renders mono/byte-identical until a track is panned, then `mixStemsStereo`/`wavBytesStereo` + per-channel `_applySendStereo`; pan lives in GrooveSpec `pn`, so share tokens + undo cover it). +5 widget/engine tests, **113 loop-suite tests green**, analyze clean on all touched files. On-device SoLoud integration test added (`integration_test/gapless_loop_player_test.dart`, run `-d macos`). (3) **Full editor discoverable:** the buried Share-sheet "Open in Tracker" is now also a one-tap button in the Loop Mixer's advanced toolbar (reuses the existing `_openInTracker` bridge; disabled until there's pitched content) — the full per-track Advanced-Tracker editor is one tap from the Loop Suite. Deliberately additive on the LOOP side only (no tracker-screen/registry edits) so it doesn't collide with codex's tracker-menu restructuring. Touched only `gapless_loop_player.dart`/`loop_engine.dart`/`loop_mixer_screen.dart` + ARBs — **no tracker/registry/DAW files**, so non-colliding with daw-ux/score-editor. **116 loop-suite tests green.** ⚠ this Mac's Data volume is 100% full → macOS builds ENOSPC (the on-device SoLoud assertion couldn't run; app built+linked fine first). — opus
-- **opus (daw-ux)** · 🚧 **ACTIVE — Audio Editor Ocenaudio-parity ladder (see "## Audio Editor — Ocenaudio-parity ladder" section below). Tier 1 (O1–O6) SHIPPED** — normalize · invert phase · remove DC offset · trim silence · amplify-by-dB (all bakes over a shared `_bakeClip`, whose take now carries a `startShiftMs` so a front-trim slides the clip instead of moving the audio) + range crop / range silence (shared `_removeClipsAroundRange`). Inspector items + a Range Edit menu + EN/DE keys; +12 service tests, +3 widget tests. **Then the edit maths was pulled OUT of the service into Flutter-free `lib/core/audio/daw_edits.dart` and wired to a new `bin/dawedit.dart` CLI** (per maintainer request) so every op is unit-testable headlessly and audible on a real WAV without the app; O7 generate + O10 clip-stats engines landed with it (+19 headless, +8 CLI-subprocess tests). Next: the O7/O10 in-app UI, then O8 zoom + O9 loop-selection. Closing O1→O16 one at a time (destructive clip processing, generation, zoom, loop-selection, stats, EQ/filters, meters, markers, record, spectrogram, more formats). Additive bake-methods in `daw_service.dart` + inspector items in `daw_screen.dart` (rebase-before-edit; O11 FX-enum is codex/crispaudio-parity's turf — coordinate). worktree `../mus-daw-ux`. — opus
+- **opus (daw-ux)** · 🚧 **ACTIVE — Audio Editor Ocenaudio-parity ladder (see "## Audio Editor — Ocenaudio-parity ladder" section below). Tier 1 (O1–O6) SHIPPED** — normalize · invert phase · remove DC offset · trim silence · amplify-by-dB (all bakes over a shared `_bakeClip`, whose take now carries a `startShiftMs` so a front-trim slides the clip instead of moving the audio) + range crop / range silence (shared `_removeClipsAroundRange`). Inspector items + a Range Edit menu + EN/DE keys; +12 service tests, +3 widget tests. **Then the edit maths was pulled OUT of the service into Flutter-free `lib/core/audio/daw_edits.dart` and wired to a new `bin/dawedit.dart` CLI** (per maintainer request) so every op is unit-testable headlessly and audible on a real WAV without the app; O7 generate + O10 clip-stats engines landed with it (+19 headless, +8 CLI-subprocess tests). **Tier 2 (O7–O10) SHIPPED too**: generate dialog · timeline zoom in/out/fit · loop-the-marked-selection · clip stats in the inspector (+6 widget tests). Next: Tier 3 (O11 biquad FX — ⚠ coordinate, O12 meters, O13 markers). Closing O1→O16 one at a time (destructive clip processing, generation, zoom, loop-selection, stats, EQ/filters, meters, markers, record, spectrogram, more formats). Additive bake-methods in `daw_service.dart` + inspector items in `daw_screen.dart` (rebase-before-edit; O11 FX-enum is codex/crispaudio-parity's turf — coordinate). worktree `../mus-daw-ux`. — opus
 - **codex (score-editor-web)** · 🚧 **ACTIVE — Score Workshop web/mobile usability baseline.** Octave-qualified note names and the remaining import/export, metadata, lyrics, analysis, and Sound Library web fixes are still open. Marquee selection now stays aligned in the scrollable multi-part canvas, the top action bar scrolls horizontally on narrow screens, and Advanced Tracker has been removed from the Score Workshop menu. — codex
 - **codex (score-editor-web)** · 📋 **BACKLOG — Score Workshop and web parity gaps.**
   - Score rendering: bar-number setting has no visible result; note names must include octave (for example `F2`) and remain legible at compact sizes.
@@ -142,20 +142,39 @@ trim-silence → exactly 500.0 ms cut. `bin/listen.dart` reads the generated ton
 as A4 440.0 Hz, clarity 1.00. Tests: `daw_edits_test.dart` (19, headless) +
 `dawedit_cli_test.dart` (8, real subprocess).
 
+> ⚠️ **HEADS-UP for the tracker agent (not mine to fix):** `b3858e85` committed
+> `test/native_tick_zone_reuse_test.dart`, which asserts
+> `test/fixtures/wonderfulpain.it` "must be present" — but that fixture is
+> **untracked**; it exists only in the `mus/` worktree. So a full
+> `flutter test` is RED on `main` for everyone else and in CI (3460 pass, 8
+> skip, this 1 fails). I did NOT commit the fixture: it's an unclear-provenance
+> module, which the licensing rules keep out of tracked files. Either gate the
+> test on the file existing (skip when absent, like the other corpus-backed
+> tests) or point it at a fixture that can be committed.
+
 **Tier 2 — generation + precise editing:**
-- [~] **O7** Generate clip: engine + CLI DONE (`generateWave`, 7 shapes;
+- [x] **O7** Generate clip: engine + CLI + **in-app dialog** (shape dropdown ·
+  frequency, shown only for the pitched shapes · length · level → a clip on its
+  own new lane). `generateWave`, 7 shapes;
   `DawService.addGeneratedClip` puts it on its own lane with a 5 ms fade so the
   hard edges don't click). Deliberately NOT built on `sfxr` — that's an
   envelope-shaped SFX generator, wrong for a steady signal. Noise is scaled by
   its realised peak (the pink filter's sum overshoots ~19% otherwise, which
-  would clip a loud generated clip). **Remaining: the in-app UI (a generate
-  dialog + toolbar entry).**
-- [ ] **O8** Zoom in/out/fit (pixels-per-second control; timeline is fixed-scale today).
-- [ ] **O9** Loop the marked selection (loop-region), not just the whole arrangement.
-- [~] **O10** Clip statistics: engine + CLI DONE (`clipStatsOf` /
-  `DawService.clipStats` → peak · peak dBFS · RMS · RMS dBFS · duration ·
-  clipped-sample count · channels; dBFS floors at `silenceDb` = −160 rather
-  than −infinity). **Remaining: showing them in the inspector.**
+  would clip a loud generated clip).
+- [x] **O8** Zoom in/out/fit. The fixed `_pxPerSecond = 80` became
+  `_basePxPerSecond * _zoom` behind a getter, so all twelve time↔pixel sites
+  (ruler, clips, beat grid, range overlay, drag maths, tap-to-seek) rescale
+  together with no other edits. 0.1x–20x in 1.5x steps; Fit solves the zoom
+  that puts the whole arrangement in the viewport.
+- [x] **O9** Loop the marked selection. Marking a range while Loop is on makes
+  playback wrap at the range end instead of the arrangement end — the standard
+  loop-region behaviour, no extra toggle to discover. `loopsMarkedRange` is the
+  one condition (`_loop && _hasFxRange`), checked in `_onTick`.
+- [x] **O10** Clip statistics in the inspector: duration · mono/stereo · peak
+  dBFS · RMS dBFS, plus a red "clipping!" flag when any sample is at or past
+  full scale. `clipStatsOf` / `DawService.clipStats`; dBFS floors at
+  `silenceDb` = −160 rather than −infinity. Peak/RMS/dBFS are left untranslated
+  as technical units.
 
 **Tier 3 — filters/EQ + analysis + markers:**
 - [ ] **O11** Expose the full biquad set as FX (band-pass · notch · low/high shelf · peaking EQ) + Phaser. ⚠ touches `DawClipEffectType` = codex/crispaudio-parity's core FX area — coordinate.

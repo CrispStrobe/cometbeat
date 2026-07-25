@@ -2053,6 +2053,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawRangeCrop => 'Crop to range';
 
   @override
+  String get dawStatsClipping => 'clipping!';
+
+  @override
+  String get dawGenerate => 'Generate…';
+
+  @override
+  String get dawFrequency => 'Frequency';
+
+  @override
+  String get dawLength => 'Length';
+
+  @override
+  String get dawLevel => 'Level';
+
+  @override
+  String get dawShapeSine => 'Sine tone';
+
+  @override
+  String get dawShapeSquare => 'Square tone';
+
+  @override
+  String get dawShapeSaw => 'Sawtooth tone';
+
+  @override
+  String get dawShapeTriangle => 'Triangle tone';
+
+  @override
+  String get dawShapeWhiteNoise => 'White noise';
+
+  @override
+  String get dawShapePinkNoise => 'Pink noise';
+
+  @override
+  String get dawShapeSilence => 'Silence';
+
+  @override
+  String get dawZoomIn => 'Zoom in';
+
+  @override
+  String get dawZoomOut => 'Zoom out';
+
+  @override
+  String get dawZoomFit => 'Fit';
+
+  @override
   String get dawSlower => 'Slower';
 
   @override
@@ -2109,7 +2154,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dawHelpToolbarBody =>
-      'Undo and redo every edit. With clips selected, copy, cut, paste at the playhead, or delete them across lanes. Play or stop, toggle Loop, toggle Snap to grid, export the mix, or clear everything.';
+      'Undo and redo every edit. With clips selected, copy, cut, paste at the playhead, or delete them across lanes. Play or stop, toggle Loop, toggle Snap to grid, export the mix, or clear everything. Generate… builds a fresh tone, noise or silence clip on its own lane, and the zoom buttons stretch or squeeze the timeline (Fit shows the whole arrangement at once). If you mark a range while Loop is on, playback loops just that selection instead of the whole arrangement.';
 
   @override
   String get dawHelpBuildTitle => 'Building a track';
