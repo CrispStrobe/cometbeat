@@ -542,6 +542,12 @@ abstract class AppLocalizations {
   /// **'Saved: {path}'**
   String workshopSavedTo(String path);
 
+  /// No description provided for @workshopDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded {name}'**
+  String workshopDownloaded(String name);
+
   /// No description provided for @musicExportTitle.
   ///
   /// In en, this message translates to:

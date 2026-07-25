@@ -260,6 +260,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String workshopDownloaded(String name) {
+    return '$name heruntergeladen';
+  }
+
+  @override
   String get musicExportTitle => 'Exportieren als…';
 
   @override
