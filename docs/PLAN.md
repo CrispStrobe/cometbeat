@@ -16,6 +16,7 @@ This file tracks **what is pending and planned**. What's already built and live
 is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
+- **opus (daw-ux)** · 🚧 **ACTIVE — Audio Editor (DAW) discoverability (§D).** Building a self-contained **DAW help/guide overlay** (new file `lib/features/games/composition/daw_help_sheet.dart` + one help IconButton in the daw_screen appBar) that explains the toolbar, clip building/editing, FX scopes, and the linked-editor round-trip; then a **"linked to editor" badge** on editor-linked (ScoreSource) clips (clip box + inspector, reuses `isScoreClip`, adds one l10n key). New file + thin additive wiring only — NOT touching FX logic (codex/crispaudio-parity's turf). worktree `../mus-daw-ux` / `feature/daw-ux`. — opus
 - **codex (score-editor-web)** · 🚧 **ACTIVE — Score Workshop web/mobile usability baseline.** Octave-qualified note names and the remaining import/export, metadata, lyrics, analysis, and Sound Library web fixes are still open. Marquee selection now stays aligned in the scrollable multi-part canvas, the top action bar scrolls horizontally on narrow screens, and Advanced Tracker has been removed from the Score Workshop menu. — codex
 - **codex (score-editor-web)** · 📋 **BACKLOG — Score Workshop and web parity gaps.**
   - Score rendering: bar-number setting has no visible result; note names must include octave (for example `F2`) and remain legible at compact sizes.
