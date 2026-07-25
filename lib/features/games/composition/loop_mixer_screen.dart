@@ -23,6 +23,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/aec_capability.dart';
 import 'package:comet_beat/core/audio/aec_engine.dart';
@@ -44,7 +45,8 @@ import 'package:comet_beat/core/audio/synth.dart'
         midiToFrequency,
         renderSegments,
         timbreFor,
-        wavBytes;
+        wavBytes,
+        wavBytesStereo;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/wav_io.dart';
@@ -141,6 +143,10 @@ abstract interface class LoopMixerTester {
   int get loopIteration;
   int variantOf(String id);
   double levelOf(String id);
+
+  /// Per-track stereo pan (−1 left … 0 centre … +1 right) and its setter.
+  double panOf(String id);
+  void setTrackPan(String id, double pan);
   void toggleTrack(String id);
   void toggleSolo(String id);
   void cycleTrackVariant(String id);
@@ -235,6 +241,10 @@ abstract interface class LoopMixerTester {
   /// the rendered PCM).
   bool get hasScenes;
   Float64List debugRenderArrangement();
+
+  /// The current loop rendered to a WAV (mono, or interleaved stereo when a
+  /// track is panned) — lets a test assert channel count + pan energy.
+  Uint8List debugRenderLoop();
 
   /// Scale-locked smear pad (§F-1): visibility, whether a lead is recorded, and
   /// keeping it as a layer. Tests: the in-key notes played, playing at a
@@ -433,6 +443,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   int variantOf(String id) => _engine.variants[id] ?? 0;
   @override
   double levelOf(String id) => _engine.levels[id] ?? 1.0;
+  @override
+  double panOf(String id) => _engine.panOf(id);
+  @override
+  void setTrackPan(String id, double pan) => _setPan(id, pan);
   @override
   void toggleTrack(String id) => _toggle(id);
   @override
@@ -728,6 +742,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   Float64List debugRenderArrangement() =>
       _engine.renderArrangement(_capturedScenes());
+  @override
+  Uint8List debugRenderLoop() => _engine.renderLoop();
   @override
   bool get smearPadVisible => _showSmear;
   @override
@@ -1201,7 +1217,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       );
 
   Uint8List _pcmOf(Uint8List wav) {
-    final data = readWavPcm16(wav).samples;
+    final wavData = readWavPcm16(wav);
+    // The AEC reference is mono; fold a panned (stereo) loop down before it feeds
+    // the reference scheduler so the echo estimate stays correct while jamming.
+    if (wavData.channels == 2) {
+      final frames = wavData.samples.length ~/ 2;
+      final mono = Int16List(frames);
+      for (var i = 0; i < frames; i++) {
+        mono[i] = (wavData.samples[i * 2] + wavData.samples[i * 2 + 1]) ~/ 2;
+      }
+      return mono.buffer.asUint8List(mono.offsetInBytes, mono.lengthInBytes);
+    }
+    final data = wavData.samples;
     return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   }
 
@@ -1763,6 +1790,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         onCycleVariant: () => _cycleVariant(track.id),
         onRollVariant: () => _rollVariant(track.id),
         onLevel: (v) => _setLevel(track.id, v),
+        pan: _engine.panOf(track.id),
+        onPan: (v) => _setPan(track.id, v),
+        panLabel: l10n.loopMixerPan,
         soloed: _soloTrack == track.id,
         onSolo: () => _toggleSolo(track.id),
         voiced: _engine.trackVoice(track.id) != null,
@@ -2149,6 +2179,25 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// keeping the engine's symbolic/render cache byte-stable for editing/tests.
   Uint8List _seamSafeWav(Uint8List wav) {
     final pcm = readWavPcm16(wav);
+    // Stereo (a panned mix): repair each channel independently and re-interleave.
+    if (pcm.channels == 2) {
+      final frames = pcm.samples.length ~/ 2;
+      final left = Int16List(frames);
+      final right = Int16List(frames);
+      for (var i = 0; i < frames; i++) {
+        left[i] = pcm.samples[i * 2];
+        right[i] = pcm.samples[i * 2 + 1];
+      }
+      final fl = crossfadePcm16Seam(left);
+      final fr = crossfadePcm16Seam(right);
+      if (identical(fl, left) && identical(fr, right)) return wav;
+      final out = Int16List(frames * 2);
+      for (var i = 0; i < frames; i++) {
+        out[i * 2] = fl[i];
+        out[i * 2 + 1] = fr[i];
+      }
+      return wavBytesStereo(out);
+    }
     final fixed = crossfadePcm16Seam(pcm.samples);
     return identical(fixed, pcm.samples) ? wav : wavBytes(fixed);
   }
@@ -2454,6 +2503,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   void _setLevel(String id, double level) {
     setState(() => _engine.levels[id] = level.clamp(0.0, 1.0));
+    if (_engine.enabled.contains(id)) _syncPlayback();
+  }
+
+  void _setPan(String id, double pan) {
+    setState(() => _engine.setPan(id, pan));
     if (_engine.enabled.contains(id)) _syncPlayback();
   }
 
@@ -3767,6 +3821,9 @@ class _TrackCard extends StatelessWidget {
     this.voiced = false,
     this.onDelete,
     this.deleteTooltip,
+    this.pan = 0.0,
+    this.onPan,
+    this.panLabel,
   });
 
   final Color color;
@@ -3795,6 +3852,12 @@ class _TrackCard extends StatelessWidget {
   /// built-in band cards, which are the fixed groove).
   final VoidCallback? onDelete;
   final String? deleteTooltip;
+
+  /// Stereo pan −1 (left) … 0 (centre) … +1 (right), and its setter. Null
+  /// `onPan` hides the pan control.
+  final double pan;
+  final ValueChanged<double>? onPan;
+  final String? panLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -3897,6 +3960,47 @@ class _TrackCard extends StatelessWidget {
                     overlayShape: SliderComponentShape.noOverlay,
                   ),
                   child: Slider(value: level, onChanged: onLevel),
+                ),
+              ),
+            // Per-card stereo pan (L … C … R). Double-tap the slider to recentre.
+            if (active && onPan != null)
+              SizedBox(
+                width: 220,
+                child: Row(
+                  children: [
+                    Text(
+                      'L',
+                      style: TextStyle(color: foreground, fontSize: 11),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onDoubleTap: () => onPan!(0),
+                        child: SliderTheme(
+                          data: SliderThemeData(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 6,
+                            ),
+                            activeTrackColor: foreground.withValues(alpha: 0.5),
+                            inactiveTrackColor:
+                                foreground.withValues(alpha: 0.5),
+                            thumbColor: foreground,
+                            overlayShape: SliderComponentShape.noOverlay,
+                          ),
+                          child: Slider(
+                            value: pan.clamp(-1.0, 1.0),
+                            min: -1,
+                            label: panLabel,
+                            onChanged: onPan,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'R',
+                      style: TextStyle(color: foreground, fontSize: 11),
+                    ),
+                  ],
                 ),
               ),
           ],

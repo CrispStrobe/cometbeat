@@ -583,6 +583,7 @@
   "loopMixerUndo": "Undo",
   "loopMixerRedo": "Redo",
   "loopMixerDeleteTrack": "Remove this track",
+  "loopMixerPan": "Left ↔ right (double-tap to centre)",
   "loopMixerCopyCode": "Copy groove code",
   "loopMixerPasteCode": "Paste a groove code",
   "loopMixerCodeCopied": "Groove code copied — paste it anywhere!",

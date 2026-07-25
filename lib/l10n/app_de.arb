@@ -523,6 +523,7 @@
   "loopMixerUndo": "Rückgängig",
   "loopMixerRedo": "Wiederholen",
   "loopMixerDeleteTrack": "Diese Spur entfernen",
+  "loopMixerPan": "Links ↔ rechts (Doppeltippen zum Zentrieren)",
   "loopMixerCopyCode": "Groove-Code kopieren",
   "loopMixerPasteCode": "Groove-Code einfügen",
   "loopMixerCodeCopied": "Groove-Code kopiert — füge ihn irgendwo ein!",

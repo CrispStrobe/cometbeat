@@ -12,6 +12,7 @@ import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
+import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
@@ -1244,6 +1245,41 @@ void main() {
     game.undo();
     await tester.pump();
     expect(game.levelOf('drums'), 1.0);
+  });
+
+  testWidgets('per-track pan renders a stereo loop and undo reverts it',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.toggleTrack('drums');
+    game.toggleTrack('bass');
+    await tester.pump();
+
+    // Centre by default → the loop is mono (byte-identical to the pre-pan path).
+    expect(game.panOf('bass'), 0.0);
+    final mono = readWavPcm16(game.debugRenderLoop());
+    expect(mono.channels, 1);
+
+    // Pan bass hard right → the render switches to a stereo mix, with more
+    // energy on the right channel than the left.
+    game.setTrackPan('bass', 1.0);
+    await tester.pump();
+    expect(game.panOf('bass'), closeTo(1.0, 1e-9));
+    final stereo = readWavPcm16(game.debugRenderLoop());
+    expect(stereo.channels, 2);
+    var energyL = 0.0, energyR = 0.0;
+    for (var i = 0; i < stereo.samples.length; i += 2) {
+      energyL += stereo.samples[i].abs();
+      energyR += stereo.samples[i + 1].abs();
+    }
+    expect(energyR, greaterThan(energyL));
+
+    // Undo restores centre + the mono render.
+    game.undo();
+    await tester.pump();
+    expect(game.panOf('bass'), 0.0);
+    expect(readWavPcm16(game.debugRenderLoop()).channels, 1);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a captured beat track can be removed; built-ins cannot',

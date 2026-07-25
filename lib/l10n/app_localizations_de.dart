@@ -1557,6 +1557,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerShare => 'Teile deinen Groove';
 
   @override
+  String get loopMixerUndo => 'Rückgängig';
+
+  @override
+  String get loopMixerRedo => 'Wiederholen';
+
+  @override
+  String get loopMixerDeleteTrack => 'Diese Spur entfernen';
+
+  @override
+  String get loopMixerPan => 'Links ↔ rechts (Doppeltippen zum Zentrieren)';
+
+  @override
   String get loopMixerCopyCode => 'Groove-Code kopieren';
 
   @override

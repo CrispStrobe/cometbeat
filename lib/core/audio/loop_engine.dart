@@ -340,6 +340,7 @@ class GrooveSpec {
     this.enabled = const {},
     this.variants = const {},
     this.levels = const {},
+    this.pans = const {},
     this.tempoBpm = 100,
     this.swing = 0,
     this.progressionId,
@@ -357,6 +358,10 @@ class GrooveSpec {
   final Set<String> enabled;
   final Map<String, int> variants;
   final Map<String, double> levels;
+
+  /// Per-track stereo pan −1..1 (missing/0 = centre). Travels with save slots
+  /// and share tokens like [levels].
+  final Map<String, double> pans;
   final int tempoBpm;
   final double swing;
 
@@ -406,6 +411,11 @@ class GrooveSpec {
               .cast<String, num>()
               .map((k, v) => MapEntry(k, v.toDouble())),
         },
+        pans: {
+          ...(json['pn'] as Map? ?? const {})
+              .cast<String, num>()
+              .map((k, v) => MapEntry(k, v.toDouble().clamp(-1.0, 1.0))),
+        },
         // Untrusted: a hand-edited token must not divide the timing math by 0
         // (or by a negative). Clamped like `levels`/`swing` already are.
         tempoBpm: (json['t'] as num? ?? 100)
@@ -441,6 +451,13 @@ class GrooveSpec {
           'l': {
             for (final e in levels.entries)
               if (e.value != 1.0)
+                e.key: double.parse(e.value.toStringAsFixed(2)),
+          },
+        // Omitted at centre so pre-pan `KU1.` tokens stay byte-identical.
+        if (pans.values.any((p) => p != 0.0))
+          'pn': {
+            for (final e in pans.entries)
+              if (e.value != 0.0)
                 e.key: double.parse(e.value.toStringAsFixed(2)),
           },
         't': tempoBpm,
@@ -1271,6 +1288,27 @@ class LoopEngine {
   /// Per-track level 0..1 multiplied onto the authored gain (missing = 1).
   final Map<String, double> levels = {};
 
+  /// Per-track stereo pan −1 (hard left) … 0 (centre) … +1 (hard right).
+  /// Missing = 0 = centre. The whole loop renders mono (byte-identical to the
+  /// pre-pan path) until at least one enabled track is panned off centre, at
+  /// which point [renderLoop]/[renderVariedLoop] switch to the stereo mixdown.
+  final Map<String, double> pans = {};
+
+  /// The pan of [id] (0 = centre).
+  double panOf(String id) => pans[id] ?? 0.0;
+
+  /// Sets the pan of [id] (clamped −1..1). Centre (0) is stored so the value
+  /// round-trips through the spec; the render still folds to mono when NO
+  /// enabled track is panned.
+  void setPan(String id, double value) {
+    pans[id] = value.clamp(-1.0, 1.0);
+  }
+
+  /// Whether any currently-enabled track is panned off centre — the switch
+  /// between the mono and stereo mixdown.
+  bool get _anyPanned =>
+      tracks.any((t) => enabled.contains(t.id) && (pans[t.id] ?? 0) != 0);
+
   int _tempoBpm;
   int get tempoBpm => _tempoBpm;
   set tempoBpm(int bpm) {
@@ -1355,6 +1393,10 @@ class LoopEngine {
         enabled: {...enabled},
         variants: {...variants},
         levels: {...levels},
+        pans: {
+          for (final e in pans.entries)
+            if (e.value != 0.0) e.key: e.value,
+        },
         tempoBpm: _tempoBpm,
         swing: _swing,
         progressionId: _progression?.id,
@@ -1434,6 +1476,12 @@ class LoopEngine {
       ..addAll({
         for (final e in next.levels.entries)
           if (known.contains(e.key)) e.key: e.value.clamp(0.0, 1.0),
+      });
+    pans
+      ..clear()
+      ..addAll({
+        for (final e in next.pans.entries)
+          if (known.contains(e.key)) e.key: e.value.clamp(-1.0, 1.0),
       });
     tempoBpm = next.tempoBpm;
     swing = next.swing;
@@ -1544,6 +1592,30 @@ class LoopEngine {
     for (var i = 0; i < n; i++) {
       // The second copy is the converged, seam-continuous loop.
       out[i] = (wet[n + i] * 32768).round().clamp(-32768, 32767);
+    }
+    return out;
+  }
+
+  /// Stereo counterpart of [_applySend]: splits the interleaved (L,R) buffer,
+  /// runs the SAME per-channel reverb/delay + master filter (so the seam-safe
+  /// two-copy trick and click-free convergence carry over), and re-interleaves.
+  /// The two channels get independent effect state — a naturally decorrelated,
+  /// wider tail — which is exactly right for a panned mix.
+  Int16List _applySendStereo(Int16List interleaved) {
+    if (send == LoopSend.none && _masterFilter == 0) return interleaved;
+    final frames = interleaved.length ~/ 2;
+    final left = Int16List(frames);
+    final right = Int16List(frames);
+    for (var i = 0; i < frames; i++) {
+      left[i] = interleaved[i * 2];
+      right[i] = interleaved[i * 2 + 1];
+    }
+    final wetL = _applySend(left);
+    final wetR = _applySend(right);
+    final out = Int16List(frames * 2);
+    for (var i = 0; i < frames; i++) {
+      out[i * 2] = wetL[i];
+      out[i * 2 + 1] = wetR[i];
     }
     return out;
   }
@@ -1768,20 +1840,50 @@ class LoopEngine {
   Uint8List renderLoop({bool fill = false}) {
     final filling = fill && enabled.contains('drums');
     final key = '${spec.cacheKey}${filling ? '#fill' : ''}$_masterBusKey';
-    return _wavCache[key] ??= wavBytes(
+    return _wavCache[key] ??= _renderMix(
+      stem: (track) => filling && track.id == 'drums'
+          ? _fillStemFor(track)
+          : _stemFor(track),
+    );
+  }
+
+  /// Mixes the enabled tracks' [stem]s into one loop WAV. Renders MONO — exactly
+  /// the pre-pan path — unless a track is panned off centre ([_anyPanned]), in
+  /// which case it renders INTERLEAVED STEREO with a constant-power pan law; the
+  /// master send/filter is applied per channel either way.
+  Uint8List _renderMix({required Float64List Function(LoopTrack) stem}) {
+    final total = timing.totalSamples;
+    if (_anyPanned) {
+      return wavBytesStereo(
+        _applySendStereo(
+          mixStemsStereo(
+            [
+              for (final track in tracks)
+                if (enabled.contains(track.id))
+                  (
+                    samples: stem(track),
+                    gain:
+                        track.gain * (levels[track.id] ?? 1.0).clamp(0.0, 1.0),
+                    pan: (pans[track.id] ?? 0.0).clamp(-1.0, 1.0),
+                  ),
+            ],
+            totalSamples: total,
+          ),
+        ),
+      );
+    }
+    return wavBytes(
       _applySend(
         mixStems(
           [
             for (final track in tracks)
               if (enabled.contains(track.id))
                 (
-                  samples: filling && track.id == 'drums'
-                      ? _fillStemFor(track)
-                      : _stemFor(track),
+                  samples: stem(track),
                   gain: track.gain * (levels[track.id] ?? 1.0).clamp(0.0, 1.0),
                 ),
           ],
-          totalSamples: timing.totalSamples,
+          totalSamples: total,
         ),
       ),
     );
@@ -1828,26 +1930,12 @@ class LoopEngine {
     if (enabled.isEmpty) return renderLoop();
     final rng = Random(spec.cacheKey.hashCode ^ (iteration * 2654435761));
     final filling = fill && enabled.contains('drums');
-    return wavBytes(
-      _applySend(
-        mixStems(
-          [
-            for (final track in tracks)
-              if (enabled.contains(track.id))
-                (
-                  samples: switch (track.id) {
-                    'drums' => filling
-                        ? _fillStemFor(track)
-                        : _variedDrumStem(track, rng),
-                    'melody' => _variedMelodyStem(track, rng),
-                    _ => _stemFor(track),
-                  },
-                  gain: track.gain * (levels[track.id] ?? 1.0).clamp(0.0, 1.0),
-                ),
-          ],
-          totalSamples: timing.totalSamples,
-        ),
-      ),
+    return _renderMix(
+      stem: (track) => switch (track.id) {
+        'drums' => filling ? _fillStemFor(track) : _variedDrumStem(track, rng),
+        'melody' => _variedMelodyStem(track, rng),
+        _ => _stemFor(track),
+      },
     );
   }
 

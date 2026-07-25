@@ -1552,6 +1552,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerShare => 'Share your groove';
 
   @override
+  String get loopMixerUndo => 'Undo';
+
+  @override
+  String get loopMixerRedo => 'Redo';
+
+  @override
+  String get loopMixerDeleteTrack => 'Remove this track';
+
+  @override
+  String get loopMixerPan => 'Left ↔ right (double-tap to centre)';
+
+  @override
   String get loopMixerCopyCode => 'Copy groove code';
 
   @override
