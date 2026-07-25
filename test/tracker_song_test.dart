@@ -685,4 +685,42 @@ void main() {
       expect(song.timing.swing, 0.9);
     });
   });
+
+  group('revoiceChannel — whole-track re-voice', () {
+    test(
+        'sets the channel default AND clears per-cell instrument refs across '
+        'every pattern, so a module-style track (explicit pool refs) actually '
+        'switches voice', () {
+      final song = TrackerSong();
+      // A pool instrument a cell can reference (instrument column = 1) — the
+      // shape every imported module has.
+      song.instruments.add(const AdditiveInstrument('lead', Instrument.piano));
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60, instrument: 1));
+      // A second pattern with another ch0 cell that references the pool.
+      final p1 = song.addPattern();
+      song.selectPattern(p1);
+      song.engine.setCell(0, 4, const TrackerCell(midi: 64, instrument: 1));
+      song.selectPattern(0);
+
+      const newVoice = AdditiveInstrument('revoiced', Instrument.piano);
+      song.revoiceChannel(0, newVoice);
+
+      // Channel default is the new voice.
+      expect(song.engine.channels[0].instrument.id, 'revoiced');
+      // The current pattern's ch0 cell now falls back to the channel default…
+      expect(song.engine.cellAt(0, 0).instrument, 0);
+      expect(song.engine.cellAt(0, 0).midi, 60); // pitch preserved
+      // …and the NON-current pattern was cleared too.
+      song.selectPattern(p1);
+      expect(song.engine.cellAt(0, 4).instrument, 0);
+      expect(song.engine.cellAt(0, 4).midi, 64);
+    });
+
+    test('is a no-op for an out-of-range channel', () {
+      final song = TrackerSong();
+      const v = AdditiveInstrument('x', Instrument.piano);
+      expect(() => song.revoiceChannel(-1, v), returnsNormally);
+      expect(() => song.revoiceChannel(999, v), returnsNormally);
+    });
+  });
 }

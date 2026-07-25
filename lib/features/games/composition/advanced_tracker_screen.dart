@@ -2254,8 +2254,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               final newInst =
                   await showInstrumentEditor(context, ch.instrument);
               if (newInst != null && mounted) {
-                // Update the instrument in the song and rebuild
-                setState(() => _song.setChannelInstrument(c, newInst));
+                // Re-voice the whole track and rebuild
+                setState(() => _song.revoiceChannel(c, newInst));
                 _syncPlayback();
                 setSheet(() {});
               }
@@ -2436,7 +2436,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   }
 
   void _assignSample(int channel, SampleInstrument inst) {
-    setState(() => _song.setChannelInstrument(channel, inst));
+    setState(() => _song.revoiceChannel(channel, inst));
     _syncPlayback();
   }
 
@@ -3074,7 +3074,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                         label: Text(_instrumentLabel(opt.id)),
                         selected: opt.id == currentId,
                         onSelected: (_) {
-                          setChannelInstrument(channel, opt.id);
+                          _setChannelInstrumentVoice(channel, opt.build());
                           Navigator.of(ctx).pop();
                         },
                       ),
@@ -3123,10 +3123,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     );
   }
 
-  /// Set [channel]'s default instrument to [inst] (from the library / a
-  /// SoundFont) and refresh playback.
+  /// Re-voice the whole track [channel] to [inst] (from the library / a
+  /// SoundFont / a built-in chip) and refresh playback. Clears the channel's
+  /// per-cell instrument column so the change is audible even when the cells
+  /// carry explicit pool references (as imported modules always do).
   void _setChannelInstrumentVoice(int channel, TrackerInstrument inst) {
-    setState(() => _song.setChannelInstrument(channel, inst));
+    setState(() => _song.revoiceChannel(channel, inst));
     _syncPlayback();
   }
 

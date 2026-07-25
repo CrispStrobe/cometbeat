@@ -314,6 +314,27 @@ class TrackerSong {
     _engine.importCells(current.cells); // the current pattern was remapped
   }
 
+  /// Re-voices a whole track: sets [channel]'s default instrument to [inst] AND
+  /// clears that channel's per-cell instrument column to 0 (the channel default)
+  /// across EVERY pattern. Without the clear, a channel whose cells carry
+  /// explicit pool-instrument references — as EVERY imported module does — keeps
+  /// resolving each cell's own pool voice in the replayer, so changing the
+  /// channel default alone is silently inaudible. Syncs live edits first, then
+  /// reloads the (cleared) current pattern into the engine.
+  void revoiceChannel(int channel, TrackerInstrument inst) {
+    if (channel < 0 || channel >= _engine.channels.length) return;
+    syncCurrent();
+    _engine.setChannelInstrument(channel, inst);
+    for (final p in patterns) {
+      if (channel >= p.cells.length) continue;
+      final col = p.cells[channel];
+      for (var r = 0; r < col.length; r++) {
+        if (col[r].instrument != 0) col[r] = col[r].copyWith(instrument: 0);
+      }
+    }
+    _engine.importCells(current.cells); // reload the (cleared) current pattern
+  }
+
   /// Save the live pattern, then load [index] into the engine for editing.
   /// Re-times the engine to the selected pattern's own row count (Feature B:
   /// patterns may have different lengths), so the engine's per-channel
