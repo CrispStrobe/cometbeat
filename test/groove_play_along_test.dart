@@ -18,9 +18,9 @@ void main() {
   test('cells map to target notes in musical time (2 steps = 1 beat)', () {
     final chart = grooveChart(
       const [
-        (midis: [60], steps: 2), // C4, one beat at beat 0
-        (midis: null, steps: 2), // a rest — a gap, no note
-        (midis: [64], steps: 4), // E4, two beats at beat 2
+        PatternCell(midis: [60], steps: 2), // C4, one beat at beat 0
+        PatternCell(steps: 2), // a rest — a gap, no note
+        PatternCell(midis: [64], steps: 4), // E4, two beats at beat 2
       ],
       bpm: 100,
       name: 'test',
@@ -41,7 +41,10 @@ void main() {
   test('a chord/dyad collapses to its top voice', () {
     final chart = grooveChart(
       const [
-        (midis: [60, 64, 67], steps: 2), // C major triad → top note G4
+        PatternCell(
+          midis: [60, 64, 67],
+          steps: 2,
+        ), // C major triad → top note G4
       ],
       bpm: 120,
       name: 'chord',
@@ -52,7 +55,7 @@ void main() {
   test('octaveAgnostic passes through for sung targets', () {
     final chart = grooveChart(
       const [
-        (midis: [60], steps: 2),
+        PatternCell(midis: [60], steps: 2),
       ],
       bpm: 100,
       name: 'sing',

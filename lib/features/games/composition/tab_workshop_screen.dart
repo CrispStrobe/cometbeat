@@ -662,11 +662,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         final m = _doc.tuning.strings[string].midiNumber + fret + _capo;
         if (midi == null || m > midi!) midi = m;
       });
-      cells.add((midis: midi == null ? null : [midi!], steps: steps));
+      cells
+          .add(PatternCell(midis: midi == null ? null : [midi!], steps: steps));
       filled += steps;
     }
     if (filled < kPatternSteps) {
-      cells.add((midis: null, steps: kPatternSteps - filled));
+      cells.add(PatternCell(steps: kPatternSteps - filled));
     }
     if (cells.every((c) => c.midis == null)) return; // nothing but rests
     MelodyBridge.instance.publish(

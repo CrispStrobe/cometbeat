@@ -135,11 +135,11 @@ void main() {
     MelodyBridge.instance.publish(
       SharedMelody(
         cells: const <PatternCell>[
-          (midis: [60], steps: 2),
-          (midis: [62], steps: 2),
-          (midis: [64], steps: 2),
-          (midis: [67], steps: 2),
-          (midis: null, steps: 8),
+          PatternCell(midis: [60], steps: 2),
+          PatternCell(midis: [62], steps: 2),
+          PatternCell(midis: [64], steps: 2),
+          PatternCell(midis: [67], steps: 2),
+          PatternCell(steps: 8),
         ],
         tempoBpm: 120,
         source: 'loopmixer',

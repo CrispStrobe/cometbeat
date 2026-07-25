@@ -83,8 +83,45 @@ class LoopTiming {
 const kPatternSteps = LoopTiming.stepsPerBar * 2;
 
 /// One melodic pattern cell: [midis] sounding for [steps] eighth-steps
-/// (null or empty = rest).
-typedef PatternCell = ({List<int>? midis, int steps});
+/// (null or empty = rest). [velocity] is per-note dynamics 0..1 (1 = normal) —
+/// soft/accent editing in the tune grid; it scales the note's synthesis gain.
+///
+/// Was a `({midis, steps})` record; promoted to a class to carry [velocity]
+/// (and any future per-note attribute) while keeping value equality.
+class PatternCell {
+  const PatternCell({this.midis, required this.steps, this.velocity = 1.0});
+
+  final List<int>? midis;
+  final int steps;
+  final double velocity;
+
+  PatternCell copyWith({List<int>? midis, int? steps, double? velocity}) =>
+      PatternCell(
+        midis: midis ?? this.midis,
+        steps: steps ?? this.steps,
+        velocity: velocity ?? this.velocity,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is PatternCell &&
+      other.steps == steps &&
+      other.velocity == velocity &&
+      _patternMidisEqual(other.midis, midis);
+
+  @override
+  int get hashCode =>
+      Object.hash(steps, velocity, Object.hashAll(midis ?? const <int>[]));
+}
+
+bool _patternMidisEqual(List<int>? a, List<int>? b) {
+  if (a == null || b == null) return a == b;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
 
 /// A track's pattern for one 2-bar loop — data, renderable onto any timing.
 sealed class LoopPattern {
@@ -146,7 +183,33 @@ Float64List renderCells(
     );
     step += cell.steps;
   }
-  return renderSegmentsRaw(segments, timbre: timbreFor(instrument));
+  final buffer = renderSegmentsRaw(segments, timbre: timbreFor(instrument));
+  applyCellVelocities(buffer, cells, segments);
+  return buffer;
+}
+
+/// Scales each cell's rendered samples by its [PatternCell.velocity] (per-note
+/// dynamics). A note softer than its neighbours reads as quieter within the
+/// stem; a uniform velocity is a no-op after the mixer's per-stem unit-peak
+/// normalization (dynamics are relative). Shared by the plain and instrument
+/// render paths so voiced tracks respect velocity too.
+void applyCellVelocities(
+  Float64List buffer,
+  List<PatternCell> cells,
+  List<Segment> segments,
+) {
+  var off = 0;
+  for (var i = 0; i < segments.length && i < cells.length; i++) {
+    final n = (segments[i].ms * kSampleRate) ~/ 1000;
+    final v = cells[i].velocity.clamp(0.0, 1.0);
+    if (v != 1.0) {
+      final end = off + n < buffer.length ? off + n : buffer.length;
+      for (var j = off; j < end; j++) {
+        buffer[j] *= v;
+      }
+    }
+    off += n;
+  }
 }
 
 /// An unpitched pattern: one boolean hit row per drum voice.
@@ -316,7 +379,7 @@ class ChordBar {
     if (root > foldAbove) root -= 12;
     return [
       for (final cell in cells)
-        (
+        PatternCell(
           midis: cell.tones == null
               ? null
               : [
@@ -564,7 +627,13 @@ class GrooveSpec {
 }
 
 List<dynamic> _cellsToJson(List<PatternCell> cells) => [
-      for (final c in cells) [c.midis, c.steps],
+      // 2-element [midis, steps] at full velocity keeps pre-velocity tokens
+      // byte-identical; a soft/accent note adds a 3rd velocity element.
+      for (final c in cells)
+        if (c.velocity == 1.0)
+          [c.midis, c.steps]
+        else
+          [c.midis, c.steps, double.parse(c.velocity.toStringAsFixed(2))],
     ];
 
 /// Parses cells from token json; null on any structural violation (foreign
@@ -574,9 +643,15 @@ List<PatternCell>? _cellsFromJson(dynamic json) {
   final cells = <PatternCell>[];
   var total = 0;
   for (final entry in json) {
-    if (entry is! List || entry.length != 2) return null;
-    final [midisRaw, steps] = entry;
+    if (entry is! List || entry.length < 2 || entry.length > 3) return null;
+    final midisRaw = entry[0];
+    final steps = entry[1];
     if (steps is! int || steps < 1) return null;
+    var velocity = 1.0;
+    if (entry.length == 3) {
+      final v = entry[2];
+      if (v is num) velocity = v.toDouble().clamp(0.0, 1.0);
+    }
     List<int>? midis;
     if (midisRaw != null) {
       if (midisRaw is! List) return null;
@@ -586,7 +661,7 @@ List<PatternCell>? _cellsFromJson(dynamic json) {
         midis.add(m);
       }
     }
-    cells.add((midis: midis, steps: steps));
+    cells.add(PatternCell(midis: midis, steps: steps, velocity: velocity));
     total += steps;
   }
   return total == kPatternSteps ? cells : null;
@@ -752,55 +827,55 @@ final List<LoopTrack> kLoopMixerTracks = [
     variants: [
       // A — root-motion quarters.
       MelodicPattern(Instrument.cello, [
-        (midis: [_c2], steps: 2),
-        (midis: [_c2], steps: 2),
-        (midis: [_g2], steps: 2),
-        (midis: [_a2], steps: 2),
-        (midis: [_e2], steps: 2),
-        (midis: [_g2], steps: 2),
-        (midis: [_a2], steps: 2),
-        (midis: [_g2], steps: 2),
+        PatternCell(midis: [_c2], steps: 2),
+        PatternCell(midis: [_c2], steps: 2),
+        PatternCell(midis: [_g2], steps: 2),
+        PatternCell(midis: [_a2], steps: 2),
+        PatternCell(midis: [_e2], steps: 2),
+        PatternCell(midis: [_g2], steps: 2),
+        PatternCell(midis: [_a2], steps: 2),
+        PatternCell(midis: [_g2], steps: 2),
       ]),
       // B — octave-pump eighths.
       MelodicPattern(Instrument.cello, [
-        (midis: [_c2], steps: 1),
-        (midis: [_c3], steps: 1),
-        (midis: [_c2], steps: 1),
-        (midis: [_c3], steps: 1),
-        (midis: [_g2], steps: 1),
-        (midis: [_g3], steps: 1),
-        (midis: [_a2], steps: 1),
-        (midis: [_a3], steps: 1),
-        (midis: [_a2], steps: 1),
-        (midis: [_a3], steps: 1),
-        (midis: [_a2], steps: 1),
-        (midis: [_a3], steps: 1),
-        (midis: [_g2], steps: 1),
-        (midis: [_g3], steps: 1),
-        (midis: [_e2], steps: 1),
-        (midis: [_g2], steps: 1),
+        PatternCell(midis: [_c2], steps: 1),
+        PatternCell(midis: [_c3], steps: 1),
+        PatternCell(midis: [_c2], steps: 1),
+        PatternCell(midis: [_c3], steps: 1),
+        PatternCell(midis: [_g2], steps: 1),
+        PatternCell(midis: [_g3], steps: 1),
+        PatternCell(midis: [_a2], steps: 1),
+        PatternCell(midis: [_a3], steps: 1),
+        PatternCell(midis: [_a2], steps: 1),
+        PatternCell(midis: [_a3], steps: 1),
+        PatternCell(midis: [_a2], steps: 1),
+        PatternCell(midis: [_a3], steps: 1),
+        PatternCell(midis: [_g2], steps: 1),
+        PatternCell(midis: [_g3], steps: 1),
+        PatternCell(midis: [_e2], steps: 1),
+        PatternCell(midis: [_g2], steps: 1),
       ]),
       // C — syncopated dotted-quarter feel.
       MelodicPattern(Instrument.cello, [
-        (midis: [_c2], steps: 3),
-        (midis: null, steps: 1),
-        (midis: [_g2], steps: 2),
-        (midis: [_a2], steps: 2),
-        (midis: [_c2], steps: 3),
-        (midis: null, steps: 1),
-        (midis: [_a2], steps: 2),
-        (midis: [_g2], steps: 2),
+        PatternCell(midis: [_c2], steps: 3),
+        PatternCell(steps: 1),
+        PatternCell(midis: [_g2], steps: 2),
+        PatternCell(midis: [_a2], steps: 2),
+        PatternCell(midis: [_c2], steps: 3),
+        PatternCell(steps: 1),
+        PatternCell(midis: [_a2], steps: 2),
+        PatternCell(midis: [_g2], steps: 2),
       ]),
       // D — a rising-then-falling pentatonic walk in steady quarters.
       MelodicPattern(Instrument.cello, [
-        (midis: [_c2], steps: 2),
-        (midis: [_e2], steps: 2),
-        (midis: [_g2], steps: 2),
-        (midis: [_a2], steps: 2),
-        (midis: [_g2], steps: 2),
-        (midis: [_e2], steps: 2),
-        (midis: [_c2], steps: 2),
-        (midis: [_g2], steps: 2),
+        PatternCell(midis: [_c2], steps: 2),
+        PatternCell(midis: [_e2], steps: 2),
+        PatternCell(midis: [_g2], steps: 2),
+        PatternCell(midis: [_a2], steps: 2),
+        PatternCell(midis: [_g2], steps: 2),
+        PatternCell(midis: [_e2], steps: 2),
+        PatternCell(midis: [_c2], steps: 2),
+        PatternCell(midis: [_g2], steps: 2),
       ]),
     ],
   ),
@@ -838,40 +913,40 @@ final List<LoopTrack> kLoopMixerTracks = [
     variants: [
       // A — held pads: C major, then A minor.
       MelodicPattern(Instrument.flute, [
-        (midis: _cMaj, steps: 8),
-        (midis: _aMin, steps: 8),
+        PatternCell(midis: _cMaj, steps: 8),
+        PatternCell(midis: _aMin, steps: 8),
       ]),
       // B — off-beat stabs.
       MelodicPattern(Instrument.piano, [
-        (midis: null, steps: 1),
-        (midis: _cMaj, steps: 1),
-        (midis: null, steps: 2),
-        (midis: _cMaj, steps: 1),
-        (midis: null, steps: 3),
-        (midis: null, steps: 1),
-        (midis: _aMin, steps: 1),
-        (midis: null, steps: 2),
-        (midis: _aMin, steps: 1),
-        (midis: null, steps: 3),
+        PatternCell(steps: 1),
+        PatternCell(midis: _cMaj, steps: 1),
+        PatternCell(steps: 2),
+        PatternCell(midis: _cMaj, steps: 1),
+        PatternCell(steps: 3),
+        PatternCell(steps: 1),
+        PatternCell(midis: _aMin, steps: 1),
+        PatternCell(steps: 2),
+        PatternCell(midis: _aMin, steps: 1),
+        PatternCell(steps: 3),
       ]),
       // C — arpeggiated eighths.
       MelodicPattern(Instrument.piano, [
-        (midis: [_c4], steps: 1),
-        (midis: [_e4], steps: 1),
-        (midis: [_g4], steps: 1),
-        (midis: [_e4], steps: 1),
-        (midis: [_c4], steps: 1),
-        (midis: [_e4], steps: 1),
-        (midis: [_g4], steps: 1),
-        (midis: [_e4], steps: 1),
-        (midis: [_a3], steps: 1),
-        (midis: [_c4], steps: 1),
-        (midis: [_e4], steps: 1),
-        (midis: [_c4], steps: 1),
-        (midis: [_a3], steps: 1),
-        (midis: [_c4], steps: 1),
-        (midis: [_e4], steps: 1),
-        (midis: [_c4], steps: 1),
+        PatternCell(midis: [_c4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_c4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_a3], steps: 1),
+        PatternCell(midis: [_c4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_c4], steps: 1),
+        PatternCell(midis: [_a3], steps: 1),
+        PatternCell(midis: [_c4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_c4], steps: 1),
       ]),
     ],
   ),
@@ -881,44 +956,44 @@ final List<LoopTrack> kLoopMixerTracks = [
     variants: [
       // A — the v1 riff.
       MelodicPattern(Instrument.piano, [
-        (midis: [_e4], steps: 1),
-        (midis: [_g4], steps: 1),
-        (midis: [_a4], steps: 1),
-        (midis: null, steps: 1),
-        (midis: [_g4], steps: 1),
-        (midis: [_e4], steps: 1),
-        (midis: [_d4], steps: 2),
-        (midis: [_c4], steps: 1),
-        (midis: [_d4], steps: 1),
-        (midis: [_e4], steps: 1),
-        (midis: [_g4], steps: 1),
-        (midis: [_a4], steps: 2),
-        (midis: [_g4], steps: 1),
-        (midis: [_e4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(midis: [_a4], steps: 1),
+        PatternCell(steps: 1),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_d4], steps: 2),
+        PatternCell(midis: [_c4], steps: 1),
+        PatternCell(midis: [_d4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(midis: [_a4], steps: 2),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(midis: [_e4], steps: 1),
       ]),
       // B — an answering phrase with held notes.
       MelodicPattern(Instrument.piano, [
-        (midis: [_g4], steps: 2),
-        (midis: [_a4], steps: 1),
-        (midis: [_g4], steps: 1),
-        (midis: [_e4], steps: 2),
-        (midis: [_d4], steps: 2),
-        (midis: [_e4], steps: 1),
-        (midis: [_d4], steps: 1),
-        (midis: [_c4], steps: 2),
-        (midis: [_d4], steps: 2),
-        (midis: [_e4], steps: 2),
+        PatternCell(midis: [_g4], steps: 2),
+        PatternCell(midis: [_a4], steps: 1),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(midis: [_e4], steps: 2),
+        PatternCell(midis: [_d4], steps: 2),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(midis: [_d4], steps: 1),
+        PatternCell(midis: [_c4], steps: 2),
+        PatternCell(midis: [_d4], steps: 2),
+        PatternCell(midis: [_e4], steps: 2),
       ]),
       // C — a sparse call.
       MelodicPattern(Instrument.piano, [
-        (midis: [_e4], steps: 1),
-        (midis: null, steps: 3),
-        (midis: [_g4], steps: 1),
-        (midis: null, steps: 3),
-        (midis: [_a4], steps: 1),
-        (midis: null, steps: 3),
-        (midis: [_g4], steps: 1),
-        (midis: null, steps: 3),
+        PatternCell(midis: [_e4], steps: 1),
+        PatternCell(steps: 3),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(steps: 3),
+        PatternCell(midis: [_a4], steps: 1),
+        PatternCell(steps: 3),
+        PatternCell(midis: [_g4], steps: 1),
+        PatternCell(steps: 3),
       ]),
     ],
   ),
@@ -928,32 +1003,32 @@ final List<LoopTrack> kLoopMixerTracks = [
     variants: [
       // A — rare high dings.
       const MelodicPattern(Instrument.musicBox, [
-        (midis: null, steps: 2),
-        (midis: [_c6], steps: 1),
-        (midis: null, steps: 3),
-        (midis: [_a5], steps: 1),
-        (midis: null, steps: 1),
-        (midis: null, steps: 2),
-        (midis: [_g5], steps: 1),
-        (midis: null, steps: 3),
-        (midis: [_c6], steps: 1),
-        (midis: null, steps: 1),
+        PatternCell(steps: 2),
+        PatternCell(midis: [_c6], steps: 1),
+        PatternCell(steps: 3),
+        PatternCell(midis: [_a5], steps: 1),
+        PatternCell(steps: 1),
+        PatternCell(steps: 2),
+        PatternCell(midis: [_g5], steps: 1),
+        PatternCell(steps: 3),
+        PatternCell(midis: [_c6], steps: 1),
+        PatternCell(steps: 1),
       ]),
       // B — a running high arpeggio.
       MelodicPattern(Instrument.musicBox, [
         for (var i = 0; i < 4; i++) ...const [
-          (midis: [_c6], steps: 1),
-          (midis: [_a5], steps: 1),
-          (midis: [_g5], steps: 1),
-          (midis: [_a5], steps: 1),
+          PatternCell(midis: [_c6], steps: 1),
+          PatternCell(midis: [_a5], steps: 1),
+          PatternCell(midis: [_g5], steps: 1),
+          PatternCell(midis: [_a5], steps: 1),
         ],
       ]),
       // C — one ding per bar.
       const MelodicPattern(Instrument.musicBox, [
-        (midis: null, steps: 7),
-        (midis: [_c6], steps: 1),
-        (midis: null, steps: 7),
-        (midis: [_g5], steps: 1),
+        PatternCell(steps: 7),
+        PatternCell(midis: [_c6], steps: 1),
+        PatternCell(steps: 7),
+        PatternCell(midis: [_g5], steps: 1),
       ]),
     ],
   ),
@@ -1008,20 +1083,32 @@ final List<LoopTrack> _fourTracks = [
     ),
     variants: [
       MelodicPattern(Instrument.cello, [
-        (midis: [_c2], steps: 1), (midis: [_c3], steps: 1), //
-        (midis: [_c2], steps: 1), (midis: [_c3], steps: 1),
-        (midis: [_g2], steps: 1), (midis: [_g3], steps: 1),
-        (midis: [_g2], steps: 1), (midis: [_g3], steps: 1),
-        (midis: [_a2], steps: 1), (midis: [_a3], steps: 1),
-        (midis: [_a2], steps: 1), (midis: [_a3], steps: 1),
-        (midis: [_g2], steps: 1), (midis: [_g3], steps: 1),
-        (midis: [_e2], steps: 1), (midis: [_g2], steps: 1),
+        PatternCell(midis: [_c2], steps: 1),
+        PatternCell(midis: [_c3], steps: 1), //
+        PatternCell(midis: [_c2], steps: 1),
+        PatternCell(midis: [_c3], steps: 1),
+        PatternCell(midis: [_g2], steps: 1),
+        PatternCell(midis: [_g3], steps: 1),
+        PatternCell(midis: [_g2], steps: 1),
+        PatternCell(midis: [_g3], steps: 1),
+        PatternCell(midis: [_a2], steps: 1),
+        PatternCell(midis: [_a3], steps: 1),
+        PatternCell(midis: [_a2], steps: 1),
+        PatternCell(midis: [_a3], steps: 1),
+        PatternCell(midis: [_g2], steps: 1),
+        PatternCell(midis: [_g3], steps: 1),
+        PatternCell(midis: [_e2], steps: 1),
+        PatternCell(midis: [_g2], steps: 1),
       ]),
       MelodicPattern(Instrument.cello, [
-        (midis: [_c2], steps: 2), (midis: [_c2], steps: 2), //
-        (midis: [_g2], steps: 2), (midis: [_a2], steps: 2),
-        (midis: [_c2], steps: 2), (midis: [_c2], steps: 2),
-        (midis: [_a2], steps: 2), (midis: [_g2], steps: 2),
+        PatternCell(midis: [_c2], steps: 2),
+        PatternCell(midis: [_c2], steps: 2), //
+        PatternCell(midis: [_g2], steps: 2),
+        PatternCell(midis: [_a2], steps: 2),
+        PatternCell(midis: [_c2], steps: 2),
+        PatternCell(midis: [_c2], steps: 2),
+        PatternCell(midis: [_a2], steps: 2),
+        PatternCell(midis: [_g2], steps: 2),
       ]),
     ],
   ),
@@ -1043,14 +1130,18 @@ final List<LoopTrack> _fourTracks = [
     ),
     variants: [
       MelodicPattern(Instrument.flute, [
-        (midis: [_c4, _e4, _g4], steps: 2), (midis: null, steps: 2), //
-        (midis: [_c4, _e4, _g4], steps: 2), (midis: null, steps: 2),
-        (midis: [_a3, _c4, _e4], steps: 2), (midis: null, steps: 2),
-        (midis: [_a3, _c4, _e4], steps: 2), (midis: null, steps: 2),
+        PatternCell(midis: [_c4, _e4, _g4], steps: 2),
+        PatternCell(steps: 2), //
+        PatternCell(midis: [_c4, _e4, _g4], steps: 2),
+        PatternCell(steps: 2),
+        PatternCell(midis: [_a3, _c4, _e4], steps: 2),
+        PatternCell(steps: 2),
+        PatternCell(midis: [_a3, _c4, _e4], steps: 2),
+        PatternCell(steps: 2),
       ]),
       MelodicPattern(Instrument.flute, [
-        (midis: [_c4, _e4, _g4], steps: 8),
-        (midis: [_a3, _c4, _e4], steps: 8),
+        PatternCell(midis: [_c4, _e4, _g4], steps: 8),
+        PatternCell(midis: [_a3, _c4, _e4], steps: 8),
       ]),
     ],
   ),
@@ -1059,14 +1150,20 @@ final List<LoopTrack> _fourTracks = [
     gain: 0.34,
     variants: [
       MelodicPattern(Instrument.piano, [
-        (midis: [_e4], steps: 2), (midis: [_g4], steps: 2), //
-        (midis: [_a4], steps: 2), (midis: [_g4], steps: 2),
-        (midis: [_e4], steps: 2), (midis: [_c4], steps: 2),
-        (midis: [_d4], steps: 2), (midis: [_e4], steps: 2),
+        PatternCell(midis: [_e4], steps: 2),
+        PatternCell(midis: [_g4], steps: 2), //
+        PatternCell(midis: [_a4], steps: 2),
+        PatternCell(midis: [_g4], steps: 2),
+        PatternCell(midis: [_e4], steps: 2),
+        PatternCell(midis: [_c4], steps: 2),
+        PatternCell(midis: [_d4], steps: 2),
+        PatternCell(midis: [_e4], steps: 2),
       ]),
       MelodicPattern(Instrument.piano, [
-        (midis: [_g4], steps: 4), (midis: [_a4], steps: 4), //
-        (midis: [_g4], steps: 4), (midis: [_e4], steps: 4),
+        PatternCell(midis: [_g4], steps: 4),
+        PatternCell(midis: [_a4], steps: 4), //
+        PatternCell(midis: [_g4], steps: 4),
+        PatternCell(midis: [_e4], steps: 4),
       ]),
     ],
   ),
@@ -1075,15 +1172,18 @@ final List<LoopTrack> _fourTracks = [
     gain: 0.26,
     variants: [
       const MelodicPattern(Instrument.musicBox, [
-        (midis: [_c6], steps: 1), (midis: null, steps: 3), //
-        (midis: [_a5], steps: 1), (midis: null, steps: 3),
-        (midis: [_g5], steps: 1), (midis: null, steps: 3),
-        (midis: [_c6], steps: 1), (midis: null, steps: 3),
+        PatternCell(midis: [_c6], steps: 1),
+        PatternCell(steps: 3), //
+        PatternCell(midis: [_a5], steps: 1), PatternCell(steps: 3),
+        PatternCell(midis: [_g5], steps: 1), PatternCell(steps: 3),
+        PatternCell(midis: [_c6], steps: 1), PatternCell(steps: 3),
       ]),
       MelodicPattern(Instrument.musicBox, [
         for (var i = 0; i < 4; i++) ...[
-          (midis: [_c6], steps: 1), (midis: [_a5], steps: 1), //
-          (midis: [_g5], steps: 1), (midis: [_a5], steps: 1),
+          const PatternCell(midis: [_c6], steps: 1),
+          const PatternCell(midis: [_a5], steps: 1), //
+          const PatternCell(midis: [_g5], steps: 1),
+          const PatternCell(midis: [_a5], steps: 1),
         ],
       ]),
     ],
@@ -1125,12 +1225,15 @@ final List<LoopTrack> _chillTracks = [
     ),
     variants: [
       MelodicPattern(Instrument.cello, [
-        (midis: [_c2], steps: 4), (midis: [_g2], steps: 4), //
-        (midis: [_a2], steps: 4), (midis: [_g2], steps: 4),
+        PatternCell(midis: [_c2], steps: 4),
+        PatternCell(midis: [_g2], steps: 4), //
+        PatternCell(midis: [_a2], steps: 4),
+        PatternCell(midis: [_g2], steps: 4),
       ]),
       MelodicPattern(Instrument.cello, [
-        (midis: [_c2], steps: 6), (midis: null, steps: 2), //
-        (midis: [_a2], steps: 6), (midis: null, steps: 2),
+        PatternCell(midis: [_c2], steps: 6),
+        PatternCell(steps: 2), //
+        PatternCell(midis: [_a2], steps: 6), PatternCell(steps: 2),
       ]),
     ],
   ),
@@ -1149,12 +1252,12 @@ final List<LoopTrack> _chillTracks = [
     ),
     variants: [
       MelodicPattern(Instrument.flute, [
-        (midis: [_c4, _e4, _g4], steps: 8),
-        (midis: [_a3, _c4, _e4], steps: 8),
+        PatternCell(midis: [_c4, _e4, _g4], steps: 8),
+        PatternCell(midis: [_a3, _c4, _e4], steps: 8),
       ]),
       MelodicPattern(Instrument.flute, [
-        (midis: [_e4, _g4], steps: 8),
-        (midis: [_c4, _e4], steps: 8),
+        PatternCell(midis: [_e4, _g4], steps: 8),
+        PatternCell(midis: [_c4, _e4], steps: 8),
       ]),
     ],
   ),
@@ -1163,14 +1266,17 @@ final List<LoopTrack> _chillTracks = [
     gain: 0.32,
     variants: [
       MelodicPattern(Instrument.musicBox, [
-        (midis: [_g4], steps: 4), (midis: [_e4], steps: 4), //
-        (midis: [_a4], steps: 4), (midis: [_g4], steps: 4),
+        PatternCell(midis: [_g4], steps: 4),
+        PatternCell(midis: [_e4], steps: 4), //
+        PatternCell(midis: [_a4], steps: 4),
+        PatternCell(midis: [_g4], steps: 4),
       ]),
       MelodicPattern(Instrument.musicBox, [
-        (midis: null, steps: 2), (midis: [_e4], steps: 2), //
-        (midis: [_g4], steps: 4),
-        (midis: null, steps: 2), (midis: [_a4], steps: 2),
-        (midis: [_g4], steps: 4),
+        PatternCell(steps: 2),
+        PatternCell(midis: [_e4], steps: 2), //
+        PatternCell(midis: [_g4], steps: 4),
+        PatternCell(steps: 2), PatternCell(midis: [_a4], steps: 2),
+        PatternCell(midis: [_g4], steps: 4),
       ]),
     ],
   ),
@@ -1179,12 +1285,14 @@ final List<LoopTrack> _chillTracks = [
     gain: 0.24,
     variants: [
       MelodicPattern(Instrument.musicBox, [
-        (midis: null, steps: 7), (midis: [_c6], steps: 1), //
-        (midis: null, steps: 7), (midis: [_g5], steps: 1),
+        PatternCell(steps: 7),
+        PatternCell(midis: [_c6], steps: 1), //
+        PatternCell(steps: 7), PatternCell(midis: [_g5], steps: 1),
       ]),
       MelodicPattern(Instrument.musicBox, [
-        (midis: [_a5], steps: 4), (midis: null, steps: 4), //
-        (midis: [_g5], steps: 4), (midis: null, steps: 4),
+        PatternCell(midis: [_a5], steps: 4),
+        PatternCell(steps: 4), //
+        PatternCell(midis: [_g5], steps: 4), PatternCell(steps: 4),
       ]),
     ],
   ),
@@ -1885,7 +1993,7 @@ class LoopEngine {
     if (cells == null || t == 0) return cells;
     return [
       for (final c in cells)
-        (midis: c.midis?.map((m) => m + t).toList(), steps: c.steps),
+        PatternCell(midis: c.midis?.map((m) => m + t).toList(), steps: c.steps),
     ];
   }
 
@@ -2154,8 +2262,8 @@ class LoopEngine {
             cell.steps == 2 &&
             rng.nextDouble() < 0.35) ...[
           // Split a 2-step note into note + pentatonic neighbour ornament.
-          (midis: cell.midis, steps: 1),
-          (
+          PatternCell(midis: cell.midis, steps: 1),
+          PatternCell(
             midis: [_pentatonicNeighbour(cell.midis!.single, rng)],
             steps: 1,
           ),

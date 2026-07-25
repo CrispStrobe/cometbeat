@@ -361,8 +361,8 @@ void main() {
 
   test('share tokens preserve symbolic edits to built-in pitched tracks', () {
     final edited = <PatternCell>[
-      (midis: const [60], steps: 8),
-      (midis: const [62], steps: 8),
+      const PatternCell(midis: [60], steps: 8),
+      const PatternCell(midis: [62], steps: 8),
     ];
     final engine = LoopEngine()
       ..setTrackCells('melody', edited)

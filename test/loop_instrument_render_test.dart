@@ -29,10 +29,10 @@ double _peak(Float64List x) {
 }
 
 const _melody = <PatternCell>[
-  (midis: [60], steps: 4),
-  (midis: [64], steps: 4),
-  (midis: [67], steps: 4),
-  (midis: [72], steps: 4),
+  PatternCell(midis: [60], steps: 4),
+  PatternCell(midis: [64], steps: 4),
+  PatternCell(midis: [67], steps: 4),
+  PatternCell(midis: [72], steps: 4),
 ];
 
 void main() {
@@ -47,8 +47,8 @@ void main() {
   test('a rest cell (no midis) leaves that span quieter than a played span',
       () {
     final withRest = <PatternCell>[
-      (midis: [60], steps: 8),
-      (midis: null, steps: 8), // second half is a rest
+      const PatternCell(midis: [60], steps: 8),
+      const PatternCell(steps: 8), // second half is a rest
     ];
     final pcm = renderCellsWithInstrument(withRest, _voice(), timing);
     // energy in the first half (played) exceeds the second (rest) — allowing
@@ -74,10 +74,10 @@ void main() {
 
   test('a chord cell sums its tones (louder than a single note)', () {
     const single = <PatternCell>[
-      (midis: [60], steps: 16),
+      PatternCell(midis: [60], steps: 16),
     ];
     const chord = <PatternCell>[
-      (midis: [60, 64, 67], steps: 16),
+      PatternCell(midis: [60, 64, 67], steps: 16),
     ];
     final one = renderCellsWithInstrument(single, _voice(), timing);
     final three = renderCellsWithInstrument(chord, _voice(), timing);

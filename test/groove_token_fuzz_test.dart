@@ -40,7 +40,10 @@ GrooveSpec _randomValidSpec(Random r) {
     userCells: r.nextBool()
         ? [
             for (var i = 0; i < 8; i++)
-              (midis: r.nextBool() ? [48 + r.nextInt(36)] : null, steps: 2),
+              PatternCell(
+                midis: r.nextBool() ? [48 + r.nextInt(36)] : null,
+                steps: 2,
+              ),
           ]
         : null,
     userInstrument: r.nextBool() ? 'flute' : null,

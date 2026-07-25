@@ -32,20 +32,20 @@ void main() {
   test('clef follows the actual voice range, not its track label', () {
     expect(
       clefForGrooveCells(const [
-        (midis: [36], steps: 1),
+        PatternCell(midis: [36], steps: 1),
       ]),
       Clef.bass,
     );
     expect(
       clefForGrooveCells(const [
-        (midis: [72], steps: 1),
+        PatternCell(midis: [72], steps: 1),
       ]),
       Clef.treble,
     );
     expect(
       clefForGrooveCells(const [
-        (midis: [36], steps: 1),
-        (midis: [72], steps: 1),
+        PatternCell(midis: [36], steps: 1),
+        PatternCell(midis: [72], steps: 1),
       ]),
       Clef.treble,
     );
@@ -80,10 +80,10 @@ void main() {
 
   test('cells pack into 4/4 bars with greedy durations', () {
     final score = grooveScore(const [
-      (midis: [60], steps: 8), // a whole-note bar
-      (midis: null, steps: 3), // dotted-quarter rest
-      (midis: [64, 67], steps: 2), // a quarter dyad
-      (midis: [69], steps: 3),
+      PatternCell(midis: [60], steps: 8), // a whole-note bar
+      PatternCell(steps: 3), // dotted-quarter rest
+      PatternCell(midis: [64, 67], steps: 2), // a quarter dyad
+      PatternCell(midis: [69], steps: 3),
     ]);
     expect(score.measures.length, 2);
     final bar1 = score.measures.first.elements;
@@ -103,9 +103,9 @@ void main() {
 
   test('a cell crossing the barline is split', () {
     final score = grooveScore(const [
-      (midis: null, steps: 6),
-      (midis: [60], steps: 4), // 2 steps in bar 1 + 2 steps in bar 2
-      (midis: null, steps: 6),
+      PatternCell(steps: 6),
+      PatternCell(midis: [60], steps: 4), // 2 steps in bar 1 + 2 steps in bar 2
+      PatternCell(steps: 6),
     ]);
     expect(score.measures.length, 2);
     final tail = score.measures.first.elements.last as NoteElement;
@@ -248,10 +248,10 @@ void main() {
     test('maps each step to the note sounding then, null on rests', () {
       // C (2 steps) · rest (2) · G (2) · rest (2) = one bar.
       final score = grooveScore(const [
-        (midis: [60], steps: 2),
-        (midis: null, steps: 2),
-        (midis: [67], steps: 2),
-        (midis: null, steps: 2),
+        PatternCell(midis: [60], steps: 2),
+        PatternCell(steps: 2),
+        PatternCell(midis: [67], steps: 2),
+        PatternCell(steps: 2),
       ]);
       final id0 = grooveNoteIdAtStep(score, 0);
       expect(id0, isNotNull);

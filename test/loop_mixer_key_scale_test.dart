@@ -34,7 +34,7 @@ void main() {
       final at0 = _detectMidi(
         renderCells(
           [
-            (midis: [60], steps: 16),
+            const PatternCell(midis: [60], steps: 16),
           ],
           Instrument.flute,
           timing,
@@ -43,7 +43,7 @@ void main() {
       final at5 = _detectMidi(
         renderCells(
           [
-            (midis: [60], steps: 16),
+            const PatternCell(midis: [60], steps: 16),
           ],
           Instrument.flute,
           timing,

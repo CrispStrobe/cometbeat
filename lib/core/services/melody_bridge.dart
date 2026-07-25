@@ -68,7 +68,7 @@ List<PatternCell> patternCellsFromMidiRows(
       if (next != null) break; // a fresh trigger starts a new cell
       len++;
     }
-    cells.add((midis: midi == null ? null : [midi], steps: len));
+    cells.add(PatternCell(midis: midi == null ? null : [midi], steps: len));
     i += len;
   }
   return cells;

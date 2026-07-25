@@ -932,11 +932,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       var steps = (num * stepsPerBar / den).round();
       if (steps < 1) steps = 1;
       if (filled + steps > kPatternSteps) steps = kPatternSteps - filled;
-      cells.add((midis: e.isRest ? null : [e.pitch!.midiNumber], steps: steps));
+      cells.add(PatternCell(
+          midis: e.isRest ? null : [e.pitch!.midiNumber], steps: steps,),);
       filled += steps;
     }
     if (filled < kPatternSteps) {
-      cells.add((midis: null, steps: kPatternSteps - filled));
+      cells.add(PatternCell(steps: kPatternSteps - filled));
     }
     return cells;
   }

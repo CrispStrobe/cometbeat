@@ -140,14 +140,14 @@ Score drumGrooveScore(DrumRowsPattern pattern, {Clef clef = Clef.treble}) {
         for (final d in Drum.values)
           if (hit(d, i)) _drumMidi(d),
       ]..sort();
-      cells.add((midis: hits, steps: 1));
+      cells.add(PatternCell(midis: hits, steps: 1));
       i++;
     } else {
       var j = i;
       while (j < steps && !anyHit(j)) {
         j++;
       }
-      cells.add((midis: null, steps: j - i));
+      cells.add(PatternCell(steps: j - i));
       i = j;
     }
   }
@@ -218,14 +218,14 @@ List<PatternCell> _drumRowCells(List<bool> row, int midi) {
   var i = 0;
   while (i < row.length) {
     if (row[i]) {
-      cells.add((midis: [midi], steps: 1));
+      cells.add(PatternCell(midis: [midi], steps: 1));
       i++;
     } else {
       var j = i;
       while (j < row.length && !row[j]) {
         j++;
       }
-      cells.add((midis: null, steps: j - i));
+      cells.add(PatternCell(steps: j - i));
       i = j;
     }
   }

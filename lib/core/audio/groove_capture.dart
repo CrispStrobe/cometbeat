@@ -76,9 +76,11 @@ List<PatternCell>? quantizeToGroove(
     if (last != null &&
         ((last.midis?.singleOrNull == snapped && snapped != null) ||
             (last.midis == null && snapped == null))) {
-      cells[cells.length - 1] = (midis: last.midis, steps: last.steps + 1);
+      cells[cells.length - 1] =
+          PatternCell(midis: last.midis, steps: last.steps + 1);
     } else {
-      cells.add((midis: snapped == null ? null : [snapped], steps: 1));
+      cells.add(
+          PatternCell(midis: snapped == null ? null : [snapped], steps: 1),);
     }
   }
   return cells;

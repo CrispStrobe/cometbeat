@@ -631,8 +631,8 @@ void main() {
     expect(find.text('Sing a track!'), findsOneWidget);
 
     game.debugCaptureCells(const [
-      (midis: [64], steps: 8),
-      (midis: [67], steps: 8),
+      PatternCell(midis: [64], steps: 8),
+      PatternCell(midis: [67], steps: 8),
     ]);
     await tester.pump();
 
@@ -1413,6 +1413,36 @@ void main() {
     await tester.tap(staffRow, warnIfMissed: false);
     await tester.pump();
     expect(game.tuneEditVisible, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('note-level velocity: long-press cycles soft/normal + it renders',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.debugSetTuneTarget('melody');
+    // Two notes so a per-note dynamic is audible relative to its neighbour
+    // (a single note would be normalized back to unit peak by the mixer).
+    game.debugEditTuneCell(64, 0); // E4 at step 0
+    game.debugEditTuneCell(67, 4); // G4 at step 4
+    await tester.pump();
+    expect(game.debugTuneCells![0].velocity, 1.0);
+    final before = game.debugRenderLoop();
+
+    // Long-press cycles the step-0 note to soft.
+    game.debugCycleTuneVelocity(64, 0);
+    await tester.pump();
+    expect(game.debugTuneCells![0].velocity, lessThan(1.0));
+    expect(game.debugRenderLoop(), isNot(equals(before)));
+
+    // Velocity survives a share-token round-trip.
+    final token = game.grooveToken;
+    expect(decodeGrooveToken(token), isNotNull);
+
+    // Cycle back to normal.
+    game.debugCycleTuneVelocity(64, 0);
+    await tester.pump();
+    expect(game.debugTuneCells![0].velocity, 1.0);
     expect(tester.takeException(), isNull);
   });
 

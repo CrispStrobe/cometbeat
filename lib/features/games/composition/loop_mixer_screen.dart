@@ -234,6 +234,10 @@ abstract interface class LoopMixerTester {
   List<PatternCell>? get debugTuneCells;
   void debugSetTuneTarget(String id);
 
+  /// Cycle the dynamics of the note(s) at [step] (soft ↔ normal) — the tune
+  /// grid's long-press, for note-level velocity editing.
+  void debugCycleTuneVelocity(int midi, int step);
+
   /// Wide pitch range for the tune editor (Beginner-Tracker parity): one octave
   /// off, two octaves on.
   bool get tuneWideRange;
@@ -661,6 +665,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void debugEditTuneCell(int midi, int step) => _toggleTuneCell(midi, step);
   @override
   void debugSetTuneTarget(String id) => setState(() => _tuneTarget = id);
+  @override
+  void debugCycleTuneVelocity(int midi, int step) =>
+      _cycleTuneCellVelocity(midi, step);
 
   /// Which pitched part the tune editor edits: the user track ('voice' = "My
   /// tune") or a built-in stem (LM-UX4c, via the engine's cell-override).
@@ -704,7 +711,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         60 + (_tuneWideRange ? 24 : 12),
       ];
 
-  /// The target's cells as grid cells (one StepCell per pitch per onset).
+  /// A soft note's velocity (accent parity with the Beginner Tracker's soft).
+  static const _softVelocity = 0.45;
+
+  /// The target's cells as grid cells (one StepCell per pitch per onset),
+  /// carrying each cell's velocity so soft notes render dimmer.
   List<StepCell> _tuneStepCells() {
     final cells = _targetCells() ?? const <PatternCell>[];
     final out = <StepCell>[];
@@ -713,7 +724,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       final midis = c.midis;
       if (midis != null) {
         for (final m in midis) {
-          out.add(StepCell(m, pos, len: c.steps));
+          out.add(StepCell(m, pos, len: c.steps, velocity: c.velocity));
         }
       }
       pos += c.steps;
@@ -721,11 +732,14 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     return out;
   }
 
-  /// Grid cells → a bar of [PatternCell]s (rests fill the gaps).
+  /// Grid cells → a bar of [PatternCell]s (rests fill the gaps). Velocity is
+  /// per time-slice: all notes placed on a step share that step's velocity.
   List<PatternCell> _stepCellsToPattern(List<StepCell> cells, int steps) {
     final byStep = <int, List<int>>{};
+    final velOf = <int, double>{};
     for (final c in cells) {
       (byStep[c.step] ??= []).add(c.row);
+      velOf[c.step] = c.velocity;
     }
     final out = <PatternCell>[];
     var pos = 0;
@@ -735,22 +749,21 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       while (next < steps && !byStep.containsKey(next)) {
         next++;
       }
-      out.add((midis: midis, steps: next - pos));
+      out.add(
+        PatternCell(
+          midis: midis,
+          steps: next - pos,
+          velocity: velOf[pos] ?? 1.0,
+        ),
+      );
       pos = next;
     }
     return out;
   }
 
-  void _toggleTuneCell(int midi, int step) {
+  /// Writes the edited grid cells back to the current tune target and re-renders.
+  void _writeTuneCells(List<StepCell> next) {
     const steps = kPatternSteps; // pitched patterns fill 2 bars
-    final cells = _tuneStepCells();
-    final idx = cells.indexWhere((c) => c.row == midi && c.step == step);
-    final next = [...cells];
-    if (idx >= 0) {
-      next.removeAt(idx);
-    } else {
-      next.add(StepCell(midi, step, len: 2));
-    }
     final pattern =
         next.isEmpty ? <PatternCell>[] : _stepCellsToPattern(next, steps);
     if (_tuneTargetIsUser) {
@@ -767,6 +780,34 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     }
     setState(() {});
     _restartGroove();
+  }
+
+  void _toggleTuneCell(int midi, int step) {
+    final cells = _tuneStepCells();
+    final idx = cells.indexWhere((c) => c.row == midi && c.step == step);
+    final next = [...cells];
+    if (idx >= 0) {
+      next.removeAt(idx);
+    } else {
+      next.add(StepCell(midi, step, len: 2));
+    }
+    _writeTuneCells(next);
+  }
+
+  /// Long-press a placed note: cycle the whole time-slice's dynamics
+  /// soft ↔ normal (full note-level editing, Beginner-Tracker parity).
+  void _cycleTuneCellVelocity(int midi, int step) {
+    final cells = _tuneStepCells();
+    final atStep = cells.where((c) => c.step == step);
+    if (atStep.isEmpty) return; // no note here to accent
+    final nextVel = atStep.first.velocity >= 1.0 ? _softVelocity : 1.0;
+    _writeTuneCells([
+      for (final c in cells)
+        if (c.step == step)
+          StepCell(c.row, c.step, len: c.len, velocity: nextVel)
+        else
+          c,
+    ]);
   }
 
   bool _infinite = false;
@@ -2111,6 +2152,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 melodyRows: _tuneRows,
                 playStep: hl >= 0 ? hl % kPatternSteps : null,
                 onToggle: _toggleTuneCell,
+                // Long-press a note to cycle its dynamics soft ↔ normal.
+                onLongPress: _cycleTuneCellVelocity,
               ),
             ),
           ],

@@ -19,10 +19,13 @@ import 'package:flutter/material.dart';
 /// One placed event on the grid: [row] is a MIDI pitch (melodic) or a drum lane
 /// (percussive), [step] is a 16th column, [len] the length in steps.
 class StepCell {
-  const StepCell(this.row, this.step, {this.len = 1});
+  const StepCell(this.row, this.step, {this.len = 1, this.velocity = 1.0});
   final int row;
   final int step;
   final int len;
+
+  /// Per-note dynamics 0..1 (1 = normal). Soft notes draw dimmer.
+  final double velocity;
 }
 
 class StepGridView extends StatelessWidget {
@@ -34,6 +37,7 @@ class StepGridView extends StatelessWidget {
     this.melodyRows = const [],
     this.playStep,
     this.onToggle,
+    this.onLongPress,
     this.height,
   });
 
@@ -50,6 +54,10 @@ class StepGridView extends StatelessWidget {
   /// Tap-to-toggle. The callback gets the STORED row value (a drum lane for
   /// beats, a MIDI pitch for melodies) and the step. Null = read-only.
   final void Function(int row, int step)? onToggle;
+
+  /// Long-press a cell — same (row, step) coordinates as [onToggle]. Used by the
+  /// tune editor to cycle a note's soft/normal dynamics.
+  final void Function(int row, int step)? onLongPress;
 
   /// Optional fixed height; defaults to 36 (percussive) / 78 (melodic).
   final double? height;
@@ -75,7 +83,17 @@ class StepGridView extends StatelessWidget {
         play: scheme.tertiary,
       ),
     );
-    final editable = onToggle != null && steps > 0 && _rowCount > 0;
+    final editable =
+        (onToggle != null || onLongPress != null) && steps > 0 && _rowCount > 0;
+    (int, int) hit(Offset local, double maxWidth) {
+      final step = (local.dx / maxWidth * steps).floor().clamp(0, steps - 1);
+      final yRow = (local.dy / _h * _rowCount).floor().clamp(0, _rowCount - 1);
+      final stored = percussive
+          ? yRow // 0 hat · 1 snare · 2 kick
+          : melodyRows[(_rowCount - 1) - yRow]; // top = highest
+      return (stored, step);
+    }
+
     return SizedBox(
       height: _h,
       width: double.infinity,
@@ -83,22 +101,18 @@ class StepGridView extends StatelessWidget {
           ? LayoutBuilder(
               builder: (context, c) => GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTapDown: (d) {
-                  final step = (d.localPosition.dx / c.maxWidth * steps)
-                      .floor()
-                      .clamp(0, steps - 1);
-                  final yRow = (d.localPosition.dy / _h * _rowCount)
-                      .floor()
-                      .clamp(0, _rowCount - 1);
-                  final int stored;
-                  if (percussive) {
-                    stored = yRow; // 0 hat · 1 snare · 2 kick
-                  } else {
-                    stored =
-                        melodyRows[(_rowCount - 1) - yRow]; // top = highest
-                  }
-                  onToggle!(stored, step);
-                },
+                onTapDown: onToggle == null
+                    ? null
+                    : (d) {
+                        final (stored, step) = hit(d.localPosition, c.maxWidth);
+                        onToggle!(stored, step);
+                      },
+                onLongPressStart: onLongPress == null
+                    ? null
+                    : (d) {
+                        final (stored, step) = hit(d.localPosition, c.maxWidth);
+                        onLongPress!(stored, step);
+                      },
                 child: paint,
               ),
             )
@@ -208,17 +222,18 @@ class _StepGridPainter extends CustomPainter {
     }
 
     final rowH = size.height / rows;
-    final cellPaint = Paint()..color = fill;
     for (final c in cells) {
       final x = c.step * stepW;
       final w = max(stepW * c.len - 1, 2.0);
       final y = rowOf(c) * rowH;
+      // Soft notes draw dimmer so dynamics are visible on the grid.
+      final alpha = c.velocity >= 1.0 ? 1.0 : (0.4 + 0.6 * c.velocity);
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(x + 0.5, y + 1, w, max(rowH - 2, 2)),
           const Radius.circular(2),
         ),
-        cellPaint,
+        Paint()..color = fill.withValues(alpha: alpha.clamp(0.0, 1.0)),
       );
     }
     canvas.restore();

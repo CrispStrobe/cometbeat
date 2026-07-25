@@ -13,9 +13,9 @@ void main() {
 
     final m = SharedMelody(
       cells: const <PatternCell>[
-        (midis: [60], steps: 2),
-        (midis: null, steps: 2),
-        (midis: [67], steps: 4),
+        PatternCell(midis: [60], steps: 2),
+        PatternCell(steps: 2),
+        PatternCell(midis: [67], steps: 4),
       ],
       tempoBpm: 100,
       instrument: 'flute',
@@ -35,7 +35,7 @@ void main() {
   test('an all-rest tune counts as empty (not offered)', () {
     MelodyBridge.instance.publish(
       SharedMelody(
-        cells: const <PatternCell>[(midis: null, steps: 16)],
+        cells: const <PatternCell>[PatternCell(steps: 16)],
         tempoBpm: 100,
       ),
     );
@@ -46,11 +46,14 @@ void main() {
   test('cells are unmodifiable (a snapshot)', () {
     final m = SharedMelody(
       cells: const <PatternCell>[
-        (midis: [60], steps: 16),
+        PatternCell(midis: [60], steps: 16),
       ],
       tempoBpm: 100,
     );
-    expect(() => m.cells.add((midis: null, steps: 1)), throwsUnsupportedError);
+    expect(
+      () => m.cells.add(const PatternCell(steps: 1)),
+      throwsUnsupportedError,
+    );
   });
 
   group('midi-row ↔ PatternCell converters', () {
@@ -99,8 +102,8 @@ void main() {
     test('load applies the transpose (authoring key folds into pitch)', () {
       final rows = midiRowsFromPatternCells(
         const <PatternCell>[
-          (midis: [60], steps: 8),
-          (midis: [64], steps: 8),
+          PatternCell(midis: [60], steps: 8),
+          PatternCell(midis: [64], steps: 8),
         ],
         16,
         transpose: 2,
