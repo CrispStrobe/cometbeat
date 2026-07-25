@@ -31,7 +31,7 @@
 
   <title>CometBeat</title>
   <link rel="manifest" href="manifest.json">
-</head>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});});}}</script></head>
 <body>
   <!--
     You can customize the "flutter_bootstrap.js" script.
