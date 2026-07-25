@@ -268,7 +268,8 @@ S3mPattern _readPattern(
       info = bytes[pos++];
     }
 
-    final logical = channel < logicalChannel.length ? logicalChannel[channel] : -1;
+    final logical =
+        channel < logicalChannel.length ? logicalChannel[channel] : -1;
     if (logical >= 0 && logical < channelCount) {
       rows[row][logical] = S3mCell(
         note: note ?? S3mCell.emptyNote,

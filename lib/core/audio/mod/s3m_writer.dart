@@ -243,9 +243,8 @@ Uint8List writeS3m(S3mModule module) {
         final hasVol = cell.volume != S3mCell.noVolume;
         final hasCmd = cell.command != 0 || cell.info != 0;
 
-        final physical = ch < physicalChannels.length
-            ? physicalChannels[ch]
-            : ch;
+        final physical =
+            ch < physicalChannels.length ? physicalChannels[ch] : ch;
         var what = physical & 0x1F;
         if (hasNoteIns) what |= 0x20;
         if (hasVol) what |= 0x40;

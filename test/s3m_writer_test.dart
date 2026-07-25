@@ -161,7 +161,8 @@ void main() {
     expect(parsed.patterns.first.rows.first[1].note, 0x60);
   });
 
-  test('preserves zero-length native patterns without shifting later patterns', () {
+  test('preserves zero-length native patterns without shifting later patterns',
+      () {
     final src = S3mModule(
       title: 'EMPTY-PATTERN',
       channelCount: 1,
