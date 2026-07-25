@@ -2285,7 +2285,7 @@ void _renderChannelIntoStereo(
     final rendered = channel.instrument is SampleInstrument
         ? _renderSampleNotesStereo(channel, cells, timing, pool)
         : channel.instrument is MultiSampleInstrument
-            ? _renderMultiSampleNotesStereo(channel, cells, timing)
+            ? _renderMultiSampleNotesStereo(channel, cells, timing, scratch)
             : null;
     if (rendered != null) {
       final n = min(timing.totalSamples, left.length - sampleOffset);
@@ -2356,12 +2356,24 @@ void _renderChannelIntoStereo(
 ({Float64List left, Float64List right}) _renderMultiSampleNotesStereo(
   TrackerChannel channel,
   List<TrackerCell> cells,
-  TrackerTiming timing,
-) {
+  TrackerTiming timing, [
+  _StereoScratch? scratch,
+]) {
   final instrument = channel.instrument as MultiSampleInstrument;
-  final raw = instrument.renderChannelStereo(cells, timing);
-  final left = Float64List.fromList(raw.left);
-  final right = Float64List.fromList(raw.right);
+  // Reuse the per-channel accumulator (chL/chR) and the per-run zone-render
+  // scratch (runL/runR) when a scratch set is supplied (whole-song export), so
+  // the note-run render allocates no whole-song transients. Byte-identical.
+  final raw = instrument.renderChannelStereo(
+    cells,
+    timing,
+    into: scratch != null ? (scratch.chL, scratch.chR) : null,
+    runInto: scratch != null ? (scratch.runL, scratch.runR) : null,
+  );
+  // raw.left / raw.right are owned by this render (fresh, or the reused scratch
+  // pair) and never aliased to each other, so pan/gain in place instead of
+  // copying — two whole-song transients per channel eliminated.
+  final left = raw.left;
+  final right = raw.right;
   final pan = channel.pan.clamp(-1.0, 1.0);
   final hasNativeStereo = instrument.zones.values.any(
     (zone) => zone is SampleInstrument && zone.sampleRight != null,

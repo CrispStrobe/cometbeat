@@ -768,12 +768,30 @@ class SampleInstrument implements TrackerInstrument {
   /// Renders a native stereo sample without flattening its right channel.
   ({Float64List left, Float64List right}) renderChannelStereo(
     List<TrackerCell> cells,
-    TrackerTiming timing,
-  ) =>
-      (
-        left: _renderChannelFrom(sample, cells, timing),
-        right: _renderChannelFrom(sampleRight ?? sample, cells, timing),
+    TrackerTiming timing, {
+    (Float64List, Float64List)? into,
+  }) {
+    if (into != null) {
+      // Reuse caller-provided whole-song buffers (zero-filled first, since
+      // _renderChannelFrom overwrites only each run window). Byte-identical to
+      // the fresh-buffer path; just no per-render transients.
+      into.$1.fillRange(0, into.$1.length, 0.0);
+      into.$2.fillRange(0, into.$2.length, 0.0);
+      return (
+        left: _renderChannelFrom(sample, cells, timing, into: into.$1),
+        right: _renderChannelFrom(
+          sampleRight ?? sample,
+          cells,
+          timing,
+          into: into.$2,
+        ),
       );
+    }
+    return (
+      left: _renderChannelFrom(sample, cells, timing),
+      right: _renderChannelFrom(sampleRight ?? sample, cells, timing),
+    );
+  }
 
   @override
   Float64List renderChannel(
@@ -1152,11 +1170,21 @@ class MultiSampleInstrument implements TrackerInstrument {
   /// to both outputs and are panned by the caller.
   ({Float64List left, Float64List right}) renderChannelStereo(
     List<TrackerCell> cells,
-    TrackerTiming timing,
-  ) {
+    TrackerTiming timing, {
+    (Float64List, Float64List)? into,
+    (Float64List, Float64List)? runInto,
+  }) {
     if (nativeVoiceSemantics) return _renderNativeVoices(cells, timing);
-    final left = Float64List(timing.totalSamples);
-    final right = Float64List(timing.totalSamples);
+    // Reusable whole-song per-channel accumulators + per-run zone-render scratch
+    // (export path): zero-filled and reused instead of freshly allocated, so the
+    // O(runs) whole-song transients that spiked the GC peak are gone. The values
+    // written are identical, so the render stays byte-identical.
+    final left = into != null
+        ? (into.$1..fillRange(0, timing.totalSamples, 0.0))
+        : Float64List(timing.totalSamples);
+    final right = into != null
+        ? (into.$2..fillRange(0, timing.totalSamples, 0.0))
+        : Float64List(timing.totalSamples);
     if (zones.isEmpty) return (left: left, right: right);
 
     var startStep = 0;
@@ -1177,7 +1205,7 @@ class MultiSampleInstrument implements TrackerInstrument {
                 : TrackerCell(midi: midi);
           }
           final zoneStereo = zone is SampleInstrument
-              ? zone.renderChannelStereo(dummyCells, timing)
+              ? zone.renderChannelStereo(dummyCells, timing, into: runInto)
               : null;
           final zoneLeft =
               zoneStereo?.left ?? zone.renderChannel(dummyCells, timing);

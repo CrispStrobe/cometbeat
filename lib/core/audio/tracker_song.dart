@@ -763,8 +763,24 @@ class TrackerSong {
   Future<void> writeSongWavStreaming(String path) async {
     syncCurrent();
     if (usesPan || stereoOutput) {
-      // STEREO: stream the float L/R accumulator to disk in blocks so the
-      // whole-song int16 + WAV copy are never materialised.
+      // STEREO. The UNIFORM (no mid-song tempo change, no flow) stereo render is
+      // a byte-for-byte CONCATENATION of INDEPENDENT per-order renders — the tick
+      // stereo replayer carries no voice state across order boundaries in that
+      // path. The one cross-order coupling is the Gxx/Hxy GLOBAL-volume envelope
+      // (its level persists across orders); when the song carries no such
+      // command, per-order streaming is exactly the whole-song render. So stream
+      // it order-by-order, holding ONE order's float accumulator instead of the
+      // whole song's — the whole-song L/R Float64 accumulator (the memory floor
+      // for a long song) is never materialised.
+      if (!songUsesVariableTiming(this) &&
+          !songNeedsWalkRender(this) &&
+          !_usesGlobalVolumeCommand()) {
+        await streamSongWavToFile(path);
+        return;
+      }
+      // Variable/flow (or global-volume) stereo: the render carries cross-order
+      // state, so stream the whole-song float L/R accumulator to disk in blocks
+      // (the int16 PCM + WAV copy are still never materialised alongside it).
       final f = songStereoFloat(this);
       await _writeStereoFloatWav(path, f.left, f.right);
       return;
@@ -782,6 +798,26 @@ class TrackerSong {
     File(path).writeAsBytesSync(
       renderSong(_engine, [for (final i in order) patterns[i].cells]),
     );
+  }
+
+  /// Whether any played pattern carries a Gxx (set) or Hxy (slide) GLOBAL-volume
+  /// command. Global volume persists ACROSS order boundaries, so a per-order
+  /// streamed render (which restarts each order from full volume) only matches
+  /// the whole-song render when NO such command appears. Used to gate the bounded
+  /// per-order stereo stream in [writeSongWavStreaming].
+  bool _usesGlobalVolumeCommand() {
+    for (final o in order) {
+      if (o < 0 || o >= patterns.length) continue;
+      for (final column in patterns[o].cells) {
+        for (final cell in column) {
+          if (cell.fxCmd == kFxSetGlobalVolume ||
+              cell.fxCmd == kFxGlobalVolSlide) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   /// Streams a float stereo mix to a 2-channel PCM16 WAV. The header + samples
