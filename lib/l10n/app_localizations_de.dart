@@ -2190,6 +2190,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawClose => 'Schließen';
 
   @override
+  String get dawMoveToLane => 'In Spur verschieben';
+
+  @override
+  String get dawCurveHint =>
+      'Punkt ziehen zum Formen · tippen zum Hinzufügen · halten zum Entfernen';
+
+  @override
+  String get dawExportFullMix => 'Gesamter Mix';
+
+  @override
+  String dawExportTrackOnly(String track) {
+    return 'Nur: $track';
+  }
+
+  @override
   String get dawSpectrogram => 'Spektrum';
 
   @override

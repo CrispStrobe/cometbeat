@@ -209,6 +209,63 @@ as A4 440.0 Hz, clarity 1.00. Tests: `daw_edits_test.dart` (19, headless) +
   spacing now grows (1/2/5/10/15/30/60…s) so zooming out doesn't produce a wall
   of overlapping labels.
 
+### Beyond the ladder — real DAW gaps the ladder missed (2026-07-25)
+
+The O1–O16 list was written against a single-file editor (Ocenaudio), so it
+never asked for the things a MULTITRACK editor must do. Three were genuinely
+missing and are now shipped:
+
+- [x] **Move a clip between lanes.** `moveClipToTrack` (the old `moveClip` only
+  slid a clip along the lane it was already on). Long-press-drag now moves
+  vertically too — committed on release, because re-parenting mid-drag tears
+  down the gesture driving it — plus a "Move to lane" picker in the inspector,
+  which is the reliable path on a phone. The clip keeps source/trim/gain/pan/
+  fades/FX; only the lane changes.
+- [x] **Per-track (stem) export.** `bakeTrack` / `bakeTrackStereo` + a source
+  dropdown in the export sheet (full mix · or one lane). **Stems deliberately
+  skip the master limiter** — limiting each stem is mastering a part, and it
+  would stop stems summing back to the mix, which is the point of stems. Other
+  lanes' solo is ignored (asking for lane 3 means lane 3); the lane's own mute
+  is honoured. Filenames carry the lane (`…-stem-<lane>.wav`).
+- [x] **Drawable automation curves.** `automation_curve_editor.dart`: drag a
+  breakpoint to shape it, tap empty canvas to add, hold a handle to remove
+  (never below two). Automation and fade curves already existed and already
+  played back — what was missing was any way to SEE or draw them; the numeric
+  list stays alongside for precision and accessibility.
+
+⚠️ **Correction on the Ocenaudio comparison:** split · copy/cut/paste/duplicate ·
+per-clip/track/bus/master/range FX · fade curves (linear/exp/S) already existed
+before this pass — the gap was narrower than "tiny steps", but these three were
+real and are the difference between a clip arranger and a DAW.
+
+### ⚠️ Opus export: glint HAS the encoder, this app does NOT ship it
+
+Corrects an earlier claim in this doc that FLAC/OGG export "needs an encoder we
+don't have". `glint.h` declares `glint_encode_audio(...)` → **MP3 / AAC-LC /
+Ogg-Opus** in one call, and `~/code/glint` implements it
+(`src/encode_audio_c_api.cpp` + a full CELT Opus encoder).
+
+**But `native/glint/sync_glint.sh` vendors the "MINIMAL glint Ogg-Vorbis DECODE
+source set" only** — the header is glint's whole public ABI, so it *advertises*
+encoders the compiled plugin doesn't contain. `glint_encode_audio` would fail to
+resolve at runtime.
+
+Shipped now: the Dart side, done and safe — `sf2/opus_glint_ffi.dart` (FFI
+binding), `sf2/encoded_audio.dart` (dart:ffi-free types), and an
+`encode_capability` stub/ffi seam whose loader returns **null** when the symbol
+isn't there, so the export UI simply won't offer Opus rather than failing at
+save time.
+
+**To actually enable it:** extend `sync_glint.sh` to vendor the encode closure —
+`encode_audio_c_api.cpp` + `opus_c_api.cpp` + the CELT encoder set
+(`opus_celt_encoder`, `opus_celt_enc_{bands,energy,vq}`, `opus_ec`, `opus_mdct`,
+`opus_cwrs`, `opus_laplace`, `opus_celt_rate`, …, ~20 files) — and either vendor
+the MP3/AAC encoders too or shim their entry points, since `glint_encode_audio`
+dispatches to all three. It also needs the REAL `glint_free` instead of the
+current 2-line shim. That's a native-build change on all five platforms, so it
+wants its own pass. **FLAC export stays out regardless: glint decodes FLAC and
+has no FLAC encoder.**
+
 **Tier 4 — bigger (assess feasibility as reached):**
 - [x] **O14** Record mic → new lane, via the app's single mic-facing capture
   path (`VoiceClipRecorder`, shared with the Tracker). Guarded like the

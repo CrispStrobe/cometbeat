@@ -413,6 +413,41 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Move a clip to another lane, optionally to a new time — the thing a
+  /// timeline has to do that [moveClip] can't: that one only slides a clip
+  /// along the lane it's already on.
+  ///
+  /// The clip keeps everything about itself (source, trim, gain, pan, fades,
+  /// FX); only which lane plays it changes. Returns its index in the new lane,
+  /// or -1 if the move wasn't possible. Dropping a clip back on its own lane is
+  /// just a time move, so it coalesces like a drag instead of stacking undo.
+  int moveClipToTrack(
+    int fromTrack,
+    int index,
+    int toTrack, {
+    double? startMs,
+  }) {
+    if (fromTrack < 0 || fromTrack >= timeline.tracks.length) return -1;
+    if (toTrack < 0 || toTrack >= timeline.tracks.length) return -1;
+    final from = timeline.tracks[fromTrack].clips;
+    if (index < 0 || index >= from.length) return -1;
+
+    if (fromTrack == toTrack) {
+      if (startMs != null) moveClip(fromTrack, index, startMs);
+      return index;
+    }
+
+    _record();
+    final clip = from.removeAt(index);
+    var at = startMs ?? clip.startMs;
+    if (at < 0) at = 0;
+    if (snapMs > 0) at = (at / snapMs).round() * snapMs;
+    final to = timeline.tracks[toTrack].clips..add(clip.copyWith(startMs: at));
+    _peaks.clear();
+    notifyListeners();
+    return to.length - 1;
+  }
+
   /// Set a clip's linear [gain] (0 = silent). A slider sweep coalesces to one
   /// undo entry.
   void setClipGain(int track, int index, double gain) {
@@ -2095,6 +2130,61 @@ class DawService extends ChangeNotifier {
 
   /// Bake the arrangement as separate left/right channels for stereo export.
   DawStereoMix bakeStereo() => renderTimelineStereo(timeline, cache: _cache);
+
+  /// Bake ONE lane on its own — a stem. Everything that lane carries applies
+  /// (its clips' FX, its own track insert, its gain/pan); what's dropped is the
+  /// other lanes, so stems sum back to something close to the full mix rather
+  /// than each being a separate mastered mix.
+  ///
+  /// Solo/mute on OTHER tracks is ignored on purpose: asking for track 3's stem
+  /// means track 3, even if track 1 happens to be soloed. The lane's own mute is
+  /// honoured, so a muted lane stems to silence.
+  ///
+  /// The master soft-limiter is NOT applied. Limiting each stem on its own would
+  /// be mastering a part — and it would stop the stems summing back to the mix,
+  /// which is the whole point of stems. The limiter belongs on the sum, so
+  /// whoever recombines them applies it once.
+  Float64List bakeTrack(int track) {
+    if (track < 0 || track >= timeline.tracks.length) return Float64List(0);
+    return renderTimeline(_soloTimeline(track), cache: _cache, limit: false);
+  }
+
+  /// Stereo [bakeTrack] — same no-limiter rule.
+  DawStereoMix bakeTrackStereo(int track) {
+    if (track < 0 || track >= timeline.tracks.length) {
+      return DawStereoMix(Float64List(0), Float64List(0));
+    }
+    return renderTimelineStereo(
+      _soloTimeline(track),
+      cache: _cache,
+      limit: false,
+    );
+  }
+
+  /// A one-lane view of the arrangement, keeping the buses and master FX the
+  /// lane routes through so a stem sounds like it does in the mix.
+  DawTimeline _soloTimeline(int track) {
+    final lane = timeline.tracks[track];
+    return DawTimeline(
+      tracks: [
+        DawTrack(
+          name: lane.name,
+          gain: lane.gain,
+          pan: lane.pan,
+          muted: lane.muted,
+          instrument: lane.instrument,
+          busIndex: lane.busIndex,
+          busSends: {...lane.busSends},
+          effect: lane.effect,
+          effects: [...lane.effects],
+          gainAutomation: _cloneAutomation(lane.gainAutomation),
+          clips: [...lane.clips],
+        ),
+      ],
+      buses: _cloneBuses(timeline.buses),
+      effects: _cloneEffectChain(timeline.effects),
+    );
+  }
 
   // --- Project save / load ---------------------------------------------------
 

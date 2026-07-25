@@ -2183,6 +2183,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dawClose => 'Close';
 
   @override
+  String get dawMoveToLane => 'Move to lane';
+
+  @override
+  String get dawCurveHint =>
+      'Drag a point to shape the curve · tap to add · hold to remove';
+
+  @override
+  String get dawExportFullMix => 'Full mix';
+
+  @override
+  String dawExportTrackOnly(String track) {
+    return 'Only: $track';
+  }
+
+  @override
   String get dawSpectrogram => 'Spectrum';
 
   @override

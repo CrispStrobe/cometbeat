@@ -4124,6 +4124,30 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get dawClose;
 
+  /// No description provided for @dawMoveToLane.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to lane'**
+  String get dawMoveToLane;
+
+  /// No description provided for @dawCurveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a point to shape the curve · tap to add · hold to remove'**
+  String get dawCurveHint;
+
+  /// No description provided for @dawExportFullMix.
+  ///
+  /// In en, this message translates to:
+  /// **'Full mix'**
+  String get dawExportFullMix;
+
+  /// No description provided for @dawExportTrackOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only: {track}'**
+  String dawExportTrackOnly(String track);
+
   /// No description provided for @dawSpectrogram.
   ///
   /// In en, this message translates to:

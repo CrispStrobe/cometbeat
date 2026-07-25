@@ -1242,6 +1242,73 @@ void main() {
     expect(find.text('chorus'), findsOneWidget);
   });
 
+  testWidgets('a clip can be moved to another lane from the inspector',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    daw.addDemoBeat(); // lane A
+    await tester.pump();
+    expect(service.timeline.tracks[0].clips, hasLength(1));
+
+    await tester.tap(find.text('🥁'));
+    await tester.pumpAndSettle();
+    final move = find.text('Move to lane');
+    await tester.ensureVisible(move);
+    await tester.pumpAndSettle();
+    await tester.tap(move);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('B').last); // the other lane
+    await tester.pumpAndSettle();
+
+    expect(service.timeline.tracks[0].clips, isEmpty);
+    expect(service.timeline.tracks[1].clips, hasLength(1));
+    expect(daw.clipCount, 1); // moved, not copied
+
+    service.undo();
+    await tester.pump();
+    expect(service.timeline.tracks[0].clips, hasLength(1));
+  });
+
+  testWidgets('the export dialog can target one track as a stem',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Export sound'));
+    await tester.pumpAndSettle();
+    // The source dropdown ("Full mix") is separate from the time-window
+    // segments ("Whole length" / "Marked range").
+    expect(find.text('Full mix'), findsOneWidget);
+    expect(find.text('Whole length'), findsOneWidget);
+
+    // Pick the first lane instead of the mix.
+    await tester.tap(find.text('Full mix'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Only: A').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('This track:'), findsOneWidget);
+  });
+
+  testWidgets('a stem holds one lane and skips the master limiter',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pump();
+
+    final stem = daw.bakeTrack(0);
+    expect(stem, isNotEmpty);
+    // The only lane with content, so its stem covers the whole arrangement.
+    expect(stem.length, daw.debugBakeLength());
+    expect(daw.bakeTrack(1), isEmpty); // the empty lane stems to nothing
+  });
+
   testWidgets('a recorded take lands on its own new lane', (tester) async {
     // The mic can't run under the headless binding, so the capture itself is
     // injected; what's under test is the placement and that it's undoable.

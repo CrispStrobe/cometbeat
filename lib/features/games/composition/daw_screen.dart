@@ -30,6 +30,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/features/games/composition/automation_curve_editor.dart';
 import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
 import 'package:comet_beat/features/games/composition/spectrogram_view.dart'
     show showSpectrogramDialog;
@@ -142,6 +143,13 @@ abstract interface class DawTester {
 
   /// Measured peak/RMS/duration/clipping for a clip's played window.
   ClipStats clipStats(int track, int index);
+
+  /// Move a clip to another lane (drag-and-drop, or the inspector's picker).
+  /// Returns its index in the new lane, or -1 if the move wasn't possible.
+  int moveClipToTrack(int fromTrack, int index, int toTrack, {double? startMs});
+
+  /// Render ONE lane on its own, for a stem export.
+  Float64List bakeTrack(int track);
 
   /// Generate a steady tone / noise / silence onto its own new lane.
   void generateClip({
@@ -1876,6 +1884,25 @@ class _DawScreenState extends State<DawScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Draw the shape; the numeric list below stays for precise
+                  // values and for anyone who can't drag.
+                  AutomationCurveEditor(
+                    points: edited,
+                    min: min,
+                    max: max,
+                    timeMax: timeMax,
+                    onChanged: (next) => setDialog(() {
+                      edited
+                        ..clear()
+                        ..addAll(next);
+                    }),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    AppLocalizations.of(dialogCtx)!.dawCurveHint,
+                    style: Theme.of(dialogCtx).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
                   Text('${edited.length} points'),
                   const SizedBox(height: 8),
                   for (var index = 0; index < edited.length; index++)
@@ -2384,6 +2411,30 @@ class _DawScreenState extends State<DawScreen>
 
   @override
   ClipStats clipStats(int track, int index) => _daw.clipStats(track, index);
+
+  @override
+  int moveClipToTrack(
+    int fromTrack,
+    int index,
+    int toTrack, {
+    double? startMs,
+  }) {
+    final at = _daw.moveClipToTrack(
+      fromTrack,
+      index,
+      toTrack,
+      startMs: startMs,
+    );
+    if (at >= 0) {
+      // The selection points at (track, index) pairs that just moved.
+      setState(_selectedClips.clear);
+      if (_playing) play();
+    }
+    return at;
+  }
+
+  @override
+  Float64List bakeTrack(int track) => _daw.bakeTrack(track);
 
   @override
   void generateClip({
@@ -3085,24 +3136,31 @@ class _DawScreenState extends State<DawScreen>
   // Bake the arrangement, choose the export window, then hand off to the shared
   // WAV/MP3 sheet.
   Future<void> _export() async {
-    final stereo = _daw.bakeStereo();
-    final pcm = stereo.left;
-    final rightPcm = stereo.right;
-    if (pcm.isEmpty) {
+    final fullMix = _daw.bakeStereo();
+    if (fullMix.left.isEmpty) {
       await showAudioExportSheet(
         context,
-        pcm: pcm,
+        pcm: fullMix.left,
         baseName: _exportBaseName(),
       );
       return;
     }
     var useRange = false;
     var normalize = false;
+    // null = the full mix; otherwise the lane to export on its own (a stem).
+    int? stemTrack;
     final rangeAvailable = _hasFxRange;
+
+    // A stem skips the master limiter, so stems sum back to the mix instead of
+    // each arriving separately mastered.
+    DawStereoMix source() =>
+        stemTrack == null ? fullMix : _daw.bakeTrackStereo(stemTrack!);
+
     final action = await showDialog<String>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) {
+          final pcm = source().left;
           final selected = useRange ? _exportRangePcm(pcm) : pcm;
           final exportPcm =
               normalize ? _normalizeExportPcm(selected) : selected;
@@ -3114,11 +3172,36 @@ class _DawScreenState extends State<DawScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // What to export: everything, or one lane on its own.
+                  DropdownButton<int?>(
+                    value: stemTrack,
+                    isExpanded: true,
+                    onChanged: (v) => setDialog(() => stemTrack = v),
+                    items: [
+                      DropdownMenuItem(
+                        child: Text(AppLocalizations.of(ctx)!.dawExportFullMix),
+                      ),
+                      for (var t = 0; t < _daw.timeline.tracks.length; t++)
+                        DropdownMenuItem(
+                          value: t,
+                          child: Text(
+                            AppLocalizations.of(ctx)!.dawExportTrackOnly(
+                              _daw.timeline.tracks[t].name.isEmpty
+                                  ? '${t + 1}'
+                                  : _daw.timeline.tracks[t].name,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   SegmentedButton<bool>(
                     segments: [
+                      // This picks the time WINDOW; the dropdown above picks
+                      // the SOURCE. Calling both "Full mix" was ambiguous.
                       const ButtonSegment(
                         value: false,
-                        label: Text('Full mix'),
+                        label: Text('Whole length'),
                         icon: Icon(Icons.multitrack_audio),
                       ),
                       ButtonSegment(
@@ -3133,7 +3216,11 @@ class _DawScreenState extends State<DawScreen>
                         setDialog(() => useRange = values.single),
                   ),
                   const SizedBox(height: 12),
-                  Text('Full mix: ${_exportSummary(pcm)}'),
+                  Text(
+                    stemTrack == null
+                        ? 'Whole length: ${_exportSummary(pcm)}'
+                        : 'This track: ${_exportSummary(pcm)}',
+                  ),
                   Text(
                     rangeAvailable
                         ? 'Marked range: ${_exportSummary(_exportRangePcm(pcm))}'
@@ -3174,8 +3261,10 @@ class _DawScreenState extends State<DawScreen>
       ),
     );
     if (!mounted || action != 'export') return;
-    final selected = useRange ? _exportRangePcm(pcm) : pcm;
-    final selectedRight = useRange ? _exportRangePcm(rightPcm) : rightPcm;
+    final chosen = source();
+    final selected = useRange ? _exportRangePcm(chosen.left) : chosen.left;
+    final selectedRight =
+        useRange ? _exportRangePcm(chosen.right) : chosen.right;
     final exportPcm = normalize ? _normalizeExportPcm(selected) : selected;
     final exportRight =
         normalize ? _normalizeExportPcm(selectedRight) : selectedRight;
@@ -3183,7 +3272,10 @@ class _DawScreenState extends State<DawScreen>
       context,
       pcm: exportPcm,
       rightPcm: exportRight,
-      baseName: _exportBaseName(range: useRange),
+      baseName: _exportBaseName(
+        range: useRange,
+        stem: stemTrack == null ? null : _daw.timeline.tracks[stemTrack!].name,
+      ),
     );
   }
 
@@ -3225,18 +3317,24 @@ class _DawScreenState extends State<DawScreen>
     return _peak(pcm).toStringAsFixed(2);
   }
 
-  String _exportBaseName({bool range = false}) {
+  String _exportBaseName({bool range = false, String? stem}) {
     final active = [
       for (final track in _daw.timeline.tracks)
         if (track.clips.isNotEmpty) track.name,
     ];
     final title = active.isEmpty ? 'audio-editor' : active.take(3).join('-');
-    final slug = title
+    String slugify(String s) => s
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
         .replaceAll(RegExp(r'^-+|-+$'), '');
+    final slug = slugify(title);
+    final stemSlug = stem == null ? '' : slugify(stem);
     return [
       if (slug.isEmpty) 'audio-editor' else slug,
+      // A stem's filename has to say which lane it is, or four exports land in
+      // the folder as indistinguishable siblings.
+      if (stem != null) 'stem',
+      if (stem != null) (stemSlug.isEmpty ? 'track' : stemSlug),
       if (range) 'range',
     ].join('-');
   }
@@ -3848,6 +3946,37 @@ class _DawScreenState extends State<DawScreen>
                           icon: const Icon(Icons.graphic_eq),
                           label: Text(l10n.dawAmplify),
                         ),
+                        // Move to another lane — the reliable path when a
+                        // long-press drag is fiddly (phones, precise moves).
+                        if (_daw.timeline.tracks.length > 1)
+                          MenuAnchor(
+                            menuChildren: [
+                              for (var t = 0;
+                                  t < _daw.timeline.tracks.length;
+                                  t++)
+                                if (t != track)
+                                  MenuItemButton(
+                                    onPressed: () {
+                                      Navigator.of(sheetCtx).pop();
+                                      moveClipToTrack(track, index, t);
+                                    },
+                                    leadingIcon: const Icon(Icons.swap_horiz),
+                                    child: Text(
+                                      _daw.timeline.tracks[t].name.isEmpty
+                                          ? '${t + 1}'
+                                          : _daw.timeline.tracks[t].name,
+                                    ),
+                                  ),
+                            ],
+                            builder: (context, controller, _) =>
+                                TextButton.icon(
+                              onPressed: () => controller.isOpen
+                                  ? controller.close()
+                                  : controller.open(),
+                              icon: const Icon(Icons.swap_horiz),
+                              label: Text(l10n.dawMoveToLane),
+                            ),
+                          ),
                         // O15 — see what's IN the clip, not just how loud.
                         TextButton.icon(
                           onPressed: () {
@@ -4477,6 +4606,10 @@ class _DawScreenState extends State<DawScreen>
   // The clip's start when a long-press drag begins (offsets are relative to it).
   double _dragOriginMs = 0;
 
+  /// How many lanes up (−) or down (+) the in-flight drag currently sits. Shown
+  /// on the dragged clip and committed on release.
+  int _dragLaneDelta = 0;
+
   /// Where the last clip ends — the arrangement's length, which sets the lane
   /// width and what "zoom to fit" has to fit.
   double get _arrangementMs {
@@ -4859,22 +4992,46 @@ class _DawScreenState extends State<DawScreen>
       height: _laneHeight - 12,
       width: widthPx,
       child: GestureDetector(
-        // Long-press then drag to reposition in time (a plain drag over the lane
-        // still scrolls it); tap to freeze to audio.
-        onLongPressStart: (_) => _dragOriginMs = daw.clipStartMs(i, j),
-        onLongPressMoveUpdate: (d) => moveClip(
-          i,
-          j,
-          _dragOriginMs + d.localOffsetFromOrigin.dx / _pxPerSecond * 1000,
-        ),
+        // Long-press then drag to reposition (a plain drag over the lane still
+        // scrolls it); tap to open the inspector. Horizontal movement retimes
+        // the clip live; VERTICAL movement moves it to another lane, but only
+        // on release — re-parenting mid-drag would tear down the very gesture
+        // that's driving it.
+        onLongPressStart: (_) {
+          _dragOriginMs = daw.clipStartMs(i, j);
+          _dragLaneDelta = 0;
+        },
+        onLongPressMoveUpdate: (d) {
+          moveClip(
+            i,
+            j,
+            _dragOriginMs + d.localOffsetFromOrigin.dx / _pxPerSecond * 1000,
+          );
+          final delta = (d.localOffsetFromOrigin.dy / _laneHeight).round();
+          if (delta != _dragLaneDelta) setState(() => _dragLaneDelta = delta);
+        },
+        onLongPressEnd: (_) {
+          final delta = _dragLaneDelta;
+          setState(() => _dragLaneDelta = 0);
+          if (delta == 0) return;
+          final target = (i + delta).clamp(0, daw.timeline.tracks.length - 1);
+          if (target != i) moveClipToTrack(i, j, target);
+        },
+        onLongPressCancel: () {
+          if (_dragLaneDelta != 0) setState(() => _dragLaneDelta = 0);
+        },
         onTap: () => _openClipInspector(i, j),
         child: Container(
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(6),
+            // While a drag is heading for another lane, say so on the clip —
+            // otherwise the move only becomes visible after the drop.
             border: Border.all(
-              color: selected ? scheme.primary : scheme.outline,
-              width: selected ? 2 : 1,
+              color: _dragLaneDelta != 0
+                  ? scheme.tertiary
+                  : (selected ? scheme.primary : scheme.outline),
+              width: _dragLaneDelta != 0 || selected ? 2 : 1,
             ),
           ),
           child: ClipRRect(

@@ -1354,6 +1354,116 @@ void main() {
     });
   });
 
+  group('move a clip between lanes', () {
+    test('the clip changes lane and keeps everything about itself', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      s
+        ..setClipGain(0, 0, 0.3)
+        ..setClipPan(0, 0, -0.5)
+        ..setClipFades(0, 0, fadeInMs: 7);
+      final before = s.timeline.tracks[0].clips.single;
+
+      final at = s.moveClipToTrack(0, 0, 1, startMs: 500);
+
+      expect(at, 0);
+      expect(s.timeline.tracks[0].clips, isEmpty);
+      expect(s.timeline.tracks[1].clips, hasLength(1));
+      final after = s.timeline.tracks[1].clips.single;
+      expect(after.startMs, 500);
+      // Only the lane changed — not the sound.
+      expect(identical(after.source, before.source), isTrue);
+      expect(after.gain, before.gain);
+      expect(after.pan, before.pan);
+      expect(after.fadeInMs, before.fadeInMs);
+    });
+
+    test('keeping its time is the default', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      s.moveClip(0, 0, 750);
+      s.moveClipToTrack(0, 0, 1);
+      expect(s.timeline.tracks[1].clips.single.startMs, 750);
+    });
+
+    test('a cross-lane move is undoable in one step', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      s.moveClipToTrack(0, 0, 1);
+      expect(s.timeline.tracks[1].clips, hasLength(1));
+      s.undo();
+      expect(s.timeline.tracks[0].clips, hasLength(1));
+      expect(s.timeline.tracks[1].clips, isEmpty);
+    });
+
+    test('dropping onto its own lane is just a time move', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      expect(s.moveClipToTrack(0, 0, 0, startMs: 250), 0);
+      expect(s.timeline.tracks[0].clips.single.startMs, 250);
+    });
+
+    test('the drop time snaps when snapping is on', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      s.toggleSnap(); // one beat at 120 BPM = 500 ms
+      s.moveClipToTrack(0, 0, 1, startMs: 600);
+      expect(s.timeline.tracks[1].clips.single.startMs, closeTo(500, 1e-9));
+    });
+
+    test('bad indices are refused rather than throwing', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      expect(s.moveClipToTrack(0, 5, 1), -1);
+      expect(s.moveClipToTrack(9, 0, 1), -1);
+      expect(s.moveClipToTrack(0, 0, 9), -1);
+      expect(s.clipCount, 1);
+    });
+  });
+
+  group('per-track stems', () {
+    test('a stem holds only its own lane', () {
+      final s = DawService()
+        ..addClip(_tone(0.4, 1000))
+        ..addClip(_tone(0.4, 1000), track: 1);
+      s.moveClip(1, 0, 0);
+
+      final stemA = s.bakeTrack(0);
+      final stemB = s.bakeTrack(1);
+
+      expect(stemA, isNotEmpty);
+      expect(stemB, isNotEmpty);
+      // Each stem holds one lane...
+      expect(stemA[10], closeTo(0.4, 1e-9));
+      expect(stemB[10], closeTo(0.4, 1e-9));
+      // ...and the stems SUM BACK to the mix. That only works because stems
+      // skip the master limiter: `bake()` soft-limits the sum, so comparing
+      // against the limited mix would be comparing against a mastered signal.
+      final unlimited = renderTimeline(s.timeline, cache: {}, limit: false);
+      expect(stemA[10] + stemB[10], closeTo(unlimited[10], 1e-9));
+      expect(s.bake()[10], lessThan(unlimited[10])); // the limiter did act
+    });
+
+    test("a lane's own mute silences its stem", () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      expect(s.bakeTrack(0), isNotEmpty);
+      s.toggleTrackMute(0);
+      expect(_silent(s.bakeTrack(0)), isTrue);
+    });
+
+    test('another lane being soloed does not steal this stem', () {
+      // Asking for track 1's stem means track 1, whatever track 0 is doing.
+      final s = DawService()
+        ..addClip(_tone(0.4, 1000))
+        ..addClip(_tone(0.4, 1000), track: 1);
+      s
+        ..moveClip(1, 0, 0)
+        ..toggleTrackSolo(0);
+      expect(s.bakeTrack(1), isNotEmpty);
+    });
+
+    test('an out-of-range track stems to empty, not a crash', () {
+      final s = DawService()..addClip(_tone(0.4, 1000));
+      expect(s.bakeTrack(-1), isEmpty);
+      expect(s.bakeTrack(9), isEmpty);
+      expect(s.bakeTrackStereo(9).left, isEmpty);
+    });
+  });
+
   group('markers', () {
     test('markers stay sorted by time however they are added', () {
       final s = DawService()
