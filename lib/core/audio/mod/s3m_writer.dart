@@ -105,6 +105,16 @@ Uint8List writeS3m(S3mModule module) {
   if (ordNum == 0) ordNum = 0; // an empty order stays empty (even).
 
   final channelCount = module.channelCount;
+  final physicalChannels = <int>[];
+  for (var i = 0; i < 32 && physicalChannels.length < channelCount; i++) {
+    final setting = i < module.channelSettings.length
+        ? module.channelSettings[i]
+        : (i < channelCount ? i : 255);
+    if (setting < 128) physicalChannels.add(i);
+  }
+  while (physicalChannels.length < channelCount) {
+    physicalChannels.add(physicalChannels.length);
+  }
 
   // ── HEADER (96 bytes) ──────────────────────────────────────────────────────
   asciiFixed(module.title, 28); // 0x00
@@ -233,7 +243,10 @@ Uint8List writeS3m(S3mModule module) {
         final hasVol = cell.volume != S3mCell.noVolume;
         final hasCmd = cell.command != 0 || cell.info != 0;
 
-        var what = ch & 0x1F;
+        final physical = ch < physicalChannels.length
+            ? physicalChannels[ch]
+            : ch;
+        var what = physical & 0x1F;
         if (hasNoteIns) what |= 0x20;
         if (hasVol) what |= 0x40;
         if (hasCmd) what |= 0x80;

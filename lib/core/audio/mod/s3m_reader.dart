@@ -57,12 +57,16 @@ S3mModule parseS3m(Uint8List bytes) {
 
   // Channel settings: 32 bytes @ 0x40, value < 128 = enabled.
   var channelCount = 0;
+  final logicalChannel = List<int>.filled(32, -1);
   final channelSettings = <int>[];
   for (var i = 0; i < 32; i++) {
     channelSettings.add(bytes[0x40 + i]);
-    if (bytes[0x40 + i] < 128) channelCount++;
+    if (bytes[0x40 + i] < 128) logicalChannel[i] = channelCount++;
   }
-  if (channelCount == 0) channelCount = 1; // defensive; must be > 0.
+  if (channelCount == 0) {
+    channelCount = 1; // defensive; must be > 0.
+    logicalChannel[0] = 0;
+  }
 
   // Order list: ordNum bytes @ 0x60, with 254/255 markers removed.
   const orderStart = 0x60;
@@ -114,7 +118,9 @@ S3mModule parseS3m(Uint8List bytes) {
       continue;
     }
     final para = data.getUint16(ptrOff, Endian.little);
-    patterns.add(_readPattern(bytes, data, para * 16, channelCount));
+    patterns.add(
+      _readPattern(bytes, data, para * 16, channelCount, logicalChannel),
+    );
   }
 
   return S3mModule(
@@ -215,6 +221,7 @@ S3mPattern _readPattern(
   ByteData data,
   int base,
   int channelCount,
+  List<int> logicalChannel,
 ) {
   final rows = List.generate(
     _rowsPerPattern,
@@ -261,8 +268,9 @@ S3mPattern _readPattern(
       info = bytes[pos++];
     }
 
-    if (channel < channelCount) {
-      rows[row][channel] = S3mCell(
+    final logical = channel < logicalChannel.length ? logicalChannel[channel] : -1;
+    if (logical >= 0 && logical < channelCount) {
+      rows[row][logical] = S3mCell(
         note: note ?? S3mCell.emptyNote,
         instrument: instrument ?? 0,
         volume: volume ?? S3mCell.noVolume,

@@ -136,6 +136,31 @@ void main() {
     });
   });
 
+  test('sparse physical channel settings preserve later pattern tracks', () {
+    final rows = <List<S3mCell>>[
+      [
+        const S3mCell(note: 0x50, instrument: 1),
+        const S3mCell(note: 0x60, instrument: 2),
+      ],
+    ];
+    final source = S3mModule(
+      title: 'SPARSE',
+      channelCount: 2,
+      channelSettings: const [0, 255, 2],
+      order: const [0],
+      samples: [
+        S3mSample(pcm: _i8([20, -20])),
+        S3mSample(pcm: _i8([40, -40])),
+      ],
+      patterns: [S3mPattern(rows)],
+    );
+
+    final parsed = parseS3m(writeS3m(source));
+    expect(parsed.channelCount, 2);
+    expect(parsed.patterns.first.rows.first[0].note, 0x50);
+    expect(parsed.patterns.first.rows.first[1].note, 0x60);
+  });
+
   test('preserves zero-length native patterns without shifting later patterns', () {
     final src = S3mModule(
       title: 'EMPTY-PATTERN',
