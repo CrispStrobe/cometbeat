@@ -1114,6 +1114,39 @@ void main() {
       expect(second, lessThan(0));
     });
 
+    test('multi-sample additive zones keep tick rendering', () {
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60)
+        ..[1] = fx(0x4, 0x31)
+        ..[4] = const TrackerCell(midi: 72)
+        ..[5] = fx(0x4, 0x31);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'additive-zones',
+            instrument: const MultiSampleInstrument(
+              'additive-zones',
+              {
+                60: AdditiveInstrument('low', Instrument.piano),
+                72: AdditiveInstrument('high', Instrument.flute),
+              },
+            ),
+            rows: 8,
+          ),
+        ],
+        timing: const TrackerTiming(rows: 8),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+
+      final rendered = replaySong(song).pcm;
+      final split = const TrackerTiming(rows: 8).stepStartSample(4);
+      expect(rendered.sublist(0, split).any((value) => value != 0), isTrue);
+      expect(rendered.sublist(split).any((value) => value != 0), isTrue);
+    });
+
     test('stereo sample channels keep the right waveform through effects', () {
       final leftSample = Float64List.fromList(
         List<double>.filled(120000, 0.25),

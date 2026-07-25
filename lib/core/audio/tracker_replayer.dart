@@ -1665,7 +1665,11 @@ void _renderMultiSampleChannelInto(
     final steps = run.$2 + run.$3;
     if (midi != null) {
       final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
-      if (zone is SampleInstrument) {
+      if (zone == null) {
+        startStep += steps;
+        continue;
+      }
+      if (zone is SampleInstrument || _additiveOf(zone) != null) {
         final isolated =
             List<TrackerCell>.filled(cells.length, TrackerCell.empty)
               ..setRange(startStep, min(startStep + steps, cells.length), cells,
@@ -1683,14 +1687,25 @@ void _renderMultiSampleChannelInto(
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
         );
-        _renderSampleChannelInto(
-          mix,
-          zoneChannel,
-          isolated,
-          timing,
-          ticksPerRow,
-          0,
-        );
+        if (zone is SampleInstrument) {
+          _renderSampleChannelInto(
+            mix,
+            zoneChannel,
+            isolated,
+            timing,
+            ticksPerRow,
+            0,
+          );
+        } else if (_additiveOf(zone) != null) {
+          _renderChannelInto(
+            mix,
+            zoneChannel,
+            isolated,
+            timing,
+            ticksPerRow,
+            0,
+          );
+        }
       }
     }
     startStep += steps;
@@ -1716,7 +1731,11 @@ void _renderMultiSampleChannelInto(
     final steps = run.$2 + run.$3;
     if (midi != null) {
       final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
-      if (zone is SampleInstrument) {
+      if (zone == null) {
+        startStep += steps;
+        continue;
+      }
+      if (zone is SampleInstrument || _additiveOf(zone) != null) {
         final isolated =
             List<TrackerCell>.filled(cells.length, TrackerCell.empty)
               ..setRange(startStep, min(startStep + steps, cells.length), cells,
@@ -1734,13 +1753,29 @@ void _renderMultiSampleChannelInto(
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
         );
-        final rendered = _renderSampleChannelStereoTicks(
-          zoneChannel,
-          isolated,
-          rowStart,
-          List<int>.filled(cells.length, ticksPerRow),
-          null,
-        );
+        late final ({Float64List left, Float64List right}) rendered;
+        if (_additiveOf(zone) != null) {
+          final zoneLeft = Float64List(timing.totalSamples);
+          final zoneRight = Float64List(timing.totalSamples);
+          _renderChannelIntoStereo(
+            zoneLeft,
+            zoneRight,
+            zoneChannel,
+            isolated,
+            timing,
+            ticksPerRow,
+            0,
+          );
+          rendered = (left: zoneLeft, right: zoneRight);
+        } else {
+          rendered = _renderSampleChannelStereoTicks(
+            zoneChannel,
+            isolated,
+            rowStart,
+            List<int>.filled(cells.length, ticksPerRow),
+            null,
+          );
+        }
         for (var i = 0; i < left.length; i++) {
           left[i] += rendered.left[i];
           right[i] += rendered.right[i];
@@ -1767,7 +1802,11 @@ void _renderMultiSampleChannelIntoVariable(
     final steps = run.$2 + run.$3;
     if (midi != null) {
       final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
-      if (zone is SampleInstrument) {
+      if (zone == null) {
+        startStep += steps;
+        continue;
+      }
+      if (zone is SampleInstrument || _additiveOf(zone) != null) {
         final isolated =
             List<TrackerCell>.filled(cells.length, TrackerCell.empty)
               ..setRange(startStep, min(startStep + steps, cells.length), cells,
@@ -1785,14 +1824,25 @@ void _renderMultiSampleChannelIntoVariable(
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
         );
-        _renderSampleChannelIntoVariable(
-          mix,
-          zoneChannel,
-          isolated,
-          rowStart,
-          ticksPerRow,
-          null,
-        );
+        if (zone is SampleInstrument) {
+          _renderSampleChannelIntoVariable(
+            mix,
+            zoneChannel,
+            isolated,
+            rowStart,
+            ticksPerRow,
+            null,
+          );
+        } else if (_additiveOf(zone) != null) {
+          _renderChannelIntoVariable(
+            mix,
+            zoneChannel,
+            isolated,
+            rowStart,
+            ticksPerRow,
+            ticksPerRow.first,
+          );
+        }
       }
     }
     startStep += steps;
