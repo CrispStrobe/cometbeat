@@ -24,12 +24,14 @@ import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:comet_beat/core/audio/mod/mod.dart';
 import 'package:comet_beat/core/audio/mod/mod_bridge.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
-    show sniffModuleFormat, parseAnyModule, convertToMod, convertModule;
+    show sniffModuleFormat, parseAnyModule, convertToMod, convertDocTo;
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/module_instrument_bridge.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
+import 'package:comet_beat/core/audio/tracker_song_module.dart'
+    show moduleDocFromSong;
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
@@ -462,9 +464,16 @@ class _TrackerScreenState extends State<TrackerScreen>
   Uint8List exportModBytes() => writeMod(_currentAsMod());
   @override
   Uint8List exportModuleBytes(String format) {
-    final mod = writeMod(_currentAsMod());
     final fmt = ModuleFormat.values.byName(format);
-    return fmt == ModuleFormat.mod ? mod : convertModule(mod, fmt);
+    if (fmt == ModuleFormat.mod) return writeMod(_currentAsMod());
+    // Converting through MOD loses the sandbox's procedural instruments: MOD
+    // has no instrument definition beyond a sample slot, so the intermediate
+    // file contains only empty samples. Promote the live grid first; the song
+    // bridge renders those voices to PCM for XM/S3M/IT export.
+    return convertDocTo(
+      moduleDocFromSong(_promoteToSong(), targetFormat: fmt),
+      fmt,
+    );
   }
 
   @override
@@ -822,8 +831,7 @@ class _TrackerScreenState extends State<TrackerScreen>
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final mod = writeMod(_currentAsMod());
-      final bytes = fmt == ModuleFormat.mod ? mod : convertModule(mod, fmt);
+      final bytes = exportModuleBytes(fmt.name);
       final name = 'tracker.${fmt.name}';
       final location = await getSaveLocation(
         suggestedName: name,

@@ -10,7 +10,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/mod/it_module.dart';
 import 'package:comet_beat/core/audio/mod/it_writer.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
-    show parseAnyModule;
+    show convertDocTo, parseAnyModule;
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/s3m_module.dart';
 import 'package:comet_beat/core/audio/mod/s3m_writer.dart';
@@ -19,6 +19,7 @@ import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show replaySong, songUsesVariableTiming;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,57 @@ Uint8List _fixture(String name) =>
     File('test/fixtures/$name').readAsBytesSync();
 
 void main() {
+  test('sample-free Advanced Tracker voices export as playable samples', () {
+    final song = TrackerSong();
+    song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+
+    for (final format in ModuleFormat.values) {
+      final bytes = convertDocTo(
+        moduleDocFromSong(song, targetFormat: format),
+        format,
+      );
+      final doc = parseAnyModule(bytes);
+      expect(
+        doc.samples.any((sample) => !sample.isEmpty),
+        isTrue,
+        reason: '${format.name} export lost its generated sample',
+      );
+    }
+  });
+
+  test('native S3M and IT channel pans reach imported channel state', () {
+    final sample = DocSample(
+      pcm: Float64List.fromList([0.2, -0.2]),
+      pan: 128,
+    );
+    final pattern = const [
+      [DocCell(note: 60, instrument: 1)],
+    ];
+    final s3m = songFromModuleDoc(
+      ModuleDoc(
+        sourceFormat: ModuleFormat.s3m,
+        channelCount: 1,
+        order: const [0],
+        patterns: [DocPattern(pattern, 1)],
+        samples: [sample],
+        s3mDefaultPans: const [0x0F],
+      ),
+    );
+    expect(s3m.channels.single.pan, closeTo(1.0, 0.001));
+
+    final it = songFromModuleDoc(
+      ModuleDoc(
+        sourceFormat: ModuleFormat.it,
+        channelCount: 1,
+        order: const [0],
+        patterns: [DocPattern(pattern, 1)],
+        samples: [sample],
+        channelPans: const [0],
+      ),
+    );
+    expect(it.channels.single.pan, closeTo(-1.0, 0.001));
+  });
+
   for (final name in ['golden.mod', 'golden.s3m', 'golden.xm', 'golden.it']) {
     test('$name imports into a consistent TrackerSong', () {
       final bytes = _fixture(name);

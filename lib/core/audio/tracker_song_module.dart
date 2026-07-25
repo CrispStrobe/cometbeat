@@ -79,7 +79,7 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
         // The channel's dominant sample carries the module's default pan +
         // envelopes (XM/IT); convert them onto the channel so the imported
         // module plays — and shows in the editor — with its shaping intact.
-        pan: _channelPan(doc, rep[c]),
+        pan: _channelPanForChannel(doc, rep[c], c),
         volumeEnvelope: _channelVolEnv(doc, rep[c]),
         panEnvelope: _channelPanEnv(doc, rep[c]),
       ),
@@ -163,6 +163,26 @@ double _channelPan(ModuleDoc doc, int ins) {
   // the sample's scalar pan again would shift that image twice.
   if (s.pcmRight != null) return 0.0;
   return ((s.pan - 128) / 128).clamp(-1.0, 1.0);
+}
+
+/// Resolve a channel's native header pan before falling back to the dominant
+/// sample's pan. S3M stores 16 coarse positions in the default-pan table;
+/// IT stores 0..64 with 32 as centre (100 is surround, which has no exact
+/// representation in the current stereo channel model).
+double _channelPanForChannel(ModuleDoc doc, int ins, int channel) {
+  if (doc.sourceFormat == ModuleFormat.it &&
+      channel >= 0 &&
+      channel < doc.channelPans.length) {
+    final value = doc.channelPans[channel];
+    if (value <= 64) return ((value - 32) / 32).clamp(-1.0, 1.0);
+  }
+  if (doc.sourceFormat == ModuleFormat.s3m &&
+      channel >= 0 &&
+      channel < doc.s3mDefaultPans.length) {
+    final value = doc.s3mDefaultPans[channel] & 0x0F;
+    return ((value / 15) * 2 - 1).clamp(-1.0, 1.0);
+  }
+  return _channelPan(doc, ins);
 }
 
 /// The dominant sample's volume envelope as a tracker [VolumeEnvelope] (ticks →
