@@ -937,8 +937,9 @@ Uint8List convertToMod(ModuleDoc doc) => writeMod(docToMod(doc));
 
 /// Neutral → [XmModule] (one single-sample XM instrument per neutral sample).
 ///
-/// v1 writes 8-bit samples (the neutral model doesn't carry bit depth); notes,
-/// instruments, the volume column, samples, loops and structure convert.
+/// Sample bit depth is honoured: a neutral [DocSample.sixteenBit] sample is
+/// emitted as a 16-bit XM sample (via [xmSampleFromDoc]), otherwise 8-bit.
+/// Notes, instruments, the volume column, samples, loops and structure convert.
 XmModule docToXm(ModuleDoc doc) {
   if (doc.sourceFormat == ModuleFormat.xm &&
       doc.xmInstruments.isNotEmpty &&

@@ -69,7 +69,7 @@ Uint8List writeMod(ModModule module) {
   // p == 1080
 
   // ── 1080: signature ────────────────────────────────────────────────────────
-  final sig = _signatureFor(channels);
+  final sig = _signatureFor(channels, module.patterns.length);
   for (var i = 0; i < 4; i++) {
     out[p++] = sig.codeUnitAt(i);
   }
@@ -124,7 +124,12 @@ void _writeU16be(Uint8List out, int offset, int value) {
 }
 
 /// The 4-byte signature for a given channel count: "M.K." for 4, else "%dCHN".
-String _signatureFor(int channels) {
-  if (channels == 4) return 'M.K.';
+///
+/// A 4-channel module with MORE than 64 patterns cannot be addressed by the
+/// classic "M.K." tag (its pattern indices exceed the 64-pattern range the tag
+/// implies), so use the ProTracker-extended "M!K!" tag in that case. `parseMod`
+/// reads both "M.K." and "M!K!" as 4 channels, so the round-trip is preserved.
+String _signatureFor(int channels, int patternCount) {
+  if (channels == 4) return patternCount > 64 ? 'M!K!' : 'M.K.';
   return '${channels}CHN';
 }
