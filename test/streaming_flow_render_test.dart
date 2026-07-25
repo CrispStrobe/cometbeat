@@ -8,6 +8,8 @@
 // whole-song render exactly, while holding only one chunk in memory.
 
 import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -232,6 +234,197 @@ void main() {
         onStart: (_) {},
         onBlock: b.addAll,
       );
+      expect(a, orderedEquals(b));
+      expect(a, isNotEmpty);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Gxx/Hxy GLOBAL VOLUME across chunk boundaries: the running level persists,
+  // so a chunked render must carry it. Byte-identity to renderSongWav proves the
+  // carried scalar reproduces the whole-song globalVolumeEnvelope exactly.
+  group('global-volume song streams byte-identically', () {
+    // A variable-timing song (two speeds) carrying Gxx (set) and Hxy (slide up +
+    // down) global-volume commands on several rows across several orders — the
+    // level changes MID-CHUNK and PERSISTS across chunk boundaries.
+    TrackerSong globalVol({required bool stereo}) {
+      final p0 = _commandPattern(
+        '00',
+        3,
+        48,
+        cellOf: (c, r) {
+          if (c == 0 && r == 0) {
+            return [const TrackerCell(fxCmd: kFxSetSpeed, fxParam: 0x06)];
+          }
+          if (c == 1 && r == 8) {
+            return [
+              const TrackerCell(fxCmd: kFxSetGlobalVolume, fxParam: 0x20),
+            ];
+          }
+          if (c == 1 && r == 20) {
+            return [const TrackerCell(fxCmd: kFxGlobalVolSlide, fxParam: 0x10)];
+          }
+          if (c == 2 && r == 40) {
+            return [
+              const TrackerCell(fxCmd: kFxSetGlobalVolume, fxParam: 0x38),
+            ];
+          }
+          return const [];
+        },
+      );
+      final p1 = _commandPattern(
+        '01',
+        3,
+        48,
+        cellOf: (c, r) {
+          if (c == 0 && r == 0) {
+            return [const TrackerCell(fxCmd: kFxSetSpeed, fxParam: 0x08)];
+          }
+          if (c == 1 && r == 6) {
+            return [const TrackerCell(fxCmd: kFxGlobalVolSlide, fxParam: 0x03)];
+          }
+          if (c == 1 && r == 30) {
+            return [
+              const TrackerCell(fxCmd: kFxSetGlobalVolume, fxParam: 0x10),
+            ];
+          }
+          return const [];
+        },
+      );
+      return _song(patterns: [p0, p1], order: [0, 1, 0, 1], stereo: stereo);
+    }
+
+    for (final stereo in [false, true]) {
+      test('global volume (${stereo ? 'stereo' : 'mono'})', () async {
+        final song = globalVol(stereo: stereo);
+        expect(songUsesVariableTiming(song), isTrue);
+        expect(
+          songCanStreamFlowVariable(song, stereo: stereo),
+          isTrue,
+          reason: 'a global-volume song must now stream (not force whole-song)',
+        );
+        final whole = song.renderSongWav();
+        final streamed = await _streamedBytes(song);
+        // Spans many chunks, so the carried global-volume level is exercised
+        // across boundaries (chunk-size independence: chunking never shows up).
+        final frames = (whole.length - 44) ~/ (stereo ? 4 : 2);
+        expect(frames, greaterThan(kStreamChunkFrames * 4));
+        expect(streamed.length, whole.length);
+        expect(streamed, orderedEquals(whole));
+      });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Native multi-sample (NNA-zone) channels via the bounded per-note-run stereo
+  // path (_renderLongNativeVariableStereo) — the buddhia3.it case. Only a LONG
+  // (> 120 s) variable-timing stereo song takes it, so the fixture is built past
+  // that threshold; each note run's tick-voice state is carried across chunks.
+  group('native NNA-zone (long stereo) song streams byte-identically', () {
+    MultiSampleInstrument nativeMulti(String id) {
+      final lo = Float64List(4000);
+      final hi = Float64List(4000);
+      for (var i = 0; i < lo.length; i++) {
+        lo[i] = sin(2 * pi * i / 40) * 0.3;
+        hi[i] = sin(2 * pi * i / 20) * 0.25;
+      }
+      return MultiSampleInstrument(
+        id,
+        {
+          // Looping native zones (normalize == false) so notes sustain across
+          // the long rows and actually overlap chunk boundaries.
+          60: SampleInstrument(
+            'lo',
+            lo,
+            normalize: false,
+            loopLength: lo.length,
+            nativeFadeout: 128,
+          ),
+          72: SampleInstrument(
+            'hi',
+            hi,
+            normalize: false,
+            loopLength: hi.length,
+            nativeFadeout: 128,
+          ),
+        },
+        polyphonic: true,
+        nativeVoiceSemantics: true,
+      );
+    }
+
+    TrackerSong nativeLong() {
+      const rows = 64;
+      final channels = [
+        for (var c = 0; c < 2; c++)
+          TrackerChannel(
+            id: 'z$c',
+            instrument: nativeMulti('m$c'),
+            rows: rows,
+            pan: c.isEven ? -0.5 : 0.6, // non-zero pan ⇒ exercises pan regions
+          ),
+      ];
+      TrackerPattern pat(String name, int speed) {
+        final p = TrackerPattern.empty(name: name, channels: 2, rows: rows);
+        for (var c = 0; c < 2; c++) {
+          for (var r = 0; r < rows; r++) {
+            if (c == 0 && r == 0) {
+              p.cells[c][r] =
+                  TrackerCell(midi: 60, fxCmd: kFxSetSpeed, fxParam: speed);
+            } else if (r % 8 == 0) {
+              p.cells[c][r] = TrackerCell(midi: (r ~/ 8).isEven ? 60 : 72);
+            } else if (r % 8 == 4) {
+              p.cells[c][r] =
+                  const TrackerCell(fxCmd: kFxVibrato, fxParam: 0x38);
+            }
+          }
+        }
+        return p;
+      }
+
+      // BPM 40, speeds 12/14 ⇒ ~750/875 ms per row; order [0,1,0] over 64 rows is
+      // ~152 s, past the 120 s native-long threshold.
+      return TrackerSong.fromParts(
+        channels: channels,
+        timing: const TrackerTiming(tempoBpm: 40, rows: rows),
+        patterns: [pat('00', 12), pat('01', 14)],
+        order: [0, 1, 0],
+        instruments: defaultInstrumentPool(),
+        initialSpeed: 12,
+        stereoOutput: true,
+      );
+    }
+
+    test('long native-zone stereo variable song', () async {
+      final song = nativeLong();
+      expect(songUsesVariableTiming(song), isTrue);
+      expect(
+        songCanStreamFlowVariable(song, stereo: true),
+        isTrue,
+        reason: 'the long native-zone stereo path must now stream',
+      );
+      final whole = song.renderSongWav();
+      final frames = (whole.length - 44) ~/ 4;
+      expect(
+        frames,
+        greaterThan(120 * 44100),
+        reason: 'must exceed the 120 s native-long threshold',
+      );
+      // Spans ~100 chunks; byte-identity to the un-chunked whole-song render is
+      // the chunk-size-independence guarantee.
+      expect(frames, greaterThan(kStreamChunkFrames * 10));
+      expect(whole.any((b) => b != 0), isTrue, reason: 'must be non-silent');
+      final streamed = await _streamedBytes(song);
+      expect(streamed.length, whole.length);
+      expect(streamed, orderedEquals(whole));
+    });
+
+    test('chunk-size independence: streamed run is deterministic', () {
+      final song = nativeLong();
+      final a = <int>[];
+      final b = <int>[];
+      streamFlowVariableStereoPcm(song, onStart: (_) {}, onBlock: a.addAll);
+      streamFlowVariableStereoPcm(song, onStart: (_) {}, onBlock: b.addAll);
       expect(a, orderedEquals(b));
       expect(a, isNotEmpty);
     });
