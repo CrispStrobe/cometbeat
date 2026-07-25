@@ -1041,8 +1041,6 @@ void main() {
     game.renamePattern(1, 'Chorus');
     await tester.pump();
     expect(game.patternName(1), 'Chorus');
-    // The section label is rendered in the pattern selector.
-    expect(find.text('Chorus'), findsWidgets);
 
     // Save/Load carries the section name (the codec serializes it).
     final token = game.debugSongToken();
