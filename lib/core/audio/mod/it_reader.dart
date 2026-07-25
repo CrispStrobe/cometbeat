@@ -125,6 +125,36 @@ ItModule parseIt(Uint8List bytes) {
   final smpBase = 0xC0 + ordNum + insNum * 4;
   final patBase = smpBase + smpNum * 4;
 
+  // ── embedded MIDI-macro configuration (MidiCfg), when Special bit 0x08 set ──
+  // It follows the pattern-offset table, after the (optional) edit-history block
+  // that Special bit 0x02 introduces (u16 entry count + count × 8 bytes). Absent
+  // ⇒ null ⇒ the implicit IT default macro set. See ItMidiMacros for the layout.
+  ItMidiMacros? midiMacros;
+  if ((special & 0x08) != 0) {
+    var cfg = patBase + patNum * 4;
+    if ((special & 0x02) != 0) {
+      final histCount = u16(cfg); // edit-history entries
+      cfg += 2 + histCount * 8;
+    }
+    if (cfg >= 0 && cfg + ItMidiMacros.blockBytes <= len) {
+      String macro(int base) => readCString(base, ItMidiMacros.macroLength);
+      final global = <String>[];
+      final sfx = <String>[];
+      final zxx = <String>[];
+      var p = cfg;
+      for (var i = 0; i < ItMidiMacros.globalCount; i++, p += 32) {
+        global.add(macro(p));
+      }
+      for (var i = 0; i < ItMidiMacros.sfxCount; i++, p += 32) {
+        sfx.add(macro(p));
+      }
+      for (var i = 0; i < ItMidiMacros.zxxCount; i++, p += 32) {
+        zxx.add(macro(p));
+      }
+      midiMacros = ItMidiMacros(global: global, sfx: sfx, zxx: zxx);
+    }
+  }
+
   // Sample and pattern references (in the order list and cells) are single
   // bytes, so a module addresses at most 256 of each. A header declaring more
   // (up to the u16 max) is malformed — and unclamped it is a decode bomb: a
@@ -186,6 +216,7 @@ ItModule parseIt(Uint8List bytes) {
     patterns: patterns,
     samples: samples,
     instruments: instruments,
+    midiMacros: midiMacros,
   );
 }
 

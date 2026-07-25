@@ -542,7 +542,7 @@ ModuleDoc docFromXm(XmModule m) {
 /// differences are `X` (pan is 0x00..0xFF, not ..0x80) and `T` (T0x/T1x are tempo
 /// SLIDES, only T20+ sets tempo). Shares [_s3mSpecialToFx] for `Sxy`. Verified
 /// against libopenmpt — see docs/ORACLE.md. No-equivalents return `(0, 0)`.
-(int, int) _itEffectToFx(int cmd, int value) {
+(int, int) _itEffectToFx(int cmd, int value, ItMidiMacros? macros) {
   switch (cmd) {
     case 1: // A — set speed
       return value == 0 ? (0, 0) : (0xF, value < 0x20 ? value : 0x1F);
@@ -594,10 +594,17 @@ ModuleDoc docFromXm(XmModule m) {
       return (0x8, value);
     case 25: // Y — panbrello
       return (0x1E, value);
-    case 26: // Z — set filter cutoff (Z00..Z7F) / resonance (Z80..ZFF)
-      // Maps onto the replayer's kFxSetFilter (0x1C). The value carries the
-      // cutoff/resonance selector in its high bit, decoded in ReplayVoice.
-      return (0x1C, value);
+    case 26: // Z — MIDI-macro / set filter cutoff (Z00..Z7F) / resonance (Z80..ZFF)
+      // No embedded MidiCfg ⇒ the implicit IT default macro set: map directly to
+      // the replayer's kFxSetFilter (0x1C), whose param carries the cutoff/
+      // resonance selector in its high bit (decoded in ReplayVoice). This is the
+      // pre-macro behavior, kept byte-identical for every file without a MidiCfg.
+      if (macros == null) return (0x1C, value);
+      // With a MidiCfg, resolve Zxx THROUGH the module's macro table. A recognized
+      // filter macro (F0F000 cutoff / F0F001 resonance) routes to kFxSetFilter; a
+      // non-filter macro (MIDI to external gear) has no audible target → dropped.
+      final filterParam = macros.resolveZxxFilterParam(value);
+      return filterParam == null ? (0, 0) : (0x1C, filterParam);
     default:
       // Z MIDI-macro (\x87…) — no neutral equivalent (dropped).
       return (0, 0);
@@ -690,7 +697,8 @@ ModuleDoc docFromIt(ItModule m) {
         }
 
         final vol = (c.volpan >= 0 && c.volpan <= 64) ? c.volpan : -1;
-        final (fxCmd, fxParam) = _itEffectToFx(c.command, c.commandValue);
+        final (fxCmd, fxParam) =
+            _itEffectToFx(c.command, c.commandValue, m.midiMacros);
         cells.add(
           DocCell(
             note: docNote,

@@ -251,6 +251,117 @@ class ItInstrument {
       );
 }
 
+/// The IT embedded MIDI-macro configuration (the "MidiCfg" block), present when
+/// the header Special word has bit 0x08 set. It is laid out as 9 global "MIDI
+/// out" macros, then 16 parametric SFx macros (SF0..SFF), then 128 fixed Zxx
+/// macros — each a NUL-padded 32-byte ASCII string of hex nibbles plus the
+/// parameter placeholder `z`.
+///
+/// A `Zxx` pattern effect resolves through this table: values 0x00..0x7F run the
+/// channel's active parametric macro (SFx) with the low 7 bits substituted for
+/// `z`; values 0x80..0xFF run fixed macro (value & 0x7F). Of all the macro forms,
+/// only the resonant-filter macros are renderable here — `F0F000` sets cutoff and
+/// `F0F001` sets resonance (the canonical IT filter macros). Every other macro is
+/// a MIDI event to external gear with no audible target in this offline renderer;
+/// it is parsed and ignored.
+///
+/// DEFERRED: per-channel active-macro selection (`\SFx`). The active parametric
+/// macro is assumed to be 0 (the IT default), which is what all real modules that
+/// do not explicitly switch macros use. Full `z`-parameter arithmetic beyond the
+/// direct substitution is likewise a follow-up.
+class ItMidiMacros {
+  const ItMidiMacros({
+    required this.global,
+    required this.sfx,
+    required this.zxx,
+  });
+
+  /// Bytes per macro slot in the on-disk MidiCfg block.
+  static const int macroLength = 32;
+
+  /// Slot counts: 9 global, 16 parametric (SF0..SFF), 128 fixed (Zxx). The total
+  /// on-disk block is (9 + 16 + 128) × 32 = 4896 bytes.
+  static const int globalCount = 9;
+  static const int sfxCount = 16;
+  static const int zxxCount = 128;
+  static const int blockBytes =
+      (globalCount + sfxCount + zxxCount) * macroLength;
+
+  /// The 9 global MIDI-out event macros (start/stop/tick/note-on/off/volume/pan/
+  /// bank/program). Parsed for completeness; none are renderable here.
+  final List<String> global;
+
+  /// The 16 parametric SFx macros (SF0..SFF), triggered by `Zxx` values
+  /// 0x00..0x7F through the channel's active macro (assumed 0).
+  final List<String> sfx;
+
+  /// The 128 fixed Zxx macros, triggered by `Zxx` values 0x80..0xFF (index =
+  /// value & 0x7F).
+  final List<String> zxx;
+
+  /// Resolve a `Zxx` effect [value] to the kFxSetFilter param (a cutoff 0..0x7F,
+  /// or `0x80 | resonance`) for the renderer, honoring these macros. Returns null
+  /// when the resolved macro is NOT a recognized filter macro (a MIDI-out macro
+  /// with no audible target — parse-and-ignore).
+  ///
+  /// For the DEFAULT filter macro set (SF0 = `F0F000z` cutoff, fixed Zxx[n] =
+  /// `F0F001nn` resonance) this returns [value] unchanged, i.e. it is identical to
+  /// the direct `Zxx→filter` mapping (Z00..Z7F cutoff, Z80..ZFF resonance).
+  int? resolveZxxFilterParam(int value) {
+    final String macro;
+    final int? param;
+    if (value < 0x80) {
+      // Parametric: active macro assumed 0 (see class doc). `z` ← low 7 bits.
+      macro = sfx.isNotEmpty ? sfx[0] : '';
+      param = value & 0x7F;
+    } else {
+      final idx = value & 0x7F;
+      macro = idx < zxx.length ? zxx[idx] : '';
+      param = null; // a fixed macro carries its own value
+    }
+    return _recognizeFilterParam(macro, param);
+  }
+
+  /// True when the table is the IT DEFAULT filter set — i.e.
+  /// [resolveZxxFilterParam] reproduces the direct mapping for every `Zxx` value.
+  bool get isDefaultFilterSet {
+    for (var v = 0; v < 256; v++) {
+      if (resolveZxxFilterParam(v) != v) return false;
+    }
+    return true;
+  }
+
+  static String _clean(String macro) =>
+      macro.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+
+  /// Recognize a filter macro string: `F0F000`→cutoff, `F0F001`→resonance,
+  /// followed by either the `z` placeholder (→[param]) or two hex digits (a fixed
+  /// value). Returns the kFxSetFilter param, or null if not a filter macro.
+  static int? _recognizeFilterParam(String macro, int? param) {
+    final s = _clean(macro);
+    final bool cutoff;
+    if (s.startsWith('F0F000')) {
+      cutoff = true;
+    } else if (s.startsWith('F0F001')) {
+      cutoff = false;
+    } else {
+      return null;
+    }
+    final rest = s.substring(6);
+    int? val;
+    if (rest.startsWith('Z')) {
+      val = param; // parameter substitution
+    } else if (rest.length >= 2) {
+      val = int.tryParse(rest.substring(0, 2), radix: 16);
+    } else if (rest.isEmpty) {
+      val = param; // "F0F000"/"F0F001" alone → take the parameter
+    }
+    if (val == null) return null;
+    val &= 0x7F;
+    return cutoff ? val : (0x80 | val);
+  }
+}
+
 /// A parsed Impulse Tracker module.
 class ItModule {
   const ItModule({
@@ -274,6 +385,7 @@ class ItModule {
     required this.patterns,
     required this.samples,
     this.instruments = const [],
+    this.midiMacros,
   });
 
   final String name;
@@ -292,6 +404,11 @@ class ItModule {
   /// Parsed instrument headers (empty for sample-mode files). Indexed 0-based;
   /// a cell's 1-based instrument number is `instruments[n - 1]`.
   final List<ItInstrument> instruments;
+
+  /// The embedded MIDI-macro configuration, or null when the header Special word
+  /// has no MidiCfg (bit 0x08 clear). Null ⇒ the implicit IT default macro set,
+  /// i.e. the direct `Zxx→filter` mapping (see [ItMidiMacros]).
+  final ItMidiMacros? midiMacros;
 
   bool get usesInstruments => instruments.isNotEmpty;
 }
