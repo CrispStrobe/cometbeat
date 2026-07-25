@@ -1031,6 +1031,46 @@ void main() {
       expect(sum, lessThan(0));
     });
 
+    test('effect-bearing sample voices enter release after key-off', () {
+      final sample = Float64List.fromList(List<double>.filled(8000, 0.5));
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60)
+        ..[1] = fx(0x4, 0x31)
+        ..[4] = TrackerCell.noteCut;
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'release-effects',
+            instrument: SampleInstrument(
+              'release-effects',
+              sample,
+              sustainLoopStart: 1000,
+              sustainLoopLength: 1000,
+            ),
+            rows: 8,
+          ),
+        ],
+        timing: const TrackerTiming(rows: 8),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+
+      final rendered = replaySong(song).pcm;
+      final keyOff = const TrackerTiming(rows: 8).stepStartSample(4);
+      var before = 0.0;
+      var after = 0.0;
+      for (var i = keyOff - 2000; i < keyOff; i++) {
+        before += rendered[i].abs();
+      }
+      for (var i = keyOff + 200; i < keyOff + 700; i++) {
+        after += rendered[i].abs();
+      }
+      expect(before, greaterThan(after * 4));
+      expect(after, greaterThan(0));
+    });
+
     test('stereo sample channels keep the right waveform through effects', () {
       final leftSample = Float64List.fromList(
         List<double>.filled(120000, 0.25),

@@ -263,6 +263,12 @@ class ReplayVoice {
   /// Whether a note has ever been triggered (so 3xx with no prior note starts).
   bool active = false;
 
+  /// A key-off ended the sustain portion of the current sampled note. Additive
+  /// voices retain their existing hard-stop behavior; sampled tick renderers
+  /// use this state to enter the native release envelope and ordinary loop.
+  bool released = false;
+  bool _releasedThisRow = false;
+
   // Effect memory: a 0 param reuses the last non-zero param for that command.
   int _memPortaUp = 0;
   int _memPortaDown = 0;
@@ -337,6 +343,7 @@ class ReplayVoice {
     _cmd = cell.fxCmd;
     _param = cell.fxParam;
     _retriggered = false;
+    _releasedThisRow = false;
     _pendingDelayTick = null;
 
     // EDx note delay: defer the trigger to tick x instead of triggering now.
@@ -348,6 +355,10 @@ class ReplayVoice {
       _pendingNoteVolume = cell.volume ?? 1.0;
       _pendingDelayTick = _exVal;
     } else if (cell.keyOff) {
+      if (active) {
+        released = true;
+        _releasedThisRow = true;
+      }
       active = false;
     } else if (cell.midi != null) {
       final m = cell.midi!.toDouble();
@@ -356,6 +367,7 @@ class ReplayVoice {
         if (!active) {
           pitch = m;
           active = true;
+          released = false;
           _retriggered = true;
           noteVolume = cell.volume ?? 1.0;
           _vibPhase = 0;
@@ -366,6 +378,7 @@ class ReplayVoice {
         pitch = m;
         targetPitch = m;
         active = true;
+        released = false;
         _retriggered = true;
         noteVolume = cell.volume ?? 1.0;
         _vibPhase = 0;
@@ -443,6 +456,8 @@ class ReplayVoice {
   /// the envelope). Valid after [armRow].
   bool get retriggeredThisRow => _retriggered;
 
+  bool get releasedThisRow => _releasedThisRow;
+
   /// Advance one tick [k] (0-based within the row) and return the effective
   /// (pitch, volume0to64) to synthesize this tick. [ticksPerRow] is the row's
   /// speed. Slide-type effects act on ticks 1.. (tick 0 holds), matching classic
@@ -459,6 +474,7 @@ class ReplayVoice {
       targetPitch = _pendingNote;
       noteVolume = _pendingNoteVolume;
       active = true;
+      released = false;
       retrigger = true;
       _vibPhase = 0;
       _tremPhase = 0;
@@ -821,6 +837,7 @@ double? _readLoopedSample(
   final voice = ReplayVoice();
   var readPos = 0.0;
   var noteStartSample = 0;
+  var releaseStartSample = 0;
   var rowPan = channel.pan.clamp(-1.0, 1.0);
 
   for (var r = 0; r < rows; r++) {
@@ -841,6 +858,7 @@ double? _readLoopedSample(
           .clamp(-1.0, 1.0);
     }
     voice.armRow(cell);
+    if (voice.releasedThisRow) releaseStartSample = rowStart[r];
     if (voice.retriggeredThisRow) {
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
       readPos = cell.fxCmd == kFxSampleOffset
@@ -848,7 +866,7 @@ double? _readLoopedSample(
           : 0.0;
       noteStartSample = rowStart[r];
     }
-    if ((!voice.active && !voice.hasPendingNote) ||
+    if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
         cur is! SampleInstrument ||
         cur.sample.isEmpty) {
       continue;
@@ -870,7 +888,6 @@ double? _readLoopedSample(
     final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
     final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
     final playbackLoops = useSustainLoop || loops;
-    final loopEnd = playbackLoopStart + playbackLoopLength;
     final rowS = rowStart[r];
     final rowE = rowStart[r + 1];
     final tpr = ticksPerRow[r] < 1 ? 1 : ticksPerRow[r];
@@ -882,24 +899,29 @@ double? _readLoopedSample(
         readPos = 0.0;
         noteStartSample = ts;
       }
-      if (!voice.active) continue;
+      if (!voice.active && !voice.released) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < total; i++) {
-        if (playbackLoops &&
-            !playbackPingPong &&
-            playbackLoopLength > 0 &&
-            readPos >= loopEnd) {
-          readPos = playbackLoopStart +
-              ((readPos - playbackLoopStart) % playbackLoopLength);
+        final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
+        final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
+        final activePingPong = voice.released ? pingPong : playbackPingPong;
+        final activeLoops = voice.released ? loops : playbackLoops;
+        final activeLoopEnd = activeLoopStart + activeLoopLength;
+        if (activeLoops &&
+            !activePingPong &&
+            activeLoopLength > 0 &&
+            readPos >= activeLoopEnd) {
+          readPos = activeLoopStart +
+              ((readPos - activeLoopStart) % activeLoopLength);
         }
         final value = _readLoopedSample(
           sample,
           readPos,
-          playbackLoops,
-          playbackPingPong,
-          playbackLoopStart,
-          playbackLoopLength,
+          activeLoops,
+          activePingPong,
+          activeLoopStart,
+          activeLoopLength,
         );
         if (value == null) break;
         final rightValue = sampleRight == null
@@ -907,23 +929,26 @@ double? _readLoopedSample(
             : _readLoopedSample(
                   sampleRight,
                   readPos,
-                  playbackLoops,
-                  playbackPingPong,
-                  playbackLoopStart,
-                  playbackLoopLength,
+                  activeLoops,
+                  activePingPong,
+                  activeLoopStart,
+                  activeLoopLength,
                 ) ??
                 0.0;
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
         final nativeEnv = cur.nativeVolumeEnvelope;
-        final level = nativeEnv?.levelAt(t * 1000) ??
+        final level = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
         final pan = (rowPan +
                 state.pan +
                 (channel.panEnvelope?.panAt(t * 1000) ?? 0.0) +
                 (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0))
             .clamp(-1.0, 1.0);
-        final amount = vol * attack * level;
+        final release = voice.released
+            ? exp(-max(0, i - releaseStartSample) / (0.03 * kSampleRate))
+            : 1.0;
+        final amount = vol * attack * level * release;
         if (sampleRight != null) {
           final leftGain = pan > 0 ? 1.0 - pan : 1.0;
           final rightGain = pan < 0 ? 1.0 + pan : 1.0;
@@ -982,6 +1007,7 @@ void _renderSampleChannelInto(
   final voice = ReplayVoice();
   var readPos = 0.0; // fractional index into the current sample
   var noteStartSample = 0;
+  var releaseStartSample = 0;
 
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
@@ -992,6 +1018,7 @@ void _renderSampleChannelInto(
       cur = pool[cellInst - 1];
     }
     voice.armRow(cells[r]);
+    if (voice.releasedThisRow) releaseStartSample = timing.stepStartSample(r);
     if (voice.retriggeredThisRow) {
       final c = cells[r];
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
@@ -999,7 +1026,7 @@ void _renderSampleChannelInto(
           c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
       noteStartSample = timing.stepStartSample(r);
     }
-    if ((!voice.active && !voice.hasPendingNote) ||
+    if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
         cur is! SampleInstrument ||
         cur.sample.isEmpty) {
       continue;
@@ -1016,7 +1043,6 @@ void _renderSampleChannelInto(
     final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
     final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
     final playbackLoops = useSustainLoop || loops;
-    final loopEnd = playbackLoopStart + playbackLoopLength;
     final rowStart = timing.stepStartSample(r);
     final rowEnd =
         r + 1 < rows ? timing.stepStartSample(r + 1) : timing.totalSamples;
@@ -1028,32 +1054,40 @@ void _renderSampleChannelInto(
         readPos = 0.0;
         noteStartSample = ts;
       }
-      if (!voice.active) continue;
+      if (!voice.active && !voice.released) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
-        if (playbackLoops &&
-            !playbackPingPong &&
-            playbackLoopLength > 0 &&
-            readPos >= loopEnd) {
-          readPos = playbackLoopStart +
-              ((readPos - playbackLoopStart) % playbackLoopLength);
+        final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
+        final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
+        final activePingPong = voice.released ? pingPong : playbackPingPong;
+        final activeLoops = voice.released ? loops : playbackLoops;
+        final activeLoopEnd = activeLoopStart + activeLoopLength;
+        if (activeLoops &&
+            !activePingPong &&
+            activeLoopLength > 0 &&
+            readPos >= activeLoopEnd) {
+          readPos = activeLoopStart +
+              ((readPos - activeLoopStart) % activeLoopLength);
         }
         final sampleVal = _readLoopedSample(
           s,
           readPos,
-          playbackLoops,
-          playbackPingPong,
-          playbackLoopStart,
-          playbackLoopLength,
+          activeLoops,
+          activePingPong,
+          activeLoopStart,
+          activeLoopLength,
         );
         if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
         final nativeEnv = cur.nativeVolumeEnvelope;
-        final el = nativeEnv?.levelAt(t * 1000) ??
+        final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
-        stem[i] += sampleVal * vol * attack * el;
+        final release = voice.released
+            ? exp(-max(0, i - releaseStartSample) / (0.03 * kSampleRate))
+            : 1.0;
+        stem[i] += sampleVal * vol * attack * el * release;
         readPos += ratio;
       }
     }
@@ -1100,6 +1134,7 @@ void _renderSampleChannelIntoVariable(
   final voice = ReplayVoice();
   var readPos = 0.0;
   var noteStartSample = 0;
+  var releaseStartSample = 0;
 
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
@@ -1110,6 +1145,7 @@ void _renderSampleChannelIntoVariable(
       cur = pool[cellInst - 1];
     }
     voice.armRow(cells[r]);
+    if (voice.releasedThisRow) releaseStartSample = rowStart[r];
     if (voice.retriggeredThisRow) {
       final c = cells[r];
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
@@ -1117,7 +1153,7 @@ void _renderSampleChannelIntoVariable(
           c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
       noteStartSample = rowStart[r];
     }
-    if ((!voice.active && !voice.hasPendingNote) ||
+    if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
         cur is! SampleInstrument ||
         cur.sample.isEmpty) {
       continue;
@@ -1134,7 +1170,6 @@ void _renderSampleChannelIntoVariable(
     final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
     final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
     final playbackLoops = useSustainLoop || loops;
-    final loopEnd = playbackLoopStart + playbackLoopLength;
     final rowS = rowStart[r];
     final rowE = rowStart[r + 1];
     final tpr = ticksPerRow[r] < 1 ? 1 : ticksPerRow[r];
@@ -1146,32 +1181,40 @@ void _renderSampleChannelIntoVariable(
         readPos = 0.0;
         noteStartSample = ts;
       }
-      if (!voice.active) continue;
+      if (!voice.active && !voice.released) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
-        if (playbackLoops &&
-            !playbackPingPong &&
-            playbackLoopLength > 0 &&
-            readPos >= loopEnd) {
-          readPos = playbackLoopStart +
-              ((readPos - playbackLoopStart) % playbackLoopLength);
+        final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
+        final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
+        final activePingPong = voice.released ? pingPong : playbackPingPong;
+        final activeLoops = voice.released ? loops : playbackLoops;
+        final activeLoopEnd = activeLoopStart + activeLoopLength;
+        if (activeLoops &&
+            !activePingPong &&
+            activeLoopLength > 0 &&
+            readPos >= activeLoopEnd) {
+          readPos = activeLoopStart +
+              ((readPos - activeLoopStart) % activeLoopLength);
         }
         final sampleVal = _readLoopedSample(
           s,
           readPos,
-          playbackLoops,
-          playbackPingPong,
-          playbackLoopStart,
-          playbackLoopLength,
+          activeLoops,
+          activePingPong,
+          activeLoopStart,
+          activeLoopLength,
         );
         if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
         final nativeEnv = cur.nativeVolumeEnvelope;
-        final el = nativeEnv?.levelAt(t * 1000) ??
+        final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
-        stem[i] += sampleVal * vol * attack * el;
+        final release = voice.released
+            ? exp(-max(0, i - releaseStartSample) / (0.03 * kSampleRate))
+            : 1.0;
+        stem[i] += sampleVal * vol * attack * el * release;
         readPos += ratio;
       }
     }
