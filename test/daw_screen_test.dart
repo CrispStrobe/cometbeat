@@ -13,6 +13,7 @@ import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:provider/provider.dart';
@@ -1068,6 +1069,34 @@ void main() {
 
     // Batch-delete the selection from the toolbar removes both clips.
     await tester.tap(find.byIcon(Icons.delete_sweep_outlined));
+    await tester.pumpAndSettle();
+    expect(daw.clipCount, 0);
+  });
+
+  testWidgets('keyboard: Space toggles play, Delete removes selected clips',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    daw.addDemoTune();
+    await tester.pumpAndSettle();
+
+    // Space starts playback (use pump, not pumpAndSettle — the ticker runs).
+    expect(daw.isPlaying, isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(daw.isPlaying, isTrue);
+    // Space again stops it.
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(daw.isPlaying, isFalse);
+
+    // Select both clips, then Delete removes them.
+    await tester.tap(find.byTooltip('Select clip for FX').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Select clip for FX').first);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.delete);
     await tester.pumpAndSettle();
     expect(daw.clipCount, 0);
   });

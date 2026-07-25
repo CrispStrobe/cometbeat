@@ -3950,6 +3950,18 @@ abstract class AppLocalizations {
   /// **'A music clip (shown with a note badge) stays linked to the notation editors. Open in editor takes it to the Score or Tab Workshop; when you Send to Audio Editor there, it updates this same clip in place. You can also send it one way to the Advanced Tracker.'**
   String get dawHelpRoundTripBody;
 
+  /// No description provided for @dawHelpShortcutsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyboard shortcuts'**
+  String get dawHelpShortcutsTitle;
+
+  /// No description provided for @dawHelpShortcutsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'On a keyboard: Space plays or stops; Delete removes the selected clips.'**
+  String get dawHelpShortcutsBody;
+
   /// No description provided for @dawClipLinked.
   ///
   /// In en, this message translates to:

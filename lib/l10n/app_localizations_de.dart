@@ -2108,6 +2108,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ein Musik-Clip (mit Noten-Symbol) bleibt mit den Noten-Editoren verknüpft. Im Editor öffnen bringt ihn in die Partitur- oder Tabulatur-Werkstatt; wenn du dort An Audio-Editor senden wählst, wird genau dieser Clip aktualisiert. Du kannst ihn auch einmalig an den erweiterten Tracker senden.';
 
   @override
+  String get dawHelpShortcutsTitle => 'Tastenkürzel';
+
+  @override
+  String get dawHelpShortcutsBody =>
+      'Mit Tastatur: Leertaste startet/stoppt; Entf löscht die ausgewählten Clips.';
+
+  @override
   String get dawClipLinked => 'Mit Editor verknüpft';
 
   @override

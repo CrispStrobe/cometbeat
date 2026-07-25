@@ -58,6 +58,11 @@ class _DawHelpSheet extends StatelessWidget {
         l10n.dawHelpRoundTripTitle,
         l10n.dawHelpRoundTripBody,
       ),
+      _HelpSection(
+        Icons.keyboard,
+        l10n.dawHelpShortcutsTitle,
+        l10n.dawHelpShortcutsBody,
+      ),
     ];
 
     return SafeArea(

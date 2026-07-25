@@ -54,6 +54,7 @@ import 'package:crisp_notation/crisp_notation.dart'
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/scheduler.dart' show Ticker;
+import 'package:flutter/services.dart' show KeyDownEvent, LogicalKeyboardKey;
 import 'package:provider/provider.dart';
 
 /// Test handle onto the running arranger.
@@ -3251,6 +3252,25 @@ class _DawScreenState extends State<DawScreen>
                     : '🎵';
   }
 
+  /// Desktop/web keyboard shortcuts for the transport: Space toggles play/stop,
+  /// Delete/Backspace removes the selected clips. The DAW has no persistent text
+  /// field on this surface, so intercepting these globally is safe.
+  KeyEventResult _handleDawKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.space) {
+      _playing ? stop() : play();
+      return KeyEventResult.handled;
+    }
+    if ((key == LogicalKeyboardKey.delete ||
+            key == LogicalKeyboardKey.backspace) &&
+        _hasSelectedClips) {
+      _deleteSelectedClips();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   /// The app-bar transport/edit actions, made width-aware so the row never
   /// overflows on a narrow (phone/web) window. Essential actions (help,
   /// undo/redo, play/stop) stay as icons; the rest collapse into a single
@@ -3390,275 +3410,285 @@ class _DawScreenState extends State<DawScreen>
     final scheme = Theme.of(context).colorScheme;
     final daw = context.watch<DawService>(); // rebuild as clips are sent
 
-    return Scaffold(
-      appBar: GameAppBar(
-        title: l10n.dawTitle,
-        actions: _toolbarActions(context, daw, scheme, l10n),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // A DAW look from the first frame: the lanes/ruler are always shown
-            // (even empty), with a gentle hint banner until the first clip lands.
-            if (daw.clipCount == 0)
-              Container(
-                width: double.infinity,
-                color: scheme.surfaceContainerHighest,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 18, color: scheme.primary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        l10n.dawEmpty,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            Expanded(child: _timeline(daw, scheme)),
-            const Divider(height: 1),
-            // The control strip wraps into many rows at narrow widths; bound it
-            // to half the viewport and let it scroll so it never pushes the
-            // timeline off-screen (keeps every control reachable on phone/web).
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * 0.5,
-              ),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleDawKey,
+      child: Scaffold(
+        appBar: GameAppBar(
+          title: l10n.dawTitle,
+          actions: _toolbarActions(context, daw, scheme, l10n),
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // A DAW look from the first frame: the lanes/ruler are always shown
+              // (even empty), with a gentle hint banner until the first clip lands.
+              if (daw.clipCount == 0)
+                Container(
+                  width: double.infinity,
+                  color: scheme.surfaceContainerHighest,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
                     children: [
-                      // Add clip is timeline material only. Instrument
-                      // generation lives in the Sound Library; voice shaping
-                      // lives in track FX.
-                      MenuAnchor(
-                        menuChildren: [
-                          MenuItemButton(
-                            leadingIcon: const Icon(Icons.graphic_eq),
-                            onPressed: addSample,
-                            child: Text(l10n.dawAddFromLibrary),
-                          ),
-                          MenuItemButton(
-                            leadingIcon: const Icon(Icons.file_upload_outlined),
-                            onPressed: _importAudioFile,
-                            child: Text(l10n.dawImportAudioFile),
-                          ),
-                          MenuItemButton(
-                            leadingIcon:
-                                const Icon(Icons.library_music_outlined),
-                            onPressed: _addMusic,
-                            child: Text(l10n.dawAddMusic),
-                          ),
-                          MenuItemButton(
-                            leadingIcon: const Icon(Icons.colorize),
-                            onPressed: _addFromExtractor,
-                            child: Text(l10n.dawExtractSample),
-                          ),
-                          const Divider(height: 1),
-                          MenuItemButton(
-                            leadingIcon: const Icon(Icons.music_note),
-                            onPressed: addDemoBeat,
-                            child: Text(l10n.dawAddBeat),
-                          ),
-                          MenuItemButton(
-                            leadingIcon: const Icon(Icons.piano),
-                            onPressed: addDemoTune,
-                            child: Text(l10n.dawAddTune),
-                          ),
-                        ],
-                        builder: (context, controller, _) => FilledButton.icon(
-                          onPressed: () => controller.isOpen
-                              ? controller.close()
-                              : controller.open(),
-                          icon: const Icon(Icons.add),
-                          label: Text(l10n.dawAddClip),
+                      Icon(Icons.info_outline, size: 18, color: scheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.dawEmpty,
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
-                      ),
-                      FilledButton.tonalIcon(
-                        onPressed:
-                            daw.clipCount < 2 ? null : _mergeAllWithToast,
-                        icon: const Icon(Icons.layers),
-                        label: Text(l10n.dawMergeAll),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: daw.clipCount == 0 ? null : _saveProject,
-                        icon: const Icon(Icons.save_outlined),
-                        label: Text(l10n.dawSaveProject),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _openProject,
-                        icon: const Icon(Icons.folder_open),
-                        label: Text(l10n.dawOpenProject),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: addTrack,
-                        icon: const Icon(Icons.add_road),
-                        label: Text(l10n.dawAddTrack),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _masterFxMenu,
-                        icon: const Icon(Icons.graphic_eq),
-                        label: const Text('Master FX'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _busMenu,
-                        icon: const Icon(Icons.call_merge),
-                        label: const Text('Buses'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: daw.clipCount == 0 ? null : _markRangeIn,
-                        icon: const Icon(Icons.keyboard_tab),
-                        label: const Text('Mark In'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: daw.clipCount == 0 ? null : _markRangeOut,
-                        icon: const Icon(Icons.keyboard_return),
-                        label: const Text('Mark Out'),
-                      ),
-                      MenuAnchor(
-                        menuChildren: [
-                          SubmenuButton(
-                            leadingIcon: const Icon(Icons.auto_fix_high),
-                            menuChildren: [
-                              for (final preset in DawClipEffectPreset.values)
-                                MenuItemButton(
-                                  onPressed: _hasFxRange
-                                      ? () => _applyRangePreset(preset)
-                                      : null,
-                                  child: Text(_clipEffectPresetLabel(preset)),
-                                ),
-                            ],
-                            child: const Text('Preset'),
-                          ),
-                          SubmenuButton(
-                            leadingIcon: const Icon(Icons.add_circle_outline),
-                            menuChildren: [
-                              for (final type in _clipEffectTypes)
-                                MenuItemButton(
-                                  onPressed: _hasFxRange
-                                      ? () => _addRangeEffect(type)
-                                      : null,
-                                  child: Text(_clipEffectLabel(type)),
-                                ),
-                            ],
-                            child: const Text('Effect'),
-                          ),
-                        ],
-                        builder: (context, controller, _) =>
-                            OutlinedButton.icon(
-                          onPressed: _hasFxRange
-                              ? () => controller.isOpen
-                                  ? controller.close()
-                                  : controller.open()
-                              : null,
-                          icon: const Icon(Icons.segment),
-                          label: Text(_rangeLabel()),
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _hasFxRange ? _rangeGainDialog : null,
-                        icon: const Icon(Icons.tune),
-                        label: const Text('Range Gain'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _hasFxRange ? _trackAutomationDialog : null,
-                        icon: const Icon(Icons.timeline),
-                        label: const Text('Track Auto'),
-                      ),
-                      MenuAnchor(
-                        menuChildren: [
-                          for (final curve in DawFadeCurve.values)
-                            MenuItemButton(
-                              onPressed: _hasFxRange
-                                  ? () => _applyRangeFade(
-                                        fadeIn: true,
-                                        curve: curve,
-                                      )
-                                  : null,
-                              leadingIcon: const Icon(Icons.trending_up),
-                              child: Text('Fade In ${_fadeCurveLabel(curve)}'),
-                            ),
-                          for (final curve in DawFadeCurve.values)
-                            MenuItemButton(
-                              onPressed: _hasFxRange
-                                  ? () => _applyRangeFade(
-                                        fadeIn: false,
-                                        curve: curve,
-                                      )
-                                  : null,
-                              leadingIcon: const Icon(Icons.trending_down),
-                              child: Text('Fade Out ${_fadeCurveLabel(curve)}'),
-                            ),
-                        ],
-                        builder: (context, controller, _) =>
-                            OutlinedButton.icon(
-                          onPressed: _hasFxRange
-                              ? () => controller.isOpen
-                                  ? controller.close()
-                                  : controller.open()
-                              : null,
-                          icon: const Icon(Icons.show_chart),
-                          label: const Text('Range Fade'),
-                        ),
-                      ),
-                      MenuAnchor(
-                        menuChildren: [
-                          MenuItemButton(
-                            onPressed:
-                                _hasFxRange ? () => _setRangeMuted(true) : null,
-                            leadingIcon: const Icon(Icons.volume_off),
-                            child: const Text('Mute'),
-                          ),
-                          MenuItemButton(
-                            onPressed: _hasFxRange
-                                ? () => _setRangeMuted(false)
-                                : null,
-                            leadingIcon: const Icon(Icons.volume_up),
-                            child: const Text('Unmute'),
-                          ),
-                        ],
-                        builder: (context, controller, _) =>
-                            OutlinedButton.icon(
-                          onPressed: _hasFxRange
-                              ? () => controller.isOpen
-                                  ? controller.close()
-                                  : controller.open()
-                              : null,
-                          icon: const Icon(Icons.volume_off),
-                          label: const Text('Range Mute'),
-                        ),
-                      ),
-                      // Project tempo — defines the beat snap grid.
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove),
-                            tooltip: l10n.dawTempoDown,
-                            onPressed: () => setBpm(daw.bpm - 5),
-                          ),
-                          Text(l10n.dawBpm(daw.bpm.round())),
-                          IconButton(
-                            icon: const Icon(Icons.add),
-                            tooltip: l10n.dawTempoUp,
-                            onPressed: () => setBpm(daw.bpm + 5),
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ),
+              Expanded(child: _timeline(daw, scheme)),
+              const Divider(height: 1),
+              // The control strip wraps into many rows at narrow widths; bound it
+              // to half the viewport and let it scroll so it never pushes the
+              // timeline off-screen (keeps every control reachable on phone/web).
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // Add clip is timeline material only. Instrument
+                        // generation lives in the Sound Library; voice shaping
+                        // lives in track FX.
+                        MenuAnchor(
+                          menuChildren: [
+                            MenuItemButton(
+                              leadingIcon: const Icon(Icons.graphic_eq),
+                              onPressed: addSample,
+                              child: Text(l10n.dawAddFromLibrary),
+                            ),
+                            MenuItemButton(
+                              leadingIcon:
+                                  const Icon(Icons.file_upload_outlined),
+                              onPressed: _importAudioFile,
+                              child: Text(l10n.dawImportAudioFile),
+                            ),
+                            MenuItemButton(
+                              leadingIcon:
+                                  const Icon(Icons.library_music_outlined),
+                              onPressed: _addMusic,
+                              child: Text(l10n.dawAddMusic),
+                            ),
+                            MenuItemButton(
+                              leadingIcon: const Icon(Icons.colorize),
+                              onPressed: _addFromExtractor,
+                              child: Text(l10n.dawExtractSample),
+                            ),
+                            const Divider(height: 1),
+                            MenuItemButton(
+                              leadingIcon: const Icon(Icons.music_note),
+                              onPressed: addDemoBeat,
+                              child: Text(l10n.dawAddBeat),
+                            ),
+                            MenuItemButton(
+                              leadingIcon: const Icon(Icons.piano),
+                              onPressed: addDemoTune,
+                              child: Text(l10n.dawAddTune),
+                            ),
+                          ],
+                          builder: (context, controller, _) =>
+                              FilledButton.icon(
+                            onPressed: () => controller.isOpen
+                                ? controller.close()
+                                : controller.open(),
+                            icon: const Icon(Icons.add),
+                            label: Text(l10n.dawAddClip),
+                          ),
+                        ),
+                        FilledButton.tonalIcon(
+                          onPressed:
+                              daw.clipCount < 2 ? null : _mergeAllWithToast,
+                          icon: const Icon(Icons.layers),
+                          label: Text(l10n.dawMergeAll),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: daw.clipCount == 0 ? null : _saveProject,
+                          icon: const Icon(Icons.save_outlined),
+                          label: Text(l10n.dawSaveProject),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _openProject,
+                          icon: const Icon(Icons.folder_open),
+                          label: Text(l10n.dawOpenProject),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: addTrack,
+                          icon: const Icon(Icons.add_road),
+                          label: Text(l10n.dawAddTrack),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _masterFxMenu,
+                          icon: const Icon(Icons.graphic_eq),
+                          label: const Text('Master FX'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _busMenu,
+                          icon: const Icon(Icons.call_merge),
+                          label: const Text('Buses'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: daw.clipCount == 0 ? null : _markRangeIn,
+                          icon: const Icon(Icons.keyboard_tab),
+                          label: const Text('Mark In'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: daw.clipCount == 0 ? null : _markRangeOut,
+                          icon: const Icon(Icons.keyboard_return),
+                          label: const Text('Mark Out'),
+                        ),
+                        MenuAnchor(
+                          menuChildren: [
+                            SubmenuButton(
+                              leadingIcon: const Icon(Icons.auto_fix_high),
+                              menuChildren: [
+                                for (final preset in DawClipEffectPreset.values)
+                                  MenuItemButton(
+                                    onPressed: _hasFxRange
+                                        ? () => _applyRangePreset(preset)
+                                        : null,
+                                    child: Text(_clipEffectPresetLabel(preset)),
+                                  ),
+                              ],
+                              child: const Text('Preset'),
+                            ),
+                            SubmenuButton(
+                              leadingIcon: const Icon(Icons.add_circle_outline),
+                              menuChildren: [
+                                for (final type in _clipEffectTypes)
+                                  MenuItemButton(
+                                    onPressed: _hasFxRange
+                                        ? () => _addRangeEffect(type)
+                                        : null,
+                                    child: Text(_clipEffectLabel(type)),
+                                  ),
+                              ],
+                              child: const Text('Effect'),
+                            ),
+                          ],
+                          builder: (context, controller, _) =>
+                              OutlinedButton.icon(
+                            onPressed: _hasFxRange
+                                ? () => controller.isOpen
+                                    ? controller.close()
+                                    : controller.open()
+                                : null,
+                            icon: const Icon(Icons.segment),
+                            label: Text(_rangeLabel()),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _hasFxRange ? _rangeGainDialog : null,
+                          icon: const Icon(Icons.tune),
+                          label: const Text('Range Gain'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed:
+                              _hasFxRange ? _trackAutomationDialog : null,
+                          icon: const Icon(Icons.timeline),
+                          label: const Text('Track Auto'),
+                        ),
+                        MenuAnchor(
+                          menuChildren: [
+                            for (final curve in DawFadeCurve.values)
+                              MenuItemButton(
+                                onPressed: _hasFxRange
+                                    ? () => _applyRangeFade(
+                                          fadeIn: true,
+                                          curve: curve,
+                                        )
+                                    : null,
+                                leadingIcon: const Icon(Icons.trending_up),
+                                child:
+                                    Text('Fade In ${_fadeCurveLabel(curve)}'),
+                              ),
+                            for (final curve in DawFadeCurve.values)
+                              MenuItemButton(
+                                onPressed: _hasFxRange
+                                    ? () => _applyRangeFade(
+                                          fadeIn: false,
+                                          curve: curve,
+                                        )
+                                    : null,
+                                leadingIcon: const Icon(Icons.trending_down),
+                                child:
+                                    Text('Fade Out ${_fadeCurveLabel(curve)}'),
+                              ),
+                          ],
+                          builder: (context, controller, _) =>
+                              OutlinedButton.icon(
+                            onPressed: _hasFxRange
+                                ? () => controller.isOpen
+                                    ? controller.close()
+                                    : controller.open()
+                                : null,
+                            icon: const Icon(Icons.show_chart),
+                            label: const Text('Range Fade'),
+                          ),
+                        ),
+                        MenuAnchor(
+                          menuChildren: [
+                            MenuItemButton(
+                              onPressed: _hasFxRange
+                                  ? () => _setRangeMuted(true)
+                                  : null,
+                              leadingIcon: const Icon(Icons.volume_off),
+                              child: const Text('Mute'),
+                            ),
+                            MenuItemButton(
+                              onPressed: _hasFxRange
+                                  ? () => _setRangeMuted(false)
+                                  : null,
+                              leadingIcon: const Icon(Icons.volume_up),
+                              child: const Text('Unmute'),
+                            ),
+                          ],
+                          builder: (context, controller, _) =>
+                              OutlinedButton.icon(
+                            onPressed: _hasFxRange
+                                ? () => controller.isOpen
+                                    ? controller.close()
+                                    : controller.open()
+                                : null,
+                            icon: const Icon(Icons.volume_off),
+                            label: const Text('Range Mute'),
+                          ),
+                        ),
+                        // Project tempo — defines the beat snap grid.
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove),
+                              tooltip: l10n.dawTempoDown,
+                              onPressed: () => setBpm(daw.bpm - 5),
+                            ),
+                            Text(l10n.dawBpm(daw.bpm.round())),
+                            IconButton(
+                              icon: const Icon(Icons.add),
+                              tooltip: l10n.dawTempoUp,
+                              onPressed: () => setBpm(daw.bpm + 5),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

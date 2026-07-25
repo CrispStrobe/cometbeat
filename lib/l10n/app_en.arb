@@ -800,6 +800,8 @@
   "dawHelpFxBody": "Effects live in chains at four scopes: a single clip, a whole track, a bus, or the master output. Add effects like Reverb, Delay, Compressor, Gate, Chorus, Pan or Gain, and automate any control with breakpoints over time. Each track has its own volume and pan.",
   "dawHelpRoundTripTitle": "Linked editors",
   "dawHelpRoundTripBody": "A music clip (shown with a note badge) stays linked to the notation editors. Open in editor takes it to the Score or Tab Workshop; when you Send to Audio Editor there, it updates this same clip in place. You can also send it one way to the Advanced Tracker.",
+  "dawHelpShortcutsTitle": "Keyboard shortcuts",
+  "dawHelpShortcutsBody": "On a keyboard: Space plays or stops; Delete removes the selected clips.",
   "dawClipLinked": "Linked to editor",
   "dawClipLinkedHint": "Edits sent back from the Score or Tab editor update this clip in place.",
   "dawCopyClips": "Copy selected clips",

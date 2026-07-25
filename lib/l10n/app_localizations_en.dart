@@ -2101,6 +2101,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'A music clip (shown with a note badge) stays linked to the notation editors. Open in editor takes it to the Score or Tab Workshop; when you Send to Audio Editor there, it updates this same clip in place. You can also send it one way to the Advanced Tracker.';
 
   @override
+  String get dawHelpShortcutsTitle => 'Keyboard shortcuts';
+
+  @override
+  String get dawHelpShortcutsBody =>
+      'On a keyboard: Space plays or stops; Delete removes the selected clips.';
+
+  @override
   String get dawClipLinked => 'Linked to editor';
 
   @override
