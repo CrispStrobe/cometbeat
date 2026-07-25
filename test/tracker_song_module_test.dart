@@ -515,6 +515,39 @@ void main() {
       expect(ch.volumeEnvelope, isNull);
       expect(ch.panEnvelope, isNull);
     });
+
+    test('disabled native envelope points do not affect playback state', () {
+      final doc = ModuleDoc(
+        sourceFormat: ModuleFormat.it,
+        channelCount: 1,
+        order: [0],
+        patterns: [
+          const DocPattern(
+            [
+              [DocCell(note: 60, instrument: 1)],
+            ],
+            1,
+          ),
+        ],
+        samples: [
+          DocSample(
+            pcm: Float64List(64),
+            volumeEnvelope: const DocEnvelope(
+              points: [(0, 0), (4, 64)],
+              enabled: false,
+            ),
+            panEnvelope: const DocEnvelope(
+              points: [(0, 64), (4, 0)],
+              enabled: false,
+            ),
+          ),
+        ],
+      );
+
+      final ch = songFromModuleDoc(doc).channels.first;
+      expect(ch.volumeEnvelope, isNull);
+      expect(ch.panEnvelope, isNull);
+    });
   });
 
   test('imports XM/IT-style patterns with their individual row counts', () {

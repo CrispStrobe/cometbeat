@@ -176,7 +176,7 @@ VolumeEnvelope? _sampleVolEnv(DocSample sample, int tempo) =>
     _trackerVolEnv(sample.volumeEnvelope, tempo);
 
 VolumeEnvelope? _trackerVolEnv(DocEnvelope? e, int tempo) {
-  if (e == null || e.isEmpty) return null;
+  if (e == null || e.isEmpty || !e.enabled) return null;
   final ms = _tickMs(tempo);
   return VolumeEnvelope([
     for (final (t, v) in e.points)
@@ -195,7 +195,7 @@ PanEnvelope? _samplePanEnv(DocSample sample, int tempo) =>
     _trackerPanEnv(sample.panEnvelope, tempo);
 
 PanEnvelope? _trackerPanEnv(DocEnvelope? e, int tempo) {
-  if (e == null || e.isEmpty) return null;
+  if (e == null || e.isEmpty || !e.enabled) return null;
   final ms = _tickMs(tempo);
   return PanEnvelope([
     for (final (t, v) in e.points)
