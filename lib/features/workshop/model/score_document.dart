@@ -258,6 +258,7 @@ class ScoreDocument {
     this.timeSignature = TimeSignature.fourFour,
     this.keySignature = const KeySignature(0),
     this.clef = Clef.treble,
+    this.metadata = const ScoreMetadata(),
     this.tempo,
   });
 
@@ -288,6 +289,16 @@ class ScoreDocument {
   /// [_tempoChanges]. Feeds crisp_notation's `Score.tempo` → `TempoMap`, so it
   /// is the anchor real variable-tempo playback reads.
   Tempo? tempo;
+
+  /// Bibliographic metadata carried through notation exports.
+  ScoreMetadata metadata;
+
+  /// Update bibliographic metadata and invalidate the rendered score cache.
+  void setMetadata(ScoreMetadata value) {
+    if (value == metadata) return;
+    metadata = value;
+    _invalidate();
+  }
 
   /// How an over-long note is handled when it doesn't fit the current bar.
   /// [RhythmPolicy.spill] (the default, kid-sandbox behaviour) short-fills the
@@ -1179,6 +1190,7 @@ class ScoreDocument {
     keySignature = score.keySignature;
     timeSignature = score.timeSignature ?? TimeSignature.fourFour;
     tempo = score.tempo;
+    metadata = score.metadata;
     pickup = _pickupOf(score);
     // Dynamics live in a side list keyed by element id, so they have to be
     // re-anchored onto the elements as we rebuild them.
@@ -1545,6 +1557,7 @@ class ScoreDocument {
       keySignature: keySignature,
       timeSignature: timeSignature,
       tempo: tempo,
+      metadata: metadata,
       measures: _withVoice2(
         _withTuplets(
           _withInlineClefs(

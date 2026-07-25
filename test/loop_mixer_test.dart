@@ -179,7 +179,82 @@ void main() {
     expect(game.isPlaying, isFalse);
   });
 
-  testWidgets('tempo chips retune the groove', (tester) async {
+  testWidgets('transport pauses and resumes without clearing the groove',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    game.toggleTrack('melody');
+    await tester.pump();
+    expect(game.isPlaying, isTrue);
+
+    game.pauseOrResume();
+    await tester.pump();
+    expect(game.enabledTracks, {'melody'});
+    expect(game.isPlaying, isFalse);
+
+    // An edit while paused updates the document but must not restart audio.
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, {'melody', 'bass'});
+    expect(game.isPlaying, isFalse);
+
+    game.pauseOrResume();
+    await tester.pump();
+    expect(game.enabledTracks, {'melody', 'bass'});
+    expect(game.isPlaying, isTrue);
+  });
+
+  testWidgets('solo isolates a track and restores the previous mix',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    game.toggleTrack('melody');
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, {'melody', 'bass'});
+
+    game.toggleSolo('melody');
+    await tester.pump();
+    expect(game.soloTrack, 'melody');
+    expect(game.enabledTracks, {'melody'});
+
+    game.toggleTrack('chords');
+    await tester.pump();
+    expect(game.enabledTracks, {'melody'});
+
+    game.toggleSolo('melody');
+    await tester.pump();
+    expect(game.soloTrack, isNull);
+    expect(game.enabledTracks, {'melody', 'bass'});
+
+    game.toggleSolo('melody');
+    await tester.pump();
+    game.stopAll();
+    await tester.pump();
+    expect(game.soloTrack, isNull);
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, {'bass'});
+
+    game.toggleTrack('bass');
+    await tester.pump();
+    expect(game.enabledTracks, isEmpty);
+  });
+
+  testWidgets('solo ignores an unknown track id', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    game.toggleSolo('not-a-track');
+    await tester.pump();
+
+    expect(game.soloTrack, isNull);
+    expect(game.enabledTracks, isEmpty);
+  });
+
+  testWidgets('BPM slider retunes the groove', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
     expect(game.tempoBpm, 100);
@@ -187,10 +262,24 @@ void main() {
     game.toggleTrack('chords');
     await tester.pump();
 
-    await tester.tap(find.text('Fast'));
+    final tempo = tester.widget<Slider>(
+      find.byKey(const ValueKey('loop-mixer-tempo')),
+    );
+    tempo.onChanged!(120);
     await tester.pump();
     expect(game.tempoBpm, 120);
     expect(game.isPlaying, isTrue, reason: 'groove restarts at the new tempo');
+  });
+
+  testWidgets('BPM slider exposes the engine-safe tempo range', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+
+    final slider = tester.widget<Slider>(
+      find.byKey(const ValueKey('loop-mixer-tempo')),
+    );
+    expect(slider.min, kMinTempoBpm);
+    expect(slider.max, kMaxTempoBpm);
+    expect(slider.divisions, kMaxTempoBpm - kMinTempoBpm);
   });
 
   testWidgets('variant badge, level slider and swing drive the engine',

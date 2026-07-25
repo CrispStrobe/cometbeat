@@ -12,6 +12,60 @@
 import 'dart:math';
 import 'dart:typed_data';
 
+/// Makes a finite loop buffer continuous at its wrap point.
+///
+/// The source and destination windows are paired across the boundary and
+/// equalized with a short linear crossfade. This only changes the final few
+/// milliseconds, but removes the single-sample discontinuity that becomes an
+/// audible click when a platform audio element repeats the buffer.
+Float64List crossfadeLoopSeam(
+  Float64List pcm, {
+  int fadeSamples = 128,
+}) {
+  if (pcm.length < 2 ||
+      fadeSamples < 1 ||
+      pcm.length < fadeSamples * 2 ||
+      (pcm.first - pcm.last).abs() < 0.01) {
+    return pcm;
+  }
+  final fade = fadeSamples;
+  final out = Float64List.fromList(pcm);
+  final seam = Float64List(fade);
+  for (var i = 0; i < fade; i++) {
+    final t = (i + 1) / fade;
+    // The head fades from its original start toward the tail. Mirror that
+    // ramp into the tail so the final sample equals the first sample.
+    seam[i] = pcm[pcm.length - fade + i] * t + pcm[i] * (1 - t);
+    out[i] = seam[i];
+  }
+  for (var i = 0; i < fade; i++) {
+    out[pcm.length - fade + i] = seam[fade - 1 - i];
+  }
+  return out;
+}
+
+/// Int16 counterpart used by the Loop Mixer WAV renderer.
+Int16List crossfadePcm16Seam(Int16List pcm, {int fadeSamples = 128}) {
+  if (pcm.length < 2 ||
+      fadeSamples < 1 ||
+      pcm.length < fadeSamples * 2 ||
+      (pcm.first - pcm.last).abs() < 256) {
+    return pcm;
+  }
+  final fade = fadeSamples;
+  final out = Int16List.fromList(pcm);
+  final seam = Int32List(fade);
+  for (var i = 0; i < fade; i++) {
+    final t = (i + 1) / fade;
+    seam[i] = (pcm[pcm.length - fade + i] * t + pcm[i] * (1 - t)).round();
+    out[i] = seam[i].clamp(-32768, 32767);
+  }
+  for (var i = 0; i < fade; i++) {
+    out[pcm.length - fade + i] = seam[fade - 1 - i].clamp(-32768, 32767);
+  }
+  return out;
+}
+
 /// tanh soft-knee — compresses hot sums without a hard clip.
 double _tanh(double x) {
   if (x > 20) return 1.0;
@@ -53,5 +107,5 @@ Float64List renderLoopStack(
       out[i] = _tanh(out[i]);
     }
   }
-  return out;
+  return crossfadeLoopSeam(out);
 }

@@ -78,4 +78,19 @@ void main() {
       expect(_allEqual(coin, zap), isFalse);
     });
   });
+
+  test('copyWith preserves untouched synthesis controls', () {
+    const original = SfxrParams(
+      attack: 0.2,
+      freqRamp: -0.4,
+      distortion: 0.7,
+      fmDepth: 0.3,
+    );
+    final changed = original.copyWith(attack: 0.8, lfoDepth: 0.5);
+    expect(changed.attack, 0.8);
+    expect(changed.lfoDepth, 0.5);
+    expect(changed.freqRamp, original.freqRamp);
+    expect(changed.distortion, original.distortion);
+    expect(changed.fmDepth, original.fmDepth);
+  });
 }

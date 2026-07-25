@@ -10,7 +10,7 @@
 // every 4th loop, applied at the loop seam.
 //
 // Audio: LoopEngine mixes the enabled tracks offline into ONE looping WAV
-// (sample-accurate sync for free) played on a dedicated LoopPlayerService.
+// (sample-accurate sync for free) played on a dedicated GaplessLoopPlayer.
 // The screen owns the musical clock (a Stopwatch); user changes swap the
 // fresh mix at the clock's phase (`play(position: …)`), so layers and feel
 // change without the bar ever restarting. Seam-timed changes (the fill) are
@@ -31,6 +31,8 @@ import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
 import 'package:comet_beat/core/audio/groove_capture.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/loop_reference.dart';
+import 'package:comet_beat/core/audio/loop_stack_render.dart'
+    show crossfadePcm16Seam;
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
@@ -48,7 +50,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
-import 'package:comet_beat/core/services/loop_player_service.dart';
+import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/custom_progressions.dart';
@@ -84,12 +86,25 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoopMixerScreen extends StatefulWidget {
-  const LoopMixerScreen({super.key, this.aecFactory, this.initialSpec});
+  const LoopMixerScreen({
+    super.key,
+    this.aecFactory,
+    this.initialSpec,
+    this.showAppBar = true,
+    this.simpleLayout = false,
+  });
 
   /// An optional groove to open with — lets another Workshop mode hand a
   /// [GrooveSpec] over (e.g. a tracker pattern → a groove). Null = the default
   /// starter groove.
   final GrooveSpec? initialSpec;
+
+  /// The Loop Studio shell owns the app bar when embedding this editor.
+  final bool showAppBar;
+
+  /// Hide arrangement and production controls while retaining the same
+  /// editable tracks, transport, BPM, and beat/tune editors.
+  final bool simpleLayout;
 
   /// Builds the native Tier-3b [AecEngine] for graded jam mode, or returns null
   /// when the platform has no full-duplex plugin (web / not built) — then jam
@@ -118,6 +133,7 @@ class LoopMixerScreen extends StatefulWidget {
 @visibleForTesting
 abstract interface class LoopMixerTester {
   Set<String> get enabledTracks;
+  String? get soloTrack;
   bool get isPlaying;
   int get tempoBpm;
   double get swing;
@@ -126,9 +142,11 @@ abstract interface class LoopMixerTester {
   int variantOf(String id);
   double levelOf(String id);
   void toggleTrack(String id);
+  void toggleSolo(String id);
   void cycleTrackVariant(String id);
   void rollTrackVariant(String id);
   void setTrackLevel(String id, double level);
+  void pauseOrResume();
 
   /// Whether track [id] can be voiced by a saved instrument (pitched tracks
   /// only), the id of its current voice (null = built-in timbre), and a setter
@@ -294,7 +312,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     with SingleTickerProviderStateMixin
     implements LoopMixerTester {
   final _engine = LoopEngine();
-  final _loop = LoopPlayerService();
+  final _loop = GaplessLoopPlayer();
 
   /// The groove's musical clock: playback phase is derived from it, never
   /// from the player, so swaps can re-enter the loop in phase.
@@ -310,6 +328,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   /// Smooth loop phase 0..1 for the sweeping playhead; -1 while stopped.
   final _progress = ValueNotifier<double>(-1);
+  final _tempoController = TextEditingController(text: '100');
 
   /// Current eighth-step index across the loop (LM-UX3) for the sheet-music
   /// note highlight; -1 while stopped. Changes ~8×/bar (not every frame), so
@@ -318,6 +337,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   int _iteration = 0;
   int _lastPhaseMs = 0;
+  bool _paused = false;
 
   /// What the loop player is currently looping (identity-compared against
   /// the engine's cached renders to decide whether a seam swap is needed).
@@ -327,12 +347,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void initState() {
     super.initState();
     if (widget.initialSpec != null) _engine.applySpec(widget.initialSpec!);
+    _tempoController.text = _engine.tempoBpm.toString();
     // LM-UX7: load the kid's saved harmonies (best-effort).
     _progStore.load().then((ps) {
       if (mounted) setState(() => _customProgressions = ps);
     });
     _ticker = createTicker((_) {
-      if (!_clock.isRunning) {
+      if (!_clock.isRunning && !_paused) {
         _step.value = -1;
         _progress.value = -1;
         _hlStep.value = -1;
@@ -354,6 +375,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _ticker.dispose();
     _step.dispose();
     _progress.dispose();
+    _tempoController.dispose();
     _hlStep.dispose();
     _loop.dispose();
     _countInTimer?.cancel();
@@ -370,6 +392,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   Set<String> get enabledTracks => Set.unmodifiable(_engine.enabled);
   @override
+  String? get soloTrack => _soloTrack;
+  @override
   bool get isPlaying => _clock.isRunning;
   @override
   int get tempoBpm => _engine.tempoBpm;
@@ -385,6 +409,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   double levelOf(String id) => _engine.levels[id] ?? 1.0;
   @override
   void toggleTrack(String id) => _toggle(id);
+  @override
+  void toggleSolo(String id) => _toggleSolo(id);
   @override
   void cycleTrackVariant(String id) => _cycleVariant(id);
   @override
@@ -439,6 +465,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   @override
   void stopAll() => _stopAll();
+  @override
+  void pauseOrResume() => _pauseOrResume();
   @override
   void debugLoopWrap() => _onLoopWrap();
 
@@ -619,6 +647,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   // the next loop seam (it "arms") so layers always drop in on the beat.
   bool _quantize = false;
   final Set<String> _pendingLaunches = {};
+  String? _soloTrack;
+  Set<String>? _enabledBeforeSolo;
 
   // Section/scene grid (§G-1): 4 snapshot slots of the live layer set. Tap a
   // filled scene to relaunch it; a chain plays them in sequence at each seam.
@@ -1153,7 +1183,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   bool loadGrooveToken(String token) {
     final spec = decodeGrooveToken(token);
     if (spec == null) return false;
-    setState(() => _engine.applySpec(spec));
+    setState(() {
+      _engine.applySpec(spec);
+      _soloTrack = null;
+      _enabledBeforeSolo = null;
+    });
     _restartGroove();
     return true;
   }
@@ -1631,7 +1665,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       Score? score;
       Clef clef = Clef.treble;
       if (cells != null) {
-        clef = track.id == 'bass' ? Clef.bass : Clef.treble;
+        clef = clefForGrooveCells(cells);
         score = grooveScore(cells, clef: clef);
       } else {
         // Unpitched (drums / beatbox): a one-staff rhythm reduction.
@@ -1692,6 +1726,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         onCycleVariant: () => _cycleVariant(track.id),
         onRollVariant: () => _rollVariant(track.id),
         onLevel: (v) => _setLevel(track.id, v),
+        soloed: _soloTrack == track.id,
+        onSolo: () => _toggleSolo(track.id),
         voiced: _engine.trackVoice(track.id) != null,
         onVoice:
             _trackIsPitched(track) ? () => _pickVoice(l10n, track.id) : null,
@@ -1730,6 +1766,67 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           ],
         );
       },
+    );
+  }
+
+  Widget _simpleTools(AppLocalizations l10n) {
+    if (MediaQuery.sizeOf(context).width < 420) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton.filledTonal(
+              tooltip: l10n.loopMixerBeatEdit,
+              icon: Icon(_showBeatEdit ? Icons.close : Icons.grid_on),
+              onPressed: toggleBeatEdit,
+            ),
+            IconButton.filledTonal(
+              tooltip: l10n.loopMixerTuneEdit,
+              icon: Icon(_showTuneEdit ? Icons.close : Icons.piano),
+              onPressed: toggleTuneEdit,
+            ),
+            IconButton.filledTonal(
+              tooltip: l10n.loopMixerScore,
+              icon: Icon(
+                _showScore ? Icons.library_music : Icons.library_music_outlined,
+              ),
+              onPressed: toggleScorePanel,
+            ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 6,
+        children: [
+          FilledButton.tonalIcon(
+            icon: Icon(_showBeatEdit ? Icons.close : Icons.grid_on),
+            label: Text(
+              _showBeatEdit ? l10n.loopStudioClose : l10n.loopMixerBeatEdit,
+            ),
+            onPressed: toggleBeatEdit,
+          ),
+          FilledButton.tonalIcon(
+            icon: Icon(_showTuneEdit ? Icons.close : Icons.piano),
+            label: Text(
+              _showTuneEdit ? l10n.loopStudioClose : l10n.loopMixerTuneEdit,
+            ),
+            onPressed: toggleTuneEdit,
+          ),
+          OutlinedButton.icon(
+            icon: Icon(
+              _showScore ? Icons.library_music : Icons.library_music_outlined,
+            ),
+            label: Text(l10n.loopMixerScore),
+            onPressed: toggleScorePanel,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1976,14 +2073,26 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       return;
     }
     _loop.playLoop(
-      wanted,
+      _seamSafeWav(wanted),
       position: Duration(
         milliseconds: _clock.elapsedMilliseconds % _engine.timing.totalMs,
       ),
     );
   }
 
+  /// Audio elements can expose a tiny discontinuity when their native loop
+  /// callback fires. Repair the finite WAV at the last possible boundary while
+  /// keeping the engine's symbolic/render cache byte-stable for editing/tests.
+  Uint8List _seamSafeWav(Uint8List wav) {
+    final pcm = readWavPcm16(wav);
+    final fixed = crossfadePcm16Seam(pcm.samples);
+    return identical(fixed, pcm.samples) ? wav : wavBytes(fixed);
+  }
+
   void _toggle(String id) {
+    // Solo is an explicit isolation mode. Do not let a normal card tap mutate
+    // the saved mix underneath it; leaving solo restores that exact mix.
+    if (_soloTrack != null) return;
     // Quantized launch: while a groove is playing, arm the change and apply it
     // at the next seam instead of firing instantly.
     if (_quantize && _clock.isRunning && _engine.enabled.isNotEmpty) {
@@ -1993,6 +2102,27 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       return;
     }
     setState(() => _engine.toggle(id));
+    _syncPlayback();
+    _checkCombo();
+  }
+
+  void _toggleSolo(String id) {
+    if (!_engine.tracks.any((track) => track.id == id)) return;
+    setState(() {
+      if (_soloTrack == id) {
+        _engine.enabled
+          ..clear()
+          ..addAll(_enabledBeforeSolo ?? const <String>{});
+        _soloTrack = null;
+        _enabledBeforeSolo = null;
+      } else {
+        _enabledBeforeSolo ??= Set<String>.from(_engine.enabled);
+        _engine.enabled
+          ..clear()
+          ..add(id);
+        _soloTrack = id;
+      }
+    });
     _syncPlayback();
     _checkCombo();
   }
@@ -2217,6 +2347,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// it never sounds empty. A gentle swing roll varies the feel.
   void _roll() {
     setState(() {
+      _soloTrack = null;
+      _enabledBeforeSolo = null;
       final ids = _engine.tracks.map((t) => t.id).toSet();
       _engine.enabled.clear();
       if (ids.contains('drums')) _engine.enabled.add('drums');
@@ -2281,6 +2413,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void _setTempo(int bpm) {
     if (bpm == _engine.tempoBpm) return;
     setState(() => _engine.tempoBpm = bpm);
+    _tempoController.value = TextEditingValue(
+      text: _engine.tempoBpm.toString(),
+      selection: TextSelection.collapsed(
+        offset: _engine.tempoBpm.toString().length,
+      ),
+    );
     _restartGroove();
   }
 
@@ -2442,6 +2580,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   /// A new grid (tempo or bar count changed) — restart from the top.
   void _restartGroove() {
+    _paused = false;
     _clock
       ..stop()
       ..reset();
@@ -2453,7 +2592,33 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   }
 
   void _stopAll() {
-    setState(_engine.enabled.clear);
+    _paused = false;
+    setState(() {
+      _engine.enabled.clear();
+      _soloTrack = null;
+      _enabledBeforeSolo = null;
+    });
+    _syncPlayback();
+  }
+
+  /// Pause/resume the audio player and musical clock together. Stopwatch keeps
+  /// its elapsed value while stopped, so resume re-enters the same loop phase.
+  void _pauseOrResume() {
+    if (_engine.enabled.isEmpty) return;
+    if (_clock.isRunning) {
+      _paused = true;
+      _clock.stop();
+      unawaited(_loop.pause());
+      return;
+    }
+    if (!_paused) {
+      _syncPlayback();
+      return;
+    }
+    _paused = false;
+    _clock.start();
+    // Edits made while paused may have replaced the buffer, so resume through
+    // the normal swap path instead of resuming a stale player source.
     _syncPlayback();
   }
 
@@ -2461,6 +2626,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// the musical phase: the new mix starts exactly where the clock says the
   /// groove is, so the beat never resets when something changes.
   void _syncPlayback() {
+    if (_soloTrack case final id?) {
+      // Editors and capture callbacks can add tracks directly to the engine;
+      // reassert solo at the shared audio boundary.
+      _engine.enabled
+        ..clear()
+        ..add(id);
+    }
     // AEC jam owns audio: a live edit (variant/level/swing) re-feeds the
     // reference scheduler; the loop player stays silent until jam ends.
     if (_jamAec != null) {
@@ -2479,15 +2651,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     }
     if (!context.read<AudioService>().soundOn) return; // master mute
     final wav = _engine.renderLoop(fill: _fillDue);
-    if (!_clock.isRunning) {
+    if (!_clock.isRunning && !_paused) {
       _clock
         ..reset()
         ..start();
       _lastPhaseMs = 0;
     }
     _currentWav = wav;
+    if (_paused) return;
     _loop.playLoop(
-      wav,
+      _seamSafeWav(wav),
       position: Duration(
         milliseconds: _clock.elapsedMilliseconds % _engine.timing.totalMs,
       ),
@@ -2514,12 +2687,6 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         'voice' => l10n.loopMixerTrackVoice,
         'beat' => l10n.loopMixerTrackBeat,
         _ => l10n.loopMixerTrackSparkle,
-      };
-
-  String _tempoLabel(AppLocalizations l10n, int bpm) => switch (bpm) {
-        75 => l10n.loopMixerTempoChill,
-        120 => l10n.loopMixerTempoFast,
-        _ => l10n.loopMixerTempoGroove,
       };
 
   String _kitLabel(AppLocalizations l10n, String id) => switch (id) {
@@ -2651,7 +2818,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
     return Scaffold(
       // LM-UX6: the "?" opens the concept + what-each-control-does primer.
-      appBar: GameAppBar(title: l10n.gameLoopMixer, tutorial: loopMixerPrimer),
+      appBar: widget.showAppBar
+          ? GameAppBar(title: l10n.gameLoopMixer, tutorial: loopMixerPrimer)
+          : null,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -2698,129 +2867,131 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 // Wrapping to a second run keeps every control reachable —
                 // a horizontal scroller would hide them behind an invisible
                 // affordance.
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  children: [
-                    IconButton.filledTonal(
-                      icon: const Icon(Icons.casino),
-                      tooltip: l10n.loopMixerRoll,
-                      onPressed: _roll,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        _showScore
-                            ? Icons.library_music
-                            : Icons.library_music_outlined,
+                if (widget.simpleLayout) _simpleTools(l10n),
+                if (!widget.simpleLayout)
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    children: [
+                      IconButton.filledTonal(
+                        icon: const Icon(Icons.casino),
+                        tooltip: l10n.loopMixerRoll,
+                        onPressed: _roll,
+                        visualDensity: VisualDensity.compact,
                       ),
-                      tooltip: l10n.loopMixerScore,
-                      onPressed: toggleScorePanel,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    // LM-UX4: the tappable beat step-editor.
-                    IconButton(
-                      icon: Icon(
-                        _showBeatEdit ? Icons.grid_on : Icons.grid_view,
-                      ),
-                      tooltip: l10n.loopMixerBeatEdit,
-                      onPressed: toggleBeatEdit,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    // LM-UX4b: the tappable tune (pitched) step-editor.
-                    IconButton(
-                      icon: Icon(
-                        _showTuneEdit ? Icons.piano : Icons.piano_outlined,
-                      ),
-                      tooltip: l10n.loopMixerTuneEdit,
-                      onPressed: toggleTuneEdit,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.all_inclusive,
-                        color: _infinite
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: _infinite,
-                      tooltip: l10n.loopMixerInfinite,
-                      onPressed: toggleInfinite,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.grid_4x4,
-                        color: _quantize
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: _quantize,
-                      tooltip: l10n.loopMixerQuantize,
-                      onPressed: _toggleQuantize,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.gesture,
-                        color: _showSmear
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: _showSmear,
-                      tooltip: l10n.loopMixerSolo,
-                      onPressed: _toggleSmearPad,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.surround_sound,
-                        color: send != LoopSend.none
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: send != LoopSend.none,
-                      tooltip: l10n.loopMixerSend,
-                      onPressed: () => setSend(
-                        LoopSend
-                            .values[(send.index + 1) % LoopSend.values.length],
-                      ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.hearing,
-                        color: _jamming
-                            ? Theme.of(context).colorScheme.primary
-                            : null,
-                      ),
-                      isSelected: _jamming,
-                      tooltip: l10n.loopMixerJam,
-                      onPressed: toggleJam,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    // Follow the melody: grade the player against the leading
-                    // track. Only offered while jamming with a tune on screen.
-                    if (_jamming && _engravedTrackId != null)
                       IconButton(
                         icon: Icon(
-                          Icons.track_changes,
-                          color: isFollowing
+                          _showScore
+                              ? Icons.library_music
+                              : Icons.library_music_outlined,
+                        ),
+                        tooltip: l10n.loopMixerScore,
+                        onPressed: toggleScorePanel,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      // LM-UX4: the tappable beat step-editor.
+                      IconButton(
+                        icon: Icon(
+                          _showBeatEdit ? Icons.grid_on : Icons.grid_view,
+                        ),
+                        tooltip: l10n.loopMixerBeatEdit,
+                        onPressed: toggleBeatEdit,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      // LM-UX4b: the tappable tune (pitched) step-editor.
+                      IconButton(
+                        icon: Icon(
+                          _showTuneEdit ? Icons.piano : Icons.piano_outlined,
+                        ),
+                        tooltip: l10n.loopMixerTuneEdit,
+                        onPressed: toggleTuneEdit,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.all_inclusive,
+                          color: _infinite
                               ? Theme.of(context).colorScheme.primary
                               : null,
                         ),
-                        isSelected: isFollowing,
-                        tooltip: l10n.loopMixerFollow,
-                        onPressed: toggleFollow,
+                        isSelected: _infinite,
+                        tooltip: l10n.loopMixerInfinite,
+                        onPressed: toggleInfinite,
                         visualDensity: VisualDensity.compact,
                       ),
-                    IconButton(
-                      icon: const Icon(Icons.ios_share),
-                      tooltip: l10n.loopMixerShare,
-                      onPressed: _openShareSheet,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.grid_4x4,
+                          color: _quantize
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        isSelected: _quantize,
+                        tooltip: l10n.loopMixerQuantize,
+                        onPressed: _toggleQuantize,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.gesture,
+                          color: _showSmear
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        isSelected: _showSmear,
+                        tooltip: l10n.loopMixerSolo,
+                        onPressed: _toggleSmearPad,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.surround_sound,
+                          color: send != LoopSend.none
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        isSelected: send != LoopSend.none,
+                        tooltip: l10n.loopMixerSend,
+                        onPressed: () => setSend(
+                          LoopSend.values[
+                              (send.index + 1) % LoopSend.values.length],
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.hearing,
+                          color: _jamming
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        isSelected: _jamming,
+                        tooltip: l10n.loopMixerJam,
+                        onPressed: toggleJam,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      // Follow the melody: grade the player against the leading
+                      // track. Only offered while jamming with a tune on screen.
+                      if (_jamming && _engravedTrackId != null)
+                        IconButton(
+                          icon: Icon(
+                            Icons.track_changes,
+                            color: isFollowing
+                                ? Theme.of(context).colorScheme.primary
+                                : null,
+                          ),
+                          isSelected: isFollowing,
+                          tooltip: l10n.loopMixerFollow,
+                          onPressed: toggleFollow,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.ios_share),
+                        tooltip: l10n.loopMixerShare,
+                        onPressed: _openShareSheet,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
                 // Jam feedback: the live note, coloured by how it fits the
                 // sounding chord (green = chord tone, amber = scale, red = out).
                 if (_jamming)
@@ -2974,176 +3145,219 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                     ),
                   ),
                 // Section grid: capture/launch/chain scenes into an arrangement.
-                _sceneRow(l10n),
+                if (!widget.simpleLayout) _sceneRow(l10n),
                 // A gentle band challenge (no score) to nudge exploration.
-                _challengeBanner(l10n),
+                if (!widget.simpleLayout) _challengeBanner(l10n),
                 // Style: a whole-band flavour preset (re-points every card).
-                _optionRow(
-                  l10n.loopMixerStyle,
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      for (final style in kGrooveStyles)
-                        ChoiceChip(
-                          label: Text(_styleLabel(l10n, style.id)),
-                          selected: _engine.styleId == style.id,
-                          onSelected: (_) => _setStyle(style.id),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerStyle,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        for (final style in kGrooveStyles)
+                          ChoiceChip(
+                            label: Text(_styleLabel(l10n, style.id)),
+                            selected: _engine.styleId == style.id,
+                            onSelected: (_) => _setStyle(style.id),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
+                    ),
                   ),
-                ),
                 // The harmony lane: free vamp, or a 4-chord song progression.
-                _optionRow(
-                  l10n.loopMixerHarmony,
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      ChoiceChip(
-                        label: Text(l10n.loopMixerHarmonyOff),
-                        selected: _engine.progression == null,
-                        onSelected: (_) => _setProgression(null),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      for (final p in kProgressions)
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerHarmony,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
                         ChoiceChip(
-                          label: Text(p.label),
-                          selected: _engine.progression?.id == p.id,
-                          onSelected: (_) => _setProgression(p),
+                          label: Text(l10n.loopMixerHarmonyOff),
+                          selected: _engine.progression == null,
+                          onSelected: (_) => _setProgression(null),
                           visualDensity: VisualDensity.compact,
                         ),
-                      // LM-UX7: the kid's own saved harmonies (deletable).
-                      for (final p in _customProgressions)
-                        InputChip(
-                          label: Text(p.label),
-                          selected: _engine.progression?.id == p.id,
-                          onSelected: (_) => _setProgression(p),
-                          onDeleted: () => _deleteCustomProgression(p),
+                        for (final p in kProgressions)
+                          ChoiceChip(
+                            label: Text(p.label),
+                            selected: _engine.progression?.id == p.id,
+                            onSelected: (_) => _setProgression(p),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        // LM-UX7: the kid's own saved harmonies (deletable).
+                        for (final p in _customProgressions)
+                          InputChip(
+                            label: Text(p.label),
+                            selected: _engine.progression?.id == p.id,
+                            onSelected: (_) => _setProgression(p),
+                            onDeleted: () => _deleteCustomProgression(p),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ActionChip(
+                          avatar: const Icon(Icons.add, size: 16),
+                          label: Text(l10n.loopMixerHarmonyMake),
+                          onPressed: () => _makeCustomProgression(l10n),
                           visualDensity: VisualDensity.compact,
                         ),
-                      ActionChip(
-                        avatar: const Icon(Icons.add, size: 16),
-                        label: Text(l10n.loopMixerHarmonyMake),
-                        onPressed: () => _makeCustomProgression(l10n),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 // AnaVis: the selected progression, coloured by harmonic function.
-                if (_engine.progression != null)
+                if (!widget.simpleLayout && _engine.progression != null)
                   _progressionFunctionStrip(_engine.progression!),
                 // Key: rigidly transpose every pitched stem to a new root.
-                _optionRow(
-                  l10n.loopMixerKey,
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: [
-                      for (var k = 0; k < LoopMixerScreen._keyNames.length; k++)
-                        ChoiceChip(
-                          label: Text(LoopMixerScreen._keyNames[k]),
-                          selected: _engine.key == k,
-                          onSelected: (_) => _setKey(k),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
-                ),
-                // Scale: major = bright, minor = darker (relative-minor set).
-                _optionRow(
-                  l10n.loopMixerScale,
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      ChoiceChip(
-                        label: Text(l10n.loopMixerScaleMajor),
-                        selected: _engine.scale == GrooveScale.majorPentatonic,
-                        onSelected: (_) =>
-                            _setScale(GrooveScale.majorPentatonic),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      ChoiceChip(
-                        label: Text(l10n.loopMixerScaleMinor),
-                        selected: _engine.scale == GrooveScale.minorPentatonic,
-                        onSelected: (_) =>
-                            _setScale(GrooveScale.minorPentatonic),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ],
-                  ),
-                ),
-                // Drum kit: same beat, different timbre (clean/deep/warm/lo-fi).
-                _optionRow(
-                  l10n.loopMixerKit,
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      for (final kit in kDrumKits)
-                        ChoiceChip(
-                          label: Text(_kitLabel(l10n, kit.id)),
-                          selected: _engine.kitId == kit.id,
-                          onSelected: (_) => _setKit(kit.id),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
-                ),
-                _optionRow(
-                  l10n.loopMixerSwing,
-                  _captionedSlider(
-                    low: l10n.loopMixerSwingStraight,
-                    high: l10n.loopMixerSwingShuffle,
-                    slider: Slider(
-                      value: _engine.swing,
-                      max: 0.6,
-                      // Discrete stops: the engine snaps the swing offset to the
-                      // 10 ms sample grid anyway (LoopTiming._swingMs), so a
-                      // continuous slider only offered identical values.
-                      divisions: 12,
-                      onChanged: _setSwing,
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerKey,
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        for (var k = 0;
+                            k < LoopMixerScreen._keyNames.length;
+                            k++)
+                          ChoiceChip(
+                            label: Text(LoopMixerScreen._keyNames[k]),
+                            selected: _engine.key == k,
+                            onSelected: (_) => _setKey(k),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
                     ),
                   ),
-                ),
+                // Scale: major = bright, minor = darker (relative-minor set).
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerScale,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        ChoiceChip(
+                          label: Text(l10n.loopMixerScaleMajor),
+                          selected:
+                              _engine.scale == GrooveScale.majorPentatonic,
+                          onSelected: (_) =>
+                              _setScale(GrooveScale.majorPentatonic),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        ChoiceChip(
+                          label: Text(l10n.loopMixerScaleMinor),
+                          selected:
+                              _engine.scale == GrooveScale.minorPentatonic,
+                          onSelected: (_) =>
+                              _setScale(GrooveScale.minorPentatonic),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                // Drum kit: same beat, different timbre (clean/deep/warm/lo-fi).
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerKit,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        for (final kit in kDrumKits)
+                          ChoiceChip(
+                            label: Text(_kitLabel(l10n, kit.id)),
+                            selected: _engine.kitId == kit.id,
+                            onSelected: (_) => _setKit(kit.id),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                      ],
+                    ),
+                  ),
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerSwing,
+                    _captionedSlider(
+                      low: l10n.loopMixerSwingStraight,
+                      high: l10n.loopMixerSwingShuffle,
+                      slider: Slider(
+                        value: _engine.swing,
+                        max: 0.6,
+                        // Discrete stops: the engine snaps the swing offset to the
+                        // 10 ms sample grid anyway (LoopTiming._swingMs), so a
+                        // continuous slider only offered identical values.
+                        divisions: 12,
+                        onChanged: _setSwing,
+                      ),
+                    ),
+                  ),
                 // One-knob master filter: left = low-pass (dark), right =
                 // high-pass (thin); centred = off. A big breakdown/drop gesture.
-                _optionRow(
-                  l10n.loopMixerFilter,
-                  _captionedSlider(
-                    low: l10n.loopMixerFilterDark,
-                    high: l10n.loopMixerFilterThin,
-                    slider: Slider(
-                      value: _engine.masterFilter,
-                      min: -1,
-                      divisions: 20,
-                      onChanged: _setMasterFilter,
-                      onChangeEnd: (v) {
-                        // Snap back to "off" near the centre detent.
-                        if (v.abs() < 0.06) _setMasterFilter(0);
-                      },
+                if (!widget.simpleLayout)
+                  _optionRow(
+                    l10n.loopMixerFilter,
+                    _captionedSlider(
+                      low: l10n.loopMixerFilterDark,
+                      high: l10n.loopMixerFilterThin,
+                      slider: Slider(
+                        value: _engine.masterFilter,
+                        min: -1,
+                        divisions: 20,
+                        onChanged: _setMasterFilter,
+                        onChangeEnd: (v) {
+                          // Snap back to "off" near the centre detent.
+                          if (v.abs() < 0.06) _setMasterFilter(0);
+                        },
+                      ),
                     ),
                   ),
-                ),
                 Row(
                   children: [
                     Expanded(
-                      child: Wrap(
-                        spacing: 8,
+                      child: Row(
                         children: [
-                          for (final bpm in LoopMixerScreen.tempos)
-                            ChoiceChip(
-                              label: Text(_tempoLabel(l10n, bpm)),
-                              selected: _engine.tempoBpm == bpm,
-                              onSelected: (_) => _setTempo(bpm),
+                          Text(
+                            'BPM',
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          Expanded(
+                            child: Slider(
+                              key: const ValueKey('loop-mixer-tempo'),
+                              min: kMinTempoBpm.toDouble(),
+                              max: kMaxTempoBpm.toDouble(),
+                              divisions: kMaxTempoBpm - kMinTempoBpm,
+                              value: _engine.tempoBpm.toDouble(),
+                              label: '${_engine.tempoBpm} BPM',
+                              onChanged: (v) => _setTempo(v.round()),
                             ),
+                          ),
+                          SizedBox(
+                            width: 64,
+                            child: TextField(
+                              controller: _tempoController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                suffixText: 'BPM',
+                              ),
+                              onSubmitted: (value) {
+                                final bpm = int.tryParse(value);
+                                if (bpm != null) _setTempo(bpm);
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
+                    IconButton(
+                      onPressed:
+                          _engine.enabled.isEmpty ? null : _pauseOrResume,
+                      icon: Icon(
+                        _clock.isRunning ? Icons.pause : Icons.play_arrow,
+                      ),
+                      tooltip: _clock.isRunning ? 'Pause' : 'Play',
+                    ),
                     OutlinedButton.icon(
                       onPressed: _engine.enabled.isEmpty ? null : _stopAll,
                       icon: const Icon(Icons.stop),
@@ -3404,6 +3618,8 @@ class _TrackCard extends StatelessWidget {
     required this.onCycleVariant,
     required this.onRollVariant,
     required this.onLevel,
+    required this.onSolo,
+    required this.soloed,
     this.onVoice,
     this.voiced = false,
   });
@@ -3420,6 +3636,8 @@ class _TrackCard extends StatelessWidget {
   final VoidCallback onCycleVariant;
   final VoidCallback onRollVariant;
   final ValueChanged<double> onLevel;
+  final VoidCallback onSolo;
+  final bool soloed;
 
   /// Long-press a pitched track to voice it with a saved "My Instruments"
   /// sound (null for unpitched tracks — drums have no notes to voice).
@@ -3431,6 +3649,7 @@ class _TrackCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = active ? Colors.white : color;
+    final compact = MediaQuery.sizeOf(context).width < 420;
     return GestureDetector(
       onTap: onTap,
       onLongPress: onVoice,
@@ -3498,8 +3717,10 @@ class _TrackCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Icon(Icons.piano, size: 18, color: foreground),
                 ],
+                if (!compact) _soloButton(foreground),
               ],
             ),
+            if (compact) _soloButton(foreground),
             // Per-card level, only offered while the layer sounds.
             if (active)
               SizedBox(
@@ -3524,4 +3745,17 @@ class _TrackCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _soloButton(Color foreground) => IconButton(
+        tooltip: soloed ? 'Unsolo' : 'Solo',
+        onPressed: onSolo,
+        visualDensity: VisualDensity.compact,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        icon: Icon(
+          Icons.headphones,
+          size: 18,
+          color: soloed ? Colors.amber : foreground,
+        ),
+      );
 }

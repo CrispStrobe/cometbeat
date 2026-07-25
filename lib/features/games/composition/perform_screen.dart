@@ -31,8 +31,8 @@ import 'package:comet_beat/core/audio/sample_pitch.dart'
 import 'package:comet_beat/core/audio/synth.dart'
     show Drum, kSampleRate, wavBytes;
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/live_voice.dart';
-import 'package:comet_beat/core/services/loop_player_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/soloud_live_voice.dart'
     show SoLoudLiveVoice;
@@ -215,7 +215,7 @@ class PerformScreen extends StatefulWidget {
 class _PerformScreenState extends State<PerformScreen>
     implements PerformTester {
   final LoopStack<_PerformLayer> _stack = LoopStack<_PerformLayer>();
-  final LoopPlayerService _loop = LoopPlayerService();
+  final GaplessLoopPlayer _loop = GaplessLoopPlayer();
   // F1/R1/R2: polyphonic play-in voices behind a swappable backend (classic
   // audioplayers pool or the real-time flutter_soloud engine), chosen by the
   // user's setting with graceful degrade when the engine can't initialise.

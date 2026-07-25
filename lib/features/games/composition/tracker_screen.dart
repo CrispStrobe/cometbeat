@@ -36,11 +36,14 @@ import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
+import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/note_reading/note_colors.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
+import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
+    show showMyInstrumentsSheet;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -229,6 +232,7 @@ class _TrackerScreenState extends State<TrackerScreen>
 
   late final Ticker _ticker;
   final _step = ValueNotifier<int>(-1);
+  final _progress = ValueNotifier<double>(-1.0);
 
   int _selected = 0;
   bool _isRecording = false;
@@ -294,11 +298,17 @@ class _TrackerScreenState extends State<TrackerScreen>
         final pos = _clock.elapsedMilliseconds % songMs;
         _playingOrder.value = pos ~/ t.totalMs;
         _step.value = (pos % t.totalMs) ~/ t.stepMs;
+        _progress.value = (pos % t.totalMs) / t.totalMs;
       } else {
         _playingOrder.value = -1;
-        _step.value = _clock.isRunning
-            ? (_clock.elapsedMilliseconds % t.totalMs) ~/ t.stepMs
-            : -1;
+        if (_clock.isRunning) {
+          final pos = _clock.elapsedMilliseconds % t.totalMs;
+          _step.value = pos ~/ t.stepMs;
+          _progress.value = pos / t.totalMs;
+        } else {
+          _step.value = -1;
+          _progress.value = -1.0;
+        }
       }
     })
       ..start();
@@ -308,6 +318,7 @@ class _TrackerScreenState extends State<TrackerScreen>
   void dispose() {
     _ticker.dispose();
     _step.dispose();
+    _progress.dispose();
     _playingOrder.dispose();
     _loop.dispose();
     _recorder.dispose();
@@ -1444,60 +1455,28 @@ class _TrackerScreenState extends State<TrackerScreen>
         VoiceEffect.demon => l10n.trackerVoiceDemon,
       };
 
-  String _instrumentLabel(AppLocalizations l10n, String id) => switch (id) {
-        'piano' => l10n.instrumentPiano,
-        'cello' => l10n.instrumentCello,
-        'flute' => l10n.instrumentFlute,
-        'musicBox' => l10n.instrumentMusicBox,
-        'zap' => l10n.trackerSfxrZap,
-        'blip' => l10n.trackerSfxrBlip,
-        'laser' => l10n.trackerSfxrLaser,
-        'coin' => l10n.trackerSfxrCoin,
-        'bell' => l10n.trackerSfxrBell,
-        _ => l10n.trackerSfxrExplosion,
-      };
-
-  /// The per-channel instrument picker (additive voices + chiptune presets).
-  void _showInstrumentSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) {
-        final l10n = AppLocalizations.of(sheetContext)!;
-        final currentId = _engine.channels[_selected].instrument.id;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.trackerChangeInstrument,
-                  style: Theme.of(sheetContext).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (final option in kTrackerInstruments)
-                      ChoiceChip(
-                        label: Text(_instrumentLabel(l10n, option.id)),
-                        selected: option.id == currentId,
-                        onSelected: (_) {
-                          Navigator.pop(sheetContext);
-                          setInstrument(option.id);
-                        },
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  /// The per-channel instrument picker uses the shared Sound Library, so the
+  /// Beginner Tracker can select built-ins, saved samples, and generated FX.
+  Future<void> _showInstrumentSheet() async {
+    final saved = await showMyInstrumentsSheet(
+      context,
+      includeBuiltIns: true,
     );
+    if (saved == null || !mounted) return;
+    final instrument = saved.instrument;
+    if (instrument == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.drumkitSoundUnavailable,
+          ),
+        ),
+      );
+      return;
+    }
+    _engine.setChannelInstrument(_selected, instrument);
+    setState(() {});
+    _syncPlayback();
   }
 
   String _channelEffectLabel(AppLocalizations l10n, TrackerChannelEffect fx) =>
@@ -1808,19 +1787,53 @@ class _TrackerScreenState extends State<TrackerScreen>
               ],
               const SizedBox(height: 10),
               // Instrument tabs — pick the channel you're editing.
-              Wrap(
-                spacing: 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  for (var i = 0; i < _engine.channels.length; i++)
-                    _ChannelChip(
-                      label: _channelLabel(l10n, _engine.channels[i].id),
-                      icon: _channelIcons[_engine.channels[i].id]!,
-                      selected: i == _selected,
-                      hasNotes: _engine.channels[i].hasAnyNote,
-                      onTap: () => setState(() => _selected = i),
-                    ),
-                ],
+              ValueListenableBuilder<double>(
+                valueListenable: _progress,
+                builder: (context, progress, _) => Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (var i = 0; i < _engine.channels.length; i++)
+                      Column(
+                        children: [
+                          _ChannelChip(
+                            label: _channelLabel(l10n, _engine.channels[i].id),
+                            icon: _channelIcons[_engine.channels[i].id]!,
+                            selected: i == _selected,
+                            hasNotes: _engine.channels[i].hasAnyNote,
+                            onTap: () => setState(() => _selected = i),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 80,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: OscilloscopeWidget(
+                                pcm: _engine.getStem(i),
+                                progress: progress,
+                                waveColor: i == _selected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerLowest,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               // Pattern slots (A–D) — build a few patterns, then Play song.

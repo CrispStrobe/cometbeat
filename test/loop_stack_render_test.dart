@@ -51,6 +51,14 @@ void main() {
     }
   });
 
+  test('the rendered loop has a continuous wrap boundary', () {
+    final source = Float64List.fromList([
+      for (var i = 0; i < 256; i++) i < 128 ? 0.8 : -0.8,
+    ]);
+    final out = renderLoopStack([source], limit: false);
+    expect((out.first - out.last).abs(), lessThan(0.02));
+  });
+
   test('renders a LoopStack — a muted layer drops out of the mix', () {
     final stack = LoopStack<Float64List>()
       ..add(_const(0.3, 4))

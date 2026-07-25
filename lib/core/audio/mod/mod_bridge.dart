@@ -78,10 +78,27 @@ ModImport modToTracker(ModModule mod, {int rows = 8, int stepsPerBeat = 2}) {
       for (var s = 0; s < rows; s++) {
         final modRow = (s * 64) ~/ rows;
         final cell = _cellAt(pattern, modRow, c);
-        if (cell == null || cell.period <= 0) {
+        // Note: The TrackerEngine does not yet support sub-row tick timing for key-offs.
+        // Therefore, ANY Note Cut (ECx) regardless of tick offset 'x' is normalized
+        // to an immediate Note Cut (EC0) upon import.
+        if (cell == null) {
           cells.add(TrackerCell.empty);
+          continue;
+        }
+        final isCut = cell.effect == 0xE && (cell.effectParam & 0xF0) == 0xC0;
+        final midi = cell.period > 0 ? periodToMidi(cell.period) : null;
+
+        // ECx is a sub-row event in the source format. The tracker grid has
+        // row-level events only, so normalize every ECx to an immediate cut.
+        // A source cell may also carry a note, but that note is cut at the
+        // same normalized instant and must not become a second render-path
+        // interpretation of the event.
+        if (isCut) {
+          cells.add(TrackerCell.noteCut);
+        } else if (midi != null) {
+          cells.add(TrackerCell(midi: midi));
         } else {
-          cells.add(TrackerCell(midi: periodToMidi(cell.period)));
+          cells.add(TrackerCell.empty);
         }
       }
       snapshot.add(cells);
@@ -170,15 +187,17 @@ ModModule trackerToMod(
       final cells = c < snapshot.length ? snapshot[c] : const <TrackerCell>[];
       for (var s = 0; s < cells.length; s++) {
         final cell = cells[s];
-        final midi = cell.midi;
-        if (midi == null) continue;
         final modRow = (s * 64) ~/ rows;
         if (modRow < 0 || modRow >= 64) continue;
-        // sample number = the channel's 1-based instrument index.
-        modRows[modRow][c] = ModCell(
-          sample: c + 1,
-          period: midiToPeriod(midi),
-        );
+        if (cell.isNoteCut) {
+          modRows[modRow][c] = const ModCell(effect: 0xE, effectParam: 0xC0);
+        } else if (cell.midi != null) {
+          // sample number = the channel's 1-based instrument index.
+          modRows[modRow][c] = ModCell(
+            sample: c + 1,
+            period: midiToPeriod(cell.midi!),
+          );
+        }
       }
     }
     modPatterns.add(ModPattern(modRows));

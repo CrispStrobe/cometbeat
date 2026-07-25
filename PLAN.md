@@ -1,5 +1,9 @@
 # Automatic Play-Along — plan & status
 
+🚧 **Idle / Last-shipped (Agent checkpoint)**
+- Shipped: Synth & FX Editor (embeds Sound Lab directly into Tracker via `instrument_editor.dart`).
+- Shipped: Multi-Sample Groundwork (`MultiSampleInstrument` added to `tracker_engine.dart` with correct monophonic choking semantics).
+
 Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
 on one pure-Dart detection core so it stays testable headlessly and from a CLI.
@@ -29,6 +33,119 @@ Sound Library creation tools.
   it can process any WAV/sample/track/segment. Today that means a Voice Shaping
   section in track inserts; later it can grow clip/segment modules and more FX
   sections without changing the instrument picker model.
+
+## Loop Studio consolidation (IN PROGRESS)
+
+Live Looper / Perform, Loop Mixer, and Beginner Tracker currently expose three
+overlapping but incompatible editing experiences. They must converge on one
+musical loop document and one transport; the beginner view is a simpler skin,
+not a second playback engine.
+
+- **One loop document.** Every audible voice/track must have editable symbolic
+  events (drums, pitched notes, chords, and imported material) plus its selected
+  instrument. Editing a beat/tune must change those events and re-render the
+  exact voice, never a black-box baked stem.
+- **One transport.** Start, pause, stop, loop length, BPM, and playhead phase
+  are shared. Loop swaps happen at a musical boundary without stopping and
+  restarting the audio player. The loop buffer must be periodic and seam-safe.
+- **One primary workflow.** Loop Studio opens in a focused beginner layout with
+  direct track controls; an Advanced view reveals the full matrix, per-track
+  instruments, sends, effects, and arrangement. Remove redundant mode choices
+  where they only lead to different non-editable copies of the same groove.
+- **Controls must be scannable.** Replace Chill/Groove/Fast tempo buttons with a
+  BPM slider plus numeric field. Group key, scale, swing, loop length, and sound
+  choices in the same compact settings bar pattern used by Score Workshop.
+- **Notation is a view of the document.** Show one or more voices/parts,
+  choosing treble, bass, or grand staff per range; notation follows the actual
+  selected tracks and has Start/Pause/Stop transport.
+- **Verification.** Add pure tests for periodic loop rendering, boundary swaps,
+  editable per-track events, and clef selection; add widget tests for the
+  beginner/advanced workflow and transport states before removing old surfaces.
+
+## Five-mode product architecture (DECIDED)
+
+The product has five top-level authoring modes. They are different musical
+mental models over one shared project/document model, not five unrelated apps:
+
+1. **Tracker** — a classic pattern-sequencer successor: pattern matrix,
+   rows/channels, instruments, ticks, effect commands, macros, sample
+   playback, pattern order, and tracker interchange (MOD/XM/S3M/IT/MIDI).
+2. **Loop Studio** — a creator-to-professional loop workflow: record, capture,
+   quantize, overdub, arrange sections, edit every voice, choose instruments,
+   mix, and perform over loops. Simple and Advanced layouts edit the same loop
+   document; they are not separate modes.
+3. **Score** — multi-part conventional notation and engraving: voices, chords,
+   lyrics, clefs, analysis, playback, and print/interchange exports.
+4. **Tab** — guitar/bass/cello/string-instrument notation: tuning, strings,
+   frets, fingering, chord diagrams, notation, and instrument-aware playback.
+5. **Audio** — the DAW: clips, regions, recording, buses, automation, inserts,
+   Voice Shaping and future FX, mixing, and final export.
+
+### Loop Studio UX contract
+
+Loop Studio opens directly into an audible, editable project. The first screen
+must make the following obvious without tutorials: what is playing, which tracks
+are active, where the playhead is, how long the loop is, the BPM, and where the
+user can change the actual notes/hits.
+
+- The top transport bar is shared and stable: Start/Pause, Stop, loop length,
+  BPM slider plus numeric field, undo/redo, Save, and Export.
+- The first content band is the track lane. Each track exposes play/mute/solo,
+  level, instrument, record/overdub, and an Edit button. Editing opens the
+  actual symbolic events for that track, not a decorative preview or a baked
+  audio blob.
+- Simple layout shows one friendly event lane per track with large cells,
+  piano/pad input, quantize, and a small number of safe controls. It is suitable
+  for a child copying a performance video.
+- Advanced layout adds the full matrix, exact event durations, velocity,
+  per-track instruments, effects, sends, automation, section scenes, and
+  arrangement. It remains the same project and transport.
+- Settings use compact grouped bars like Score Workshop: BPM/loop, key/scale,
+  swing, quantize, sound, and arrangement. Preset words such as Chill/Groove/
+  Fast may remain as named starting points, but never as the only tempo control.
+- Sheet Music is a synchronized projection of selected Loop Studio tracks:
+  multiple voices are visible, clefs follow pitch range, grand staff is used
+  for a genuinely mixed voice, and the same transport controls it.
+- Record, import, and play-in actions always create editable track events first;
+  rendering to audio is an explicit bounce operation into Audio mode.
+
+### Integration and retirement map
+
+- **Keep and integrate:** `LoopEngine` timing/pattern model, `LoopStack` undo /
+  mute primitives, `BeatBridge` / `MelodyBridge`, groove capture and quantize,
+  per-track instrument voicing, scene/arrangement concepts, periodic rendering,
+  groove notation, and the shared Sound Library.
+- **Refactor into Loop Studio:** Perform's recording/overdub flow, Loop Mixer's
+  track cards, beat editor, tune editor, scene launcher, jam/follow tools, and
+  the transport. Their symbolic data must become one editable track model.
+- **Use as Tracker interop:** Beginner Tracker's approachable keyboard/grid
+  ideas and Advanced Tracker's precise pattern/effect concepts. Tracker remains
+  a separate top-level mode because tick/pattern authoring is a different job.
+- **Replace:** duplicate Loop Mixer/Perform playback clocks, restart-based loop
+  swaps, black-box tune/beat previews, hard-coded clef choices, and separate
+  beginner/advanced persistence formats.
+- **Archive behind a branch until parity is proven:** the current standalone
+  Perform screen, current Loop Mixer screen, and Beginner Tracker screen. Do not
+  delete them until Loop Studio passes transport, recording, editable-track,
+  import/export, notation, and web smoke tests; then keep their useful pure
+  primitives but remove their redundant navigation entries.
+
+### Shared project boundaries
+
+```
+Project
+├── Tracker patterns / instruments / effect commands
+├── Loop Studio tracks / symbolic events / sections
+├── Score parts / voices / metadata
+├── Tab arrangements / tunings / fingerings
+├── Audio tracks / clips / regions / automation
+└── shared instruments, samples, FX, and export references
+```
+
+Interop is explicit: Tracker patterns can become Loop Studio tracks; Loop
+Studio tracks can open in Tracker, Score, Tab, or Audio; Score and Tab can feed
+pitched Loop Studio tracks; Audio can receive any mode as a clip and can return
+through transcription/analysis with documented losses.
 
 ## Tab Editor navigation (DONE)
 
@@ -201,3 +318,55 @@ SpeexDSP echo canceller (BSD, port/FFI) · WebRTC AEC3 / webrtc-audio-processing
 - `dart run bin/listen.dart --selftest --chords` — headless smoke test.
 - `dart run bin/listen.dart --stdin` fed from `sox`/`ffmpeg` — live mic.
 - macOS/iOS builds need the GEM-env wrapper (see CLAUDE.md / appstore.md).
+
+## Advanced Tracker module: Feature Gap Analysis & Roadmap
+
+To evolve our tracker into a world-class, perfect UX environment (drawing on
+classic pattern-editor conventions without adopting a rigid hardware-emulator
+path), we must focus on universal instrument support, seamless ecosystem
+interchangeability, and power-user ergonomics.
+
+### 1. Universal Instrument Ecosystem & Editing
+**Current State:** 
+Our `TrackerInstrument` hierarchy (`AdditiveInstrument`, `SfxrInstrument`, `SampleInstrument`) is robust but lacks a unified, deep editing UI. We want to support all kinds of sounds interchangeably without forcing hardware constraints.
+
+**Implementation Steps:**
+1. ~~**Instrument Editor Overlay:** Create `instrument_editor.dart` inside the Studio UI with a real-time testing keyboard.~~ (DONE)
+2. ~~**Sample Editor:** For `SampleInstrument`, build a waveform viewer with draggable handles for `loopStart`/`loopLength`, ping-pong toggles, and base MIDI tuning.~~ (DONE)
+3. ~~**Synth & FX Editor:** For `SfxrInstrument` or FM models, embed the existing `lib/features/sound_lab/sound_lab_screen.dart` to expose its rich slider UI directly in the tracker.~~ (DONE)
+4. ~~**Multi-Sample Groundwork:** Enable `MultiSampleInstrument` to map different sample IDs across the keyboard (essential for complex DrumKits and realistic acoustic patches).~~ (DONE)
+
+### 2. Ecosystem Interchangeability (Workshop, Looper, DrumKit, Tab)
+**Current State:**
+We have `tracker_notation.dart` bridging Tracker ↔ Score Workshop. However, deep integration with other DAW tools (Looper, Tab Editor, DrumKit) is missing. 
+
+**Implementation Steps:**
+1. **Looper / Loop Mixer Bridge:** Implement a function to bake a Tracker pattern directly into a `LoopTrack` stem (`Float64List`) so it can be dropped into the Loop Mixer as a perfectly-timed, loopable clip.
+2. **DrumKit Bridge:** Ensure `PercussionInstrument` directly reads from/writes to the same model used by the standalone DrumKit view. A beat tapped out physically in the DrumKit must instantly populate the Tracker's percussion channel.
+3. **Tab Editor Translation:** Expand `tracker_notation.dart` to support translating plucked string channels (`KarplusInstrument`) into Tab Editor strings, mapping MIDI pitches to string/fret combinations based on tuning.
+
+### 3. Visual Excellence & Workflow (classic tracker ergonomics)
+**Current State:**
+The Studio UI (`tracker_screen.dart`) is functional but lacks the slick, real-time visual feedback and rapid navigation of elite modern trackers.
+
+**Implementation Steps:**
+1. ~~**Real-time Oscilloscopes & Meters:**~~ Tap the `_stem(channel)` cache in `TrackerEngine`. Pass this data to an `OscilloscopeWidget` using `CustomPainter` to draw vivid, real-time waveforms and VU meters per channel. (DONE)
+2. **Smooth Scrolling Matrix:** Evolve the grid rendering to support pixel-smooth playhead scrolling (rather than rigid row-by-row jumping) and a dynamic pattern matrix where channel loops can be visualized block-by-block.
+3. **Advanced Keyboard Handling:** Add `FocusNode` and `KeyEvent` handlers for lightning-fast multi-cell selection (shift+arrows), cross-channel copy/paste, and value interpolation directly in the grid.
+
+### 4. Deep Instrument Modulation (Macros & Envelopes)
+**Current State:**
+Instruments are static per note run, lacking tick-level modulators.
+
+**Implementation Steps:**
+1. **Macro Data Model:** Create a `MacroSequence` class for Volume, Panning, Pitch, and Arpeggio envelopes.
+2. **Tick-level Rendering:** Transition `mixStems` and `renderChannel` to evaluate notes tick-by-tick, updating the instrument's active frequency and amplitude based on the `MacroSequence`.
+
+### 5. Comprehensive Effect Command Set & Flow Control
+**Current State:**
+`TrackerCell` holds hex `fxCmd/fxParam`, but we currently only process volume commands. 
+
+**Implementation Steps:**
+1. **Unify Pitch Effects:** Move arpeggio/porta/vibrato from the `TrackerEffect` enum into the hex pipeline, evaluating them tick-by-tick during `renderChannel`.
+2. **Flow & Groove Commands:** Support Speed (`Fxx`), Pattern Break (`Dxx`), and Position Jump (`Bxx`). Rewrite `renderSong` as a dynamic state machine that respects these navigation commands.
+3. **Sub-row Timing:** Implement Note Delay (`EDx`) and Note Cut (`ECx`) directly in the offline renderer to allow complex swing and ghost notes.

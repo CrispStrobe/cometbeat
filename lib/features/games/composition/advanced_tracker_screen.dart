@@ -71,8 +71,11 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/features/games/composition/instrument_editor.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
+import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
+import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
@@ -87,6 +90,7 @@ import 'package:comet_beat/features/workshop/screens/composition_workshop_screen
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
+import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
@@ -336,6 +340,9 @@ abstract interface class AdvancedTrackerTester {
   /// the file picker uses, minus the picker).
   void debugImportKern(String kern);
 
+  /// Import a decoded score through the shared music picker bridge.
+  void debugImportMusic(MultiPartScore score);
+
   /// Export the whole song as a module file of [format] ('mod'/'xm'/'s3m'/'it').
   Uint8List? debugExportModule(String format);
 
@@ -525,6 +532,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// The sounding row (0-based), or -1 when stopped. Drives the playhead without
   /// a full rebuild.
   final _row = ValueNotifier<int>(-1);
+  final _progress = ValueNotifier<double>(-1.0);
 
   /// Which order-list position is sounding in song mode (else -1).
   final _playingOrder = ValueNotifier<int>(-1);
@@ -688,6 +696,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       if (_paused) return; // freeze the playhead where it is
       if (!_clock.isRunning) {
         if (_row.value != -1) _row.value = -1;
+        if (_progress.value != -1.0) _progress.value = -1.0;
         if (_playingOrder.value != -1) _playingOrder.value = -1;
         if (_levels.value.isNotEmpty) _levels.value = const [];
         return;
@@ -733,6 +742,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           _maybeTick(step);
         }
       }
+      _progress.value = posInPattern / t.totalMs;
       _updateLevels(posInPattern);
     })
       ..start();
@@ -748,6 +758,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void dispose() {
     _ticker.dispose();
     _row.dispose();
+    _progress.dispose();
     _playingOrder.dispose();
     _levels.dispose();
     _vScroll.dispose();
@@ -1064,12 +1075,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _song.engine.setCell(
         _cursorChannel,
         row,
-        TrackerCell(
+        cur.copyWith(
           midi: midi,
-          volume: cur.volume,
-          effect: cur.effect,
-          fxCmd: cur.fxCmd,
-          fxParam: cur.fxParam,
           instrument: _activeInstrument,
         ),
       );
@@ -2231,6 +2238,21 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               ),
             ),
           ),
+          IconButton(
+            icon: const Icon(Icons.edit, size: 16),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: () async {
+              final newInst =
+                  await showInstrumentEditor(context, ch.instrument);
+              if (newInst != null && mounted) {
+                // Update the instrument in the song and rebuild
+                setState(() => _song.setChannelInstrument(c, newInst));
+                _syncPlayback();
+                setSheet(() {});
+              }
+            },
+          ),
           // Gain slider.
           Expanded(
             child: Tooltip(
@@ -2488,7 +2510,25 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     final saved = await showMyInstrumentsSheet(
       context,
       includeBuiltIns: true,
-      onModuleSelected: (bytes) async => importModuleBytes(bytes),
+      onMusicSelected: (score) async {
+        if (!_replaceMusicScore(score)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.musicPickerFailed),
+            ),
+          );
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.importDone)),
+        );
+      },
+      onModuleSelected: (bytes) async {
+        importModuleBytes(bytes);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.importDone)),
+        );
+      },
       onSoundFontSelected: (instrument) async => _addPoolInstrument(instrument),
     );
     if (saved == null || !mounted) return;
@@ -2601,14 +2641,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _song.engine.setCell(
         channel,
         row,
-        TrackerCell(
-          midi: cur.midi,
-          volume: cur.volume,
-          effect: cur.effect,
-          fxCmd: cmd,
-          fxParam: param,
-          instrument: cur.instrument,
-        ),
+        cur.copyWith(fxCmd: cmd, fxParam: param),
       );
     });
     _syncPlayback();
@@ -2861,7 +2894,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     style: Theme.of(ctx).textTheme.labelMedium,
                   ),
                   const SizedBox(height: 6),
-                  _SampleWaveform(
+                  SampleWaveform(
                     pcm: clip!,
                     start: sampStart,
                     end: sampEnd,
@@ -3459,13 +3492,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       () => _song.engine.setCell(
         channel,
         row,
-        TrackerCell(
-          midi: cur.midi,
-          volume: cur.volume,
-          effect: cur.effect,
+        cur.copyWith(
           fxCmd: cmd,
           fxParam: param,
-          instrument: cur.instrument, // don't drop the per-cell instrument
         ),
       ),
     );
@@ -3512,6 +3541,16 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _cursorRow = 0;
       _scopeDirty = true;
     });
+  }
+
+  /// Replaces the document from a notation selection and reports whether it
+  /// produced actual tracker notes. An empty decoded container otherwise looks
+  /// like a no-op after the Sound Library sheet closes.
+  bool _replaceMusicScore(MultiPartScore score) {
+    final song = _songFromMultiPart(score);
+    if (song.isEmpty) return false;
+    _replaceSong(song);
+    return true;
   }
 
   @override
@@ -3729,6 +3768,34 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     }
   }
 
+  /// One entry point for built-in songs, saved songs, local files, and the
+  /// online catalog. All sources return a decoded score and use the same bridge.
+  Future<void> _addMusic() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final score = await showMusicPicker(context);
+      if (!mounted || score == null) return;
+      if (!_replaceMusicScore(score)) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.musicPickerFailed),
+          ),
+        );
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.importDone)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.musicPickerFailed),
+        ),
+      );
+    }
+  }
+
   /// The WHOLE SONG's pitched channels as one multi-part score: each channel's
   /// cells are concatenated across the order list (not just the current pattern
   /// — that was the "place some notes first" bug when notes lived on another
@@ -3815,6 +3882,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   void debugImportKern(String kern) =>
       _replaceSong(_songFromMultiPart(multiPartScoreFromKern(kern)));
+
+  @override
+  void debugImportMusic(MultiPartScore score) =>
+      _replaceSong(_songFromMultiPart(score));
 
   @override
   Uint8List? debugExportModule(String format) {
@@ -4177,6 +4248,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               switch (v) {
+                case 'addMusic':
+                  _addMusic();
                 case 'import':
                   _importModule();
                 case 'importScore':
@@ -4219,6 +4292,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             },
             itemBuilder: (ctx) => [
               _menuSection(l10n.trackerMenuOpenLibrary),
+              _menuRow(
+                'addMusic',
+                Icons.library_music_outlined,
+                l10n.musicPickerTitle,
+              ),
               _menuRow('import', Icons.library_music, l10n.trackerImportMod),
               _menuRow(
                 'importScore',
@@ -5054,7 +5132,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             ],
           ),
           // VU meter — lights up with the channel's live level during playback.
-          _ChannelMeter(levels: _levels, channel: c, muted: muted),
+          _ChannelMeter(
+            levels: _levels,
+            channel: c,
+            muted: muted,
+            progress: _progress,
+            pcm: _song.engine.getStem(c),
+          ),
         ],
       ),
     );
@@ -5653,11 +5737,15 @@ class _ChannelMeter extends StatelessWidget {
     required this.levels,
     required this.channel,
     required this.muted,
+    required this.progress,
+    required this.pcm,
   });
 
   final ValueNotifier<List<double>> levels;
+  final ValueNotifier<double> progress;
   final int channel;
   final bool muted;
+  final Float64List pcm;
 
   @override
   Widget build(BuildContext context) {
@@ -5669,15 +5757,37 @@ class _ChannelMeter extends StatelessWidget {
             (channel < values.length && !muted) ? values[channel] : 0.0;
         return Padding(
           padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: level,
-              minHeight: 4,
-              backgroundColor: scheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation(
-                Color.lerp(scheme.primary, scheme.error, level) ??
-                    scheme.primary,
+          child: Container(
+            height: 12,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: Stack(
+                children: [
+                  // VU Meter Background
+                  FractionallySizedBox(
+                    widthFactor: level,
+                    heightFactor: 1.0,
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      color: Color.lerp(scheme.primary, scheme.error, level) ??
+                          scheme.primary,
+                    ),
+                  ),
+                  // Oscilloscope overlay
+                  ValueListenableBuilder<double>(
+                    valueListenable: progress,
+                    builder: (context, prog, _) => OscilloscopeWidget(
+                      pcm: pcm,
+                      progress: prog,
+                      waveColor: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      backgroundColor: Colors.transparent,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -5939,164 +6049,4 @@ Float64List sliceFraction(Float64List pcm, double start, double end) {
   final i0 = (s * pcm.length).floor().clamp(0, pcm.length);
   final i1 = (e * pcm.length).ceil().clamp(i0, pcm.length);
   return Float64List.sublistView(pcm, i0, i1);
-}
-
-/// The sample editor's waveform strip: a peak-per-column render of the recorded
-/// clip with two draggable trim handles; the kept region is bright, the cropped
-/// tails dim. Reports the new [start]/[end] fractions as the user drags.
-class _SampleWaveform extends StatefulWidget {
-  const _SampleWaveform({
-    required this.pcm,
-    required this.start,
-    required this.end,
-    required this.onChanged,
-    required this.wave,
-    required this.bg,
-  });
-
-  final Float64List pcm;
-  final double start;
-  final double end;
-  final void Function(double start, double end) onChanged;
-  final Color wave;
-  final Color bg;
-
-  @override
-  State<_SampleWaveform> createState() => _SampleWaveformState();
-}
-
-class _SampleWaveformState extends State<_SampleWaveform> {
-  int _handle = 0; // 0 = start, 1 = end — whichever the drag grabbed
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, c) {
-        final w = c.maxWidth;
-        double fracAt(double dx) => (dx / w).clamp(0.0, 1.0);
-        void grab(double dx) {
-          final f = fracAt(dx);
-          _handle = (f - widget.start).abs() <= (f - widget.end).abs() ? 0 : 1;
-        }
-
-        void drag(double dx) {
-          final f = fracAt(dx);
-          if (_handle == 0) {
-            widget.onChanged(f.clamp(0.0, widget.end - 0.02), widget.end);
-          } else {
-            widget.onChanged(widget.start, f.clamp(widget.start + 0.02, 1.0));
-          }
-        }
-
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragStart: (d) => grab(d.localPosition.dx),
-          onHorizontalDragUpdate: (d) => drag(d.localPosition.dx),
-          onTapDown: (d) {
-            grab(d.localPosition.dx);
-            drag(d.localPosition.dx);
-          },
-          child: CustomPaint(
-            size: Size(w, 64),
-            painter: _WaveformPainter(
-              pcm: widget.pcm,
-              start: widget.start,
-              end: widget.end,
-              wave: widget.wave,
-              bg: widget.bg,
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Paints [pcm] (−1..1 floats) as a peak-per-column waveform, dimming the
-/// cropped tails outside [start]..[end] and drawing a knob at each handle.
-class _WaveformPainter extends CustomPainter {
-  _WaveformPainter({
-    required this.pcm,
-    required this.start,
-    required this.end,
-    required this.wave,
-    required this.bg,
-  });
-
-  final Float64List pcm;
-  final double start;
-  final double end;
-  final Color wave;
-  final Color bg;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final r = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(6),
-    );
-    canvas.drawRRect(r, Paint()..color = bg);
-    canvas.save();
-    canvas.clipRRect(r);
-    final mid = size.height / 2;
-    if (pcm.isNotEmpty) {
-      final cols = size.width.round().clamp(1, 4000);
-      final n = pcm.length;
-      final keep = Paint()
-        ..color = wave
-        ..strokeWidth = 1;
-      final drop = Paint()
-        ..color = wave.withValues(alpha: 0.28)
-        ..strokeWidth = 1;
-      for (var x = 0; x < cols; x++) {
-        final frac = x / cols;
-        final i0 = (x * n / cols).floor();
-        final i1 = ((x + 1) * n / cols).floor().clamp(i0 + 1, n);
-        var peak = 0.0;
-        for (var i = i0; i < i1; i++) {
-          final a = pcm[i].abs();
-          if (a > peak) peak = a;
-        }
-        final h = peak.clamp(0.0, 1.0) * mid;
-        final xx = x * size.width / cols;
-        canvas.drawLine(
-          Offset(xx, mid - h),
-          Offset(xx, mid + h),
-          frac >= start && frac <= end ? keep : drop,
-        );
-      }
-    }
-    // Shade the cropped tails.
-    final shade = Paint()..color = bg.withValues(alpha: 0.5);
-    if (start > 0) {
-      canvas.drawRect(
-        Rect.fromLTRB(0, 0, start * size.width, size.height),
-        shade,
-      );
-    }
-    if (end < 1) {
-      canvas.drawRect(
-        Rect.fromLTRB(end * size.width, 0, size.width, size.height),
-        shade,
-      );
-    }
-    // Handles.
-    final line = Paint()
-      ..color = const Color(0xFFFF5252)
-      ..strokeWidth = 2;
-    for (final f in [start, end]) {
-      final x = f * size.width;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
-      canvas.drawCircle(Offset(x, mid), 6, line..style = PaintingStyle.fill);
-    }
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_WaveformPainter old) =>
-      old.start != start ||
-      old.end != end ||
-      !identical(old.pcm, pcm) ||
-      old.wave != wave ||
-      old.bg != bg;
 }

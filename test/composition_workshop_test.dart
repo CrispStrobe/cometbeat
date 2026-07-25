@@ -208,6 +208,27 @@ void main() {
     expect(find.text('C Major'), findsNothing);
   });
 
+  testWidgets('Analysis tints note elements, not only the banner',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopAnalysis));
+    await tester.pumpAndSettle();
+
+    final view = tester.widget<MultiSystemView>(find.byType(MultiSystemView));
+    final note = view.score.measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .first;
+    expect(view.elementColors[note.id], const Color(0xFF59A14F));
+  });
+
   testWidgets('🔍 Inspect mode: tapping a note opens its Looking-Glass card',
       (tester) async {
     await pump(tester);
@@ -412,6 +433,40 @@ void main() {
       _editor(tester).debugMusicXmlExport(),
       contains('<part-name>Morning Demo</part-name>'),
     );
+    expect(
+      _editor(tester).debugMusicXmlExport(),
+      contains('<work><work-title>Morning Demo</work-title></work>'),
+    );
+  });
+
+  testWidgets('save uses the editor title without asking for it again',
+      (tester) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.tap(_pianoKey());
+    await tester.pump();
+
+    await tester.tap(find.byTooltip(l10n.workshopSetTitle));
+    await tester.pumpAndSettle();
+    final titleField = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(titleField, 'No Prompt Save');
+    await tester.tap(
+      find.text(
+        MaterialLocalizations.of(tester.element(find.byType(AlertDialog)))
+            .okButtonLabel,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.more_vert).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.myMelodySave));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text(l10n.myMelodySaved), findsOneWidget);
   });
 
   testWidgets('narrow workshop keeps title and menu actions reachable',

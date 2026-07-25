@@ -114,6 +114,48 @@ void main() {
       expect(find.text('New FX'), findsOneWidget);
     });
 
+    testWidgets('generated FX is saved to the selector library store',
+        (t) async {
+      final store = InstrumentLibraryStore();
+      await t.pumpWidget(
+        MultiProvider(
+          providers: [Provider<AudioService>(create: (_) => AudioService())],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () async {
+                    await showVoicePicker(context, store: store);
+                  },
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await t.tap(find.text('open'));
+      await t.pumpAndSettle();
+      await t.tap(find.byIcon(Icons.library_music_outlined));
+      await t.pumpAndSettle();
+      await t.tap(find.byIcon(Icons.add));
+      await t.pumpAndSettle();
+      await t.tap(find.text('New FX'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('laser'));
+      await t.pumpAndSettle();
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await t.ensureVisible(save);
+      await t.tap(save);
+      await t.pumpAndSettle();
+
+      expect((await store.load()).map((s) => s.name), contains('laser'));
+      expect(find.text('Sound Library'), findsOneWidget);
+    });
+
     testWidgets('the Chiptune filter narrows to chiptune voices', (t) async {
       await t.pumpWidget(host());
       await t.pumpAndSettle();

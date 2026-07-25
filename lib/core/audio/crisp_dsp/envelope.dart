@@ -6,6 +6,7 @@
 // shape the note (soft attack, decay to a sustain level). Pure Dart, deterministic.
 // From OpenMPT/IT instrument envelopes (the idea), simplified. See FX_HANDOVER.md #4.
 
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
@@ -50,6 +51,7 @@ Float64List applyEnvelope(
   Float64List buf,
   Envelope env, {
   int sampleRate = kSampleRate,
+  int? sustainSamples,
 }) {
   final n = buf.length;
   if (n == 0 || env.isIdentity) return Float64List.fromList(buf);
@@ -57,28 +59,41 @@ Float64List applyEnvelope(
   final sustain = env.sustain.clamp(0.0, 1.0);
   var a = (env.attack * sampleRate).round().clamp(0, n);
   var d = (env.decay * sampleRate).round().clamp(0, n);
-  var r = (env.release * sampleRate).round().clamp(0, n);
-  // Scale the stages down if they can't all fit (a short note).
-  final total = a + d + r;
-  if (total > n && total > 0) {
-    final scale = n / total;
-    a = (a * scale).floor();
-    d = (d * scale).floor();
-    r = (r * scale).floor();
+  var r = (env.release * sampleRate).round();
+
+  int relStart;
+  if (sustainSamples != null) {
+    // Synthesizer behavior: sustain until Note Cut
+    relStart = sustainSamples.clamp(0, n);
+    if (a + d > relStart) {
+      final scale = relStart > 0 ? relStart / (a + d) : 0.0;
+      a = (a * scale).floor();
+      d = (d * scale).floor();
+    }
+  } else {
+    // Legacy / One-shot behavior: fit release at the end of the buffer
+    r = r.clamp(0, n);
+    final total = a + d + r;
+    if (total > n && total > 0) {
+      final scale = n / total;
+      a = (a * scale).floor();
+      d = (d * scale).floor();
+      r = (r * scale).floor();
+    }
+    relStart = n - r;
   }
-  final relStart = n - r;
 
   final out = Float64List(n);
   for (var i = 0; i < n; i++) {
     double g;
     if (i < a) {
-      g = a > 0 ? i / a : 1.0; // attack 0 → 1
+      g = a > 0 ? i / a : 1.0;
     } else if (i < a + d) {
-      g = 1 - (1 - sustain) * ((i - a) / d); // decay 1 → sustain
+      g = 1 - (1 - sustain) * ((i - a) / d);
     } else if (i < relStart) {
-      g = sustain; // sustain hold
+      g = sustain;
     } else {
-      g = r > 0 ? sustain * (n - i) / r : sustain; // release → 0
+      g = r > 0 ? sustain * max(0.0, 1.0 - (i - relStart) / r) : 0.0;
     }
     out[i] = buf[i] * g;
   }
