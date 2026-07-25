@@ -720,7 +720,25 @@ ModuleDoc moduleDocFromSong(
         ],
     xmInstruments: native?.xmInstruments ?? const [],
     itInstruments: native?.itInstruments ?? const [],
+    channelPans: targetFormat == ModuleFormat.it
+        ? [
+            for (final channel in song.channels)
+              ((channel.pan * 32) + 32).round().clamp(0, 64),
+          ]
+        : const [],
+    channelVolumes: targetFormat == ModuleFormat.it
+        ? [
+            for (final channel in song.channels)
+              _itChannelVolume(channel.gain, channelCount),
+          ]
+        : const [],
   );
+}
+
+int _itChannelVolume(double gain, int channelCount) {
+  final base = 0.6 * min(1.0, 4 / channelCount);
+  if (base <= 0) return 0;
+  return (gain / base * 64).round().clamp(0, 64);
 }
 
 /// A tracker [VolumeEnvelope] as a doc [DocEnvelope] (ms → ticks at [tempo] BPM,
