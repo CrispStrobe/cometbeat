@@ -123,4 +123,103 @@ final List<DrumPreset> kDrumPresets = [
       Drum.crash: 'x...............',
     }),
   ),
+  DrumPreset(
+    'Techno',
+    _p({
+      Drum.kick: 'x...x...x...x...',
+      Drum.openHat: '..x...x...x...x.',
+      Drum.clap: '....x.......x...',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Trap',
+    _p({
+      Drum.kick: 'x.....x..x.x....',
+      Drum.snare: '........x.......',
+      Drum.hat: 'x.xxx.x.x.xxx.x.',
+    }),
+  ),
+  DrumPreset(
+    'Drum & bass',
+    _p({
+      Drum.kick: 'x......x..x.....',
+      Drum.snare: '....x.....x...x.',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Boom-bap',
+    _p({
+      Drum.kick: 'x.....x.x.......',
+      Drum.snare: '....x.......x...',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Reggaeton',
+    _p({
+      Drum.kick: 'x...x...x...x...',
+      Drum.snare: 'x..x..x.x..x..x.',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Afrobeat',
+    _p({
+      Drum.kick: 'x..x...x..x...x.',
+      Drum.snare: '....x.......x...',
+      Drum.rim: 'x..x.x..x..x.x..',
+      Drum.hat: 'xxxxxxxxxxxxxxxx',
+    }),
+  ),
+  DrumPreset(
+    'Samba',
+    _p({
+      Drum.kick: 'x..x..x.x..x..x.',
+      Drum.snare: 'x.xx.x.xx.x.xx.x',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Bossa nova',
+    _p({
+      Drum.rim: 'x..x..x.x..x..x.',
+      Drum.kick: 'x.....x.x.....x.',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Breakbeat',
+    _p({
+      Drum.kick: 'x.....x.x.......',
+      Drum.snare: '....x.......x.x.',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Half-time',
+    _p({
+      Drum.kick: 'x.......x.......',
+      Drum.snare: '........x.......',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Motown',
+    _p({
+      Drum.kick: 'x...x...x...x...',
+      Drum.snare: '....x.......x...',
+      Drum.clap: 'x.x.x.x.x.x.x.x.',
+      Drum.hat: 'x.x.x.x.x.x.x.x.',
+    }),
+  ),
+  DrumPreset(
+    'Trance',
+    _p({
+      Drum.kick: 'x...x...x...x...',
+      Drum.openHat: '..x...x...x...x.',
+      Drum.clap: '....x.......x...',
+    }),
+  ),
 ];

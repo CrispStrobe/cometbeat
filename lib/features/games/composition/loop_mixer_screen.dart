@@ -2545,9 +2545,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   // The harmonic function of a groove chord degree (all in C major).
   HarmonicFunction _degreeFunction(ChordDegree d) => switch (d) {
         ChordDegree.i => HarmonicFunction.tonic,
+        ChordDegree.iii => HarmonicFunction.tonic,
+        ChordDegree.vi => HarmonicFunction.tonic,
+        ChordDegree.ii => HarmonicFunction.subdominant,
         ChordDegree.iv => HarmonicFunction.subdominant,
         ChordDegree.v => HarmonicFunction.dominant,
-        ChordDegree.vi => HarmonicFunction.tonic,
       };
 
   /// A strip of the selected progression's chords, coloured by function.

@@ -197,6 +197,8 @@ String rowToString(List<bool> row) =>
 /// A harmonic degree of C major the groove can sit on.
 enum ChordDegree {
   i(0, [0, 4, 7], 'I'),
+  ii(2, [0, 3, 7], 'ii'),
+  iii(4, [0, 3, 7], 'iii'),
   iv(5, [0, 4, 7], 'IV'),
   v(7, [0, 4, 7], 'V'),
   vi(9, [0, 3, 7], 'vi');
@@ -237,6 +239,60 @@ const kProgressions = [
   Progression(
     'ballad',
     [ChordDegree.vi, ChordDegree.iv, ChordDegree.i, ChordDegree.v],
+  ),
+  // A pentatonic melody stays consonant over all of these (the chords are
+  // diatonic to C major); labels come from the roman numerals, so no l10n.
+  Progression(
+    'doowop',
+    [ChordDegree.i, ChordDegree.vi, ChordDegree.iv, ChordDegree.v],
+  ),
+  Progression(
+    'fifties',
+    [ChordDegree.i, ChordDegree.vi, ChordDegree.ii, ChordDegree.v],
+  ),
+  Progression(
+    'pachelbel',
+    [ChordDegree.i, ChordDegree.v, ChordDegree.vi, ChordDegree.iii],
+  ),
+  Progression(
+    'jazz',
+    [ChordDegree.ii, ChordDegree.v, ChordDegree.i, ChordDegree.i],
+  ),
+  Progression(
+    'blues',
+    [ChordDegree.i, ChordDegree.iv, ChordDegree.i, ChordDegree.v],
+  ),
+  Progression(
+    'emotional',
+    [ChordDegree.i, ChordDegree.iii, ChordDegree.vi, ChordDegree.iv],
+  ),
+  Progression(
+    'anthem',
+    [ChordDegree.i, ChordDegree.iv, ChordDegree.vi, ChordDegree.v],
+  ),
+  Progression(
+    'dreamy',
+    [ChordDegree.iv, ChordDegree.i, ChordDegree.v, ChordDegree.vi],
+  ),
+  Progression(
+    'cycle',
+    [ChordDegree.vi, ChordDegree.ii, ChordDegree.v, ChordDegree.i],
+  ),
+  Progression(
+    'rise',
+    [ChordDegree.i, ChordDegree.ii, ChordDegree.iii, ChordDegree.iv],
+  ),
+  Progression(
+    'epic',
+    [ChordDegree.vi, ChordDegree.v, ChordDegree.iv, ChordDegree.v],
+  ),
+  Progression(
+    'calm',
+    [ChordDegree.i, ChordDegree.iii, ChordDegree.iv, ChordDegree.i],
+  ),
+  Progression(
+    'wistful',
+    [ChordDegree.vi, ChordDegree.iii, ChordDegree.iv, ChordDegree.i],
   ),
 ];
 
