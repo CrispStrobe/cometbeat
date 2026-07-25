@@ -124,6 +124,14 @@
       }
     }
   },
+  "workshopDownloaded": "Downloaded {name}",
+  "@workshopDownloaded": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "musicExportTitle": "Export as…",
   "musicExportEmpty": "Nothing to export yet",
   "musicExportFailed": "Export failed",

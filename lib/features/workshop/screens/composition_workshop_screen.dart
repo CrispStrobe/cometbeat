@@ -48,6 +48,7 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
+import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
@@ -3324,26 +3325,35 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       final (bytes, text) = await _generateExport(fmt);
       if (!mounted) return;
       final data = bytes ?? Uint8List.fromList(utf8.encode(text!));
+      final name = '$_fileStem.${fmt.ext}';
       try {
-        final location = await getSaveLocation(
-          suggestedName: '$_fileStem.${fmt.ext}',
-          acceptedTypeGroups: [
-            XTypeGroup(label: fmt.label, extensions: [fmt.ext]),
-          ],
-        );
-        if (location == null) return; // cancelled
-        await XFile.fromData(
-          data,
+        // Desktop → native save dialog; web → browser download; both work for
+        // binary formats. Mobile has neither, so this throws and we fall back.
+        final result = await deliverBytes(
+          bytes: data,
+          suggestedName: name,
+          label: fmt.label,
+          extension: fmt.ext,
           mimeType: fmt.mime,
-          name: '$_fileStem.${fmt.ext}',
-        ).saveTo(location.path);
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
         );
+        if (!mounted) return;
+        switch (result.kind) {
+          case DeliveryKind.cancelled:
+            return;
+          case DeliveryKind.saved:
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(l10n.workshopSavedTo(result.path ?? name)),
+              ),
+            );
+          case DeliveryKind.downloaded:
+            messenger.showSnackBar(
+              SnackBar(content: Text(l10n.workshopDownloaded(name))),
+            );
+        }
       } catch (_) {
-        // No save dialog on this platform (web / mobile): a text format can
-        // still be copied out; a binary one needs a desktop save.
+        // No save dialog / download on this platform (mobile): a text format
+        // can still be copied out; a binary one needs a desktop save or web.
         if (text != null && mounted) {
           await _exportText(fmt.label, text);
         } else {

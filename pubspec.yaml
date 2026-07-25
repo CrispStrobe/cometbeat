@@ -49,6 +49,10 @@ dependencies:
   # Files (import of MIDI etc.)
   file_selector: ^1.0.3
 
+  # Web-only DOM access for browser downloads (file_delivery_web.dart). The io
+  # build never imports it; version follows the Flutter SDK's pin.
+  web: any
+
   # PDF export (Workshop): pure-Dart PDF writer. We compose pages ourselves from
   # per-system PNGs — see lib/features/workshop/export/score_pdf.dart.
   pdf: ^3.11.0
