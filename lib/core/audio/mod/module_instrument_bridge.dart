@@ -36,7 +36,7 @@ SampleInstrument sampleInstrumentFromDoc(
   }
   final c5 = sample.c5speed > 0 ? sample.c5speed : 8363;
   final ratio = c5 / engineRate;
-  final atEngineRate = resampleCubic(sample.pcm, ratio);
+  final atEngineRate = resampleLinear(sample.pcm, ratio);
   // Cubic resampling overshoots [-1,1] at transients (ringing) — a full-scale
   // sample can peak ~1.2+, which then clips and distorts when several stack in
   // the mix. Clamp back to unity so imported samples stay in range.

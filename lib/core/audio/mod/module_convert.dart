@@ -180,6 +180,8 @@ ModuleDoc docFromMod(ModModule m) {
             // MOD's effect nibble maps 1:1 onto the replayer's fxCmd/fxParam.
             effect: c.effect,
             effectParam: c.effectParam,
+            nativeEffect: c.effect == 0 && c.effectParam == 0 ? -1 : c.effect,
+            nativeEffectParam: c.effectParam,
           ),
         );
       }
@@ -191,6 +193,7 @@ ModuleDoc docFromMod(ModModule m) {
   return ModuleDoc(
     title: m.title,
     channelCount: m.channelCount,
+    globalVolume: 128,
     sourceFormat: ModuleFormat.mod,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -299,6 +302,8 @@ ModuleDoc docFromS3m(S3mModule m) {
             volume: c.volume == S3mCell.noVolume ? -1 : c.volume,
             effect: fxCmd,
             effectParam: fxParam,
+            nativeEffect: c.command == 0 && c.info == 0 ? -1 : c.command,
+            nativeEffectParam: c.info,
           ),
         );
       }
@@ -312,6 +317,18 @@ ModuleDoc docFromS3m(S3mModule m) {
     channelCount: m.channelCount,
     initialSpeed: m.initialSpeed,
     initialTempo: m.initialTempo,
+    globalVolume: m.globalVolume * 2,
+    s3mMasterVolume: m.masterVolume,
+    s3mUltraClick: m.ultraClick,
+    s3mDefaultPan: m.defaultPan,
+    s3mChannelSettings: List<int>.from(m.channelSettings),
+    s3mSampleFormat: m.sampleFormat,
+    s3mFlags: m.flags,
+    s3mCreatedWith: m.createdWith,
+    s3mDefaultPans: List<int>.from(m.defaultPans),
+    s3mRawOrder: List<int>.from(m.rawOrder),
+    s3mPatterns: List<S3mPattern>.from(m.patterns),
+    s3mSamples: List<S3mSample>.from(m.samples),
     sourceFormat: ModuleFormat.s3m,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -326,6 +343,14 @@ DocEnvelope _docEnvFromXm(XmEnvelope e) => DocEnvelope(
       loopStart: e.loopStart,
       loopEnd: e.loopEnd,
       enabled: e.enabled,
+    );
+
+DocEnvelope _docEnvFromIt(ItEnvelope e) => DocEnvelope(
+      points: List<(int, int)>.from(e.points),
+      enabled: e.enabled,
+      loopStart: e.loopStart,
+      loopEnd: e.loopEnd,
+      sustain: e.sustainStart,
     );
 
 XmEnvelope _xmEnvFromDoc(DocEnvelope e) => XmEnvelope(
@@ -372,11 +397,6 @@ ModuleDoc docFromXm(XmModule m) {
       for (final c in row) {
         final vol =
             (c.volume >= 0x10 && c.volume <= 0x50) ? c.volume - 0x10 : -1;
-        // XM's main effect column shares MOD's 0x0–0xF numbering, so those map
-        // 1:1 onto our fxCmd/fxParam. XM's letter effects (G+ = 0x10 and up)
-        // don't fit a nibble and use different semantics — drop them for now
-        // (the cross-format table is a follow-up).
-        final carryFx = c.effect <= 0xF;
         var instrument = c.instrument;
         if (c.instrument > 0 && c.instrument <= m.instruments.length) {
           final inst = m.instruments[c.instrument - 1];
@@ -392,8 +412,16 @@ ModuleDoc docFromXm(XmModule m) {
             noteOff: c.note == XmCell.noteOff,
             instrument: instrument,
             volume: vol,
-            effect: carryFx ? c.effect : 0,
-            effectParam: carryFx ? c.effectParam : 0,
+            // Keep the full XM command byte in the neutral model. Cross-format
+            // writers may still degrade commands without an equivalent, but a
+            // same-format XM round-trip must not erase G+ effects.
+            effect: c.effect,
+            effectParam: c.effectParam,
+            nativeEffect: c.effect == 0 && c.effectParam == 0 ? -1 : c.effect,
+            nativeEffectParam: c.effectParam,
+            nativeInstrument: c.instrument,
+            nativeInstrumentSet: c.instrument != 0,
+            nativeNote: c.note,
           ),
         );
       }
@@ -404,9 +432,17 @@ ModuleDoc docFromXm(XmModule m) {
 
   return ModuleDoc(
     title: m.name,
+    xmTrackerName: m.trackerName,
+    xmVersion: m.version,
+    xmRestart: m.restart,
+    xmRawHeader: List<int>.from(m.rawHeader),
     channelCount: m.channelCount,
     initialSpeed: m.defaultTempo,
     initialTempo: m.defaultBpm,
+    globalVolume: 128,
+    linearFrequency: m.linearFrequency,
+    xmInstruments: List<XmInstrument>.from(m.instruments),
+    xmPatterns: List<XmPattern>.from(m.patterns),
     sourceFormat: ModuleFormat.xm,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -468,9 +504,10 @@ ModuleDoc docFromIt(ItModule m) {
     if (s.isEmpty) {
       samples.add(DocSample.empty());
     } else {
-      final looped = s.loopEnd > s.loopStart;
+      final looped = s.loop && s.loopEnd > s.loopStart;
       final ds = DocSample(
         name: s.name,
+        globalVolume: s.globalVolume,
         volume: s.defaultVolume,
         loopStart: s.loopStart,
         loopLength: looped ? (s.loopEnd - s.loopStart) : 0,
@@ -479,6 +516,7 @@ ModuleDoc docFromIt(ItModule m) {
         pingPong: looped && s.pingPong,
         sixteenBit: s.sixteenBit,
         pcm: Float64List.fromList(s.pcm),
+        pcmRight: s.pcmRight == null ? null : Float64List.fromList(s.pcmRight!),
       );
       samples.add(ds);
     }
@@ -528,6 +566,13 @@ ModuleDoc docFromIt(ItModule m) {
             volume: vol,
             effect: fxCmd,
             effectParam: fxParam,
+            nativeEffect:
+                c.command == 0 && c.commandValue == 0 ? -1 : c.command,
+            nativeEffectParam: c.commandValue,
+            nativeInstrument: c.instrument,
+            nativeInstrumentSet: true,
+            nativeNote: c.note,
+            nativeVolpan: c.volpan,
           ),
         );
       }
@@ -541,6 +586,44 @@ ModuleDoc docFromIt(ItModule m) {
     channelCount: m.channelCount,
     initialSpeed: m.initialSpeed,
     initialTempo: m.initialTempo,
+    globalVolume: m.globalVolume,
+    itCreatedWith: m.createdWith,
+    itCompatibleWith: m.compatibleWith,
+    itSpecial: m.special,
+    itRowHighlight: m.rowHighlight,
+    itFlags: m.flags,
+    itMixVolume: m.mixVolume,
+    itPanSeparation: m.panSeparation,
+    itPitchWheelDepth: m.pitchWheelDepth,
+    channelPans: List<int>.from(m.channelPans),
+    channelVolumes: List<int>.from(m.channelVolumes),
+    itInstrumentHeaders: [
+      for (final instrument in m.instruments)
+        List<int>.from(instrument.rawHeader),
+    ],
+    itInstruments: [
+      for (final instrument in m.instruments)
+        DocInstrument(
+          name: instrument.name,
+          nna: instrument.nna,
+          dct: instrument.dct,
+          dca: instrument.dca,
+          fadeout: instrument.fadeout,
+          pps: instrument.pps,
+          ppc: instrument.ppc,
+          globalVolume: instrument.globalVolume,
+          defaultPan: instrument.defaultPan,
+          randomVolume: instrument.randomVolume,
+          randomPan: instrument.randomPan,
+          keymap: List<int>.from(instrument.keymap),
+          noteMap: List<int>.from(instrument.noteMap),
+          volumeEnvelope: _docEnvFromIt(instrument.volumeEnvelope),
+          panEnvelope: _docEnvFromIt(instrument.panEnvelope),
+          pitchEnvelope: _docEnvFromIt(instrument.pitchEnvelope),
+          rawHeader: List<int>.from(instrument.rawHeader),
+        ),
+    ],
+    itSamples: List<ItSample>.from(m.samples),
     sourceFormat: ModuleFormat.it,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -657,7 +740,10 @@ ModModule docToMod(ModuleDoc doc) {
           // the volume column, or C00 from a note-off (MOD has neither — Cxx sets
           // the volume, C00 silences the note as a rest). Effects > 0xF are our
           // internal extended commands, which MOD can't represent → dropped.
-          final (eff, param) = _modEffectFor(c);
+          final (eff, param) =
+              doc.sourceFormat == ModuleFormat.mod && c.nativeEffect >= 0
+                  ? (c.nativeEffect, c.nativeEffectParam)
+                  : _modEffectFor(c);
           cells.add(
             ModCell(
               sample: c.instrument.clamp(0, 31),
@@ -700,7 +786,12 @@ ModModule docToMod(ModuleDoc doc) {
     title: doc.title,
     restart: 0,
     samples: samples,
-    order: List<int>.from(doc.order),
+    // IT/XM order lists may carry 0xFF as an explicit end marker. MOD has no
+    // end-marker value; copying it would make a reader allocate pattern 255.
+    order: doc.order
+        .where((pattern) => pattern >= 0 && pattern < doc.patterns.length)
+        .take(128)
+        .toList(),
     patterns: patterns,
   );
 }
@@ -717,6 +808,22 @@ Uint8List convertToMod(ModuleDoc doc) => writeMod(docToMod(doc));
 /// v1 writes 8-bit samples (the neutral model doesn't carry bit depth); notes,
 /// instruments, the volume column, samples, loops and structure convert.
 XmModule docToXm(ModuleDoc doc) {
+  if (doc.sourceFormat == ModuleFormat.xm && doc.xmInstruments.isNotEmpty) {
+    return XmModule(
+      name: doc.title,
+      trackerName: doc.xmTrackerName,
+      version: doc.xmVersion,
+      restart: doc.xmRestart,
+      rawHeader: List<int>.from(doc.xmRawHeader),
+      channelCount: doc.channelCount,
+      defaultTempo: doc.initialSpeed,
+      defaultBpm: doc.initialTempo,
+      linearFrequency: doc.linearFrequency,
+      order: List<int>.from(doc.order),
+      patterns: List<XmPattern>.from(doc.xmPatterns),
+      instruments: List<XmInstrument>.from(doc.xmInstruments),
+    );
+  }
   final instruments = <XmInstrument>[];
   for (final ds in doc.samples) {
     if (ds.isEmpty) {
@@ -747,6 +854,27 @@ XmModule docToXm(ModuleDoc doc) {
     );
   }
 
+  final patterns = _docPatternsToXm(doc);
+  return XmModule(
+    name: doc.title,
+    trackerName: doc.xmTrackerName,
+    version: doc.xmVersion,
+    restart: doc.xmRestart,
+    rawHeader: List<int>.from(doc.xmRawHeader),
+    channelCount: doc.channelCount,
+    defaultTempo: doc.initialSpeed,
+    defaultBpm: doc.initialTempo,
+    linearFrequency: doc.linearFrequency,
+    order: List<int>.from(doc.order),
+    patterns: patterns,
+    instruments: instruments,
+  );
+}
+
+List<XmPattern> _docPatternsToXm(
+  ModuleDoc doc, {
+  bool preserveNativeInstruments = false,
+}) {
   final patterns = <XmPattern>[];
   for (final dp in doc.patterns) {
     final rows = <List<XmCell>>[];
@@ -757,16 +885,23 @@ XmModule docToXm(ModuleDoc doc) {
           final c = srcRow[ch];
           cells.add(
             XmCell(
-              note: c.noteOff
-                  ? XmCell.noteOff
-                  : (c.note < 0 ? 0 : (c.note - 11).clamp(1, 96)),
-              instrument: c.instrument.clamp(0, 255),
+              note: preserveNativeInstruments && c.nativeNote >= 0
+                  ? c.nativeNote
+                  : (c.noteOff
+                      ? XmCell.noteOff
+                      : (c.note < 0 ? 0 : (c.note - 11).clamp(1, 96))),
+              instrument: (preserveNativeInstruments && c.nativeInstrumentSet
+                      ? c.nativeInstrument
+                      : c.instrument)
+                  .clamp(0, 255),
               volume: c.volume < 0 ? 0 : (0x10 + c.volume).clamp(0x10, 0x50),
-              // XM's main effect column shares MOD's 0x0–0xF numbering, so the
-              // doc effect carries 1:1 (matching docFromXm's cap). Extended
-              // (>0xF) internal effects are dropped, as the reader drops them.
-              effect: c.effect <= 0xF ? c.effect : 0,
-              effectParam: c.effect <= 0xF ? c.effectParam & 0xFF : 0,
+              effect: doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
+                  ? c.nativeEffect & 0xFF
+                  : c.effect & 0xFF,
+              effectParam:
+                  doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
+                      ? c.nativeEffectParam & 0xFF
+                      : c.effectParam & 0xFF,
             ),
           );
         } else {
@@ -777,16 +912,7 @@ XmModule docToXm(ModuleDoc doc) {
     }
     patterns.add(XmPattern(rows));
   }
-
-  return XmModule(
-    name: doc.title,
-    channelCount: doc.channelCount,
-    defaultTempo: doc.initialSpeed,
-    defaultBpm: doc.initialTempo,
-    order: List<int>.from(doc.order),
-    patterns: patterns,
-    instruments: instruments,
-  );
+  return patterns;
 }
 
 /// Convenience: convert a neutral module straight to `.xm` bytes.
@@ -810,12 +936,13 @@ int _midiToS3mNote(int midi) {
 /// A doc cell → an [S3mCell]: note/instrument, the volume column (a MOD `Cxx`
 /// set-volume effect routes here, since S3M keeps volume in the column), and the
 /// translated effect command/info.
-S3mCell _s3mCellFrom(DocCell c) {
+S3mCell _s3mCellFrom(DocCell c, {required bool preserveNative}) {
   final vol = c.volume >= 0
       ? c.volume.clamp(0, 64)
       : (c.effect == 0xC ? c.effectParam.clamp(0, 64) : S3mCell.noVolume);
-  final (command, info) =
-      _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: false);
+  final (command, info) = preserveNative && c.nativeEffect >= 0
+      ? (c.nativeEffect, c.nativeEffectParam)
+      : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: false);
   return S3mCell(
     note: c.noteOff ? S3mCell.noteOff : _midiToS3mNote(c.note),
     instrument: c.instrument.clamp(0, 255),
@@ -827,7 +954,13 @@ S3mCell _s3mCellFrom(DocCell c) {
 
 S3mModule docToS3m(ModuleDoc doc) {
   final samples = <S3mSample>[];
+  if (doc.sourceFormat == ModuleFormat.s3m && doc.s3mSamples.isNotEmpty) {
+    samples.addAll(doc.s3mSamples);
+  }
   for (final ds in doc.samples) {
+    if (doc.sourceFormat == ModuleFormat.s3m && doc.s3mSamples.isNotEmpty) {
+      break;
+    }
     if (ds.isEmpty) {
       samples.add(S3mSample.empty());
       continue;
@@ -848,7 +981,13 @@ S3mModule docToS3m(ModuleDoc doc) {
   }
 
   final patterns = <S3mPattern>[];
+  if (doc.sourceFormat == ModuleFormat.s3m && doc.s3mPatterns.isNotEmpty) {
+    patterns.addAll(doc.s3mPatterns);
+  }
   for (final dp in doc.patterns) {
+    if (doc.sourceFormat == ModuleFormat.s3m && doc.s3mPatterns.isNotEmpty) {
+      break;
+    }
     final rows = <List<S3mCell>>[];
     for (final srcRow in dp.rows) {
       final cells = <S3mCell>[];
@@ -856,7 +995,10 @@ S3mModule docToS3m(ModuleDoc doc) {
         if (ch < srcRow.length) {
           final c = srcRow[ch];
           cells.add(
-            _s3mCellFrom(c),
+            _s3mCellFrom(
+              c,
+              preserveNative: doc.sourceFormat == ModuleFormat.s3m,
+            ),
           );
         } else {
           cells.add(S3mCell.empty);
@@ -887,6 +1029,16 @@ S3mModule docToS3m(ModuleDoc doc) {
     channelCount: doc.channelCount,
     initialSpeed: doc.initialSpeed,
     initialTempo: doc.initialTempo,
+    globalVolume: (doc.globalVolume / 2).round().clamp(0, 64),
+    masterVolume: doc.s3mMasterVolume,
+    ultraClick: doc.s3mUltraClick,
+    defaultPan: doc.s3mDefaultPan,
+    channelSettings: List<int>.from(doc.s3mChannelSettings),
+    sampleFormat: doc.s3mSampleFormat,
+    flags: doc.s3mFlags,
+    createdWith: doc.s3mCreatedWith,
+    defaultPans: List<int>.from(doc.s3mDefaultPans),
+    rawOrder: List<int>.from(doc.s3mRawOrder),
     order: List<int>.from(doc.order),
     samples: samples,
     patterns: patterns,
@@ -904,25 +1056,129 @@ Uint8List convertToS3m(ModuleDoc doc) => writeS3m(docToS3m(doc));
 /// A doc cell → an [ItCell]: note/instrument, the volume-column (a MOD `Cxx` set-
 /// volume routes here), and the translated effect command/value (IT X pan is
 /// direct 0x00–0xFF).
-ItCell _itCellFrom(DocCell c) {
+ItCell _itCellFrom(DocCell c, {required bool preserveNative}) {
   final vol = c.volume >= 0
       ? c.volume.clamp(0, 64)
       : (c.effect == 0xC ? c.effectParam.clamp(0, 64) : -1);
-  final (command, value) =
-      _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: true);
+  final (command, value) = preserveNative && c.nativeEffect >= 0
+      ? (c.nativeEffect, c.nativeEffectParam)
+      : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: true);
   return ItCell(
     // IT note 255 = note-off (writeIt emits it since it != -1).
-    note: c.noteOff ? 255 : (c.note < 0 ? -1 : c.note.clamp(0, 119)),
-    instrument: c.instrument.clamp(0, 255),
-    volpan: vol,
+    note: preserveNative && c.nativeNote >= 0
+        ? c.nativeNote
+        : (c.noteOff ? 255 : (c.note < 0 ? -1 : c.note.clamp(0, 119))),
+    instrument: preserveNative && c.nativeInstrumentSet
+        ? c.nativeInstrument
+        : c.instrument.clamp(0, 255),
+    volpan: preserveNative && c.nativeVolpan >= 0 ? c.nativeVolpan : vol,
     command: command,
     commandValue: value,
   );
 }
 
+void _writeItEnvelope(
+  List<int> raw,
+  int offset,
+  DocEnvelope envelope, {
+  required bool signedValue,
+}) {
+  var flags = envelope.enabled ? 1 : 0;
+  if (envelope.loopStart != null && envelope.loopEnd != null) flags |= 2;
+  if (envelope.sustain != null) flags |= 4;
+  raw[offset] = flags;
+  raw[offset + 1] = envelope.points.length.clamp(0, 25);
+  raw[offset + 2] = (envelope.loopStart ?? 0).clamp(0, 24);
+  raw[offset + 3] = (envelope.loopEnd ?? 0).clamp(0, 24);
+  raw[offset + 4] = (envelope.sustain ?? 0).clamp(0, 24);
+  raw[offset + 5] = (envelope.sustain ?? 0).clamp(0, 24);
+  for (var i = 0; i < envelope.points.length && i < 25; i++) {
+    final p = offset + 6 + i * 3;
+    final (tick, pointValue) = envelope.points[i];
+    final value =
+        signedValue ? pointValue.clamp(-32, 32) : pointValue.clamp(0, 64);
+    raw[p] = value & 0xFF;
+    raw[p + 1] = tick.clamp(0, 9999) & 0xFF;
+    raw[p + 2] = (tick.clamp(0, 9999) >> 8) & 0xFF;
+  }
+}
+
+ItInstrument _itInstrumentFromDoc(DocInstrument d, List<int> rawHeader) {
+  final raw = rawHeader.length >= 554
+      ? List<int>.from(rawHeader.take(554))
+      : List<int>.filled(554, 0);
+  if (rawHeader.length < 554) {
+    raw.setAll(0, const [0x49, 0x4D, 0x50, 0x49]);
+    void u16(int offset, int value) {
+      raw[offset] = value & 0xFF;
+      raw[offset + 1] = (value >> 8) & 0xFF;
+    }
+
+    raw[0x11] = d.nna.clamp(0, 255);
+    raw[0x12] = d.dct.clamp(0, 255);
+    raw[0x13] = d.dca.clamp(0, 255);
+    u16(0x14, d.fadeout.clamp(0, 65535));
+    raw[0x16] = d.pps & 0xFF;
+    raw[0x17] = d.ppc & 0xFF;
+    raw[0x18] = d.globalVolume.clamp(0, 255);
+    raw[0x19] = d.defaultPan.clamp(0, 255);
+    raw[0x1A] = d.randomVolume.clamp(0, 255);
+    raw[0x1B] = d.randomPan.clamp(0, 255);
+    final name = d.name.codeUnits;
+    for (var i = 0; i < 26 && i < name.length; i++) {
+      raw[0x1C + i] = name[i] & 0xFF;
+    }
+  }
+  final keymap = d.keymap.isEmpty ? List<int>.filled(120, 0) : d.keymap;
+  final noteMap =
+      d.noteMap.isEmpty ? [for (var i = 0; i < 120; i++) i] : d.noteMap;
+  if (rawHeader.length < 554) {
+    raw[0x11] = d.nna.clamp(0, 255);
+    raw[0x12] = d.dct.clamp(0, 255);
+    raw[0x13] = d.dca.clamp(0, 255);
+    raw[0x14] = d.fadeout.clamp(0, 65535) & 0xFF;
+    raw[0x15] = (d.fadeout.clamp(0, 65535) >> 8) & 0xFF;
+    raw[0x16] = d.pps & 0xFF;
+    raw[0x17] = d.ppc & 0xFF;
+    raw[0x18] = d.globalVolume.clamp(0, 255);
+    raw[0x19] = d.defaultPan.clamp(0, 255);
+    raw[0x1A] = d.randomVolume.clamp(0, 255);
+    raw[0x1B] = d.randomPan.clamp(0, 255);
+    _writeItEnvelope(raw, 0x130, d.volumeEnvelope, signedValue: false);
+    _writeItEnvelope(raw, 0x182, d.panEnvelope, signedValue: true);
+    _writeItEnvelope(raw, 0x1D4, d.pitchEnvelope, signedValue: true);
+    for (var i = 0; i < 120; i++) {
+      raw[0x40 + i * 2] = noteMap[i.clamp(0, noteMap.length - 1)] & 0xFF;
+      raw[0x41 + i * 2] = keymap[i.clamp(0, keymap.length - 1)] & 0xFF;
+    }
+  }
+  return ItInstrument(
+    keymap: List<int>.from(keymap),
+    noteMap: List<int>.from(noteMap),
+    name: d.name,
+    nna: d.nna,
+    dct: d.dct,
+    dca: d.dca,
+    fadeout: d.fadeout,
+    pps: d.pps,
+    ppc: d.ppc,
+    globalVolume: d.globalVolume,
+    defaultPan: d.defaultPan,
+    randomVolume: d.randomVolume,
+    randomPan: d.randomPan,
+    rawHeader: raw,
+  );
+}
+
 ItModule docToIt(ModuleDoc doc) {
   final samples = <ItSample>[];
-  for (final ds in doc.samples) {
+  if (doc.sourceFormat == ModuleFormat.it && doc.itSamples.isNotEmpty) {
+    samples.addAll(doc.itSamples);
+  }
+  for (final ds
+      in doc.itSamples.isNotEmpty && doc.sourceFormat == ModuleFormat.it
+          ? const <DocSample>[]
+          : doc.samples) {
     if (ds.isEmpty) {
       samples.add(ItSample.empty());
       continue;
@@ -930,15 +1186,19 @@ ItModule docToIt(ModuleDoc doc) {
     samples.add(
       ItSample(
         name: ds.name,
+        globalVolume: ds.globalVolume.clamp(0, 64),
         defaultVolume: ds.volume.clamp(0, 64),
         length: ds.pcm.length,
         loopStart: ds.loopStart,
         loopEnd: ds.loopStart + ds.loopLength,
+        loop: ds.loopLength > 0,
         c5speed: ds.c5speed,
         pan: ds.pan,
         pingPong: ds.pingPong,
         sixteenBit: ds.sixteenBit,
         pcm: Float64List.fromList(ds.pcm),
+        pcmRight:
+            ds.pcmRight == null ? null : Float64List.fromList(ds.pcmRight!),
       ),
     );
   }
@@ -952,7 +1212,10 @@ ItModule docToIt(ModuleDoc doc) {
         if (ch < srcRow.length) {
           final c = srcRow[ch];
           cells.add(
-            _itCellFrom(c),
+            _itCellFrom(
+              c,
+              preserveNative: doc.sourceFormat == ModuleFormat.it,
+            ),
           );
         } else {
           cells.add(ItCell.empty);
@@ -968,6 +1231,37 @@ ItModule docToIt(ModuleDoc doc) {
     channelCount: doc.channelCount,
     initialSpeed: doc.initialSpeed,
     initialTempo: doc.initialTempo,
+    globalVolume: doc.globalVolume.clamp(0, 128),
+    createdWith: doc.itCreatedWith,
+    compatibleWith: doc.itCompatibleWith,
+    special: doc.itSpecial,
+    rowHighlight: doc.itRowHighlight,
+    flags: doc.itFlags,
+    mixVolume: doc.itMixVolume,
+    panSeparation: doc.itPanSeparation,
+    pitchWheelDepth: doc.itPitchWheelDepth,
+    channelPans: doc.sourceFormat == ModuleFormat.it
+        ? List<int>.from(doc.channelPans)
+        : const [],
+    channelVolumes: doc.sourceFormat == ModuleFormat.it
+        ? List<int>.from(doc.channelVolumes)
+        : const [],
+    instruments: [
+      for (var i = 0; i < doc.itInstruments.length; i++)
+        _itInstrumentFromDoc(
+          doc.itInstruments[i],
+          i < doc.itInstrumentHeaders.length
+              ? doc.itInstrumentHeaders[i]
+              : const [],
+        ),
+      if (doc.itInstruments.isEmpty)
+        for (final header in doc.itInstrumentHeaders)
+          ItInstrument(
+            keymap: const [],
+            noteMap: const [],
+            rawHeader: List<int>.from(header),
+          ),
+    ],
     order: List<int>.from(doc.order),
     patterns: patterns,
     samples: samples,

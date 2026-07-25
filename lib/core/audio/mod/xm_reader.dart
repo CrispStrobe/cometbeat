@@ -92,6 +92,8 @@ XmModule parseXm(Uint8List bytes) {
 
   // 2. Header.
   final name = _readName(bytes, 0x11, 0x25);
+  final trackerName = _readName(bytes, 0x26, 0x3A);
+  final version = bd.getUint16(0x3A, Endian.little);
   final headerSize = bd.getUint32(0x3C, Endian.little);
   final songLength = bd.getUint16(0x40, Endian.little);
   final restart = bd.getUint16(0x42, Endian.little);
@@ -109,6 +111,7 @@ XmModule parseXm(Uint8List bytes) {
   final numInstruments = rawInstruments > 256 ? 256 : rawInstruments;
   final defaultTempo = bd.getUint16(0x4C, Endian.little);
   final defaultBpm = bd.getUint16(0x4E, Endian.little);
+  final linearFrequency = (bd.getUint16(0x4A, Endian.little) & 1) != 0;
 
   final order = <int>[];
   for (var i = 0; i < songLength; i++) {
@@ -142,7 +145,16 @@ XmModule parseXm(Uint8List bytes) {
       numChannels,
       packedSize,
     );
-    patterns.add(XmPattern(rows));
+    patterns.add(
+      XmPattern(
+        rows,
+        rawHeader: List<int>.from(bytes.sublist(fieldStart, dataStart)),
+        rawData: dataStart < len
+            ? Uint8List.fromList(
+                bytes.sublist(dataStart, dataEnd.clamp(0, len)))
+            : null,
+      ),
+    );
 
     cursor = dataEnd;
   }
@@ -160,7 +172,18 @@ XmModule parseXm(Uint8List bytes) {
     final numSamples = bd.getUint16(instrumentStart + 27, Endian.little);
 
     if (numSamples == 0) {
-      instruments.add(XmInstrument(name: insName, samples: const []));
+      instruments.add(
+        XmInstrument(
+          name: insName,
+          samples: const [],
+          rawHeader: instrumentStart + instrumentHeaderSize <= len
+              ? List<int>.from(bytes.sublist(
+                  instrumentStart,
+                  instrumentStart + instrumentHeaderSize,
+                ))
+              : const [],
+        ),
+      );
       instrumentStart += instrumentHeaderSize;
       continue;
     }
@@ -170,6 +193,8 @@ XmModule parseXm(Uint8List bytes) {
     // headers omit it — guard on the declared header size + bounds.
     var volEnv = const XmEnvelope();
     var panEnv = const XmEnvelope();
+    var vibratoType = 0, vibratoSweep = 0, vibratoDepth = 0, vibratoRate = 0;
+    var fadeout = 0;
     final keymap = <int>[
       for (var i = 0; i < 96; i++)
         instrumentStart + 33 + i < len ? bytes[instrumentStart + 33 + i] : 0,
@@ -193,6 +218,11 @@ XmModule parseXm(Uint8List bytes) {
         loopEndAt: instrumentStart + 232,
         typeAt: instrumentStart + 234,
       );
+      vibratoType = bytes[instrumentStart + 235];
+      vibratoSweep = bytes[instrumentStart + 236];
+      vibratoDepth = bytes[instrumentStart + 237];
+      vibratoRate = bytes[instrumentStart + 238];
+      fadeout = bd.getUint16(instrumentStart + 239, Endian.little);
     }
 
     // Sample headers begin at instrumentStart + instrumentHeaderSize.
@@ -222,6 +252,8 @@ XmModule parseXm(Uint8List bytes) {
           sixteenBit: (type & 0x10) != 0,
           pingPong: (type & 0x03) == 2, // loop type: 0 none, 1 fwd, 2 pingpong
           name: sName,
+          rawHeader:
+              List<int>.from(bytes.sublist(headerCursor, headerCursor + 40)),
         ),
       );
       headerCursor += 40;
@@ -244,6 +276,13 @@ XmModule parseXm(Uint8List bytes) {
           sixteenBit: meta.sixteenBit,
           pingPong: meta.pingPong,
           pcm: pcm,
+          rawHeader: meta.rawHeader,
+          rawData: dataCursor < len
+              ? Uint8List.fromList(
+                  bytes.sublist(dataCursor,
+                      (dataCursor + meta.lengthInBytes).clamp(0, len)),
+                )
+              : null,
         ),
       );
       dataCursor += meta.lengthInBytes;
@@ -256,6 +295,17 @@ XmModule parseXm(Uint8List bytes) {
         keymap: keymap,
         volumeEnvelope: volEnv,
         panEnvelope: panEnv,
+        vibratoType: vibratoType,
+        vibratoSweep: vibratoSweep,
+        vibratoDepth: vibratoDepth,
+        vibratoRate: vibratoRate,
+        fadeout: fadeout,
+        rawHeader: instrumentHeaderSize <= len - instrumentStart
+            ? List<int>.from(bytes.sublist(
+                instrumentStart,
+                instrumentStart + instrumentHeaderSize,
+              ))
+            : const [],
       ),
     );
     instrumentStart = dataCursor;
@@ -263,13 +313,17 @@ XmModule parseXm(Uint8List bytes) {
 
   return XmModule(
     name: name,
+    trackerName: trackerName,
+    version: version,
     channelCount: numChannels,
     defaultTempo: defaultTempo,
     defaultBpm: defaultBpm,
+    linearFrequency: linearFrequency,
     restart: restart,
     order: order,
     patterns: patterns,
     instruments: instruments,
+    rawHeader: List<int>.from(bytes.take(_kFixedHeaderSize)),
   );
 }
 
@@ -297,8 +351,10 @@ List<List<XmCell>> _unpackPattern(
       }
       final b = bytes[cursor++];
       int note = 0, instrument = 0, volume = 0, effect = 0, param = 0;
+      var presentMask = 0;
       if ((b & 0x80) != 0) {
         final mask = b;
+        presentMask = mask & 0x1F;
         if ((mask & 0x01) != 0 && cursor < end) note = bytes[cursor++];
         if ((mask & 0x02) != 0 && cursor < end) instrument = bytes[cursor++];
         if ((mask & 0x04) != 0 && cursor < end) volume = bytes[cursor++];
@@ -306,6 +362,7 @@ List<List<XmCell>> _unpackPattern(
         if ((mask & 0x10) != 0 && cursor < end) param = bytes[cursor++];
       } else {
         note = b;
+        presentMask = 0x1F;
         if (cursor < end) instrument = bytes[cursor++];
         if (cursor < end) volume = bytes[cursor++];
         if (cursor < end) effect = bytes[cursor++];
@@ -318,6 +375,7 @@ List<List<XmCell>> _unpackPattern(
           volume: volume,
           effect: effect,
           effectParam: param,
+          presentMask: presentMask,
         ),
       );
     }
@@ -376,6 +434,7 @@ class _SampleMeta {
     required this.sixteenBit,
     required this.pingPong,
     required this.name,
+    required this.rawHeader,
   });
 
   final int lengthInBytes;
@@ -384,4 +443,5 @@ class _SampleMeta {
   final bool sixteenBit;
   final bool pingPong;
   final String name;
+  final List<int> rawHeader;
 }

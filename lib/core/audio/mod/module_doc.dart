@@ -21,6 +21,10 @@
 
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
+import 'package:comet_beat/core/audio/mod/it_module.dart';
+import 'package:comet_beat/core/audio/mod/s3m_module.dart';
+
 /// The source container format a [ModuleDoc] was read from.
 enum ModuleFormat { mod, s3m, xm, it }
 
@@ -50,6 +54,7 @@ class DocEnvelope {
 class DocSample {
   const DocSample({
     this.name = '',
+    this.globalVolume = 64,
     this.volume = 64,
     this.loopStart = 0,
     this.loopLength = 0,
@@ -60,11 +65,15 @@ class DocSample {
     this.volumeEnvelope = const DocEnvelope(),
     this.panEnvelope = const DocEnvelope(),
     required this.pcm,
+    this.pcmRight,
   });
 
   factory DocSample.empty() => DocSample(pcm: Float64List(0));
 
   final String name;
+
+  /// Native per-sample gain where supported (IT 0..64).
+  final int globalVolume;
   final int volume; // 0..64 default volume
   final int loopStart; // in samples
   final int loopLength; // in samples (0 = no loop)
@@ -86,8 +95,43 @@ class DocSample {
   final DocEnvelope volumeEnvelope, panEnvelope;
 
   final Float64List pcm;
+  final Float64List? pcmRight;
 
   bool get isEmpty => pcm.isEmpty;
+}
+
+/// A tracker instrument independent of its sample storage. IT's NNA/DCT/DCA,
+/// fadeout, tuning, gain, randomization, and keymap live here rather than on
+/// a flattened sample. Envelopes use the shared [DocEnvelope] representation.
+class DocInstrument {
+  const DocInstrument({
+    this.name = '',
+    this.nna = 0,
+    this.dct = 0,
+    this.dca = 0,
+    this.fadeout = 0,
+    this.pps = 0,
+    this.ppc = 0,
+    this.globalVolume = 128,
+    this.defaultPan = 32,
+    this.randomVolume = 0,
+    this.randomPan = 0,
+    this.keymap = const [],
+    this.noteMap = const [],
+    this.volumeEnvelope = const DocEnvelope(),
+    this.panEnvelope = const DocEnvelope(),
+    this.pitchEnvelope = const DocEnvelope(),
+    this.rawHeader = const [],
+  });
+
+  final String name;
+  final int nna, dct, dca, fadeout, pps, ppc;
+  final int globalVolume, defaultPan, randomVolume, randomPan;
+  final List<int> keymap, noteMap;
+  final DocEnvelope volumeEnvelope, panEnvelope, pitchEnvelope;
+
+  /// Compatibility bytes for fields not yet interpreted by the neutral model.
+  final List<int> rawHeader;
 }
 
 /// One cell in the neutral model. Absent fields use sentinels.
@@ -99,6 +143,12 @@ class DocCell {
     this.noteOff = false,
     this.effect = 0,
     this.effectParam = 0,
+    this.nativeEffect = -1,
+    this.nativeEffectParam = 0,
+    this.nativeInstrument = 0,
+    this.nativeInstrumentSet = false,
+    this.nativeNote = -1,
+    this.nativeVolpan = -1,
   });
 
   /// A key-off cell: stops the ringing note (the formats' note-off / note-cut).
@@ -111,7 +161,13 @@ class DocCell {
         volume = -1,
         noteOff = true,
         effect = 0,
-        effectParam = 0;
+        effectParam = 0,
+        nativeEffect = -1,
+        nativeEffectParam = 0,
+        nativeInstrument = 0,
+        nativeInstrumentSet = false,
+        nativeNote = -1,
+        nativeVolpan = -1;
 
   static const empty = DocCell();
 
@@ -128,13 +184,27 @@ class DocCell {
   final int effect; // 0 = none (0/0), else the format's effect command
   final int effectParam; // 0..255
 
+  /// Original command encoding for lossless same-format writes. [effect] is
+  /// the mapped neutral command; this retains commands without a common
+  /// equivalent, such as IT Q/V/W/Y commands.
+  final int nativeEffect; // -1 when unavailable
+  final int nativeEffectParam;
+  final int nativeInstrument; // original IT instrument number, or 0
+  final bool nativeInstrumentSet;
+  final int nativeNote; // original IT note byte, or -1
+  final int nativeVolpan; // original IT volume/pan byte, or -1
+
   bool get isEmpty =>
       note == -1 &&
       instrument == 0 &&
       volume == -1 &&
       !noteOff &&
       effect == 0 &&
-      effectParam == 0;
+      effectParam == 0 &&
+      nativeEffect == -1 &&
+      nativeInstrument == 0 &&
+      nativeNote == -1 &&
+      nativeVolpan == -1;
 
   @override
   bool operator ==(Object other) =>
@@ -144,11 +214,29 @@ class DocCell {
       other.volume == volume &&
       other.noteOff == noteOff &&
       other.effect == effect &&
-      other.effectParam == effectParam;
+      other.effectParam == effectParam &&
+      other.nativeEffect == nativeEffect &&
+      other.nativeEffectParam == nativeEffectParam &&
+      other.nativeInstrument == nativeInstrument &&
+      other.nativeInstrumentSet == nativeInstrumentSet &&
+      other.nativeNote == nativeNote &&
+      other.nativeVolpan == nativeVolpan;
 
   @override
-  int get hashCode =>
-      Object.hash(note, instrument, volume, noteOff, effect, effectParam);
+  int get hashCode => Object.hash(
+        note,
+        instrument,
+        volume,
+        noteOff,
+        effect,
+        effectParam,
+        nativeEffect,
+        nativeEffectParam,
+        nativeInstrument,
+        nativeInstrumentSet,
+        nativeNote,
+        nativeVolpan,
+      );
 }
 
 /// A pattern: [numRows] rows × [channelCount] cells.
@@ -163,9 +251,41 @@ class DocPattern {
 class ModuleDoc {
   const ModuleDoc({
     this.title = '',
+    this.xmTrackerName = '',
+    this.xmVersion = 0x0104,
+    this.xmRestart = 0,
+    this.xmRawHeader = const [],
     this.channelCount = 0,
     this.initialSpeed = 6,
     this.initialTempo = 125,
+    this.globalVolume = 128,
+    this.itCreatedWith = 0x0214,
+    this.itCompatibleWith = 0x0200,
+    this.itSpecial = 0,
+    this.itRowHighlight = 0,
+    this.s3mMasterVolume = 48,
+    this.s3mUltraClick = 0,
+    this.s3mDefaultPan = 0,
+    this.s3mChannelSettings = const [],
+    this.s3mSampleFormat = 1,
+    this.s3mFlags = 0,
+    this.s3mCreatedWith = 0x1320,
+    this.s3mDefaultPans = const [],
+    this.s3mRawOrder = const [],
+    this.s3mPatterns = const [],
+    this.s3mSamples = const [],
+    this.itFlags = 9,
+    this.itMixVolume = 48,
+    this.itPanSeparation = 128,
+    this.itPitchWheelDepth = 0,
+    this.linearFrequency = false,
+    this.channelPans = const [],
+    this.channelVolumes = const [],
+    this.itInstrumentHeaders = const [],
+    this.itInstruments = const [],
+    this.itSamples = const [],
+    this.xmInstruments = const [],
+    this.xmPatterns = const [],
     required this.sourceFormat,
     required this.order,
     required this.patterns,
@@ -173,8 +293,43 @@ class ModuleDoc {
   });
 
   final String title;
+  final String xmTrackerName;
+  final int xmVersion;
+  final int xmRestart;
+  final List<int> xmRawHeader;
   final int channelCount;
   final int initialSpeed, initialTempo;
+
+  /// Container global volume normalized to the IT 0..128 scale.
+  final int globalVolume;
+  final int itCreatedWith;
+  final int itCompatibleWith, itSpecial, itRowHighlight;
+  final int s3mMasterVolume, s3mUltraClick, s3mDefaultPan;
+  final List<int> s3mChannelSettings;
+  final int s3mSampleFormat;
+  final int s3mFlags, s3mCreatedWith;
+  final List<int> s3mDefaultPans;
+  final List<int> s3mRawOrder;
+  final List<S3mPattern> s3mPatterns;
+  final List<S3mSample> s3mSamples;
+
+  /// Original IT header flags, including instrument mode and slide mode.
+  final int itFlags;
+  final int itMixVolume, itPanSeparation, itPitchWheelDepth;
+  final bool linearFrequency;
+
+  /// Optional native channel state. IT uses pan 0..64 and volume 0..64.
+  final List<int> channelPans, channelVolumes;
+
+  /// Original IT instrument headers for lossless IT -> IT conversion.
+  final List<List<int>> itInstrumentHeaders;
+  final List<DocInstrument> itInstruments;
+  final List<ItSample> itSamples;
+
+  /// Native XM instruments retained for lossless XM -> XM conversion. The
+  /// neutral sample list remains available for cross-format conversion.
+  final List<XmInstrument> xmInstruments;
+  final List<XmPattern> xmPatterns;
   final ModuleFormat sourceFormat;
   final List<int> order; // pattern indices
   final List<DocPattern> patterns;

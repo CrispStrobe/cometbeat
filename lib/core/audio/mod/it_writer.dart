@@ -92,29 +92,29 @@ Uint8List writeIt(ItModule module) {
   // ── HEADER (0xC0 bytes) ──
   writeString('IMPM', 4); // 0x00
   writeString(module.name, 26); // 0x04
-  u16(0); // 0x1E
+  u16(module.rowHighlight); // 0x1E
   u16(ordNum); // 0x20 OrdNum
-  u16(0); // 0x22 InsNum
+  u16(module.instruments.length); // 0x22 InsNum
   u16(smpNum); // 0x24 SmpNum
   u16(patNum); // 0x26 PatNum
-  u16(0x0214); // 0x28 Cwt/v
-  u16(0x0200); // 0x2A Cmwt
-  u16(0x0009); // 0x2C Flags (bit2 clear)
-  u16(0); // 0x2E Special
+  u16(module.createdWith); // 0x28 Cwt/v
+  u16(module.compatibleWith); // 0x2A Cmwt
+  u16(module.flags | (module.instruments.isNotEmpty ? 0x0004 : 0)); // flags
+  u16(module.special); // 0x2E Special
   u8(module.globalVolume); // 0x30 global volume
-  u8(48); // 0x31 mix volume
+  u8(module.mixVolume); // 0x31 mix volume
   u8(module.initialSpeed); // 0x32 initial speed
   u8(module.initialTempo); // 0x33 initial tempo
-  u8(128); // 0x34 pan separation
-  u8(0); // 0x35 pitch-wheel depth
+  u8(module.panSeparation); // 0x34 pan separation
+  u8(module.pitchWheelDepth); // 0x35 pitch-wheel depth
   u16(0); // 0x36 message length
   u32(0); // 0x38 message offset
   u32(0); // 0x3C reserved
   for (var i = 0; i < 64; i++) {
-    u8(32); // 0x40 channel pan
+    u8(i < module.channelPans.length ? module.channelPans[i] : 32);
   }
   for (var i = 0; i < 64; i++) {
-    u8(64); // 0x80 channel volume
+    u8(i < module.channelVolumes.length ? module.channelVolumes[i] : 64);
   }
 
   // 0xC0 order list
@@ -122,6 +122,11 @@ Uint8List writeIt(ItModule module) {
     u8(order[i]);
   }
 
+  // instrument-header offset table (zeros; patched later)
+  final insTableOffset = out.length;
+  for (var i = 0; i < module.instruments.length; i++) {
+    u32(0);
+  }
   // sample-header offset table (zeros; patched later)
   final smpTableOffset = out.length;
   for (var i = 0; i < smpNum; i++) {
@@ -133,17 +138,35 @@ Uint8List writeIt(ItModule module) {
     u32(0);
   }
 
+  // ── INSTRUMENT HEADERS ──
+  final instrumentHeaderOffsets = <int>[];
+  for (final instrument in module.instruments) {
+    instrumentHeaderOffsets.add(out.length);
+    if (instrument.rawHeader.length >= 554) {
+      out.addAll(instrument.rawHeader.take(554));
+    } else {
+      final header = List<int>.filled(554, 0);
+      header[0] = 0x49; // IMP I
+      header[1] = 0x4D;
+      header[2] = 0x50;
+      header[3] = 0x49;
+      out.addAll(header);
+    }
+  }
+
   // ── SAMPLE HEADERS ──
   final sampleHeaderOffsets = <int>[];
   for (var i = 0; i < smpNum; i++) {
     final s = samples[i];
     sampleHeaderOffsets.add(out.length);
     final empty = s.pcm.isEmpty;
-    final loop = s.loopEnd > s.loopStart;
+    final loop = s.loop;
     final flg = empty
         ? 0
         : (0x01 |
             (s.sixteenBit ? 0x02 : 0) |
+            (s.pcmRight != null ? 0x04 : 0) |
+            (s.rawData != null ? 0x08 : 0) |
             (loop ? 0x10 : 0) |
             (loop && s.pingPong ? 0x40 : 0)); // 0x40 = bidirectional loop
     final length = empty ? 0 : s.pcm.length;
@@ -151,11 +174,11 @@ Uint8List writeIt(ItModule module) {
     writeString('IMPS', 4); // 0x00
     writeString('', 12); // 0x04 filename
     u8(0); // 0x10
-    u8(64); // 0x11 global volume
+    u8(s.globalVolume.clamp(0, 64)); // 0x11 global volume
     u8(flg); // 0x12 Flg
     u8(s.defaultVolume); // 0x13 default volume
     writeString(s.name, 26); // 0x14 name
-    u8(0x01); // 0x2E Cvt (signed)
+    u8(s.cvt); // 0x2E Cvt
     // 0x2F default pan: centre (128) → no explicit default pan; else set bit 7
     // + the 0..64 pan (doc 0..255 → IT 0..64).
     u8(s.pan == 128 ? 32 : (0x80 | (s.pan * 64 ~/ 255).clamp(0, 64)));
@@ -168,13 +191,16 @@ Uint8List writeIt(ItModule module) {
     u32(0); // 0x48 sample pointer (patched)
     u32(0); // 0x4C vibrato
   }
-
   // ── SAMPLE DATA ──
   final sampleDataOffsets = List<int>.filled(smpNum, 0);
   for (var i = 0; i < smpNum; i++) {
     final s = samples[i];
     if (s.pcm.isEmpty) continue;
     sampleDataOffsets[i] = out.length;
+    if (s.rawData != null) {
+      out.addAll(s.rawData!);
+      continue;
+    }
     if (s.sixteenBit) {
       for (final v in s.pcm) {
         final q = (v * 32768).round().clamp(-32768, 32767);
@@ -184,6 +210,19 @@ Uint8List writeIt(ItModule module) {
       for (final v in s.pcm) {
         final q = (v * 128).round().clamp(-128, 127);
         u8(q & 0xFF);
+      }
+    }
+    if (s.pcmRight != null) {
+      if (s.sixteenBit) {
+        for (final v in s.pcmRight!) {
+          final q = (v * 32768).round().clamp(-32768, 32767);
+          u16(q & 0xFFFF);
+        }
+      } else {
+        for (final v in s.pcmRight!) {
+          final q = (v * 128).round().clamp(-128, 127);
+          u8(q & 0xFF);
+        }
       }
     }
   }
@@ -235,6 +274,13 @@ Uint8List writeIt(ItModule module) {
   // ── convert + patch the offset tables ──
   final bytes = Uint8List.fromList(out);
   final bd = ByteData.sublistView(bytes);
+  for (var i = 0; i < instrumentHeaderOffsets.length; i++) {
+    bd.setUint32(
+      insTableOffset + i * 4,
+      instrumentHeaderOffsets[i],
+      Endian.little,
+    );
+  }
   for (var i = 0; i < smpNum; i++) {
     bd.setUint32(smpTableOffset + i * 4, sampleHeaderOffsets[i], Endian.little);
     bd.setUint32(

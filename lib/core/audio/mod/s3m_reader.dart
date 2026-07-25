@@ -45,14 +45,21 @@ S3mModule parseS3m(Uint8List bytes) {
   final ordNum = data.getUint16(0x20, Endian.little);
   final insNum = data.getUint16(0x22, Endian.little);
   final patNum = data.getUint16(0x24, Endian.little);
+  final flags = data.getUint16(0x26, Endian.little);
+  final createdWith = data.getUint16(0x28, Endian.little);
   final sampleFormat = data.getUint16(0x2A, Endian.little);
   final globalVolume = bytes[0x30];
   final initialSpeed = bytes[0x31];
   final initialTempo = bytes[0x32];
+  final masterVolume = bytes[0x33];
+  final ultraClick = bytes[0x34];
+  final defaultPan = bytes[0x35];
 
   // Channel settings: 32 bytes @ 0x40, value < 128 = enabled.
   var channelCount = 0;
+  final channelSettings = <int>[];
   for (var i = 0; i < 32; i++) {
+    channelSettings.add(bytes[0x40 + i]);
     if (bytes[0x40 + i] < 128) channelCount++;
   }
   if (channelCount == 0) channelCount = 1; // defensive; must be > 0.
@@ -60,10 +67,12 @@ S3mModule parseS3m(Uint8List bytes) {
   // Order list: ordNum bytes @ 0x60, with 254/255 markers removed.
   const orderStart = 0x60;
   final order = <int>[];
+  final rawOrder = <int>[];
   for (var i = 0; i < ordNum; i++) {
     final off = orderStart + i;
     if (off >= bytes.length) break;
     final v = bytes[off];
+    rawOrder.add(v);
     if (v == 254 || v == 255) continue;
     order.add(v);
   }
@@ -79,6 +88,10 @@ S3mModule parseS3m(Uint8List bytes) {
   const maxAddressable = 256;
   final insPtrStart = orderStart + ordNum;
   final patPtrStart = insPtrStart + insNum * 2;
+  final panStart = patPtrStart + patNum * 2;
+  final defaultPans = defaultPan == 252 && panStart + 32 <= bytes.length
+      ? List<int>.from(bytes.sublist(panStart, panStart + 32))
+      : const <int>[];
   final insCount = insNum > maxAddressable ? maxAddressable : insNum;
   final patCount = patNum > maxAddressable ? maxAddressable : patNum;
 
@@ -108,6 +121,15 @@ S3mModule parseS3m(Uint8List bytes) {
     title: title,
     channelCount: channelCount,
     globalVolume: globalVolume,
+    masterVolume: masterVolume,
+    ultraClick: ultraClick,
+    defaultPan: defaultPan,
+    channelSettings: channelSettings,
+    sampleFormat: sampleFormat,
+    flags: flags,
+    createdWith: createdWith,
+    defaultPans: defaultPans,
+    rawOrder: rawOrder,
     initialSpeed: initialSpeed,
     initialTempo: initialTempo,
     order: order,
@@ -179,6 +201,12 @@ S3mSample _readInstrument(
     loop: loop,
     sixteenBit: sixteenBit,
     pcm: pcm,
+    rawHeader: List<int>.from(bytes.sublist(base, base + 0x50)),
+    rawData: pcmOffset >= 0 &&
+            pcmOffset + available * bytesPerSample <= bytes.length
+        ? Uint8List.fromList(
+            bytes.sublist(pcmOffset, pcmOffset + available * bytesPerSample))
+        : null,
   );
 }
 
@@ -199,6 +227,9 @@ S3mPattern _readPattern(
     return S3mPattern(rows);
   }
   final packedLen = data.getUint16(base, Endian.little);
+  if (packedLen == 0) {
+    return S3mPattern(rows, rawData: Uint8List(0));
+  }
   // Data body starts after the length word; end is bounded by both the declared
   // length and the actual file size.
   var end = base + packedLen;
@@ -241,7 +272,12 @@ S3mPattern _readPattern(
     }
   }
 
-  return S3mPattern(rows);
+  return S3mPattern(
+    rows,
+    rawData: base >= 0 && base + packedLen <= bytes.length
+        ? Uint8List.fromList(bytes.sublist(base, base + packedLen))
+        : null,
+  );
 }
 
 S3mPattern _emptyPattern(int channelCount) => S3mPattern(

@@ -98,7 +98,9 @@ Uint8List writeS3m(S3mModule module) {
   final patNum = patterns.length;
 
   // ordNum = order length padded up to even.
-  var ordNum = module.order.length;
+  final encodedOrder =
+      module.rawOrder.isNotEmpty ? module.rawOrder : module.order;
+  var ordNum = encodedOrder.length;
   if (ordNum.isOdd) ordNum++;
   if (ordNum == 0) ordNum = 0; // an empty order stays empty (even).
 
@@ -112,27 +114,29 @@ Uint8List writeS3m(S3mModule module) {
   u16(ordNum); // 0x20
   u16(insNum); // 0x22
   u16(patNum); // 0x24
-  u16(0); // 0x26 flags
-  u16(0x1320); // 0x28 version
-  u16(1); // 0x2A sample format = signed
+  u16(module.flags); // 0x26 flags
+  u16(module.createdWith); // 0x28 version
+  u16(module.sampleFormat); // 0x2A sample format (1 signed / 2 unsigned)
   asciiFixed('SCRM', 4); // 0x2C
   u8(module.globalVolume); // 0x30
   u8(module.initialSpeed); // 0x31
   u8(module.initialTempo); // 0x32
-  u8(48); // 0x33 master volume
-  u8(0); // 0x34 ultra-click
-  u8(0); // 0x35 default pan (not 252 → no pan block)
+  u8(module.masterVolume); // 0x33 master volume
+  u8(module.ultraClick); // 0x34 ultra-click
+  u8(module.defaultPan); // 0x35 default pan (252 → pan block)
   for (var i = 0x36; i < 0x40; i++) {
     u8(0); // 0x36..0x3F
   }
   // 0x40 channel settings (32 bytes).
   for (var i = 0; i < 32; i++) {
-    u8(i < channelCount ? i : 255);
+    u8(i < module.channelSettings.length
+        ? module.channelSettings[i]
+        : (i < channelCount ? i : 255));
   }
 
   // ── Order list (ordNum bytes, pad with 255) ────────────────────────────────
   for (var i = 0; i < ordNum; i++) {
-    u8(i < module.order.length ? module.order[i] : 255);
+    u8(i < encodedOrder.length ? encodedOrder[i] : 255);
   }
 
   // ── Instrument parapointers (patched later) ────────────────────────────────
@@ -147,7 +151,11 @@ Uint8List writeS3m(S3mModule module) {
     u16(0);
   }
 
-  // No pan block.
+  if (module.defaultPan == 252) {
+    for (var i = 0; i < 32; i++) {
+      u8(i < module.defaultPans.length ? module.defaultPans[i] : 0);
+    }
+  }
 
   // Records to patch after the whole file is laid out.
   final insHeaderOffsets = List<int>.filled(insNum, 0);
@@ -164,6 +172,11 @@ Uint8List writeS3m(S3mModule module) {
     final headerOff = len();
     insHeaderOffsets[s] = headerOff;
     insParapointers[s] = headerOff ~/ 16;
+
+    if (sample.rawHeader.length >= 0x50) {
+      out.add(sample.rawHeader.take(0x50).toList());
+      continue;
+    }
 
     u8(isEmpty ? 0 : 1); // 0x00 type
     asciiFixed('', 12); // 0x01 DOS filename
@@ -185,27 +198,6 @@ Uint8List writeS3m(S3mModule module) {
     }
     asciiFixed(sample.name, 28); // 0x30 name
     asciiFixed('SCRS', 4); // 0x4C
-
-    if (!isEmpty) {
-      align16();
-      final pcmOff = len();
-      insMemsegs[s] = pcmOff ~/ 16;
-      // Quantize the normalized float PCM back to signed 8- or 16-bit (×128 /
-      // ×32768 inverts the reader's /128 / /32768, so a parsed sample round-trips
-      // byte-exactly). 16-bit is a signed LE word each.
-      if (sample.sixteenBit) {
-        for (var i = 0; i < pcmLen; i++) {
-          final q = (sample.pcm[i] * 32768).round().clamp(-32768, 32767);
-          u8(q & 0xFF);
-          u8((q >> 8) & 0xFF);
-        }
-      } else {
-        for (var i = 0; i < pcmLen; i++) {
-          final q = (sample.pcm[i] * 128).round().clamp(-128, 127);
-          u8(q & 0xFF);
-        }
-      }
-    }
   }
 
   // ── PATTERNS ───────────────────────────────────────────────────────────────
@@ -214,6 +206,15 @@ Uint8List writeS3m(S3mModule module) {
     align16();
     final patOff = len();
     patParapointers[p] = patOff ~/ 16;
+
+    if (module.rawOrder.isNotEmpty && pattern.rawData != null) {
+      if (pattern.rawData!.isEmpty) {
+        u16(0);
+      } else {
+        out.add(pattern.rawData!);
+      }
+      continue;
+    }
 
     // Pack the rows into a temporary buffer, then prefix with the length word.
     final body = BytesBuilder();
@@ -254,6 +255,34 @@ Uint8List writeS3m(S3mModule module) {
     final total = packed.length + 2; // includes the length word itself
     u16(total);
     out.add(packed);
+  }
+
+  // Sample memory segments are 24-bit, but pattern parapointers are only
+  // 16-bit paragraphs. Keep patterns before large sample payloads so a module
+  // with megabytes of PCM does not wrap its pattern pointers and become
+  // unreadable on the next parse.
+  for (var s = 0; s < insNum; s++) {
+    final sample = samples[s];
+    if (sample.isEmpty) continue;
+    align16();
+    final pcmOff = len();
+    insMemsegs[s] = pcmOff ~/ 16;
+    final pcmLen = sample.pcm.length;
+    if (sample.rawData != null) {
+      out.add(sample.rawData!);
+    } else if (sample.sixteenBit) {
+      for (var i = 0; i < pcmLen; i++) {
+        final q = (sample.pcm[i] * 32768).round().clamp(-32768, 32767);
+        final encoded = module.sampleFormat == 2 ? q + 32768 : q;
+        u8(encoded & 0xFF);
+        u8((encoded >> 8) & 0xFF);
+      }
+    } else {
+      for (var i = 0; i < pcmLen; i++) {
+        final q = (sample.pcm[i] * 128).round().clamp(-128, 127);
+        u8(module.sampleFormat == 2 ? q + 128 : q);
+      }
+    }
   }
 
   // ── PATCH the tables + memseg fields ───────────────────────────────────────

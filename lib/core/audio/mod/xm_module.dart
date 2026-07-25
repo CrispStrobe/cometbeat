@@ -63,6 +63,8 @@ class XmSample {
     this.loopLength = 0,
     this.sixteenBit = false,
     this.pingPong = false,
+    this.rawHeader = const [],
+    this.rawData,
     required this.pcm,
   });
 
@@ -76,6 +78,8 @@ class XmSample {
   final int loopStart, loopLength;
   final bool sixteenBit;
   final bool pingPong; // loop-type 2 (bidirectional)
+  final List<int> rawHeader;
+  final Uint8List? rawData;
   final Float64List pcm;
 
   bool get isEmpty => pcm.isEmpty;
@@ -104,6 +108,12 @@ class XmInstrument {
     this.keymap = const [],
     this.volumeEnvelope = const XmEnvelope(),
     this.panEnvelope = const XmEnvelope(),
+    this.vibratoType = 0,
+    this.vibratoSweep = 0,
+    this.vibratoDepth = 0,
+    this.vibratoRate = 0,
+    this.fadeout = 0,
+    this.rawHeader = const [],
   });
   final String name;
   final List<XmSample> samples;
@@ -112,6 +122,9 @@ class XmInstrument {
   /// indices into [samples]. Empty means the legacy single-sample default.
   final List<int> keymap;
   final XmEnvelope volumeEnvelope, panEnvelope;
+  final int vibratoType, vibratoSweep, vibratoDepth, vibratoRate;
+  final int fadeout;
+  final List<int> rawHeader;
 }
 
 /// One note cell. `note == 0` empty, `note == 97` note-off.
@@ -122,6 +135,7 @@ class XmCell {
     this.volume = 0,
     this.effect = 0,
     this.effectParam = 0,
+    this.presentMask = -1,
   });
 
   static const empty = XmCell();
@@ -131,6 +145,10 @@ class XmCell {
   final int instrument;
   final int volume;
   final int effect, effectParam;
+
+  /// Original packed-field presence bits: note=1, instrument=2, volume=4,
+  /// effect=8, parameter=16. -1 means infer presence from non-zero values.
+  final int presentMask;
 
   bool get isEmpty =>
       note == 0 &&
@@ -146,17 +164,20 @@ class XmCell {
       other.instrument == instrument &&
       other.volume == volume &&
       other.effect == effect &&
-      other.effectParam == effectParam;
+      other.effectParam == effectParam &&
+      other.presentMask == presentMask;
 
   @override
   int get hashCode =>
-      Object.hash(note, instrument, volume, effect, effectParam);
+      Object.hash(note, instrument, volume, effect, effectParam, presentMask);
 }
 
 /// A pattern: [numRows] rows × [channelCount] cells.
 class XmPattern {
-  const XmPattern(this.rows);
+  const XmPattern(this.rows, {this.rawHeader = const [], this.rawData});
   final List<List<XmCell>> rows;
+  final List<int> rawHeader;
+  final Uint8List? rawData;
   int get numRows => rows.length;
   int get channelCount => rows.isEmpty ? 0 : rows.first.length;
 }
@@ -165,9 +186,13 @@ class XmPattern {
 class XmModule {
   const XmModule({
     this.name = '',
+    this.trackerName = '',
+    this.version = 0x0104,
+    this.rawHeader = const [],
     this.channelCount = 0,
     this.defaultTempo = 6,
     this.defaultBpm = 125,
+    this.linearFrequency = false,
     this.restart = 0,
     required this.order,
     required this.patterns,
@@ -175,8 +200,12 @@ class XmModule {
   });
 
   final String name;
+  final String trackerName;
+  final int version;
+  final List<int> rawHeader;
   final int channelCount;
   final int defaultTempo, defaultBpm, restart;
+  final bool linearFrequency;
   final List<int> order; // pattern indices (song length entries)
   final List<XmPattern> patterns;
   final List<XmInstrument> instruments;

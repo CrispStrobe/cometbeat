@@ -101,12 +101,16 @@ ItModule parseIt(Uint8List bytes) {
   final smpNum = u16(0x24);
   final patNum = u16(0x26);
   final cwtv = u16(0x28);
+  final cmwt = u16(0x2A);
   final flags = u16(0x2C);
+  final special = u16(0x2E);
   final useInstruments = (flags & 0x04) != 0;
   final globalVolume = u8(0x30);
   final initialSpeed = u8(0x32);
   final initialTempo = u8(0x33);
   final it215 = cwtv >= 0x0215;
+  final channelPans = [for (var i = 0; i < 64; i++) u8(0x40 + i)];
+  final channelVolumes = [for (var i = 0; i < 64; i++) u8(0x80 + i)];
 
   // order list @ 0xC0, OrdNum bytes
   final order = <int>[];
@@ -168,6 +172,16 @@ ItModule parseIt(Uint8List bytes) {
     initialSpeed: initialSpeed,
     initialTempo: initialTempo,
     globalVolume: globalVolume,
+    createdWith: cwtv,
+    compatibleWith: cmwt,
+    special: special,
+    rowHighlight: u16(0x1E),
+    flags: flags,
+    mixVolume: u8(0x31),
+    panSeparation: u8(0x34),
+    pitchWheelDepth: u8(0x35),
+    channelPans: channelPans,
+    channelVolumes: channelVolumes,
     order: order,
     patterns: patterns,
     samples: samples,
@@ -187,7 +201,70 @@ ItInstrument _parseInstrument(Uint8List bytes, int base) {
       keymap[n] = bytes[table + n * 2 + 1]; // 1-based sample number (0 = none)
     }
   }
-  return ItInstrument(keymap: keymap, noteMap: noteMap);
+  final rawHeader = base >= 0 && base + 554 <= bytes.length
+      ? List<int>.from(bytes.sublist(base, base + 554))
+      : const <int>[];
+  int u8(int offset) =>
+      base >= 0 && base + offset < bytes.length ? bytes[base + offset] : 0;
+  int u16(int offset) => base >= 0 && base + offset + 2 <= bytes.length
+      ? bytes[base + offset] | (bytes[base + offset + 1] << 8)
+      : 0;
+  int signed8(int offset) {
+    final value = u8(offset);
+    return value >= 128 ? value - 256 : value;
+  }
+
+  String name() {
+    final codes = <int>[];
+    for (var i = 0; i < 26; i++) {
+      final value = u8(0x1C + i);
+      if (value == 0) break;
+      codes.add(value);
+    }
+    return String.fromCharCodes(codes).trim();
+  }
+
+  ItEnvelope envelope(int offset, {required bool signedValue}) {
+    final flags = u8(offset);
+    final count = u8(offset + 1).clamp(0, 25);
+    final points = <(int, int)>[];
+    for (var i = 0; i < count; i++) {
+      final p = base + offset + 6 + i * 3;
+      if (p + 3 > bytes.length) break;
+      final rawValue = bytes[p];
+      final value = signedValue && rawValue >= 128 ? rawValue - 256 : rawValue;
+      final tick = bytes[p + 1] | (bytes[p + 2] << 8);
+      points.add((tick, value));
+    }
+    return ItEnvelope(
+      points: points,
+      enabled: (flags & 1) != 0,
+      loopStart: u8(offset + 2),
+      loopEnd: u8(offset + 3),
+      sustainStart: u8(offset + 4),
+      sustainEnd: u8(offset + 5),
+    );
+  }
+
+  return ItInstrument(
+    keymap: keymap,
+    noteMap: noteMap,
+    name: name(),
+    nna: u8(0x11),
+    dct: u8(0x12),
+    dca: u8(0x13),
+    fadeout: u16(0x14),
+    pps: signed8(0x16),
+    ppc: signed8(0x17),
+    globalVolume: u8(0x18),
+    defaultPan: u8(0x19),
+    randomVolume: u8(0x1A),
+    randomPan: u8(0x1B),
+    volumeEnvelope: envelope(0x130, signedValue: false),
+    panEnvelope: envelope(0x182, signedValue: true),
+    pitchEnvelope: envelope(0x1D4, signedValue: true),
+    rawHeader: rawHeader,
+  );
 }
 
 // ── sample parsing ────────────────────────────────────────────────────────────
@@ -244,14 +321,40 @@ ItSample _parseSample(
   final compressed = (flg & 0x08) != 0;
   final hasSample = (flg & 0x01) != 0;
   final pingPong = (flg & 0x40) != 0; // bidirectional loop
+  final loop = (flg & 0x10) != 0;
 
   Float64List pcm;
+  Float64List? pcmRight;
+  Uint8List? rawData;
   if (!hasSample || length == 0) {
     pcm = Float64List(0);
   } else if (compressed) {
-    pcm = _decodeCompressed(bytes, dataPtr, length, sixteenBit, it215);
+    // IT 2.15 double-delta compression is selected by the module creation
+    // version. The sample Cvt flags describe the stored sample representation,
+    // not whether the compressed stream uses the IT215 delta stage.
+    pcm = _decodeCompressed(
+      bytes,
+      dataPtr,
+      length,
+      sixteenBit,
+      it215,
+    );
+    final end = _compressedDataEnd(bytes, dataPtr, length, sixteenBit);
+    if (end > dataPtr && end <= bytes.length) {
+      rawData = Uint8List.fromList(bytes.sublist(dataPtr, end));
+    }
   } else {
     pcm = _decodeUncompressed(bytes, dataPtr, length, sixteenBit, cvt);
+    if ((flg & 0x04) != 0) {
+      final stride = sixteenBit ? 2 : 1;
+      pcmRight = _decodeUncompressed(
+        bytes,
+        dataPtr + length * stride,
+        length,
+        sixteenBit,
+        cvt,
+      );
+    }
   }
 
   return ItSample(
@@ -260,15 +363,40 @@ ItSample _parseSample(
     globalVolume: globalVol,
     defaultVolume: defaultVol,
     sixteenBit: sixteenBit,
+    stereo: (flg & 0x04) != 0,
     compressed: compressed,
+    cvt: cvt,
+    rawData: rawData,
     length: length,
     loopStart: loopStart,
     loopEnd: loopEnd,
+    loop: loop,
     c5speed: c5speed == 0 ? 8363 : c5speed,
     pan: pan,
     pingPong: pingPong,
     pcm: pcm,
+    pcmRight: pcmRight,
   );
+}
+
+int _compressedDataEnd(
+  Uint8List bytes,
+  int dataPtr,
+  int length,
+  bool sixteenBit,
+) {
+  final quota = sixteenBit ? 0x4000 : 0x8000;
+  var remaining = length;
+  var pos = dataPtr;
+  while (remaining > 0 && pos + 2 <= bytes.length) {
+    final blockLen = bytes[pos] | (bytes[pos + 1] << 8);
+    pos += 2;
+    final available = math.min(blockLen, bytes.length - pos);
+    pos += available;
+    remaining -= math.min(remaining, quota);
+    if (available < blockLen) break;
+  }
+  return pos;
 }
 
 int _wrap8(int x) => ((x + 128) & 0xFF) - 128;
@@ -554,14 +682,20 @@ ItPattern _parsePattern(Uint8List bytes, ByteData bd, int po) {
       cmdVal = lastCmdVal[channel];
     }
 
-    grid[row][channel] = ItCell(
+    final cell = ItCell(
       note: note,
       instrument: instr,
       volpan: vol,
       command: cmd,
       commandValue: cmdVal,
     );
-    if (channel > maxCh) maxCh = channel;
+    // A zero-mask event can legally appear as padding/no-op data. It does not
+    // establish a channel in the decoded module, and retaining it here would
+    // make a native IT roundtrip grow/shrink the reported channel count.
+    if (!cell.isEmpty) {
+      grid[row][channel] = cell;
+      if (channel > maxCh) maxCh = channel;
+    }
   }
 
   final channelCount = maxCh + 1;

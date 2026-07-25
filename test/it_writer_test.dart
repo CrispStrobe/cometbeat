@@ -50,14 +50,10 @@ void main() {
       }
     });
 
-    test('sample PCM survives (incl. compressed sources → uncompressed)', () {
+    test('sample PCM and compression survive', () {
       for (var i = 0; i < m0.samples.length; i++) {
         final s0 = m0.samples[i], s1 = m1.samples[i];
-        expect(
-          s1.compressed,
-          isFalse,
-          reason: 'sample $i written uncompressed',
-        );
+        expect(s1.compressed, s0.compressed, reason: 'sample $i compression');
         expect(s1.sixteenBit, s0.sixteenBit, reason: 'sample $i bit depth');
         expect(s1.pcm.length, s0.pcm.length, reason: 'sample $i length');
         final tol = s0.sixteenBit ? 1e-4 : 1 / 128;
@@ -137,5 +133,34 @@ void main() {
       expect(s16.pcm[1], closeTo(0.25, 1e-4));
       expect(s16.pcm[3], closeTo(0.9, 1e-4));
     });
+  });
+
+  test('doc-to-IT round-trip preserves an active sample loop', () {
+    final src = ItModule(
+      name: 'LOOPIT',
+      channelCount: 1,
+      order: const [0],
+      patterns: [
+        ItPattern(
+          [
+            const [ItCell(note: 60, instrument: 1)]
+          ],
+          1,
+        ),
+      ],
+      samples: [
+        ItSample(
+          length: 32,
+          loop: true,
+          loopStart: 8,
+          loopEnd: 24,
+          pcm: Float64List.fromList(List.filled(32, 0.25)),
+        ),
+      ],
+    );
+    final back = parseIt(writeIt(src));
+    expect(back.samples.single.loop, isTrue);
+    expect(back.samples.single.loopStart, 8);
+    expect(back.samples.single.loopEnd, 24);
   });
 }

@@ -75,14 +75,19 @@ class ItSample {
     this.globalVolume = 64,
     this.defaultVolume = 64,
     this.sixteenBit = false,
+    this.stereo = false,
     this.compressed = false,
+    this.cvt = 1,
+    this.rawData,
     this.length = 0,
     this.loopStart = 0,
     this.loopEnd = 0,
+    this.loop = false,
     this.c5speed = 8363,
     this.pan = 128,
     this.pingPong = false,
     required this.pcm,
+    this.pcmRight,
   });
 
   factory ItSample.empty() => ItSample(pcm: Float64List(0));
@@ -90,9 +95,13 @@ class ItSample {
   final String name, filename;
   final int globalVolume, defaultVolume; // 0..64
   final bool sixteenBit;
+  final bool stereo;
   final bool compressed; // whether the SOURCE was IT214/215 compressed
+  final int cvt; // original sample conversion flags
+  final Uint8List? rawData; // original compressed blocks, when retained
   final int length; // declared length in samples
   final int loopStart, loopEnd;
+  final bool loop;
   final int c5speed; // playback rate at C-5
 
   /// Default stereo position 0 left … 128 centre … 255 right, from the sample
@@ -101,6 +110,7 @@ class ItSample {
 
   final bool pingPong; // Flg 0x40 — bidirectional loop
   final Float64List pcm;
+  final Float64List? pcmRight;
 
   bool get isEmpty => pcm.isEmpty;
 }
@@ -146,6 +156,21 @@ class ItCell {
       Object.hash(note, instrument, volpan, command, commandValue);
 }
 
+class ItEnvelope {
+  const ItEnvelope({
+    this.points = const [],
+    this.enabled = false,
+    this.loopStart,
+    this.loopEnd,
+    this.sustainStart,
+    this.sustainEnd,
+  });
+
+  final List<(int, int)> points; // (tick, value)
+  final bool enabled;
+  final int? loopStart, loopEnd, sustainStart, sustainEnd;
+}
+
 /// A pattern: [numRows] rows × [channelCount] cells (padded to the highest
 /// channel index actually used, +1).
 class ItPattern {
@@ -160,13 +185,39 @@ class ItPattern {
 /// these, and the PLAYED note indexes [keymap] to pick the actual sample (and
 /// [noteMap] the note to sound). Sample-mode files have none.
 class ItInstrument {
-  const ItInstrument({required this.keymap, required this.noteMap});
+  const ItInstrument({
+    required this.keymap,
+    required this.noteMap,
+    this.name = '',
+    this.nna = 0,
+    this.dct = 0,
+    this.dca = 0,
+    this.fadeout = 0,
+    this.pps = 0,
+    this.ppc = 0,
+    this.globalVolume = 128,
+    this.defaultPan = 32,
+    this.randomVolume = 0,
+    this.randomPan = 0,
+    this.volumeEnvelope = const ItEnvelope(),
+    this.panEnvelope = const ItEnvelope(),
+    this.pitchEnvelope = const ItEnvelope(),
+    this.rawHeader = const [],
+  });
 
   /// 120 entries: the 1-based sample number for each input note (0 = no sample).
   final List<int> keymap;
 
   /// 120 entries: the note actually played for each input note (usually 1:1).
   final List<int> noteMap;
+  final String name;
+  final int nna, dct, dca, fadeout, pps, ppc;
+  final int globalVolume, defaultPan, randomVolume, randomPan;
+  final ItEnvelope volumeEnvelope, panEnvelope, pitchEnvelope;
+
+  /// Original 554-byte IMPI header, when available. This preserves IT
+  /// envelopes and instrument behavior for same-format roundtrips.
+  final List<int> rawHeader;
 
   factory ItInstrument.identity() => ItInstrument(
         keymap: List<int>.filled(120, 0),
@@ -183,6 +234,16 @@ class ItModule {
     this.initialSpeed = 6,
     this.initialTempo = 125,
     this.globalVolume = 128,
+    this.createdWith = 0x0214,
+    this.compatibleWith = 0x0200,
+    this.special = 0,
+    this.rowHighlight = 0,
+    this.flags = 9,
+    this.mixVolume = 48,
+    this.panSeparation = 128,
+    this.pitchWheelDepth = 0,
+    this.channelPans = const [],
+    this.channelVolumes = const [],
     required this.order,
     required this.patterns,
     required this.samples,
@@ -192,7 +253,12 @@ class ItModule {
   final String name;
   final int channelCount; // max used across patterns
   final int instrumentCount; // InsNum
-  final int initialSpeed, initialTempo, globalVolume;
+  final int initialSpeed, initialTempo, globalVolume, flags, createdWith;
+  final int compatibleWith, special, rowHighlight;
+  final int mixVolume, panSeparation, pitchWheelDepth;
+
+  /// IT header channel state, indexed by channel (pan 0..64, volume 0..64).
+  final List<int> channelPans, channelVolumes;
   final List<int> order; // OrdNum entries (0xFF end, 0xFE skip)
   final List<ItPattern> patterns;
   final List<ItSample> samples;
