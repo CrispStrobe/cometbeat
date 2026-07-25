@@ -676,7 +676,9 @@ void main() {
     TabDocument twoEndings() {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: [for (var i = 0; i < 8; i++) const TabColumn(frets: {0: 0})],
+        columns: [
+          for (var i = 0; i < 8; i++) const TabColumn(frets: {0: 0}),
+        ],
       );
       doc.setBarVolta(0, 1); // bar 0 = 1st ending
       doc.setBarVolta(4, 2); // bar 1 = 2nd ending

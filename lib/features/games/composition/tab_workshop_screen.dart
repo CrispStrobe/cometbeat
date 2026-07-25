@@ -1949,7 +1949,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                         Builder(
                           builder: (_) {
                             final cur = _selCol < _doc.columns.length
-                                ? _doc.columns[_doc.barBoundsAt(_selCol).$1].volta
+                                ? _doc
+                                    .columns[_doc.barBoundsAt(_selCol).$1].volta
                                 : null;
                             return InputChip(
                               avatar: const Icon(Icons.call_split, size: 18),

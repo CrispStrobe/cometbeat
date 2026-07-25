@@ -74,7 +74,8 @@ Future<Uint8List> _renderWithOpenMpt(String fixturePath) async {
     final wavFile = File(outputPath);
     if (!await wavFile.exists()) {
       throw Exception(
-          'OpenMPT did not create expected output file: $outputPath',);
+        'OpenMPT did not create expected output file: $outputPath',
+      );
     }
 
     return await wavFile.readAsBytes();
@@ -167,9 +168,11 @@ void main() {
 
     if (!testModulesAvailable) {
       print(
-          '⚠️  Test modules not found. Run: bash tool/download_test_modules.sh',);
+        '⚠️  Test modules not found. Run: bash tool/download_test_modules.sh',
+      );
       print(
-          '    Skipping regression tests (will use minimal golden fixtures only)',);
+        '    Skipping regression tests (will use minimal golden fixtures only)',
+      );
     }
 
     // Skip if OpenMPT not available
@@ -186,10 +189,15 @@ void main() {
     group('OpenMPT reference comparison', () {
       // Only run these tests if test modules are downloaded
       if (!testModulesAvailable) {
-        test('WARNING: Test modules not available', () {
-          print(
-              'Download test modules first: bash tool/download_test_modules.sh',);
-        }, skip: 'Test modules not downloaded',);
+        test(
+          'WARNING: Test modules not available',
+          () {
+            print(
+              'Download test modules first: bash tool/download_test_modules.sh',
+            );
+          },
+          skip: 'Test modules not downloaded',
+        );
         return;
       }
 
@@ -212,14 +220,20 @@ void main() {
 
             // 2. Render with our pipeline
             final ourWav = song.renderSongWav();
-            expect(ourWav.length, greaterThan(44),
-                reason: 'Our render produced empty WAV',);
+            expect(
+              ourWav.length,
+              greaterThan(44),
+              reason: 'Our render produced empty WAV',
+            );
 
             // 3. Render with OpenMPT (industry standard)
             final openmptWav =
                 await _renderWithOpenMpt('test/fixtures/$fixtureName');
-            expect(openmptWav.length, greaterThan(44),
-                reason: 'OpenMPT render produced empty WAV',);
+            expect(
+              openmptWav.length,
+              greaterThan(44),
+              reason: 'OpenMPT render produced empty WAV',
+            );
 
             // 4. Extract PCM data
             final ourPcm = _monoWavToPcm(ourWav);
@@ -254,14 +268,21 @@ void main() {
             // For minimal test fixtures, accept very low RMS (sparse notes)
             if (ourRms < 0.001 && openmptRms < 0.001) {
               print(
-                  '  $fixtureName: Both renders are silent/sparse (minimal fixture)',);
+                '  $fixtureName: Both renders are silent/sparse (minimal fixture)',
+              );
               return; // Skip further checks for minimal fixtures
             }
 
-            expect(ourRms, greaterThan(0.001),
-                reason: 'Our render is nearly silent',);
-            expect(openmptRms, greaterThan(0.001),
-                reason: 'OpenMPT render is nearly silent',);
+            expect(
+              ourRms,
+              greaterThan(0.001),
+              reason: 'Our render is nearly silent',
+            );
+            expect(
+              openmptRms,
+              greaterThan(0.001),
+              reason: 'OpenMPT render is nearly silent',
+            );
 
             final rmsDiff = _rmsDifference(ourDownsampled, openmptDownsampled);
             final rmsDiffDb =
@@ -269,8 +290,11 @@ void main() {
 
             // 9. Check for clipping
             final ourPeak = ourPcm.reduce((a, b) => max(a.abs(), b.abs()));
-            expect(ourPeak, lessThan(1.0),
-                reason: 'Our render clips ($ourPeak peak)',);
+            expect(
+              ourPeak,
+              lessThan(1.0),
+              reason: 'Our render clips ($ourPeak peak)',
+            );
 
             // 10. Report results
             print('  $fixtureName comparison:');
@@ -282,9 +306,12 @@ void main() {
 
             // Acceptable threshold: < 10 dB difference for minimal fixtures
             // (Real modules should be < 3 dB; minimal fixtures have edge cases)
-            expect(rmsDiffDb.abs(), lessThan(10.0),
-                reason: 'Audio differs too much from OpenMPT reference '
-                    '($rmsDiffDb dB). Possible instrument or mixing regression.',);
+            expect(
+              rmsDiffDb.abs(),
+              lessThan(10.0),
+              reason: 'Audio differs too much from OpenMPT reference '
+                  '($rmsDiffDb dB). Possible instrument or mixing regression.',
+            );
           },
           timeout: const Timeout(Duration(seconds: 30)),
         );
@@ -294,7 +321,8 @@ void main() {
     test('all test modules render without crashing', () {
       if (!testModulesAvailable) {
         print(
-            'Skipping: Test modules not available. Run: bash tool/download_test_modules.sh',);
+          'Skipping: Test modules not available. Run: bash tool/download_test_modules.sh',
+        );
         return;
       }
 
@@ -310,22 +338,34 @@ void main() {
       for (final fixtureName in testModules) {
         final bytes = _fixture(fixtureName);
 
-        expect(() => songFromModuleBytes(bytes), returnsNormally,
-            reason: '$fixtureName import crashed',);
+        expect(
+          () => songFromModuleBytes(bytes),
+          returnsNormally,
+          reason: '$fixtureName import crashed',
+        );
 
         final song = songFromModuleBytes(bytes);
-        expect(song.renderSongWav, returnsNormally,
-            reason: '$fixtureName render crashed',);
+        expect(
+          song.renderSongWav,
+          returnsNormally,
+          reason: '$fixtureName render crashed',
+        );
 
         final wav = song.renderSongWav();
-        expect(wav.length, greaterThan(44),
-            reason: '$fixtureName produced empty WAV',);
+        expect(
+          wav.length,
+          greaterThan(44),
+          reason: '$fixtureName produced empty WAV',
+        );
 
         // Check that the render produced actual audio
         final pcm = _monoWavToPcm(wav);
         final peak = pcm.reduce((a, b) => max(a.abs(), b.abs()));
-        expect(peak, greaterThan(0.01),
-            reason: '$fixtureName produced nearly silent audio',);
+        expect(
+          peak,
+          greaterThan(0.01),
+          reason: '$fixtureName produced nearly silent audio',
+        );
       }
     });
   });

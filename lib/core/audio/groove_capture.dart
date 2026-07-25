@@ -80,7 +80,8 @@ List<PatternCell>? quantizeToGroove(
           PatternCell(midis: last.midis, steps: last.steps + 1);
     } else {
       cells.add(
-          PatternCell(midis: snapped == null ? null : [snapped], steps: 1),);
+        PatternCell(midis: snapped == null ? null : [snapped], steps: 1),
+      );
     }
   }
   return cells;
