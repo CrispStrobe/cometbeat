@@ -88,6 +88,14 @@ void main() {
     );
     expect(exported.channelPans.first, 0);
     expect(exported.channelVolumes.first, 32);
+
+    final exportedS3m = parseAnyModule(
+      convertDocTo(
+        moduleDocFromSong(s3m, targetFormat: ModuleFormat.s3m),
+        ModuleFormat.s3m,
+      ),
+    );
+    expect(exportedS3m.s3mDefaultPans.first & 0x0F, 15);
   });
 
   for (final name in ['golden.mod', 'golden.s3m', 'golden.xm', 'golden.it']) {

@@ -732,6 +732,13 @@ ModuleDoc moduleDocFromSong(
               _itChannelVolume(channel.gain, channelCount),
           ]
         : const [],
+    s3mDefaultPan: targetFormat == ModuleFormat.s3m ? 252 : 0,
+    s3mDefaultPans: targetFormat == ModuleFormat.s3m
+        ? [
+            for (final channel in song.channels)
+              0x20 | (((channel.pan + 1) * 7.5).round().clamp(0, 15)),
+          ]
+        : const [],
   );
 }
 
