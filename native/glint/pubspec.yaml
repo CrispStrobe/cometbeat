@@ -1,9 +1,11 @@
 name: glint_vorbis
 description: >-
-  Native Ogg-Vorbis DECODER for CometBeat's .sf3 SoundFont path — the minimal
-  Vorbis source set from the glint codec suite (MIT), compiled into the app as a
-  Flutter FFI plugin. Exposes glint_vorbis_decode / glint_free. Reached via
-  lib/core/audio/sf2/vorbis_capability.dart. Re-vendor with sync_glint.sh.
+  Native glint codecs (MIT) compiled into CometBeat as a Flutter FFI plugin:
+  DECODE Ogg-Vorbis (.sf3 SoundFonts) and FLAC (SFZ samples), ENCODE MP3 /
+  AAC-LC / Ogg-Opus for audio export. Exposes glint_vorbis_decode,
+  glint_flac_decode, glint_encode_audio and glint_free. Reached via the
+  capability seams in lib/core/audio/sf2/. Re-vendor with sync_glint.sh.
+  (Package name is historical — it predates the FLAC and encode sets.)
 publish_to: none
 version: 0.1.0
 
