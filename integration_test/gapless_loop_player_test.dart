@@ -62,28 +62,40 @@ void main() {
       return;
     }
 
-    expect(soloud.getActiveVoiceCount(), greaterThanOrEqualTo(1),
-        reason: 'a looping voice should be sounding after playLoop');
+    expect(
+      soloud.getActiveVoiceCount(),
+      greaterThanOrEqualTo(1),
+      reason: 'a looping voice should be sounding after playLoop',
+    );
 
     // 2. An in-phase swap (a live edit / infinite-mode variation) keeps a voice
     //    active — the crossfade means we never drop to silence at the seam.
     await player.playLoop(wav, position: const Duration(milliseconds: 250));
     await Future<void>.delayed(const Duration(milliseconds: 60));
-    expect(soloud.getActiveVoiceCount(), greaterThanOrEqualTo(1),
-        reason: 'the swap should overlap, never leaving a gap');
+    expect(
+      soloud.getActiveVoiceCount(),
+      greaterThanOrEqualTo(1),
+      reason: 'the swap should overlap, never leaving a gap',
+    );
 
     // 3. Pause silences the transport; resume brings it back.
     await player.pause();
     await Future<void>.delayed(const Duration(milliseconds: 40));
     await player.resume();
     await Future<void>.delayed(const Duration(milliseconds: 40));
-    expect(soloud.getActiveVoiceCount(), greaterThanOrEqualTo(1),
-        reason: 'resume should re-sound the same loop');
+    expect(
+      soloud.getActiveVoiceCount(),
+      greaterThanOrEqualTo(1),
+      reason: 'resume should re-sound the same loop',
+    );
 
     // 4. Stop releases every voice this player owns.
     await player.stop();
     await Future<void>.delayed(const Duration(milliseconds: 120));
-    expect(soloud.getActiveVoiceCount(), 0,
-        reason: 'stop should release the loop voice(s)');
+    expect(
+      soloud.getActiveVoiceCount(),
+      0,
+      reason: 'stop should release the loop voice(s)',
+    );
   });
 }
