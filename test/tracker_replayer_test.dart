@@ -1114,6 +1114,37 @@ void main() {
       expect(second, lessThan(0));
     });
 
+    test('multi-sample channels keep their order-entry offset', () {
+      final sample = Float64List(120000)..fillRange(0, 120000, 0.25);
+      final timing = const TrackerTiming(rows: 2);
+      final cells = [
+        const TrackerCell(midi: 60),
+        TrackerCell.empty,
+      ];
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'ordered-zones',
+            instrument: MultiSampleInstrument(
+              'ordered-zones',
+              {60: SampleInstrument('sample', sample, normalize: false)},
+            ),
+            rows: 2,
+          ),
+        ],
+        timing: timing,
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: const [0, 0],
+      );
+
+      final rendered = replaySong(song).pcm;
+      final split = timing.totalSamples;
+      expect(rendered.sublist(0, split).any((value) => value != 0), isTrue);
+      expect(rendered.sublist(split).any((value) => value != 0), isTrue);
+    });
+
     test('multi-sample additive zones keep tick rendering', () {
       final cells = List<TrackerCell>.filled(8, TrackerCell.empty)
         ..[0] = const TrackerCell(midi: 60)
@@ -1188,6 +1219,48 @@ void main() {
       final after = rendered[split + 100];
       expect(before, greaterThan(0));
       expect(after, lessThan(0));
+    });
+
+    test('native IT NNA also applies on effect-bearing zone voices', () {
+      final positive = Float64List(120000)..fillRange(0, 120000, 0.25);
+      final negative = Float64List(120000)..fillRange(0, 120000, -0.5);
+      final timing = const TrackerTiming(rows: 4);
+      final cells = List<TrackerCell>.filled(4, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60)
+        ..[1] = fx(0x4, 0x31)
+        ..[2] = const TrackerCell(midi: 72);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'it-effect-voices',
+            instrument: MultiSampleInstrument(
+              'it-instrument',
+              {
+                60: SampleInstrument(
+                  'low',
+                  positive,
+                  normalize: false,
+                  nativeNna: 0,
+                ),
+                72: SampleInstrument('high', negative, normalize: false),
+              },
+              polyphonic: true,
+              nativeVoiceSemantics: true,
+            ),
+            rows: 4,
+          ),
+        ],
+        timing: timing,
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+
+      final rendered = replaySong(song).pcm;
+      final split = timing.stepStartSample(2);
+      expect(rendered[split - 100], greaterThan(0));
+      expect(rendered[split + 100], lessThan(0));
     });
 
     test('stereo sample channels keep the right waveform through effects', () {

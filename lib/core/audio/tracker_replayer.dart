@@ -1277,6 +1277,7 @@ void _renderChannelInto(
       cells,
       timing,
       ticksPerRow,
+      sampleOffset,
     );
     return;
   }
@@ -1653,15 +1654,211 @@ List<({int start, int end, double pan})> _panRegions(
 /// but its generic fallback cannot apply per-tick tracker commands. Each note
 /// run is isolated so the selected zone, envelope, loop, and key-off state are
 /// all evaluated from that run's native instrument.
+class _NativeTickZoneVoice {
+  _NativeTickZoneVoice({
+    required this.midi,
+    required this.zone,
+    required this.startStep,
+    required this.runSteps,
+    required this.cells,
+    required this.left,
+    this.right,
+  });
+
+  final int midi;
+  final TrackerInstrument zone;
+  final int startStep;
+  final int runSteps;
+  final List<TrackerCell> cells;
+  final Float64List left;
+  final Float64List? right;
+  int endSample = 1 << 60;
+  int? releaseAt;
+  int? fadeAt;
+  Float64List? releaseLeft;
+  Float64List? releaseRight;
+}
+
+typedef _NativeTickZoneRenderer = ({Float64List left, Float64List? right})
+    Function(
+  TrackerInstrument zone,
+  List<TrackerCell> cells,
+);
+
+List<TrackerCell> _isolatedTickZoneCells(
+  List<TrackerCell> cells,
+  int startStep,
+  int runSteps,
+) {
+  final isolated = List<TrackerCell>.filled(cells.length, TrackerCell.empty);
+  final end = min(startStep + runSteps, cells.length);
+  isolated.setRange(startStep, end, cells, startStep);
+  if (end < isolated.length) isolated[end] = TrackerCell.noteCut;
+  return isolated;
+}
+
+({Float64List left, Float64List? right}) _renderNativeTickZoneVoices(
+  MultiSampleInstrument multi,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  _NativeTickZoneRenderer render,
+) {
+  final total = rowStart.last;
+  final left = Float64List(total);
+  final voices = <_NativeTickZoneVoice>[];
+  var startStep = 0;
+
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final runSteps = run.$2 + run.$3;
+    if (midi != null) {
+      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      if (zone != null) {
+        final voiceCells = _isolatedTickZoneCells(cells, startStep, runSteps);
+        final rendered = render(zone, voiceCells);
+        final voice = _NativeTickZoneVoice(
+          midi: midi,
+          zone: zone,
+          startStep: startStep,
+          runSteps: runSteps,
+          cells: voiceCells,
+          left: rendered.left,
+          right: rendered.right,
+        );
+        final newStart = rowStart[startStep];
+        for (final old in voices) {
+          if (old.endSample <= newStart) continue;
+          final duplicate = _isNativeTickDuplicate(
+            old,
+            voice,
+            nativeDctOf(zone),
+          );
+          final action = duplicate ? nativeDcaOf(zone) : nativeNnaOf(old.zone);
+          switch (action) {
+            case 0:
+              old.endSample = newStart;
+            case 1:
+              old.releaseAt = newStart;
+              if (old.releaseLeft == null) {
+                final releasedCells = List<TrackerCell>.from(old.cells);
+                if (startStep < releasedCells.length) {
+                  releasedCells[startStep] = TrackerCell.noteCut;
+                }
+                final released = render(old.zone, releasedCells);
+                old.releaseLeft = released.left;
+                old.releaseRight = released.right;
+              }
+            case 2:
+              old.fadeAt = newStart;
+          }
+        }
+        voices.add(voice);
+      }
+    }
+    startStep += runSteps;
+  }
+
+  final rightStem =
+      voices.any((voice) => voice.right != null) ? Float64List(total) : null;
+  if (rightStem != null) {
+    for (final voice in voices) {
+      final end = voice.endSample.clamp(rowStart[voice.startStep], total);
+      final fadeRate = nativeFadeoutOf(voice.zone) / 1024.0;
+      for (var i = rowStart[voice.startStep]; i < end; i++) {
+        final released = voice.releaseAt != null && i >= voice.releaseAt!;
+        final selected = released
+            ? (voice.releaseRight ?? voice.releaseLeft)
+            : (voice.right ?? voice.left);
+        if (selected == null || i >= selected.length) continue;
+        var gain = 1.0;
+        if (voice.fadeAt != null && i >= voice.fadeAt!) {
+          gain = exp(-fadeRate * (i - voice.fadeAt!) / kSampleRate * 8.0);
+        }
+        rightStem[i] += selected[i] * gain;
+      }
+    }
+  }
+  for (final voice in voices) {
+    final end = voice.endSample.clamp(rowStart[voice.startStep], total);
+    final fadeRate = nativeFadeoutOf(voice.zone) / 1024.0;
+    for (var i = rowStart[voice.startStep]; i < end; i++) {
+      final released = voice.releaseAt != null && i >= voice.releaseAt!;
+      final selected = released ? voice.releaseLeft : voice.left;
+      if (selected == null || i >= selected.length) continue;
+      var gain = 1.0;
+      if (voice.fadeAt != null && i >= voice.fadeAt!) {
+        gain = exp(-fadeRate * (i - voice.fadeAt!) / kSampleRate * 8.0);
+      }
+      left[i] += selected[i] * gain;
+    }
+  }
+  return (left: left, right: rightStem);
+}
+
+bool _isNativeTickDuplicate(
+  _NativeTickZoneVoice old,
+  _NativeTickZoneVoice next,
+  int dct,
+) {
+  switch (dct) {
+    case 1:
+      return old.midi == next.midi;
+    case 2:
+      return old.zone.id == next.zone.id;
+    case 3:
+      return true;
+    default:
+      return false;
+  }
+}
+
 void _renderMultiSampleChannelInto(
   Float64List mix,
   TrackerChannel channel,
   List<TrackerCell> cells,
   TrackerTiming timing,
   int ticksPerRow,
+  int sampleOffset,
 ) {
   final multi = channel.instrument;
   if (multi is! MultiSampleInstrument) return;
+  if (multi.nativeVoiceSemantics &&
+      multi.zones.values.every((zone) => zone is SampleInstrument)) {
+    final rowStart = [
+      for (var row = 0; row < cells.length; row++) timing.stepStartSample(row),
+    ]..add(timing.totalSamples);
+    final rendered = _renderNativeTickZoneVoices(
+      multi,
+      cells,
+      rowStart,
+      (zone, isolated) {
+        final out = Float64List(timing.totalSamples);
+        final zoneChannel = TrackerChannel(
+          id: '${channel.id}:zone',
+          instrument: zone,
+          rows: cells.length,
+          gain: channel.gain,
+          pan: channel.pan,
+          volumeEnvelope: channel.volumeEnvelope,
+          panEnvelope: channel.panEnvelope,
+        );
+        _renderSampleChannelInto(
+          out,
+          zoneChannel,
+          isolated,
+          timing,
+          ticksPerRow,
+          0,
+        );
+        return (left: out, right: null);
+      },
+    );
+    final n = min(rendered.left.length, mix.length - sampleOffset);
+    for (var i = 0; i < n; i++) {
+      mix[sampleOffset + i] += rendered.left[i];
+    }
+    return;
+  }
   var startStep = 0;
   for (final run in noteRuns(cells)) {
     final midi = run.$1;
@@ -1697,7 +1894,7 @@ void _renderMultiSampleChannelInto(
             isolated,
             timing,
             ticksPerRow,
-            0,
+            sampleOffset,
           );
         } else if (_additiveOf(zone) != null) {
           _renderChannelInto(
@@ -1706,7 +1903,7 @@ void _renderMultiSampleChannelInto(
             isolated,
             timing,
             ticksPerRow,
-            0,
+            sampleOffset,
           );
         }
       }
@@ -1728,6 +1925,37 @@ void _renderMultiSampleChannelInto(
   final rowStart = [
     for (var row = 0; row < cells.length; row++) timing.stepStartSample(row),
   ]..add(timing.totalSamples);
+  if (multi.nativeVoiceSemantics &&
+      multi.zones.values.every((zone) => zone is SampleInstrument)) {
+    final rendered = _renderNativeTickZoneVoices(
+      multi,
+      cells,
+      rowStart,
+      (zone, isolated) {
+        final zoneChannel = TrackerChannel(
+          id: '${channel.id}:zone',
+          instrument: zone,
+          rows: cells.length,
+          gain: channel.gain,
+          pan: channel.pan,
+          volumeEnvelope: channel.volumeEnvelope,
+          panEnvelope: channel.panEnvelope,
+        );
+        final stereo = _renderSampleChannelStereoTicks(
+          zoneChannel,
+          isolated,
+          rowStart,
+          List<int>.filled(cells.length, ticksPerRow),
+          null,
+        );
+        return (left: stereo.left, right: stereo.right);
+      },
+    );
+    return (
+      left: rendered.left,
+      right: rendered.right ?? Float64List.fromList(rendered.left),
+    );
+  }
   var startStep = 0;
   for (final run in noteRuns(cells)) {
     final midi = run.$1;
@@ -1799,6 +2027,39 @@ void _renderMultiSampleChannelIntoVariable(
 ) {
   final multi = channel.instrument;
   if (multi is! MultiSampleInstrument) return;
+  if (multi.nativeVoiceSemantics &&
+      multi.zones.values.every((zone) => zone is SampleInstrument)) {
+    final rendered = _renderNativeTickZoneVoices(
+      multi,
+      cells,
+      rowStart,
+      (zone, isolated) {
+        final out = Float64List(rowStart.last);
+        final zoneChannel = TrackerChannel(
+          id: '${channel.id}:zone',
+          instrument: zone,
+          rows: cells.length,
+          gain: channel.gain,
+          pan: channel.pan,
+          volumeEnvelope: channel.volumeEnvelope,
+          panEnvelope: channel.panEnvelope,
+        );
+        _renderSampleChannelIntoVariable(
+          out,
+          zoneChannel,
+          isolated,
+          rowStart,
+          ticksPerRow,
+          null,
+        );
+        return (left: out, right: null);
+      },
+    );
+    for (var i = 0; i < rendered.left.length && i < mix.length; i++) {
+      mix[i] += rendered.left[i];
+    }
+    return;
+  }
   var startStep = 0;
   for (final run in noteRuns(cells)) {
     final midi = run.$1;
@@ -3061,6 +3322,42 @@ ReplayResult _replayVariableStereo(TrackerSong song) {
     final flatCells = [
       for (final pr in played) song.patterns[pr.patternIndex].cells[c][pr.row],
     ];
+    final multi = channels[c].instrument;
+    if (multi is MultiSampleInstrument &&
+        multi.nativeVoiceSemantics &&
+        multi.zones.values.every((zone) => zone is SampleInstrument) &&
+        _hasPerTickEffect(flatCells)) {
+      final rendered = _renderNativeTickZoneVoices(
+        multi,
+        flatCells,
+        rowStart,
+        (zone, isolated) {
+          final zoneChannel = TrackerChannel(
+            id: '${channels[c].id}:zone',
+            instrument: zone,
+            rows: flatCells.length,
+            gain: channels[c].gain,
+            pan: channels[c].pan,
+            volumeEnvelope: channels[c].volumeEnvelope,
+            panEnvelope: channels[c].panEnvelope,
+          );
+          final stereo = _renderSampleChannelStereoTicks(
+            zoneChannel,
+            isolated,
+            rowStart,
+            ticks,
+            null,
+          );
+          return (left: stereo.left, right: stereo.right);
+        },
+      );
+      final renderedRight = rendered.right ?? rendered.left;
+      for (var i = 0; i < acc; i++) {
+        left[i] += rendered.left[i];
+        right[i] += renderedRight[i];
+      }
+      continue;
+    }
     if (channels[c].instrument is SampleInstrument &&
         _hasPerTickEffect(flatCells)) {
       final rendered = _renderSampleChannelStereoTicks(
