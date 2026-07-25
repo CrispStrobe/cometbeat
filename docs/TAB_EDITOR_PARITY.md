@@ -235,7 +235,12 @@ parametric technique end-to-end.
 - [x] **A7** alternate endings (voltas) — `TabColumn.volta` (bar-level, first
   column); `toScore` → `Measure.volta`; `fromScore` round-trip; `setBarVolta` +
   an "Ending" cycle chip. Tests: group A7.
-- [ ] A8 … E2 — pending (scoped above)
+- [x] **A8** directions + section labels — `TabColumn.navigation`
+  (`NavigationMark`: D.C./D.S./Coda/Fine/Segno…, bar-level) → `Measure.navigation`;
+  `TabColumn.section` (rehearsal label) → a `Score.annotation` on that note; both
+  round-trip. `setBarNavigation`/`setSection`. Tests: group A8. (UI controls for
+  these land with the Tab-Editor UX pass, not the settings sheet.)
+- [ ] A9 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

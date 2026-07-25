@@ -706,4 +706,38 @@ void main() {
       expect(doc.columns[4].volta, isNull);
     });
   });
+
+  group('A8 — directions + section labels', () {
+    test('a direction mark stamps Measure.navigation and round-trips', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [for (var i = 0; i < 4; i++) const TabColumn(frets: {0: 0})],
+      );
+      doc.setBarNavigation(0, NavigationMark.daCapo);
+      expect(doc.toScore().measures.first.navigation, NavigationMark.daCapo);
+      final back = TabDocument.fromScore(doc.toScore(), Tuning.standardGuitar);
+      expect(back.columns.first.navigation, NavigationMark.daCapo);
+    });
+
+    test('a section label becomes a Score annotation and round-trips', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [const TabColumn(frets: {0: 0})],
+      );
+      doc.setSection(0, 'Verse');
+      final score = doc.toScore();
+      expect(score.annotations.any((a) => a.text == 'Verse'), isTrue);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.section, 'Verse');
+    });
+
+    test('withNavigation/withSection preserve other bar metadata', () {
+      const c = TabColumn(frets: {0: 0}, volta: 2, startRepeat: true);
+      final n = c.withNavigation(NavigationMark.fine).withSection('Chorus');
+      expect(n.volta, 2);
+      expect(n.startRepeat, isTrue);
+      expect(n.navigation, NavigationMark.fine);
+      expect(n.section, 'Chorus');
+    });
+  });
 }

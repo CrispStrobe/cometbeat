@@ -61,6 +61,14 @@ class TabColumn {
   /// null for none. Bar-level, anchored to the bar's first column.
   final int? volta;
 
+  /// A repeat-structure direction (D.C. / D.S. / Coda / Fine / Segno …) drawn
+  /// over this column's bar, or null. Bar-level, anchored to the first column.
+  final NavigationMark? navigation;
+
+  /// A section / rehearsal label (e.g. "Verse", "Chorus") shown above this
+  /// note, or null. Anchored to this column's own note.
+  final String? section;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
@@ -71,6 +79,8 @@ class TabColumn {
     this.startRepeat = false,
     this.endRepeat = false,
     this.volta,
+    this.navigation,
+    this.section,
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -85,6 +95,8 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 
   TabColumn withoutString(int string) => TabColumn(
@@ -100,6 +112,8 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 
   TabColumn withDuration(NoteDuration d) => TabColumn(
@@ -112,6 +126,8 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 
   /// Adds [t] if absent, else removes it.
@@ -127,6 +143,8 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 
   /// Sets (or clears, when null) this column's chord diagram.
@@ -140,6 +158,8 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 
   /// Sets whether this note ties into the next column.
@@ -153,6 +173,8 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 
   /// Sets (or clears, when null) this column's tuplet ratio.
@@ -166,6 +188,8 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 
   /// Sets this column's bar repeat-barline flags.
@@ -179,6 +203,8 @@ class TabColumn {
         startRepeat: start ?? startRepeat,
         endRepeat: end ?? endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 
   /// Sets (or clears, when null) this column's bar volta number.
@@ -192,6 +218,38 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: v,
+        navigation: navigation,
+        section: section,
+      );
+
+  /// Sets (or clears, when null) this column's bar direction mark.
+  TabColumn withNavigation(NavigationMark? n) => TabColumn(
+        frets: frets,
+        duration: duration,
+        techniques: techniques,
+        chord: chord,
+        tieToNext: tieToNext,
+        tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
+        volta: volta,
+        navigation: n,
+        section: section,
+      );
+
+  /// Sets (or clears, when null) this column's section/rehearsal label.
+  TabColumn withSection(String? label) => TabColumn(
+        frets: frets,
+        duration: duration,
+        techniques: techniques,
+        chord: chord,
+        tieToNext: tieToNext,
+        tuplet: tuplet,
+        startRepeat: startRepeat,
+        endRepeat: endRepeat,
+        volta: volta,
+        navigation: navigation,
+        section: label,
       );
 
   /// A deep copy (fresh frets/techniques collections) — for duplicating columns.
@@ -205,6 +263,8 @@ class TabColumn {
         startRepeat: startRepeat,
         endRepeat: endRepeat,
         volta: volta,
+        navigation: navigation,
+        section: section,
       );
 }
 
@@ -404,6 +464,21 @@ class TabDocument {
     columns[first] = columns[first].withVolta(volta);
   }
 
+  /// Sets (or clears, when null) the direction mark of the BAR containing [col].
+  void setBarNavigation(int col, NavigationMark? mark) {
+    if (columns.isEmpty) return;
+    final (first, _) = barBoundsAt(col);
+    _ensure(first);
+    columns[first] = columns[first].withNavigation(mark);
+  }
+
+  /// Sets (or clears, when null) the section/rehearsal label on the column at
+  /// [col] (it shows above that note).
+  void setSection(int col, String? label) {
+    _ensure(col);
+    columns[col] = columns[col].withSection(label);
+  }
+
   /// Marks the [count] columns starting at [start] as one tuplet of [ratio]
   /// (default a 3:2 triplet). Grows the document if needed.
   void makeTuplet(int start, int count, {(int, int) ratio = (3, 2)}) {
@@ -525,6 +600,7 @@ class TabDocument {
     final slurs = <Slur>[];
     final glissandos = <Glissando>[];
     final vibratos = <Vibrato>[];
+    final annotations = <Annotation>[];
     var bar = <MusicElement>[];
     var barSteps = 0.0;
     var barFirstCol =
@@ -559,6 +635,7 @@ class TabDocument {
             startRepeat: first?.startRepeat ?? false,
             endRepeat: first?.endRepeat ?? false,
             volta: first?.volta,
+            navigation: first?.navigation,
           ),
         );
       }
@@ -611,6 +688,7 @@ class TabDocument {
           ),
         );
         voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
+        if (col.section != null) annotations.add(Annotation(id, col.section!));
         for (final t in col.techniques) {
           switch (t) {
             case TabTechnique.bend:
@@ -651,6 +729,7 @@ class TabDocument {
       slurs: slurs,
       glissandos: glissandos,
       vibratos: vibratos,
+      annotations: annotations,
     );
   }
 
@@ -735,6 +814,10 @@ class TabDocument {
       );
     }
 
+    final annById = <String, String>{};
+    for (final a in score.annotations) {
+      annById.putIfAbsent(a.elementId, () => a.text);
+    }
     final midiCols = <List<int>>[];
     final durations = <NoteDuration>[];
     final ids = <String?>[]; // per-column source note id (null for a rest)
@@ -743,6 +826,8 @@ class TabDocument {
     final startReps = <bool>[]; // per-column: bar opens a repeat
     final endReps = <bool>[]; // per-column: bar closes a repeat
     final voltas = <int?>[]; // per-column: bar volta number
+    final navs = <NavigationMark?>[]; // per-column: bar direction mark
+    final sections = <String?>[]; // per-column: section/rehearsal label
     final pinned = <int, Fretting>{}; // column index → explicit fingering
     var idx = 0;
     for (final measure in score.measures) {
@@ -766,6 +851,8 @@ class TabDocument {
           durations.add(el.duration);
           ids.add(el.id);
           ties.add(el.tieToNext);
+          sections.add(annById[el.id]);
+          navs.add(null);
           tuplets.add(null);
           startReps.add(false);
           endReps.add(false);
@@ -776,6 +863,8 @@ class TabDocument {
           durations.add(el.duration);
           ids.add(null);
           ties.add(false);
+          sections.add(null);
+          navs.add(null);
           tuplets.add(null);
           startReps.add(false);
           endReps.add(false);
@@ -802,6 +891,9 @@ class TabDocument {
       if (measure.volta != null && measureStart < voltas.length) {
         voltas[measureStart] = measure.volta;
       }
+      if (measure.navigation != null && measureStart < navs.length) {
+        navs[measureStart] = measure.navigation;
+      }
     }
     if (midiCols.isEmpty) {
       return TabDocument(
@@ -827,6 +919,8 @@ class TabDocument {
             startRepeat: startReps[i],
             endRepeat: endReps[i],
             volta: voltas[i],
+            navigation: navs[i],
+            section: sections[i],
           ),
       ],
     );
