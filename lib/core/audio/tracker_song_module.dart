@@ -75,7 +75,7 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
         rows: rows,
         // Keep the four-channel tracker default, but provide headroom for
         // wide modules whose channels are mixed into the same stereo bus.
-        gain: 0.6 * min(1.0, 4 / channelCount),
+        gain: _channelGain(doc, channelCount, c),
         // The channel's dominant sample carries the module's default pan +
         // envelopes (XM/IT); convert them onto the channel so the imported
         // module plays — and shows in the editor — with its shaping intact.
@@ -163,6 +163,16 @@ double _channelPan(ModuleDoc doc, int ins) {
   // the sample's scalar pan again would shift that image twice.
   if (s.pcmRight != null) return 0.0;
   return ((s.pan - 128) / 128).clamp(-1.0, 1.0);
+}
+
+double _channelGain(ModuleDoc doc, int channelCount, int channel) {
+  final base = 0.6 * min(1.0, 4 / channelCount);
+  if (doc.sourceFormat == ModuleFormat.it &&
+      channel >= 0 &&
+      channel < doc.channelVolumes.length) {
+    return base * (doc.channelVolumes[channel].clamp(0, 64) / 64.0);
+  }
+  return base;
 }
 
 /// Resolve a channel's native header pan before falling back to the dominant

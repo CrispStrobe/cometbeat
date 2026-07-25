@@ -74,9 +74,11 @@ void main() {
         patterns: [DocPattern(pattern, 1)],
         samples: [sample],
         channelPans: const [0],
+        channelVolumes: const [32],
       ),
     );
     expect(it.channels.single.pan, closeTo(-1.0, 0.001));
+    expect(it.channels.single.gain, closeTo(0.3, 0.001));
   });
 
   for (final name in ['golden.mod', 'golden.s3m', 'golden.xm', 'golden.it']) {
