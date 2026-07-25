@@ -380,9 +380,9 @@ DocEnvelope _docEnvFromXm(XmEnvelope e) => DocEnvelope(
 DocEnvelope _docEnvFromIt(ItEnvelope e) => DocEnvelope(
       points: List<(int, int)>.from(e.points),
       enabled: e.enabled,
-      loopStart: e.loopStart,
-      loopEnd: e.loopEnd,
-      sustain: e.sustainStart,
+      loopStart: e.loopEnabled ? e.loopStart : null,
+      loopEnd: e.loopEnabled ? e.loopEnd : null,
+      sustain: e.sustainEnabled ? e.sustainStart : null,
     );
 
 XmEnvelope _xmEnvFromDoc(DocEnvelope e) => XmEnvelope(

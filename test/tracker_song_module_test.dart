@@ -548,6 +548,46 @@ void main() {
       expect(ch.volumeEnvelope, isNull);
       expect(ch.panEnvelope, isNull);
     });
+
+    test('IT pitch envelope reaches the sampled native zone', () {
+      final doc = ModuleDoc(
+        sourceFormat: ModuleFormat.it,
+        channelCount: 1,
+        initialTempo: 120,
+        order: [0],
+        patterns: [
+          DocPattern([
+            [
+              const DocCell(
+                note: 60,
+                instrument: 1,
+                nativeInstrument: 1,
+                nativeInstrumentSet: true,
+              ),
+            ],
+          ], 1),
+        ],
+        samples: [
+          DocSample(pcm: Float64List(44100 * 2), c5speed: kSampleRate),
+        ],
+        itInstruments: [
+          DocInstrument(
+            keymap: List<int>.filled(120, 1),
+            pitchEnvelope: const DocEnvelope(
+              points: [(0, 12), (4, 0)],
+              enabled: true,
+            ),
+          ),
+        ],
+      );
+
+      final song = songFromModuleDoc(doc);
+      final multi = song.instruments.single as MultiSampleInstrument;
+      final zone = multi.zones[60]! as SampleInstrument;
+      expect(zone.nativePitchEnvelope, isNotNull);
+      expect(zone.nativePitchEnvelope!.semitonesAt(0), 12);
+      expect(zone.nativePitchEnvelope!.semitonesAt(1000), 0);
+    });
   });
 
   test('imports XM/IT-style patterns with their individual row counts', () {

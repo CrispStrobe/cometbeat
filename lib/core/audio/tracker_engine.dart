@@ -592,6 +592,7 @@ class SampleInstrument implements TrackerInstrument {
     this.sampleRight,
     this.nativeVolumeEnvelope,
     this.nativePanEnvelope,
+    this.nativePitchEnvelope,
     this.nativeNna = 0,
     this.nativeDct = 0,
     this.nativeDca = 0,
@@ -627,6 +628,9 @@ class SampleInstrument implements TrackerInstrument {
 
   /// Tracker-native pan envelope, evaluated from each note onset.
   final PanEnvelope? nativePanEnvelope;
+
+  /// IT tracker-native pitch envelope, in semitones from the note pitch.
+  final PitchEnvelope? nativePitchEnvelope;
 
   /// IT/XM old-note action metadata. NNA values follow IT: 0=cut,
   /// 1=continue, 2=note-off, 3=fade.
@@ -688,6 +692,7 @@ class SampleInstrument implements TrackerInstrument {
     Float64List? sampleRight,
     VolumeEnvelope? nativeVolumeEnvelope,
     PanEnvelope? nativePanEnvelope,
+    PitchEnvelope? nativePitchEnvelope,
     int? nativeNna,
     int? nativeDct,
     int? nativeDca,
@@ -710,6 +715,7 @@ class SampleInstrument implements TrackerInstrument {
         sampleRight: sampleRight ?? this.sampleRight,
         nativeVolumeEnvelope: nativeVolumeEnvelope ?? this.nativeVolumeEnvelope,
         nativePanEnvelope: nativePanEnvelope ?? this.nativePanEnvelope,
+        nativePitchEnvelope: nativePitchEnvelope ?? this.nativePitchEnvelope,
         nativeNna: nativeNna ?? this.nativeNna,
         nativeDct: nativeDct ?? this.nativeDct,
         nativeDca: nativeDca ?? this.nativeDca,
@@ -792,16 +798,27 @@ class SampleInstrument implements TrackerInstrument {
                 loopStart: playbackLoopStart,
                 loopLength: playbackLoopLength,
                 pingPong: playbackPingPong,
+                pitchEnvelope: nativePitchEnvelope,
               )
-            : envelope.pitchStart != 0 && maxOut > 0
-                ? resampleGlide(
+            : nativePitchEnvelope != null && maxOut > 0
+                ? _resampleLooping(
                     src,
-                    ratioStart: baseRatio * pow(2, envelope.pitchStart / 12),
-                    ratioEnd: baseRatio,
-                    glideSamples: (envelope.pitchTime * kSampleRate).round(),
-                    outLen: maxOut,
+                    baseRatio,
+                    maxOut,
+                    0,
+                    pitchEnvelope: nativePitchEnvelope,
                   )
-                : resampleCubic(src, baseRatio);
+                : envelope.pitchStart != 0 && maxOut > 0
+                    ? resampleGlide(
+                        src,
+                        ratioStart:
+                            baseRatio * pow(2, envelope.pitchStart / 12),
+                        ratioEnd: baseRatio,
+                        glideSamples:
+                            (envelope.pitchTime * kSampleRate).round(),
+                        outLen: maxOut,
+                      )
+                    : resampleCubic(src, baseRatio);
         final n = min(min(buf.length, runSamples), out.length - startSample);
         if (n > 0) {
           // - explicit key-off: use sustainSamples (enter ADSR release)
@@ -910,6 +927,8 @@ class SampleInstrument implements TrackerInstrument {
     int? loopStart,
     int? loopLength,
     bool? pingPong,
+    PitchEnvelope? pitchEnvelope,
+    bool released = false,
   }) {
     final activeLoopStart = loopStart ?? this.loopStart;
     final activeLoopLength = loopLength ?? this.loopLength;
@@ -930,7 +949,12 @@ class SampleInstrument implements TrackerInstrument {
         final frac = p - idx;
         out[i] = source[idx] * (1 - frac) + source[idx + 1] * frac;
       }
-      pos += ratio;
+      final semitones = pitchEnvelope?.semitonesAt(
+            i / kSampleRate * 1000,
+            released: released,
+          ) ??
+          0.0;
+      pos += ratio * pow(2, semitones / 12.0);
     }
     return out;
   }
@@ -1470,6 +1494,47 @@ class PanEnvelope {
       }
     }
     return points.last.pan;
+  }
+}
+
+/// A tracker-native pitch envelope. Values are semitone offsets from the
+/// played note and are evaluated from each note onset.
+class PitchEnvelope {
+  const PitchEnvelope(
+    this.points, {
+    this.sustain,
+    this.loopStart,
+    this.loopEnd,
+  });
+
+  final List<({int ms, double semitones})> points;
+  final int? sustain;
+  final int? loopStart;
+  final int? loopEnd;
+
+  bool get isEmpty => points.isEmpty;
+
+  double semitonesAt(double ms, {bool released = false}) {
+    if (points.isEmpty) return 0.0;
+    ms = _envelopeTime(
+      ms,
+      released: released,
+      sustain: sustain,
+      loopStart: loopStart,
+      loopEnd: loopEnd,
+      pointMs: [for (final p in points) p.ms],
+    );
+    if (ms <= points.first.ms) return points.first.semitones;
+    for (var i = 1; i < points.length; i++) {
+      final b = points[i];
+      if (ms <= b.ms) {
+        final a = points[i - 1];
+        final span = b.ms - a.ms;
+        if (span <= 0) return b.semitones;
+        return a.semitones + (b.semitones - a.semitones) * ((ms - a.ms) / span);
+      }
+    }
+    return points.last.semitones;
   }
 }
 

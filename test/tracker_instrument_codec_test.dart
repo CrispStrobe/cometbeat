@@ -118,6 +118,10 @@ void main() {
         loopLength: 120,
         offsetScale: 0.5,
         envelope: const Envelope(attack: 0.01, release: 0.02, sustain: 0.8),
+        nativePitchEnvelope: const PitchEnvelope([
+          (ms: 0, semitones: 12),
+          (ms: 500, semitones: 0),
+        ]),
       );
       // Float32 PCM → tiny precision loss; render is near-identical.
       expectRoundTrips(inst, tol: 1e-5);
@@ -132,6 +136,8 @@ void main() {
       expect(d.sample.length, pcm.length);
       expect(d.envelope.attack, closeTo(0.01, 1e-9));
       expect(d.envelope.sustain, closeTo(0.8, 1e-9));
+      expect(d.nativePitchEnvelope, isNotNull);
+      expect(d.nativePitchEnvelope!.points.last.semitones, 0);
     });
 
     test('percussion', () {

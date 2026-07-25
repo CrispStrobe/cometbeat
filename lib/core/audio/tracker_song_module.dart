@@ -203,6 +203,15 @@ PanEnvelope? _trackerPanEnv(DocEnvelope? e, int tempo) {
   ], sustain: e.sustain, loopStart: e.loopStart, loopEnd: e.loopEnd);
 }
 
+PitchEnvelope? _trackerPitchEnv(DocEnvelope? e, int tempo) {
+  if (e == null || e.isEmpty || !e.enabled) return null;
+  final ms = _tickMs(tempo);
+  return PitchEnvelope([
+    for (final (t, v) in e.points)
+      (ms: (t * ms).round(), semitones: v.toDouble()),
+  ], sustain: e.sustain, loopStart: e.loopStart, loopEnd: e.loopEnd);
+}
+
 /// A channel's instrument: its dominant module sample, else a rotating additive
 /// voice so empty channels still sound distinct.
 TrackerInstrument _instrumentForChannel(ModuleDoc doc, int ins, int c) {
@@ -307,6 +316,8 @@ TrackerInstrument _itNativeInstrument(
               _trackerVolEnv(instrument.volumeEnvelope, doc.initialTempo),
           nativePanEnvelope:
               _trackerPanEnv(instrument.panEnvelope, doc.initialTempo),
+          nativePitchEnvelope:
+              _trackerPitchEnv(instrument.pitchEnvelope, doc.initialTempo),
           nativeNna: instrument.nna,
           nativeDct: instrument.dct,
           nativeDca: instrument.dca,
@@ -475,6 +486,8 @@ _NativeExportParts _nativeExportParts(
         (first is SampleInstrument ? first.nativePanEnvelope : null);
     final volumeEnvelope = _docVolEnv(vol, tempo);
     final panEnvelope = _docPanEnv(pan, tempo);
+    final pitch = first is SampleInstrument ? first.nativePitchEnvelope : null;
+    final pitchEnvelope = _docPitchEnv(pitch, tempo);
     final nna = first is SampleInstrument ? first.nativeNna : 0;
     final dct = first is SampleInstrument ? first.nativeDct : 0;
     final dca = first is SampleInstrument ? first.nativeDca : 0;
@@ -519,6 +532,7 @@ _NativeExportParts _nativeExportParts(
         fadeout: fadeout,
         volumeEnvelope: volumeEnvelope,
         panEnvelope: panEnvelope,
+        pitchEnvelope: pitchEnvelope,
       ),
     );
   }
@@ -706,6 +720,21 @@ DocEnvelope _docPanEnv(PanEnvelope? e, int tempo) {
     points: [
       for (final p in e.points)
         ((p.ms / perTick).round(), (p.pan * 32 + 32).round().clamp(0, 64)),
+    ],
+    sustain: e.sustain,
+    loopStart: e.loopStart,
+    loopEnd: e.loopEnd,
+  );
+}
+
+DocEnvelope _docPitchEnv(PitchEnvelope? e, int tempo) {
+  if (e == null || e.isEmpty) return const DocEnvelope();
+  final perTick = _tickMs(tempo);
+  return DocEnvelope(
+    enabled: true,
+    points: [
+      for (final p in e.points)
+        ((p.ms / perTick).round(), p.semitones.round().clamp(-32, 32)),
     ],
     sustain: e.sustain,
     loopStart: e.loopStart,

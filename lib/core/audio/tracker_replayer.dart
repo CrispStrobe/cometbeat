@@ -900,7 +900,6 @@ double? _readLoopedSample(
         noteStartSample = ts;
       }
       if (!voice.active && !voice.released) continue;
-      final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < total; i++) {
         final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
@@ -959,7 +958,12 @@ double? _readLoopedSample(
           left[i] += value * amount * cos(theta);
           right[i] += value * amount * sin(theta);
         }
-        readPos += ratio;
+        final pitch = cur.nativePitchEnvelope?.semitonesAt(
+              t * 1000,
+              released: voice.released,
+            ) ??
+            0.0;
+        readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
       }
     }
   }
@@ -1056,7 +1060,6 @@ void _renderSampleChannelInto(
         noteStartSample = ts;
       }
       if (!voice.active && !voice.released) continue;
-      final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
         final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
@@ -1089,7 +1092,12 @@ void _renderSampleChannelInto(
             ? exp(-max(0, i - releaseStartSample) / (0.03 * kSampleRate))
             : 1.0;
         stem[i] += sampleVal * vol * attack * el * release;
-        readPos += ratio;
+        final pitch = cur.nativePitchEnvelope?.semitonesAt(
+              t * 1000,
+              released: voice.released,
+            ) ??
+            0.0;
+        readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
       }
     }
   }
@@ -1184,7 +1192,6 @@ void _renderSampleChannelIntoVariable(
         noteStartSample = ts;
       }
       if (!voice.active && !voice.released) continue;
-      final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
         final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
@@ -1217,7 +1224,12 @@ void _renderSampleChannelIntoVariable(
             ? exp(-max(0, i - releaseStartSample) / (0.03 * kSampleRate))
             : 1.0;
         stem[i] += sampleVal * vol * attack * el * release;
-        readPos += ratio;
+        final pitch = cur.nativePitchEnvelope?.semitonesAt(
+              t * 1000,
+              released: voice.released,
+            ) ??
+            0.0;
+        readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
       }
     }
   }

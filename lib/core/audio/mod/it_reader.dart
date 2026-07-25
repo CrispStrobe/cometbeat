@@ -239,6 +239,8 @@ ItInstrument _parseInstrument(Uint8List bytes, int base) {
     return ItEnvelope(
       points: points,
       enabled: (flags & 1) != 0,
+      loopEnabled: (flags & 2) != 0,
+      sustainEnabled: (flags & 4) != 0,
       loopStart: u8(offset + 2),
       loopEnd: u8(offset + 3),
       sustainStart: u8(offset + 4),

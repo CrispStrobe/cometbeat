@@ -285,6 +285,16 @@ class _SampleEditor extends StatelessWidget {
     if (edited != null) onChanged(inst.copyWith(nativePanEnvelope: edited));
   }
 
+  Future<void> _editPitchEnvelope(BuildContext context) async {
+    final edited = await showDialog<PitchEnvelope>(
+      context: context,
+      builder: (_) => _NativePitchEnvelopeDialog(
+        initial: inst.nativePitchEnvelope,
+      ),
+    );
+    if (edited != null) onChanged(inst.copyWith(nativePitchEnvelope: edited));
+  }
+
   @override
   Widget build(BuildContext context) {
     final len = inst.sample.length;
@@ -418,6 +428,15 @@ class _SampleEditor extends StatelessWidget {
             icon: const Icon(Icons.tune),
             tooltip: 'Edit native pan envelope',
             onPressed: () => _editPanEnvelope(context),
+          ),
+        ),
+        ListTile(
+          title: const Text('Native Pitch Envelope'),
+          subtitle: Text(_envelopeSummary(inst.nativePitchEnvelope)),
+          trailing: IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Edit native pitch envelope',
+            onPressed: () => _editPitchEnvelope(context),
           ),
         ),
         ListTile(
@@ -766,6 +785,148 @@ class _NativePanEnvelopeDialogState extends State<_NativePanEnvelopeDialog> {
           TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
+          FilledButton(onPressed: _apply, child: const Text('Apply')),
+        ],
+      );
+}
+
+class _NativePitchEnvelopeDialog extends StatefulWidget {
+  const _NativePitchEnvelopeDialog({required this.initial});
+  final PitchEnvelope? initial;
+
+  @override
+  State<_NativePitchEnvelopeDialog> createState() =>
+      _NativePitchEnvelopeDialogState();
+}
+
+class _NativePitchEnvelopeDialogState
+    extends State<_NativePitchEnvelopeDialog> {
+  late List<({TextEditingController ms, TextEditingController value})> _rows;
+  int? _sustain;
+  int? _loopStart;
+  int? _loopEnd;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    _rows = [
+      for (final point
+          in initial?.points ?? const <({int ms, double semitones})>[])
+        (
+          ms: TextEditingController(text: '${point.ms}'),
+          value: TextEditingController(text: '${point.semitones}'),
+        ),
+    ];
+    _sustain = initial?.sustain;
+    _loopStart = initial?.loopStart;
+    _loopEnd = initial?.loopEnd;
+  }
+
+  @override
+  void dispose() {
+    for (final row in _rows) {
+      row.ms.dispose();
+      row.value.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addRow() => setState(() {
+        final ms =
+            _rows.isEmpty ? 0 : (int.tryParse(_rows.last.ms.text) ?? 0) + 100;
+        _rows.add((
+          ms: TextEditingController(text: '$ms'),
+          value: TextEditingController(text: '0'),
+        ));
+      });
+
+  void _removeRow(int index) {
+    final row = _rows.removeAt(index);
+    row.ms.dispose();
+    row.value.dispose();
+    setState(() {
+      _sustain = _removeIndex(_sustain, index);
+      _loopStart = _removeIndex(_loopStart, index);
+      _loopEnd = _removeIndex(_loopEnd, index);
+    });
+  }
+
+  int? _removeIndex(int? value, int removed) {
+    if (value == null || value == removed) return null;
+    return value > removed ? value - 1 : value;
+  }
+
+  void _apply() {
+    final values = <({int index, int ms, double semitones})>[];
+    for (var i = 0; i < _rows.length; i++) {
+      final ms = int.tryParse(_rows[i].ms.text.trim());
+      final semitones = double.tryParse(_rows[i].value.text.trim());
+      if (ms == null || semitones == null || ms < 0) return;
+      values.add((index: i, ms: ms, semitones: semitones.clamp(-32.0, 32.0)));
+    }
+    values.sort((a, b) => a.ms.compareTo(b.ms));
+    final remap = <int, int>{
+      for (var i = 0; i < values.length; i++) values[i].index: i,
+    };
+    int? mapped(int? value) => value == null ? null : remap[value];
+    Navigator.of(context).pop(PitchEnvelope(
+      [for (final value in values) (ms: value.ms, semitones: value.semitones)],
+      sustain: mapped(_sustain),
+      loopStart: mapped(_loopStart),
+      loopEnd: mapped(_loopEnd),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Native Pitch Envelope'),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < _rows.length; i++)
+                  _EnvelopePointRow(
+                    index: i,
+                    ms: _rows[i].ms,
+                    value: _rows[i].value,
+                    valueLabel: 'Semitones (-32..32)',
+                    onRemove: () => _removeRow(i),
+                  ),
+                TextButton.icon(
+                  onPressed: _addRow,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add point'),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Sustain point',
+                  value: _sustain,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _sustain = v),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Loop start',
+                  value: _loopStart,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _loopStart = v),
+                ),
+                _EnvelopeIndexRow(
+                  label: 'Loop end',
+                  value: _loopEnd,
+                  count: _rows.length,
+                  onChanged: (v) => setState(() => _loopEnd = v),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           FilledButton(onPressed: _apply, child: const Text('Apply')),
         ],
       );

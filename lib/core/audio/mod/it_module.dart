@@ -166,6 +166,8 @@ class ItEnvelope {
   const ItEnvelope({
     this.points = const [],
     this.enabled = false,
+    this.loopEnabled = false,
+    this.sustainEnabled = false,
     this.loopStart,
     this.loopEnd,
     this.sustainStart,
@@ -174,6 +176,8 @@ class ItEnvelope {
 
   final List<(int, int)> points; // (tick, value)
   final bool enabled;
+  final bool loopEnabled;
+  final bool sustainEnabled;
   final int? loopStart, loopEnd, sustainStart, sustainEnd;
 }
 

@@ -117,6 +117,9 @@ Map<String, dynamic> instrumentToJson(TrackerInstrument instrument) {
             _volumeEnvelopeToJson(instrument.nativeVolumeEnvelope!),
       if (instrument.nativePanEnvelope != null)
         'nativePanEnvelope': _panEnvelopeToJson(instrument.nativePanEnvelope!),
+      if (instrument.nativePitchEnvelope != null)
+        'nativePitchEnvelope':
+            _pitchEnvelopeToJson(instrument.nativePitchEnvelope!),
       'nativeNna': instrument.nativeNna,
       'nativeDct': instrument.nativeDct,
       'nativeDca': instrument.nativeDca,
@@ -221,6 +224,9 @@ TrackerInstrument instrumentFromJson(Map<String, dynamic> json) {
         ),
         nativePanEnvelope: _panEnvelopeFromJson(
           json['nativePanEnvelope'] as Map<String, dynamic>?,
+        ),
+        nativePitchEnvelope: _pitchEnvelopeFromJson(
+          json['nativePitchEnvelope'] as Map<String, dynamic>?,
         ),
         nativeNna: (json['nativeNna'] as num?)?.toInt() ?? 0,
         nativeDct: (json['nativeDct'] as num?)?.toInt() ?? 0,
@@ -379,6 +385,31 @@ PanEnvelope? _panEnvelopeFromJson(Map<String, dynamic>? m) {
         (
           ms: ((raw as Map<String, dynamic>)['ms'] as num).toInt(),
           pan: (raw['pan'] as num).toDouble(),
+        ),
+    ],
+    sustain: (m['sustain'] as num?)?.toInt(),
+    loopStart: (m['loopStart'] as num?)?.toInt(),
+    loopEnd: (m['loopEnd'] as num?)?.toInt(),
+  );
+}
+
+Map<String, dynamic> _pitchEnvelopeToJson(PitchEnvelope e) => {
+      'points': [
+        for (final p in e.points) {'ms': p.ms, 'semitones': p.semitones},
+      ],
+      'sustain': e.sustain,
+      'loopStart': e.loopStart,
+      'loopEnd': e.loopEnd,
+    };
+
+PitchEnvelope? _pitchEnvelopeFromJson(Map<String, dynamic>? m) {
+  if (m == null) return null;
+  return PitchEnvelope(
+    [
+      for (final raw in (m['points'] as List? ?? const []))
+        (
+          ms: ((raw as Map<String, dynamic>)['ms'] as num).toInt(),
+          semitones: (raw['semitones'] as num).toDouble(),
         ),
     ],
     sustain: (m['sustain'] as num?)?.toInt(),

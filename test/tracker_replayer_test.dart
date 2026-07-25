@@ -821,6 +821,41 @@ void main() {
       expect(e.levelAt(250, released: true), closeTo(0.75, 1e-9));
     });
 
+    test('native pitch envelope bends a sampled note', () {
+      final sample = Float64List(120000);
+      for (var i = 0; i < sample.length; i++) {
+        sample[i] = sin(2 * pi * 220 * i / kSampleRate);
+      }
+      final inst = SampleInstrument(
+        'pitch-env',
+        sample,
+        nativePitchEnvelope: const PitchEnvelope([
+          (ms: 0, semitones: 12),
+          (ms: 1000, semitones: 0),
+        ]),
+      );
+      const timing = TrackerTiming(rows: 8);
+      final out = inst.renderChannel(
+        [
+          const TrackerCell(midi: 60),
+          ...List<TrackerCell>.filled(7, TrackerCell.empty)
+        ],
+        timing,
+      );
+
+      int crossings(int start, int end) {
+        var count = 0;
+        for (var i = start + 1; i < end; i++) {
+          if ((out[i - 1] < 0) != (out[i] < 0)) count++;
+        }
+        return count;
+      }
+
+      final quarter = out.length ~/ 4;
+      expect(crossings(0, quarter),
+          greaterThan(crossings(3 * quarter, out.length) * 1.4));
+    });
+
     test('a fade-out envelope makes the note quieter at the end', () {
       final song = TrackerSong(timing: const TrackerTiming(rows: 8));
       song.engine

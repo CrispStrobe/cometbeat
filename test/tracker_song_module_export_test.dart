@@ -314,5 +314,47 @@ void main() {
       // 120 ms → 6 ticks → back to 6 × 20 ms = 120 ms at the same tempo.
       expect(env.points.last.ms, 120);
     });
+
+    test('native IT pitch envelope survives the song round-trip', () {
+      final instrument = SampleInstrument(
+        'it-pitch',
+        buzz(2000),
+        nativePitchEnvelope: const PitchEnvelope([
+          (ms: 0, semitones: 12),
+          (ms: 100, semitones: 0),
+        ]),
+      );
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(id: 'it', instrument: instrument, rows: 8),
+        ],
+        timing: const TrackerTiming(tempoBpm: 125, rows: 8),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+
+      final doc = moduleDocFromSong(song, targetFormat: ModuleFormat.it);
+      final exported = doc.itInstruments.firstWhere(
+        (instrument) => instrument.pitchEnvelope.enabled,
+      );
+      expect(exported.pitchEnvelope.points, [(0, 12), (5, 0)]);
+
+      final back = songFromModuleBytes(convertToIt(doc));
+      final multi = back.instruments.firstWhere(
+        (instrument) =>
+            instrument is MultiSampleInstrument &&
+            instrument.zones.values.any(
+              (zone) =>
+                  zone is SampleInstrument && zone.nativePitchEnvelope != null,
+            ),
+      ) as MultiSampleInstrument;
+      final zone = multi.zones[60]! as SampleInstrument;
+      expect(zone.nativePitchEnvelope!.semitonesAt(0), 12);
+      expect(zone.nativePitchEnvelope!.semitonesAt(1000), 0);
+    });
   });
 }
