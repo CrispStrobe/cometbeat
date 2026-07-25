@@ -651,6 +651,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   // Opacity of the view-painted drag preview: the real glyph, slightly lifted.
   static const double _kDragPreviewOpacity = 0.85;
   int _verse = 1; // which lyric verse the inline field edits
+  bool _lyricFocused = false; // true while the inline lyric field has focus
   bool _marquee = false; // rubber-band select mode (drag selects, not places)
 
   // C7: the view feeds its element hit-regions here so a marquee rect → ids.
@@ -1617,6 +1618,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// undo/redo/copy/cut/paste.
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
+    // While the inline lyric field is being typed into, let every key reach it
+    // (A–G, digits, etc.) instead of placing notes — otherwise typing a lyric
+    // silently drops characters and scatters notes onto the staff.
+    if (_lyricFocused) return KeyEventResult.ignored;
     final key = event.logicalKey;
     final kb = HardwareKeyboard.instance;
 
@@ -3486,6 +3491,7 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           key: ValueKey('lyric-${e.id}-v$_verse'),
           initial: _doc.lyricOf(e.id, verse: _verse) ?? '',
           hint: l10n.workshopLyricHint,
+          onFocusChanged: (f) => _lyricFocused = f,
           onCommit: (t) =>
               setState(() => _doc.setLyricFor(e.id, t, verse: _verse)),
         ),
@@ -5061,11 +5067,16 @@ class _LyricField extends StatefulWidget {
     required this.initial,
     required this.hint,
     required this.onCommit,
+    this.onFocusChanged,
   });
 
   final String initial;
   final String hint;
   final ValueChanged<String> onCommit;
+
+  /// Fired as the field gains/loses focus so the host can stop its
+  /// letter-key note-entry shortcuts from stealing typed characters.
+  final ValueChanged<bool>? onFocusChanged;
 
   @override
   State<_LyricField> createState() => _LyricFieldState();
@@ -5077,6 +5088,9 @@ class _LyricFieldState extends State<_LyricField> {
 
   @override
   void dispose() {
+    // Selection change rebuilds this field with a new key; make sure the host
+    // doesn't keep suppressing note-entry keys for a field that's gone.
+    widget.onFocusChanged?.call(false);
     _controller.dispose();
     super.dispose();
   }
@@ -5093,6 +5107,7 @@ class _LyricFieldState extends State<_LyricField> {
       width: 140,
       child: Focus(
         onFocusChange: (hasFocus) {
+          widget.onFocusChanged?.call(hasFocus);
           if (!hasFocus) _commit();
         },
         child: TextField(

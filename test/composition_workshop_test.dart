@@ -229,6 +229,34 @@ void main() {
     expect(view.elementColors[note.id], const Color(0xFF59A14F));
   });
 
+  testWidgets('typing a lyric does not place notes (no dropped keypresses)',
+      (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+
+    // Place a note so its inline lyric field appears, then focus that field.
+    await tester.tap(_pianoKey());
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    // Focus the field directly (it lives in a scrollable input bar, so a tap can
+    // miss); this fires the focus signal the host uses to yield its shortcuts.
+    await tester.showKeyboard(find.byType(TextField));
+    await tester.pumpAndSettle();
+
+    // With the lyric field focused, letter/digit keys must edit its text, not
+    // place notes on the staff (the note-entry shortcuts must yield to it).
+    final before = editor.noteCount;
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyG);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+    await tester.pump();
+    expect(
+      editor.noteCount,
+      before,
+      reason: 'keys typed into the lyric field must not add notes',
+    );
+  });
+
   testWidgets('the info button explains controls, not only shortcuts',
       (tester) async {
     await pump(tester);
