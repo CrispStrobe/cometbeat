@@ -2533,7 +2533,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundLibraryBrowseCatalog => 'Browse catalog';
 
   @override
-  String get catalogNotInstallable => 'Browsable here — install coming soon';
+  String get catalogNotInstallable =>
+      'Install needs the app (samples are cached on your device) — open the source to preview';
 
   @override
   String get catalogInstallInstrument => 'Install instrument';

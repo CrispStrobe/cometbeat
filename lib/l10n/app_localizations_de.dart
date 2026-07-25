@@ -2541,7 +2541,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get soundLibraryBrowseCatalog => 'Katalog durchsuchen';
 
   @override
-  String get catalogNotInstallable => 'Hier durchsuchbar – Installation folgt';
+  String get catalogNotInstallable =>
+      'Installation nur in der App (Samples werden auf dem Gerät gespeichert) – Quelle zum Ansehen öffnen';
 
   @override
   String get catalogInstallInstrument => 'Instrument installieren';

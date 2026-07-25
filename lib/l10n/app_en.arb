@@ -963,7 +963,7 @@
   "instrumentPlayHint": "Tap the keys to play your instrument.",
   "myInstrumentsDelete": "Delete",
   "soundLibraryBrowseCatalog": "Browse catalog",
-  "catalogNotInstallable": "Browsable here — install coming soon",
+  "catalogNotInstallable": "Install needs the app (samples are cached on your device) — open the source to preview",
   "catalogInstallInstrument": "Install instrument",
   "catalogInstalling": "Downloading samples…",
   "catalogInstrumentInstalled": "Installed ({n} files)",

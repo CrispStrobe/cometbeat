@@ -4769,7 +4769,7 @@ abstract class AppLocalizations {
   /// No description provided for @catalogNotInstallable.
   ///
   /// In en, this message translates to:
-  /// **'Browsable here — install coming soon'**
+  /// **'Install needs the app (samples are cached on your device) — open the source to preview'**
   String get catalogNotInstallable;
 
   /// No description provided for @catalogInstallInstrument.

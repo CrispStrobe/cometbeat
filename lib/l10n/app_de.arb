@@ -890,7 +890,7 @@
   "instrumentPlayHint": "Tippe die Tasten, um dein Instrument zu spielen.",
   "myInstrumentsDelete": "Löschen",
   "soundLibraryBrowseCatalog": "Katalog durchsuchen",
-  "catalogNotInstallable": "Hier durchsuchbar – Installation folgt",
+  "catalogNotInstallable": "Installation nur in der App (Samples werden auf dem Gerät gespeichert) – Quelle zum Ansehen öffnen",
   "catalogInstallInstrument": "Instrument installieren",
   "catalogInstalling": "Samples werden geladen…",
   "catalogInstrumentInstalled": "Installiert ({n} Dateien)",

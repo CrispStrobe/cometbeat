@@ -503,10 +503,17 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
             label: l10n.catalogInstallInstrument,
             run: () => _installInstrument(item),
           ),
+        // Instrument install caches a whole sample set on the device, which the
+        // web build can't do — say so accurately and make the tile a working
+        // fallback that opens the instrument's source page to preview it.
         _ => (
-            icon: Icons.info_outline,
+            icon: Icons.public,
             label: l10n.catalogNotInstallable,
-            run: () {},
+            run: () {
+              if (item.sourceUrl != null && item.sourceUrl!.isNotEmpty) {
+                _openSource(item);
+              }
+            },
           ),
       },
       if (item.collection == 'module')
