@@ -530,6 +530,8 @@ class SampleInstrument implements TrackerInstrument {
     this.pingPong = false,
     this.volume = 1.0,
     this.normalize = true,
+    this.sampleRight,
+    this.nativeVolumeEnvelope,
   });
 
   /// Records-once: applies [fx] to [raw] and keeps the result as the sample.
@@ -551,6 +553,13 @@ class SampleInstrument implements TrackerInstrument {
   @override
   final String id;
   final Float64List sample;
+
+  /// Optional right channel for native stereo module samples.
+  final Float64List? sampleRight;
+
+  /// Tracker-native instrument envelope, expressed in milliseconds. It is
+  /// evaluated per note so a per-cell sample switch also switches envelopes.
+  final VolumeEnvelope? nativeVolumeEnvelope;
   final int baseMidi;
 
   /// A per-note volume envelope (default a gentle declick attack/release).
@@ -587,10 +596,27 @@ class SampleInstrument implements TrackerInstrument {
       loopStart >= 0 &&
       loopStart + loopLength <= sample.length;
 
+  /// Renders a native stereo sample without flattening its right channel.
+  ({Float64List left, Float64List right}) renderChannelStereo(
+    List<TrackerCell> cells,
+    TrackerTiming timing,
+  ) =>
+      (
+        left: _renderChannelFrom(sample, cells, timing),
+        right: _renderChannelFrom(sampleRight ?? sample, cells, timing),
+      );
+
   @override
-  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) {
+  Float64List renderChannel(List<TrackerCell> cells, TrackerTiming timing) =>
+      _renderChannelFrom(sample, cells, timing);
+
+  Float64List _renderChannelFrom(
+    Float64List source,
+    List<TrackerCell> cells,
+    TrackerTiming timing,
+  ) {
     final out = Float64List(timing.totalSamples);
-    if (sample.isEmpty) return out;
+    if (source.isEmpty) return out;
     final baseFreq = midiToFrequency(baseMidi);
     var startStep = 0;
     for (final run in noteRuns(cells)) {
@@ -605,9 +631,9 @@ class SampleInstrument implements TrackerInstrument {
       final offset = trigger.fxCmd == 0x9
           ? (trigger.fxParam * 256 * offsetScale).round()
           : 0;
-      if (midi != null && offset < sample.length) {
+      if (midi != null && offset < source.length) {
         final src =
-            offset > 0 ? Float64List.sublistView(sample, offset) : sample;
+            offset > 0 ? Float64List.sublistView(source, offset) : source;
         final startSample = timing.stepStartSample(startStep);
         final runSamples =
             timing.stepStartSample(startStep + steps) - startSample;
@@ -619,7 +645,7 @@ class SampleInstrument implements TrackerInstrument {
         // sustained note doesn't cut off). Else the existing one-shot resample
         // (byte-identical): a pitch-envelope glide, or a fixed-ratio cubic.
         final buf = loops && maxOut > 0
-            ? _resampleLooping(baseRatio, maxOut, offset)
+            ? _resampleLooping(source, baseRatio, maxOut, offset)
             : envelope.pitchStart != 0 && maxOut > 0
                 ? resampleGlide(
                     src,
@@ -654,8 +680,10 @@ class SampleInstrument implements TrackerInstrument {
           );
           // A per-cell volume column scales the note (null = full, unchanged).
           final vol = trigger.volume ?? 1.0;
+          final nativeVol = nativeVolumeEnvelope;
           for (var i = 0; i < n; i++) {
-            out[startSample + i] = voiced[i] * vol * volume;
+            final env = nativeVol?.levelAt(i / kSampleRate * 1000) ?? 1.0;
+            out[startSample + i] = voiced[i] * vol * volume * env;
           }
         }
       }
@@ -668,18 +696,23 @@ class SampleInstrument implements TrackerInstrument {
   /// starting at sample [startPos]. The lead-in `[0, loopStart+loopLength)` plays
   /// once, then `[loopStart, loopStart+loopLength)` repeats — so a note longer
   /// than the sample sustains instead of falling silent.
-  Float64List _resampleLooping(double ratio, int outLen, int startPos) {
+  Float64List _resampleLooping(
+    Float64List source,
+    double ratio,
+    int outLen,
+    int startPos,
+  ) {
     final out = Float64List(outLen);
     var pos = startPos.toDouble();
     for (var i = 0; i < outLen; i++) {
       final p =
           foldLoopPosition(pos, loopStart, loopLength, pingPong: pingPong);
       final idx = p.floor();
-      if (idx >= sample.length - 1) {
-        out[i] = idx < sample.length ? sample[idx] : 0.0;
+      if (idx >= source.length - 1) {
+        out[i] = idx < source.length ? source[idx] : 0.0;
       } else {
         final frac = p - idx;
-        out[i] = sample[idx] * (1 - frac) + sample[idx + 1] * frac;
+        out[i] = source[idx] * (1 - frac) + source[idx + 1] * frac;
       }
       pos += ratio;
     }

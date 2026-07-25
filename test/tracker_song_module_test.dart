@@ -441,6 +441,47 @@ void main() {
       expect(ch.panEnvelope, isNull);
     });
   });
+
+  test('imports XM/IT-style patterns with their individual row counts', () {
+    final doc = ModuleDoc(
+      sourceFormat: ModuleFormat.xm,
+      channelCount: 1,
+      order: [0, 1],
+      patterns: [
+        const DocPattern(
+          [
+            [DocCell(note: 60)],
+            [DocCell.empty],
+            [DocCell.empty],
+            [DocCell.empty],
+          ],
+          1,
+        ),
+        const DocPattern(
+          [
+            [DocCell(note: 62)],
+            [DocCell.empty],
+            [DocCell.empty],
+            [DocCell.empty],
+            [DocCell.empty],
+            [DocCell.empty],
+            [DocCell.empty],
+            [DocCell.empty],
+          ],
+          1,
+        ),
+      ],
+      samples: [
+        DocSample(pcm: Float64List.fromList([0.5, 0.0, -0.5]))
+      ],
+    );
+    final song = songFromModuleDoc(doc);
+    expect(song.patterns[0].rows, 4);
+    expect(song.patterns[1].rows, 8);
+    song.selectPattern(1);
+    expect(song.rows, 8);
+    expect(song.renderSongWav().length, greaterThan(44));
+  });
 }
 
 Float64List _sineF() {

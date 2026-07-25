@@ -152,4 +152,18 @@ void main() {
       expect(peak, lessThanOrEqualTo(1.0)); // no overshoot clipping downstream
     });
   });
+
+  test('preserves and resamples a native stereo right channel', () {
+    final left = Float64List.fromList([for (var i = 0; i < 128; i++) 0.25]);
+    final right = Float64List.fromList([for (var i = 0; i < 128; i++) -0.5]);
+    final inst = sampleInstrumentFromDoc(
+      'stereo',
+      DocSample(pcm: left, pcmRight: right, c5speed: 8000),
+    );
+
+    expect(inst.sampleRight, isNotNull);
+    expect(inst.sampleRight!.length, inst.sample.length);
+    expect(inst.sample[64], closeTo(0.25, 1e-6));
+    expect(inst.sampleRight![64], closeTo(-0.5, 1e-6));
+  });
 }

@@ -680,7 +680,9 @@ Float64List renderChannelPerNote(
       final e =
           endRow < rows ? timing.stepStartSample(endRow) : timing.totalSamples;
       final lim = min(e, min(buf.length, stem.length));
-      if (envelope == null) {
+      final instrumentEnvelope =
+          curInst is SampleInstrument ? curInst.nativeVolumeEnvelope : null;
+      if (envelope == null || instrumentEnvelope != null) {
         for (var i = s; i < lim; i++) {
           stem[i] += buf[i];
         }
@@ -834,8 +836,7 @@ void _renderSampleChannelInto(
       }
       if (!voice.active) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
-      final vol =
-          (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
         if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
           readPos = loopStart + ((readPos - loopStart) % loopLen);
@@ -845,7 +846,9 @@ void _renderSampleChannelInto(
         if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
-        final el = hasEnv ? env.levelAt(t * 1000) : 1.0;
+        final nativeEnv = cur.nativeVolumeEnvelope;
+        final el = nativeEnv?.levelAt(t * 1000) ??
+            (hasEnv ? env.levelAt(t * 1000) : 1.0);
         stem[i] += sampleVal * vol * attack * el;
         readPos += ratio;
       }
@@ -936,8 +939,7 @@ void _renderSampleChannelIntoVariable(
       }
       if (!voice.active) continue;
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
-      final vol =
-          (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
         if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
           readPos = loopStart + ((readPos - loopStart) % loopLen);
@@ -947,7 +949,9 @@ void _renderSampleChannelIntoVariable(
         if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
-        final el = hasEnv ? env.levelAt(t * 1000) : 1.0;
+        final nativeEnv = cur.nativeVolumeEnvelope;
+        final el = nativeEnv?.levelAt(t * 1000) ??
+            (hasEnv ? env.levelAt(t * 1000) : 1.0);
         stem[i] += sampleVal * vol * attack * el;
         readPos += ratio;
       }
@@ -1269,6 +1273,37 @@ void _renderChannelIntoStereo(
   List<TrackerInstrument>? pool,
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
+
+  // Keep native stereo samples stereo. Command-heavy and per-cell-instrument
+  // paths still use the existing mono tick renderer below.
+  final nativeStereo = channel.instrument is SampleInstrument &&
+      (channel.instrument as SampleInstrument).sampleRight != null &&
+      !_hasPerTickEffect(cells) &&
+      !cells.any((c) => c.instrument != 0);
+  if (nativeStereo) {
+    final inst = channel.instrument as SampleInstrument;
+    final rendered = inst.renderChannelStereo(cells, timing);
+    var peak = 0.0;
+    for (final v in rendered.left) {
+      if (v.abs() > peak) peak = v.abs();
+    }
+    for (final v in rendered.right) {
+      if (v.abs() > peak) peak = v.abs();
+    }
+    if (peak == 0) return;
+    final scale = inst.normalize ? channel.gain / peak : channel.gain;
+    // Balance an intrinsic stereo image without attenuating it at centre.
+    final pan = channel.pan.clamp(-1.0, 1.0);
+    final leftGain = pan > 0 ? 1.0 - pan : 1.0;
+    final rightGain = pan < 0 ? 1.0 + pan : 1.0;
+    final n = min(timing.totalSamples, left.length - sampleOffset);
+    for (var i = 0; i < n; i++) {
+      left[sampleOffset + i] += rendered.left[i] * scale * leftGain;
+      right[sampleOffset + i] += rendered.right[i] * scale * rightGain;
+    }
+    return;
+  }
+
   final total = timing.totalSamples;
   final mono = Float64List(total);
   _renderChannelInto(mono, channel, cells, timing, ticksPerRow, 0, pool: pool);

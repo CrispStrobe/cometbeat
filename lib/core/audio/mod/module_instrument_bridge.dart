@@ -20,7 +20,7 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
-    show SampleInstrument;
+    show SampleInstrument, VolumeEnvelope;
 
 /// Builds a [SampleInstrument] from a module [DocSample]. The PCM is resampled
 /// from the sample's native `c5speed` to [engineRate]; [baseMidi] (default 60 =
@@ -30,6 +30,7 @@ SampleInstrument sampleInstrumentFromDoc(
   DocSample sample, {
   int baseMidi = 60,
   int engineRate = kSampleRate,
+  VolumeEnvelope? nativeVolumeEnvelope,
 }) {
   if (sample.isEmpty) {
     return SampleInstrument(id, Float64List(0), baseMidi: baseMidi);
@@ -37,6 +38,8 @@ SampleInstrument sampleInstrumentFromDoc(
   final c5 = sample.c5speed > 0 ? sample.c5speed : 8363;
   final ratio = c5 / engineRate;
   final atEngineRate = resampleLinear(sample.pcm, ratio);
+  final right =
+      sample.pcmRight == null ? null : resampleLinear(sample.pcmRight!, ratio);
   // Cubic resampling overshoots [-1,1] at transients (ringing) — a full-scale
   // sample can peak ~1.2+, which then clips and distorts when several stack in
   // the mix. Clamp back to unity so imported samples stay in range.
@@ -46,6 +49,16 @@ SampleInstrument sampleInstrumentFromDoc(
       atEngineRate[i] = 1.0;
     } else if (v < -1.0) {
       atEngineRate[i] = -1.0;
+    }
+  }
+  if (right != null) {
+    for (var i = 0; i < right.length; i++) {
+      final v = right[i];
+      if (v > 1.0) {
+        right[i] = 1.0;
+      } else if (v < -1.0) {
+        right[i] = -1.0;
+      }
     }
   }
   // Loop points are in ORIGINAL-sample units → scale to the engine rate (output
@@ -61,6 +74,8 @@ SampleInstrument sampleInstrumentFromDoc(
     pingPong: sample.pingPong,
     volume: sample.volume.clamp(0, 64) / 64.0,
     normalize: false,
+    sampleRight: right,
+    nativeVolumeEnvelope: nativeVolumeEnvelope,
     // A 9xx offset is in original-sample units → same 1/ratio scale as the loop.
     offsetScale: 1 / ratio,
   );

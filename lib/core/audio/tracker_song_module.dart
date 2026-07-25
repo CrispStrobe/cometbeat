@@ -6,12 +6,10 @@
 // the existing readers (parseAnyModule -> ModuleDoc) and the sample bridge
 // (sampleInstrumentFromDoc), so nothing about the codecs is re-implemented here.
 //
-// Two lossy adaptations (documented, unavoidable given the Advanced model):
+// One lossy adaptation remains (documented, unavoidable given the Advanced
+// model):
 //   * The channel instrument is a dominant-sample fallback; per-CELL instrument
 //     columns are retained in the shared pool and used by the replayer.
-//   * The model uses a uniform row count across patterns, so every pattern is
-//     fitted to the module's most common pattern length (MOD/S3M are all 64
-//     rows -> lossless; XM/IT with mixed lengths are padded/truncated).
 //
 // Flutter-free -> unit-tested in test/tracker_song_module_test.dart.
 
@@ -35,7 +33,11 @@ TrackerSong songFromModuleBytes(Uint8List bytes) =>
 /// Imports an already-parsed [ModuleDoc].
 TrackerSong songFromModuleDoc(ModuleDoc doc) {
   final channelCount = doc.channelCount < 1 ? 1 : doc.channelCount;
-  final rows = _modalRows(doc.patterns);
+  // The engine needs a timing row count for the currently selected pattern;
+  // individual TrackerPattern snapshots retain their own native lengths.
+  final rows = doc.patterns.isEmpty || doc.patterns.first.numRows < 1
+      ? 64
+      : doc.patterns.first.numRows;
   final rep = _repInstrumentPerChannel(doc, channelCount);
 
   final band = <TrackerChannel>[
@@ -63,7 +65,12 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
 
   final patterns = <TrackerPattern>[
     for (var pi = 0; pi < doc.patterns.length; pi++)
-      _patternFromDoc(doc.patterns[pi], channelCount, rows, pi),
+      _patternFromDoc(
+        doc.patterns[pi],
+        channelCount,
+        doc.patterns[pi].numRows < 1 ? rows : doc.patterns[pi].numRows,
+        pi,
+      ),
   ];
 
   final order = [
@@ -76,7 +83,11 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
   // per-note render — real per-note sample fidelity, not one voice per channel.
   final pool = <TrackerInstrument>[
     for (var i = 0; i < doc.samples.length; i++)
-      sampleInstrumentFromDoc('smp${i + 1}', doc.samples[i]),
+      sampleInstrumentFromDoc(
+        'smp${i + 1}',
+        doc.samples[i],
+        nativeVolumeEnvelope: _sampleVolEnv(doc.samples[i], doc.initialTempo),
+      ),
   ];
 
   return TrackerSong.fromParts(
@@ -88,18 +99,6 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
     initialSpeed: doc.initialSpeed,
     stereoOutput: true,
   );
-}
-
-/// The most common pattern row count (falls back to 64 — the MOD/S3M default).
-int _modalRows(List<DocPattern> patterns) {
-  if (patterns.isEmpty) return 64;
-  final counts = <int, int>{};
-  for (final p in patterns) {
-    final n = p.numRows;
-    if (n > 0) counts[n] = (counts[n] ?? 0) + 1;
-  }
-  if (counts.isEmpty) return 64;
-  return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
 }
 
 /// For each channel, the 1-based sample index it triggers most often (0 = none).
@@ -142,8 +141,15 @@ double _channelPan(ModuleDoc doc, int ins) {
 /// ms at the module tempo, value 0..64 → level 0..1). Null when there's none.
 VolumeEnvelope? _channelVolEnv(ModuleDoc doc, int ins) {
   final e = _sampleFor(doc, ins)?.volumeEnvelope;
+  return _trackerVolEnv(e, doc.initialTempo);
+}
+
+VolumeEnvelope? _sampleVolEnv(DocSample sample, int tempo) =>
+    _trackerVolEnv(sample.volumeEnvelope, tempo);
+
+VolumeEnvelope? _trackerVolEnv(DocEnvelope? e, int tempo) {
   if (e == null || e.isEmpty) return null;
-  final ms = _tickMs(doc.initialTempo);
+  final ms = _tickMs(tempo);
   return VolumeEnvelope([
     for (final (t, v) in e.points)
       (ms: (t * ms).round(), level: (v / 64).clamp(0.0, 1.0)),

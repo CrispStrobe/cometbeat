@@ -125,9 +125,10 @@ class TrackerSong {
   }
 
   /// Builds a song directly from prepared [channels] + [patterns] + [order] —
-  /// the shape a module importer produces (see tracker_song_module.dart). Every
-  /// pattern must be channel-major with `channels.length` columns of
-  /// `timing.rows` cells.
+  /// the shape a module importer produces (see tracker_song_module.dart).
+  /// Patterns may have different row counts; [timing.rows] describes the
+  /// initially selected pattern and selecting another pattern retimes the
+  /// editing engine to that snapshot.
   factory TrackerSong.fromParts({
     required List<TrackerChannel> channels,
     required TrackerTiming timing,
