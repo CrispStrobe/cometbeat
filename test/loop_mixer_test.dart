@@ -1066,10 +1066,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('LM-UX4: tapping the beat grid builds/edits the beat',
+  testWidgets('LM-UX4: tapping the beat grid builds/edits the captured beat',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
+    // Target the captured 'beat' layer (the drums card is the default target).
+    game.debugSetBeatTarget(LoopEngine.beatTrackId);
     expect(game.hasBeatTrack, isFalse);
     expect(game.debugBeatPattern, isNull);
 
@@ -1361,6 +1363,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('editing the drums card changes the actual drums pattern',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.toggleTrack('drums');
+    await tester.pump();
+    final before = game.debugRenderLoop();
+
+    // Edit the drums card (default beat target = 'drums') → a drum override.
+    game.editTrack('drums');
+    await tester.pump();
+    game.debugEditBeatCell(Drum.kick, 1);
+    game.debugEditBeatCell(Drum.hat, 3);
+    await tester.pump();
+
+    // No separate 'beat' layer was created — the drums card itself changed.
+    expect(game.hasBeatTrack, isFalse);
+    expect(game.debugBeatPattern!.rows[Drum.kick]![1], isTrue);
+    // The rendered groove actually differs (the override drives the drums stem).
+    expect(game.debugRenderLoop(), isNot(equals(before)));
+
+    // Undo reverts the drums edit.
+    game.undo();
+    await tester.pump();
+    expect(game.debugRenderLoop().length, before.length);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('per-track Edit opens the right editor targeting that track',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
@@ -1390,7 +1420,8 @@ void main() {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
 
-    // Tapping the beat grid installs a captured (beatboxed) 'beat' layer.
+    // Editing the captured-beat target installs the 'beat' layer.
+    game.debugSetBeatTarget('beat');
     game.debugEditBeatCell(Drum.kick, 0);
     await tester.pump();
     expect(game.enabledTracks, contains('beat'));

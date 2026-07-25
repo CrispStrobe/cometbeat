@@ -218,6 +218,9 @@ abstract interface class LoopMixerTester {
   void debugEditBeatCell(Drum drum, int step);
   DrumRowsPattern? get debugBeatPattern;
 
+  /// Which drum track the beat editor targets ('drums' card or captured 'beat').
+  void debugSetBeatTarget(String id);
+
   /// LM-UX4b: the tappable diatonic step-grid that builds/edits the tune (the
   /// user melodic track), via the shared StepGridView + setUserTrack.
   bool get tuneEditVisible;
@@ -568,14 +571,31 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   void toggleBeatEdit() => setState(() => _showBeatEdit = !_showBeatEdit);
   @override
-  DrumRowsPattern? get debugBeatPattern => _engine.userBeatPattern;
+  DrumRowsPattern? get debugBeatPattern => _engine.drumRowsFor(_beatTarget);
   @override
   void debugEditBeatCell(Drum drum, int step) =>
       _toggleBeatEditCell(drum, step);
+  @override
+  void debugSetBeatTarget(String id) => setState(() => _beatTarget = id);
 
-  /// The beat grid's step count — the user beat's length, or one bar.
+  /// Which drum track the beat grid edits: the built-in 'drums' card or the
+  /// captured beatboxed layer. The 'drums' edits write a per-track drum override
+  /// (so the actual card changes); 'beat' writes the captured layer.
+  String _beatTarget = 'drums';
+
+  /// The drum tracks the beat editor can target — always the drums card, plus
+  /// the captured beat if one exists.
+  List<String> get _beatTargets => [
+        'drums',
+        if (_engine.userBeatPattern != null) LoopEngine.beatTrackId,
+      ];
+
+  /// The pattern the beat editor currently shows for [_beatTarget].
+  DrumRowsPattern? get _beatTargetPattern => _engine.drumRowsFor(_beatTarget);
+
+  /// The beat grid's step count — the target pattern's length, or one bar.
   int get _beatSteps {
-    final p = _engine.userBeatPattern;
+    final p = _beatTargetPattern;
     if (p == null) return LoopTiming.stepsPerBar;
     return p.rows.values.fold(
       LoopTiming.stepsPerBar,
@@ -584,10 +604,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   }
 
   /// Toggle one cell of the beat grid and re-render (LM-UX4). Reads/writes the
-  /// user beat track, preserving the other lanes.
+  /// TARGET drum track (the drums card via a drum override, or the captured
+  /// beat), preserving the other lanes.
   void _toggleBeatEditCell(Drum drum, int step) {
     final steps = _beatSteps;
-    final p = _engine.userBeatPattern;
+    final p = _beatTargetPattern;
     final rows = <Drum, List<bool>>{};
     if (p != null) {
       for (final e in p.rows.entries) {
@@ -600,8 +621,14 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     }
     final lane = rows.putIfAbsent(drum, () => List<bool>.filled(steps, false));
     lane[step] = !lane[step];
-    _engine.setUserBeatTrack(DrumRowsPattern(rows));
-    _engine.enabled.add(LoopEngine.beatTrackId);
+    final pattern = DrumRowsPattern(rows);
+    if (_beatTarget == LoopEngine.beatTrackId) {
+      _engine.setUserBeatTrack(pattern);
+      _engine.enabled.add(LoopEngine.beatTrackId);
+    } else {
+      _engine.setTrackDrums(_beatTarget, pattern);
+      _engine.enabled.add(_beatTarget);
+    }
     setState(() {});
     _restartGroove();
   }
@@ -1873,7 +1900,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// LM-UX4: a tappable kick/snare/hat × step grid that builds/edits the beat.
   Widget _buildBeatEditor(AppLocalizations l10n) {
     final steps = _beatSteps;
-    final p = _engine.userBeatPattern;
+    final p = _beatTargetPattern;
     final scheme = Theme.of(context).colorScheme;
     bool on(Drum d, int s) => (p?.rows[d]?.length ?? 0) > s && p!.rows[d]![s];
     final lanes = [
@@ -1895,6 +1922,23 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                   ),
             ),
             const SizedBox(height: 4),
+            // Which drum track to edit — the drums card, or the captured beat.
+            if (_beatTargets.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Wrap(
+                  spacing: 6,
+                  children: [
+                    for (final id in _beatTargets)
+                      ChoiceChip(
+                        label: Text(_trackLabel(l10n, id)),
+                        selected: _beatTarget == id,
+                        onSelected: (_) => setState(() => _beatTarget = id),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+              ),
             for (final (drum, label) in lanes)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
@@ -2453,6 +2497,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final isDrum = id == 'drums' || id == LoopEngine.beatTrackId;
     setState(() {
       if (isDrum) {
+        _beatTarget = id;
         _showBeatEdit = true;
         _showTuneEdit = false;
       } else {

@@ -352,6 +352,7 @@ class GrooveSpec {
     this.userInstrument,
     this.beatRows,
     this.trackOverrides,
+    this.drumOverrides,
     this.trackVoices,
   });
 
@@ -395,6 +396,10 @@ class GrooveSpec {
   /// save slots and share tokens just like the captured user tracks.
   final Map<String, List<PatternCell>>? trackOverrides;
 
+  /// Edited hit-grids replacing built-in DRUM tracks (e.g. the 'drums' card),
+  /// keyed by track id → drum-name → step string. Travels like [trackOverrides].
+  final Map<String, Map<Drum, List<bool>>>? drumOverrides;
+
   /// Serializable per-track instrument overrides. SoundFont references are
   /// intentionally omitted because their source file is not embedded here.
   final Map<String, TrackerInstrument>? trackVoices;
@@ -436,6 +441,7 @@ class GrooveSpec {
             json['u'] is Map ? (json['u'] as Map)['i'] as String? : null,
         beatRows: _beatRowsFromJson(json['b']),
         trackOverrides: _trackOverridesFromJson(json['o']),
+        drumOverrides: _drumOverridesFromJson(json['dr']),
         trackVoices: _trackVoicesFromJson(json['iv']),
       );
 
@@ -481,6 +487,14 @@ class GrooveSpec {
           'o': {
             for (final id in trackOverrides!.keys.toList()..sort())
               id: _cellsToJson(trackOverrides![id]!),
+          },
+        if (drumOverrides != null && drumOverrides!.isNotEmpty)
+          'dr': {
+            for (final id in drumOverrides!.keys.toList()..sort())
+              id: {
+                for (final e in drumOverrides![id]!.entries)
+                  e.key.name: rowToString(e.value),
+              },
           },
         if (trackVoices != null && trackVoices!.isNotEmpty)
           'iv': {
@@ -564,6 +578,19 @@ Map<Drum, List<bool>>? _beatRowsFromJson(dynamic json) {
     rows[drum] = stepRow(value);
   }
   return rows.isEmpty ? null : rows;
+}
+
+/// Per-track drum overrides from token json (id → {drum: stepString}); null on
+/// any structural violation (a foreign token must never crash or smuggle data).
+Map<String, Map<Drum, List<bool>>>? _drumOverridesFromJson(dynamic json) {
+  if (json is! Map) return null;
+  final out = <String, Map<Drum, List<bool>>>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    if (key is! String) return null;
+    final rows = _beatRowsFromJson(value);
+    if (rows != null) out[key] = rows;
+  }
+  return out.isEmpty ? null : out;
 }
 
 /// Groove share token: `KU1.` + url-safe base64 of the spec's compact json.
@@ -1208,6 +1235,40 @@ class LoopEngine {
     if (_cellOverrides.remove(id) != null) _clearRenderCaches();
   }
 
+  /// Per-track DRUM-row overrides: when set, a built-in drum stem (e.g. the
+  /// 'drums' card) plays the kid's edited hit-grid instead of its variant
+  /// pattern — the drum twin of [setTrackCells], so the beat editor edits the
+  /// actual card rather than a parallel overlay. Travels with the spec.
+  final Map<String, DrumRowsPattern> _drumOverrides = {};
+
+  /// The current drum override for [id], or null. Seeds the beat editor.
+  DrumRowsPattern? trackDrumsOverride(String id) => _drumOverrides[id];
+
+  /// The drum hit-grid a drum track currently plays: its override if edited,
+  /// else its active variant pattern. Null if [id] isn't a drum track. Seeds
+  /// the beat editor so the kid edits from what's actually sounding.
+  DrumRowsPattern? drumRowsFor(String id) {
+    final override = _drumOverrides[id];
+    if (override != null) return override;
+    for (final track in tracks) {
+      if (track.id != id) continue;
+      final pat = track.variants[_variantOf(track)];
+      return pat is DrumRowsPattern ? pat : null;
+    }
+    return null;
+  }
+
+  /// Replace a built-in drum track's pattern with [rows]. An all-empty grid
+  /// clears the override (back to the variant pattern).
+  void setTrackDrums(String id, DrumRowsPattern? rows) {
+    if (rows == null || rows.rows.values.every((r) => r.every((h) => !h))) {
+      _drumOverrides.remove(id);
+    } else {
+      _drumOverrides[id] = rows;
+    }
+    _clearRenderCaches();
+  }
+
   /// The selected band flavour ([kGrooveStyles]). Setting it re-points the five
   /// cards at that style's pattern set and biases the tempo/swing/kit/scale
   /// toward the flavour; enabled/variant/level state carries across (same ids).
@@ -1413,6 +1474,13 @@ class LoopEngine {
           for (final entry in _cellOverrides.entries)
             entry.key: List<PatternCell>.of(entry.value),
         },
+        drumOverrides: {
+          for (final entry in _drumOverrides.entries)
+            entry.key: {
+              for (final r in entry.value.rows.entries)
+                r.key: List<bool>.of(r.value),
+            },
+        },
         trackVoices: {
           for (final entry in _trackVoices.entries)
             if (isSerializableInstrument(entry.value)) entry.key: entry.value,
@@ -1453,6 +1521,19 @@ class LoopEngine {
               entry.key != userTrackId &&
               entry.key != beatTrackId)
             entry.key: List<PatternCell>.of(entry.value),
+      });
+    _drumOverrides
+      ..clear()
+      ..addAll({
+        for (final entry in next.drumOverrides?.entries ??
+            const <MapEntry<String, Map<Drum, List<bool>>>>[])
+          if (known.contains(entry.key) &&
+              entry.key != userTrackId &&
+              entry.key != beatTrackId)
+            entry.key: DrumRowsPattern({
+              for (final r in entry.value.entries)
+                r.key: List<bool>.of(r.value),
+            }),
       });
     _trackVoices
       ..clear()
@@ -1755,7 +1836,11 @@ class LoopEngine {
   Float64List _stemFor(LoopTrack track) {
     final variant = _variantOf(track);
     final voice = _trackVoices[track.id]?.id ?? '';
-    final key = '${track.id}#$variant#${_progression?.id ?? 'vamp'}#$voice';
+    // The drum override is keyed by object identity (a new edited pattern is a
+    // new instance), so a fresh edit never reads a stale cached stem.
+    final drumOv = _drumOverrides[track.id];
+    final ov = drumOv != null ? '#do${identityHashCode(drumOv)}' : '';
+    final key = '${track.id}#$variant#${_progression?.id ?? 'vamp'}#$voice$ov';
     return _stemCache[key] ??= _renderStem(track, variant);
   }
 
@@ -1766,6 +1851,21 @@ class LoopEngine {
     final voice = _trackVoices[track.id];
     final prog = _progression;
     final t = pitchTranspose;
+
+    // A per-track DRUM override plays the kid's edited hit-grid for a built-in
+    // drum stem (e.g. the 'drums' card). Tiled under a progression like the
+    // plain drum path (drums don't re-voice per chord).
+    final drumOverride = _drumOverrides[track.id];
+    if (drumOverride != null) {
+      if (prog == null) return drumOverride.render(timing, kit: _kit);
+      final twoBars = drumOverride.render(_vampTiming, kit: _kit);
+      final reps = prog.degrees.length ~/ 2;
+      final out = Float64List(twoBars.length * reps);
+      for (var r = 0; r < reps; r++) {
+        out.setAll(r * twoBars.length, twoBars);
+      }
+      return out;
+    }
 
     // A per-track cell override (LM-UX4c) plays the kid's edited pattern instead
     // of the variant/progression shape — a 2-bar pattern that tiles under a
