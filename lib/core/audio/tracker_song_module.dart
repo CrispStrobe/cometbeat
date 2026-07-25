@@ -98,6 +98,7 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
         doc.patterns[pi].numRows < 1 ? rows : doc.patterns[pi].numRows,
         pi,
         useNativeInstruments: nativeInstrumentMode,
+        sourceFormat: doc.sourceFormat.name,
       ),
   ];
 
@@ -333,7 +334,7 @@ DocInstrument? _sampleOwner(ModuleDoc doc, int sampleIndex) {
 /// fitting it to [rows] (extra rows dropped; short patterns padded with empties).
 TrackerPattern _patternFromDoc(
     DocPattern dp, int channelCount, int rows, int index,
-    {bool useNativeInstruments = false}) {
+    {bool useNativeInstruments = false, String? sourceFormat}) {
   final cells = <List<TrackerCell>>[
     for (var c = 0; c < channelCount; c++)
       List<TrackerCell>.filled(rows, TrackerCell.empty, growable: true),
@@ -359,6 +360,10 @@ TrackerPattern _patternFromDoc(
           fxParam: dc.effectParam,
           instrument: instrument,
           nativeNote: nativeNote,
+          nativeEffect: dc.nativeEffect,
+          nativeEffectParam: dc.nativeEffectParam,
+          nativeVolpan: dc.nativeVolpan,
+          nativeFormat: sourceFormat,
         );
       } else if (dc.note >= 0 || hasFx || dc.instrument != 0 || hasVol) {
         cells[c][r] = TrackerCell(
@@ -373,6 +378,10 @@ TrackerPattern _patternFromDoc(
           // songFromModuleDoc, so the note plays its own sample.
           instrument: instrument,
           nativeNote: nativeNote,
+          nativeEffect: dc.nativeEffect,
+          nativeEffectParam: dc.nativeEffectParam,
+          nativeVolpan: dc.nativeVolpan,
+          nativeFormat: sourceFormat,
         );
       }
     }
@@ -599,6 +608,18 @@ ModuleDoc moduleDocFromSong(
             volume: vol,
             effect: cell.fxCmd,
             effectParam: cell.fxParam,
+            nativeEffect:
+                targetFormat != null && cell.nativeFormat == targetFormat?.name
+                    ? cell.nativeEffect
+                    : -1,
+            nativeEffectParam:
+                targetFormat != null && cell.nativeFormat == targetFormat?.name
+                    ? cell.nativeEffectParam
+                    : 0,
+            nativeVolpan: targetFormat == ModuleFormat.it &&
+                    cell.nativeFormat == targetFormat?.name
+                ? cell.nativeVolpan
+                : -1,
             nativeNote: targetFormat == ModuleFormat.xm
                 ? (cell.midi == null ? -1 : (cell.midi! - 11).clamp(1, 96))
                 : targetFormat == ModuleFormat.it

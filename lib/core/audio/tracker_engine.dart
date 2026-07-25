@@ -95,6 +95,10 @@ class TrackerCell {
   const TrackerCell({
     this.midi,
     this.nativeNote,
+    this.nativeEffect = -1,
+    this.nativeEffectParam = 0,
+    this.nativeVolpan = -1,
+    this.nativeFormat,
     this.volume,
     this.effect = TrackerEffect.none,
     this.fxCmd = 0,
@@ -108,6 +112,12 @@ class TrackerCell {
     bool clearMidi = false,
     int? nativeNote,
     bool clearNativeNote = false,
+    int? nativeEffect,
+    int? nativeEffectParam,
+    bool clearNativeEffect = false,
+    int? nativeVolpan,
+    bool clearNativeVolpan = false,
+    String? nativeFormat,
     double? volume,
     bool clearVolume = false,
     TrackerEffect? effect,
@@ -121,6 +131,14 @@ class TrackerCell {
       nativeNote: clearNativeNote || midi != null
           ? nativeNote
           : (nativeNote ?? this.nativeNote),
+      nativeEffect: clearNativeEffect || fxCmd != null || fxParam != null
+          ? -1
+          : (nativeEffect ?? this.nativeEffect),
+      nativeEffectParam: nativeEffectParam ?? this.nativeEffectParam,
+      nativeVolpan: clearNativeVolpan || volume != null || clearVolume
+          ? -1
+          : (nativeVolpan ?? this.nativeVolpan),
+      nativeFormat: nativeFormat ?? this.nativeFormat,
       volume: clearVolume ? null : (volume ?? this.volume),
       effect: effect ?? this.effect,
       fxCmd: fxCmd ?? this.fxCmd,
@@ -136,6 +154,14 @@ class TrackerCell {
   /// separate from [midi], which may already include an IT note-map transpose.
   /// Editing the MIDI note clears this provenance through [copyWith].
   final int? nativeNote;
+
+  /// Original format command/volume-column provenance. It is used only when
+  /// exporting back to the same format; editing the generic effect or volume
+  /// fields clears it through [copyWith].
+  final int nativeEffect;
+  final int nativeEffectParam;
+  final int nativeVolpan;
+  final String? nativeFormat;
   final double? volume;
 
   /// The per-cell INSTRUMENT number (the classic tracker sample/instrument
@@ -169,7 +195,9 @@ class TrackerCell {
       effect == TrackerEffect.none &&
       !hasCommand &&
       instrument == 0 &&
-      !keyOff;
+      !keyOff &&
+      nativeEffect < 0 &&
+      nativeVolpan < 0;
 
   /// Whether an effect-column command is present (any non-zero cmd/param).
   bool get hasCommand => fxCmd != 0 || fxParam != 0;
@@ -185,6 +213,10 @@ class TrackerCell {
       other is TrackerCell &&
       other.midi == midi &&
       other.nativeNote == nativeNote &&
+      other.nativeEffect == nativeEffect &&
+      other.nativeEffectParam == nativeEffectParam &&
+      other.nativeVolpan == nativeVolpan &&
+      other.nativeFormat == nativeFormat &&
       other.volume == volume &&
       other.effect == effect &&
       other.fxCmd == fxCmd &&
@@ -196,6 +228,10 @@ class TrackerCell {
   int get hashCode => Object.hash(
         midi,
         nativeNote,
+        nativeEffect,
+        nativeEffectParam,
+        nativeVolpan,
+        nativeFormat,
         volume,
         effect,
         fxCmd,

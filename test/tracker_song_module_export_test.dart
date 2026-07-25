@@ -6,7 +6,8 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
     show convertToIt, convertToXm, parseAnyModule;
-import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
+import 'package:comet_beat/core/audio/mod/module_doc.dart'
+    show DocCell, DocPattern, DocSample, ModuleDoc, ModuleFormat;
 import 'package:comet_beat/core/audio/mod/xm_module.dart' show XmCell;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -112,6 +113,41 @@ void main() {
         convertToIt(moduleDocFromSong(song, targetFormat: ModuleFormat.it)),
       );
       expect(it.patterns.single.rows[1].single.noteOff, isTrue);
+    });
+
+    test('same-format native command bytes survive the song bridge', () {
+      final pcm = Float64List.fromList(List<double>.filled(300, 0.2));
+      final source = ModuleDoc(
+        sourceFormat: ModuleFormat.xm,
+        channelCount: 1,
+        order: const [0],
+        patterns: [
+          const DocPattern([
+            [
+              DocCell(
+                note: 60,
+                nativeNote: 49,
+                instrument: 1,
+                nativeInstrument: 1,
+                nativeInstrumentSet: true,
+                effect: 0x4,
+                effectParam: 0x12,
+                nativeEffect: 0xA,
+                nativeEffectParam: 0x34,
+              ),
+            ],
+          ], 1),
+        ],
+        samples: [DocSample(pcm: pcm)],
+      );
+      final song = songFromModuleDoc(source);
+      final exported = parseAnyModule(
+        convertToXm(moduleDocFromSong(song, targetFormat: ModuleFormat.xm)),
+      );
+      final cell = exported.xmPatterns.single.rows.first.single;
+      expect(cell.effect, 0xA);
+      expect(cell.effectParam, 0x34);
+      expect(cell.note, 49);
     });
 
     test('a SampleInstrument keeps its real PCM in the doc', () {

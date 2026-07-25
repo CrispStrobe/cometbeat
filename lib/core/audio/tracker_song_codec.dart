@@ -509,6 +509,8 @@ TrackerPattern _patternFromJson(Map<String, dynamic> m) => TrackerPattern(
 Map<String, dynamic>? _cellToJson(TrackerCell c) {
   if (c.midi == null &&
       c.nativeNote == null &&
+      c.nativeEffect < 0 &&
+      c.nativeVolpan < 0 &&
       c.volume == null &&
       c.effect == TrackerEffect.none &&
       c.fxCmd == 0 &&
@@ -520,6 +522,10 @@ Map<String, dynamic>? _cellToJson(TrackerCell c) {
   return {
     if (c.midi != null) 'n': c.midi,
     if (c.nativeNote != null) 'nn': c.nativeNote,
+    if (c.nativeEffect >= 0) 'nec': c.nativeEffect,
+    if (c.nativeEffectParam != 0) 'nep': c.nativeEffectParam,
+    if (c.nativeVolpan >= 0) 'nvp': c.nativeVolpan,
+    if (c.nativeFormat != null) 'nf': c.nativeFormat,
     if (c.volume != null) 'v': c.volume,
     if (c.effect != TrackerEffect.none) 'e': c.effect.name,
     if (c.fxCmd != 0) 'c': c.fxCmd,
@@ -534,6 +540,10 @@ TrackerCell _cellFromJson(Map<String, dynamic>? m) {
   return TrackerCell(
     midi: (m['n'] as num?)?.toInt(),
     nativeNote: (m['nn'] as num?)?.toInt(),
+    nativeEffect: (m['nec'] as num?)?.toInt() ?? -1,
+    nativeEffectParam: (m['nep'] as num?)?.toInt() ?? 0,
+    nativeVolpan: (m['nvp'] as num?)?.toInt() ?? -1,
+    nativeFormat: m['nf'] as String?,
     volume: (m['v'] as num?)?.toDouble(),
     effect: _trackerEffectFromName(m['e'] as String?),
     fxCmd: (m['c'] as num?)?.toInt() ?? 0,
