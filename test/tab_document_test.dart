@@ -498,4 +498,42 @@ void main() {
       expect(doc.columns[0].copy().tieToNext, isTrue);
     });
   });
+
+  group('A4 — time signature', () {
+    TabDocument meter(TimeSignature ts, int quarters) => TabDocument(
+          tuning: Tuning.standardGuitar,
+          timeSignature: ts,
+          columns: [for (var i = 0; i < quarters; i++) const TabColumn()],
+        );
+
+    test('default is 4/4 and a bar holds 32 steps (a whole note)', () {
+      final doc = TabDocument.blank(Tuning.standardGuitar);
+      expect(doc.timeSignature.beats, 4);
+      expect(doc.timeSignature.beatUnit, 4);
+      expect(doc.barCapacity, 32);
+    });
+
+    test('3/4 holds three quarters per bar', () {
+      final doc = meter(const TimeSignature(3, 4), 6); // six quarters
+      expect(doc.barCapacity, 24);
+      expect(doc.toScore().measures.length, 2); // 6 / 3 per bar = 2 bars
+    });
+
+    test('6/8 has a bar capacity of 24 (a dotted half)', () {
+      expect(meter(const TimeSignature(6, 8), 1).barCapacity, 24);
+    });
+
+    test('toScore stamps the time signature', () {
+      final ts = meter(const TimeSignature(6, 8), 1).toScore().timeSignature;
+      expect(ts?.beats, 6);
+      expect(ts?.beatUnit, 8);
+    });
+
+    test('the meter survives the import→edit→export round-trip', () {
+      final src = meter(const TimeSignature(3, 4), 1).toScore();
+      final back = TabDocument.fromScore(src, Tuning.standardGuitar);
+      expect(back.timeSignature.beats, 3);
+      expect(back.timeSignature.beatUnit, 4);
+    });
+  });
 }

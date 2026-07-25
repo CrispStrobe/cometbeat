@@ -229,8 +229,15 @@ class TabDocument {
   Tuning tuning;
   final List<TabColumn> columns;
 
-  TabDocument({required this.tuning, List<TabColumn>? columns})
-      : columns = columns ?? <TabColumn>[];
+  /// The meter columns are tiled into. Default 4/4; set it and a bar holds
+  /// [barSteps] thirty-second-note steps (3/4 = 24, 6/8 = 24, 5/4 = 40, …).
+  TimeSignature timeSignature;
+
+  TabDocument({
+    required this.tuning,
+    List<TabColumn>? columns,
+    this.timeSignature = TimeSignature.fourFour,
+  }) : columns = columns ?? <TabColumn>[];
 
   /// A blank document with [initialColumns] empty columns.
   factory TabDocument.blank(Tuning tuning, {int initialColumns = 8}) =>
@@ -240,6 +247,11 @@ class TabDocument {
       );
 
   int get stringCount => tuning.stringCount;
+
+  /// How many 32nd-note steps fill one bar at the current [timeSignature]
+  /// (4/4 = 32 = a whole note). Columns tile into bars by this capacity.
+  int get barCapacity =>
+      (timeSignature.toFraction().toDouble() * _kBarSteps).round();
 
   /// Grows [columns] so index [col] exists (padding with empty columns).
   void _ensure(int col) {
@@ -324,7 +336,7 @@ class TabDocument {
     var steps = 0;
     for (var c = 0; c < columns.length; c++) {
       final s = _stepsOf(columns[c].duration);
-      if (steps > 0 && steps + s > _kBarSteps) {
+      if (steps > 0 && steps + s > barCapacity) {
         if (target < c) return (start, c); // the bar [start, c) holds `col`
         start = c;
         steps = 0;
@@ -406,7 +418,7 @@ class TabDocument {
     for (var c = 0; c < columns.length; c++) {
       final col = columns[c];
       final steps = _stepsOf(col.duration);
-      if (barSteps > 0 && barSteps + steps > _kBarSteps) {
+      if (barSteps > 0 && barSteps + steps > barCapacity) {
         measures.add(Measure(bar));
         bar = <MusicElement>[];
         barSteps = 0;
@@ -461,6 +473,7 @@ class TabDocument {
     }
     return Score(
       clef: Clef.treble,
+      timeSignature: timeSignature,
       measures: measures,
       tabVoicings: voicings,
       bends: bends,
@@ -583,11 +596,16 @@ class TabDocument {
       }
     }
     if (midiCols.isEmpty) {
-      return TabDocument(tuning: tuning, columns: [const TabColumn()]);
+      return TabDocument(
+        tuning: tuning,
+        timeSignature: score.timeSignature ?? TimeSignature.fourFour,
+        columns: [const TabColumn()],
+      );
     }
     final arranged = arrangeTab(midiCols, tuning, capo: capo);
     return TabDocument(
       tuning: tuning,
+      timeSignature: score.timeSignature ?? TimeSignature.fourFour,
       columns: [
         for (var i = 0; i < arranged.length; i++)
           TabColumn(

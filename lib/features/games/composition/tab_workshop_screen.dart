@@ -1713,6 +1713,43 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                         ),
                       ],
                     ),
+                    // Meter (time signature): columns tile into bars by it.
+                    Builder(
+                      builder: (_) {
+                        final cur = '${_doc.timeSignature.beats}'
+                            '/${_doc.timeSignature.beatUnit}';
+                        final meters = <String>{
+                          '4/4', '3/4', '2/4', '6/8', '5/4',
+                          '7/8', '12/8', '2/2', '3/8', '9/8', cur, //
+                        }.toList()
+                          ..sort();
+                        return Row(
+                          children: [
+                            const Icon(Icons.straighten, size: 18),
+                            const SizedBox(width: 6),
+                            const Expanded(child: Text('Meter')),
+                            DropdownButton<String>(
+                              value: cur,
+                              items: [
+                                for (final m in meters)
+                                  DropdownMenuItem(value: m, child: Text(m)),
+                              ],
+                              onChanged: (m) {
+                                if (m == null) return;
+                                final p = m.split('/');
+                                setState(
+                                  () => _doc.timeSignature = TimeSignature(
+                                    int.parse(p[0]),
+                                    int.parse(p[1]),
+                                  ),
+                                );
+                                refresh();
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                     stepRow(
                       l10n.tabCapo,
                       Icons.linear_scale,

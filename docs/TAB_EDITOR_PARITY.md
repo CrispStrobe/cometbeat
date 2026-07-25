@@ -210,7 +210,18 @@ parametric technique end-to-end.
   playback merges a tied chain into one sound of the summed length; `fromScore`
   reads ties back (round-trip); `setTie`/`withTie` + a Tie chip in the settings
   sheet. Tests in `test/tab_document_test.dart` (group A2).
-- [ ] A3 … E2 — pending (scoped above)
+- [x] **A4** time signature — `TabDocument.timeSignature` (default 4/4) drives a
+  `barCapacity` getter that replaces the hard-coded 32-step bar; `toScore` stamps
+  `Score.timeSignature`; `fromScore` reads it back; a Meter dropdown in the
+  settings sheet (common meters + whatever an import brought). Tests: group A4.
+  (Done before A3 — it's independent and cleaner; mid-song meter changes are the
+  A4b follow-up.)
+- [ ] **A3 (next)** tuplets — needs group-scaled tiling: a tuplet is a span of N
+  columns with (actual, normal); each column keeps its written duration but the
+  SPAN's bar-fill is `Σ steps × normal/actual` (e.g. a 3:2 eighth-triplet =
+  3×4×2/3 = 8 steps = one beat, still integral on the 32nd grid). `toScore`
+  emits a `Tuplet` decoration; playback scales each note's ms by normal/actual.
+- [ ] A5 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.
