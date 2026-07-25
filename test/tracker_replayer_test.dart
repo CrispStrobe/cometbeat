@@ -993,6 +993,44 @@ void main() {
       expect(rendered.sublist(afterOneShot).any((v) => v.abs() > 0.01), isTrue);
     });
 
+    test('effect-bearing sample voices use their native sustain loop', () {
+      final sample = Float64List.fromList([
+        ...List<double>.filled(1000, 0.2),
+        ...List<double>.filled(1000, -0.7),
+        ...List<double>.filled(1000, 0.4),
+      ]);
+      final cells = List<TrackerCell>.filled(8, TrackerCell.empty)
+        ..[0] = const TrackerCell(midi: 60)
+        ..[1] = fx(0x4, 0x31);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'sustain-effects',
+            instrument: SampleInstrument(
+              'sustain-effects',
+              sample,
+              sustainLoopStart: 1000,
+              sustainLoopLength: 1000,
+            ),
+            rows: 8,
+          ),
+        ],
+        timing: const TrackerTiming(rows: 8),
+        patterns: [
+          TrackerPattern(name: '00', cells: [cells])
+        ],
+        order: [0],
+      );
+
+      final rendered = replaySong(song).pcm;
+      final afterLeadIn = const TrackerTiming(rows: 8).stepStartSample(4);
+      var sum = 0;
+      for (var i = afterLeadIn; i < rendered.length; i++) {
+        sum += rendered[i];
+      }
+      expect(sum, lessThan(0));
+    });
+
     test('stereo sample channels keep the right waveform through effects', () {
       final leftSample = Float64List.fromList(
         List<double>.filled(120000, 0.25),

@@ -861,7 +861,16 @@ double? _readLoopedSample(
     final pingPong = cur.pingPong;
     final loopStart = cur.loopStart;
     final loopLen = cur.loopLength;
-    final loopEnd = loopStart + loopLen;
+    // A held note uses the IT sustain loop until a key-off. The tick voice is
+    // only entered for effect-bearing rows, so it must make the same choice as
+    // SampleInstrument.renderChannel instead of silently falling through to
+    // the ordinary playback loop.
+    final useSustainLoop = cur.sustainLoops;
+    final playbackLoopStart = useSustainLoop ? cur.sustainLoopStart : loopStart;
+    final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
+    final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
+    final playbackLoops = useSustainLoop || loops;
+    final loopEnd = playbackLoopStart + playbackLoopLength;
     final rowS = rowStart[r];
     final rowE = rowStart[r + 1];
     final tpr = ticksPerRow[r] < 1 ? 1 : ticksPerRow[r];
@@ -877,21 +886,31 @@ double? _readLoopedSample(
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < total; i++) {
-        if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
-          readPos = loopStart + ((readPos - loopStart) % loopLen);
+        if (playbackLoops &&
+            !playbackPingPong &&
+            playbackLoopLength > 0 &&
+            readPos >= loopEnd) {
+          readPos = playbackLoopStart +
+              ((readPos - playbackLoopStart) % playbackLoopLength);
         }
         final value = _readLoopedSample(
-            sample, readPos, loops, pingPong, loopStart, loopLen);
+          sample,
+          readPos,
+          playbackLoops,
+          playbackPingPong,
+          playbackLoopStart,
+          playbackLoopLength,
+        );
         if (value == null) break;
         final rightValue = sampleRight == null
             ? value
             : _readLoopedSample(
                   sampleRight,
                   readPos,
-                  loops,
-                  pingPong,
-                  loopStart,
-                  loopLen,
+                  playbackLoops,
+                  playbackPingPong,
+                  playbackLoopStart,
+                  playbackLoopLength,
                 ) ??
                 0.0;
         final t = (i - noteStartSample) / kSampleRate;
@@ -992,7 +1011,12 @@ void _renderSampleChannelInto(
     final pingPong = cur.pingPong;
     final loopStart = cur.loopStart;
     final loopLen = cur.loopLength;
-    final loopEnd = loopStart + loopLen;
+    final useSustainLoop = cur.sustainLoops;
+    final playbackLoopStart = useSustainLoop ? cur.sustainLoopStart : loopStart;
+    final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
+    final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
+    final playbackLoops = useSustainLoop || loops;
+    final loopEnd = playbackLoopStart + playbackLoopLength;
     final rowStart = timing.stepStartSample(r);
     final rowEnd =
         r + 1 < rows ? timing.stepStartSample(r + 1) : timing.totalSamples;
@@ -1008,11 +1032,21 @@ void _renderSampleChannelInto(
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
-        if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
-          readPos = loopStart + ((readPos - loopStart) % loopLen);
+        if (playbackLoops &&
+            !playbackPingPong &&
+            playbackLoopLength > 0 &&
+            readPos >= loopEnd) {
+          readPos = playbackLoopStart +
+              ((readPos - playbackLoopStart) % playbackLoopLength);
         }
-        final sampleVal =
-            _readLoopedSample(s, readPos, loops, pingPong, loopStart, loopLen);
+        final sampleVal = _readLoopedSample(
+          s,
+          readPos,
+          playbackLoops,
+          playbackPingPong,
+          playbackLoopStart,
+          playbackLoopLength,
+        );
         if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
@@ -1095,7 +1129,12 @@ void _renderSampleChannelIntoVariable(
     final pingPong = cur.pingPong;
     final loopStart = cur.loopStart;
     final loopLen = cur.loopLength;
-    final loopEnd = loopStart + loopLen;
+    final useSustainLoop = cur.sustainLoops;
+    final playbackLoopStart = useSustainLoop ? cur.sustainLoopStart : loopStart;
+    final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
+    final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
+    final playbackLoops = useSustainLoop || loops;
+    final loopEnd = playbackLoopStart + playbackLoopLength;
     final rowS = rowStart[r];
     final rowE = rowStart[r + 1];
     final tpr = ticksPerRow[r] < 1 ? 1 : ticksPerRow[r];
@@ -1111,11 +1150,21 @@ void _renderSampleChannelIntoVariable(
       final ratio = pow(2.0, (state.pitch - baseMidi) / 12.0).toDouble();
       final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
       for (var i = ts; i < te && i < stem.length; i++) {
-        if (loops && !pingPong && loopLen > 0 && readPos >= loopEnd) {
-          readPos = loopStart + ((readPos - loopStart) % loopLen);
+        if (playbackLoops &&
+            !playbackPingPong &&
+            playbackLoopLength > 0 &&
+            readPos >= loopEnd) {
+          readPos = playbackLoopStart +
+              ((readPos - playbackLoopStart) % playbackLoopLength);
         }
-        final sampleVal =
-            _readLoopedSample(s, readPos, loops, pingPong, loopStart, loopLen);
+        final sampleVal = _readLoopedSample(
+          s,
+          readPos,
+          playbackLoops,
+          playbackPingPong,
+          playbackLoopStart,
+          playbackLoopLength,
+        );
         if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
