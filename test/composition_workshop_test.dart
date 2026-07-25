@@ -609,6 +609,49 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('narrow workshop with content + a lyric field never overflows',
+      (tester) async {
+    for (final locale in const [Locale('en'), Locale('de')]) {
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(360, 720);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            Provider<AudioService>(create: (_) => AudioService()),
+            ChangeNotifierProvider(create: (_) => UserSongsService()),
+            ChangeNotifierProvider(create: (_) => SettingsService()),
+            ChangeNotifierProvider(create: (_) => DawService()),
+          ],
+          child: MaterialApp(
+            locale: locale,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en'), Locale('de')],
+            home: const CompositionWorkshopScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Place a note so the input bar + inline lyric field are present.
+      await tester.tap(_pianoKey());
+      await tester.pumpAndSettle();
+
+      // The whole narrow surface (top bars, input bar, lyric field) lays out
+      // with no RenderFlex overflow, in EN and DE.
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'no overflow at 360px in ${locale.languageCode}',
+      );
+    }
+  });
+
   testWidgets('the Studio inspector is off by default and toggles on',
       (tester) async {
     await pump(tester);
