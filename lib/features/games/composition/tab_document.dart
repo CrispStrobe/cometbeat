@@ -454,8 +454,43 @@ class TabDocument {
   /// dense polyphony. Behind a [capo] the open pitch rises, so frets shrink.
   static TabDocument fromScore(Score score, Tuning tuning, {int capo = 0}) {
     final voiced = {for (final v in score.tabVoicings) v.noteId: v.strings};
+
+    // Read the techniques the notation already carries back onto their source
+    // notes, so an imported .gp/MusicXML keeps its bends / slides / vibrato /
+    // dead / ghost / harmonic / hammer through the editor. Without this, every
+    // technique is silently dropped on the first import→edit→export round-trip
+    // (toScore writes them, fromScore never read them back).
+    final tech = <String, Set<TabTechnique>>{};
+    void mark(String id, TabTechnique t) =>
+        (tech[id] ??= <TabTechnique>{}).add(t);
+    for (final b in score.bends) {
+      mark(b.noteId, TabTechnique.bend);
+    }
+    for (final g in score.glissandos) {
+      mark(g.startId, TabTechnique.slide);
+    }
+    for (final v in score.vibratos) {
+      mark(v.noteId, TabTechnique.vibrato);
+    }
+    for (final s in score.slurs) {
+      mark(s.startId, TabTechnique.hammer);
+    }
+    for (final m in score.tabNoteMarks) {
+      mark(
+        m.noteId,
+        switch (m.style) {
+          TabNoteStyle.dead => TabTechnique.dead,
+          TabNoteStyle.ghost => TabTechnique.ghost,
+          // natural / artificial / pinch / tapped / semi all fold onto our
+          // single harmonic flag until harmonic kinds land (step B5).
+          _ => TabTechnique.harmonic,
+        },
+      );
+    }
+
     final midiCols = <List<int>>[];
     final durations = <NoteDuration>[];
+    final ids = <String?>[]; // per-column source note id (null for a rest)
     final pinned = <int, Fretting>{}; // column index → explicit fingering
     var idx = 0;
     for (final measure in score.measures) {
@@ -475,10 +510,12 @@ class TabDocument {
           }
           midiCols.add(midis);
           durations.add(el.duration);
+          ids.add(el.id);
           idx++;
         } else if (el is RestElement) {
           midiCols.add(const []);
           durations.add(el.duration);
+          ids.add(null);
           idx++;
         }
       }
@@ -491,7 +528,11 @@ class TabDocument {
       tuning: tuning,
       columns: [
         for (var i = 0; i < arranged.length; i++)
-          TabColumn(frets: pinned[i] ?? arranged[i], duration: durations[i]),
+          TabColumn(
+            frets: pinned[i] ?? arranged[i],
+            duration: durations[i],
+            techniques: {...?tech[ids[i]]},
+          ),
       ],
     );
   }

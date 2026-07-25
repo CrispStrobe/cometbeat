@@ -546,3 +546,11 @@ live-loop surface (quick start, layer parts, record a voice, arrange sections).
   movement-smoothness + span regularizers in training; DP-in-the-loop / CRF training
   if >85% agreement doesn't fall out; EGSet12 ingest; string-shift augmentation;
   model-card/HF hygiene.
+- **Tab Editor pro-parity** → [docs/TAB_EDITOR_PARITY.md](docs/TAB_EDITOR_PARITY.md):
+  close the gap to industry-standard tab editors AND make the editor faithfully
+  edit what we import/export (`.gp`/MusicXML/MIDI round-trip). Phased steps A0–E2:
+  finer rhythm/tuplets/ties, time-sig/key/repeats/voltas/tempo-map, parametric
+  techniques (bend curves, whammy, slide kinds, harmonics, palm-mute…), dynamics,
+  second voice, per-track instrument/mixer, drum-tab, practice tools, PDF export.
+  A0 (round-trip harness + the 7 existing techniques now survive import→edit→export)
+  shipped; A1+ pending, each scoped for a fresh agent in the doc.
