@@ -617,7 +617,8 @@ ModuleDoc moduleDocFromSong(
                 targetFormat != null && cell.nativeFormat == targetFormat?.name
                     ? cell.nativeEffectParam
                     : 0,
-            nativeVolpan: targetFormat == ModuleFormat.it &&
+            nativeVolpan: (targetFormat == ModuleFormat.it ||
+                        targetFormat == ModuleFormat.xm) &&
                     cell.nativeFormat == targetFormat?.name
                 ? cell.nativeVolpan
                 : -1,

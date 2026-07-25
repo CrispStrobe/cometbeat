@@ -41,6 +41,7 @@ void main() {
             const XmCell(
               note: 49,
               instrument: 1,
+              volume: 0x63,
               effect: 0x14,
               effectParam: 0x31,
             ),
@@ -57,6 +58,12 @@ void main() {
     expect(cell.effectParam, 0x31);
     expect(cell.nativeEffect, 0x14);
     expect(cell.nativeEffectParam, 0x31);
+    expect(cell.nativeVolpan, 0x63);
+    final roundTrip = parseXm(convertToXm(doc));
+    final written = roundTrip.patterns.first.rows.first.first;
+    expect(written.effect, 0x14);
+    expect(written.effectParam, 0x31);
+    expect(written.volume, 0x63);
   });
 
   test('IT native volume commands do not synthesize a volume-column byte', () {

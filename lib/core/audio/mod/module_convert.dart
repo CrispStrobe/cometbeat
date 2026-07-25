@@ -436,6 +436,8 @@ ModuleDoc docFromXm(XmModule m) {
         // reserves 1Dh for tremor so it cannot collide with MOD effects. Keep
         // the original byte in nativeEffect for same-format export.
         final effect = c.effect == 0x14 ? 0x1D : c.effect;
+        final hasVolpan =
+            c.presentMask < 0 ? c.volume != 0 : (c.presentMask & 0x04) != 0;
         final vol =
             (c.volume >= 0x10 && c.volume <= 0x50) ? c.volume - 0x10 : -1;
         if (c.instrument > 0) lastInstrument[channel] = c.instrument;
@@ -467,6 +469,7 @@ ModuleDoc docFromXm(XmModule m) {
             nativeInstrument: effectiveInstrument,
             nativeInstrumentSet: effectiveInstrument != 0,
             nativeNote: xmNoteToMidi(c.note),
+            nativeVolpan: hasVolpan ? c.volume : -1,
           ),
         );
       }
@@ -997,7 +1000,11 @@ List<XmPattern> _docPatternsToXm(
                       ? c.nativeInstrument
                       : c.instrument)
                   .clamp(0, 255),
-              volume: c.volume < 0 ? 0 : (0x10 + c.volume).clamp(0x10, 0x50),
+              volume: doc.sourceFormat == ModuleFormat.xm && c.nativeVolpan >= 0
+                  ? c.nativeVolpan & 0xFF
+                  : c.volume < 0
+                      ? 0
+                      : (0x10 + c.volume).clamp(0x10, 0x50),
               effect: doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
                   ? c.nativeEffect & 0xFF
                   : (c.effect == 0x1D ? 0x14 : c.effect) & 0xFF,
