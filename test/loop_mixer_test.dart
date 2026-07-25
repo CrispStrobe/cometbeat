@@ -1391,6 +1391,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the score is an editing surface — tap a staff to edit that part',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.toggleTrack('melody');
+    await tester.pump();
+    game.toggleScorePanel();
+    await tester.pump();
+
+    expect(find.byType(StaffView), findsWidgets);
+    expect(game.tuneEditVisible, isFalse);
+
+    // Tapping the melody staff's row opens the tune editor targeting it.
+    final staffRow = find
+        .ancestor(
+          of: find.byType(StaffView).first,
+          matching: find.byType(InkWell),
+        )
+        .first;
+    await tester.tap(staffRow, warnIfMissed: false);
+    await tester.pump();
+    expect(game.tuneEditVisible, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('tune editor wide-range parity exposes two octaves',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

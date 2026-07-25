@@ -2140,51 +2140,75 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     );
   }
 
+  /// Whether track [id] has an in-place editor (score → tap-to-edit).
+  bool _trackIsEditableById(String id) =>
+      id == 'drums' ||
+      id == LoopEngine.beatTrackId ||
+      _tuneTargets.contains(id);
+
   Widget _scoreStaffRow(AppLocalizations l10n, String id, Score score) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 56,
-            child: Text(
-              _trackLabel(l10n, id),
-              style: Theme.of(context).textTheme.labelSmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+    final editable = _trackIsEditableById(id);
+    return InkWell(
+      // The score is an editing surface: tap a part's staff to open that
+      // track's grid editor (beat grid for drums, tune grid for a pitched part).
+      onTap: editable ? () => _editTrack(id) : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 56,
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      _trackLabel(l10n, id),
+                      style: Theme.of(context).textTheme.labelSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (editable)
+                    Icon(
+                      Icons.edit_note,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                ],
+              ),
             ),
-          ),
-          // LM-UX2: render the staff at a legible size and SCROLL a wide bar
-          // horizontally instead of shrinking the whole thing to fit.
-          // LM-UX3: light up the note currently sounding, driven by the loop
-          // clock's eighth-step index (rebuilds only when the note moves).
-          Expanded(
-            child: SizedBox(
-              height: _scoreRowHeight,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ValueListenableBuilder<int>(
-                  valueListenable: _hlStep,
-                  builder: (context, step, _) {
-                    final totalSteps =
-                        score.measures.length * LoopTiming.stepsPerBar;
-                    final ids = <String>{};
-                    if (step >= 0 && totalSteps > 0) {
-                      final id = grooveNoteIdAtStep(score, step % totalSteps);
-                      if (id != null) ids.add(id);
-                    }
-                    return StaffView(
-                      score: score,
-                      staffSpace: 11,
-                      theme: kidsScoreTheme,
-                      highlightedIds: ids,
-                    );
-                  },
+            // LM-UX2: render the staff at a legible size and SCROLL a wide bar
+            // horizontally instead of shrinking the whole thing to fit.
+            // LM-UX3: light up the note currently sounding, driven by the loop
+            // clock's eighth-step index (rebuilds only when the note moves).
+            Expanded(
+              child: SizedBox(
+                height: _scoreRowHeight,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: _hlStep,
+                    builder: (context, step, _) {
+                      final totalSteps =
+                          score.measures.length * LoopTiming.stepsPerBar;
+                      final ids = <String>{};
+                      if (step >= 0 && totalSteps > 0) {
+                        final id = grooveNoteIdAtStep(score, step % totalSteps);
+                        if (id != null) ids.add(id);
+                      }
+                      return StaffView(
+                        score: score,
+                        staffSpace: 11,
+                        theme: kidsScoreTheme,
+                        highlightedIds: ids,
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
