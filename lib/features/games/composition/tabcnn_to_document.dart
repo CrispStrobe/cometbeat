@@ -24,7 +24,10 @@ import 'package:flutter/foundation.dart' show compute;
 /// TabCNN's per-frame hop in seconds (512 samples ÷ 22.05 kHz).
 const double kTabCnnHopSeconds = 512 / 22050;
 
-/// The [kTabDurations] note value whose eighth-step length is nearest [steps].
+/// The [kTabDurations] note value whose length in 32nd-note steps is nearest
+/// [steps]. NB: [kTabDurations] is measured on a **32nd-note** grid (a whole
+/// note is 32 steps, a quarter is 8) — it used to be an eighth-note grid, and
+/// callers that still hand over eighth-steps land four times too short.
 NoteDuration _nearestTabDuration(int steps) {
   var best = kTabDurations.last.$1;
   var bestDiff = 1 << 30;
@@ -55,11 +58,12 @@ TabDocument tabFramesToDocument(
   for (final (frets, frames) in collapseTabFrames(perFrame)) {
     if (frames < minFrames) continue; // drop flicker (minor grid drift)
     final beats = frames * hopSeconds * tempoBpm / 60;
-    final eighthSteps = (beats * 2).round().clamp(1, 8);
+    // One beat is a quarter = 8 thirty-second steps; a whole note = 32.
+    final steps = (beats * 8).round().clamp(1, 32);
     columns.add(
       TabColumn(
         frets: frets.isEmpty ? const {} : Map<int, int>.of(frets),
-        duration: _nearestTabDuration(eighthSteps),
+        duration: _nearestTabDuration(steps),
       ),
     );
   }

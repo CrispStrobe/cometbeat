@@ -634,7 +634,9 @@ void main() {
     TabDocument twoBars() {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: [for (var i = 0; i < 8; i++) const TabColumn(frets: {0: 0})],
+        columns: [
+          for (var i = 0; i < 8; i++) const TabColumn(frets: {0: 0}),
+        ],
       );
       doc.setBarRepeat(0, start: true); // bar 0
       doc.setBarRepeat(4, end: true); // bar 1
