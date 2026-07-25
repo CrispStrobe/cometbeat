@@ -119,7 +119,7 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > sample 97 · soundfont 1). Scores by source: GregoBase 18,710 · NIFC Polish 8,181 ·
 > **PDMX 10,799** (74 is_original + 3,352 classical MXL shippable; see below) ·
 > OpenScore Lieder 1,350 · NIFC Chopin 512 · Mutopia 510 · DCML Bach Chorales 361 ·
-> OpenScore SQ 122 · OpenEWLD 103 · **Wikimedia Commons (Gerloff) 1,073** · Kinder
+> OpenScore SQ 122 · OpenEWLD 103 · **Wikimedia Commons (Gerloff) 1,088** (1,073 CC0/A + 15 CC-BY/B) · Kinder
 > wollen singen 155 · Musikpiraten Season Songs 52 · Pete Mac 15 · EGSet12 12.
 > Assets: VCSL 183 · ModArchive 166 · FreePats 39 · Salamander Grand Piano V3 1 ·
 > FluidR3 1.
@@ -131,7 +131,7 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > **Exact tiers of the 1,136 files: A (CC0/PD) 1,083 · B (CC-BY) 16 · C (CC-BY-SA) 37.**
 > Ship gate = Tier A ∩ axis-2-PD (the melody source is traditional/origin, Gerloff's
 > own CC0-original, or a named composer the shared `wikidata_deaths` verdict confirms
-> died ≤1955) → **1,073 ingested** — MIDI-only (Commons hosts these as `.mid`; Gerloff
+> died ≤1955) → **1,088 ingested** (1,073 Tier A + 15 Tier B) — MIDI-only (Commons hosts these as `.mid`; Gerloff
 > is a priest/composer who makes a "Satz und Tondatei" for German Wikipedia articles
 > and publishes **no notation source** — for richer formats use the kinder-wollen-singen
 > `.mscz`/`.musicxml` or self-engraving). Tooling: `bin/commons_gerloff_{ingest,reverify,
@@ -155,8 +155,7 @@ Every line here is a *licence/coverage* statement; detail per source follows.
 > was in the first upload → **deleted from HF HEAD** (`delete_file`; a purged file is
 > 404 at `main`. ⚠ old commit SHAs may still serve it — a full history purge was NOT
 > done for one file; flagged for the maintainer).
-> **HELD** (`commons-gerloff-held.json`): 16 Tier-B (attribution), 37 Tier-C
-> (SA-propagation), the axis-2-not-provably-PD + the 14 axis-2-recent/namesake demotes.
+> **TIER B (CC-BY) done:** of the 16, **15 shipped with attribution** (`bin/commons_gerloff_tierb.py`; `attribution="Peter Gerloff (Rabanus Flavus), CC BY 4.0[; melody: Crüger/Mason]"` → the app's already-built "Sources & credits" surfaces it; the catalog-tiers work already ships A+B). ⚠ axis-2 still applies to the MELODY, not just the CC-BY setting — **1 held: "Sankt Josef" = Erhard Quack d.1983** (copyrighted melody under a CC-BY setting). Remaining **HELD**: 37 Tier-C (SA-propagation), the axis-2-not-provably-PD, and the 3 axis-2-recent (Sibelius/VW).
 > **Lessons:** (a) never default to "traditional" — read the melody source in every
 > language; (b) **a descriptor keyword must not short-circuit the composer death-check**
 > — a "traditional English hymn tune by X" can still hide a d.1958 composer. **Lesson:**
