@@ -136,6 +136,70 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
         widget.inst.zones.isEmpty ? 60 : widget.inst.zones.keys.first;
   }
 
+  Future<int?> _askMidi({int? initial}) async {
+    final controller = TextEditingController(text: '${initial ?? 60}');
+    final value = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('MIDI key'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: '0-127'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final midi = int.tryParse(controller.text.trim());
+              if (midi != null && midi >= 0 && midi <= 127) {
+                Navigator.of(ctx).pop(midi);
+              }
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    return value;
+  }
+
+  Future<void> _addMapping() async {
+    final midi = await _askMidi();
+    if (!mounted || midi == null || widget.inst.zones.containsKey(midi)) return;
+    final source = widget.inst.zones[_selectedMidi];
+    if (source == null) return;
+    final zones = Map<int, TrackerInstrument>.of(widget.inst.zones)
+      ..[midi] = source;
+    widget.onChanged(widget.inst.copyWith(zones: zones));
+    setState(() => _selectedMidi = midi);
+  }
+
+  Future<void> _remapSelected() async {
+    final midi = await _askMidi(initial: _selectedMidi);
+    if (!mounted || midi == null || midi == _selectedMidi) return;
+    if (widget.inst.zones.containsKey(midi)) return;
+    final zones = Map<int, TrackerInstrument>.of(widget.inst.zones)
+      ..[midi] = widget.inst.zones[_selectedMidi]!
+      ..remove(_selectedMidi);
+    widget.onChanged(widget.inst.copyWith(zones: zones));
+    setState(() => _selectedMidi = midi);
+  }
+
+  void _removeSelected() {
+    final zones = Map<int, TrackerInstrument>.of(widget.inst.zones)
+      ..remove(_selectedMidi);
+    widget.onChanged(widget.inst.copyWith(zones: zones));
+    setState(() {
+      _selectedMidi = zones.isEmpty ? 60 : (zones.keys.toList()..sort()).first;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final keys = widget.inst.zones.keys.toList()..sort();
@@ -146,15 +210,35 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
       children: [
         ListTile(
           title: const Text('Mapped Note'),
-          trailing: DropdownButton<int>(
-            value: _selectedMidi,
-            items: [
-              for (final key in keys)
-                DropdownMenuItem(value: key, child: Text('MIDI $key')),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButton<int>(
+                value: _selectedMidi,
+                items: [
+                  for (final key in keys)
+                    DropdownMenuItem(value: key, child: Text('MIDI $key')),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _selectedMidi = value);
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: 'Add key mapping',
+                onPressed: _addMapping,
+              ),
+              IconButton(
+                icon: const Icon(Icons.drive_file_rename_outline),
+                tooltip: 'Remap selected key',
+                onPressed: _remapSelected,
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Remove key mapping',
+                onPressed: _removeSelected,
+              ),
             ],
-            onChanged: (value) {
-              if (value != null) setState(() => _selectedMidi = value);
-            },
           ),
         ),
         if (zone is SampleInstrument)
