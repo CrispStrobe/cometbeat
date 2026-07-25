@@ -55,12 +55,38 @@ before export, what the chosen target format cannot represent (channels > 4 and
 losses, cross-format provenance loss, etc.) and is surfaced as a confirmation in
 the Advanced Tracker export flow. *(export-report commit)*
 
-**Still open (documented, not done in this pass):** full block-streaming
-renderer + range/streaming export; cross-format effect-table widening (unmapped
-S3M/IT `Sxy` and `Z`/MIDI still drop cross-format); S3M DP30 ADPCM decode and
-OPL synthesis; MOD tag-alias preservation (FLT8/OCTA); and native tracker-state
-editors (raw effect-memory, native S3M header, native flow timeline, velocity
-zones). See the feature audit below for the per-feature state.
+### Second pass (continuation, same day) — further gaps closed
+
+Continuing the same cadence, the following also shipped to `main`, each gated and
+unit-tested:
+- **Cross-format effects**: S3M/IT `S1x`/`S2x`/`S3x`/`S4x` (glissando control,
+  set-finetune, vibrato/tremolo waveform) now map bidirectionally cross-format via
+  the replayer’s `Exy` commands; genuinely-unmappable ones (`S0`/`S5`/`S7`/`S9`/
+  `SA`/`Z`-MIDI) still drop and are now named by the export-loss report.
+- **Bounded streaming / range export**: `renderOrderChunksPcm` /
+  `streamSongWavToFile` / `renderOrderRangeWav` + CLI `--stream` / `--from-order`
+  / `--to-order` / `--chunk-orders`. Peak RSS on a long MOD dropped ~41 %
+  (611 → 362 MB) in stream mode; byte-identical to the default render for
+  uniform/non-command songs; a full-length single chunk reproduces the exact
+  render. (The *default* full render is unchanged.)
+- **S3M DP30 ADPCM** packed samples now decode to PCM (libopenmpt algorithm;
+  algorithm/roundtrip-verified, no real packed `.s3m` fixture; degenerate input
+  falls back to preserve-only).
+- **S3M AdLib/OPL** (type-2) instruments are now **audible** via a static 2-op FM
+  approximation of the patch at import (documented as an approximation, not a
+  cycle-exact OPL2 emulator); the instrument still re-exports byte-identically.
+- **Native flow/order timeline**: a pure `songFlowTimeline` (from `walkFlow`) plus
+  a read-only Advanced Tracker view showing the played order sequence with its
+  jump/break/loop/speed/tempo commands.
+
+**Still genuinely open (documented, not done):** a **fully byte-identical
+continuous streaming renderer** for command-heavy songs (the bounded export above
+resets voice state at chunk boundaries; true cross-chunk continuity needs the
+whole channel×row×block loop transposed — a large rewrite); the remaining unmapped
+cross-format effects (`S0`/`S5`/`S7`/`S9`/`SA`/`Z`); MOD tag-alias preservation
+(FLT8/OCTA); a cycle-exact OPL emulator (vs the FM approximation shipped); and the
+deeper native editors (raw effect-memory, native S3M header, velocity zones,
+in-place flow *editing*). See the feature audit below for per-feature state.
 
 ## Verification status
 
