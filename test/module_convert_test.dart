@@ -66,6 +66,42 @@ void main() {
     expect(written.volume, 0x63);
   });
 
+  test('XM volume-column mini-commands map into neutral effects', () {
+    const cases = <(int, int, int)>{
+      (0x63, 0xA, 0x03),
+      (0x74, 0xA, 0x40),
+      (0x85, 0xE, 0xB5),
+      (0x96, 0xE, 0xA6),
+      (0xA7, 0x4, 0x70),
+      (0xB8, 0x4, 0x08),
+      (0xC9, 0x8, 0x99),
+      (0xDA, 0x19, 0x0A),
+      (0xEB, 0x19, 0xB0),
+      (0xFC, 0x3, 0x0C),
+    };
+    for (final (volume, command, param) in cases) {
+      final module = XmModule(
+        channelCount: 1,
+        order: const [0],
+        patterns: [
+          XmPattern([
+            [
+              XmCell(note: 49, instrument: 1, volume: volume),
+            ],
+          ]),
+        ],
+        instruments: [
+          XmInstrument(samples: [XmSample(pcm: Float64List(32))]),
+        ],
+      );
+      final cell = docFromXm(module).patterns.first.rows.first.first;
+      expect(cell.effect, command,
+          reason: 'volume ${volume.toRadixString(16)}');
+      expect(cell.effectParam, param);
+      expect(cell.nativeVolpan, volume);
+    }
+  });
+
   test('IT native volume commands do not synthesize a volume-column byte', () {
     final doc = ModuleDoc(
       sourceFormat: ModuleFormat.it,

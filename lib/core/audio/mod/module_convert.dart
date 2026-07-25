@@ -267,7 +267,7 @@ ModuleDoc docFromMod(ModModule m) {
 
 /// S3M `Sxy` special sub-commands → our `Exy` extended (where an equivalent
 /// exists). The sub-command nibble maps: SBx→E6x loop, SCx→ECx cut, SDx→EDx
-/// delay. Others (waveforms, panning, pattern delay, finetune) are dropped.
+/// delay. Other supported mini-commands use the neutral Exy/Pxy equivalents.
 (int, int) _s3mSpecialToFx(int info) {
   final sub = (info >> 4) & 0xF, val = info & 0xF;
   switch (sub) {
@@ -280,6 +280,23 @@ ModuleDoc docFromMod(ModModule m) {
     default:
       return (0, 0);
   }
+}
+
+/// XM volume-column mini-commands that have a direct neutral/replayer form.
+/// The raw XM byte remains in [DocCell.nativeVolpan] for same-format export.
+(int, int)? _xmVolumeColumnToFx(int volume) {
+  final nibble = volume & 0xF;
+  if (volume >= 0x60 && volume <= 0x6F) return (0xA, nibble);
+  if (volume >= 0x70 && volume <= 0x7F) return (0xA, nibble << 4);
+  if (volume >= 0x80 && volume <= 0x8F) return (0xE, 0xB0 | nibble);
+  if (volume >= 0x90 && volume <= 0x9F) return (0xE, 0xA0 | nibble);
+  if (volume >= 0xA0 && volume <= 0xAF) return (0x4, nibble << 4);
+  if (volume >= 0xB0 && volume <= 0xBF) return (0x4, nibble);
+  if (volume >= 0xC0 && volume <= 0xCF) return (0x8, nibble * 0x11);
+  if (volume >= 0xD0 && volume <= 0xDF) return (0x19, nibble);
+  if (volume >= 0xE0 && volume <= 0xEF) return (0x19, nibble << 4);
+  if (volume >= 0xF0 && volume <= 0xFF) return (0x3, nibble);
+  return null;
 }
 
 ModuleDoc docFromS3m(S3mModule m) {
@@ -435,11 +452,19 @@ ModuleDoc docFromXm(XmModule m) {
         // XM's Txy tremor uses effect byte 14h, while the neutral replayer
         // reserves 1Dh for tremor so it cannot collide with MOD effects. Keep
         // the original byte in nativeEffect for same-format export.
-        final effect = c.effect == 0x14 ? 0x1D : c.effect;
+        var effect = c.effect == 0x14 ? 0x1D : c.effect;
+        var effectParam = c.effectParam;
         final hasVolpan =
             c.presentMask < 0 ? c.volume != 0 : (c.presentMask & 0x04) != 0;
         final vol =
             (c.volume >= 0x10 && c.volume <= 0x50) ? c.volume - 0x10 : -1;
+        if (effect == 0 && hasVolpan) {
+          final mini = _xmVolumeColumnToFx(c.volume);
+          if (mini != null) {
+            effect = mini.$1;
+            effectParam = mini.$2;
+          }
+        }
         if (c.instrument > 0) lastInstrument[channel] = c.instrument;
         final effectiveInstrument =
             c.instrument > 0 ? c.instrument : (lastInstrument[channel] ?? 0);
@@ -463,7 +488,7 @@ ModuleDoc docFromXm(XmModule m) {
             // writers may still degrade commands without an equivalent, but a
             // same-format XM round-trip must not erase G+ effects.
             effect: effect,
-            effectParam: c.effectParam,
+            effectParam: effectParam,
             nativeEffect: c.effect == 0 && c.effectParam == 0 ? -1 : c.effect,
             nativeEffectParam: c.effectParam,
             nativeInstrument: effectiveInstrument,
