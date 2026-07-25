@@ -182,6 +182,31 @@ double itFilterResonanceQ(int resonance) {
   return 0.70710678 * pow(10.0, 1.2 * r / 127.0);
 }
 
+// --- Filter-envelope cutoff modulation (OpenMPT/IT) ---------------------------
+//
+// When an IT instrument's third envelope is a FILTER envelope, its 0..64 value
+// modulates the cutoff. Following OpenMPT's `CutOffToFrequency(cutoff,
+// flt_modifier)`: the envelope value `v` (0..64) becomes the filter modifier
+// `flt = v·4` (0..256), and
+//   computedCutoff = clamp(cutoff · (flt + 256), 0, 127·512)
+//   fc = 110 · 2^(0.25 + computedCutoff/(24·512))
+// v = 64 → flt = 256 → computedCutoff = cutoff·512 → the NEUTRAL cutoff (matches
+// [itFilterCutoffHz] with no envelope). Lower values darken (v = 0 → cutoff·256,
+// i.e. ~one octave down). This lets a rising envelope open the filter over the
+// note and a falling envelope close it. [fltModifier] is 0..256.
+double itFilterCutoffHzMod(
+  int cutoff,
+  int fltModifier, {
+  double sampleRate = kSampleRate + 0.0,
+}) {
+  final c = cutoff.clamp(0, 127);
+  final m = fltModifier.clamp(0, 256);
+  final computed = (c * (m + 256)).clamp(0, 127 * 512).toDouble();
+  final fc = 110.0 * pow(2.0, 0.25 + computed / (24.0 * 512.0));
+  final nyquist = sampleRate / 2.0;
+  return fc.clamp(120.0, nyquist - 1.0);
+}
+
 // --- Tuning constants (MUSICAL APPROXIMATIONS, not period-accurate MOD) -------
 //
 // Real MOD effects operate on Amiga period units; we model pitch in fractional
@@ -340,7 +365,19 @@ class ReplayVoice {
   int _lpfCutoff = -1;
   int _lpfRes = -1;
 
-  bool get _filterActive => filterCutoff < 127 || filterResonance > 0;
+  // IT filter-cutoff ENVELOPE (the instrument's third envelope when its
+  // env-filter flag is set). When present it modulates the cutoff over the note
+  // via [itFilterCutoffHzMod]; [filterCutoff] is the base it modulates from
+  // (127 = fully open when the instrument set no initial cutoff). A voice with
+  // no filter envelope leaves [_filterEnv] null → the biquad path is byte-for-
+  // byte the initial-cutoff-only behaviour.
+  FilterEnvelope? _filterEnv;
+  bool _hasFilterEnv = false;
+  int _filterEnvMod = 256; // 0..256; 256 = neutral (base cutoff)
+  int _lpfEnvMod = -1; // last modifier the biquad was tuned for
+
+  bool get _filterActive =>
+      filterCutoff < 127 || filterResonance > 0 || _hasFilterEnv;
 
   // --- Anti-click ramps (MultiPLAY-style) ------------------------------------
   // Two per-voice smoothers that kill the two classic tracker clicks. They live
@@ -484,15 +521,36 @@ class ReplayVoice {
   /// the instrument default replaces the current filter. The biquad memory is
   /// always cleared — a new note starts the filter fresh (like a fresh sample
   /// read-pointer). [instCutoff] < 0 means the instrument has no filter → open.
-  void armFilterOnTrigger(int instCutoff, int instResonance) {
+  void armFilterOnTrigger(
+    int instCutoff,
+    int instResonance, [
+    FilterEnvelope? filterEnv,
+  ]) {
     if (!_filterSetThisRow) {
       filterCutoff = (instCutoff < 0 || instCutoff > 127) ? 127 : instCutoff;
       filterResonance = instResonance.clamp(0, 127);
     }
+    // The filter envelope re-arms fresh at each note trigger (evaluated from the
+    // note onset like the volume/pitch envelopes). A Zxx cutoff set on the row
+    // still wins for the BASE cutoff; the envelope modulates around it.
+    _filterEnv = filterEnv;
+    _hasFilterEnv = filterEnv != null;
+    _filterEnvMod = 256;
+    _lpfEnvMod = -1;
     _lpf?.reset();
     _lpfR?.reset();
     _lpfCutoff = -1;
     _lpfRes = -1;
+  }
+
+  /// Evaluate the filter-cutoff envelope at [ms] since the note onset and update
+  /// the current modifier. No-op (and byte-identical) when the voice has no
+  /// filter envelope. Call once per sample, before [filterOut].
+  void updateFilterEnv(double ms) {
+    final env = _filterEnv;
+    if (env == null) return;
+    final v = env.valueAt(ms, released: released); // 0..64
+    _filterEnvMod = (v * 4.0).round().clamp(0, 256);
   }
 
   /// Runs one sample through the voice's (mono/left) resonant low-pass. A no-op
@@ -505,6 +563,37 @@ class ReplayVoice {
 
   double _filter(double x, bool right) {
     if (!_filterActive) return x;
+    // A filter ENVELOPE modulates the corner frequency per sample; retune on any
+    // change of the (quantised 0..256) modifier as well as cutoff/resonance. The
+    // no-envelope path is left byte-for-byte unchanged (same [itFilterCutoffHz]).
+    if (_hasFilterEnv) {
+      if (_lpf == null || _lpfRes != filterResonance) {
+        final f = itFilterCutoffHzMod(filterCutoff, _filterEnvMod);
+        final q = itFilterResonanceQ(filterResonance);
+        _lpf = Biquad(
+          BiquadKind.lowpass,
+          freq: f,
+          sampleRate: kSampleRate.toDouble(),
+          q: q,
+        );
+        _lpfR = Biquad(
+          BiquadKind.lowpass,
+          freq: f,
+          sampleRate: kSampleRate.toDouble(),
+          q: q,
+        );
+        _lpfCutoff = filterCutoff;
+        _lpfRes = filterResonance;
+        _lpfEnvMod = _filterEnvMod;
+      } else if (_lpfCutoff != filterCutoff || _lpfEnvMod != _filterEnvMod) {
+        final f = itFilterCutoffHzMod(filterCutoff, _filterEnvMod);
+        _lpf!.setFreq(f);
+        _lpfR!.setFreq(f);
+        _lpfCutoff = filterCutoff;
+        _lpfEnvMod = _filterEnvMod;
+      }
+      return right ? _lpfR!.process(x) : _lpf!.process(x);
+    }
     // (Re)build on a resonance change (Q is fixed at construction); retune in
     // place on a cutoff change (preserves memory → click-free sweeps).
     if (_lpfRes != filterResonance) {
@@ -1165,7 +1254,11 @@ double? readLoopedSampleForTest(
     if (voice.retriggeredThisRow) {
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
       if (cur is SampleInstrument) {
-        voice.armFilterOnTrigger(cur.filterCutoff, cur.filterResonance);
+        voice.armFilterOnTrigger(
+          cur.filterCutoff,
+          cur.filterResonance,
+          cur.nativeFilterEnvelope,
+        );
       }
       readPos = cell.fxCmd == kFxSampleOffset
           ? (cell.fxParam * 256 * os).toDouble()
@@ -1240,8 +1333,10 @@ double? readLoopedSampleForTest(
                   activeLoopLength,
                 ) ??
                 0.0;
-        // Per-voice resonant low-pass (IT initial cutoff/resonance + Zxx). A
-        // no-op pass-through when the voice is unfiltered.
+        // Per-voice resonant low-pass (IT initial cutoff/resonance + Zxx + the
+        // filter-cutoff envelope). A no-op pass-through when the voice is
+        // unfiltered; updateFilterEnv is a no-op without a filter envelope.
+        voice.updateFilterEnv((i - noteStartSample) / kSampleRate * 1000);
         final fValue = voice.filterOut(value);
         final fRight =
             sampleRight == null ? fValue : voice.filterOutRight(rightValue);
@@ -1360,7 +1455,11 @@ void _renderSampleChannelInto(
       final c = cells[r];
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
       if (cur is SampleInstrument) {
-        voice.armFilterOnTrigger(cur.filterCutoff, cur.filterResonance);
+        voice.armFilterOnTrigger(
+          cur.filterCutoff,
+          cur.filterResonance,
+          cur.nativeFilterEnvelope,
+        );
       }
       readPos =
           c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
@@ -1432,6 +1531,7 @@ void _renderSampleChannelInto(
             : 1.0;
         // Anti-click: a hard cut (ECx) emits a decaying residue tail instead of
         // an instant zero; a real trigger fades in over the soft-start ramp.
+        voice.updateFilterEnv(t * 1000);
         if (voice.noteCut) {
           stem[i] += voice.residueStep();
         } else {
@@ -1516,7 +1616,11 @@ void _renderSampleChannelIntoVariable(
       final c = cells[r];
       final os = cur is SampleInstrument ? cur.offsetScale : 1.0;
       if (cur is SampleInstrument) {
-        voice.armFilterOnTrigger(cur.filterCutoff, cur.filterResonance);
+        voice.armFilterOnTrigger(
+          cur.filterCutoff,
+          cur.filterResonance,
+          cur.nativeFilterEnvelope,
+        );
       }
       readPos =
           c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
@@ -1589,6 +1693,7 @@ void _renderSampleChannelIntoVariable(
         // Anti-click: hard-cut residue tail vs. soft-start fade-in (see the
         // buffered [_renderSampleChannelInto] emit). [sv] is the finished value
         // BEFORE channel gain, so the residue tracks the pre-gain scalar.
+        voice.updateFilterEnv(t * 1000);
         final double sv;
         if (voice.noteCut) {
           sv = voice.residueStep();
@@ -4565,7 +4670,11 @@ void _sampleRenderRowsMono(
       final scur = st.cur;
       final os = scur is SampleInstrument ? scur.offsetScale : 1.0;
       if (scur is SampleInstrument) {
-        voice.armFilterOnTrigger(scur.filterCutoff, scur.filterResonance);
+        voice.armFilterOnTrigger(
+          scur.filterCutoff,
+          scur.filterResonance,
+          scur.nativeFilterEnvelope,
+        );
       }
       st.readPos =
           c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
@@ -4640,6 +4749,7 @@ void _sampleRenderRowsMono(
         // (mirror of the buffered [_renderSampleChannelInto]): residue tail on a
         // hard cut, soft-start fade-in on a trigger — voice state carries the
         // ramp/residue across chunk boundaries.
+        voice.updateFilterEnv(t * 1000);
         if (voice.noteCut) {
           dest[i - sampleBase] += voice.residueStep();
         } else {
@@ -4704,7 +4814,11 @@ void _sampleRenderRowsStereo(
       final scur = st.cur;
       final os = scur is SampleInstrument ? scur.offsetScale : 1.0;
       if (scur is SampleInstrument) {
-        voice.armFilterOnTrigger(scur.filterCutoff, scur.filterResonance);
+        voice.armFilterOnTrigger(
+          scur.filterCutoff,
+          scur.filterResonance,
+          scur.nativeFilterEnvelope,
+        );
       }
       st.readPos = cell.fxCmd == kFxSampleOffset
           ? (cell.fxParam * 256 * os).toDouble()
@@ -4777,7 +4891,9 @@ void _sampleRenderRowsStereo(
                 ) ??
                 0.0;
         // Per-voice resonant low-pass (carried across chunk boundaries via the
-        // voice's biquad state). A no-op pass-through when unfiltered.
+        // voice's biquad state). A no-op pass-through when unfiltered;
+        // updateFilterEnv is a no-op without a filter envelope.
+        voice.updateFilterEnv((i - st.noteStartSample) / kSampleRate * 1000);
         final fValue = voice.filterOut(value);
         final fRight =
             sampleRight == null ? fValue : voice.filterOutRight(rightValue);

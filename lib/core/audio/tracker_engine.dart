@@ -628,6 +628,7 @@ class SampleInstrument implements TrackerInstrument {
     this.nativeVolumeEnvelope,
     this.nativePanEnvelope,
     this.nativePitchEnvelope,
+    this.nativeFilterEnvelope,
     this.nativeNna = 0,
     this.nativeDct = 0,
     this.nativeDca = 0,
@@ -669,6 +670,14 @@ class SampleInstrument implements TrackerInstrument {
   /// IT tracker-native pitch envelope, in semitones from the note pitch.
   final PitchEnvelope? nativePitchEnvelope;
 
+  /// IT tracker-native FILTER-CUTOFF envelope (the instrument's third envelope
+  /// when its env-filter flag is set instead of a pitch envelope). Values are
+  /// 0..64; it modulates the resonant low-pass cutoff over the note. Applied by
+  /// the replayer's per-voice filter path; null = no filter envelope (unchanged
+  /// render). When set, [nativePitchEnvelope] is null (the same envelope block
+  /// is EITHER pitch OR filter, never both).
+  final FilterEnvelope? nativeFilterEnvelope;
+
   /// IT/XM old-note action metadata. NNA values follow IT: 0=cut,
   /// 1=continue, 2=note-off, 3=fade.
   final int nativeNna;
@@ -685,9 +694,13 @@ class SampleInstrument implements TrackerInstrument {
   final int filterResonance;
 
   /// Whether this instrument engages the low-pass: an enabled cutoff below the
-  /// fully-open 127, or any resonance. (Cutoff 127 with no resonance = open.)
+  /// fully-open 127, any resonance, or a filter-cutoff envelope (which modulates
+  /// the cutoff even from a fully-open base). (Cutoff 127, no resonance, no
+  /// filter envelope = open.)
   bool get hasFilter =>
-      (filterCutoff >= 0 && filterCutoff < 127) || filterResonance > 0;
+      (filterCutoff >= 0 && filterCutoff < 127) ||
+      filterResonance > 0 ||
+      nativeFilterEnvelope != null;
   final int baseMidi;
 
   /// A per-note volume envelope (default a gentle declick attack/release).
@@ -743,6 +756,7 @@ class SampleInstrument implements TrackerInstrument {
     VolumeEnvelope? nativeVolumeEnvelope,
     PanEnvelope? nativePanEnvelope,
     PitchEnvelope? nativePitchEnvelope,
+    FilterEnvelope? nativeFilterEnvelope,
     int? nativeNna,
     int? nativeDct,
     int? nativeDca,
@@ -768,6 +782,7 @@ class SampleInstrument implements TrackerInstrument {
         nativeVolumeEnvelope: nativeVolumeEnvelope ?? this.nativeVolumeEnvelope,
         nativePanEnvelope: nativePanEnvelope ?? this.nativePanEnvelope,
         nativePitchEnvelope: nativePitchEnvelope ?? this.nativePitchEnvelope,
+        nativeFilterEnvelope: nativeFilterEnvelope ?? this.nativeFilterEnvelope,
         nativeNna: nativeNna ?? this.nativeNna,
         nativeDct: nativeDct ?? this.nativeDct,
         nativeDca: nativeDca ?? this.nativeDca,
@@ -1686,6 +1701,55 @@ class PitchEnvelope {
       }
     }
     return points.last.semitones;
+  }
+}
+
+/// A tracker-native FILTER-CUTOFF envelope (IT). When an instrument's third
+/// envelope carries the env-filter flag it is a filter envelope rather than a
+/// pitch envelope: its 0..64 value modulates the resonant low-pass cutoff over
+/// the note. Same breakpoint/loop/sustain shape as the other envelopes (linear
+/// interpolation, holds the ends). Evaluated from each note onset. In OpenMPT
+/// terms the value drives the filter modifier `flt = value * 4` (0..256, where
+/// 256 = neutral / base cutoff, lower values darken).
+class FilterEnvelope {
+  const FilterEnvelope(
+    this.points, {
+    this.sustain,
+    this.loopStart,
+    this.loopEnd,
+  });
+
+  /// `(ms, value 0..64)` breakpoints, ascending in ms.
+  final List<({int ms, double value})> points;
+  final int? sustain;
+  final int? loopStart;
+  final int? loopEnd;
+
+  bool get isEmpty => points.isEmpty;
+
+  /// The envelope value (0..64) at [ms] — linear interpolation, held at the
+  /// ends, honouring sustain/loop and note-off like the other envelopes.
+  double valueAt(double ms, {bool released = false}) {
+    if (points.isEmpty) return 64.0;
+    ms = _envelopeTime(
+      ms,
+      released: released,
+      sustain: sustain,
+      loopStart: loopStart,
+      loopEnd: loopEnd,
+      pointMs: [for (final p in points) p.ms],
+    );
+    if (ms <= points.first.ms) return points.first.value;
+    for (var i = 1; i < points.length; i++) {
+      final b = points[i];
+      if (ms <= b.ms) {
+        final a = points[i - 1];
+        final span = b.ms - a.ms;
+        if (span <= 0) return b.value;
+        return a.value + (b.value - a.value) * ((ms - a.ms) / span);
+      }
+    }
+    return points.last.value;
   }
 }
 

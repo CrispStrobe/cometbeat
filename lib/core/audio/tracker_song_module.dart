@@ -257,6 +257,23 @@ PitchEnvelope? _trackerPitchEnv(DocEnvelope? e, int tempo) {
   );
 }
 
+/// The IT instrument's third-envelope block as a [FilterEnvelope] when it is
+/// flagged as a FILTER (cutoff) envelope. Its 0..64 node values drive the
+/// per-voice low-pass cutoff. Same tick→ms mapping as the other envelopes.
+FilterEnvelope? _trackerFilterEnv(DocEnvelope? e, int tempo) {
+  if (e == null || e.isEmpty || !e.enabled) return null;
+  final ms = _tickMs(tempo);
+  return FilterEnvelope(
+    [
+      for (final (t, v) in e.points)
+        (ms: (t * ms).round(), value: v.toDouble()),
+    ],
+    sustain: e.sustain,
+    loopStart: e.loopStart,
+    loopEnd: e.loopEnd,
+  );
+}
+
 /// A channel's instrument: its dominant module sample, else a rotating additive
 /// voice so empty channels still sound distinct.
 TrackerInstrument _instrumentForChannel(ModuleDoc doc, int ins, int c) {
@@ -369,6 +386,10 @@ TrackerInstrument _itNativeInstrument(
     if (sampleIndex >= 0 && sampleIndex < doc.samples.length) {
       final sample = doc.samples[sampleIndex];
       if (!sample.isEmpty) {
+        // The third envelope block is EITHER a pitch envelope OR (when the
+        // instrument's env-filter flag is set) a filter-cutoff envelope — never
+        // both. Route the same DocEnvelope to whichever it is.
+        final isFilterEnv = instrument.filterEnvelope;
         zones[midi] = bySample[sampleNumber] ??= sampleInstrumentFromDoc(
           'it${instrumentIndex + 1}_smp$sampleNumber',
           sample,
@@ -376,8 +397,12 @@ TrackerInstrument _itNativeInstrument(
               _trackerVolEnv(instrument.volumeEnvelope, doc.initialTempo),
           nativePanEnvelope:
               _trackerPanEnv(instrument.panEnvelope, doc.initialTempo),
-          nativePitchEnvelope:
-              _trackerPitchEnv(instrument.pitchEnvelope, doc.initialTempo),
+          nativePitchEnvelope: isFilterEnv
+              ? null
+              : _trackerPitchEnv(instrument.pitchEnvelope, doc.initialTempo),
+          nativeFilterEnvelope: isFilterEnv
+              ? _trackerFilterEnv(instrument.pitchEnvelope, doc.initialTempo)
+              : null,
           nativeNna: instrument.nna,
           nativeDct: instrument.dct,
           nativeDca: instrument.dca,

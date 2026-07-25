@@ -20,7 +20,12 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
-    show PanEnvelope, PitchEnvelope, SampleInstrument, VolumeEnvelope;
+    show
+        FilterEnvelope,
+        PanEnvelope,
+        PitchEnvelope,
+        SampleInstrument,
+        VolumeEnvelope;
 
 /// Builds a [SampleInstrument] from a module [DocSample]. The PCM is resampled
 /// from the sample's native `c5speed` to [engineRate]; [baseMidi] (default 60 =
@@ -33,6 +38,7 @@ SampleInstrument sampleInstrumentFromDoc(
   VolumeEnvelope? nativeVolumeEnvelope,
   PanEnvelope? nativePanEnvelope,
   PitchEnvelope? nativePitchEnvelope,
+  FilterEnvelope? nativeFilterEnvelope,
   int nativeNna = 0,
   int nativeDct = 0,
   int nativeDca = 0,
@@ -92,6 +98,7 @@ SampleInstrument sampleInstrumentFromDoc(
     nativeVolumeEnvelope: nativeVolumeEnvelope,
     nativePanEnvelope: nativePanEnvelope,
     nativePitchEnvelope: nativePitchEnvelope,
+    nativeFilterEnvelope: nativeFilterEnvelope,
     nativeNna: nativeNna,
     nativeDct: nativeDct,
     nativeDca: nativeDca,
