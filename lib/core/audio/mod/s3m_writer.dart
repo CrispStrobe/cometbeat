@@ -139,9 +139,11 @@ Uint8List writeS3m(S3mModule module) {
   }
   // 0x40 channel settings (32 bytes).
   for (var i = 0; i < 32; i++) {
-    u8(i < module.channelSettings.length
-        ? module.channelSettings[i]
-        : (i < channelCount ? i : 255));
+    u8(
+      i < module.channelSettings.length
+          ? module.channelSettings[i]
+          : (i < channelCount ? i : 255),
+    );
   }
 
   // ── Order list (ordNum bytes, pad with 255) ────────────────────────────────

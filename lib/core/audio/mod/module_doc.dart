@@ -21,9 +21,9 @@
 
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:comet_beat/core/audio/mod/it_module.dart';
 import 'package:comet_beat/core/audio/mod/s3m_module.dart';
+import 'package:comet_beat/core/audio/mod/xm_module.dart';
 
 /// The source container format a [ModuleDoc] was read from.
 enum ModuleFormat { mod, s3m, xm, it }

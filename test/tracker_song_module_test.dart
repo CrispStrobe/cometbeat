@@ -16,9 +16,9 @@ import 'package:comet_beat/core/audio/mod/s3m_module.dart';
 import 'package:comet_beat/core/audio/mod/s3m_writer.dart';
 import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
+import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show replaySong, songUsesVariableTiming;
-import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:comet_beat/core/audio/wav_io.dart';
@@ -49,9 +49,8 @@ void main() {
   test('native S3M and IT channel pans reach imported channel state', () {
     final sample = DocSample(
       pcm: Float64List.fromList([0.2, -0.2]),
-      pan: 128,
     );
-    final pattern = const [
+    const pattern = [
       [DocCell(note: 60, instrument: 1)],
     ];
     final s3m = songFromModuleDoc(
@@ -59,7 +58,7 @@ void main() {
         sourceFormat: ModuleFormat.s3m,
         channelCount: 1,
         order: const [0],
-        patterns: [DocPattern(pattern, 1)],
+        patterns: [const DocPattern(pattern, 1)],
         samples: [sample],
         s3mDefaultPans: const [0x0F],
       ),
@@ -71,7 +70,7 @@ void main() {
         sourceFormat: ModuleFormat.it,
         channelCount: 1,
         order: const [0],
-        patterns: [DocPattern(pattern, 1)],
+        patterns: [const DocPattern(pattern, 1)],
         samples: [sample],
         channelPans: const [0],
         channelVolumes: const [32],
@@ -605,11 +604,9 @@ void main() {
             pcm: Float64List(64),
             volumeEnvelope: const DocEnvelope(
               points: [(0, 0), (4, 64)],
-              enabled: false,
             ),
             panEnvelope: const DocEnvelope(
               points: [(0, 64), (4, 0)],
-              enabled: false,
             ),
           ),
         ],
@@ -627,16 +624,19 @@ void main() {
         initialTempo: 120,
         order: [0],
         patterns: [
-          DocPattern([
+          const DocPattern(
             [
-              const DocCell(
-                note: 60,
-                instrument: 1,
-                nativeInstrument: 1,
-                nativeInstrumentSet: true,
-              ),
+              [
+                DocCell(
+                  note: 60,
+                  instrument: 1,
+                  nativeInstrument: 1,
+                  nativeInstrumentSet: true,
+                ),
+              ],
             ],
-          ], 1),
+            1,
+          ),
         ],
         samples: [
           DocSample(pcm: Float64List(44100 * 2), c5speed: kSampleRate),
@@ -691,7 +691,7 @@ void main() {
         ),
       ],
       samples: [
-        DocSample(pcm: Float64List.fromList([0.5, 0.0, -0.5]))
+        DocSample(pcm: Float64List.fromList([0.5, 0.0, -0.5])),
       ],
     );
     final song = songFromModuleDoc(doc);

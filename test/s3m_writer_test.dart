@@ -177,8 +177,10 @@ void main() {
 
     final roundTrip = parseS3m(writeS3m(src));
     expect(roundTrip.patterns[0].rawData, isEmpty);
-    expect(roundTrip.patterns[0].rows.expand((r) => r).every((c) => c.isEmpty),
-        isTrue);
+    expect(
+      roundTrip.patterns[0].rows.expand((r) => r).every((c) => c.isEmpty),
+      isTrue,
+    );
     expect(roundTrip.patterns[1].rawData, [2, 0]);
   });
 }

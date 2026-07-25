@@ -67,7 +67,7 @@ void main() {
         instruments: [kit],
         timing: const TrackerTiming(rows: 4),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );
@@ -101,7 +101,7 @@ void main() {
         instruments: [sample],
         timing: const TrackerTiming(rows: 2),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );
@@ -122,21 +122,24 @@ void main() {
         channelCount: 1,
         order: const [0],
         patterns: [
-          const DocPattern([
+          const DocPattern(
             [
-              DocCell(
-                note: 60,
-                nativeNote: 49,
-                instrument: 1,
-                nativeInstrument: 1,
-                nativeInstrumentSet: true,
-                effect: 0x4,
-                effectParam: 0x12,
-                nativeEffect: 0xA,
-                nativeEffectParam: 0x34,
-              ),
+              [
+                DocCell(
+                  note: 60,
+                  nativeNote: 49,
+                  instrument: 1,
+                  nativeInstrument: 1,
+                  nativeInstrumentSet: true,
+                  effect: 0x4,
+                  effectParam: 0x12,
+                  nativeEffect: 0xA,
+                  nativeEffectParam: 0x34,
+                ),
+              ],
             ],
-          ], 1),
+            1,
+          ),
         ],
         samples: [DocSample(pcm: pcm)],
       );
@@ -332,7 +335,7 @@ void main() {
         ],
         timing: const TrackerTiming(tempoBpm: 125, rows: 8),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );

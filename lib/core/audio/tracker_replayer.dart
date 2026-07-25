@@ -1838,7 +1838,8 @@ void _renderMultiSampleChannelInto(
       multi.zones.values.every((zone) => zone is SampleInstrument)) {
     final rowStart = [
       for (var row = 0; row < cells.length; row++) timing.stepStartSample(row),
-    ]..add(timing.totalSamples);
+      timing.totalSamples,
+    ];
     final rendered = _renderNativeTickZoneVoices(
       multi,
       cells,
@@ -1884,8 +1885,12 @@ void _renderMultiSampleChannelInto(
       if (zone is SampleInstrument || _additiveOf(zone) != null) {
         final isolated =
             List<TrackerCell>.filled(cells.length, TrackerCell.empty)
-              ..setRange(startStep, min(startStep + steps, cells.length), cells,
-                  startStep);
+              ..setRange(
+                startStep,
+                min(startStep + steps, cells.length),
+                cells,
+                startStep,
+              );
         final boundary = startStep + steps;
         if (boundary < isolated.length && isolated[boundary].isEmpty) {
           isolated[boundary] = TrackerCell.noteCut;
@@ -1936,7 +1941,8 @@ void _renderMultiSampleChannelInto(
   if (multi is! MultiSampleInstrument) return (left: left, right: right);
   final rowStart = [
     for (var row = 0; row < cells.length; row++) timing.stepStartSample(row),
-  ]..add(timing.totalSamples);
+    timing.totalSamples,
+  ];
   if (multi.nativeVoiceSemantics &&
       multi.zones.values.every((zone) => zone is SampleInstrument)) {
     final rendered = _renderNativeTickZoneVoices(
@@ -1981,8 +1987,12 @@ void _renderMultiSampleChannelInto(
       if (zone is SampleInstrument || _additiveOf(zone) != null) {
         final isolated =
             List<TrackerCell>.filled(cells.length, TrackerCell.empty)
-              ..setRange(startStep, min(startStep + steps, cells.length), cells,
-                  startStep);
+              ..setRange(
+                startStep,
+                min(startStep + steps, cells.length),
+                cells,
+                startStep,
+              );
         final boundary = startStep + steps;
         if (boundary < isolated.length && isolated[boundary].isEmpty) {
           isolated[boundary] = TrackerCell.noteCut;
@@ -2085,8 +2095,12 @@ void _renderMultiSampleChannelIntoVariable(
       if (zone is SampleInstrument || _additiveOf(zone) != null) {
         final isolated =
             List<TrackerCell>.filled(cells.length, TrackerCell.empty)
-              ..setRange(startStep, min(startStep + steps, cells.length), cells,
-                  startStep);
+              ..setRange(
+                startStep,
+                min(startStep + steps, cells.length),
+                cells,
+                startStep,
+              );
         final boundary = startStep + steps;
         if (boundary < isolated.length && isolated[boundary].isEmpty) {
           isolated[boundary] = TrackerCell.noteCut;
@@ -2158,7 +2172,8 @@ void _renderChannelIntoStereo(
   if (channel.instrument is SampleInstrument && _hasPerTickEffect(cells)) {
     final rowStart = [
       for (var row = 0; row < cells.length; row++) timing.stepStartSample(row),
-    ]..add(timing.totalSamples);
+      timing.totalSamples,
+    ];
     final rendered = _renderSampleChannelStereoTicks(
       channel,
       cells,

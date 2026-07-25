@@ -194,7 +194,7 @@ void main() {
   test('IT continue old-note action keeps the previous sample voice ringing',
       () {
     final sample = Float64List.fromList([for (var i = 0; i < 88200; i++) 0.5]);
-    const timing = TrackerTiming(tempoBpm: 60, rows: 4, stepsPerBeat: 4);
+    const timing = TrackerTiming(tempoBpm: 60, rows: 4);
     final cells = [
       const TrackerCell(midi: 60),
       const TrackerCell(midi: 60),
@@ -214,7 +214,7 @@ void main() {
 
   test('IT duplicate-note action uses DCT/DCA matching', () {
     final sample = Float64List.fromList([for (var i = 0; i < 88200; i++) 0.5]);
-    const timing = TrackerTiming(tempoBpm: 60, rows: 4, stepsPerBeat: 4);
+    const timing = TrackerTiming(tempoBpm: 60, rows: 4);
     final cells = [
       const TrackerCell(midi: 60),
       const TrackerCell(midi: 62),
@@ -226,7 +226,6 @@ void main() {
       sample,
       nativeNna: 1,
       nativeDct: 1,
-      nativeDca: 0,
     );
     final dctOut = dctNote.renderChannel(cells, timing);
     final i = (0.75 * kSampleRate).round();

@@ -211,7 +211,8 @@ S3mSample _readInstrument(
     rawData: pcmOffset >= 0 &&
             pcmOffset + available * bytesPerSample <= bytes.length
         ? Uint8List.fromList(
-            bytes.sublist(pcmOffset, pcmOffset + available * bytesPerSample))
+            bytes.sublist(pcmOffset, pcmOffset + available * bytesPerSample),
+          )
         : null,
   );
 }

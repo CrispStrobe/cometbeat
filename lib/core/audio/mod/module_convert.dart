@@ -193,7 +193,6 @@ ModuleDoc docFromMod(ModModule m) {
   return ModuleDoc(
     title: m.title,
     channelCount: m.channelCount,
-    globalVolume: 128,
     sourceFormat: ModuleFormat.mod,
     order: List<int>.from(m.order),
     patterns: patterns,
@@ -415,7 +414,6 @@ XmSample xmSampleFromDoc(DocSample ds) {
     pingPong: ds.pingPong,
     sixteenBit: ds.sixteenBit,
     pcm: Float64List.fromList(ds.pcm),
-    rawData: null,
   );
 }
 
@@ -518,7 +516,6 @@ ModuleDoc docFromXm(XmModule m) {
     channelCount: m.channelCount,
     initialSpeed: m.defaultTempo,
     initialTempo: m.defaultBpm,
-    globalVolume: 128,
     linearFrequency: m.linearFrequency,
     xmInstruments: List<XmInstrument>.from(m.instruments),
     xmPatterns: List<XmPattern>.from(m.patterns),

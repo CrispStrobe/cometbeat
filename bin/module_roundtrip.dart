@@ -93,33 +93,48 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
   }
 
   check(a.title.trim() == b.title.trim(), 'title "${a.title}" != "${b.title}"');
-  check(a.channelCount == b.channelCount,
-      'channels ${a.channelCount} != ${b.channelCount}');
-  check(a.initialSpeed == b.initialSpeed,
-      'speed ${a.initialSpeed} != ${b.initialSpeed}');
-  check(a.initialTempo == b.initialTempo,
-      'tempo ${a.initialTempo} != ${b.initialTempo}');
+  check(
+    a.channelCount == b.channelCount,
+    'channels ${a.channelCount} != ${b.channelCount}',
+  );
+  check(
+    a.initialSpeed == b.initialSpeed,
+    'speed ${a.initialSpeed} != ${b.initialSpeed}',
+  );
+  check(
+    a.initialTempo == b.initialTempo,
+    'tempo ${a.initialTempo} != ${b.initialTempo}',
+  );
   final orderA = _validOrder(a), orderB = _validOrder(b);
   check(orderA.toString() == orderB.toString(), 'order $orderA != $orderB');
-  check(a.patterns.length == b.patterns.length,
-      'patterns ${a.patterns.length} != ${b.patterns.length}');
-  check(a.linearFrequency == b.linearFrequency,
-      'linear frequency ${a.linearFrequency} != ${b.linearFrequency}');
-  check(a.xmInstruments.length == b.xmInstruments.length,
-      'XM instruments ${a.xmInstruments.length} != ${b.xmInstruments.length}');
+  check(
+    a.patterns.length == b.patterns.length,
+    'patterns ${a.patterns.length} != ${b.patterns.length}',
+  );
+  check(
+    a.linearFrequency == b.linearFrequency,
+    'linear frequency ${a.linearFrequency} != ${b.linearFrequency}',
+  );
+  check(
+    a.xmInstruments.length == b.xmInstruments.length,
+    'XM instruments ${a.xmInstruments.length} != ${b.xmInstruments.length}',
+  );
   final xmInstruments =
       math.min(a.xmInstruments.length, b.xmInstruments.length);
   for (var i = 0; i < xmInstruments; i++) {
     final ia = a.xmInstruments[i], ib = b.xmInstruments[i];
-    check(ia.keymap.toString() == ib.keymap.toString(),
-        'XM instrument ${i + 1} keymap differs');
     check(
-        ia.vibratoType == ib.vibratoType &&
-            ia.vibratoSweep == ib.vibratoSweep &&
-            ia.vibratoDepth == ib.vibratoDepth &&
-            ia.vibratoRate == ib.vibratoRate &&
-            ia.fadeout == ib.fadeout,
-        'XM instrument ${i + 1} playback fields differ');
+      ia.keymap.toString() == ib.keymap.toString(),
+      'XM instrument ${i + 1} keymap differs',
+    );
+    check(
+      ia.vibratoType == ib.vibratoType &&
+          ia.vibratoSweep == ib.vibratoSweep &&
+          ia.vibratoDepth == ib.vibratoDepth &&
+          ia.vibratoRate == ib.vibratoRate &&
+          ia.fadeout == ib.fadeout,
+      'XM instrument ${i + 1} playback fields differ',
+    );
   }
   for (var p = 0; p < math.min(a.xmPatterns.length, b.xmPatterns.length); p++) {
     final pa = a.xmPatterns[p], pb = b.xmPatterns[p];
@@ -135,11 +150,15 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
       p < math.min(a.s3mPatterns.length, b.s3mPatterns.length);
       p++) {
     final ra = a.s3mPatterns[p].rawData, rb = b.s3mPatterns[p].rawData;
-    check((ra == null) == (rb == null),
-        'S3M pattern $p raw data presence differs');
+    check(
+      (ra == null) == (rb == null),
+      'S3M pattern $p raw data presence differs',
+    );
     if (ra != null && rb != null) {
-      check(ra.length == rb.length && _bytesEqual(ra, rb),
-          'S3M pattern $p raw data differs (${ra.length} != ${rb.length})');
+      check(
+        ra.length == rb.length && _bytesEqual(ra, rb),
+        'S3M pattern $p raw data differs (${ra.length} != ${rb.length})',
+      );
     }
   }
 
@@ -161,22 +180,30 @@ List<String> _diff(ModuleDoc a, ModuleDoc b) {
     }
   }
 
-  check(a.samples.length == b.samples.length,
-      'samples ${a.samples.length} != ${b.samples.length}');
+  check(
+    a.samples.length == b.samples.length,
+    'samples ${a.samples.length} != ${b.samples.length}',
+  );
   final samples = math.min(a.samples.length, b.samples.length);
   for (var i = 0; i < samples; i++) {
     final sa = a.samples[i], sb = b.samples[i];
     check(sa.pcm.length == sb.pcm.length, 'sample ${i + 1} length differs');
-    check(sa.loopStart == sb.loopStart && sa.loopLength == sb.loopLength,
-        'sample ${i + 1} loop differs');
+    check(
+      sa.loopStart == sb.loopStart && sa.loopLength == sb.loopLength,
+      'sample ${i + 1} loop differs',
+    );
     check(sa.pingPong == sb.pingPong, 'sample ${i + 1} ping-pong differs');
     check(sa.volume == sb.volume, 'sample ${i + 1} volume differs');
-    check(sa.globalVolume == sb.globalVolume,
-        'sample ${i + 1} global volume differs');
+    check(
+      sa.globalVolume == sb.globalVolume,
+      'sample ${i + 1} global volume differs',
+    );
     check(sa.pan == sb.pan, 'sample ${i + 1} pan differs');
     check(sa.sixteenBit == sb.sixteenBit, 'sample ${i + 1} bit depth differs');
-    check((sa.pcmRight == null) == (sb.pcmRight == null),
-        'sample ${i + 1} stereo differs');
+    check(
+      (sa.pcmRight == null) == (sb.pcmRight == null),
+      'sample ${i + 1} stereo differs',
+    );
     check(sa.c5speed == sb.c5speed, 'sample ${i + 1} C5 speed differs');
     final n = math.min(sa.pcm.length, sb.pcm.length);
     final tolerance = sa.sixteenBit || sb.sixteenBit ? 1e-4 : 1 / 128;
@@ -210,13 +237,19 @@ void _printDiff(String label, List<String> diff) {
     stdout.writeln('$label: PASS');
   } else {
     stdout.writeln('$label: CHECK (${diff.length} differences shown)');
-    for (final line in diff) stdout.writeln('  $line');
+    for (final line in diff) {
+      stdout.writeln('  $line');
+    }
   }
 }
 
 Future<bool?> _renderExternal(
-    String executable, String sourcePath, String x1Path, String outputDir,
-    {double? seconds}) async {
+  String executable,
+  String sourcePath,
+  String x1Path,
+  String outputDir, {
+  double? seconds,
+}) async {
   final rendered = <({double duration, double peak, double rms})>[];
   for (final input in [sourcePath, x1Path]) {
     final copied = '$outputDir/external_${input.split('/').last}';

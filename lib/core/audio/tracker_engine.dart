@@ -747,8 +747,11 @@ class SampleInstrument implements TrackerInstrument {
       _renderChannelFrom(sample, cells, timing);
 
   Float64List _renderChannelFrom(
-      Float64List source, List<TrackerCell> cells, TrackerTiming timing,
-      {bool applyNativeAction = true}) {
+    Float64List source,
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    bool applyNativeAction = true,
+  }) {
     if (applyNativeAction &&
         (nativeNna != 0 || nativeDct != 0) &&
         (identical(source, sample) || identical(source, sampleRight))) {
@@ -1136,7 +1139,9 @@ class MultiSampleInstrument implements TrackerInstrument {
           final maxSample = polyphonic
               ? left.length
               : min(
-                  timing.stepStartSample(startStep + totalSteps), left.length);
+                  timing.stepStartSample(startStep + totalSteps),
+                  left.length,
+                );
           for (var i = startSample; i < maxSample; i++) {
             if (polyphonic) {
               left[i] += zoneLeft[i];

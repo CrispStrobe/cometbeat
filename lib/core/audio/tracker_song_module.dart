@@ -208,10 +208,15 @@ VolumeEnvelope? _sampleVolEnv(DocSample sample, int tempo) =>
 VolumeEnvelope? _trackerVolEnv(DocEnvelope? e, int tempo) {
   if (e == null || e.isEmpty || !e.enabled) return null;
   final ms = _tickMs(tempo);
-  return VolumeEnvelope([
-    for (final (t, v) in e.points)
-      (ms: (t * ms).round(), level: (v / 64).clamp(0.0, 1.0)),
-  ], sustain: e.sustain, loopStart: e.loopStart, loopEnd: e.loopEnd);
+  return VolumeEnvelope(
+    [
+      for (final (t, v) in e.points)
+        (ms: (t * ms).round(), level: (v / 64).clamp(0.0, 1.0)),
+    ],
+    sustain: e.sustain,
+    loopStart: e.loopStart,
+    loopEnd: e.loopEnd,
+  );
 }
 
 /// The dominant sample's pan envelope as a tracker [PanEnvelope] (value 0..64,
@@ -227,19 +232,29 @@ PanEnvelope? _samplePanEnv(DocSample sample, int tempo) =>
 PanEnvelope? _trackerPanEnv(DocEnvelope? e, int tempo) {
   if (e == null || e.isEmpty || !e.enabled) return null;
   final ms = _tickMs(tempo);
-  return PanEnvelope([
-    for (final (t, v) in e.points)
-      (ms: (t * ms).round(), pan: ((v - 32) / 32).clamp(-1.0, 1.0)),
-  ], sustain: e.sustain, loopStart: e.loopStart, loopEnd: e.loopEnd);
+  return PanEnvelope(
+    [
+      for (final (t, v) in e.points)
+        (ms: (t * ms).round(), pan: ((v - 32) / 32).clamp(-1.0, 1.0)),
+    ],
+    sustain: e.sustain,
+    loopStart: e.loopStart,
+    loopEnd: e.loopEnd,
+  );
 }
 
 PitchEnvelope? _trackerPitchEnv(DocEnvelope? e, int tempo) {
   if (e == null || e.isEmpty || !e.enabled) return null;
   final ms = _tickMs(tempo);
-  return PitchEnvelope([
-    for (final (t, v) in e.points)
-      (ms: (t * ms).round(), semitones: v.toDouble()),
-  ], sustain: e.sustain, loopStart: e.loopStart, loopEnd: e.loopEnd);
+  return PitchEnvelope(
+    [
+      for (final (t, v) in e.points)
+        (ms: (t * ms).round(), semitones: v.toDouble()),
+    ],
+    sustain: e.sustain,
+    loopStart: e.loopStart,
+    loopEnd: e.loopEnd,
+  );
 }
 
 /// A channel's instrument: its dominant module sample, else a rotating additive
@@ -322,7 +337,10 @@ List<TrackerInstrument> _nativeInstrumentPool(ModuleDoc doc, int tempo) {
         instrumentIndex < doc.itInstruments.length;
         instrumentIndex++)
       _itNativeInstrument(
-          doc, doc.itInstruments[instrumentIndex], instrumentIndex),
+        doc,
+        doc.itInstruments[instrumentIndex],
+        instrumentIndex,
+      ),
   ];
 }
 
@@ -375,8 +393,13 @@ DocInstrument? _sampleOwner(ModuleDoc doc, int sampleIndex) {
 /// Transposes a row-major [DocPattern] into a channel-major [TrackerPattern],
 /// fitting it to [rows] (extra rows dropped; short patterns padded with empties).
 TrackerPattern _patternFromDoc(
-    DocPattern dp, int channelCount, int rows, int index,
-    {bool useNativeInstruments = false, String? sourceFormat}) {
+  DocPattern dp,
+  int channelCount,
+  int rows,
+  int index, {
+  bool useNativeInstruments = false,
+  String? sourceFormat,
+}) {
   final cells = <List<TrackerCell>>[
     for (var c = 0; c < channelCount; c++)
       List<TrackerCell>.filled(rows, TrackerCell.empty, growable: true),

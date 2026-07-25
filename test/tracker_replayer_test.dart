@@ -838,7 +838,7 @@ void main() {
       final out = inst.renderChannel(
         [
           const TrackerCell(midi: 60),
-          ...List<TrackerCell>.filled(7, TrackerCell.empty)
+          ...List<TrackerCell>.filled(7, TrackerCell.empty),
         ],
         timing,
       );
@@ -852,8 +852,10 @@ void main() {
       }
 
       final quarter = out.length ~/ 4;
-      expect(crossings(0, quarter),
-          greaterThan(crossings(3 * quarter, out.length) * 1.4));
+      expect(
+        crossings(0, quarter),
+        greaterThan(crossings(3 * quarter, out.length) * 1.4),
+      );
     });
 
     test('a fade-out envelope makes the note quieter at the end', () {
@@ -1020,7 +1022,7 @@ void main() {
         sustainLoopStart: 1000,
         sustainLoopLength: 1000,
       );
-      final timing = const TrackerTiming(rows: 8);
+      const timing = TrackerTiming(rows: 8);
       final cells = List<TrackerCell>.filled(8, TrackerCell.empty)
         ..[0] = const TrackerCell(midi: 60);
       final rendered = inst.renderChannel(cells, timing);
@@ -1052,7 +1054,7 @@ void main() {
         ],
         timing: const TrackerTiming(rows: 8),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );
@@ -1087,7 +1089,7 @@ void main() {
         ],
         timing: const TrackerTiming(rows: 8),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );
@@ -1130,7 +1132,7 @@ void main() {
         ],
         timing: const TrackerTiming(rows: 8),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );
@@ -1151,7 +1153,7 @@ void main() {
 
     test('multi-sample channels keep their order-entry offset', () {
       final sample = Float64List(120000)..fillRange(0, 120000, 0.25);
-      final timing = const TrackerTiming(rows: 2);
+      const timing = TrackerTiming(rows: 2);
       final cells = [
         const TrackerCell(midi: 60),
         TrackerCell.empty,
@@ -1169,7 +1171,7 @@ void main() {
         ],
         timing: timing,
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: const [0, 0],
       );
@@ -1202,7 +1204,7 @@ void main() {
         ],
         timing: const TrackerTiming(rows: 8),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );
@@ -1216,7 +1218,7 @@ void main() {
     test('native IT multi-sample zones apply NNA cut between notes', () {
       final positive = Float64List(120000)..fillRange(0, 120000, 0.25);
       final negative = Float64List(120000)..fillRange(0, 120000, -0.5);
-      final timing = const TrackerTiming(rows: 4);
+      const timing = TrackerTiming(rows: 4);
       final cells = List<TrackerCell>.filled(4, TrackerCell.empty)
         ..[0] = const TrackerCell(midi: 60)
         ..[2] = const TrackerCell(midi: 72);
@@ -1231,7 +1233,6 @@ void main() {
                   'low',
                   positive,
                   normalize: false,
-                  nativeNna: 0,
                 ),
                 72: SampleInstrument('high', negative, normalize: false),
               },
@@ -1243,7 +1244,7 @@ void main() {
         ],
         timing: timing,
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );
@@ -1259,7 +1260,7 @@ void main() {
     test('native IT NNA also applies on effect-bearing zone voices', () {
       final positive = Float64List(120000)..fillRange(0, 120000, 0.25);
       final negative = Float64List(120000)..fillRange(0, 120000, -0.5);
-      final timing = const TrackerTiming(rows: 4);
+      const timing = TrackerTiming(rows: 4);
       final cells = List<TrackerCell>.filled(4, TrackerCell.empty)
         ..[0] = const TrackerCell(midi: 60)
         ..[1] = fx(0x4, 0x31)
@@ -1275,7 +1276,6 @@ void main() {
                   'low',
                   positive,
                   normalize: false,
-                  nativeNna: 0,
                 ),
                 72: SampleInstrument('high', negative, normalize: false),
               },
@@ -1287,7 +1287,7 @@ void main() {
         ],
         timing: timing,
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
       );
@@ -1324,7 +1324,7 @@ void main() {
         ],
         timing: const TrackerTiming(rows: 4),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
         stereoOutput: true,
@@ -1412,7 +1412,7 @@ void main() {
         ],
         timing: const TrackerTiming(rows: 8),
         patterns: [
-          TrackerPattern(name: '00', cells: [cells])
+          TrackerPattern(name: '00', cells: [cells]),
         ],
         order: [0],
         stereoOutput: true,

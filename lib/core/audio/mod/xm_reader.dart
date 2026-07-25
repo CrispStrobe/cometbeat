@@ -151,7 +151,8 @@ XmModule parseXm(Uint8List bytes) {
         rawHeader: List<int>.from(bytes.sublist(fieldStart, dataStart)),
         rawData: dataStart < len
             ? Uint8List.fromList(
-                bytes.sublist(dataStart, dataEnd.clamp(0, len)))
+                bytes.sublist(dataStart, dataEnd.clamp(0, len)),
+              )
             : null,
       ),
     );
@@ -177,10 +178,12 @@ XmModule parseXm(Uint8List bytes) {
           name: insName,
           samples: const [],
           rawHeader: instrumentStart + instrumentHeaderSize <= len
-              ? List<int>.from(bytes.sublist(
-                  instrumentStart,
-                  instrumentStart + instrumentHeaderSize,
-                ))
+              ? List<int>.from(
+                  bytes.sublist(
+                    instrumentStart,
+                    instrumentStart + instrumentHeaderSize,
+                  ),
+                )
               : const [],
         ),
       );
@@ -279,8 +282,10 @@ XmModule parseXm(Uint8List bytes) {
           rawHeader: meta.rawHeader,
           rawData: dataCursor < len
               ? Uint8List.fromList(
-                  bytes.sublist(dataCursor,
-                      (dataCursor + meta.lengthInBytes).clamp(0, len)),
+                  bytes.sublist(
+                    dataCursor,
+                    (dataCursor + meta.lengthInBytes).clamp(0, len),
+                  ),
                 )
               : null,
         ),
@@ -301,10 +306,12 @@ XmModule parseXm(Uint8List bytes) {
         vibratoRate: vibratoRate,
         fadeout: fadeout,
         rawHeader: instrumentHeaderSize <= len - instrumentStart
-            ? List<int>.from(bytes.sublist(
-                instrumentStart,
-                instrumentStart + instrumentHeaderSize,
-              ))
+            ? List<int>.from(
+                bytes.sublist(
+                  instrumentStart,
+                  instrumentStart + instrumentHeaderSize,
+                ),
+              )
             : const [],
       ),
     );

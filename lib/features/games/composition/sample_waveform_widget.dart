@@ -140,7 +140,10 @@ class _WaveformPainter extends CustomPainter {
         drawChannel(pcm, size.height * 0.25, wave);
         if (secondaryPcm!.isNotEmpty) {
           drawChannel(
-              secondaryPcm!, size.height * 0.75, wave.withValues(alpha: 0.8));
+            secondaryPcm!,
+            size.height * 0.75,
+            wave.withValues(alpha: 0.8),
+          );
         }
       }
     }

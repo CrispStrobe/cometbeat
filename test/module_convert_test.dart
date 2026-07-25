@@ -18,10 +18,10 @@ import 'package:comet_beat/core/audio/mod/mod_module.dart';
 import 'package:comet_beat/core/audio/mod/mod_reader.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
-import 'package:comet_beat/core/audio/mod/s3m_reader.dart';
 import 'package:comet_beat/core/audio/mod/s3m_module.dart';
-import 'package:comet_beat/core/audio/mod/xm_reader.dart';
+import 'package:comet_beat/core/audio/mod/s3m_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_module.dart';
+import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart' show kFxTremor;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -52,8 +52,11 @@ void main() {
         ],
       );
       final cell = docFromS3m(module).patterns.first.rows.first.first;
-      expect(cell.effect, special >> 4 == 0x8 ? 0x8 : 0xE,
-          reason: 'S${special.toRadixString(16)}');
+      expect(
+        cell.effect,
+        special >> 4 == 0x8 ? 0x8 : 0xE,
+        reason: 'S${special.toRadixString(16)}',
+      );
       expect(
         cell.effectParam,
         special >> 4 == 0x8 ? (special & 0xF) * 0x11 : 0xE0 | (special & 0xF),
@@ -68,9 +71,9 @@ void main() {
       channelCount: 1,
       order: const [0],
       patterns: [
-        XmPattern([
+        const XmPattern([
           [
-            const XmCell(
+            XmCell(
               note: 49,
               instrument: 1,
               volume: 0x63,
@@ -127,8 +130,11 @@ void main() {
         ],
       );
       final cell = docFromXm(module).patterns.first.rows.first.first;
-      expect(cell.effect, command,
-          reason: 'volume ${volume.toRadixString(16)}');
+      expect(
+        cell.effect,
+        command,
+        reason: 'volume ${volume.toRadixString(16)}',
+      );
       expect(cell.effectParam, param);
       expect(cell.nativeVolpan, volume);
     }
@@ -140,18 +146,20 @@ void main() {
       channelCount: 1,
       order: const [0],
       patterns: [
-        const DocPattern([
+        const DocPattern(
           [
-            DocCell(
-              note: 60,
-              effect: 0xC,
-              effectParam: 0x20,
-              nativeEffect: 13, // IT Mxx: set channel volume
-              nativeEffectParam: 0x20,
-              nativeVolpan: -1,
-            ),
+            [
+              DocCell(
+                note: 60,
+                effect: 0xC,
+                effectParam: 0x20,
+                nativeEffect: 13, // IT Mxx: set channel volume
+                nativeEffectParam: 0x20,
+              ),
+            ],
           ],
-        ], 1),
+          1,
+        ),
       ],
       samples: [
         DocSample(pcm: Float64List.fromList([0.2, 0.2, 0.2])),
@@ -170,9 +178,12 @@ void main() {
       channelCount: 1,
       order: const [0],
       patterns: [
-        const DocPattern([
-          [DocCell(note: 60, instrument: 1)],
-        ], 1),
+        const DocPattern(
+          [
+            [DocCell(note: 60, instrument: 1)],
+          ],
+          1,
+        ),
       ],
       samples: [
         DocSample(
@@ -197,9 +208,9 @@ void main() {
       channelCount: 1,
       order: const [0],
       patterns: [
-        XmPattern([
+        const XmPattern([
           [
-            const XmCell(note: 1, instrument: 1),
+            XmCell(note: 1, instrument: 1),
           ],
         ]),
       ],

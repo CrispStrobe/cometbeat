@@ -141,9 +141,9 @@ void main() {
       channelCount: 1,
       order: const [0],
       patterns: [
-        ItPattern(
+        const ItPattern(
           [
-            const [ItCell(note: 60, instrument: 1)]
+            [ItCell(note: 60, instrument: 1)],
           ],
           1,
         ),

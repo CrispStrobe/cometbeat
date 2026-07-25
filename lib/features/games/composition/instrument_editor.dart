@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytesStereo;
+import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
@@ -335,10 +335,12 @@ class _SampleEditor extends StatelessWidget {
             if (len == 0) return;
             final loopStart = (s * len).round();
             final loopEnd = (e * len).round();
-            onChanged(inst.copyWith(
-              loopStart: loopStart,
-              loopLength: loopEnd - loopStart,
-            ));
+            onChanged(
+              inst.copyWith(
+                loopStart: loopStart,
+                loopLength: loopEnd - loopStart,
+              ),
+            );
           },
           wave: Theme.of(context).colorScheme.primary,
           bg: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -367,10 +369,12 @@ class _SampleEditor extends StatelessWidget {
             if (len == 0) return;
             final sustainStart = (s * len).round();
             final sustainEnd = (e * len).round();
-            onChanged(inst.copyWith(
-              sustainLoopStart: sustainStart,
-              sustainLoopLength: sustainEnd - sustainStart,
-            ));
+            onChanged(
+              inst.copyWith(
+                sustainLoopStart: sustainStart,
+                sustainLoopLength: sustainEnd - sustainStart,
+              ),
+            );
           },
           wave: Theme.of(context).colorScheme.secondary,
           bg: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -413,8 +417,6 @@ class _SampleEditor extends StatelessWidget {
             width: 180,
             child: Slider(
               value: inst.volume.clamp(0.0, 1.0),
-              min: 0,
-              max: 1,
               onChanged: (v) => onChanged(inst.copyWith(volume: v)),
             ),
           ),
@@ -496,7 +498,6 @@ class _SampleEditor extends StatelessWidget {
             width: 180,
             child: Slider(
               value: inst.nativeFadeout.clamp(0, 1024).toDouble(),
-              min: 0,
               max: 1024,
               onChanged: (v) =>
                   onChanged(inst.copyWith(nativeFadeout: v.round())),
@@ -578,10 +579,12 @@ class _NativeVolumeEnvelopeDialogState
     final ms =
         _rows.isEmpty ? 0 : (int.tryParse(_rows.last.ms.text) ?? 0) + 100;
     setState(() {
-      _rows.add((
-        ms: TextEditingController(text: '$ms'),
-        value: TextEditingController(text: '1'),
-      ));
+      _rows.add(
+        (
+          ms: TextEditingController(text: '$ms'),
+          value: TextEditingController(text: '1'),
+        ),
+      );
     });
   }
 
@@ -615,12 +618,14 @@ class _NativeVolumeEnvelopeDialogState
       for (var i = 0; i < values.length; i++) values[i].index: i,
     };
     int? mapped(int? value) => value == null ? null : remap[value];
-    Navigator.of(context).pop(VolumeEnvelope(
-      [for (final value in values) (ms: value.ms, level: value.level)],
-      sustain: mapped(_sustain),
-      loopStart: mapped(_loopStart),
-      loopEnd: mapped(_loopEnd),
-    ));
+    Navigator.of(context).pop(
+      VolumeEnvelope(
+        [for (final value in values) (ms: value.ms, level: value.level)],
+        sustain: mapped(_sustain),
+        loopStart: mapped(_loopStart),
+        loopEnd: mapped(_loopEnd),
+      ),
+    );
   }
 
   @override
@@ -669,8 +674,9 @@ class _NativeVolumeEnvelopeDialogState
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           FilledButton(onPressed: _apply, child: const Text('Apply')),
         ],
       );
@@ -719,10 +725,12 @@ class _NativePanEnvelopeDialogState extends State<_NativePanEnvelopeDialog> {
   void _addRow() => setState(() {
         final ms =
             _rows.isEmpty ? 0 : (int.tryParse(_rows.last.ms.text) ?? 0) + 100;
-        _rows.add((
-          ms: TextEditingController(text: '$ms'),
-          value: TextEditingController(text: '0'),
-        ));
+        _rows.add(
+          (
+            ms: TextEditingController(text: '$ms'),
+            value: TextEditingController(text: '0'),
+          ),
+        );
       });
 
   void _removeRow(int index) {
@@ -755,12 +763,14 @@ class _NativePanEnvelopeDialogState extends State<_NativePanEnvelopeDialog> {
       for (var i = 0; i < values.length; i++) values[i].index: i,
     };
     int? mapped(int? value) => value == null ? null : remap[value];
-    Navigator.of(context).pop(PanEnvelope(
-      [for (final value in values) (ms: value.ms, pan: value.pan)],
-      sustain: mapped(_sustain),
-      loopStart: mapped(_loopStart),
-      loopEnd: mapped(_loopEnd),
-    ));
+    Navigator.of(context).pop(
+      PanEnvelope(
+        [for (final value in values) (ms: value.ms, pan: value.pan)],
+        sustain: mapped(_sustain),
+        loopStart: mapped(_loopStart),
+        loopEnd: mapped(_loopEnd),
+      ),
+    );
   }
 
   @override
@@ -809,8 +819,9 @@ class _NativePanEnvelopeDialogState extends State<_NativePanEnvelopeDialog> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           FilledButton(onPressed: _apply, child: const Text('Apply')),
         ],
       );
@@ -861,10 +872,12 @@ class _NativePitchEnvelopeDialogState
   void _addRow() => setState(() {
         final ms =
             _rows.isEmpty ? 0 : (int.tryParse(_rows.last.ms.text) ?? 0) + 100;
-        _rows.add((
-          ms: TextEditingController(text: '$ms'),
-          value: TextEditingController(text: '0'),
-        ));
+        _rows.add(
+          (
+            ms: TextEditingController(text: '$ms'),
+            value: TextEditingController(text: '0'),
+          ),
+        );
       });
 
   void _removeRow(int index) {
@@ -896,12 +909,17 @@ class _NativePitchEnvelopeDialogState
       for (var i = 0; i < values.length; i++) values[i].index: i,
     };
     int? mapped(int? value) => value == null ? null : remap[value];
-    Navigator.of(context).pop(PitchEnvelope(
-      [for (final value in values) (ms: value.ms, semitones: value.semitones)],
-      sustain: mapped(_sustain),
-      loopStart: mapped(_loopStart),
-      loopEnd: mapped(_loopEnd),
-    ));
+    Navigator.of(context).pop(
+      PitchEnvelope(
+        [
+          for (final value in values)
+            (ms: value.ms, semitones: value.semitones),
+        ],
+        sustain: mapped(_sustain),
+        loopStart: mapped(_loopStart),
+        loopEnd: mapped(_loopEnd),
+      ),
+    );
   }
 
   @override
@@ -988,7 +1006,9 @@ class _EnvelopePointRow extends StatelessWidget {
             child: TextField(
               controller: value,
               keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true, signed: true),
+                decimal: true,
+                signed: true,
+              ),
               decoration: InputDecoration(labelText: valueLabel),
             ),
           ),
@@ -1020,7 +1040,7 @@ class _EnvelopeIndexRow extends StatelessWidget {
         trailing: DropdownButton<int?>(
           value: value,
           items: [
-            const DropdownMenuItem<int?>(value: null, child: Text('None')),
+            const DropdownMenuItem<int?>(child: Text('None')),
             for (var i = 0; i < count; i++)
               DropdownMenuItem<int?>(value: i, child: Text('$i')),
           ],
