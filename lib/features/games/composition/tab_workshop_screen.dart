@@ -2405,12 +2405,17 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         TabTechnique.harmonic => l10n.tabTechHarmonic,
       };
 
+  // Labels for the 32nd-note step grid (a whole note = 32 steps).
   String _durLabel(int steps) => switch (steps) {
-        8 => '𝅝',
-        6 => '𝅗𝅥.',
-        4 => '𝅗𝅥',
-        3 => '♩.',
-        2 => '♩',
-        _ => '♪',
+        32 => '𝅝', // whole
+        24 => '𝅗𝅥.', // dotted half
+        16 => '𝅗𝅥', // half
+        12 => '♩.', // dotted quarter
+        8 => '♩', // quarter
+        6 => '♪.', // dotted eighth
+        4 => '♪', // eighth
+        3 => '𝅘𝅥𝅯.', // dotted sixteenth
+        2 => '𝅘𝅥𝅯', // sixteenth
+        _ => '𝅘𝅥𝅰', // thirty-second
       };
 }

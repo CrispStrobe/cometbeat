@@ -199,8 +199,14 @@ parametric technique end-to-end.
 
 ## Status
 
-- [ ] A0 round-trip fidelity audit + harness — _first step, in progress_
-- [ ] A1 … E2 — pending (scoped above)
+- [x] **A0** round-trip harness + the 7 existing techniques now survive
+  import→edit→export (`fromScore` reads them back). `test/tab_roundtrip_test.dart`.
+- [x] **A1** finer durations — the rhythm grid is now a **32nd** (was an eighth);
+  16th / 32nd / dotted-eighth / dotted-16th added; `_stepsOf` is fraction-based so
+  any imported value tiles + plays exactly (no more quarter fallback). Explicit
+  rests already work (an empty column of a chosen duration → `RestElement`).
+  Tests in `test/tab_document_test.dart` (group A1).
+- [ ] A2 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

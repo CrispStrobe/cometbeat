@@ -398,4 +398,59 @@ void main() {
     expect(doc.columns[0].frets.containsKey(0), isFalse);
     expect(doc.columns[0].frets[1], 7);
   });
+
+  group('A1 — finer durations (16th / 32nd) on the 32nd grid', () {
+    const sixteenth = NoteDuration(DurationBase.sixteenth);
+
+    test('the palette now offers 16th and 32nd (and dotted eighth/16th)', () {
+      final bases = {
+        for (final (d, _) in kTabDurations) (d.base, d.dots),
+      };
+      expect(bases.contains((DurationBase.sixteenth, 0)), isTrue);
+      expect(bases.contains((DurationBase.thirtySecond, 0)), isTrue);
+      expect(bases.contains((DurationBase.eighth, 1)), isTrue); // dotted 8th
+      expect(bases.contains((DurationBase.sixteenth, 1)), isTrue); // dotted 16th
+    });
+
+    test('sixteen 16th-notes tile into exactly one 4/4 bar', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [
+          for (var i = 0; i < 16; i++)
+            const TabColumn(frets: {0: 0}, duration: sixteenth),
+        ],
+      );
+      expect(doc.toScore().measures.length, 1); // 16 × 1/16 = one whole bar
+    });
+
+    test('a 16th plays for exactly an eighth of a beat (125ms @120bpm)', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: const [TabColumn(frets: {0: 0}, duration: sixteenth)],
+      );
+      expect(doc.toPlaybackEvents().single.$2, 125); // 2000/16 @120bpm default
+    });
+
+    test('a quarter still plays exactly 500ms @120bpm (no grid rounding drift)',
+        () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: const [TabColumn(frets: {0: 0})], // default quarter
+      );
+      expect(doc.toPlaybackEvents().single.$2, 500);
+    });
+
+    test('a 16th note survives the import→edit→export round-trip', () {
+      final src = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: const [
+          TabColumn(frets: {0: 3}, duration: sixteenth),
+          TabColumn(frets: {0: 5}, duration: sixteenth),
+        ],
+      ).toScore();
+      final back =
+          TabDocument.fromScore(src, Tuning.standardGuitar).columns.first;
+      expect(back.duration.base, DurationBase.sixteenth);
+    });
+  });
 }

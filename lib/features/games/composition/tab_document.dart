@@ -94,22 +94,33 @@ class TabColumn {
       );
 }
 
-/// The selectable note durations, each with its length in eighth-note steps
-/// (kept integral so columns tile 4/4 bars cleanly). Ordered long→short.
+/// Rhythm is measured on a **32nd-note grid** so every selectable value — down
+/// to a 32nd and including dotted forms — tiles a bar integrally. A whole note
+/// is 32 steps; a 4/4 bar therefore holds [_kBarSteps] steps.
+const int _kBarSteps = 32; // one 4/4 bar = a whole note = 32 thirty-seconds
+
+/// The selectable note durations, each with its length in 32nd-note steps.
+/// Ordered long→short (whole … 32nd, with the dotted forms interleaved).
 const List<(NoteDuration, int)> kTabDurations = [
-  (NoteDuration.whole, 8),
-  (NoteDuration(DurationBase.half, dots: 1), 6),
-  (NoteDuration.half, 4),
-  (NoteDuration(DurationBase.quarter, dots: 1), 3),
-  (NoteDuration.quarter, 2),
-  (NoteDuration.eighth, 1),
+  (NoteDuration.whole, 32),
+  (NoteDuration(DurationBase.half, dots: 1), 24),
+  (NoteDuration.half, 16),
+  (NoteDuration(DurationBase.quarter, dots: 1), 12),
+  (NoteDuration.quarter, 8),
+  (NoteDuration(DurationBase.eighth, dots: 1), 6),
+  (NoteDuration.eighth, 4),
+  (NoteDuration(DurationBase.sixteenth, dots: 1), 3),
+  (NoteDuration(DurationBase.sixteenth), 2),
+  (NoteDuration(DurationBase.thirtySecond), 1),
 ];
 
+/// This duration's length in 32nd-note steps. Computed from the actual note
+/// fraction (× 32) so it is exact for ANY [NoteDuration] — dotted, tuplet, or an
+/// imported value not in [kTabDurations] — instead of a table lookup that fell
+/// back to a quarter and mis-tiled 16th/32nd imports.
 int _stepsOf(NoteDuration d) {
-  for (final (dur, steps) in kTabDurations) {
-    if (dur == d) return steps;
-  }
-  return 2; // default: a quarter
+  final steps = (d.toFraction().toDouble() * _kBarSteps).round();
+  return steps < 1 ? 1 : steps;
 }
 
 /// C-major natural spellings by pitch class; others take the natural below + ♯.
@@ -286,7 +297,7 @@ class TabDocument {
     var steps = 0;
     for (var c = 0; c < columns.length; c++) {
       final s = _stepsOf(columns[c].duration);
-      if (steps > 0 && steps + s > 8) {
+      if (steps > 0 && steps + s > _kBarSteps) {
         if (target < c) return (start, c); // the bar [start, c) holds `col`
         start = c;
         steps = 0;
@@ -368,7 +379,7 @@ class TabDocument {
     for (var c = 0; c < columns.length; c++) {
       final col = columns[c];
       final steps = _stepsOf(col.duration);
-      if (barSteps > 0 && barSteps + steps > 8) {
+      if (barSteps > 0 && barSteps + steps > _kBarSteps) {
         measures.add(Measure(bar));
         bar = <MusicElement>[];
         barSteps = 0;
@@ -430,7 +441,10 @@ class TabDocument {
   /// [bpm] (a quarter note = 60000/bpm ms). [capo] raises every pitch by that
   /// many semitones so playback matches a clamped nut (see [toScore]).
   List<(List<int>, int)> toPlaybackEvents({int bpm = 120, int capo = 0}) {
-    final eighthMs = (60000 / bpm / 2).round();
+    // Duration → ms straight from the note fraction (a whole note = 4 beats), so
+    // it is exact for every value — a quarter is exactly 60000/bpm, no rounding
+    // drift from the 32nd-step grid.
+    final wholeMs = 60000 / bpm * 4;
     return [
       for (final col in columns)
         (
@@ -440,7 +454,7 @@ class TabDocument {
                   ..sort((a, b) => a.key.compareTo(b.key))))
               tuning.strings[e.key].midiNumber + e.value + capo,
           ],
-          _stepsOf(col.duration) * eighthMs,
+          (col.duration.toFraction().toDouble() * wholeMs).round(),
         ),
     ];
   }
