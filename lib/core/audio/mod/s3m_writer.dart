@@ -114,8 +114,8 @@ Uint8List writeS3m(S3mModule module) {
   u16(ordNum); // 0x20
   u16(insNum); // 0x22
   u16(patNum); // 0x24
-  u16(0); // 0x26 flags
-  u16(0x1320); // 0x28 version
+  u16(module.flags); // 0x26 flags
+  u16(module.createdWith); // 0x28 version
   u16(module.sampleFormat); // 0x2A sample format (1 signed / 2 unsigned)
   asciiFixed('SCRM', 4); // 0x2C
   u8(module.globalVolume); // 0x30

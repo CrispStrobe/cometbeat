@@ -45,6 +45,8 @@ S3mModule parseS3m(Uint8List bytes) {
   final ordNum = data.getUint16(0x20, Endian.little);
   final insNum = data.getUint16(0x22, Endian.little);
   final patNum = data.getUint16(0x24, Endian.little);
+  final flags = data.getUint16(0x26, Endian.little);
+  final createdWith = data.getUint16(0x28, Endian.little);
   final sampleFormat = data.getUint16(0x2A, Endian.little);
   final globalVolume = bytes[0x30];
   final initialSpeed = bytes[0x31];
@@ -124,6 +126,8 @@ S3mModule parseS3m(Uint8List bytes) {
     defaultPan: defaultPan,
     channelSettings: channelSettings,
     sampleFormat: sampleFormat,
+    flags: flags,
+    createdWith: createdWith,
     defaultPans: defaultPans,
     rawOrder: rawOrder,
     initialSpeed: initialSpeed,

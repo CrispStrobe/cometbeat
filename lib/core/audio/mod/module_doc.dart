@@ -262,6 +262,8 @@ class ModuleDoc {
     this.s3mDefaultPan = 0,
     this.s3mChannelSettings = const [],
     this.s3mSampleFormat = 1,
+    this.s3mFlags = 0,
+    this.s3mCreatedWith = 0x1320,
     this.s3mDefaultPans = const [],
     this.s3mRawOrder = const [],
     this.s3mPatterns = const [],
@@ -299,6 +301,7 @@ class ModuleDoc {
   final int s3mMasterVolume, s3mUltraClick, s3mDefaultPan;
   final List<int> s3mChannelSettings;
   final int s3mSampleFormat;
+  final int s3mFlags, s3mCreatedWith;
   final List<int> s3mDefaultPans;
   final List<int> s3mRawOrder;
   final List<S3mPattern> s3mPatterns;

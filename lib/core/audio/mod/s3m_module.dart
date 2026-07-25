@@ -151,6 +151,8 @@ class S3mModule {
     this.defaultPan = 0,
     this.channelSettings = const [],
     this.sampleFormat = 1,
+    this.flags = 0,
+    this.createdWith = 0x1320,
     this.defaultPans = const [],
     this.rawOrder = const [],
     this.initialSpeed = 6,
@@ -166,6 +168,7 @@ class S3mModule {
   final int initialSpeed, initialTempo;
   final List<int> channelSettings;
   final int sampleFormat;
+  final int flags, createdWith;
   final List<int> defaultPans;
   final List<int> rawOrder;
   final List<int> order; // pattern indices (254/255 markers removed)
