@@ -49,6 +49,7 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart'
 import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
 import 'package:comet_beat/core/audio/mod/module_export_report.dart'
     show moduleExportLossReport;
+import 'package:comet_beat/core/audio/mod/module_flow_timeline.dart';
 import 'package:comet_beat/core/audio/sample_pitch.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -4104,6 +4105,109 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     );
   }
 
+  /// Read-only view of the native flow/order timeline: how the current song
+  /// ACTUALLY plays once its flow commands (Bxx jump, Dxx break, E6x loop, Fxx
+  /// speed/tempo) are followed. Purely derived from [songFlowTimeline] — the
+  /// same pure function the tests pin — so a jumped/looped song shows the same
+  /// order more than once, in play order. Nothing here changes playback.
+  void _showFlowTimeline() {
+    final l10n = AppLocalizations.of(context)!;
+    _song.syncCurrent(); // fold live edits into the snapshot before walking
+    final timeline = songFlowTimeline(_song);
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.trackerFlowTimeline,
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.trackerFlowTimelineHint,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: timeline.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (_, i) => _flowTimelineTile(l10n, timeline[i]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// One timeline row: the order/pattern/row range + timing, and each flow
+  /// command the visit carries rendered as a small chip.
+  Widget _flowTimelineTile(AppLocalizations l10n, FlowTimelineEntry e) {
+    return ListTile(
+      dense: true,
+      leading: CircleAvatar(radius: 14, child: Text('${e.orderIndex}')),
+      title: Text(
+        l10n.trackerFlowEntry(
+          e.orderIndex,
+          e.patternIndex,
+          e.firstRow,
+          e.lastRow,
+        ),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.trackerFlowTiming(e.tempoBpm, e.ticksPerRow)),
+          if (e.commands.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final c in e.commands)
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      label: Text(_flowCommandLabel(l10n, c)),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// The human-readable label for one flow command.
+  String _flowCommandLabel(AppLocalizations l10n, FlowCommand c) {
+    switch (c.kind) {
+      case FlowCommandKind.positionJump:
+        return l10n.trackerFlowJump(c.target);
+      case FlowCommandKind.patternBreak:
+        return l10n.trackerFlowBreak(c.target);
+      case FlowCommandKind.patternLoop:
+        return l10n.trackerFlowLoop;
+      case FlowCommandKind.speedChange:
+        return l10n.trackerFlowSetSpeed(c.target);
+      case FlowCommandKind.tempoChange:
+        return l10n.trackerFlowSetTempo(c.target);
+    }
+  }
+
   Future<void> _pickModuleFormat() async {
     final l10n = AppLocalizations.of(context)!;
     var sixteenBit = true; // persists across the sheet's rebuilds
@@ -4353,6 +4457,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   loadSharedMelody();
                 case 'workshop':
                   _openInWorkshop();
+                case 'flowTimeline':
+                  _showFlowTimeline();
               }
             },
             itemBuilder: (ctx) => [
@@ -4422,6 +4528,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 enabled: canLoadSharedMelody,
               ),
               const PopupMenuDivider(),
+              _menuRow(
+                'flowTimeline',
+                Icons.timeline,
+                l10n.trackerFlowTimeline,
+              ),
               _menuRow('workshop', Icons.edit_note, l10n.trackerOpenWorkshop),
             ],
           ),

@@ -3330,6 +3330,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerExportLossContinue => 'Export anyway';
 
   @override
+  String get trackerFlowTimeline => 'Flow timeline';
+
+  @override
+  String get trackerFlowTimelineHint =>
+      'How this song actually plays once its flow commands (jumps, breaks, loops, tempo) are followed.';
+
+  @override
+  String trackerFlowEntry(int order, int pattern, int first, int last) {
+    return 'Order $order · pattern $pattern · rows $first–$last';
+  }
+
+  @override
+  String trackerFlowTiming(int tempo, int speed) {
+    return 'tempo $tempo · speed $speed';
+  }
+
+  @override
+  String trackerFlowJump(int order) {
+    return '→ jump to order $order';
+  }
+
+  @override
+  String trackerFlowBreak(int row) {
+    return '→ break to row $row';
+  }
+
+  @override
+  String get trackerFlowLoop => 'pattern loop';
+
+  @override
+  String trackerFlowSetSpeed(int value) {
+    return 'speed → $value';
+  }
+
+  @override
+  String trackerFlowSetTempo(int value) {
+    return 'tempo → $value';
+  }
+
+  @override
   String get trackerOpenWorkshop => 'Open in Score Workshop';
 
   @override

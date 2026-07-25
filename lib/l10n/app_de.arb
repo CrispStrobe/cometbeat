@@ -1198,6 +1198,41 @@
     "placeholders": { "format": { "type": "String" } }
   },
   "trackerExportLossContinue": "Trotzdem exportieren",
+  "trackerFlowTimeline": "Ablauf-Timeline",
+  "trackerFlowTimelineHint": "Wie dieser Song tatsächlich abgespielt wird, sobald die Ablaufbefehle (Sprünge, Umbrüche, Schleifen, Tempo) befolgt werden.",
+  "trackerFlowEntry": "Order {order} · Pattern {pattern} · Zeilen {first}–{last}",
+  "@trackerFlowEntry": {
+    "placeholders": {
+      "order": { "type": "int" },
+      "pattern": { "type": "int" },
+      "first": { "type": "int" },
+      "last": { "type": "int" }
+    }
+  },
+  "trackerFlowTiming": "Tempo {tempo} · Speed {speed}",
+  "@trackerFlowTiming": {
+    "placeholders": {
+      "tempo": { "type": "int" },
+      "speed": { "type": "int" }
+    }
+  },
+  "trackerFlowJump": "→ Sprung zu Order {order}",
+  "@trackerFlowJump": {
+    "placeholders": { "order": { "type": "int" } }
+  },
+  "trackerFlowBreak": "→ Umbruch zu Zeile {row}",
+  "@trackerFlowBreak": {
+    "placeholders": { "row": { "type": "int" } }
+  },
+  "trackerFlowLoop": "Pattern-Schleife",
+  "trackerFlowSetSpeed": "Speed → {value}",
+  "@trackerFlowSetSpeed": {
+    "placeholders": { "value": { "type": "int" } }
+  },
+  "trackerFlowSetTempo": "Tempo → {value}",
+  "@trackerFlowSetTempo": {
+    "placeholders": { "value": { "type": "int" } }
+  },
   "trackerOpenWorkshop": "In der Notenwerkstatt öffnen",
   "trackerMenuOpenLibrary": "Öffnen und Bibliothek",
   "trackerMenuSaveExport": "Speichern und Exportieren",

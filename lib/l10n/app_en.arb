@@ -1271,6 +1271,41 @@
     "placeholders": { "format": { "type": "String" } }
   },
   "trackerExportLossContinue": "Export anyway",
+  "trackerFlowTimeline": "Flow timeline",
+  "trackerFlowTimelineHint": "How this song actually plays once its flow commands (jumps, breaks, loops, tempo) are followed.",
+  "trackerFlowEntry": "Order {order} · pattern {pattern} · rows {first}–{last}",
+  "@trackerFlowEntry": {
+    "placeholders": {
+      "order": { "type": "int" },
+      "pattern": { "type": "int" },
+      "first": { "type": "int" },
+      "last": { "type": "int" }
+    }
+  },
+  "trackerFlowTiming": "tempo {tempo} · speed {speed}",
+  "@trackerFlowTiming": {
+    "placeholders": {
+      "tempo": { "type": "int" },
+      "speed": { "type": "int" }
+    }
+  },
+  "trackerFlowJump": "→ jump to order {order}",
+  "@trackerFlowJump": {
+    "placeholders": { "order": { "type": "int" } }
+  },
+  "trackerFlowBreak": "→ break to row {row}",
+  "@trackerFlowBreak": {
+    "placeholders": { "row": { "type": "int" } }
+  },
+  "trackerFlowLoop": "pattern loop",
+  "trackerFlowSetSpeed": "speed → {value}",
+  "@trackerFlowSetSpeed": {
+    "placeholders": { "value": { "type": "int" } }
+  },
+  "trackerFlowSetTempo": "tempo → {value}",
+  "@trackerFlowSetTempo": {
+    "placeholders": { "value": { "type": "int" } }
+  },
   "trackerOpenWorkshop": "Open in Score Workshop",
   "trackerMenuOpenLibrary": "Open and Library",
   "trackerMenuSaveExport": "Save and Export",

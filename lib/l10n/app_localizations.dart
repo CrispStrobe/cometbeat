@@ -6224,6 +6224,60 @@ abstract class AppLocalizations {
   /// **'Export anyway'**
   String get trackerExportLossContinue;
 
+  /// No description provided for @trackerFlowTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Flow timeline'**
+  String get trackerFlowTimeline;
+
+  /// No description provided for @trackerFlowTimelineHint.
+  ///
+  /// In en, this message translates to:
+  /// **'How this song actually plays once its flow commands (jumps, breaks, loops, tempo) are followed.'**
+  String get trackerFlowTimelineHint;
+
+  /// No description provided for @trackerFlowEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Order {order} · pattern {pattern} · rows {first}–{last}'**
+  String trackerFlowEntry(int order, int pattern, int first, int last);
+
+  /// No description provided for @trackerFlowTiming.
+  ///
+  /// In en, this message translates to:
+  /// **'tempo {tempo} · speed {speed}'**
+  String trackerFlowTiming(int tempo, int speed);
+
+  /// No description provided for @trackerFlowJump.
+  ///
+  /// In en, this message translates to:
+  /// **'→ jump to order {order}'**
+  String trackerFlowJump(int order);
+
+  /// No description provided for @trackerFlowBreak.
+  ///
+  /// In en, this message translates to:
+  /// **'→ break to row {row}'**
+  String trackerFlowBreak(int row);
+
+  /// No description provided for @trackerFlowLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'pattern loop'**
+  String get trackerFlowLoop;
+
+  /// No description provided for @trackerFlowSetSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'speed → {value}'**
+  String trackerFlowSetSpeed(int value);
+
+  /// No description provided for @trackerFlowSetTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'tempo → {value}'**
+  String trackerFlowSetTempo(int value);
+
   /// No description provided for @trackerOpenWorkshop.
   ///
   /// In en, this message translates to:

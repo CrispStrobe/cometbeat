@@ -3340,6 +3340,46 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerExportLossContinue => 'Trotzdem exportieren';
 
   @override
+  String get trackerFlowTimeline => 'Ablauf-Timeline';
+
+  @override
+  String get trackerFlowTimelineHint =>
+      'Wie dieser Song tatsächlich abgespielt wird, sobald die Ablaufbefehle (Sprünge, Umbrüche, Schleifen, Tempo) befolgt werden.';
+
+  @override
+  String trackerFlowEntry(int order, int pattern, int first, int last) {
+    return 'Order $order · Pattern $pattern · Zeilen $first–$last';
+  }
+
+  @override
+  String trackerFlowTiming(int tempo, int speed) {
+    return 'Tempo $tempo · Speed $speed';
+  }
+
+  @override
+  String trackerFlowJump(int order) {
+    return '→ Sprung zu Order $order';
+  }
+
+  @override
+  String trackerFlowBreak(int row) {
+    return '→ Umbruch zu Zeile $row';
+  }
+
+  @override
+  String get trackerFlowLoop => 'Pattern-Schleife';
+
+  @override
+  String trackerFlowSetSpeed(int value) {
+    return 'Speed → $value';
+  }
+
+  @override
+  String trackerFlowSetTempo(int value) {
+    return 'Tempo → $value';
+  }
+
+  @override
   String get trackerOpenWorkshop => 'In der Notenwerkstatt öffnen';
 
   @override
