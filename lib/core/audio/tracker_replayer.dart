@@ -1684,8 +1684,6 @@ class _NativeTickZoneVoice {
     required this.startStep,
     required this.runSteps,
     required this.cells,
-    required this.left,
-    this.right,
   });
 
   final int midi;
@@ -1693,13 +1691,13 @@ class _NativeTickZoneVoice {
   final int startStep;
   final int runSteps;
   final List<TrackerCell> cells;
-  final Float64List left;
-  final Float64List? right;
   int endSample = 1 << 60;
   int? releaseAt;
   int? fadeAt;
-  Float64List? releaseLeft;
-  Float64List? releaseRight;
+  // Step at which a release (NNA action 1) was first triggered on this voice.
+  // The audio for the release variant is rendered lazily in pass 2, so we only
+  // record the metadata here.
+  int? releaseStep;
 }
 
 typedef _NativeTickZoneRenderer = ({Float64List left, Float64List? right})
@@ -1731,6 +1729,9 @@ List<TrackerCell> _isolatedTickZoneCells(
   final voices = <_NativeTickZoneVoice>[];
   var startStep = 0;
 
+  // Pass 1: build voice metadata and resolve NNA/DCT actions WITHOUT rendering
+  // any audio. Each note run walks the same as before; the only difference is
+  // that no whole-song buffers are allocated here.
   for (final run in noteRuns(cells)) {
     final midi = run.$1;
     final runSteps = run.$2 + run.$3;
@@ -1738,15 +1739,12 @@ List<TrackerCell> _isolatedTickZoneCells(
       final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
       if (zone != null) {
         final voiceCells = _isolatedTickZoneCells(cells, startStep, runSteps);
-        final rendered = render(zone, voiceCells);
         final voice = _NativeTickZoneVoice(
           midi: midi,
           zone: zone,
           startStep: startStep,
           runSteps: runSteps,
           cells: voiceCells,
-          left: rendered.left,
-          right: rendered.right,
         );
         final newStart = rowStart[startStep];
         for (final old in voices) {
@@ -1762,15 +1760,9 @@ List<TrackerCell> _isolatedTickZoneCells(
               old.endSample = newStart;
             case 1:
               old.releaseAt = newStart;
-              if (old.releaseLeft == null) {
-                final releasedCells = List<TrackerCell>.from(old.cells);
-                if (startStep < releasedCells.length) {
-                  releasedCells[startStep] = TrackerCell.noteCut;
-                }
-                final released = render(old.zone, releasedCells);
-                old.releaseLeft = released.left;
-                old.releaseRight = released.right;
-              }
+              // Record the release trigger step once (matches the original
+              // guard that only rendered the release variant the first time).
+              old.releaseStep ??= startStep;
             case 2:
               old.fadeAt = newStart;
           }
@@ -1781,17 +1773,39 @@ List<TrackerCell> _isolatedTickZoneCells(
     startStep += runSteps;
   }
 
-  final rightStem =
-      voices.any((voice) => voice.right != null) ? Float64List(total) : null;
-  if (rightStem != null) {
-    for (final voice in voices) {
-      final end = voice.endSample.clamp(rowStart[voice.startStep], total);
-      final fadeRate = nativeFadeoutOf(voice.zone) / 1024.0;
-      for (var i = rowStart[voice.startStep]; i < end; i++) {
+  // Pass 2: render and mix one voice at a time so voice buffers are never
+  // co-resident. At most ~2 whole-song buffers (the note and its release
+  // variant) are alive at once instead of one per overlapping voice.
+  Float64List? rightStem;
+  for (final voice in voices) {
+    final rendered = render(voice.zone, voice.cells);
+    // All voices in a single call share the same renderer, so its right-channel
+    // presence is uniform; allocating the stem on first sight is equivalent to
+    // the previous `voices.any((v) => v.right != null)` decision.
+    if (rendered.right != null && rightStem == null) {
+      rightStem = Float64List(total);
+    }
+    Float64List? releaseLeft;
+    Float64List? releaseRight;
+    if (voice.releaseAt != null) {
+      final releasedCells = List<TrackerCell>.from(voice.cells);
+      final rs = voice.releaseStep!;
+      if (rs < releasedCells.length) {
+        releasedCells[rs] = TrackerCell.noteCut;
+      }
+      final releasedRendered = render(voice.zone, releasedCells);
+      releaseLeft = releasedRendered.left;
+      releaseRight = releasedRendered.right;
+    }
+    final start = rowStart[voice.startStep];
+    final end = voice.endSample.clamp(start, total);
+    final fadeRate = nativeFadeoutOf(voice.zone) / 1024.0;
+    if (rightStem != null) {
+      for (var i = start; i < end; i++) {
         final released = voice.releaseAt != null && i >= voice.releaseAt!;
         final selected = released
-            ? (voice.releaseRight ?? voice.releaseLeft)
-            : (voice.right ?? voice.left);
+            ? (releaseRight ?? releaseLeft)
+            : (rendered.right ?? rendered.left);
         if (selected == null || i >= selected.length) continue;
         var gain = 1.0;
         if (voice.fadeAt != null && i >= voice.fadeAt!) {
@@ -1800,13 +1814,9 @@ List<TrackerCell> _isolatedTickZoneCells(
         rightStem[i] += selected[i] * gain;
       }
     }
-  }
-  for (final voice in voices) {
-    final end = voice.endSample.clamp(rowStart[voice.startStep], total);
-    final fadeRate = nativeFadeoutOf(voice.zone) / 1024.0;
-    for (var i = rowStart[voice.startStep]; i < end; i++) {
+    for (var i = start; i < end; i++) {
       final released = voice.releaseAt != null && i >= voice.releaseAt!;
-      final selected = released ? voice.releaseLeft : voice.left;
+      final selected = released ? releaseLeft : rendered.left;
       if (selected == null || i >= selected.length) continue;
       var gain = 1.0;
       if (voice.fadeAt != null && i >= voice.fadeAt!) {
