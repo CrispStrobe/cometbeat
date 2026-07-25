@@ -1047,6 +1047,31 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('touch multi-select via clip checkboxes + batch delete',
+      (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    daw.addDemoTune();
+    await tester.pumpAndSettle();
+    expect(daw.clipCount, 2);
+
+    // Tap each clip's on-box selection checkbox (a touch target). Track headers
+    // have their own checkbox, so target the clip one by tooltip; after the
+    // first is selected its tooltip flips, so the remaining clip is next.
+    expect(find.byTooltip('Select clip for FX'), findsNWidgets(2));
+    await tester.tap(find.byTooltip('Select clip for FX').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Select clip for FX').first);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Deselect clip for FX'), findsNWidgets(2));
+
+    // Batch-delete the selection from the toolbar removes both clips.
+    await tester.tap(find.byIcon(Icons.delete_sweep_outlined));
+    await tester.pumpAndSettle();
+    expect(daw.clipCount, 0);
+  });
+
   testWidgets('a My Samples clip is arranged, resampled to the timeline rate',
       (tester) async {
     await _pumpDaw(tester);
