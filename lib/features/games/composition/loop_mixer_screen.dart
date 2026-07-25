@@ -3181,6 +3181,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                           onPressed: toggleFollow,
                           visualDensity: VisualDensity.compact,
                         ),
+                      // One-tap route to the full track editor (Advanced
+                      // Tracker) with the current groove — was buried in the
+                      // Share sheet. Disabled until there's pitched content the
+                      // bridge can convert.
+                      IconButton(
+                        icon: const Icon(Icons.open_in_full),
+                        tooltip: l10n.loopMixerOpenTracker,
+                        onPressed: hasPitchedTrack ? _openInTracker : null,
+                        visualDensity: VisualDensity.compact,
+                      ),
                       IconButton(
                         icon: const Icon(Icons.ios_share),
                         tooltip: l10n.loopMixerShare,

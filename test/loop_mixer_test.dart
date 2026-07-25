@@ -1282,6 +1282,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the full-editor button surfaces once there is pitched content',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    IconButton fullEditorButton() => tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.open_in_full),
+        );
+
+    // Present in the advanced toolbar, but disabled with no pitched track.
+    expect(find.widgetWithIcon(IconButton, Icons.open_in_full), findsOneWidget);
+    expect(fullEditorButton().onPressed, isNull);
+
+    // A pitched layer makes the route to the full track editor available.
+    game.toggleTrack('melody');
+    await tester.pump();
+    expect(fullEditorButton().onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a captured beat track can be removed; built-ins cannot',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
