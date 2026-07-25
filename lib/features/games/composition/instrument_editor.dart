@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/synth.dart' show wavBytesStereo;
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
@@ -44,7 +47,12 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
     if (pcm.isEmpty) return;
 
     final audio = context.read<AudioService>();
-    final wav = pcmFloatToWav(pcm);
+    final right = _inst is SampleInstrument
+        ? (_inst as SampleInstrument).sampleRight
+        : null;
+    final wav = right == null
+        ? pcmFloatToWav(pcm)
+        : wavBytesStereo(_interleaveStereo(pcm, right));
     audio.playWavBytes(wav);
   }
 
@@ -320,6 +328,7 @@ class _SampleEditor extends StatelessWidget {
         ),
         SampleWaveform(
           pcm: inst.sample,
+          secondaryPcm: inst.sampleRight,
           start: startFrac,
           end: endFrac,
           onChanged: (s, e) {
@@ -497,6 +506,16 @@ class _SampleEditor extends StatelessWidget {
       ],
     );
   }
+}
+
+Int16List _interleaveStereo(Float64List left, Float64List right) {
+  final frames = left.length < right.length ? left.length : right.length;
+  final out = Int16List(frames * 2);
+  for (var i = 0; i < frames; i++) {
+    out[i * 2] = (left[i].clamp(-1.0, 1.0) * 32767).round();
+    out[i * 2 + 1] = (right[i].clamp(-1.0, 1.0) * 32767).round();
+  }
+  return out;
 }
 
 String _envelopeSummary(Object? envelope) {

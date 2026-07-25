@@ -55,6 +55,10 @@ import 'package:comet_beat/core/audio/tracker_replayer.dart'
         RowTiming,
         kFxGlobalVolSlide,
         kFxPanSlide,
+        kFxPanbrello,
+        kFxRetrigVolSlide,
+        kFxSampleOffset,
+        kFxSetPan,
         kFxSetGlobalVolume,
         kFxTempoSlide,
         kFxTremor,
@@ -5838,6 +5842,8 @@ class _CommandEditorState extends State<_CommandEditor> {
     0x5: '5xy  Tone-porta + vol slide',
     0x6: '6xy  Vibrato + vol slide',
     0x7: '7xy  Tremolo',
+    kFxSetPan: '8xx  Set pan',
+    kFxSampleOffset: '9xx  Sample offset',
     0xA: 'Axy  Volume slide',
     0xB: 'Bxx  Position jump',
     0xC: 'Cxx  Set volume',
@@ -5848,8 +5854,10 @@ class _CommandEditorState extends State<_CommandEditor> {
     kFxSetGlobalVolume: 'Gxx  Set global volume',
     kFxGlobalVolSlide: 'Hxy  Global volume slide',
     kFxPanSlide: 'Pxy  Pan slide',
+    kFxRetrigVolSlide: 'Rxy  Retrigger + volume',
     kFxTempoSlide: 'Txy  Tempo slide',
-    kFxTremor: 'Txy  Tremor',
+    kFxTremor: 'Ixy  Tremor',
+    kFxPanbrello: 'Yxy  Panbrello',
   };
 
   @override

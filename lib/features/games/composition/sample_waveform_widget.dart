@@ -9,6 +9,7 @@ class SampleWaveform extends StatefulWidget {
   const SampleWaveform({
     super.key,
     required this.pcm,
+    this.secondaryPcm,
     required this.start,
     required this.end,
     required this.onChanged,
@@ -17,6 +18,9 @@ class SampleWaveform extends StatefulWidget {
   });
 
   final Float64List pcm;
+
+  /// Optional second channel, drawn in the lower half of the strip.
+  final Float64List? secondaryPcm;
   final double start;
   final double end;
   final void Function(double start, double end) onChanged;
@@ -62,6 +66,7 @@ class _SampleWaveformState extends State<SampleWaveform> {
             size: Size(w, 64),
             painter: _WaveformPainter(
               pcm: widget.pcm,
+              secondaryPcm: widget.secondaryPcm,
               start: widget.start,
               end: widget.end,
               wave: widget.wave,
@@ -79,6 +84,7 @@ class _SampleWaveformState extends State<SampleWaveform> {
 class _WaveformPainter extends CustomPainter {
   _WaveformPainter({
     required this.pcm,
+    this.secondaryPcm,
     required this.start,
     required this.end,
     required this.wave,
@@ -86,6 +92,7 @@ class _WaveformPainter extends CustomPainter {
   });
 
   final Float64List pcm;
+  final Float64List? secondaryPcm;
   final double start;
   final double end;
   final Color wave;
@@ -103,29 +110,38 @@ class _WaveformPainter extends CustomPainter {
     final mid = size.height / 2;
     if (pcm.isNotEmpty) {
       final cols = size.width.round().clamp(1, 4000);
-      final n = pcm.length;
-      final keep = Paint()
-        ..color = wave
-        ..strokeWidth = 1;
-      final drop = Paint()
-        ..color = wave.withValues(alpha: 0.28)
-        ..strokeWidth = 1;
-      for (var x = 0; x < cols; x++) {
-        final frac = x / cols;
-        final i0 = (x * n / cols).floor();
-        final i1 = ((x + 1) * n / cols).floor().clamp(i0 + 1, n);
-        var peak = 0.0;
-        for (var i = i0; i < i1; i++) {
-          final a = pcm[i].abs();
-          if (a > peak) peak = a;
+      void drawChannel(Float64List samples, double center, Color color) {
+        final n = samples.length;
+        final keep = Paint()..color = color;
+        final drop = Paint()..color = color.withValues(alpha: 0.28);
+        for (var x = 0; x < cols; x++) {
+          final frac = x / cols;
+          final i0 = (x * n / cols).floor();
+          final i1 = ((x + 1) * n / cols).floor().clamp(i0 + 1, n);
+          var peak = 0.0;
+          for (var i = i0; i < i1; i++) {
+            final a = samples[i].abs();
+            if (a > peak) peak = a;
+          }
+          final h =
+              peak.clamp(0.0, 1.0) * (secondaryPcm == null ? mid : mid / 2);
+          final xx = x * size.width / cols;
+          canvas.drawLine(
+            Offset(xx, center - h),
+            Offset(xx, center + h),
+            frac >= start && frac <= end ? keep : drop,
+          );
         }
-        final h = peak.clamp(0.0, 1.0) * mid;
-        final xx = x * size.width / cols;
-        canvas.drawLine(
-          Offset(xx, mid - h),
-          Offset(xx, mid + h),
-          frac >= start && frac <= end ? keep : drop,
-        );
+      }
+
+      if (secondaryPcm == null) {
+        drawChannel(pcm, mid, wave);
+      } else {
+        drawChannel(pcm, size.height * 0.25, wave);
+        if (secondaryPcm!.isNotEmpty) {
+          drawChannel(
+              secondaryPcm!, size.height * 0.75, wave.withValues(alpha: 0.8));
+        }
       }
     }
     // Shade the cropped tails.
