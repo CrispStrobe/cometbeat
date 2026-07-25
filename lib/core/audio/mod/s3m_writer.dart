@@ -283,8 +283,12 @@ Uint8List writeS3m(S3mModule module) {
     final sample = samples[s];
     // Skip only samples with no data payload (truly empty or AdLib, whose OPL
     // bytes live in the already-written header). Packed samples keep their raw
-    // block via rawData; PCM (mono or stereo) has non-empty pcm.
-    if (sample.pcm.isEmpty && sample.rawData == null) continue;
+    // block via rawData; PCM (mono or stereo) has non-empty pcm. AdLib samples
+    // now carry a synthesized-FM pcm for playback only — it is never written to
+    // disk, so a type-2 instrument re-exports byte-identically.
+    if ((sample.pcm.isEmpty && sample.rawData == null) || sample.adlib) {
+      continue;
+    }
     align16();
     final pcmOff = len();
     insMemsegs[s] = pcmOff ~/ 16;

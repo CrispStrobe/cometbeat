@@ -136,7 +136,10 @@ void main() {
       final s = parsed.samples.single;
       expect(s.adlib, isTrue);
       expect(s.isEmpty, isFalse); // survives instead of being S3mSample.empty()
-      expect(s.pcm, isEmpty); // no OPL synthesis — pcm stays empty
+      // The OPL patch is now rendered to an audible FM approximation, so pcm is
+      // populated (playback-only; the header still re-exports byte-identically).
+      expect(s.pcm, isNotEmpty);
+      expect(s.pcm.every((v) => v.isFinite && v.abs() <= 1.0), isTrue);
     });
 
     test('preserves the 12 OPL register bytes', () {

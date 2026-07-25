@@ -99,10 +99,12 @@ class S3mSample {
   /// (`length` samples each, same bit depth).
   final Float64List? pcmRight;
 
-  /// True for a type-2 AdLib/OPL instrument. There is no OPL synthesis (out of
-  /// scope), so [pcm] stays empty; the 12 OPL register bytes are kept in
-  /// [adlibData] and the full header in [rawHeader] so the instrument is
-  /// preserved rather than silently dropped.
+  /// True for a type-2 AdLib/OPL instrument. Rather than emulate the OPL chip,
+  /// the reader renders a short loopable APPROXIMATION of the 2-operator FM
+  /// timbre into [pcm] (see synthesizeAdlibWaveform) so the sample path can
+  /// sound it. The 12 OPL register bytes are still kept in [adlibData] and the
+  /// full header in [rawHeader] so the instrument re-exports byte-identically
+  /// (the synth [pcm] is playback-only and is never written back to disk).
   final bool adlib;
 
   /// The 12 OPL register bytes of an AdLib instrument (header 0x10..0x1B).

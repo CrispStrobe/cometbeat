@@ -21,6 +21,7 @@
 // Verify against test/s3m_codec_test.dart (a hand-authored golden oracle +, when
 // present, the real test/fixtures/*.s3m).
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/mod/s3m_module.dart';
@@ -156,10 +157,15 @@ S3mSample _readInstrument(
   final type = bytes[base];
   final rawHeader = List<int>.from(bytes.sublist(base, base + 0x50));
 
-  // type 2 = AdLib/OPL (melodic or percussion). No OPL synthesis (out of
-  // scope), but do NOT drop it: preserve the 12 OPL register bytes
-  // (header 0x10..0x1B) + the full header so it survives a read/write cycle.
+  // type 2 = AdLib/OPL (melodic or percussion). We do NOT emulate the OPL chip;
+  // instead we render a short, loopable APPROXIMATION of the 2-operator FM
+  // timbre to PCM (see [synthesizeAdlibWaveform]) so the ordinary sample path
+  // can sound it. The 12 OPL register bytes (header 0x10..0x1B) and the full
+  // header are still preserved so the instrument survives a read/write cycle
+  // and re-exports byte-identically (the writer never emits the synth PCM).
   if (type == 2) {
+    final adlibData = List<int>.from(bytes.sublist(base + 0x10, base + 0x1C));
+    final wave = synthesizeAdlibWaveform(adlibData);
     return S3mSample(
       name: _readAsciiz(bytes, base + 0x30, 28),
       volume: bytes[base + 0x1C],
@@ -167,9 +173,13 @@ S3mSample _readInstrument(
         final c = data.getUint32(base + 0x20, Endian.little);
         return c == 0 ? 8363 : c;
       }(),
-      pcm: Float64List(0),
+      pcm: wave,
+      // Loop the whole synthesized waveform so a held note sustains the tone.
+      loop: wave.isNotEmpty,
+      // loopStart defaults to 0 (start of the buffer).
+      loopEnd: wave.length,
       adlib: true,
-      adlibData: List<int>.from(bytes.sublist(base + 0x10, base + 0x1C)),
+      adlibData: adlibData,
       rawHeader: rawHeader,
     );
   }
@@ -376,6 +386,109 @@ S3mPattern _emptyPattern(int channelCount) => S3mPattern(
         growable: false,
       ),
     );
+
+/// OPL frequency-multiplication factor per the 4-bit `MULT` field (registers
+/// 0x20/0x23). Index 11 and 13 alias 10 and 12; 14/15 both mean 15.
+const List<double> _oplMultTable = <double>[
+  0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15, //
+];
+
+/// The synthesized buffer spans this many cycles of the base (unit) frequency.
+/// It is even so that a 0.5× OPL multiple still yields a whole number of
+/// oscillator cycles across the buffer, guaranteeing a seamless loop.
+const int _adlibBaseCycles = 2;
+
+/// Maximum FM modulation index (radians of carrier-phase deviation) reached
+/// when the modulator operator is at full level (total-level attenuation 0).
+const double _adlibMaxModIndex = 4.0;
+
+/// Renders a short, seamlessly loopable APPROXIMATION of an AdLib/OPL 2-operator
+/// FM instrument to normalized PCM in [-1, 1], so the ordinary S3M sample path
+/// can sound a type-2 instrument.
+///
+/// This is NOT a cycle-exact OPL2/OPL3 emulator. It captures only the static
+/// FM timbre: a carrier phase-modulated by a single modulator,
+///
+///   carrier(t) = sin(2π·fc·t + I·sin(2π·fm·t + fb·prev))
+///
+/// where `fc`/`fm` are the carrier/modulator OPL frequency multiples, `I` is a
+/// modulation index derived from the modulator's total-level attenuation, and
+/// `fb` is a small feedback term applied to the modulator when the patch's
+/// feedback field is non-zero. Envelopes (attack/decay/sustain/release),
+/// key-scaling, vibrato/tremolo, the waveform-select registers, and the
+/// additive (connection=1) topology are all ignored — the result is a single
+/// sustained FM tone, not the chip's actual output.
+///
+/// [adlibData] is the standard 12-byte SBI-style register block (header
+/// 0x10..0x1B): modulator/carrier characteristic (MULT in the low nibble) at
+/// 0/1, KSL+total-level at 2/3, attack/decay 4/5, sustain/release 6/7, waveform
+/// 8/9, and feedback/connection at 10.
+///
+/// Tuning: the buffer holds [_adlibBaseCycles] cycles of the base frequency, so
+/// looping it produces a tone at the base frequency and PITCH TRACKS THE PLAYED
+/// NOTE through the existing resampler (the carrier sits at `carrierMult ×` the
+/// base). Returns [samples] frames, normalized so the peak magnitude is 1.
+///
+/// A degenerate patch (fewer than 11 bytes, or all-zero registers) returns an
+/// empty list so nothing garbage is played.
+Float64List synthesizeAdlibWaveform(List<int> adlibData, {int samples = 2048}) {
+  if (samples <= 0 || adlibData.length < 11) return Float64List(0);
+  // All-zero register block = no real patch → play nothing.
+  if (!adlibData.any((b) => (b & 0xFF) != 0)) return Float64List(0);
+
+  final modMult = _oplMultTable[adlibData[0] & 0x0F];
+  final carMult = _oplMultTable[adlibData[1] & 0x0F];
+  final modTotalLevel = adlibData[2] & 0x3F; // 0 = loudest .. 63 = silent
+  final feedbackField = (adlibData[10] >> 1) & 0x07; // 0..7
+
+  // Modulator amplitude (linear) from its total-level attenuation. OPL total
+  // level is 0.75 dB per step; 0 → unity, 63 → ~ -47 dB (effectively silent).
+  final modAmp = math.pow(10.0, -0.75 * modTotalLevel / 20.0).toDouble();
+  final modIndex = modAmp * _adlibMaxModIndex;
+
+  // Feedback → a bounded self-modulation term on the modulator phase (0..π/2).
+  final feedback =
+      feedbackField == 0 ? 0.0 : (feedbackField / 7.0) * (math.pi / 2);
+
+  // Whole cycle counts across the buffer (integers because base cycles is even
+  // and the multiples are integers or 0.5) → the waveform loops seamlessly.
+  final carCycles = carMult * _adlibBaseCycles;
+  final modCycles = modMult * _adlibBaseCycles;
+
+  const twoPi = 2 * math.pi;
+
+  // Warm up the feedback so the loop point is seamless: run the (periodic)
+  // modulator to a steady state before rendering the carrier.
+  var modPrev = 0.0;
+  if (feedback != 0.0) {
+    for (var pass = 0; pass < 2; pass++) {
+      for (var i = 0; i < samples; i++) {
+        final phase = twoPi * modCycles * i / samples + feedback * modPrev;
+        modPrev = math.sin(phase);
+      }
+    }
+  }
+
+  final out = Float64List(samples);
+  var peak = 0.0;
+  for (var i = 0; i < samples; i++) {
+    final ph = i / samples;
+    final modPhase = twoPi * modCycles * ph + feedback * modPrev;
+    final mod = math.sin(modPhase);
+    modPrev = mod;
+    final car = math.sin(twoPi * carCycles * ph + modIndex * mod);
+    out[i] = car;
+    final a = car.abs();
+    if (a > peak) peak = a;
+  }
+
+  if (peak <= 0.0 || !peak.isFinite) return Float64List(0);
+  final inv = 1.0 / peak;
+  for (var i = 0; i < samples; i++) {
+    out[i] *= inv;
+  }
+  return out;
+}
 
 /// Decodes an ST3 "DP30ADPCM" packed sample block into normalized PCM in
 /// [-1, 1]. Implements the well-known ST3 4-bit ADPCM (a.k.a. delta-PCM)
