@@ -1218,15 +1218,16 @@ void main() {
     test('a rich tab exports its techniques as GPIF note properties', () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: [const TabColumn(frets: {0: 5})],
+        columns: [
+          const TabColumn(frets: {0: 5}),
+        ],
       );
       doc.columns[0] = doc.columns[0]
           .withPalmMute(true)
           .withLetRing(true)
           .withTap(true)
           .withRightFinger(RightHandFinger.middle)
-          .withLeftFingers([2])
-          .withBend(TabBends.bend());
+          .withLeftFingers([2]).withBend(TabBends.bend());
       final gpif = scoreToGpif(doc.toScore(), tuning: Tuning.standardGuitar);
       // Techniques carried through toScore → GPIF (crisp_notation@ee05c33).
       expect(gpif, contains('PalmMuted'));
