@@ -712,15 +712,29 @@ had already shipped, so this block was a trap for the next agent to redo:
   `advanced_tracker_screen.dart` (`case 'starterBeat'`).
 
 **DAW real-time engine** (was `SOUND_AND_DAW_ROADMAP` P2.1):
-- ⬜ **OPEN (verified 2026-07-26), and the biggest thing left in the DAW.**
-  `renderTimeline` is still a whole-buffer offline render, so playback is
-  bake-then-play: faders/automation only take effect on the next bake, nothing is
-  live-playable, and there's no input monitoring. Replacing it with a streamed
-  graph unlocks the remaining DAW gaps.
-  ⚠️ **Needs coordination before anyone starts** — it overlaps the Tracker audio
-  arc's §E3 (`flutter_soloud`) claim, and the Tracker has just finished its own
-  streaming-mixer work (Renderer v2.1), so there may be a shared engine to reuse
-  rather than two streamed graphs.
+- 🔶 **IN PROGRESS — slice 1 SHIPPED 2026-07-26: the windowed render.**
+  `renderTimelineWindowStereo(timeline, fromSample:, toSample:)` renders just the
+  asked-for span instead of allocating a full-length buffer per lane plus the
+  master. A two-second preview of a twenty-minute arrangement now costs two
+  seconds of memory, and clips that don't overlap the window are never touched.
+  **Byte-identical to the matching slice of the full render** — that's the whole
+  contract, and 18 tests pin it across overlapping lanes, mid-fade windows, clip
+  FX, stereo width, mute/solo, past-the-end (zero-padded) and unlimited renders.
+  Why it's exact: a clip's FX chain runs on that clip's own bounded buffer, so it
+  doesn't depend on where the window falls, and the master limiter is per-sample
+  and stateless (now extracted so both paths run literally the same code).
+  `timelineWindowIsBounded` names the constructs that DO couple across a window —
+  track inserts, track gain automation, bus routing/sends, master FX — because a
+  reverb tail or an automation ramp reaches in from outside it. Those lanes fall
+  back to a full render + slice: still exact, just without the saving. (Same
+  philosophy as the Tracker's `songCanStreamFlowVariable`.)
+  ⬜ **Still to do for full P2.1, and it needs a coordination call:** driving
+  PLAYBACK off this (block-by-block, so faders/automation apply live instead of
+  on the next bake), live-playable instruments, and input monitoring. That part
+  overlaps the Tracker arc's §E3 (`flutter_soloud`) claim, and the Tracker just
+  shipped its own streaming mixer (Renderer v2.1) — there is probably ONE engine
+  to share rather than two. The windowed render above is deliberately the piece
+  that is useful on its own and commits nobody to an engine choice.
 - ✅ **DONE** P0.1 convolution reverb — `crisp_dsp/convolution_reverb.dart`
   (synthesized IR + FFT overlap-add) landed and is tested; as of 2026-07-26 it's
   also wired into the shared FX rack as `FxType.convolutionReverb`, where before

@@ -653,24 +653,191 @@ DawStereoMix renderTimelineStereo(
   final outLeft = out.left;
   final outRight = out.right;
 
-  if (limit) {
-    for (var i = 0; i < outLeft.length; i++) {
-      final x = outLeft[i];
-      // Soft-knee: transparent below ~0.6, tanh-limited toward the rails so
-      // overlapping clips round off instead of hard-clipping.
-      if (x.abs() > 0.6) {
-        outLeft[i] = x.sign * (0.6 + _tanh((x.abs() - 0.6) / 0.4) * 0.4);
-      }
-      final r = outRight[i];
-      if (r.abs() > 0.6) {
-        outRight[i] = r.sign * (0.6 + _tanh((r.abs() - 0.6) / 0.4) * 0.4);
-      }
-    }
-  }
+  if (limit) _limitStereoBuffers(outLeft, outRight);
   return DawStereoMix(outLeft, outRight);
 }
 
+/// The master soft-knee limiter: transparent below ~0.6, tanh-limited toward
+/// the rails so overlapping clips round off instead of hard-clipping.
+///
+/// Per-sample and stateless, which is why a windowed render can apply it to a
+/// window and still match the full render exactly — shared by both paths so
+/// they can't drift apart.
+void _limitStereoBuffers(Float64List left, Float64List right) {
+  for (var i = 0; i < left.length; i++) {
+    final x = left[i];
+    if (x.abs() > 0.6) {
+      left[i] = x.sign * (0.6 + _tanh((x.abs() - 0.6) / 0.4) * 0.4);
+    }
+    final r = right[i];
+    if (r.abs() > 0.6) {
+      right[i] = r.sign * (0.6 + _tanh((r.abs() - 0.6) / 0.4) * 0.4);
+    }
+  }
+}
+
 /// Backward-compatible mono view of the stereo timeline render.
+/// Whether a WINDOWED render ([renderTimelineWindowStereo]) can skip material
+/// outside the window and still be byte-identical to slicing the full render.
+///
+/// It can when nothing processes a lane as a whole. Clip effects are safe at any
+/// window — a clip's audio is bounded and its chain is applied to that clip's
+/// own buffer, so it doesn't depend on where the window falls. What is NOT safe
+/// is anything that reads a lane's entire timeline:
+///
+///   * a track insert chain / [TrackEffect] — a reverb tail or delay repeat
+///     started before the window still belongs inside it;
+///   * track gain AUTOMATION — its value at a sample depends on the points
+///     around it, which may sit outside the window;
+///   * bus sends / bus routing and master effects, for the same reason.
+///
+/// Those lanes are still rendered CORRECTLY by the windowed path (it falls back
+/// to rendering that lane in full and slicing); this predicate only reports
+/// whether the memory win applies. Mirrors the Tracker's
+/// `songCanStreamFlowVariable` in spirit: name exactly which constructs couple
+/// across the window, and route only those to the whole-length path.
+bool timelineWindowIsBounded(DawTimeline timeline) {
+  if (timeline.effects.isNotEmpty) return false;
+  if (timeline.buses.isNotEmpty) return false;
+  for (final track in timeline.tracks) {
+    if (track.effects.isNotEmpty) return false;
+    if (track.effect != TrackEffect.none) return false;
+    if (track.gainAutomation.isNotEmpty) return false;
+    if (track.busIndex != null) return false;
+    if (track.busSends.isNotEmpty) return false;
+  }
+  return true;
+}
+
+/// Render only `[fromSample, toSample)` of [timeline].
+///
+/// This is the piece the DAW was missing: [renderTimelineStereo] allocates a
+/// full-length buffer per lane plus the master, so memory grows with
+/// `tracks × arrangement length` and playback has to bake the whole thing before
+/// a single sample is heard. A windowed render touches only the clips that
+/// overlap the window, so a two-second preview of a twenty-minute arrangement
+/// costs two seconds of memory.
+///
+/// **Byte-identical** to the matching slice of [renderTimelineStereo] — there is
+/// a test pinning exactly that. When [timelineWindowIsBounded] is false the
+/// lane-coupled tracks are rendered in full and sliced, which keeps the audio
+/// right at the cost of the saving; the fast path still applies to every other
+/// lane.
+DawStereoMix renderTimelineWindowStereo(
+  DawTimeline timeline, {
+  required int fromSample,
+  required int toSample,
+  int sampleRate = kDawSampleRate,
+  Map<Object, Float64List>? cache,
+  bool limit = true,
+}) {
+  final from = fromSample < 0 ? 0 : fromSample;
+  final to = toSample < from ? from : toSample;
+  final n = to - from;
+  if (n == 0) return DawStereoMix(Float64List(0), Float64List(0));
+
+  // Anything lane-coupled: render the whole mix once and slice. Correct, and no
+  // worse than today.
+  if (!timelineWindowIsBounded(timeline)) {
+    final full = renderTimelineStereo(
+      timeline,
+      sampleRate: sampleRate,
+      cache: cache,
+      limit: limit,
+    );
+    return DawStereoMix(
+      _sliceOrPad(full.left, from, to),
+      _sliceOrPad(full.right, from, to),
+    );
+  }
+
+  final store = cache ?? <Object, Float64List>{};
+  final left = Float64List(n);
+  final right = Float64List(n);
+  final anySolo = timeline.tracks.any((t) => t.soloed);
+
+  for (final track in timeline.tracks) {
+    if (track.muted) continue;
+    if (anySolo && !track.soloed) continue;
+    for (final clip in track.clips) {
+      if (clip.muted) continue;
+      final start = (clip.startMs * sampleRate / 1000).round();
+      final rendered = store.putIfAbsent(
+        clip.source.cacheKey,
+        () => clip.source.render(sampleRate),
+      );
+      if (rendered.isEmpty) continue;
+      final isStereo = clip.source is StereoSampleSource;
+      final sourceRight =
+          isStereo ? (clip.source as StereoSampleSource).right : rendered;
+      final pcm = _trimView(rendered, clip, sampleRate);
+      final rightPcm = _trimView(sourceRight, clip, sampleRate);
+      if (pcm.isEmpty) continue;
+      // Skip clips that don't reach the window at all — the whole point.
+      if (start + pcm.length <= from || start >= to) continue;
+
+      final effected = clip.effects.isEmpty
+          ? (left: pcm, right: rightPcm)
+          : isStereo
+              ? applyFxChainStereo(pcm, rightPcm, clip.effects, sampleRate)
+              : (
+                  left: applyClipEffectChain(pcm, clip.effects, sampleRate),
+                  right: rightPcm,
+                );
+      final positioned =
+          isStereo ? _applyStereoWidth(effected, clip.width) : effected;
+
+      final total = positioned.left.length;
+      final gainBase = clip.gain * track.gain;
+      final pan = (track.pan + clip.pan).clamp(-1.0, 1.0);
+      final fadeIn = (clip.fadeInMs * sampleRate / 1000).round();
+      final fadeOut = (clip.fadeOutMs * sampleRate / 1000).round();
+
+      // Only the overlapping span, but the fade envelope is still indexed from
+      // the CLIP's own start so a window mid-fade gets the right level.
+      final iStart = from - start < 0 ? 0 : from - start;
+      final iEnd = to - start < total ? to - start : total;
+      for (var i = iStart; i < iEnd; i++) {
+        var env = 1.0;
+        if (fadeIn > 0 && i < fadeIn) {
+          env = fadeCurveValue(i / fadeIn, clip.fadeInCurve);
+        }
+        if (fadeOut > 0 && i >= total - fadeOut) {
+          final down = fadeCurveValue((total - i) / fadeOut, clip.fadeOutCurve);
+          if (down < env) env = down;
+        }
+        final gain = gainBase * env;
+        final at = start + i - from;
+        if (isStereo) {
+          final lg = pan <= 0 ? 1.0 : math.cos(pan * math.pi / 2);
+          final rg = pan >= 0 ? 1.0 : math.cos(pan * math.pi / 2);
+          left[at] += positioned.left[i] * gain * lg;
+          right[at] += positioned.right[i] * gain * rg;
+        } else {
+          final sample = positioned.left[i] * gain;
+          final angle = (pan + 1) * math.pi / 4;
+          left[at] += sample * math.cos(angle);
+          right[at] += sample * math.sin(angle);
+        }
+      }
+    }
+  }
+
+  if (limit) {
+    _limitStereoBuffers(left, right);
+  }
+  return DawStereoMix(left, right);
+}
+
+/// `[from, to)` of [buffer], zero-padded where the window runs past the end.
+Float64List _sliceOrPad(Float64List buffer, int from, int to) {
+  final out = Float64List(to - from);
+  for (var i = from; i < to && i < buffer.length; i++) {
+    out[i - from] = buffer[i];
+  }
+  return out;
+}
+
 Float64List renderTimeline(
   DawTimeline timeline, {
   int sampleRate = kDawSampleRate,
