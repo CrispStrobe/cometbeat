@@ -22,6 +22,7 @@ import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
+import 'package:comet_beat/features/games/composition/chord_db.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart';
 import 'package:comet_beat/features/games/composition/tab_chord_builder.dart';
@@ -643,6 +644,25 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   void _setChordDiagram(ChordDiagram? diagram) {
     _snapshot();
     setState(() => _doc.setChordVoicing(_selCol, diagram));
+  }
+
+  /// The bundled chords-db voicings for the current tuning — `guitar`/`ukulele`
+  /// when it's a standard tuning, else null (the chord builder then voices
+  /// algorithmically). Loaded + cached lazily.
+  Future<ChordDb?> _loadChordDb() {
+    final pitches = _doc.tuning.strings.map((p) => p.midiNumber).toList();
+    bool isTuning(Tuning t) {
+      final other = t.strings.map((p) => p.midiNumber).toList();
+      if (other.length != pitches.length) return false;
+      for (var i = 0; i < pitches.length; i++) {
+        if (pitches[i] != other[i]) return false;
+      }
+      return true;
+    }
+
+    if (isTuning(Tuning.standardGuitar)) return ChordDb.load('guitar');
+    if (isTuning(Tuning.ukulele)) return ChordDb.load('ukulele');
+    return Future<ChordDb?>.value();
   }
 
   @override
@@ -2615,6 +2635,9 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     // Chord-builder selection (root pitch class + quality index).
     var buildRoot = 0;
     var buildQuality = 0;
+    // Curated multi-position voicings (chords-db) load lazily INSIDE the sheet
+    // (below) so the picker opens immediately; the future is cached once.
+    Future<ChordDb?>? dbFuture;
     ChordDiagram builtDiagram() {
       final (label, intervals) = kChordQualities[buildQuality];
       return chordVoicing(
@@ -2708,22 +2731,64 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   ],
                 ),
                 const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: ChordDiagramView(builtDiagram()),
-                ),
-                const SizedBox(height: 8),
-                FilledButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: Text(
-                    chordName(
-                      buildRoot,
-                      kChordQualities[buildQuality].$1,
-                    ),
-                  ),
-                  onPressed: () {
-                    _setChordDiagram(builtDiagram());
-                    Navigator.of(ctx).pop(); // applied already
+                // Prefer the curated chords-db voicings (tap a shape to add it);
+                // fall back to one algorithmically-voiced diagram + Add while
+                // the DB loads or when it doesn't carry this chord/tuning.
+                FutureBuilder<ChordDb?>(
+                  future: dbFuture ??= _loadChordDb(),
+                  builder: (_, snap) {
+                    final voicings = snap.data?.voicings(
+                          buildRoot,
+                          kChordQualities[buildQuality].$1,
+                        ) ??
+                        const <ChordDiagram>[];
+                    if (voicings.isEmpty) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ChordDiagramView(builtDiagram()),
+                          const SizedBox(height: 8),
+                          FilledButton.icon(
+                            icon: const Icon(Icons.add),
+                            label: Text(
+                              chordName(
+                                buildRoot,
+                                kChordQualities[buildQuality].$1,
+                              ),
+                            ),
+                            onPressed: () {
+                              _setChordDiagram(builtDiagram());
+                              Navigator.of(ctx).pop(); // applied already
+                            },
+                          ),
+                        ],
+                      );
+                    }
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final v in voicings)
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  _setChordDiagram(v);
+                                  Navigator.of(ctx).pop();
+                                },
+                                child: ChordDiagramView(v),
+                              ),
+                              TextButton.icon(
+                                icon: const Icon(Icons.play_arrow, size: 16),
+                                label: Text(l10n.tabPatternPreview),
+                                onPressed: () =>
+                                    _previewColumns(strumColumns(v, _dur)),
+                              ),
+                            ],
+                          ),
+                      ],
+                    );
                   },
                 ),
                 const SizedBox(height: 8),

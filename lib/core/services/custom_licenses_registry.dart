@@ -20,6 +20,20 @@ import 'package:flutter/services.dart' show rootBundle;
 Future<void> ensureCustomLicensesRegistered() async {
   registerBundledFontLicenses(); // Bravura (SIL OFL 1.1), owned by crisp_notation.
   _registerAppBundledOfl();
+  _registerBundledData();
+}
+
+bool _dataRegistered = false;
+
+/// Non-font bundled data that ships under its own licence: the chords-db chord
+/// voicings (MIT). Registered so it appears on the "View licenses" page.
+void _registerBundledData() {
+  if (_dataRegistered) return;
+  _dataRegistered = true;
+  LicenseRegistry.addLicense(() async* {
+    final text = await rootBundle.loadString('assets/chords/LICENSE.txt');
+    yield LicenseEntryWithLineBreaks(['chords-db (chord voicings)'], text);
+  });
 }
 
 bool _appOflRegistered = false;
