@@ -29,6 +29,24 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (bar-attributes)** · ✅ **SHIPPED (idle) — edit a bar's key/time-sig inline
+  in the inspector.** Closes scoped candidate 3 (root PLAN.md). The inspector's
+  Structure section now shows inline **Key** and **Time signature** dropdowns for a
+  single selection — reusing `_changeRow` + `setKeyChangeAt`/`setTimeChangeAt`,
+  applied on selection — so the common bar-attribute change no longer needs the
+  buried "Change from here…" dialog (which stays for clef/tempo/volta/nav). Also
+  corrected candidate 1's scoping in root PLAN.md: the Advanced-Tracker "menu" is
+  actually spread across many sheets/toolbars, so it's a multi-surface restructure
+  needing a maintainer design pass, not a quick regroup. ⚠️ **touched hot shared
+  `composition_workshop_screen.dart`** additively (two dropdowns in
+  `_inspectorStructure`); no new l10n (reused existing keys). Fixed one now-stale
+  sibling assertion (a test asserted "No change" was absent to prove the summary
+  wasn't empty — my dropdowns legitimately show "No change" as their default, so it
+  now asserts the repeat-end chip instead). Full workshop suite green (85).
+  Follow-up noted: a time change anchored at the very FIRST element exports a
+  degenerate MusicXML doc (pre-existing in the Change-from-here path).
+  Worktree `../mus-barattr`.
+
 - **opus (voice2-gaps)** · ✅ **SHIPPED (idle) — the grand-staff view keeps voice 2.**
   Re-audited the Workshop "voice-2 gaps" backlog against the code (most was stale:
   dynamics/lyrics harvest from BOTH voices in `buildScore`, slurs are shared,

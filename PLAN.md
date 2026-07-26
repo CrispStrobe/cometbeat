@@ -1226,26 +1226,33 @@ These are the substantial items left after the easy wins shipped; scoped here so
 whoever picks one starts from a plan, not a re-survey. Item 2 is being done now.
 
 1. **Advanced-Tracker menu grouping** (`advanced_tracker_screen.dart`, ~7.1k lines
-   — a HOT file; `opus (daw-suite)` is adjacent via the DAW/tracker round-trip, so
-   claim the board first and stay additive). The toolbar/app-bar region
-   (~`2363`–`2510`: scattered `IconButton`s + `PopupMenuButton`s) collapses into
-   logical groups — **Import/Open · Library · Edit · View · Playback · Export** —
-   preserving every existing action, and aligns the import/save wording with the
-   Score Workshop. Risk: the large `advanced_tracker_screen_test.dart` finds items
-   by text/icon, so navigation changes need matching test updates. Value: HIGH
-   (maintainer-flagged repeatedly). Do it as a pure regroup, no behaviour change.
+   — a HOT file). ⚠️ **SCOPE CORRECTION (2026-07-26, after inspection):** this is
+   NOT a single oversized menu to regroup — the actions are spread across *many*
+   bottom sheets, toolbars and dialogs (Load SoundFont `~2210`, Load WAV `~3012`,
+   Load Song `~3976`, Export sheet `~4619`, per-channel mixer header `~2363–2517`,
+   etc.). Collapsing them into **Import/Open · Library · Edit · View · Playback ·
+   Export** is a genuine multi-surface UI restructure, not a menu regroup — larger
+   and riskier than first scoped, and it wants a maintainer design pass (which
+   entries move where, what stays a toolbar button) before a blind refactor.
+   `opus (daw-suite)` is adjacent (DAW/tracker round-trip). Value HIGH
+   (maintainer-flagged), but do it deliberately, with the extensive
+   `advanced_tracker_screen_test.dart` in mind — not as a quick sweep.
 2. **Voice-2 gaps → `buildGrandStaff` keeps voice 2** (`score_document.dart`). Done
    by `opus (voice2-gaps)`: a two-voice document now engraves as a two-hand grand
    staff (voice 1 → treble / RH, voice 2 → bass / LH) instead of dropping voice 2;
    a single voice keeps the pitch auto-split. The other voice-2 sub-gaps were found
    stale (see the Voice-2 bullet above). Follow-up: carry dynamics/slurs/lyrics onto
    the grand-staff view (both voices — a pre-existing grand-staff limitation).
-3. **Bar-attribute editing in the inspector** (`composition_workshop_screen.dart`
-   — HOT). Surface the current bar's **time signature / key signature** as direct,
-   inline inspector controls (for a single selection), instead of only via the
-   buried "Change from here…" dialog. Bounded + fully testable, but modest value:
-   it re-presents the existing mid-score-change mechanism, so mostly a
-   discoverability win. Reuse `_barChangeSummary` / the "Change from here" editor.
+3. **Bar-attribute editing in the inspector** — ✅ **DONE (`opus (bar-attributes)`).**
+   The inspector's Structure section now carries inline **Key** and **Time
+   signature** dropdowns (for a single selection) that read/write
+   `keyChanges`/`timeChanges` via `setKeyChangeAt`/`setTimeChangeAt` and apply on
+   selection — no need to open "Change from here…" for the common case; the fuller
+   dialog stays for clef/tempo/volta/navigation. Reused `_changeRow` + the existing
+   `_keyChoices`/`_timeChoices`, no new l10n. ⚠️ follow-up noted: a time change
+   anchored at the *very first* element exports a degenerate MusicXML document (the
+   base time sig is already that meter) — pre-existing in the "Change from here"
+   path, worth a look but out of scope here.
 
 ### Group 2 — pointers to live reference docs (detail lives there)
 

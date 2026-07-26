@@ -25,6 +25,7 @@ import 'package:crisp_notation/crisp_notation.dart'
         MultiSystemView,
         NoteElement,
         NoteNameStyle,
+        TimeSignature,
         bekernToScore,
         multiPartScoreFromGpif,
         readGpifFromGp;
@@ -798,6 +799,34 @@ void main() {
     expect(find.text(l10n.workshopChangeHereTitle), findsOneWidget);
   });
 
+  testWidgets('the inspector edits a bar time signature in place', (
+    tester,
+  ) async {
+    await pump(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(_pianoKey()); // place + select a note (single selection)
+    await tester.pump();
+    await _enterStudio(tester);
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.pumpAndSettle();
+
+    // The Structure section now carries inline Key + Time-signature controls,
+    // not just the "Change from here…" dialog.
+    expect(find.byType(DropdownButton<TimeSignature?>), findsOneWidget);
+    expect(find.text('3/4'), findsNothing); // nothing selected yet
+
+    // Pick 3/4 from the inline dropdown → the change applies to the doc, and
+    // the dropdown (whose value reads back from _doc.timeChanges) now shows it.
+    await tester.tap(find.byType(DropdownButton<TimeSignature?>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('3/4').last);
+    await tester.pumpAndSettle();
+    expect(find.text('3/4'), findsOneWidget);
+  });
+
   testWidgets("the inspector edits a rest's length", (tester) async {
     await pump(tester);
     final editor = _editor(tester);
@@ -843,8 +872,9 @@ void main() {
     await tester.tap(find.text(l10n.workshopRepeatEnd));
     await tester.pumpAndSettle();
 
-    // The Studio inspector's Structure section reflects that anchored change
-    // instead of "No change".
+    // The Studio inspector's Structure section reflects that anchored change:
+    // a Repeat-end chip in the summary. (The inline Key/Time controls show their
+    // own "No change" defaults, so we assert on the chip, not its absence.)
     await _enterStudio(tester);
     await tester.tap(find.byIcon(Icons.more_vert));
     await tester.pumpAndSettle();
@@ -853,7 +883,6 @@ void main() {
 
     expect(find.text(l10n.workshopStructure), findsOneWidget);
     expect(find.text(l10n.workshopRepeatEnd), findsOneWidget);
-    expect(find.text(l10n.workshopNoChange), findsNothing);
   });
 
   testWidgets('the Studio shelf reveals the depth controls', (tester) async {

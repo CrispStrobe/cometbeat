@@ -2804,9 +2804,29 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                 ),
             ],
           ),
+        const SizedBox(height: 8),
+        // The two most-changed bar attributes, editable in place — no need to
+        // open "Change from here…" for the common case. They anchor at this
+        // element's bar and apply on selection, exactly like the dialog.
+        _changeRow<KeySignature>(
+          label: l10n.workshopKey,
+          value: _doc.keyChanges[id],
+          items: {for (final f in _keyChoices) KeySignature(f): _keyLabel(f)},
+          noChange: l10n.workshopNoChange,
+          onChanged: (v) => setState(() => _doc.setKeyChangeAt(id, v)),
+        ),
+        _changeRow<TimeSignature>(
+          label: l10n.workshopTimeSignature,
+          value: _doc.timeChanges[id],
+          items: _timeChoices,
+          noChange: l10n.workshopNoChange,
+          onChanged: (v) => setState(() => _doc.setTimeChangeAt(id, v)),
+        ),
         const SizedBox(height: 4),
         Align(
           alignment: Alignment.centerLeft,
+          // The rest — clef, mid-bar clef, tempo, volta, navigation — stay in
+          // the fuller dialog.
           child: TextButton.icon(
             icon: const Icon(Icons.edit_outlined, size: 18),
             label: Text(l10n.workshopChangeHere),
