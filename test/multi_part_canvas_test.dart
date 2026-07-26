@@ -70,4 +70,26 @@ void main() {
     // The onElementTap wiring is present (screen feeds it to selectByGlobalId).
     expect(view.onElementTap, isNull); // not wired in this bare harness
   });
+
+  testWidgets('forwards showNoteOctaves to the full-score view',
+      (tester) async {
+    await useGameSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MultiPartCanvas(
+            document: _twoParts(),
+            showNoteNames: true,
+            showNoteOctaves: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final view = tester.widget<InteractiveMultiPartView>(
+      find.byType(InteractiveMultiPartView),
+    );
+    expect(view.showNoteNames, isTrue);
+    expect(view.showNoteOctaves, isTrue);
+  });
 }

@@ -39,6 +39,7 @@ class MultiPartCanvas extends StatefulWidget {
     this.showEndCaret = false,
     this.showMeasureNumbers = false,
     this.showNoteNames = false,
+    this.showNoteOctaves = false,
     this.noteNameStyle = NoteNameStyle.letter,
     this.staffSpace = 11,
   });
@@ -108,6 +109,9 @@ class MultiPartCanvas extends StatefulWidget {
 
   /// Whether to draw each note's name below its staff, in [noteNameStyle].
   final bool showNoteNames;
+
+  /// Whether the name overlay also carries the octave (e.g. F2).
+  final bool showNoteOctaves;
   final NoteNameStyle noteNameStyle;
 
   /// Pixels per staff space (zoom).
@@ -254,6 +258,7 @@ class _MultiPartCanvasState extends State<MultiPartCanvas> {
                           caret: widget.caret,
                           showMeasureNumbers: widget.showMeasureNumbers,
                           showNoteNames: widget.showNoteNames,
+                          showNoteOctaves: widget.showNoteOctaves,
                           noteNameStyle: widget.noteNameStyle,
                         ),
                         if (widget.showEndCaret && widget.controller != null)

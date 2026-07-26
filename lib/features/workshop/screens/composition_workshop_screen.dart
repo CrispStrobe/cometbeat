@@ -4272,6 +4272,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                                               !_doc.isEmpty,
                                       showMeasureNumbers: _barNumbers,
                                       showNoteNames: _noteNames,
+                                      // Note names carry their octave (F2) in
+                                      // the editor, where exact pitch matters.
+                                      showNoteOctaves: _noteNames,
                                       noteNameStyle: _noteNameStyle,
                                     ),
                                     if (_inspect && _hoverInfo != null)

@@ -29,6 +29,26 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-octave)** · ✅ **SHIPPED (idle) — Workshop note names carry their
+  octave (F2).** Taking over the (now-idle) codex `score-editor-web` backlog — most
+  of it is already shipped by the score-fixes effort; the one genuinely-open,
+  verified item was that the note-name overlay spelled bare letters (C, F#) with no
+  octave. crisp_notation now has an opt-in **`showNoteOctaves`** (`crisp_notation@d0fc67b`,
+  pushed + shared clone fast-forwarded) threaded parallel to `showNoteNames` through
+  every layout entry point + the interactive/render views; it appends the scientific
+  octave (middle C = C4) after any accidental, OFF by default so the note-reading
+  games stay bare-letter. App side: the **multi-part** Workshop path
+  (`MultiPartCanvas` → `InteractiveMultiPartView`) now passes `showNoteOctaves:
+  _noteNames`, so names show octaves there too; the single-part overlay painter
+  already used `spelledMidiNameWith(withOctave: true)`, so it was already correct.
+  ⚠️ **touched hot shared `composition_workshop_screen.dart`** additively (one
+  param at the canvas site) + `multi_part_canvas.dart`. Tests: crisp_notation overlay
+  (octave with accidentals / off-by-default) + app canvas forwards the flag; whole
+  suites green (workshop 84, crisp_notation layout 142). ⚠️ note: the shared
+  `../crisp_notation` clone carries another agent's pubspec WIP — my fast-forward
+  left it untouched (incoming commits don't touch pubspec). Worktree
+  `../mus-note-octave`.
+
 - **opus (daw-suite)** · 🚧 **ACTIVE — Audio Editor → swiss-army knife.**
   Worktree `../mus-daw-suite` (`feature/daw-suite`). Maintainer ask: the full
   DSP bag of tricks, **every op in the GUI *and* the CLI**, plus five-mode
