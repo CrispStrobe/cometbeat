@@ -393,6 +393,36 @@ const List<double> _oplMultTable = <double>[
   0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15, //
 ];
 
+/// Evaluates one of the four OPL2 operator waveforms (register 0xE0 range, 2
+/// bits per operator) at [phase] radians. The OPL2 waveform-select values are:
+///
+///   0 = full sine          sin(p)
+///   1 = half sine          sin(p) for the positive half, 0 for the negative
+///   2 = absolute sine      |sin(p)|  (full-wave rectified — two humps/period)
+///   3 = quarter/pulse sine |sin(p)| during the rising quarter of each hump,
+///                          0 during the falling quarter
+///
+/// [phase] may be any real value; it is reduced into [0, 2π) internally.
+double _oplWaveform(int select, double phase) {
+  const twoPi = 2 * math.pi;
+  var p = phase % twoPi;
+  if (p < 0) p += twoPi;
+  switch (select & 0x03) {
+    case 1: // half sine
+      return p < math.pi ? math.sin(p) : 0.0;
+    case 2: // absolute sine
+      return math.sin(p).abs();
+    case 3: // quarter / pulse sine
+      // Four quadrants of π/2. Quadrants 0 and 2 (the rising quarters of each
+      // rectified hump) pass |sin|; quadrants 1 and 3 are silent.
+      final quadrant = (p / (math.pi / 2)).floor();
+      return (quadrant == 0 || quadrant == 2) ? math.sin(p).abs() : 0.0;
+    case 0:
+    default: // full sine
+      return math.sin(p);
+  }
+}
+
 /// The synthesized buffer spans this many cycles of the base (unit) frequency.
 /// It is even so that a 0.5× OPL multiple still yields a whole number of
 /// oscillator cycles across the buffer, guaranteeing a seamless loop.
@@ -406,23 +436,39 @@ const double _adlibMaxModIndex = 4.0;
 /// FM instrument to normalized PCM in [-1, 1], so the ordinary S3M sample path
 /// can sound a type-2 instrument.
 ///
-/// This is NOT a cycle-exact OPL2/OPL3 emulator. It captures only the static
-/// FM timbre: a carrier phase-modulated by a single modulator,
+/// This is NOT a cycle-exact OPL2/OPL3 emulator. It captures the static
+/// 2-operator timbre only. In FM (connection=0) mode a carrier operator is
+/// phase-modulated by a single modulator operator,
 ///
-///   carrier(t) = sin(2π·fc·t + I·sin(2π·fm·t + fb·prev))
+///   carrier(t) = W_c(2π·fc·t + I·W_m(2π·fm·t + fb·prev))
 ///
-/// where `fc`/`fm` are the carrier/modulator OPL frequency multiples, `I` is a
-/// modulation index derived from the modulator's total-level attenuation, and
-/// `fb` is a small feedback term applied to the modulator when the patch's
-/// feedback field is non-zero. Envelopes (attack/decay/sustain/release),
-/// key-scaling, vibrato/tremolo, the waveform-select registers, and the
-/// additive (connection=1) topology are all ignored — the result is a single
-/// sustained FM tone, not the chip's actual output.
+/// and in additive (connection=1) mode the two operators sound independently
+/// and are summed,
+///
+///   out(t) = W_c(2π·fc·t) + A_m·W_m(2π·fm·t + fb·prev)
+///
+/// where `fc`/`fm` are the carrier/modulator OPL frequency multiples, `W_c`/`W_m`
+/// are the per-operator OPL2 waveform-select shapes (sine / half-sine /
+/// abs-sine / quarter-sine, see [_oplWaveform]), `I` is a modulation index
+/// derived from the modulator's total-level attenuation, `A_m` is the
+/// modulator's linear amplitude, and `fb` is a small feedback term applied to
+/// the modulator when the patch's feedback field is non-zero.
+///
+/// Registers honored: MULT (bytes 0/1 low nibble), modulator total-level
+/// (byte 2), waveform-select (bytes 8/9, register 0xE0 range — 2 bits each),
+/// and the feedback + connection field (byte 10 — bit 0 = connection, bits 1..3
+/// = feedback). Per-note envelopes (attack/decay/sustain/release), key-scaling,
+/// and vibrato/tremolo are still ignored: this static-PCM approach renders one
+/// sustained, looped period and CANNOT reproduce dynamic ADSR envelopes. A full
+/// dynamic per-note OPL voice (and a cycle-exact chip emulation) is a documented
+/// larger follow-up; the output here remains a timbre approximation, not the
+/// chip's actual sample stream.
 ///
 /// [adlibData] is the standard 12-byte SBI-style register block (header
 /// 0x10..0x1B): modulator/carrier characteristic (MULT in the low nibble) at
-/// 0/1, KSL+total-level at 2/3, attack/decay 4/5, sustain/release 6/7, waveform
-/// 8/9, and feedback/connection at 10.
+/// 0/1, KSL+total-level at 2/3, attack/decay 4/5, sustain/release 6/7,
+/// waveform-select at 8/9 (modulator/carrier, low 2 bits used), and
+/// feedback/connection at 10.
 ///
 /// Tuning: the buffer holds [_adlibBaseCycles] cycles of the base frequency, so
 /// looping it produces a tone at the base frequency and PITCH TRACKS THE PLAYED
@@ -439,6 +485,13 @@ Float64List synthesizeAdlibWaveform(List<int> adlibData, {int samples = 2048}) {
   final modMult = _oplMultTable[adlibData[0] & 0x0F];
   final carMult = _oplMultTable[adlibData[1] & 0x0F];
   final modTotalLevel = adlibData[2] & 0x3F; // 0 = loudest .. 63 = silent
+  // Waveform-select (register 0xE0 range): low 2 bits of bytes 8/9 pick one of
+  // the four OPL2 operator shapes for the modulator and carrier respectively.
+  final modWave = adlibData[8] & 0x03;
+  final carWave = adlibData[9] & 0x03;
+  // Byte 10 (register 0xC0): bit 0 = connection (0 = FM, 1 = additive),
+  // bits 1..3 = feedback strength.
+  final connection = adlibData[10] & 0x01;
   final feedbackField = (adlibData[10] >> 1) & 0x07; // 0..7
 
   // Modulator amplitude (linear) from its total-level attenuation. OPL total
@@ -464,7 +517,7 @@ Float64List synthesizeAdlibWaveform(List<int> adlibData, {int samples = 2048}) {
     for (var pass = 0; pass < 2; pass++) {
       for (var i = 0; i < samples; i++) {
         final phase = twoPi * modCycles * i / samples + feedback * modPrev;
-        modPrev = math.sin(phase);
+        modPrev = _oplWaveform(modWave, phase);
       }
     }
   }
@@ -474,11 +527,21 @@ Float64List synthesizeAdlibWaveform(List<int> adlibData, {int samples = 2048}) {
   for (var i = 0; i < samples; i++) {
     final ph = i / samples;
     final modPhase = twoPi * modCycles * ph + feedback * modPrev;
-    final mod = math.sin(modPhase);
+    final mod = _oplWaveform(modWave, modPhase);
     modPrev = mod;
-    final car = math.sin(twoPi * carCycles * ph + modIndex * mod);
-    out[i] = car;
-    final a = car.abs();
+    final double v;
+    if (connection == 1) {
+      // Additive: both operators sound independently and are summed. The
+      // modulator's level scales its contribution; final normalization below
+      // rescales the mix to full range.
+      final car = _oplWaveform(carWave, twoPi * carCycles * ph);
+      v = car + modAmp * mod;
+    } else {
+      // FM (phase modulation): the modulator deviates the carrier's phase.
+      v = _oplWaveform(carWave, twoPi * carCycles * ph + modIndex * mod);
+    }
+    out[i] = v;
+    final a = v.abs();
     if (a > peak) peak = a;
   }
 
