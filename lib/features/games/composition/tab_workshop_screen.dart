@@ -7,8 +7,6 @@ import 'package:comet_beat/core/audio/loop_engine.dart'
     show LoopTiming, PatternCell, kPatternSteps;
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
-import 'package:comet_beat/core/audio/score_instrument_render.dart'
-    show renderMultiPartWithInstrument;
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
@@ -24,6 +22,7 @@ import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart';
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
+import 'package:comet_beat/features/games/composition/tab_fx.dart';
 import 'package:comet_beat/features/games/composition/tab_labeler.dart';
 import 'package:comet_beat/features/games/composition/tab_mic_capture.dart';
 import 'package:comet_beat/features/games/composition/tab_patterns.dart';
@@ -565,10 +564,14 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   void _renderAndPlayWith(TrackerInstrument inst) {
     final quarterMs = (60000 / (_bpm <= 0 ? 120 : _bpm)).round();
-    final pcm = renderMultiPartWithInstrument(
-      _bandScore(),
+    // A6: renders per track and applies each track's own FX chain. With no
+    // chains anywhere it takes the same single-pass path as before, so an
+    // effect-free tab still sounds byte-identical.
+    final pcm = renderTabBandWithFx(
+      _tracks,
       inst,
       quarterMs: quarterMs,
+      capo: _capo,
     );
     if (pcm.isEmpty) return;
     var peak = 0.0;

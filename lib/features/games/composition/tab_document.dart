@@ -7,6 +7,7 @@
 //
 // Pure Dart (no Flutter) so the whole model is unit-testable.
 
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -283,7 +284,24 @@ class TabTrack {
   TabDocument doc;
   bool muted;
   bool soloed;
-  TabTrack(this.name, this.doc, {this.muted = false, this.soloed = false});
+
+  /// A6 — this track's insert chain in the shared [FxSpec] model (the same
+  /// effects the Audio Editor, Tracker, Loop Studio and Instrument Builder
+  /// use). Empty = dry, and an all-empty band renders byte-identically to
+  /// before effects existed here.
+  ///
+  /// Per TRACK, not per band: in a two-guitar tab the rhythm part wants crunch
+  /// while the lead wants fuzz. Applied by `renderTabBandWithFx` in
+  /// `tab_fx.dart`.
+  List<FxSpec> fxChain;
+
+  TabTrack(
+    this.name,
+    this.doc, {
+    this.muted = false,
+    this.soloed = false,
+    List<FxSpec>? fxChain,
+  }) : fxChain = fxChain ?? <FxSpec>[];
 }
 
 /// The tracks that should SOUND: if any track is soloed, only the soloed ones;

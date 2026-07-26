@@ -24,6 +24,8 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart';
+import 'package:comet_beat/core/audio/fx/fx_chain.dart';
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/loop_instrument_render.dart'
     show renderCellsWithInstrument;
 import 'package:comet_beat/core/audio/synth.dart';
@@ -35,6 +37,28 @@ import 'package:comet_beat/core/audio/wav_io.dart';
 
 /// An optional master send effect on the whole Loop Mixer output.
 enum LoopSend { none, reverb, delay }
+
+/// A5 — the two loop sends expressed in the shared [FxSpec] model, so a send
+/// authored here can travel to the Audio Editor, Tracker, Instrument Builder or
+/// Tab (and be tweaked or automated on the way).
+///
+/// Reproduces `_applySend`'s hardcoded params EXACTLY; `loop_send_fx_test.dart`
+/// asserts that sample-for-sample. [LoopSend.none] has no spec — an empty chain
+/// is dry.
+FxSpec? fxForLoopSend(LoopSend send) => switch (send) {
+      LoopSend.none => null,
+      // No 'decay' key: reverbFx falls back to roomSize when it is absent, and
+      // roomSize 0.6 / damping 0.4 are reverbFx's own defaults, which is what
+      // `reverbFx(f, mix: 0.28)` has always used.
+      LoopSend.reverb => const FxSpec(
+          type: FxType.reverb,
+          params: {'roomSize': 0.6, 'damping': 0.4, 'mix': 0.28},
+        ),
+      LoopSend.delay => const FxSpec(
+          type: FxType.delay,
+          params: {'delayMs': 300, 'feedback': 0.3, 'mix': 0.28},
+        ),
+    };
 
 /// The musical clock the patterns render against: [bars] bars of 4/4 on an
 /// eighth-note step grid (2 bars for the free vamp, 4 with a progression).
@@ -1772,6 +1796,16 @@ class LoopEngine {
   /// spec/share token). Different sends cache to different WAV keys.
   LoopSend send = LoopSend.none;
 
+  /// A5 — the master bus insert chain in the shared [FxSpec] model, i.e. the
+  /// same effects the Audio Editor, Tracker, Instrument Builder and Tab use.
+  ///
+  /// When non-empty this REPLACES [send], so a groove with no chain renders
+  /// through exactly the old two-preset path and stays byte-identical. Like
+  /// [send] and [masterFilter] it is a LIVE control outside the spec, so the
+  /// `KU1.` share token is untouched — but it is part of the cache key, so
+  /// changing it re-renders.
+  List<FxSpec> masterFxChain = <FxSpec>[];
+
   /// One-knob master filter (a live "make it sound produced" sweep, not
   /// persisted): −1 = full low-pass (dark/muffled, for a breakdown) … 0 = off …
   /// +1 = full high-pass (thin/opened-up, for a drop). Clamped on set.
@@ -1781,9 +1815,28 @@ class LoopEngine {
 
   // Cache-key suffix for the master bus (send + filter) — both are live controls
   // outside the spec, so the WAV cache must distinguish them.
-  String get _masterBusKey =>
-      (send == LoopSend.none ? '' : '#send:${send.name}') +
-      (_masterFilter == 0 ? '' : '#filt:${_masterFilter.toStringAsFixed(2)}');
+  String get _masterBusKey {
+    final fxHash = Object.hashAll([
+      for (final fx in masterFxChain) fx.cacheKey,
+    ]);
+    final fxKey = masterFxChain.isEmpty ? '' : '#fx:$fxHash';
+    return (send == LoopSend.none ? '' : '#send:${send.name}') +
+        fxKey +
+        (_masterFilter == 0 ? '' : '#filt:${_masterFilter.toStringAsFixed(2)}');
+  }
+
+  /// A5 test hook: the master-bus cache-key suffix. The send / FX chain /
+  /// filter are LIVE controls outside the spec, so if one of them failed to
+  /// reach this key a tweak would silently serve a stale WAV from cache — worth
+  /// asserting directly rather than inferring from rendered audio.
+  ///
+  /// (Named `...ForTest` rather than annotated `@visibleForTesting`: this file
+  /// is deliberately Flutter-free and `meta` is not a direct dependency.)
+  String get wavCacheKeySuffixForTest => _masterBusKey;
+
+  /// A5 test hook: the master-bus processing (send / FX chain / filter) applied
+  /// to one mixed loop buffer, including the two-copy seam warm-up.
+  Int16List applySendForTest(Int16List pcm) => _applySend(pcm);
 
   // The mix-bus cutoff for the current knob: a log sweep so the move feels even.
   Float64List _applyMasterFilter(Float64List f) {
@@ -1809,7 +1862,9 @@ class LoopEngine {
   /// Applies the [send] effect + the master filter to a mixed [pcm] via a
   /// Float64 round-trip.
   Int16List _applySend(Int16List pcm) {
-    if (send == LoopSend.none && _masterFilter == 0) return pcm;
+    if (send == LoopSend.none && masterFxChain.isEmpty && _masterFilter == 0) {
+      return pcm;
+    }
     final n = pcm.length;
     // Pre-roll one full loop: reverb/delay start with zero-initialized state and
     // truncate the tail at the buffer end, so a single-pass render is NOT the
@@ -1825,11 +1880,18 @@ class LoopEngine {
       f[i] = s;
       f[n + i] = s;
     }
-    var wet = switch (send) {
-      LoopSend.reverb => reverbFx(f, mix: 0.28),
-      LoopSend.delay => delayFx(f, delayMs: 300, feedback: 0.3, mix: 0.28),
-      LoopSend.none => f,
-    };
+    // A hand-built chain wins over the two presets. It runs on the SAME
+    // two-copy buffer, so an arbitrary chain inherits the periodic-steady-state
+    // guarantee above for free — that is why this is here and not around the
+    // call.
+    var wet = masterFxChain.isNotEmpty
+        ? applyFxChain(f, masterFxChain, kSampleRate)
+        : switch (send) {
+            LoopSend.reverb => reverbFx(f, mix: 0.28),
+            LoopSend.delay =>
+              delayFx(f, delayMs: 300, feedback: 0.3, mix: 0.28),
+            LoopSend.none => f,
+          };
     // The filter runs on the two-copy buffer too, so its state has converged by
     // the second copy — the seam stays click-free.
     wet = _applyMasterFilter(wet);
@@ -1847,7 +1909,9 @@ class LoopEngine {
   /// The two channels get independent effect state — a naturally decorrelated,
   /// wider tail — which is exactly right for a panned mix.
   Int16List _applySendStereo(Int16List interleaved) {
-    if (send == LoopSend.none && _masterFilter == 0) return interleaved;
+    if (send == LoopSend.none && masterFxChain.isEmpty && _masterFilter == 0) {
+      return interleaved;
+    }
     final frames = interleaved.length ~/ 2;
     final left = Int16List(frames);
     final right = Int16List(frames);
