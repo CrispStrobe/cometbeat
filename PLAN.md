@@ -685,19 +685,20 @@ Import/export is **DONE and at parity across native and web** (shipped
   and `ci.yml`'s `android-build` asserts the codec is actually inside the APK.
 
 ## Known constraints / follow-ups (not yet done)
-- **Tracker→editors sweep — 2 items handed to `daw-suite`** (2026-07-26; the sweep
-  itself is in [docs/HISTORY.md](docs/HISTORY.md)). Both live in the DAW/export
-  surface `daw-suite` is actively working, so they were handed off rather than
-  done, to avoid collisions:
-  - **DAW bounded-memory save (end-to-end).** The render core
-    `streamTimelineWav` / `dawTimelineLengthSamples` (`daw_timeline.dart`,
-    byte-identical, tested) is ready to plug into `showAudioExportSheet` for the
-    WAV / native-rate / 16-bit case so the actual *Save* stops calling
-    `bakeStereo()` and streams to disk. Needs the shared export-sheet to accept a
-    streaming producer.
-  - **Export dither.** Optional deterministic TPDF dither in `pcmFloatToWav`
-    (default off → byte-identical) plus a sheet toggle, for cleaner quiet/fade
-    exports. The soft-knee limiter is already applied in the DAW render.
+- **Tracker→editors sweep — 2 items handed to `daw-suite`** ✅ **BOTH DONE**
+  (2026-07-27, per maintainer; the sweep itself is in
+  [docs/HISTORY.md](docs/HISTORY.md)). They lived in the DAW/export surface, so
+  they were handed off to avoid collisions, then implemented additively:
+  - ✅ **DAW bounded-memory save (`6cc269ab`).** New web-safe `stream_save.dart`
+    seam (io/stub conditional import); `showAudioExportSheet` gained an optional
+    `WavStreamProducer`; `_exportAs` streams the WAV to disk via `streamTimelineWav`
+    → `streamBytesToFile` for the plain full-mix WAV / native-rate / 16-bit /
+    no-dither case (guarded on `!stem && !range && !normalize`), so *Save* stops
+    calling `bakeStereo()`+whole-file-in-RAM there. Web + every other choice fall
+    back to the in-memory bake (unchanged). Byte-identical output; seam-tested.
+  - ✅ **Export dither (`128eec8c`).** Optional deterministic (fixed-seed) TPDF
+    dither in `pcmFloatToWav` (default off → byte-identical) + a 'Dither' sheet
+    toggle (WAV only), threaded through `build`/`_exportAs`. +4 tests.
 - **Backing audio vs. mic (AEC):** see the dedicated section below — count-in
   metronome + optional backing (tiers 0/1) shipped; a Dart AEC core is the next
   step; a native full-duplex plugin is the production fix.
