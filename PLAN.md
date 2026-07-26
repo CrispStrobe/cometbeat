@@ -156,7 +156,7 @@ Studio tracks can open in Tracker, Score, Tab, or Audio; Score and Tab can feed
 pitched Loop Studio tracks; Audio can receive any mode as a clip and can return
 through transcription/analysis with documented losses.
 
-## Cross-mode FX + interop consolidation (PLANNED — `feature/fx-interop`)
+## Cross-mode FX + interop consolidation (SHIPPED — all 12 items, `feature/fx-interop`)
 
 **Why.** The five modes each grew their own FX vocabulary and their own
 converters over what is already *one* shared DSP library (`lib/core/audio/
@@ -344,6 +344,44 @@ order; A1 and B1/B2 unblock everything else.
   pitch slides").
   - Tests: widget test — the menu lists exactly the modes the bridge can reach
     from the current mode, and the report text renders.
+
+### D — finishing the interchangeability map (PLANNED, `feature/fx-interop`)
+
+C1–C4 built the matrix, but two edges are still second-class and one section of
+the Tracker roadmap below (§2 *Ecosystem Interchangeability*) is only half
+wired. All three are the same shape: a converter exists in ONE direction, so the
+reverse either does not exist or detours through a mode that distorts it.
+
+- **D1. Direct Tracker <-> Loop, symbolically.** Today the Loop Mixer's "Open in
+  Tracker" goes `Loop -> Score -> Tracker` (`trackerSongFromMultiPart`), and
+  C3's `tracker -> loop` edge goes via **Tab** — which fret-maps everything onto
+  six strings. That is fine for a guitar part and wrong for a piano or drum
+  channel. Add `lib/core/interop/loop_tracker.dart`:
+  `loopCellsFromTrackerChannel` / `trackerChannelFromLoopCells`, both symbolic
+  (a `PatternCell` run <-> a channel's cells), and repoint C3's two tracker/loop
+  edges at it.
+  - Both models are already a monophonic-per-step grid, so the only real work is
+    the grid ratio: a loop step is an eighth, a tracker row is
+    `1 / timing.stepsPerBeat` of a beat. Whole-number ratios are exact; anything
+    else quantizes and must say so.
+  - Tests: round-trip identity at matching grids; a 4-steps-per-beat tracker
+    song halving cleanly onto the loop grid; velocity and chords surviving;
+    the report naming the quantization when the ratio is not integral.
+
+- **D2. Tracker percussion -> DrumKit** (PLAN.md §2.2's missing half).
+  `beat_to_tracker.dart` already turns a `SharedBeat` into percussion channels;
+  nothing reads them back, so a beat edited in the Tracker cannot return to the
+  Drum Kit. Add `sharedBeatFromTrackerSong` in
+  `lib/core/interop/drum_tracker.dart` — the exact inverse, so round-trip
+  identity is a testable property rather than a hope.
+  - Tests: `beat -> song -> beat` is identity (rows, tempo, swing, per-drum
+    voices); a song with no percussion channel yields null rather than an empty
+    beat; a channel edited in the Tracker shows up in the returned rows.
+
+- **D3. §2.3 is already done** — `tab_tracker.dart` (C1) is exactly the
+  "translate plucked-string channels into Tab strings" item, and does it better
+  than the roadmap asked (one channel per string, so the mapping is native
+  rather than re-derived from pitch). Marked below.
 
 ### Collision policy for this arc
 
