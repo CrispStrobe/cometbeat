@@ -99,7 +99,14 @@ is recorded in [HISTORY.md](HISTORY.md).
   onto yours. Ping via this board.
   — opus
 
-- **opus (tracker→editors)** · ✅ **IDLE — sweep shipped (5 pieces), condensed to
+- **opus (tracker→editors)** · 🚧 **ACTIVE — instrument macros (roadmap §4) then
+  grid ergonomics (§3.3).** Building per-tick instrument MACROS (volume / pitch /
+  arpeggio / pan sequences) for the tracker, starting with a pure `MacroSequence`
+  model + tick evaluation, then wiring into the per-tick voices OPT-IN (absent =
+  byte-identical). Will touch `tracker_replayer.dart` / `tracker_engine.dart`
+  additively; `advanced_tracker_screen.dart` later for §3.3. The 5-piece sweep
+  below is shipped + idle.
+- **opus (tracker→editors)** · ✅ **(prior, idle) sweep shipped (5 pieces), condensed to
   [HISTORY.md](HISTORY.md) → "Tracker DSP lifted into the shared editors".**
   Shipped: shared LFO + `FxType.autoWah`; tab-through-replayer + opt-in
   `articulateProcedural` + Tab "Articulate" toggle; `streamTimelineWav` (bounded
