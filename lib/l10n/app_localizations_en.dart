@@ -1719,6 +1719,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Infinite mode — every loop a little different';
 
   @override
+  String get loopMixerMasterFx => 'Master effects';
+
+  @override
+  String get loopMixerMasterFxHint =>
+      'Effects on the whole mix. They run across the loop seam, so tails carry over instead of dropping out on the downbeat.';
+
+  @override
   String get loopMixerSend => 'Space effect (reverb / echo)';
 
   @override

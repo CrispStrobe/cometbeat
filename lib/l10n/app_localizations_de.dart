@@ -1725,6 +1725,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Endlos-Modus — jeder Loop ein bisschen anders';
 
   @override
+  String get loopMixerMasterFx => 'Master-Effekte';
+
+  @override
+  String get loopMixerMasterFxHint =>
+      'Effekte auf den ganzen Mix. Sie laufen über die Loop-Naht hinweg, Hallfahnen brechen also nicht auf der Eins ab.';
+
+  @override
   String get loopMixerSend => 'Raum-Effekt (Hall / Echo)';
 
   @override

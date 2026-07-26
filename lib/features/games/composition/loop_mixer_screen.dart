@@ -29,6 +29,7 @@ import 'package:comet_beat/core/audio/aec_capability.dart';
 import 'package:comet_beat/core/audio/aec_engine.dart';
 import 'package:comet_beat/core/audio/beat_capture.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/groove_capture.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/loop_reference.dart';
@@ -79,6 +80,7 @@ import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart'
     show showTutorial;
+import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/step_grid.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show Clef, HarmonicFunction, Score, StaffView, multiPartToMusicXml;
@@ -184,6 +186,12 @@ abstract interface class LoopMixerTester {
   /// The master send effect on the whole mix, and a setter.
   LoopSend get send;
   void setSend(LoopSend value);
+
+  /// E3 — the master bus insert chain in the shared [FxSpec] model. When
+  /// non-empty it takes over from [send] (see LoopEngine.masterFxChain), so
+  /// this is the "advanced" face of the same control.
+  List<FxSpec> get masterFxChain;
+  void setMasterFxChain(List<FxSpec> chain);
 
   /// One-knob master filter (−1 low-pass … 0 off … +1 high-pass).
   double get masterFilter;
@@ -509,6 +517,14 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void setSwing(double value) => _setSwing(value);
   @override
   LoopSend get send => _engine.send;
+  @override
+  List<FxSpec> get masterFxChain => _engine.masterFxChain;
+  @override
+  void setMasterFxChain(List<FxSpec> chain) {
+    setState(() => _engine.masterFxChain = chain);
+    _syncPlayback();
+  }
+
   @override
   void setSend(LoopSend value) => _setSend(value);
   @override
@@ -2756,6 +2772,59 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _syncPlayback();
   }
 
+  /// E3 — the master bus's insert chain, in the shared FX rack. The two
+  /// presets behind [LoopSend] stay as the quick path; this is everything else.
+  void _showMasterFxSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext)!;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: StatefulBuilder(
+              builder: (context, setSheetState) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.loopMixerMasterFx,
+                    style: Theme.of(sheetContext).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.loopMixerMasterFxHint,
+                    style: Theme.of(sheetContext).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(sheetContext).size.height * 0.5,
+                    ),
+                    child: SingleChildScrollView(
+                      child: FxRack(
+                        key: const ValueKey('loop-master-fx'),
+                        chain: _engine.masterFxChain,
+                        dense: true,
+                        onChanged: (next) {
+                          setMasterFxChain(next);
+                          setSheetState(() {});
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _setSend(LoopSend value) {
     if (value == _engine.send) return;
     setState(() => _engine.send = value);
@@ -3185,6 +3254,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             setSend(
               LoopSend.values[(send.index + 1) % LoopSend.values.length],
             );
+          case 'masterFx':
+            _showMasterFxSheet();
           case 'jam':
             toggleJam();
           case 'follow':
@@ -3224,6 +3295,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         PopupMenuItem<String>(
           value: 'send',
           child: Text('${l10n.loopMixerSend}: ${_sendLabel(l10n, send)}'),
+        ),
+        PopupMenuItem<String>(
+          value: 'masterFx',
+          child: Text(l10n.loopMixerMasterFx),
         ),
         CheckedPopupMenuItem<String>(
           value: 'jam',

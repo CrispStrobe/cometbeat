@@ -637,6 +637,8 @@
   "loopMixerSaveFailed": "Saving audio isn't available here",
   "loopMixerLoad": "Load",
   "loopMixerInfinite": "Infinite mode — every loop a little different",
+  "loopMixerMasterFx": "Master effects",
+  "loopMixerMasterFxHint": "Effects on the whole mix. They run across the loop seam, so tails carry over instead of dropping out on the downbeat.",
   "loopMixerSend": "Space effect (reverb / echo)",
   "loopMixerSing": "Sing a track!",
   "loopMixerSingAgain": "Sing your track again",

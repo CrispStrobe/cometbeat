@@ -3230,6 +3230,18 @@ abstract class AppLocalizations {
   /// **'Infinite mode — every loop a little different'**
   String get loopMixerInfinite;
 
+  /// No description provided for @loopMixerMasterFx.
+  ///
+  /// In en, this message translates to:
+  /// **'Master effects'**
+  String get loopMixerMasterFx;
+
+  /// No description provided for @loopMixerMasterFxHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects on the whole mix. They run across the loop seam, so tails carry over instead of dropping out on the downbeat.'**
+  String get loopMixerMasterFxHint;
+
   /// No description provided for @loopMixerSend.
   ///
   /// In en, this message translates to:
