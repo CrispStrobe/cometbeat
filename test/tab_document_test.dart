@@ -1135,4 +1135,73 @@ void main() {
       expect(doc.toScore().measures.first.voice2, isEmpty);
     });
   });
+
+  group('D1–D4 — tracks, mixer, drum-tab, practice', () {
+    test('D1/D2 a track carries instrument/capo/volume/pan + defaults', () {
+      final t = TabTrack('Lead', TabDocument.blank(Tuning.standardGuitar));
+      // defaults
+      expect(t.instrument, isNull);
+      expect(t.capo, 0);
+      expect(t.volume, 1.0);
+      expect(t.pan, 0.0);
+      expect(t.isDrums, isFalse);
+      final bass = TabTrack(
+        'Bass',
+        TabDocument.blank(Tuning.standardBass),
+        instrument: 33, // GM finger bass
+        capo: 2,
+        volume: 0.8,
+        pan: -0.5,
+      );
+      expect(bass.instrument, 33);
+      expect(bass.capo, 2);
+      expect(bass.pan, -0.5);
+    });
+
+    test('D3 drum lines map to GM percussion notes', () {
+      expect(drumMidiForLine(kDrumLines.length - 1), 36); // Kick, bottom
+      expect(kDrumLines.map((e) => e.$1), contains('Snare'));
+      expect(drumMidiForLine(-1), isNull);
+      expect(drumMidiForLine(99), isNull);
+    });
+
+    test('D3 toDrumScore emits percussion notes on the drum clef', () {
+      // Kick (bottom line) + Snare on two quarters.
+      final kick = kDrumLines.length - 1;
+      final snare = kDrumLines.indexWhere((e) => e.$1 == 'Snare');
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar, // 6 lines is enough for these two
+        columns: [
+          TabColumn(frets: {kick: 1}),
+          TabColumn(frets: {snare: 1}),
+        ],
+      );
+      final score = doc.toDrumScore();
+      expect(score.clef, Clef.percussion);
+      expect(score.metadata.isPercussion, isTrue);
+      final notes =
+          score.measures.expand((m) => m.elements).whereType<NoteElement>();
+      expect(notes.first.pitches.single.midiNumber, 36); // kick
+      expect(notes.last.pitches.single.midiNumber, 38); // snare
+    });
+
+    test('D4 speed-trainer ramps and always lands on the target', () {
+      final t = speedTrainerTempos(baseBpm: 120, stepPct: 20);
+      expect(t.first, 72); // 60% of 120
+      expect(t.last, 120); // 100% target
+      expect(t, [72, 96, 120]);
+      // a non-dividing step still ends exactly on target
+      final t2 = speedTrainerTempos(baseBpm: 100, startPct: 50, stepPct: 30);
+      expect(t2.last, 100);
+    });
+
+    test('D4 LoopRange + metronome clicks are correct', () {
+      const loop = LoopRange(2, 4);
+      expect(loop.barCount, 3);
+      expect(loop.contains(3), isTrue);
+      expect(loop.contains(5), isFalse);
+      final clicks = metronomeClicksMs(bpm: 120); // 1 bar, 4 beats @500ms
+      expect(clicks, [0, 500, 1000, 1500]);
+    });
+  });
 }

@@ -298,7 +298,23 @@ parametric technique end-to-end.
   same bars as voice 1 and emitted as `Measure.voice2` (notes / rests / ties +
   string voicings; per-note techniques on voice 2 are a follow-up); `fromScore`
   reconstructs it via the arranger. Round-trip tested. **Phase C done.**
-- [ ] D1 … E2 — pending (scoped above)
+- [x] **D1** per-track instrument + capo — `TabTrack.instrument` (GM program) and
+  `TabTrack.capo` (per-track tuning already lives on the track's `doc`). Model +
+  tests. ⚠ playback voicing each track by its program + the toolbar edit UI are the
+  app-side follow-up.
+- [x] **D2** mixer — `TabTrack.volume` (0..1) + `TabTrack.pan` (−1..1) alongside
+  mute/solo. Model + tests. ⚠ the mixer sheet + pan/scale in playback are the
+  app-side follow-up (the `(midis,ms)` merge tuple carries no gain/pan yet).
+- [x] **D3** drum-tab — `TabTrack.isDrums`; `kDrumLines` (9 standard lines →
+  GM percussion notes) + `drumMidiForLine`; `TabDocument.toDrumScore()` engraves
+  each fretted line as its drum voice on the neutral percussion clef with
+  `isPercussion` metadata (→ GM channel 10 on export). Tests: line map + drum
+  score.
+- [x] **D4** practice tools — pure helpers: `LoopRange(startBar,endBar)`,
+  `speedTrainerTempos` (ramp start%→target%, always landing on target),
+  `metronomeClicksMs`. Tests on the helpers. ⚠ wiring them to the loop player +
+  UI is the app-side follow-up. **Phase D model done.**
+- [ ] E1 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

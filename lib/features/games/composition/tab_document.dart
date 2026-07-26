@@ -512,13 +512,96 @@ class TabTrack {
   /// `tab_fx.dart`.
   List<FxSpec> fxChain;
 
+  /// The General-MIDI program (0..127) this track sounds with (D1); null =
+  /// the app default. Carried into MIDI/GP export as the track's patch.
+  int? instrument;
+
+  /// A per-track capo (D1): raises this track's sounding pitch, fret numbers
+  /// unchanged (see [TabDocument.toScore]'s `capo`).
+  int capo;
+
+  /// Mixer volume 0..1 (D2), authored gain before the master mix.
+  double volume;
+
+  /// Mixer pan −1 (left) … 0 (centre) … +1 (right) (D2).
+  double pan;
+
+  /// A percussion / drum-tab track (D3): its lines map to drum voices, and
+  /// export marks the track as percussion (GM channel 10).
+  bool isDrums;
+
   TabTrack(
     this.name,
     this.doc, {
     this.muted = false,
     this.soloed = false,
     List<FxSpec>? fxChain,
+    this.instrument,
+    this.capo = 0,
+    this.volume = 1.0,
+    this.pan = 0.0,
+    this.isDrums = false,
   }) : fxChain = fxChain ?? <FxSpec>[];
+}
+
+/// Standard drum-tab lines (D3), top → bottom, each mapped to its General-MIDI
+/// percussion note (GM channel-10 key numbers). A drum [TabTrack]'s tuning has
+/// one string per line; a mark on line _i_ sounds `kDrumLines[i].$2`.
+const List<(String, int)> kDrumLines = [
+  ('Crash', 49),
+  ('Ride', 51),
+  ('Hi-hat', 42),
+  ('Open hat', 46),
+  ('Tom hi', 48),
+  ('Tom mid', 45),
+  ('Tom low', 41),
+  ('Snare', 38),
+  ('Kick', 36),
+];
+
+/// The GM percussion note for drum-tab line [line] (0 = top), or null if out of
+/// range. Used to voice a drum [TabTrack] and to build its export.
+int? drumMidiForLine(int line) =>
+    (line >= 0 && line < kDrumLines.length) ? kDrumLines[line].$2 : null;
+
+/// A bar range to loop while practising (D4), inclusive `[startBar, endBar]`.
+class LoopRange {
+  final int startBar;
+  final int endBar;
+  const LoopRange(this.startBar, this.endBar);
+
+  bool contains(int bar) => bar >= startBar && bar <= endBar;
+  int get barCount => endBar - startBar + 1;
+}
+
+/// The speed-trainer tempo ramp (D4): starting at [startPct] of [baseBpm],
+/// rising by [stepPct] each loop until [targetPct] (inclusive, always landing
+/// exactly on the target). Pure; the UI drives a loop player with these BPMs.
+List<int> speedTrainerTempos({
+  required int baseBpm,
+  double startPct = 60,
+  double stepPct = 10,
+  double targetPct = 100,
+}) {
+  final target = (baseBpm * targetPct / 100).round();
+  if (stepPct <= 0 || startPct > targetPct) return [target];
+  final out = <int>[];
+  for (var pct = startPct; pct <= targetPct + 1e-9; pct += stepPct) {
+    out.add((baseBpm * pct / 100).round());
+  }
+  if (out.isEmpty || out.last != target) out.add(target);
+  return out;
+}
+
+/// The metronome click times in ms (D4) for [bars] bars of [beatsPerBar] at
+/// [bpm] — one entry per beat from 0. Pure; the click player reads it.
+List<int> metronomeClicksMs({
+  required int bpm,
+  int beatsPerBar = 4,
+  int bars = 1,
+}) {
+  final beatMs = 60000 / bpm;
+  return [for (var b = 0; b < beatsPerBar * bars; b++) (b * beatMs).round()];
 }
 
 /// The tracks that should SOUND: if any track is soloed, only the soloed ones;
@@ -1125,6 +1208,57 @@ class TabDocument {
       glissandos: glissandos,
       vibratos: vibratos,
       annotations: annotations,
+    );
+  }
+
+  /// A percussion [Score] (D3): each fretted string is read as a drum-tab LINE
+  /// (via [drumMidiForLine]) rather than a pitched fret, engraved on the neutral
+  /// percussion clef and flagged `isPercussion` so export routes it to GM
+  /// channel 10. Tiling + rests match [toScore]; the fret value is ignored (a
+  /// mark on a line is just a hit).
+  Score toDrumScore() {
+    final measures = <Measure>[];
+    var bar = <MusicElement>[];
+    var steps = 0.0;
+    for (var c = 0; c < columns.length; c++) {
+      final col = columns[c];
+      final s = _scaledStepsOf(col);
+      if (steps > 0 && steps + s > barCapacity + 1e-6) {
+        measures.add(Measure(bar));
+        bar = <MusicElement>[];
+        steps = 0;
+      }
+      if (col.isEmpty) {
+        bar.add(RestElement(col.duration));
+      } else {
+        final lines = col.frets.keys.toList()..sort();
+        final notes = [
+          for (final line in lines)
+            if (drumMidiForLine(line) case final int m) m,
+        ];
+        if (notes.isEmpty) {
+          bar.add(RestElement(col.duration));
+        } else {
+          bar.add(
+            NoteElement(
+              pitches: [for (final m in notes) pitchFromMidi(m)],
+              duration: col.duration,
+              id: 'd$c',
+            ),
+          );
+        }
+      }
+      steps += s;
+    }
+    if (bar.isNotEmpty) measures.add(Measure(bar));
+    if (measures.isEmpty) {
+      measures.add(const Measure([RestElement(NoteDuration.whole)]));
+    }
+    return Score(
+      clef: Clef.percussion,
+      timeSignature: timeSignature,
+      measures: measures,
+      metadata: const ScoreMetadata(instrument: 'Drums', isPercussion: true),
     );
   }
 
