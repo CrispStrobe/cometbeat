@@ -263,18 +263,38 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-omr-trial)** · 🚧 **ACTIVE — the Audiveris trial (authorised).**
-  Maintainer said do it. **And it needs no attestation gate after all:** the Dotzauer
-  cello etudes exist as PD **Internet Archive** scans of the same prints
-  (`imslp-cello-etudes-op175-dotzauer-friedrich`, `imslp-etudes-op123-…`), which are
-  ungated — so no bot check, no consent grey area, and one gentle single-file
-  download instead of a crawl. Plan: fetch ONE etude PDF, install Audiveris from its
-  GitHub release (⚠ root volume has ~3 GiB free — install under the session
-  scratchpad and delete after), run it with the fingering-digits topic on a couple of
-  pages, and measure whether printed fingerings come out of the MusicXML at all. If
-  they do, the same pages become the first REAL cello gold set beyond the 193 CC0
-  labels. Throwaway tooling; the measurement is the deliverable.
-  Worktree `../mus-cello-fingering`.
+- **opus (cello-omr-trial)** · 🔬 **TRIAL DONE (measured) — Audiveris DOES recover
+  printed cello fingerings, at low recall, with detectable errors.** Ran Audiveris
+  5.11 over one page of a PD 19th-c. Dotzauer Op.175 print (a PD Internet Archive
+  scan — **no attestation gate needed**, so no consent question arose after all),
+  300 dpi, `fingerings` topic on. Result: **482 notes, 4 fingerings exported** as
+  real `<fingering placement="above">2</fingering>` MusicXML; the page prints roughly
+  15–25 fingerings (counted by eye — this edition fingers sparingly), so **recall
+  ≈20%**. Stable across two configurations.
+  **Precision is visibly imperfect and the failure is diagnosable:** one of the four
+  is `finger 0` on F♯4, which no cello open string can sound — the page is full of
+  small harmonic circles and the classifier reads them as a fingering `0`.
+  **Useful consequence: our own geometry is a label validator.** The arranger knows
+  what is reachable, so an impossible label is rejected automatically — that one was.
+  On the 3 plausible labels the arranger agreed with the editor once; both
+  disagreements are the documented phenomenon (the editor avoids the open A and the
+  open D mid-phrase for timbre, where we take the open string). N=3 is an anecdote,
+  NOT a number to tune on, and it is recorded as a qualitative signal only.
+  **Configuration findings for whoever repeats this** (each cost real time): the
+  constant key is `org.audiveris.omr.sheet.ProcessingSwitches.fingerings` (ConstantSet
+  derives its unit from `getDeclaringClass()`); book files only serialise book-level
+  overrides, so a switch set via `-constant` correctly leaves no trace in `book.xml`;
+  OCR needs `TESSDATA_PREFIX` pointing AT the tessdata dir or Audiveris registers
+  languages as `tessdata/eng` and rejects `eng`; and with OCR active the CURVES step
+  blows the 120 s per-step limit, so raise `org.audiveris.omr.Main.sheetStepTimeOut`.
+  ⚠ **Audiveris is AGPL-3.0** — fine as an offline label-generation tool (its output
+  is not a derivative work), never bundled into the app.
+  **⇒ Verdict for item 2:** a bulk run would yield a modest, geometry-validated label
+  set at ~20% recall — perhaps a few hundred labels from a handful of etude books,
+  against the 193 we already have. That is worth doing only if the maintainer wants
+  the HMM path; it will not reach the thousands a neural emission model needs.
+  Recommend closing item 3 regardless. Install removed after the trial (162 MB app +
+  81 MB dmg deleted; root volume was at 3 GiB free).
 
 - **opus (cello-omr-spike)** · 🔬 **SPIKE DONE (throwaway, measured) — item 2 must
   NOT be built in-house; it needs Audiveris + real scans, or it is closed.** Three
