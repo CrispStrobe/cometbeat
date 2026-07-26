@@ -7,6 +7,78 @@ changelog it graduated from.
 
 ## Progression
 
+## Audio codecs — native + web at parity (2026-07-26)
+
+Completed `GLINT_ENCODER_HANDOVER.md` (now deleted) and then kept pulling the
+thread. Canonical per-platform table:
+[AUDIO_CODEC_MATRIX.md](AUDIO_CODEC_MATRIX.md).
+
+**Result.** Both platforms read WAV, AIFF, MP3, AAC, FLAC, Ogg-Vorbis and
+Ogg-Opus; both write WAV, MP3, AAC and Opus. MP3 has two selectable encoders
+(our Dart port, default; glint's native one). FLAC/Vorbis stay decode-only —
+glint ships no encoder for either.
+
+**Native.** Vendored glint's encode closure into `native/glint` and wired it on
+all five platforms. Two decisions worth remembering: took **all three codecs**
+rather than Opus-only (MP3+AAC cost only +268 KB, and stubbing them would leave
+`encode(format: mp3)` silently returning null); and took `opus_c_api.cpp`
+**verbatim** even though it drags the Opus+SILK decoder in (+97 KB), because a
+hand-copied `glint_opus_encode_file` would be a fork of glint's muxing logic
+that drifts silently into subtly wrong `.opus` files. This plugin forks no glint
+codec logic, which is what makes re-running `sync_glint.sh` always safe — and
+the script now GENERATES the CMake source list and the Apple forwarders, so a
+vendored-but-unlisted source can't become a link error one platform finds days
+later. `glint_free` was verified, not assumed (glint's real definition is
+exactly `std::free`, every buffer is `malloc`'d) — the handover had flagged it
+as a heap-corruption risk.
+
+**Web.** The shipped `glint.wasm` had exported the FULL codec surface all along
+(`_glint_encode_audio`, `_glint_decode_audio`) while only `_glint_vorbis_decode`
+was wired to Dart — we shipped the capability and hid ~5/6 of it. Exposed via
+`web/glint/glint_codec_web.js` at **zero extra download** (same module the
+Vorbis shim already loads).
+
+**Three asymmetries closed**, each invisible until someone looked: `.opus` was
+write-only (an Opus file passed the picker, missed every branch and returned
+null — you could export a mix and not reopen it); AAC was write-only on native
+while web could read it; FLAC didn't import on web at all. Ogg containers are
+now disambiguated properly (Opus before Vorbis; ADTS before MP3, since both
+start `0xFF` and the loose MP3 sync scan also matches an ADTS header).
+
+**A readiness bug, one new and one old.** The wasm loads lazily, so until it
+resolves every glint-backed decoder returns null and an import fails looking
+like corruption. Nothing awaited it — and `ensureGlintVorbisReady()` had existed
+since the `.sf3` work and was called from **nowhere**, so compressed SoundFonts
+were quietly broken on web too. Fixed by making the await impossible to forget:
+`importAudioAsync` / `importAudioMonoAsync` / `loadSoundFontAsync`.
+
+**Windows was genuinely broken.** MSVC's `<cmath>` doesn't define `M_PI` without
+`_USE_MATH_DEFINES` and five vendored files use it. Reproduced exactly under a
+strict-ANSI cross-compile, fixed in `src/CMakeLists.txt` rather than in the
+sources (`sync_glint.sh` would overwrite those), and confirmed on a real MSVC
+CI run. CI then caught a second, self-inflicted one: `<windows.h>`'s `min`/`max`
+macros mangling `std::min`, fixed with `NOMINMAX`.
+
+**Two blockers in the separate CrispEmbed repo** were fixed to get mobile
+building: a Gradle-9-removed `Project.exec()` call, and an iOS-15 podspec against
+an app targeting 13 (raised to 15 — iOS 15 runs on the same devices as 13, so no
+hardware dropped). Plus an `onnxruntime` `compileSdk 33` pin. **The app's Android
+build works for the first time** and is CI-guarded.
+
+**Verification.** New `.github/workflows/glint-native.yml` builds the library and
+runs the round-trip tests on Linux/macOS/**Windows**, runs the wasm suite under
+node, and builds an example app on all five platforms; `ci.yml` gained an
+`android-build` job that asserts `libglint_vorbis.so` is actually inside the APK
+and a Chrome run for the web seams. Test ladder:
+`native/glint/test/encode_roundtrip_test.cpp` · `web/glint/codec_roundtrip_test.mjs` ·
+`test/audio_import_opus_test.dart` · `test/audio_export_format_test.dart` ·
+`test/web/audio_codec_web_test.dart` · `integration_test/glint_encoder_test.dart`.
+
+**Follow-up scoped, not started:** a clean-room Vorbis ENCODER, whose only real
+use is writing `.sf3`. Handover in the glint repo
+(`docs/VORBIS_ENCODER_HANDOVER.md`); the fact that makes it viable is that
+Vorbis transmits its codebooks in the setup header, so an encoder ships its own.
+
 ## DAW & Score-Workshop UX pass (2026-07-25)
 
 A sweep across the authoring surfaces (Audio Editor, Score Workshop, Sound

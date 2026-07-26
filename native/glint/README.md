@@ -13,10 +13,17 @@ suite into the CometBeat app. Two halves:
 
 Buffers from both halves are released with `glint_free`.
 
-**Web runs the same C code** compiled to wasm — see `web/glint/`. Keeping the
-two in step is the point: for a while native could WRITE AAC but not read it
-back, while the wasm build could do both, so an export was unopenable on the
-platform that made it.
+**Web runs the same C code** compiled to wasm — see
+[`../../web/glint/README.md`](../../web/glint/README.md). Keeping the two in step
+is the point: for a while native could WRITE AAC but not read it back, while the
+wasm build could do both, so an export was unopenable on the platform that made
+it.
+
+**Canonical per-platform table:**
+[`../../docs/AUDIO_CODEC_MATRIX.md`](../../docs/AUDIO_CODEC_MATRIX.md) — read
+that for what the app can actually read and write, and which entry point serves
+each format. Note MP3 is the one format with two encoders (this one and the
+pure-Dart writer), selectable in the export sheet; the Dart one is the default.
 
 > The package name is historical — it predates the FLAC and encode sets.
 > Renaming it would churn five platform manifests for no functional gain.
@@ -78,9 +85,13 @@ always decodes at 48 kHz), that hard-panned stereo neither collapses nor swaps,
 that MP3/AAC streams carry valid MPEG/ADTS sync, that malformed input is
 rejected rather than crashed on, and that 250 encode/free cycles don't grow RSS.
 
-The Dart side: `test/audio_export_format_test.dart` (gating logic, headless) and
-`integration_test/glint_encoder_test.dart` (the live symbol + round-trip against
-a real app build).
+The Dart side: `test/audio_export_format_test.dart` (gating + which MP3 encoder
+each request reaches), `test/audio_import_opus_test.dart` (container detection
+and import routing), `test/web/audio_codec_web_test.dart` (the web seams, under
+Chrome) and `integration_test/glint_encoder_test.dart` (the live symbol +
+round-trip against a real app build).
+
+CI runs all of it: `.github/workflows/glint-native.yml`.
 
 ## Verification status
 

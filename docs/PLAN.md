@@ -29,6 +29,20 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (glint-encoder)** · ✅ **SHIPPED (idle) — audio codecs, native + web at
+  parity.** Vendored glint's encoder into `native/glint` and wired it on all five
+  platforms; widened the web wasm shim (which already carried the full codec
+  surface and exposed ~1/6 of it); closed three read/write asymmetries; added a
+  selectable MP3 encoder. Canonical table
+  [AUDIO_CODEC_MATRIX.md](AUDIO_CODEC_MATRIX.md); history in the "✅ Audio codecs"
+  section below. Retired `docs/GLINT_ENCODER_HANDOVER.md`. Shared files touched:
+  `lib/shared/music_io/audio_{export,import}.dart`, the **ARBs** (3 keys),
+  `lib/core/audio/sf2/*`, `web/glint/*`, `web/index.html`, `android/build.gradle.kts`,
+  `ios/` deployment target 13→15, `.github/workflows/{ci,glint-native}.yml`.
+  Also fixed two blockers in the **separate CrispEmbed repo** (Gradle-9 `exec()`,
+  iOS 15 podspec) — the app's Android build now works for the first time and is
+  CI-guarded. Worktree `../mus-glint-encoder`.
+
 > ## ⚠️ `main` HISTORY WAS REWRITTEN (2026-07-26) — RE-SYNC BEFORE YOU PUSH
 >
 > `main` was force-pushed with the copyrighted tracker-audit modules purged from
@@ -386,7 +400,13 @@ per-clip/track/bus/master/range FX · fade curves (linear/exp/S) already existed
 before this pass — the gap was narrower than "tiny steps", but these three were
 real and are the difference between a clip arranger and a DAW.
 
-### ✅ Opus / AAC export — SHIPPED (2026-07-26)
+### ✅ Audio codecs — native + web at parity — SHIPPED (2026-07-26)
+
+**One-line status:** both platforms read WAV, AIFF, MP3, AAC, FLAC, Ogg-Vorbis
+and Ogg-Opus, and write WAV, MP3 (two selectable encoders), AAC and Opus.
+Canonical table: **[AUDIO_CODEC_MATRIX.md](AUDIO_CODEC_MATRIX.md)** — keep that
+file current, not this section, which is the historical record of how it got
+there.
 
 `glint.h` declares `glint_encode_audio(...)` → **MP3 / AAC-LC / Ogg-Opus** in
 one call, and `~/code/glint` implements it (`src/encode_audio_c_api.cpp` + a
@@ -470,6 +490,43 @@ have failed*. Reproduced exactly (`'M_PI' was not declared in this scope`) by
 cross-compiling under strict `-std=c++17`, then fixed in `src/CMakeLists.txt`
 rather than in the sources, since `sync_glint.sh` would overwrite any edit to a
 verbatim-vendored file on the next re-vendor.
+
+**MP3 has TWO encoders now, user-selectable** (`Mp3Encoder.dart|native`): our
+pure-Dart port and glint's C one. Both export sheets show the choice, but only
+where both exist. Default stays `.dart` — it is the better-exercised path here
+(golden + ffmpeg round-trip tests pin its output) and keeps exports
+byte-comparable across platforms; glint's is the more mature encoder and faster,
+so flipping the default is reasonable once it has mileage, and it is a one-line
+change. Asking for `.native` where glint is absent falls back rather than
+failing, because unlike Opus/AAC, MP3 always has a working path.
+
+**The readiness rule (the subtlest bug of the pass).** On web the wasm loads
+lazily, so until it resolves every glint-backed decoder returns null — a
+FLAC/Opus/AAC import then fails looking exactly like a corrupt file. Nothing
+awaited it. Worse, `ensureGlintVorbisReady()` had existed since the `.sf3` work
+and was called from **nowhere**, so compressed SoundFonts were quietly broken on
+web too. Fixed by making the await impossible to forget rather than by adding
+await lines: `importAudioAsync` / `importAudioMonoAsync` / `loadSoundFontAsync`
+do it, and every call site uses them. `sample_extractor.dart` deliberately keeps
+the sync form (it admits only `.wav`/`.mp3`, both pure Dart) with a comment
+saying what must change if that filter widens.
+
+**FLAC and Vorbis stay decode-only, deliberately.** glint ships no encoder for
+either, so this is not a wiring gap. For export both are redundant — Opus beats
+Vorbis at every bitrate and two `.ogg` producers is a UX trap. The one thing
+Opus cannot substitute for is **writing `.sf3`**, which is Vorbis by definition.
+Scoped, unclaimed, with the cost honestly split between "minimal correct" and
+"competitive with libvorbis": `docs/VORBIS_ENCODER_HANDOVER.md` **in the glint
+repo**. Key insight recorded there so nobody re-derives it — Vorbis transmits
+its codebooks in the setup header, so a clean-room encoder ships its own and
+never needs libvorbis's tuned ones.
+
+**Test ladder** (each layer catches what the others cannot):
+`native/glint/test/encode_roundtrip_test.cpp` (ctest, 3 desktops incl. MSVC) ·
+`web/glint/codec_roundtrip_test.mjs` (node — the web path shares no code with
+FFI above Dart) · `test/audio_import_opus_test.dart` + `audio_export_format_test.dart`
+(headless routing/gating) · `test/web/audio_codec_web_test.dart` (Chrome — the
+degradation path) · `integration_test/glint_encoder_test.dart` (live build).
 
 **Two unrelated blockers in the separate CrispEmbed repo were fixed to get the
 mobile builds through** (neither caused by this work): its Android

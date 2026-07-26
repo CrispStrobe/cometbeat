@@ -500,6 +500,31 @@ into named collections (browse / search / reorder / export).
 - Flagged here so the OMR work in CrispEmbed and this app's songbook UI stay
   aligned; sequencing vs. the AEC/backing work is open.
 
+## Audio codecs — what remains
+
+Import/export is **DONE and at parity across native and web** (shipped
+2026-07-26; see [docs/HISTORY.md](docs/HISTORY.md) and the canonical table
+[docs/AUDIO_CODEC_MATRIX.md](docs/AUDIO_CODEC_MATRIX.md)). What is left:
+
+- **FLAC encode — not planned.** glint decodes FLAC and ships no FLAC encoder.
+  Writing one is a real project, and nothing in the app asks to write FLAC.
+- **Vorbis encode — scoped, unclaimed, probably not worth it.** Redundant for
+  export (Opus wins at every bitrate; two `.ogg` producers is a UX trap). The
+  ONLY genuine trigger is **writing `.sf3` SoundFonts**, which are Vorbis by
+  definition — today we can only read them. Full handover with the clean-room
+  affidavit, an 8-slice plan and an honest cost estimate lives in the **glint**
+  repo: `docs/VORBIS_ENCODER_HANDOVER.md`. Do not start it unless SoundFont
+  authoring is actually wanted.
+- **AIFF is read-only.** We parse AIFF/AIFF-C and never write it. ~40 lines of
+  pure Dart if the symmetry is ever wanted; nothing requests AIFF output today.
+- **Native MP3 is not the default.** Both encoders ship and the export sheets
+  let you pick; the default stays the pure-Dart one because its output is what
+  the golden/ffmpeg tests pin and it is identical on every platform. Flipping it
+  is one line once glint's has mileage here.
+- **Per-platform builds are CI's job now**, not a manual chore:
+  `.github/workflows/glint-native.yml` covers all five platforms plus the wasm,
+  and `ci.yml`'s `android-build` asserts the codec is actually inside the APK.
+
 ## Known constraints / follow-ups (not yet done)
 - **Backing audio vs. mic (AEC):** see the dedicated section below — count-in
   metronome + optional backing (tiers 0/1) shipped; a Dart AEC core is the next
