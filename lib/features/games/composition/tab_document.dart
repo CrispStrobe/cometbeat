@@ -149,6 +149,14 @@ class TabColumn {
   /// Right-hand fingering (B10): p/i/m/a/c → `TabFingering(id, finger)`.
   final RightHandFinger? rightFinger;
 
+  /// A dynamic marking on this note (C1): ppp…fff → `DynamicMarking` + a
+  /// mapped `NoteElement.velocity`. Null = inherit.
+  final DynamicLevel? dynamic;
+
+  /// A crescendo/diminuendo hairpin STARTING at this column (C1), running to the
+  /// next column that sets a [dynamic] (or the next hairpin). Null = none.
+  final HairpinType? hairpin;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
@@ -178,6 +186,8 @@ class TabColumn {
     this.pickStroke,
     this.leftFingers,
     this.rightFinger,
+    this.dynamic,
+    this.hairpin,
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -214,6 +224,8 @@ class TabColumn {
     Object? pickStroke = _unset,
     Object? leftFingers = _unset,
     Object? rightFinger = _unset,
+    Object? dynamic = _unset,
+    Object? hairpin = _unset,
   }) =>
       TabColumn(
         frets: frets ?? this.frets,
@@ -255,6 +267,8 @@ class TabColumn {
         rightFinger: rightFinger == _unset
             ? this.rightFinger
             : rightFinger as RightHandFinger?,
+        dynamic: dynamic == _unset ? this.dynamic : dynamic as DynamicLevel?,
+        hairpin: hairpin == _unset ? this.hairpin : hairpin as HairpinType?,
       );
 
   TabColumn withFret(int string, int fret) =>
@@ -355,6 +369,12 @@ class TabColumn {
   /// Sets (or clears, when null) this column's right-hand fingering (B10).
   TabColumn withRightFinger(RightHandFinger? f) => copyWith(rightFinger: f);
 
+  /// Sets (or clears, when null) this column's dynamic level (C1).
+  TabColumn withDynamic(DynamicLevel? d) => copyWith(dynamic: d);
+
+  /// Sets (or clears, when null) a hairpin starting at this column (C1).
+  TabColumn withHairpin(HairpinType? h) => copyWith(hairpin: h);
+
   /// A deep copy (fresh mutable collections) — for duplicating columns.
   TabColumn copy() => copyWith(
         frets: {...frets},
@@ -426,6 +446,52 @@ double _scaledStepsOf(TabColumn c) {
   final base = _stepsOf(c.duration).toDouble();
   final t = c.tuplet;
   return t == null ? base : base * t.$2 / t.$1;
+}
+
+/// The MIDI note-on velocity (0..127) a dynamic level maps to (C1) — a standard
+/// ppp→ffff ramp; the sudden/accent marks (sf/sfz/…) read as a firm accent.
+int velocityOf(DynamicLevel d) => switch (d) {
+      DynamicLevel.pppp => 8,
+      DynamicLevel.ppp => 16,
+      DynamicLevel.pp => 33,
+      DynamicLevel.p => 49,
+      DynamicLevel.mp => 64,
+      DynamicLevel.mf => 80,
+      DynamicLevel.f => 96,
+      DynamicLevel.ff => 112,
+      DynamicLevel.fff => 120,
+      DynamicLevel.ffff => 127,
+      _ => 104, // sf/sfz/sffz/fz/fp/rf — a firm accent
+    };
+
+/// The ramp levels a raw MIDI velocity quantises to (pppp…ffff), nearest by
+/// [velocityOf] — so a MIDI/GP import that carries only note velocities still
+/// keeps its loudness as an editable dynamic (C1).
+const List<DynamicLevel> _dynamicRamp = [
+  DynamicLevel.pppp,
+  DynamicLevel.ppp,
+  DynamicLevel.pp,
+  DynamicLevel.p,
+  DynamicLevel.mp,
+  DynamicLevel.mf,
+  DynamicLevel.f,
+  DynamicLevel.ff,
+  DynamicLevel.fff,
+  DynamicLevel.ffff,
+];
+
+/// The [DynamicLevel] whose [velocityOf] is closest to [velocity].
+DynamicLevel nearestDynamic(int velocity) {
+  var best = _dynamicRamp.first;
+  var bestDist = (velocityOf(best) - velocity).abs();
+  for (final d in _dynamicRamp.skip(1)) {
+    final dist = (velocityOf(d) - velocity).abs();
+    if (dist < bestDist) {
+      best = d;
+      bestDist = dist;
+    }
+  }
+  return best;
 }
 
 /// One track in a multi-track tab "band" — a named [TabDocument] (its own
@@ -519,12 +585,18 @@ class TabDocument {
   /// accidental spelling on the standard/grand-staff views and exports.
   KeySignature keySignature;
 
+  /// An optional SECOND voice (C2): a parallel column list tiled into the same
+  /// bars as [columns] and emitted as `Measure.voice2`. Empty = single voice.
+  final List<TabColumn> voice2;
+
   TabDocument({
     required this.tuning,
     List<TabColumn>? columns,
     this.timeSignature = TimeSignature.fourFour,
     this.keySignature = const KeySignature(0),
-  }) : columns = columns ?? <TabColumn>[];
+    List<TabColumn>? voice2,
+  })  : columns = columns ?? <TabColumn>[],
+        voice2 = voice2 ?? <TabColumn>[];
 
   /// A blank document with [initialColumns] empty columns.
   factory TabDocument.blank(Tuning tuning, {int initialColumns = 8}) =>
@@ -633,6 +705,18 @@ class TabDocument {
   void toggleArticulation(int col, Articulation a) {
     _ensure(col);
     columns[col] = columns[col].toggleArticulation(a);
+  }
+
+  /// Sets (or clears, when null) the dynamic on the column at [col] (C1).
+  void setDynamic(int col, DynamicLevel? d) {
+    _ensure(col);
+    columns[col] = columns[col].withDynamic(d);
+  }
+
+  /// Starts (or clears, when null) a hairpin at the column at [col] (C1).
+  void setHairpin(int col, HairpinType? h) {
+    _ensure(col);
+    columns[col] = columns[col].withHairpin(h);
   }
 
   /// Sets the repeat barlines of the BAR containing [col] (anchored to that
@@ -801,6 +885,8 @@ class TabDocument {
     final letRings = <LetRing>[];
     final pickStrokes = <PickStroke>[];
     final tabFingerings = <TabFingering>[];
+    final dynamics = <DynamicMarking>[];
+    final hairpins = <Hairpin>[];
     final marks = <TabNoteMark>[];
     final slurs = <Slur>[];
     final glissandos = <Glissando>[];
@@ -828,6 +914,49 @@ class TabDocument {
       tupRatio = null;
     }
 
+    // C2 — tile the optional second voice into per-bar element lists (notes /
+    // rests / ties / voicings only; techniques on voice 2 are a follow-up) so
+    // each measure can carry its `voice2`.
+    final v2Bars = <List<MusicElement>>[];
+    final v2Voicings = <TabVoicing>[];
+    {
+      var vb = <MusicElement>[];
+      var vSteps = 0.0;
+      for (var c = 0; c < voice2.length; c++) {
+        final col = voice2[c];
+        final s = _scaledStepsOf(col);
+        if (vSteps > 0 && vSteps + s > barCapacity + 1e-6) {
+          v2Bars.add(vb);
+          vb = <MusicElement>[];
+          vSteps = 0;
+        }
+        if (col.isEmpty) {
+          vb.add(RestElement(col.duration));
+        } else {
+          final entries = col.frets.entries.toList()
+            ..sort((a, b) => a.key.compareTo(b.key));
+          final id = 'v$c';
+          vb.add(
+            NoteElement(
+              pitches: [
+                for (final e in entries)
+                  pitchFromMidi(
+                    tuning.strings[e.key].midiNumber + e.value + capo,
+                  ),
+              ],
+              duration: col.duration,
+              id: id,
+              tieToNext: col.tieToNext,
+            ),
+          );
+          v2Voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
+        }
+        vSteps += s;
+      }
+      if (vb.isNotEmpty) v2Bars.add(vb);
+    }
+    var measIdx = 0;
+
     void flushBar() {
       closeTuplet(bar.length);
       if (bar.isNotEmpty) {
@@ -836,6 +965,7 @@ class TabDocument {
         measures.add(
           Measure(
             bar,
+            voice2: measIdx < v2Bars.length ? v2Bars[measIdx] : const [],
             tuplets: barTuplets,
             startRepeat: first?.startRepeat ?? false,
             endRepeat: first?.endRepeat ?? false,
@@ -845,6 +975,7 @@ class TabDocument {
                 first?.tempoChange == null ? null : Tempo(first!.tempoChange!),
           ),
         );
+        measIdx++;
       }
       bar = <MusicElement>[];
       barSteps = 0;
@@ -901,6 +1032,8 @@ class TabDocument {
             graceStyle: col.graceStyle, // B8
             arpeggio: col.arpeggio, // B9 strum roll
             fingerings: col.leftFingers ?? const [], // B10 left hand
+            velocity:
+                col.dynamic == null ? null : velocityOf(col.dynamic!), // C1
           ),
         );
         voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
@@ -920,6 +1053,7 @@ class TabDocument {
         if (col.rightFinger != null) {
           tabFingerings.add(TabFingering(id, col.rightFinger!));
         }
+        if (col.dynamic != null) dynamics.add(DynamicMarking(id, col.dynamic!));
         for (final t in col.techniques) {
           switch (t) {
             case TabTechnique.bend:
@@ -949,9 +1083,27 @@ class TabDocument {
       barSteps += steps;
     }
     flushBar();
+    // C1 hairpins: a start marker runs to the next noteful column that sets a
+    // dynamic (or another hairpin), else to the last noteful column.
+    for (var c = 0; c < columns.length; c++) {
+      if (columns[c].isEmpty || columns[c].hairpin == null) continue;
+      int? end;
+      var lastNoteful = -1;
+      for (var j = c + 1; j < columns.length; j++) {
+        if (columns[j].isEmpty) continue;
+        lastNoteful = j;
+        if (columns[j].dynamic != null || columns[j].hairpin != null) {
+          end = j;
+          break;
+        }
+      }
+      end ??= lastNoteful >= 0 ? lastNoteful : null;
+      if (end != null) hairpins.add(Hairpin('t$c', 't$end', columns[c].hairpin!));
+    }
     if (measures.isEmpty) {
       measures.add(const Measure([RestElement(NoteDuration.whole)]));
     }
+    voicings.addAll(v2Voicings); // C2 — voice-2 string pins
     return Score(
       clef: Clef.treble,
       timeSignature: timeSignature,
@@ -966,6 +1118,8 @@ class TabDocument {
       letRings: letRings,
       pickStrokes: pickStrokes,
       tabFingerings: tabFingerings,
+      dynamics: dynamics,
+      hairpins: hairpins,
       tabNoteMarks: marks,
       slurs: slurs,
       glissandos: glissandos,
@@ -1082,6 +1236,9 @@ class TabDocument {
     final rightFingerById = {
       for (final f in score.tabFingerings) f.noteId: f.finger,
     };
+    // C1 — dynamics by note id + hairpin starts by their start note id.
+    final dynamicById = {for (final d in score.dynamics) d.elementId: d.level};
+    final hairpinById = {for (final h in score.hairpins) h.startId: h.type};
     // Per-note attributes captured during the element walk below.
     final artById = <String, Set<Articulation>>{}; // B6
     final ornById = <String, Ornament>{}; // B7
@@ -1089,6 +1246,7 @@ class TabDocument {
     final graceById = <String, (List<int>, GraceStyle)>{}; // B8
     final arpById = <String, Arpeggio>{}; // B9
     final leftFingersById = <String, List<int>>{}; // B10
+    final velById = <String, int>{}; // C1 raw note velocity (fallback dynamic)
 
     final annById = <String, String>{};
     for (final a in score.annotations) {
@@ -1106,6 +1264,12 @@ class TabDocument {
     final tempos = <double?>[]; // per-column: bar tempo change (BPM)
     final sections = <String?>[]; // per-column: section/rehearsal label
     final pinned = <int, Fretting>{}; // column index → explicit fingering
+    // C2 — second-voice parallel arrays.
+    final v2Midis = <List<int>>[];
+    final v2Durs = <NoteDuration>[];
+    final v2Ties = <bool>[];
+    final v2Pinned = <int, Fretting>{};
+    var v2idx = 0;
     var idx = 0;
     for (final measure in score.measures) {
       final measureStart =
@@ -1135,6 +1299,7 @@ class TabDocument {
             }
             if (el.arpeggio != null) arpById[eid] = el.arpeggio!;
             if (el.fingerings.isNotEmpty) leftFingersById[eid] = el.fingerings;
+            if (el.velocity != null) velById[eid] = el.velocity!;
           }
           midiCols.add(midis);
           durations.add(el.duration);
@@ -1163,6 +1328,32 @@ class TabDocument {
           idx++;
         }
       }
+      // C2 — collect the second voice (notes / rests / ties + string pins).
+      for (final el in measure.voice2) {
+        if (el is NoteElement) {
+          final midis = [for (final p in el.pitches) p.midiNumber];
+          final strings = voiced[el.id];
+          if (strings != null && strings.length == midis.length) {
+            final frets = <int, int>{};
+            for (var i = 0; i < midis.length; i++) {
+              final s = strings[i];
+              if (s < 0 || s >= tuning.strings.length) continue;
+              final fret = midis[i] - tuning.strings[s].midiNumber - capo;
+              if (fret >= 0) frets[s] = fret;
+            }
+            if (frets.isNotEmpty) v2Pinned[v2idx] = frets;
+          }
+          v2Midis.add(midis);
+          v2Durs.add(el.duration);
+          v2Ties.add(el.tieToNext);
+          v2idx++;
+        } else if (el is RestElement) {
+          v2Midis.add(const []);
+          v2Durs.add(el.duration);
+          v2Ties.add(false);
+          v2idx++;
+        }
+      }
       // Stamp this bar's tuplet spans (voice 1) onto their columns.
       for (final t in measure.tuplets) {
         if (t.voice != 0) continue; // voice 0 = elements (voice 1)
@@ -1189,12 +1380,27 @@ class TabDocument {
         tempos[measureStart] = measure.tempoChange!.bpm;
       }
     }
+    // C2 — reconstruct the second voice via the same arranger.
+    final v2Cols = <TabColumn>[];
+    if (v2Midis.isNotEmpty) {
+      final v2Arr = arrangeTab(v2Midis, tuning, capo: capo);
+      for (var i = 0; i < v2Arr.length; i++) {
+        v2Cols.add(
+          TabColumn(
+            frets: v2Pinned[i] ?? v2Arr[i],
+            duration: v2Durs[i],
+            tieToNext: v2Ties[i],
+          ),
+        );
+      }
+    }
     if (midiCols.isEmpty) {
       return TabDocument(
         tuning: tuning,
         timeSignature: score.timeSignature ?? TimeSignature.fourFour,
         keySignature: score.keySignature,
         columns: [const TabColumn()],
+        voice2: v2Cols,
       );
     }
     // B6 — palm-mute / let-ring are id spans; flag every column in each range.
@@ -1224,6 +1430,7 @@ class TabDocument {
       tuning: tuning,
       timeSignature: score.timeSignature ?? TimeSignature.fourFour,
       keySignature: score.keySignature,
+      voice2: v2Cols,
       columns: [
         for (var i = 0; i < arranged.length; i++)
           TabColumn(
@@ -1257,6 +1464,13 @@ class TabDocument {
             pickStroke: ids[i] == null ? null : pickStrokeById[ids[i]],
             leftFingers: ids[i] == null ? null : leftFingersById[ids[i]],
             rightFinger: ids[i] == null ? null : rightFingerById[ids[i]],
+            dynamic: ids[i] == null
+                ? null
+                : (dynamicById[ids[i]] ??
+                    (velById[ids[i]] != null
+                        ? nearestDynamic(velById[ids[i]]!)
+                        : null)),
+            hairpin: ids[i] == null ? null : hairpinById[ids[i]],
           ),
       ],
     );

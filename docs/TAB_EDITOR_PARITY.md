@@ -286,7 +286,19 @@ parametric technique end-to-end.
   → `NoteElement.fingerings`; `TabColumn.rightFinger: RightHandFinger?` (p/i/m/a) →
   `TabFingering`. Both read back. `withLeftFingers`/`withRightFinger`. `copy()` now
   deep-copies the bend/whammy/grace/finger lists. Tests: B7–B10. **Phase B done.**
-- [ ] C1 … E2 — pending (scoped above)
+- [x] **C1** dynamics — `TabColumn.dynamic: DynamicLevel?` → a `DynamicMarking` +
+  a mapped `NoteElement.velocity` (`velocityOf` ramp); import reads the marking
+  back, and a raw velocity with no marking (MIDI/GP) quantises to the nearest level
+  (`nearestDynamic`). `TabColumn.hairpin: HairpinType?` starts a crescendo/
+  diminuendo running to the next dynamic → `Hairpin`; the start marker round-trips.
+  `setDynamic`/`setHairpin`. ⚠ playback amplitude isn't scaled yet (the
+  `(midis,ms)` event tuple carries no velocity) — notation/export/round-trip only.
+  Tests: group C1.
+- [x] **C2** second voice — `TabDocument.voice2: List<TabColumn>` tiled into the
+  same bars as voice 1 and emitted as `Measure.voice2` (notes / rests / ties +
+  string voicings; per-note techniques on voice 2 are a follow-up); `fromScore`
+  reconstructs it via the arranger. Round-trip tested. **Phase C done.**
+- [ ] D1 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

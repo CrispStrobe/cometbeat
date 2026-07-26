@@ -1047,4 +1047,92 @@ void main() {
       expect(identical(dup.leftFingers, c.leftFingers), isFalse);
     });
   });
+
+  group('C1 — dynamics + hairpins', () {
+    test('a dynamic sets velocity + DynamicMarking and round-trips', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [const TabColumn(frets: {0: 5})],
+      )..setDynamic(0, DynamicLevel.ff);
+      final score = doc.toScore();
+      final note =
+          score.measures.first.elements.whereType<NoteElement>().first;
+      expect(note.velocity, velocityOf(DynamicLevel.ff));
+      expect(score.dynamics.single.level, DynamicLevel.ff);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.dynamic, DynamicLevel.ff);
+    });
+
+    test('velocityOf ramps ppp<mf<fff', () {
+      expect(
+        velocityOf(DynamicLevel.ppp),
+        lessThan(velocityOf(DynamicLevel.mf)),
+      );
+      expect(
+        velocityOf(DynamicLevel.mf),
+        lessThan(velocityOf(DynamicLevel.fff)),
+      );
+    });
+
+    test('a hairpin spans from its start to the next dynamic + round-trips', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [
+          const TabColumn(frets: {0: 0}),
+          const TabColumn(frets: {0: 2}),
+          const TabColumn(frets: {0: 3}),
+        ],
+      )
+        ..setHairpin(0, HairpinType.crescendo)
+        ..setDynamic(2, DynamicLevel.f); // the hairpin should end here
+      final score = doc.toScore();
+      expect(score.hairpins, hasLength(1));
+      expect(score.hairpins.single.startId, 't0');
+      expect(score.hairpins.single.endId, 't2');
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.hairpin, HairpinType.crescendo);
+    });
+  });
+
+  group('C2 — second voice', () {
+    test('a second voice becomes Measure.voice2 and round-trips', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [
+          const TabColumn(frets: {0: 0}),
+          const TabColumn(frets: {0: 2}),
+          const TabColumn(frets: {0: 3}),
+          const TabColumn(frets: {0: 5}),
+        ],
+        voice2: [
+          const TabColumn(frets: {5: 0}),
+          const TabColumn(frets: {5: 3}),
+          const TabColumn(frets: {5: 0}),
+          const TabColumn(frets: {5: 2}),
+        ],
+      );
+      final score = doc.toScore();
+      // One 4/4 bar of four quarters — voice 2 sits on it.
+      expect(score.measures.first.voice2, isNotEmpty);
+      expect(
+        score.measures.first.voice2.whereType<NoteElement>(),
+        hasLength(4),
+      );
+
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.voice2, hasLength(4));
+      // voice-2 low-E pitches (fret 0 and 3 on string 5) come back.
+      expect(back.voice2.first.frets[5], 0);
+      expect(back.voice2[1].frets[5], 3);
+    });
+
+    test('no second voice → empty voice2, single-voice measures', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [const TabColumn(frets: {0: 0})],
+      );
+      expect(doc.voice2, isEmpty);
+      expect(doc.toScore().measures.first.voice2, isEmpty);
+    });
+  });
 }

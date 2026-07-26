@@ -65,10 +65,10 @@ void main() {
     });
   });
 
-  group('A0 scoreboard — still lost (each flips as its step lands)', () {
-    // These document the remaining gaps. When a step is done, change the
-    // matcher from isEmpty/absent to preserved and delete the TODO.
-    test('TODO(C1) per-note velocity/dynamics are dropped', () {
+  group('A0 scoreboard — preserved (each flipped as its step landed)', () {
+    // These document features that now survive the editor round-trip. When a
+    // step is done, its matcher flips from isEmpty/absent to preserved.
+    test('C1 per-note dynamics survive (velocity quantised to a level)', () {
       const src = Score(
         clef: Clef.treble,
         measures: [
@@ -83,17 +83,19 @@ void main() {
         ],
       );
       final out = _roundTrip(src);
+      // The raw velocity is inferred to the nearest dynamic level and re-emitted
+      // as both a DynamicMarking and a note velocity — no longer dropped.
+      expect(out.dynamics, isNotEmpty);
       expect(
         out.measures
             .expand((m) => m.elements)
             .whereType<NoteElement>()
-            .every((n) => n.velocity == null),
+            .every((n) => n.velocity != null),
         isTrue,
-        reason: 'C1 will carry velocity/dynamics',
       );
     });
 
-    test('TODO(C2) a second voice is dropped', () {
+    test('C2 a second voice survives', () {
       final src = Score(
         clef: Clef.treble,
         measures: [
@@ -105,9 +107,9 @@ void main() {
       );
       final out = _roundTrip(src);
       expect(
-        out.measures.every((m) => m.voice2.isEmpty),
+        out.measures.any((m) => m.voice2.isNotEmpty),
         isTrue,
-        reason: 'C2 will carry a second voice',
+        reason: 'C2 carries a second voice',
       );
     });
   });
