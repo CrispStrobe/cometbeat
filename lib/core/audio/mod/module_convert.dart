@@ -77,7 +77,7 @@ import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
-    show kFxSetSpeedFull;
+    show kFxSetSpeedFull, kFxSetPanbrelloWaveform;
 
 /// Detects the module container format by signature; null if unrecognized.
 ModuleFormat? sniffModuleFormat(Uint8List bytes) {
@@ -285,8 +285,8 @@ ModuleDoc docFromMod(ModModule m) {
       return (0xE, (0x4 << 4) | val);
     case 0x4: // S4x — set tremolo waveform → E7x (kExTremoloWaveform)
       return (0xE, (0x7 << 4) | val);
-    case 0x5: // S5x — set panbrello waveform → kFxSetPanbrelloWaveform (0x12)
-      return (0x12, val);
+    case 0x5: // S5x — set panbrello waveform → kFxSetPanbrelloWaveform (0x15)
+      return (kFxSetPanbrelloWaveform, val);
     case 0xA: // SAx — high sample offset → kFxSetHighOffset (0x13)
       return (0x13, val);
     case 0x9: // S9x — sound control (surround/reverse) → kFxSetSoundControl
@@ -873,10 +873,7 @@ ModuleDoc docFromIt(ItModule m) {
       return (24, directPan ? param : (param / 2).round().clamp(0, 0x80));
     case 0x9:
       return (15, param); // O sample offset
-    case 0x12:
-      // 0x12 is shared by kFxSetPanbrelloWaveform and kFxSetSpeedFull (a
-      // pre-existing constant collision); the panbrello reverse-map wins for
-      // this value, so a neutral 0x12 exports as S5x set-panbrello-waveform.
+    case kFxSetPanbrelloWaveform: // 0x15
       return (19, (0x5 << 4) | (param & 0xF)); // S5x set panbrello waveform
     case 0x13:
       return (19, (0xA << 4) | (param & 0xF)); // SAx high sample offset
@@ -921,8 +918,8 @@ ModuleDoc docFromIt(ItModule m) {
       return (25, param); // Y panbrello
     case 0x1F:
       return (20, param); // T tempo slide
-    // (kFxSetSpeedFull shares code 0x12 with kFxSetPanbrelloWaveform above, so
-    // it is handled by that `case 0x12` — no separate clause here.)
+    case kFxSetSpeedFull: // 0x12 — A set speed (full 1..255)
+      return (1, param.clamp(1, 255));
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:

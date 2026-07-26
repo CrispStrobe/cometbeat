@@ -185,8 +185,9 @@ const double kPanbrelloDepthPerUnit = 1 / 15;
 /// square. Persistent per-channel control state — the panbrello counterpart of
 /// the vibrato (E4x) / tremolo (E7x) waveform selects — honored by the panbrello
 /// LFO in [ReplayVoice.tick]. S3M/IT-only (like [kFxPanbrello] / [kFxSetFilter]);
-/// no MOD/XM equivalent, so cross-format importers map `S5x` here.
-const int kFxSetPanbrelloWaveform = 0x12;
+/// no MOD/XM equivalent, so cross-format importers map `S5x` here. NB: 0x12 is
+/// already taken by [kFxSetSpeedFull]; this uses 0x15 to avoid that collision.
+const int kFxSetPanbrelloWaveform = 0x15;
 
 /// `SAx` — set the HIGH byte of the sample-start offset (S3M/IT special
 /// sub-command `S A x`). It seeds a per-channel high-offset MEMORY that a
@@ -198,7 +199,7 @@ const int kFxSetPanbrelloWaveform = 0x12;
 /// via [ReplayVoice.sampleReadStart]. S3M/IT-only (no MOD/XM equivalent), so
 /// cross-format importers map `SAx` here; with a 0 high-offset a plain `9xx`
 /// render is byte-identical to the classic behaviour. The next free command
-/// code after [kFxSetPanbrelloWaveform] (0x12).
+/// code after the panbrello-waveform command.
 const int kFxSetHighOffset = 0x13;
 
 /// `S9x` — IT/S3M SOUND-CONTROL sub-command, carried in the low nibble of the
@@ -218,8 +219,8 @@ const int kFxSetHighOffset = 0x13;
 ///     is a documented no-op there. Set on the voice as [ReplayVoice.surround].
 /// Other `S9x` sub-commands (no audible target) are carried but ignored. With
 /// the defaults (forward, surround-off) a render is byte-identical to the
-/// pre-S9x behaviour. The next free command code after [kFxSetHighOffset]
-/// (0x13); 0x12 is shared by set-speed-full / set-panbrello-waveform.
+/// pre-S9x behaviour. Command code 0x14 (0x12 = set-speed-full, 0x13 =
+/// high-offset, 0x15 = panbrello-waveform).
 const int kFxSetSoundControl = 0x14;
 
 /// Zxx — set the resonant low-pass FILTER (IT effect 'Z'): `Z00..Z7F` set the
