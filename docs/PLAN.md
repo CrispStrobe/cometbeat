@@ -155,6 +155,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (cello-omr-spike)** · 🔬 **SPIKE (throwaway, measuring) — can a fingering
+  digit be READ off an engraved staff?** Item 2 of the cello arc assumed "get PD
+  scans, run OMR". That assumption is **wrong by construction**: our OMR is the SMT
+  model emitting `bekern` → Humdrum `**kern`, and neither the token vocabulary nor
+  our kern reader has any fingering representation at all — so scans would come back
+  with notes and no fingerings, and the acquisition would buy nothing. The real
+  question is therefore whether a separate DIGIT pass is feasible, and that can be
+  measured with no acquisition at all: we can render fingered parts ourselves, so the
+  ground truth is exact. Measuring with the tesseract already on this machine
+  (`/opt/homebrew/bin`) against our own renders. Throwaway — no product code unless
+  the number justifies it. Worktree `../mus-cello-fingering`.
+
 - **opus (cello-bowing)** · ✅ **SHIPPED (idle) — bowing marks** (`9587b9ba`).
   The song screen's cello toggle now marks up all three things a teacher writes on
   a part: fingering digits, a Roman numeral where the string is not inferable, and
