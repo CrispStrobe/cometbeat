@@ -2588,6 +2588,7 @@ class _DawScreenState extends State<DawScreen>
     DawClipEffectType.lowShelf,
     DawClipEffectType.highShelf,
     DawClipEffectType.phaser,
+    DawClipEffectType.convolutionReverb,
     DawClipEffectType.compressor,
     DawClipEffectType.gate,
     DawClipEffectType.pitchShift,
@@ -2630,6 +2631,7 @@ class _DawScreenState extends State<DawScreen>
         DawClipEffectType.lowShelf => 'Low Shelf',
         DawClipEffectType.highShelf => 'High Shelf',
         DawClipEffectType.phaser => 'Phaser',
+        DawClipEffectType.convolutionReverb => 'Convolution Reverb',
       };
 
   String _clipEffectPresetLabel(DawClipEffectPreset preset) => switch (preset) {
@@ -2775,6 +2777,20 @@ class _DawScreenState extends State<DawScreen>
                   step: 10
                 ),
                 (key: 'stages', label: 'Stages', min: 2, max: 12, step: 2),
+              ],
+            // Convolution reverb: the IR is synthesized from these, so they
+            // shape a room rather than pick a preset file.
+            DawClipEffectType.convolutionReverb => const [
+                (key: 'seconds', label: 'Tail s', min: 0.1, max: 5, step: 0.1),
+                (key: 'decay', label: 'Decay', min: 0.05, max: 1, step: 0.01),
+                (
+                  key: 'predelayMs',
+                  label: 'Pre-delay ms',
+                  min: 0,
+                  max: 200,
+                  step: 1
+                ),
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
               ],
             DawClipEffectType.compressor => const [
                 (

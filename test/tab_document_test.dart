@@ -754,8 +754,7 @@ void main() {
     TabDocument twoBars() => TabDocument(
           tuning: Tuning.standardGuitar,
           columns: [
-            for (var i = 0; i < 8; i++)
-              TabColumn(frets: {0: i}, duration: NoteDuration.quarter),
+            for (var i = 0; i < 8; i++) TabColumn(frets: {0: i}),
           ],
         );
 
@@ -778,7 +777,8 @@ void main() {
     test('a tempo change re-times playback from its bar on', () {
       final doc = twoBars();
       doc.setBarTempo(4, 60); // bar 2 at 60 BPM (quarter = 1000 ms)
-      final events = doc.toPlaybackEvents(bpm: 120); // bar 1: quarter = 500 ms
+      // Default 120 BPM → bar 1's quarter is 500 ms.
+      final events = doc.toPlaybackEvents();
       expect(events, hasLength(8));
       expect(events[0].$2, 500); // bar 1 at 120
       expect(events[4].$2, 1000); // bar 2 at 60

@@ -164,6 +164,94 @@ void main() {
     });
   });
 
+  group('convolution reverb as a clip effect', () {
+    /// An impulse: the cleanest way to see a reverb tail, since anything after
+    /// sample 0 is the effect's own output.
+    Float64List impulse(int samples) => Float64List(samples)..[0] = 1.0;
+
+    test('adds a decaying tail after the dry hit', () {
+      final out = _apply(
+        DawClipEffectType.convolutionReverb,
+        impulse(_rate),
+        params: {'seconds': 1.0, 'mix': 1},
+      );
+      double energy(int from, int to) {
+        var sum = 0.0;
+        for (var i = from; i < to && i < out.length; i++) {
+          sum += out[i] * out[i];
+        }
+        return sum;
+      }
+
+      // There is real energy after the impulse...
+      expect(energy(100, _rate ~/ 4), greaterThan(0));
+      // ...and it decays: the first quarter-second holds more than the last.
+      expect(
+        energy(100, _rate ~/ 4),
+        greaterThan(energy(_rate ~/ 2, _rate)),
+      );
+    });
+
+    test('pre-delay pushes the tail later', () {
+      Float64List tail(double predelayMs) => _apply(
+            DawClipEffectType.convolutionReverb,
+            impulse(_rate ~/ 2),
+            params: {'predelayMs': predelayMs, 'mix': 1, 'seconds': 0.5},
+          );
+      int firstTailIndex(Float64List pcm) {
+        for (var i = 50; i < pcm.length; i++) {
+          if (pcm[i].abs() > 1e-6) return i;
+        }
+        return pcm.length;
+      }
+
+      expect(
+        firstTailIndex(tail(50)),
+        greaterThan(firstTailIndex(tail(0))),
+      );
+    });
+
+    test('mix 0 is an exact bypass', () {
+      final input = _tone(440, samples: 4410);
+      expect(
+        _apply(
+          DawClipEffectType.convolutionReverb,
+          input,
+          params: {'mix': 0},
+        ),
+        input,
+      );
+    });
+
+    test('is deterministic — the same settings render the same tail', () {
+      // The IR is synthesized from a FIXED seed, which is what lets a baked
+      // clip stay byte-identical across renders.
+      final a = _apply(DawClipEffectType.convolutionReverb, impulse(8192));
+      final b = _apply(DawClipEffectType.convolutionReverb, impulse(8192));
+      expect(a, b);
+    });
+
+    test('differs audibly from the algorithmic reverb', () {
+      // Both are reverbs; if they rendered the same there'd be no reason to
+      // offer both.
+      final conv = _apply(DawClipEffectType.convolutionReverb, impulse(8192));
+      final algo = _apply(DawClipEffectType.reverb, impulse(8192));
+      var diff = 0.0;
+      for (var i = 0; i < 8192; i++) {
+        diff += (conv[i] - algo[i]).abs();
+      }
+      expect(diff, greaterThan(1));
+    });
+
+    test('has defaults and survives a project round-trip', () {
+      final fx = defaultDawClipEffect(DawClipEffectType.convolutionReverb);
+      expect(fx.params.keys, containsAll(['seconds', 'decay', 'mix']));
+      final restored = DawClipEffect.fromJson(fx.toJson());
+      expect(restored!.type, DawClipEffectType.convolutionReverb);
+      expect(restored.params, fx.params);
+    });
+  });
+
   group('phaser', () {
     test('sweeping notches make the output vary over time', () {
       // A phaser on steady input must NOT be steady: the moving notches change

@@ -16,6 +16,8 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart'
     show BiquadKind, biquadFx;
+import 'package:comet_beat/core/audio/crisp_dsp/convolution_reverb.dart'
+    show convolutionReverbFx;
 import 'package:comet_beat/core/audio/crisp_dsp/distortion.dart'
     show distortionFx;
 import 'package:comet_beat/core/audio/crisp_dsp/dynamics.dart'
@@ -321,6 +323,17 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
         minFreq: p('minFreq', 200),
         maxFreq: p('maxFreq', 2000),
         stages: p('stages', 4).round(),
+      ),
+    // The IR is synthesized from the params (no audio asset) and the seed is
+    // fixed, so the same settings always render the same tail — which is what
+    // lets a baked clip stay byte-identical across renders.
+    FxType.convolutionReverb => convolutionReverbFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        seconds: p('seconds', 1.5),
+        decay: p('decay', 0.5),
+        predelayMs: p('predelayMs', 0),
+        mix: p('mix', 0.35),
       ),
     FxType.compressor => compressorFx(
         input,

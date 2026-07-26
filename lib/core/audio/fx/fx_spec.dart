@@ -152,6 +152,11 @@ enum FxType {
   lowShelf,
   highShelf,
   phaser,
+
+  /// Convolution reverb — a REAL-SPACE tail (convolve with a synthesized
+  /// impulse response), where [reverb] is algorithmic Freeverb. The DSP was
+  /// already written and tested but only reachable from the Voice Lab.
+  convolutionReverb,
 }
 
 enum FxPreset { vocalPolish, lofiCrunch, wideSpace, robotVoice }
@@ -234,6 +239,18 @@ FxSpec defaultFx(FxType type) => switch (type) {
             'minFreq': 200,
             'maxFreq': 2000,
             'stages': 4,
+          },
+        ),
+      // A shortish, fairly damped room by default — long enough to hear the
+      // difference from the algorithmic reverb, short enough that the
+      // convolution cost stays modest on a phone.
+      FxType.convolutionReverb => const FxSpec(
+          type: FxType.convolutionReverb,
+          params: {
+            'seconds': 1.5,
+            'decay': 0.5,
+            'predelayMs': 0,
+            'mix': 0.35,
           },
         ),
       FxType.compressor => const FxSpec(

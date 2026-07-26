@@ -598,14 +598,29 @@ kept here so nothing is lost from the canonical plan.
 - `DonationConfig` tile flip-on (A5) — `donation.dart` exists but stays disabled
   until a Ko-fi/PayPal URL is set.
 
-**Audio FX** (was `FX_HANDOVER`):
-- Standalone `ring_mod`; full `distortion` set (hardClip/softClip/fuzz/wavefold);
-  restore dropped sfxr params (FM, LFO); optional FFT-convolution reverb.
-- Cubic-Hermite sample interpolation to replace linear `resample.dart` (improves
-  recorded-voice pitch-shift quality).
-- Multi-effect per-channel chain (one insert per channel today); sfxr FM/LFO into
-  the instrument picker; pitch envelope on sfxr/additive voices; reverb/delay send
-  on the Loop Mixer.
+**Audio FX** (was `FX_HANDOVER`) — ✅ **VERIFIED DONE 2026-07-26, except one item.**
+Audited each line against the code rather than re-implementing; all but the last
+had already shipped, so this block was a trap for the next agent to redo:
+- ✅ Standalone `ring_mod` → `crisp_dsp/ring_mod.dart` (`ringModFx`).
+- ✅ Full `distortion` set → `crisp_dsp/distortion.dart` has `hardClip`/`softClip`/
+  `fuzz`/`wavefold` (`DistortionKind`).
+- ✅ sfxr FM/LFO → `crisp_dsp/sfxr.dart` carries `fmDepth`/`lfoDepth`/`lfoSpeed`.
+- ✅ Cubic-Hermite interpolation → `resampleCubic` in `crisp_dsp/resample.dart`,
+  used by `sound_library.dart` + `tracker_replayer.dart`.
+- ✅ Multi-effect per-channel chain → `tracker_engine.dart` applies an ordered
+  chain of inserts per stem; the DAW has clip/track/bus/master chains.
+- ✅ Reverb/delay send on the Loop Mixer → `loop_engine.dart` `_applySend` /
+  `_applySendStereo`.
+- ✅ FFT-convolution reverb → `crisp_dsp/convolution_reverb.dart` (synthesized IR,
+  FFT overlap-add) existed and was tested, **but was only reachable from the Voice
+  Lab.** Now wired into the shared FX rack as `FxType.convolutionReverb`
+  (appended; `.cbdaw` stores effects by name) with tail/decay/pre-delay/mix, so
+  clips, tracks, buses and the master can use it alongside the algorithmic
+  Freeverb. Tests assert it actually behaves like a reverb — decaying tail,
+  pre-delay moves the onset, deterministic (fixed IR seed, so baked clips stay
+  byte-identical), and audibly different from `FxType.reverb`.
+- ⬜ **STILL OPEN:** pitch envelope on sfxr/additive voices. sfxr has a linear
+  `freqRamp` slide but no envelope; the additive voice has neither.
 
 **Samples** (was `CC0_SAMPLE_SOURCE_HANDOFF`):
 - Optional "starter-module generator": a pure `starterPattern(style, channels,
