@@ -50,7 +50,8 @@ List<TrackerCell> _column(int rows, int notesEvery, int phase) {
   for (var r = 0; r < rows; r++) {
     col[r] = r % notesEvery == 0
         ? TrackerCell(
-            midi: zoneKeys[(r ~/ notesEvery + phase) % zoneKeys.length])
+            midi: zoneKeys[(r ~/ notesEvery + phase) % zoneKeys.length],
+          )
         : const TrackerCell(fxCmd: kFxVibrato, fxParam: 0x38);
   }
   return col;

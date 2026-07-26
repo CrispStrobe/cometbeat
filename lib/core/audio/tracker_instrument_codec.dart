@@ -289,6 +289,8 @@ Map<String, dynamic> _sfxrToJson(SfxrParams p) => {
       'fmRatio': p.fmRatio,
       'lfoDepth': p.lfoDepth,
       'lfoSpeed': p.lfoSpeed,
+      'pitchEnvSemitones': p.pitchEnvSemitones,
+      'pitchEnvDecay': p.pitchEnvDecay,
     };
 
 double _d(Map<String, dynamic> m, String k, double fallback) =>
@@ -320,6 +322,10 @@ SfxrParams _sfxrFromJson(Map<String, dynamic> m) => SfxrParams(
       fmRatio: _d(m, 'fmRatio', 2),
       lfoDepth: _d(m, 'lfoDepth', 0),
       lfoSpeed: _d(m, 'lfoSpeed', 0.2),
+      // Absent in instruments saved before the pitch envelope existed; the
+      // defaults leave those sounding exactly as they did.
+      pitchEnvSemitones: _d(m, 'pitchEnvSemitones', 0),
+      pitchEnvDecay: _d(m, 'pitchEnvDecay', 8),
     );
 
 Map<String, dynamic> _envelopeToJson(Envelope e) => {

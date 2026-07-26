@@ -26,11 +26,27 @@ class Timbre {
     required this.harmonics,
     required this.attackMs,
     required this.decay,
+    this.pitchEnvSemitones = 0,
+    this.pitchEnvDecay = 8,
   });
 
   final List<double> harmonics;
   final double attackMs;
   final double decay;
+
+  /// Pitch ENVELOPE: the note starts [pitchEnvSemitones] away from its written
+  /// pitch and curves back to it, decaying at [pitchEnvDecay] (higher =
+  /// snappier). Positive starts sharp and falls — the drop that makes a
+  /// synthesized kick or tom read as a drum rather than a hum.
+  ///
+  /// 0 (the default, and every built-in timbre) leaves synthesis on the exact
+  /// path it took before this existed — see [renderSegmentsRaw], which keeps a
+  /// separate fixed-frequency branch precisely so the tracker's byte-identical
+  /// render gate still holds.
+  final double pitchEnvSemitones;
+  final double pitchEnvDecay;
+
+  bool get hasPitchEnvelope => pitchEnvSemitones != 0;
 }
 
 const _timbres = <Instrument, Timbre>{
@@ -82,18 +98,44 @@ Float64List renderSegmentsRaw(
   final buffer = Float64List(totalSamples);
 
   var offset = 0;
+  // A swept pitch needs ACCUMULATED phase (φ += 2π·f(t)/sr); evaluating
+  // sin(2π·f(t)·t) with a moving f gives the wrong instantaneous frequency.
+  // For a fixed pitch the two are mathematically identical but not bit-wise, so
+  // the original expression is kept verbatim on the no-envelope path — the
+  // tracker gates renders on byte-identical output.
+  final sweeping = voice.hasPitchEnvelope;
+  final phases = sweeping ? List<double>.filled(harmonics.length, 0) : null;
+
   for (final segment in segments) {
     final n = (segment.ms * sampleRate) ~/ 1000;
     final seconds = segment.ms / 1000;
+    if (sweeping) phases!.fillRange(0, phases.length, 0);
     for (var i = 0; i < n; i++) {
       final t = i / sampleRate;
       // Instrument-specific attack, exponential decay over the segment.
       final attack = t < attackSec ? t / attackSec : 1.0;
       final envelope = attack * exp(-decay * t / seconds);
       var sample = 0.0;
-      for (final freq in segment.freqs) {
-        for (var h = 0; h < harmonics.length; h++) {
-          sample += harmonics[h] * sin(2 * pi * freq * (h + 1) * t);
+      if (sweeping) {
+        // Exponential in frequency, so the gesture sounds the same in any
+        // octave. One phase accumulator per harmonic keeps them locked.
+        final bend = pow(
+          2,
+          voice.pitchEnvSemitones /
+              12 *
+              exp(-max(0.0, voice.pitchEnvDecay) * t),
+        ).toDouble();
+        for (final freq in segment.freqs) {
+          for (var h = 0; h < harmonics.length; h++) {
+            sample += harmonics[h] * sin(phases![h]);
+            phases[h] += 2 * pi * freq * (h + 1) * bend / sampleRate;
+          }
+        }
+      } else {
+        for (final freq in segment.freqs) {
+          for (var h = 0; h < harmonics.length; h++) {
+            sample += harmonics[h] * sin(2 * pi * freq * (h + 1) * t);
+          }
         }
       }
       buffer[offset + i] = sample * envelope;

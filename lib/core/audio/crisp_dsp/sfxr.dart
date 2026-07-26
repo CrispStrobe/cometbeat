@@ -61,6 +61,8 @@ class SfxrParams {
     this.fmRatio = 2,
     this.lfoDepth = 0,
     this.lfoSpeed = 0.2,
+    this.pitchEnvSemitones = 0,
+    this.pitchEnvDecay = 8,
   });
 
   final int waveType;
@@ -82,6 +84,18 @@ class SfxrParams {
   /// fmDepth > 0. LFO: a tremolo at [lfoSpeed] (×20 Hz) dips the amplitude by up
   /// to [lfoDepth] — applied only when lfoDepth > 0.
   final double fmDepth, fmRatio, lfoDepth, lfoSpeed;
+
+  /// Pitch ENVELOPE: the note starts [pitchEnvSemitones] away from [baseFreq]
+  /// and curves back to it, decaying at [pitchEnvDecay] (higher = snappier).
+  /// Positive starts sharp and falls — the drop that makes a kick read as a
+  /// kick, or a laser as a laser; negative starts flat and rises.
+  ///
+  /// Distinct from [freqRamp], which is a LINEAR per-sample slide that never
+  /// settles: a ramp keeps going, an envelope returns to the base pitch. 0
+  /// disables it, and the synthesis then takes exactly the path it did before
+  /// this parameter existed.
+  final double pitchEnvSemitones;
+  final double pitchEnvDecay;
 
   SfxrParams copyWith({
     int? waveType,
@@ -109,6 +123,8 @@ class SfxrParams {
     double? fmRatio,
     double? lfoDepth,
     double? lfoSpeed,
+    double? pitchEnvSemitones,
+    double? pitchEnvDecay,
   }) =>
       SfxrParams(
         waveType: waveType ?? this.waveType,
@@ -136,6 +152,8 @@ class SfxrParams {
         fmRatio: fmRatio ?? this.fmRatio,
         lfoDepth: lfoDepth ?? this.lfoDepth,
         lfoSpeed: lfoSpeed ?? this.lfoSpeed,
+        pitchEnvSemitones: pitchEnvSemitones ?? this.pitchEnvSemitones,
+        pitchEnvDecay: pitchEnvDecay ?? this.pitchEnvDecay,
       );
 }
 
@@ -235,6 +253,14 @@ Float64List sfxrGenerate(
 
     frequency = _clamp(frequency + params.freqRamp * 10, 20, 20000);
     var cur = frequency * _clamp(arpValue, 0.1, 10);
+
+    // Pitch envelope: start pitchEnvSemitones away and curve back to the base
+    // pitch. Exponential in FREQUENCY (2^(semitones/12)) rather than linear in
+    // Hz, so the gesture sounds the same whatever octave it's played at.
+    if (params.pitchEnvSemitones != 0) {
+      final shape = exp(-max(0.0, params.pitchEnvDecay) * t);
+      cur *= pow(2, params.pitchEnvSemitones / 12 * shape).toDouble();
+    }
 
     if (params.vibStrength > 0 && params.vibSpeed > 0) {
       final v = sin(2 * pi * params.vibSpeed * 50 * t);
