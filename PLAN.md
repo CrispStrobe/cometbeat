@@ -494,7 +494,23 @@ lenient match). Records to ProgressService + stars. Validated end-to-end via
 the BlackHole loop — all four roots detected on real captured audio (the
 7th/maj7 variants are expected overtone pickup, hence the lenient match).
 
-## Songbook — scan sheet music into playable songs (PLANNED)
+## Songbook — scan sheet music into playable songs (MOSTLY BUILT — audited 2026-07-26)
+
+> Audit against the code, because the PLANNED marker was badly out of date:
+> ✅ **collection model** — `SongCollection` in `user_songs_service.dart` +
+> `songbook_screen.dart` (named, ordered books; drag-reorder; remove-from-book
+> without deleting the song). ✅ **persistence** — `UserSongsService.load/_save`
+> over SharedPreferences. ✅ **OMR → notation bridge** — `songs/import/
+> omr_import{,_io,_stub}.dart` + `import_screen.dart`, consuming CrispEmbed's
+> GGUF engines as intended. ✅ **per-song metadata** — composer / key / tempo,
+> derived from the stored MusicXML, persisted, shown in the book (2026-07-26).
+> ⬜ **source image retained**, so OMR can be re-run on a bad scan.
+> ⬜ **edit / re-run correction flow** before a scan becomes a chart.
+>
+> ⚠️ Related sibling-repo bug, unfixed: crisp_notation's MusicXML reader takes
+> its tempo from `<metronome>` and ignores `<sound tempo="…">`, so a file with
+> only the playback attribute imports with no tempo. Pinned as a known-limitation
+> test in `test/song_metadata_test.dart`.
 
 Product feature, not a detector: let the user build **songbooks** from real sheet
 music. Flow: import/scan a score photo → **Optical Music Recognition** → notation
