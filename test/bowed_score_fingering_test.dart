@@ -128,4 +128,63 @@ void main() {
     final table = fingerBowedScore(score, skill: BowedSkill.neckPositions);
     expect(table['a']!.single.anchor, table['b']!.single.anchor);
   });
+
+  group('written into the model (for files, not screens)', () {
+    test('fingerings land on the notes and reach MusicXML', () {
+      final fingered = scoreWithBowedFingerings(
+        _cScale(),
+        skill: BowedSkill.firstPosition,
+      );
+      final notes = fingered.measures
+          .expand((m) => m.elements)
+          .whereType<NoteElement>()
+          .toList();
+      expect(
+        notes.map((n) => n.fingerings.single).toList(),
+        [0, 1, 3, 4, 0, 1, 3, 4],
+      );
+      // The point: a file can carry them. The display channel cannot.
+      final xml = scoreToMusicXml(fingered);
+      expect(xml, contains('<fingering>4</fingering>'));
+      expect(scoreToMusicXml(_cScale()), isNot(contains('<fingering>')));
+    });
+
+    test('the source score is left alone', () {
+      final original = _cScale();
+      final before = scoreToMusicXml(original);
+      scoreWithBowedFingerings(original, skill: BowedSkill.firstPosition);
+      expect(scoreToMusicXml(original), before);
+      expect(
+        original.measures
+            .expand((m) => m.elements)
+            .whereType<NoteElement>()
+            .every((n) => n.fingerings.isEmpty),
+        isTrue,
+      );
+    });
+
+    test('everything else about the score survives the copy', () {
+      final original = _cScale();
+      final fingered = scoreWithBowedFingerings(
+        original,
+        skill: BowedSkill.firstPosition,
+      );
+      expect(fingered.clef, original.clef);
+      expect(fingered.measures.length, original.measures.length);
+      // Strip the fingerings back off and the score is the one we started with —
+      // which is the check that no other field was dropped in the rebuild.
+      final stripped = fingered.copyWith(
+        measures: [
+          for (final m in fingered.measures)
+            m.copyWith(
+              elements: [
+                for (final e in m.elements)
+                  e is NoteElement ? e.copyWith(fingerings: const []) : e,
+              ],
+            ),
+        ],
+      );
+      expect(stripped, original);
+    });
+  });
 }

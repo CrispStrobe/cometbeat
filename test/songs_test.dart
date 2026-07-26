@@ -348,8 +348,8 @@ void main() {
     MultiSystemView view() =>
         tester.widget<MultiSystemView>(find.byType(MultiSystemView));
     expect(view().extraFingerings, isEmpty); // off by default
-    // Printing is reachable from the same screen — what you see is what prints.
-    expect(find.byIcon(Icons.picture_as_pdf_outlined), findsOneWidget);
+    // Exporting is reachable from the same screen — what you see is what you get.
+    expect(find.byIcon(Icons.ios_share), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.back_hand_outlined));
     await tester.pump();
@@ -361,6 +361,14 @@ void main() {
     // stays in first position — 4, 0, 1, 2. Worth pinning precisely, because a
     // plausible-but-wrong answer here would look just as reasonable on screen.
     expect(marks.values.map((m) => m.single).toList(), [4, 0, 1, 2]);
+
+    // The export sheet offers the formats, and the score it is handed carries the
+    // fingerings in its notes — a file cannot use the display-time channel.
+    await tester.tap(find.byIcon(Icons.ios_share));
+    await tester.pumpAndSettle();
+    expect(find.text('MusicXML'), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10)); // dismiss the sheet
+    await tester.pumpAndSettle();
 
     // And off again.
     await tester.tap(find.byIcon(Icons.back_hand));

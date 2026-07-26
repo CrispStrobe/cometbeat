@@ -107,3 +107,47 @@ Map<String, List<int>> bowedFingeringDigits(
       entry.key: [for (final f in entry.value) f.finger],
   };
 }
+
+/// [score] with its cello fingerings written INTO the notes, as
+/// `NoteElement.fingerings`.
+///
+/// The difference from [bowedFingeringDigits] is where the marks live, and it
+/// matters: that map is a display argument the layout draws and forgets, which is
+/// all a screen or a printed page needs. A FILE needs them in the model, because
+/// MusicXML writes `<fingering>` from the note itself — so this is the path for
+/// exporting a fingered part to something another program will read.
+///
+/// Returns a copy; [score] is untouched, because a fingering is our reading of the
+/// piece rather than an edit to it.
+Score scoreWithBowedFingerings(
+  Score score, {
+  required BowedSkill skill,
+  BowedInstrument? instrument,
+  BowedArrangeCost? cost,
+  BowedPositionModel? model,
+}) {
+  final marks = fingerBowedScore(
+    score,
+    skill: skill,
+    instrument: instrument,
+    cost: cost,
+    model: model,
+  );
+  if (marks.isEmpty) return score;
+  return score.copyWith(
+    measures: [
+      for (final measure in score.measures)
+        measure.copyWith(
+          elements: [
+            for (final element in measure.elements)
+              if (element is NoteElement && marks[element.id] != null)
+                element.copyWith(
+                  fingerings: [for (final f in marks[element.id]!) f.finger],
+                )
+              else
+                element,
+          ],
+        ),
+    ],
+  );
+}
