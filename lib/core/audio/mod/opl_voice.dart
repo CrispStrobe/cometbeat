@@ -165,16 +165,39 @@ class OplPatch {
       data.length < 11 || !data.any((b) => (b & 0xFF) != 0);
 }
 
+/// Built-in OPL2 (AdLib / YM3812) patches, each an 11-byte S3M AdLib register
+/// block (the layout is documented at the top of this file). These are the
+/// authentic FM-chip timbres — distinct from the generic 2-op `FmInstrument` —
+/// so the app's voice list can offer a real AdLib sound. Byte order per pair is
+/// [mod, car]: 0x20, 0x40, 0x60, 0x80, 0xE0, then 0xC0 (FB<<1 | connection).
+const Map<String, List<int>> kOplPresets = {
+  // FM lead: MULT 1 both, moderate modulator level (TL 0x1A) shaping a loud
+  // carrier, fast attack / short decay, a little feedback (2) — a bright reed.
+  'adlibLead': [
+    0x21, 0x21, 0x1A, 0x00, 0xF4, 0xF2, 0x05, 0x03, 0x00, 0x00, 0x04, //
+  ],
+  // Additive organ: connection 1 so BOTH operators sound, both loud, sustained
+  // (fast attack, no decay/release) — a held drawbar tone.
+  'adlibOrgan': [
+    0x21, 0x21, 0x00, 0x00, 0xF0, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x01, //
+  ],
+};
+
 /// A dynamic OPL2 two-operator FM instrument built from an S3M AdLib patch.
 /// Renders each note with real per-operator ADSR envelopes, the selected
 /// waveforms, key-scaling, AM/VIB LFOs and FM / additive mixing.
 class OplInstrument implements TrackerInstrument {
   OplInstrument(this.id, List<int> adlibData)
-      : _blank = OplPatch.isBlank(adlibData),
+      : adlibData = List<int>.unmodifiable(adlibData),
+        _blank = OplPatch.isBlank(adlibData),
         patch = OplPatch.fromS3m(adlibData);
 
   @override
   final String id;
+
+  /// The raw 11-byte S3M AdLib register block this patch was built from —
+  /// retained so the instrument can be serialized (the codec) and re-created.
+  final List<int> adlibData;
 
   /// The decoded operator model — exposed for inspection / tests.
   final OplPatch patch;

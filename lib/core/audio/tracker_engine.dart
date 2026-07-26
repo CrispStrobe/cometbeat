@@ -29,6 +29,8 @@ import 'package:comet_beat/core/audio/crisp_dsp/subtractive.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:comet_beat/core/audio/fx/fx_chain.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
+import 'package:comet_beat/core/audio/mod/opl_voice.dart'
+    show OplInstrument, kOplPresets;
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_effects.dart';
 import 'package:comet_beat/core/audio/tracker_replay.dart';
@@ -2127,6 +2129,10 @@ final List<InstrumentOption> kTrackerInstruments = [
   // Subtractive — pad, lead, synth bass (the sustained analog side).
   for (final e in kSubPresets.entries)
     InstrumentOption(e.key, () => SubtractiveInstrument.preset(e.key, e.value)),
+  // OPL2 / AdLib (YM3812) — the authentic FM-chip voice, distinct from the
+  // generic 2-op FM above. Built from an 11-byte S3M AdLib register block.
+  for (final e in kOplPresets.entries)
+    InstrumentOption(e.key, () => OplInstrument(e.key, e.value)),
 ];
 
 /// Holds the pattern (channels × rows) + timing, edits cells, and renders the

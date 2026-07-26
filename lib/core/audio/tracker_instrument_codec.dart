@@ -18,6 +18,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/envelope.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/fm.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/subtractive.dart';
+import 'package:comet_beat/core/audio/mod/opl_voice.dart' show OplInstrument;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 
@@ -37,6 +38,7 @@ bool isSerializableInstrument(TrackerInstrument instrument) =>
     instrument is KarplusInstrument ||
     instrument is FmInstrument ||
     instrument is SubtractiveInstrument ||
+    instrument is OplInstrument ||
     instrument is SampleInstrument ||
     (instrument is MultiSampleInstrument &&
         instrument.zones.values.every(isSerializableInstrument)) ||
@@ -145,6 +147,13 @@ Map<String, dynamic> instrumentToJson(TrackerInstrument instrument) {
       ],
     };
   }
+  if (instrument is OplInstrument) {
+    return {
+      'type': 'opl',
+      'id': instrument.id,
+      'adlib': List<int>.from(instrument.adlibData),
+    };
+  }
   if (instrument is PercussionInstrument) {
     return {'type': 'percussion', 'id': instrument.id};
   }
@@ -188,6 +197,11 @@ TrackerInstrument instrumentFromJson(Map<String, dynamic> json) {
           indexDecay: (p['indexDecay'] as num).toDouble(),
           ampDecay: (p['ampDecay'] as num).toDouble(),
         ),
+      );
+    case 'opl':
+      return OplInstrument(
+        id,
+        [for (final b in json['adlib'] as List) (b as num).toInt()],
       );
     case 'subtractive':
       final p = json['preset'] as Map<String, dynamic>;
