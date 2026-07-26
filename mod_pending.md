@@ -79,14 +79,21 @@ unit-tested:
   a read-only Advanced Tracker view showing the played order sequence with its
   jump/break/loop/speed/tempo commands.
 
-**Still genuinely open (documented, not done):** a **fully byte-identical
-continuous streaming renderer** for command-heavy songs (the bounded export above
-resets voice state at chunk boundaries; true cross-chunk continuity needs the
-whole channel×row×block loop transposed — a large rewrite); the remaining unmapped
-cross-format effects (`S0`/`S5`/`S7`/`S9`/`SA`/`Z`); MOD tag-alias preservation
-(FLT8/OCTA); a cycle-exact OPL emulator (vs the FM approximation shipped); and the
-deeper native editors (raw effect-memory, native S3M header, velocity zones,
-in-place flow *editing*). See the feature audit below for per-feature state.
+**Superseded — most of this paragraph is now DONE** (see the later sections and
+the 2026-07-26 summary at the end): the byte-identical **continuous streaming
+renderer** shipped (every song shape streams with carried voice state, flat RAM
+&lt;500 MB — buddhia3 2.8 GB→~340 MB, byte-identical); MOD **tag-alias**
+preservation shipped; the resonant filter, cubic interpolation, anti-click,
+dither, velocity/non-sample zones, **in-place flow editing**, raw
+effect-memory + native S3M header editors, and a **dynamic OPL2 voice with ADSR**
+all shipped. Genuinely remaining are only: the cross-format effects `S5/S7/S9/SA/Z`
+(verified to have no faithful neutral equivalent — named in the export-loss
+report, not silently dropped); non-default IT MIDI macros; bit-exact OPL2 chip
+emulation (log-sin/exp DAC ladder, OPL3 4-op, rhythm mode — the dynamic 2-op
+voice is faithful but not cycle-exact); a per-note re-attack at streamer chunk
+boundaries for procedural voices (sfxr/fm/subtractive/OPL — shared trade-off);
+and model-retention of a few S3M header bytes (master vol / ultraClick / flags /
+createdWith / channelSettings). See the feature audit below for per-feature state.
 
 ### Native-editing pass (raw command provenance + S3M header)
 

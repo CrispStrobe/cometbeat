@@ -54,17 +54,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   `bb5a5bee`'s `mod_hard_pan.dart`/`tracker_replayer_walkflow.dart`/`.bak2/.orig/.rej`
   were pre-existing untracked cruft, already removed by `4a9c55d0`. — opus
 
-- **opus (tracker-complete)** · 🚧 **ACTIVE — tracker MOD/XM/S3M/IT renderer/editor.**
-  Shipped: full <500 MB streaming renderer (byte-identical), resonant IT filter
-  (+cutoff env, MIDI-macro), cubic interp + anti-click, opt-in TPDF dither, S3M
-  DP30/OPL2, cross-format effect table, velocity/non-sample zones, export-loss
-  report, flow timeline. **Hot files I touch:** `tracker_replayer.dart`,
-  `tracker_engine.dart`, `tracker_song.dart`, `advanced_tracker_screen.dart`,
-  `instrument_editor.dart`, `mod/*.dart`, ARBs. Now working the remaining
-  deferred items (in-place flow-command editing, native S3M header / raw
-  effect-memory editors, contrived stereo-native memory edge, cycle-exact OPL).
-  ⚠️ Loop/PatternCell/note-velocity work (`bb5a5bee`) is a SEPARATE workstream —
-  not mine. — opus
+- **opus (tracker-complete)** · ✅ **IDLE / last-shipped — tracker MOD/XM/S3M/IT
+  renderer+editor complete.** Shipped to `main`: full **<500 MB streaming
+  renderer** (every song shape, byte-identical; buddhia3 2.8 GB→~340 MB); resonant
+  IT filter (+cutoff envelope, MIDI-macro); cubic interp + anti-click; opt-in TPDF
+  dither; S3M DP30 ADPCM + **dynamic OPL2 voice w/ ADSR**; MOD tag aliases; full
+  cross-format effect mapping + export-loss report; velocity/non-sample zones;
+  **editable flow/order timeline**; raw native-command + S3M-header editors. All
+  corpus-byte-identical where required, oracle-gated where output changed, each
+  unit-tested; whole-project analyze clean. Residuals in `mod_pending.md`
+  (bit-exact OPL chip, non-default IT MIDI macros, a few unretained S3M header
+  bytes). Now idle. ⚠️ Loop/PatternCell work (`bb5a5bee`) is a separate
+  workstream — not mine. — opus
 
 > ⛔ **`dart format` is a HARD CI GATE — and it runs FIRST.** `ci.yml` runs
 > `dart format --output=none --set-exit-if-changed .` *before* analyze and test.
