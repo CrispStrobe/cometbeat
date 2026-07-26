@@ -540,6 +540,7 @@
   "firstRunLoopEdit": "Tipp ✎ auf einer Karte (oder eine Note in den Noten), um zu ändern, was sie spielt — du hörst es sofort.",
   "firstRunLoopMore": "Keine Idee? Würfle 🎲 für eine Überraschung. Mehr willst du? Öffne den Beat im Schlagzeug oder den ganzen Song im Tracker oder Noten-Workshop.",
   "loopMixerTuneWide": "Großer Tonumfang",
+  "loopMixerTuneInTracker": "Im Tracker feinschleifen",
   "loopMixerScoreEmpty": "Schalte eine Spur ein, um sie als Noten zu sehen.",
   "loopMixerShare": "Teile deinen Groove",
   "loopMixerUndo": "Rückgängig",

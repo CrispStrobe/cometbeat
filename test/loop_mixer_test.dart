@@ -1263,6 +1263,67 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the tune editor offers Fine-tune in Tracker', (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.toggleTuneEdit();
+    await tester.pump();
+    expect(game.tuneEditVisible, isTrue);
+    expect(find.text('Fine-tune in Tracker'), findsOneWidget);
+  });
+
+  testWidgets(
+      'returning from the Tracker folds a shared-back tune into the loop',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    expect(game.hasVoiceTrack, isFalse);
+
+    // The bridge was empty when we opened the Tracker; the pro edited and
+    // shared a tune back (the Advanced Tracker's "Share tune" → MelodyBridge).
+    MelodyBridge.instance.publish(
+      SharedMelody(
+        cells: const [
+          PatternCell(midis: [60], steps: 8),
+          PatternCell(midis: [67], steps: 8),
+        ],
+        tempoBpm: 100,
+        source: 'advtracker',
+      ),
+    );
+    game.debugFoldTrackerReturn(null); // before = empty bridge
+    await tester.pump();
+
+    expect(game.hasVoiceTrack, isTrue);
+    expect(
+      game.debugTuneCells!.any((c) => c.midis?.contains(60) ?? false),
+      isTrue,
+    );
+  });
+
+  testWidgets(
+      'returning from the Tracker without sharing leaves the loop alone',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    // A stale melody already sat on the bridge when we opened the Tracker, and
+    // the pro did NOT share back — the same instance is still there on return,
+    // so nothing should be folded in (no surprise clobber).
+    MelodyBridge.instance.publish(
+      SharedMelody(
+        cells: const [
+          PatternCell(midis: [62], steps: 16),
+        ],
+        tempoBpm: 100,
+      ),
+    );
+    final before = MelodyBridge.instance.current;
+    game.debugFoldTrackerReturn(before);
+    await tester.pump();
+    expect(game.hasVoiceTrack, isFalse);
+  });
+
   testWidgets('LM-UX7: a custom harmony is added, selected, and shown',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

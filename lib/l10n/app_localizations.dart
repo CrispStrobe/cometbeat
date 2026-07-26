@@ -3038,6 +3038,12 @@ abstract class AppLocalizations {
   /// **'Wide range'**
   String get loopMixerTuneWide;
 
+  /// Button in the Loop Studio tune editor: open the full (Advanced) Tracker to fine-edit the groove on the chromatic grid; a tune shared back folds into the loop.
+  ///
+  /// In en, this message translates to:
+  /// **'Fine-tune in Tracker'**
+  String get loopMixerTuneInTracker;
+
   /// Hint shown in the Loop Mixer score panel when no track is enabled to engrave.
   ///
   /// In en, this message translates to:

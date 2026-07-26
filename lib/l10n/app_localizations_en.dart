@@ -1621,6 +1621,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerTuneWide => 'Wide range';
 
   @override
+  String get loopMixerTuneInTracker => 'Fine-tune in Tracker';
+
+  @override
   String get loopMixerScoreEmpty =>
       'Turn on a layer to see it written as notes.';
 

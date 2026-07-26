@@ -1626,6 +1626,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerTuneWide => 'Großer Tonumfang';
 
   @override
+  String get loopMixerTuneInTracker => 'Im Tracker feinschleifen';
+
+  @override
   String get loopMixerScoreEmpty =>
       'Schalte eine Spur ein, um sie als Noten zu sehen.';
 

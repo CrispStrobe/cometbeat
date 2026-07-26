@@ -599,6 +599,10 @@
   "firstRunLoopEdit": "Tap ✎ on any card (or a note on the sheet music) to change what it plays — you hear the change right away.",
   "firstRunLoopMore": "Stuck? Roll 🎲 for a surprise. Want more? Open the beat in the Drum Kit, or the whole song in the Tracker or Score Workshop.",
   "loopMixerTuneWide": "Wide range",
+  "loopMixerTuneInTracker": "Fine-tune in Tracker",
+  "@loopMixerTuneInTracker": {
+    "description": "Button in the Loop Studio tune editor: open the full (Advanced) Tracker to fine-edit the groove on the chromatic grid; a tune shared back folds into the loop."
+  },
   "loopMixerScoreEmpty": "Turn on a layer to see it written as notes.",
   "@loopMixerScoreEmpty": {
     "description": "Hint shown in the Loop Mixer score panel when no track is enabled to engrave."

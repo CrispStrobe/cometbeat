@@ -239,6 +239,10 @@ abstract interface class LoopMixerTester {
   /// "actually overridden by an edit".
   bool debugHasTuneOverride(String id);
 
+  /// The round-trip fold used when returning from the full Tracker: if a fresh
+  /// tune arrived on MelodyBridge since [before], load it into the loop.
+  void debugFoldTrackerReturn(SharedMelody? before);
+
   /// Cycle the dynamics of the note(s) at [step] (soft ↔ normal) — the tune
   /// grid's long-press, for note-level velocity editing.
   void debugCycleTuneVelocity(int midi, int step);
@@ -673,6 +677,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   bool debugHasTuneOverride(String id) =>
       _engine.trackCellsOverride(id) != null;
+  @override
+  void debugFoldTrackerReturn(SharedMelody? before) =>
+      _foldTrackerReturn(before);
   @override
   void debugCycleTuneVelocity(int midi, int step) =>
       _cycleTuneCellVelocity(midi, step);
@@ -1636,7 +1643,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       case 'export':
         _exportGroove();
       case 'tracker':
-        _openInTracker();
+        unawaited(_openInTracker());
       case 'workshop':
         _openInWorkshop();
       case 'wav':
@@ -1691,19 +1698,35 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     );
   }
 
-  /// Send the groove's pitched tracks into the Advanced Tracker to keep editing
-  /// on the grid (via the score bridge — one chromatic channel per track).
-  void _openInTracker() {
+  /// Graduate the groove's pitched tracks into the Advanced Tracker to fine-edit
+  /// on the full chromatic grid (via the score bridge — one channel per track),
+  /// then ROUND-TRIP: if the pro shares their edited tune back through
+  /// MelodyBridge (the tracker's "Share tune" seam), fold it into the loop on
+  /// return. One-way today only if they don't share; a fully-automatic
+  /// publish-on-exit is a coordinated follow-up on the tracker side.
+  Future<void> _openInTracker() async {
     final l10n = AppLocalizations.of(context)!;
     final parts = grooveParts(_engine, nameOf: (id) => _trackLabel(l10n, id));
     if (parts == null) return;
-    Navigator.of(context).push(
+    final before = MelodyBridge.instance.current;
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AdvancedTrackerScreen(
           initialSong: trackerSongFromMultiPart(parts.score),
         ),
       ),
     );
+    if (!mounted) return;
+    _foldTrackerReturn(before);
+  }
+
+  /// If a fresh tune arrived on [MelodyBridge] since [before] (the pro shared
+  /// their Tracker edit back), fold it into the loop via the shared-tune loader.
+  /// Factored out of [_openInTracker] so the round-trip is unit-testable without
+  /// driving real navigation.
+  void _foldTrackerReturn(SharedMelody? before) {
+    final after = MelodyBridge.instance.current;
+    if (after != null && !identical(after, before)) loadSharedTune();
   }
 
   /// Round-trip the current beat target through the full Drum Kit pad editor:
@@ -2140,22 +2163,35 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.loopMixerTuneEditHint,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+            Text(
+              l10n.loopMixerTuneEditHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
-                ),
+            ),
+            const SizedBox(height: 4),
+            // Controls wrap so a long label (e.g. DE) never overflows a phone.
+            Wrap(
+              spacing: 6,
+              runSpacing: 2,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
                 // Beginner-Tracker parity: widen the grid to two octaves.
                 FilterChip(
                   label: Text(l10n.loopMixerTuneWide),
                   selected: _tuneWideRange,
                   onSelected: setTuneWideRange,
                   visualDensity: VisualDensity.compact,
+                ),
+                // Graduate to the full (Advanced) Tracker for fine chromatic /
+                // per-cell editing; a tune shared back folds into the loop.
+                TextButton.icon(
+                  onPressed: () => unawaited(_openInTracker()),
+                  icon: const Icon(Icons.tune, size: 18),
+                  label: Text(l10n.loopMixerTuneInTracker),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               ],
             ),
@@ -3152,7 +3188,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           case 'follow':
             toggleFollow();
           case 'tracker':
-            _openInTracker();
+            unawaited(_openInTracker());
           case 'workshop':
             _openInWorkshop();
           case 'share':
