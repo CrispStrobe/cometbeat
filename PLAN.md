@@ -541,7 +541,7 @@ lenient match). Records to ProgressService + stars. Validated end-to-end via
 the BlackHole loop — all four roots detected on real captured audio (the
 7th/maj7 variants are expected overtone pickup, hence the lenient match).
 
-## Songbook — scan sheet music into playable songs (MOSTLY BUILT — audited 2026-07-26)
+## Songbook — scan sheet music into playable songs (DONE — audited 2026-07-26)
 
 > Audit against the code, because the PLANNED marker was badly out of date:
 > ✅ **collection model** — `SongCollection` in `user_songs_service.dart` +
@@ -551,8 +551,14 @@ the BlackHole loop — all four roots detected on real captured audio (the
 > omr_import{,_io,_stub}.dart` + `import_screen.dart`, consuming CrispEmbed's
 > GGUF engines as intended. ✅ **per-song metadata** — composer / key / tempo,
 > derived from the stored MusicXML, persisted, shown in the book (2026-07-26).
-> ⬜ **source image retained**, so OMR can be re-run on a bad scan.
-> ⬜ **edit / re-run correction flow** before a scan becomes a chart.
+> ✅ **source image retained** — `import/omr_source_store{,_io,_stub}.dart` keeps
+> the photo in the same `~/.cache/crisp_notation` tree as the model cache, and
+> `ImportedSong.hasSourceImage` records it (`4c86257b`).
+> ✅ **re-run correction flow** — `_RescanButton` on the song row re-runs
+> recognition on the retained scan and replaces the notation, so a bad read is
+> fixed without re-photographing (`4c86257b`).
+>
+> ⇒ **This section is now complete.** Everything it scoped is built.
 >
 > ✅ Related sibling-repo bug, FIXED (crisp_notation `d8589c5`): the MusicXML
 > reader took its tempo from `<metronome>` only and ignored `<sound tempo="…">`,
