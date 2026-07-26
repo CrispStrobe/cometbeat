@@ -33,6 +33,13 @@ export 'package:comet_beat/shared/step_duration.dart'
 /// tied notes; notes are decomposed into standard values and split at 4/4 bar
 /// lines (with a tie across the line). An empty channel yields a single bar of
 /// rests.
+///
+/// A Note Cut (key-off) ends the note and the rows after it become RESTS. This
+/// reads [noteRuns] rather than [cellRuns] to see that: `cellRuns` adds the
+/// release phase back onto the sustain, which is right for "how long until the
+/// next trigger" but wrong for notation — it drew a note running through the
+/// silence the module actually plays, so a cut-off phrase came out as one long
+/// held note and a score round trip grew notes that were never written.
 Score trackerChannelToScore(
   TrackerChannel channel,
   TrackerTiming timing, {
@@ -50,7 +57,8 @@ Score trackerChannelToScore(
     posInBar = 0;
   }
 
-  for (final (midi, steps) in cellRuns(channel.cells)) {
+  /// Lays [steps] of [midi] (null = silence) onto the bar grid.
+  void emit(int? midi, int steps) {
     var rem = steps;
     while (rem > 0) {
       final avail = barSteps - posInBar;
@@ -75,6 +83,11 @@ Score trackerChannelToScore(
       rem -= take;
       if (posInBar >= barSteps) closeBar();
     }
+  }
+
+  for (final (midi, sustain, release) in noteRuns(channel.cells)) {
+    emit(midi, sustain);
+    emit(null, release); // the note is off — this is silence, not more note
   }
   if (current.isNotEmpty) closeBar();
 

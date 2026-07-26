@@ -9,38 +9,116 @@ import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart'
     show scoreToChannels, trackerToScoreParts;
-import 'package:crisp_notation/crisp_notation.dart' show MultiPartScore, Score;
+import 'package:comet_beat/shared/step_duration.dart' show durationToSteps;
+import 'package:crisp_notation/crisp_notation.dart'
+    show MultiPartScore, NoteElement, RestElement, Score;
+
+/// Rows in one pattern of an imported song.
+///
+/// 64 is the tracker convention and what the pattern editor is laid out for; a
+/// score longer than that becomes SEVERAL patterns rather than one long one.
+const int kImportPatternRows = 64;
+
+/// How many grid steps [score] needs end to end.
+///
+/// Every element contributes its own duration whether or not it is tied — a tie
+/// merges two notes into one held cell, but the held cell still occupies both
+/// durations, so summing is exact rather than an estimate.
+int _stepsNeeded(Score score, TrackerTiming timing) {
+  var steps = 0;
+  for (final measure in score.measures) {
+    for (final element in measure.elements) {
+      if (element is NoteElement) {
+        steps += durationToSteps(element.duration, timing.stepsPerBeat);
+      } else if (element is RestElement) {
+        steps += durationToSteps(element.duration, timing.stepsPerBeat);
+      }
+    }
+  }
+  return steps;
+}
 
 /// Builds a [TrackerSong] from [mp] — one chromatic channel per part (no
 /// pentatonic snap). Empty score → an empty default song.
+///
+/// The song is sized to the MUSIC. This used to render into a single fixed
+/// 64-row pattern, which silently truncated anything longer: "London Bridge"
+/// arrived as its first thirteen notes and the rest was simply gone, with no
+/// error and nothing in the conversion report to say so. Now the parts are
+/// rendered at full length and split across as many 64-row patterns as they
+/// need, which is also the shape a module importer produces — so the inverse
+/// [multiPartScoreFromTrackerSong], which concatenates patterns in order,
+/// reads the whole song back.
 TrackerSong trackerSongFromMultiPart(MultiPartScore mp) {
-  const timing = TrackerTiming(rows: 64);
-  final channels = <TrackerChannel>[];
-  final cells = <List<TrackerCell>>[];
-  for (var p = 0; p < mp.parts.length; p++) {
-    final Score part = mp.parts[p];
+  const timing = TrackerTiming(rows: kImportPatternRows);
+
+  // Long enough for the longest part, and never shorter than one pattern.
+  var total = 0;
+  for (final part in mp.parts) {
+    final steps = _stepsNeeded(part, timing);
+    if (steps > total) total = steps;
+  }
+  if (total < kImportPatternRows) total = kImportPatternRows;
+  final patternCount = (total + kImportPatternRows - 1) ~/ kImportPatternRows;
+  final fullRows = patternCount * kImportPatternRows;
+  final fullTiming = timing.copyWith(rows: fullRows);
+
+  // Render each part across the WHOLE length first, then slice: a note's row is
+  // its position in the piece, so slicing after placement keeps every note where
+  // the music put it, including notes that straddle a pattern boundary.
+  final full = <List<TrackerCell>>[];
+  for (final Score part in mp.parts) {
     final col = scoreToChannels(
       part,
-      timing,
+      fullTiming,
       channelCount: 1,
       snapToScale: false,
     ).first;
-    channels.add(
+
+    // Stop the last note where the music stops. A tracker cell sounds until
+    // something replaces it, so without this the final note runs on through the
+    // padding rows up to the pattern boundary — which reads back as a longer
+    // note than was written, or as an extra tied note after it.
+    final end = _stepsNeeded(part, timing);
+    if (end < col.length) col[end] = const TrackerCell(keyOff: true);
+
+    full.add(col);
+  }
+  if (full.isEmpty) return TrackerSong();
+
+  final patterns = <TrackerPattern>[];
+  for (var p = 0; p < patternCount; p++) {
+    final start = p * kImportPatternRows;
+    patterns.add(
+      TrackerPattern(
+        name: p.toString().padLeft(2, '0'),
+        cells: [
+          for (final col in full)
+            List<TrackerCell>.of(
+              col.sublist(start, start + kImportPatternRows),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // Channels mirror the selected (first) pattern — `fromParts` loads that one
+  // into the editing engine.
+  final channels = <TrackerChannel>[
+    for (var p = 0; p < full.length; p++)
       TrackerChannel(
         id: 'part${p + 1}',
         instrument: kTrackerInstruments.first.build(),
-        rows: timing.rows,
-        cells: col,
+        rows: kImportPatternRows,
+        cells: patterns.first.cells[p],
       ),
-    );
-    cells.add(col);
-  }
-  if (channels.isEmpty) return TrackerSong();
+  ];
+
   return TrackerSong.fromParts(
     channels: channels,
     timing: timing,
-    patterns: [TrackerPattern(name: '00', cells: cells)],
-    order: [0],
+    patterns: patterns,
+    order: [for (var p = 0; p < patternCount; p++) p],
   );
 }
 

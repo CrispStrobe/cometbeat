@@ -29,6 +29,27 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (interop)** · ✅ **SHIPPED (idle) — the interop matrix now runs against
+  the real song book, and it found two truncation/fidelity bugs.**
+  `test/interop_corpus_test.dart` puts all 15 bundled songs through every route
+  the matrix offers and requires Score → X → Score to return the same MIDI
+  sequence. Tab round-tripped clean; the Tracker did not, and the two causes were
+  both real:
+  (1) `multipart_to_tracker.dart` rendered into ONE fixed 64-row pattern, so any
+  longer score was silently cut — "London Bridge" imported as its first 13 notes
+  with nothing in the conversion report to say so. It now sizes to the music and
+  splits across as many 64-row patterns as needed (the module-importer shape, so
+  the existing inverse reads it straight back).
+  (2) **hot shared file** `tracker_notation.dart`: `trackerChannelToScore` read
+  `cellRuns`, which folds a note's release phase back into its sustain, so a Note
+  Cut drew as *more note* instead of silence — the score view of any imported
+  module showed notes running through rows it plays silent. Now reads `noteRuns`
+  (the same sustain/release split `loop_tracker.dart` needs for rests).
+  Tests: corpus (36) + `tracker_notation_keyoff_test.dart` (4, incl. "an uncut
+  note still rings" so the tracker rule is pinned both ways). Green:
+  tracker_notation{,_full}, multipart_to_tracker, project_bridge,
+  tab_tracker_interop, loop_tracker_drum_interop. `flutter analyze` clean.
+
 - **opus (songbook-rescan)** · ✅ **SHIPPED (idle) — OMR imports keep their scan +
   can be re-run.** Songbook audit's two open ⬜ items: an OMR import now **retains
   the source photo** (new `import/omr_source_store.dart`, io/stub split, stored in
