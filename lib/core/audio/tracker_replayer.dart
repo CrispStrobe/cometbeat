@@ -249,11 +249,14 @@ const int kFxSetSoundControl = 0x16;
 ///     3 = continue/leave), matching the switch that already consumes
 ///     `nativeNnaOf`.
 ///   • `S77`/`S78` vol-env off/on, `S79`/`S7A` pan-env off/on, `S7B`/`S7C`
-///     pitch/filter-env off/on — per-voice envelope TOGGLES. DEFERRED: the neutral
-///     command carries them cross-format (they round-trip as data), but the
-///     replayer does not yet enable/disable envelopes per voice, so they are a
-///     documented no-op for now. Implementing them needs per-voice envelope
-///     enable state threaded through the sample tick voices.
+///     pitch/filter-env off/on — per-voice envelope TOGGLES, applied by the
+///     sample tick voices. Each sets a persistent enable flag on the channel's
+///     [ReplayVoice] ([ReplayVoice.volEnvEnabled] / `panEnvEnabled` /
+///     `pitchEnvEnabled`, all DEFAULT enabled). When a flag is OFF the matching
+///     native envelope is SKIPPED for that voice — the sample plays at its base
+///     volume / pan / pitch for that dimension, as if the instrument carried no
+///     such envelope. The flags persist across rows and streaming chunk
+///     boundaries with the rest of the voice state.
 /// With no `S7x` present a render is byte-identical to the pre-S7x behaviour.
 /// Command code 0x17 — 0x16 is [kFxSetSoundControl]; 0x12/0x18/0x1A remain free.
 const int kFxSetPastNote = 0x17;
@@ -474,6 +477,25 @@ class ReplayVoice {
   /// the RIGHT channel phase-inverted, R = −L, in the stereo path). Persists per
   /// channel until another `S90`/`S91` toggles it. No audible effect in mono.
   bool surround = false;
+
+  // --- Per-voice envelope TOGGLES (S3M/IT `S77`..`S7C`, [kFxSetPastNote]) ------
+  // IT scopes these to the channel's currently-playing note; here that maps to
+  // the per-channel [ReplayVoice] (one voice per channel in the sample tick
+  // renderers), so the flags live ON the voice and persist across rows AND
+  // streaming chunk boundaries with the rest of the voice state. All DEFAULT
+  // enabled, so a voice that never toggles them applies every native envelope
+  // exactly as before — byte-for-byte identical to the pre-S7x render.
+  //
+  //  • S77 → volEnvEnabled = false, S78 → true  (native VOLUME envelope)
+  //  • S79 → panEnvEnabled = false, S7A → true  (native PAN envelope)
+  //  • S7B → pitchEnvEnabled = false, S7C → true (native PITCH/FILTER envelope)
+  //
+  // When a flag is OFF the corresponding native envelope is SKIPPED for the
+  // voice — the sample plays at its base volume / pan / pitch for that dimension
+  // (as if the instrument carried no such envelope).
+  bool volEnvEnabled = true;
+  bool panEnvEnabled = true;
+  bool pitchEnvEnabled = true;
 
   // LFO waveform select (E4x/E7x + S5x panbrello) + glissando control (E3x) —
   // persist across rows (and streaming chunks) like a real tracker's per-channel
@@ -886,6 +908,26 @@ class ReplayVoice {
             _playBackward = false;
           case 0xF: // S9F — play BACKWARD (reverse sample playback)
             _playBackward = true;
+        }
+      case kFxSetPastNote:
+        // S7x — the PAST-NOTE actions / set-NNA (sub-nibbles 0..6) are applied
+        // over the note runs by [_applyPastNoteActions] / [_setNnaOverrides] and
+        // are NOT touched here. Sub-nibbles 7..C are the per-voice envelope
+        // TOGGLES: set the persistent enable flag for this voice.
+        switch (_param & 0xF) {
+          case 0x7: // S77 — volume envelope OFF
+            volEnvEnabled = false;
+          case 0x8: // S78 — volume envelope ON
+            volEnvEnabled = true;
+          case 0x9: // S79 — pan envelope OFF
+            panEnvEnabled = false;
+          case 0xA: // S7A — pan envelope ON
+            panEnvEnabled = true;
+          case 0xB: // S7B — pitch/filter envelope OFF
+            pitchEnvEnabled = false;
+          case 0xC: // S7C — pitch/filter envelope ON
+            pitchEnvEnabled = true;
+          // 0..6 handled by the note-run passes; not a per-voice toggle.
         }
       case kFxExtended:
         // One-time (tick-0) extended commands: fine porta and fine volume.
@@ -1550,13 +1592,15 @@ double? readLoopedSampleForTest(
             sampleRight == null ? fValue : voice.filterOutRight(rightValue);
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
-        final nativeEnv = cur.nativeVolumeEnvelope;
+        final nativeEnv = voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
         final level = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
         final pan = (rowPan +
                 state.pan +
                 (channel.panEnvelope?.panAt(t * 1000) ?? 0.0) +
-                (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0))
+                (voice.panEnvEnabled
+                    ? (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0)
+                    : 0.0))
             .clamp(-1.0, 1.0);
         final fadeRate = cur.nativeFadeout / 1024.0;
         final relSamples = max(0, i - releaseStartSample);
@@ -1601,11 +1645,13 @@ double? readLoopedSampleForTest(
         }
         left[i] += outL;
         right[i] += outR;
-        final pitch = cur.nativePitchEnvelope?.semitonesAt(
-              t * 1000,
-              released: voice.released,
-            ) ??
-            0.0;
+        final pitch = voice.pitchEnvEnabled
+            ? (cur.nativePitchEnvelope?.semitonesAt(
+                  t * 1000,
+                  released: voice.released,
+                ) ??
+                0.0)
+            : 0.0;
         final incr = pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
         readPos += voice.playBackward ? -incr : incr;
       }
@@ -1748,7 +1794,7 @@ void _renderSampleChannelInto(
         if (sampleVal == null) break; // one-shot: sample exhausted (front/back)
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
-        final nativeEnv = cur.nativeVolumeEnvelope;
+        final nativeEnv = voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
         final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
         final fadeRate = cur.nativeFadeout / 1024.0;
@@ -1769,11 +1815,13 @@ void _renderSampleChannelInto(
               voice.filterOut(sampleVal) * vol * attack * el * release * sg;
           stem[i] += voice.keepResidue(out);
         }
-        final pitch = cur.nativePitchEnvelope?.semitonesAt(
-              t * 1000,
-              released: voice.released,
-            ) ??
-            0.0;
+        final pitch = voice.pitchEnvEnabled
+            ? (cur.nativePitchEnvelope?.semitonesAt(
+                  t * 1000,
+                  released: voice.released,
+                ) ??
+                0.0)
+            : 0.0;
         final incr = pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
         readPos += voice.playBackward ? -incr : incr;
       }
@@ -1909,7 +1957,7 @@ void _renderSampleChannelIntoVariable(
         if (sampleVal == null) break; // one-shot: sample exhausted
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
-        final nativeEnv = cur.nativeVolumeEnvelope;
+        final nativeEnv = voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
         final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
         final fadeRate = cur.nativeFadeout / 1024.0;
@@ -1939,11 +1987,13 @@ void _renderSampleChannelIntoVariable(
         } else {
           stem[i] += sv;
         }
-        final pitch = cur.nativePitchEnvelope?.semitonesAt(
-              t * 1000,
-              released: voice.released,
-            ) ??
-            0.0;
+        final pitch = voice.pitchEnvEnabled
+            ? (cur.nativePitchEnvelope?.semitonesAt(
+                  t * 1000,
+                  released: voice.released,
+                ) ??
+                0.0)
+            : 0.0;
         readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
       }
     }
@@ -5423,7 +5473,7 @@ void _sampleRenderRowsMono(
         if (sampleVal == null) break;
         final t = (i - st.noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
-        final nativeEnv = cur.nativeVolumeEnvelope;
+        final nativeEnv = voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
         final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
         final fadeRate = cur.nativeFadeout / 1024.0;
@@ -5446,11 +5496,13 @@ void _sampleRenderRowsMono(
               voice.filterOut(sampleVal) * vol * attack * el * release * sg;
           dest[i - sampleBase] += voice.keepResidue(out);
         }
-        final pitch = cur.nativePitchEnvelope?.semitonesAt(
-              t * 1000,
-              released: voice.released,
-            ) ??
-            0.0;
+        final pitch = voice.pitchEnvEnabled
+            ? (cur.nativePitchEnvelope?.semitonesAt(
+                  t * 1000,
+                  released: voice.released,
+                ) ??
+                0.0)
+            : 0.0;
         st.readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
       }
     }
@@ -5585,13 +5637,15 @@ void _sampleRenderRowsStereo(
             sampleRight == null ? fValue : voice.filterOutRight(rightValue);
         final t = (i - st.noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
-        final nativeEnv = cur.nativeVolumeEnvelope;
+        final nativeEnv = voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
         final level = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
         final pan = (st.rowPan +
                 state.pan +
                 (channel.panEnvelope?.panAt(t * 1000) ?? 0.0) +
-                (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0))
+                (voice.panEnvEnabled
+                    ? (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0)
+                    : 0.0))
             .clamp(-1.0, 1.0);
         final fadeRate = cur.nativeFadeout / 1024.0;
         final relSamples = max(0, i - st.releaseStartSample);
@@ -5629,11 +5683,13 @@ void _sampleRenderRowsStereo(
         }
         destL[di] += outL;
         destR[di] += outR;
-        final pitch = cur.nativePitchEnvelope?.semitonesAt(
-              t * 1000,
-              released: voice.released,
-            ) ??
-            0.0;
+        final pitch = voice.pitchEnvEnabled
+            ? (cur.nativePitchEnvelope?.semitonesAt(
+                  t * 1000,
+                  released: voice.released,
+                ) ??
+                0.0)
+            : 0.0;
         st.readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
       }
     }
@@ -6185,7 +6241,8 @@ void _zoneRunRenderChunkStereo(
           if (sampleVal == null) break;
           final t = (i - run.noteStartSample) / kSampleRate;
           final attack = t < declickSec ? t / declickSec : 1.0;
-          final nativeEnv = cur.nativeVolumeEnvelope;
+          final nativeEnv =
+              voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
           final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
               (hasEnv ? env.levelAt(t * 1000) : 1.0);
           final fadeRate = cur.nativeFadeout / 1024.0;
@@ -6219,11 +6276,13 @@ void _zoneRunRenderChunkStereo(
               break;
             }
           }
-          final pitch = cur.nativePitchEnvelope?.semitonesAt(
-                t * 1000,
-                released: voice.released,
-              ) ??
-              0.0;
+          final pitch = voice.pitchEnvEnabled
+              ? (cur.nativePitchEnvelope?.semitonesAt(
+                    t * 1000,
+                    released: voice.released,
+                  ) ??
+                  0.0)
+              : 0.0;
           run.readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
         }
       }
@@ -6330,7 +6389,8 @@ void _zoneRunRenderChunkMono(
           if (sampleVal == null) break;
           final t = (i - run.noteStartSample) / kSampleRate;
           final attack = t < declickSec ? t / declickSec : 1.0;
-          final nativeEnv = cur.nativeVolumeEnvelope;
+          final nativeEnv =
+              voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
           final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
               (hasEnv ? env.levelAt(t * 1000) : 1.0);
           final fadeRate = cur.nativeFadeout / 1024.0;
@@ -6355,11 +6415,13 @@ void _zoneRunRenderChunkMono(
             sv = voice.keepResidue(out);
           }
           mix[i - sampleBase] += sv * gain;
-          final pitch = cur.nativePitchEnvelope?.semitonesAt(
-                t * 1000,
-                released: voice.released,
-              ) ??
-              0.0;
+          final pitch = voice.pitchEnvEnabled
+              ? (cur.nativePitchEnvelope?.semitonesAt(
+                    t * 1000,
+                    released: voice.released,
+                  ) ??
+                  0.0)
+              : 0.0;
           run.readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
         }
       }
