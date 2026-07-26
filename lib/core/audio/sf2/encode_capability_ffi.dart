@@ -73,3 +73,37 @@ OpusFileDecode? loadOpusFileDecoder({String? libraryPath}) {
   }
   return null;
 }
+
+/// Whole-file decode of any format glint recognises (MP3, AAC-LC, Ogg-Opus,
+/// Ogg-Vorbis, FLAC), auto-detected from the header. Same resolution order as
+/// [loadGlintEncoder].
+///
+/// This is `glint_decode_audio`, vendored alongside the MP3 + AAC decoders so
+/// native matches what the web/wasm build could always do. Before that, the app
+/// could WRITE AAC and never read it back.
+AudioFileDecode? loadAudioDecoder({String? libraryPath}) {
+  if (libraryPath != null) {
+    try {
+      return GlintAudioDecoder.open(libraryPath).decodeAudioFile;
+    } catch (_) {
+      return null;
+    }
+  }
+  try {
+    return GlintAudioDecoder.process().decodeAudioFile;
+  } catch (_) {
+    // Not compiled in -> try a bundled library.
+  }
+  for (final name in _candidates()) {
+    try {
+      return GlintAudioDecoder.open(name).decodeAudioFile;
+    } catch (_) {
+      // Try the next candidate, else null.
+    }
+  }
+  return null;
+}
+
+/// Native needs no async load — the symbols are either linked in or they are
+/// not — so readiness is just "did the encoder resolve".
+Future<bool> ensureGlintCodecReady() async => loadGlintEncoder() != null;

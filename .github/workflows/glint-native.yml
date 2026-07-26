@@ -16,10 +16,12 @@ on:
   push:
     paths:
       - 'native/glint/**'
+      - 'web/glint/**'
       - '.github/workflows/glint-native.yml'
   pull_request:
     paths:
       - 'native/glint/**'
+      - 'web/glint/**'
       - '.github/workflows/glint-native.yml'
   workflow_dispatch:
 
@@ -101,6 +103,20 @@ jobs:
           test "$n_cpp" -eq "$n_listed"
           test "$n_cpp" -eq "$n_macos"
           test "$n_cpp" -eq "$n_ios"
+
+  # 1b) The WEB half. web/glint ships the same glint C code compiled to wasm,
+  #     reached through a JS shim instead of dart:ffi — no shared code above
+  #     Dart, a different memory model (a wasm heap that can be detached by a
+  #     grow) and a float32 ABI, so it needs its own round trip.
+  web-codec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Round-trip the wasm codec shim
+        run: node web/glint/codec_roundtrip_test.mjs
 
   # 2) Per-platform plugin packaging, via a throwaway example app.
   example-build:

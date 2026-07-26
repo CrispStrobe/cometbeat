@@ -390,6 +390,15 @@ running in CI. New workflow `.github/workflows/glint-native.yml` builds the lib
 + tests on all three desktops and an example app on all five platforms, so this
 stops being a manual chore.
 
+**Codec matrix (2026-07-26): native and web now agree** — both read WAV, AIFF,
+MP3, AAC, FLAC, Ogg-Vorbis and Ogg-Opus, and both write WAV, MP3, AAC and Opus.
+Full table + the history of the three asymmetries that were closed:
+[AUDIO_CODEC_MATRIX.md](AUDIO_CODEC_MATRIX.md). The root cause of all three: the
+shipped wasm exported glint's FULL codec surface from the start, but only
+`_glint_vorbis_decode` was wired through to Dart — we shipped the capability and
+hid it. Closing them cost +55 KB of native lib (glint's whole-file decoder) and
+zero extra web download (same wasm module, more of it reachable).
+
 **Windows bug found and fixed:** MSVC's `<cmath>` does not define `M_PI` without
 `_USE_MATH_DEFINES`, and five vendored files use it — the Windows build *would
 have failed*. Reproduced exactly (`'M_PI' was not declared in this scope`) by

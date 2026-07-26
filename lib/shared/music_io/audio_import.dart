@@ -1,11 +1,14 @@
 // lib/shared/music_io/audio_import.dart
 //
 // The read side of the shared audio I/O. Where `audio_export.dart` writes WAV/
-// MP3, this reads them back: any screen that loads a user audio file (Voice Lab,
-// sample import) can accept **WAV, AIFF, MP3, or FLAC** from one place instead
-// of a WAV-only picker. WAV goes through `readWavPcm16` and AIFF/AIFF-C through
-// `readAiff` (both pure Dart, so both work on web); MP3 through our pure-Dart
-// `mp3Decode`; FLAC uses the platform-safe glint capability seam.
+// MP3/Opus/AAC, this reads them back: any screen that loads a user audio file
+// (Voice Lab, sample import) can accept **WAV, AIFF, MP3, AAC, FLAC,
+// Ogg-Vorbis or Ogg-Opus** from one place instead of a WAV-only picker.
+//
+// WAV goes through `readWavPcm16`, AIFF/AIFF-C through `readAiff`, MP3 through
+// our own `mp3Decode` — all pure Dart, so all three work on web. FLAC, Vorbis
+// and Opus need glint, reached through the platform-safe capability seams
+// (dart:ffi natively, the wasm shim on web).
 //
 // Format is detected by MAGIC BYTES, not the extension, so a mislabelled file
 // still decodes (or fails cleanly to null rather than mis-parsing).
@@ -19,6 +22,13 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/aiff_io.dart' show isAiff, readAiff;
 import 'package:comet_beat/core/audio/mp3/mp3_decoder.dart';
+import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
+    show
+        AudioFileDecode,
+        OpusFileDecode,
+        isOggOpus,
+        loadAudioDecoder,
+        loadOpusFileDecoder;
 import 'package:comet_beat/core/audio/sf2/flac_capability.dart';
 import 'package:comet_beat/core/audio/sf2/vorbis_capability.dart';
 import 'package:comet_beat/core/audio/wav_io.dart' show readWavPcm16;
@@ -44,6 +54,9 @@ const List<String> kAudioImportExtensions = [
   'aifc',
   'ogg',
   'oga',
+  'opus',
+  'aac',
+  'm4a',
 ];
 
 /// True if [bytes] looks like a RIFF/WAVE file.
@@ -72,6 +85,24 @@ bool _isMp3(Uint8List b) {
   return false;
 }
 
+/// True if [b] starts with an ADTS AAC frame: a 12-bit sync word (0xFFF) whose
+/// layer bits are 00. That last part is what separates it from an MP3 frame
+/// sync, which shares the leading 0xFF and sets the layer bits.
+bool _isAdtsAac(Uint8List b) {
+  if (b.length < 7) return false;
+  var off = 0;
+  if (b.length > 10 && b[0] == 0x49 && b[1] == 0x44 && b[2] == 0x33) {
+    // Skip an ID3v2 tag (syncsafe size) before looking at the first frame.
+    off = 10 +
+        ((b[6] & 0x7F) << 21 |
+            (b[7] & 0x7F) << 14 |
+            (b[8] & 0x7F) << 7 |
+            (b[9] & 0x7F));
+  }
+  if (off + 2 > b.length) return false;
+  return b[off] == 0xFF && (b[off + 1] & 0xF6) == 0xF0;
+}
+
 bool _isFlac(Uint8List b) =>
     b.length >= 4 &&
     b[0] == 0x66 &&
@@ -79,12 +110,15 @@ bool _isFlac(Uint8List b) =>
     b[2] == 0x61 &&
     b[3] == 0x43; // "fLaC"
 
-/// Decodes [bytes] (WAV, MP3, or FLAC, detected by content) to float PCM.
-/// Returns null if the format is unrecognised or decoding fails.
+/// Decodes [bytes] (WAV, AIFF, MP3, FLAC, Ogg-Vorbis or Ogg-Opus, detected by
+/// CONTENT not extension) to float PCM. Returns null if the format is
+/// unrecognised or its decoder isn't available on this platform.
 ImportedAudio? importAudio(
   Uint8List bytes, {
   FlacDecode? flacDecode,
   VorbisFileDecode? vorbisDecode,
+  OpusFileDecode? opusDecode,
+  AudioFileDecode? audioDecode,
 }) {
   try {
     // WAV and AIFF are the same shape once parsed (interleaved PCM16 + rate),
@@ -101,6 +135,23 @@ ImportedAudio? importAudio(
       return ImportedAudio(
         left,
         wav.sampleRate > 0 ? wav.sampleRate : 44100,
+        right: right,
+      );
+    }
+    // ADTS AAC BEFORE MP3: both start 0xFF, and _isMp3's loose sync scan
+    // (0xFF followed by 111x xxxx) also matches an ADTS header, so testing MP3
+    // first would send every .aac to the MP3 decoder. ADTS is the stricter
+    // pattern — 12 sync bits with the layer field 00 — so it decides first.
+    if (_isAdtsAac(bytes)) {
+      final decoded = (audioDecode ?? loadAudioDecoder())?.call(bytes);
+      if (decoded == null || decoded.frames <= 0) return null;
+      final ch = decoded.channels < 1 ? 1 : decoded.channels;
+      final left = _channel(decoded.pcm, ch, 0);
+      final right = ch > 1 ? _channel(decoded.pcm, ch, 1) : null;
+      if (left.isEmpty) return null;
+      return ImportedAudio(
+        left,
+        decoded.sampleRate > 0 ? decoded.sampleRate : 44100,
         right: right,
       );
     }
@@ -124,6 +175,24 @@ ImportedAudio? importAudio(
         decoded.left,
         decoded.sampleRate > 0 ? decoded.sampleRate : 44100,
         right: decoded.right,
+      );
+    }
+    // Ogg-Opus BEFORE Ogg-Vorbis: both are `.ogg`/`.oga`, and an Opus stream
+    // handed to the Vorbis decoder just fails. We can WRITE Opus (the export
+    // sheet offers it), so not being able to read our own output back was a
+    // hole — and a silent one, since the file passed the picker's extension
+    // filter and then returned null like a corrupt file.
+    if (isOggOpus(bytes)) {
+      final decoded = (opusDecode ?? loadOpusFileDecoder())?.call(bytes);
+      if (decoded == null || decoded.frames <= 0) return null;
+      final ch = decoded.channels < 1 ? 1 : decoded.channels;
+      final left = _channel(decoded.pcm, ch, 0);
+      final right = ch > 1 ? _channel(decoded.pcm, ch, 1) : null;
+      if (left.isEmpty) return null;
+      return ImportedAudio(
+        left,
+        decoded.sampleRate > 0 ? decoded.sampleRate : 48000,
+        right: right,
       );
     }
     if (isOggVorbis(bytes)) {
@@ -153,11 +222,15 @@ ImportedAudio? importAudioMono(
   Uint8List bytes, {
   FlacDecode? flacDecode,
   VorbisFileDecode? vorbisDecode,
+  OpusFileDecode? opusDecode,
+  AudioFileDecode? audioDecode,
 }) {
   final imported = importAudio(
     bytes,
     flacDecode: flacDecode,
     vorbisDecode: vorbisDecode,
+    opusDecode: opusDecode,
+    audioDecode: audioDecode,
   );
   if (imported == null || imported.right == null) return imported;
   final frames = math.min(imported.pcm.length, imported.right!.length);

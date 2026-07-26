@@ -10,3 +10,9 @@ EncodeAudio? loadGlintEncoder({String? libraryPath}) => null;
 
 /// ...and so nothing to decode back either.
 OpusFileDecode? loadOpusFileDecoder({String? libraryPath}) => null;
+
+/// No whole-file decoder here either.
+AudioFileDecode? loadAudioDecoder({String? libraryPath}) => null;
+
+/// Nothing to load, so readiness is immediate and false.
+Future<bool> ensureGlintCodecReady() async => false;

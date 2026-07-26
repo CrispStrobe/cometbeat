@@ -141,6 +141,72 @@ class GlintEncoder {
   }
 }
 
+/// Decodes ANY stream glint recognises — MP3, AAC-LC, Ogg-Opus, Ogg-Vorbis or
+/// FLAC — through `glint_decode_audio`, which detects the format from the
+/// header. Signature is identical to the Opus-only decoder, so it reuses
+/// [_OpusDec].
+class GlintAudioDecoder {
+  GlintAudioDecoder.open(String libraryPath)
+      : this._(DynamicLibrary.open(libraryPath));
+
+  GlintAudioDecoder.process() : this._(DynamicLibrary.process());
+
+  GlintAudioDecoder._(this._lib) {
+    _decode = _lib.lookupFunction<_OpusDecNative, _OpusDec>(
+      'glint_decode_audio',
+    );
+    _free = _lib.lookupFunction<_FreeNative, _Free>('glint_free');
+  }
+
+  final DynamicLibrary _lib;
+  late final _OpusDec _decode;
+  late final _Free _free;
+
+  AudioFileDecode get decodeAudioFile => decode;
+
+  DecodedAudio? decode(Uint8List bytes) =>
+      _decodeInto(_decode, _free, bytes, fallbackRate: 44100);
+}
+
+/// Shared body for the two whole-file decoders above: marshal in, copy the PCM
+/// out of native memory, free it. Kept in one place so a leak can only be
+/// written once.
+DecodedAudio? _decodeInto(
+  _OpusDec decode,
+  _Free free,
+  Uint8List bytes, {
+  required int fallbackRate,
+}) {
+  if (bytes.isEmpty) return null;
+  final inPtr = calloc<Uint8>(bytes.length);
+  final sr = calloc<Int32>();
+  final ch = calloc<Int32>();
+  final frames = calloc<Int32>();
+  try {
+    inPtr.asTypedList(bytes.length).setAll(0, bytes);
+    final out = decode(inPtr, bytes.length, sr, ch, frames);
+    if (out == nullptr || ch.value <= 0 || frames.value <= 0) return null;
+    final count = frames.value * ch.value;
+    final view = out.asTypedList(count);
+    final pcm = Float64List(count);
+    for (var i = 0; i < count; i++) {
+      pcm[i] = view[i];
+    }
+    free(out.cast());
+    return DecodedAudio(
+      pcm: pcm,
+      channels: ch.value,
+      sampleRate: sr.value > 0 ? sr.value : fallbackRate,
+    );
+  } finally {
+    calloc
+      ..free(inPtr)
+      ..free(sr)
+      ..free(ch)
+      ..free(frames);
+  }
+}
+
 /// Decodes a complete Ogg-Opus stream back to PCM, through the plugin's
 /// `cometbeat_opus_file_decode`.
 ///
@@ -165,35 +231,8 @@ class GlintOpusFileDecoder {
 
   OpusFileDecode get decodeOpusFile => decode;
 
-  DecodedAudio? decode(Uint8List ogg) {
-    if (ogg.isEmpty) return null;
-    final inPtr = calloc<Uint8>(ogg.length);
-    final sr = calloc<Int32>();
-    final ch = calloc<Int32>();
-    final frames = calloc<Int32>();
-    try {
-      inPtr.asTypedList(ogg.length).setAll(0, ogg);
-      final out = _decode(inPtr, ogg.length, sr, ch, frames);
-      if (out == nullptr || ch.value <= 0 || frames.value <= 0) return null;
-      final count = frames.value * ch.value;
-      // Copy out of native memory before freeing it.
-      final view = out.asTypedList(count);
-      final pcm = Float64List(count);
-      for (var i = 0; i < count; i++) {
-        pcm[i] = view[i];
-      }
-      _free(out.cast());
-      return DecodedAudio(
-        pcm: pcm,
-        channels: ch.value,
-        sampleRate: sr.value,
-      );
-    } finally {
-      calloc
-        ..free(inPtr)
-        ..free(sr)
-        ..free(ch)
-        ..free(frames);
-    }
-  }
+  // Opus always decodes at 48 kHz, so that is the honest fallback if the
+  // decoder somehow reports no rate.
+  DecodedAudio? decode(Uint8List ogg) =>
+      _decodeInto(_decode, _free, ogg, fallbackRate: 48000);
 }

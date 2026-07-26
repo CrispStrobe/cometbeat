@@ -3,14 +3,20 @@
 Compiles source sets from the MIT [glint](https://github.com/CrispStrobe) codec
 suite into the CometBeat app. Two halves:
 
-- **Decode** — Ogg-Vorbis (compressed **`.sf3` SoundFonts**) and FLAC (SFZ
-  samples, e.g. VCSL / VSCO2). C ABI: `glint_vorbis_decode`,
-  `glint_flac_decode`.
+- **Decode** — `glint_decode_audio` takes a whole stream and detects the format
+  from its header: **MP3, AAC-LC, Ogg-Opus, Ogg-Vorbis, FLAC**. Plus the
+  narrower entry points the app already used: `glint_vorbis_decode` (compressed
+  `.sf3` SoundFonts) and `glint_flac_decode` (SFZ samples, e.g. VCSL / VSCO2).
 - **Encode** — `glint_encode_audio`: interleaved float PCM at any rate →
   **MP3 / AAC-LC / Ogg-Opus**, auto-resampling to a rate the codec allows
   (Opus → 48 kHz). This is what audio export uses.
 
 Buffers from both halves are released with `glint_free`.
+
+**Web runs the same C code** compiled to wasm — see `web/glint/`. Keeping the
+two in step is the point: for a while native could WRITE AAC but not read it
+back, while the wasm build could do both, so an export was unopenable on the
+platform that made it.
 
 > The package name is historical — it predates the FLAC and encode sets.
 > Renaming it would churn five platform manifests for no functional gain.
@@ -36,10 +42,11 @@ forks none of glint's codec logic, so re-running it is always safe:
   **decoder** along (+97 KB, measured). We pay that rather than hand-copy
   glint's muxing logic into a local shim that would silently drift.
 
-Two files are **local, not vendored**: `flac_c_api.cpp` (a minimal wrapper
-mirroring glint's `vorbis_c_api.cpp`) and `opus_file_c_api.cpp`
+One file is **local, not vendored**: `opus_file_c_api.cpp`
 (`cometbeat_opus_file_decode` — Ogg-Opus → PCM glue, so the encode round-trip is
-testable end to end). Plus `glint_free_shim.cpp`: glint's real `glint_free`
+testable end to end). There used to be a local `flac_c_api.cpp` too; vendoring
+`decode_audio_c_api.cpp` retired it, because glint defines `glint_flac_decode`
+itself and the two collided. One less fork. Plus `glint_free_shim.cpp`: glint's real `glint_free`
 lives in `decoder_c_api.cpp`, which we don't vendor. Read that file's header
 before touching it — the encoder returns malloc'd buffers, so a mismatched free
 would be heap corruption that no smoke test catches.

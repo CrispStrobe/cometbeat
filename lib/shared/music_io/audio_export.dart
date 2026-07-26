@@ -30,7 +30,12 @@ import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart'
     show mp3EncodeMono, mp3EncodeJointStereo;
 import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
-    show EncodeAudio, EncodedAudioFormat, EncodedAudioFormatX, loadGlintEncoder;
+    show
+        EncodeAudio,
+        EncodedAudioFormat,
+        EncodedAudioFormatX,
+        ensureGlintCodecReady,
+        loadGlintEncoder;
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:file_selector/file_selector.dart';
@@ -361,6 +366,21 @@ EncodeAudio? nativeAudioEncoder() {
   return _nativeEncoder;
 }
 
+/// Make the encoder usable, then report whether it is.
+///
+/// Natively this is immediate — the symbols are linked in or they aren't. On
+/// WEB the glint wasm is fetched lazily, so this must be awaited once before
+/// [nativeAudioEncoder] returns anything useful; without it the web export
+/// sheet would offer Opus/AAC on the first open and then fail to encode.
+/// Cheap and idempotent, so both export sheets just await it up front.
+Future<bool> prepareNativeAudioEncoder() async {
+  if (_nativeEncoderProbed && _nativeEncoder != null) return true;
+  final ok = await ensureGlintCodecReady();
+  // Re-probe: on web the loader only yields a working encoder post-init.
+  _nativeEncoderProbed = false;
+  return nativeAudioEncoder() != null && ok;
+}
+
 /// Test seam: pin the encoder (or null to force the no-native path) so the
 /// gating logic is exercisable headless. Pass nothing to reset to a fresh
 /// probe.
@@ -391,6 +411,9 @@ Future<void> showAudioExportSheet(
   var selectedWavBitDepth = 16;
   var selectedBitrate = 128;
   final rateChoices = _uniqueRates([sampleRate, kSampleRate, 48000, 32000]);
+  // On web this loads the glint wasm; native returns immediately.
+  await prepareNativeAudioEncoder();
+  if (!context.mounted) return;
   final formats = availableAudioExportFormats();
   await showModalBottomSheet<void>(
     context: context,
@@ -579,6 +602,8 @@ Future<void> showAudioStemsExportSheet(
   }
 
   var format = AudioExportFormat.wav;
+  await prepareNativeAudioEncoder();
+  if (!context.mounted) return;
   final formats = availableAudioExportFormats();
   final go = await showDialog<bool>(
     context: context,

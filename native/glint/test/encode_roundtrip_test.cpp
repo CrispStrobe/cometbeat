@@ -265,6 +265,39 @@ void test_opus_hard_pan() {
     glint_free(dec);
 }
 
+// MP3 and AAC now round-trip natively too: glint's whole-file decoder
+// (decode_audio_c_api.cpp + the MP3/AAC decoders) is vendored, so the app can
+// finally READ BACK what it writes. Before that it could export AAC and never
+// reopen it, while the web/wasm build could do both all along.
+void test_mp3_and_aac_roundtrip() {
+    std::printf("MP3 / AAC round-trip through glint_decode_audio\n");
+    const int sr = 44100;
+    std::vector<float> pcm = tone({440.0}, sr, 2.0);
+    int frames = static_cast<int>(pcm.size());
+
+    const int fmts[] = {GLINT_ENC_MP3, GLINT_ENC_AAC};
+    const char* names[] = {"MP3", "AAC"};
+    for (int i = 0; i < 2; i++) {
+        int n = 0;
+        uint8_t* enc = glint_encode_audio(pcm.data(), frames, 1, sr, fmts[i],
+                                          128, -1, 5, &n);
+        if (!enc || n <= 0) {
+            check(false, names[i]);
+            continue;
+        }
+        int dsr = 0, dch = 0, dframes = 0;
+        float* dec = glint_decode_audio(enc, n, &dsr, &dch, &dframes);
+        glint_free(enc);
+        if (!dec) {
+            check(false, names[i]);
+            continue;
+        }
+        double f = estimate_pitch(dec, dframes, dch < 1 ? 1 : dch, 0, dsr);
+        checkf(std::fabs(f - 440.0) < 4.0, names[i], f, 440.0);
+        glint_free(dec);
+    }
+}
+
 void test_mp3_and_aac_structure() {
     std::printf("MP3 / AAC streams are structurally valid\n");
     const int sr = 44100;
@@ -368,6 +401,7 @@ int main() {
     test_opus_stereo_panning();
     test_opus_hard_pan();
     test_mp3_and_aac_structure();
+    test_mp3_and_aac_roundtrip();
     test_rejects_bad_input();
     test_no_leak_under_repetition();
     std::printf("\n%s (%d failure%s)\n", g_failures == 0 ? "ALL PASS" : "FAILED",

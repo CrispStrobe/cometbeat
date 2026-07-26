@@ -2,18 +2,20 @@
 # Every .cpp under src/: the vendored glint set + our local wrappers.
 set(GLINT_NATIVE_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/aac_coder.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/aac_decoder.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/aac_encoder.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/aac_mdct.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/aac_psy.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/aac_tns.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/bitstream.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/decode_audio_c_api.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/encode_audio_c_api.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/encoder.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/flac_c_api.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/flac_decoder.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/glint_free_shim.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/huffman.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/mdct.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/mp3_decoder.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/opus_analysis.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/opus_c_api.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/opus_celt_bands.cpp

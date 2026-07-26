@@ -7,9 +7,8 @@
 #
 # Everything here is copied VERBATIM from the glint repo (MIT) — this plugin
 # forks none of glint's codec logic, so re-running this script is always safe.
-# The only local sources are flac_c_api.cpp (our minimal wrapper, mirroring
-# glint's vorbis_c_api.cpp) and glint_free_shim.cpp; both are intentionally
-# absent from the copy lists below.
+# The only local sources are opus_file_c_api.cpp (Ogg-Opus -> PCM glue) and
+# glint_free_shim.cpp; both are intentionally absent from the copy lists below.
 #
 # Re-run after glint moves. Source of truth: the glint repo (MIT), path below.
 set -euo pipefail
@@ -18,8 +17,14 @@ DST="$(cd "$(dirname "$0")" && pwd)/src"
 if [ ! -d "$GLINT/src" ]; then echo "glint repo not found at $GLINT (set GLINT_DIR)"; exit 1; fi
 
 # ---- .cpp compiled into the app -------------------------------------------
-# Decode side.
-CPP=(vorbis_c_api.cpp vorbis_decoder.cpp flac_decoder.cpp opus_ogg.cpp resample.cpp)
+# Decode side. decode_audio_c_api.cpp is glint's whole-file, header-detecting
+# decoder (MP3 / AAC-LC / Ogg-Opus / Ogg-Vorbis / FLAC in one call) and needs the
+# MP3 + AAC decoders with it. Measured cost: +55 KB of dylib. It buys native
+# parity with the web/wasm build, which has always had this decoder, and it
+# DEFINES glint_flac_decode itself — which is why this plugin no longer carries
+# a local flac_c_api.cpp (the two collided; glint's is now the only copy).
+CPP=(vorbis_c_api.cpp vorbis_decoder.cpp flac_decoder.cpp opus_ogg.cpp resample.cpp
+     decode_audio_c_api.cpp mp3_decoder.cpp aac_decoder.cpp)
 # Encode entry point: dispatches to all three codecs, so the link closure is
 # much bigger than its include list suggests (see the three groups below).
 CPP+=(encode_audio_c_api.cpp)
@@ -50,7 +55,7 @@ CPP+=(opus_c_api.cpp opus_decoder.cpp opus_ms_decoder.cpp opus_celt_decoder.cpp
 #   clang++ -std=c++17 -MM -I include -I src src/<each>.cpp
 # Re-derive it that way after adding sources; do not guess.
 HDR=(vorbis_decoder.hpp vorbis_bits.hpp vorbis_imdct.hpp vorbis_ogg.hpp
-     flac_decoder.hpp opus_ogg.hpp resample.hpp
+     flac_decoder.hpp opus_ogg.hpp resample.hpp mp3_decoder.hpp aac_decoder.hpp
      encoder.hpp subband.hpp mdct.hpp quantize.hpp huffman.hpp reservoir.hpp
      bitstream.hpp psycho.hpp tables.hpp simd.hpp fixedpoint.hpp intmath.hpp
      aac_coder.hpp aac_coder_types_fwd.hpp aac_mdct.hpp aac_psy.hpp
