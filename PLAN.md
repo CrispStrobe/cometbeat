@@ -11,6 +11,53 @@
 - Shipped: Synth & FX Editor (embeds Sound Lab directly into Tracker via `instrument_editor.dart`).
 - Shipped: Multi-Sample Groundwork (`MultiSampleInstrument` added to `tracker_engine.dart` with correct monophonic choking semantics).
 
+## Cello fingering (string · position · finger) — step 1 SHIPPED, steps 2–3 pending
+
+`lib/core/notation/bowed_arranger.dart` fingers a bowed line the way the guitar
+tab arranger fingers a fretted one: same Sayegh/Viterbi optimum path, but the state
+is a hand FRAME (mode × anchor) instead of a set of `(string, fret)` pairs, so the
+finger falls out of the geometry. Cello + double bass (Simandl 1-2-4); extensions
+and thumb position are frame modes with per-note costs; a `BowedSkill` profile caps
+the technique with soft costs, so a learner's fingering stays in first position and
+only the notes that force it reach higher. Untrained, no model asset.
+`bowed_score_fingering.dart` is the score-level entry point (id-keyed side table,
+like `Score.slurs`). Gates: `kCelloFirstPosition` re-derived from geometry
+(`test/bowed_arranger_test.dart`) + agreement against printed CC0 editions
+(`test/bowed_arranger_accept_test.dart`, 50.3% of 193 printed fingers).
+
+**Where the ceiling is.** A 135-point weight sweep spans 38.3–50.3%, so ~50% is
+what authored weights can do on that gold set. The violin literature says why:
+string choice is nearly solved by geometry, hand POSITION is subjective (ten
+professionals disagree; F1 ≈ .24–.31), and expressive position choice is exactly
+what a learner doesn't need — which is why the capped profiles are the useful
+product and the uncapped one is the research problem.
+
+Pending, in order:
+1. **Consumers.** Nothing renders this yet. Cheapest real wins: fingering digits
+   on cello parts in Song Book / play-along (copy `bowedFingeringDigits` into
+   `NoteElement.fingerings`, which the layout engine already draws), a string
+   indicator for the cello games, and lifting `cello_first_position.dart`'s games
+   beyond first position. Needs a `T` glyph before thumb position can be engraved.
+2. **More labels (the real lever).** Dense cello fingering barely exists: the
+   entire 42k-score corpus yields **193 printed fingers** on 4 files, and no public
+   cello fingering dataset exists at all. The one avenue with volume is OMR over
+   long-PD fingered method books (Dotzauer, Duport, Kummer, Lee, Franchomme,
+   Popper, Grützmacher, Klengel) — Audiveris has an optional "fingering digits"
+   recognition topic. Bowed strings are *easier* than the guitar case: a digit over
+   a note is unambiguously the finger, with none of the circled-string ambiguity
+   that stalled guitar OMR. String and position stay hidden variables, which the DP
+   can infer from finger + pitch + continuity (an EM setup, not plain supervision).
+   ⚠ Pre-1930 prints only; a modern edition's fingering is a fresh editorial layer.
+3. **Learned emission.** `BowedPositionModel` is the seam (twin of
+   `TabPositionModel`); the DP keeps reachability and movement, a model only biases
+   which reachable frame wins. This DP already *is* an HMM's decoder, so the first
+   step is fitting transition/emission tables rather than training a network — a
+   small state space needs far fewer labels than the guitar labeler did. The violin
+   TNUA dataset (217k note annotations, 10 violinists) is **unlicensed** → dev/eval
+   only, never shipped weights, and its geometry is violin's, so it validates the
+   architecture rather than supplying cello labels. Score with MRR/nDCG against
+   multiple editions, not single-label agreement.
+
 ## Automatic play-along — live pitch detection (feature area)
 
 Live pitch/chord detection from the mic, turned into real practice modes:

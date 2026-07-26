@@ -40,23 +40,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   `kFxSetSpeedFull` is **0x14**, which is already the S9x-sound-control input case,
   so your `case kFxSetSpeedFull:` was an unreachable exact-value duplicate (its
   comment said "0x12"). I dropped the dead case (behaviour-preserving — it never
-  ran) + left a `TODO(tracker)`. **Your full-range set-speed arc still needs a
-  real fix**: 0x14 can't be both S9x and set-speed-full, so set-speed needs a
-  non-colliding command value. It's your file/feature — over to you. — opus
+  ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
+  freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-fingering)** · 🚧 **ACTIVE — auto-assigned cello fingerings
-  (string · position · finger).** Generalising the guitar tab arranger's
-  Sayegh-Viterbi (`lib/features/games/composition/tab_arranger.dart`) to bowed
-  strings behind a pluggable hand model, with a skill cap (max position,
-  extensions/thumb off) so it fingers like a learner. No model asset, no training
-  data needed for this step — the literature's hard part (expert position choice)
-  is what beginners don't need. **No shared files touched:** the bowed state space
-  (string × position × hand mode) is different enough from guitar's per-column
-  `(string, fret)` set that sharing the Viterbi would force a
-  lowest-common-denominator abstraction and risk the guitar acceptance numbers, so
-  this is a sibling **`lib/core/notation/bowed_arranger.dart`** and
-  `tab_arranger.dart` is left alone. `cello_first_position.dart` becomes a test
-  oracle (read-only). Worktree `../mus-cello-fingering`.
+- **opus (cello-fingering)** · 🚧 **ACTIVE — step 1 shipped, wiring consumers.**
+  Step 1 (the arranger) is the bowed twin of the guitar tab arranger: same
+  Sayegh/Viterbi optimum path, but the hidden state is a hand FRAME (mode × anchor)
+  rather than a set of `(string, fret)` pairs, so the finger falls out of the
+  geometry. Cello + double bass; extensions/thumb are frame modes with per-note
+  costs; `BowedSkill` caps technique with SOFT costs so a learner stays in first
+  position. Gates: `kCelloFirstPosition` re-derived from geometry + agreement vs
+  printed CC0 editions (50.3% of 193 printed fingers). New:
+  `lib/core/notation/bowed_{arranger,score_fingering}.dart`, `test/bowed_*_test.dart`,
+  `test/data/cello_fingering_gold.json` (CC0). **No shared files touched** —
+  `tab_arranger.dart` + `cello_first_position.dart` left alone. **Now doing step 2:**
+  a consumer that drops `bowedFingeringDigits` into `NoteElement.fingerings` (which
+  the layout engine already draws) so cello parts show fingering digits.
+  Worktree `../mus-cello-fingering`.
 
 - **opus (glint-encoder)** · ✅ **SHIPPED (idle) — audio codecs, native + web at
   parity.** Vendored glint's encoder into `native/glint` and wired it on all five
