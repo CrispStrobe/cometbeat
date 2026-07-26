@@ -142,19 +142,24 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-bowing)** · 🚧 **ACTIVE — bowing marks (the other hand).** The arc's
-  remaining items (more labels via OMR of PD method books, then fitting HMM tables)
-  are **blocked on source material I would need the maintainer's consent to
-  acquire** — IMSLP is behind a human-attestation gate and CLAUDE.md is explicit
-  that I do not click it. So: the right hand instead, which is unblocked and
-  completes what a marked-up part actually looks like. `Articulation.upBow`/
-  `downBow` already engrave (above the staff, like a fermata) and already write to
-  MusicXML `<up-bow/>`/`<down-bow/>`, so this is app-side only. Rules: alternate;
-  a slur is ONE stroke; a rest restarts; and the rule of the down-bow — the bar's
-  downbeat wants a down-bow, so when alternation would land an up-bow there the
-  player retakes (two down-bows in a row), which is what editions print. Rides in
-  the same `copyWith` copy as the fingerings and string numerals. No ARB, no
-  registry, no library work. Worktree `../mus-cello-fingering`.
+- **opus (cello-bowing)** · ✅ **SHIPPED (idle) — bowing marks** (`9587b9ba`).
+  The song screen's cello toggle now marks up all three things a teacher writes on
+  a part: fingering digits, a Roman numeral where the string is not inferable, and
+  a bow direction per stroke. `Articulation.upBow`/`downBow` already engraved and
+  already wrote MusicXML, so this was rules + the same `copyWith` copy, no library
+  work. **Rules, not search** — fingering has a space of plausible answers worth
+  optimising over, bowing has a short list of conventions: alternate; a slur is ONE
+  stroke; a rest resets to the frog; and the rule of the down-bow — the downbeat
+  wants the stronger stroke, so when alternation would land an up-bow there the
+  player RETAKES and two down-bows print in a row. That retake is the only thing a
+  naive alternator gets wrong. Explicitly NOT modelled (said so in the file):
+  hooked bowings, whole-/half-bow economy, and period style — choices rather than
+  rules, where a wrong guess is worse than no mark.
+  ⚠ **The arc's last two items are BLOCKED ON THE MAINTAINER, not on code:** more
+  labels means OMR over long-PD fingered method books (Dotzauer, Duport, Kummer,
+  Popper, Grützmacher…), and the PD scans sit behind IMSLP's human-attestation gate
+  that CLAUDE.md says I do not click; fitting HMM tables then waits on those labels.
+  Everything buildable without new source material is done.
 
 - **opus (cello-strings)** · ✅ **SHIPPED (idle) — string indications I–IV**
   (`bea1c06b`). A fingering digit does not say which string — a cello pitch sits on
