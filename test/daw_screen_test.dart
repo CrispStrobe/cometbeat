@@ -719,6 +719,24 @@ void main() {
     );
   });
 
+  test('the effect menu offers every effect that exists', () {
+    // kDawClipEffectTypes is hand-ordered so the menu groups sensibly, which
+    // means it can fall behind the enum. An effect appended to DawClipEffectType
+    // and forgotten there still exists and still renders — it is simply
+    // unreachable in the app, and nothing anywhere fails. (The label switch is
+    // exhaustive, so the compiler already covers that half.)
+    final missing = DawClipEffectType.values.toSet()
+      ..removeAll(kDawClipEffectTypes);
+    expect(
+      missing,
+      isEmpty,
+      reason: 'these effects exist but no menu offers them: '
+          '${missing.map((e) => e.name).join(", ")}',
+    );
+    // ...and nothing listed twice, which would show a duplicate menu row.
+    expect(kDawClipEffectTypes.toSet(), hasLength(kDawClipEffectTypes.length));
+  });
+
   testWidgets('a tracker clip offers the way back to the Tracker',
       (tester) async {
     // W4: material that arrived from the Tracker must be able to go home. The

@@ -250,6 +250,48 @@ abstract interface class DawTester {
   int debugBakeLength();
 }
 
+/// Every effect the Audio Editor offers, in MENU order — grouped basics,
+/// modulation, filters, dynamics, pitch/time, then the voice shapers. One list
+/// feeds all four scopes (clip, track, bus, master) and the marked-range action.
+///
+/// Deliberately hand-ordered rather than `DawClipEffectType.values`, because the
+/// grouping is what makes a 29-item menu usable. The cost of that is drift: an
+/// effect appended to the enum and forgotten here still exists, still renders,
+/// and is simply unreachable in the app — nothing fails. `daw_screen_test.dart`
+/// asserts this list covers the enum, so the omission surfaces as a test
+/// failure naming the missing effect.
+const kDawClipEffectTypes = <DawClipEffectType>[
+  DawClipEffectType.gain,
+  DawClipEffectType.pan,
+  DawClipEffectType.reverb,
+  DawClipEffectType.delay,
+  DawClipEffectType.chorus,
+  DawClipEffectType.flanger,
+  DawClipEffectType.ringMod,
+  DawClipEffectType.distortion,
+  DawClipEffectType.bitCrush,
+  DawClipEffectType.lowpass,
+  DawClipEffectType.highpass,
+  DawClipEffectType.bandpass,
+  DawClipEffectType.notch,
+  DawClipEffectType.peakingEq,
+  DawClipEffectType.lowShelf,
+  DawClipEffectType.highShelf,
+  DawClipEffectType.phaser,
+  DawClipEffectType.convolutionReverb,
+  DawClipEffectType.compressor,
+  DawClipEffectType.gate,
+  DawClipEffectType.pitchShift,
+  DawClipEffectType.timeStretch,
+  DawClipEffectType.tremolo,
+  DawClipEffectType.vocoder,
+  DawClipEffectType.voiceShape,
+  DawClipEffectType.voiceChipmunk,
+  DawClipEffectType.voiceDeep,
+  DawClipEffectType.voiceRobot,
+  DawClipEffectType.voiceRadio,
+];
+
 class DawScreen extends StatefulWidget {
   const DawScreen({super.key});
 
@@ -2596,37 +2638,7 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
-  static const _clipEffectTypes = [
-    DawClipEffectType.gain,
-    DawClipEffectType.pan,
-    DawClipEffectType.reverb,
-    DawClipEffectType.delay,
-    DawClipEffectType.chorus,
-    DawClipEffectType.flanger,
-    DawClipEffectType.ringMod,
-    DawClipEffectType.distortion,
-    DawClipEffectType.bitCrush,
-    DawClipEffectType.lowpass,
-    DawClipEffectType.highpass,
-    DawClipEffectType.bandpass,
-    DawClipEffectType.notch,
-    DawClipEffectType.peakingEq,
-    DawClipEffectType.lowShelf,
-    DawClipEffectType.highShelf,
-    DawClipEffectType.phaser,
-    DawClipEffectType.convolutionReverb,
-    DawClipEffectType.compressor,
-    DawClipEffectType.gate,
-    DawClipEffectType.pitchShift,
-    DawClipEffectType.timeStretch,
-    DawClipEffectType.tremolo,
-    DawClipEffectType.vocoder,
-    DawClipEffectType.voiceShape,
-    DawClipEffectType.voiceChipmunk,
-    DawClipEffectType.voiceDeep,
-    DawClipEffectType.voiceRobot,
-    DawClipEffectType.voiceRadio,
-  ];
+  static const _clipEffectTypes = kDawClipEffectTypes;
 
   String _clipEffectLabel(DawClipEffectType type) => switch (type) {
         DawClipEffectType.gain => 'Gain',
