@@ -96,9 +96,7 @@ TabToTrackerResult trackerSongFromTabDocument(
   final annotations = SymbolicAnnotations()
     ..docMeta[AnnotationKeys.sourceMode] = 'tab'
     ..docMeta[AnnotationKeys.capo] = capo
-    ..docMeta[AnnotationKeys.tuning] = [
-      for (final s in doc.tuning.strings) s.midiNumber,
-    ]
+    ..docMeta[AnnotationKeys.tuning] = tuningToAnnotation(doc.tuning)
     ..docMeta[AnnotationKeys.timeSignature] = [
       doc.timeSignature.beats,
       doc.timeSignature.beatUnit,
@@ -235,7 +233,7 @@ TrackerToTabResult tabDocumentFromTrackerSong(
   final rows = channels.isEmpty ? 0 : channels.first.cells.length;
 
   final capo = _asInt(notes.docMeta[AnnotationKeys.capo]) ?? 0;
-  final tuning = _tuningFrom(notes.docMeta[AnnotationKeys.tuning]) ??
+  final tuning = tuningFromAnnotation(notes.docMeta[AnnotationKeys.tuning]) ??
       fallbackTuning ??
       Tuning.standardGuitar;
   if (notes.docMeta[AnnotationKeys.tuning] == null) {
@@ -426,7 +424,15 @@ NoteDuration _durationForSteps(
   return ladder.isEmpty ? NoteDuration.quarter : ladder.last.$1;
 }
 
-Tuning? _tuningFrom(Object? raw) {
+/// A tuning as the side-car stores it: one MIDI number per string.
+///
+/// Public because the bridge writes it on any hop that leaves a fretted
+/// instrument, and reads it back on any hop that has to rebuild one.
+List<int> tuningToAnnotation(Tuning tuning) =>
+    [for (final string in tuning.strings) string.midiNumber];
+
+/// The inverse of [tuningToAnnotation]; null when [raw] is not a tuning.
+Tuning? tuningFromAnnotation(Object? raw) {
   if (raw is! List || raw.isEmpty) return null;
   final midis = <int>[];
   for (final entry in raw) {

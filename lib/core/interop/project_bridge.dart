@@ -151,7 +151,12 @@ abstract final class ProjectBridge {
       );
     }
 
-    final strings = tuning ?? Tuning.standardGuitar;
+    // An explicit tuning wins; otherwise honour one an earlier hop recorded, so
+    // a DADGAD tab that travelled through a mode with no strings comes back in
+    // DADGAD rather than silently in standard.
+    final strings = tuning ??
+        tuningFromAnnotation(annotations?.docMeta[AnnotationKeys.tuning]) ??
+        Tuning.standardGuitar;
 
     // The "never throws" contract is load-bearing: a menu offers every target
     // before knowing whether THIS document can make the trip, so a converter
@@ -160,7 +165,10 @@ abstract final class ProjectBridge {
     // case the matrix test found — `MultiPartScore` requires at least one part,
     // so a song with no notes asserted instead of converting.
     try {
-      return _route(from, to, document, annotations, strings, capo);
+      return _carryForward(
+        annotations,
+        _route(from, to, document, annotations, strings, capo),
+      );
     } on Object catch (error) {
       return ConversionResult(
         document: null,
@@ -201,13 +209,30 @@ abstract final class ProjectBridge {
               annotations: annotations,
               capo: capo,
             );
-            return ConversionResult(document: out.cells, report: out.report);
+            return ConversionResult(
+              document: out.cells,
+              // A loop track has no strings either — same reason as Tab → Score
+              // below, so a Loop → Tab trip later can rebuild the right one.
+              annotations: SymbolicAnnotations()
+                ..docMeta[AnnotationKeys.sourceMode] = 'tab'
+                ..docMeta[AnnotationKeys.capo] = capo
+                ..docMeta[AnnotationKeys.tuning] =
+                    tuningToAnnotation(doc.tuning),
+              report: out.report,
+            );
           },
         ),
       (AppMode.tab, AppMode.score) => _fromTab(
           document,
           (doc) => ConversionResult(
             document: MultiPartScore([doc.toScore(capo: capo)]),
+            // A score has no strings, so the fretting context goes in the
+            // side-car — otherwise a later trip back to Tab has to guess a
+            // tuning, and guesses standard.
+            annotations: SymbolicAnnotations()
+              ..docMeta[AnnotationKeys.sourceMode] = 'tab'
+              ..docMeta[AnnotationKeys.capo] = capo
+              ..docMeta[AnnotationKeys.tuning] = tuningToAnnotation(doc.tuning),
             report: ConversionReport()
               ..addLost('string and fret choice (a score carries pitches)'),
           ),
@@ -460,6 +485,27 @@ ConversionResult _fromTracker(
     document is TrackerSong
         ? convert(document)
         : _wrongType('TrackerSong', document);
+
+/// Lets document-level facts from an earlier hop survive one that cannot hold
+/// them.
+///
+/// Only [SymbolicAnnotations.docMeta] travels. A tuning or a capo means the same
+/// thing in every mode, so carrying it is safe and is the whole point of the
+/// side-car; per-EVENT entries are keyed by an address the conversion has just
+/// invalidated, so carrying those would attach a fact to the wrong note.
+///
+/// The route's own values win — it looked at the actual document, the incoming
+/// side-car only remembers an earlier one.
+ConversionResult _carryForward(
+  SymbolicAnnotations? incoming,
+  ConversionResult result,
+) {
+  if (incoming == null || incoming.docMeta.isEmpty) return result;
+  for (final entry in incoming.docMeta.entries) {
+    result.annotations.docMeta.putIfAbsent(entry.key, () => entry.value);
+  }
+  return result;
+}
 
 ConversionResult _fromScore(
   Object document,

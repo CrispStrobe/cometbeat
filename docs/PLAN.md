@@ -91,6 +91,38 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
+- **opus (sidecar-carry)** · ✅ **SHIPPED (idle) — the side-car now survives the
+  hop it exists for.** Auditing `ProjectBridge`'s routes found the symbolic
+  side-car was barely connected: only `Tab → Tracker` ever AUTHORED one, and five
+  of six hops dropped an incoming one entirely. So a **DADGAD tab that passed
+  through Score or Loop came back in standard tuning** — frets preserved, every
+  pitch wrong, nothing thrown and nothing in the report, because each converter
+  individually did exactly what it claimed.
+  Most of the machinery already existed and simply was not wired:
+  `tabDocumentFromLoopCells` already READS a tuning/capo from the side-car.
+  Now: `Tab → Score` and `Tab → Loop` author tuning/capo/sourceMode;
+  `_carryForward` lets an incoming `docMeta` cross any hop that authors nothing
+  (route's own reading wins — it is looking at the document); and `strings`
+  prefers a carried tuning when the caller named none (an explicit `tuning:`
+  still wins). Tuning codec is now shared (`tuningToAnnotation` /
+  `tuningFromAnnotation`) instead of hand-rolled at the one call site.
+  ⚠️ **Deliberate limit, please keep it:** only `docMeta` travels. Per-EVENT
+  entries are keyed by an `EventAddress` (track, step, voice) in the SOURCE
+  model, which the conversion has just invalidated — carrying them would state a
+  true fact about the WRONG note, which is worse than losing it because it looks
+  right. Pinned by a test.
+  ⬜ **Not done, and the natural next step:** per-note fretting restoration.
+  `Score → Tab` re-runs `arrangeTab` rather than consulting the side-car, so a
+  round trip returns a playable fretting, not the ORIGINAL one. That needs
+  event-address translation, i.e. the thing the limit above rules out — so it
+  wants a design, not a patch.
+  Tests: `interop_sidecar_carry_test.dart` (7, incl. the no-side-car fallback and
+  explicit-tuning-wins cases, and verified to go red when the carry is removed).
+  Green: interop_corpus, report_honesty, tracker_song_flatten, project_bridge,
+  tab_tracker_interop, loop_tracker_drum_interop, loop_send_tab_fx (159) +
+  tab_workshop, tab_rig_open_in, tracker_open_in, open_in_menu (64). analyze
+  clean. — opus
+
 - **opus (interop-flatten)** · ✅ **SHIPPED (idle) — a tracker song is its
   patterns, not the one on screen.** Wrote a report-honesty property test (for
   every ordered pair of symbolic modes: go and come back by the same edge; if
