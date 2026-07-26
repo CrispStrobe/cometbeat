@@ -334,6 +334,38 @@ void main() {
     expect(find.text('Play'), findsOneWidget); // finished, reset to Play
   });
 
+  testWidgets('song screen: the fingering toggle engraves cello fingerings',
+      (tester) async {
+    // The toggle runs the bowed arranger over the song and hands the marks to
+    // MultiSystemView.extraFingerings, so the digits appear over the notation
+    // without the (immutable) Score being rebuilt.
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    const song =
+        Song(id: 't', title: 'Test', dsl: 'c3:q d3:q e3:q f3:q', lyrics: '');
+    await tester.pumpWidget(_wrap(SongScreen(song: song), sri));
+    await tester.pump();
+
+    MultiSystemView view() =>
+        tester.widget<MultiSystemView>(find.byType(MultiSystemView));
+    expect(view().extraFingerings, isEmpty); // off by default
+
+    await tester.tap(find.byIcon(Icons.back_hand_outlined));
+    await tester.pump();
+
+    final marks = view().extraFingerings;
+    expect(marks, isNotEmpty);
+    // C3-D3-F3 is not the open-C tetrachord (that is an octave lower): C3 is the
+    // fourth finger on the G string, then the hand crosses to the open D and
+    // stays in first position — 4, 0, 1, 2. Worth pinning precisely, because a
+    // plausible-but-wrong answer here would look just as reasonable on screen.
+    expect(marks.values.map((m) => m.single).toList(), [4, 0, 1, 2]);
+
+    // And off again.
+    await tester.tap(find.byIcon(Icons.back_hand));
+    await tester.pump();
+    expect(view().extraFingerings, isEmpty);
+  });
+
   testWidgets('song screen: To Multitrack sends the song as a DAW clip',
       (tester) async {
     final sri = SriService(getNow: () => DateTime(2026, 7, 11));

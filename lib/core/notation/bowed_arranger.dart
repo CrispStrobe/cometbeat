@@ -57,12 +57,15 @@
 // and unit-testable without a device.
 
 import 'package:crisp_notation_core/crisp_notation_core.dart'
-    show Pitch, Tuning;
+    show Pitch, Tuning, kFingeringThumb;
 
 /// The finger index used for the thumb in thumb position. Fingers are `0` (open
-/// string) and `1`–`4`; the thumb is conventionally written `T`, and [kThumb]
-/// is its slot so a fingering can stay a plain int.
-const int kThumb = 5;
+/// string) and `1`–`4`; the thumb is written `T`.
+///
+/// Aliases crisp_notation's [kFingeringThumb] so an arranged finger drops straight
+/// into `NoteElement.fingerings` / `extraFingerings` with no translation — the
+/// notation layer draws it as the `T` glyph.
+const int kThumb = kFingeringThumb;
 
 /// The shape the left hand is holding.
 enum BowedHandMode {

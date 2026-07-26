@@ -55,11 +55,34 @@ void main() {
     );
   });
 
-  test('digits are ready to engrave, thumb held back by default', () {
+  test('marks come out in the notation layer own vocabulary', () {
     final digits =
         bowedFingeringDigits(_cScale(), skill: BowedSkill.firstPosition);
     expect(digits['e0'], [0]);
     expect(digits['e3'], [4]);
+  });
+
+  test('a thumb is exactly the value crisp_notation draws as T', () {
+    // High enough that only thumb position reaches it. No translation step: the
+    // arranger's thumb IS the notation layer's thumb, so the map can go straight
+    // to StaffView.extraFingerings.
+    final score = Score(
+      clef: Clef.bass,
+      measures: [
+        Measure([
+          // A4 — an octave and a fifth above the open A, so only the thumb
+          // reaches it (Pitch defaults to octave 4).
+          NoteElement.note(
+            const Pitch(Step.a),
+            NoteDuration.quarter,
+            id: 'high',
+          ),
+        ]),
+      ],
+    );
+    final digits = bowedFingeringDigits(score, skill: BowedSkill.advanced);
+    expect(digits['high'], [kFingeringThumb]);
+    expect(kThumb, kFingeringThumb);
   });
 
   test('notes without ids are skipped rather than mis-keyed', () {

@@ -280,8 +280,12 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
                                 StaffView(
                                   score: Score.simple(
                                     clef: Clef.bass,
+                                    // `=N` engraves the finger above the note,
+                                    // the way a cello method book prints it —
+                                    // the chip below still spells out the string.
                                     notes: '${_target.pitch.step.name}'
-                                        '${_target.pitch.octave}:w',
+                                        '${_target.pitch.octave}:w'
+                                        '=${_target.finger}',
                                   ),
                                   staffSpace: 14,
                                   theme: kidsScoreTheme,

@@ -9,6 +9,8 @@ import 'dart:async';
 
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/audio/play_along.dart' show PlayAlongChart;
+import 'package:comet_beat/core/notation/bowed_arranger.dart';
+import 'package:comet_beat/core/notation/bowed_score_fingering.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart';
@@ -59,6 +61,20 @@ class _SongScreenState extends State<SongScreen> {
   String? _highlightedId;
   bool _playing = false;
   bool _inspect = false; // 🔍 Looking Glass: tap a note to see what it is
+
+  // 🎻 Cello fingerings over the notation: which finger stops each note, from
+  // the bowed arranger (core/notation/bowed_arranger.dart). Computed once and
+  // cached — it is a Viterbi over the whole line, not a per-note lookup, so it
+  // must not run on every rebuild. Positions 1–4 with extensions: what a learner
+  // has. Off by default; the song may be for any instrument.
+  bool _fingerings = false;
+  Map<String, List<int>>? _fingeringCache;
+
+  Map<String, List<int>> get _celloFingerings =>
+      _fingeringCache ??= bowedFingeringDigits(
+        widget.score,
+        skill: BowedSkill.neckPositions,
+      );
   late final ScoreAnalysis _analysis = analyze(widget.score);
   int _playToken = 0; // invalidates a running play loop
 
@@ -211,6 +227,13 @@ class _SongScreenState extends State<SongScreen> {
             onPressed: () => setState(() => _inspect = !_inspect),
           ),
           IconButton(
+            icon: const Icon(Icons.back_hand_outlined),
+            tooltip: l10n.playAlongFingerings,
+            isSelected: _fingerings,
+            selectedIcon: const Icon(Icons.back_hand),
+            onPressed: () => setState(() => _fingerings = !_fingerings),
+          ),
+          IconButton(
             icon: const Icon(Icons.insights),
             tooltip: l10n.analyzeAction,
             onPressed: () => Navigator.of(context).push(
@@ -248,6 +271,8 @@ class _SongScreenState extends State<SongScreen> {
                             score: widget.score,
                             staffSpace: 11,
                             theme: kidsScoreTheme,
+                            extraFingerings:
+                                _fingerings ? _celloFingerings : const {},
                             controller: _regions,
                             highlightedIds: {
                               if (_highlightedId != null) _highlightedId!,

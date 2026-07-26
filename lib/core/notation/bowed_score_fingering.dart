@@ -88,21 +88,22 @@ Map<String, List<BowedFingering>> fingerBowedScore(
   return out;
 }
 
-/// The same thing as engravable digits, ready to drop into
-/// `NoteElement.fingerings`. The thumb comes back as [kThumb]; a caller that
-/// engraves it needs a `T` glyph rather than a digit, so notes in thumb position
-/// are omitted unless [includeThumb] is set.
+/// The same thing as engravable marks, ready to hand to
+/// `StaffView.extraFingerings` / `MultiSystemView.extraFingerings` (or to drop
+/// into `NoteElement.fingerings` when building a score).
+///
+/// Values are exactly what the notation layer expects: digits `0`–`4` and
+/// [kFingeringThumb] for the thumb, which it draws as the `T` glyph. Nothing is
+/// filtered — a fingering the player can't reach is still the fingering the
+/// passage needs, and [BowedArrangement.relaxed] is how a caller learns that.
 Map<String, List<int>> bowedFingeringDigits(
   Score score, {
   required BowedSkill skill,
   BowedInstrument? instrument,
-  bool includeThumb = false,
 }) {
   final table = fingerBowedScore(score, instrument: instrument, skill: skill);
-  final out = <String, List<int>>{};
-  for (final entry in table.entries) {
-    if (!includeThumb && entry.value.any((f) => f.finger == kThumb)) continue;
-    out[entry.key] = [for (final f in entry.value) f.finger];
-  }
-  return out;
+  return {
+    for (final entry in table.entries)
+      entry.key: [for (final f in entry.value) f.finger],
+  };
 }
