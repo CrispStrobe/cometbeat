@@ -34,7 +34,6 @@ import 'package:comet_beat/features/games/composition/loop_studio_screen.dart';
 import 'package:comet_beat/features/games/composition/melody_doodle_screen.dart';
 import 'package:comet_beat/features/games/composition/my_melody_screen.dart';
 import 'package:comet_beat/features/games/composition/question_answer_screen.dart';
-import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/drums/drum_read_screen.dart';
 import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
 import 'package:comet_beat/features/games/expression/articulation_ear_screen.dart';
@@ -1267,16 +1266,14 @@ final Map<String, List<GameInfo>> kGamesByModule = {
       subtitle: (l) => l.gameDrumKitSubtitle,
       builder: (_) => const DrumkitScreen(),
     ),
-    // Touch-first pattern sequencer (a kid-friendly tracker): pick an
-    // instrument, tap a pentatonic grid, layers loop together. A sandbox,
-    // no stars.
-    GameInfo(
-      id: 'tracker',
-      icon: Icons.grid_view,
-      title: (l) => l.gameTracker,
-      subtitle: (l) => l.gameTrackerSubtitle,
-      builder: (_) => const TrackerScreen(),
-    ),
+    // NB: the standalone "Beginner Tracker" (Sandbox) tile was retired
+    // 2026-07-26 — its touch-first pentatonic grid is now the Loop Studio tune
+    // + beat editors (per-voice grid, seeded from the real notes, soft/normal
+    // velocity, wide range; drums edit in-place). Pros still reach the full
+    // multi-channel sequencer via Loop Studio → "Open in Tracker" (the Advanced
+    // Tracker), and module/score loads route straight there too. The
+    // `TrackerScreen` (Sandbox) widget stays for the Advanced screen's
+    // "simplify" path; it just no longer has its own hub tile.
   ],
   'cello': [
     // Live-mic tuner.

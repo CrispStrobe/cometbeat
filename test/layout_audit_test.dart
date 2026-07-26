@@ -64,15 +64,9 @@ void main() {
       (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final overflows = <String>[];
-    // `tracker` (the Advanced-tracker-adjacent sequencer) is under active rework
-    // by another agent and has a small pre-existing 9px overflow at 375px — left
-    // for that agent so this audit doesn't edit their hot file. Everything else
-    // must be clean.
-    const skip = {'tracker'};
-    final games = kGamesByModule.values
-        .expand((g) => g)
-        .where((g) => !skip.contains(g.id))
-        .toList();
+    // (The standalone Beginner-Tracker tile was retired 2026-07-26 — folded into
+    // the Loop Studio editors — so its old audit skip is gone with it.)
+    final games = kGamesByModule.values.expand((g) => g).toList();
 
     for (final locale in const [Locale('en'), Locale('de')]) {
       for (final size in _sizes.entries) {
