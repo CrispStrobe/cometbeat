@@ -1452,6 +1452,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('undo covers tune-grid note edits (place → grow → shrink back)',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    game.debugEditTuneCell(60, 0); // place 1/8
+    await tester.pump();
+    expect(game.canUndo, isTrue);
+    game.debugEditTuneCell(60, 0); // grow → 1/4
+    await tester.pump();
+    int lenOf60() => game.debugTuneCells!
+        .firstWhere((c) => c.midis?.contains(60) ?? false)
+        .steps;
+    expect(lenOf60(), 4);
+
+    // Undo reverts just the grow (1/4 → 1/8), not the whole note.
+    game.undo();
+    await tester.pump();
+    expect(lenOf60(), 2);
+
+    // Undo again removes the note (the track clears).
+    game.undo();
+    await tester.pump();
+    expect(
+      game.debugTuneCells?.any((c) => c.midis?.contains(60) ?? false) ?? false,
+      isFalse,
+    );
+
+    // Redo re-applies: note back at 1/8.
+    game.redo();
+    await tester.pump();
+    expect(lenOf60(), 2);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('undo also covers a per-track level edit', (tester) async {
     await pumpGame(tester, const LoopMixerScreen());
     final game = _game(tester);
