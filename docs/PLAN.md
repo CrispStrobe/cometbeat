@@ -43,17 +43,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-positions)** · 🚧 **ACTIVE — the cello games beyond first position.**
-  `cello_first_position.dart` is a hand-typed 16-note table, so the Cello Corner's
-  finger quiz and "Play it" can only ever ask about first position. The arranger's
-  frame model already knows every position, so the note pool becomes DERIVED
-  (`celloNotesInPosition(n)`) with first position asserted equal to the hand-typed
-  table — the book stays the oracle, the geometry does the work. Adds a position
-  selector (1–4) to those two games. **No hot shared files:** new
-  `features/games/cello/cello_positions.dart` + the two cello screens; **no ARB**
-  (reuses the existing `tabPatternPosition` = "Position"), **no `game_registry.dart`**
-  (a selector inside the existing tiles, not new tiles), `cello_first_position.dart`
-  read-only. Worktree `../mus-cello-fingering`.
+- **opus (cello-positions)** · ✅ **SHIPPED (idle) — the cello games drill positions
+  1–4** (`6daeac99`). The finger quiz and "Play it" were locked to the nut because
+  their pool was the hand-typed 16-note `cello_first_position.dart`. New
+  `celloNotesInPosition(n)` DERIVES the pool from the arranger's frame model, and
+  the hand-typed table earns its keep as the ORACLE — position 1 must reproduce it
+  note for note (a book wrote that table, this code did not, so matching it is an
+  independent check, not a tautology). Naturals only, like the book, which leaves
+  real gaps (the D string's first finger has no natural in third position — the gap
+  is correct, and pinned: E, F, —, G); open strings only in first position. Changing
+  position restarts the run, since a score belongs to one position. **No hot shared
+  files** — no ARB (reused `tabPatternPosition`), no `game_registry.dart`,
+  `cello_first_position.dart` untouched. ⚠ Leftover for whoever has the ARBs: the
+  finger-quiz tile subtitle still reads "First position: which finger?", now narrow
+  rather than wrong. +6 tests.
 
 - **opus (cello-fingering)** · ✅ **SHIPPED (idle) — auto-assigned cello fingerings,
   now on the cello play-along.** Step 1 (the arranger) is the bowed twin of the
