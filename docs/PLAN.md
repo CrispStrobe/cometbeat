@@ -29,6 +29,22 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (daw-suite)** · 🚧 **ACTIVE — Audio Editor → swiss-army knife.**
+  Worktree `../mus-daw-suite` (`feature/daw-suite`). Maintainer ask: the full
+  DSP bag of tricks, **every op in the GUI *and* the CLI**, plus five-mode
+  interop so any lane opens in any editor with the same FX. Full scoping in
+  **[AUDIO_EDITOR_SUITE.md](AUDIO_EDITOR_SUITE.md)**; condensed ladder in the
+  *"Audio Editor — swiss-army ladder"* section below.
+  **Files I will touch:** `core/audio/fx/*` (additive — new `FxType`s are
+  APPENDED, never reordered, since `.cbdaw` stores effects by name),
+  `core/audio/crisp_dsp/*` (new files), `core/audio/daw_edits.dart`,
+  `core/audio/daw_project.dart`, `bin/fxproc.dart` + `bin/dawedit.dart`, later
+  `daw_service.dart` / `daw_screen.dart` / `core/interop/*`.
+  ⚠️ **Overlap heads-up for `opus (tracker→editors)`**: you are also in `fx/*`.
+  I only append to `FxType` + add dispatch cases; if we collide, mine rebases
+  onto yours. Ping via this board.
+  — opus
+
 - **opus (tracker→editors)** · 🚧 **ACTIVE — lifting tracker DSP into the shared
   FX rack / editors.** Four-part sweep (user-requested): (1) extract `trackerLfo`
   → `crisp_dsp/lfo.dart` + add `FxType.autoWah` (LFO-swept resonant low-pass — the
@@ -571,7 +587,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 Order: T1a → T1b → T1c → T1d → T1e → T1f → Tier 2 → SFZ.
 
-## Audio Editor ("Multitrack") — Ocenaudio-parity ladder (opus, 2026-07-25)
+## Audio Editor ("Multitrack") — single-file-editor parity ladder (opus, 2026-07-25)
 
 The DAW is already a strong **non-destructive multitrack** engine: stereo
 throughout; per-clip/track/bus/master FX chains + breakpoint automation (reverb,
@@ -585,7 +601,7 @@ marked-range, optional normalize-on-export; undo/redo depth-50; stereo waveform 
 ruler + beat grid; snap; whole-arrangement loop; `.cbdaw` save/load; Space/Delete
 keys.
 
-Gaps vs a single-file editor (**Ocenaudio**), to close in order. Most DSP already
+Gaps vs a capable **single-file audio editor**, to close in order. Most DSP already
 exists in `crisp_dsp/` (`sample_edit.dart`: `normalizePcm`/`removeDcOffset`/
 `trimSilence`/`trimPcm`/`peakMagnitude`; `biquad.dart` full filter set;
 `sfxr.dart` tone/noise) — the work is wiring it as DAW clip ops (bake pattern like
@@ -611,7 +627,7 @@ exists in `crisp_dsp/` (`sample_edit.dart`: `normalizePcm`/`removeDcOffset`/
   `setClipMutedInRange`, which is reversible and leaves the clips in place.
   Both share `_removeClipsAroundRange` (split at both bounds, then drop one
   side; a sliver too short to split is decided by its midpoint).
-- [x] **O6** `amplifyClip(track, index, db)` (bake) + an Ocenaudio-style dB
+- [x] **O6** `amplifyClip(track, index, db)` (bake) + a conventional dB
   dialog. Complements the non-destructive Gain FX: this rewrites the samples,
   so a later normalize/statistic sees the new level.
 
@@ -699,7 +715,7 @@ as A4 440.0 Hz, clarity 1.00. Tests: `daw_edits_test.dart` (19, headless) +
 
 ### Beyond the ladder — real DAW gaps the ladder missed (2026-07-25)
 
-The O1–O16 list was written against a single-file editor (Ocenaudio), so it
+The O1–O16 list was written against a single-file editor, so it
 never asked for the things a MULTITRACK editor must do. Three were genuinely
 missing and are now shipped:
 
@@ -730,10 +746,104 @@ missing and are now shipped:
   played back — what was missing was any way to SEE or draw them; the numeric
   list stays alongside for precision and accessibility.
 
-⚠️ **Correction on the Ocenaudio comparison:** split · copy/cut/paste/duplicate ·
+⚠️ **Correction on that comparison:** split · copy/cut/paste/duplicate ·
 per-clip/track/bus/master/range FX · fade curves (linear/exp/S) already existed
 before this pass — the gap was narrower than "tiny steps", but these three were
 real and are the difference between a clip arranger and a DAW.
+
+## Audio Editor — swiss-army ladder (opus, 2026-07-26) — 🚧 ACTIVE
+
+Maintainer ask: the Audio Editor becomes a **swiss-army knife** — the whole DSP
+bag of tricks a serious workstation carries, **every op available in the GUI
+*and* in a CLI** (the CLI is what makes each one unit- and live-testable), and
+five-mode interop so **any lane opens in any other editor** with the **same FX
+rack for every kind of track**. Everything clean-room from published DSP theory
+(see auto-memory `cleanroom-gpl-port-process`); no encumbered source is read or
+ported.
+
+**Full scoping — the gap tables, the target interop matrix, acceptance criteria
+and non-goals — lives in [AUDIO_EDITOR_SUITE.md](AUDIO_EDITOR_SUITE.md).** This
+is the checklist; keep the detail there, not here.
+
+**The lever.** `fx_spec.dart` (what an effect is) + `fx_params.dart` (each
+param's range/unit/type) already describe the whole rack machine-readably, and
+the GUI is already generated from it. So **generate the CLI from it too**: then
+one new `FxType` yields a GUI control, a CLI verb, `--list` documentation, range
+validation and a preset entry with no further work. The shared surface is a
+**chain string** — `highpass freq=120 | compressor ratio=4 | reverb mix=0.2` —
+that is simultaneously the CLI argument and the app's copy/paste preset, so a
+chain tuned by ear pastes into a test and vice versa.
+
+**Foundations**
+- [ ] **F1** `fx/fx_chain_codec.dart` — chain string ↔ `List<FxSpec>`, registry
+  introspection (every type, param, range, unit, default), range validation.
+- [ ] **F2** `bin/fxproc.dart` regenerated from the registry: whole-rack,
+  **stereo**, `--chain`, `--list [type]`, `--play`, `--stats`; old flags kept.
+- [ ] **F3** Chain string as a copy/paste preset in the app's FX rack.
+
+**Pillar A — DSP vocabulary** (each: `FxType` + defaults + ranges + dispatch +
+DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
+- [ ] **A1 filters** — all-pass · one-pole LP/HP · band-reject by width · raw
+  biquad (user coefficients) · windowed-sinc (steepness) · arbitrary FIR ·
+  Hilbert.
+- [ ] **A2 tone curves** — tilt EQ · loudness compensation · de-emphasis curves ·
+  presence/contrast.
+- [ ] **A3 dynamics** — multi-segment **companding** (the general case that
+  subsumes compressor/expander/gate) · **multiband** companding · look-ahead
+  **limiter** (the master's tanh knee is a soft-clip, not a limiter) · expander ·
+  de-esser.
+- [ ] **A4 channels/stereo** — swap · **remix matrix** · mid/side encode+decode ·
+  out-of-phase (centre-cancel) extraction · headphone crossfeed · balance ·
+  auto-pan.
+- [ ] **A5 restoration** — DC shift · **noise profile → spectral reduction** (the
+  most-wanted repair tool; the radix-2 FFT already exists in
+  `chroma_analysis.dart`) · hum comb · click/crackle repair · de-clip.
+- [ ] **A6 time/pitch** — pitch **bend envelope** · stretch quality tiers ·
+  high-quality rate conversion with explicit anti-aliasing · raw up/downsample.
+- [ ] **A7 generators** — brown/blue/violet noise · sweep/chirp (lin+log) ·
+  plucked string (`crisp_dsp/karplus.dart` exists but is unreachable here) ·
+  multi-shape with ramps + envelope · impulse/DTMF.
+
+**Pillar B — non-FX editor ops** (`daw_edits.dart` → service → `bin/dawedit.dart`
+→ inspector, the same three-way testability as O1–O6)
+- [ ] **B1** pad · repeat · silence detection *anywhere* (not just edges) ·
+  auto-split a long take into one clip per phrase · splice with equal-power
+  crossfade.
+- [ ] **B2** dither + noise shaping on any bit-depth reduction, not just export.
+- [ ] **B3** full statistics — peak/RMS/DC/crest/dynamic range/effective bit
+  depth/zero-crossings, per channel, `--json`.
+- [ ] **B4** voice-activity trim. **B5** spectrogram → PNG from the CLI
+  (`core/audio/spectrogram.dart` exists, no CLI). **B6** batch/macro: a chain
+  string over many clips, lanes, or a folder.
+
+**Pillar C — five modes, one document.** The converters already exist
+(`ProjectBridge`, with honest per-route loss reports) and score/tracker clips
+already round-trip **in place**. The gaps:
+- [ ] **C1** ⭐ **`.cbdaw` v2 — models survive Save.** Today `projectToJson`
+  bakes every clip to PCM, so reopening a project loses every editable model:
+  the "vector, not bitmap" engine survives only until the user saves. Persist
+  the typed source (score/tracker/drum/groove/sample) with the baked PCM kept
+  as a *cache*. **Highest-value single slice in this pillar.**
+- [ ] **C2** Drum (`DrumSource`) + groove (`GrooveSource`) accessors and
+  round-trip — a beat sent from the DrumKit currently can never go back.
+- [ ] **C3** Universal "Open in…" routed through `ProjectBridge` (with its loss
+  report shown *before* committing) instead of the two hardcoded special cases;
+  gives score→Tracker its missing return path.
+- [ ] **C4** Tab fidelity inbound — string/fret/fingering currently die at the
+  door, so Audio Editor → Tab re-frets from scratch.
+- [ ] **C5** "Transcribe this clip → notes → any editor" — the honest audio→
+  symbolic bridge, explicitly labelled as estimation.
+- [ ] **C6** Lane-level send (clip-level exists). **C7** surface the shared rack
+  in Tracker/Loop/Tab/Score too, with the chain string as interchange.
+
+**Pillar D — DAW-grade extras** (as pulled): ripple delete/insert · clip groups +
+nudge · per-clip gain envelope · LUFS + true-peak + correlation metering · take
+lanes/comping · a real tempo map (bpm is one number today).
+
+**Non-goals** (stated so they are not re-litigated): a real-time audio graph (the
+app is offline render-then-play *by design*), third-party plugin hosting, and
+editing symbolic models *from* the waveform (that stays behind the explicit
+Transcribe door).
 
 ### ✅ Audio codecs — native + web at parity — SHIPPED (2026-07-26)
 
