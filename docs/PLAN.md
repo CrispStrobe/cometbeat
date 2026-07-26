@@ -62,6 +62,24 @@ is recorded in [HISTORY.md](HISTORY.md).
   entry), the **ARBs** (1 key `playAlongFingerings` de/en),
   `playalong/play_along_screen.dart`. `tab_arranger.dart` +
   `cello_first_position.dart` left alone. Worktree `../mus-cello-fingering`.
+  **Step 2b — the NOTATION LAYER can now draw all of it** (crisp_notation `1bf31a7`
+  → `9089318`, on its main): (a) **fixed a real codepoint bug** — `fingering6`–
+  `fingering9` pointed at U+ED16–ED19, which are the LETTER glyphs
+  (fingeringTUpper / PLower / TLower / ILower); SMuFL puts 0–5 at ED10–ED15 and
+  appends 6–9 at ED24–ED27, so any fingering above 5 rendered as `T`/`p`/`t`/`i`
+  (unnoticed because piano and guitar only use 1–5); (b) the **left-hand thumb** is
+  now expressible (`kFingeringThumb`, negative because `5` is the pianist's pinky)
+  and drawable (`fingeringTUpper`), and round-trips MusicXML as the `T` editions
+  print; (c) **`extraFingerings`** on `LayoutEngine.layout` / `layoutSystems` /
+  `StaffView` / `MultiSystemView` draws fingerings the score does NOT carry, keyed by
+  element id — the channel for marks computed at display time, which exists because
+  `Score` is immutable with ~40 fields and no `copyWith`, so the alternative was
+  hand-cloning it at every call site. App consumers on top of that: a **hand-icon
+  toggle on the song screen** (any song → cello fingerings, arrange cached; reuses
+  the `playAlongFingerings` key, no ARB churn) and the **cello "Play it" staff** now
+  printing the finger over the note. ⚠ For whoever runs the crisp_notation suite:
+  `golden_test.dart` #118 (notation+tab pair) fails with "image sizes do not match"
+  — verified pre-existing at `8f496c7`, unrelated (that score has no fingerings).
 
 - **opus (glint-encoder)** · ✅ **SHIPPED (idle) — audio codecs, native + web at
   parity.** Vendored glint's encoder into `native/glint` and wired it on all five
