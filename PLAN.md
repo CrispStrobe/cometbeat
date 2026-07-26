@@ -345,7 +345,14 @@ order; A1 and B1/B2 unblock everything else.
   - Tests: widget test — the menu lists exactly the modes the bridge can reach
     from the current mode, and the report text renders.
 
-### D — finishing the interchangeability map (PLANNED, `feature/fx-interop`)
+### D — finishing the interchangeability map (SHIPPED, `feature/fx-interop`)
+
+> D1–D3 are done. **What is still open across this whole arc is UI wiring:** the
+> shared `FxRack` widget and the `OpenInMenu` exist and are tested, but no mode
+> screen hosts either one yet. The models are all in place (`fxChain` on tracker
+> channels, tab tracks and the loop master bus; `ProjectBridge` for every mode
+> pair), so each host is a small, independent change — deliberately left to the
+> agents who own those screens rather than done from here.
 
 C1–C4 built the matrix, but two edges are still second-class and one section of
 the Tracker roadmap below (§2 *Ecosystem Interchangeability*) is only half
@@ -580,14 +587,29 @@ Our `TrackerInstrument` hierarchy (`AdditiveInstrument`, `SfxrInstrument`, `Samp
 3. ~~**Synth & FX Editor:** For `SfxrInstrument` or FM models, embed the existing `lib/features/sound_lab/sound_lab_screen.dart` to expose its rich slider UI directly in the tracker.~~ (DONE)
 4. ~~**Multi-Sample Groundwork:** Enable `MultiSampleInstrument` to map different sample IDs across the keyboard (essential for complex DrumKits and realistic acoustic patches).~~ (DONE)
 
-### 2. Ecosystem Interchangeability (Workshop, Looper, DrumKit, Tab)
+### 2. Ecosystem Interchangeability (Workshop, Looper, DrumKit, Tab) — DONE
 **Current State:**
-We have `tracker_notation.dart` bridging Tracker ↔ Score Workshop. However, deep integration with other DAW tools (Looper, Tab Editor, DrumKit) is missing. 
+All three items shipped (C1, D1, D2). Every edge is symbolic and reversible, and
+every conversion returns a `ConversionReport` naming what it could not carry;
+`ProjectBridge` (`lib/core/interop/project_bridge.dart`) is the single entry
+point. What remains open is UI: no screen hosts the shared `FxRack` or the
+`OpenInMenu` yet — see the D-series note in the cross-mode FX section above.
 
 **Implementation Steps:**
-1. **Looper / Loop Mixer Bridge:** Implement a function to bake a Tracker pattern directly into a `LoopTrack` stem (`Float64List`) so it can be dropped into the Loop Mixer as a perfectly-timed, loopable clip.
-2. **DrumKit Bridge:** Ensure `PercussionInstrument` directly reads from/writes to the same model used by the standalone DrumKit view. A beat tapped out physically in the DrumKit must instantly populate the Tracker's percussion channel.
-3. **Tab Editor Translation:** Expand `tracker_notation.dart` to support translating plucked string channels (`KarplusInstrument`) into Tab Editor strings, mapping MIDI pitches to string/fret combinations based on tuning.
+1. ~~**Looper / Loop Mixer Bridge**~~ (DONE, D1) — and done SYMBOLICALLY rather
+   than as a baked stem, which is the stronger form: `lib/core/interop/
+   loop_tracker.dart` converts a tracker channel to/from `PatternCell`s, so the
+   result stays editable in the Loop Studio instead of arriving as audio. A
+   baked `Float64List` is still available via `TrackerEngine.renderLoopFloat`
+   when a clip really is wanted.
+2. ~~**DrumKit Bridge**~~ (DONE, D2) — `beat_to_tracker.dart` already carried
+   DrumKit → Tracker; `lib/core/interop/drum_tracker.dart` adds the inverse
+   (`sharedBeatFromTrackerSong`), so the trip is now two-way and
+   `beat → song → beat` is asserted to be identity.
+3. ~~**Tab Editor Translation**~~ (DONE, C1) — `lib/core/interop/tab_tracker.dart`
+   does this better than described: rather than mapping pitches onto strings
+   after the fact, it puts **one channel per string**, so the fingering is
+   native and survives a round trip instead of being re-derived.
 
 ### 3. Visual Excellence & Workflow (classic tracker ergonomics)
 **Current State:**
