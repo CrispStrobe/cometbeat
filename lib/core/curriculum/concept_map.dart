@@ -604,7 +604,9 @@ const List<Concept> kConcepts = [
     GradeBand.g56,
     ConceptArea.creating,
     'Layer and arrange loops',
-    ['loop_mixer', 'tracker', 'drumkit'],
+    // The standalone Beginner-Tracker tile was retired in 3d63805a and folded
+    // into Loop Studio, so `loop_mixer` already covers what `tracker` taught.
+    ['loop_mixer', 'drumkit'],
   ),
   Concept(
     'learn_songs',

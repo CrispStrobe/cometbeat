@@ -254,9 +254,8 @@ class TabColumn {
         articulations: articulations ?? this.articulations,
         ornament: ornament == _unset ? this.ornament : ornament as Ornament?,
         tremolo: tremolo == _unset ? this.tremolo : tremolo as int?,
-        graceMidis: graceMidis == _unset
-            ? this.graceMidis
-            : graceMidis as List<int>?,
+        graceMidis:
+            graceMidis == _unset ? this.graceMidis : graceMidis as List<int>?,
         graceStyle: graceStyle ?? this.graceStyle,
         arpeggio: arpeggio == _unset ? this.arpeggio : arpeggio as Arpeggio?,
         pickStroke:
@@ -1123,7 +1122,9 @@ class TabDocument {
         if (col.section != null) annotations.add(Annotation(id, col.section!));
         // Parametric expressions (B1–B3) — a point list wins over the flat flag.
         if (col.bend != null) bends.add(Bend.curve(id, col.bend!));
-        if (col.whammy != null) tremoloBars.add(TremoloBar.curve(id, col.whammy!));
+        if (col.whammy != null) {
+          tremoloBars.add(TremoloBar.curve(id, col.whammy!));
+        }
         if (col.slide != null) slideInOuts.add(TabSlide(id, col.slide!));
         // B4/B5/B6/B9/B10 note-scoped marks.
         if (col.tap) taps.add(Tap(id));
@@ -1181,7 +1182,9 @@ class TabDocument {
         }
       }
       end ??= lastNoteful >= 0 ? lastNoteful : null;
-      if (end != null) hairpins.add(Hairpin('t$c', 't$end', columns[c].hairpin!));
+      if (end != null) {
+        hairpins.add(Hairpin('t$c', 't$end', columns[c].hairpin!));
+      }
     }
     if (measures.isEmpty) {
       measures.add(const Measure([RestElement(NoteDuration.whole)]));
@@ -1428,8 +1431,10 @@ class TabDocument {
             if (el.ornament != null) ornById[eid] = el.ornament!;
             if (el.tremolo != null) tremById[eid] = el.tremolo!;
             if (el.graceNotes.isNotEmpty) {
-              graceById[eid] =
-                  ([for (final p in el.graceNotes) p.midiNumber], el.graceStyle);
+              graceById[eid] = (
+                [for (final p in el.graceNotes) p.midiNumber],
+                el.graceStyle
+              );
             }
             if (el.arpeggio != null) arpById[eid] = el.arpeggio!;
             if (el.fingerings.isNotEmpty) leftFingersById[eid] = el.fingerings;
@@ -1586,9 +1591,8 @@ class TabDocument {
             harmonic: ids[i] == null ? null : harmonicById[ids[i]],
             palmMute: palmMuteRows.contains(i),
             letRing: letRingRows.contains(i),
-            articulations: ids[i] == null
-                ? const {}
-                : (artById[ids[i]] ?? const {}),
+            articulations:
+                ids[i] == null ? const {} : (artById[ids[i]] ?? const {}),
             ornament: ids[i] == null ? null : ornById[ids[i]],
             tremolo: ids[i] == null ? null : tremById[ids[i]],
             graceMidis: ids[i] == null ? null : graceById[ids[i]]?.$1,

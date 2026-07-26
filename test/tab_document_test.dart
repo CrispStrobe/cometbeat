@@ -804,7 +804,9 @@ void main() {
   group('B1–B3 — parametric bend / whammy / slide', () {
     TabDocument oneNote() => TabDocument(
           tuning: Tuning.standardGuitar,
-          columns: [const TabColumn(frets: {0: 5})],
+          columns: [
+            const TabColumn(frets: {0: 5}),
+          ],
         );
 
     test('B1 a bend curve emits Bend.curve and round-trips its points', () {
@@ -870,7 +872,9 @@ void main() {
   group('B4–B6 — tap / harmonic kinds / articulations', () {
     TabDocument oneNote() => TabDocument(
           tuning: Tuning.standardGuitar,
-          columns: [const TabColumn(frets: {0: 5})],
+          columns: [
+            const TabColumn(frets: {0: 5}),
+          ],
         );
 
     test('B4 tap emits a Tap and round-trips', () {
@@ -951,8 +955,7 @@ void main() {
         ..toggleArticulation(0, Articulation.staccato)
         ..toggleArticulation(0, Articulation.accent);
       final score = doc.toScore();
-      final note =
-          score.measures.first.elements.whereType<NoteElement>().first;
+      final note = score.measures.first.elements.whereType<NoteElement>().first;
       expect(
         note.articulations,
         containsAll([Articulation.staccato, Articulation.accent]),
@@ -982,7 +985,9 @@ void main() {
   group('B7–B10 — trill/tremolo, grace, strum/pick, fingering', () {
     TabDocument oneNote() => TabDocument(
           tuning: Tuning.standardGuitar,
-          columns: [const TabColumn(frets: {0: 5})],
+          columns: [
+            const TabColumn(frets: {0: 5}),
+          ],
         );
     NoteElement firstNote(Score s) =>
         s.measures.first.elements.whereType<NoteElement>().first;
@@ -1001,8 +1006,8 @@ void main() {
 
     test('B8 grace notes emit graceNotes + style and round-trip', () {
       final doc = oneNote();
-      doc.columns[0] = doc.columns[0]
-          .withGrace([62, 64], style: GraceStyle.appoggiatura);
+      doc.columns[0] =
+          doc.columns[0].withGrace([62, 64], style: GraceStyle.appoggiatura);
       final score = doc.toScore();
       expect(
         firstNote(score).graceNotes.map((p) => p.midiNumber).toList(),
@@ -1039,8 +1044,8 @@ void main() {
     });
 
     test('copy() deep-copies grace + finger lists (no aliasing)', () {
-      final c = const TabColumn(frets: {0: 5})
-          .withGrace([62]).withLeftFingers([1]);
+      final c =
+          const TabColumn(frets: {0: 5}).withGrace([62]).withLeftFingers([1]);
       final dup = c.copy();
       expect(dup.graceMidis, [62]);
       expect(identical(dup.graceMidis, c.graceMidis), isFalse);
@@ -1052,11 +1057,12 @@ void main() {
     test('a dynamic sets velocity + DynamicMarking and round-trips', () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: [const TabColumn(frets: {0: 5})],
+        columns: [
+          const TabColumn(frets: {0: 5}),
+        ],
       )..setDynamic(0, DynamicLevel.ff);
       final score = doc.toScore();
-      final note =
-          score.measures.first.elements.whereType<NoteElement>().first;
+      final note = score.measures.first.elements.whereType<NoteElement>().first;
       expect(note.velocity, velocityOf(DynamicLevel.ff));
       expect(score.dynamics.single.level, DynamicLevel.ff);
       final back = TabDocument.fromScore(score, Tuning.standardGuitar);
@@ -1074,7 +1080,8 @@ void main() {
       );
     });
 
-    test('a hairpin spans from its start to the next dynamic + round-trips', () {
+    test('a hairpin spans from its start to the next dynamic + round-trips',
+        () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
         columns: [
@@ -1129,7 +1136,9 @@ void main() {
     test('no second voice → empty voice2, single-voice measures', () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,
-        columns: [const TabColumn(frets: {0: 0})],
+        columns: [
+          const TabColumn(frets: {0: 0}),
+        ],
       );
       expect(doc.voice2, isEmpty);
       expect(doc.toScore().measures.first.voice2, isEmpty);
