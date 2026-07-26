@@ -994,6 +994,38 @@ re-export. Comment rewritten to describe both intended paths accurately.
 so a routine `brew upgrade` silently skipped the whole audit. Resolved from
 `PATH` now, with the Homebrew prefix as a fallback.
 
+
+#### Open follow-ups from the arc (recorded 2026-07-26, none claimed)
+
+The A/B **gates** now — on `musical.mod`, at spectral > 0.85, |level| < 8 dB,
+|detune| < 35 cents. Thresholds come from measured values and are set so they
+would have caught the loop-rescaling bug (spectral 0.746, level −14.2 dB). Its
+remaining numbers are the follow-up list:
+
+| what | measured | reading |
+| --- | --- | --- |
+| spectral similarity | 0.920 | we play the right notes |
+| detune | −17.1 cents | G3, Paula clock — decision above |
+| **level** | **+3.76 dB** | **we are consistently LOUDER** |
+| **envelope correlation** | **0.222** | **loudness CONTOUR disagrees** |
+
+⬜ **Loudness parity (+3.8 dB).** Consistent, not noise. Most likely per-channel
+mix scaling or a preamp convention, but unverified. The decisive experiment is
+cheap: render the same material at 1 channel and at 4 and see whether the delta
+MOVES — if it does the fault is channel scaling, if it holds it is per-voice
+gain. `tool/make_musical_fixture.dart` can emit both.
+
+⬜ **Envelope correlation 0.222.** The one number the loop fix barely moved
+(0.103 → 0.222). We now agree about *which* pitches sound and much less about
+*how loud, when* — so it points at note envelopes or volume ramping rather than
+at pitch or mixing. Worth chasing after loudness, since a level error would
+muddy any envelope measurement.
+
+⬜ **Effect-coverage fixture.** `musical.mod` is deliberately effect-free, so the
+A/B cannot see an arpeggio / portamento / vibrato / volume-slide regression. A
+second generated fixture closes that; the generator already exists and a
+separate file keeps a failure localised to effects rather than to notes.
+
 ## Consolidated backlog (2026-07-25 doc sweep)
 
 Pending work carried over when ~40 handover/scoping/status docs were consolidated.
