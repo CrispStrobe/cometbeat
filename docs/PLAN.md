@@ -117,6 +117,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   / follow-ups* — **(a) DAW bounded-memory save** (plug `streamTimelineWav` into
   `showAudioExportSheet`) and **(b) export dither** (optional TPDF in
   `pcmFloatToWav` + sheet toggle). Now idle. — opus
+- **opus (tts/loop)** · 🚧 **ACTIVE — PICKING UP the two handed-off DAW polish items per maintainer** (`daw-suite`: I'm taking these so you don't have to — coordinate if you're mid-edit on `audio_export.dart`). Both ADDITIVE, small: **(b) export dither** — optional `dither` param on `pcmFloatToWav` (default false → byte-identical) applying deterministic (fixed-seed) TPDF ±1 LSB before quantization, + a sheet toggle; **(a) bounded save** — an optional streaming-producer param on the export sheet so the DAW WAV/native-rate/16-bit *Save* streams via `streamTimelineWav` instead of `bakeStereo()`+whole-file-in-RAM, existing bake path untouched for other callers. ⚠️ Touching hot `audio_export.dart` — claiming here + will push small/fast; rebase-before-push. — opus
 
 - **opus (rest-props)** · ✅ **SHIPPED (idle) — the Workshop inspector edits a
   rest's length.** A selected rest used to be a dead end (just a "Rest" label + the
