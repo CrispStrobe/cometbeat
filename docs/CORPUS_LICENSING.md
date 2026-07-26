@@ -65,9 +65,34 @@ We classify all content strictly according to these definitions:
   imported songs + samples); (4) every B row has a non-empty attribution.
 - ⚠️ **Tier C (Share-Alike, incl. ODbL) is NOT shippable until the app enforces
   SA-propagation** — once SA content enters an Editor (Audio Editor / Tracker /
-  Workshop), export/save/share must affirm SA on the output. Requirement noted;
-  not yet built. (thesession.org is ODbL **+ a no-LLM clause + composer-copyright
-  risk** → excluded entirely; hosting it on HF can't honour "no LLM use".)
+  Workshop), export/save/share must affirm SA on the output. (thesession.org is
+  ODbL **+ a no-LLM clause + composer-copyright risk** → excluded entirely;
+  hosting it on HF can't honour "no LLM use".)
+  - 🔶 **The RULE is now built (2026-07-26): `lib/core/licensing/license_obligations.dart`**
+    (+ 23 tests). `obligationsFor(works)` returns what an export owes:
+    `requiresAttribution`, `requiresShareAlike`, the licence the **output** must
+    carry, the works to credit, and a `noticeText()`. It encodes the three things
+    that make SA different from attribution: SA is **infectious** (one SA
+    contributor governs the whole output); mixed CC BY-SA versions resolve to the
+    **newest** (BY-SA permits relicensing an adaptation upward, so 3.0+4.0 ships
+    as 4.0 — claiming 3.0 would under-license the 4.0 part); and **incompatible
+    copyleft is a conflict, not a choice** (ODbL with CC BY-SA is reported so a
+    caller refuses, because picking one would be inventing permission).
+    It classifies via `LicensePolicy.classify` rather than matching strings
+    itself — that is already the compliance spine, and a second opinion about
+    what a licence means is the bug to avoid.
+  - ⬜ **Still needed to lift the Tier-C hold — the WIRING, which is a model
+    change, not a rule change.** Nothing carries provenance into the editors
+    yet: `SampleClip` has `source`/`license`/`sourceUrl`, but the Audio Editor's
+    `Clip`, the Tracker's instruments and Workshop scores do not. Until an
+    imported work's licence travels with it, `obligationsFor` has nothing to be
+    given at export time. Order of work: (1) a provenance field on the editor
+    document models, (2) populate it on every import path, (3) call
+    `obligationsFor` in the export/save/share sheets and surface
+    `noticeText()` / refuse on `hasProblem`.
+  - 📝 Worth knowing: `Gemeinfrei` alone classifies as **unknown**, not free —
+    matching §"gemeinfrei / GEMA-frei ≠ free to bundle" below. A test pins that,
+    because assuming otherwise is the obvious mistake.
 
 ## Our import reach — format is rarely the blocker; LICENCE is
 
