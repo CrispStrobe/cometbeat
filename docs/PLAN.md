@@ -29,6 +29,21 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (songbook-rescan)** · ✅ **SHIPPED (idle) — OMR imports keep their scan +
+  can be re-run.** Songbook audit's two open ⬜ items: an OMR import now **retains
+  the source photo** (new `import/omr_source_store.dart`, io/stub split, stored in
+  the same `~/.cache/crisp_notation` tree the model uses — no new dep), flagged on
+  the song by a persisted `ImportedSong.hasSourceImage`; and the imported-songs
+  list shows a **Re-run recognition** button (`_RescanButton`) that re-OMRs the
+  kept photo and swaps the notation via new `UserSongsService.updateSongXml`
+  (re-derives metadata, keeps id/title/flag). Deleting a song drops its scan. New
+  l10n `songRescan{,Done,NoImage}` (de/en). Tests: store round-trip + path-escape
+  guard, `hasSourceImage` JSON round-trip/legacy-default, `updateSongXml`. (I'd
+  also flipped the stale `<sound tempo>` pin in `song_metadata_test.dart`, but the
+  reader-fix agent landed the same flip first (`0c0e55d0`) so I dropped mine.)
+  Files: songbook import/list/service + the ARBs (3 keys). Worktree
+  `../mus-omr-rescan`.
+
 - **opus (tab-chords)** · ✅ **SHIPPED (idle) — Tab Editor chord picker: builder +
   chords-db.** "Pick a chord" now has a **Build a chord** section (root × quality
   dropdowns → any chord on any tuning via a pure, tested `chordVoicing`), and, on

@@ -112,6 +112,55 @@ void main() {
     expect(back.id, song.id);
     expect(back.title, song.title);
     expect(back.musicXml, song.musicXml);
+    // Default: not an OMR import, so no retained scan.
+    expect(back.hasSourceImage, isFalse);
+  });
+
+  test('hasSourceImage round-trips and defaults false on legacy JSON', () {
+    const scanned = ImportedSong(
+      id: 'scan',
+      title: 'Scanned',
+      musicXml: _xml,
+      hasSourceImage: true,
+    );
+    expect(ImportedSong.fromJson(scanned.toJson()).hasSourceImage, isTrue);
+    // A song saved before the field existed reads back as no-scan, not a crash.
+    final legacy = {'id': 'old', 'title': 'Old', 'xml': _xml};
+    expect(ImportedSong.fromJson(legacy).hasSourceImage, isFalse);
+  });
+
+  test('updateSongXml swaps the notation, re-derives metadata, keeps the flag',
+      () async {
+    final svc = UserSongsService();
+    await svc.load();
+    svc.addSong(
+      const ImportedSong(
+        id: 's',
+        title: 'S',
+        musicXml: _xml,
+        hasSourceImage: true,
+      ),
+    );
+    // A different key (2 sharps) so the re-derived metadata visibly changes.
+    const xml2 = '''
+<score-partwise version="4.0"><part-list><score-part id="P1">
+<part-name>M</part-name></score-part></part-list><part id="P1"><measure number="1">
+<attributes><divisions>1</divisions><key><fifths>2</fifths></key>
+<time><beats>4</beats><beat-type>4</beat-type></time>
+<clef><sign>G</sign><line>2</line></clef></attributes>
+<note><pitch><step>D</step><octave>4</octave></pitch><duration>4</duration>
+<type>whole</type></note></measure></part></score-partwise>''';
+    svc.updateSongXml('s', xml2);
+    final updated = svc.songs.single;
+    expect(updated.id, 's');
+    expect(updated.title, 'S'); // identity preserved
+    expect(updated.musicXml, xml2); // notation replaced
+    expect(updated.keyFifths, 2); // metadata re-derived from the new XML
+    expect(updated.hasSourceImage, isTrue); // the retained scan still stands
+
+    // An unknown id is a no-op.
+    svc.updateSongXml('nope', _xml);
+    expect(svc.songs.single.musicXml, xml2);
   });
 
   test('ImportedChordSheet JSON round-trips', () {

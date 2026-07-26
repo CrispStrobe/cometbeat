@@ -4442,6 +4442,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Noten konnten nicht gelesen werden. Bitte ein schärferes, gerades Foto versuchen.';
 
   @override
+  String get songRescan => 'Erkennung erneut ausführen';
+
+  @override
+  String get songRescanDone => 'Aus dem gespeicherten Scan neu erkannt.';
+
+  @override
+  String get songRescanNoImage =>
+      'Der gespeicherte Scan ist nicht mehr verfügbar.';
+
+  @override
   String get importDone => 'Importiert!';
 
   @override

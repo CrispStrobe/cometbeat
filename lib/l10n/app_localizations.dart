@@ -8312,6 +8312,24 @@ abstract class AppLocalizations {
   /// **'Couldn\'t read the sheet music. Try a clearer, straight-on photo.'**
   String get importScanFailed;
 
+  /// No description provided for @songRescan.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-run recognition'**
+  String get songRescan;
+
+  /// No description provided for @songRescanDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-recognised from the saved scan.'**
+  String get songRescanDone;
+
+  /// No description provided for @songRescanNoImage.
+  ///
+  /// In en, this message translates to:
+  /// **'The saved scan is no longer available.'**
+  String get songRescanNoImage;
+
   /// No description provided for @importDone.
   ///
   /// In en, this message translates to:

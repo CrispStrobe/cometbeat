@@ -4428,6 +4428,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t read the sheet music. Try a clearer, straight-on photo.';
 
   @override
+  String get songRescan => 'Re-run recognition';
+
+  @override
+  String get songRescanDone => 'Re-recognised from the saved scan.';
+
+  @override
+  String get songRescanNoImage => 'The saved scan is no longer available.';
+
+  @override
   String get importDone => 'Imported!';
 
   @override

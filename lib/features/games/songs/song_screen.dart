@@ -17,6 +17,8 @@ import 'package:comet_beat/features/games/composition/score_analysis_view.dart';
 import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
 import 'package:comet_beat/features/games/songs/chord_sheet_screen.dart';
 import 'package:comet_beat/features/games/songs/import/chordpro.dart';
+import 'package:comet_beat/features/games/songs/import/omr_import.dart';
+import 'package:comet_beat/features/games/songs/import/omr_source_store.dart';
 import 'package:comet_beat/features/games/songs/import_screen.dart';
 import 'package:comet_beat/features/games/songs/multi_part_song_screen.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart';
@@ -30,12 +32,14 @@ import 'package:comet_beat/shared/score_theme.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
         ElementRegionController,
+        MultiPartScore,
         MultiSystemView,
         NoteElement,
         Score,
         ScoreAnalysis,
         analyze,
-        multiPartScoreFromMusicXml;
+        multiPartScoreFromMusicXml,
+        multiPartToMusicXml;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -514,6 +518,9 @@ class SongListScreen extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Only OMR imports keep their scan; re-run recognition on
+                      // it to fix a bad read without re-photographing.
+                      if (song.hasSourceImage) _RescanButton(song: song),
                       IconButton(
                         icon: const Icon(Icons.ios_share),
                         tooltip: l10n.musicExportTitle,
@@ -595,6 +602,76 @@ class _SongAnalysisScreen extends StatelessWidget {
           const SizedBox(height: 16),
         ],
       ),
+    );
+  }
+}
+
+/// Re-runs OMR on a song's retained scan and replaces its notation with the
+/// fresh recognition. A tiny stateful button so [SongListScreen] can stay
+/// stateless: it owns the in-flight spinner and the result snackbars. Only
+/// rendered for songs whose scan was kept (`ImportedSong.hasSourceImage`).
+class _RescanButton extends StatefulWidget {
+  const _RescanButton({required this.song});
+
+  final ImportedSong song;
+
+  @override
+  State<_RescanButton> createState() => _RescanButtonState();
+}
+
+class _RescanButtonState extends State<_RescanButton> {
+  bool _busy = false;
+
+  Future<void> _rescan() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final songs = context.read<UserSongsService>();
+    setState(() => _busy = true);
+    try {
+      final bytes = await loadOmrSource(widget.song.id);
+      if (!mounted) return;
+      if (bytes == null) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.songRescanNoImage)),
+        );
+        return;
+      }
+      final score = await recognizeSheetMusic(bytes, download: true);
+      if (!mounted) return;
+      if (score == null) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.importScanFailed)));
+        return;
+      }
+      songs.updateSongXml(
+        widget.song.id,
+        multiPartToMusicXml(MultiPartScore(<Score>[score])),
+      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.songRescanDone)));
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.importScanFailed)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_busy) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return IconButton(
+      icon: const Icon(Icons.document_scanner_outlined),
+      tooltip: AppLocalizations.of(context)!.songRescan,
+      onPressed: _rescan,
     );
   }
 }

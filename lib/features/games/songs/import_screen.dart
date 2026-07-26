@@ -12,6 +12,7 @@ import 'package:comet_beat/core/notation/multi_part_export.dart'
 import 'package:comet_beat/features/games/songs/import/chordpro.dart';
 import 'package:comet_beat/features/games/songs/import/jams.dart';
 import 'package:comet_beat/features/games/songs/import/omr_import.dart';
+import 'package:comet_beat/features/games/songs/import/omr_source_store.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/library/library_browser_screen.dart';
 import 'package:comet_beat/features/library/license_policy.dart';
@@ -231,11 +232,17 @@ class _ImportScreenState extends State<ImportScreen> {
         return;
       }
       final typed = _title.text.trim();
+      final id = _newId();
+      // Keep the photo so the recognition can be re-run on a bad scan. Best
+      // effort: the flag only claims an image when the write actually landed.
+      final kept = await saveOmrSource(id, bytes);
+      if (!mounted) return;
       context.read<UserSongsService>().addSong(
             ImportedSong(
-              id: _newId(),
+              id: id,
               title: typed.isNotEmpty ? typed : name,
               musicXml: multiPartToMusicXml(MultiPartScore(<Score>[score])),
+              hasSourceImage: kept,
             ),
           );
       _done();

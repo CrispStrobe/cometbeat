@@ -4,8 +4,10 @@
 // as MusicXML — the interchange format survives app updates) and ChordPro
 // chord sheets (stored as source text).
 
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:comet_beat/features/games/songs/import/omr_source_store.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show MultiPartScore, Score, multiPartScoreFromMusicXml, scoreFromMusicXml;
 import 'package:flutter/foundation.dart';
@@ -42,6 +44,11 @@ class ImportedSong {
   /// Initial metronome mark in quarter-notes per minute, or null.
   final double? tempoBpm;
 
+  /// True when the sheet-music photo this song was recognised from is retained
+  /// in the OMR source store (see `import/omr_source_store.dart`), so the
+  /// recognition can be re-run on a bad scan. Only OMR imports set it.
+  final bool hasSourceImage;
+
   const ImportedSong({
     required this.id,
     required this.title,
@@ -51,6 +58,7 @@ class ImportedSong {
     this.composer,
     this.keyFifths,
     this.tempoBpm,
+    this.hasSourceImage = false,
   });
 
   /// This song with [composer]/[keyFifths]/[tempoBpm] read out of [musicXml].
@@ -71,6 +79,7 @@ class ImportedSong {
         composer: composer ?? _blankToNull(s.metadata.composer),
         keyFifths: keyFifths ?? s.keySignature.fifths,
         tempoBpm: tempoBpm ?? s.tempo?.quarterBpm,
+        hasSourceImage: hasSourceImage,
       );
     } catch (_) {
       return this;
@@ -108,6 +117,7 @@ class ImportedSong {
         if (composer != null) 'composer': composer,
         if (keyFifths != null) 'keyFifths': keyFifths,
         if (tempoBpm != null) 'tempoBpm': tempoBpm,
+        if (hasSourceImage) 'hasSourceImage': true,
       };
 
   factory ImportedSong.fromJson(Map<String, dynamic> json) => ImportedSong(
@@ -119,6 +129,7 @@ class ImportedSong {
         composer: json['composer'] as String?,
         keyFifths: (json['keyFifths'] as num?)?.toInt(),
         tempoBpm: (json['tempoBpm'] as num?)?.toDouble(),
+        hasSourceImage: json['hasSourceImage'] as bool? ?? false,
       );
 }
 
@@ -249,6 +260,35 @@ class UserSongsService with ChangeNotifier {
     _save();
   }
 
+  /// Replaces a song's notation with freshly recognised [musicXml] (the re-run
+  /// OMR flow), re-deriving its metadata. Keeps id/title/attribution and the
+  /// retained-image flag. No-op if [id] is unknown.
+  void updateSongXml(String id, String musicXml) {
+    var changed = false;
+    _songs = [
+      for (final s in _songs)
+        if (s.id == id)
+          () {
+            changed = true;
+            return ImportedSong(
+              id: s.id,
+              title: s.title,
+              musicXml: musicXml,
+              attribution: s.attribution,
+              sourceUrl: s.sourceUrl,
+              hasSourceImage: s.hasSourceImage,
+              // composer/key/tempo left null so withDerivedMetadata re-reads
+              // them from the new XML rather than keeping the old scan's cache.
+            ).withDerivedMetadata();
+          }()
+        else
+          s,
+    ];
+    if (!changed) return;
+    notifyListeners();
+    _save();
+  }
+
   void removeSong(String id) {
     _songs = _songs.where((s) => s.id != id).toList();
     // Drop it from any songbook it was in so no book points at a ghost.
@@ -258,6 +298,8 @@ class UserSongsService with ChangeNotifier {
             ? c.copyWith(songIds: c.songIds.where((s) => s != id).toList())
             : c,
     ];
+    // A removed song leaves no retained scan behind.
+    unawaited(deleteOmrSource(id));
     notifyListeners();
     _save();
   }
