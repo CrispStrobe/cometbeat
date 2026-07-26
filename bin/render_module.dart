@@ -13,6 +13,14 @@
 //   --to-order N        render only order entries [..., N)   (default order len)
 //   --chunk-orders K    chunk size in order entries          (default 1)
 //
+// QUALITY (opt-in; OFF by default so the default render stays byte-identical +
+// reproducible):
+//   --dither            add deterministic TPDF dither at the float→Int16
+//                       quantisation (decorrelates quantisation noise). Seeded,
+//                       so a dithered render is reproducible run-to-run; the SAME
+//                       dither is applied on the buffered and --stream paths.
+//   --dither-seed N     seed the dither PRNG (default a fixed constant).
+//
 // FIDELITY: for a UNIFORM / non-command song the whole-song render is already a
 // concatenation of independent per-order renders, so --stream is BYTE-IDENTICAL
 // to the default render at any chunk size. For a COMMAND-HEAVY song (commands /
@@ -53,6 +61,8 @@ Future<void> main(List<String> args) async {
   final fromOrder = _intArg(args, '--from-order');
   final toOrder = _intArg(args, '--to-order');
   final chunkOrders = _intArg(args, '--chunk-orders') ?? 1;
+  final dither = args.contains('--dither');
+  final ditherSeed = _intArg(args, '--dither-seed');
 
   if (pattern != null) {
     if (stream || fromOrder != null || toOrder != null) {
@@ -83,6 +93,8 @@ Future<void> main(List<String> args) async {
       chunkOrders: chunkOrders,
       fromOrder: lo,
       toOrder: hi,
+      dither: dither,
+      ditherSeed: ditherSeed,
     );
     stdout.writeln(
       'wrote ${args[1]} (stream): ${song.channelCount} ch · '
@@ -110,7 +122,11 @@ Future<void> main(List<String> args) async {
   // renderSongWav): the whole-song render is converted to PCM16 and streamed to
   // disk in blocks, so the int16 PCM + WAV copy are never held alongside the
   // float mix accumulator.
-  await song.writeSongWavStreaming(args[1]);
+  await song.writeSongWavStreaming(
+    args[1],
+    dither: dither,
+    ditherSeed: ditherSeed,
+  );
   stdout.writeln(
     'wrote ${args[1]}: ${song.channelCount} ch · ${song.patterns.length} pat · '
     'order ${song.order.length} · song · '

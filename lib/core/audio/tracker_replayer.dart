@@ -1903,11 +1903,72 @@ void _renderChannelInto(
   }
 }
 
+// --- Opt-in deterministic TPDF dither (float→Int16 quantisation) -------------
+//
+// The final quantisation `round(tanh(mix)·0.95·32767)` truncates the float mix
+// to signed 16-bit. Plain rounding makes the quantisation error a DETERMINISTIC
+// function of the signal, so on quiet, slowly-varying material it shows up as
+// harmonic distortion correlated with the signal. Adding a small triangular-PDF
+// (TPDF) dither before rounding DECORRELATES that error — the quantisation noise
+// becomes white and signal-independent (the standard dither result), at the cost
+// of a slightly raised (but flat) noise floor. This is a real quality OPTION;
+// it is OFF by default so the default render is byte-identical + reproducible.
+//
+// TPDF = the sum of two independent uniform values in [-0.5, +0.5] LSB, giving a
+// triangular distribution over [-1, +1] LSB — exactly one quantisation step of
+// support, the classic choice for 16-bit dither. We deliberately do NOT add
+// noise-shaping / error-feedback: keeping the dither a pure per-sample function
+// of the PRNG (no cross-sample state, channels independent) is what lets the
+// STREAMING conversion produce byte-identical output to the whole-render one —
+// both advance the same seeded PRNG over the same L,R,L,R sample order.
+//
+// The PRNG is a tiny deterministic xorshift32 (NOT `Math.random`, which is
+// banned + non-reproducible): seeded from a fixed constant (or a caller-supplied
+// seed), so the same input renders to the same dithered bytes every run.
+
+/// The default dither PRNG seed — a fixed constant, so a dithered render with no
+/// explicit seed is still reproducible run-to-run.
+const int kDefaultDitherSeed = 0x9E3779B9;
+
+/// A deterministic TPDF ditherer for the final float→Int16 quantisation. Holds a
+/// seeded xorshift32 PRNG advanced once per emitted uniform (two per sample).
+/// Passing `null` anywhere a `PcmDither?` is accepted means NO dither → the exact
+/// original `round(...)` behaviour (bit-identical). Construct ONE per render and
+/// thread it through every conversion so the whole sequence is deterministic.
+class PcmDither {
+  PcmDither({int seed = kDefaultDitherSeed})
+      : _state =
+            (seed & 0xFFFFFFFF) == 0 ? kDefaultDitherSeed : seed & 0xFFFFFFFF;
+
+  // xorshift32 state, kept in the low 32 bits and never zero.
+  int _state;
+
+  /// One xorshift32 step → a uniform double in [-0.5, +0.5).
+  double _nextUniform() {
+    var x = _state;
+    x ^= (x << 13) & 0xFFFFFFFF;
+    x ^= x >> 17;
+    x ^= (x << 5) & 0xFFFFFFFF;
+    _state = x & 0xFFFFFFFF;
+    return _state / 4294967296.0 - 0.5;
+  }
+
+  /// The next TPDF sample (sum of two independent uniforms) in [-1, +1] LSB.
+  double nextTriangular() => _nextUniform() + _nextUniform();
+
+  /// Quantise a value [scaled] ALREADY in the int16 domain (i.e.
+  /// `tanh(mix)·0.95·32767`) by adding TPDF dither, then rounding.
+  int quantizeScaled(double scaled) => (scaled + nextTriangular()).round();
+}
+
 /// Converts a Float64 mix to PCM16 with the same tanh soft-knee as [mixStems].
-Int16List _mixToPcm(Float64List mix) {
+/// With a non-null [dither] each sample is TPDF-dithered before rounding;
+/// null leaves it bit-identical to plain rounding.
+Int16List _mixToPcm(Float64List mix, [PcmDither? dither]) {
   final out = Int16List(mix.length);
   for (var i = 0; i < mix.length; i++) {
-    out[i] = (_tanh(mix[i]) * 0.95 * 32767).round();
+    final s = _tanh(mix[i]) * 0.95 * 32767;
+    out[i] = dither == null ? s.round() : dither.quantizeScaled(s);
   }
   return out;
 }
@@ -1994,11 +2055,19 @@ double _panFromParam(int param) => ((param - 0x80) / 0x80).clamp(-1.0, 1.0);
 
 /// Interleaves separate [left]/[right] Float64 mixes into stereo PCM16 with the
 /// same tanh soft-knee as [_mixToPcm].
-Int16List _interleaveToPcm(List<double> left, List<double> right) {
+Int16List _interleaveToPcm(
+  List<double> left,
+  List<double> right, [
+  PcmDither? dither,
+]) {
   final out = Int16List(left.length * 2);
   for (var i = 0; i < left.length; i++) {
-    out[i * 2] = (_tanh(left[i]) * 0.95 * 32767).round();
-    out[i * 2 + 1] = (_tanh(right[i]) * 0.95 * 32767).round();
+    final l = _tanh(left[i]) * 0.95 * 32767;
+    final r = _tanh(right[i]) * 0.95 * 32767;
+    // Advance the PRNG in L,R,L,R order so the streaming stereo converter
+    // (same order) is byte-identical.
+    out[i * 2] = dither == null ? l.round() : dither.quantizeScaled(l);
+    out[i * 2 + 1] = dither == null ? r.round() : dither.quantizeScaled(r);
   }
   return out;
 }
@@ -3408,17 +3477,22 @@ int rowIndexAtMs(List<RowTiming> map, int ms) {
 ReplayResult replaySong(
   TrackerSong song, {
   int ticksPerRow = kDefaultTicksPerRow,
+  PcmDither? dither,
 }) {
   song.syncCurrent();
   // A MID-SONG tempo/speed change needs per-row durations — render that first
   // (it also expands flow via [walkFlow], so it subsumes flow+variable songs).
-  if (songUsesVariableTiming(song)) return _replayVariable(song);
+  if (songUsesVariableTiming(song)) {
+    return _replayVariable(song, dither: dither);
+  }
   // An Fxx set-speed command overrides the default ticks/row (effect
   // granularity); timing-safe (speed subdivides the row, not its duration).
   final initialTicks = song.initialSpeed > 0 ? song.initialSpeed : ticksPerRow;
   final ticks = songInitialSpeed(song, fallback: initialTicks);
   // Flow OR variable-length patterns both flatten the played sequence.
-  if (songNeedsWalkRender(song)) return _replayFlow(song, ticks);
+  if (songNeedsWalkRender(song)) {
+    return _replayFlow(song, ticks, dither: dither);
+  }
 
   // An Fxx set-tempo command sets the (uniform) render tempo.
   final timing = effectiveTiming(song);
@@ -3462,7 +3536,7 @@ ReplayResult replaySong(
   }
   _applyGlobalVolumeMix(mix, gvRows, gvStarts, ticks);
   _applySongGlobalVolume(mix, song.globalVolume);
-  return ReplayResult(_mixToPcm(mix), timingMap);
+  return ReplayResult(_mixToPcm(mix, dither), timingMap);
 }
 
 /// The stereo sibling of [replaySong]: same order walk / flow expansion, but each
@@ -3471,9 +3545,10 @@ ReplayResult replaySong(
 ReplayResult replaySongStereo(
   TrackerSong song, {
   int ticksPerRow = kDefaultTicksPerRow,
+  PcmDither? dither,
 }) {
   final f = _replaySongStereoFloat(song, ticksPerRow: ticksPerRow);
-  return ReplayResult(_interleaveToPcm(f.left, f.right), f.timingMap);
+  return ReplayResult(_interleaveToPcm(f.left, f.right, dither), f.timingMap);
 }
 
 /// The raw float stereo mixes of [replaySongStereo] (same routing / arithmetic),
@@ -3490,7 +3565,10 @@ ReplayResult replaySongStereo(
 /// Quantises one float mix sample to signed PCM16 with the SAME tanh soft-knee
 /// as [_interleaveToPcm] / [_mixToPcm], so a streamed conversion is byte-for-byte
 /// identical to the in-memory render.
-int pcm16Sample(double x) => (_tanh(x) * 0.95 * 32767).round();
+int pcm16Sample(double x, [PcmDither? dither]) {
+  final s = _tanh(x) * 0.95 * 32767;
+  return dither == null ? s.round() : dither.quantizeScaled(s);
+}
 
 /// The float L/R core of [replaySongStereo] — same routing / arithmetic, but it
 /// returns the raw stereo float mixes (not yet quantised to PCM16). The bounded
@@ -3566,7 +3644,11 @@ int pcm16Sample(double x) => (_tanh(x) * 0.95 * 32767).round();
 /// (porta/vibrato/oscillator phase) stays continuous across the flat rows, and
 /// non-additive voices trigger at their flattened positions, so both stay
 /// aligned with the reordered timeline.
-ReplayResult _replayFlow(TrackerSong song, int ticksPerRow) {
+ReplayResult _replayFlow(
+  TrackerSong song,
+  int ticksPerRow, {
+  PcmDither? dither,
+}) {
   final played = walkFlow(song);
   final channels = song.channels;
   final base = effectiveTiming(song); // Fxx set-tempo (uniform)
@@ -3607,7 +3689,7 @@ ReplayResult _replayFlow(TrackerSong song, int ticksPerRow) {
         played[i].row,
       ),
   ];
-  return ReplayResult(_mixToPcm(mix), timingMap);
+  return ReplayResult(_mixToPcm(mix, dither), timingMap);
 }
 
 /// The stereo sibling of [_replayFlow]: flatten the played rows then pan each
@@ -3666,7 +3748,7 @@ ReplayResult _replayFlow(TrackerSong song, int ticksPerRow) {
 /// row's [PlayedRow.ticksPerRow] for tick granularity; non-additive voices are
 /// placed per note over their run's summed duration. The row-timing map + length
 /// use the ms-summed onsets so [TrackerSong.songTotalMs] and the transport agree.
-ReplayResult _replayVariable(TrackerSong song) {
+ReplayResult _replayVariable(TrackerSong song, {PcmDither? dither}) {
   final played = walkFlow(song);
   final channels = song.channels;
   final def = song.timing.tempoBpm;
@@ -3716,7 +3798,7 @@ ReplayResult _replayVariable(TrackerSong song) {
         played[i].row,
       ),
   ];
-  return ReplayResult(_mixToPcm(mix), timingMap);
+  return ReplayResult(_mixToPcm(mix, dither), timingMap);
 }
 
 /// The run length in SECONDS of the note (re)triggered at row [from] under
@@ -5366,6 +5448,7 @@ void streamFlowVariableMonoPcm(
   TrackerSong song, {
   required void Function(int totalFrames) onStart,
   required void Function(Int16List block) onBlock,
+  PcmDither? dither,
 }) {
   song.syncCurrent();
   final played = walkFlow(song);
@@ -5449,7 +5532,7 @@ void streamFlowVariableMonoPcm(
     }
     final out = Int16List(frames);
     for (var j = 0; j < frames; j++) {
-      out[j] = pcm16Sample(mix[j]);
+      out[j] = pcm16Sample(mix[j], dither);
     }
     onBlock(out);
   });
@@ -5464,6 +5547,7 @@ void streamFlowVariableStereoPcm(
   TrackerSong song, {
   required void Function(int totalFrames) onStart,
   required void Function(Int16List block) onBlock,
+  PcmDither? dither,
 }) {
   song.syncCurrent();
   final played = walkFlow(song);
@@ -5592,8 +5676,10 @@ void streamFlowVariableStereoPcm(
     }
     final out = Int16List(frames * 2);
     for (var j = 0; j < frames; j++) {
-      out[j * 2] = pcm16Sample(mixL[j]);
-      out[j * 2 + 1] = pcm16Sample(mixR[j]);
+      // L,R,L,R order matches [_interleaveToPcm] so a dithered stream is
+      // byte-identical to a dithered whole-render.
+      out[j * 2] = pcm16Sample(mixL[j], dither);
+      out[j * 2 + 1] = pcm16Sample(mixR[j], dither);
     }
     onBlock(out);
   });

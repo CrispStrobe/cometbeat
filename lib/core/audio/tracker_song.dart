@@ -734,22 +734,39 @@ class TrackerSong {
   /// The whole song (the [order] list) rendered to one WAV, patterns back to
   /// back. Side-effect-free (the engine's live pattern is restored). Routes
   /// through the tick [replaySong] when any pattern [usesCommands].
-  Uint8List renderSongWav() {
+  /// [dither] (default OFF) applies opt-in deterministic TPDF dither at the
+  /// float→Int16 quantisation (see [PcmDither]); [ditherSeed] seeds its PRNG so a
+  /// dithered render is reproducible. With dither off the output is byte-identical
+  /// to before. When dither is on, even an otherwise-offline (uniform, command-
+  /// free) song routes through the tick replayer so the dither is actually applied.
+  ///
+  /// [ditherState] is an INTERNAL hook: a chunked/streamed render passes ONE
+  /// shared [PcmDither] through every chunk clone so the PRNG advances
+  /// continuously across chunk boundaries (making the dithered stream match the
+  /// dithered whole-render). External callers use [dither]/[ditherSeed].
+  Uint8List renderSongWav({
+    bool dither = false,
+    int? ditherSeed,
+    PcmDither? ditherState,
+  }) {
     syncCurrent();
+    final d = ditherState ??
+        (dither ? PcmDither(seed: ditherSeed ?? kDefaultDitherSeed) : null);
     // Panned songs render in STEREO; the stereo replayer handles commands /
     // per-cell instruments / flow / variable-length via the same walk.
     if (usesPan || stereoOutput) {
-      return wavBytesStereo(replaySongStereo(this).pcm);
+      return wavBytesStereo(replaySongStereo(this, dither: d).pcm);
     }
     // Else route through the mono tick replayer for commands, per-cell
     // instruments, flow, OR variable-length patterns (the offline concatenation
     // assumes one fixed pattern length). A uniform, command-free, unpanned song
-    // keeps the fast offline path.
-    if (usesCommands ||
+    // keeps the fast offline path — unless dither is on, which needs the replayer.
+    if (d != null ||
+        usesCommands ||
         usesInstruments ||
         usesEnvelopes ||
         songNeedsWalkRender(this)) {
-      return wavBytes(replaySong(this).pcm);
+      return wavBytes(replaySong(this, dither: d).pcm);
     }
     return renderSong(_engine, [for (final i in order) patterns[i].cells]);
   }
@@ -760,8 +777,16 @@ class TrackerSong {
   /// `File(path).writeAsBytesSync(renderSongWav())`, but with a bounded peak so a
   /// long song's full-file CLI render stays within budget. This is the default
   /// `render_module <in> <out>` path.
-  Future<void> writeSongWavStreaming(String path) async {
+  Future<void> writeSongWavStreaming(
+    String path, {
+    bool dither = false,
+    int? ditherSeed,
+  }) async {
     syncCurrent();
+    // ONE shared ditherer for the whole render, threaded through every streaming
+    // / chunk path so the seeded PRNG advances continuously (dithered stream ==
+    // dithered whole-render). Null when dither is off → byte-identical default.
+    final d = dither ? PcmDither(seed: ditherSeed ?? kDefaultDitherSeed) : null;
     if (usesPan || stereoOutput) {
       // STEREO. The UNIFORM (no mid-song tempo change, no flow) stereo render is
       // a byte-for-byte CONCATENATION of INDEPENDENT per-order renders — the tick
@@ -775,7 +800,7 @@ class TrackerSong {
       if (!songUsesVariableTiming(this) &&
           !songNeedsWalkRender(this) &&
           !_usesGlobalVolumeCommand()) {
-        await streamSongWavToFile(path);
+        await streamSongWavToFile(path, ditherState: d);
         return;
       }
       // Flow / variable-timing STEREO with only chunk-safe channels (additive or
@@ -783,7 +808,7 @@ class TrackerSong {
       // NO whole-song L/R accumulator is ever allocated — flat RAM at any song
       // length, byte-identical to replaySongStereo (see songCanStreamFlowVariable).
       if (songCanStreamFlowVariable(this, stereo: true)) {
-        _streamFlowVariableWav(path, stereo: true);
+        _streamFlowVariableWav(path, stereo: true, dither: d);
         return;
       }
       // Variable/flow (or global-volume, or non-chunk-safe channel) stereo: the
@@ -791,22 +816,23 @@ class TrackerSong {
       // accumulator to disk in blocks (the int16 PCM + WAV copy are still never
       // materialised alongside it).
       final f = songStereoFloat(this);
-      await _writeStereoFloatWav(path, f.left, f.right);
+      await _writeStereoFloatWav(path, f.left, f.right, d);
       return;
     }
-    if (usesCommands ||
+    if (d != null ||
+        usesCommands ||
         usesInstruments ||
         usesEnvelopes ||
         songNeedsWalkRender(this)) {
       // Flow / variable-timing MONO with only chunk-safe channels: as above but
       // for the mono mix — no whole-song Float64 accumulator, flat RAM.
       if (songCanStreamFlowVariable(this, stereo: false)) {
-        _streamFlowVariableWav(path, stereo: false);
+        _streamFlowVariableWav(path, stereo: false, dither: d);
         return;
       }
       // MONO command path: materialise the int16 PCM (compact — 2 bytes/sample)
       // and stream its bytes with a mono header, skipping the extra WAV copy.
-      await _writeMonoPcmWav(path, replaySong(this).pcm);
+      await _writeMonoPcmWav(path, replaySong(this, dither: d).pcm);
       return;
     }
     // Uniform offline mono: the engine mixer already returns a complete WAV.
@@ -841,8 +867,9 @@ class TrackerSong {
   static Future<void> _writeStereoFloatWav(
     String path,
     List<double> left,
-    List<double> right,
-  ) async {
+    List<double> right, [
+    PcmDither? dither,
+  ]) async {
     final n = left.length;
     final dataLen = n * 4; // 2 channels * 2 bytes
     final raf = await File(path).open(mode: FileMode.write);
@@ -856,8 +883,8 @@ class TrackerSong {
         final end = i + frames < n ? i + frames : n;
         var off = 0;
         for (var j = i; j < end; j++) {
-          bd.setInt16(off, pcm16Sample(left[j]), Endian.little);
-          bd.setInt16(off + 2, pcm16Sample(right[j]), Endian.little);
+          bd.setInt16(off, pcm16Sample(left[j], dither), Endian.little);
+          bd.setInt16(off + 2, pcm16Sample(right[j], dither), Endian.little);
           off += 4;
         }
         await raf.writeFrom(block, 0, off);
@@ -873,7 +900,11 @@ class TrackerSong {
   /// The header is written from the total frame count reported up front, then
   /// each PCM16 block is written straight to disk. Byte-identical to
   /// [renderSongWav] (see [songCanStreamFlowVariable]); flat RAM at any length.
-  void _streamFlowVariableWav(String path, {required bool stereo}) {
+  void _streamFlowVariableWav(
+    String path, {
+    required bool stereo,
+    PcmDither? dither,
+  }) {
     final raf = File(path).openSync(mode: FileMode.write);
     try {
       void onStart(int totalFrames) {
@@ -888,9 +919,19 @@ class TrackerSong {
       }
 
       if (stereo) {
-        streamFlowVariableStereoPcm(this, onStart: onStart, onBlock: onBlock);
+        streamFlowVariableStereoPcm(
+          this,
+          onStart: onStart,
+          onBlock: onBlock,
+          dither: dither,
+        );
       } else {
-        streamFlowVariableMonoPcm(this, onStart: onStart, onBlock: onBlock);
+        streamFlowVariableMonoPcm(
+          this,
+          onStart: onStart,
+          onBlock: onBlock,
+          dither: dither,
+        );
       }
     } finally {
       raf.closeSync();
@@ -984,9 +1025,16 @@ class TrackerSong {
   /// Renders the order slice `[fromOrder, toOrder)` and returns its raw PCM
   /// bytes (little-endian int16, header stripped). Interleaved L,R when
   /// [_streamStereo]. A zero-length slice yields an empty list.
-  Uint8List _renderChunkPcm(int fromOrder, int toOrder, bool stereo) {
+  Uint8List _renderChunkPcm(
+    int fromOrder,
+    int toOrder,
+    bool stereo, [
+    PcmDither? dither,
+  ]) {
     if (toOrder <= fromOrder) return Uint8List(0);
-    final wav = _sliceSong(fromOrder, toOrder, stereo).renderSongWav();
+    // Pass the SHARED ditherer so the PRNG advances continuously across chunks.
+    final wav = _sliceSong(fromOrder, toOrder, stereo)
+        .renderSongWav(ditherState: dither);
     // Both wavBytes and wavBytesStereo emit a fixed 44-byte header.
     return Uint8List.sublistView(wav, 44);
   }
@@ -1002,6 +1050,7 @@ class TrackerSong {
     int chunkOrders = 1,
     int? fromOrder,
     int? toOrder,
+    PcmDither? ditherState,
   }) sync* {
     final k = chunkOrders < 1 ? 1 : chunkOrders;
     final lo = (fromOrder ?? 0).clamp(0, order.length);
@@ -1009,7 +1058,7 @@ class TrackerSong {
     final stereo = _streamStereo;
     for (var start = lo; start < hi; start += k) {
       final end = (start + k) > hi ? hi : (start + k);
-      yield _renderChunkPcm(start, end, stereo);
+      yield _renderChunkPcm(start, end, stereo, ditherState);
     }
   }
 
@@ -1055,8 +1104,16 @@ class TrackerSong {
     int chunkOrders = 1,
     int? fromOrder,
     int? toOrder,
+    bool dither = false,
+    int? ditherSeed,
+    PcmDither? ditherState,
   }) async {
     final stereo = _streamStereo;
+    // ONE shared ditherer, threaded through every chunk clone so the seeded PRNG
+    // advances continuously across chunks (dithered stream == dithered whole-
+    // render). Null when off → byte-identical to the current stream.
+    final d = ditherState ??
+        (dither ? PcmDither(seed: ditherSeed ?? kDefaultDitherSeed) : null);
     final raf = await File(path).open(mode: FileMode.write);
     try {
       // Placeholder header (data length patched at close).
@@ -1066,6 +1123,7 @@ class TrackerSong {
         chunkOrders: chunkOrders,
         fromOrder: fromOrder,
         toOrder: toOrder,
+        ditherState: d,
       )) {
         if (pcm.isEmpty) continue;
         await raf.writeFrom(pcm);
