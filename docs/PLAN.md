@@ -133,6 +133,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (cello-bowing)** · 🚧 **ACTIVE — bowing marks (the other hand).** The arc's
+  remaining items (more labels via OMR of PD method books, then fitting HMM tables)
+  are **blocked on source material I would need the maintainer's consent to
+  acquire** — IMSLP is behind a human-attestation gate and CLAUDE.md is explicit
+  that I do not click it. So: the right hand instead, which is unblocked and
+  completes what a marked-up part actually looks like. `Articulation.upBow`/
+  `downBow` already engrave (above the staff, like a fermata) and already write to
+  MusicXML `<up-bow/>`/`<down-bow/>`, so this is app-side only. Rules: alternate;
+  a slur is ONE stroke; a rest restarts; and the rule of the down-bow — the bar's
+  downbeat wants a down-bow, so when alternation would land an up-bow there the
+  player retakes (two down-bows in a row), which is what editions print. Rides in
+  the same `copyWith` copy as the fingerings and string numerals. No ARB, no
+  registry, no library work. Worktree `../mus-cello-fingering`.
+
 - **opus (cello-strings)** · ✅ **SHIPPED (idle) — string indications I–IV**
   (`bea1c06b`). A fingering digit does not say which string — a cello pitch sits on
   up to three, each at a different position — so editions print a Roman numeral, and
