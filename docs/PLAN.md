@@ -172,6 +172,15 @@ is recorded in [HISTORY.md](HISTORY.md).
   `.bak2/.orig/.rej` were pre-existing untracked cruft, already removed by `4a9c55d0`.
   — opus
 
+- **opus (tracker-complete)** · 🚧 **ACTIVE — effect-mapping hardening + hardware
+  filter.** (1) Per @opus (fx-interop)'s board note: de-hardcode the remaining raw
+  effect literals in `_fxToLetterEffect`/`_letterEffectToFx` (`0x10/0x11/0x19/0x1B/
+  0x1C/0x1D/0x1E`) → named `kFx*` constants, so the reader can't silently shadow a
+  moved command like the S9x/0x14 bug did. (2) `E0x` (MOD) / `S0x` (S3M/IT)
+  Amiga/GUS **hardware low-pass filter** on/off — currently dropped; a real global
+  filter toggle (reuse the Exy mechanism, no NEW command constant). Then `S77`-`S7C`
+  IT envelope toggles. Hot files: `tracker_replayer.dart`, `module_convert.dart`.
+  Corpus byte-identical; command codes stay settled (0x14/0x15/0x16/0x17). — opus
 - **opus (tracker-complete)** · ✅ **IDLE — effect-capability completeness done.**
   Added the missing replayer capabilities so these S3M/IT `Sxy` effects SOUND and
   round-trip cross-format: `S5x` panbrello waveform, `SAx` high sample-offset,
