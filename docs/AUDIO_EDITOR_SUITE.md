@@ -214,7 +214,7 @@ the Audio Editor mostly does not *use* it, and that Save throws the models away.
 ### What is missing
 | # | Gap | Why it matters |
 |---|---|---|
-| **C1** | **`.cbdaw` bakes every clip to PCM on save** | Reopen a project and every clip is dead audio. The "vector, not bitmap" engine survives only until Save. **Highest priority in this pillar.** |
+| ~~**C1**~~ | ~~`.cbdaw` bakes every clip to PCM on save~~ | ✅ **SHIPPED** — clips now store their model as well as their audio; v1 still opens, the PCM primes the render cache, and neither encode nor decode can fail the project. |
 | **C2** | Drum clips (`DrumSource`) and groove clips (`GrooveSource`) have no accessor and no route | A beat sent from the DrumKit can never be re-opened in the DrumKit |
 | **C3** | No universal "Open in…" | The routing exists in `ProjectBridge` but the Audio Editor hardcodes two special cases instead of asking it |
 | **C4** | Tab fidelity is lost inbound | A tab arrives as `MultiPartScore`; string/fret/fingering are discarded, so Audio Editor → Tab re-frets from scratch |
@@ -279,7 +279,7 @@ A5  restoration       A6  time/pitch          A2  tone curves      A7  generator
 B1  pad/repeat/split-on-silence/splice        B3  full stats
 B2  dither+noise shaping                      B4  VAD      B5  spectrogram CLI
 
-C1  .cbdaw v2 — models survive save           ← highest-value single slice
+C1  .cbdaw v2 — models survive save           ✅ SHIPPED
 C2  drum + groove round-trip
 C3  universal Open-in via ProjectBridge
 C4  tab fidelity inbound

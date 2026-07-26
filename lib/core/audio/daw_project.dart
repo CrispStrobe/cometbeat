@@ -9,21 +9,35 @@
 // arrangement: uniform, robust across every current and future source type,
 // and a natural fit for an offline-render-then-play app.
 //
-// Trade-off (documented, deliberate): a reopened project is a set of audio
-// takes, not re-editable source models — reopening a saved groove gives you
-// its audio, not the groove spec. The clip's placement, gain, fades and
-// (non-destructive) trim all survive and stay editable.
+// C1 (2026-07-26) — that is no longer the whole story. A clip now ALSO stores
+// its model when it has one (`daw_clip_source_codec.dart`), so a tracker song,
+// a groove, a drum grid or engraved music comes back as itself and can be
+// reopened in its editor. The baked PCM stays alongside it, for three reasons:
+// it is what a source WITHOUT a model (a recording, a bounce) has always been;
+// it is the fallback when a model cannot be decoded, so a stale entry costs
+// editability rather than audio; and it primes the render cache on load, so
+// reopening a heavy arrangement does not re-render every clip before the first
+// sample plays.
+//
+// The residual trade-off is narrower and still worth stating: a source type with
+// no codec yet still reopens as audio only.
 
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/daw_clip_source_codec.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 
 /// Renders a source to PCM — injectable so the service can render through its
 /// per-source cache instead of re-rendering on save.
 typedef SourceRender = Float64List Function(ClipSource source);
 
-const int _kProjectVersion = 1;
+/// The version WRITTEN. Version 2 adds the per-clip `source` model (C1).
+const int _kProjectVersion = 2;
+
+/// Versions that can be READ. A v1 project has no models and its clips come
+/// back as audio, exactly as they always did.
+const Set<int> _kReadableProjectVersions = {1, 2};
 
 /// Serializes [timeline] to a JSON string: every audible clip baked to PCM plus
 /// its placement. [render] defaults to a direct `source.render`.
@@ -90,6 +104,10 @@ String projectToJson(
                 // on reload is worse than none, because it looks discharged.
                 if (clip.provenance != null)
                   'provenance': _provenanceToJson(clip.provenance!),
+                // The model, when the source has one — what makes the clip
+                // editable again rather than merely audible.
+                if (clipSourceToJson(clip.source) case final source?)
+                  'source': source,
                 'pcm': base64Encode(_floatToInt16(r(clip.source))),
                 if (clip.source is StereoSampleSource)
                   'rightPcm': base64Encode(
@@ -102,17 +120,30 @@ String projectToJson(
   });
 }
 
-/// Rebuilds a [DawTimeline] from [json]. Every clip comes back as a
-/// [SampleSource] of its baked PCM. Throws [FormatException] on malformed input
-/// — callers catch it to report a bad/corrupt project file.
-DawTimeline projectFromJson(String json) {
+/// Rebuilds a [DawTimeline] from [json].
+///
+/// A clip that stored a MODEL comes back as that model (a [TrackerSource],
+/// [GrooveSource], [DrumSource] or [ScoreSource]) and is editable again; one
+/// that did not — a recording, a bounce, or a v1 project — comes back as a
+/// [SampleSource] of its baked PCM, as before.
+///
+/// Pass [warmCache] (the caller's render cache) to have the baked audio primed
+/// against each restored source's key, so a reopened project plays immediately
+/// instead of re-rendering every model first.
+///
+/// Throws [FormatException] on malformed input — callers catch it to report a
+/// bad/corrupt project file.
+DawTimeline projectFromJson(
+  String json, {
+  Map<Object, Float64List>? warmCache,
+}) {
   final Object? decoded;
   try {
     decoded = jsonDecode(json);
   } catch (_) {
     throw const FormatException('Not a valid project file');
   }
-  if (decoded is! Map || decoded['v'] != _kProjectVersion) {
+  if (decoded is! Map || !_kReadableProjectVersions.contains(decoded['v'])) {
     throw const FormatException('Unrecognized project format');
   }
   final tracksJson = decoded['tracks'];
@@ -178,11 +209,22 @@ DawTimeline projectFromJson(String json) {
         } catch (_) {
           continue; // skip an unreadable clip rather than fail the whole load
         }
+        // Prefer the stored MODEL; fall back to the baked audio. A clip that
+        // cannot decode its model is still a clip — it just arrives as a take.
+        final restored = clipSourceFromJson(c['source']);
+        if (restored != null) {
+          // Prime the render cache with what was baked, so opening a project
+          // does not re-render every tracker song and groove up front. The key
+          // is the RESTORED source's own cacheKey, so a later edit to the model
+          // invalidates it exactly as an edit made in this session would.
+          warmCache?[restored.cacheKey] = pcm;
+        }
         clips.add(
           Clip(
-            source: right == null
-                ? SampleSource(pcm)
-                : StereoSampleSource(pcm, right),
+            source: restored ??
+                (right == null
+                    ? SampleSource(pcm)
+                    : StereoSampleSource(pcm, right)),
             startMs: num_(c['startMs']),
             gain: c['gain'] is num ? num_(c['gain']) : 1.0,
             pan: c['pan'] is num ? num_(c['pan']).clamp(-1.0, 1.0) : 0.0,

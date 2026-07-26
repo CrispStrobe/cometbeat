@@ -2252,8 +2252,9 @@ class DawService extends ChangeNotifier {
 
   // --- Project save / load ---------------------------------------------------
 
-  /// Serialize the arrangement to a portable project string (every clip baked
-  /// to PCM). Renders through the per-source cache so a save is cheap.
+  /// Serialize the arrangement to a portable project string: every clip's MODEL
+  /// (when it has one) plus its baked PCM. Renders through the per-source cache
+  /// so a save is cheap.
   String saveProject() => projectToJson(
         timeline,
         render: (s) => _cache.putIfAbsent(
@@ -2265,7 +2266,14 @@ class DawService extends ChangeNotifier {
   /// Replace the arrangement with a saved project. Throws [FormatException] on
   /// a bad file; on success the timeline, cache and undo history are reset.
   void loadProject(String json) {
-    final loaded = projectFromJson(json); // may throw before we mutate anything
+    // Restored models render themselves, which for a tracker song or a groove
+    // is not free — so the project's baked audio is handed straight to the
+    // render cache under each restored source's key. A reopened arrangement
+    // therefore plays immediately AND is editable, instead of trading one for
+    // the other.
+    final warm = <Object, Float64List>{};
+    // May throw before we mutate anything.
+    final loaded = projectFromJson(json, warmCache: warm);
     timeline.effects = _cloneEffectChain(loaded.effects);
     timeline.buses
       ..clear()
@@ -2276,7 +2284,9 @@ class DawService extends ChangeNotifier {
     if (timeline.tracks.isEmpty) {
       timeline.tracks.addAll([DawTrack(name: 'A'), DawTrack(name: 'B')]);
     }
-    _cache.clear();
+    _cache
+      ..clear()
+      ..addAll(warm);
     _peaks.clear();
     _undo.clear();
     _redo.clear();

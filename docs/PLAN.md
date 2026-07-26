@@ -1042,11 +1042,27 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
 **Pillar C — five modes, one document.** The converters already exist
 (`ProjectBridge`, with honest per-route loss reports) and score/tracker clips
 already round-trip **in place**. The gaps:
-- [ ] **C1** ⭐ **`.cbdaw` v2 — models survive Save.** Today `projectToJson`
-  bakes every clip to PCM, so reopening a project loses every editable model:
-  the "vector, not bitmap" engine survives only until the user saves. Persist
-  the typed source (score/tracker/drum/groove/sample) with the baked PCM kept
-  as a *cache*. **Highest-value single slice in this pillar.**
+- [x] **C1** ⭐ **`.cbdaw` v2 — models survive Save.** `projectToJson` baked
+  every clip to PCM, so the "vector, not bitmap" engine survived only until the
+  user pressed Save: a reopened tracker song was a waveform and every editor
+  door had closed behind it. A clip now stores its MODEL too
+  (`daw_clip_source_codec.dart`), so tracker · groove · drum · score clips come
+  back as themselves. Deliberately **not** a new format — it dispatches over the
+  codecs that already exist (the Tracker's song JSON, `GrooveSpec.toJson` which
+  is also its share token, MusicXML for engraved music), plus a `kind` tag.
+  * the baked PCM STAYS: it is what a source without a model has always been, it
+    is the fallback when a model cannot be decoded, and it **primes the render
+    cache** on load — so a reopened arrangement is editable *and* plays without
+    re-rendering every model first;
+  * neither direction can fail the project: an un-encodable source just gets no
+    entry, an un-decodable one falls back to its audio. Losing editability is
+    bad; losing the audio would be much worse;
+  * **v1 projects still open** (as audio, exactly as before); v2 is what is
+    written. `ClipSourceKind`'s strings are an on-disk representation — add,
+    never rename — pinned by a test.
+  Tests: `daw_project_models_test` (17) — per-type round trips, placement/FX/
+  **licence provenance** riding along, the fallback paths, v1 compatibility, and
+  the cache priming.
 - [ ] **C2** Drum (`DrumSource`) + groove (`GrooveSource`) accessors and
   round-trip — a beat sent from the DrumKit currently can never go back.
 - [ ] **C3** Universal "Open in…" routed through `ProjectBridge` (with its loss
