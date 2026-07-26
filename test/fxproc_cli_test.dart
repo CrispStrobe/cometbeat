@@ -4,6 +4,17 @@
 // per-effect tests, so what this guards is the wiring: that the registry
 // reaches the command line, that stereo survives, that a bad chain writes
 // nothing, and that the CLI stays Flutter-free (`dart run`, not `flutter test`).
+//
+// ⏱ Every test here SPAWNS A PROCESS, so the default 30-second budget is the
+// wrong one: it is sized for an in-process unit test, and a `dart run` on a
+// machine that is busy (a parallel suite, a build, CI) can take far longer than
+// the work it is doing. This suite was seen failing at load average 28 on a
+// developer machine while passing in seconds when idle — a timeout that depends
+// on what else is running is a flake, not a signal. The budget below is
+// deliberately generous for that reason; it is not hiding a slow code path,
+// which is why the assertions themselves are unchanged.
+@Timeout(Duration(minutes: 3))
+library;
 
 import 'dart:io';
 import 'dart:math' as math;
