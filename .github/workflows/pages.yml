@@ -70,28 +70,18 @@ jobs:
         working-directory: cometbeat
         run: flutter pub get
 
-      # Neural narration for the web: pre-render the app's fixed tutorial text to
-      # CC0-voice WAV assets offline (runtime synthesis would freeze the single-
-      # threaded browser). Cached by the strings' content hash so the ~30-min
-      # bake runs ONLY when tool/narration_strings.json changes; the voices are
-      # cached separately (stable). A bake miss/failure just leaves the manifest
-      # near-empty → the app falls back to the browser voice.
-      - name: Cache Piper voices
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/comet_beat/models/piper
-          key: piper-voices-v1
-      - name: Cache pre-baked narration
-        id: narration-cache
-        uses: actions/cache@v4
+      # Neural narration for the web: RESTORE the pre-baked CC0-voice WAV assets
+      # (runtime synthesis would freeze the single-threaded browser). The bake
+      # itself (~30 min) runs in the separate `narration-bake.yml` workflow — it
+      # can't live here, since Pages is cancel-in-progress and would kill a bake
+      # before it finished. Restore-only (no save) so a miss here never poisons
+      # the cache the bake workflow owns. On a miss the manifest stays {} → the
+      # app falls back to the browser voice (harmless).
+      - name: Restore pre-baked narration
+        uses: actions/cache/restore@v4
         with:
           path: cometbeat/assets/narration
           key: narration-${{ hashFiles('cometbeat/tool/narration_strings.json') }}
-      - name: Bake neural narration (on cache miss)
-        if: steps.narration-cache.outputs.cache-hit != 'true'
-        continue-on-error: true
-        working-directory: cometbeat
-        run: dart run tool/bake_narration.dart tool/narration_strings.json
 
       # Project Pages serve at /cometbeat/, so the base href must match (an empty
       # or "/" base href would 404 every asset and blank the page).

@@ -1,0 +1,79 @@
+name: Bake narration
+
+# Pre-renders the app's fixed tutorial text to CC0-voice WAV assets (Piper VITS,
+# pure Dart) and populates the shared Actions cache that the Pages deploy reads.
+#
+# WHY a separate workflow: the bake is ~30 min (316 strings), and the Pages
+# workflow (which runs on EVERY push) is cancel-in-progress — in a busy repo it
+# would be killed long before a bake finished, so the cache would never populate
+# and the neural narration would never ship. This workflow runs ONLY when the
+# strings change (or on demand), is NOT cancelled, so a bake completes once and
+# fills the cache keyed by the strings' content hash; every later Pages deploy
+# then restores it instantly. Nothing binary is committed.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['tool/narration_strings.json']
+
+concurrency:
+  group: narration-bake
+  cancel-in-progress: false # let a running bake finish
+
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout cometbeat
+        uses: actions/checkout@v5
+        with:
+          path: cometbeat
+          ref: ${{ github.sha }}
+      - name: Checkout crisp_notation (sibling path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/crisp_notation
+          ref: main
+          path: crisp_notation
+      - name: Checkout CrispEmbed (sibling FFI path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/CrispEmbed
+          ref: main
+          path: CrispEmbed
+      - name: Checkout onnx_runtime_dart (sibling dev path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/onnx_runtime_dart
+          ref: main
+          path: onnx_runtime_dart
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        working-directory: cometbeat
+        run: flutter pub get
+
+      - name: Cache Piper voices
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/comet_beat/models/piper
+          key: piper-voices-v1
+      # SAVE the baked assets under the SAME key the Pages deploy restores. On a
+      # hit (already baked for these strings) the bake below is skipped; on a
+      # miss it bakes, then this cache saves at post-job.
+      - name: Cache pre-baked narration
+        id: narration-cache
+        uses: actions/cache@v4
+        with:
+          path: cometbeat/assets/narration
+          key: narration-${{ hashFiles('cometbeat/tool/narration_strings.json') }}
+      - name: Bake neural narration (on cache miss)
+        if: steps.narration-cache.outputs.cache-hit != 'true'
+        working-directory: cometbeat
+        run: dart run tool/bake_narration.dart tool/narration_strings.json
