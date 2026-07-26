@@ -64,7 +64,7 @@ Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
 on one pure-Dart detection core so it stays testable headlessly and from a CLI.
 
-## Sound Library / Instrument / FX unification (IN PROGRESS)
+## Sound Library / Instrument / FX unification (ONE ITEM LEFT — see below)
 
 Unify the places that currently drift apart: the Tracker instrument selector,
 Workshop Score "Play with an instrument", Audio Editor track/clip voicing, and
@@ -97,7 +97,26 @@ Sound Library creation tools.
   FX action. So the voice-shaping DSP already processes any clip, track, bus,
   master or segment, which was the ask.
 
-## Loop Studio consolidation (IN PROGRESS)
+## Loop Studio consolidation (DONE — every bullet audited 2026-07-26)
+
+> Audited against the code, bullet by bullet, because the IN-PROGRESS marker had
+> outlived the work: ✅ **one loop document** — captured sung/beatboxed layers are
+> symbolic (`MelodicPattern` / `DrumRowsPattern` via `setUserTrack` /
+> `setBeatTrack`), never baked stems. ✅ **one transport** — `GaplessLoopPlayer`
+> over flutter_soloud, seam-safe periodic buffers, boundary swaps without a
+> restart. ✅ **one primary workflow** — the Beginner-Tracker hub tile is retired
+> and `PerformScreen` is out of navigation (referenced only by its own file and
+> tests), so the redundant entries are gone. ✅ **scannable controls** — BPM
+> slider (`loop_mixer_screen.dart` ~3685) plus numeric field (~3702). ✅
+> **notation is a view** — per-track staves following the selection, sharing the
+> transport, with treble/bass/**grand** chosen from each track's actual range.
+> ✅ **verification** — pure tests for periodic rendering, boundary swaps,
+> editable per-track events and staff choice, plus widget tests for the
+> workflow/transport.
+>
+> The one thing left is a judgement call, not code: whether to DELETE the archived
+> `perform_screen.dart` (dead but still tested) now that parity is proven. The
+> retirement map gates that on a sign-off, so it stays.
 
 Live Looper / Perform, Loop Mixer, and Beginner Tracker currently expose three
 overlapping but incompatible editing experiences. They must converge on one
@@ -673,11 +692,13 @@ the mic grading the speaker. Two corrections shape the design:
   cost pitch accuracy. **Needs on-device measurement** (can't be tested via the
   BlackHole digital loopback — no speaker→mic path).
 - **Tier 2 — Dart pitch gate: SKIPPED** (self-defeating for play-along, per #1).
-- **Tier 3a — Dart AEC core (IN PROGRESS).** `core/audio/echo_canceller.dart`: a
-  compact **constrained frequency-domain block-NLMS** echo canceller (the linear
-  core of Speex MDF / WebRTC AEC3), reusing the FFT. Testable headlessly with a
-  perfectly-aligned digital mix (ERLE assertion). Deployment still needs Tier 3b
-  to feed it aligned ref+mic.
+- **Tier 3a — Dart AEC core (BUILT + VERIFIED; blocked on 3b for deployment).**
+  `core/audio/echo_canceller.dart`: a compact **constrained frequency-domain
+  block-NLMS** echo canceller (the linear core of Speex MDF / WebRTC AEC3),
+  reusing the FFT. Its stated verification exists — `test/echo_canceller_test.dart`
+  asserts high ERLE on an echo-only mix and near-end preservation under
+  double-talk (verified 2026-07-26). Nothing is left to write here: deployment
+  needs Tier 3b to feed it aligned ref+mic, which is the real blocker.
 - **Tier 3b — native full-duplex plugin (DESIGNED, not started in code).** One
   native audio engine that owns playback+capture on a shared clock and runs a
   real AEC. This is the production fix. Full architecture, Dart API, per-platform
@@ -831,8 +852,10 @@ had already shipped, so this block was a trap for the next agent to redo:
   Freeverb. Tests assert it actually behaves like a reverb — decaying tail,
   pre-delay moves the onset, deterministic (fixed IR seed, so baked clips stay
   byte-identical), and audibly different from `FxType.reverb`.
-- ⬜ **STILL OPEN:** pitch envelope on sfxr/additive voices. sfxr has a linear
-  `freqRamp` slide but no envelope; the additive voice has neither.
+- ✅ **DONE (verified 2026-07-26)** — pitch envelope on both voices:
+  `pitchEnvSemitones`/`pitchEnvDecay` on `crisp_dsp/sfxr.dart`'s `SfxParams` AND
+  on `synth.dart`'s additive voice (`238fa39e`). ⇒ **the whole Audio-FX block is
+  now done.**
 
 **Samples** (was `CC0_SAMPLE_SOURCE_HANDOFF`):
 - ✅ **DONE (verified 2026-07-26)** — "starter-module generator" shipped as
