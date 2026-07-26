@@ -151,6 +151,13 @@ const int kFxTremor = 0x1D;
 const int kFxPanbrello = 0x1E;
 const double kPanbrelloDepthPerUnit = 1 / 15;
 
+/// Set the panbrello LFO WAVEFORM (S3M/IT `S5x`): 0 sine · 1 saw(ramp) · 2
+/// square. Persistent per-channel control state — the panbrello counterpart of
+/// the vibrato (E4x) / tremolo (E7x) waveform selects — honored by the panbrello
+/// LFO in [ReplayVoice.tick]. S3M/IT-only (like [kFxPanbrello] / [kFxSetFilter]);
+/// no MOD/XM equivalent, so cross-format importers map `S5x` here.
+const int kFxSetPanbrelloWaveform = 0x12;
+
 /// Zxx — set the resonant low-pass FILTER (IT effect 'Z'): `Z00..Z7F` set the
 /// cutoff (the param IS the 0..127 cutoff), `Z80..ZFF` set the resonance (param
 /// `& 0x7F`). Decoded per-voice in [ReplayVoice.armRow]; applied by the sample
@@ -342,10 +349,13 @@ class ReplayVoice {
   int _memPanbrelloSpeed = 0;
   int _memPanbrelloDepth = 0;
 
-  // LFO waveform select (E4x/E7x) + glissando control (E3x) — persist across
-  // rows like a real tracker's per-channel control state.
+  // LFO waveform select (E4x/E7x + S5x panbrello) + glissando control (E3x) —
+  // persist across rows (and streaming chunks) like a real tracker's per-channel
+  // control state, carried on the voice with the rest of its state.
   int _vibWave = 0;
   int _tremWave = 0;
+  int _panbrelloWave =
+      0; // S5x — panbrello LFO waveform (0 sine/1 saw/2 square)
   bool _glissando = false;
 
   // LFO phases (radians), reset on a new note.
@@ -729,6 +739,10 @@ class ReplayVoice {
         final x = (_param >> 4) & 0xF, y = _param & 0xF;
         if (x != 0) _memPanbrelloSpeed = x;
         if (y != 0) _memPanbrelloDepth = y;
+      case kFxSetPanbrelloWaveform:
+        // S5x — persistent panbrello LFO waveform (0 sine/1 saw/2 square), like
+        // the vibrato E4x / tremolo E7x waveform selects.
+        _panbrelloWave = _param & 0xF;
       case kFxExtended:
         // One-time (tick-0) extended commands: fine porta and fine volume.
         switch (_exSub) {
@@ -837,7 +851,7 @@ class ReplayVoice {
     if (_cmd == kFxPanbrello) {
       effPan = _memPanbrelloDepth *
           kPanbrelloDepthPerUnit *
-          trackerLfo(0, _panbrelloPhase);
+          trackerLfo(_panbrelloWave, _panbrelloPhase);
       _panbrelloPhase += _memPanbrelloSpeed * kVibratoRadPerSpeedUnit;
     }
 
@@ -1085,6 +1099,7 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
         cmd == kFxRetrigVolSlide ||
         cmd == kFxTremor ||
         cmd == kFxPanbrello ||
+        cmd == kFxSetPanbrelloWaveform ||
         cmd == kFxSetFilter ||
         cmd == kFxExtended) {
       return true;

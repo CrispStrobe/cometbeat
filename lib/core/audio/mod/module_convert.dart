@@ -279,6 +279,8 @@ ModuleDoc docFromMod(ModModule m) {
       return (0xE, (0x4 << 4) | val);
     case 0x4: // S4x — set tremolo waveform → E7x (kExTremoloWaveform)
       return (0xE, (0x7 << 4) | val);
+    case 0x5: // S5x — set panbrello waveform → kFxSetPanbrelloWaveform (0x12)
+      return (0x12, val);
     case 0x6: // S6x — fine pattern delay; EEx is row delay in our engine
     case 0xE: // SEx — coarse pattern delay
       return (0xE, (0xE << 4) | val);
@@ -298,9 +300,6 @@ ModuleDoc docFromMod(ModModule m) {
       //     output filter, cf. the Amiga LED filter), NOT the IT resonant
       //     filter. kFxSetFilter needs a 0..127 cutoff/resonance value; "filter
       //     on" carries no cutoff, so mapping it to Zxx would fabricate one.
-      //   • S5x set panbrello waveform — the panbrello LFO renders sine-only
-      //     (armVoiceTick hardcodes trackerLfo(0, …)); there is no neutral
-      //     panbrello-waveform command and no MOD/XM equivalent.
       //   • S7x past-note / NNA / envelope control — instrument-layer state with
       //     no per-cell neutral command (and no S3M/MOD/XM equivalent).
       //   • S9x sound control (surround / reverse play) — the replayer has no
@@ -862,6 +861,8 @@ ModuleDoc docFromIt(ItModule m) {
       return (24, directPan ? param : (param / 2).round().clamp(0, 0x80));
     case 0x9:
       return (15, param); // O sample offset
+    case 0x12:
+      return (19, (0x5 << 4) | (param & 0xF)); // S5x set panbrello waveform
     case 0x10:
       return (22, param.clamp(0, 64)); // V global volume
     case 0x11:

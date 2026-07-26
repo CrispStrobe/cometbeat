@@ -59,9 +59,9 @@ class ModuleExportLoss {
   /// Sxy control sub-commands with no faithful cross-format equivalent — they
   /// survive only a same-format export (S3M→S3M / IT→IT via native provenance).
   static const unmappedSpecialEffects =
-      'Some Sxy control effects are dropped: S0x set-filter toggle, S5x '
-      'panbrello waveform, S7x NNA/envelope control, S9x surround/reverse, SAx '
-      'high sample offset, SFx MIDI macro.';
+      'Some Sxy control effects are dropped: S0x set-filter toggle, S7x '
+      'NNA/envelope control, S9x surround/reverse, SAx high sample offset, SFx '
+      'MIDI macro.';
 
   /// Cross-format samples are re-encoded to S3M PCM; AdLib/packed data is lost.
   static const s3mSampleReencode =
@@ -90,7 +90,7 @@ class ModuleExportLoss {
 /// with a real command is dropped by those writers.
 const _s3mItRepresentableEffects = <int>{
   0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xD, 0xF, //
-  0x10, 0x11, 0x19, 0x1B, 0x1D, 0x1E, 0x1F,
+  0x10, 0x11, 0x12, 0x19, 0x1B, 0x1D, 0x1E, 0x1F,
 };
 
 /// True if [c]'s effect would be dropped when written through the S3M/IT
@@ -117,6 +117,7 @@ const _mappedSpecialSubs = <int>{
   0x2,
   0x3,
   0x4,
+  0x5,
   0x6,
   0x8,
   0xB,
@@ -126,7 +127,7 @@ const _mappedSpecialSubs = <int>{
 };
 
 /// True if [c] carries an S3M/IT `S` letter-command (19) whose sub-command has
-/// no neutral equivalent (S0/S5/S7/S9/SA/SF) — dropped on any cross-format
+/// no neutral equivalent (S0/S7/S9/SA/SF) — dropped on any cross-format
 /// export. Read from the native command, since the neutral effect column is
 /// already `(0, 0)` for these.
 bool _hasUnmappedSpecial(DocCell c) =>

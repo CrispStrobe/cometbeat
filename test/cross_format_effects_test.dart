@@ -197,11 +197,11 @@ void main() {
   group('unmapped Sxy sub-commands drop and are export-loss-reported', () {
     // Every remaining special sub-command that GENUINELY has no faithful
     // neutral/replayer equivalent (verified against the IT/ST3 spec):
-    //   S0 set-filter toggle · S5 panbrello waveform · S7 NNA/envelope control ·
-    //   S9 surround/reverse · SA high sample offset · SF set MIDI macro.
+    //   S0 set-filter toggle · S7 NNA/envelope control · S9 surround/reverse ·
+    //   SA high sample offset · SF set MIDI macro.
+    // (S5 panbrello waveform now maps → see panbrello_waveform_test.dart.)
     const droppedSubs = {
       0x0: 'S0 (set filter on/off)',
-      0x5: 'S5 (panbrello waveform)',
       0x7: 'S7 (NNA / envelope control)',
       0x9: 'S9 (surround / reverse)',
       0xA: 'SA (high sample offset)',
