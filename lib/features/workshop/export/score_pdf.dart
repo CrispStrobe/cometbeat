@@ -107,6 +107,10 @@ const _defaultSpatium = 6.0;
 /// [spatium] (so ~216 dpi by default) and placed at its exact staff-space
 /// position. [spatium] sets the engraving size: larger = fewer bars per line.
 ///
+/// [extraFingerings] engraves fingering marks the score does not itself carry,
+/// keyed by note-element id — what a printed part needs when the fingering was
+/// computed (by the bowed arranger, say) rather than authored into the score.
+///
 /// Must run inside a Flutter binding with the engraving font registered (the app
 /// always is; a test needs `MusicFonts.load` first) — [renderLayoutToPng]
 /// rasterizes through `dart:ui`.
@@ -121,6 +125,7 @@ Future<Uint8List> exportScoreToPdf(
   double spatium = _defaultSpatium,
   double rasterScale = 3,
   double margin = 8,
+  Map<String, List<int>> extraFingerings = const {},
 }) async {
   final metadata = MusicFonts.metadataOrNull(theme.musicFont) ??
       await MusicFonts.load(theme.musicFont);
@@ -145,7 +150,12 @@ Future<Uint8List> exportScoreToPdf(
     marginLeft: margin,
     marginRight: margin,
   );
-  final paged = layoutPages(score, settings, metrics: metrics);
+  final paged = layoutPages(
+    score,
+    settings,
+    metrics: metrics,
+    extraFingerings: extraFingerings,
+  );
 
   // Rasterize every system up front: the pdf builder callback is sync.
   final pages = <List<(PositionedSystem, Uint8List)>>[];

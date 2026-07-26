@@ -348,6 +348,8 @@ void main() {
     MultiSystemView view() =>
         tester.widget<MultiSystemView>(find.byType(MultiSystemView));
     expect(view().extraFingerings, isEmpty); // off by default
+    // Printing is reachable from the same screen — what you see is what prints.
+    expect(find.byIcon(Icons.picture_as_pdf_outlined), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.back_hand_outlined));
     await tester.pump();

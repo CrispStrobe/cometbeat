@@ -165,4 +165,42 @@ void main() {
       });
     });
   });
+
+  testWidgets('a fingered part prints its fingerings', (tester) async {
+    await tester.runAsync(() async {
+      final score = _score(4);
+      final ids = <String>[
+        for (final measure in score.measures)
+          for (final element in measure.elements)
+            if (element is NoteElement && element.id != null) element.id!,
+      ];
+      final bare = await exportScoreToPdf(score);
+      final fingered = await exportScoreToPdf(
+        score,
+        extraFingerings: {
+          for (final id in ids) id: const [3],
+        },
+      );
+      // The pages are rasterised, so "did the marks print" is a question about
+      // ink: a dropped mark anywhere in layoutPages → layoutSystems →
+      // engine.layout would produce a byte-identical PDF and an unfingered part.
+      expect(fingered, isNot(bare));
+      expect(fingered.length, greaterThan(bare.length));
+    });
+  });
+
+  testWidgets('a mark for a note that is not there prints nothing extra',
+      (tester) async {
+    await tester.runAsync(() async {
+      final score = _score(2);
+      final a = await exportScoreToPdf(score);
+      final b = await exportScoreToPdf(
+        score,
+        extraFingerings: const {
+          'no-such-note': [1],
+        },
+      );
+      expect(b.length, a.length);
+    });
+  });
 }

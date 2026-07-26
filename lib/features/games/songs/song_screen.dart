@@ -25,6 +25,7 @@ import 'package:comet_beat/features/games/songs/song_book.dart';
 import 'package:comet_beat/features/games/songs/song_play_along.dart';
 import 'package:comet_beat/features/games/songs/songbook_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/workshop/export/score_pdf.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
@@ -40,6 +41,7 @@ import 'package:crisp_notation/crisp_notation.dart'
         analyze,
         multiPartScoreFromMusicXml,
         multiPartToMusicXml;
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -73,6 +75,37 @@ class _SongScreenState extends State<SongScreen> {
   // has. Off by default; the song may be for any instrument.
   bool _fingerings = false;
   Map<String, List<int>>? _fingeringCache;
+
+  /// Prints the song — with the fingerings when they are on screen, so what you
+  /// print is what you see. The marks ride in as a layout argument rather than
+  /// being written into the score, which is why an exported PDF can show them
+  /// while the saved song stays untouched.
+  Future<void> _exportPdf() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes = await exportScoreToPdf(
+        widget.score,
+        title: widget.title,
+        theme: kidsScoreTheme,
+        extraFingerings: _fingerings ? _celloFingerings : const {},
+      );
+      final suggested = '${widget.title}.pdf';
+      final location = await getSaveLocation(
+        suggestedName: suggested,
+        acceptedTypeGroups: const [
+          XTypeGroup(label: 'PDF', extensions: ['pdf']),
+        ],
+      );
+      if (location == null) return;
+      await XFile.fromData(bytes, name: suggested).saveTo(location.path);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
+      );
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.musicExportFailed)));
+    }
+  }
 
   Map<String, List<int>> get _celloFingerings =>
       _fingeringCache ??= bowedFingeringDigits(
@@ -229,6 +262,11 @@ class _SongScreenState extends State<SongScreen> {
             isSelected: _inspect,
             selectedIcon: const Icon(Icons.search_off),
             onPressed: () => setState(() => _inspect = !_inspect),
+          ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: l10n.workshopExport,
+            onPressed: _exportPdf,
           ),
           IconButton(
             icon: const Icon(Icons.back_hand_outlined),
