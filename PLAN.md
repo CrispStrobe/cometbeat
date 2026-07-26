@@ -809,7 +809,23 @@ never attempt it — which is where most of our recent effect-mapping bugs lived
 copying, but a Paula clock constant is a fact and "compare spectra as well as
 RMS" is a method; lifting Swift into Dart would buy nothing and muddy provenance.
 
-**G1 — Our reference-comparison metrics are too weak to catch a tuning error.**
+✅ **G1 — DONE (`d6186fd2`). Metrics built, and running them found four defects.**
+`test/support/audio_compare.dart` = level · envelope correlation · lag ·
+spectral similarity, each isolating one fault, as a LIBRARY with 19 tests of
+its own against synthesised signals (the A/B is opt-in and never runs on CI).
+What running it exposed: **the A/B had never actually run** (gated on a
+licence-restricted file absent from every checkout — now gated on a fixture we
+own); **the reference was non-deterministic** (`openmpt123` defaults to
+`--dither 1`, and dither is random — the same inputs gave lags of 21504 and
+29696; now `--dither 0`, and our own render is verified byte-identical run to
+run); **the old RMS check peak-normalised before differencing**, so it could not
+see a level error by construction — it rated `golden.mod` "-0.8 dB" where the
+real delta is **-16.4 dB**; and **our `golden.mod` render is nearly silent**
+(RMS 0.00037). ⬜ **Left open, deliberately, and unclaimed:** the per-format
+level disagreements (up to 16 dB, inconsistent in sign) and the 17%-short XM/IT
+renders. Both may be artifacts of fixtures never meant as audio references —
+neither is investigated. The golden.* fixtures are report-only for that reason;
+their measured numbers are recorded in the harness. *Original finding:*
 `test/tracker_audio_regression_test.dart` renders through our pipeline and
 `openmpt123` and compares **duration + RMS deltas**. Their `reference_compare.py`
 compares duration, **envelope correlation**, **onset/lag alignment** and
@@ -843,9 +859,9 @@ bug-emulation (swing, legacy pattern loops, proprietary envelope release nodes),
 MPTM detected-but-refused, IT to `cmwt=0x0216`. Writing down what we refuse to
 chase is how a replayer stays finishable — ours is currently open-ended.
 
-**G5 — Harness brittleness (5 minutes).** `_kOpenMptPath` is pinned to
-`/opt/homebrew/Cellar/libopenmpt/0.8.7/bin/openmpt123` — one Homebrew version,
-macOS only. Resolve the binary from `PATH` instead.
+✅ **G5 — DONE (`d6186fd2`).** `_kOpenMptPath` was pinned to one Cellar version,
+so a routine `brew upgrade` silently skipped the whole audit. Resolved from
+`PATH` now, with the Homebrew prefix as a fallback.
 
 ## Consolidated backlog (2026-07-25 doc sweep)
 
