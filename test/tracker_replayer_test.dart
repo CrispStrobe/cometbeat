@@ -25,6 +25,49 @@ TrackerCell ex(int sub, int val, {int? midi}) =>
     fx(kFxExtended, (sub << 4) | val, midi: midi);
 
 void main() {
+  test('every internal command number is allocated exactly once', () {
+    // Two agents once allocated 0x12 ten minutes apart — kFxSetSpeedFull and
+    // kFxSetPanbrelloWaveform. Nothing failed: the switches in
+    // module_convert.dart match the FIRST case, so an IT `Axx` speed was read
+    // and written as "set panbrello waveform" while the later branch became
+    // dead code. The only signal anywhere was one unreachable_switch_case
+    // warning. This makes the next duplicate fail loudly instead.
+    final byNumber = <int, List<String>>{};
+    void allocate(String name, int value) =>
+        byNumber.putIfAbsent(value, () => []).add(name);
+
+    allocate('kFxArpeggio', kFxArpeggio);
+    allocate('kFxPortaUp', kFxPortaUp);
+    allocate('kFxPortaDown', kFxPortaDown);
+    allocate('kFxTonePorta', kFxTonePorta);
+    allocate('kFxVibrato', kFxVibrato);
+    allocate('kFxTonePortaVolSlide', kFxTonePortaVolSlide);
+    allocate('kFxVibratoVolSlide', kFxVibratoVolSlide);
+    allocate('kFxTremolo', kFxTremolo);
+    allocate('kFxPositionJump', kFxPositionJump);
+    allocate('kFxPatternBreak', kFxPatternBreak);
+    allocate('kFxSetSpeed', kFxSetSpeed);
+    allocate('kFxExtended', kFxExtended);
+    allocate('kFxSetSpeedFull', kFxSetSpeedFull);
+    allocate('kFxSetGlobalVolume', kFxSetGlobalVolume);
+    allocate('kFxGlobalVolSlide', kFxGlobalVolSlide);
+    allocate('kFxSetPanbrelloWaveform', kFxSetPanbrelloWaveform);
+    allocate('kFxSetHighOffset', kFxSetHighOffset);
+    allocate('kFxPanSlide', kFxPanSlide);
+    allocate('kFxRetrigVolSlide', kFxRetrigVolSlide);
+    allocate('kFxSetFilter', kFxSetFilter);
+    allocate('kFxTremor', kFxTremor);
+    allocate('kFxPanbrello', kFxPanbrello);
+    allocate('kFxTempoSlide', kFxTempoSlide);
+
+    final clashes = [
+      for (final e in byNumber.entries)
+        if (e.value.length > 1)
+          '0x${e.key.toRadixString(16)} → ${e.value.join(" + ")}',
+    ];
+    expect(clashes, isEmpty, reason: 'command numbers collide: $clashes');
+  });
+
   group('arpeggio (0xy)', () {
     test('cycles base / base+x / base+y each tick without moving the base', () {
       final cells = [

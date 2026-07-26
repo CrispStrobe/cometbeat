@@ -112,11 +112,20 @@ const int kFxSetSpeed = 0xF; // Fxx — <0x20 set speed (ticks/row); ≥0x20 tem
 ///
 /// Value note: pick a genuinely free slot if you ever add another command. The
 /// taken set is NOT just the `kFx*` constants below — `module_convert.dart`'s
-/// internal→IT/S3M switches use RAW hex literals, and 0x12 is already S5x
-/// (set panbrello waveform) there. Taken as of writing: 0x00–0x12, 0x19,
-/// 0x1B–0x1F. Free: 0x13–0x18, 0x1A. (`flutter analyze` catches a collision as
-/// an unreachable-switch-case, which is how 0x12 was caught here.)
-const int kFxSetSpeedFull = 0x13;
+/// internal→IT/S3M switches use RAW hex literals, so a number can be spoken for
+/// in a place this file never mentions.
+///
+/// ⚠️ This value has now collided TWICE, which is why the allocation is checked
+/// by a test rather than by reading. It was 0x12, already
+/// [kFxSetPanbrelloWaveform] — so an `Axx` speed was read AND written as "set
+/// panbrello waveform", because the switches match the FIRST case and the later
+/// one is dead. Moving it to 0x13 then hit [kFxSetHighOffset]. 0x14 is free;
+/// 0x15–0x18 and 0x1A remain.
+///
+/// Do not hand-enumerate the free list — that is exactly what produced the
+/// second collision. `tracker_replayer_test.dart` fails on any duplicate and
+/// names both offenders.
+const int kFxSetSpeedFull = 0x14;
 const int kFxExtended =
     0xE; // Exy — sub-command in the high nibble of the param
 
