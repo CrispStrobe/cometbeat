@@ -87,6 +87,52 @@ void main() {
     expect(shared.isEmpty, isFalse);
   });
 
+  group('auto-share-on-exit (Loop Studio Fine-tune round-trip)', () {
+    testWidgets('publishes the edited melody on exit when enabled + edited',
+        (tester) async {
+      await pumpGame(
+        tester,
+        const AdvancedTrackerScreen(autoShareOnExit: true),
+      );
+      final game = _game(tester);
+
+      // A real cell edit (pushes undo → counts as "edited").
+      game.setNote(0, 0, 60);
+      await tester.pump();
+      expect(game.canUndo, isTrue);
+
+      MelodyBridge.instance.clear();
+      game.debugSimulateExit(); // as if the route were popped
+      expect(MelodyBridge.instance.hasMelody, isTrue);
+      expect(MelodyBridge.instance.current!.source, 'advtracker');
+    });
+
+    testWidgets('does nothing on exit when opened but never edited',
+        (tester) async {
+      await pumpGame(
+        tester,
+        const AdvancedTrackerScreen(autoShareOnExit: true),
+      );
+      final game = _game(tester);
+      expect(game.canUndo, isFalse);
+
+      game.debugSimulateExit();
+      expect(MelodyBridge.instance.hasMelody, isFalse);
+    });
+
+    testWidgets('does nothing on exit when the flag is off (default)',
+        (tester) async {
+      await pumpGame(tester, const AdvancedTrackerScreen());
+      final game = _game(tester);
+      game.setNote(0, 0, 60);
+      await tester.pump();
+
+      MelodyBridge.instance.clear();
+      game.debugSimulateExit();
+      expect(MelodyBridge.instance.hasMelody, isFalse);
+    });
+  });
+
   testWidgets('loads a shared beat as a polyphonic drum song, and shares back',
       (tester) async {
     // A beat another mode shared: kick + hat both on step 0 (needs polyphony).

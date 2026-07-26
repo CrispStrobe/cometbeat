@@ -1713,6 +1713,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       MaterialPageRoute(
         builder: (_) => AdvancedTrackerScreen(
           initialSong: trackerSongFromMultiPart(parts.score),
+          // Auto-publish the edited tune back on exit → no manual "Share tune".
+          autoShareOnExit: true,
         ),
       ),
     );

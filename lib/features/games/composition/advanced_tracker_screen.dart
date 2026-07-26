@@ -240,12 +240,22 @@ const _kKeyToSemitone = <String, int>{
 };
 
 class AdvancedTrackerScreen extends StatefulWidget {
-  const AdvancedTrackerScreen({super.key, this.initialSong});
+  const AdvancedTrackerScreen({
+    super.key,
+    this.initialSong,
+    this.autoShareOnExit = false,
+  });
 
   /// An optional song to open with — the Beginner→Advanced "promote" hands its
   /// groove over here so the switch keeps the kid's work instead of starting
   /// fresh. Null = a new empty song.
   final TrackerSong? initialSong;
+
+  /// When true, on leaving the screen the edited melody is published back to
+  /// [MelodyBridge] automatically (only if the user actually edited) — so Loop
+  /// Studio's "Fine-tune in Tracker" round-trip needs no manual "Share tune"
+  /// tap. Default false → every other entry point behaves exactly as before.
+  final bool autoShareOnExit;
 
   @override
   State<AdvancedTrackerScreen> createState() => _AdvancedTrackerScreenState();
@@ -370,6 +380,10 @@ abstract interface class AdvancedTrackerTester {
   bool get canRedo;
   void undo();
   void redo();
+
+  /// Test seam: run the on-exit auto-share hook as if the route were popped
+  /// (drives the Loop Studio "Fine-tune in Tracker" round-trip).
+  void debugSimulateExit();
 
   /// FT2 feel: live record (jam at the playhead) + block interpolate.
   bool get isRecording;
@@ -2618,6 +2632,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   bool get canUndo => _canUndo;
   @override
+  void debugSimulateExit() => _onPopMaybeShare(true, null);
+  @override
   bool get canRedo => _canRedo;
   @override
   void undo() => _undo();
@@ -3641,16 +3657,19 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   int _melodicIndex() =>
       _song.channels.indexWhere((c) => c.instrument is! PercussionInstrument);
 
-  @override
-  void shareMelody() {
+  /// Publish the first melodic channel to [MelodyBridge]. Returns true if it
+  /// published (there was a non-empty melodic channel). The pure half of
+  /// [shareMelody], reused by the auto-publish-on-exit round-trip (no snackbar,
+  /// no context needed — safe to call while leaving the screen).
+  bool _publishMelodyToBridge() {
     final ch = _melodicIndex();
-    if (ch < 0) return;
+    if (ch < 0) return false;
     final steps = _song.rows;
     final cells = _song.channels[ch].cells;
     final rows = <int?>[
       for (var s = 0; s < steps; s++) s < cells.length ? cells[s].midi : null,
     ];
-    if (rows.every((m) => m == null)) return;
+    if (rows.every((m) => m == null)) return false;
     MelodyBridge.instance.publish(
       SharedMelody(
         cells: patternCellsFromMidiRows(rows),
@@ -3658,6 +3677,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         source: 'advtracker',
       ),
     );
+    return true;
+  }
+
+  @override
+  void shareMelody() {
+    if (!_publishMelodyToBridge()) return;
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.tuneShared)),
@@ -4370,199 +4395,211 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   // --- Build ---
 
+  /// Auto-round-trip hook: as the screen leaves, publish the edited melody back
+  /// to the bridge so Loop Studio's "Fine-tune in Tracker" folds it in with no
+  /// manual Share tap. Gated on [AdvancedTrackerScreen.autoShareOnExit] (off for
+  /// every other entry point) AND [_canUndo] (the user actually edited), so an
+  /// opened-and-abandoned session leaves the loop untouched.
+  void _onPopMaybeShare(bool didPop, Object? result) {
+    if (didPop && widget.autoShareOnExit && _canUndo) _publishMelodyToBridge();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      appBar: GameAppBar(
-        title: l10n.trackerAdvancedTitle,
-        tutorial: advancedTrackerPrimer,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.undo),
-            tooltip: l10n.myMelodyUndo,
-            onPressed: _canUndo ? _undo : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.redo),
-            tooltip: l10n.workshopRedo,
-            onPressed: _canRedo ? _redo : null,
-          ),
-          IconButton(
-            icon: Icon(_inspect ? Icons.search_off : Icons.search),
-            isSelected: _inspect,
-            tooltip: l10n.inspectMode,
-            onPressed: () => setState(() => _inspect = !_inspect),
-          ),
-          IconButton(
-            icon: const Icon(Icons.child_care),
-            tooltip: l10n.trackerModeToBeginner,
-            onPressed: _toBeginner,
-          ),
-          // (Play song lives in the transport row next to Play/Stop.)
-          IconButton(
-            icon: const Icon(Icons.tune),
-            tooltip: l10n.trackerMixer,
-            onPressed: () => _showMixer(l10n),
-          ),
-          IconButton(
-            icon: Badge(
-              isLabelVisible: _activeInstrument > 0,
-              label: Text('$_activeInstrument'),
-              child: const Icon(Icons.queue_music),
+    return PopScope(
+      onPopInvokedWithResult: _onPopMaybeShare,
+      child: Scaffold(
+        appBar: GameAppBar(
+          title: l10n.trackerAdvancedTitle,
+          tutorial: advancedTrackerPrimer,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.undo),
+              tooltip: l10n.myMelodyUndo,
+              onPressed: _canUndo ? _undo : null,
             ),
-            tooltip: l10n.trackerInstruments,
-            onPressed: _showInstrumentPanel,
-          ),
-          _blockMenu(l10n),
-          IconButton(
-            icon: const Icon(Icons.delete_sweep_outlined),
-            tooltip: l10n.trackerClear,
-            onPressed: _confirmClearAll,
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (v) {
-              switch (v) {
-                case 'addMusic':
-                  _addMusic();
-                case 'import':
-                  _importModule();
-                case 'importScore':
-                  _importScore();
-                case 'demo':
-                  _loadDemo();
-                case 'starterBeat':
-                  _applyStarterBeat();
-                case 'soundLibrary':
-                  _showSoundLibrary();
-                case 'shareSong':
-                  _shareSong();
-                case 'loadSong':
-                  _loadSong();
-                case 'saveSong':
-                  _saveToSongBook();
-                case 'exportMidi':
-                  _exportMidi();
-                case 'exportXml':
-                  _exportMusicXml();
-                case 'exportAbc':
-                  _exportAbc();
-                case 'exportModule':
-                  _pickModuleFormat();
-                case 'exportAudio':
-                  _exportAudio();
-                case 'daw':
-                  sendToDaw();
-                case 'shareBeat':
-                  shareBeat();
-                case 'loadBeat':
-                  loadSharedBeat();
-                case 'shareMelody':
-                  shareMelody();
-                case 'loadMelody':
-                  loadSharedMelody();
-                case 'workshop':
-                  _openInWorkshop();
-                case 'flowTimeline':
-                  _showFlowTimeline();
-              }
-            },
-            itemBuilder: (ctx) => [
-              _menuSection(l10n.trackerMenuOpenLibrary),
-              _menuRow(
-                'addMusic',
-                Icons.library_music_outlined,
-                l10n.musicPickerTitle,
+            IconButton(
+              icon: const Icon(Icons.redo),
+              tooltip: l10n.workshopRedo,
+              onPressed: _canRedo ? _redo : null,
+            ),
+            IconButton(
+              icon: Icon(_inspect ? Icons.search_off : Icons.search),
+              isSelected: _inspect,
+              tooltip: l10n.inspectMode,
+              onPressed: () => setState(() => _inspect = !_inspect),
+            ),
+            IconButton(
+              icon: const Icon(Icons.child_care),
+              tooltip: l10n.trackerModeToBeginner,
+              onPressed: _toBeginner,
+            ),
+            // (Play song lives in the transport row next to Play/Stop.)
+            IconButton(
+              icon: const Icon(Icons.tune),
+              tooltip: l10n.trackerMixer,
+              onPressed: () => _showMixer(l10n),
+            ),
+            IconButton(
+              icon: Badge(
+                isLabelVisible: _activeInstrument > 0,
+                label: Text('$_activeInstrument'),
+                child: const Icon(Icons.queue_music),
               ),
-              _menuRow('import', Icons.library_music, l10n.trackerImportMod),
-              _menuRow(
-                'importScore',
-                Icons.file_open_outlined,
-                l10n.trackerImportScore,
-              ),
-              _menuRow('demo', Icons.auto_awesome, l10n.trackerLoadDemo),
-              _menuRow(
-                'starterBeat',
-                Icons.auto_fix_high,
-                l10n.trackerStarterBeat,
-              ),
-              _menuRow(
-                'soundLibrary',
-                Icons.library_music,
-                l10n.trackerSoundLibrary,
-              ),
-              const PopupMenuDivider(),
-              _menuSection(l10n.trackerMenuSaveExport),
-              _menuRow(
-                'saveSong',
-                Icons.bookmark_add_outlined,
-                l10n.trackerSaveSong,
-              ),
-              _menuRow('shareSong', Icons.ios_share, l10n.trackerShareSong),
-              _menuRow(
-                'loadSong',
-                Icons.download_outlined,
-                l10n.trackerLoadSong,
-              ),
-              _menuRow('exportMidi', Icons.piano, l10n.trackerExportMidi),
-              _menuRow('exportXml', Icons.description, l10n.trackerExportXml),
-              _menuRow(
-                'exportAbc',
-                Icons.text_snippet_outlined,
-                l10n.trackerExportAbc,
-              ),
-              _menuRow(
-                'exportModule',
-                Icons.grid_on,
-                l10n.trackerExportModule,
-              ),
-              _menuRow('exportAudio', Icons.download, l10n.audioExportTitle),
-              _menuRow('daw', Icons.library_add, l10n.dawSend),
-              _menuSection(l10n.trackerMenuShareSend),
-              _menuRow('shareBeat', Icons.upload, l10n.beatShare),
-              _menuRow('loadBeat', Icons.download, l10n.beatLoadShared),
-              _menuRow(
-                'shareMelody',
-                Icons.upload,
-                l10n.tuneShare,
-                enabled: _melodicIndex() >= 0,
-              ),
-              _menuRow(
-                'loadMelody',
-                Icons.download,
-                l10n.tuneLoadShared,
-                enabled: canLoadSharedMelody,
-              ),
-              const PopupMenuDivider(),
-              _menuRow(
-                'flowTimeline',
-                Icons.timeline,
-                l10n.trackerFlowTimeline,
-              ),
-              _menuRow('workshop', Icons.edit_note, l10n.trackerOpenWorkshop),
-            ],
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Focus(
-          focusNode: _focus,
-          autofocus: true,
-          onKeyEvent: _onKey,
-          child: GestureDetector(
-            // Tap anywhere on the grid area keeps keyboard focus for entry.
-            onTap: _focus.requestFocus,
-            behavior: HitTestBehavior.deferToChild,
-            child: Column(
-              children: [
-                _commandBar(l10n),
-                const Divider(height: 1),
-                Expanded(child: _grid(context)),
-                const Divider(height: 1),
-                if (_showScope) _scopeStrip(context),
-                _pianoBar(l10n),
+              tooltip: l10n.trackerInstruments,
+              onPressed: _showInstrumentPanel,
+            ),
+            _blockMenu(l10n),
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined),
+              tooltip: l10n.trackerClear,
+              onPressed: _confirmClearAll,
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (v) {
+                switch (v) {
+                  case 'addMusic':
+                    _addMusic();
+                  case 'import':
+                    _importModule();
+                  case 'importScore':
+                    _importScore();
+                  case 'demo':
+                    _loadDemo();
+                  case 'starterBeat':
+                    _applyStarterBeat();
+                  case 'soundLibrary':
+                    _showSoundLibrary();
+                  case 'shareSong':
+                    _shareSong();
+                  case 'loadSong':
+                    _loadSong();
+                  case 'saveSong':
+                    _saveToSongBook();
+                  case 'exportMidi':
+                    _exportMidi();
+                  case 'exportXml':
+                    _exportMusicXml();
+                  case 'exportAbc':
+                    _exportAbc();
+                  case 'exportModule':
+                    _pickModuleFormat();
+                  case 'exportAudio':
+                    _exportAudio();
+                  case 'daw':
+                    sendToDaw();
+                  case 'shareBeat':
+                    shareBeat();
+                  case 'loadBeat':
+                    loadSharedBeat();
+                  case 'shareMelody':
+                    shareMelody();
+                  case 'loadMelody':
+                    loadSharedMelody();
+                  case 'workshop':
+                    _openInWorkshop();
+                  case 'flowTimeline':
+                    _showFlowTimeline();
+                }
+              },
+              itemBuilder: (ctx) => [
+                _menuSection(l10n.trackerMenuOpenLibrary),
+                _menuRow(
+                  'addMusic',
+                  Icons.library_music_outlined,
+                  l10n.musicPickerTitle,
+                ),
+                _menuRow('import', Icons.library_music, l10n.trackerImportMod),
+                _menuRow(
+                  'importScore',
+                  Icons.file_open_outlined,
+                  l10n.trackerImportScore,
+                ),
+                _menuRow('demo', Icons.auto_awesome, l10n.trackerLoadDemo),
+                _menuRow(
+                  'starterBeat',
+                  Icons.auto_fix_high,
+                  l10n.trackerStarterBeat,
+                ),
+                _menuRow(
+                  'soundLibrary',
+                  Icons.library_music,
+                  l10n.trackerSoundLibrary,
+                ),
+                const PopupMenuDivider(),
+                _menuSection(l10n.trackerMenuSaveExport),
+                _menuRow(
+                  'saveSong',
+                  Icons.bookmark_add_outlined,
+                  l10n.trackerSaveSong,
+                ),
+                _menuRow('shareSong', Icons.ios_share, l10n.trackerShareSong),
+                _menuRow(
+                  'loadSong',
+                  Icons.download_outlined,
+                  l10n.trackerLoadSong,
+                ),
+                _menuRow('exportMidi', Icons.piano, l10n.trackerExportMidi),
+                _menuRow('exportXml', Icons.description, l10n.trackerExportXml),
+                _menuRow(
+                  'exportAbc',
+                  Icons.text_snippet_outlined,
+                  l10n.trackerExportAbc,
+                ),
+                _menuRow(
+                  'exportModule',
+                  Icons.grid_on,
+                  l10n.trackerExportModule,
+                ),
+                _menuRow('exportAudio', Icons.download, l10n.audioExportTitle),
+                _menuRow('daw', Icons.library_add, l10n.dawSend),
+                _menuSection(l10n.trackerMenuShareSend),
+                _menuRow('shareBeat', Icons.upload, l10n.beatShare),
+                _menuRow('loadBeat', Icons.download, l10n.beatLoadShared),
+                _menuRow(
+                  'shareMelody',
+                  Icons.upload,
+                  l10n.tuneShare,
+                  enabled: _melodicIndex() >= 0,
+                ),
+                _menuRow(
+                  'loadMelody',
+                  Icons.download,
+                  l10n.tuneLoadShared,
+                  enabled: canLoadSharedMelody,
+                ),
+                const PopupMenuDivider(),
+                _menuRow(
+                  'flowTimeline',
+                  Icons.timeline,
+                  l10n.trackerFlowTimeline,
+                ),
+                _menuRow('workshop', Icons.edit_note, l10n.trackerOpenWorkshop),
               ],
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Focus(
+            focusNode: _focus,
+            autofocus: true,
+            onKeyEvent: _onKey,
+            child: GestureDetector(
+              // Tap anywhere on the grid area keeps keyboard focus for entry.
+              onTap: _focus.requestFocus,
+              behavior: HitTestBehavior.deferToChild,
+              child: Column(
+                children: [
+                  _commandBar(l10n),
+                  const Divider(height: 1),
+                  Expanded(child: _grid(context)),
+                  const Divider(height: 1),
+                  if (_showScope) _scopeStrip(context),
+                  _pianoBar(l10n),
+                ],
+              ),
             ),
           ),
         ),
