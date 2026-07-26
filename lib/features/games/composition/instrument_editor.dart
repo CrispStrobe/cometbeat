@@ -5,6 +5,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/sound_lab/sound_lab_screen.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:flutter/material.dart';
@@ -12,18 +13,104 @@ import 'package:provider/provider.dart';
 
 Future<TrackerInstrument?> showInstrumentEditor(
   BuildContext context,
-  TrackerInstrument initial,
-) async {
+  TrackerInstrument initial, {
+  List<TrackerInstrument> candidates = const [],
+}) async {
   return showModalBottomSheet<TrackerInstrument>(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => _InstrumentEditorSheet(initial: initial),
+    builder: (ctx) =>
+        _InstrumentEditorSheet(initial: initial, candidates: candidates),
   );
 }
 
+/// The pool of instruments a multi-sample zone can be replaced with: the
+/// caller-supplied [extra] (typically the song's other channel instruments)
+/// followed by the built-in sound library, de-duplicated by id. Always non-empty
+/// so the zone picker is usable even with no song pool threaded in.
+List<TrackerInstrument> zonePickerCandidates(List<TrackerInstrument> extra) {
+  final out = <TrackerInstrument>[];
+  final seen = <String>{};
+  void add(TrackerInstrument inst) {
+    // Multi-sample zones must be leaf instruments, not nested zone maps.
+    if (inst is MultiSampleInstrument) return;
+    if (seen.add(inst.id)) out.add(inst);
+  }
+
+  for (final inst in extra) {
+    add(inst);
+  }
+  for (final option in kTrackerInstruments) {
+    add(option.build());
+  }
+  return out;
+}
+
+/// The single UI-authored velocity split for [note], if any. The model supports
+/// several splits per note; the editor exposes one.
+VelocityZone? selectedVelocitySplit(MultiSampleInstrument inst, int note) {
+  for (final v in inst.velocityZones) {
+    if (v.note == note) return v;
+  }
+  return null;
+}
+
+/// Replaces [note]'s zone instrument with ANY [replacement] (not just a
+/// SampleInstrument). A velocity split on [note] that shared the old base
+/// instrument follows the replacement so the pair stays coherent.
+MultiSampleInstrument replaceZoneInstrument(
+  MultiSampleInstrument inst,
+  int note,
+  TrackerInstrument replacement,
+) {
+  final oldBase = inst.zones[note];
+  final zones = Map<int, TrackerInstrument>.of(inst.zones)
+    ..[note] = replacement;
+  final splits = [
+    for (final v in inst.velocityZones)
+      if (v.note == note && v.instrument == oldBase)
+        v.copyWith(instrument: replacement)
+      else
+        v,
+  ];
+  return inst.copyWith(zones: zones, velocityZones: splits);
+}
+
+/// Sets the velocity window (0..127) that gates [note]. A full `0..127` range
+/// clears the split (the note reverts to the plain full-range zone,
+/// byte-identical to today); any narrower window upserts a single split using
+/// the existing split's or the base zone's instrument.
+MultiSampleInstrument setZoneVelocityRange(
+  MultiSampleInstrument inst,
+  int note,
+  int low,
+  int high,
+) {
+  final others = inst.velocityZones.where((v) => v.note != note).toList();
+  if (low <= 0 && high >= 127) {
+    return inst.copyWith(velocityZones: others);
+  }
+  final existing = selectedVelocitySplit(inst, note);
+  final zoneInst = existing?.instrument ?? inst.zones[note];
+  if (zoneInst == null) return inst;
+  others.add(
+    VelocityZone(
+      note: note,
+      instrument: zoneInst,
+      velLow: low.clamp(0, 127),
+      velHigh: high.clamp(0, 127),
+    ),
+  );
+  return inst.copyWith(velocityZones: others);
+}
+
 class _InstrumentEditorSheet extends StatefulWidget {
-  const _InstrumentEditorSheet({required this.initial});
+  const _InstrumentEditorSheet({
+    required this.initial,
+    this.candidates = const [],
+  });
   final TrackerInstrument initial;
+  final List<TrackerInstrument> candidates;
 
   @override
   State<_InstrumentEditorSheet> createState() => _InstrumentEditorSheetState();
@@ -106,6 +193,7 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
     } else if (_inst is MultiSampleInstrument) {
       return _MultiSampleEditor(
         inst: _inst as MultiSampleInstrument,
+        candidates: zonePickerCandidates(widget.candidates),
         onChanged: (newInst) => setState(() => _inst = newInst),
       );
     } else {
@@ -126,8 +214,13 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
 }
 
 class _MultiSampleEditor extends StatefulWidget {
-  const _MultiSampleEditor({required this.inst, required this.onChanged});
+  const _MultiSampleEditor({
+    required this.inst,
+    required this.onChanged,
+    this.candidates = const [],
+  });
   final MultiSampleInstrument inst;
+  final List<TrackerInstrument> candidates;
   final ValueChanged<MultiSampleInstrument> onChanged;
 
   @override
@@ -202,18 +295,65 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
   void _removeSelected() {
     final zones = Map<int, TrackerInstrument>.of(widget.inst.zones)
       ..remove(_selectedMidi);
-    widget.onChanged(widget.inst.copyWith(zones: zones));
+    // Drop any velocity splits orphaned by removing the note.
+    final splits = widget.inst.velocityZones
+        .where((v) => v.note != _selectedMidi)
+        .toList();
+    widget.onChanged(
+      widget.inst.copyWith(zones: zones, velocityZones: splits),
+    );
     setState(() {
       _selectedMidi = zones.isEmpty ? 60 : (zones.keys.toList()..sort()).first;
     });
   }
 
+  /// The (single, UI-authored) velocity split for the selected note, if any.
+  VelocityZone? get _selectedSplit =>
+      selectedVelocitySplit(widget.inst, _selectedMidi);
+
+  void _replaceZoneInstrument(TrackerInstrument inst) {
+    widget.onChanged(
+      replaceZoneInstrument(widget.inst, _selectedMidi, inst),
+    );
+    setState(() {});
+  }
+
+  void _setVelocityRange(int low, int high) {
+    widget.onChanged(
+      setZoneVelocityRange(widget.inst, _selectedMidi, low, high),
+    );
+    setState(() {});
+  }
+
+  Future<void> _pickZoneInstrument() async {
+    if (widget.candidates.isEmpty) return;
+    final chosen = await showDialog<TrackerInstrument>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(AppLocalizations.of(ctx)!.trackerZoneInstrumentPickerTitle),
+        children: [
+          for (final cand in widget.candidates)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(cand),
+              child: Text(cand.id),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || chosen == null) return;
+    _replaceZoneInstrument(chosen);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final keys = widget.inst.zones.keys.toList()..sort();
     if (keys.isEmpty) return const Center(child: Text('No mapped zones'));
     if (!keys.contains(_selectedMidi)) _selectedMidi = keys.first;
     final zone = widget.inst.zones[_selectedMidi];
+    final split = _selectedSplit;
+    final rangeLow = (split?.velLow ?? 0).toDouble();
+    final rangeHigh = (split?.velHigh ?? 127).toDouble();
     return ListView(
       children: [
         ListTile(
@@ -249,6 +389,33 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
             ],
           ),
         ),
+        ListTile(
+          title: Text(l10n.trackerZoneInstrument),
+          subtitle: Text(zone?.id ?? '-'),
+          trailing: TextButton.icon(
+            icon: const Icon(Icons.swap_horiz),
+            label: Text(l10n.trackerZoneReplaceInstrument),
+            onPressed: widget.candidates.isEmpty ? null : _pickZoneInstrument,
+          ),
+        ),
+        ListTile(
+          title: Text(l10n.trackerZoneVelocityRange),
+          subtitle: Text(
+            split == null
+                ? l10n.trackerZoneVelocityFull
+                : '${split.velLow}-${split.velHigh}',
+          ),
+        ),
+        RangeSlider(
+          values: RangeValues(rangeLow, rangeHigh),
+          max: 127,
+          divisions: 127,
+          labels: RangeLabels(
+            rangeLow.round().toString(),
+            rangeHigh.round().toString(),
+          ),
+          onChanged: (v) => _setVelocityRange(v.start.round(), v.end.round()),
+        ),
         if (zone is SampleInstrument)
           _SampleEditor(
             inst: zone,
@@ -259,9 +426,9 @@ class _MultiSampleEditorState extends State<_MultiSampleEditor> {
             },
           )
         else
-          const ListTile(
-            title: Text('This zone is procedural'),
-            subtitle: Text('Use the sound editor to replace it with a sample.'),
+          ListTile(
+            title: Text(l10n.trackerZoneProcedural),
+            subtitle: Text(l10n.trackerZoneProceduralHint),
           ),
       ],
     );

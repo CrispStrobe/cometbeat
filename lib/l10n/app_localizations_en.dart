@@ -3953,6 +3953,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerCursor => 'Move cursor';
 
   @override
+  String get trackerZoneInstrument => 'Zone instrument';
+
+  @override
+  String get trackerZoneReplaceInstrument => 'Replace';
+
+  @override
+  String get trackerZoneInstrumentPickerTitle => 'Assign instrument to zone';
+
+  @override
+  String get trackerZoneVelocityRange => 'Velocity range';
+
+  @override
+  String get trackerZoneVelocityFull => 'Full range (all velocities)';
+
+  @override
+  String get trackerZoneProcedural => 'This zone is procedural';
+
+  @override
+  String get trackerZoneProceduralHint =>
+      'Use Replace to assign a sample or another voice.';
+
+  @override
   String get trackerFxColumn => 'Effect column (MOD)';
 
   @override

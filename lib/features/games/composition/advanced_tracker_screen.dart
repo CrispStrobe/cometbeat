@@ -2251,8 +2251,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             onPressed: () async {
-              final newInst =
-                  await showInstrumentEditor(context, ch.instrument);
+              final newInst = await showInstrumentEditor(
+                context,
+                ch.instrument,
+                candidates: [
+                  for (final other in _song.channels) other.instrument,
+                ],
+              );
               if (newInst != null && mounted) {
                 // Re-voice the whole track and rebuild
                 setState(() => _song.revoiceChannel(c, newInst));

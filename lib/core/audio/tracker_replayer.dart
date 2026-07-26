@@ -2287,7 +2287,10 @@ List<TrackerCell> _isolatedTickZoneCells(
     final midi = run.$1;
     final runSteps = run.$2 + run.$3;
     if (midi != null) {
-      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      final zone = multi.zoneForNoteVelocity(
+        cells[startStep].nativeNote ?? midi,
+        cells[startStep].volume,
+      );
       if (zone != null) {
         final voiceCells = _isolatedTickZoneCells(cells, startStep, runSteps);
         final voice = _NativeTickZoneVoice(
@@ -2449,7 +2452,10 @@ void _renderMultiSampleChannelInto(
     final midi = run.$1;
     final steps = run.$2 + run.$3;
     if (midi != null) {
-      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      final zone = multi.zoneForNoteVelocity(
+        cells[startStep].nativeNote ?? midi,
+        cells[startStep].volume,
+      );
       if (zone == null) {
         startStep += steps;
         continue;
@@ -2559,7 +2565,10 @@ void _renderMultiSampleChannelInto(
     final midi = run.$1;
     final steps = run.$2 + run.$3;
     if (midi != null) {
-      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      final zone = multi.zoneForNoteVelocity(
+        cells[startStep].nativeNote ?? midi,
+        cells[startStep].volume,
+      );
       if (zone == null) {
         startStep += steps;
         continue;
@@ -2668,7 +2677,10 @@ void _renderMultiSampleChannelIntoVariable(
     final midi = run.$1;
     final steps = run.$2 + run.$3;
     if (midi != null) {
-      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      final zone = multi.zoneForNoteVelocity(
+        cells[startStep].nativeNote ?? midi,
+        cells[startStep].volume,
+      );
       if (zone == null) {
         startStep += steps;
         continue;
@@ -4010,7 +4022,10 @@ void _renderLongNativeVariable(
     final releaseSteps = run.$3;
     final steps = sustainSteps + releaseSteps;
     if (midi != null) {
-      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      final zone = multi.zoneForNoteVelocity(
+        cells[startStep].nativeNote ?? midi,
+        cells[startStep].volume,
+      );
       if (zone is SampleInstrument) {
         final start = rowStart[startStep];
         final end = rowStart[startStep + steps];
@@ -4111,7 +4126,10 @@ void _renderLongNativeVariableStereo(
     final releaseSteps = run.$3;
     final steps = sustainSteps + releaseSteps;
     if (midi != null) {
-      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      final zone = multi.zoneForNoteVelocity(
+        cells[startStep].nativeNote ?? midi,
+        cells[startStep].volume,
+      );
       if (zone is SampleInstrument) {
         final start = rowStart[startStep];
         final end = rowStart[startStep + steps];
@@ -5240,7 +5258,10 @@ List<_ZoneRun> _planZoneRuns(TrackerChannel channel, List<TrackerCell> cells) {
     final sustainSteps = run.$2;
     final steps = run.$2 + run.$3;
     if (midi != null) {
-      final zone = multi.zoneForNote(cells[startStep].nativeNote ?? midi);
+      final zone = multi.zoneForNoteVelocity(
+        cells[startStep].nativeNote ?? midi,
+        cells[startStep].volume,
+      );
       if (zone is SampleInstrument) {
         runs.add(_ZoneRun(startStep, steps, sustainSteps, zone));
       }

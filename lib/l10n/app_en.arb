@@ -1501,6 +1501,34 @@
   "trackerClearCell": "Clear cell",
   "trackerClearConfirm": "Erase the whole pattern? This can't be undone.",
   "trackerCursor": "Move cursor",
+  "trackerZoneInstrument": "Zone instrument",
+  "@trackerZoneInstrument": {
+    "description": "Label for the instrument assigned to a multi-sample zone."
+  },
+  "trackerZoneReplaceInstrument": "Replace",
+  "@trackerZoneReplaceInstrument": {
+    "description": "Button to replace a multi-sample zone's instrument with any instrument."
+  },
+  "trackerZoneInstrumentPickerTitle": "Assign instrument to zone",
+  "@trackerZoneInstrumentPickerTitle": {
+    "description": "Title of the dialog that picks an instrument for a multi-sample zone."
+  },
+  "trackerZoneVelocityRange": "Velocity range",
+  "@trackerZoneVelocityRange": {
+    "description": "Label for a multi-sample zone's velocity (note volume) window."
+  },
+  "trackerZoneVelocityFull": "Full range (all velocities)",
+  "@trackerZoneVelocityFull": {
+    "description": "Shown when a zone answers for every velocity (no split)."
+  },
+  "trackerZoneProcedural": "This zone is procedural",
+  "@trackerZoneProcedural": {
+    "description": "Shown when a multi-sample zone is a synth/procedural instrument, not a sample."
+  },
+  "trackerZoneProceduralHint": "Use Replace to assign a sample or another voice.",
+  "@trackerZoneProceduralHint": {
+    "description": "Hint explaining how to change a procedural multi-sample zone."
+  },
   "trackerFxColumn": "Effect column (MOD)",
   "trackerMixer": "Tracks & mixer",
   "trackerGain": "Volume",

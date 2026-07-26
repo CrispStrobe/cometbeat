@@ -7406,6 +7406,48 @@ abstract class AppLocalizations {
   /// **'Move cursor'**
   String get trackerCursor;
 
+  /// Label for the instrument assigned to a multi-sample zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Zone instrument'**
+  String get trackerZoneInstrument;
+
+  /// Button to replace a multi-sample zone's instrument with any instrument.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get trackerZoneReplaceInstrument;
+
+  /// Title of the dialog that picks an instrument for a multi-sample zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign instrument to zone'**
+  String get trackerZoneInstrumentPickerTitle;
+
+  /// Label for a multi-sample zone's velocity (note volume) window.
+  ///
+  /// In en, this message translates to:
+  /// **'Velocity range'**
+  String get trackerZoneVelocityRange;
+
+  /// Shown when a zone answers for every velocity (no split).
+  ///
+  /// In en, this message translates to:
+  /// **'Full range (all velocities)'**
+  String get trackerZoneVelocityFull;
+
+  /// Shown when a multi-sample zone is a synth/procedural instrument, not a sample.
+  ///
+  /// In en, this message translates to:
+  /// **'This zone is procedural'**
+  String get trackerZoneProcedural;
+
+  /// Hint explaining how to change a procedural multi-sample zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Replace to assign a sample or another voice.'**
+  String get trackerZoneProceduralHint;
+
   /// No description provided for @trackerFxColumn.
   ///
   /// In en, this message translates to:

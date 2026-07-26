@@ -1087,6 +1087,63 @@ class PercussionInstrument implements TrackerInstrument {
   }
 }
 
+/// A velocity-split zone: a sub-[instrument] that answers for [note] only when
+/// the triggering note's velocity falls within `[velLow, velHigh]` (both
+/// inclusive, on the classic 0..127 MIDI velocity scale). Several zones may
+/// share the same [note] with non-overlapping velocity windows so that a soft
+/// note and a hard note on the same key select different timbres — the tracker's
+/// per-note VOLUME (0..1) is the velocity proxy.
+///
+/// This is purely additive: a [MultiSampleInstrument] with no velocity zones
+/// resolves notes exactly through its plain [MultiSampleInstrument.zones] map, so
+/// every existing instrument renders byte-identically.
+class VelocityZone {
+  const VelocityZone({
+    required this.note,
+    required this.instrument,
+    this.velLow = 0,
+    this.velHigh = 127,
+  });
+
+  /// The base MIDI note this split answers for (exact-match, like the plain
+  /// zone map's keys).
+  final int note;
+
+  /// The sub-instrument rendered when a note on [note] falls in this window.
+  final TrackerInstrument instrument;
+
+  /// Inclusive lower/upper velocity bounds on the 0..127 MIDI scale.
+  final int velLow;
+  final int velHigh;
+
+  /// Whether [velocity] (0..127) is inside this split's window.
+  bool contains(int velocity) => velocity >= velLow && velocity <= velHigh;
+
+  VelocityZone copyWith({
+    int? note,
+    TrackerInstrument? instrument,
+    int? velLow,
+    int? velHigh,
+  }) =>
+      VelocityZone(
+        note: note ?? this.note,
+        instrument: instrument ?? this.instrument,
+        velLow: velLow ?? this.velLow,
+        velHigh: velHigh ?? this.velHigh,
+      );
+
+  @override
+  bool operator ==(Object other) =>
+      other is VelocityZone &&
+      other.note == note &&
+      other.instrument == instrument &&
+      other.velLow == velLow &&
+      other.velHigh == velHigh;
+
+  @override
+  int get hashCode => Object.hash(note, instrument, velLow, velHigh);
+}
+
 /// An instrument composed of multiple sub-instruments mapped across the keyboard.
 /// Essential for drum kits (where each key triggers a distinct sample) or realistic
 class MultiSampleInstrument implements TrackerInstrument {
@@ -1095,6 +1152,7 @@ class MultiSampleInstrument implements TrackerInstrument {
     this.zones, {
     this.polyphonic = false,
     this.nativeVoiceSemantics = false,
+    this.velocityZones = const [],
   });
 
   MultiSampleInstrument copyWith({
@@ -1102,12 +1160,14 @@ class MultiSampleInstrument implements TrackerInstrument {
     Map<int, TrackerInstrument>? zones,
     bool? polyphonic,
     bool? nativeVoiceSemantics,
+    List<VelocityZone>? velocityZones,
   }) =>
       MultiSampleInstrument(
         id ?? this.id,
         zones ?? this.zones,
         polyphonic: polyphonic ?? this.polyphonic,
         nativeVoiceSemantics: nativeVoiceSemantics ?? this.nativeVoiceSemantics,
+        velocityZones: velocityZones ?? this.velocityZones,
       );
 
   @override
@@ -1124,6 +1184,14 @@ class MultiSampleInstrument implements TrackerInstrument {
 
   /// Maps a base MIDI note to the [TrackerInstrument] representing that zone.
   final Map<int, TrackerInstrument> zones;
+
+  /// Optional velocity-split zones. When empty (the default, and the state of
+  /// every instrument imported today) note resolution is exactly the plain
+  /// [zones] map, so the render is byte-identical. When present, a note whose
+  /// key exactly matches a split's [VelocityZone.note] and whose velocity falls
+  /// in that split's window selects the split's instrument instead; anything
+  /// unmatched falls back to the plain [zones] map.
+  final List<VelocityZone> velocityZones;
 
   TrackerInstrument? _closestZone(int midi) {
     if (zones.isEmpty) return null;
@@ -1143,8 +1211,25 @@ class MultiSampleInstrument implements TrackerInstrument {
 
   /// Resolves the native note-to-zone mapping for renderer/editor bridges.
   /// Exact-key matches win; otherwise the nearest mapped key is used, matching
-  /// the tracker import behavior for sparse XM/IT keymaps.
+  /// the tracker import behavior for sparse XM/IT keymaps. This is the
+  /// full-velocity-range resolution and ignores velocity splits entirely.
   TrackerInstrument? zoneForNote(int midi) => _closestZone(midi);
+
+  /// Velocity-aware zone resolution. [velocity] is the tracker's per-note VOLUME
+  /// (0..1); it is scaled to the 0..127 MIDI velocity scale to test against each
+  /// [VelocityZone] window. When [velocityZones] is empty this is byte-identical
+  /// to [zoneForNote] (velocity is not even consulted), so every existing
+  /// instrument renders exactly as before. A `null` velocity is treated as full
+  /// (1.0), matching the render default for a note that carries no volume column.
+  TrackerInstrument? zoneForNoteVelocity(int midi, [double? velocity]) {
+    if (velocityZones.isNotEmpty) {
+      final vel = ((velocity ?? 1.0).clamp(0.0, 1.0) * 127).round();
+      for (final vz in velocityZones) {
+        if (vz.note == midi && vz.contains(vel)) return vz.instrument;
+      }
+    }
+    return _closestZone(midi);
+  }
 
   @override
   Float64List renderChannel(
@@ -1166,7 +1251,10 @@ class MultiSampleInstrument implements TrackerInstrument {
       final totalSteps = sustainSteps + releaseSteps;
 
       if (midi != null) {
-        final zone = _closestZone(cells[startStep].nativeNote ?? midi);
+        final zone = zoneForNoteVelocity(
+          cells[startStep].nativeNote ?? midi,
+          cells[startStep].volume,
+        );
         if (zone != null) {
           // Isolate this note run so the sub-instrument accurately envelopes it
           final dummyCells =
@@ -1230,7 +1318,10 @@ class MultiSampleInstrument implements TrackerInstrument {
       final releaseSteps = run.$3;
       final totalSteps = sustainSteps + releaseSteps;
       if (midi != null) {
-        final zone = _closestZone(cells[startStep].nativeNote ?? midi);
+        final zone = zoneForNoteVelocity(
+          cells[startStep].nativeNote ?? midi,
+          cells[startStep].volume,
+        );
         if (zone != null) {
           final dummyCells =
               List<TrackerCell>.filled(timing.rows, TrackerCell.empty);
@@ -1284,7 +1375,10 @@ class MultiSampleInstrument implements TrackerInstrument {
       final releaseSteps = run.$3;
       final totalSteps = sustainSteps + releaseSteps;
       if (midi != null) {
-        final zone = _closestZone(cells[startStep].nativeNote ?? midi);
+        final zone = zoneForNoteVelocity(
+          cells[startStep].nativeNote ?? midi,
+          cells[startStep].volume,
+        );
         if (zone != null) {
           final trigger = cells[startStep];
           final voiceCells = _nativeVoiceCells(
