@@ -23,20 +23,25 @@ Unify the places that currently drift apart: the Tracker instrument selector,
 Workshop Score "Play with an instrument", Audio Editor track/clip voicing, and
 Sound Library creation tools.
 
-- **One Sound Library surface for instruments.** Built-in Tracker voices
-  (Tonal / Plucked / Chiptune / Drums / Recorded), saved instruments/samples,
-  SoundFont-backed voices, catalog installs, and generated FX must all be
-  available from the same picker. Any screen that says "choose an instrument"
-  should open that picker, not a separate chip-only palette.
-- **Generate FX creates instruments.** SFXR/FX generation belongs inside the
-  Sound Library creation menu so generated FX can become playable instruments in
-  Tracker, Workshop Score playback, and Audio Editor score/track voicing. It
-  should not be hidden behind Audio Editor > Add clip as a one-off timeline
-  source.
-- **Add clip adds timeline material.** Audio Editor > Add clip should stay about
-  arranging clips: samples from the library, extracted/imported material, and
-  demo beat/tune. Sound design tools live in the Sound Library when the goal is
-  creating/selecting an instrument.
+- **One Sound Library surface for instruments** — *partly done; the residue is
+  `@codex (score-editor-web)`, see the board.* `showMyInstrumentsSheet` IS that
+  picker and is already the one every "choose an instrument" surface opens:
+  Workshop, both Trackers, Drumkit, Voice Lab, the settings voice picker and
+  Audio Editor (`daw_screen.dart:2963`, `includeBuiltIns: true`). What is still
+  open is the *other* direction — Advanced Tracker's parallel one-off entries
+  (Mod Archive, Load SoundFont, catalog browsing) belong inside that picker, and
+  the web-side install path needs to work or say why not.
+- ✅ **Generate FX creates instruments — DONE (verified 2026-07-26).**
+  `_generateFx` (`my_instruments_sheet.dart:470`) lives in the Sound Library
+  creation menu and returns a `SavedInstrument` that is merged straight into the
+  library list, so a generated FX is thereafter pickable anywhere the sheet
+  opens — Tracker, Workshop playback, Audio Editor voicing. It is **not**
+  reachable from Audio Editor > Add clip, which was the anti-requirement.
+- ✅ **Add clip adds timeline material — DONE (verified 2026-07-26).** The
+  Add-clip menu (`daw_screen.dart:~4390`) offers exactly the specified set and
+  nothing else: `dawAddFromLibrary`, `dawImportAudioFile`, `dawAddMusic`,
+  `dawExtractSample`, `dawAddBeat` (+ tune). No sound-design entry — that work
+  happens in the Sound Library.
 - ✅ **Voice Shaping is an audio FX module — DONE (verified 2026-07-26).**
   `voiceShape` / `voiceChipmunk` / `voiceDeep` / `voiceRobot` / `voiceRadio` are
   `FxType` values with defaults in `fx_spec.dart`, and `daw_screen.dart`'s single
