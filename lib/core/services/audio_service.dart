@@ -155,29 +155,36 @@ class AudioService {
   ///
   /// [gains] optionally scales each part's authored level (index-aligned to
   /// [parts], default 1.0), so a mixer's per-track volume reaches the mix.
+  /// [pans] optionally places each part in the stereo field (−1 left … +1
+  /// right); when any part is panned the mix is rendered stereo, else mono
+  /// (byte-identical to the no-pan path).
   Future<void> playMixedTimedChords(
     List<List<(List<int>, int)>> parts, {
     List<double>? gains,
+    List<double>? pans,
   }) {
     if (!soundOn) return Future.value(); // rendering is wasted while muted
-    final wav = mixedWavBytes(parts, gains: gains);
+    final wav = mixedWavBytes(parts, gains: gains, pans: pans);
     if (wav == null) return Future.value();
     return _play(wav);
   }
 
   /// The mixed PCM16 WAV for [parts], each stem rendered with the current voice
-  /// and combined by [mixStems] (per-stem unit-peak × [gains] → tanh). Null when
-  /// everything is silent. Split out from [playMixedTimedChords] so the mix — in
-  /// particular that a per-track gain scales its stem — is unit-testable without
-  /// touching the audio plugin.
+  /// and combined by [mixStems] (per-stem unit-peak × [gains] → tanh). When any
+  /// entry of [pans] is non-zero the mix is rendered STEREO with [mixStemsStereo]
+  /// (constant-power pan); otherwise it stays mono. Null when everything is
+  /// silent. Split out from [playMixedTimedChords] so the mix — that a per-track
+  /// gain scales its stem and a pan steers it — is unit-testable without touching
+  /// the audio plugin.
   @visibleForTesting
   Uint8List? mixedWavBytes(
     List<List<(List<int>, int)>> parts, {
     List<double>? gains,
+    List<double>? pans,
   }) {
     final v = voice;
     final timbre = v == null ? timbreFor(instrument) : null;
-    final stems = <MixStem>[];
+    final built = <({Float64List samples, double gain, double pan})>[];
     var totalSamples = 0;
     for (var i = 0; i < parts.length; i++) {
       final segments = <Segment>[
@@ -190,10 +197,27 @@ class AudioService {
           : renderSegmentsRaw(segments, timbre: timbre!);
       if (samples.length > totalSamples) totalSamples = samples.length;
       final gain = (gains != null && i < gains.length) ? gains[i] : 1.0;
-      stems.add((samples: samples, gain: gain));
+      final pan = (pans != null && i < pans.length) ? pans[i] : 0.0;
+      built.add((samples: samples, gain: gain, pan: pan));
     }
-    if (stems.isEmpty) return null;
-    return wavBytes(mixStems(stems, totalSamples: totalSamples));
+    if (built.isEmpty) return null;
+    if (built.any((s) => s.pan != 0)) {
+      return wavBytesStereo(
+        mixStemsStereo(
+          [
+            for (final s in built)
+              (samples: s.samples, gain: s.gain, pan: s.pan),
+          ],
+          totalSamples: totalSamples,
+        ),
+      );
+    }
+    return wavBytes(
+      mixStems(
+        [for (final s in built) (samples: s.samples, gain: s.gain)],
+        totalSamples: totalSamples,
+      ),
+    );
   }
 
   /// Sequential chords (e.g. a cadence), [ms] each.

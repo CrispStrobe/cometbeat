@@ -308,13 +308,16 @@ parametric technique end-to-end.
   single-voice synth (per-program *audition* is the remaining bit; GP track program
   is a separate GPIF follow-up).
 - [x] **D2** mixer — `TabTrack.volume` (0..1) + `TabTrack.pan` (−1..1) alongside
-  mute/solo. **Volume is now wired end-to-end:** a **Mixer sheet** (⋮ menu) with a
-  volume slider + mute/solo per track; tab band playback renders each audible
-  track as its own stem scaled by its volume via
-  `AudioService.playMixedTimedChords(gains:)` (additive param; existing callers
-  unchanged). Tested at the mix level (`mixedWavBytes` — a lower gain gives a
-  lower peak). ⚠ **pan** still needs stereo rendering (`playMixedTimedChords`
-  mixes mono) — the remaining D2 bit.
+  mute/solo, **wired end-to-end**: a **Mixer sheet** (⋮ menu) with a volume slider,
+  a pan slider (double-tap the label to re-centre), and mute/solo per track. Tab
+  band playback renders each audible track as its own stem via
+  `AudioService.playMixedTimedChords(gains:, pans:)` (both additive params;
+  existing callers unchanged) — volume scales the stem and, when any track is
+  panned, the mix goes STEREO (`mixStemsStereo`, constant-power pan), else mono
+  (byte-identical to the no-pan path). Tested at the mix level (`mixedWavBytes` —
+  a lower gain → lower peak; a hard-left pan → nothing on the right; a zero pan →
+  byte-identical mono). **Phase D done end-to-end** (D4 practice-tools UI over the
+  pure helpers is the last unstarted app-side bit).
 - [x] **D3** drum-tab — `TabTrack.isDrums`; `kDrumLines` (9 standard lines →
   GM percussion notes) + `drumMidiForLine`; `TabDocument.toDrumScore()` engraves
   each fretted line as its drum voice on the neutral percussion clef with

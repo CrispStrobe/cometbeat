@@ -17,6 +17,19 @@ int _peak(Uint8List wav) {
   return peak;
 }
 
+/// The per-channel peak of an INTERLEAVED (L,R,L,R…) stereo WAV.
+({int left, int right}) _stereoPeaks(Uint8List wav) {
+  final data = ByteData.sublistView(wav);
+  var l = 0, r = 0;
+  for (var i = 44; i + 3 < wav.length; i += 4) {
+    final ls = data.getInt16(i, Endian.little).abs();
+    final rs = data.getInt16(i + 2, Endian.little).abs();
+    if (ls > l) l = ls;
+    if (rs > r) r = rs;
+  }
+  return (left: l, right: r);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -41,5 +54,28 @@ void main() {
   test('an all-silent set of parts renders nothing (null)', () {
     final audio = AudioService();
     expect(audio.mixedWavBytes([<(List<int>, int)>[]]), isNull);
+  });
+
+  test('a hard-left pan steers the stem to the left channel', () {
+    final audio = AudioService();
+    const part = <(List<int>, int)>[
+      ([60, 64, 67], 500),
+    ];
+    final wav = audio.mixedWavBytes([part], pans: [-1.0]);
+    expect(wav, isNotNull);
+    final peaks = _stereoPeaks(wav!);
+    expect(peaks.left, greaterThan(0));
+    expect(peaks.right, 0); // constant-power hard-left → nothing on the right
+  });
+
+  test('a zero pan stays mono (byte-identical to the no-pan path)', () {
+    final audio = AudioService();
+    const part = <(List<int>, int)>[
+      ([60], 200),
+    ];
+    final mono = audio.mixedWavBytes([part]);
+    final zeroPan = audio.mixedWavBytes([part], pans: [0.0]);
+    expect(mono, isNotNull);
+    expect(zeroPan, equals(mono));
   });
 }

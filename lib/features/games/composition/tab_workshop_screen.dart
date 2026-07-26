@@ -1238,6 +1238,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         for (final t in audible) t.doc.toPlaybackEvents(bpm: _bpm, capo: _capo),
       ],
       gains: [for (final t in audible) t.volume],
+      pans: [for (final t in audible) t.pan],
     );
     final schedule = <({int col, int start, int end, bool note})>[];
     var t = 0;
@@ -1871,7 +1872,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 children: [
                   Text('Mixer', style: Theme.of(ctx).textTheme.titleMedium),
                   const SizedBox(height: 4),
-                  for (var i = 0; i < _tracks.length; i++)
+                  for (var i = 0; i < _tracks.length; i++) ...[
                     Row(
                       children: [
                         SizedBox(
@@ -1910,6 +1911,27 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                         ),
                       ],
                     ),
+                    // Pan: L … centre … R (double-tap the label to re-centre).
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => bump(() => _tracks[i].pan = 0),
+                          child: const SizedBox(
+                            width: 84,
+                            child: Text('Pan', style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: _tracks[i].pan.clamp(-1.0, 1.0),
+                            min: -1,
+                            onChanged: (v) => bump(() => _tracks[i].pan = v),
+                          ),
+                        ),
+                        const SizedBox(width: 96), // align with the icons above
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
