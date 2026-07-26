@@ -43,20 +43,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-fingering)** · 🚧 **ACTIVE — step 1 shipped, wiring consumers.**
-  Step 1 (the arranger) is the bowed twin of the guitar tab arranger: same
-  Sayegh/Viterbi optimum path, but the hidden state is a hand FRAME (mode × anchor)
-  rather than a set of `(string, fret)` pairs, so the finger falls out of the
-  geometry. Cello + double bass; extensions/thumb are frame modes with per-note
-  costs; `BowedSkill` caps technique with SOFT costs so a learner stays in first
-  position. Gates: `kCelloFirstPosition` re-derived from geometry + agreement vs
-  printed CC0 editions (50.3% of 193 printed fingers). New:
+- **opus (cello-fingering)** · ✅ **SHIPPED (idle) — auto-assigned cello fingerings,
+  now on the cello play-along.** Step 1 (the arranger) is the bowed twin of the
+  guitar tab arranger: same Sayegh/Viterbi optimum path, but the hidden state is a
+  hand FRAME (mode × anchor) rather than a `(string, fret)` set, so the finger falls
+  out of the geometry. Cello + double bass; extensions/thumb are frame modes with
+  per-note costs; `BowedSkill` caps technique with SOFT costs so a learner stays in
+  first position. Gates: `kCelloFirstPosition` re-derived from geometry + agreement
+  vs printed CC0 editions (50.3% of 193). New:
   `lib/core/notation/bowed_{arranger,score_fingering}.dart`, `test/bowed_*_test.dart`,
-  `test/data/cello_fingering_gold.json` (CC0). **No shared files touched** —
-  `tab_arranger.dart` + `cello_first_position.dart` left alone. **Now doing step 2:**
-  a consumer that drops `bowedFingeringDigits` into `NoteElement.fingerings` (which
-  the layout engine already draws) so cello parts show fingering digits.
-  Worktree `../mus-cello-fingering`.
+  `test/data/cello_fingering_gold.json` (CC0). **Step 2 (consumer) shipped:** the
+  **cello play-along notation view now engraves fingering digits** (on by default,
+  a **Show fingering** AppBar toggle in notation mode) — `PlayAlongScreen` gained an
+  optional `fingeringInstrument` (the cello registry entry passes
+  `BowedInstrument.cello`; guitar/keyboard/voice charts pass nothing → no toggle,
+  no digits). Fingerings drop into `NoteElement.fingerings`, which the layout engine
+  already draws. Shared files touched: `game_registry.dart` (one field on the cello
+  entry), the **ARBs** (1 key `playAlongFingerings` de/en),
+  `playalong/play_along_screen.dart`. `tab_arranger.dart` +
+  `cello_first_position.dart` left alone. Worktree `../mus-cello-fingering`.
 
 - **opus (glint-encoder)** · ✅ **SHIPPED (idle) — audio codecs, native + web at
   parity.** Vendored glint's encoder into `native/glint` and wired it on all five

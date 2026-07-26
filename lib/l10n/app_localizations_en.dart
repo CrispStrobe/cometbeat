@@ -7006,6 +7006,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get playAlongBacking => 'Backing (use headphones)';
 
   @override
+  String get playAlongFingerings => 'Show fingering';
+
+  @override
   String get playAlongTempo => 'Tempo';
 
   @override

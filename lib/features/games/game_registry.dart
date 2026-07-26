@@ -6,6 +6,7 @@
 
 import 'package:comet_beat/core/audio/chord_progression.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/notation/bowed_arranger.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/features/games/cello/bowing_screen.dart';
 import 'package:comet_beat/features/games/cello/cello_finger_quiz_screen.dart';
@@ -1296,6 +1297,7 @@ final Map<String, List<GameInfo>> kGamesByModule = {
         title: AppLocalizations.of(ctx)!.gamePlayAlong,
         gameId: 'cello_play_along',
         sriPrefix: 'cello.play_along',
+        fingeringInstrument: BowedInstrument.cello,
       ),
     ),
     GameInfo(

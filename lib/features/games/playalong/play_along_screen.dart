@@ -22,6 +22,8 @@ import 'package:comet_beat/core/audio/metronome.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/notation/bowed_arranger.dart';
+import 'package:comet_beat/core/notation/bowed_score_fingering.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
@@ -90,10 +92,18 @@ class PlayAlongScreen extends StatefulWidget {
     required this.gameId,
     required this.sriPrefix,
     this.scaleStarsToLength = false,
+    this.fingeringInstrument,
   });
 
   final PlayAlongChart chart;
   final String title;
+
+  /// When set (e.g. [BowedInstrument.cello] for the cello play-along), the
+  /// engraved notation view offers a "show fingerings" toggle: the bowed
+  /// arranger fingers the line and the digits are drawn above each note. Null
+  /// (guitar / keyboard / voice charts) hides the toggle entirely — there is no
+  /// bowed hand to finger.
+  final BowedInstrument? fingeringInstrument;
 
   /// Key into [kStarThresholds] and [ProgressService] (e.g. 'cello_play_along').
   final String gameId;
@@ -141,12 +151,28 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
   bool _backingStarted = false;
   bool _running = false;
   bool _finished = false;
+  // Show bowed fingering digits over the notation. Only meaningful when the
+  // chart is for a bowed instrument (fingeringInstrument != null); defaults on
+  // there, since the whole point of the cello chart is to learn the fingering.
+  bool _showFingerings = true;
   ({PitchCaptureError reason, String? detail})? _error;
 
   /// The chart rendered as engraved notation — built once (id 'n<i>' per note).
   late final Score _score = _buildScore();
 
-  Score _buildScore() {
+  /// The fingered variant, built lazily the first time it is shown and cached
+  /// (the arranger runs a Viterbi over the whole line, so we do not redo it per
+  /// frame). Null until [fingeringInstrument] is set and fingerings are on.
+  Score? _fingeredScore;
+
+  /// The score actually handed to the notation view: fingered when the toggle
+  /// is on and the chart is bowed, otherwise the plain one.
+  Score get _displayScore =>
+      (_showFingerings && widget.fingeringInstrument != null)
+          ? (_fingeredScore ??= _buildScore(withFingerings: true))
+          : _score;
+
+  Score _buildScore({bool withFingerings = false}) {
     final notes = widget.chart.notes;
     final clef = notes.any((n) => n.midi < 55) ? Clef.bass : Clef.treble;
     NoteDuration durFor(double beats) => switch (beats) {
@@ -175,7 +201,38 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
       beatsInBar += notes[i].beats;
     }
     if (current.isNotEmpty) measures.add(Measure(current));
-    return Score(clef: clef, measures: measures);
+    final score = Score(clef: clef, measures: measures);
+
+    final instrument = widget.fingeringInstrument;
+    if (!withFingerings || instrument == null) return score;
+
+    // Finger the whole line at once (the arranger needs the full melody for its
+    // shift-minimising path), then re-emit each note carrying its digits. A
+    // first-position skill keeps a beginner's chart in the low neck; the
+    // registry passes the instrument, so the same code fits cello and bass.
+    final digits = bowedFingeringDigits(
+      score,
+      skill: BowedSkill.firstPosition,
+      instrument: instrument,
+    );
+    return Score(
+      clef: clef,
+      measures: [
+        for (final measure in score.measures)
+          Measure([
+            for (final element in measure.elements)
+              if (element is NoteElement)
+                NoteElement(
+                  pitches: element.pitches,
+                  duration: element.duration,
+                  id: element.id,
+                  fingerings: digits[element.id] ?? const [],
+                )
+              else
+                element,
+          ]),
+      ],
+    );
   }
 
   @override
@@ -369,6 +426,17 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
               // at start), so only allow toggling while stopped.
               onPressed:
                   _running ? null : () => setState(() => _backing = !_backing),
+            ),
+          if (!_finished &&
+              widget.fingeringInstrument != null &&
+              _view == PlayAlongView.notation)
+            IconButton(
+              tooltip: l.playAlongFingerings,
+              isSelected: _showFingerings,
+              icon: const Icon(Icons.do_not_touch_outlined),
+              selectedIcon: const Icon(Icons.back_hand_outlined),
+              onPressed: () =>
+                  setState(() => _showFingerings = !_showFingerings),
             ),
           if (!_finished)
             PopupMenuButton<PlayAlongView>(
@@ -576,7 +644,11 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
           scheme: scheme,
         );
       case PlayAlongView.notation:
-        return _NotationView(engine: _engine, score: _score, scheme: scheme);
+        return _NotationView(
+          engine: _engine,
+          score: _displayScore,
+          scheme: scheme,
+        );
     }
   }
 }

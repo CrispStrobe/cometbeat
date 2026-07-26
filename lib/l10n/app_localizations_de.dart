@@ -7037,6 +7037,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get playAlongBacking => 'Begleitung (Kopfhörer nutzen)';
 
   @override
+  String get playAlongFingerings => 'Fingersatz anzeigen';
+
+  @override
   String get playAlongTempo => 'Tempo';
 
   @override

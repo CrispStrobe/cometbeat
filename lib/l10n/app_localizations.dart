@@ -12800,6 +12800,12 @@ abstract class AppLocalizations {
   /// **'Backing (use headphones)'**
   String get playAlongBacking;
 
+  /// No description provided for @playAlongFingerings.
+  ///
+  /// In en, this message translates to:
+  /// **'Show fingering'**
+  String get playAlongFingerings;
+
   /// No description provided for @playAlongTempo.
   ///
   /// In en, this message translates to:
