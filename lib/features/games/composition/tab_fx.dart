@@ -27,6 +27,9 @@ import 'package:comet_beat/core/audio/score_instrument_render.dart'
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/audio/tracker_replayer.dart' show replaySong;
+import 'package:comet_beat/core/interop/tab_tracker.dart'
+    show trackerSongFromTabDocument;
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:crisp_notation/crisp_notation.dart' show MultiPartScore;
 
@@ -80,6 +83,61 @@ Float64List renderTabBandWithFx(
     rendered.add(pcm);
   }
 
+  return _sumTracks(rendered);
+}
+
+/// Like [renderTabBandWithFx], but each track is rendered through the tracker
+/// REPLAYER (Tab → tracker song → [replaySong]) instead of the dry `Score`
+/// voice — so a column's playing techniques are actually HEARD, not just drawn.
+///
+/// [trackerSongFromTabDocument] already emits each technique as an effect-column
+/// command (slide → `3xx` tone portamento, vibrato → `4xy`, bend → `1xx` pitch
+/// slide up); the dry `Score` path in [renderTabBandWithFx] throws those away.
+/// Routing through the replayer plays them.
+///
+/// The per-track FX chain, capo and band summing match [renderTabBandWithFx];
+/// only the note-rendering voice differs. The tracker renders at [kSampleRate],
+/// so the FX chain and any caller mixing this buffer must assume that rate.
+///
+/// CAVEAT — the pitch techniques (vibrato/bend/slide) are audible only for a
+/// SAMPLE-backed [instrument]. The replayer's per-tick pitch engine resamples
+/// sample PCM, but a PROCEDURAL voice (the tab's default plucked-string, or any
+/// FM/sfxr voice) is rendered at a fixed pitch, so for those this plays the
+/// notes correctly but the pitch techniques are inaudible — identical to the dry
+/// path, never worse. Volume-oriented effects are unaffected.
+Float64List renderTabBandThroughTracker(
+  List<TabTrack> tracks,
+  TrackerInstrument instrument, {
+  int quarterMs = 500,
+  int capo = 0,
+}) {
+  final audible = audibleTracks(tracks).toList();
+  if (audible.isEmpty) return Float64List(0);
+
+  // The tracker sequences on a beat grid, so translate the quarter-note length
+  // into a tempo (BPM). 500 ms/quarter → 120 BPM, the shared default.
+  final bpm = quarterMs <= 0 ? 120 : (60000 / quarterMs).round().clamp(1, 999);
+
+  final rendered = <Float64List>[];
+  for (final track in audible) {
+    final result = trackerSongFromTabDocument(
+      track.doc,
+      instrument: instrument,
+      capo: capo + track.capo,
+      tempoBpm: bpm,
+    );
+    var pcm = _int16ToFloat64(replaySong(result.song).pcm);
+    if (track.fxChain.isNotEmpty) {
+      pcm = applyFxChain(pcm, track.fxChain, kSampleRate);
+    }
+    rendered.add(pcm);
+  }
+  return _sumTracks(rendered);
+}
+
+/// Sums per-track Float64 stems into one band buffer (the length of the longest
+/// stem). Shared by both band renderers so they mix identically.
+Float64List _sumTracks(List<Float64List> rendered) {
   var length = 0;
   for (final pcm in rendered) {
     if (pcm.length > length) length = pcm.length;
@@ -89,6 +147,16 @@ Float64List renderTabBandWithFx(
     for (var i = 0; i < pcm.length; i++) {
       out[i] += pcm[i];
     }
+  }
+  return out;
+}
+
+/// The tracker replayer emits 16-bit PCM; the FX chain and band mix work in
+/// Float64 in [-1, 1], so scale by 1/32768.
+Float64List _int16ToFloat64(Int16List pcm) {
+  final out = Float64List(pcm.length);
+  for (var i = 0; i < pcm.length; i++) {
+    out[i] = pcm[i] / 32768.0;
   }
   return out;
 }
