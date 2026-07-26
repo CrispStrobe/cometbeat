@@ -4442,6 +4442,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die Noten konnten nicht gelesen werden. Bitte ein schärferes, gerades Foto versuchen.';
 
   @override
+  String get songEdit => 'In der Werkstatt bearbeiten';
+
+  @override
   String get songRescan => 'Erkennung erneut ausführen';
 
   @override

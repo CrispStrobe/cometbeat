@@ -1679,6 +1679,7 @@
   "importScanModelDownload": "Download",
   "importScanCancel": "Cancel",
   "importScanFailed": "Couldn't read the sheet music. Try a clearer, straight-on photo.",
+  "songEdit": "Edit in Workshop",
   "songRescan": "Re-run recognition",
   "songRescanDone": "Re-recognised from the saved scan.",
   "songRescanNoImage": "The saved scan is no longer available.",

@@ -4428,6 +4428,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t read the sheet music. Try a clearer, straight-on photo.';
 
   @override
+  String get songEdit => 'Edit in Workshop';
+
+  @override
   String get songRescan => 'Re-run recognition';
 
   @override

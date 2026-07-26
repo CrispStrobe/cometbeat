@@ -62,6 +62,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   to whoever is mid-flight in the replayer; `noteRuns` already returns the split
   if it turns out to be a bug.
 
+- **opus (song-edit-workshop)** · ✅ **SHIPPED (idle) — correct an imported song in
+  the Workshop.** Closes the Songbook audit's other open item (the edit/correction
+  flow). The imported-songs list gains an **Edit in Workshop** action (an overflow
+  menu now groups Edit + Export so the row stays uncluttered); it opens the song in
+  the existing Composition Workshop via the already-present `initialScore` bridge.
+  `CompositionWorkshopScreen` gains an optional **`editSongId`** — when set, **Save
+  updates THAT song in place** (via my `updateSongXml`, so id/title/retained-scan
+  survive) instead of adding a duplicate; null everywhere else keeps "Save = new
+  song". ⚠️ **touched the hot shared `composition_workshop_screen.dart`** but only
+  additively: one optional ctor field + a 4-line branch at the top of `_save()`,
+  no existing path changed (full workshop suite green, 103). New l10n `songEdit`
+  (de/en). Test: `editSongId` Save updates in place, not a duplicate. Worktree
+  `../mus-song-edit`.
+
 - **opus (songbook-rescan)** · ✅ **SHIPPED (idle) — OMR imports keep their scan +
   can be re-run.** Songbook audit's two open ⬜ items: an OMR import now **retains
   the source photo** (new `import/omr_source_store.dart`, io/stub split, stored in

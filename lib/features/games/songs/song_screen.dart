@@ -25,6 +25,7 @@ import 'package:comet_beat/features/games/songs/song_book.dart';
 import 'package:comet_beat/features/games/songs/song_play_along.dart';
 import 'package:comet_beat/features/games/songs/songbook_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
+import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
@@ -546,17 +547,49 @@ class SongListScreen extends StatelessWidget {
                       // Only OMR imports keep their scan; re-run recognition on
                       // it to fix a bad read without re-photographing.
                       if (song.hasSourceImage) _RescanButton(song: song),
-                      IconButton(
-                        icon: const Icon(Icons.ios_share),
-                        tooltip: l10n.musicExportTitle,
-                        // The stored MusicXML keeps every voice, so export is
-                        // multi-part (not just the flattened single Score).
-                        onPressed: () => showMusicExportSheet(
-                          context,
-                          multiPart: multiPartScoreFromMusicXml(song.musicXml),
-                          partNames: const [],
-                          baseName: _safeName(song.title),
-                        ),
+                      // Edit + Export grouped so the row stays uncluttered.
+                      PopupMenuButton<String>(
+                        onSelected: (choice) {
+                          switch (choice) {
+                            case 'edit':
+                              // Open the song in the Workshop to correct notes;
+                              // Save there writes back to THIS song in place.
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => CompositionWorkshopScreen(
+                                    initialScore: song.multiPart,
+                                    editSongId: song.id,
+                                  ),
+                                ),
+                              );
+                            case 'export':
+                              // The stored MusicXML keeps every voice, so export
+                              // is multi-part (not the flattened single Score).
+                              showMusicExportSheet(
+                                context,
+                                multiPart:
+                                    multiPartScoreFromMusicXml(song.musicXml),
+                                partNames: const [],
+                                baseName: _safeName(song.title),
+                              );
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: _MenuRow(
+                              icon: Icons.edit_outlined,
+                              label: l10n.songEdit,
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'export',
+                            child: _MenuRow(
+                              icon: Icons.ios_share,
+                              label: l10n.musicExportTitle,
+                            ),
+                          ),
+                        ],
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline),
@@ -697,6 +730,27 @@ class _RescanButtonState extends State<_RescanButton> {
       icon: const Icon(Icons.document_scanner_outlined),
       tooltip: AppLocalizations.of(context)!.songRescan,
       onPressed: _rescan,
+    );
+  }
+}
+
+/// A compact icon + label row for a [PopupMenuItem] — matches the ListTile look
+/// without the height/padding overhead a full ListTile brings into a menu.
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20),
+        const SizedBox(width: 12),
+        Text(label),
+      ],
     );
   }
 }

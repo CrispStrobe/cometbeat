@@ -420,6 +420,7 @@ class CompositionWorkshopScreen extends StatefulWidget {
     this.initialScore,
     this.initialNames,
     this.onReturnToDaw,
+    this.editSongId,
     this.debugScanImage,
   });
 
@@ -435,6 +436,12 @@ class CompositionWorkshopScreen extends StatefulWidget {
   /// calls this with the edited multi-part score and pops back — an IN-PLACE
   /// round-trip that updates the source clip instead of adding a new one.
   final void Function(MultiPartScore edited)? onReturnToDaw;
+
+  /// When set (opened from the Song Book to correct an imported song), Save
+  /// UPDATES that song in place — `UserSongsService.updateSongXml` swaps its
+  /// notation and re-derives metadata — instead of adding a new song. Null for
+  /// every other entry point, which keeps the "Save = new song" behaviour.
+  final String? editSongId;
 
   /// Test seam for "Scan sheet music" (OMR): given the picked image bytes,
   /// returns a recognised [Score] (or null). Production uses the shared
@@ -3657,6 +3664,13 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final songs = context.read<UserSongsService>();
+    // Correcting an existing Song Book entry: replace its notation in place
+    // (title/id/attribution/retained-scan kept) rather than making a duplicate.
+    if (widget.editSongId != null) {
+      songs.updateSongXml(widget.editSongId!, _musicXmlExport());
+      messenger.showSnackBar(SnackBar(content: Text(l10n.myMelodySaved)));
+      return;
+    }
     final name = _scoreTitle.trim().isEmpty
         ? l10n.myMelodyDefaultName
         : _scoreTitle.trim();

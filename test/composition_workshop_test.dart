@@ -590,6 +590,68 @@ void main() {
     expect(find.text(l10n.myMelodySaved), findsOneWidget);
   });
 
+  testWidgets('editSongId makes Save update the source song in place', (
+    tester,
+  ) async {
+    // Opened from the Song Book to correct an import: Save must replace THAT
+    // song, not add a duplicate. Without editSongId the same flow adds a new
+    // one (covered by the test above). The edit itself (adding a note) stands
+    // in for a correction.
+    SharedPreferences.setMockInitialValues({});
+    const xml = '''
+<score-partwise version="4.0"><part-list><score-part id="P1">
+<part-name>M</part-name></score-part></part-list><part id="P1"><measure number="1">
+<attributes><divisions>1</divisions><key><fifths>0</fifths></key>
+<time><beats>4</beats><beat-type>4</beat-type></time>
+<clef><sign>G</sign><line>2</line></clef></attributes>
+<note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration>
+<type>whole</type></note></measure></part></score-partwise>''';
+    final songs = UserSongsService();
+    songs.addSong(
+      const ImportedSong(id: 'orig', title: 'My Import', musicXml: xml)
+          .withDerivedMetadata(),
+    );
+    expect(songs.songs.length, 1);
+
+    await tester.binding.setSurfaceSize(const Size(1000, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          Provider<AudioService>(create: (_) => AudioService()),
+          ChangeNotifierProvider<UserSongsService>.value(value: songs),
+          ChangeNotifierProvider(create: (_) => SettingsService()),
+          ChangeNotifierProvider(create: (_) => DawService()),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('en'), Locale('de')],
+          home: CompositionWorkshopScreen(editSongId: 'orig'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(_pianoKey()); // an edit → the doc is non-empty
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.more_vert).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.myMelodySave));
+    await tester.pumpAndSettle();
+
+    // Updated in place: still one song, same id + title — not a duplicate.
+    expect(songs.songs.length, 1);
+    expect(songs.songs.single.id, 'orig');
+    expect(songs.songs.single.title, 'My Import');
+    expect(find.text(l10n.myMelodySaved), findsOneWidget);
+  });
+
   testWidgets('narrow workshop keeps title and menu actions reachable',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 640));

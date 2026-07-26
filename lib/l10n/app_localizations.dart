@@ -8312,6 +8312,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t read the sheet music. Try a clearer, straight-on photo.'**
   String get importScanFailed;
 
+  /// No description provided for @songEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit in Workshop'**
+  String get songEdit;
+
   /// No description provided for @songRescan.
   ///
   /// In en, this message translates to:
