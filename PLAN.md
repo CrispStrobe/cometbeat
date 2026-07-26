@@ -36,18 +36,14 @@ Pending, in order:
 1. **Consumers — DONE.** Fingerings show on the cello play-along, on the song screen
    (a toggle) and on the cello "Play it" staff; the games drill positions 1–4; and a
    fingered part **prints** (Export… → PDF, marks passed as a layout argument so the
-   saved song is untouched). Remaining in this bullet: a **string indicator** (Roman
-   numerals — `Annotation` already renders text above a staff, but attaching one to
-   an imported score hits the same immutability wall as fingerings did), and
-   **MusicXML-with-fingerings — DONE** (`Score.copyWith`/`NoteElement.copyWith`
+   saved song is untouched). **String indicator — DONE** (Roman numerals at
+   crossings and on the opening stopped note, never on an open string, since an open
+   pitch names its own string; rides in the same copy). **MusicXML-with-fingerings —
+   DONE** (`Score.copyWith`/`NoteElement.copyWith`
    shipped in crisp_notation with a source-reading drift guard; the song screen
-   exports a fingered copy through the standard export sheet).
-   Historic note — the original text of this bullet:
-1. ~~**Consumers.** Nothing renders this yet.~~ Cheapest real wins: fingering digits
-   on cello parts in Song Book / play-along (copy `bowedFingeringDigits` into
-   `NoteElement.fingerings`, which the layout engine already draws), a string
-   indicator for the cello games, and lifting `cello_first_position.dart`'s games
-   beyond first position. Needs a `T` glyph before thumb position can be engraved.
+   exports a fingered copy through the standard export sheet). The `T` glyph this
+   bullet once waited on is in the library now, so thumb position engraves too.
+   **Everything in this bullet is shipped; what remains in the arc is 2 and 3.**
 2. **More labels (the real lever).** Dense cello fingering barely exists: the
    entire 42k-score corpus yields **193 printed fingers** on 4 files, and no public
    cello fingering dataset exists at all. The one avenue with volume is OMR over
