@@ -267,6 +267,124 @@ double spectralSimilarity(
   return total / counted;
 }
 
+/// The average magnitude spectrum of [pcm], on a LOG-frequency axis.
+///
+/// Log spacing is what makes a tuning offset a simple SHIFT: transposing by an
+/// interval multiplies every frequency by a constant, which on a log axis moves
+/// the whole spectrum sideways by a constant number of bins. On a linear axis
+/// the same transposition stretches it, and no amount of correlating recovers a
+/// single number from that.
+Float64List _logSpectrum(
+  Float64List pcm, {
+  required int sampleRate,
+  required int binsPerOctave,
+  double minHz = 80,
+  double maxHz = 8000,
+  int frame = 8192,
+}) {
+  final octaves = math.log(maxHz / minHz) / math.ln2;
+  final bins = (octaves * binsPerOctave).round();
+  final out = Float64List(bins);
+  if (pcm.length < frame) return out;
+
+  // One averaged linear spectrum first — averaging over frames keeps a single
+  // loud note from deciding the answer for the whole piece.
+  final half = frame ~/ 2;
+  final avg = Float64List(half);
+  var frames = 0;
+  final floor = rms(pcm) * 0.1;
+  for (var start = 0; start + frame <= pcm.length; start += frame ~/ 2) {
+    final win = Float64List.fromList(
+      Float64List.sublistView(pcm, start, start + frame),
+    );
+    if (rms(win) < floor) continue;
+    final mag = _magnitudeSpectrum(win);
+    for (var i = 0; i < half; i++) {
+      avg[i] += mag[i];
+    }
+    frames++;
+  }
+  if (frames == 0) return out;
+
+  final hzPerBin = sampleRate / frame;
+  for (var b = 0; b < bins; b++) {
+    final hz = minHz * math.pow(2, b / binsPerOctave);
+    final pos = hz / hzPerBin;
+    final i = pos.floor();
+    if (i < 0 || i + 1 >= half) continue;
+    // Linear interpolation between neighbouring linear bins.
+    final t = pos - i;
+    out[b] = (avg[i] * (1 - t) + avg[i + 1] * t) / frames;
+  }
+  return out;
+}
+
+/// How far [b] is detuned from [a], in CENTS. Positive = [b] is sharp.
+///
+/// This is the number the whole metric set was built to produce. We map Amiga
+/// periods through `periodToMidi` and render at A440 rather than deriving pitch
+/// from the Paula clock, so a systematic tuning offset is a live possibility —
+/// and it is invisible to duration, RMS and envelope alike. `spectralSimilarity`
+/// can tell you two renders disagree; only this says by how much, which is what
+/// decides whether the difference is worth changing anything for.
+///
+/// Cross-correlates the two log-frequency spectra and parabolically interpolates
+/// the peak, so it resolves well below one bin. Returns 0 when either side has
+/// no usable spectrum — "no evidence", not "perfectly in tune".
+double detuneCents(
+  Float64List a,
+  Float64List b, {
+  int sampleRate = 44100,
+  int binsPerOctave = 240, // 5 cents per bin before interpolation
+  double maxCents = 600, // half an octave either way
+}) {
+  final sa =
+      _logSpectrum(a, sampleRate: sampleRate, binsPerOctave: binsPerOctave);
+  final sb =
+      _logSpectrum(b, sampleRate: sampleRate, binsPerOctave: binsPerOctave);
+  if (sa.isEmpty || sb.isEmpty) return double.nan;
+  if (rms(sa) <= 1e-20 || rms(sb) <= 1e-20) return double.nan;
+
+  final maxShift = (maxCents / 1200 * binsPerOctave).round();
+  var bestShift = 0;
+  var bestScore = -2.0;
+  final scores = <int, double>{};
+  for (var shift = -maxShift; shift <= maxShift; shift++) {
+    final start = math.max(0, -shift);
+    final end = math.min(sa.length, sb.length - shift);
+    if (end - start < binsPerOctave) continue;
+    final va = Float64List(end - start);
+    final vb = Float64List(end - start);
+    for (var i = start; i < end; i++) {
+      va[i - start] = sa[i];
+      vb[i - start] = sb[i + shift];
+    }
+    final score = _cosine(va, vb);
+    scores[shift] = score;
+    if (score > bestScore) {
+      bestScore = score;
+      bestShift = shift;
+    }
+  }
+  // A peak sitting ON the search rail is not a measurement — it means the true
+  // offset is outside the window, or there is no peak and the argmax wandered
+  // to the edge. The degenerate golden.* fixtures do exactly this, and
+  // reporting the rail as "-600 cents" would read like a finding. NaN says
+  // "no answer" in a way a number never can.
+  if (bestScore < 0 || bestShift.abs() >= maxShift) return double.nan;
+
+  // Parabolic interpolation across the peak — the true offset rarely lands on
+  // a bin centre, and without this the answer quantises to 5-cent steps.
+  var refined = bestShift.toDouble();
+  final l = scores[bestShift - 1];
+  final r = scores[bestShift + 1];
+  if (l != null && r != null) {
+    final denom = l - 2 * bestScore + r;
+    if (denom.abs() > 1e-12) refined += 0.5 * (l - r) / denom;
+  }
+  return refined / binsPerOctave * 1200;
+}
+
 /// Every metric at once, for a one-line diagnostic when an A/B fails.
 class AudioComparison {
   const AudioComparison({
@@ -274,6 +392,7 @@ class AudioComparison {
     required this.envelope,
     required this.lagSamples,
     required this.spectral,
+    required this.detune,
   });
 
   /// Measures all four, **aligning by the detected lag before comparing
@@ -297,6 +416,7 @@ class AudioComparison {
       envelope: envelopeCorrelation(a, b),
       lagSamples: lag,
       spectral: spectralSimilarity(alignedA, alignedB),
+      detune: detuneCents(alignedA, alignedB),
     );
   }
 
@@ -305,9 +425,14 @@ class AudioComparison {
   final int lagSamples;
   final double spectral;
 
+  /// Cents the SECOND render is sharp of the first. The number that decides
+  /// whether a pitch difference is worth acting on.
+  final double detune;
+
   @override
   String toString() => 'level ${levelDb.toStringAsFixed(2)} dB · '
       'envelope ${envelope.toStringAsFixed(3)} · '
       'lag $lagSamples samples · '
-      'spectral ${spectral.toStringAsFixed(3)}';
+      'spectral ${spectral.toStringAsFixed(3)} · '
+      'detune ${detune.isNaN ? "n/a" : "${detune.toStringAsFixed(1)} cents"}';
 }

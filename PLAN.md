@@ -921,9 +921,20 @@ with a per-sample on/off schedule — flagging it here is what routed it to them
 since `E0x` IS that command. ⬜ **Still absent: the Paula clock.** No PAL
 (3,546,894.6 Hz) / NTSC switching, and no pitch derived from clock ÷ output rate;
 ours stays a pure c5speed/finetune model, which is why MOD playback is tuned to
-A440 rather than to the hardware. Now measurable: `musical.mod` spans two
-octaves and `spectralSimilarity` resolves a semitone, so a systematic tuning
-offset would show up in the A/B rather than being argued about.
+A440 rather than to the hardware. **MEASURED 2026-07-26: we render 17.1 CENTS FLAT of OpenMPT** on
+`musical.mod` (`detuneCents` in `audio_compare.dart`, verified to ±3 cents
+against synthesised offsets). So the Paula-clock hypothesis is confirmed, with a
+size attached: not a rounding wobble, but not gross either — about a sixth of a
+semitone, consistent across the piece. The degenerate `golden.*` fixtures report
+`n/a` rather than a number, which is the metric refusing to guess.
+
+⬜ **The decision is now informed, and is not mine to take alone.** Deriving
+pitch from the Paula clock instead of A440 would change EVERY module render, in
+ (tracker-complete)'s area, and I had already changed rendering once today
+(the loop fix). 17 cents is audible to a trained ear on a sustained note and
+matters more in an app where a child may play along with a tuner; it is also
+small enough that nobody has noticed. The number is here so the call can be made
+on evidence rather than on principle.
 
 ✅ **G4 — NON-GOALS, DECIDED.** What we refuse to chase, so the replayer can be
 finished rather than approached forever. Written from what the code already

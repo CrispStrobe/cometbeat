@@ -35,11 +35,11 @@ Float64List _swell(double hz, {int n = 32768, double amp = 0.5}) {
 
 /// A sequence of [hz] notes, each swelling, spread evenly over [n] samples —
 /// material whose SPECTRUM changes with time, which a steady tone's does not.
-Float64List _melody(List<double> hz, {int n = 131072}) {
+Float64List _melody(List<num> hz, {int n = 131072}) {
   final out = Float64List(n);
   final per = n ~/ hz.length;
   for (var k = 0; k < hz.length; k++) {
-    final note = _swell(hz[k], n: per);
+    final note = _swell(hz[k].toDouble(), n: per);
     out.setRange(k * per, k * per + per, note);
   }
   return out;
@@ -130,6 +130,43 @@ void main() {
         greaterThan(0.9),
         reason: 'after alignment these are plainly the same notes',
       );
+    });
+
+    test('detuneCents says HOW FAR out of tune, not merely that it is', () {
+      // spectralSimilarity can tell you two renders disagree; only this says by
+      // how much, which is what decides whether a difference is worth changing
+      // anything for. Signed: positive means the SECOND render is sharp.
+      final reference = _melody(const [220, 330, 440, 550]);
+
+      for (final cents in [0, 5, -5, 25, -25, 100, -100]) {
+        final ratio = math.pow(2, cents / 1200).toDouble();
+        final shifted = _melody(
+          const [220, 330, 440, 550].map((hz) => hz * ratio).toList(),
+        );
+        expect(
+          detuneCents(reference, shifted),
+          closeTo(cents, 3),
+          reason: 'asked for $cents cents',
+        );
+      }
+    });
+
+    test('detune resolves finer than its bin spacing', () {
+      // 240 bins/octave is 5 cents per bin, so without the parabolic
+      // interpolation across the correlation peak the answer would quantise to
+      // multiples of 5 and a 2-cent drift would read as 0.
+      final a = _melody(const [220, 330, 440, 550]);
+      final ratio = math.pow(2, 2 / 1200).toDouble();
+      final b =
+          _melody(const [220, 330, 440, 550].map((hz) => hz * ratio).toList());
+      expect(detuneCents(a, b), closeTo(2, 1.5));
+    });
+
+    test('detune reports NaN, not a number, when it cannot tell', () {
+      // Silence has no spectrum to align. Returning 0 would read as "perfectly
+      // in tune"; returning the search rail (-600) would read as a finding.
+      // Both are lies a caller would print. NaN is not.
+      expect(detuneCents(Float64List(65536), Float64List(65536)).isNaN, isTrue);
     });
 
     test('an identical render scores ~1 on every metric', () {
