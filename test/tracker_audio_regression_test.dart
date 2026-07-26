@@ -41,6 +41,27 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Opt-in flag for the heavy OpenMPT A/B comparison, matching the
+/// `String.fromEnvironment` pattern in `test/bench_arrange_test.dart`.
+///
+/// It is OFF by default because the comparison does four full offline renders of
+/// multi-minute modules on BOTH sides plus FFT analysis — around 8 minutes of
+/// solid CPU. Inside a whole-suite `flutter test`, where ~20 other files run in
+/// parallel, the harness cannot keep that isolate alive and dies with "Cannot
+/// close sink while adding stream" — i.e. the suite failed on infrastructure,
+/// not on anything musical. Standalone it is fine.
+///
+/// Run the A/B deliberately:
+///   flutter test --dart-define=OPENMPT_AB=1 test/tracker_audio_regression_test.dart
+///
+/// The whole FILE is behind this flag, not just the A/B. The "renders without
+/// crashing" group looked cheap but also does full offline renders of all six
+/// modules — two of them multi-minute — which is another ~12 minutes. And the
+/// file can contribute nothing at all on a machine without the corpus, which
+/// means CI and most checkouts. So `flutter test` skips it instantly and a
+/// developer opts in when they want the audit.
+const _openMptAb = bool.fromEnvironment('OPENMPT_AB');
+
 // OpenMPT binary path (Homebrew install location)
 const _kOpenMptPath = '/opt/homebrew/Cellar/libopenmpt/0.8.7/bin/openmpt123';
 const _kSampleRate = 44100;
@@ -208,11 +229,17 @@ void main() {
     // dependency is not a regression. (This used to throw from setUpAll, which
     // made the whole group fail on any machine without Homebrew's openmpt.)
     final openMptAvailable = File(_kOpenMptPath).existsSync();
-    final skipReason = !testModulesAvailable
-        ? 'test modules not downloaded — run tool/download_test_modules.sh'
-        : (!openMptAvailable
-            ? 'openmpt123 not found at $_kOpenMptPath — brew install libopenmpt'
-            : null);
+    const optInReason =
+        'opt-in: pass --dart-define=OPENMPT_AB=1 (this audit takes ~20 min and '
+        'cannot survive a parallel whole-suite run)';
+    final skipReason = !_openMptAb
+        ? optInReason
+        : !testModulesAvailable
+            ? 'test modules not downloaded — run tool/download_test_modules.sh'
+            : (!openMptAvailable
+                ? 'openmpt123 not found at $_kOpenMptPath — brew install '
+                    'libopenmpt'
+                : null);
 
     group(
       'OpenMPT reference comparison',
@@ -407,7 +434,9 @@ void main() {
         }
         // Needs the downloaded modules, but not openmpt123.
       },
-      skip: testModulesAvailable ? null : 'test modules not downloaded',
+      skip: !_openMptAb
+          ? optInReason
+          : (testModulesAvailable ? null : 'test modules not downloaded'),
     );
   });
 }
