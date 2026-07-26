@@ -78,11 +78,18 @@ import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show
+        kFxGlobalVolSlide,
+        kFxPanbrello,
+        kFxPanSlide,
+        kFxRetrigVolSlide,
+        kFxSetFilter,
+        kFxSetGlobalVolume,
         kFxSetHighOffset,
         kFxSetPanbrelloWaveform,
         kFxSetPastNote,
         kFxSetSoundControl,
-        kFxSetSpeedFull;
+        kFxSetSpeedFull,
+        kFxTremor;
 
 /// Detects the module container format by signature; null if unrecognized.
 ModuleFormat? sniffModuleFormat(Uint8List bytes) {
@@ -240,9 +247,9 @@ ModuleDoc docFromMod(ModModule m) {
     case 14: // N — channel volume slide
       return (0xA, info);
     case 16: // P — pan slide
-      return (0x19, info);
+      return (kFxPanSlide, info);
     case 17: // Q — retrigger + volume action
-      return (0x1B, info);
+      return (kFxRetrigVolSlide, info);
     case 10: // J — arpeggio
       return (0x0, info);
     case 11: // K — vibrato + volume slide
@@ -258,17 +265,17 @@ ModuleDoc docFromMod(ModModule m) {
     case 20: // T — set tempo (BPM); our Fxx >= 0x20 = tempo
       return info < 0x20 ? (0x1F, info) : (0xF, info);
     case 9: // I — tremor
-      return (0x1D, info);
+      return (kFxTremor, info);
     case 21: // U — fine vibrato (approximated as vibrato)
       return (0x4, info);
     case 22: // V — set global volume
-      return (0x10, info.clamp(0, 64));
+      return (kFxSetGlobalVolume, info.clamp(0, 64));
     case 23: // W — global volume slide
-      return (0x11, info);
+      return (kFxGlobalVolSlide, info);
     case 24: // X — set pan (0x00..0x80) → our 8xx (0x00..0xFF)
       return (0x8, (info * 2).clamp(0, 0xFF));
     case 25: // Y — panbrello
-      return (0x1E, info);
+      return (kFxPanbrello, info);
     default:
       // Y panbrello · Z MIDI — no neutral equivalent (dropped).
       return (0, 0);
@@ -345,8 +352,8 @@ ModuleDoc docFromMod(ModModule m) {
   if (volume >= 0xA0 && volume <= 0xAF) return (0x4, nibble << 4);
   if (volume >= 0xB0 && volume <= 0xBF) return (0x4, nibble);
   if (volume >= 0xC0 && volume <= 0xCF) return (0x8, nibble * 0x11);
-  if (volume >= 0xD0 && volume <= 0xDF) return (0x19, nibble);
-  if (volume >= 0xE0 && volume <= 0xEF) return (0x19, nibble << 4);
+  if (volume >= 0xD0 && volume <= 0xDF) return (kFxPanSlide, nibble);
+  if (volume >= 0xE0 && volume <= 0xEF) return (kFxPanSlide, nibble << 4);
   if (volume >= 0xF0 && volume <= 0xFF) return (0x3, nibble);
   return null;
 }
@@ -611,9 +618,9 @@ ModuleDoc docFromXm(XmModule m) {
     case 14: // N — channel volume slide
       return (0xA, value);
     case 16: // P — pan slide
-      return (0x19, value);
+      return (kFxPanSlide, value);
     case 17: // Q — retrigger + volume action
-      return (0x1B, value);
+      return (kFxRetrigVolSlide, value);
     case 10: // J — arpeggio
       return (0x0, value);
     case 11: // K — vibrato + volume slide
@@ -629,30 +636,30 @@ ModuleDoc docFromXm(XmModule m) {
     case 20: // T — set tempo (T20+); T0x/T1x are tempo slides
       return value >= 0x20 ? (0xF, value) : (0x1F, value);
     case 9: // I — tremor
-      return (0x1D, value);
+      return (kFxTremor, value);
     case 21: // U — fine vibrato (approximated as vibrato)
       return (0x4, value);
     case 22: // V — set global volume
-      return (0x10, value.clamp(0, 64));
+      return (kFxSetGlobalVolume, value.clamp(0, 64));
     case 23: // W — global volume slide
-      return (0x11, value);
+      return (kFxGlobalVolSlide, value);
     case 24: // X — set panning (0x00..0xFF, direct → our 8xx)
       return (0x8, value);
     case 25: // Y — panbrello
-      return (0x1E, value);
+      return (kFxPanbrello, value);
     case 26: // Z — MIDI-macro / set filter cutoff (Z00..Z7F) / resonance (Z80..ZFF)
       // No embedded MidiCfg ⇒ the implicit IT default macro set: map directly to
       // the replayer's kFxSetFilter (0x1C), whose param carries the cutoff/
       // resonance selector in its high bit (decoded in ReplayVoice). This is the
       // pre-macro behavior, kept byte-identical for every file without a MidiCfg.
-      if (macros == null) return (0x1C, value);
+      if (macros == null) return (kFxSetFilter, value);
       // With a MidiCfg, resolve Zxx THROUGH the module's macro table, running the
       // channel's active parametric macro ([activeMacro], set by SFx) for the
       // 0x00..0x7F range. A recognized filter macro (F0F000 cutoff / F0F001
       // resonance) routes to kFxSetFilter; a non-filter macro (MIDI to external
       // gear) has no audible target → dropped.
       final filterParam = macros.resolveZxxFilterParam(value, activeMacro);
-      return filterParam == null ? (0, 0) : (0x1C, filterParam);
+      return filterParam == null ? (0, 0) : (kFxSetFilter, filterParam);
     default:
       // Z MIDI-macro (\x87…) — no neutral equivalent (dropped).
       return (0, 0);
@@ -900,9 +907,9 @@ ModuleDoc docFromIt(ItModule m) {
       ); // S9x sound control (surround/rev)
     case kFxSetPastNote: // 0x16
       return (19, (0x7 << 4) | (param & 0xF)); // S7x past-note / NNA control
-    case 0x10:
+    case kFxSetGlobalVolume:
       return (22, param.clamp(0, 64)); // V global volume
-    case 0x11:
+    case kFxGlobalVolSlide:
       return (23, param); // W global volume slide
     case 0xA:
       return (4, param); // D volume slide
@@ -926,13 +933,13 @@ ModuleDoc docFromIt(ItModule m) {
         0xE => (19, (0xE << 4) | val), // EEx row delay      → SEx
         _ => (0, 0),
       };
-    case 0x19:
+    case kFxPanSlide:
       return (16, param); // P pan slide
-    case 0x1B:
+    case kFxRetrigVolSlide:
       return (17, param); // Q retrigger + volume action
-    case 0x1D:
+    case kFxTremor:
       return (9, param); // I tremor
-    case 0x1E:
+    case kFxPanbrello:
       return (25, param); // Y panbrello
     case 0x1F:
       return (20, param); // T tempo slide
