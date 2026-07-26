@@ -42,6 +42,7 @@
   "workshopEditHint": "Tippe ins System, um die Note zu verschieben, oder lösche sie.",
   "workshopDelete": "Löschen",
   "workshopRest": "Pause",
+  "workshopRestLength": "Pausenlänge",
   "workshopRedo": "Wiederherstellen",
   "workshopDot": "Punktiert",
   "workshopAccidental": "Vorzeichen",

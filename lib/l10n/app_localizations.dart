@@ -332,6 +332,12 @@ abstract class AppLocalizations {
   /// **'Rest'**
   String get workshopRest;
 
+  /// No description provided for @workshopRestLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest length'**
+  String get workshopRestLength;
+
   /// No description provided for @workshopRedo.
   ///
   /// In en, this message translates to:

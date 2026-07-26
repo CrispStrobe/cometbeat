@@ -38,6 +38,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   (OPL voice, export dither/limiter, richer tab techniques). Touching
   `tracker_replayer.dart` (LFO delegate only, byte-identical) + `fx/*`. — opus
 
+- **opus (rest-props)** · ✅ **SHIPPED (idle) — the Workshop inspector edits a
+  rest's length.** A selected rest used to be a dead end (just a "Rest" label + the
+  Structure view); the inspector now shows a **Rest length** control — a glyph chip
+  per note value + a dot toggle — driving the same `ScoreDocument.setDurationOfSelected`
+  the input dock uses. This matters because the dock only edits the selection in
+  select-mode, so a rest's length wasn't reachable from the (Studio) inspector at
+  all. Closes the "rest properties" item in the Workshop backlog. ⚠️ **touched the
+  hot shared `composition_workshop_screen.dart`**, additively: one new branch in
+  `_inspectorPanel` + a `_restLengthControls` helper, no existing path changed
+  (full workshop suite green, 84). New l10n `workshopRestLength` (de/en). Test:
+  inspector shows the control for a rest and editing it changes the document.
+  Worktree `../mus-rest-props`.
+
 - **opus (pickup)** · ✅ **SHIPPED (idle) — an anacrusis now declares its length.**
   `reflow`'s `flush()` (`workshop/model/score_document.dart`) built the opening
   bar as `Measure(current, pickup: true, …)` and never set `actualDuration`. The

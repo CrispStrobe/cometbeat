@@ -2640,14 +2640,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             style: theme.textTheme.bodySmall,
           ),
           const Divider(height: 20),
-          if (notes.isEmpty)
+          if (notes.isEmpty) ...[
             Text(
               _doc.hasSelection
                   ? l10n.workshopRest
                   : l10n.workshopInspectorEmpty,
               style: theme.textTheme.bodySmall,
-            )
-          else ...[
+            ),
+            // A rest carries no articulation/dynamic/etc, but its LENGTH is a
+            // real property — give it the same editable home the note gets,
+            // instead of leaving a rest selection a dead end.
+            if (_doc.hasSelection) ...[
+              const SizedBox(height: 12),
+              Text(l10n.workshopRestLength, style: theme.textTheme.labelMedium),
+              const SizedBox(height: 6),
+              _restLengthControls(l10n),
+            ],
+          ] else ...[
             Text(
               l10n.workshopArticulations,
               style: theme.textTheme.labelMedium,
@@ -2723,6 +2732,47 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
           if (_doc.selectedIds.length == 1) _inspectorStructure(l10n, theme),
         ],
       ),
+    );
+  }
+
+  /// Duration + dot chips for the selected rest(s), driving the same
+  /// [ScoreDocument.setDurationOfSelected] the input dock uses — so a rest's
+  /// length is editable straight from the inspector, in any mode (the dock only
+  /// edits the selection in select-mode). A mixed selection shows nothing
+  /// selected and the dot toggle is disabled until the base agrees.
+  Widget _restLengthControls(AppLocalizations l10n) {
+    final rests = _doc.selectedElements.where((e) => e.isRest).toList();
+    final bases = rests.map((e) => e.duration.base).toSet();
+    final base = bases.length == 1 ? bases.first : null;
+    final dotVals = rests.map((e) => e.duration.dots).toSet();
+    final dotted = dotVals.length == 1 && dotVals.first > 0;
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final v in _values)
+          ChoiceChip(
+            label: MusicGlyph(v.glyph, size: 18),
+            selected: base == v.base,
+            onSelected: (_) => setState(
+              () => _doc.setDurationOfSelected(
+                NoteDuration(v.base, dots: dotted ? 1 : 0),
+              ),
+            ),
+          ),
+        FilterChip(
+          label: Text(l10n.workshopDot),
+          selected: dotted,
+          // A dot needs a single base to attach to; grey it out when mixed.
+          onSelected: base == null
+              ? null
+              : (_) => setState(
+                    () => _doc.setDurationOfSelected(
+                      NoteDuration(base, dots: dotted ? 0 : 1),
+                    ),
+                  ),
+        ),
+      ],
     );
   }
 

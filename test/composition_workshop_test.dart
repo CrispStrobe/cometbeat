@@ -798,6 +798,34 @@ void main() {
     expect(find.text(l10n.workshopChangeHereTitle), findsOneWidget);
   });
 
+  testWidgets("the inspector edits a rest's length", (tester) async {
+    await pump(tester);
+    final editor = _editor(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    // Insert a rest (selected on insertion) and open the Studio inspector.
+    await tester.ensureVisible(find.byIcon(Icons.music_off_outlined));
+    await tester.tap(find.byIcon(Icons.music_off_outlined));
+    await tester.pump();
+    expect(editor.selectedCount, 1);
+    await _enterStudio(tester);
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopInspector));
+    await tester.pumpAndSettle();
+
+    // The rest now has a length control (it used to be a dead end) with a chip
+    // per note value.
+    expect(find.text(l10n.workshopRestLength), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsNWidgets(5));
+
+    // Changing the (default quarter) rest to a half rest changes the document.
+    final before = editor.debugMusicXmlExport();
+    await tester.tap(find.byType(ChoiceChip).at(1)); // half note, second value
+    await tester.pumpAndSettle();
+    expect(editor.debugMusicXmlExport(), isNot(before));
+  });
+
   testWidgets('the inspector Structure section lists an anchored change',
       (tester) async {
     await pump(tester);

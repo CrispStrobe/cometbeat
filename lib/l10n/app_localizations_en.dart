@@ -147,6 +147,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workshopRest => 'Rest';
 
   @override
+  String get workshopRestLength => 'Rest length';
+
+  @override
   String get workshopRedo => 'Redo';
 
   @override

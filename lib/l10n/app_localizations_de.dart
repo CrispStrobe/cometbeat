@@ -147,6 +147,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get workshopRest => 'Pause';
 
   @override
+  String get workshopRestLength => 'Pausenlänge';
+
+  @override
   String get workshopRedo => 'Wiederherstellen';
 
   @override

@@ -1006,7 +1006,10 @@ had already shipped, so this block was a trap for the next agent to redo:
 
 **Score Workshop** (was `WORKSHOP_G6_HANDOVER`, `WORKSHOP_NEXT_HANDOVER`,
 `WORKSHOP_PLAN`):
-- Richer inspector: multi-select view, rest properties, bar-attribute editing.
+- Richer inspector: multi-select view ✅ (edits a whole selection), rest
+  properties ✅ (rest-length control, `opus (rest-props)`), bar-attribute editing
+  (⬜ still open — time-sig/key at a bar live in "Change from here…", not the
+  inspector proper).
 - Categorized *insertion* palettes (dynamics / lines / repeats / text), distinct
   from the modification inspector.
 - Voice-2 v1 gaps: voice 2 carries no dynamics/lyrics/slurs; tuplets and mid-score

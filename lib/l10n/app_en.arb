@@ -66,6 +66,7 @@
   "workshopEditHint": "Tap the staff to move this note, or Delete it.",
   "workshopDelete": "Delete",
   "workshopRest": "Rest",
+  "workshopRestLength": "Rest length",
   "workshopRedo": "Redo",
   "workshopDot": "Dotted",
   "workshopAccidental": "Accidental",
