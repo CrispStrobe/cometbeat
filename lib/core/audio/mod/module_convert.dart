@@ -343,6 +343,9 @@ ModuleDoc docFromS3m(S3mModule m) {
         c5speed: s.c2spd,
         sixteenBit: s.sixteenBit,
         pcm: Float64List.fromList(s.pcm), // already normalized by the reader
+        // AdLib (type-2): carry the 12 OPL register bytes so the import can
+        // build a dynamic OplInstrument instead of the static preview PCM.
+        adlibData: s.adlib ? List<int>.from(s.adlibData) : null,
       );
       samples.add(ds);
     }

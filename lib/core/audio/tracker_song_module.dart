@@ -21,6 +21,7 @@ import 'package:comet_beat/core/audio/mod/module_convert.dart'
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/module_instrument_bridge.dart'
     show sampleInstrumentFromDoc;
+import 'package:comet_beat/core/audio/mod/opl_voice.dart' show OplInstrument;
 import 'package:comet_beat/core/audio/mod/xm_module.dart'
     show XmEnvelope, XmInstrument;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
@@ -51,18 +52,23 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
       ? _nativeInstrumentPool(doc, doc.initialTempo)
       : <TrackerInstrument>[
           for (var i = 0; i < doc.samples.length; i++)
-            sampleInstrumentFromDoc(
-              'smp${i + 1}',
-              doc.samples[i],
-              nativeVolumeEnvelope:
-                  _sampleVolEnv(doc.samples[i], doc.initialTempo),
-              nativePanEnvelope:
-                  _samplePanEnv(doc.samples[i], doc.initialTempo),
-              nativeNna: _sampleOwner(doc, i)?.nna ?? 0,
-              nativeDct: _sampleOwner(doc, i)?.dct ?? 0,
-              nativeDca: _sampleOwner(doc, i)?.dca ?? 0,
-              nativeFadeout: _sampleOwner(doc, i)?.fadeout ?? 0,
-            ),
+            // An S3M AdLib (type-2) sample carries a 12-byte OPL register block
+            // instead of PCM → render it as a dynamic OPL2 2-operator voice.
+            if (doc.samples[i].adlibData != null)
+              OplInstrument('opl${i + 1}', doc.samples[i].adlibData!)
+            else
+              sampleInstrumentFromDoc(
+                'smp${i + 1}',
+                doc.samples[i],
+                nativeVolumeEnvelope:
+                    _sampleVolEnv(doc.samples[i], doc.initialTempo),
+                nativePanEnvelope:
+                    _samplePanEnv(doc.samples[i], doc.initialTempo),
+                nativeNna: _sampleOwner(doc, i)?.nna ?? 0,
+                nativeDct: _sampleOwner(doc, i)?.dct ?? 0,
+                nativeDca: _sampleOwner(doc, i)?.dca ?? 0,
+                nativeFadeout: _sampleOwner(doc, i)?.fadeout ?? 0,
+              ),
         ];
 
   final band = <TrackerChannel>[
@@ -279,6 +285,10 @@ FilterEnvelope? _trackerFilterEnv(DocEnvelope? e, int tempo) {
 TrackerInstrument _instrumentForChannel(ModuleDoc doc, int ins, int c) {
   if (ins >= 1 && ins - 1 < doc.samples.length) {
     final sample = doc.samples[ins - 1];
+    // AdLib (type-2): a dynamic OPL2 voice built from the OPL register block.
+    if (sample.adlibData != null) {
+      return OplInstrument('opl$ins', sample.adlibData!);
+    }
     if (!sample.isEmpty) {
       final owner = _sampleOwner(doc, ins - 1);
       return sampleInstrumentFromDoc(

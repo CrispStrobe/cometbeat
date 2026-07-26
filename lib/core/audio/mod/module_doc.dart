@@ -71,6 +71,7 @@ class DocSample {
     this.filterResonance = 0,
     this.volumeEnvelope = const DocEnvelope(),
     this.panEnvelope = const DocEnvelope(),
+    this.adlibData,
     required this.pcm,
     this.pcmRight,
   });
@@ -111,6 +112,12 @@ class DocSample {
   /// The instrument's volume / panning envelopes (XM/IT carry these on the
   /// instrument; MOD/S3M have none, so these stay empty there).
   final DocEnvelope volumeEnvelope, panEnvelope;
+
+  /// For an S3M AdLib (type-2) instrument, the 12-byte OPL register block
+  /// (header 0x10..0x1B). Non-null marks this sample as a dynamic OPL voice
+  /// rather than PCM; the import builds an `OplInstrument` from it. Null for
+  /// every ordinary PCM sample.
+  final List<int>? adlibData;
 
   final Float64List pcm;
   final Float64List? pcmRight;
