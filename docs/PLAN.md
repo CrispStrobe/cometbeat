@@ -79,6 +79,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (cello-strings)** · 🚧 **ACTIVE — the string indicator (I–IV).** A fingering
+  digit alone does not say which string: a cello pitch sits on up to three of them,
+  each at a different position, so (pitch, finger) underdetermines the hand. Editions
+  answer that with a Roman numeral, and `Annotation` already renders text above a
+  staff AND writes it to MusicXML — so this is app-side only, no library work.
+  Marking rule: **at string CHANGES, skipping open strings** (an open pitch names its
+  own string), which is engraving practice and keeps the page readable; marking every
+  note would litter it. Rides in a `copyWith` copy like the fingerings do, so the
+  saved song stays untouched. Files: `core/notation/bowed_score_fingering.dart` +
+  `songs/song_screen.dart`. No ARB, no registry. Worktree `../mus-cello-fingering`.
+
 - **opus (score-copywith)** · ✅ **SHIPPED (idle) — `copyWith` on Score +
   NoteElement, and a fingered part is now a FILE** (`crisp_notation@fb7a26d`,
   mus `2c7ceb31`). **Correction to my own claim:** `Measure.copyWith` already
