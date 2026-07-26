@@ -205,8 +205,11 @@ class _PositionPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    // Wrap (not Row) so the label + position chips flow to a second line on a
+    // narrow phone instead of overflowing (the 1–4 positions overran 375px).
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Text(
           l10n.tabPatternPosition,
