@@ -67,6 +67,34 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
+- **opus (interop-flatten)** · ✅ **SHIPPED (idle) — a tracker song is its
+  patterns, not the one on screen.** Wrote a report-honesty property test (for
+  every ordered pair of symbolic modes: go and come back by the same edge; if
+  the music changed, the reports must not BOTH say lossless) and it found a
+  second truncation of the same family as the 64-row one: `Tracker → Loop` and
+  `Tracker → Tab` read `TrackerSong.channels`, which is the EDITING view — the
+  pattern currently loaded in the engine — so a song imported from a score
+  arrived as its first 64 rows and the report called that lossless. A
+  one-pattern fixture makes the two views identical, which is why every existing
+  test agreed with them.
+  Fix: new `lib/core/interop/tracker_song_flatten.dart`
+  (`trackerChannelsAcrossOrder` / `trackerRowsAcrossOrder`), used by both
+  converters and by `multiPartScoreFromTrackerSong`, which had its own copy of
+  the flattening — so the three can no longer disagree.
+  ⚠️ **Note for anyone flattening a song:** do NOT reach for
+  `TrackerSong.syncCurrent()` to pick up unsaved grid edits. It WRITES the
+  engine's cells back into the pattern, so a converter mutates the document it
+  is reading — and a song whose patterns came from `const` cell lists (every
+  `fromParts` fixture, and the module importer's entry point) makes that write
+  throw `Cannot modify an unmodifiable list`. Read `song.engine.exportCells()`
+  for the selected pattern instead; live edits are still included. Both traps
+  are pinned by tests.
+  Tests: `tracker_song_flatten_test.dart` (8) + `interop_report_honesty_test.dart`
+  (25). Green: interop_corpus, project_bridge, tab_tracker_interop,
+  loop_tracker_drum_interop, multipart_to_tracker, tracker_notation{,_full,
+  _keyoff} (159) + advanced_tracker_screen, tracker_screen, loop_mixer (168).
+  analyze clean. — opus
+
 - **opus (pickup)** · ✅ **SHIPPED (idle) — an anacrusis now declares its length.**
   `reflow`'s `flush()` (`workshop/model/score_document.dart`) built the opening
   bar as `Measure(current, pickup: true, …)` and never set `actualDuration`. The

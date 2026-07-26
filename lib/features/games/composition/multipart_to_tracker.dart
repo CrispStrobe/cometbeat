@@ -7,6 +7,7 @@
 
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
+import 'package:comet_beat/core/interop/tracker_song_flatten.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart'
     show scoreToChannels, trackerToScoreParts;
 import 'package:comet_beat/shared/step_duration.dart' show durationToSteps;
@@ -128,34 +129,14 @@ TrackerSong trackerSongFromMultiPart(MultiPartScore mp) {
 /// measures. This is intentionally lossy, but preserves the melodic content
 /// well enough for Score/Tab editing.
 MultiPartScore multiPartScoreFromTrackerSong(TrackerSong song) {
-  song.syncCurrent();
-  final channelCount = song.channelCount;
-  final combined = <List<TrackerCell>>[
-    for (var c = 0; c < channelCount; c++) <TrackerCell>[],
-  ];
-  for (final patternIndex in song.order) {
-    if (patternIndex < 0 || patternIndex >= song.patterns.length) continue;
-    final pattern = song.patterns[patternIndex];
-    for (var c = 0; c < channelCount && c < pattern.cells.length; c++) {
-      combined[c].addAll(pattern.cells[c]);
-    }
-  }
-  if (combined.isEmpty || combined.first.isEmpty) {
-    return MultiPartScore(const []);
-  }
-  final channels = [
-    for (var c = 0; c < channelCount; c++)
-      TrackerChannel(
-        id: song.channels[c].id,
-        instrument: song.channels[c].instrument,
-        rows: combined[c].length,
-        cells: combined[c],
-      ),
-  ];
+  // Shared with the Tab and Loop converters, which used to flatten the song
+  // themselves — or, in their case, forget to and read only the loaded pattern.
+  final channels = trackerChannelsAcrossOrder(song);
+  if (channels.isEmpty) return MultiPartScore(const []);
   return MultiPartScore(
     trackerToScoreParts(
       channels,
-      song.timing.copyWith(rows: combined.first.length),
+      song.timing.copyWith(rows: channels.first.cells.length),
     ),
   );
 }

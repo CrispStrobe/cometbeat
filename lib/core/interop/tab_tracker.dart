@@ -31,6 +31,7 @@ import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show kFxPortaUp, kFxTonePorta, kFxVibrato;
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
+import 'package:comet_beat/core/interop/tracker_song_flatten.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/shared/step_duration.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -224,7 +225,10 @@ TrackerToTabResult tabDocumentFromTrackerSong(
 }) {
   final report = ConversionReport();
   final notes = annotations ?? SymbolicAnnotations();
-  final channels = song.channels;
+  // The whole song, not `song.channels` — that is the currently-loaded pattern,
+  // so reading it dropped every pattern after the first (see
+  // tracker_song_flatten.dart).
+  final channels = trackerChannelsAcrossOrder(song);
   final rows = channels.isEmpty ? 0 : channels.first.cells.length;
 
   final capo = _asInt(notes.docMeta[AnnotationKeys.capo]) ?? 0;

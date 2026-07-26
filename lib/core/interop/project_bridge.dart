@@ -27,6 +27,7 @@ import 'package:comet_beat/core/interop/loop_tab.dart';
 import 'package:comet_beat/core/interop/loop_tracker.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
 import 'package:comet_beat/core/interop/tab_tracker.dart';
+import 'package:comet_beat/core/interop/tracker_song_flatten.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -239,21 +240,29 @@ abstract final class ProjectBridge {
             // every pitch onto six strings — right for a guitar part, wrong for
             // a piano channel and nonsense for a drum one. Both models are a
             // monophonic-per-step grid already, so no detour is needed.
-            if (song.channels.isEmpty) {
+            // The WHOLE song, laid out in play order. Reading `song.channels`
+            // here took only the pattern currently loaded in the editor, so a
+            // song imported from a score arrived as its first 64 rows — and the
+            // report called that lossless.
+            final channels = trackerChannelsAcrossOrder(song);
+            if (channels.isEmpty) {
               return ConversionResult(
                 document: const <PatternCell>[],
                 report: ConversionReport()
                   ..addLost('this song has no channels'),
               );
             }
-            final busiest = song.channels.reduce(
+            final busiest = channels.reduce(
               (a, b) => _noteCount(b) > _noteCount(a) ? b : a,
             );
-            final out = loopCellsFromTrackerChannel(busiest, song.timing);
+            final out = loopCellsFromTrackerChannel(
+              busiest,
+              song.timing.copyWith(rows: busiest.cells.length),
+            );
             final report = out.report;
-            if (song.channels.length > 1) {
+            if (channels.length > 1) {
               report.addLost(
-                'the other ${song.channels.length - 1} channels — a loop track '
+                'the other ${channels.length - 1} channels — a loop track '
                 'is one voice',
               );
             }
