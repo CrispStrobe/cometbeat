@@ -88,14 +88,16 @@ class _SongScreenState extends State<SongScreen> {
         baseName: _safeName(widget.title),
       );
 
-  /// The song as a cellist would mark it up: fingering digits on the notes and a
-  /// Roman numeral where the string is not inferable. Written into a COPY — the
+  /// The song as a cellist would mark it up: fingering digits on the notes, a
+  /// Roman numeral where the string is not inferable, and a bow direction on each
+  /// stroke — the three things a teacher writes on a part. Written into a COPY — the
   /// saved song never gains marks — and cached, because the arrange is a Viterbi
   /// over the whole line rather than a per-note lookup.
   Score get _fingeredScore => _fingeredCache ??= scoreWithBowedFingerings(
         widget.score,
         skill: BowedSkill.neckPositions,
         markStrings: true,
+        markBowing: true,
       );
   late final ScoreAnalysis _analysis = analyze(widget.score);
   int _playToken = 0; // invalidates a running play loop

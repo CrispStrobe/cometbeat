@@ -265,4 +265,68 @@ void main() {
       expect(original.annotations, isEmpty);
     });
   });
+
+  group('bowing in the marked-up copy', () {
+    test('every note gets a direction, starting down', () {
+      final marked = scoreWithBowedFingerings(
+        _cScale(),
+        skill: BowedSkill.firstPosition,
+        markBowing: true,
+      );
+      final notes =
+          marked.measures.expand((m) => m.elements).whereType<NoteElement>();
+      expect(notes.every((n) => n.articulations.isNotEmpty), isTrue);
+      expect(notes.first.articulations, contains(Articulation.downBow));
+    });
+
+    test('off by default — the fingering copy carries no bowing', () {
+      final marked = scoreWithBowedFingerings(
+        _cScale(),
+        skill: BowedSkill.firstPosition,
+      );
+      expect(
+        marked.measures
+            .expand((m) => m.elements)
+            .whereType<NoteElement>()
+            .every((n) => n.articulations.isEmpty),
+        isTrue,
+      );
+    });
+
+    test('bow marks survive into MusicXML', () {
+      final xml = scoreToMusicXml(
+        scoreWithBowedFingerings(
+          _cScale(),
+          skill: BowedSkill.firstPosition,
+          markBowing: true,
+        ),
+      );
+      expect(xml, contains('<down-bow/>'));
+      expect(xml, contains('<up-bow/>'));
+    });
+
+    test('a note existing articulation is kept, not replaced', () {
+      final score = Score(
+        clef: Clef.bass,
+        measures: [
+          Measure([
+            NoteElement.note(
+              const Pitch(Step.d, octave: 3),
+              NoteDuration.quarter,
+              articulations: const {Articulation.staccato},
+              id: 'a',
+            ),
+          ]),
+        ],
+      );
+      final marked = scoreWithBowedFingerings(
+        score,
+        skill: BowedSkill.firstPosition,
+        markBowing: true,
+      );
+      final note =
+          marked.measures.single.elements.whereType<NoteElement>().single;
+      expect(note.articulations, {Articulation.staccato, Articulation.downBow});
+    });
+  });
 }

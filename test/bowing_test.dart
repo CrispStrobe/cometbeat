@@ -1,82 +1,126 @@
-// Bowing — reading up-bow / down-bow marks (crisp_notation articulations). Verifies
-// the round loop: choosing the correct stroke scores + records SRI under
-// cello.bowing.*, and clearing all rounds finishes.
+// test/bowing_test.dart
+//
+// Bow direction. The interesting case is the retake: plain alternation is easy,
+// and the thing that makes a printed bowing look printed is the bar whose
+// downbeat would otherwise fall on an up-bow.
 
-import 'package:comet_beat/core/services/audio_service.dart';
-import 'package:comet_beat/core/services/progress_service.dart';
-import 'package:comet_beat/core/services/settings_service.dart';
-import 'package:comet_beat/core/services/sri_service.dart';
-import 'package:comet_beat/features/games/cello/bowing_screen.dart';
-import 'package:comet_beat/l10n/app_localizations.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:comet_beat/core/notation/bowing.dart';
+import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _app() => MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => SettingsService()),
-        ChangeNotifierProvider(
-          create: (_) => SriService(getNow: () => DateTime(2026, 7, 11)),
-        ),
-        Provider<AudioService>(create: (_) => AudioService()),
-        ChangeNotifierProvider(create: (_) => ProgressService()),
-      ],
-      child: const MaterialApp(
-        localizationsDelegates: [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: [Locale('en'), Locale('de')],
-        home: BowingScreen(),
-      ),
-    );
-
-BowingTester _game(WidgetTester tester) =>
-    tester.state<State<BowingScreen>>(find.byType(BowingScreen))
-        as BowingTester;
-
-Future<void> _solveRound(WidgetTester tester) async {
-  // The down-bow button label contains "Down-bow"; up contains "Up-bow"
-  // (prefixed by the bow glyph, so match the substring's button ancestor).
-  final want = _game(tester).isDown ? 'Down-bow' : 'Up-bow';
-  final button = find.ancestor(
-    of: find.textContaining(want),
-    matching: find.byType(FilledButton),
+/// [counts] notes per bar, ids `n0`, `n1`, … in reading order.
+Score _bars(List<int> counts, {List<Slur> slurs = const []}) {
+  var i = 0;
+  return Score(
+    clef: Clef.bass,
+    measures: [
+      for (final count in counts)
+        Measure([
+          for (var k = 0; k < count; k++)
+            NoteElement.note(
+              const Pitch(Step.d, octave: 3),
+              NoteDuration.quarter,
+              id: 'n${i++}',
+            ),
+        ]),
+    ],
+    slurs: slurs,
   );
-  await tester.tap(button);
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 800));
+}
+
+List<String> _pattern(Score score) {
+  final bowing = bowingFor(score);
+  final out = <String>[];
+  for (final measure in score.measures) {
+    for (final element in measure.elements) {
+      if (element is! NoteElement) continue;
+      final mark = bowing[element.id];
+      out.add(
+        mark == null
+            ? '.'
+            : mark == Articulation.downBow
+                ? 'D'
+                : 'U',
+      );
+    }
+  }
+  return out;
 }
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
-
-  testWidgets('choosing the marked stroke scores and records it',
-      (tester) async {
-    await tester.pumpWidget(_app());
-    await tester.pump();
-
-    expect(find.text('Round 1 of 10'), findsOneWidget);
-    final sri = tester.element(find.byType(BowingScreen)).read<SriService>();
-
-    await _solveRound(tester);
-    expect(sri.getDetailedBreakdown()['cello'], isNotNull);
-    expect(find.text('Round 2 of 10'), findsOneWidget);
+  test('the default is strict alternation, starting down', () {
+    expect(_pattern(_bars([4])), ['D', 'U', 'D', 'U']);
   });
 
-  testWidgets('clearing all rounds finishes with a result screen',
-      (tester) async {
-    await tester.pumpWidget(_app());
-    await tester.pump();
+  test('an even bar keeps alternating across the barline', () {
+    expect(_pattern(_bars([4, 4])), ['D', 'U', 'D', 'U', 'D', 'U', 'D', 'U']);
+  });
 
-    for (var r = 0; r < 10; r++) {
-      await _solveRound(tester);
-    }
+  test('an odd bar forces a retake — two down-bows in a row', () {
+    // Three notes leave the bow going up when the next bar starts, and the
+    // downbeat wants a down-bow. The player retakes; editions print D D.
+    expect(_pattern(_bars([3, 3])), ['D', 'U', 'D', 'D', 'U', 'D']);
+  });
 
-    expect(find.byIcon(Icons.star).evaluate().length, greaterThanOrEqualTo(1));
+  test('a slur is one stroke: only its first note is marked', () {
+    // Four notes, the middle two slurred: D (U for the pair) D.
+    final score = _bars([4], slurs: const [Slur('n1', 'n2')]);
+    expect(_pattern(score), ['D', 'U', '.', 'D']);
+  });
+
+  test('a slurred pair counts once for the alternation', () {
+    // Without the slur this bar would end up-bow; with it, the pair eats one
+    // stroke and the last note lands down.
+    expect(_pattern(_bars([4])).last, 'U');
+    expect(_pattern(_bars([4], slurs: const [Slur('n1', 'n2')])).last, 'D');
+  });
+
+  test('a rest resets the bow to a down-bow', () {
+    final score = Score(
+      clef: Clef.bass,
+      measures: [
+        Measure([
+          NoteElement.note(
+            const Pitch(Step.d, octave: 3),
+            NoteDuration.quarter,
+            id: 'a',
+          ),
+          const RestElement(NoteDuration.quarter),
+          NoteElement.note(
+            const Pitch(Step.d, octave: 3),
+            NoteDuration.quarter,
+            id: 'b',
+          ),
+        ]),
+      ],
+    );
+    final bowing = bowingFor(score);
+    expect(bowing['a'], Articulation.downBow);
+    // Without the reset this would be an up-bow.
+    expect(bowing['b'], Articulation.downBow);
+  });
+
+  test('notes without ids are skipped rather than mis-marked', () {
+    final score = Score(
+      clef: Clef.bass,
+      measures: [
+        Measure([
+          NoteElement.note(
+            const Pitch(Step.d, octave: 3),
+            NoteDuration.quarter,
+          ),
+          NoteElement.note(
+            const Pitch(Step.d, octave: 3),
+            NoteDuration.quarter,
+            id: 'kept',
+          ),
+        ]),
+      ],
+    );
+    expect(bowingFor(score).keys, ['kept']);
+  });
+
+  test('an empty score bows nothing', () {
+    expect(bowingFor(const Score(clef: Clef.bass, measures: [])), isEmpty);
   });
 }

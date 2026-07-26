@@ -17,6 +17,7 @@ import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
+        Articulation,
         MultiPartScore,
         MultiSystemView,
         NoteElement,
@@ -368,6 +369,15 @@ void main() {
     );
     // The opening G-string note is marked; the rest follow from it.
     expect(shown().annotations.map((a) => a.text).toList(), ['III']);
+    // And the other hand: a bow direction per stroke, opening down.
+    expect(
+      notesOf(shown()).first.articulations,
+      contains(Articulation.downBow),
+    );
+    expect(
+      notesOf(shown()).every((n) => n.articulations.isNotEmpty),
+      isTrue,
+    );
 
     // The song itself gained nothing — the marks live on a copy.
     expect(notesOf(song.score).every((n) => n.fingerings.isEmpty), isTrue);

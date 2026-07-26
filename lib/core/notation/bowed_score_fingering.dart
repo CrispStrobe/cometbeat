@@ -17,8 +17,9 @@
 // `scoreToMidi` has.
 
 import 'package:comet_beat/core/notation/bowed_arranger.dart';
+import 'package:comet_beat/core/notation/bowing.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart'
-    show Annotation, MusicElement, NoteElement, Score;
+    show Annotation, Articulation, MusicElement, NoteElement, Score;
 
 /// Fingers the voice-1 line of a single-staff [score].
 ///
@@ -117,6 +118,10 @@ Map<String, List<int>> bowedFingeringDigits(
 /// MusicXML writes `<fingering>` from the note itself — so this is the path for
 /// exporting a fingered part to something another program will read.
 ///
+/// With [markStrings], Roman numerals go on where the string is not inferable
+/// (see [bowedStringMarks]); with [markBowing], each note gets its bow direction
+/// (see [bowingFor]). Together they are what an edited part carries.
+///
 /// Returns a copy; [score] is untouched, because a fingering is our reading of the
 /// piece rather than an edit to it.
 Score scoreWithBowedFingerings(
@@ -126,6 +131,7 @@ Score scoreWithBowedFingerings(
   BowedArrangeCost? cost,
   BowedPositionModel? model,
   bool markStrings = false,
+  bool markBowing = false,
 }) {
   final marks = fingerBowedScore(
     score,
@@ -135,6 +141,8 @@ Score scoreWithBowedFingerings(
     model: model,
   );
   if (marks.isEmpty) return score;
+  // The other hand. Rules, not search — see bowing.dart.
+  final bows = markBowing ? bowingFor(score) : const <String, Articulation>{};
   final strings = markStrings
       ? bowedStringMarks(
           score,
@@ -157,6 +165,9 @@ Score scoreWithBowedFingerings(
               if (element is NoteElement && marks[element.id] != null)
                 element.copyWith(
                   fingerings: [for (final f in marks[element.id]!) f.finger],
+                  articulations: bows[element.id] == null
+                      ? null
+                      : {...element.articulations, bows[element.id]!},
                 )
               else
                 element,
