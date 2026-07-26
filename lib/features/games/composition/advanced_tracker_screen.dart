@@ -73,6 +73,7 @@ import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/audio/wav_io.dart'
     show readWavPcm16, wavToMonoFloat;
+import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -84,6 +85,8 @@ import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
+import 'package:comet_beat/features/games/composition/tab_document.dart';
+import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
@@ -103,6 +106,7 @@ import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
+import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -4311,6 +4315,35 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     );
   }
 
+  /// E4 — pushes whichever screen [target] means, with the already-converted
+  /// document. The bridge did the conversion and warned about any loss; this
+  /// only has to know the route.
+  void _openConvertedElsewhere(AppMode target, ConversionResult result) {
+    final document = result.document;
+    if (document == null) return;
+    switch (target) {
+      case AppMode.tab:
+        if (document is! TabDocument) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TabWorkshopScreen(initialScore: document.toScore()),
+          ),
+        );
+      case AppMode.score:
+        if (document is! MultiPartScore) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CompositionWorkshopScreen(initialScore: document),
+          ),
+        );
+      case AppMode.tracker:
+      case AppMode.loop:
+      case AppMode.audio:
+        // Not offered — see the `targets` list on the menu.
+        break;
+    }
+  }
+
   /// Import a score file (MusicXML / MIDI / …) as a new tracker song — one track
   /// per part, chromatic (no pentatonic snap). The reverse of Export/Open.
   Future<void> _importScore() async {
@@ -4455,6 +4488,15 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               icon: const Icon(Icons.delete_sweep_outlined),
               tooltip: l10n.trackerClear,
               onPressed: _confirmClearAll,
+            ),
+            // E4 — the shared "Open in…" action. Restricted to what this screen
+            // can actually PUSH: offering a destination it has no route to
+            // would convert the user's song and then drop it.
+            OpenInMenu(
+              from: AppMode.tracker,
+              targets: const [AppMode.tab, AppMode.score],
+              documentBuilder: () => _song,
+              onConverted: _openConvertedElsewhere,
             ),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
