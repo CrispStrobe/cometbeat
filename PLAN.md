@@ -347,12 +347,24 @@ order; A1 and B1/B2 unblock everything else.
 
 ### D — finishing the interchangeability map (SHIPPED, `feature/fx-interop`)
 
-> D1–D3 are done. **What is still open across this whole arc is UI wiring:** the
-> shared `FxRack` widget and the `OpenInMenu` exist and are tested, but no mode
-> screen hosts either one yet. The models are all in place (`fxChain` on tracker
-> channels, tab tracks and the loop master bus; `ProjectBridge` for every mode
-> pair), so each host is a small, independent change — deliberately left to the
-> agents who own those screens rather than done from here.
+> D1–D3 done, and **E1–E4 wire it all into the screens**: the shared `FxRack`
+> now hosts in the Tracker's channel-effect sheet (E1), a new per-track Tab
+> guitar rig (E2) and the Loop Mixer's master bus (E3), and the shared
+> `OpenInMenu` is in the Tab and Advanced Tracker toolbars (E4).
+>
+> Two things learned wiring it, worth keeping: (a) `OpenInMenu` needed a
+> `targets` filter, because CONVERTING and OPENING are different problems — the
+> bridge can produce a document for every reachable mode, but a screen can only
+> offer a destination it has a route to push, and offering one it cannot open
+> would convert the user's work and then drop it. (b) Every FX host is additive:
+> the legacy preset path (7 tracker chips, 2 loop sends) stays as the quick
+> path and still renders through the old code, so no saved project changes how
+> it sounds.
+>
+> **Not wired, deliberately:** `daw_screen.dart` — daw-ux owns its FX UI and it
+> already has one; and Loop's own "Open in…" (the Loop Mixer already has a
+> hand-rolled "Open in Tracker" round-trip that auto-publishes on exit, which is
+> richer than the generic menu — replacing it is that agent's call, not mine).
 
 C1–C4 built the matrix, but two edges are still second-class and one section of
 the Tracker roadmap below (§2 *Ecosystem Interchangeability*) is only half
