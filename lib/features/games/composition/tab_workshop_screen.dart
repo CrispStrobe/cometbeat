@@ -1230,13 +1230,15 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     // Audio: every track sounding together. Highlight: the ACTIVE track's own
     // column timeline (that's what the preview shows).
     final events = _doc.toPlaybackEvents(bpm: _bpm, capo: _capo);
-    final band = mergePlaybackEvents(
+    // Mix each audible track as its own stem, scaled by its mixer volume (D2),
+    // so per-track balance is audible instead of a flat merge.
+    final audible = audibleTracks(_tracks).toList();
+    context.read<AudioService>().playMixedTimedChords(
       [
-        for (final t in audibleTracks(_tracks))
-          t.doc.toPlaybackEvents(bpm: _bpm, capo: _capo),
+        for (final t in audible) t.doc.toPlaybackEvents(bpm: _bpm, capo: _capo),
       ],
+      gains: [for (final t in audible) t.volume],
     );
-    context.read<AudioService>().playTimedChords(band);
     final schedule = <({int col, int start, int end, bool note})>[];
     var t = 0;
     for (var c = 0; c < events.length; c++) {
@@ -1518,6 +1520,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   _promptSave();
                 case 'rig':
                   _showRigSheet();
+                case 'mixer':
+                  _showMixer();
                 case 'workshop':
                   _openInScoreWorkshop();
                 case 'clear':
@@ -1531,6 +1535,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 l10n.workshopPlayWithInstrument,
               ),
               _menuItem('rig', Icons.graphic_eq, l10n.tabRig),
+              _menuItem('mixer', Icons.tune, 'Mixer'),
               CheckedPopupMenuItem(
                 value: 'countIn',
                 checked: _countIn,
@@ -1839,6 +1844,77 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             onPressed: _pickChord,
           ),
         ],
+      ),
+    );
+  }
+
+  /// The mixer (D2): a volume slider + mute/solo per track. Volume scales that
+  /// track's stem in playback ([AudioService.playMixedTimedChords] gains).
+  void _showMixer() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final scheme = Theme.of(ctx).colorScheme;
+          void bump(VoidCallback f) {
+            setState(f);
+            setSheet(() {});
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Mixer', style: Theme.of(ctx).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  for (var i = 0; i < _tracks.length; i++)
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 84,
+                          child: Text(
+                            _tracks[i].name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: _tracks[i].volume.clamp(0.0, 1.0),
+                            onChanged: (v) => bump(() => _tracks[i].volume = v),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Mute',
+                          icon: Icon(
+                            _tracks[i].muted
+                                ? Icons.volume_off
+                                : Icons.volume_up,
+                            color: _tracks[i].muted ? scheme.error : null,
+                          ),
+                          onPressed: () =>
+                              bump(() => _tracks[i].muted = !_tracks[i].muted),
+                        ),
+                        IconButton(
+                          tooltip: 'Solo',
+                          icon: Icon(
+                            Icons.headphones,
+                            color: _tracks[i].soloed ? scheme.primary : null,
+                          ),
+                          onPressed: () => bump(
+                            () => _tracks[i].soloed = !_tracks[i].soloed,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

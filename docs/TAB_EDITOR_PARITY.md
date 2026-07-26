@@ -308,8 +308,13 @@ parametric technique end-to-end.
   single-voice synth (per-program *audition* is the remaining bit; GP track program
   is a separate GPIF follow-up).
 - [x] **D2** mixer — `TabTrack.volume` (0..1) + `TabTrack.pan` (−1..1) alongside
-  mute/solo. Model + tests. ⚠ the mixer sheet + pan/scale in playback are the
-  app-side follow-up (the `(midis,ms)` merge tuple carries no gain/pan yet).
+  mute/solo. **Volume is now wired end-to-end:** a **Mixer sheet** (⋮ menu) with a
+  volume slider + mute/solo per track; tab band playback renders each audible
+  track as its own stem scaled by its volume via
+  `AudioService.playMixedTimedChords(gains:)` (additive param; existing callers
+  unchanged). Tested at the mix level (`mixedWavBytes` — a lower gain gives a
+  lower peak). ⚠ **pan** still needs stereo rendering (`playMixedTimedChords`
+  mixes mono) — the remaining D2 bit.
 - [x] **D3** drum-tab — `TabTrack.isDrums`; `kDrumLines` (9 standard lines →
   GM percussion notes) + `drumMidiForLine`; `TabDocument.toDrumScore()` engraves
   each fretted line as its drum voice on the neutral percussion clef with

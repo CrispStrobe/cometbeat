@@ -152,15 +152,36 @@ class AudioService {
   /// combined with [mixStems] (per-stem unit-peak × gain → tanh soft-knee), so
   /// adding or muting a part never pumps the overall level. An empty [parts]
   /// list, or all-empty parts, is a silent no-op.
-  Future<void> playMixedTimedChords(List<List<(List<int>, int)>> parts) {
+  ///
+  /// [gains] optionally scales each part's authored level (index-aligned to
+  /// [parts], default 1.0), so a mixer's per-track volume reaches the mix.
+  Future<void> playMixedTimedChords(
+    List<List<(List<int>, int)>> parts, {
+    List<double>? gains,
+  }) {
     if (!soundOn) return Future.value(); // rendering is wasted while muted
+    final wav = mixedWavBytes(parts, gains: gains);
+    if (wav == null) return Future.value();
+    return _play(wav);
+  }
+
+  /// The mixed PCM16 WAV for [parts], each stem rendered with the current voice
+  /// and combined by [mixStems] (per-stem unit-peak × [gains] → tanh). Null when
+  /// everything is silent. Split out from [playMixedTimedChords] so the mix — in
+  /// particular that a per-track gain scales its stem — is unit-testable without
+  /// touching the audio plugin.
+  @visibleForTesting
+  Uint8List? mixedWavBytes(
+    List<List<(List<int>, int)>> parts, {
+    List<double>? gains,
+  }) {
     final v = voice;
     final timbre = v == null ? timbreFor(instrument) : null;
     final stems = <MixStem>[];
     var totalSamples = 0;
-    for (final events in parts) {
+    for (var i = 0; i < parts.length; i++) {
       final segments = <Segment>[
-        for (final (midis, ms) in events)
+        for (final (midis, ms) in parts[i])
           if (ms > 0) (freqs: midis.map(midiToFrequency).toList(), ms: ms),
       ];
       if (segments.isEmpty) continue;
@@ -168,10 +189,11 @@ class AudioService {
           ? renderSegmentsThroughInstrument(segments, v)
           : renderSegmentsRaw(segments, timbre: timbre!);
       if (samples.length > totalSamples) totalSamples = samples.length;
-      stems.add((samples: samples, gain: 1.0));
+      final gain = (gains != null && i < gains.length) ? gains[i] : 1.0;
+      stems.add((samples: samples, gain: gain));
     }
-    if (stems.isEmpty) return Future.value();
-    return _play(wavBytes(mixStems(stems, totalSamples: totalSamples)));
+    if (stems.isEmpty) return null;
+    return wavBytes(mixStems(stems, totalSamples: totalSamples));
   }
 
   /// Sequential chords (e.g. a cadence), [ms] each.
