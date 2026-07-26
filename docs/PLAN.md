@@ -63,6 +63,15 @@ is recorded in [HISTORY.md](HISTORY.md).
   `.bak2/.orig/.rej` were pre-existing untracked cruft, already removed by `4a9c55d0`.
   — opus
 
+- **opus (tracker-complete)** · 🚧 **ACTIVE — effect-capability completeness.**
+  Closing the remaining unmapped S3M/IT `Sxy` effects by adding the missing
+  **replayer playback capabilities** so they actually SOUND (then become
+  cross-format mappable): `S5x` panbrello waveform, `SAx` high sample-offset
+  (Oxx memory), `S9x` reverse/surround playback, `S7x` per-cell NNA control; plus
+  bounding long-*sfxr* streaming. Hot files: `tracker_replayer.dart`,
+  `tracker_engine.dart`, `module_convert.dart`. Corpus stays byte-identical
+  (golden.* don't use these; synthetic tests). ⚠️ Loop/PatternCell (`bb5a5bee`)
+  separate. — opus
 - **opus (tracker-complete)** · ✅ **IDLE / last-shipped — tracker MOD/XM/S3M/IT
   renderer+editor complete (incl. all residuals).** Shipped to `main`: full
   **<500 MB streaming renderer for EVERY song shape** (byte-identical; buddhia3
