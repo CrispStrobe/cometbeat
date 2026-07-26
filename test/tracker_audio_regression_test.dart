@@ -90,31 +90,62 @@ Future<Uint8List> _renderWithOpenMpt(String fixturePath) async {
 }
 
 /// Extracts mono PCM from stereo 16-bit WAV (averages L+R)
+/// Mono PCM from ANY 16-bit PCM WAV, whatever its channel count.
+///
+/// This used to be TWO functions — one that downmixed stereo (used for the
+/// OpenMPT reference) and one that assumed mono (used for our render). Our
+/// renderer has since gained stereo output, so our side was being read as twice
+/// as many "samples" of interleaved L/R: every module reported a duration ratio
+/// of almost exactly 2.0, and the RMS/spectrum comparisons after it were
+/// matching interleaved L/R against a mono downmix, which is meaningless.
+///
+/// So there is one reader now, and it reads the channel count from the header
+/// rather than assuming it. A renderer that changes its channel layout again
+/// cannot break the comparison this way twice.
 Float64List _wavToMonoPcm(Uint8List wavBytes) {
   final data = ByteData.sublistView(wavBytes);
-  final numSamples = (wavBytes.length - 44) ~/ 4; // 2 bytes per channel
-  final pcm = Float64List(numSamples);
+  if (wavBytes.length < 44) return Float64List(0);
 
-  for (var i = 0; i < numSamples; i++) {
-    final left = data.getInt16(44 + i * 4, Endian.little) / 32768.0;
-    final right = data.getInt16(46 + i * 4, Endian.little) / 32768.0;
-    pcm[i] = (left + right) / 2;
+  // Walk the chunk list rather than trusting a fixed 44-byte header — a WAV
+  // with a LIST/fact chunk would otherwise shift every sample.
+  var channels = 1;
+  var bitsPerSample = 16;
+  var dataOffset = -1;
+  var dataBytes = 0;
+  var pos = 12; // past "RIFF" + size + "WAVE"
+  while (pos + 8 <= wavBytes.length) {
+    final id = String.fromCharCodes(wavBytes.sublist(pos, pos + 4));
+    final size = data.getUint32(pos + 4, Endian.little);
+    final body = pos + 8;
+    if (id == 'fmt ' && body + 16 <= wavBytes.length) {
+      channels = data.getUint16(body + 2, Endian.little);
+      bitsPerSample = data.getUint16(body + 14, Endian.little);
+    } else if (id == 'data') {
+      dataOffset = body;
+      dataBytes = size;
+      break;
+    }
+    pos = body + size + (size.isOdd ? 1 : 0);
+  }
+  if (dataOffset < 0 || channels < 1 || bitsPerSample != 16) {
+    return Float64List(0);
   }
 
-  return pcm;
-}
-
-/// Extracts mono PCM from mono WAV (our render path)
-Float64List _monoWavToPcm(Uint8List wavBytes) {
-  final data = ByteData.sublistView(wavBytes);
-  final numSamples = (wavBytes.length - 44) ~/ 2;
-  final pcm = Float64List(numSamples);
-
-  for (var i = 0; i < numSamples; i++) {
-    final sample = data.getInt16(44 + i * 2, Endian.little) / 32768.0;
-    pcm[i] = sample;
+  final available = wavBytes.length - dataOffset;
+  final usable =
+      dataBytes > 0 && dataBytes <= available ? dataBytes : available;
+  final bytesPerFrame = 2 * channels;
+  final frames = usable ~/ bytesPerFrame;
+  final pcm = Float64List(frames);
+  for (var i = 0; i < frames; i++) {
+    var sum = 0.0;
+    for (var c = 0; c < channels; c++) {
+      sum +=
+          data.getInt16(dataOffset + i * bytesPerFrame + c * 2, Endian.little) /
+              32768.0;
+    }
+    pcm[i] = sum / channels;
   }
-
   return pcm;
 }
 
@@ -189,8 +220,12 @@ void main() {
         // Availability is handled by the group's `skip:` below — no early return
         // and no warning test, which reported as a pass and hid the gap.
 
-        // Use real module files for comprehensive regression testing
-        // These are freely distributable modules from the Amiga Music Preservation archive
+        // Real modules, for comprehensive regression testing. They are © their
+        // authors and NOT freely distributable — see the licence note in this
+        // file's header and test/fixtures/README.md. They live only in a
+        // developer checkout and are .gitignored; an earlier version of this
+        // comment claimed they were "freely distributable", which is how 2.8 MB
+        // of them ended up committed by accident (bb5a5bee).
         final testModules = [
           'powerbase.mod', // Classic 4-channel ProTracker MOD
           'mobile.mod', // Another classic MOD file
@@ -202,6 +237,9 @@ void main() {
           test(
             '$fixtureName matches OpenMPT reference',
             () async {
+              // See the note in the crash group: any one fixture may legitimately
+              // be absent, since none of them can be committed.
+              if (!File('test/fixtures/$fixtureName').existsSync()) return;
               // 1. Load and parse the module
               final bytes = _fixture(fixtureName);
               final song = songFromModuleBytes(bytes);
@@ -224,7 +262,7 @@ void main() {
               );
 
               // 4. Extract PCM data
-              final ourPcm = _monoWavToPcm(ourWav);
+              final ourPcm = _wavToMonoPcm(ourWav);
               final openmptPcm = _wavToMonoPcm(openmptWav);
 
               // 5. Duration check: allow 10% tolerance (tempo rounding, sample length differences)
@@ -302,7 +340,15 @@ void main() {
                     '($rmsDiffDb dB). Possible instrument or mixing regression.',
               );
             },
-            timeout: const Timeout(Duration(seconds: 30)),
+            // Generous on purpose. Each case does a full OFFLINE render of a
+            // real module on both sides plus an FFT comparison, and the corpus
+            // includes multi-minute songs — buddhia3.it alone is a ~5-minute IT
+            // with NNA voices and simply cannot render inside 30 s on any
+            // machine, so that one case failed as a timeout rather than on
+            // anything musical. This suite only runs where the local corpus and
+            // Homebrew's openmpt123 both exist (it skips on CI), so a long
+            // budget costs a developer minutes, not the pipeline.
+            timeout: const Timeout(Duration(minutes: 6)),
           );
         }
       },
@@ -322,6 +368,12 @@ void main() {
         ];
 
         for (final fixtureName in testModules) {
+          // Per-module, not once for the whole group. The group's `skip:` only
+          // checks powerbase.mod, so a PARTIAL corpus — the normal state after a
+          // `git clean` or an interrupted download — used to crash here with a
+          // PathNotFoundException instead of skipping. A fixture this suite
+          // cannot legally ship is always allowed to be absent.
+          if (!File('test/fixtures/$fixtureName').existsSync()) continue;
           final bytes = _fixture(fixtureName);
 
           expect(
@@ -345,7 +397,7 @@ void main() {
           );
 
           // Check that the render produced actual audio
-          final pcm = _monoWavToPcm(wav);
+          final pcm = _wavToMonoPcm(wav);
           final peak = pcm.reduce((a, b) => max(a.abs(), b.abs()));
           expect(
             peak,
