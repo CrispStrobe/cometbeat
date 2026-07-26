@@ -572,6 +572,12 @@ abstract class AppLocalizations {
   /// **'Export failed'**
   String get musicExportFailed;
 
+  /// No description provided for @musicExportShared.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared'**
+  String get musicExportShared;
+
   /// No description provided for @audioExportTitle.
   ///
   /// In en, this message translates to:

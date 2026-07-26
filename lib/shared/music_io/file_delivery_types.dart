@@ -10,6 +10,9 @@ enum DeliveryKind {
   /// Handed to the browser as a download (web).
   downloaded,
 
+  /// Handed to the OS share sheet — AirDrop, Files, Messages, … (mobile).
+  shared,
+
   /// The user dismissed the save dialog — nothing was written.
   cancelled,
 }

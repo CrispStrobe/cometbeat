@@ -48,6 +48,9 @@ dependencies:
 
   # Files (import of MIDI etc.)
   file_selector: ^1.0.3
+  # Native OS share sheet (AirDrop / Files / Messages …) for exporting a score
+  # on mobile + web, where a save-file dialog isn't available.
+  share_plus: ^12.0.2
 
   # Web-only DOM access for browser downloads (file_delivery_web.dart). The io
   # build never imports it; version follows the Flutter SDK's pin.

@@ -3444,6 +3444,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             messenger.showSnackBar(
               SnackBar(content: Text(l10n.workshopDownloaded(name))),
             );
+          case DeliveryKind.shared:
+            messenger.showSnackBar(
+              SnackBar(content: Text(l10n.musicExportShared)),
+            );
         }
       } catch (_) {
         // No save dialog / download on this platform (mobile): a text format

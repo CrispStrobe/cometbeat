@@ -277,6 +277,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get musicExportFailed => 'Export fehlgeschlagen';
 
   @override
+  String get musicExportShared => 'Geteilt';
+
+  @override
   String get audioExportTitle => 'Klang exportieren';
 
   @override

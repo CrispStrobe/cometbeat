@@ -29,6 +29,24 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (share-export)** · ✅ **SHIPPED (idle) — export hands off to the OS share
+  sheet on mobile (AirDrop / Files / Messages).** Codex backlog item ("native share
+  handoff … with a download fallback on web") — genuinely open: the export path used
+  `getSaveLocation`, which THROWS on iOS/Android (no file dialog), so mobile export
+  was broken. Added `share_plus ^12.0.2` (12.x, not 13 — 13 needs a newer win32 than
+  package_info_plus ^8 allows) and taught the shared **`deliverBytes`** helper
+  (`file_delivery_io.dart`) to share on mobile and save on desktop; web already
+  downloads. New `DeliveryKind.shared`; the Workshop's delivery switch + `music_export`
+  handle it (music_export now routes through `deliverBytes` instead of calling
+  `getSaveLocation` directly — one delivery path for everyone). ⚠️ **touched hot
+  shared files** additively: `pubspec.yaml` (one dep), `music_export.dart`,
+  `composition_workshop_screen.dart` (one switch case). New l10n `musicExportShared`
+  (de/en). Tests: the mobile-vs-desktop delivery decision (`deliveryUsesShareSheet`)
+  + the save path still saves (pinned desktop); whole suites green (workshop 84 +
+  delivery 3 = 87), analyze clean. The actual share invocation is share_plus's
+  (platform channel) — verified by CI's platform builds + on-device, not headlessly.
+  Worktree `../mus-share-export`.
+
 - **opus (note-octave)** · ✅ **SHIPPED (idle) — Workshop note names carry their
   octave (F2).** Taking over the (now-idle) codex `score-editor-web` backlog — most
   of it is already shipped by the score-fixes effort; the one genuinely-open,

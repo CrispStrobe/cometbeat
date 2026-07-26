@@ -21,9 +21,20 @@ import 'package:comet_beat/core/notation/multi_part_export.dart'
 import 'package:comet_beat/features/workshop/export/score_pdf.dart'
     show exportMultiPartToPdf;
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:crisp_notation/crisp_notation.dart';
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+
+/// MIME type by export extension — passed to [deliverBytes] so a share sheet's
+/// receiving app can pick a handler. Falls back to a generic binary type.
+String _mimeFor(String ext) => switch (ext) {
+      'musicxml' || 'xml' => 'application/vnd.recordare.musicxml+xml',
+      'mxl' => 'application/vnd.recordare.musicxml',
+      'mid' => 'audio/midi',
+      'pdf' => 'application/pdf',
+      'abc' || 'krn' || 'ly' || 'mei' || 'brf' => 'text/plain',
+      _ => 'application/octet-stream',
+    };
 
 /// One exportable format: a label, a file extension, and a builder that turns
 /// the score into the file's bytes (string writers are utf8-encoded here).
@@ -157,18 +168,23 @@ Future<void> _exportAs(
   final messenger = ScaffoldMessenger.of(context);
   try {
     final bytes = await fmt.build(mp, names);
-    final suggested = '$baseName.${fmt.ext}';
-    final location = await getSaveLocation(
-      suggestedName: suggested,
-      acceptedTypeGroups: [
-        XTypeGroup(label: fmt.label, extensions: [fmt.ext]),
-      ],
+    // deliverBytes picks the right channel per platform: a Save dialog on
+    // desktop, the OS share sheet on mobile, a browser download on web.
+    final result = await deliverBytes(
+      bytes: bytes,
+      suggestedName: '$baseName.${fmt.ext}',
+      label: fmt.label,
+      extension: fmt.ext,
+      mimeType: _mimeFor(fmt.ext),
     );
-    if (location == null) return;
-    await XFile.fromData(bytes, name: suggested).saveTo(location.path);
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.workshopSavedTo(location.path))),
-    );
+    final message = switch (result.kind) {
+      DeliveryKind.saved => l10n.workshopSavedTo(result.path ?? ''),
+      DeliveryKind.shared || DeliveryKind.downloaded => l10n.musicExportShared,
+      DeliveryKind.cancelled => null,
+    };
+    if (message != null) {
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    }
   } catch (_) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.musicExportFailed)));
   }

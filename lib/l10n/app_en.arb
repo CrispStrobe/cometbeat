@@ -136,6 +136,7 @@
   "musicExportTitle": "Export as…",
   "musicExportEmpty": "Nothing to export yet",
   "musicExportFailed": "Export failed",
+  "musicExportShared": "Shared",
   "audioExportTitle": "Export sound",
   "audioExportWav": "WAV (uncompressed)",
   "audioExportMp3": "MP3 (smaller)",
