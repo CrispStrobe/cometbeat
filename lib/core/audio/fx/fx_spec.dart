@@ -194,7 +194,10 @@ FxSpec defaultFx(FxType type) => switch (type) {
         ),
       FxType.distortion => const FxSpec(
           type: FxType.distortion,
-          params: {'drive': 4, 'mix': 0.55},
+          // 'kind' is the DistortionKind index; 1 = soft clip, which is what the
+          // dispatch falls back to, so a saved spec written before A3 (with no
+          // 'kind' key at all) renders identically.
+          params: {'kind': 1, 'drive': 4, 'mix': 0.55},
         ),
       FxType.bitCrush => const FxSpec(
           type: FxType.bitCrush,

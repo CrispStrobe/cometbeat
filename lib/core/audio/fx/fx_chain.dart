@@ -19,7 +19,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart'
 import 'package:comet_beat/core/audio/crisp_dsp/convolution_reverb.dart'
     show convolutionReverbFx;
 import 'package:comet_beat/core/audio/crisp_dsp/distortion.dart'
-    show distortionFx;
+    show DistortionKind, distortionFx;
 import 'package:comet_beat/core/audio/crisp_dsp/dynamics.dart'
     show compressorFx, compressorFxStereo, gateFx, gateFxStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
@@ -248,6 +248,13 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
       ),
     FxType.distortion => distortionFx(
         input,
+        // A3: the shaper CURVE, as an index into DistortionKind. The DSP has
+        // always had four (hard clip / soft clip / fuzz / wave fold) but the
+        // rack only ever reached soft clip, so a fuzz — which the Instrument
+        // mode's "demon" voice is built on — was unreachable from a chain. The
+        // default is soft clip's own index, so every existing spec is
+        // unaffected.
+        kind: _distortionKind(p('kind', 1)),
         drive: p('drive', 4),
         mix: p('mix', 0.55),
       ),
@@ -421,6 +428,11 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
       ),
   };
 }
+
+/// A [DistortionKind] from its enum index, clamped — a corrupt or
+/// future-versioned value falls back to soft clip rather than throwing.
+DistortionKind _distortionKind(double raw) => DistortionKind
+    .values[raw.round().clamp(0, DistortionKind.values.length - 1)];
 
 Float64List _gainFx(
   Float64List input, {
