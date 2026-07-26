@@ -252,7 +252,14 @@ class AdvancedTrackerScreen extends StatefulWidget {
     super.key,
     this.initialSong,
     this.autoShareOnExit = false,
+    this.onReturnToDaw,
   });
+
+  /// When set (opened to edit an Audio Editor tracker clip), "Send to Audio
+  /// Editor" calls this with the edited song and pops back — an IN-PLACE round
+  /// trip that updates the source clip instead of adding a second copy of the
+  /// same music. Null keeps the normal add-a-new-clip send.
+  final void Function(TrackerSong edited)? onReturnToDaw;
 
   /// An optional song to open with — the Beginner→Advanced "promote" hands its
   /// groove over here so the switch keeps the kid's work instead of starting
@@ -2924,7 +2931,18 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   bool get debugHoverCardShown => _inspect && _hoverInfo != null;
 
   @override
-  void sendToDaw() => sendToMultitrack(context, TrackerSource(_song));
+  void sendToDaw() {
+    // In-place round-trip: update the source Audio Editor clip and go back
+    // (same shape as the Score and Tab workshops). Without the callback this
+    // stays the plain "add a new clip" send.
+    final onReturn = widget.onReturnToDaw;
+    if (onReturn != null) {
+      onReturn(_song);
+      Navigator.of(context).pop();
+    } else {
+      sendToMultitrack(context, TrackerSource(_song));
+    }
+  }
 
   static const _voiceIcons = <VoiceEffect, IconData>{
     VoiceEffect.normal: Icons.person,

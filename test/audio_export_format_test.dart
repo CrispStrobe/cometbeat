@@ -320,8 +320,11 @@ void _mp3EncoderChoice() {
         mp3Encoder: Mp3Encoder.native,
       );
       expect(fake.calls, 1);
-      expect(fake.format, EncodedAudioFormat.mp3,
-          reason: 'not opus/aac by accident');
+      expect(
+        fake.format,
+        EncodedAudioFormat.mp3,
+        reason: 'not opus/aac by accident',
+      );
     });
 
     test('native MP3 falls back to Dart when glint is absent', () {
@@ -348,10 +351,13 @@ void _mp3EncoderChoice() {
       );
       expect(String.fromCharCodes(wav.take(4)), 'RIFF');
       expect(fake.calls, 0);
-      // Opus is always native, and Mp3Encoder.dart must not divert it.
+      // Opus is always native, and Mp3Encoder.dart must not divert it. Passed
+      // explicitly even though it is today's default: the point of the test is
+      // this exact value, which a changed default would otherwise stop testing.
       AudioExportFormat.opus.build(
         _ramp(500),
         48000,
+        // ignore: avoid_redundant_argument_values
         mp3Encoder: Mp3Encoder.dart,
       );
       expect(fake.calls, 1);

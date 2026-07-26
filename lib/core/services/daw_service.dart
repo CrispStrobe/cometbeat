@@ -9,10 +9,12 @@ import 'dart:math' as math;
 
 import 'package:comet_beat/core/audio/daw_edits.dart';
 import 'package:comet_beat/core/audio/daw_project.dart';
-import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
+import 'package:comet_beat/core/audio/daw_sources.dart'
+    show ScoreSource, TrackerSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart'
     show MultiPartScore;
@@ -1077,9 +1079,27 @@ class DawService extends ChangeNotifier {
     return src is ScoreSource ? src.score : null;
   }
 
+  /// Whether the clip is a tracker pattern — sent here from the Tracker, and so
+  /// still holding the song itself rather than only its render.
+  bool isTrackerClip(int track, int index) =>
+      timeline.tracks[track].clips[index].source is TrackerSource;
+
+  /// The pattern song behind a tracker clip (null on any other clip).
+  ///
+  /// A clip that arrived via the Tracker's "Send to Audio Editor" keeps the
+  /// live [TrackerSong], not a bounce of it. Treating such a clip as opaque
+  /// audio would have made Tracker → Audio Editor → Tracker a one-way trip
+  /// while the exact song sat in the clip, so the way back is exact retrieval —
+  /// nothing is transcribed and nothing is approximated.
+  TrackerSong? clipTrackerSong(int track, int index) {
+    final src = timeline.tracks[track].clips[index].source;
+    return src is TrackerSource ? src.song : null;
+  }
+
   /// The raw source of a clip — captured before opening it in an editor so the
-  /// edit can be routed back to the SAME clip via [replaceScoreClipSource],
-  /// robustly against the clip being moved/reordered meanwhile.
+  /// edit can be routed back to the SAME clip via [replaceScoreClipSource] or
+  /// [replaceTrackerClipSource], robustly against the clip being
+  /// moved/reordered meanwhile.
   ClipSource clipSourceAt(int track, int index) =>
       timeline.tracks[track].clips[index].source;
 
@@ -1105,6 +1125,23 @@ class DawService extends ChangeNotifier {
     addClip(ScoreSource(score, instrument: inst));
   }
 
+  /// The tracker twin of [replaceScoreClipSource]: put the edited [song] back
+  /// into the clip it came from, keeping placement/gain/fades/trim/provenance.
+  /// If that clip is gone, the edit lands as a new clip so nothing is lost.
+  void replaceTrackerClipSource(ClipSource oldSource, TrackerSong song) {
+    for (final t in timeline.tracks) {
+      for (var i = 0; i < t.clips.length; i++) {
+        if (identical(t.clips[i].source, oldSource)) {
+          _record();
+          t.clips[i] = _reSource(t.clips[i], TrackerSource(song));
+          notifyListeners();
+          return;
+        }
+      }
+    }
+    addClip(TrackerSource(song));
+  }
+
   /// Re-source [clip] onto [source], preserving placement/gain/mute/fades/trim.
   ///
   /// [Clip.provenance] rides along deliberately: editing borrowed music in the
@@ -1112,7 +1149,7 @@ class DawService extends ChangeNotifier {
   /// new work. Dropping the licence here would have laundered it — the clip
   /// would return looking unencumbered and the export gate would stop asking
   /// for the attribution/share-alike the source still requires.
-  Clip _reSource(Clip clip, ScoreSource source) => Clip(
+  Clip _reSource(Clip clip, ClipSource source) => Clip(
         source: source,
         startMs: clip.startMs,
         gain: clip.gain,

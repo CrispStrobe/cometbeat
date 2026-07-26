@@ -5,9 +5,13 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/daw_sources.dart' show TrackerSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart'
     show DawClipEffectType, DawFadeCurve, kDawSampleRate;
+import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart'
+    show AdvancedTrackerScreen;
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
@@ -713,6 +717,48 @@ void main() {
       service.clipEffects(1, 0).map((fx) => fx.type),
       [DawClipEffectType.distortion, DawClipEffectType.highpass],
     );
+  });
+
+  testWidgets('a tracker clip offers the way back to the Tracker',
+      (tester) async {
+    // W4: material that arrived from the Tracker must be able to go home. The
+    // clip still holds the TrackerSong, so the inspector shows the same "Open
+    // in editor" door a score clip gets — otherwise the Audio Editor is a
+    // one-way street for anything but engraved music.
+    await _pumpDaw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    service.addClip(TrackerSource(TrackerSong()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('🎹'));
+    await tester.pumpAndSettle();
+    expect(find.text('Open in editor'), findsOneWidget);
+
+    await tester.tap(find.text('Open in editor'));
+    // Explicit pumps, not pumpAndSettle: the Tracker runs a continuous ticker,
+    // so settling never completes.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    // Straight to the Tracker — no format sheet, because nothing is converted.
+    expect(find.byType(AdvancedTrackerScreen), findsOneWidget);
+  });
+
+  testWidgets('a plain audio clip offers no way back — nothing to hand back',
+      (tester) async {
+    // The other half of the rule: a bounced/imported waveform is NOT notes, so
+    // offering "Open in editor" there would promise a conversion we would have
+    // to invent. Transcription stays an explicit, separate feature.
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    daw.addDemoBeat();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('🥁'));
+    await tester.pumpAndSettle();
+    expect(find.text('Open in editor'), findsNothing);
   });
 
   testWidgets('copy and paste selected clips preserves lane timing',

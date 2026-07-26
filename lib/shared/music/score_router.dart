@@ -7,6 +7,7 @@
 // clip — so opening a DAW music clip and sending back updates that SAME clip
 // in place. With no [onReturn] the editors keep their normal add-a-new-clip send.
 
+import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
     show trackerSongFromMultiPart;
@@ -21,6 +22,9 @@ import 'package:flutter/material.dart';
 
 /// Called with the edited score when an editor "sends back" a round-trip edit.
 typedef ScoreReturn = void Function(MultiPartScore edited);
+
+/// The tracker twin of [ScoreReturn] — the edited pattern song, unconverted.
+typedef TrackerReturn = void Function(TrackerSong edited);
 
 /// Open [score] in the full Score Workshop (editable notation, all parts).
 void openScoreInWorkshop(
@@ -66,6 +70,28 @@ void openScoreInTracker(BuildContext context, MultiPartScore score) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => AdvancedTrackerScreen(initialSong: song),
+    ),
+  );
+}
+
+/// Open a tracker [song] in the Advanced Tracker as-is.
+///
+/// Unlike [openScoreInTracker] there is no conversion here: an Audio Editor
+/// clip that arrived from the Tracker still holds the song, so this hands back
+/// the same document. Pass [onReturn] for the in-place round trip — the
+/// Tracker's "Send to Audio Editor" then updates THAT clip instead of adding a
+/// second copy of the same music to the timeline.
+void openTrackerSong(
+  BuildContext context,
+  TrackerSong song, {
+  TrackerReturn? onReturn,
+}) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => AdvancedTrackerScreen(
+        initialSong: song,
+        onReturnToDaw: onReturn,
+      ),
     ),
   );
 }

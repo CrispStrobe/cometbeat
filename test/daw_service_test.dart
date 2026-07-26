@@ -3,11 +3,13 @@
 
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
+import 'package:comet_beat/core/audio/daw_sources.dart'
+    show ScoreSource, TrackerSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
-    show AdditiveInstrument;
+    show AdditiveInstrument, TrackerCell;
+import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -782,6 +784,53 @@ void main() {
       final src = s.clipSourceAt(0, 0);
       s.removeClip(0, 0); // the clip vanished while "editing"
       s.replaceScoreClipSource(src, _editedScore());
+      expect(s.clipCount, 1); // the edit still lands — nothing lost
+    });
+
+    test('a tracker clip hands back the song itself, not a transcription', () {
+      // The way OUT of the Audio Editor for material that arrived from the
+      // Tracker. The clip kept the TrackerSong, so this is exact retrieval —
+      // the reason Tracker → Audio Editor → Tracker can be lossless while
+      // Audio Editor → anywhere is not (a bounced waveform would have to be
+      // transcribed).
+      final song = TrackerSong()
+        ..engine.setCell(0, 0, const TrackerCell(midi: 60));
+      final s = DawService()..addClip(TrackerSource(song));
+      expect(s.isTrackerClip(0, 0), isTrue);
+      expect(s.clipTrackerSong(0, 0), same(song));
+
+      // A score clip is not a tracker clip and vice versa — the inspector
+      // shows one door, not two.
+      final s2 = DawService()..addClip(_scoreClip());
+      expect(s2.isTrackerClip(0, 0), isFalse);
+      expect(s2.clipTrackerSong(0, 0), isNull);
+      expect(s.clipScore(0, 0), isNull);
+    });
+
+    test('replaceTrackerClipSource updates the SAME clip in place', () {
+      final s = DawService()..addClip(TrackerSource(TrackerSong()));
+      // Move + fade it, so we can prove the placement survives the trip.
+      s.moveClip(0, 0, 1500);
+      s.setClipFades(0, 0, fadeInMs: 120);
+      final src = s.clipSourceAt(0, 0);
+
+      final edited = TrackerSong()
+        ..engine.setCell(0, 0, const TrackerCell(midi: 64));
+      s.replaceTrackerClipSource(src, edited);
+
+      expect(s.timeline.tracks[0].clips.length, 1); // replaced, not duplicated
+      expect(s.clipTrackerSong(0, 0), same(edited));
+      final clip = s.timeline.tracks[0].clips.single;
+      expect(clip.startMs, 1500);
+      expect(clip.fadeInMs, 120);
+    });
+
+    test('replaceTrackerClipSource adds a new clip when the source is gone',
+        () {
+      final s = DawService()..addClip(TrackerSource(TrackerSong()));
+      final src = s.clipSourceAt(0, 0);
+      s.removeClip(0, 0);
+      s.replaceTrackerClipSource(src, TrackerSong());
       expect(s.clipCount, 1); // the edit still lands — nothing lost
     });
 

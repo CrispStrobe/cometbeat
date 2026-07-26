@@ -44,7 +44,7 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
     show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music/score_router.dart'
-    show showScoreDestinations;
+    show openTrackerSong, showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show AudioStem, showAudioExportSheet, showAudioStemsExportSheet;
 import 'package:comet_beat/shared/music_io/audio_import.dart'
@@ -4012,6 +4012,27 @@ class _DawScreenState extends State<DawScreen>
                             label: Text(l10n.dawOpenInEditor),
                           ),
                         ],
+                        // The same door for a clip that came from the Tracker.
+                        // It still holds the song, so this hands back the very
+                        // document — no conversion, nothing approximated.
+                        if (_daw.isTrackerClip(track, index))
+                          TextButton.icon(
+                            onPressed: () {
+                              final song = _daw.clipTrackerSong(track, index);
+                              final source = _daw.clipSourceAt(track, index);
+                              Navigator.of(sheetCtx).pop();
+                              if (song != null) {
+                                openTrackerSong(
+                                  context,
+                                  song,
+                                  onReturn: (edited) => _daw
+                                      .replaceTrackerClipSource(source, edited),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.open_in_new),
+                            label: Text(l10n.dawOpenInEditor),
+                          ),
                         // Split at the playhead — only when it falls inside the clip.
                         TextButton.icon(
                           onPressed: canSplitClip(track, index, playheadMs)
