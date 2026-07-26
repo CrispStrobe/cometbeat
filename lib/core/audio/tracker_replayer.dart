@@ -96,6 +96,20 @@ const int kFxSampleOffset =
 const int kFxPositionJump = 0xB; // Bxx — continue at order xx, row 0
 const int kFxPatternBreak = 0xD; // Dxx — next order entry, row = decimal(xx)
 const int kFxSetSpeed = 0xF; // Fxx — <0x20 set speed (ticks/row); ≥0x20 tempo
+
+/// Set speed (ticks per row) over the FULL 1–255 range, unambiguously.
+///
+/// [kFxSetSpeed] is MOD's `Fxx`, where the single parameter is overloaded: below
+/// 0x20 it means speed, at or above it means tempo. That works for MOD and XM,
+/// which really do encode it that way. IT and S3M do NOT — they have separate
+/// `Axx` (speed, 1–255) and `Txx` (tempo) commands, so a legitimate `A99`
+/// (speed 153) has no representation in `Fxx` at all and used to be clamped to
+/// 0x1F. That silently truncated any IT/S3M passage built on a slow speed: on
+/// `buddhia3.it` the final rows played at speed 31 instead of 153 and the render
+/// came out 47 s short of libopenmpt's.
+///
+/// So IT/S3M `Axx` maps here instead, and the parameter is just the speed.
+const int kFxSetSpeedFull = 0x12;
 const int kFxExtended =
     0xE; // Exy — sub-command in the high nibble of the param
 
@@ -3155,7 +3169,10 @@ bool songNeedsWalkRender(TrackerSong song) =>
 bool _songHasFxx(TrackerSong song) => song.patterns.any(
       (p) => p.cells.any(
         (col) => col.any(
-          (c) => c.fxCmd == kFxSetSpeed || c.fxCmd == kFxTempoSlide,
+          (c) =>
+              c.fxCmd == kFxSetSpeed ||
+              c.fxCmd == kFxSetSpeedFull ||
+              c.fxCmd == kFxTempoSlide,
         ),
       ),
     );
@@ -3268,6 +3285,9 @@ List<PlayedRow> walkFlow(TrackerSong song, {int maxRows = 65536}) {
         } else if (c.fxParam > 0) {
           curSpeed = c.fxParam; // already >= 1
         }
+      } else if (c.fxCmd == kFxSetSpeedFull) {
+        // IT/S3M Axx: always speed, never tempo, full range.
+        if (c.fxParam > 0) curSpeed = c.fxParam.clamp(1, 255);
       } else if (c.fxCmd == kFxTempoSlide && !slidThisRow) {
         slidThisRow = true;
         final up = ((c.fxParam >> 4) & 0xF) == 1;
@@ -3379,6 +3399,9 @@ int _firstFxx(
           final isTempo = c.fxParam >= 0x20;
           if (wantTempo && isTempo) return c.fxParam;
           if (!wantTempo && c.fxParam > 0 && !isTempo) return c.fxParam;
+        } else if (c.fxCmd == kFxSetSpeedFull && !wantTempo) {
+          // Never a tempo, so it only ever answers the speed question.
+          if (c.fxParam > 0) return c.fxParam;
         }
       }
     }

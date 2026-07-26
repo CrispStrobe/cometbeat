@@ -76,6 +76,8 @@ import 'package:comet_beat/core/audio/mod/s3m_writer.dart';
 import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_writer.dart';
+import 'package:comet_beat/core/audio/tracker_replayer.dart'
+    show kFxSetSpeedFull;
 
 /// Detects the module container format by signature; null if unrecognized.
 ModuleFormat? sniffModuleFormat(Uint8List bytes) {
@@ -207,8 +209,12 @@ ModuleDoc docFromMod(ModModule m) {
 /// our set return `(0, 0)` (dropped). fxCmd values match the replayer's `kFx*`.
 (int, int) _s3mEffectToFx(int cmd, int info) {
   switch (cmd) {
-    case 1: // A — set speed (ticks/row); our Fxx < 0x20 = speed
-      return info == 0 ? (0, 0) : (0xF, info < 0x20 ? info : 0x1F);
+    case 1: // A — set speed (ticks/row), full 1..255 range
+      // NOT Fxx: S3M/IT keep speed (Axx) and tempo (Txx) as separate commands,
+      // so a speed of e.g. 153 is legal and has no Fxx encoding (there, >= 0x20
+      // means tempo). It used to be clamped to 0x1F here, which silently sped up
+      // every passage built on a slow speed.
+      return info == 0 ? (0, 0) : (kFxSetSpeedFull, info.clamp(1, 255));
     case 2: // B — position jump
       return (0xB, info);
     case 3: // C — pattern break (row param, decimal like MOD's Dxx)
@@ -565,8 +571,10 @@ ModuleDoc docFromXm(XmModule m) {
   int activeMacro = 0,
 ]) {
   switch (cmd) {
-    case 1: // A — set speed
-      return value == 0 ? (0, 0) : (0xF, value < 0x20 ? value : 0x1F);
+    case 1: // A — set speed (ticks/row), full 1..255 range
+      // See the note in _s3mEffectToFx: Axx is always a speed in IT, so it maps
+      // to kFxSetSpeedFull rather than being squeezed into MOD's Fxx.
+      return value == 0 ? (0, 0) : (kFxSetSpeedFull, value.clamp(1, 255));
     case 2: // B — position jump
       return (0xB, value);
     case 3: // C — pattern break
@@ -899,6 +907,8 @@ ModuleDoc docFromIt(ItModule m) {
       return (25, param); // Y panbrello
     case 0x1F:
       return (20, param); // T tempo slide
+    case kFxSetSpeedFull:
+      return (1, param.clamp(1, 255)); // A — speed, unambiguous
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:

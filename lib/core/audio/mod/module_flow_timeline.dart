@@ -341,7 +341,10 @@ bool _cellIsKind(TrackerCell c, FlowCommandKind kind) {
       return c.fxCmd == kFxExtended &&
           ((c.fxParam >> 4) & 0xF) == kExPatternLoop;
     case FlowCommandKind.speedChange:
-      return c.fxCmd == kFxSetSpeed && c.fxParam > 0 && c.fxParam < 0x20;
+      // Either encoding: MOD's Fxx (speed only below 0x20) or IT/S3M's
+      // full-range Axx, which is always a speed.
+      return (c.fxCmd == kFxSetSpeed && c.fxParam > 0 && c.fxParam < 0x20) ||
+          (c.fxCmd == kFxSetSpeedFull && c.fxParam > 0);
     case FlowCommandKind.tempoChange:
       return c.fxCmd == kFxSetSpeed && c.fxParam >= 0x20;
   }
@@ -382,6 +385,11 @@ void _scanRowCommands(
         haveSpeed = true;
         out.add(FlowCommand(FlowCommandKind.speedChange, c.fxParam, row));
       }
+    } else if (c.fxCmd == kFxSetSpeedFull && c.fxParam > 0 && !haveSpeed) {
+      // IT/S3M Axx — a speed even when the value is >= 0x20, so it must not
+      // fall into the tempo branch above.
+      haveSpeed = true;
+      out.add(FlowCommand(FlowCommandKind.speedChange, c.fxParam, row));
     }
   }
 }
