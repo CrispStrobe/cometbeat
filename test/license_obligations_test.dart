@@ -335,6 +335,41 @@ void main() {
       expect(s.licenseObligations().isClear, isTrue);
     });
 
+    test('baking a symbolic clip to audio does not shed its licence', () {
+      // Saving a project BAKES every clip to PCM (deliberate — see
+      // daw_project.dart). That is the one moment a licensed score stops being
+      // a score, so it is the likeliest place for an obligation to evaporate:
+      // the reopened clip is plain audio, and plain audio looks unencumbered.
+      // The trade-off is about EDITABILITY, never about rights.
+      const work = LicensedWork(
+        title: 'Borrowed setting',
+        license: 'CC-BY-SA-4.0',
+        creator: 'U. Wolf',
+      );
+      final t = DawTimeline(
+        tracks: [
+          DawTrack(
+            clips: [
+              Clip(source: ScoreSource(_oneNoteScore()), provenance: work),
+            ],
+          ),
+        ],
+      );
+
+      final back = projectFromJson(
+        projectToJson(t, render: (_) => Float64List(64)..fillRange(0, 64, 0.2)),
+      );
+      final clip = back.tracks.single.clips.single;
+
+      // The documented trade-off: it came back as audio, not a score.
+      expect(clip.source, isNot(isA<ScoreSource>()));
+      // But the obligation rode through the bake.
+      expect(clip.provenance, work);
+      final s = DawService();
+      s.timeline.tracks[0].clips.add(clip);
+      expect(s.licenseObligations().requiresShareAlike, isTrue);
+    });
+
     test('provenance survives a project save/load round-trip', () {
       // An obligation that disappears on reload is worse than none — it looks
       // discharged.
