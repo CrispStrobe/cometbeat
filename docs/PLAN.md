@@ -29,16 +29,15 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-> ## ⚠️ `main` HISTORY WAS REWRITTEN — RE-SYNC BEFORE YOU PUSH
+> ## ⚠️ `main` HISTORY WAS REWRITTEN (2026-07-26) — RE-SYNC BEFORE YOU PUSH
 >
-> The maintainer authorised purging the copyrighted tracker-audit modules from
-> git history (2.8 MB of ModArchive / Amiga Music Preservation binaries that
-> `bb5a5bee` committed by accident against both `test/fixtures/README.md` and the
-> header of `test/tracker_audio_regression_test.dart`). `main` has been
-> force-pushed with those blobs removed from every commit.
+> `main` was force-pushed with the copyrighted tracker-audit modules purged from
+> every commit (2.8 MB of ModArchive / Amiga Music Preservation binaries that
+> `bb5a5bee` committed by accident, against both `test/fixtures/README.md` and the
+> header of `test/tracker_audio_regression_test.dart`). Rewritten tip:
+> **`d31199a0`**, from pre-rewrite `29bad73b`.
 >
-> **Every clone and worktree now has orphaned SHAs on `main`.** Before your next
-> push:
+> **Every clone and worktree has orphaned SHAs on `main`.** Before your next push:
 >
 > ```
 > git stash            # if you have uncommitted work
@@ -48,9 +47,25 @@ is recorded in [HISTORY.md](HISTORY.md).
 > ```
 >
 > Only `main` was rewritten — `gh-pages` and all 11 feature branches never held
-> the blobs and were left untouched, so if you are working on a feature branch
-> you only need this when you next rebase onto `main`. If you push a stale `main`
-> you will re-introduce the binaries.
+> the blobs and were left untouched. If you push a stale `main` you re-introduce
+> the binaries. The local corpus itself is untouched on disk (untracked +
+> .gitignored), so the OpenMPT audit still works.
+>
+> Concurrent pushes during the rewrite were preserved, not clobbered: the push was
+> lease-guarded, and the two commits that landed mid-operation were replayed onto
+> the rewritten tip.
+>
+> 🔴 **STILL NOT FULLY PURGED — needs the maintainer.** GitHub keeps unreferenced
+> objects reachable by direct SHA until it garbage-collects, and it has not:
+> `https://github.com/CrispStrobe/cometbeat/commit/bb5a5bee…` and
+> `raw.githubusercontent.com/.../bb5a5bee…/test/fixtures/powerbase.mod` both still
+> return **HTTP 200** after the force-push (verified). So anyone holding an old SHA
+> can still download the modules. Closing that needs one of:
+>   1. **GitHub Support** asked to run `gc` on the repo (the documented route), or
+>   2. **delete + recreate the repo** — the only thing that actually worked for the
+>      analogous Hugging Face purge (see the CLAUDE.md incident note: squashing
+>      left old SHAs serving the payloads at 200).
+> Forks and any PR refs retain the objects independently either way.
 
 
 - **opus (tab-parity)** · ✅ **SHIPPED (idle) — Guitar Tab Editor parity A0–E2 + CI unblock.**
