@@ -1,8 +1,9 @@
 // lib/features/games/cello/cello_play_it_screen.dart
 //
 // "Play It" for the Cello Corner — mic grading on the real instrument
-// (docs/PLAN.md live-mic follow-ups). A first-position note is shown on the
-// bass staff, with a string + finger hint; the child bows it on their real
+// (docs/PLAN.md live-mic follow-ups). A note is shown on the bass staff (any of
+// positions 1–4, pool derived by `celloNotesInPosition`), with a string + finger
+// hint; the child bows it on their real
 // cello and the live pitch detector verifies it. Matching is octave-agnostic
 // and must hold for a moment to shrug off the bow's scratchy attack. Turns the
 // finger/string knowledge active — the child actually plays, not taps.
@@ -19,6 +20,7 @@ import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/tuning.dart';
 import 'package:comet_beat/features/games/cello/cello_first_position.dart';
+import 'package:comet_beat/features/games/cello/cello_positions.dart';
 import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
@@ -66,6 +68,11 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
   final _random = Random();
 
   late CelloNote _target;
+
+  /// Which neck position is being drilled; changing it restarts (a run's score
+  /// belongs to one position).
+  int _position = 1;
+
   int _done = 0; // notes resolved (played or skipped)
   int _score = 0;
   bool _finished = false;
@@ -124,7 +131,8 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
   }
 
   void _nextTarget() {
-    _target = kCelloFirstPosition[_random.nextInt(kCelloFirstPosition.length)];
+    final pool = celloNotesInPosition(_position);
+    _target = pool[_random.nextInt(pool.length)];
     _matchStartMs = null;
   }
 
@@ -257,6 +265,30 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
                           '$_score',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          l10n.tabPatternPosition,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                        const SizedBox(width: 12),
+                        for (var p = 1; p <= kMaxGamePosition; p++)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 3),
+                            child: ChoiceChip(
+                              label: const Text('\$p'),
+                              selected: p == _position,
+                              onSelected: (_) {
+                                if (p == _position) return;
+                                _position = p;
+                                _restart();
+                              },
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 8),

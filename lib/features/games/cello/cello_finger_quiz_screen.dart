@@ -1,9 +1,12 @@
 // lib/features/games/cello/cello_finger_quiz_screen.dart
 //
-// "Finger-Quiz" — a first-position note on the bass clef: which finger
-// plays it (0 = open string, 1–4)? The string is shown as a hint, so the
-// child practices the finger pattern, not string-finding (that's the
-// Saiten-Quiz).
+// "Finger-Quiz" — a note on the bass clef: which finger plays it (0 = open
+// string, 1–4)? The string is shown as a hint, so the child practices the finger
+// pattern, not string-finding (that's the Saiten-Quiz).
+//
+// Positions 1–4: the pool comes from `celloNotesInPosition`, derived from the
+// arranger's hand model, so the same finger pattern can be drilled anywhere on
+// the neck instead of only at the nut. Opens in first position.
 //
 // SRI: 'cello.finger.<step><octave>'.
 
@@ -12,6 +15,7 @@ import 'dart:math';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/cello/cello_first_position.dart';
+import 'package:comet_beat/features/games/cello/cello_positions.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -36,6 +40,12 @@ class _CelloFingerQuizScreenState extends State<CelloFingerQuizScreen>
   int? _tapped;
   bool? _lastAnswer;
 
+  /// Which neck position is being drilled. Changing it restarts the game — a
+  /// score is per position, and mixing them mid-run would grade two skills as
+  /// one.
+  int _position = 1;
+  List<CelloNote> get _pool => celloNotesInPosition(_position);
+
   @override
   int get totalRounds => 10;
 
@@ -54,7 +64,8 @@ class _CelloFingerQuizScreenState extends State<CelloFingerQuizScreen>
 
   @override
   void prepareRound() {
-    _target = kCelloFirstPosition[_random.nextInt(kCelloFirstPosition.length)];
+    final pool = _pool;
+    _target = pool[_random.nextInt(pool.length)];
     _tapped = null;
     _lastAnswer = null;
   }
@@ -109,7 +120,15 @@ class _CelloFingerQuizScreenState extends State<CelloFingerQuizScreen>
                         _target.string.label(l10n),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    _PositionPicker(
+                      position: _position,
+                      onChanged: (p) => setState(() {
+                        _position = p;
+                        restartGame();
+                      }),
+                    ),
+                    const SizedBox(height: 12),
                     Expanded(
                       child: Card(
                         child: Center(
@@ -170,6 +189,40 @@ class _CelloFingerQuizScreenState extends State<CelloFingerQuizScreen>
                 ),
               ),
       ),
+    );
+  }
+}
+
+/// Chips 1–4 for the neck position being drilled. Roman-free on purpose: the
+/// games say "1st position" in words elsewhere, and a bare digit row reads at a
+/// glance for a child mid-round.
+class _PositionPicker extends StatelessWidget {
+  const _PositionPicker({required this.position, required this.onChanged});
+
+  final int position;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          l10n.tabPatternPosition,
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(width: 12),
+        for (var p = 1; p <= kMaxGamePosition; p++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: ChoiceChip(
+              label: Text('$p'),
+              selected: p == position,
+              onSelected: (_) => onChanged(p),
+            ),
+          ),
+      ],
     );
   }
 }

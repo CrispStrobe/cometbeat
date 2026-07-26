@@ -6,6 +6,7 @@ import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/features/games/cello/cello_finger_quiz_screen.dart';
 import 'package:comet_beat/features/games/cello/cello_first_position.dart';
+import 'package:comet_beat/features/games/cello/cello_positions.dart';
 import 'package:comet_beat/features/games/cello/cello_string_quiz_screen.dart';
 import 'package:comet_beat/features/games/note_reading/note_reading_quiz_screen.dart';
 import 'package:comet_beat/features/games/screens/module_screen.dart';
@@ -91,6 +92,44 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, '1'));
     await tester.pump();
     expect(sri.getDetailedBreakdown()['cello']!.keys, ['finger']);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('finger quiz drills a chosen position, not only the nut',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const CelloFingerQuizScreen(), sri));
+    await tester.pump();
+
+    // Positions 1-4 offered, first position selected.
+    for (final p in ['1', '2', '3', '4']) {
+      expect(find.widgetWithText(ChoiceChip, p), findsOneWidget);
+    }
+    expect(
+      tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '1')).selected,
+      isTrue,
+    );
+
+    // Third position: no open strings, and every note it can ask about is one
+    // the third-position pool actually contains.
+    await tester.tap(find.widgetWithText(ChoiceChip, '3'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '3')).selected,
+      isTrue,
+    );
+
+    final third = celloNotesInPosition(3);
+    expect(third.any((n) => n.finger == 0), isFalse);
+    // The prompt names one of the four strings, and the drawn note is in pool.
+    final staff = tester.widget<StaffView>(find.byType(StaffView));
+    final drawn = staff.score.measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .single
+        .pitches
+        .single;
+    expect(third.map((n) => n.pitch.midiNumber), contains(drawn.midiNumber));
+
     await tester.pumpAndSettle();
   });
 
