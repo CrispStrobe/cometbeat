@@ -271,7 +271,22 @@ parametric technique end-to-end.
   column in range); `TabColumn.articulations: Set<Articulation>` (staccato / tenuto
   / accent / marcato / fermata …) set on `NoteElement.articulations`, read back on
   import. `setPalmMute`/`setLetRing`/`toggleArticulation`. Tests: B4–B6.
-- [ ] B7 … E2 — pending (scoped above)
+- [x] **B7** trill + tremolo picking — `TabColumn.ornament: Ornament?` (trill /
+  mordent / turn …) → `NoteElement.ornament`; `TabColumn.tremolo: int?` (beam
+  count 1/2/3 = 8th/16th/32nd) → `NoteElement.tremolo`. Both read back on import.
+  `withOrnament`/`withTremolo`. Tests: group B7–B10. (A trill's auxiliary interval
+  is not modelled — logged gap.)
+- [x] **B8** grace notes — `TabColumn.graceMidis: List<int>?` + `graceStyle`
+  (acciaccatura / appoggiatura) → `NoteElement.graceNotes`/`graceStyle`; round-trip
+  via the element. `withGrace`. Tests: B7–B10.
+- [x] **B9** strum / pick — `TabColumn.arpeggio: Arpeggio?` (rolled-chord up/down)
+  → `NoteElement.arpeggio`; `TabColumn.pickStroke: bool?` (up/down) → `PickStroke`.
+  Both read back. `withArpeggio`/`withPickStroke`. Tests: B7–B10.
+- [x] **B10** fingering — `TabColumn.leftFingers: List<int>?` (0/T,1–4 per pitch)
+  → `NoteElement.fingerings`; `TabColumn.rightFinger: RightHandFinger?` (p/i/m/a) →
+  `TabFingering`. Both read back. `withLeftFingers`/`withRightFinger`. `copy()` now
+  deep-copies the bend/whammy/grace/finger lists. Tests: B7–B10. **Phase B done.**
+- [ ] C1 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

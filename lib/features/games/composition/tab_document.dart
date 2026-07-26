@@ -118,6 +118,37 @@ class TabColumn {
   /// set on the engraved `NoteElement.articulations`.
   final Set<Articulation> articulations;
 
+  /// An ornament on this note (B7): trill / mordent / turn … →
+  /// `NoteElement.ornament`. (A trill's auxiliary interval isn't modelled here.)
+  final Ornament? ornament;
+
+  /// Tremolo-picking beam count (B7): 1 = 8th, 2 = 16th, 3 = 32nd; null = none.
+  /// Maps to `NoteElement.tremolo`.
+  final int? tremolo;
+
+  /// Grace-note pitches (B8) played before this note, as MIDI numbers, or null.
+  /// Maps to `NoteElement.graceNotes`; [graceStyle] picks acciaccatura vs
+  /// appoggiatura.
+  final List<int>? graceMidis;
+
+  /// How [graceMidis] are performed/drawn (B8). Ignored when [graceMidis] null.
+  final GraceStyle graceStyle;
+
+  /// A strum / rolled-chord direction over this column (B9) →
+  /// `NoteElement.arpeggio`. Null = block chord.
+  final Arpeggio? arpeggio;
+
+  /// Pick-stroke direction (B9): true = up-stroke, false = down-stroke, null =
+  /// unspecified. Maps to `PickStroke(id, up:)`.
+  final bool? pickStroke;
+
+  /// Left-hand fingering per note (B10): 0 = open/T (thumb), 1–4 fingers, one
+  /// entry per pitch (pitch order). Maps to `NoteElement.fingerings`.
+  final List<int>? leftFingers;
+
+  /// Right-hand fingering (B10): p/i/m/a/c → `TabFingering(id, finger)`.
+  final RightHandFinger? rightFinger;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
@@ -139,6 +170,14 @@ class TabColumn {
     this.palmMute = false,
     this.letRing = false,
     this.articulations = const {},
+    this.ornament,
+    this.tremolo,
+    this.graceMidis,
+    this.graceStyle = GraceStyle.acciaccatura,
+    this.arpeggio,
+    this.pickStroke,
+    this.leftFingers,
+    this.rightFinger,
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -167,6 +206,14 @@ class TabColumn {
     bool? palmMute,
     bool? letRing,
     Set<Articulation>? articulations,
+    Object? ornament = _unset,
+    Object? tremolo = _unset,
+    Object? graceMidis = _unset,
+    GraceStyle? graceStyle,
+    Object? arpeggio = _unset,
+    Object? pickStroke = _unset,
+    Object? leftFingers = _unset,
+    Object? rightFinger = _unset,
   }) =>
       TabColumn(
         frets: frets ?? this.frets,
@@ -193,6 +240,21 @@ class TabColumn {
         palmMute: palmMute ?? this.palmMute,
         letRing: letRing ?? this.letRing,
         articulations: articulations ?? this.articulations,
+        ornament: ornament == _unset ? this.ornament : ornament as Ornament?,
+        tremolo: tremolo == _unset ? this.tremolo : tremolo as int?,
+        graceMidis: graceMidis == _unset
+            ? this.graceMidis
+            : graceMidis as List<int>?,
+        graceStyle: graceStyle ?? this.graceStyle,
+        arpeggio: arpeggio == _unset ? this.arpeggio : arpeggio as Arpeggio?,
+        pickStroke:
+            pickStroke == _unset ? this.pickStroke : pickStroke as bool?,
+        leftFingers: leftFingers == _unset
+            ? this.leftFingers
+            : leftFingers as List<int>?,
+        rightFinger: rightFinger == _unset
+            ? this.rightFinger
+            : rightFinger as RightHandFinger?,
       );
 
   TabColumn withFret(int string, int fret) =>
@@ -267,11 +329,41 @@ class TabColumn {
             : {...articulations, a},
       );
 
+  /// Sets (or clears, when null) this column's ornament (B7).
+  TabColumn withOrnament(Ornament? o) => copyWith(ornament: o);
+
+  /// Sets (or clears, when null) this column's tremolo-picking beams (B7).
+  TabColumn withTremolo(int? beams) => copyWith(tremolo: beams);
+
+  /// Sets (or clears, when null) this column's grace notes (B8).
+  TabColumn withGrace(
+    List<int>? midis, {
+    GraceStyle style = GraceStyle.acciaccatura,
+  }) =>
+      copyWith(graceMidis: midis, graceStyle: style);
+
+  /// Sets (or clears, when null) this column's strum/arpeggio direction (B9).
+  TabColumn withArpeggio(Arpeggio? a) => copyWith(arpeggio: a);
+
+  /// Sets (or clears, when null) this column's pick-stroke direction (B9).
+  TabColumn withPickStroke(bool? up) => copyWith(pickStroke: up);
+
+  /// Sets (or clears, when null) this column's left-hand fingering (B10).
+  TabColumn withLeftFingers(List<int>? fingers) =>
+      copyWith(leftFingers: fingers);
+
+  /// Sets (or clears, when null) this column's right-hand fingering (B10).
+  TabColumn withRightFinger(RightHandFinger? f) => copyWith(rightFinger: f);
+
   /// A deep copy (fresh mutable collections) — for duplicating columns.
   TabColumn copy() => copyWith(
         frets: {...frets},
         techniques: {...techniques},
         articulations: {...articulations},
+        bend: bend == null ? null : [...bend!],
+        whammy: whammy == null ? null : [...whammy!],
+        graceMidis: graceMidis == null ? null : [...graceMidis!],
+        leftFingers: leftFingers == null ? null : [...leftFingers!],
       );
 }
 
@@ -707,6 +799,8 @@ class TabDocument {
     final taps = <Tap>[];
     final palmMutes = <PalmMute>[];
     final letRings = <LetRing>[];
+    final pickStrokes = <PickStroke>[];
+    final tabFingerings = <TabFingering>[];
     final marks = <TabNoteMark>[];
     final slurs = <Slur>[];
     final glissandos = <Glissando>[];
@@ -799,6 +893,14 @@ class TabDocument {
             id: id,
             tieToNext: col.tieToNext,
             articulations: col.articulations,
+            ornament: col.ornament, // B7 trill/mordent/turn
+            tremolo: col.tremolo, // B7 tremolo picking
+            graceNotes: col.graceMidis == null
+                ? const []
+                : [for (final m in col.graceMidis!) pitchFromMidi(m)],
+            graceStyle: col.graceStyle, // B8
+            arpeggio: col.arpeggio, // B9 strum roll
+            fingerings: col.leftFingers ?? const [], // B10 left hand
           ),
         );
         voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
@@ -807,11 +909,17 @@ class TabDocument {
         if (col.bend != null) bends.add(Bend.curve(id, col.bend!));
         if (col.whammy != null) tremoloBars.add(TremoloBar.curve(id, col.whammy!));
         if (col.slide != null) slideInOuts.add(TabSlide(id, col.slide!));
-        // B4/B5/B6 note-scoped marks.
+        // B4/B5/B6/B9/B10 note-scoped marks.
         if (col.tap) taps.add(Tap(id));
         if (col.harmonic != null) marks.add(TabNoteMark(id, col.harmonic!));
         if (col.palmMute) palmMutes.add(PalmMute(id, id)); // self-span
         if (col.letRing) letRings.add(LetRing(id, id));
+        if (col.pickStroke != null) {
+          pickStrokes.add(PickStroke(id, up: col.pickStroke!));
+        }
+        if (col.rightFinger != null) {
+          tabFingerings.add(TabFingering(id, col.rightFinger!));
+        }
         for (final t in col.techniques) {
           switch (t) {
             case TabTechnique.bend:
@@ -856,6 +964,8 @@ class TabDocument {
       taps: taps,
       palmMutes: palmMutes,
       letRings: letRings,
+      pickStrokes: pickStrokes,
+      tabFingerings: tabFingerings,
       tabNoteMarks: marks,
       slurs: slurs,
       glissandos: glissandos,
@@ -967,8 +1077,18 @@ class TabDocument {
     }
     // B4 — right-hand taps.
     final tapIds = {for (final t in score.taps) t.noteId};
-    // B6 — per-note articulations, captured during the element walk below.
-    final artById = <String, Set<Articulation>>{};
+    // B9/B10 — pick-stroke + right-hand fingering (score-level, by note id).
+    final pickStrokeById = {for (final p in score.pickStrokes) p.noteId: p.up};
+    final rightFingerById = {
+      for (final f in score.tabFingerings) f.noteId: f.finger,
+    };
+    // Per-note attributes captured during the element walk below.
+    final artById = <String, Set<Articulation>>{}; // B6
+    final ornById = <String, Ornament>{}; // B7
+    final tremById = <String, int>{}; // B7
+    final graceById = <String, (List<int>, GraceStyle)>{}; // B8
+    final arpById = <String, Arpeggio>{}; // B9
+    final leftFingersById = <String, List<int>>{}; // B10
 
     final annById = <String, String>{};
     for (final a in score.annotations) {
@@ -1004,8 +1124,17 @@ class TabDocument {
             }
             if (frets.isNotEmpty) pinned[idx] = frets;
           }
-          if (el.id != null && el.articulations.isNotEmpty) {
-            artById[el.id!] = el.articulations;
+          final eid = el.id;
+          if (eid != null) {
+            if (el.articulations.isNotEmpty) artById[eid] = el.articulations;
+            if (el.ornament != null) ornById[eid] = el.ornament!;
+            if (el.tremolo != null) tremById[eid] = el.tremolo!;
+            if (el.graceNotes.isNotEmpty) {
+              graceById[eid] =
+                  ([for (final p in el.graceNotes) p.midiNumber], el.graceStyle);
+            }
+            if (el.arpeggio != null) arpById[eid] = el.arpeggio!;
+            if (el.fingerings.isNotEmpty) leftFingersById[eid] = el.fingerings;
           }
           midiCols.add(midis);
           durations.add(el.duration);
@@ -1119,6 +1248,15 @@ class TabDocument {
             articulations: ids[i] == null
                 ? const {}
                 : (artById[ids[i]] ?? const {}),
+            ornament: ids[i] == null ? null : ornById[ids[i]],
+            tremolo: ids[i] == null ? null : tremById[ids[i]],
+            graceMidis: ids[i] == null ? null : graceById[ids[i]]?.$1,
+            graceStyle: (ids[i] == null ? null : graceById[ids[i]]?.$2) ??
+                GraceStyle.acciaccatura,
+            arpeggio: ids[i] == null ? null : arpById[ids[i]],
+            pickStroke: ids[i] == null ? null : pickStrokeById[ids[i]],
+            leftFingers: ids[i] == null ? null : leftFingersById[ids[i]],
+            rightFinger: ids[i] == null ? null : rightFingerById[ids[i]],
           ),
       ],
     );

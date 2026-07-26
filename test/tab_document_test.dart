@@ -978,4 +978,73 @@ void main() {
       expect(identical(dup.articulations, withArt.articulations), isFalse);
     });
   });
+
+  group('B7–B10 — trill/tremolo, grace, strum/pick, fingering', () {
+    TabDocument oneNote() => TabDocument(
+          tuning: Tuning.standardGuitar,
+          columns: [const TabColumn(frets: {0: 5})],
+        );
+    NoteElement firstNote(Score s) =>
+        s.measures.first.elements.whereType<NoteElement>().first;
+
+    test('B7 ornament + tremolo picking set on the note and round-trip', () {
+      final doc = oneNote()
+        ..columns[0] =
+            oneNote().columns[0].withOrnament(Ornament.trill).withTremolo(3);
+      final score = doc.toScore();
+      expect(firstNote(score).ornament, Ornament.trill);
+      expect(firstNote(score).tremolo, 3);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.ornament, Ornament.trill);
+      expect(back.columns.first.tremolo, 3);
+    });
+
+    test('B8 grace notes emit graceNotes + style and round-trip', () {
+      final doc = oneNote();
+      doc.columns[0] = doc.columns[0]
+          .withGrace([62, 64], style: GraceStyle.appoggiatura);
+      final score = doc.toScore();
+      expect(
+        firstNote(score).graceNotes.map((p) => p.midiNumber).toList(),
+        [62, 64],
+      );
+      expect(firstNote(score).graceStyle, GraceStyle.appoggiatura);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.graceMidis, [62, 64]);
+      expect(back.columns.first.graceStyle, GraceStyle.appoggiatura);
+    });
+
+    test('B9 arpeggio + pick-stroke emit and round-trip', () {
+      final doc = oneNote();
+      doc.columns[0] =
+          doc.columns[0].withArpeggio(Arpeggio.up).withPickStroke(true);
+      final score = doc.toScore();
+      expect(firstNote(score).arpeggio, Arpeggio.up);
+      expect(score.pickStrokes.single.up, isTrue);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.arpeggio, Arpeggio.up);
+      expect(back.columns.first.pickStroke, isTrue);
+    });
+
+    test('B10 left- and right-hand fingerings emit and round-trip', () {
+      final doc = oneNote();
+      doc.columns[0] = doc.columns[0]
+          .withLeftFingers([2]).withRightFinger(RightHandFinger.middle);
+      final score = doc.toScore();
+      expect(firstNote(score).fingerings, [2]);
+      expect(score.tabFingerings.single.finger, RightHandFinger.middle);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.leftFingers, [2]);
+      expect(back.columns.first.rightFinger, RightHandFinger.middle);
+    });
+
+    test('copy() deep-copies grace + finger lists (no aliasing)', () {
+      final c = const TabColumn(frets: {0: 5})
+          .withGrace([62]).withLeftFingers([1]);
+      final dup = c.copy();
+      expect(dup.graceMidis, [62]);
+      expect(identical(dup.graceMidis, c.graceMidis), isFalse);
+      expect(identical(dup.leftFingers, c.leftFingers), isFalse);
+    });
+  });
 }
