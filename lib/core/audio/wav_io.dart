@@ -115,6 +115,27 @@ WavData readWavPcm16(Uint8List bytes) {
   return WavData(samples: out, sampleRate: sampleRate, channels: channels);
 }
 
+/// De-interleave into planar channels in [-1, 1], PRESERVING stereo — the
+/// channel-keeping sibling of [wavToMonoFloat], which folds a stereo file down
+/// before the caller ever sees the sides.
+///
+/// [right] is null for a mono file, which is the same shape the DAW's edit and
+/// FX functions take (`left, right?`), so a file read this way flows straight
+/// into them. A file with more than two channels keeps its first two: an editor
+/// that silently discarded them would be worse, but pretending to handle 5.1
+/// would be worse still — the timeline is stereo.
+({Float64List left, Float64List? right}) wavToChannels(WavData wav) {
+  final ch = wav.channels < 1 ? 1 : wav.channels;
+  final frames = wav.samples.length ~/ ch;
+  final left = Float64List(frames);
+  final right = ch >= 2 ? Float64List(frames) : null;
+  for (var f = 0; f < frames; f++) {
+    left[f] = wav.samples[f * ch] / 32768.0;
+    if (right != null) right[f] = wav.samples[f * ch + 1] / 32768.0;
+  }
+  return (left: left, right: right);
+}
+
 /// Downmix interleaved samples to a mono float list in [-1, 1].
 Float64List wavToMonoFloat(WavData wav) {
   final ch = wav.channels < 1 ? 1 : wav.channels;
