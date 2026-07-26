@@ -320,9 +320,12 @@ parametric technique end-to-end.
   also write **palm-mute, let-ring, tap, and left/right-hand fingering** note
   properties. Writer test in crisp_notation + an app-side end-to-end test
   (`TabColumn` → `toScore` → `scoreToGpif` carries them, still a valid `.gp`).
-  ⚠ **whammy bar** and **pick-stroke** are GP *beat* properties (not note-level) →
-  a separate GPIF beat-plumbing follow-up; they survive MusicXML/notation but not
-  yet GP. Tests: group E1.
+  The **whammy bar**, **pick-stroke** and **brush/arpeggio** are GP *beat*
+  properties (they apply to the strum, not one note); the writer now emits them
+  on the `<Beat>` too (crisp_notation@`167ba18`: `WhammyBar` +
+  Origin/Destination, `PickStroke` Direction, `Brush` Direction), so the whole
+  A/B/C technique set now survives to `.gp`. Tests: group E1 (+ beat-property
+  assertions).
 - [x] **E2** PDF export — the Tab Workshop export menu gained **PDF (print)**,
   reusing the Score Workshop's paginated `exportScoreToPdf` on `_doc.toScore()`
   (localized de/en). App-side wiring; the renderer itself is covered by the

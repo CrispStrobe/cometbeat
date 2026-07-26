@@ -1240,5 +1240,25 @@ void main() {
       final bytes = writeGpFromGpif(gpif);
       expect(bytes.sublist(0, 2), [0x50, 0x4B]);
     });
+
+    test('beat-level techniques (whammy / pick-stroke / brush) reach the .gp',
+        () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [
+          const TabColumn(frets: {0: 5}),
+        ],
+      );
+      doc.columns[0] = doc.columns[0]
+          .withWhammy(const [BendPoint(0, 0), BendPoint(1, -1)])
+          .withPickStroke(true)
+          .withArpeggio(Arpeggio.up);
+      final gpif = scoreToGpif(doc.toScore(), tuning: Tuning.standardGuitar);
+      // These live on the <Beat> (crisp_notation@167ba18).
+      expect(gpif, contains('WhammyBar'));
+      expect(gpif, contains('PickStroke'));
+      expect(gpif, contains('Brush'));
+      expect(writeGpFromGpif(gpif).sublist(0, 2), [0x50, 0x4B]);
+    });
   });
 }
