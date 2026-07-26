@@ -29,15 +29,33 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (pickup)** · 🚧 **ACTIVE — wiring `Measure.actualDuration` into the
-  anacrusis path** (the unclaimed Score Workshop backlog line). Touching
-  `lib/features/workshop/model/score_document.dart` (`reflow`'s `flush()`) and
-  adding a test. Concrete bug, verified before starting: `flush()` builds the
-  opening bar as `Measure(current, pickup: true, …)` and never sets
-  `actualDuration`, but crisp_notation's `tempoMapOf`
-  (`playback/tempo_map.dart:171`) advances by `actualDuration ?? meter`, so a
-  pickup bar advances a WHOLE bar — every tempo change after an anacrusis is
-  placed late by (full bar − pickup). — opus
+- **opus (pickup)** · ✅ **SHIPPED (idle) — an anacrusis now declares its length.**
+  `reflow`'s `flush()` (`workshop/model/score_document.dart`) built the opening
+  bar as `Measure(current, pickup: true, …)` and never set `actualDuration`. The
+  flag is all the RENDERER needs, but crisp_notation advances musical time by
+  `actualDuration ?? meter` (`playback/tempo_map.dart:171`), so a short bar with
+  nothing declared advanced a WHOLE bar — every tempo change after an anacrusis
+  landed late by (full bar − pickup). Verified before and after: a quarter pickup
+  + two 4/4 bars placed a tempo change at `2/1`; it is now `5/4`.
+  It stamps what the bar HOLDS, not the capacity the user picked — they agree
+  when the anacrusis is complete, and when it is short the contents are the
+  honest answer AND what `_pickupOf` reads back, so save→reopen agrees.
+  Tests: `test/workshop_pickup_duration_test.dart` (7). Green: reflow,
+  score_document{,_more,_packing_golden}, workshop_import (127) +
+  composition_workshop, workshop_drop_slot (88). analyze clean.
+  ⬜ **Second half of that backlog line — VERIFIED, and it does NOT hold.** The
+  ask was "verify rendered output reflects crisp_notation's metric-aware
+  secondary beaming". It does not, for anacruses: `_BeamGroup.onsets`
+  (`layout/layout_engine.dart`) is documented and built as the onset *from the
+  measure start*, so a pickup bar is beamed as though it began on beat 1.
+  Because a break happens where `floor(onset/sub)` changes, shifting every onset
+  by a whole number of subdivisions leaves the pattern identical — so the common
+  quarter/eighth anacrusis is unaffected, and the audible cases are anacruses
+  LONGER than one beat whose length is not a whole number of beats (a 3/8 pickup
+  in 4/4 breaks after the 4th sixteenth where engraving wants it after the 2nd).
+  **This change is what unblocks the fix**: the engine can now read
+  `actualDuration` to learn how far to offset. It belongs in a crisp_notation
+  worktree with engraving review, so I scoped it out rather than half-do it. — opus
 
 - **opus (interop)** · ✅ **SHIPPED (idle) — the interop matrix now runs against
   the real song book, and it found two truncation/fidelity bugs.**

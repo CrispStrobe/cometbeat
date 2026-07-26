@@ -2179,10 +2179,23 @@ List<Measure> reflow(
   // a full measure. The short opening bar is flagged as a pickup.
   Fraction capacity() => (isFirst && pickupCap != null) ? pickupCap : full;
   void flush() {
+    final isPickupBar = isFirst && pickupCap != null;
     bars.add(
       Measure(
         current,
-        pickup: isFirst && pickupCap != null,
+        pickup: isPickupBar,
+        // An anacrusis must SAY how long it is, not just that it is one. The
+        // `pickup` flag is enough for the renderer, which draws no missing-beat
+        // warning, but anything measuring musical time advances a bar by
+        // `actualDuration ?? meter` — so a short bar that declared nothing
+        // advanced a WHOLE bar, placing every later tempo change late by
+        // (full bar − pickup).
+        //
+        // The length stamped is what the bar actually HOLDS, not the capacity
+        // the user picked. The two agree whenever the anacrusis is complete;
+        // when it is short the contents are the honest answer, and it is also
+        // what `_pickupOf` recovers on reopen, so the two directions agree.
+        actualDuration: isPickupBar ? filled : null,
         timeChange: barTimeChange,
       ),
     );
