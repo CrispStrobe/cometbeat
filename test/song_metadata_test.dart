@@ -48,10 +48,9 @@ String _xml({
 </score-partwise>
 ''';
 
-/// A visible metronome mark. NOTE: `<sound tempo="…">` alone is NOT read by
-/// crisp_notation's MusicXML reader (it only looks at `<metronome>`), so a file
-/// carrying only the playback attribute imports with no tempo — see the
-/// known-limitation test at the bottom.
+/// A visible metronome mark. `<sound tempo="…">` alone is also read now
+/// (crisp_notation `d8589c5`), with the printed metronome winning when a file
+/// carries both — see the group at the bottom.
 String _metronome(double bpm) => '''
       <direction placement="above">
         <direction-type>
@@ -208,15 +207,13 @@ void main() {
     });
   });
 
-  group('known limitation: <sound tempo> alone', () {
-    test('a file with only <sound tempo> imports without a tempo', () {
-      // crisp_notation's MusicXML reader takes its tempo from <metronome>, the
-      // VISIBLE mark, and ignores the <sound tempo="..."> playback attribute.
-      // Plenty of exporters write the latter with no visible mark, so those
-      // files lose their tempo on import. This is a reader gap in the sibling
-      // repo, not something this feature can fix — it is pinned here so the
-      // behaviour is documented and this test flips to a failure (a good one)
-      // the day the reader learns to read it.
+  group('a tempo stated only for playback', () {
+    test('<sound tempo> alone now imports a tempo', () {
+      // This used to be a known limitation: crisp_notation's MusicXML reader
+      // took its tempo from <metronome>, the VISIBLE mark, and ignored the
+      // <sound tempo="..."> playback attribute — so files from exporters that
+      // write only the latter arrived with no tempo. Fixed in crisp_notation
+      // d8589c5, with <metronome> still winning when a file has both.
       const xml = '''
 <?xml version="1.0" encoding="UTF-8"?>
 <score-partwise version="3.1">
@@ -237,11 +234,9 @@ void main() {
       final s = _song(xml).withDerivedMetadata();
       expect(
         s.tempoBpm,
-        isNull,
-        reason: 'the reader now reads <sound tempo> — good! Update this test '
-            'and the note on _metronome().',
+        closeTo(132, 0.001),
+        reason: 'is the sibling crisp_notation checkout older than d8589c5?',
       );
-      // The rest of the metadata still comes through, so the song is fine.
       expect(s.keyFifths, 0);
     });
   });
