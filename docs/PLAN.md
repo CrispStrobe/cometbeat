@@ -108,6 +108,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
+- **opus (articulation-carry)** · ✅ **SHIPPED (idle) — HOW a tab is played
+  survives every waypoint too.** Measured first, as with the fretting, and found
+  two separate gaps: **Tracker dropped palm mute and let ring** (they are NOT
+  members of `TabColumn.techniques` — they are their own flags, so writing that
+  set alone let a palm-muted riff come back open), and **Loop dropped all
+  articulation**, a loop cell being pitch + duration and nothing else. Score held
+  everything already.
+  Fix: new `AnnotationKeys.palmMute` / `letRing`, written and read on the
+  tab↔tracker edge; and `Tab → Loop` now records techniques + both flags beside
+  the fretting at the same `EventAddress`, with `Loop → Tab` restoring them.
+  ⚠️ **The restore rule, please keep it.** There is no pitch to check a vibrato
+  against, so articulation is restored ONLY where the fretting check already
+  confirmed the note is the same one (see `interop_fretting_carry_test`).
+  Identity is proved once, by the thing that can prove it, and the rest rides
+  along — so an edited loop drops the articulation instead of stamping a vibrato
+  onto whatever now sits at that step. Pinned, along with a negative test that
+  nothing INVENTS an articulation.
+  Tests: `interop_articulation_carry_test.dart` (5). Green: the interop suite
+  (173) + tab_workshop, tab_rig_open_in, loop_mixer (113). analyze clean.
+  ⬜ **Measured but NOT carried, for whoever continues:** a tab's `chord`
+  diagrams, `bend`/`whammy`/`slide` CURVES (the parametric B1–B3 data), and
+  per-note dynamics still do not cross Loop. Same pattern would work; each needs
+  its own codec, and the bend curves need a decision on whether an approximated
+  curve is better than none. — opus
+
 - **opus (fretting-carry)** · ✅ **SHIPPED (idle) — the strings you wrote it on
   come back, through every waypoint.** Before building the "per-note fretting"
   follow-up I had left myself, I measured where fretting actually survives — and

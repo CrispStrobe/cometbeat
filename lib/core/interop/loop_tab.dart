@@ -125,6 +125,27 @@ LoopToTabResult tabDocumentFromLoopCells(
     );
     final fretting = remembered ?? byIndex[i] ?? const <int, int>{};
 
+    // Articulation rides with a VERIFIED fretting and only then. There is no
+    // pitch to check a vibrato against, so it inherits the note's identity from
+    // the fretting check — if that could not confirm this is the same note, the
+    // articulation is not this note's either.
+    final at = EventAddress(track: 0, step: step);
+    final techniques = <TabTechnique>{};
+    var palmMute = false;
+    var letRing = false;
+    if (remembered != null) {
+      final raw = notes.get(at, AnnotationKeys.techniques);
+      if (raw is List) {
+        for (final name in raw) {
+          for (final technique in TabTechnique.values) {
+            if (technique.name == name) techniques.add(technique);
+          }
+        }
+      }
+      palmMute = notes.get(at, AnnotationKeys.palmMute) == true;
+      letRing = notes.get(at, AnnotationKeys.letRing) == true;
+    }
+
     if ((cell.midis?.isNotEmpty ?? false) && fretting.isEmpty) {
       report.addLost('notes outside the instrument\'s range');
     }
@@ -137,7 +158,15 @@ LoopToTabResult tabDocumentFromLoopCells(
       report.addLost('per-note velocity (a tab has no dynamics)');
     }
 
-    columns.add(TabColumn(frets: fretting, duration: duration));
+    columns.add(
+      TabColumn(
+        frets: fretting,
+        duration: duration,
+        techniques: techniques,
+        palmMute: palmMute,
+        letRing: letRing,
+      ),
+    );
     step += cell.steps;
   }
 
@@ -207,6 +236,13 @@ TabToLoopResult loopCellsFromTabDocument(
       out.set(at, AnnotationKeys.fretting, frettingToAnnotation(column.frets));
       report.addLost('string and fret choice (a loop track carries pitches)');
     }
+    if (column.techniques.isNotEmpty) {
+      out.set(at, AnnotationKeys.techniques, [
+        for (final technique in column.techniques) technique.name,
+      ]);
+    }
+    if (column.palmMute) out.set(at, AnnotationKeys.palmMute, true);
+    if (column.letRing) out.set(at, AnnotationKeys.letRing, true);
 
     cells.add(
       PatternCell(

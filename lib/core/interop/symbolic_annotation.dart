@@ -85,6 +85,12 @@ abstract final class AnnotationKeys {
   /// A `List<String>` of `TabTechnique.name` values.
   static const techniques = 'techniques';
 
+  /// Per-column playing state that is NOT a [TabTechnique] — `TabColumn` keeps
+  /// these as their own flags, so they need their own keys or they travel with
+  /// nothing.
+  static const palmMute = 'palmMute';
+  static const letRing = 'letRing';
+
   /// Tracker effect-column command + parameter.
   static const fxCmd = 'fxCmd';
   static const fxParam = 'fxParam';

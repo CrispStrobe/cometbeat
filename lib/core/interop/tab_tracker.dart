@@ -158,6 +158,10 @@ TabToTrackerResult trackerSongFromTabDocument(
         AnnotationKeys.techniques: [
           for (final t in column.techniques) t.name,
         ],
+      // Not members of `techniques` — TabColumn keeps them as their own flags,
+      // so listing the set alone let a palm-muted riff come back open.
+      if (column.palmMute) AnnotationKeys.palmMute: true,
+      if (column.letRing) AnnotationKeys.letRing: true,
     });
 
     if (column.tuplet != null) {
@@ -324,6 +328,8 @@ TrackerToTabResult tabDocumentFromTrackerSong(
         volta: _asInt(meta[AnnotationKeys.volta]),
         navigation: _navigationFrom(meta[AnnotationKeys.navigation]),
         section: meta[AnnotationKeys.section] as String?,
+        palmMute: meta[AnnotationKeys.palmMute] == true,
+        letRing: meta[AnnotationKeys.letRing] == true,
       ),
     );
   }
