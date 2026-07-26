@@ -25,6 +25,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart'
     show transcribeRecording;
+import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/note_naming.dart';
@@ -49,6 +50,7 @@ import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
 import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
 import 'package:comet_beat/shared/music_io/file_delivery.dart';
+import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
@@ -3328,7 +3330,27 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     }
   }
 
+  /// Licence provenance for material loaded from the library. Empty for the
+  /// user's own work and for files they opened themselves, which owe nothing.
+  final List<LicensedWork> _provenance = [];
+
+  /// What exporting this score owes — the same rule the Audio Editor and
+  /// Tracker use.
+  LicenseObligations licenseObligations() => obligationsFor(_provenance);
+
+  /// Record an imported work's licence. One funnel, so an obligation can't
+  /// enter the document unrecorded.
+  void noteProvenance(LicensedWork? work) {
+    if (work != null && !_provenance.contains(work)) _provenance.add(work);
+  }
+
   Future<void> _export(ExportFormat fmt) async {
+    // States share-alike terms on the OUTPUT and refuses outright when the
+    // score can't lawfully be exported.
+    if (!await confirmLicenseObligations(context, licenseObligations()) ||
+        !mounted) {
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {

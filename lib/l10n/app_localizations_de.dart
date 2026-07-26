@@ -2268,6 +2268,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dawExportBlocked => 'Export nicht möglich';
 
   @override
+  String get licenseCannotExport => 'Export nicht möglich';
+
+  @override
+  String get licenseTermsTitle => 'Lizenzbedingungen';
+
+  @override
+  String get licenseCannotInclude => 'Kann nicht enthalten sein';
+
+  @override
+  String get licenseAgreeAndExport => 'Zustimmen und exportieren';
+
+  @override
   String get dawExportFullMix => 'Gesamter Mix';
 
   @override

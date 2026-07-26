@@ -16,6 +16,7 @@ import 'dart:convert';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument, TrackerInstrument;
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
+import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart'
     show SampleClip, decodeClips;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -85,12 +86,26 @@ class SavedInstrument {
         _ => 'Instruments',
       };
 
-  /// True if the licence obliges crediting the author (CC BY / BY-SA). CC0 /
-  /// public-domain / unknown do not.
-  bool get needsAttribution {
-    final l = license?.toLowerCase() ?? '';
-    return l.contains('by') || l.contains('attribution');
+  /// This item's licence as a [LicensedWork], or null when it declares none —
+  /// what an export needs in order to know what it owes.
+  LicensedWork? get licensedWork {
+    final l = license?.trim() ?? '';
+    if (l.isEmpty) return null;
+    return LicensedWork(
+      title: name,
+      license: l,
+      source: source,
+      url: sourceUrl,
+    );
   }
+
+  /// True if the licence obliges crediting the author.
+  ///
+  /// Delegates to the shared classifier rather than matching strings here: the
+  /// old local rule (`contains('by')`) also fired on CC BY-NC, which must be
+  /// BLOCKED rather than merely credited, and it couldn't tell share-alike from
+  /// plain attribution.
+  bool get needsAttribution => licensedWork?.tier.requiresAttribution ?? false;
 
   /// True if rebuilding needs the referenced SoundFont file (async), not just
   /// this embedded JSON — resolve those via `resolveInstrumentJson`.

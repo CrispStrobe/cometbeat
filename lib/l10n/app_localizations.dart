@@ -4256,6 +4256,30 @@ abstract class AppLocalizations {
   /// **'Cannot export'**
   String get dawExportBlocked;
 
+  /// No description provided for @licenseCannotExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot export'**
+  String get licenseCannotExport;
+
+  /// No description provided for @licenseTermsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Licence terms'**
+  String get licenseTermsTitle;
+
+  /// No description provided for @licenseCannotInclude.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot be included'**
+  String get licenseCannotInclude;
+
+  /// No description provided for @licenseAgreeAndExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Agree and export'**
+  String get licenseAgreeAndExport;
+
   /// No description provided for @dawExportFullMix.
   ///
   /// In en, this message translates to:

@@ -75,6 +75,7 @@ import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/audio/wav_io.dart'
     show readWavPcm16, wavToMonoFloat;
 import 'package:comet_beat/core/interop/project_bridge.dart';
+import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -105,6 +106,7 @@ import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
+import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
@@ -2566,10 +2568,31 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _addSavedInstrument(saved);
   }
 
+  /// Licence provenance for pool instruments that came from the library, keyed
+  /// by the instrument identity actually in the pool. Populated at the ONE
+  /// funnel below, so an imported instrument's obligation can't enter the song
+  /// unrecorded.
+  final Map<TrackerInstrument, LicensedWork> _instrumentProvenance = {};
+
   void _addSavedInstrument(SavedInstrument saved) {
     final inst = saved.instrument;
-    if (inst != null) _addPoolInstrument(inst);
+    if (inst == null) return;
+    final work = saved.licensedWork;
+    if (work != null) _instrumentProvenance[inst] = work;
+    _addPoolInstrument(inst);
   }
+
+  /// What exporting this song owes. Read from the CURRENT pool, so removing an
+  /// instrument removes its obligation — the same rule the Audio Editor uses.
+  LicenseObligations licenseObligations() => obligationsFor([
+        for (final inst in _song.instruments)
+          if (_instrumentProvenance[inst] case final work?) work,
+      ]);
+
+  /// Every export routes through here first: it states share-alike terms on the
+  /// OUTPUT and refuses outright when the song can't lawfully be exported.
+  Future<bool> _licenseGate() =>
+      confirmLicenseObligations(context, licenseObligations());
 
   /// Append [inst] to the 1-based pool and make it the active instrument.
   void _addPoolInstrument(TrackerInstrument inst) {
@@ -4146,6 +4169,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   }
 
   Future<void> _exportMidi() async {
+    if (!await _licenseGate() || !mounted) return;
+
     final mp = _songMultiPart();
     final l10n = AppLocalizations.of(context)!;
     if (mp == null) {
@@ -4164,12 +4189,16 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// Render the whole song and offer it as WAV or MP3 (pure-Dart, web-safe).
   Future<void> _exportAudio() async {
+    if (!await _licenseGate() || !mounted) return;
+
     final pcm = wavToMonoFloat(readWavPcm16(_song.renderSongWav()));
     if (!mounted) return;
     await showAudioExportSheet(context, pcm: pcm, baseName: 'tracker');
   }
 
   Future<void> _exportMusicXml() async {
+    if (!await _licenseGate() || !mounted) return;
+
     final mp = _songMultiPart();
     final l10n = AppLocalizations.of(context)!;
     if (mp == null) {
@@ -4188,6 +4217,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   }
 
   Future<void> _exportAbc() async {
+    if (!await _licenseGate() || !mounted) return;
+
     final mp = _songMultiPart();
     final l10n = AppLocalizations.of(context)!;
     if (mp == null) {
@@ -4211,6 +4242,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// which re-synthesizes a timbre and drops effects). Also exports drum-only
   /// songs the Score path couldn't.
   Future<void> _exportModule(ModuleFormat fmt, {bool sixteenBit = true}) async {
+    if (!await _licenseGate() || !mounted) return;
+
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     _song.syncCurrent(); // fold live edits into the snapshot before isEmpty
