@@ -41,6 +41,8 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/audio_compare.dart';
+
 /// Opt-in flag for the heavy OpenMPT A/B comparison, matching the
 /// `String.fromEnvironment` pattern in `test/bench_arrange_test.dart`.
 ///
@@ -69,7 +71,20 @@ const _openMptAbRaw = String.fromEnvironment('OPENMPT_AB');
 final _openMptAb = _openMptAbRaw.isNotEmpty && _openMptAbRaw != '0';
 
 // OpenMPT binary path (Homebrew install location)
-const _kOpenMptPath = '/opt/homebrew/Cellar/libopenmpt/0.8.7/bin/openmpt123';
+/// Resolved from PATH, falling back to the Homebrew prefix. It used to be
+/// pinned to one Cellar version, so a routine `brew upgrade` silently skipped
+/// the whole audit.
+final String _kOpenMptPath = _resolveOpenMpt();
+
+String _resolveOpenMpt() {
+  final which = Process.runSync('which', ['openmpt123']);
+  if (which.exitCode == 0) {
+    final path = (which.stdout as String).trim();
+    if (path.isNotEmpty && File(path).existsSync()) return path;
+  }
+  return '/opt/homebrew/bin/openmpt123';
+}
+
 const _kSampleRate = 44100;
 
 /// Loads test fixture bytes
@@ -92,6 +107,14 @@ Future<Uint8List> _renderWithOpenMpt(String fixturePath) async {
         '--samplerate', '$_kSampleRate',
         '--channels', '2',
         '--no-float', // 16-bit integer
+        // Dither is RANDOM and openmpt123 defaults it on (`--dither 1`) for
+        // 16-bit output, so the reference differed on every run. Level and
+        // envelope shrugged it off, but on thin material it was enough to move
+        // the cross-correlation peak — the same A/B reported lags of 21504 and
+        // 29696 samples for identical inputs. Our own render is byte-identical
+        // run to run (verified), so switching dither off makes the whole
+        // comparison reproducible.
+        '--dither', '0',
         tempFixture,
       ],
       workingDirectory: tempDir.path,
@@ -225,9 +248,15 @@ void _normalize(Float64List pcm) {
 
 void main() {
   group('Tracker audio regression vs OpenMPT', () {
-    // Check if test modules are available
-    final testModulesAvailable =
-        File('test/fixtures/powerbase.mod').existsSync();
+    // Gated on a fixture WE own, not on the licence-restricted corpus.
+    //
+    // This used to require `powerbase.mod`, which is © its author and therefore
+    // absent from every clean checkout — so the entire audit skipped even
+    // though the committed golden.* fixtures were sitting right there and
+    // openmpt123 was installed. The restricted modules are far better signal
+    // and remain the reason to run this, but they are now an ENHANCEMENT: each
+    // one skips itself individually if missing, and the baseline still runs.
+    final testModulesAvailable = File('test/fixtures/golden.mod').existsSync();
 
     // This suite needs BOTH an external binary (openmpt123, via Homebrew) and
     // licence-unclear modules that must never be committed. Neither exists on
@@ -260,13 +289,63 @@ void main() {
         // comment claimed they were "freely distributable", which is how 2.8 MB
         // of them ended up committed by accident (bb5a5bee).
         final testModules = [
+          // OUR OWN fixtures first: committed, licence-clean, and present in
+          // every checkout. Until these were listed the A/B named only the
+          // restricted modules below, so on a tree without them it skipped
+          // everything and reported success — an A/B that had effectively
+          // never run. These are small and musically thin, but they exercise
+          // the whole path and give the metrics a baseline that always works.
+          'golden.mod',
+          'golden.xm',
+          'golden.it',
+          'golden.s3m',
+          // Real music, and much better signal — but licence-restricted, so
+          // they exist only in a developer checkout (see the file header).
           'powerbase.mod', // Classic 4-channel ProTracker MOD
           'mobile.mod', // Another classic MOD file
           '_dont_look_back_.xm', // FastTracker 2 XM with instruments
           'buddhia3.it', // Impulse Tracker IT with envelopes
         ];
 
+        // Our golden.* fixtures are REPORT-ONLY, and the reason matters.
+        //
+        // They were hand-built for PARSER testing, not as audio references —
+        // a few notes on a synthetic sample — so holding our render to
+        // OpenMPT's interpretation of them is over-reach: on material this
+        // thin the two engines legitimately disagree about default speed,
+        // trailing silence and sample tuning, and none of that is a bug.
+        //
+        // Measured 2026-07-26 and REPRODUCIBLE run to run, so a future change
+        // to these numbers is visible rather than lost:
+        //   golden.mod  level −16.38 dB · env 0.927 · lag 23040 · spectral 0.620
+        //   golden.xm   level  +9.45 dB · env 1.000 · lag   512 · spectral 0.824
+        //   golden.it   level  −9.40 dB · env 0.990 · lag  1536 · spectral 0.483
+        //   golden.s3m  level  −3.41 dB · env 0.990 · lag  2048 · spectral 0.546
+        //   golden.xm / golden.it also run 17% short (ratio 0.83).
+        //
+        // ⚠️ TWO THINGS HERE ARE WORTH SOMEONE'S TIME — not claimed by me.
+        //
+        // (a) The LEVELS disagree by up to 16 dB and not even consistently in
+        //     sign. The old comparison could not see this: it peak-normalised
+        //     both sides before differencing, so it rated the same golden.mod
+        //     pair as "-0.8 dB". A level check that normalises first is not a
+        //     level check.
+        // (b) Our golden.mod render is nearly SILENT in absolute terms — RMS
+        //     0.00037, with 2 of 1323 envelope blocks above 1e-4.
+        //
+        // Both may be artifacts of fixtures that were never meant to be audio
+        // references. Neither has been investigated.
+        //
+        // The licence-restricted modules are real music and DO gate.
+        const reportOnly = {
+          'golden.mod',
+          'golden.xm',
+          'golden.it',
+          'golden.s3m',
+        };
+
         for (final fixtureName in testModules) {
+          final strict = !reportOnly.contains(fixtureName);
           test(
             '$fixtureName matches OpenMPT reference',
             () async {
@@ -303,12 +382,17 @@ void main() {
               final openmptDuration = openmptPcm.length / _kSampleRate;
               final durationRatio = ourDuration / openmptDuration;
 
-              expect(
-                durationRatio,
-                inInclusiveRange(0.90, 1.10),
-                reason: 'Duration mismatch: ours ${ourDuration}s vs '
-                    'OpenMPT ${openmptDuration}s (ratio $durationRatio)',
-              );
+              if (strict) {
+                expect(
+                  durationRatio,
+                  inInclusiveRange(0.90, 1.10),
+                  reason: 'Duration mismatch: ours ${ourDuration}s vs '
+                      'OpenMPT ${openmptDuration}s (ratio $durationRatio)',
+                );
+              } else {
+                print('    duration ratio ${durationRatio.toStringAsFixed(3)} '
+                    '(report-only fixture)');
+              }
 
               // 6. Downsample to 4kHz for faster comparison (removes HF details)
               const downsampleFactor = _kSampleRate ~/ 4000;
@@ -363,6 +447,38 @@ void main() {
               print('    RMS: ours ${ourRms.toStringAsFixed(4)}, '
                   'OpenMPT ${openmptRms.toStringAsFixed(4)}');
               print('    RMS difference: ${rmsDiffDb.toStringAsFixed(1)} dB');
+
+              // The metrics duration+RMS cannot provide. Verified independently
+              // in audio_compare_test.dart against synthesised signals, so a
+              // surprising number here is evidence about the RENDER, not about
+              // the instrument measuring it.
+              // FULL-RATE, not the 4 kHz downsample the RMS check uses.
+              //
+              // Two reasons. The frame size sets the frequency resolution
+              // (bin = rate/frame), so an 8192 frame means 5.4 Hz at 44.1 kHz —
+              // fine enough to see a semitone — but at 4 kHz that same frame is
+              // TWO SECONDS of audio, longer than these short renders, and the
+              // metric correctly reported 0 for "no frame had energy on both
+              // sides". And the downsample is peak-normalised, which would hide
+              // exactly the level difference `levelDeltaDb` exists to report.
+              final cmp = AudioComparison.of(ourPcm, openmptPcm);
+              print('    $cmp');
+
+              // Spectral similarity is the one that sees a tuning error: we
+              // map Amiga periods through periodToMidi at A440 rather than
+              // from the Paula clock, and a systematic offset there would leave
+              // duration and RMS looking perfect. Deliberately a LOOSE floor —
+              // two independent engines differ in interpolation, envelopes and
+              // filtering, so this is a "still playing the same notes" gate,
+              // not a fidelity score.
+              if (strict) {
+                expect(
+                  cmp.spectral,
+                  greaterThan(0.5),
+                  reason: 'spectra diverged ($cmp) — a tuning, sample-mapping '
+                      'or envelope regression, not just a level difference',
+                );
+              }
 
               // Acceptable threshold: < 10 dB difference for minimal fixtures
               // (Real modules should be < 3 dB; minimal fixtures have edge cases)
