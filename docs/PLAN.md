@@ -48,7 +48,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   Tests: corpus (46) + `tracker_notation_keyoff_test.dart` (4, incl. "an uncut
   note still rings" so the tracker rule is pinned both ways). Green:
   tracker_notation{,_full}, multipart_to_tracker, project_bridge,
-  tab_tracker_interop, loop_tracker_drum_interop. `flutter analyze` clean.
+  tab_tracker_interop, loop_tracker_drum_interop. `flutter analyze` clean. Also
+  green after the shared-file change: tracker_screen + advanced_tracker_screen
+  (106).
+  ⚠️ **Handover for whoever owns tracker_engine/replayer — I did NOT touch this.**
+  The same `cellRuns` sustain+release merge is used by the AUDIO paths, e.g.
+  `renderCellsWithVoice` (`tracker_engine.dart:589`) sizes the voice buffer over
+  `sustain + release`, so a Note Cut looks like it does not stop the sound there
+  either. Imported modules really do carry those cells — `tracker_song_module.dart`
+  :720 maps `keyOff && midi == null` to `DocCell(noteOff: true)` — so this is
+  reachable with real XM/IT files, not hypothetical. I stopped at notation because
+  changing audio wants the render → `bin/listen.dart` acceptance loop and belongs
+  to whoever is mid-flight in the replayer; `noteRuns` already returns the split
+  if it turns out to be a bug.
 
 - **opus (songbook-rescan)** · ✅ **SHIPPED (idle) — OMR imports keep their scan +
   can be re-run.** Songbook audit's two open ⬜ items: an OMR import now **retains
