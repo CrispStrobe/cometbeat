@@ -50,6 +50,19 @@ class ModuleExportLoss {
   static const s3mEffects =
       'Some effects are approximated or dropped (the S3M command set differs).';
 
+  /// The IT resonant low-pass filter (Zxx cutoff/resonance and the raw MIDI
+  /// macros it drives) exists only in IT; no other container can store it.
+  static const filterEffects =
+      'Filter / MIDI effects (IT Zxx cutoff/resonance and MIDI macros) are not '
+      'represented in this format.';
+
+  /// Sxy control sub-commands with no faithful cross-format equivalent — they
+  /// survive only a same-format export (S3M→S3M / IT→IT via native provenance).
+  static const unmappedSpecialEffects =
+      'Some Sxy control effects are dropped: S0x set-filter toggle, S5x '
+      'panbrello waveform, S7x NNA/envelope control, S9x surround/reverse, SAx '
+      'high sample offset, SFx MIDI macro.';
+
   /// Cross-format samples are re-encoded to S3M PCM; AdLib/packed data is lost.
   static const s3mSampleReencode =
       'Samples are re-encoded as S3M PCM; source AdLib/OPL or packed-sample '
@@ -96,6 +109,35 @@ bool _letterEffectLost(DocCell c) {
   }
   return !_s3mItRepresentableEffects.contains(e);
 }
+
+/// S3M/IT `Sxy` sub-command nibbles that `_s3mSpecialToFx` (module_convert.dart)
+/// maps to a neutral effect. Any other sub-command drops on cross-format export.
+const _mappedSpecialSubs = <int>{
+  0x1,
+  0x2,
+  0x3,
+  0x4,
+  0x6,
+  0x8,
+  0xB,
+  0xC,
+  0xD,
+  0xE,
+};
+
+/// True if [c] carries an S3M/IT `S` letter-command (19) whose sub-command has
+/// no neutral equivalent (S0/S5/S7/S9/SA/SF) — dropped on any cross-format
+/// export. Read from the native command, since the neutral effect column is
+/// already `(0, 0)` for these.
+bool _hasUnmappedSpecial(DocCell c) =>
+    c.nativeEffect == 19 &&
+    !_mappedSpecialSubs.contains((c.nativeEffectParam >> 4) & 0xF);
+
+/// True if [c] carries a resonant-filter or MIDI-macro effect (IT `Zxx`): the
+/// neutral kFxSetFilter (0x1C) for a recognised cutoff/resonance macro, or an
+/// IT/S3M `Z` letter-command (26) that dropped to a raw MIDI macro. Only IT can
+/// store these, so every other target loses them.
+bool _hasFilterEffect(DocCell c) => c.effect == 0x1C || c.nativeEffect == 26;
 
 bool _anyCell(ModuleDoc doc, bool Function(DocCell) test) {
   for (final pattern in doc.patterns) {
@@ -168,6 +210,18 @@ List<String> moduleExportLossReport(ModuleDoc doc, ModuleFormat target) {
       }
     case ModuleFormat.it:
       out.add(ModuleExportLoss.itReencode);
+  }
+
+  // Filter (IT Zxx) exists only in IT: every other target drops it. Gated on
+  // the doc actually carrying a filter/MIDI effect so a filter-free song is
+  // never falsely flagged.
+  if (target != ModuleFormat.it && _anyCell(doc, _hasFilterEffect)) {
+    out.add(ModuleExportLoss.filterEffects);
+  }
+  // Unmapped Sxy control sub-commands survive only a same-format export (native
+  // provenance); any cross-format conversion drops them.
+  if (source != target && _anyCell(doc, _hasUnmappedSpecial)) {
+    out.add(ModuleExportLoss.unmappedSpecialEffects);
   }
 
   if (source != target) out.add(ModuleExportLoss.crossFormat(source));

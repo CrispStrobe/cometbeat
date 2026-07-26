@@ -163,5 +163,93 @@ void main() {
     final report = moduleExportLossReport(doc, ModuleFormat.mod);
     expect(report, isNotEmpty);
     expect(report, contains(ModuleExportLoss.crossFormat(ModuleFormat.s3m)));
+    // …and specifically named as a filter/MIDI drop.
+    expect(report, contains(ModuleExportLoss.filterEffects));
+  });
+
+  group('IT Zxx resonant filter', () {
+    test('Z40 maps to the neutral kFxSetFilter (0x1C) cutoff', () {
+      final cell = _itDoc(26, 0x40).patterns.first.rows.first.first;
+      expect(cell.effect, 0x1C, reason: 'IT Zxx → kFxSetFilter');
+      expect(cell.effectParam, 0x40);
+      expect(cell.nativeEffect, 26);
+    });
+
+    test('IT→IT keeps the filter and does NOT flag a filter loss', () {
+      final doc = _itDoc(26, 0x40);
+      // The filter is representable only in IT, so a same-format export is
+      // lossless for it: the report must NOT name a filter drop.
+      final report = moduleExportLossReport(doc, ModuleFormat.it);
+      expect(report, isNot(contains(ModuleExportLoss.filterEffects)));
+    });
+
+    test('IT→MOD drops the filter and names it in the report', () {
+      final doc = _itDoc(26, 0x40);
+      // kFxSetFilter (0x1C) > 0x0F → no MOD command nibble → dropped.
+      final mc = parseMod(convertToMod(doc)).patterns.first.rows.first.first;
+      expect(mc.effect, 0);
+      expect(mc.effectParam, 0);
+      final report = moduleExportLossReport(doc, ModuleFormat.mod);
+      expect(report, contains(ModuleExportLoss.filterEffects));
+    });
+  });
+
+  group('unmapped Sxy sub-commands drop and are export-loss-reported', () {
+    // Every remaining special sub-command that GENUINELY has no faithful
+    // neutral/replayer equivalent (verified against the IT/ST3 spec):
+    //   S0 set-filter toggle · S5 panbrello waveform · S7 NNA/envelope control ·
+    //   S9 surround/reverse · SA high sample offset · SF set MIDI macro.
+    const droppedSubs = {
+      0x0: 'S0 (set filter on/off)',
+      0x5: 'S5 (panbrello waveform)',
+      0x7: 'S7 (NNA / envelope control)',
+      0x9: 'S9 (surround / reverse)',
+      0xA: 'SA (high sample offset)',
+      0xF: 'SF (set MIDI macro)',
+    };
+
+    droppedSubs.forEach((sub, label) {
+      final info = (sub << 4) | 0x1; // sub-command with value 1
+
+      test('S3M $label drops to (0,0) but keeps native + is reported', () {
+        final doc = _s3mDoc(19, info);
+        final cell = doc.patterns.first.rows.first.first;
+        // No neutral effect…
+        expect(cell.effect, 0);
+        expect(cell.effectParam, 0);
+        // …native S command retained for a same-format S3M round-trip.
+        expect(cell.nativeEffect, 19);
+        expect(cell.nativeEffectParam, info);
+        // Cross-format to MOD carries no effect.
+        final mc = parseMod(convertToMod(doc)).patterns.first.rows.first.first;
+        expect(mc.effect, 0);
+        // The drop is surfaced to the user.
+        final report = moduleExportLossReport(doc, ModuleFormat.mod);
+        expect(
+          report,
+          contains(ModuleExportLoss.unmappedSpecialEffects),
+          reason: '$label must be named as an unmapped Sxy drop',
+        );
+      });
+
+      test('IT $label drops to (0,0) but keeps native + is reported', () {
+        final doc = _itDoc(19, info);
+        final cell = doc.patterns.first.rows.first.first;
+        expect(cell.effect, 0);
+        expect(cell.effectParam, 0);
+        expect(cell.nativeEffect, 19);
+        expect(cell.nativeEffectParam, info);
+        // Cross-format IT→S3M also loses it (neutral column is empty).
+        final report = moduleExportLossReport(doc, ModuleFormat.s3m);
+        expect(report, contains(ModuleExportLoss.unmappedSpecialEffects));
+      });
+    });
+
+    test('a same-format S3M export does NOT flag the Sxy drop (native kept)',
+        () {
+      final doc = _s3mDoc(19, 0x91); // S9 surround
+      final report = moduleExportLossReport(doc, ModuleFormat.s3m);
+      expect(report, isNot(contains(ModuleExportLoss.unmappedSpecialEffects)));
+    });
   });
 }

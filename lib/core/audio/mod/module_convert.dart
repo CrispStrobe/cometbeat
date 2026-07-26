@@ -291,9 +291,23 @@ ModuleDoc docFromMod(ModModule m) {
     case 0xD: // SDx — note delay → EDx
       return (0xE, (0xD << 4) | val);
     default:
-      // S0x filter · S5x panbrello waveform · S7x NNA control · S9x sound
-      // control · SAx high-offset — no faithful replayer equivalent (dropped;
-      // covered by the export-loss report).
+      // No faithful replayer equivalent → dropped (surfaced by the export-loss
+      // report). Re-examined now that kFxSetFilter (Zxx resonant low-pass)
+      // exists, and each still genuinely fails to map:
+      //   • S0x set filter — a COARSE hardware on/off toggle (the ST3 SB/GUS
+      //     output filter, cf. the Amiga LED filter), NOT the IT resonant
+      //     filter. kFxSetFilter needs a 0..127 cutoff/resonance value; "filter
+      //     on" carries no cutoff, so mapping it to Zxx would fabricate one.
+      //   • S5x set panbrello waveform — the panbrello LFO renders sine-only
+      //     (armVoiceTick hardcodes trackerLfo(0, …)); there is no neutral
+      //     panbrello-waveform command and no MOD/XM equivalent.
+      //   • S7x past-note / NNA / envelope control — instrument-layer state with
+      //     no per-cell neutral command (and no S3M/MOD/XM equivalent).
+      //   • S9x sound control (surround / reverse play) — the replayer has no
+      //     surround or reverse-playback state.
+      //   • SAx high sample offset — modifies a FOLLOWING Oxx; kFxSampleOffset
+      //     keeps no high-offset memory, so SAx alone has no standalone effect.
+      //   • SFx set active MIDI macro — MIDI to external gear, no audible target.
       return (0, 0);
   }
 }
