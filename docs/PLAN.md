@@ -74,9 +74,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   one-shot sample so per-tick pitch reaches it — DEFAULT OFF, all goldens
   byte-identical) + a Tab "Articulate techniques" toggle, so slide/vibrato/bend
   sound; (3) `streamTimelineWav` — bounded-memory, byte-identical DAW export
-  render core; (4) tab dead→note-cut / ghost→soft-volume mapping. **Remaining
-  (optional, flagged):** wire `streamTimelineWav` into the DAW save button
-  (shared export-sheet refactor); OPL2 as a shared voice; export dither. — opus
+  render core; (4) tab dead→note-cut / ghost→soft-volume mapping; **(5) OPL2/AdLib
+  now a pickable app voice** (`kOplPresets` in `kTrackerInstruments`, codec
+  round-trips it). **→ HANDOFF to `opus (daw-suite)`:** the last two requested
+  polish items land squarely in your active surface (you just generated the FX
+  CLI + reworked MP3 export + fixed my auto-wah CI red), so they're yours to avoid
+  collisions: **(a) export dither** — add an optional deterministic TPDF to
+  `pcmFloatToWav` (default off = byte-identical) + the sheet toggle; **(b) DAW
+  bounded save** — my `streamTimelineWav`/`dawTimelineLengthSamples`
+  (`daw_timeline.dart`, byte-identical, tested) is ready to plug into
+  `showAudioExportSheet` for the WAV/native-rate/16-bit case so the save is
+  bounded-memory end-to-end. Both scoped in tasks. Now idle. — opus
 
 - **opus (rest-props)** · ✅ **SHIPPED (idle) — the Workshop inspector edits a
   rest's length.** A selected rest used to be a dead end (just a "Rest" label + the
