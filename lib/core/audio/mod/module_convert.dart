@@ -918,8 +918,11 @@ ModuleDoc docFromIt(ItModule m) {
       return (25, param); // Y panbrello
     case 0x1F:
       return (20, param); // T tempo slide
-    case kFxSetSpeedFull: // 0x12 — A set speed (full 1..255)
-      return (1, param.clamp(1, 255));
+    // NB: `kFxSetSpeedFull` is 0x14, which is already handled above as S9x sound
+    // control (0x14), so a `case kFxSetSpeedFull` here is an unreachable duplicate
+    // (its comment "0x12" was also wrong). It's dropped to keep CI's analyze
+    // green; the real full-range set-speed mapping needs a non-colliding value —
+    // TODO(tracker): resolve the 0x14 collision for the IT/S3M set-speed arc.
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:
