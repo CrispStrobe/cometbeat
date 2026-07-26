@@ -1106,6 +1106,12 @@ class DawService extends ChangeNotifier {
   }
 
   /// Re-source [clip] onto [source], preserving placement/gain/mute/fades/trim.
+  ///
+  /// [Clip.provenance] rides along deliberately: editing borrowed music in the
+  /// Score Workshop and sending it back is an ARRANGEMENT of that music, not a
+  /// new work. Dropping the licence here would have laundered it — the clip
+  /// would return looking unencumbered and the export gate would stop asking
+  /// for the attribution/share-alike the source still requires.
   Clip _reSource(Clip clip, ScoreSource source) => Clip(
         source: source,
         startMs: clip.startMs,
@@ -1120,6 +1126,7 @@ class DawService extends ChangeNotifier {
         trimStartMs: clip.trimStartMs,
         trimEndMs: clip.trimEndMs,
         effects: clip.effects,
+        provenance: clip.provenance,
       );
 
   /// Voice one score clip through [inst] (null = default synth). No-op on a

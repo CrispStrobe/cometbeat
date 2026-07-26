@@ -9,10 +9,37 @@
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/daw_project.dart';
+import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:crisp_notation_core/crisp_notation_core.dart'
+    show
+        Clef,
+        DurationBase,
+        Measure,
+        MultiPartScore,
+        NoteDuration,
+        NoteElement,
+        Pitch,
+        Score,
+        Step;
 import 'package:flutter_test/flutter_test.dart';
+
+/// The smallest legal document — a `MultiPartScore` asserts on zero parts.
+MultiPartScore _oneNoteScore() => MultiPartScore([
+      Score(
+        clef: Clef.treble,
+        measures: [
+          Measure([
+            NoteElement.note(
+              const Pitch(Step.d),
+              const NoteDuration(DurationBase.half),
+            ),
+          ]),
+        ],
+      ),
+    ]);
 
 LicensedWork _w(String license, {String title = 'thing', String? creator}) =>
     LicensedWork(title: title, license: license, creator: creator);
@@ -274,6 +301,32 @@ void main() {
       expect(s.licenseObligations().requiresShareAlike, isTrue);
       s.timeline.tracks[0].clips.clear();
       expect(s.licenseObligations().isClear, isTrue);
+    });
+
+    test('a Workshop round-trip does not launder the licence', () {
+      // Open a borrowed music clip in the Score Workshop, edit it, "Send to
+      // Audio Editor". The edit is an ARRANGEMENT of licensed music, so the
+      // returning clip must still owe what the original owed — otherwise a
+      // user could strip any obligation by opening and immediately sending
+      // back.
+      const work = LicensedWork(
+        title: 'Borrowed setting',
+        license: 'CC-BY-SA-4.0',
+        creator: 'U. Wolf',
+      );
+      final s = DawService();
+      final original = ScoreSource(_oneNoteScore());
+      s.timeline.tracks[0].clips.add(
+        Clip(source: original, gain: 0.6, provenance: work),
+      );
+      expect(s.licenseObligations().requiresShareAlike, isTrue);
+
+      s.replaceScoreClipSource(original, _oneNoteScore());
+
+      final returned = s.timeline.tracks[0].clips.single;
+      expect(returned.gain, 0.6, reason: 'placement/gain still preserved');
+      expect(returned.provenance, work);
+      expect(s.licenseObligations().requiresShareAlike, isTrue);
     });
 
     test("the user's own recordings carry no obligation", () {
