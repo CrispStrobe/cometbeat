@@ -77,7 +77,7 @@ import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
-    show kFxSetSpeedFull, kFxSetPanbrelloWaveform;
+    show kFxSetSpeedFull, kFxSetPanbrelloWaveform, kFxSetSoundControl;
 
 /// Detects the module container format by signature; null if unrecognized.
 ModuleFormat? sniffModuleFormat(Uint8List bytes) {
@@ -877,7 +877,10 @@ ModuleDoc docFromIt(ItModule m) {
       return (19, (0x5 << 4) | (param & 0xF)); // S5x set panbrello waveform
     case 0x13:
       return (19, (0xA << 4) | (param & 0xF)); // SAx high sample offset
-    case 0x14:
+    // Named, not a raw literal: a bare `case 0x14:` is how this switch kept
+    // silently shadowing whichever command had been given that number most
+    // recently.
+    case kFxSetSoundControl:
       return (
         19,
         (0x9 << 4) | (param & 0xF)
@@ -918,11 +921,12 @@ ModuleDoc docFromIt(ItModule m) {
       return (25, param); // Y panbrello
     case 0x1F:
       return (20, param); // T tempo slide
-    // NB: `kFxSetSpeedFull` is 0x14, which is already handled above as S9x sound
-    // control (0x14), so a `case kFxSetSpeedFull` here is an unreachable duplicate
-    // (its comment "0x12" was also wrong). It's dropped to keep CI's analyze
-    // green; the real full-range set-speed mapping needs a non-colliding value —
-    // TODO(tracker): resolve the 0x14 collision for the IT/S3M set-speed arc.
+    // Reachable again: S9x sound control moved to 0x16, so 0x14 is this
+    // command alone. Dropping the case silenced the analyzer but also silently
+    // dropped every IT/S3M full-range speed on export, which is the thing the
+    // command exists for.
+    case kFxSetSpeedFull: // A — set speed, full 1..255
+      return (1, param.clamp(1, 255));e)
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:

@@ -5,6 +5,7 @@
 // sequence via [traceChannel]. A handful of audio-domain smoke tests prove the
 // renderer wires the same machine into non-silent PCM of the right length.
 
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -25,47 +26,69 @@ TrackerCell ex(int sub, int val, {int? midi}) =>
     fx(kFxExtended, (sub << 4) | val, midi: midi);
 
 void main() {
-  test('every internal command number is allocated exactly once', () {
-    // Two agents once allocated 0x12 ten minutes apart — kFxSetSpeedFull and
-    // kFxSetPanbrelloWaveform. Nothing failed: the switches in
-    // module_convert.dart match the FIRST case, so an IT `Axx` speed was read
-    // and written as "set panbrello waveform" while the later branch became
-    // dead code. The only signal anywhere was one unreachable_switch_case
-    // warning. This makes the next duplicate fail loudly instead.
-    final byNumber = <int, List<String>>{};
-    void allocate(String name, int value) =>
+  group('internal command-number allocation', () {
+    // THREE commands collided on one number in a single afternoon:
+    // kFxSetSpeedFull vs kFxSetPanbrelloWaveform on 0x12, then 0x13 (already
+    // kFxSetHighOffset), then 0x14 (already kFxSetSpeedFull again). Each author
+    // reasoned from a "free list" written in a neighbouring comment that a
+    // concurrent commit had already invalidated.
+    //
+    // Nothing failed loudly. The switches in module_convert.dart match the
+    // FIRST case, so the newer command silently shadowed the older one — an IT
+    // `Axx` speed was read AND written as "set panbrello waveform" — and the
+    // only signal anywhere was one unreachable_switch_case warning.
+    //
+    // This reads the SOURCE rather than a list of constants maintained here.
+    // A hand-maintained list is the same failure mode one level up: it catches
+    // duplicates only among constants someone remembered to register, and the
+    // third collision was a brand-new constant that no list knew about.
+    final source =
+        File('lib/core/audio/tracker_replayer.dart').readAsStringSync();
+    // `const int kFxFoo = 0x12;` — the whole namespace, whoever added it.
+    final declaration = RegExp(
+      r'^const int (kFx[A-Za-z0-9]+)\s*=\s*(0x[0-9A-Fa-f]+|\d+)\s*;',
+      multiLine: true,
+    );
+
+    Map<int, List<String>> allocations() {
+      final byNumber = <int, List<String>>{};
+      for (final m in declaration.allMatches(source)) {
+        final name = m.group(1)!;
+        final literal = m.group(2)!;
+        final value = literal.startsWith('0x')
+            ? int.parse(literal.substring(2), radix: 16)
+            : int.parse(literal);
         byNumber.putIfAbsent(value, () => []).add(name);
+      }
+      return byNumber;
+    }
 
-    allocate('kFxArpeggio', kFxArpeggio);
-    allocate('kFxPortaUp', kFxPortaUp);
-    allocate('kFxPortaDown', kFxPortaDown);
-    allocate('kFxTonePorta', kFxTonePorta);
-    allocate('kFxVibrato', kFxVibrato);
-    allocate('kFxTonePortaVolSlide', kFxTonePortaVolSlide);
-    allocate('kFxVibratoVolSlide', kFxVibratoVolSlide);
-    allocate('kFxTremolo', kFxTremolo);
-    allocate('kFxPositionJump', kFxPositionJump);
-    allocate('kFxPatternBreak', kFxPatternBreak);
-    allocate('kFxSetSpeed', kFxSetSpeed);
-    allocate('kFxExtended', kFxExtended);
-    allocate('kFxSetSpeedFull', kFxSetSpeedFull);
-    allocate('kFxSetGlobalVolume', kFxSetGlobalVolume);
-    allocate('kFxGlobalVolSlide', kFxGlobalVolSlide);
-    allocate('kFxSetPanbrelloWaveform', kFxSetPanbrelloWaveform);
-    allocate('kFxSetHighOffset', kFxSetHighOffset);
-    allocate('kFxPanSlide', kFxPanSlide);
-    allocate('kFxRetrigVolSlide', kFxRetrigVolSlide);
-    allocate('kFxSetFilter', kFxSetFilter);
-    allocate('kFxTremor', kFxTremor);
-    allocate('kFxPanbrello', kFxPanbrello);
-    allocate('kFxTempoSlide', kFxTempoSlide);
+    test('finds the constants at all (guards the regex itself)', () {
+      // A regex that silently matches nothing would make the test below pass
+      // for ever while checking absolutely nothing.
+      final found = allocations();
+      expect(found, isNotEmpty);
+      expect(
+        found.values.expand((names) => names),
+        containsAll(<String>['kFxArpeggio', 'kFxSetSpeedFull']),
+      );
+      expect(found[kFxSetSpeedFull], contains('kFxSetSpeedFull'));
+    });
 
-    final clashes = [
-      for (final e in byNumber.entries)
-        if (e.value.length > 1)
-          '0x${e.key.toRadixString(16)} → ${e.value.join(" + ")}',
-    ];
-    expect(clashes, isEmpty, reason: 'command numbers collide: $clashes');
+    test('no two kFx* commands share a number', () {
+      final clashes = [
+        for (final e in allocations().entries)
+          if (e.value.length > 1)
+            '0x${e.key.toRadixString(16)} → ${e.value.join(" + ")}',
+      ];
+      expect(
+        clashes,
+        isEmpty,
+        reason: 'command numbers collide: $clashes\n'
+            'Pick a number no other kFx* constant uses — do not trust a free '
+            'list written in a comment.',
+      );
+    });
   });
 
   group('arpeggio (0xy)', () {

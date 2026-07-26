@@ -219,9 +219,14 @@ const int kFxSetHighOffset = 0x13;
 ///     is a documented no-op there. Set on the voice as [ReplayVoice.surround].
 /// Other `S9x` sub-commands (no audible target) are carried but ignored. With
 /// the defaults (forward, surround-off) a render is byte-identical to the
-/// pre-S9x behaviour. Command code 0x14 (0x12 = set-speed-full, 0x13 =
-/// high-offset, 0x15 = panbrello-waveform).
-const int kFxSetSoundControl = 0x14;
+/// pre-S9x behaviour.
+///
+/// ⚠️ 0x16, not 0x14 — 0x14 is [kFxSetSpeedFull]. Do not read a "free list" out
+/// of a neighbouring comment: three commands collided in one afternoon that
+/// way, each author reasoning from a snapshot that another commit had already
+/// invalidated. `tracker_replayer_test.dart` reads THIS FILE and fails on any
+/// duplicate, so add the constant and let the test tell you.
+const int kFxSetSoundControl = 0x16;
 
 /// Zxx — set the resonant low-pass FILTER (IT effect 'Z'): `Z00..Z7F` set the
 /// cutoff (the param IS the 0..127 cutoff), `Z80..ZFF` set the resonance (param

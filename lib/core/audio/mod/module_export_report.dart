@@ -89,7 +89,14 @@ class ModuleExportLoss {
 /// with a real command is dropped by those writers.
 const _s3mItRepresentableEffects = <int>{
   0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xD, 0xF, //
-  0x10, 0x11, 0x12, 0x13, 0x14, 0x19, 0x1B, 0x1D, 0x1E, 0x1F,
+  // Keep in step with the `case` labels of `_fxToLetterEffect`. This is a hand
+  // copy of that switch, so it drifts silently: while the command numbers were
+  // being shuffled it still listed 0x12 (nothing maps there any more, so the
+  // report promised a command would survive when it is dropped) and omitted
+  // 0x15/0x16 (which do survive, so the report warned about a loss that never
+  // happened). Both directions mislead, and neither shows up as a test failure
+  // anywhere else.
+  0x10, 0x11, 0x13, 0x14, 0x15, 0x16, 0x19, 0x1B, 0x1D, 0x1E, 0x1F,
 };
 
 /// True if [c]'s effect would be dropped when written through the S3M/IT
