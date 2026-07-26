@@ -283,7 +283,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Add effect to selected tracks'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('High Pass').last);
+    await tester.tap(find.text('High-pass').last);
     await tester.pumpAndSettle();
     expect(service.trackEffects(0).single.type, DawClipEffectType.distortion);
     expect(
@@ -326,11 +326,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Voice: Robot').last);
+    await tester.tap(find.text('Robot').last);
     await tester.pumpAndSettle();
 
     expect(service.masterEffects().single.type, DawClipEffectType.voiceRobot);
-    await tester.tap(find.text('Voice: Robot'));
+    await tester.tap(find.text('Robot'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Mix'), findsOneWidget);
   });
@@ -347,17 +347,17 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Voice Shape').last);
+    await tester.tap(find.text('Voice shape').last);
     await tester.pumpAndSettle();
 
     expect(service.masterEffects().single.type, DawClipEffectType.voiceShape);
-    await tester.tap(find.text('Voice Shape'));
+    await tester.tap(find.text('Voice shape'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Formant'), findsOneWidget);
-    expect(find.textContaining('Robot Hz'), findsOneWidget);
-    expect(find.textContaining('Robot Mix'), findsOneWidget);
+    expect(find.textContaining('Carrier Hz'), findsOneWidget);
+    expect(find.textContaining('Ring mod'), findsOneWidget);
     expect(find.textContaining('Grit'), findsOneWidget);
-    expect(find.textContaining('Radio Mix'), findsOneWidget);
+    expect(find.textContaining('Band-limit'), findsOneWidget);
     expect(find.textContaining('Mix'), findsWidgets);
   });
 
@@ -373,21 +373,21 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Pitch Shift').last);
+    await tester.tap(find.text('Pitch shift').last);
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Time Stretch').last);
+    await tester.tap(find.text('Time stretch').last);
     await tester.pumpAndSettle();
 
     expect(
       service.masterEffects().map((fx) => fx.type),
       [DawClipEffectType.pitchShift, DawClipEffectType.timeStretch],
     );
-    await tester.tap(find.text('Pitch Shift'));
+    await tester.tap(find.text('Pitch shift'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Semitones'), findsOneWidget);
-    await tester.tap(find.text('Time Stretch'));
+    await tester.tap(find.text('Time stretch'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Speed'), findsOneWidget);
   });
@@ -475,10 +475,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Noise Gate').last);
+    await tester.tap(find.text('Noise gate').last);
     await tester.pumpAndSettle();
     expect(service.masterEffects().single.type, DawClipEffectType.gate);
-    await tester.tap(find.text('Noise Gate'));
+    await tester.tap(find.text('Noise gate'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Attack ms'), findsOneWidget);
     expect(find.textContaining('Release ms'), findsOneWidget);
@@ -710,7 +710,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Add effect to selected clips'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('High Pass').last);
+    await tester.tap(find.text('High-pass').last);
     await tester.pumpAndSettle();
     expect(service.clipEffects(0, 0).single.type, DawClipEffectType.distortion);
     expect(

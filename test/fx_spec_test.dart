@@ -67,6 +67,13 @@ void main() {
         // reordering silently repoints saved projects at the wrong effect.
         'convolutionReverb',
         'autoWah',
+        // A1 — the rest of the filter set, appended for the same reason.
+        'allpass',
+        'onePoleLowpass',
+        'onePoleHighpass',
+        'biquadRaw',
+        'sincFilter',
+        'hilbert',
       ]);
     });
   });

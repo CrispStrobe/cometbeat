@@ -930,17 +930,60 @@ that is simultaneously the CLI argument and the app's copy/paste preset, so a
 chain tuned by ear pastes into a test and vice versa.
 
 **Foundations**
-- [ ] **F1** `fx/fx_chain_codec.dart` — chain string ↔ `List<FxSpec>`, registry
-  introspection (every type, param, range, unit, default), range validation.
-- [ ] **F2** `bin/fxproc.dart` regenerated from the registry: whole-rack,
-  **stereo**, `--chain`, `--list [type]`, `--play`, `--stats`; old flags kept.
+- [x] **F1** `fx/fx_chain_codec.dart` — chain string ↔ `List<FxSpec>`, registry
+  introspection, range validation. Never throws (both faces must *report* a bad
+  chain); names match case/punctuation-insensitively; choices take their label;
+  0..1 params take a percentage; out-of-range clamps + warns; typo hints use
+  **transposition-aware** edit distance (`chorsu`→`chorus` is one finger slip and
+  the commonest miss). Printing is minimal and **round-trips exactly** — the
+  first cut formatted to 4 decimals, which silently moved a slider's 3.53025.
+- [x] **F2** `bin/fxproc.dart` regenerated from the registry: whole rack,
+  `--chain`, `--list [type]`, `--stats`, `--dry-run`, `--mono`, `--play`; old
+  `--effect` flags kept byte-identical. Now **stereo per channel** (it used to
+  downmix every input, discarding half of a stereo recording before processing);
+  a mono input keeps two channels out exactly when the chain moved them apart,
+  because folding a `pan` back to mono discards the effect that was asked for.
+  Tests: `fx_chain_codec_test` (23) + `fxproc_cli_test` (18, real subprocesses).
+- [x] **F2b — the GUI now comes from the registry too** (unplanned, but it is the
+  same lever and it removes a recurring CI red). `daw_screen.dart` hand-wrote
+  BOTH an effect-label switch and a ~300-line param table duplicating
+  `fxTypeLabel`/`fxParamLabel`/`fxParamSpecs`, so every effect added to the rack
+  turned this file red until someone remembered. Both are now derived. Where the
+  two tables disagreed the **wider** range won and was merged back into the
+  registry (a level fader reaching −60 dB, a notch's Q reaching 20), so the CLI
+  now offers exactly what the sliders do. New `fxParamCaption` (label + unit) and
+  `fxSliderStep` (derived from unit + range) keep the panel looking as it did.
+  ⚠ Effect labels moved to the shared sentence-case vocabulary (`Low Pass` →
+  `Low-pass`, `Voice: Robot` → `Robot`); `gate` gained the better name
+  `Noise gate` in the registry rather than losing it.
 - [ ] **F3** Chain string as a copy/paste preset in the app's FX rack.
 
 **Pillar A — DSP vocabulary** (each: `FxType` + defaults + ranges + dispatch +
 DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
-- [ ] **A1 filters** — all-pass · one-pole LP/HP · band-reject by width · raw
-  biquad (user coefficients) · windowed-sinc (steepness) · arbitrary FIR ·
-  Hilbert.
+- [x] **A1 filters** — all-pass · one-pole LP/HP · raw biquad (user
+  coefficients) · windowed-sinc (4 shapes + steepness) · Hilbert. Six new
+  `FxType`s that reached the CLI, `--list` and the GUI menu **with no CLI or
+  panel code written** — the lever working as designed. New DSP:
+  `crisp_dsp/one_pole.dart`, `crisp_dsp/fir.dart`, plus `BiquadKind.allpass` and
+  `biquadRawFx` in `biquad.dart`. Tests are spectral/phase, not plumbing
+  (`filter_zoo_fx_test`, 24). Decisions worth keeping:
+  * the one-pole pair is **exactly complementary** (LP + HP sums back to the
+    input sample-for-sample) at the cost of ~0.6 dB at the corner — perfect
+    reconstruction is what a band-splitter needs, and A3's multiband compander
+    will want it;
+  * **unstable** hand-typed biquad coefficients pass through unchanged rather
+    than rendering: the failure mode is not "wrong sound" but full-scale noise
+    then NaN spreading through the master mix;
+  * the windowed sinc is exactly **linear-phase** (a pulse stays put — pinned by
+    a test), and taps set the narrowest achievable band (~6·fs/taps ≈ 520 Hz even
+    at the 511-tap ceiling), so a *narrow* band is still the resonant biquad's
+    job. Documented where the design lives.
+  * ⛔ **Arbitrary-FIR-from-a-tap-list was dropped, not forgotten**: `FxSpec.params`
+    is a fixed map of NAMED doubles by design, and an unbounded coefficient list
+    does not belong in it (it would break the params table, the GUI panel and the
+    chain string at once). `biquadRaw` covers the escape-hatch need with five
+    named params. A real FIR-from-a-file needs a different carrier — a separate
+    design, not a slice of this one.
 - [ ] **A2 tone curves** — tilt EQ · loudness compensation · de-emphasis curves ·
   presence/contrast.
 - [ ] **A3 dynamics** — multi-segment **companding** (the general case that

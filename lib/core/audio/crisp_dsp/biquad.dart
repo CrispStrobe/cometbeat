@@ -21,6 +21,12 @@ enum BiquadKind {
   peaking, // bell — [gainDb] boosts/cuts around [freq]
   lowShelf, // [gainDb] below [freq]
   highShelf, // [gainDb] above [freq]
+
+  /// All-pass — passes every frequency at full level and changes only PHASE,
+  /// rotating it through 360° around [freq] at a rate set by q. Inaudible on its
+  /// own, which is the point: it is what makes phasers, and what lets a signal
+  /// be time-aligned or deliberately put out of phase against a copy of itself.
+  allpass,
 }
 
 /// One EQ band for [parametricEqFx].
@@ -122,6 +128,13 @@ class Biquad {
         a0 = (a + 1) + (a - 1) * cw + 2 * sqrtA * alpha;
         a1 = -2 * ((a - 1) + (a + 1) * cw);
         a2 = (a + 1) + (a - 1) * cw - 2 * sqrtA * alpha;
+      case BiquadKind.allpass:
+        b0 = 1 - alpha;
+        b1 = -2 * cw;
+        b2 = 1 + alpha;
+        a0 = 1 + alpha;
+        a1 = -2 * cw;
+        a2 = 1 - alpha;
       case BiquadKind.highShelf:
         b0 = a * ((a + 1) + (a - 1) * cw + 2 * sqrtA * alpha);
         b1 = -2 * a * ((a - 1) + (a + 1) * cw);
@@ -173,6 +186,54 @@ Float64List biquadFx(
   for (var i = 0; i < input.length; i++) {
     final w = bq.process(input[i]);
     out[i] = (1 - m) * input[i] + m * w;
+  }
+  return out;
+}
+
+/// Whether the difference equation with these (already a0-normalised) feedback
+/// coefficients is STABLE — i.e. both poles are inside the unit circle.
+///
+/// For a second-order section that is exactly the Jury/Schur test: `|a2| < 1`
+/// and `|a1| < 1 + a2`. Worth having as its own predicate because an unstable
+/// pair does not merely sound wrong, it runs away to infinity and then to NaN
+/// within a few thousand samples, and NaN spreads through the rest of the mix.
+bool biquadIsStable(double a1, double a2) =>
+    a2.abs() < 1 && a1.abs() < 1 + a2 && a1.isFinite && a2.isFinite;
+
+/// Filter [input] through a biquad given DIRECTLY as coefficients — the escape
+/// hatch for a response the named shapes do not cover.
+///
+/// The coefficients are the normalised form (`a0` divided out):
+/// `y[n] = b0·x[n] + b1·x[n-1] + b2·x[n-2] − a1·y[n-1] − a2·y[n-2]`.
+///
+/// An UNSTABLE pair is passed through unchanged rather than rendered. Hand-typed
+/// coefficients are unstable more often than not, and the alternative is a burst
+/// of full-scale noise followed by NaN in the master mix — a silent no-op is the
+/// kinder failure, and [biquadIsStable] lets a caller say so in the UI.
+Float64List biquadRawFx(
+  Float64List input, {
+  double b0 = 1,
+  double b1 = 0,
+  double b2 = 0,
+  double a1 = 0,
+  double a2 = 0,
+  double mix = 1,
+}) {
+  final out = Float64List(input.length);
+  final m = mix.clamp(0.0, 1.0);
+  if (m == 0 || !biquadIsStable(a1, a2)) {
+    out.setAll(0, input);
+    return out;
+  }
+  var x1 = 0.0, x2 = 0.0, y1 = 0.0, y2 = 0.0;
+  for (var i = 0; i < input.length; i++) {
+    final x = input[i];
+    final y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1;
+    x1 = x;
+    y2 = y1;
+    y1 = y;
+    out[i] = (1 - m) * x + m * y;
   }
   return out;
 }

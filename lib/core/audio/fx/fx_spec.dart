@@ -166,6 +166,36 @@ enum FxType {
   /// sweep never clicks. Appended for the same `.cbdaw` name-stability reason as
   /// the O11 block above.
   autoWah,
+
+  // A1 — the rest of the filter set. Appended, like every block before it,
+  // because `.cbdaw` stores an effect by NAME and reordering would only risk
+  // merges with parallel FX work for no gain.
+
+  /// All-pass: full level at every frequency, PHASE rotated around [freq].
+  /// Inaudible alone; the tool for time-aligning or deliberately de-phasing a
+  /// signal against a copy of itself.
+  allpass,
+
+  /// One-pole (6 dB/oct) low-pass — a tone control, where [lowpass] is a
+  /// 12 dB/oct filter that can resonate. The gentler shape is the commoner need.
+  onePoleLowpass,
+
+  /// One-pole (6 dB/oct) high-pass, the exact complement of [onePoleLowpass].
+  onePoleHighpass,
+
+  /// A biquad given directly as coefficients — the escape hatch for a response
+  /// the named shapes do not cover. Unstable coefficients pass through unchanged
+  /// rather than exploding into the mix.
+  biquadRaw,
+
+  /// Windowed-sinc FIR: STEEP and exactly linear-phase, where the biquads are
+  /// gentle and phase-shifting. `shape` picks low-pass/high-pass/band-pass/
+  /// band-reject and `taps` buys steepness with CPU.
+  sincFilter,
+
+  /// Hilbert transformer: every frequency shifted 90°, magnitudes untouched.
+  /// The building block the stereo-field tools are made of.
+  hilbert,
 }
 
 enum FxPreset { vocalPolish, lofiCrunch, wideSpace, robotVoice }
@@ -241,6 +271,47 @@ FxSpec defaultFx(FxType type) => switch (type) {
       FxType.highShelf => const FxSpec(
           type: FxType.highShelf,
           params: {'freq': 4000, 'q': 0.707, 'gainDb': 6, 'mix': 1},
+        ),
+      // A1. The all-pass default sits mid-spectrum with a gentle Q, where the
+      // rotation is broad enough to hear when it is mixed against a dry copy.
+      FxType.allpass => const FxSpec(
+          type: FxType.allpass,
+          params: {'freq': 1000, 'q': 0.707, 'mix': 1},
+        ),
+      // The one-poles have no q — that is the whole point of them — and default
+      // to corners that read as "a bit darker" / "a bit thinner" rather than as
+      // an effect.
+      FxType.onePoleLowpass => const FxSpec(
+          type: FxType.onePoleLowpass,
+          params: {'freq': 4000, 'mix': 1},
+        ),
+      FxType.onePoleHighpass => const FxSpec(
+          type: FxType.onePoleHighpass,
+          params: {'freq': 200, 'mix': 1},
+        ),
+      // The identity filter: b0=1 and everything else 0 passes audio through
+      // untouched, so an unedited raw biquad is a no-op rather than a surprise.
+      FxType.biquadRaw => const FxSpec(
+          type: FxType.biquadRaw,
+          params: {'b0': 1, 'b1': 0, 'b2': 0, 'a1': 0, 'a2': 0, 'mix': 1},
+        ),
+      // 127 taps is a transition band of roughly 800 Hz at 44.1 kHz — steep
+      // enough to be obviously not a biquad, cheap enough to stay interactive.
+      // 'shape' is the FirShape index; 0 = low-pass, which is what the dispatch
+      // falls back to, so a spec written without it renders identically.
+      FxType.sincFilter => const FxSpec(
+          type: FxType.sincFilter,
+          params: {
+            'shape': 0,
+            'freq': 1000,
+            'freqHigh': 8000,
+            'taps': 127,
+            'mix': 1,
+          },
+        ),
+      FxType.hilbert => const FxSpec(
+          type: FxType.hilbert,
+          params: {'taps': 127, 'mix': 1},
         ),
       FxType.phaser => const FxSpec(
           type: FxType.phaser,

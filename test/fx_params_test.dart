@@ -46,9 +46,15 @@ void main() {
     });
 
     test('every param has a label that is not just its key', () {
+      // The raw biquad's coefficients are the exception, and deliberately so:
+      // b0/b1/b2/a1/a2 ARE their names. Anyone reaching for a filter typed as
+      // coefficients knows the difference equation, and inventing prose for
+      // them ("first feed-forward tap") would be less clear, not more.
+      const namedByConvention = {'b0', 'b1', 'b2', 'a1', 'a2'};
       final raw = <String>[];
       for (final type in FxType.values) {
         for (final key in defaultFx(type).params.keys) {
+          if (namedByConvention.contains(key)) continue;
           if (fxParamLabel(key) == key) raw.add('$type.$key');
         }
       }
@@ -189,6 +195,7 @@ void main() {
       expect(choices, [
         'FxType.distortion.kind',
         'FxType.autoWah.waveform',
+        'FxType.sincFilter.shape',
       ]);
     });
   });

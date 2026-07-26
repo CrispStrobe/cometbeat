@@ -85,7 +85,9 @@ const _byName = <String, FxParamSpec>{
   'radioHighHz':
       FxParamSpec(key: 'radioHighHz', min: 500, max: 12000, unit: 'Hz'),
   'carrierHz': FxParamSpec(key: 'carrierHz', min: 20, max: 2000, unit: 'Hz'),
-  'q': FxParamSpec(key: 'q', min: 0.1, max: 12),
+  // Up to 20 because a NOTCH is only useful when it can be narrow; the gentler
+  // shapes simply never get dragged that far.
+  'q': FxParamSpec(key: 'q', min: 0.1, max: 20),
   'rateHz': FxParamSpec(key: 'rateHz', min: 0.05, max: 12, unit: 'Hz'),
   'baseFreq': FxParamSpec(key: 'baseFreq', min: 20, max: 8000, unit: 'Hz'),
   'octaves': FxParamSpec(key: 'octaves', min: 0, max: 6, unit: 'oct'),
@@ -122,6 +124,26 @@ const _byName = <String, FxParamSpec>{
     integer: true,
     choices: ['Hard clip', 'Soft clip', 'Fuzz', 'Wave fold'],
   ),
+  // A1 — the filter set's own vocabulary.
+  'freqHigh': FxParamSpec(key: 'freqHigh', min: 20, max: 20000, unit: 'Hz'),
+  // Taps buy steepness with CPU, and the cost is linear in them; the ceiling
+  // matches `kMaxFirTaps` so the slider cannot ask for what the DSP refuses.
+  'taps': FxParamSpec(key: 'taps', min: 3, max: 511, integer: true),
+  'shape': FxParamSpec(
+    key: 'shape',
+    min: 0,
+    max: 3,
+    integer: true,
+    choices: ['Low-pass', 'High-pass', 'Band-pass', 'Band-reject'],
+  ),
+  // Raw biquad coefficients. The feedback pair is bounded by the stability
+  // region (|a2| < 1, |a1| < 1 + a2), so ±2 covers every stable filter; the
+  // feed-forward taps are gain and get a wider, still-sane range.
+  'b0': FxParamSpec(key: 'b0', min: -4, max: 4),
+  'b1': FxParamSpec(key: 'b1', min: -4, max: 4),
+  'b2': FxParamSpec(key: 'b2', min: -4, max: 4),
+  'a1': FxParamSpec(key: 'a1', min: -2, max: 2),
+  'a2': FxParamSpec(key: 'a2', min: -1, max: 1),
 };
 
 /// Ranges that differ for one specific effect, where the same word means
@@ -142,6 +164,15 @@ const _byTypeAndName = <(FxType, String), FxParamSpec>{
   // without it the slider would offer 10 and read "0.50s".
   (FxType.convolutionReverb, 'decay'):
       FxParamSpec(key: 'decay', min: 0, max: 1),
+  // A steep filter is worth reaching for precisely at the edges of the
+  // spectrum — a rumble cut at 30 Hz, a hiss cut at 16 kHz — so its corner
+  // spans the whole audible range rather than the general 20..18000.
+  (FxType.sincFilter, 'freq'):
+      FxParamSpec(key: 'freq', min: 20, max: 20000, unit: 'Hz'),
+  // A LEVEL control has to reach inaudible; ±24 dB is the right span for an EQ
+  // band's boost/cut, not for a fader.
+  (FxType.gain, 'gainDb'):
+      FxParamSpec(key: 'gainDb', min: -60, max: 24, unit: 'dB'),
 };
 
 /// Every editable param of [type], in the order [defaultFx] declares them —
@@ -189,7 +220,7 @@ String fxTypeLabel(FxType type) => switch (type) {
       FxType.lowShelf => 'Low shelf',
       FxType.highShelf => 'High shelf',
       FxType.compressor => 'Compressor',
-      FxType.gate => 'Gate',
+      FxType.gate => 'Noise gate',
       FxType.pitchShift => 'Pitch shift',
       FxType.timeStretch => 'Time stretch',
       FxType.tremolo => 'Tremolo',
@@ -201,6 +232,12 @@ String fxTypeLabel(FxType type) => switch (type) {
       FxType.voiceRobot => 'Robot',
       FxType.voiceRadio => 'Radio',
       FxType.autoWah => 'Auto-wah',
+      FxType.allpass => 'All-pass',
+      FxType.onePoleLowpass => 'Low-pass (gentle)',
+      FxType.onePoleHighpass => 'High-pass (gentle)',
+      FxType.biquadRaw => 'Biquad (coefficients)',
+      FxType.sincFilter => 'Steep filter',
+      FxType.hilbert => 'Hilbert (90°)',
     };
 
 /// A short label for one param — the slider caption.
@@ -246,8 +283,72 @@ String fxParamLabel(String key) => switch (key) {
       'radioMix' => 'Band-limit',
       'grit' => 'Grit',
       'kind' => 'Curve',
+      'freqHigh' => 'Upper edge',
+      'taps' => 'Steepness',
+      'shape' => 'Shape',
+      'b0' => 'b0',
+      'b1' => 'b1',
+      'b2' => 'b2',
+      'a1' => 'a1',
+      'a2' => 'a2',
       _ => key,
     };
+
+/// The caption an FX panel should put on [spec]'s slider: its label, plus the
+/// unit when the unit is a dimensional one the reader needs ("Gain dB", "Time
+/// ms").
+///
+/// `:1`, `st` and `x` are left off because the label already says it — "Ratio
+/// :1" and "Semitones st" read as noise, where "Gain" without its dB does not
+/// say enough. Here rather than in a widget so every mode's FX panel captions a
+/// parameter the same way.
+String fxParamCaption(FxParamSpec spec) {
+  const dimensional = {'dB', 'Hz', 'ms', 's', 'oct'};
+  final label = fxParamLabel(spec.key);
+  return dimensional.contains(spec.unit) ? '$label ${spec.unit}' : label;
+}
+
+/// A sensible slider increment for [spec] — the last thing an FX panel needs
+/// that the descriptor did not already say.
+///
+/// Derived rather than tabulated for the same reason the ranges are: a step
+/// hand-written per effect is one more table to forget to update. The unit is
+/// what decides it, because that is what sets the scale a human thinks in —
+/// nobody drags a frequency in 200 Hz jumps just because the range is wide.
+double fxSliderStep(FxParamSpec spec) {
+  if (spec.integer) return 1;
+  final span = spec.max - spec.min;
+  if (span <= 0) return 0.01;
+  return switch (spec.unit) {
+    'Hz' => span > 2000 ? 10 : (span > 200 ? 1 : 0.1),
+    'ms' => span > 500 ? 10 : 1,
+    'dB' => span > 40 ? 1 : 0.5,
+    's' => 0.1,
+    _ => _snappedStep(span / 100),
+  };
+}
+
+/// [raw] rounded to the nearest 1, 2 or 5 times a power of ten, so a derived
+/// step still lands on numbers a person would have chosen.
+double _snappedStep(double raw) {
+  if (raw <= 0) return 0.01;
+  var magnitude = 1.0;
+  while (magnitude > raw) {
+    magnitude /= 10;
+  }
+  while (magnitude * 10 <= raw) {
+    magnitude *= 10;
+  }
+  final normalized = raw / magnitude;
+  final snapped = normalized <= 1
+      ? 1.0
+      : normalized <= 2
+          ? 2.0
+          : normalized <= 5
+              ? 5.0
+              : 10.0;
+  return snapped * magnitude;
+}
 
 /// How the effects group in a picker, so a 28-item flat list does not greet the
 /// user.
@@ -272,7 +373,13 @@ FxCategory fxCategory(FxType type) => switch (type) {
       FxType.peakingEq ||
       FxType.lowShelf ||
       FxType.highShelf ||
-      FxType.autoWah =>
+      FxType.autoWah ||
+      FxType.allpass ||
+      FxType.onePoleLowpass ||
+      FxType.onePoleHighpass ||
+      FxType.biquadRaw ||
+      FxType.sincFilter ||
+      FxType.hilbert =>
         FxCategory.filter,
       FxType.compressor || FxType.gate => FxCategory.dynamics,
       FxType.chorus ||

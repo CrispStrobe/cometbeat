@@ -21,6 +21,8 @@ import 'package:comet_beat/core/audio/daw_edits.dart'
     show ClipStats, GeneratorShape, clipStatsOf;
 import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
+import 'package:comet_beat/core/audio/fx/fx_params.dart'
+    show fxParamCaption, fxParamSpecs, fxSliderStep, fxTypeLabel;
 import 'package:comet_beat/core/audio/loop_engine.dart'
     show DrumRowsPattern, LoopTiming, kPatternSteps;
 import 'package:comet_beat/core/audio/synth.dart'
@@ -279,6 +281,16 @@ const kDawClipEffectTypes = <DawClipEffectType>[
   DawClipEffectType.highShelf,
   DawClipEffectType.phaser,
   DawClipEffectType.autoWah,
+  // A1 — the rest of the filter set, kept with the other filters. The gentle
+  // one-poles sit next to their resonant two-pole namesakes, and the two
+  // specialists (a filter typed as coefficients, a 90° phase rotator) come last
+  // in the group because they are tools rather than colours.
+  DawClipEffectType.allpass,
+  DawClipEffectType.onePoleLowpass,
+  DawClipEffectType.onePoleHighpass,
+  DawClipEffectType.sincFilter,
+  DawClipEffectType.biquadRaw,
+  DawClipEffectType.hilbert,
   DawClipEffectType.convolutionReverb,
   DawClipEffectType.compressor,
   DawClipEffectType.gate,
@@ -2641,38 +2653,14 @@ class _DawScreenState extends State<DawScreen>
 
   static const _clipEffectTypes = kDawClipEffectTypes;
 
-  String _clipEffectLabel(DawClipEffectType type) => switch (type) {
-        DawClipEffectType.gain => 'Gain',
-        DawClipEffectType.pan => 'Pan',
-        DawClipEffectType.reverb => 'Reverb',
-        DawClipEffectType.delay => 'Delay',
-        DawClipEffectType.chorus => 'Chorus',
-        DawClipEffectType.flanger => 'Flanger',
-        DawClipEffectType.ringMod => 'Ring Mod',
-        DawClipEffectType.distortion => 'Distortion',
-        DawClipEffectType.bitCrush => 'Bit Crush',
-        DawClipEffectType.lowpass => 'Low Pass',
-        DawClipEffectType.highpass => 'High Pass',
-        DawClipEffectType.compressor => 'Compressor',
-        DawClipEffectType.gate => 'Noise Gate',
-        DawClipEffectType.pitchShift => 'Pitch Shift',
-        DawClipEffectType.timeStretch => 'Time Stretch',
-        DawClipEffectType.tremolo => 'Tremolo',
-        DawClipEffectType.vocoder => 'Vocoder',
-        DawClipEffectType.voiceShape => 'Voice Shape',
-        DawClipEffectType.voiceChipmunk => 'Voice: Chipmunk',
-        DawClipEffectType.voiceDeep => 'Voice: Deep',
-        DawClipEffectType.voiceRobot => 'Voice: Robot',
-        DawClipEffectType.voiceRadio => 'Voice: Radio',
-        DawClipEffectType.autoWah => 'Auto-Wah',
-        DawClipEffectType.bandpass => 'Band Pass',
-        DawClipEffectType.notch => 'Notch',
-        DawClipEffectType.peakingEq => 'Peaking EQ',
-        DawClipEffectType.lowShelf => 'Low Shelf',
-        DawClipEffectType.highShelf => 'High Shelf',
-        DawClipEffectType.phaser => 'Phaser',
-        DawClipEffectType.convolutionReverb => 'Convolution Reverb',
-      };
+  /// The effect's name, from the shared FX registry.
+  ///
+  /// This used to be a hand-written switch over every [FxType], duplicating
+  /// `fxTypeLabel`. Two tables of the same facts means a new effect compiles
+  /// everywhere except here — which is exactly how it went: each effect added to
+  /// the rack turned CI red on this file until someone remembered. The registry
+  /// is the single source, so a new effect now appears in the panel by itself.
+  String _clipEffectLabel(DawClipEffectType type) => fxTypeLabel(type);
 
   String _clipEffectPresetLabel(DawClipEffectPreset preset) => switch (preset) {
         DawClipEffectPreset.vocalPolish => 'Vocal Polish',
@@ -2681,323 +2669,25 @@ class _DawScreenState extends State<DawScreen>
         DawClipEffectPreset.robotVoice => 'Robot Voice',
       };
 
+  /// The editable params of [type], as the panel's sliders want them — derived
+  /// from the shared registry (range, unit, integer-ness) rather than tabulated
+  /// here, for the same reason as [_clipEffectLabel].
+  ///
+  /// Where the two tables disagreed, the wider range won and was merged BACK
+  /// into the registry (a level fader reaching -60 dB, a notch's Q reaching 20),
+  /// so this is not a narrowing — and the CLI now offers exactly what the
+  /// sliders do.
   List<({String key, String label, double min, double max, double step})>
-      _clipEffectParams(DawClipEffectType type) => switch (type) {
-            DawClipEffectType.gain => const [
-                (key: 'gainDb', label: 'Gain dB', min: -60, max: 24, step: 1),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.pan => const [
-                (key: 'pan', label: 'Pan', min: -1, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.reverb => const [
-                (key: 'roomSize', label: 'Size', min: 0, max: 1, step: 0.01),
-                (key: 'damping', label: 'Damping', min: 0, max: 1, step: 0.01),
-                (key: 'decay', label: 'Decay s', min: 0.1, max: 10, step: 0.1),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.delay => const [
-                (key: 'delayMs', label: 'Time ms', min: 0, max: 2000, step: 10),
-                (
-                  key: 'feedback',
-                  label: 'Feedback',
-                  min: 0,
-                  max: 0.95,
-                  step: 0.01,
-                ),
-                (
-                  key: 'spread',
-                  label: 'Stereo spread',
-                  min: 0,
-                  max: 1,
-                  step: 0.01,
-                ),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.chorus => const [
-                (key: 'rateHz', label: 'Rate Hz', min: 0.1, max: 8, step: 0.1),
-                (key: 'depthMs', label: 'Depth ms', min: 0, max: 20, step: 0.5),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.flanger => const [
-                (
-                  key: 'rateHz',
-                  label: 'Rate Hz',
-                  min: 0.05,
-                  max: 5,
-                  step: 0.05
-                ),
-                (
-                  key: 'depthMs',
-                  label: 'Depth ms',
-                  min: 0,
-                  max: 10,
-                  step: 0.25
-                ),
-                (
-                  key: 'feedback',
-                  label: 'Feedback',
-                  min: 0,
-                  max: 0.95,
-                  step: 0.01
-                ),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.ringMod => const [
-                (
-                  key: 'carrierHz',
-                  label: 'Freq Hz',
-                  min: 1,
-                  max: 2000,
-                  step: 1
-                ),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.distortion => const [
-                (key: 'drive', label: 'Drive', min: 0, max: 12, step: 0.1),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.bitCrush => const [
-                (key: 'bits', label: 'Bits', min: 1, max: 16, step: 1),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.lowpass ||
-            DawClipEffectType.highpass ||
-            DawClipEffectType.bandpass ||
-            DawClipEffectType.notch =>
-              const [
-                (
-                  key: 'freq',
-                  label: 'Cutoff Hz',
-                  min: 20,
-                  max: 20000,
-                  step: 10
-                ),
-                (key: 'q', label: 'Q', min: 0.1, max: 20, step: 0.1),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            // The bell and the shelves cut/boost, so they add a gain control.
-            DawClipEffectType.peakingEq ||
-            DawClipEffectType.lowShelf ||
-            DawClipEffectType.highShelf =>
-              const [
-                (
-                  key: 'freq',
-                  label: 'Centre Hz',
-                  min: 20,
-                  max: 20000,
-                  step: 10
-                ),
-                (key: 'gainDb', label: 'Gain dB', min: -24, max: 24, step: 0.5),
-                (key: 'q', label: 'Q', min: 0.1, max: 20, step: 0.1),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.phaser => const [
-                (
-                  key: 'rateHz',
-                  label: 'Rate Hz',
-                  min: 0.05,
-                  max: 8,
-                  step: 0.05
-                ),
-                (key: 'depth', label: 'Depth', min: 0, max: 1, step: 0.01),
-                (
-                  key: 'feedback',
-                  label: 'Feedback',
-                  min: -0.95,
-                  max: 0.95,
-                  step: 0.01
-                ),
-                (key: 'minFreq', label: 'Low Hz', min: 20, max: 4000, step: 10),
-                (
-                  key: 'maxFreq',
-                  label: 'High Hz',
-                  min: 100,
-                  max: 12000,
-                  step: 10
-                ),
-                (key: 'stages', label: 'Stages', min: 2, max: 12, step: 2),
-              ],
-            // Convolution reverb: the IR is synthesized from these, so they
-            // shape a room rather than pick a preset file.
-            DawClipEffectType.convolutionReverb => const [
-                (key: 'seconds', label: 'Tail s', min: 0.1, max: 5, step: 0.1),
-                (key: 'decay', label: 'Decay', min: 0.05, max: 1, step: 0.01),
-                (
-                  key: 'predelayMs',
-                  label: 'Pre-delay ms',
-                  min: 0,
-                  max: 200,
-                  step: 1
-                ),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.compressor => const [
-                (
-                  key: 'thresholdDb',
-                  label: 'Threshold dB',
-                  min: -60,
-                  max: 0,
-                  step: 1
-                ),
-                (key: 'ratio', label: 'Ratio', min: 1, max: 20, step: 0.5),
-                (
-                  key: 'attackMs',
-                  label: 'Attack ms',
-                  min: 0,
-                  max: 200,
-                  step: 1
-                ),
-                (
-                  key: 'releaseMs',
-                  label: 'Release ms',
-                  min: 10,
-                  max: 1000,
-                  step: 10
-                ),
-                (key: 'kneeDb', label: 'Knee dB', min: 0, max: 24, step: 1),
-                (key: 'makeupDb', label: 'Makeup dB', min: 0, max: 24, step: 1),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.gate => const [
-                (
-                  key: 'thresholdDb',
-                  label: 'Threshold dB',
-                  min: -80,
-                  max: 0,
-                  step: 1
-                ),
-                (key: 'ratio', label: 'Ratio', min: 1, max: 20, step: 0.5),
-                (key: 'rangeDb', label: 'Range dB', min: -80, max: 0, step: 1),
-                (
-                  key: 'attackMs',
-                  label: 'Attack ms',
-                  min: 0,
-                  max: 200,
-                  step: 1
-                ),
-                (
-                  key: 'releaseMs',
-                  label: 'Release ms',
-                  min: 10,
-                  max: 1000,
-                  step: 10
-                ),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.pitchShift => const [
-                (
-                  key: 'semitones',
-                  label: 'Semitones',
-                  min: -24,
-                  max: 24,
-                  step: 1
-                ),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.timeStretch => const [
-                (key: 'speed', label: 'Speed', min: 0.5, max: 2, step: 0.05),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.tremolo => const [
-                (key: 'rateHz', label: 'Rate Hz', min: 0.1, max: 20, step: 0.1),
-                (key: 'depth', label: 'Depth', min: 0, max: 1, step: 0.01),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.vocoder => const [
-                (
-                  key: 'carrierHz',
-                  label: 'Carrier Hz',
-                  min: 20,
-                  max: 1000,
-                  step: 1
-                ),
-                (key: 'depth', label: 'Depth', min: 0, max: 1, step: 0.01),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.voiceShape => const [
-                (
-                  key: 'formant',
-                  label: 'Formant',
-                  min: -0.8,
-                  max: 0.8,
-                  step: 0.01
-                ),
-                (
-                  key: 'carrierHz',
-                  label: 'Robot Hz',
-                  min: 1,
-                  max: 600,
-                  step: 1
-                ),
-                (
-                  key: 'carrierMix',
-                  label: 'Robot Mix',
-                  min: 0,
-                  max: 1,
-                  step: 0.01,
-                ),
-                (key: 'grit', label: 'Grit', min: 0, max: 1, step: 0.01),
-                (
-                  key: 'radioLowHz',
-                  label: 'Low Hz',
-                  min: 20,
-                  max: 3000,
-                  step: 10
-                ),
-                (
-                  key: 'radioHighHz',
-                  label: 'High Hz',
-                  min: 1000,
-                  max: 12000,
-                  step: 10
-                ),
-                (
-                  key: 'radioMix',
-                  label: 'Radio Mix',
-                  min: 0,
-                  max: 1,
-                  step: 0.01,
-                ),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            DawClipEffectType.voiceChipmunk ||
-            DawClipEffectType.voiceDeep ||
-            DawClipEffectType.voiceRobot ||
-            DawClipEffectType.voiceRadio =>
-              const [
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-            // Ranges follow the defaults in fx_spec.dart (base 350 Hz, 2.5
-            // octaves, 1.2 Hz, depth 1, q 4) so the sliders open where the
-            // effect was voiced rather than at an arbitrary extreme.
-            DawClipEffectType.autoWah => const [
-                (
-                  key: 'baseFreq',
-                  label: 'Base Hz',
-                  min: 80,
-                  max: 2000,
-                  step: 10
-                ),
-                (
-                  key: 'octaves',
-                  label: 'Sweep oct',
-                  min: 0.5,
-                  max: 5,
-                  step: 0.1
-                ),
-                (
-                  key: 'rateHz',
-                  label: 'Rate Hz',
-                  min: 0.05,
-                  max: 8,
-                  step: 0.05
-                ),
-                (key: 'depth', label: 'Depth', min: 0, max: 1, step: 0.01),
-                (key: 'q', label: 'Resonance', min: 0.5, max: 12, step: 0.1),
-                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
-              ],
-          };
+      _clipEffectParams(DawClipEffectType type) => [
+            for (final spec in fxParamSpecs(type))
+              (
+                key: spec.key,
+                label: fxParamCaption(spec),
+                min: spec.min,
+                max: spec.max,
+                step: fxSliderStep(spec),
+              ),
+          ];
 
   /// Opens the assets Instruments/Samples library and returns the picked
   /// instrument SOUND (a `TrackerInstrument`), or null if cancelled / the pick

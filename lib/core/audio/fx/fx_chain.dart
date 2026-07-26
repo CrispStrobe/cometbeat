@@ -15,13 +15,15 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart'
-    show Biquad, BiquadKind, biquadFx;
+    show Biquad, BiquadKind, biquadFx, biquadRawFx;
 import 'package:comet_beat/core/audio/crisp_dsp/convolution_reverb.dart'
     show convolutionReverbFx;
 import 'package:comet_beat/core/audio/crisp_dsp/distortion.dart'
     show DistortionKind, distortionFx;
 import 'package:comet_beat/core/audio/crisp_dsp/dynamics.dart'
     show compressorFx, compressorFxStereo, gateFx, gateFxStereo;
+import 'package:comet_beat/core/audio/crisp_dsp/fir.dart'
+    show FirShape, hilbertFx, sincFilterFx;
 import 'package:comet_beat/core/audio/crisp_dsp/lfo.dart' show lfoValue;
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
     show
@@ -31,6 +33,8 @@ import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
         delayFxStereo,
         flangerFx,
         flangerFxStereo;
+import 'package:comet_beat/core/audio/crisp_dsp/one_pole.dart'
+    show onePoleHighpassFx, onePoleLowpassFx;
 import 'package:comet_beat/core/audio/crisp_dsp/phaser.dart' show phaserFx;
 import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart'
     show granularPitchShift, granularPitchShiftStereo;
@@ -352,6 +356,51 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
         depth: p('depth', 1),
         q: p('q', 4),
         waveform: p('waveform', 0).round(),
+        mix: p('mix', 1),
+      ),
+    // A1 — the rest of the filter set.
+    FxType.allpass => biquadFx(
+        input,
+        kind: BiquadKind.allpass,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 1000),
+        q: p('q', 0.707),
+        mix: p('mix', 1),
+      ),
+    FxType.onePoleLowpass => onePoleLowpassFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 4000),
+        mix: p('mix', 1),
+      ),
+    FxType.onePoleHighpass => onePoleHighpassFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 200),
+        mix: p('mix', 1),
+      ),
+    FxType.biquadRaw => biquadRawFx(
+        input,
+        b0: p('b0', 1),
+        b1: p('b1', 0),
+        b2: p('b2', 0),
+        a1: p('a1', 0),
+        a2: p('a2', 0),
+        mix: p('mix', 1),
+      ),
+    FxType.sincFilter => sincFilterFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        shape: FirShape
+            .values[p('shape', 0).round().clamp(0, FirShape.values.length - 1)],
+        freq: p('freq', 1000),
+        freqHigh: p('freqHigh', 8000),
+        taps: p('taps', 127).round(),
+        mix: p('mix', 1),
+      ),
+    FxType.hilbert => hilbertFx(
+        input,
+        taps: p('taps', 127).round(),
         mix: p('mix', 1),
       ),
     FxType.compressor => compressorFx(

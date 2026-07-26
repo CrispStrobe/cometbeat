@@ -104,13 +104,13 @@ Status key: ✅ have it · 🔶 partial · ⬜ to build.
 |---|---|---|
 | low-pass / high-pass (2-pole) | resonant biquad | ✅ |
 | band-pass / notch / peaking / low+high shelf | biquad family | ✅ |
-| all-pass | phase rotation without magnitude change | ⬜ A1 |
-| one-pole low/high-pass | gentle 6 dB/oct, the "tone knob" | ⬜ A1 |
-| band-reject with width in Hz/octaves | width parameterisation, not just Q | ⬜ A1 |
-| raw biquad | user-supplied b0,b1,b2,a1,a2 — the escape hatch | ⬜ A1 |
-| windowed-sinc | steep brick-wall LP/HP/BP/BR with a steepness control | ⬜ A1 |
-| arbitrary FIR | tap list, and a magnitude-response fit | ⬜ A1 |
-| Hilbert transform | 90° phase, the building block for the stereo ops | ⬜ A1 |
+| all-pass | phase rotation without magnitude change | ✅ |
+| one-pole low/high-pass | gentle 6 dB/oct, the "tone knob"; exactly complementary | ✅ |
+| band-reject with width in Hz/octaves | covered by the sinc filter's two edges | ✅ |
+| raw biquad | user-supplied b0,b1,b2,a1,a2; unstable ⇒ passthrough | ✅ |
+| windowed-sinc | steep, linear-phase LP/HP/BP/BR + steepness | ✅ |
+| arbitrary FIR | ⛔ **dropped** — an unbounded tap list cannot live in `FxSpec.params` (a fixed map of *named* doubles). `biquadRaw` covers the escape hatch; a real FIR needs a different carrier and a separate design. |
+| Hilbert transform | 90° phase, the building block for the stereo ops | ✅ |
 
 ### A2 — Tone curves
 | Op | Meaning | Status |
@@ -268,11 +268,12 @@ coexist with it. So "all FX for all track kinds" is mostly a surfacing job:
 Foundations first, because everything after them is cheaper if they exist.
 
 ```
-F1  chain-string codec + registry introspection        ← every later slice uses it
-F2  bin/fxproc.dart regenerated from the registry      ← the test/hear loop
+F1  chain-string codec + registry introspection        ✅ SHIPPED
+F2  bin/fxproc.dart regenerated from the registry      ✅ SHIPPED
+F2b the GUI's label + param tables deleted, derived    ✅ SHIPPED (unplanned)
 F3  chain string as copy/paste preset in the GUI
 
-A1  filter zoo        A3  dynamics zoo        A4  channel/stereo zoo
+A1  filter zoo ✅     A3  dynamics zoo        A4  channel/stereo zoo
 A5  restoration       A6  time/pitch          A2  tone curves      A7  generators
 
 B1  pad/repeat/split-on-silence/splice        B3  full stats
