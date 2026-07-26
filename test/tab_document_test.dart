@@ -800,4 +800,70 @@ void main() {
       expect(c.copyWith().volta, 2); // omitted → unchanged
     });
   });
+
+  group('B1–B3 — parametric bend / whammy / slide', () {
+    TabDocument oneNote() => TabDocument(
+          tuning: Tuning.standardGuitar,
+          columns: [const TabColumn(frets: {0: 5})],
+        );
+
+    test('B1 a bend curve emits Bend.curve and round-trips its points', () {
+      final doc = oneNote();
+      doc.setBend(0, TabBends.bendRelease());
+      final score = doc.toScore();
+      expect(score.bends, hasLength(1));
+      expect(score.bends.single.points, hasLength(3)); // 0 → up → 0
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.bend, isNotNull);
+      expect(
+        back.columns.first.bend!.map((p) => p.steps).toList(),
+        [0.0, 1.0, 0.0],
+      );
+    });
+
+    test('B1 the flat bend technique still emits a plain Bend (no points)', () {
+      final doc = oneNote()..toggleTechnique(0, TabTechnique.bend);
+      final score = doc.toScore();
+      expect(score.bends.single.points, isEmpty);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.techniques, contains(TabTechnique.bend));
+      expect(back.columns.first.bend, isNull);
+    });
+
+    test('B2 a whammy curve emits TremoloBar.curve and round-trips', () {
+      final doc = oneNote();
+      doc.setWhammy(
+        0,
+        const [BendPoint(0, 0), BendPoint(0.5, -2), BendPoint(1, 0)],
+      );
+      final score = doc.toScore();
+      expect(score.tremoloBars, hasLength(1));
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.whammy, isNotNull);
+      expect(
+        back.columns.first.whammy!.map((p) => p.steps).toList(),
+        [0.0, -2.0, 0.0],
+      );
+    });
+
+    test('B3 a slide-in/out emits TabSlide and round-trips its direction', () {
+      final doc = oneNote();
+      doc.setSlide(0, SlideInOut.inFromBelow);
+      final score = doc.toScore();
+      expect(score.slideInOuts, hasLength(1));
+      expect(score.slideInOuts.single.direction, SlideInOut.inFromBelow);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.slide, SlideInOut.inFromBelow);
+    });
+
+    test('the three parametric fields are independent + clearable', () {
+      var c = const TabColumn(frets: {0: 5});
+      c = c.withBend(TabBends.prebend()).withSlide(SlideInOut.outUpward);
+      expect(c.bend, isNotNull);
+      expect(c.slide, SlideInOut.outUpward);
+      expect(c.whammy, isNull);
+      expect(c.withBend(null).bend, isNull);
+      expect(c.withBend(null).slide, SlideInOut.outUpward); // untouched
+    });
+  });
 }

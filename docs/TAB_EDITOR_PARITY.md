@@ -246,7 +246,18 @@ parametric technique end-to-end.
   that bar on; `setBarTempo`. `TabColumn` was refactored to a single `copyWith`
   (sentinel-guarded nullable fields) — the named `with…` helpers are now thin
   wrappers, ending the per-field copy-constructor sprawl. Tests: group A9.
-- [ ] B1 … E2 — pending (scoped above)
+- [x] **B1** parametric bends — `TabColumn.bend: List<BendPoint>?` (control points
+  `(pos 0..1, height in whole steps)`) + `TabBends` presets (bend / bend-release /
+  prebend / prebend-release); `toScore` emits `Bend.curve` when a curve is set
+  (else the flat `TabTechnique.bend` still gives a plain `Bend`); `fromScore` reads
+  the point list back (round-trip); `setBend`/`withBend`. Tests: group B1–B3.
+- [x] **B2** whammy / tremolo bar — `TabColumn.whammy: List<BendPoint>?` →
+  `TremoloBar.curve` in `toScore`; `fromScore` reads it back (steps-only imports
+  synthesised to a 2-point dive); `setWhammy`/`withWhammy`. Tests: B1–B3.
+- [x] **B3** slide-in/out — `TabColumn.slide: SlideInOut?` (scoop/fall in or out,
+  distinct from the legato `TabTechnique.slide`) → `TabSlide(id, direction)`;
+  `fromScore` reads the direction back; `setSlide`/`withSlide`. Tests: B1–B3.
+- [ ] B4 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

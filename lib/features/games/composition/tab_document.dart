@@ -82,6 +82,21 @@ class TabColumn {
   /// `Measure.tempoChange`; playback re-times from here on.
   final double? tempoChange;
 
+  /// A parametric bend curve (B1): control points `(position 0..1, offset in
+  /// ¼-steps)`. Null = no bend curve (the flat [TabTechnique.bend] still gives a
+  /// plain whole-step bend). Non-null → `Bend.curve` in `toScore`, so a
+  /// bend/release, prebend or multi-point shape survives export.
+  final List<BendPoint>? bend;
+
+  /// A whammy-bar (tremolo-bar) curve (B2): control points, same shape as
+  /// [bend]. Null = none. Non-null → `TremoloBar.curve` in `toScore`.
+  final List<BendPoint>? whammy;
+
+  /// A slide-in / slide-out ornament on this note (B3): scoop/fall in or out.
+  /// Distinct from [TabTechnique.slide], which is a legato slide TO the next
+  /// note. Maps to `TabSlide(id, direction)` in `toScore`.
+  final SlideInOut? slide;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
@@ -95,6 +110,9 @@ class TabColumn {
     this.navigation,
     this.section,
     this.tempoChange,
+    this.bend,
+    this.whammy,
+    this.slide,
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -115,6 +133,9 @@ class TabColumn {
     Object? navigation = _unset,
     Object? section = _unset,
     Object? tempoChange = _unset,
+    Object? bend = _unset,
+    Object? whammy = _unset,
+    Object? slide = _unset,
   }) =>
       TabColumn(
         frets: frets ?? this.frets,
@@ -132,6 +153,9 @@ class TabColumn {
         section: section == _unset ? this.section : section as String?,
         tempoChange:
             tempoChange == _unset ? this.tempoChange : tempoChange as double?,
+        bend: bend == _unset ? this.bend : bend as List<BendPoint>?,
+        whammy: whammy == _unset ? this.whammy : whammy as List<BendPoint>?,
+        slide: slide == _unset ? this.slide : slide as SlideInOut?,
       );
 
   TabColumn withFret(int string, int fret) =>
@@ -178,6 +202,15 @@ class TabColumn {
   /// Sets (or clears, when null) this column's bar tempo change (BPM).
   TabColumn withTempo(double? bpm) => copyWith(tempoChange: bpm);
 
+  /// Sets (or clears, when null) this column's parametric bend curve (B1).
+  TabColumn withBend(List<BendPoint>? points) => copyWith(bend: points);
+
+  /// Sets (or clears, when null) this column's whammy-bar curve (B2).
+  TabColumn withWhammy(List<BendPoint>? points) => copyWith(whammy: points);
+
+  /// Sets (or clears, when null) this column's slide-in/out ornament (B3).
+  TabColumn withSlide(SlideInOut? kind) => copyWith(slide: kind);
+
   /// A deep copy (fresh frets/techniques collections) — for duplicating columns.
   TabColumn copy() => copyWith(frets: {...frets}, techniques: {...techniques});
 }
@@ -186,6 +219,28 @@ class TabColumn {
 /// to a 32nd and including dotted forms — tiles a bar integrally. A whole note
 /// is 32 steps; a 4/4 bar therefore holds [_kBarSteps] steps.
 const int _kBarSteps = 32; // one 4/4 bar = a whole note = 32 thirty-seconds
+
+/// The stock bend shapes (B1), each a list of `(position 0..1, height in whole
+/// steps)` control points. A whole-step bend rises 1.0; UI multiplies for ½/1½.
+/// These are the four presets industry editors expose; a user can also author
+/// an arbitrary point list.
+abstract final class TabBends {
+  /// Rise from pitch to [height] over the note.
+  static List<BendPoint> bend({double height = 1.0}) =>
+      [const BendPoint(0, 0), BendPoint(1, height)];
+
+  /// Rise to [height] then release back to pitch.
+  static List<BendPoint> bendRelease({double height = 1.0}) =>
+      [const BendPoint(0, 0), BendPoint(0.5, height), const BendPoint(1, 0)];
+
+  /// Struck already bent to [height] (a prebend), then held.
+  static List<BendPoint> prebend({double height = 1.0}) =>
+      [BendPoint(0, height), BendPoint(1, height)];
+
+  /// Struck prebent to [height], then released to pitch.
+  static List<BendPoint> prebendRelease({double height = 1.0}) =>
+      [BendPoint(0, height), BendPoint(0.5, height), const BendPoint(1, 0)];
+}
 
 /// The selectable note durations, each with its length in 32nd-note steps.
 /// Ordered long→short (whole … 32nd, with the dotted forms interleaved).
@@ -360,6 +415,27 @@ class TabDocument {
     columns[col] = columns[col].withTuplet(ratio);
   }
 
+  /// Sets (or clears, when null) the parametric bend curve on the column at
+  /// [col] (B1). Use [TabBends] for the stock shapes.
+  void setBend(int col, List<BendPoint>? points) {
+    _ensure(col);
+    columns[col] = columns[col].withBend(points);
+  }
+
+  /// Sets (or clears, when null) the whammy-bar curve on the column at [col]
+  /// (B2).
+  void setWhammy(int col, List<BendPoint>? points) {
+    _ensure(col);
+    columns[col] = columns[col].withWhammy(points);
+  }
+
+  /// Sets (or clears, when null) the slide-in/out ornament on the column at
+  /// [col] (B3).
+  void setSlide(int col, SlideInOut? kind) {
+    _ensure(col);
+    columns[col] = columns[col].withSlide(kind);
+  }
+
   /// Sets the repeat barlines of the BAR containing [col] (anchored to that
   /// bar's first column, which is where [toScore] reads them).
   void setBarRepeat(int col, {bool? start, bool? end}) {
@@ -519,6 +595,8 @@ class TabDocument {
     final measures = <Measure>[];
     final voicings = <TabVoicing>[];
     final bends = <Bend>[];
+    final tremoloBars = <TremoloBar>[];
+    final slideInOuts = <TabSlide>[];
     final marks = <TabNoteMark>[];
     final slurs = <Slur>[];
     final glissandos = <Glissando>[];
@@ -614,10 +692,14 @@ class TabDocument {
         );
         voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
         if (col.section != null) annotations.add(Annotation(id, col.section!));
+        // Parametric expressions (B1–B3) — a point list wins over the flat flag.
+        if (col.bend != null) bends.add(Bend.curve(id, col.bend!));
+        if (col.whammy != null) tremoloBars.add(TremoloBar.curve(id, col.whammy!));
+        if (col.slide != null) slideInOuts.add(TabSlide(id, col.slide!));
         for (final t in col.techniques) {
           switch (t) {
             case TabTechnique.bend:
-              bends.add(Bend(id));
+              if (col.bend == null) bends.add(Bend(id)); // flat whole-step bend
             case TabTechnique.slide:
               // A slide goes TO the next sounding note — `glissandos` is both
               // what the tab engine draws and what the GPIF writer exports.
@@ -650,6 +732,8 @@ class TabDocument {
       measures: measures,
       tabVoicings: voicings,
       bends: bends,
+      tremoloBars: tremoloBars,
+      slideInOuts: slideInOuts,
       tabNoteMarks: marks,
       slurs: slurs,
       glissandos: glissandos,
@@ -718,8 +802,25 @@ class TabDocument {
     final tech = <String, Set<TabTechnique>>{};
     void mark(String id, TabTechnique t) =>
         (tech[id] ??= <TabTechnique>{}).add(t);
+    // Parametric expressions (B1–B3) keyed by note id, read back so an imported
+    // bend curve / whammy dive / slide-in-out survives the editor round-trip.
+    final bendCurve = <String, List<BendPoint>>{};
+    final whammyCurve = <String, List<BendPoint>>{};
+    final slideKind = <String, SlideInOut>{};
     for (final b in score.bends) {
-      mark(b.noteId, TabTechnique.bend);
+      if (b.points.isNotEmpty) {
+        bendCurve[b.noteId] = b.points;
+      } else {
+        mark(b.noteId, TabTechnique.bend); // flat whole-step bend
+      }
+    }
+    for (final t in score.tremoloBars) {
+      whammyCurve[t.noteId] = t.points.isNotEmpty
+          ? t.points
+          : [const BendPoint(0, 0), BendPoint(1, t.steps)];
+    }
+    for (final s in score.slideInOuts) {
+      slideKind[s.noteId] = s.direction;
     }
     for (final g in score.glissandos) {
       mark(g.startId, TabTechnique.slide);
@@ -857,6 +958,9 @@ class TabDocument {
             navigation: navs[i],
             section: sections[i],
             tempoChange: tempos[i],
+            bend: ids[i] == null ? null : bendCurve[ids[i]],
+            whammy: ids[i] == null ? null : whammyCurve[ids[i]],
+            slide: ids[i] == null ? null : slideKind[ids[i]],
           ),
       ],
     );
