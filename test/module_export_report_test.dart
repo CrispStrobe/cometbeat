@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/module_convert.dart';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/mod/module_export_report.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -165,5 +166,74 @@ void main() {
       );
       expect(moduleExportLossReport(doc, ModuleFormat.xm), isEmpty);
     });
+  });
+
+  _reportMatchesTheWriter();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The loss report is only as good as its hand-copied list of representable
+// effects. `_s3mItRepresentableEffects` mirrors the `case` labels of
+// `_fxToLetterEffect` by hand, and during a run of command-number collisions it
+// desynced in BOTH directions: it listed a number nothing maps to any more (so
+// the report promised a command would survive when the writer drops it) and
+// omitted two that do survive (so it warned about a loss that never happens).
+//
+// Neither direction fails any other test, because nothing else compares the
+// report against what the writer actually does. This does: for each internal
+// command number it converts a one-cell doc to S3M, reads it back, and requires
+// the report's claim to match the outcome.
+void _reportMatchesTheWriter() {
+  group('the loss report agrees with the S3M writer', () {
+    ModuleDoc oneCell(int effect, int param) => ModuleDoc(
+          sourceFormat: ModuleFormat.it,
+          channelCount: 4,
+          order: const [0],
+          samples: [DocSample(pcm: _pcm())],
+          patterns: [
+            DocPattern(
+              [
+                [
+                  DocCell(
+                    note: 60,
+                    instrument: 1,
+                    effect: effect,
+                    effectParam: param,
+                  ),
+                  ...List<DocCell>.filled(3, DocCell.empty),
+                ],
+                for (var r = 1; r < 64; r++)
+                  List<DocCell>.filled(4, DocCell.empty),
+              ],
+              4,
+            ),
+          ],
+        );
+
+    // The extended range 0x10–0x1F is where the collisions happened and where
+    // the list drifted. Below 0x10 the mapping has documented special cases
+    // (volume column, arpeggio, Exy sub-commands) that this blunt check would
+    // misread, and those are covered by the cases above.
+    for (var effect = 0x10; effect <= 0x1F; effect++) {
+      test('0x${effect.toRadixString(16)}', () {
+        final doc = oneCell(effect, 0x11);
+        final claimsLoss = moduleExportLossReport(doc, ModuleFormat.s3m)
+            .contains(ModuleExportLoss.s3mEffects);
+
+        final back = parseAnyModule(convertDocTo(doc, ModuleFormat.s3m));
+        final cell = back.patterns.first.rows.first.first;
+        final survived = cell.effect != 0 || cell.effectParam != 0;
+
+        expect(
+          claimsLoss,
+          !survived,
+          reason: survived
+              ? 'the writer preserves 0x${effect.toRadixString(16)}, but the '
+                  'report warns it is dropped — a loss the user never suffers'
+              : 'the writer drops 0x${effect.toRadixString(16)}, but the report '
+                  'stays silent — the user is told their effect survived',
+        );
+      });
+    }
   });
 }
