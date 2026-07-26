@@ -75,6 +75,50 @@ void main() {
       expect(found[kFxSetSpeedFull], contains('kFxSetSpeedFull'));
     });
 
+    test('no two kEx* sub-commands share a number either', () {
+      // The Exy sub-command nibble is a SECOND namespace with the same failure
+      // mode: two kEx* constants on one nibble means the later one is shadowed
+      // inside the kFxExtended switch. Nothing above covers it, since those are
+      // kFx* names.
+      final byNumber = <int, List<String>>{};
+      final exDecl = RegExp(
+        r'^const int (kEx[A-Za-z0-9]+)\s*=\s*(0x[0-9A-Fa-f]+|\d+)\s*;',
+        multiLine: true,
+      );
+      for (final m in exDecl.allMatches(source)) {
+        final literal = m.group(2)!;
+        final value = literal.startsWith('0x')
+            ? int.parse(literal.substring(2), radix: 16)
+            : int.parse(literal);
+        byNumber.putIfAbsent(value, () => []).add(m.group(1)!);
+      }
+      expect(byNumber, isNotEmpty, reason: 'the kEx regex matched nothing');
+      final clashes = [
+        for (final e in byNumber.entries)
+          if (e.value.length > 1)
+            '0x${e.key.toRadixString(16)} → ${e.value.join(" + ")}',
+      ];
+      expect(
+        clashes,
+        isEmpty,
+        reason: 'Exy sub-command numbers collide: $clashes',
+      );
+    });
+
+    test('every command number fits the byte the codecs store it in', () {
+      // fxCmd rides a single byte through the tracker codec and the module
+      // writers, so a value above 0xFF would be truncated on save rather than
+      // rejected — a corrupt file instead of an error.
+      for (final e in allocations().entries) {
+        expect(
+          e.key,
+          inInclusiveRange(0, 0xFF),
+          reason: '${e.value.join(" + ")} = 0x${e.key.toRadixString(16)} '
+              'does not fit a byte',
+        );
+      }
+    });
+
     test('no two kFx* commands share a number', () {
       final clashes = [
         for (final e in allocations().entries)

@@ -110,21 +110,14 @@ const int kFxSetSpeed = 0xF; // Fxx — <0x20 set speed (ticks/row); ≥0x20 tem
 ///
 /// So IT/S3M `Axx` maps here instead, and the parameter is just the speed.
 ///
-/// Value note: pick a genuinely free slot if you ever add another command. The
-/// taken set is NOT just the `kFx*` constants below — `module_convert.dart`'s
-/// internal→IT/S3M switches use RAW hex literals, so a number can be spoken for
-/// in a place this file never mentions.
-///
-/// ⚠️ This value has now collided TWICE, which is why the allocation is checked
-/// by a test rather than by reading. It was 0x12, already
-/// [kFxSetPanbrelloWaveform] — so an `Axx` speed was read AND written as "set
-/// panbrello waveform", because the switches match the FIRST case and the later
-/// one is dead. Moving it to 0x13 then hit [kFxSetHighOffset]. 0x14 is free;
-/// 0x15–0x18 and 0x1A remain.
-///
-/// Do not hand-enumerate the free list — that is exactly what produced the
-/// second collision. `tracker_replayer_test.dart` fails on any duplicate and
-/// names both offenders.
+/// Value note: this has collided TWICE, so check properly before adding a
+/// command — and check BOTH namespaces. The taken set is not just the `kFx*`
+/// constants: `module_convert.dart` also switches on RAW hex literals, which is
+/// what round one turned on (0x12 was a hardcoded S5x set-panbrello-waveform).
+/// Round two was two workstreams picking 0x14 concurrently.
+/// `tracker_fx_command_ids_test.dart` now parses this file and asserts the
+/// kFx/kEx values are pairwise distinct, so a third round fails a test rather
+/// than shipping a silently unreachable command.
 const int kFxSetSpeedFull = 0x14;
 const int kFxExtended =
     0xE; // Exy — sub-command in the high nibble of the param

@@ -1536,8 +1536,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     if (spec == null) return false;
     setState(() {
       _engine.applySpec(spec);
-      _soloTrack = null;
-      _enabledBeforeSolo = null;
+      _discardSolo();
     });
     _restartGroove();
     return true;
@@ -2576,15 +2575,44 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _checkCombo();
   }
 
+  /// Leaves solo, putting back the mix it was hiding. Safe to call when not
+  /// soloing.
+  ///
+  /// Anything that REPLACES the enabled set (launching a scene, loading a token,
+  /// Surprise-me, Stop) has to come through here first, or `_enabledBeforeSolo`
+  /// still holds the pre-solo mix and the next un-solo silently clobbers what
+  /// just replaced it.
+  void _leaveSolo() {
+    if (_soloTrack == null) return;
+    _engine.enabled
+      ..clear()
+      ..addAll(_enabledBeforeSolo ?? const <String>{});
+    _discardSolo();
+  }
+
+  /// Forgets the solo state WITHOUT restoring the mix under it — for callers
+  /// that are about to define a new mix themselves (loading a token, launching a
+  /// scene, Surprise-me, Stop). Restoring there would put back a mix the user
+  /// just replaced.
+  ///
+  /// The two fields must always move together; every site used to do that by
+  /// hand, which is how the scene-launch path came to drop one of them.
+  void _discardSolo() {
+    _soloTrack = null;
+    _enabledBeforeSolo = null;
+  }
+
+  /// The mix as the user set it, ignoring any solo — what a scene should
+  /// capture. Capturing during solo used to store the one-track solo state as
+  /// if it were the mix.
+  Set<String> get _mixUnderSolo =>
+      _soloTrack == null ? {..._engine.enabled} : {...?_enabledBeforeSolo};
+
   void _toggleSolo(String id) {
     if (!_engine.tracks.any((track) => track.id == id)) return;
     setState(() {
       if (_soloTrack == id) {
-        _engine.enabled
-          ..clear()
-          ..addAll(_enabledBeforeSolo ?? const <String>{});
-        _soloTrack = null;
-        _enabledBeforeSolo = null;
+        _leaveSolo();
       } else {
         _enabledBeforeSolo ??= Set<String>.from(_engine.enabled);
         _engine.enabled
@@ -2713,13 +2741,21 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   // --- Section/scene grid (§G-1) -------------------------------------------
 
-  void _captureScene(int i) =>
-      setState(() => _scenes[i] = _engine.captureScene());
+  void _captureScene(int i) => setState(() {
+        // Not _engine.captureScene() directly: while soloing, `enabled` is the
+        // one-track solo state, so that would save "just the lead" as the scene.
+        final scene = _engine.captureScene();
+        _scenes[i] = GrooveScene(_mixUnderSolo, scene.variants);
+      });
 
   void _launchScene(int i) {
     final scene = _scenes[i];
     if (scene == null) return;
     setState(() {
+      // A scene DEFINES the mix, so forget solo rather than restoring under it.
+      // Without this the stale _enabledBeforeSolo survived and the next un-solo
+      // threw the launched scene away.
+      _discardSolo();
       _engine.applyScene(scene);
       _chainIndex = i;
     });
@@ -2752,6 +2788,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       final next = (_chainIndex + step) % _scenes.length;
       if (_scenes[next] != null) {
         setState(() {
+          _discardSolo();
           _engine.applyScene(_scenes[next]!);
           _chainIndex = next;
         });
@@ -2817,8 +2854,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// it never sounds empty. A gentle swing roll varies the feel.
   void _roll() {
     setState(() {
-      _soloTrack = null;
-      _enabledBeforeSolo = null;
+      _discardSolo();
       final ids = _engine.tracks.map((t) => t.id).toSet();
       _engine.enabled.clear();
       if (ids.contains('drums')) _engine.enabled.add('drums');
@@ -3156,8 +3192,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _paused = false;
     setState(() {
       _engine.enabled.clear();
-      _soloTrack = null;
-      _enabledBeforeSolo = null;
+      _discardSolo();
     });
     _syncPlayback();
   }
@@ -3212,8 +3247,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void _applyHistory(GrooveSpec target) {
     // Solo is a transient screen mode layered over `enabled`; drop it so the
     // restored enabled-set isn't immediately overwritten by the solo re-assert.
-    _soloTrack = null;
-    _enabledBeforeSolo = null;
+    _discardSolo();
     setState(() => _engine.applySpec(target));
     // Anchor the base to the post-apply state so _syncPlayback's own record call
     // (applySpec may clamp/drop ids) doesn't push a spurious history entry.
@@ -3245,8 +3279,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       return;
     }
     if (_soloTrack == id) {
-      _soloTrack = null;
-      _enabledBeforeSolo = null;
+      _discardSolo();
     }
     _syncPlayback();
     _checkCombo();
