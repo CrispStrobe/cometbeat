@@ -18,10 +18,10 @@
 //     just invalidated, so carrying them would attach a real fact to the wrong
 //     note — worse than losing it, because it looks right.
 
+import 'package:comet_beat/core/interop/annotation_codecs.dart'
+    show tuningFromAnnotation, tuningToAnnotation;
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
-import 'package:comet_beat/core/interop/tab_tracker.dart'
-    show tuningFromAnnotation, tuningToAnnotation;
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';

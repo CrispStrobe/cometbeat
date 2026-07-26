@@ -77,6 +77,11 @@ abstract final class AnnotationKeys {
   static const fret = 'fret';
   static const capo = 'capo';
 
+  /// A whole column's placement as `[[string, fret], …]` — [string]/[fret] name
+  /// ONE note, and a chord needs several. Stored per event so a model that
+  /// keeps only pitch (a loop track) can hand the fretting back afterwards.
+  static const fretting = 'fretting';
+
   /// A `List<String>` of `TabTechnique.name` values.
   static const techniques = 'techniques';
 

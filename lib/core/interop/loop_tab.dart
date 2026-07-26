@@ -26,6 +26,7 @@
 
 import 'package:comet_beat/core/audio/loop_engine.dart'
     show LoopTiming, PatternCell;
+import 'package:comet_beat/core/interop/annotation_codecs.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart'
     show arrangeTab;
@@ -54,9 +55,18 @@ class LoopToTabResult {
 
 /// The result of turning a tab into loop cells.
 class TabToLoopResult {
-  TabToLoopResult({required this.cells, required this.report});
+  TabToLoopResult({
+    required this.cells,
+    required this.annotations,
+    required this.report,
+  });
 
   final List<PatternCell> cells;
+
+  /// What a loop track cannot hold: the tuning, the capo, and each column's
+  /// string/fret placement. Hand this back to [tabDocumentFromLoopCells] and
+  /// the tab comes out on the strings it was written on.
+  final SymbolicAnnotations annotations;
   final ConversionReport report;
 }
 
@@ -67,11 +77,13 @@ class TabToLoopResult {
 LoopToTabResult tabDocumentFromLoopCells(
   List<PatternCell> cells,
   Tuning tuning, {
+  SymbolicAnnotations? annotations,
   int capo = 0,
   int maxFret = 20,
 }) {
   final report = ConversionReport();
-  final annotations = SymbolicAnnotations()
+  final notes = annotations ?? SymbolicAnnotations();
+  final out = SymbolicAnnotations()
     ..docMeta[AnnotationKeys.sourceMode] = 'loop'
     ..docMeta[AnnotationKeys.capo] = capo;
 
@@ -100,13 +112,24 @@ LoopToTabResult tabDocumentFromLoopCells(
   for (var i = 0; i < cells.length; i++) {
     final cell = cells[i];
     final duration = _durationForLoopSteps(cell.steps, report);
-    final fretting = byIndex[i] ?? const <int, int>{};
+    // A fretting the side-car remembers beats one the arranger invents — but
+    // only if it still SOUNDS this cell. The loop may have been edited since,
+    // and coordinates alone cannot tell; the pitches can. A stale fretting is
+    // dropped and the arranger's choice stands.
+    final remembered = _rememberedFretting(
+      notes,
+      EventAddress(track: 0, step: step),
+      cell.midis,
+      tuning,
+      capo,
+    );
+    final fretting = remembered ?? byIndex[i] ?? const <int, int>{};
 
     if ((cell.midis?.isNotEmpty ?? false) && fretting.isEmpty) {
       report.addLost('notes outside the instrument\'s range');
     }
     if (cell.velocity != 1.0) {
-      annotations.set(
+      out.set(
         EventAddress(track: 0, step: step),
         AnnotationKeys.velocity,
         cell.velocity,
@@ -120,7 +143,7 @@ LoopToTabResult tabDocumentFromLoopCells(
 
   return LoopToTabResult(
     doc: TabDocument(tuning: tuning, columns: columns),
-    annotations: annotations,
+    annotations: out,
     report: report,
   );
 }
@@ -139,6 +162,13 @@ TabToLoopResult loopCellsFromTabDocument(
   final notes = annotations ?? SymbolicAnnotations();
   final effectiveCapo =
       capo != 0 ? capo : (_asInt(notes.docMeta[AnnotationKeys.capo]) ?? 0);
+
+  // Written, not read: what this conversion is about to drop. The incoming
+  // [annotations] stay untouched — they belong to the caller.
+  final out = SymbolicAnnotations()
+    ..docMeta[AnnotationKeys.sourceMode] = 'tab'
+    ..docMeta[AnnotationKeys.capo] = effectiveCapo
+    ..docMeta[AnnotationKeys.tuning] = tuningToAnnotation(doc.tuning);
 
   final cells = <PatternCell>[];
   var step = 0;
@@ -170,6 +200,14 @@ TabToLoopResult loopCellsFromTabDocument(
     final at = EventAddress(track: 0, step: step);
     final velocity = _asDouble(notes.get(at, AnnotationKeys.velocity)) ?? 1.0;
 
+    // A loop cell is pitches; the strings these were played on are about to be
+    // lost. Record them against the same address the reverse conversion uses,
+    // so the way back can put them where they were instead of re-arranging.
+    if (column.frets.isNotEmpty) {
+      out.set(at, AnnotationKeys.fretting, frettingToAnnotation(column.frets));
+      report.addLost('string and fret choice (a loop track carries pitches)');
+    }
+
     cells.add(
       PatternCell(
         midis: midis.isEmpty ? null : midis,
@@ -187,7 +225,41 @@ TabToLoopResult loopCellsFromTabDocument(
     );
   }
 
-  return TabToLoopResult(cells: cells, report: report);
+  return TabToLoopResult(cells: cells, annotations: out, report: report);
+}
+
+/// The fretting [notes] recorded at [at], if it still sounds exactly [midis].
+///
+/// The check is the whole point. An [EventAddress] is a position, and a loop
+/// that has been edited since has different notes at the same positions — so a
+/// remembered fretting is only trustworthy when playing it produces the pitches
+/// actually in the cell. Anything else returns null and the arranger decides.
+Map<int, int>? _rememberedFretting(
+  SymbolicAnnotations notes,
+  EventAddress at,
+  List<int>? midis,
+  Tuning tuning,
+  int capo,
+) {
+  if (midis == null || midis.isEmpty) return null;
+  final frets = frettingFromAnnotation(notes.get(at, AnnotationKeys.fretting));
+  if (frets == null || frets.isEmpty) return null;
+
+  final sounded = <int>[];
+  for (final entry in frets.entries) {
+    final string = entry.key;
+    if (string < 0 || string >= tuning.stringCount) return null;
+    if (entry.value < 0) return null;
+    sounded.add(tuning.strings[string].midiNumber + entry.value + capo);
+  }
+  sounded.sort();
+
+  final wanted = List<int>.of(midis)..sort();
+  if (sounded.length != wanted.length) return null;
+  for (var i = 0; i < wanted.length; i++) {
+    if (sounded[i] != wanted[i]) return null;
+  }
+  return frets;
 }
 
 /// The note value covering [steps] eighth-note steps.

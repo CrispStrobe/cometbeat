@@ -23,6 +23,7 @@ import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show AdditiveInstrument, TrackerChannel, TrackerTiming;
 import 'package:comet_beat/core/audio/tracker_song.dart';
+import 'package:comet_beat/core/interop/annotation_codecs.dart';
 import 'package:comet_beat/core/interop/loop_tab.dart';
 import 'package:comet_beat/core/interop/loop_tracker.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
@@ -211,13 +212,7 @@ abstract final class ProjectBridge {
             );
             return ConversionResult(
               document: out.cells,
-              // A loop track has no strings either — same reason as Tab → Score
-              // below, so a Loop → Tab trip later can rebuild the right one.
-              annotations: SymbolicAnnotations()
-                ..docMeta[AnnotationKeys.sourceMode] = 'tab'
-                ..docMeta[AnnotationKeys.capo] = capo
-                ..docMeta[AnnotationKeys.tuning] =
-                    tuningToAnnotation(doc.tuning),
+              annotations: out.annotations,
               report: out.report,
             );
           },
@@ -343,7 +338,12 @@ abstract final class ProjectBridge {
       (AppMode.loop, AppMode.tab) => _fromLoop(
           document,
           (cells) {
-            final out = tabDocumentFromLoopCells(cells, strings, capo: capo);
+            final out = tabDocumentFromLoopCells(
+              cells,
+              strings,
+              annotations: annotations,
+              capo: capo,
+            );
             return ConversionResult(
               document: out.doc,
               annotations: out.annotations,

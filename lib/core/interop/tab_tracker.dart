@@ -31,6 +31,7 @@ import 'package:comet_beat/core/audio/tracker_replay.dart' show kFxSetVolume;
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show kExNoteCut, kFxExtended, kFxPortaUp, kFxTonePorta, kFxVibrato;
 import 'package:comet_beat/core/audio/tracker_song.dart';
+import 'package:comet_beat/core/interop/annotation_codecs.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
 import 'package:comet_beat/core/interop/tracker_song_flatten.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
@@ -422,28 +423,6 @@ NoteDuration _durationForSteps(
     if (length <= steps) return duration;
   }
   return ladder.isEmpty ? NoteDuration.quarter : ladder.last.$1;
-}
-
-/// A tuning as the side-car stores it: one MIDI number per string.
-///
-/// Public because the bridge writes it on any hop that leaves a fretted
-/// instrument, and reads it back on any hop that has to rebuild one.
-List<int> tuningToAnnotation(Tuning tuning) =>
-    [for (final string in tuning.strings) string.midiNumber];
-
-/// The inverse of [tuningToAnnotation]; null when [raw] is not a tuning.
-Tuning? tuningFromAnnotation(Object? raw) {
-  if (raw is! List || raw.isEmpty) return null;
-  final midis = <int>[];
-  for (final entry in raw) {
-    final midi = _asInt(entry);
-    if (midi == null) return null;
-    midis.add(midi);
-  }
-  return Tuning(
-    [for (final midi in midis) pitchFromMidi(midi)],
-    name: 'imported',
-  );
 }
 
 TimeSignature? _timeSignatureFrom(Object? raw) {

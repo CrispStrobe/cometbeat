@@ -108,6 +108,34 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
+- **opus (fretting-carry)** · ✅ **SHIPPED (idle) — the strings you wrote it on
+  come back, through every waypoint.** Before building the "per-note fretting"
+  follow-up I had left myself, I measured where fretting actually survives — and
+  the to-do was mostly wrong. `Score` was already exact (`Score.tabVoicings`,
+  written by `toScore`, read by `fromScore`) and so was `Tracker` (one channel
+  per string). **Only Loop re-arranged**, because a loop cell carries pitches and
+  nothing else. Measured both tunings before/after; correction recorded below.
+  Fix: `Tab → Loop` records each column's `{string: fret}` in the side-car under
+  the new `AnnotationKeys.fretting` (`[[string, fret], …]` — a chord needs more
+  than the singular `string`/`fret` keys), keyed by the same `EventAddress` both
+  directions already used for velocity; `Loop → Tab` prefers it over `arrangeTab`.
+  ⚠️ **The check is the point, keep it.** A remembered fretting is applied ONLY
+  if playing it sounds exactly the pitches in that cell. An address is a
+  position, and a loop edited in between has different notes at the same
+  positions — so without the check a real fretting lands on the wrong notes,
+  which is worse than losing it. Stale/garbled/out-of-range side-cars all fall
+  back to the arranger. Three tests cover exactly that.
+  DRY: the side-car value codecs (tuning + fretting) now live once in
+  `lib/core/interop/annotation_codecs.dart` instead of privately inside whichever
+  converter happened to need them first.
+  ⚠️ **Correction to my previous entry's commit message** (`d86fe9ae`): it says
+  `tabDocumentFromLoopCells` "has always read a tuning and capo back out of the
+  side-car". Wrong function — that reader is `tabDocumentFromTrackerSong`
+  (`tab_tracker.dart`). The substance is unchanged; the attribution was not.
+  Tests: `interop_fretting_carry_test.dart` (9 — 6 waypoint/tuning combinations
+  + 3 safety). Green: the interop suite (168) + tab_workshop, tab_rig_open_in,
+  loop_mixer (113). analyze clean. — opus
+
 - **opus (sidecar-carry)** · ✅ **SHIPPED (idle) — the side-car now survives the
   hop it exists for.** Auditing `ProjectBridge`'s routes found the symbolic
   side-car was barely connected: only `Tab → Tracker` ever AUTHORED one, and five
@@ -128,11 +156,13 @@ is recorded in [HISTORY.md](HISTORY.md).
   model, which the conversion has just invalidated — carrying them would state a
   true fact about the WRONG note, which is worse than losing it because it looks
   right. Pinned by a test.
-  ⬜ **Not done, and the natural next step:** per-note fretting restoration.
-  `Score → Tab` re-runs `arrangeTab` rather than consulting the side-car, so a
-  round trip returns a playable fretting, not the ORIGINAL one. That needs
-  event-address translation, i.e. the thing the limit above rules out — so it
-  wants a design, not a patch.
+  ⬜→✅ **CORRECTION (measured, same day): the to-do I left here was wrong.** I
+  wrote that `Score → Tab` re-arranges rather than restoring the original
+  fretting. It does not — `TabDocument.toScore` writes `Score.tabVoicings` and
+  `fromScore` reads it back, so Tab → Score → Tab was ALREADY exact, in both
+  standard and DADGAD. Tracker was exact too (one channel per string). Only the
+  **Loop** waypoint re-arranged, because a loop cell is pitches and nothing
+  else. Now fixed — see the entry above.
   Tests: `interop_sidecar_carry_test.dart` (7, incl. the no-side-car fallback and
   explicit-tuning-wins cases, and verified to go red when the carry is removed).
   Green: interop_corpus, report_honesty, tracker_song_flatten, project_bridge,
