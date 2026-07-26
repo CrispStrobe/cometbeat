@@ -39,9 +39,9 @@ Pending, in order:
    saved song is untouched). Remaining in this bullet: a **string indicator** (Roman
    numerals — `Annotation` already renders text above a staff, but attaching one to
    an imported score hits the same immutability wall as fingerings did), and
-   **MusicXML-with-fingerings**, which needs `copyWith` on `Score`/`Measure`/
-   `NoteElement` in crisp_notation (a library chore worth doing once, with an
-   exhaustive round-trip test per class, rather than hand-cloning at call sites).
+   **MusicXML-with-fingerings — DONE** (`Score.copyWith`/`NoteElement.copyWith`
+   shipped in crisp_notation with a source-reading drift guard; the song screen
+   exports a fingered copy through the standard export sheet).
    Historic note — the original text of this bullet:
 1. ~~**Consumers.** Nothing renders this yet.~~ Cheapest real wins: fingering digits
    on cello parts in Song Book / play-along (copy `bowedFingeringDigits` into

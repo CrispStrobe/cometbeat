@@ -58,20 +58,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (score-copywith)** · 🚧 **ACTIVE — `copyWith` on Score / Measure /
-  NoteElement (crisp_notation), then fingered MusicXML.** The library has no way to
-  say "this score, plus one thing": `Score` has ~40 fields, `Measure` ~15,
-  `NoteElement` ~13, and the only existing full rebuild (`transposedBy`) enumerates
-  every field by hand. That is why fingerings had to be a display-only channel, and
-  why nobody can write them into an exported file. Adding `copyWith` once fixes it
-  for everyone. **The hazard is drift** — a `copyWith` that silently forgets a field
-  added later is worse than none — so each gets a `dart:mirrors` parity test that
-  fails when a constructor parameter has no `copyWith` counterpart (tests run on the
-  VM, so mirrors are available), plus per-field value tests. Then mus can export a
-  song's fingerings as real `<fingering>` marks. Sibling worktree
-  `../crisp_notation-copywith`; the shared clone stays on `main`. Files:
-  `model/{score,measure,element}.dart` — no overlap with the `<sound tempo>` work in
-  `musicxml/`. Worktree `../mus-cello-fingering`.
+- **opus (score-copywith)** · ✅ **SHIPPED (idle) — `copyWith` on Score +
+  NoteElement, and a fingered part is now a FILE** (`crisp_notation@fb7a26d`,
+  mus `2c7ceb31`). **Correction to my own claim:** `Measure.copyWith` already
+  existed and is complete — I generated one for it, found the clash, and dropped it;
+  only `Score` (44 ctor params) and `NoteElement` (14) were missing. The hazard with
+  a hand-written copyWith is drift, not today's correctness, so each is guarded by a
+  test that READS THE SOURCE and fails when a constructor parameter has no copyWith
+  counterpart, in both directions, for all three classes (Measure's pre-existing one
+  now guarded too). I verified the guard fires by adding a probe field to Score's
+  constructor before removing it — a guard that cannot fail is decoration.
+  On top of it, `scoreWithBowedFingerings` writes the marks into a COPY, and the song
+  screen's Export… now hands that copy to the standard export sheet, so MusicXML /
+  MuseScore / MIDI / PDF all carry what the toggle shows. That **replaced the
+  bespoke PDF-only action from the previous commit** — four formats instead of one,
+  and the hand-rolled save path is gone; `exportScoreToPdf(extraFingerings:)` stays
+  as the API for printing marks you deliberately do NOT want in the document.
+  The saved song is never touched: tests pin that its MusicXML is byte-identical
+  after the call, and that stripping the fingerings off the copy yields a score
+  EQUAL to the original — which is what proves the rebuild dropped no other field.
 
 - **opus (cello-print)** · ✅ **SHIPPED (idle) — print the fingered part**
   (`fb4bf4cd`, library `crisp_notation@51033ca`). Fingerings were screen-only; the
