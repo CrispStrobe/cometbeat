@@ -231,7 +231,7 @@ class _MyInstrumentsSheetState extends State<MyInstrumentsSheet>
         await showScoreDestinations(navigator.context, score);
         return;
       }
-      final imported = importAudioMono(bytes);
+      final imported = await importAudioMonoAsync(bytes);
       if (imported == null || imported.pcm.isEmpty) {
         messenger.showSnackBar(
           SnackBar(content: Text(l10n.mySamplesImportFailed)),

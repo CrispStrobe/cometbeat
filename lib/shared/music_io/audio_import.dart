@@ -26,6 +26,7 @@ import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
     show
         AudioFileDecode,
         OpusFileDecode,
+        ensureGlintCodecReady,
         isOggOpus,
         loadAudioDecoder,
         loadOpusFileDecoder;
@@ -214,6 +215,60 @@ ImportedAudio? importAudio(
     // fall through to null — callers show a friendly "couldn't read" message
   }
   return null;
+}
+
+/// Make the glint-backed decoders usable, then report whether any is.
+///
+/// **On web this is not optional.** The glint wasm is fetched lazily, so until
+/// it resolves every glint-backed decoder returns null and a FLAC / Ogg-Opus /
+/// AAC import fails as if the file were corrupt. Natively it is a no-op that
+/// just reports whether the plugin linked.
+///
+/// Both wasm shims share ONE module, so awaiting both costs one fetch.
+/// [importAudioAsync] and [importAudioMonoAsync] call this for you — prefer
+/// them over the sync entry points anywhere web has to work.
+Future<bool> ensureAudioDecodersReady() async {
+  final results = await Future.wait(<Future<bool>>[
+    ensureGlintCodecReady(),
+    ensureGlintVorbisReady(),
+  ]);
+  return results.any((ready) => ready);
+}
+
+/// [importAudio] with the web decoders loaded first. Use this from UI code.
+Future<ImportedAudio?> importAudioAsync(
+  Uint8List bytes, {
+  FlacDecode? flacDecode,
+  VorbisFileDecode? vorbisDecode,
+  OpusFileDecode? opusDecode,
+  AudioFileDecode? audioDecode,
+}) async {
+  await ensureAudioDecodersReady();
+  return importAudio(
+    bytes,
+    flacDecode: flacDecode,
+    vorbisDecode: vorbisDecode,
+    opusDecode: opusDecode,
+    audioDecode: audioDecode,
+  );
+}
+
+/// [importAudioMono] with the web decoders loaded first. Use this from UI code.
+Future<ImportedAudio?> importAudioMonoAsync(
+  Uint8List bytes, {
+  FlacDecode? flacDecode,
+  VorbisFileDecode? vorbisDecode,
+  OpusFileDecode? opusDecode,
+  AudioFileDecode? audioDecode,
+}) async {
+  await ensureAudioDecodersReady();
+  return importAudioMono(
+    bytes,
+    flacDecode: flacDecode,
+    vorbisDecode: vorbisDecode,
+    opusDecode: opusDecode,
+    audioDecode: audioDecode,
+  );
 }
 
 /// Decodes an audio file and folds stereo to mono for instruments and legacy

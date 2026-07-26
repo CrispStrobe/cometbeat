@@ -110,7 +110,10 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
         setState(() => _busy = false);
         return;
       }
-      final loaded = loadSoundFont(picked.bytes, vorbis: widget.vorbis);
+      final loaded = await loadSoundFontAsync(
+        picked.bytes,
+        vorbis: widget.vorbis,
+      );
       setState(() {
         _font = loaded;
         _fontBytes = picked.bytes;
@@ -145,7 +148,7 @@ class _SoundFontSheetState extends State<_SoundFontSheet> {
     });
     try {
       final bytes = await widget.download(source);
-      final loaded = loadSoundFont(bytes, vorbis: widget.vorbis);
+      final loaded = await loadSoundFontAsync(bytes, vorbis: widget.vorbis);
       if (!mounted) return;
       setState(() {
         _font = loaded;

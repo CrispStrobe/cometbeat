@@ -98,7 +98,7 @@ class _MySamplesSheetState extends State<MySamplesSheet>
 
   @override
   Future<bool> importAudio(Uint8List bytes, String filename) async {
-    final imported = importAudioMono(bytes);
+    final imported = await importAudioMonoAsync(bytes);
     if (imported == null || imported.pcm.isEmpty) return false;
     final name = _uniqueName(_baseName(filename));
     final list = await widget.store.save(

@@ -41,6 +41,34 @@ The export sheet only offers a format where its encoder actually resolved
   return anything, which both export sheets do for you.
 - Everything degrades to **null**, never to an exception or a half-written file.
 
+### The readiness rule (web only, but it bites hard)
+
+The wasm is fetched **lazily**. Until it resolves, every glint-backed decoder
+returns null on every call — so a FLAC / Ogg-Opus / AAC import fails looking
+exactly like a corrupt file, and `.sf3` parses into silence.
+
+So: **await readiness before decoding.** Prefer the async entry points, which do
+it for you:
+
+| Instead of | Use |
+| --- | --- |
+| `importAudio(bytes)` | `await importAudioAsync(bytes)` |
+| `importAudioMono(bytes)` | `await importAudioMonoAsync(bytes)` |
+| `loadSoundFont(bytes)` | `await loadSoundFontAsync(bytes)` |
+| — | `await ensureAudioDecodersReady()` if you need the sync form |
+
+Both export sheets already call `prepareNativeAudioEncoder()` before offering
+formats — without it web would list Opus/AAC and then fail at save time.
+
+The sync entry points are still correct where only pure-Dart codecs are
+possible: `sample_extractor.dart` admits `.wav`/`.mp3` only, so it stays sync,
+with a comment saying what would have to change if that filter widened.
+
+`ensureGlintVorbisReady()` had existed for this exact reason since the `.sf3`
+work and was **never called from anywhere** — which is why `.sf3` on web was
+quietly broken too. Adding a readiness helper is not enough; something has to
+await it.
+
 ## History worth keeping
 
 Three asymmetries existed and are now closed. They're recorded because each was
@@ -73,6 +101,7 @@ and hid it.
 | Import routing + Ogg container detection | `test/audio_import_opus_test.dart` |
 | Export format gating | `test/audio_export_format_test.dart` |
 | Live, on a real build | `integration_test/glint_encoder_test.dart` |
+| Web seams in a real browser | `test/web/audio_codec_web_test.dart` (`--platform chrome`) |
 
 CI: `.github/workflows/glint-native.yml` runs the native tests on Linux/macOS/
 Windows, the wasm test on node, and builds an example app on all five platforms.

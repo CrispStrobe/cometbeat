@@ -163,6 +163,10 @@ List<ExtractedSample> extractArchiveSamples(
     if (!lower.endsWith('.wav') && !lower.endsWith('.mp3')) continue;
     if (data.isEmpty) continue;
     // importAudioMono decodes WAV or MP3 (by content) to mono float + rate.
+    // Deliberately the SYNC entry point: the filter above admits only .wav and
+    // .mp3, both pure-Dart decoders, so there is no glint wasm to wait for.
+    // Widen that filter to .flac/.ogg/.opus/.aac and this must become
+    // importAudioMonoAsync, or those will silently decode to null on web.
     final imported = importAudioMono(data);
     if (imported == null || imported.pcm.isEmpty) continue;
     out.add(

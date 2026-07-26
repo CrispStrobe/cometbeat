@@ -54,6 +54,24 @@ class SoundFontLoadException implements Exception {
 /// (default) the platform glint decoder via [loadGlintVorbis]. If the bytes are
 /// a `.sf3` and no decoder is available, throws a clear [SoundFontLoadException]
 /// telling the user to try a `.sf2` — never garbage PCM.
+/// [loadSoundFont] with the web Vorbis decoder loaded first.
+///
+/// **Prefer this from UI code.** On web the glint wasm is fetched lazily, so
+/// until it resolves `loadGlintVorbis()` hands back a decoder that returns null
+/// on every call — a `.sf3` would then parse into silence instead of either
+/// working or giving the clear "needs a Vorbis decoder" message. Natively this
+/// is a no-op. `ensureGlintVorbisReady` existed for exactly this and was never
+/// actually called from anywhere.
+Future<LoadedSoundFont> loadSoundFontAsync(
+  Uint8List bytes, {
+  VorbisDecode? vorbis,
+}) async {
+  if (vorbis == null && sf2IsCompressed(bytes)) {
+    await ensureGlintVorbisReady();
+  }
+  return loadSoundFont(bytes, vorbis: vorbis);
+}
+
 LoadedSoundFont loadSoundFont(Uint8List bytes, {VorbisDecode? vorbis}) {
   final compressed = sf2IsCompressed(bytes);
   final decode = vorbis ?? (compressed ? loadGlintVorbis() : null);

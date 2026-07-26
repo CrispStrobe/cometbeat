@@ -378,10 +378,14 @@ class _CatalogBrowseSheetState extends State<CatalogBrowseSheet> {
     final bytes = await _download(item);
     if (bytes == null || !mounted) return null;
     final l10n = AppLocalizations.of(context)!;
-    final imported = importAudioMono(bytes);
+    // Grab the messenger BEFORE the await: decoding is now async (on web it may
+    // have to fetch the glint wasm first), so `context` can go stale across it.
+    final messenger = ScaffoldMessenger.of(context);
+    final imported = await importAudioMonoAsync(bytes);
     if (imported == null || imported.pcm.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.libraryImportFailed)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.libraryImportFailed)),
+      );
       return null;
     }
     return SampleClip(

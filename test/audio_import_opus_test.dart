@@ -209,9 +209,63 @@ void main() {
     });
   });
 
+  _readinessContract();
+
   test('.opus is offered by the picker', () {
     // Without this the file dialog filters out the very files we can now read.
     expect(kAudioImportExtensions, contains('opus'));
     expect(kAudioImportExtensions, contains('ogg'));
+  });
+}
+
+/// The readiness contract. On web the glint wasm is fetched lazily, so a
+/// decoder obtained before it resolves returns null on every call and an
+/// import fails as if the file were corrupt. `ensureGlintVorbisReady` already
+/// existed for that reason and was never called from anywhere in the app —
+/// which is exactly the bug this group is here to keep from recurring.
+void _readinessContract() {
+  group('async import wrappers', () {
+    test('importAudioAsync decodes after awaiting readiness', () async {
+      final imported = await importAudioAsync(
+        _oggOpusHeader(),
+        opusDecode: (_) => _stereo(),
+      );
+      expect(imported, isNotNull);
+      expect(imported!.right, isNotNull);
+    });
+
+    test('importAudioMonoAsync folds to mono', () async {
+      final mono = await importAudioMonoAsync(
+        _oggOpusHeader(),
+        opusDecode: (_) => _stereo(),
+      );
+      expect(mono, isNotNull);
+      expect(mono!.right, isNull);
+      expect(mono.pcm[0], closeTo(0.125, 1e-12));
+    });
+
+    test('ensureAudioDecodersReady resolves and never throws', () async {
+      // Headless there is no wasm and no plugin guarantee, so the VALUE is
+      // environment-dependent; what must hold is that it completes rather than
+      // hanging or throwing, since every import now awaits it first.
+      await expectLater(ensureAudioDecodersReady(), completes);
+    });
+
+    test('the async wrappers forward every injected decoder', () async {
+      var opus = 0, vorbis = 0;
+      await importAudioAsync(
+        _oggOpusHeader(),
+        opusDecode: (_) {
+          opus++;
+          return _stereo();
+        },
+        vorbisDecode: (_) {
+          vorbis++;
+          return null;
+        },
+      );
+      expect(opus, 1, reason: 'injected Opus decoder must be used');
+      expect(vorbis, 0);
+    });
   });
 }

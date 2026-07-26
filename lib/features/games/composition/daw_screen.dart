@@ -48,7 +48,7 @@ import 'package:comet_beat/shared/music/score_router.dart'
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show AudioStem, showAudioExportSheet, showAudioStemsExportSheet;
 import 'package:comet_beat/shared/music_io/audio_import.dart'
-    show importAudio, kAudioImportExtensions;
+    show importAudioAsync, kAudioImportExtensions;
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
@@ -2295,7 +2295,7 @@ class _DawScreenState extends State<DawScreen>
         ],
       );
       if (file == null || !mounted) return;
-      final imported = importAudio(await file.readAsBytes());
+      final imported = await importAudioAsync(await file.readAsBytes());
       if (imported == null) {
         messenger.showSnackBar(
           SnackBar(content: Text(l10n.mySamplesImportFailed)),

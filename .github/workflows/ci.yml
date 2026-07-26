@@ -77,6 +77,13 @@ jobs:
         working-directory: cometbeat
         run: flutter test --coverage
 
+      # The web variants of the codec seams are dart:js_interop, so the VM run
+      # above never executes them — it compiles the dart:ffi ones instead.
+      # Chrome is the only place the conditional export picks the web files.
+      - name: Test (web seams, in Chrome)
+        working-directory: cometbeat
+        run: flutter test test/web --platform chrome
+
       - name: Upload coverage
         uses: actions/upload-artifact@v5
         if: always()

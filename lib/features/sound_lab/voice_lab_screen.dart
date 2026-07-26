@@ -358,7 +358,7 @@ class _VoiceLabScreenState extends State<VoiceLabScreen>
         ],
       );
       if (file == null || !mounted) return;
-      final imported = importAudioMono(await file.readAsBytes());
+      final imported = await importAudioMonoAsync(await file.readAsBytes());
       if (imported == null) {
         if (mounted) _snack(AppLocalizations.of(context)!.voiceLabRecordFailed);
         return;
