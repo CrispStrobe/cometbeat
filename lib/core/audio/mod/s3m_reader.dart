@@ -157,12 +157,19 @@ S3mSample _readInstrument(
   final type = bytes[base];
   final rawHeader = List<int>.from(bytes.sublist(base, base + 0x50));
 
-  // type 2 = AdLib/OPL (melodic or percussion). We do NOT emulate the OPL chip;
-  // instead we render a short, loopable APPROXIMATION of the 2-operator FM
-  // timbre to PCM (see [synthesizeAdlibWaveform]) so the ordinary sample path
-  // can sound it. The 12 OPL register bytes (header 0x10..0x1B) and the full
-  // header are still preserved so the instrument survives a read/write cycle
-  // and re-exports byte-identically (the writer never emits the synth PCM).
+  // type 2 = AdLib/OPL (melodic or percussion). There are TWO OPL paths, and
+  // this reader is the CHEAP one:
+  //   • Accurate playback DOES emulate the chip — `tracker_song_module.dart`
+  //     builds a type-2 sample into a real YM3812/OPL2 voice
+  //     ([OplInstrument] in `opl_voice.dart`) from the register block below, so a
+  //     played TrackerSong sounds the actual FM patch.
+  //   • Here in the reader we ALSO render a short, loopable APPROXIMATION of the
+  //     2-operator FM timbre to PCM (see [synthesizeAdlibWaveform]) into
+  //     [S3mSample.pcm], so any context that plays the sample through the
+  //     ordinary sample path (rather than the OPL voice) still sounds.
+  // Either way the 12 OPL register bytes (header 0x10..0x1B) and the full header
+  // are preserved, so the instrument survives a read/write cycle and re-exports
+  // byte-identically (the writer emits the registers, never the synth PCM).
   if (type == 2) {
     final adlibData = List<int>.from(bytes.sublist(base + 0x10, base + 0x1C));
     final wave = synthesizeAdlibWaveform(adlibData);

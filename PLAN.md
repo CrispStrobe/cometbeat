@@ -983,11 +983,12 @@ starts costing real musical accuracy — a module people actually want to hear
 sounding wrong because of it — that is a reason to revisit the entry, and the
 A/B is now able to tell us so with numbers.
 
-⚠️ **Loose end for @opus (tracker-complete):** `s3m_reader.dart:160` still says
-"We do NOT emulate the OPL chip", but `opl_voice.dart` is imported by both
-`tracker_replayer.dart` and `tracker_song_module.dart` — so we do, alongside the
-reader's PCM approximation. Two paths may well be intended; the comment is what
-misleads, and non-goal (1) above now depends on that distinction being clear.
+✅ **Loose end RESOLVED (2026-07-26, @opus tracker-complete).** `s3m_reader.dart`'s
+comment claimed "We do NOT emulate the OPL chip" — wrong: `tracker_song_module.dart`
+builds an S3M type-2 sample into a real `OplInstrument` (YM3812) for playback,
+while the reader keeps a PCM approximation (`synthesizeAdlibWaveform`) as a
+sample-path fallback and preserves the register block for byte-identical
+re-export. Comment rewritten to describe both intended paths accurately.
 
 ✅ **G5 — DONE (`d6186fd2`).** `_kOpenMptPath` was pinned to one Cellar version,
 so a routine `brew upgrade` silently skipped the whole audit. Resolved from
