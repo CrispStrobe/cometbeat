@@ -155,6 +155,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (cello-omr-trial)** · 🚧 **ACTIVE — the Audiveris trial (authorised).**
+  Maintainer said do it. **And it needs no attestation gate after all:** the Dotzauer
+  cello etudes exist as PD **Internet Archive** scans of the same prints
+  (`imslp-cello-etudes-op175-dotzauer-friedrich`, `imslp-etudes-op123-…`), which are
+  ungated — so no bot check, no consent grey area, and one gentle single-file
+  download instead of a crawl. Plan: fetch ONE etude PDF, install Audiveris from its
+  GitHub release (⚠ root volume has ~3 GiB free — install under the session
+  scratchpad and delete after), run it with the fingering-digits topic on a couple of
+  pages, and measure whether printed fingerings come out of the MusicXML at all. If
+  they do, the same pages become the first REAL cello gold set beyond the 193 CC0
+  labels. Throwaway tooling; the measurement is the deliverable.
+  Worktree `../mus-cello-fingering`.
+
 - **opus (cello-omr-spike)** · 🔬 **SPIKE DONE (throwaway, measured) — item 2 must
   NOT be built in-house; it needs Audiveris + real scans, or it is closed.** Three
   findings, cheapest first:
