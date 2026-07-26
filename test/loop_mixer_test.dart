@@ -1176,6 +1176,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a captured beat spans 2 bars and round-trips through a token',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+    game.debugSetBeatTarget(LoopEngine.beatTrackId);
+
+    // Author a fresh beat with a hit in the SECOND bar (step 8) — proof the
+    // grid is the full 2-bar length now, not one bar (the _beatSteps fix).
+    game.debugEditBeatCell(Drum.kick, 0);
+    game.debugEditBeatCell(Drum.kick, 8);
+    await tester.pump();
+    expect(game.debugBeatPattern!.rows[Drum.kick]!.length, kPatternSteps);
+    expect(game.debugBeatPattern!.rows[Drum.kick]![8], isTrue);
+
+    // Ghost the downbeat, snapshot the token, then clear the beat.
+    game.debugCycleBeatVelocity(Drum.kick, 0);
+    await tester.pump();
+    final token = game.grooveToken;
+    game.debugEditBeatCell(Drum.kick, 0);
+    game.debugEditBeatCell(Drum.kick, 8);
+    await tester.pump();
+
+    // Reload: the second-bar hit AND the accent both come back (before the
+    // fix the 1-bar rows failed the token decoder's length check entirely).
+    expect(game.loadGrooveToken(token), isTrue);
+    await tester.pump();
+    expect(game.debugBeatPattern!.rows[Drum.kick]![8], isTrue);
+    expect(game.debugBeatPattern!.velocities![Drum.kick]![0], lessThan(1.0));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('LM-UX4b: tapping the tune grid builds/edits the melody',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

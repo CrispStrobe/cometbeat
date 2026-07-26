@@ -647,12 +647,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// The pattern the beat editor currently shows for [_beatTarget].
   DrumRowsPattern? get _beatTargetPattern => _engine.drumRowsFor(_beatTarget);
 
-  /// The beat grid's step count — the target pattern's length, or one bar.
+  /// The beat grid's step count — the full 2-bar grid (or a longer target
+  /// pattern). Must be [kPatternSteps], not one bar: the loop, the render and
+  /// the share-token decoder all work in 2-bar (kPatternSteps) units, so a
+  /// fresh captured beat authored on a 1-bar grid used to render only in bar 1
+  /// and get dropped by the token decoder (length mismatch).
   int get _beatSteps {
     final p = _beatTargetPattern;
-    if (p == null) return LoopTiming.stepsPerBar;
+    if (p == null) return kPatternSteps;
     return p.rows.values.fold(
-      LoopTiming.stepsPerBar,
+      kPatternSteps,
       (m, r) => r.length > m ? r.length : m,
     );
   }
