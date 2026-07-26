@@ -278,6 +278,7 @@ const kDawClipEffectTypes = <DawClipEffectType>[
   DawClipEffectType.lowShelf,
   DawClipEffectType.highShelf,
   DawClipEffectType.phaser,
+  DawClipEffectType.autoWah,
   DawClipEffectType.convolutionReverb,
   DawClipEffectType.compressor,
   DawClipEffectType.gate,
@@ -2663,6 +2664,7 @@ class _DawScreenState extends State<DawScreen>
         DawClipEffectType.voiceDeep => 'Voice: Deep',
         DawClipEffectType.voiceRobot => 'Voice: Robot',
         DawClipEffectType.voiceRadio => 'Voice: Radio',
+        DawClipEffectType.autoWah => 'Auto-Wah',
         DawClipEffectType.bandpass => 'Band Pass',
         DawClipEffectType.notch => 'Notch',
         DawClipEffectType.peakingEq => 'Peaking EQ',
@@ -2964,6 +2966,35 @@ class _DawScreenState extends State<DawScreen>
             DawClipEffectType.voiceRobot ||
             DawClipEffectType.voiceRadio =>
               const [
+                (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
+              ],
+            // Ranges follow the defaults in fx_spec.dart (base 350 Hz, 2.5
+            // octaves, 1.2 Hz, depth 1, q 4) so the sliders open where the
+            // effect was voiced rather than at an arbitrary extreme.
+            DawClipEffectType.autoWah => const [
+                (
+                  key: 'baseFreq',
+                  label: 'Base Hz',
+                  min: 80,
+                  max: 2000,
+                  step: 10
+                ),
+                (
+                  key: 'octaves',
+                  label: 'Sweep oct',
+                  min: 0.5,
+                  max: 5,
+                  step: 0.1
+                ),
+                (
+                  key: 'rateHz',
+                  label: 'Rate Hz',
+                  min: 0.05,
+                  max: 8,
+                  step: 0.05
+                ),
+                (key: 'depth', label: 'Depth', min: 0, max: 1, step: 0.01),
+                (key: 'q', label: 'Resonance', min: 0.5, max: 12, step: 0.1),
                 (key: 'mix', label: 'Mix', min: 0, max: 1, step: 0.01),
               ],
           };
