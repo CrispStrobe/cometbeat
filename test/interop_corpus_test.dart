@@ -124,6 +124,28 @@ void main() {
     }
   });
 
+  group('Score → Loop → Score keeps the notes', () {
+    // The loosest of the three: a loop cell sits on an eighth-step grid, so
+    // rhythm is quantised hard and a fretting plan is chosen on the way through.
+    // It still passes for the whole corpus today, which is worth holding onto —
+    // this is the route that would silently swallow a rest if the sustain and
+    // release phases were ever merged again.
+    for (final song in kSongs) {
+      test(song.title, () {
+        final original = _asDocument(song);
+        final loop =
+            _convert(original, AppMode.score, AppMode.loop, song.title);
+        final back = _convert(loop, AppMode.loop, AppMode.score, song.title);
+
+        expect(
+          _pitchesOf(back as MultiPartScore),
+          _pitchesOf(original),
+          reason: '"${song.title}" changed pitch through Loop Studio',
+        );
+      });
+    }
+  });
+
   test('a report that claims lossless must actually be lossless', () {
     // The report is what the UI shows the user before they commit to a
     // conversion, so a false "nothing lost" is worse than an honest warning.

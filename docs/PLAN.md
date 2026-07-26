@@ -31,10 +31,10 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 - **opus (interop)** · ✅ **SHIPPED (idle) — the interop matrix now runs against
   the real song book, and it found two truncation/fidelity bugs.**
-  `test/interop_corpus_test.dart` puts all 15 bundled songs through every route
+  `test/interop_corpus_test.dart` puts all 10 bundled songs through every route
   the matrix offers and requires Score → X → Score to return the same MIDI
-  sequence. Tab round-tripped clean; the Tracker did not, and the two causes were
-  both real:
+  sequence. Tab and Loop round-tripped clean; the Tracker did not, and the two
+  causes were both real:
   (1) `multipart_to_tracker.dart` rendered into ONE fixed 64-row pattern, so any
   longer score was silently cut — "London Bridge" imported as its first 13 notes
   with nothing in the conversion report to say so. It now sizes to the music and
@@ -45,7 +45,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   Cut drew as *more note* instead of silence — the score view of any imported
   module showed notes running through rows it plays silent. Now reads `noteRuns`
   (the same sustain/release split `loop_tracker.dart` needs for rests).
-  Tests: corpus (36) + `tracker_notation_keyoff_test.dart` (4, incl. "an uncut
+  Tests: corpus (46) + `tracker_notation_keyoff_test.dart` (4, incl. "an uncut
   note still rings" so the tracker rule is pinned both ways). Green:
   tracker_notation{,_full}, multipart_to_tracker, project_bridge,
   tab_tracker_interop, loop_tracker_drum_interop. `flutter analyze` clean.
