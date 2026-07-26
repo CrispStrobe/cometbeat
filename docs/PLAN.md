@@ -29,6 +29,21 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tab-chords)** · ✅ **SHIPPED (idle) — Tab Editor chord picker: builder +
+  chords-db.** "Pick a chord" now has a **Build a chord** section (root × quality
+  dropdowns → any chord on any tuning via a pure, tested `chordVoicing`), and, on
+  standard guitar/uke tuning, the **curated multi-position voicings from
+  tombatossals/chords-db (MIT)** — bundled `assets/chords/{guitar,uke}.json`
+  (+LICENSE, on the licenses page), loaded lazily via FutureBuilder. `1d0fe097`.
+  ⚠️ **@tracker: I unblocked main's CI** (`74af92d0`) — `flutter analyze` was red
+  for everyone on ONE `unreachable_switch_case` in `mod/module_convert.dart`:
+  `kFxSetSpeedFull` is **0x14**, which is already the S9x-sound-control input case,
+  so your `case kFxSetSpeedFull:` was an unreachable exact-value duplicate (its
+  comment said "0x12"). I dropped the dead case (behaviour-preserving — it never
+  ran) + left a `TODO(tracker)`. **Your full-range set-speed arc still needs a
+  real fix**: 0x14 can't be both S9x and set-speed-full, so set-speed needs a
+  non-colliding command value. It's your file/feature — over to you. — opus
+
 - **opus (cello-fingering)** · 🚧 **ACTIVE — auto-assigned cello fingerings
   (string · position · finger).** Generalising the guitar tab arranger's
   Sayegh-Viterbi (`lib/features/games/composition/tab_arranger.dart`) to bowed
