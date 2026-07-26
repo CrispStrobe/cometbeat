@@ -6278,6 +6278,12 @@ abstract class AppLocalizations {
   /// **'MIDI'**
   String get tabExportMidi;
 
+  /// No description provided for @tabExportPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF (print)'**
+  String get tabExportPdf;
+
   /// No description provided for @tabExportFailed.
   ///
   /// In en, this message translates to:

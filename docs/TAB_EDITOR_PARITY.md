@@ -314,7 +314,19 @@ parametric technique end-to-end.
   `speedTrainerTempos` (ramp start%→target%, always landing on target),
   `metronomeClicksMs`. Tests on the helpers. ⚠ wiring them to the loop player +
   UI is the app-side follow-up. **Phase D model done.**
-- [ ] E1 … E2 — pending (scoped above)
+- [x] **E1** rich GPIF export — the GPIF writer already carried bends (incl.
+  multi-point curves) / slides / hammer / vibrato / harmonics (all kinds) /
+  dynamics / staccato+accent / grace; extended it (crisp_notation@`ee05c33`) to
+  also write **palm-mute, let-ring, tap, and left/right-hand fingering** note
+  properties. Writer test in crisp_notation + an app-side end-to-end test
+  (`TabColumn` → `toScore` → `scoreToGpif` carries them, still a valid `.gp`).
+  ⚠ **whammy bar** and **pick-stroke** are GP *beat* properties (not note-level) →
+  a separate GPIF beat-plumbing follow-up; they survive MusicXML/notation but not
+  yet GP. Tests: group E1.
+- [x] **E2** PDF export — the Tab Workshop export menu gained **PDF (print)**,
+  reusing the Score Workshop's paginated `exportScoreToPdf` on `_doc.toScore()`
+  (localized de/en). App-side wiring; the renderer itself is covered by the
+  workshop suite. **Phase E done — parity plan complete.**
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

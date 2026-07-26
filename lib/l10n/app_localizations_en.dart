@@ -3349,6 +3349,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabExportMidi => 'MIDI';
 
   @override
+  String get tabExportPdf => 'PDF (print)';
+
+  @override
   String get tabExportFailed => 'Export failed';
 
   @override

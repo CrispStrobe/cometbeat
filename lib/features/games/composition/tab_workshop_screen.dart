@@ -31,6 +31,8 @@ import 'package:comet_beat/features/games/composition/tabcnn_to_document.dart'
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
     show showMyInstrumentsSheet;
+import 'package:comet_beat/features/workshop/export/score_pdf.dart'
+    show exportScoreToPdf;
 import 'package:comet_beat/features/workshop/model/score_document.dart'
     show grandStaffFromScore;
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
@@ -1279,6 +1281,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
           'MIDI',
           const ['mid'],
         );
+      case 'pdf':
+        // E2 — print-ready PDF of the (standard-notation) tab score, reusing
+        // the Score Workshop's paginated renderer.
+        final pdf = await exportScoreToPdf(score, title: base);
+        if (!mounted) return;
+        await _saveBytes(pdf, '$base.pdf', 'PDF', const ['pdf']);
       case 'daw':
         sendToDaw();
     }
@@ -1423,6 +1431,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 child: Text(l10n.tabExportMusicXml),
               ),
               PopupMenuItem(value: 'midi', child: Text(l10n.tabExportMidi)),
+              PopupMenuItem(value: 'pdf', child: Text(l10n.tabExportPdf)),
               PopupMenuItem(value: 'daw', child: Text(l10n.dawSend)),
             ],
           ),

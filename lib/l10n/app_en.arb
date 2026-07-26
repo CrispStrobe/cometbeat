@@ -1270,6 +1270,7 @@
   "tabExportGp": "GP tab (.gp)",
   "tabExportMusicXml": "MusicXML",
   "tabExportMidi": "MIDI",
+  "tabExportPdf": "PDF (print)",
   "tabExportFailed": "Export failed",
   "tabSavedTo": "Saved to {path}",
   "@tabSavedTo": {
