@@ -51,8 +51,13 @@ import 'package:flutter_test/flutter_test.dart';
 /// close sink while adding stream" — i.e. the suite failed on infrastructure,
 /// not on anything musical. Standalone it is fine.
 ///
-/// Run the A/B deliberately:
+/// Run the audit deliberately (any non-empty value turns it on):
 ///   flutter test --dart-define=OPENMPT_AB=1 test/tracker_audio_regression_test.dart
+///
+/// Deliberately `String.fromEnvironment` + "is it non-empty", not
+/// `bool.fromEnvironment`: the bool form only accepts the literal `true`, so
+/// `OPENMPT_AB=1` silently left the audit switched OFF — the opt-in existed but
+/// could not be reached, which is worse than no flag at all.
 ///
 /// The whole FILE is behind this flag, not just the A/B. The "renders without
 /// crashing" group looked cheap but also does full offline renders of all six
@@ -60,7 +65,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// file can contribute nothing at all on a machine without the corpus, which
 /// means CI and most checkouts. So `flutter test` skips it instantly and a
 /// developer opts in when they want the audit.
-const _openMptAb = bool.fromEnvironment('OPENMPT_AB');
+const _openMptAbRaw = String.fromEnvironment('OPENMPT_AB');
+final _openMptAb = _openMptAbRaw.isNotEmpty && _openMptAbRaw != '0';
 
 // OpenMPT binary path (Homebrew install location)
 const _kOpenMptPath = '/opt/homebrew/Cellar/libopenmpt/0.8.7/bin/openmpt123';
