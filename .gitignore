@@ -62,6 +62,21 @@ test/fixtures/wild_local.*
 # Real tracker modules for local parser validation — copyrighted music, never
 # committed; fetched by bin/fetch_wild_modules.dart, tested by module_wild_test.
 test/fixtures/wild/
+# The tracker-audit corpus (see test/fixtures/README.md): real modules from
+# ModArchive / Amiga Music Preservation, © their authors and NOT open-source, so
+# they live only in a developer checkout. They were committed by accident once
+# (bb5a5bee) despite that README and the header of
+# test/tracker_audio_regression_test.dart both saying not to — these rules stop
+# it recurring. Only the synthetic golden.{mod,xm,it,s3m} fixtures are safe to
+# commit; golden.mod.wav is a RENDER of one of these modules, so it inherits
+# their licence and is excluded too.
+test/fixtures/_dont_look_back_.xm
+test/fixtures/buddhia3.it
+test/fixtures/wonderfulpain.it
+test/fixtures/mobile.mod
+test/fixtures/mulju_the_clown.mod
+test/fixtures/powerbase.mod
+test/fixtures/golden.mod.wav
 native/glint/src/.testbuild/
 
 # Android NDK/CMake build output (externalNativeBuild). Never commit it.
