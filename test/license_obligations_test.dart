@@ -335,12 +335,15 @@ void main() {
       expect(s.licenseObligations().isClear, isTrue);
     });
 
-    test('baking a symbolic clip to audio does not shed its licence', () {
-      // Saving a project BAKES every clip to PCM (deliberate — see
-      // daw_project.dart). That is the one moment a licensed score stops being
-      // a score, so it is the likeliest place for an obligation to evaporate:
-      // the reopened clip is plain audio, and plain audio looks unencumbered.
-      // The trade-off is about EDITABILITY, never about rights.
+    test('saving keeps a symbolic clip editable AND keeps its licence', () {
+      // Saving used to BAKE every clip to PCM, and this test guarded the one
+      // moment a licensed score stopped being a score — the likeliest place for
+      // an obligation to evaporate, since plain audio looks unencumbered.
+      //
+      // `c9ce38ab` removed that trade-off: a saved clip now comes back
+      // symbolic. The rights question is unchanged and still worth asking, so
+      // the assertion moved WITH the behaviour rather than being deleted — a
+      // reopened clip must now keep both its editability and its obligation.
       const work = LicensedWork(
         title: 'Borrowed setting',
         license: 'CC-BY-SA-4.0',
@@ -361,9 +364,9 @@ void main() {
       );
       final clip = back.tracks.single.clips.single;
 
-      // The documented trade-off: it came back as audio, not a score.
-      expect(clip.source, isNot(isA<ScoreSource>()));
-      // But the obligation rode through the bake.
+      // It came back as a score, still editable.
+      expect(clip.source, isA<ScoreSource>());
+      // And the obligation rode through the save.
       expect(clip.provenance, work);
       final s = DawService();
       s.timeline.tracks[0].clips.add(clip);
