@@ -6,20 +6,21 @@
 // [TrackerSong.renderSongWav], even when a note RINGS across a >=65536-frame
 // chunk boundary.
 //
-// WHY THIS HOLDS WITHOUT ANY CARRIED CHUNK STATE (the verification result):
-// The bounded-memory row-chunk streamer ([streamFlowVariableMonoPcm] /
-// [streamFlowVariableStereoPcm]) only ever handles ADDITIVE, native SAMPLE, and
-// native MULTI-SAMPLE channels — the channel kinds [_channelChunkSafe] accepts.
-// A procedural voice is none of those, so [songCanStreamFlowVariable] returns
-// false for any song containing an active procedural channel. As a result
-// [writeSongWavStreaming] NEVER row-chunks such a song; it falls back to the
-// whole-song render ([replaySong] for mono, [songStereoFloat] for stereo) and
-// streams that materialised result. Each procedural note is synthesized in ONE
-// piece over its full run ([renderChannelPerNote] / [OplInstrument.renderChannel]
-// / [_renderPerNote]) — there is no chunk boundary for it to re-attack at. So the
-// streamed bytes equal the whole-song render by construction, and the tests below
-// pin exactly that (byte-for-byte), asserting both the byte-identity AND the
-// `songCanStreamFlowVariable == false` invariant that guarantees it.
+// WHY THIS HOLDS (the verification result):
+// A song that DOES NOT walk-render / vary its timing (a plain command song —
+// e.g. an order that just repeats, a per-tick command on a ringing note) never
+// enters the flow/variable streamer at all, so [songCanStreamFlowVariable] is
+// false and [writeSongWavStreaming] streams the whole-song render ([replaySong] /
+// [songStereoFloat]) verbatim. A song that DOES (a Bxx walk or a mid-song speed
+// change) now row-chunk streams its procedural channel: FM / subtractive /
+// Karplus / OPL are chunk-safe ([_channelChunkSafe]), each note run rendered into
+// a bounded run-length buffer and read as chunks advance (see
+// [_ProcChannelState]) — byte-identical to the whole-song render (that bounded
+// path is pinned in detail by streaming_procedural_bounded_test.dart). Either
+// way the streamed bytes equal the whole-song render; the tests below pin the
+// byte-identity AND assert the now-shape-dependent
+// `songCanStreamFlowVariable` value (false for a command song, true once the song
+// walk-renders or varies its timing).
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -177,18 +178,26 @@ void main() {
           reason: 'must use the command/flow/variable render path',
         );
 
-        // (2) The invariant that MAKES the stream match the whole-song render:
-        // a procedural voice is not chunk-safe, so the row-chunk streamer is
-        // never engaged; the whole-song render is streamed instead.
+        // (2) The row-chunk streamer is engaged EXACTLY when the song
+        // walk-renders or varies its timing — the shapes the flow/variable
+        // streamer handles. A plain command song (a repeating order / a per-tick
+        // command, no flow, one tempo) is NOT one of those, so it stays on the
+        // whole-song render. Either way the streamed bytes match (asserted in
+        // (4)); this pins WHICH path produced them, now that a procedural voice
+        // is chunk-safe.
+        final willStream =
+            songNeedsWalkRender(song) || songUsesVariableTiming(song);
         expect(
           songCanStreamFlowVariable(song, stereo: false),
-          isFalse,
-          reason: 'procedural voices are not row-chunk-safe (mono)',
+          willStream,
+          reason:
+              'procedural row-chunk streaming follows the song shape (mono)',
         );
         expect(
           songCanStreamFlowVariable(song, stereo: true),
-          isFalse,
-          reason: 'procedural voices are not row-chunk-safe (stereo)',
+          willStream,
+          reason:
+              'procedural row-chunk streaming follows the song shape (stereo)',
         );
 
         final whole = song.renderSongWav();

@@ -72,6 +72,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart';
+import 'package:comet_beat/core/audio/mod/opl_voice.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_replay.dart'
@@ -4534,6 +4535,27 @@ bool _channelChunkSafe(
       _hasPerTickEffect(cells)) {
     return true;
   }
+  // A PROCEDURAL voice (FM / subtractive / Karplus / OPL) renders each note run
+  // in one piece and peak-normalises the whole channel stem. The row-chunk
+  // streamer reproduces that byte-for-byte in bounded memory by rendering each
+  // run into a run-length buffer (see the _ProcChannelState section). It streams
+  // ONLY in the whole-song render's cheap sub-case — no volume envelope and no
+  // per-cell instrument swap — because [_renderChannelInto] otherwise routes
+  // through [renderChannelPerNote], whose cap/envelope shaping this path does not
+  // mirror; those songs stay on the whole-song render (byte-identical). A pan
+  // ENVELOPE (stereo) is likewise left to the whole-song render (matching the
+  // additive gate above). sfxr is intentionally excluded (its note duration can
+  // exceed the run span and its sequential PRNG couples runs).
+  if (_isProceduralStreamInstrument(channel.instrument)) {
+    final env = channel.volumeEnvelope;
+    if (env != null && !env.isEmpty) return false;
+    if (cells.any((c) => c.instrument != 0)) return false;
+    if (stereo) {
+      final penv = channel.panEnvelope;
+      if (penv != null && !penv.isEmpty) return false;
+    }
+    return true;
+  }
   return false;
 }
 
@@ -4681,19 +4703,21 @@ class _FlowVarLayout {
             .round();
       }
       rowStart[n] = acc;
+      flatTiming = null;
     } else {
       final base = effectiveTiming(song);
-      final flatTiming = base.copyWith(rows: n == 0 ? 1 : n);
+      final flat = base.copyWith(rows: n == 0 ? 1 : n);
+      flatTiming = flat;
       final flowTicks = songInitialSpeed(
         song,
         fallback:
             song.initialSpeed > 0 ? song.initialSpeed : kDefaultTicksPerRow,
       );
       for (var i = 0; i < n; i++) {
-        rowStart[i] = flatTiming.stepStartSample(i);
+        rowStart[i] = flat.stepStartSample(i);
         ticks[i] = flowTicks;
       }
-      rowStart[n] = flatTiming.totalSamples;
+      rowStart[n] = flat.totalSamples;
     }
   }
 
@@ -4701,6 +4725,14 @@ class _FlowVarLayout {
   final List<int> rowStart;
   final List<int> ticks;
   final bool variable;
+
+  /// The uniform FLOW timing (null for the variable layout). `rowStart[n]` above
+  /// is capped to `flatTiming.totalSamples` (integer-truncated), which can differ
+  /// by a sample from `flatTiming.stepStartSample(n)` (rounded) when `n` is odd.
+  /// The whole-song per-note render bases a run's VOICE sample count on
+  /// `stepStartSample`, so the procedural per-run render reads its exact run
+  /// boundaries from here — not the capped `rowStart` — to stay bit-identical.
+  late final TrackerTiming? flatTiming;
 
   int get totalSamples => rowStart.isEmpty ? 0 : rowStart.last;
 }
@@ -5149,6 +5181,255 @@ class _ZoneChannelState {
   final List<({int start, int end, double l, double r})> regGain;
 }
 
+// ===========================================================================
+// Bounded-memory PROCEDURAL-voice streaming (per-note-run run-length buffers)
+// ===========================================================================
+//
+// A procedural voice (FM / subtractive / Karplus / OPL) is not additive, not a
+// sample, and not a native multi-sample voice, so its whole-song render
+// ([_renderChannelInto] / [_renderNonAdditiveVariable]) synthesizes each note
+// RUN in one piece and peak-normalises the WHOLE channel stem
+// (`scale = gain / peak`). The row-chunk streamer keeps that byte-for-byte while
+// bounding memory by:
+//   (1) a PEAK pre-pass that renders each run into a bounded run-length buffer,
+//       tracks the max |sample|, and discards it (one run buffer at a time), then
+//   (2) a CHUNK render that renders each run lazily into a run-length buffer,
+//       reads the chunk's window from it (caching across the chunks the run
+//       spans, freeing it when the run ends), scaled by the pre-computed
+//       `gain / peak`.
+// Memory is the few concurrent run buffers (bounded by run length), never a
+// whole-song stem. Because the whole-song stem is a NON-OVERLAPPING tiling of
+// per-run windows (each voice returns exactly its run's sample count — FM /
+// subtractive / Karplus fill it, OPL zero-pads its tail; none overflow), a
+// chunk sample is written by exactly one run, so the per-run render agrees with
+// the whole-song stem bit-for-bit.
+//
+// DEGENERATE CASE: a single run that rings for (nearly) the whole song has a run
+// buffer ≈ whole-song — that one shape stays large. Every realistic song
+// (bounded note runs, however many) is bounded.
+
+/// A procedural instrument the streamer renders per note run. sfxr is excluded
+/// (its ms-derived note length can exceed the run span → whole-song overflow,
+/// and its sequential PRNG couples runs); an sfxr channel stays on the
+/// whole-song render.
+bool _isProceduralStreamInstrument(TrackerInstrument inst) =>
+    inst is FmInstrument ||
+    inst is SubtractiveInstrument ||
+    inst is KarplusInstrument ||
+    inst is OplInstrument;
+
+/// One procedural note run — its row span, sustain split, EXACT absolute sample
+/// bounds (from the layout), and trigger cell. [buf] caches the rendered
+/// run-length buffer (raw, PRE `gain / peak`) across the chunks the run spans;
+/// it is freed once the run ends.
+class _ProcRun {
+  _ProcRun(
+    this.startStep,
+    this.steps,
+    this.sustainSteps,
+    this.startSample,
+    this.endSample,
+    this.trigger,
+  );
+  final int startStep;
+  final int steps;
+  final int sustainSteps;
+  final int startSample;
+  final int endSample;
+  final TrackerCell trigger;
+  Float64List? buf;
+}
+
+/// A procedural channel's chunk-render plan: its note runs (midi runs only, in
+/// order), the whole-channel `gain / peak` scale (0 ⇒ silent), and the render
+/// mode ([variable] ⇒ the run-local-tempo per-run render mirroring
+/// [_renderNonAdditiveVariable]; else the FLOW render over the exact flat layout
+/// boundaries). [layout] supplies the exact per-row sample bounds.
+class _ProcChannelState {
+  _ProcChannelState(
+    this.runs,
+    this.scale,
+    this.variable,
+    this.layout,
+    this.channel,
+    this.cells,
+  );
+  final List<_ProcRun> runs;
+  final double scale;
+  final bool variable;
+  final _FlowVarLayout layout;
+  final TrackerChannel channel;
+  final List<TrackerCell> cells;
+}
+
+/// The midi note runs of a procedural [cells], each tagged with its EXACT
+/// absolute sample bounds from [layout] — the same `noteRuns` walk the
+/// whole-song render performs (silent / null runs contribute nothing and are
+/// dropped, as there).
+List<_ProcRun> _planProcRuns(List<TrackerCell> cells, _FlowVarLayout layout) {
+  final runs = <_ProcRun>[];
+  var startStep = 0;
+  for (final run in noteRuns(cells)) {
+    final midi = run.$1;
+    final sustainSteps = run.$2;
+    final steps = run.$2 + run.$3;
+    if (midi != null) {
+      final s = layout.rowStart[startStep];
+      final e = layout.rowStart[startStep + steps];
+      if (e > s) {
+        runs.add(
+          _ProcRun(startStep, steps, sustainSteps, s, e, cells[startStep]),
+        );
+      }
+    }
+    startStep += steps;
+  }
+  return runs;
+}
+
+/// Renders one procedural note [run] into a run-length Float64 buffer
+/// (`run.endSample - run.startSample`), RAW (pre `gain / peak`) — byte-identical
+/// to the whole-song stem's window for that run.
+///
+///  * VARIABLE: a LINE-FOR-LINE mirror of [_renderNonAdditiveVariable]'s per-run
+///    render — a one-run tempo sized to the run's ms, a `[trigger, noteCut@sustain]`
+///    cell list, `instrument.renderChannel` over it. (Karplus seeds off row 0 and
+///    OPL's sustain rounds through the run-local tempo, exactly as the whole-song
+///    variable render does.)
+///  * FLOW: `channel.instrument.renderChannel(runCells, runTiming)` where
+///    `runTiming` carries the EXACT flat-layout sample boundaries
+///    ([TrackerTiming.rowStartOverride]) so FM / subtractive / OPL render over the
+///    identical sample count the whole-song flat timing produced (a run-local
+///    UNIFORM tempo would round differently). Karplus' whole-channel PRNG seed is
+///    `baseSeed + absoluteRow`, so a seed-shifted instrument reproduces it from
+///    the run-local row 0.
+Float64List _renderProcRun(_ProcChannelState state, _ProcRun run) {
+  final channel = state.channel;
+  final inst = channel.instrument;
+  final runLen = run.endSample - run.startSample;
+  final layout = state.layout;
+  if (state.variable) {
+    final runMs = (runLen * 1000 / kSampleRate).round();
+    final tempo =
+        (runMs <= 0 ? 240 : (60000 / runMs).round()).clamp(1, 1 << 20);
+    final noteTiming = TrackerTiming(
+      tempoBpm: tempo,
+      rows: run.steps,
+      stepsPerBeat: run.steps,
+    );
+    final one = List<TrackerCell>.filled(run.steps, TrackerCell.empty)
+      ..[0] = run.trigger;
+    if (run.sustainSteps < run.steps) {
+      one[run.sustainSteps] = TrackerCell.noteCut;
+    }
+    return _copyRun(inst.renderChannel(one, noteTiming), runLen);
+  }
+  final runCells =
+      state.cells.sublist(run.startStep, run.startStep + run.steps);
+  // Base the run's boundaries on the flat timing's `stepStartSample` (exactly
+  // what the whole-song per-note render uses for a voice's sample count) rather
+  // than the layout's `rowStart`, whose LAST entry is capped to the truncated
+  // `totalSamples` — a 1-sample difference that would re-normalise a
+  // length-dependent voice (fmVoice / subtractiveVoice) across the whole run.
+  final flat = layout.flatTiming!;
+  final runBase = flat.stepStartSample(run.startStep);
+  final rowStartOverride = <int>[
+    for (var j = 0; j <= run.steps; j++)
+      flat.stepStartSample(run.startStep + j) - runBase,
+  ];
+  final runTiming = TrackerTiming(
+    rows: run.steps,
+    rowStartOverride: rowStartOverride,
+  );
+  // Karplus' per-run PRNG seed is `baseSeed + absoluteRowIndex`; render from the
+  // run-local row 0 with a seed-shifted copy so it reproduces exactly.
+  final renderInst = inst is KarplusInstrument
+      ? KarplusInstrument(
+          inst.id,
+          damping: inst.damping,
+          blend: inst.blend,
+          seed: inst.seed + run.startStep,
+        )
+      : inst;
+  return _copyRun(renderInst.renderChannel(runCells, runTiming), runLen);
+}
+
+/// A run buffer of exactly [runLen] samples: [buf] as-is when already that
+/// length, else zero-padded / truncated to it (the whole-song render leaves the
+/// window's tail zero when a voice returns fewer than the run's samples).
+Float64List _copyRun(Float64List buf, int runLen) {
+  if (buf.length == runLen) return buf;
+  final out = Float64List(runLen);
+  final lim = min(runLen, buf.length);
+  for (var i = 0; i < lim; i++) {
+    out[i] = buf[i];
+  }
+  return out;
+}
+
+/// The whole-channel `gain / peak` scale for a procedural channel: a bounded
+/// PEAK pre-pass that renders each run once (one run buffer at a time, discarded)
+/// and tracks the max |sample|, mirroring the whole-song stem peak. 0 ⇒ silent.
+double _procChannelScale(
+  List<_ProcRun> runs,
+  bool variable,
+  _FlowVarLayout layout,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+) {
+  final peakState =
+      _ProcChannelState(runs, 1.0, variable, layout, channel, cells);
+  var peak = 0.0;
+  for (final run in runs) {
+    final buf = _renderProcRun(peakState, run);
+    for (final v in buf) {
+      final a = v.abs();
+      if (a > peak) peak = a;
+    }
+  }
+  return peak == 0 ? 0.0 : channel.gain / peak;
+}
+
+/// Adds a procedural channel's note runs for the sample window
+/// `[chunkStartSample, chunkEndSample)` into the chunk-local mono [dest] (base
+/// absolute sample [sampleBase]), each sample scaled by the pre-computed
+/// `state.scale`. A run's buffer is rendered lazily on the first chunk it touches
+/// and cached in [_ProcRun.buf] until the run ends (then freed), so a run that
+/// straddles chunk boundaries stays continuous and memory stays bounded. Runs are
+/// visited in order and each rendered exactly once. When [dest] is a Float32List
+/// (the variable stereo mono stem) the per-sample write truncates to Float32 —
+/// matching the whole-song variable render's Float32 mono accumulator.
+void _procRunRenderChunkMono(
+  List<double> dest,
+  int sampleBase,
+  _ProcChannelState state,
+  int chunkStartSample,
+  int chunkEndSample,
+) {
+  final scale = state.scale;
+  if (scale == 0.0) return;
+  for (final run in state.runs) {
+    if (run.endSample <= chunkStartSample) {
+      run.buf =
+          null; // fully behind this chunk — release (read in prior chunks)
+      continue;
+    }
+    if (run.startSample >= chunkEndSample) break; // ahead of this chunk
+    run.buf ??= _renderProcRun(state, run);
+    final buf = run.buf!;
+    final s = max(run.startSample, chunkStartSample);
+    final e = min(run.endSample, chunkEndSample);
+    for (var i = s; i < e; i++) {
+      final k = i - run.startSample;
+      if (k < buf.length) dest[i - sampleBase] += buf[k] * scale;
+    }
+    // The run ends inside this chunk — release its buffer.
+    if (run.endSample <= chunkEndSample) {
+      run.buf = null;
+    }
+  }
+}
+
 /// One channel's chunk-render disposition, resolved once per render.
 class _ChunkChannel {
   _ChunkChannel(
@@ -5158,6 +5439,7 @@ class _ChunkChannel {
     this.additive,
     this.state, {
     this.zone,
+    this.proc,
   });
   final int index;
   final TrackerChannel channel;
@@ -5166,6 +5448,8 @@ class _ChunkChannel {
   final Object state; // _AddChunkState or _SampChunkState
   // Non-null ⇒ native multi-sample (NNA-zone) channel: render via [zone].runs.
   final _ZoneChannelState? zone;
+  // Non-null ⇒ procedural channel: render via [proc] per-note-run buffers.
+  final _ProcChannelState? proc;
   List<({int start, int end, double pan})>? panRegions; // stereo only
 }
 
@@ -5219,6 +5503,45 @@ List<_ChunkChannel> _planChunkChannels(
         zone: _ZoneChannelState(runs, regGain),
       );
       out.add(zoneCc);
+      continue;
+    }
+    // Procedural (FM / subtractive / Karplus / OPL) channel — bounded per-note-run
+    // path. Gated chunk-safe by [_channelChunkSafe] (no volume envelope, no
+    // per-cell instrument swap), so it reaches here only in the whole-song
+    // render's peak-normalised sub-case. The `gain / peak` scale is pre-computed
+    // by a bounded peak pass; STEREO reuses the additive pan-region path (the
+    // whole-song render pans the mono `gain/peak` stem the same way).
+    if (_isProceduralStreamInstrument(ch.instrument)) {
+      final runs = _planProcRuns(cells, layout);
+      final scale = _procChannelScale(runs, layout.variable, layout, ch, cells);
+      final procCc = _ChunkChannel(
+        c,
+        ch,
+        cells,
+        false,
+        _SampChunkState(ch.instrument),
+        proc:
+            _ProcChannelState(runs, scale, layout.variable, layout, ch, cells),
+      );
+      if (stereo) {
+        procCc.panRegions = layout.variable
+            ? _panRegionsVariable(
+                ch.pan,
+                cells,
+                layout.rowStart,
+                ticksPerRow: song.initialSpeed,
+              )
+            : _panRegions(
+                ch.pan,
+                cells,
+                effectiveTiming(song).copyWith(rows: layout.played.length),
+                layout.totalSamples,
+                ticksPerRow: layout.ticks.isEmpty
+                    ? kDefaultTicksPerRow
+                    : layout.ticks[0],
+              );
+      }
+      out.add(procCc);
       continue;
     }
     final additive = _additiveOf(ch.instrument) != null;
@@ -5715,6 +6038,18 @@ void streamFlowVariableMonoPcm(
           rowFrom,
           rowTo,
         );
+      } else if (cc.proc != null) {
+        // Procedural (FM / subtractive / Karplus / OPL) channel — bounded
+        // per-note-run render, each run's `gain/peak`-scaled sample written
+        // straight into the chunk mix (mirrors the whole-song peak-normalised
+        // [_renderChannelInto] / [_renderNonAdditiveVariable]).
+        _procRunRenderChunkMono(
+          mix,
+          sampleFrom,
+          cc.proc!,
+          sampleFrom,
+          sampleTo,
+        );
       } else if (cc.additive) {
         // Additive folds gain into volScale and writes the mix directly (matches
         // the whole-song `_renderChannelInto`/Variable additive branch).
@@ -5837,21 +6172,36 @@ void streamFlowVariableStereoPcm(
           rowFrom,
           rowTo,
         );
-      } else if (cc.additive) {
+      } else if (cc.additive || cc.proc != null) {
+        // Additive OR procedural channel: fill a chunk-local mono stem, then pan
+        // it into L/R by the precomputed regions — exactly the whole-song render
+        // (mono then constant-power pan). The procedural stem carries the
+        // `gain/peak` scale already; a Float32 mono (variable path) truncates
+        // each write, matching the whole-song Float32 mono accumulator.
         mono ??= f32 ? Float32List(frames) : Float64List(frames);
         mono.fillRange(0, frames, 0.0);
-        _additiveRenderRows(
-          mono,
-          sampleFrom,
-          cc.state as _AddChunkState,
-          cc.channel,
-          cc.cells,
-          layout.rowStart,
-          layout.ticks,
-          pool,
-          rowFrom,
-          rowTo,
-        );
+        if (cc.proc != null) {
+          _procRunRenderChunkMono(
+            mono,
+            sampleFrom,
+            cc.proc!,
+            sampleFrom,
+            sampleTo,
+          );
+        } else {
+          _additiveRenderRows(
+            mono,
+            sampleFrom,
+            cc.state as _AddChunkState,
+            cc.channel,
+            cc.cells,
+            layout.rowStart,
+            layout.ticks,
+            pool,
+            rowFrom,
+            rowTo,
+          );
+        }
         for (final reg in cc.panRegions!) {
           final s = max(reg.start, sampleFrom);
           final e = min(reg.end, sampleTo);

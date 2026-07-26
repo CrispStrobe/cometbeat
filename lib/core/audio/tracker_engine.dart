@@ -47,6 +47,8 @@ class TrackerTiming {
     this.rows = 16,
     this.stepsPerBeat = 4,
     this.swing = 0.0,
+    this.rowStartOverride,
+    this.rowOnsetMsOverride,
   })  : assert(tempoBpm > 0),
         assert(rows > 0),
         assert(stepsPerBeat > 0),
@@ -61,19 +63,37 @@ class TrackerTiming {
   /// the odd one shorter. The loop's total length is unchanged.
   final double swing;
 
+  /// EXACT per-step sample boundaries (length `rows + 1`, `[0] == 0`). When set,
+  /// [stepStartSample] / [totalSamples] return these verbatim instead of the
+  /// uniform tempo formula. This lets a caller render a single note run over the
+  /// EXACT sample span the whole-song render placed it on (bit-for-bit), even
+  /// where the whole-song boundaries carry per-row rounding a run-local uniform
+  /// timing could not reproduce. Never set on the whole-song timings, so the
+  /// default render is unchanged.
+  final List<int>? rowStartOverride;
+
+  /// EXACT per-step onset in ms (length `rows + 1`, `[0] == 0`), the [stepOnsetMs]
+  /// analogue of [rowStartOverride] — for a run render whose synthesis reads the
+  /// onset-ms span (e.g. sfxr's note duration).
+  final List<double>? rowOnsetMsOverride;
+
   int get beatMs => 60000 ~/ tempoBpm;
   int get stepMs => beatMs ~/ stepsPerBeat;
   int get totalMs => stepMs * rows;
-  int get totalSamples => (totalMs * kSampleRate) ~/ 1000;
+  int get totalSamples => rowStartOverride != null
+      ? rowStartOverride!.last
+      : (totalMs * kSampleRate) ~/ 1000;
   Duration get loopLength => Duration(milliseconds: totalMs);
 
   /// The onset time (ms) of [step], swing-aware (off-beats delayed).
-  double stepOnsetMs(int step) =>
-      step * stepMs + (step.isOdd ? swing * stepMs : 0.0);
+  double stepOnsetMs(int step) => rowOnsetMsOverride != null
+      ? rowOnsetMsOverride![step]
+      : step * stepMs + (step.isOdd ? swing * stepMs : 0.0);
 
   /// The onset sample of [step], swing-aware.
-  int stepStartSample(int step) =>
-      (stepOnsetMs(step) * kSampleRate / 1000).round();
+  int stepStartSample(int step) => rowStartOverride != null
+      ? rowStartOverride![step]
+      : (stepOnsetMs(step) * kSampleRate / 1000).round();
 
   TrackerTiming copyWith({
     int? tempoBpm,
