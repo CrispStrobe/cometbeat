@@ -1,14 +1,16 @@
 // lib/core/audio/mod/opl_voice.dart
 //
-// A DYNAMIC OPL2 two-operator FM voice for Scream Tracker 3 AdLib (type-2)
-// instruments. This is the follow-up to the STATIC single-period approximation
+// The S3M AdLib (type-2) instrument [OplInstrument]: it decodes the 12-byte OPL
+// register block into an [OplPatch] (this file) and renders each note through
+// the YM3812 / OPL2 chip-emulation core in opl2_core.dart ([Opl2Voice]) — a
+// log-sin/exp sine reconstruction, a fixed-point phase generator, an
+// attenuation-domain envelope generator with key-scale rate/level, feedback,
+// FM (connection 0) / additive (connection 1) mixing and AM/VIB LFOs. The core
+// runs at the native OPL rate (~49716 Hz); this file resamples each note to
+// [kSampleRate]. It is the successor to the STATIC single-period approximation
 // in s3m_reader.dart ([synthesizeAdlibWaveform], retained there as a preview /
-// fallback): where that renders one looped waveform with no envelopes, this
-// renders each note DYNAMICALLY — two operators, each with a phase accumulator
-// and its own ADSR envelope derived from the OPL rate registers, the four OPL2
-// waveform-select shapes, key-scaling of both level and envelope rate, the
-// per-operator tremolo (AM) / vibrato (VIB) LFOs, and FM (connection 0) or
-// additive (connection 1) mixing with modulator feedback.
+// re-export fallback) and to the earlier faithful-FLOAT one-pole voice that
+// lived entirely here (now superseded by the chip core).
 //
 // ── The 12-byte S3M AdLib patch → OPL register mapping ──────────────────────
 // The block lives at instrument-header 0x10..0x1B (see s3m_reader.dart). It is
@@ -41,41 +43,27 @@
 //   WS         0xE0   — waveform select (0 sine, 1 half, 2 abs, 3 quarter)
 //   FB/CNT     0xC0   — modulator self-feedback depth / carrier connection
 //
-// ── The ADSR envelope model ─────────────────────────────────────────────────
-// Each operator carries an independent 4-phase envelope in the LINEAR-amplitude
-// domain (1 = full, 0 = silent):
-//   • ATTACK  — a one-pole rise toward 1.0 (key-on), rate from AR.
-//   • DECAY   — a one-pole fall toward the sustain level, rate from DR.
-//   • SUSTAIN — hold at the sustain level (EGT=1). When EGT=0 (percussive) the
-//               envelope keeps decaying toward 0 at the release rate instead.
-//   • RELEASE — key-off → a one-pole fall toward 0, rate from RR.
-// The sustain level comes from SL (3 dB per step; SL=15 ≈ silent). Each phase's
-// time constant is the OPL rate→time approximation in [_rateToCoefficient]:
-// every register step quadruples the effective rate and each effective-rate
-// step of 4 doubles the slope, so rate 0 never moves, rate 15 is near-instant.
-// The played note contributes a rate offset (KSR) and a level attenuation (KSL),
-// so higher notes decay faster and sound quieter — real OPL key-scaling.
+// ── Synthesis model ─────────────────────────────────────────────────────────
+// The actual chip model — the log-sin/exp tables, the phase generator, the
+// attenuation-domain envelope generator with KSR/KSL, feedback, connection and
+// the AM/VIB LFOs — lives in opl2_core.dart; see that file's header for the
+// algorithm and its honest residual (algorithm-faithful, NOT reference-verified
+// bit-exact; OPL3 4-op/waveforms 4–7 and rhythm mode are out of scope).
 //
-// This is a FAITHFUL DYNAMIC voice, NOT a bit-exact hardware emulation. The
-// documented residual vs a real YMF262/YM3812: the envelope uses continuous
-// one-pole time constants rather than the chip's 0.1875 dB logarithmic DAC
-// ladder and 15.7 kHz update grid; the LFO depths use the datasheet nominal
-// (AM ≈ 1 dB @ 3.7 Hz, VIB ≈ 7 cents @ 6.4 Hz) rather than the exact
-// tremolo/vibrato tables; KSL uses a per-octave attenuation instead of the
-// block/f-number table; only OPL2's four waveforms are modelled (no OPL3
-// waveforms 4–7, no 4-operator connections, no rhythm-mode percussion).
-//
-// Flutter-free and allocation-lean (each note renders directly into the output
-// window, no per-note temporaries), so it drops onto the same [TrackerInstrument]
-// seam as the sampled / procedural voices and streams under the row-chunk
-// renderer. Like the other per-note procedural voices ([FmInstrument] etc.) each
-// note is self-contained: OPL operator/envelope state is NOT threaded across a
-// streamer chunk boundary (a note re-attacks at a chunk edge) — the same
-// documented trade-off those voices make.
+// Flutter-free and allocation-lean: the OPL2 tables are computed once at load,
+// and each note builds one small [Opl2Voice] whose sample loop allocates
+// nothing (it resamples native→output in place). It drops onto the same
+// [TrackerInstrument] seam as the sampled / procedural voices and streams under
+// the row-chunk renderer. Like the other per-note procedural voices
+// ([FmInstrument] etc.) each note is self-contained: OPL operator/envelope state
+// is NOT threaded across a streamer chunk boundary (a note re-attacks at a chunk
+// edge) — the same documented trade-off those voices make.
 
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/mod/opl2_core.dart'
+    show Opl2Voice, kOplSampleRate;
 import 'package:comet_beat/core/audio/synth.dart'
     show kSampleRate, midiToFrequency;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
@@ -86,17 +74,6 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
 const List<double> _multTable = <double>[
   0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 12, 12, 15, 15, //
 ];
-
-/// Key-scale-level attenuation in dB PER OCTAVE for the 2-bit KSL field. The
-/// OPL famously swaps the 1 and 2 settings, so the order is 0, 3, 1.5, 6.
-const List<double> _kslDbPerOctave = <double>[0.0, 3.0, 1.5, 6.0];
-
-/// FM modulation depth: a full-scale modulator output (±1) deviates the carrier
-/// phase by this many CYCLES. Bounded so feedback + modulation stay finite.
-const double _kModDepth = 1.0;
-
-/// dB → linear amplitude (0 dB → 1.0).
-double _linearFromDb(double db) => math.pow(10.0, -db / 20.0).toDouble();
 
 /// One OPL operator's decoded register state (modulator or carrier).
 class OplOperator {
@@ -152,22 +129,9 @@ class OplOperator {
   final int release; // RR 0..15
   final int waveform; // WS 0..7 (OPL2: low 2 bits)
 
+  /// The OPL frequency multiple for this operator's `MULT` field (exposed for
+  /// inspection; the synthesis core reads the raw [mult] field directly).
   double get multiple => _multTable[mult & 0x0F];
-
-  /// The static output attenuation (linear amplitude) for a note whose OPL
-  /// key-scale number is [keyScaleNumber] (block<<1 | f-number MSB): the total
-  /// level plus the key-scale-level attenuation.
-  double outputLevel(int keyScaleNumber) {
-    final block = keyScaleNumber >> 1;
-    final kslDb = _kslDbPerOctave[keyScaleLevel] * block;
-    return _linearFromDb(totalLevel * 0.75 + kslDb);
-  }
-
-  /// The key-scale rate offset (0..15) added to a rate register before it is
-  /// converted to a slope: KSR uses the whole key-scale number, else its top
-  /// 2 bits — so higher notes decay faster.
-  int rateOffset(int keyScaleNumber) =>
-      keyScaleRate ? keyScaleNumber : (keyScaleNumber >> 2);
 }
 
 /// A decoded 2-operator OPL patch: modulator + carrier + how they connect.
@@ -199,110 +163,6 @@ class OplPatch {
   /// A patch with no register bits set carries no real instrument.
   static bool isBlank(List<int> data) =>
       data.length < 11 || !data.any((b) => (b & 0xFF) != 0);
-}
-
-/// Evaluates one of the four OPL2 operator waveforms at [phaseCycles] (in whole
-/// cycles; the fractional part selects the point in the period):
-///   0 = full sine, 1 = half sine (negative half zeroed), 2 = absolute sine
-///   (full-wave rectified), 3 = quarter/pulse sine (rising quarter of each hump).
-double _oplWaveform(int select, double phaseCycles) {
-  var p = phaseCycles - phaseCycles.floorToDouble(); // [0, 1)
-  if (p < 0) p += 1.0;
-  final angle = p * 2 * math.pi;
-  switch (select & 0x03) {
-    case 1:
-      return p < 0.5 ? math.sin(angle) : 0.0;
-    case 2:
-      return math.sin(angle).abs();
-    case 3:
-      final quadrant = (p * 4).floor();
-      return (quadrant == 0 || quadrant == 2) ? math.sin(angle).abs() : 0.0;
-    case 0:
-    default:
-      return math.sin(angle);
-  }
-}
-
-/// The one-pole coefficient (0..1) that advances an OPL envelope one sample for
-/// a 4-bit register [rate] with key-scale [offset]. Every register step
-/// quadruples the effective rate, and each effective-rate step of 4 doubles the
-/// dB/second slope; rate 0 never moves (coefficient 0). Continuous approximation
-/// of the chip's stepped envelope clock (documented residual).
-double _rateToCoefficient(int rate, int offset) {
-  if (rate <= 0) return 0.0;
-  final effective = math.min(63, rate * 4 + offset);
-  // ~30 dB/s at the slowest audible effective rate, doubling every 4 steps.
-  final dbPerSecond = 30.0 * math.pow(2.0, effective / 4.0);
-  // Time constant to traverse a nominal 48 dB span, as a one-pole per sample.
-  final tau = 48.0 / dbPerSecond;
-  final coefficient = 1.0 - math.exp(-1.0 / (tau * kSampleRate));
-  return coefficient.clamp(0.0, 1.0);
-}
-
-enum _EnvPhase { attack, decay, sustain, release, done }
-
-/// A running ADSR envelope for one operator over one note.
-class _Envelope {
-  _Envelope(OplOperator op, int keyScaleNumber)
-      : _sustaining = op.sustaining,
-        _attackCoef =
-            _rateToCoefficient(op.attack, op.rateOffset(keyScaleNumber)),
-        _decayCoef =
-            _rateToCoefficient(op.decay, op.rateOffset(keyScaleNumber)),
-        _releaseCoef =
-            _rateToCoefficient(op.release, op.rateOffset(keyScaleNumber)),
-        _sustainAmp =
-            op.sustainLevel >= 15 ? 0.0 : _linearFromDb(op.sustainLevel * 3.0),
-        // Attack rate 0 = no attack: the operator never sounds.
-        _phase = op.attack <= 0 ? _EnvPhase.done : _EnvPhase.attack;
-
-  final bool _sustaining;
-  final double _attackCoef;
-  final double _decayCoef;
-  final double _releaseCoef;
-  final double _sustainAmp;
-
-  _EnvPhase _phase;
-  double amp = 0.0;
-
-  bool get done => _phase == _EnvPhase.done;
-
-  /// Advances one sample. [keyOn] false triggers/continues the release phase.
-  void advance(bool keyOn) {
-    if (!keyOn && _phase != _EnvPhase.release && _phase != _EnvPhase.done) {
-      _phase = _EnvPhase.release;
-    }
-    switch (_phase) {
-      case _EnvPhase.attack:
-        amp += (1.0 - amp) * _attackCoef;
-        if (amp >= 0.999 || _attackCoef <= 0.0) {
-          amp = _attackCoef <= 0.0 ? amp : 1.0;
-          _phase = _EnvPhase.decay;
-        }
-        break;
-      case _EnvPhase.decay:
-        amp += (_sustainAmp - amp) * _decayCoef;
-        if ((amp - _sustainAmp).abs() < 1e-4 || _decayCoef <= 0.0) {
-          amp = _sustainAmp;
-          // EGT=1 holds; EGT=0 keeps decaying toward 0 at the release rate.
-          _phase = _sustaining ? _EnvPhase.sustain : _EnvPhase.release;
-        }
-        break;
-      case _EnvPhase.sustain:
-        // Hold until key-off.
-        break;
-      case _EnvPhase.release:
-        amp += (0.0 - amp) * _releaseCoef;
-        if (amp < 1e-4 || _releaseCoef <= 0.0) {
-          amp = 0.0;
-          _phase = _EnvPhase.done;
-        }
-        break;
-      case _EnvPhase.done:
-        amp = 0.0;
-        break;
-    }
-  }
 }
 
 /// A dynamic OPL2 two-operator FM instrument built from an S3M AdLib patch.
@@ -354,6 +214,14 @@ class OplInstrument implements TrackerInstrument {
 
   /// Renders one note into [out] at [start] for [runSamples] samples, keyed on
   /// for the first [sustainSamples] then released.
+  ///
+  /// The voice is generated at the native OPL rate ([kOplSampleRate] ≈ 49716 Hz)
+  /// by [Opl2Voice] and LINEARLY resampled to [kSampleRate] on the fly (no
+  /// intermediate buffer): for each output sample we advance the native
+  /// generator to straddle the output position and interpolate the two native
+  /// samples. Linear (not cubic) resampling keeps the core allocation-free; the
+  /// OPL2 core's own band-limited-ish waveforms make the interpolation error
+  /// inaudible for these timbres (documented residual).
   void _renderNote(
     Float64List out,
     int start,
@@ -362,82 +230,73 @@ class OplInstrument implements TrackerInstrument {
     int midi,
   ) {
     final freq = midiToFrequency(midi);
-    // OPL key-scale number: block (octave, 0..7) << 1 | the f-number MSB. The
-    // MSB is set for the upper half of an octave — approximate from the note.
-    final block = (midi ~/ 12).clamp(0, 7);
-    final fNumberMsb = (midi % 12) >= 6 ? 1 : 0;
-    final keyScaleNumber = (block << 1) | fNumberMsb;
-
     final mod = patch.modulator;
     final car = patch.carrier;
-    final modLevel = mod.outputLevel(keyScaleNumber);
-    final carLevel = car.outputLevel(keyScaleNumber);
-    final modEnv = _Envelope(mod, keyScaleNumber);
-    final carEnv = _Envelope(car, keyScaleNumber);
 
-    final sr = kSampleRate.toDouble();
-    final modInc = freq * mod.multiple / sr; // cycles per sample
-    final carInc = freq * car.multiple / sr;
-    // Feedback: the modulator self-modulates from its averaged last two outputs.
-    final feedbackScale =
-        patch.feedback == 0 ? 0.0 : (patch.feedback / 7.0) * 0.5;
-    final additive = patch.connection == 1;
+    final voice = Opl2Voice(
+      frequencyHz: freq,
+      nativeRate: kOplSampleRate,
+      modMult: mod.mult,
+      modWaveform: mod.waveform,
+      modTotalLevel: mod.totalLevel,
+      modKsl: mod.keyScaleLevel,
+      modAttack: mod.attack,
+      modDecay: mod.decay,
+      modSustainLevel: mod.sustainLevel,
+      modRelease: mod.release,
+      modKsr: mod.keyScaleRate,
+      modSustaining: mod.sustaining,
+      modTremolo: mod.tremolo,
+      modVibrato: mod.vibrato,
+      carMult: car.mult,
+      carWaveform: car.waveform,
+      carTotalLevel: car.totalLevel,
+      carKsl: car.keyScaleLevel,
+      carAttack: car.attack,
+      carDecay: car.decay,
+      carSustainLevel: car.sustainLevel,
+      carRelease: car.release,
+      carKsr: car.keyScaleRate,
+      carSustaining: car.sustaining,
+      carTremolo: car.tremolo,
+      carVibrato: car.vibrato,
+      feedback: patch.feedback,
+      additive: patch.connection == 1,
+    );
 
-    // LFO rates (Hz): datasheet nominals. Depths applied only when the operator
-    // enables the LFO. Vibrato ≈ 7 cents peak; tremolo ≈ 1 dB peak.
-    const vibHz = 6.4;
-    const amHz = 3.7;
-    const vibDepth = 0.004; // 2^(7/1200) - 1 ≈ 0.004 fractional pitch
-    final amFloor = _linearFromDb(1.0); // tremolo trough (1 dB down)
+    // Native → output resample ratio (native samples per output sample).
+    const ratio = kOplSampleRate / kSampleRate;
+    // The keyed-on span, measured in NATIVE samples.
+    final sustainNative = sustainSamples * ratio;
 
-    var modPhase = 0.0;
-    var carPhase = 0.0;
-    var fbPrev1 = 0.0;
-    var fbPrev2 = 0.0;
+    // Rolling native samples straddling the current output position.
+    var nativeIndex = 0; // index of [prevNative]
+    var prevNative = voice.nextNative(true); // native sample 0
+    var curNative = voice.nextNative(sustainNative > 1); // native sample 1
+    var producedNative = 2;
 
     for (var i = 0; i < runSamples; i++) {
-      final keyOn = i < sustainSamples;
-      final t = i / sr;
-
-      // Shared LFOs.
-      final vibLfo = math.sin(2 * math.pi * vibHz * t); // −1..1
-      // Tremolo attenuation multiplier: 1.0 at the crest, [amFloor] at trough.
-      final amLfo = amFloor +
-          (1.0 - amFloor) * (0.5 + 0.5 * math.cos(2 * math.pi * amHz * t));
-
-      modEnv.advance(keyOn);
-      carEnv.advance(keyOn);
-
-      // Modulator (with feedback self-modulation).
-      final modVib = mod.vibrato ? (1.0 + vibDepth * vibLfo) : 1.0;
-      final feedbackPhase = feedbackScale * 0.5 * (fbPrev1 + fbPrev2);
-      var modOut = _oplWaveform(mod.waveform, modPhase + feedbackPhase);
-      modOut *= modEnv.amp * modLevel * (mod.tremolo ? amLfo : 1.0);
-      fbPrev2 = fbPrev1;
-      fbPrev1 = modOut;
-
-      // Carrier: phase-modulated by the modulator (FM), or summed (additive).
-      final carVib = car.vibrato ? (1.0 + vibDepth * vibLfo) : 1.0;
-      final double sample;
-      if (additive) {
-        final carOut = _oplWaveform(car.waveform, carPhase) *
-            carEnv.amp *
-            carLevel *
-            (car.tremolo ? amLfo : 1.0);
-        sample = carOut + modOut;
-      } else {
-        final carOut =
-            _oplWaveform(car.waveform, carPhase + _kModDepth * modOut);
-        sample = carOut * carEnv.amp * carLevel * (car.tremolo ? amLfo : 1.0);
+      final pos = i * ratio; // native position for output sample i
+      final target = pos.floor();
+      // Advance the native generator until [nativeIndex] == target.
+      while (nativeIndex < target) {
+        prevNative = curNative;
+        final keyOn = producedNative < sustainNative;
+        curNative = voice.nextNative(keyOn);
+        producedNative++;
+        nativeIndex++;
+        // Stop early once released and silent.
+        if (!keyOn && voice.done) {
+          // Fill the tail with the (silent) last sample and finish.
+          for (var j = i; j < runSamples; j++) {
+            out[start + j] = curNative.isFinite ? curNative : 0.0;
+          }
+          return;
+        }
       }
-
-      out[start + i] = sample.isFinite ? sample : 0.0;
-
-      modPhase += modInc * modVib;
-      carPhase += carInc * carVib;
-
-      // The note is inaudible once both envelopes have run out after key-off.
-      if (!keyOn && modEnv.done && carEnv.done) break;
+      final frac = pos - target;
+      final v = prevNative + (curNative - prevNative) * frac;
+      out[start + i] = v.isFinite ? v : 0.0;
     }
   }
 }
