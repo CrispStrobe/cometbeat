@@ -1589,7 +1589,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loopMixerTuneEditHint =>
-      'Tap the grid to build your own tune — every note fits the band.';
+      'Tap the grid to build a tune — tap a note again to make it longer, hold it to make it soft.';
 
   @override
   String get loopMixerTuneMine => 'My tune';

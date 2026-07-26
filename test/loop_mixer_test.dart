@@ -1151,7 +1151,7 @@ void main() {
     final cells = game.debugTuneCells!;
     expect(cells.first.midis, contains(60));
 
-    // A second note is added, then the first can be removed.
+    // A second note is added.
     game.debugEditTuneCell(67, 4);
     await tester.pump();
     expect(
@@ -1159,10 +1159,48 @@ void main() {
       isTrue,
     );
 
-    game.debugEditTuneCell(60, 0); // remove C4
+    // Re-tapping a note now GROWS its length (C4 is capped at 1/4 by the G at
+    // step 4), and tapping once more — when it can't grow — REMOVES it.
+    game.debugEditTuneCell(60, 0); // grow C4 → 1/4
     await tester.pump();
     expect(
       game.debugTuneCells!.any((c) => c.midis?.contains(60) ?? false),
+      isTrue,
+    );
+    game.debugEditTuneCell(60, 0); // capped → removes C4
+    await tester.pump();
+    expect(
+      game.debugTuneCells!.any((c) => c.midis?.contains(60) ?? false),
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('re-tapping a note grows it 1/8 → 1/4 → 1/2, then removes it',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester);
+
+    // Place a lone note (no neighbour → free to grow to 1/2 = 8 steps).
+    game.debugEditTuneCell(60, 0);
+    await tester.pump();
+    int lenOf60() => game.debugTuneCells!
+        .firstWhere((c) => c.midis?.contains(60) ?? false)
+        .steps;
+    expect(lenOf60(), 2); // 1/8
+
+    game.debugEditTuneCell(60, 0); // → 1/4
+    await tester.pump();
+    expect(lenOf60(), 4);
+
+    game.debugEditTuneCell(60, 0); // → 1/2
+    await tester.pump();
+    expect(lenOf60(), 8);
+
+    game.debugEditTuneCell(60, 0); // maxed → removed (only note → track clears)
+    await tester.pump();
+    expect(
+      game.debugTuneCells?.any((c) => c.midis?.contains(60) ?? false) ?? false,
       isFalse,
     );
     expect(tester.takeException(), isNull);
@@ -1247,9 +1285,8 @@ void main() {
     expect(MelodyBridge.instance.hasMelody, isTrue);
     expect(game.canLoadSharedTune, isTrue);
 
-    // Clear the track (toggle both notes off), then load the shared one back.
-    game.debugEditTuneCell(60, 0);
-    game.debugEditTuneCell(67, 4);
+    // Clear the track, then load the shared one back.
+    game.debugClearTune();
     await tester.pump();
     expect(game.hasVoiceTrack, isFalse);
 

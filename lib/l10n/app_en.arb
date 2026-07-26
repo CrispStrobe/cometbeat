@@ -590,7 +590,7 @@
   "loopMixerBeatEdit": "Edit the beat",
   "loopMixerBeatEditHint": "Tap the grid to build your own beat.",
   "loopMixerTuneEdit": "Edit the tune",
-  "loopMixerTuneEditHint": "Tap the grid to build your own tune — every note fits the band.",
+  "loopMixerTuneEditHint": "Tap the grid to build a tune — tap a note again to make it longer, hold it to make it soft.",
   "loopMixerTuneMine": "My tune",
   "firstRunLoopTitle": "Make a song, live",
   "firstRunLoopStart": "Tap a card — your band starts playing the instant you do. That's your loop, going round and round.",

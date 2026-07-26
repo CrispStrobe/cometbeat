@@ -1594,7 +1594,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get loopMixerTuneEditHint =>
-      'Tippe ins Raster, um deine eigene Melodie zu bauen — jede Note passt zur Band.';
+      'Tippe ins Raster, um eine Melodie zu bauen — tippe eine Note nochmal für länger, halte sie für leise.';
 
   @override
   String get loopMixerTuneMine => 'Meine Melodie';

@@ -531,7 +531,7 @@
   "loopMixerBeatEdit": "Beat bearbeiten",
   "loopMixerBeatEditHint": "Tippe ins Raster, um deinen eigenen Beat zu bauen.",
   "loopMixerTuneEdit": "Melodie bearbeiten",
-  "loopMixerTuneEditHint": "Tippe ins Raster, um deine eigene Melodie zu bauen — jede Note passt zur Band.",
+  "loopMixerTuneEditHint": "Tippe ins Raster, um eine Melodie zu bauen — tippe eine Note nochmal für länger, halte sie für leise.",
   "loopMixerTuneMine": "Meine Melodie",
   "firstRunLoopTitle": "Mach live einen Song",
   "firstRunLoopStart": "Tipp eine Karte an — deine Band spielt sofort los. Das ist dein Loop, immer im Kreis.",

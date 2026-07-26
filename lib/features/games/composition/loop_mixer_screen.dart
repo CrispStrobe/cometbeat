@@ -251,6 +251,9 @@ abstract interface class LoopMixerTester {
   /// tune arrived on MelodyBridge since [before], load it into the loop.
   void debugFoldTrackerReturn(SharedMelody? before);
 
+  /// Empty the current tune target (removal is per-note taps in the UI).
+  void debugClearTune();
+
   /// Cycle the dynamics of the note(s) at [step] (soft ↔ normal) — the tune
   /// grid's long-press, for note-level velocity editing.
   void debugCycleTuneVelocity(int midi, int step);
@@ -697,6 +700,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void debugFoldTrackerReturn(SharedMelody? before) =>
       _foldTrackerReturn(before);
   @override
+  void debugClearTune() => _writeTuneCells(const []);
+  @override
   void debugCycleTuneVelocity(int midi, int step) =>
       _cycleTuneCellVelocity(midi, step);
 
@@ -839,14 +844,42 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _restartGroove();
   }
 
+  /// The note lengths tapping cycles through, in eighth-steps: 1/8 · 1/4 · 1/2.
+  static const _tuneNoteLens = [2, 4, 8];
+
+  /// How far a note at [step] may grow before it hits the next note or the grid
+  /// end (a note never overruns its neighbour), capped at the longest length.
+  int _tuneGrowCap(List<StepCell> cells, int step) {
+    var nextOnset = kPatternSteps;
+    for (final c in cells) {
+      if (c.step > step && c.step < nextOnset) nextOnset = c.step;
+    }
+    return min(_tuneNoteLens.last, nextOnset - step);
+  }
+
+  /// Tap a pitch cell: place a note (1/8), or — on a note that's already there —
+  /// GROW it to the next length (1/8 → 1/4 → 1/2), or REMOVE it once it can't
+  /// grow any further (at 1/2, or blocked by the next note). Long-press still
+  /// cycles its dynamics. Length editing with no extra controls.
   void _toggleTuneCell(int midi, int step) {
     final cells = _tuneStepCells();
     final idx = cells.indexWhere((c) => c.row == midi && c.step == step);
     final next = [...cells];
-    if (idx >= 0) {
-      next.removeAt(idx);
+    if (idx < 0) {
+      next.add(StepCell(midi, step, len: _tuneNoteLens.first));
     } else {
-      next.add(StepCell(midi, step, len: 2));
+      final cur = cells[idx];
+      final cap = _tuneGrowCap(cells, step);
+      final grown = _tuneNoteLens.firstWhere(
+        (t) => t > cur.len && t <= cap,
+        orElse: () => -1,
+      );
+      if (grown < 0) {
+        next.removeAt(idx); // maxed / capped → tapping again clears it
+      } else {
+        next[idx] =
+            StepCell(cur.row, cur.step, len: grown, velocity: cur.velocity);
+      }
     }
     _writeTuneCells(next);
   }

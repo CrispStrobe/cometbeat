@@ -2987,7 +2987,7 @@ abstract class AppLocalizations {
   /// No description provided for @loopMixerTuneEditHint.
   ///
   /// In en, this message translates to:
-  /// **'Tap the grid to build your own tune — every note fits the band.'**
+  /// **'Tap the grid to build a tune — tap a note again to make it longer, hold it to make it soft.'**
   String get loopMixerTuneEditHint;
 
   /// No description provided for @loopMixerTuneMine.
