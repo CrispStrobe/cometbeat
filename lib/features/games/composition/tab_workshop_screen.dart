@@ -218,6 +218,10 @@ abstract class TabWorkshopTester {
   void toggleInspectMode();
   (String, String?)? debugInspectInfo(int col, int string);
 
+  /// Practice tools (D4): whether looping / the speed trainer are on.
+  bool get debugLoop;
+  bool get debugSpeedTrainer;
+
   /// 🔍 Desktop hover: drive the hover over a cell and read whether the corner
   /// card is showing (a fretted cell shows it; an empty column clears it).
   void debugHoverCell(int col, int string);
@@ -374,6 +378,13 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   Set<String> _highlightedIds = const {};
   List<({int col, int start, int end, bool note})> _schedule = const [];
   int _totalMs = 0;
+  // Practice tools (D4): loop the piece, and a speed trainer that ramps the
+  // tempo one step per loop up to the authored [_bpm].
+  bool _loop = false;
+  bool _speedTrainer = false;
+  int _playBpm = 120; // the tempo currently sounding (trainer may ramp it)
+  List<int> _trainerTempos = const [];
+  int _loopIndex = 0;
 
   @override
   void initState() {
@@ -805,6 +816,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   void toggleInspectMode() => setState(() => _inspect = !_inspect);
   @override
+  bool get debugLoop => _loop;
+  @override
+  bool get debugSpeedTrainer => _speedTrainer;
+  @override
   (String, String?)? debugInspectInfo(int col, int string) {
     final info = _inspectInfoFor(col, string);
     return info == null ? null : (info.noteNames, info.chordSymbol);
@@ -1201,6 +1216,14 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       _stopPlayback();
       return;
     }
+    // Practice state resets at the START of a run (not on each loop): the speed
+    // trainer's ramp begins at its first step; a plain run plays at [_bpm].
+    _loopIndex = 0;
+    _playBpm = _bpm;
+    if (_speedTrainer) {
+      _trainerTempos = speedTrainerTempos(baseBpm: _bpm);
+      if (_trainerTempos.isNotEmpty) _playBpm = _trainerTempos.first;
+    }
     if (_countIn) {
       unawaited(_runCountIn());
     } else {
@@ -1214,7 +1237,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   Future<void> _runCountIn() async {
     final token = ++_playToken;
     setState(() => _countingIn = true);
-    final beatMs = (60000 / _bpm).round();
+    final beatMs = (60000 / _playBpm).round();
     final audio = context.read<AudioService>();
     for (var i = 0; i < 4; i++) {
       if (!mounted || token != _playToken) return;
@@ -1228,14 +1251,16 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   void _startPlayback() {
     // Audio: every track sounding together. Highlight: the ACTIVE track's own
-    // column timeline (that's what the preview shows).
-    final events = _doc.toPlaybackEvents(bpm: _bpm, capo: _capo);
+    // column timeline (that's what the preview shows). [_playBpm] is the authored
+    // [_bpm] normally, or the speed trainer's current ramp step.
+    final events = _doc.toPlaybackEvents(bpm: _playBpm, capo: _capo);
     // Mix each audible track as its own stem, scaled by its mixer volume (D2),
     // so per-track balance is audible instead of a flat merge.
     final audible = audibleTracks(_tracks).toList();
     context.read<AudioService>().playMixedTimedChords(
       [
-        for (final t in audible) t.doc.toPlaybackEvents(bpm: _bpm, capo: _capo),
+        for (final t in audible)
+          t.doc.toPlaybackEvents(bpm: _playBpm, capo: _capo),
       ],
       gains: [for (final t in audible) t.volume],
       pans: [for (final t in audible) t.pan],
@@ -1270,6 +1295,16 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   void _onTick(Duration elapsed) {
     final ms = elapsed.inMilliseconds;
     if (ms >= _totalMs) {
+      if (_loop && _playing) {
+        // Speed trainer: step the tempo up one rung per loop, holding at target.
+        if (_speedTrainer && _trainerTempos.isNotEmpty) {
+          _loopIndex++;
+          final i = _loopIndex.clamp(0, _trainerTempos.length - 1);
+          _playBpm = _trainerTempos[i];
+        }
+        _startPlayback(); // restarts the audio + ticker for the next pass
+        return;
+      }
       _stopPlayback();
       return;
     }
@@ -1501,6 +1536,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   _playWithInstrument();
                 case 'countIn':
                   setState(() => _countIn = !_countIn);
+                case 'loop':
+                  setState(() => _loop = !_loop);
+                case 'speedTrainer':
+                  setState(() => _speedTrainer = !_speedTrainer);
                 case 'mic':
                   _toggleMic();
                 case 'import':
@@ -1541,6 +1580,16 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 value: 'countIn',
                 checked: _countIn,
                 child: Text(l10n.tabCountIn),
+              ),
+              CheckedPopupMenuItem(
+                value: 'loop',
+                checked: _loop,
+                child: const Text('Loop'),
+              ),
+              CheckedPopupMenuItem(
+                value: 'speedTrainer',
+                checked: _speedTrainer,
+                child: const Text('Speed trainer'),
               ),
               CheckedPopupMenuItem(
                 value: 'mic',

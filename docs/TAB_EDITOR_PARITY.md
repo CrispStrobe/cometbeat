@@ -323,10 +323,14 @@ parametric technique end-to-end.
   each fretted line as its drum voice on the neutral percussion clef with
   `isPercussion` metadata (→ GM channel 10 on export). Tests: line map + drum
   score.
-- [x] **D4** practice tools — pure helpers: `LoopRange(startBar,endBar)`,
-  `speedTrainerTempos` (ramp start%→target%, always landing on target),
-  `metronomeClicksMs`. Tests on the helpers. ⚠ wiring them to the loop player +
-  UI is the app-side follow-up. **Phase D model done.**
+- [x] **D4** practice tools — pure helpers (`LoopRange`, `speedTrainerTempos`,
+  `metronomeClicksMs`) **now wired**: a **Loop** toggle (⋮ menu) repeats playback
+  instead of stopping at the end, and a **Speed trainer** toggle ramps the tempo
+  one `speedTrainerTempos` step per loop up to the authored BPM (playback re-times
+  via a new `_playBpm`; the ticker restart drives each pass). Tests: the toggles
+  flip state (widget) + the ramp/loop-range helpers (unit). **Phase D done
+  end-to-end.** ⚠ remaining refinements: a *bar-range* loop (loops the whole
+  piece today) and a metronome click *during* play (count-in already exists).
 - [x] **E1** rich GPIF export — the GPIF writer already carried bends (incl.
   multi-point curves) / slides / hammer / vibrato / harmonics (all kinds) /
   dynamics / staccato+accent / grace; extended it (crisp_notation@`ee05c33`) to

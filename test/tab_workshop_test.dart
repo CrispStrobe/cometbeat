@@ -314,6 +314,27 @@ void main() {
     expect(_tab(tester).inspectMode, isTrue);
   });
 
+  testWidgets('D4 practice: the Loop and Speed-trainer toggles flip state',
+      (tester) async {
+    await pumpGame(tester, const TabWorkshopScreen());
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    expect(_tab(tester).debugLoop, isFalse);
+    expect(_tab(tester).debugSpeedTrainer, isFalse);
+
+    await tester.tap(find.byTooltip(l10n.tabMenu));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Loop'));
+    await tester.pump();
+    expect(_tab(tester).debugLoop, isTrue);
+
+    await tester.tap(find.byTooltip(l10n.tabMenu));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Speed trainer'));
+    await tester.pump();
+    expect(_tab(tester).debugSpeedTrainer, isTrue);
+  });
+
   testWidgets('🔍 Inspect mode: a cell reports its fretted note',
       (tester) async {
     await pumpGame(tester, const TabWorkshopScreen());
