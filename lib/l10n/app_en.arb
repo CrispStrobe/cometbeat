@@ -1402,6 +1402,27 @@
   "@trackerFlowSetTempo": {
     "placeholders": { "value": { "type": "int" } }
   },
+  "trackerFlowEditTitle": "Edit flow · order {order}",
+  "@trackerFlowEditTitle": {
+    "placeholders": { "order": { "type": "int" } }
+  },
+  "trackerFlowEditHint": "Author the order-command for this entry.",
+  "trackerFlowEdit": "Edit flow",
+  "trackerFlowSetJump": "Jump to order…",
+  "trackerFlowSetBreak": "Break to row…",
+  "trackerFlowSetSpeedCmd": "Set speed…",
+  "trackerFlowSetTempoCmd": "Set tempo…",
+  "trackerFlowSetLoop": "Loop pattern…",
+  "trackerFlowRemove": "Remove {label}",
+  "@trackerFlowRemove": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "trackerFlowPickOrder": "Jump to which order?",
+  "trackerFlowPickRow": "Break to which row?",
+  "trackerFlowPickSpeed": "Speed (ticks per row)",
+  "trackerFlowPickTempo": "Tempo (BPM)",
+  "trackerFlowPickLoop": "Repeat count (0 = mark loop start)",
+  "trackerFlowApply": "Apply",
   "trackerOpenWorkshop": "Open in Score Workshop",
   "trackerMenuOpenLibrary": "Open and Library",
   "trackerMenuSaveExport": "Save and Export",

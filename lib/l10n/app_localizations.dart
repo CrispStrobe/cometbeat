@@ -6818,6 +6818,96 @@ abstract class AppLocalizations {
   /// **'tempo → {value}'**
   String trackerFlowSetTempo(int value);
 
+  /// No description provided for @trackerFlowEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit flow · order {order}'**
+  String trackerFlowEditTitle(int order);
+
+  /// No description provided for @trackerFlowEditHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Author the order-command for this entry.'**
+  String get trackerFlowEditHint;
+
+  /// No description provided for @trackerFlowEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit flow'**
+  String get trackerFlowEdit;
+
+  /// No description provided for @trackerFlowSetJump.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to order…'**
+  String get trackerFlowSetJump;
+
+  /// No description provided for @trackerFlowSetBreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Break to row…'**
+  String get trackerFlowSetBreak;
+
+  /// No description provided for @trackerFlowSetSpeedCmd.
+  ///
+  /// In en, this message translates to:
+  /// **'Set speed…'**
+  String get trackerFlowSetSpeedCmd;
+
+  /// No description provided for @trackerFlowSetTempoCmd.
+  ///
+  /// In en, this message translates to:
+  /// **'Set tempo…'**
+  String get trackerFlowSetTempoCmd;
+
+  /// No description provided for @trackerFlowSetLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop pattern…'**
+  String get trackerFlowSetLoop;
+
+  /// No description provided for @trackerFlowRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {label}'**
+  String trackerFlowRemove(String label);
+
+  /// No description provided for @trackerFlowPickOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump to which order?'**
+  String get trackerFlowPickOrder;
+
+  /// No description provided for @trackerFlowPickRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Break to which row?'**
+  String get trackerFlowPickRow;
+
+  /// No description provided for @trackerFlowPickSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed (ticks per row)'**
+  String get trackerFlowPickSpeed;
+
+  /// No description provided for @trackerFlowPickTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo (BPM)'**
+  String get trackerFlowPickTempo;
+
+  /// No description provided for @trackerFlowPickLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat count (0 = mark loop start)'**
+  String get trackerFlowPickLoop;
+
+  /// No description provided for @trackerFlowApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get trackerFlowApply;
+
   /// No description provided for @trackerOpenWorkshop.
   ///
   /// In en, this message translates to:

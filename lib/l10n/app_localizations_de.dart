@@ -3666,6 +3666,56 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String trackerFlowEditTitle(int order) {
+    return 'Ablauf bearbeiten · Order $order';
+  }
+
+  @override
+  String get trackerFlowEditHint =>
+      'Ablaufbefehl für diesen Eintrag festlegen.';
+
+  @override
+  String get trackerFlowEdit => 'Ablauf bearbeiten';
+
+  @override
+  String get trackerFlowSetJump => 'Sprung zu Order…';
+
+  @override
+  String get trackerFlowSetBreak => 'Umbruch zu Zeile…';
+
+  @override
+  String get trackerFlowSetSpeedCmd => 'Speed festlegen…';
+
+  @override
+  String get trackerFlowSetTempoCmd => 'Tempo festlegen…';
+
+  @override
+  String get trackerFlowSetLoop => 'Pattern-Schleife…';
+
+  @override
+  String trackerFlowRemove(String label) {
+    return '$label entfernen';
+  }
+
+  @override
+  String get trackerFlowPickOrder => 'Sprung zu welcher Order?';
+
+  @override
+  String get trackerFlowPickRow => 'Umbruch zu welcher Zeile?';
+
+  @override
+  String get trackerFlowPickSpeed => 'Speed (Ticks pro Zeile)';
+
+  @override
+  String get trackerFlowPickTempo => 'Tempo (BPM)';
+
+  @override
+  String get trackerFlowPickLoop => 'Wiederholungen (0 = Schleifenstart)';
+
+  @override
+  String get trackerFlowApply => 'Übernehmen';
+
+  @override
   String get trackerOpenWorkshop => 'In der Notenwerkstatt öffnen';
 
   @override

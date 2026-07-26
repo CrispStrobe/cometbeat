@@ -3655,6 +3655,55 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String trackerFlowEditTitle(int order) {
+    return 'Edit flow · order $order';
+  }
+
+  @override
+  String get trackerFlowEditHint => 'Author the order-command for this entry.';
+
+  @override
+  String get trackerFlowEdit => 'Edit flow';
+
+  @override
+  String get trackerFlowSetJump => 'Jump to order…';
+
+  @override
+  String get trackerFlowSetBreak => 'Break to row…';
+
+  @override
+  String get trackerFlowSetSpeedCmd => 'Set speed…';
+
+  @override
+  String get trackerFlowSetTempoCmd => 'Set tempo…';
+
+  @override
+  String get trackerFlowSetLoop => 'Loop pattern…';
+
+  @override
+  String trackerFlowRemove(String label) {
+    return 'Remove $label';
+  }
+
+  @override
+  String get trackerFlowPickOrder => 'Jump to which order?';
+
+  @override
+  String get trackerFlowPickRow => 'Break to which row?';
+
+  @override
+  String get trackerFlowPickSpeed => 'Speed (ticks per row)';
+
+  @override
+  String get trackerFlowPickTempo => 'Tempo (BPM)';
+
+  @override
+  String get trackerFlowPickLoop => 'Repeat count (0 = mark loop start)';
+
+  @override
+  String get trackerFlowApply => 'Apply';
+
+  @override
   String get trackerOpenWorkshop => 'Open in Score Workshop';
 
   @override

@@ -1323,6 +1323,27 @@
   "@trackerFlowSetTempo": {
     "placeholders": { "value": { "type": "int" } }
   },
+  "trackerFlowEditTitle": "Ablauf bearbeiten · Order {order}",
+  "@trackerFlowEditTitle": {
+    "placeholders": { "order": { "type": "int" } }
+  },
+  "trackerFlowEditHint": "Ablaufbefehl für diesen Eintrag festlegen.",
+  "trackerFlowEdit": "Ablauf bearbeiten",
+  "trackerFlowSetJump": "Sprung zu Order…",
+  "trackerFlowSetBreak": "Umbruch zu Zeile…",
+  "trackerFlowSetSpeedCmd": "Speed festlegen…",
+  "trackerFlowSetTempoCmd": "Tempo festlegen…",
+  "trackerFlowSetLoop": "Pattern-Schleife…",
+  "trackerFlowRemove": "{label} entfernen",
+  "@trackerFlowRemove": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "trackerFlowPickOrder": "Sprung zu welcher Order?",
+  "trackerFlowPickRow": "Umbruch zu welcher Zeile?",
+  "trackerFlowPickSpeed": "Speed (Ticks pro Zeile)",
+  "trackerFlowPickTempo": "Tempo (BPM)",
+  "trackerFlowPickLoop": "Wiederholungen (0 = Schleifenstart)",
+  "trackerFlowApply": "Übernehmen",
   "trackerOpenWorkshop": "In der Notenwerkstatt öffnen",
   "trackerMenuOpenLibrary": "Öffnen und Bibliothek",
   "trackerMenuSaveExport": "Speichern und Exportieren",

@@ -265,6 +265,88 @@ class AdvancedTrackerScreen extends StatefulWidget {
   State<AdvancedTrackerScreen> createState() => _AdvancedTrackerScreenState();
 }
 
+/// The flow/order-command kinds the editable flow timeline can author on an
+/// order entry. Each maps to a pure helper in module_flow_timeline.dart.
+enum _FlowEditKind {
+  jump(Icons.call_split),
+  brk(Icons.skip_next),
+  speed(Icons.speed),
+  tempo(Icons.timer_outlined),
+  loop(Icons.repeat);
+
+  const _FlowEditKind(this.icon);
+
+  final IconData icon;
+
+  String label(AppLocalizations l10n) => switch (this) {
+        _FlowEditKind.jump => l10n.trackerFlowSetJump,
+        _FlowEditKind.brk => l10n.trackerFlowSetBreak,
+        _FlowEditKind.speed => l10n.trackerFlowSetSpeedCmd,
+        _FlowEditKind.tempo => l10n.trackerFlowSetTempoCmd,
+        _FlowEditKind.loop => l10n.trackerFlowSetLoop,
+      };
+}
+
+/// A tiny numeric-entry dialog for a flow-command value. A dedicated widget so
+/// its [TextEditingController] lives exactly as long as the dialog (disposing it
+/// right after `showDialog` returns crashes the still-animating exit transition).
+class _FlowNumberDialog extends StatefulWidget {
+  const _FlowNumberDialog({
+    required this.title,
+    required this.initial,
+    required this.min,
+    required this.max,
+    required this.cancelLabel,
+    required this.applyLabel,
+  });
+
+  final String title;
+  final int initial;
+  final int min;
+  final int max;
+  final String cancelLabel;
+  final String applyLabel;
+
+  @override
+  State<_FlowNumberDialog> createState() => _FlowNumberDialogState();
+}
+
+class _FlowNumberDialogState extends State<_FlowNumberDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: '${widget.initial}');
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text(widget.title),
+        content: TextField(
+          controller: _controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration:
+              InputDecoration(helperText: '${widget.min}–${widget.max}'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(widget.cancelLabel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final v = int.tryParse(_controller.text.trim());
+              Navigator.of(context).pop(v?.clamp(widget.min, widget.max));
+            },
+            child: Text(widget.applyLabel),
+          ),
+        ],
+      );
+}
+
 /// Test handle onto the running screen (the state class is private) — mirrors
 /// [TrackerTester] on the Beginner screen.
 @visibleForTesting
@@ -435,6 +517,9 @@ abstract interface class AdvancedTrackerTester {
   void debugSetCommand(int channel, int row, int cmd, int param);
   (int, int) debugPlayheadAt(int songMs);
   int get debugSongTotalMs;
+
+  /// Test: open the editable flow/order-command timeline sheet.
+  void debugShowFlowTimeline();
 
   /// Order-list editing.
   List<int> get orderList;
@@ -2695,6 +2780,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   }
 
   @override
+  void debugShowFlowTimeline() => _showFlowTimeline();
+
+  @override
   (int, int) debugPlayheadAt(int songMs) {
     final map = resolveTimingMap(_song);
     if (map.isEmpty) return (-1, -1);
@@ -4141,58 +4229,78 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     );
   }
 
-  /// Read-only view of the native flow/order timeline: how the current song
-  /// ACTUALLY plays once its flow commands (Bxx jump, Dxx break, E6x loop, Fxx
-  /// speed/tempo) are followed. Purely derived from [songFlowTimeline] — the
-  /// same pure function the tests pin — so a jumped/looped song shows the same
-  /// order more than once, in play order. Nothing here changes playback.
+  /// The native flow/order timeline: how the current song ACTUALLY plays once its
+  /// flow commands (Bxx jump, Dxx break, E6x loop, Fxx speed/tempo) are followed.
+  /// Derived from [songFlowTimeline] — the same pure function the tests pin — so a
+  /// jumped/looped song shows the same order more than once, in play order. Each
+  /// entry is now EDITABLE: an edit affordance authors/changes its order-command
+  /// (via the pure helpers in module_flow_timeline.dart) and every command chip
+  /// can be removed. Edits mutate the live [_song], refresh the sheet, and mark
+  /// playback stale.
   void _showFlowTimeline() {
     final l10n = AppLocalizations.of(context)!;
     _song.syncCurrent(); // fold live edits into the snapshot before walking
-    final timeline = songFlowTimeline(_song);
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (ctx) {
         final theme = Theme.of(ctx);
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.trackerFlowTimeline,
-                  style: theme.textTheme.titleMedium,
+        return StatefulBuilder(
+          builder: (ctx, setSheet) {
+            // Recompute each rebuild so an authored/removed command shows at once.
+            final timeline = songFlowTimeline(_song);
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.trackerFlowTimeline,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.trackerFlowTimelineHint,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: timeline.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (_, i) => _flowTimelineTile(
+                          l10n,
+                          timeline[i],
+                          i,
+                          setSheet,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.trackerFlowTimelineHint,
-                  style: theme.textTheme.bodySmall,
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: timeline.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) => _flowTimelineTile(l10n, timeline[i]),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  /// One timeline row: the order/pattern/row range + timing, and each flow
-  /// command the visit carries rendered as a small chip.
-  Widget _flowTimelineTile(AppLocalizations l10n, FlowTimelineEntry e) {
+  /// One timeline row: the order/pattern/row range + timing, each flow command as
+  /// a removable chip, and a trailing edit button that authors/changes the entry's
+  /// order-command. [setSheet] rebuilds the sheet after an edit.
+  Widget _flowTimelineTile(
+    AppLocalizations l10n,
+    FlowTimelineEntry e,
+    int index,
+    StateSetter setSheet,
+  ) {
     return ListTile(
+      key: ValueKey('flowTile_$index'),
       dense: true,
       leading: CircleAvatar(radius: 14, child: Text('${e.orderIndex}')),
       title: Text(
@@ -4215,15 +4323,146 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 runSpacing: 4,
                 children: [
                   for (final c in e.commands)
-                    Chip(
+                    InputChip(
                       visualDensity: VisualDensity.compact,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       label: Text(_flowCommandLabel(l10n, c)),
+                      onDeleted: () {
+                        _applyFlowEdit(
+                          () => clearFlowCommand(_song, e.orderIndex, c.kind),
+                        );
+                        setSheet(() {});
+                      },
                     ),
                 ],
               ),
             ),
         ],
+      ),
+      trailing: IconButton(
+        key: ValueKey('flowEdit_$index'),
+        icon: const Icon(Icons.edit_outlined),
+        tooltip: l10n.trackerFlowEdit,
+        onPressed: () => _editFlowEntry(e.orderIndex, setSheet),
+      ),
+    );
+  }
+
+  /// Runs a pure flow-edit helper against the live [_song] as an undoable edit:
+  /// snapshots undo, applies inside [setState], then marks playback stale so the
+  /// next render/transport reflects the new order-command.
+  void _applyFlowEdit(void Function() edit) {
+    _pushUndo();
+    setState(edit);
+    _syncPlayback();
+  }
+
+  /// Opens the per-entry flow-command picker for order entry [orderIndex]: choose
+  /// a command kind, enter its value, and author it via the pure helpers. Rebuilds
+  /// the timeline sheet ([setSheet]) after applying.
+  Future<void> _editFlowEntry(int orderIndex, StateSetter setSheet) async {
+    final l10n = AppLocalizations.of(context)!;
+    final kind = await showModalBottomSheet<_FlowEditKind>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.trackerFlowEditTitle(orderIndex)),
+              subtitle: Text(l10n.trackerFlowEditHint),
+            ),
+            const Divider(height: 1),
+            for (final opt in _FlowEditKind.values)
+              ListTile(
+                leading: Icon(opt.icon),
+                title: Text(opt.label(l10n)),
+                onTap: () => Navigator.of(ctx).pop(opt),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (kind == null || !mounted) return;
+    await _applyFlowChoice(orderIndex, kind);
+    setSheet(() {});
+  }
+
+  /// Prompts for the [kind]'s value and authors it on order entry [orderIndex].
+  Future<void> _applyFlowChoice(int orderIndex, _FlowEditKind kind) async {
+    final l10n = AppLocalizations.of(context)!;
+    switch (kind) {
+      case _FlowEditKind.jump:
+        final target = await _flowNumberDialog(
+          l10n.trackerFlowPickOrder,
+          initial: 0,
+          min: 0,
+          max: (_song.order.length - 1).clamp(0, 255),
+        );
+        if (target != null) {
+          _applyFlowEdit(() => setPositionJump(_song, orderIndex, target));
+        }
+      case _FlowEditKind.brk:
+        final row = await _flowNumberDialog(
+          l10n.trackerFlowPickRow,
+          initial: 0,
+          min: 0,
+          max: 99,
+        );
+        if (row != null) {
+          _applyFlowEdit(() => setPatternBreak(_song, orderIndex, row));
+        }
+      case _FlowEditKind.speed:
+        final ticks = await _flowNumberDialog(
+          l10n.trackerFlowPickSpeed,
+          initial: _song.initialSpeed,
+          min: 1,
+          max: 31,
+        );
+        if (ticks != null) {
+          _applyFlowEdit(() => setSpeed(_song, orderIndex, ticks));
+        }
+      case _FlowEditKind.tempo:
+        final bpm = await _flowNumberDialog(
+          l10n.trackerFlowPickTempo,
+          initial: _song.timing.tempoBpm,
+          min: 32,
+          max: 255,
+        );
+        if (bpm != null) {
+          _applyFlowEdit(() => setTempo(_song, orderIndex, bpm));
+        }
+      case _FlowEditKind.loop:
+        final count = await _flowNumberDialog(
+          l10n.trackerFlowPickLoop,
+          initial: 1,
+          min: 0,
+          max: 15,
+        );
+        if (count != null) {
+          _applyFlowEdit(() => setPatternLoop(_song, orderIndex, count));
+        }
+    }
+  }
+
+  /// A small numeric-entry dialog for a flow-command value, returning the clamped
+  /// [min]..[max] integer or null if cancelled.
+  Future<int?> _flowNumberDialog(
+    String title, {
+    required int initial,
+    required int min,
+    required int max,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    return showDialog<int>(
+      context: context,
+      builder: (ctx) => _FlowNumberDialog(
+        title: title,
+        initial: initial,
+        min: min,
+        max: max,
+        cancelLabel: l10n.trackerCancel,
+        applyLabel: l10n.trackerFlowApply,
       ),
     );
   }
