@@ -41,9 +41,12 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <!-- glint Ogg-Vorbis wasm shim for decoding .sf3 SoundFonts on web. Exposes
-       globalThis.glintVorbis; the wasm itself loads lazily on the first .sf3.
-       See web/glint/README.md + lib/core/audio/sf2/vorbis_capability_web.dart. -->
+  <!-- glint wasm shims. Exposes globalThis.glintVorbis (.sf3 SoundFont decode)
+       and globalThis.glintCodec (MP3/AAC/Opus encode + MP3/AAC/Opus/Vorbis/FLAC
+       decode) from ONE shared module, so audio import/export on web runs the
+       same C code as native. The wasm loads lazily on first use — no startup
+       cost. See web/glint/README.md, lib/core/audio/sf2/vorbis_capability_web.dart
+       and lib/core/audio/sf2/encode_capability_web.dart. -->
   <script type="module" src="glint/bootstrap.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
