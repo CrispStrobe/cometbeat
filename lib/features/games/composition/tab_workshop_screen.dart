@@ -377,6 +377,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   late final Ticker _ticker;
   bool _playing = false;
   bool _countIn = false; // opt-in one-bar metronome before playback
+  // Opt-in: render playback through the tracker replayer so a column's playing
+  // techniques (slide/vibrato/bend) are HEARD, not just drawn. Off = the dry
+  // Score voice, unchanged.
+  bool _articulate = false;
   bool _countingIn = false;
   int _playToken = 0; // bumped to cancel an in-flight count-in
   Set<String> _highlightedIds = const {};
@@ -592,12 +596,23 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     // A6: renders per track and applies each track's own FX chain. With no
     // chains anywhere it takes the same single-pass path as before, so an
     // effect-free tab still sounds byte-identical.
-    final pcm = renderTabBandWithFx(
-      _tracks,
-      inst,
-      quarterMs: quarterMs,
-      capo: _capo,
-    );
+    //
+    // "Articulate" opts into the tracker replayer instead, so a column's playing
+    // techniques (slide → 3xx, vibrato → 4xy, bend → 1xx) actually sound; the FX
+    // chains still apply. Off keeps the dry Score voice.
+    final pcm = _articulate
+        ? renderTabBandThroughTracker(
+            _tracks,
+            inst,
+            quarterMs: quarterMs,
+            capo: _capo,
+          )
+        : renderTabBandWithFx(
+            _tracks,
+            inst,
+            quarterMs: quarterMs,
+            capo: _capo,
+          );
     if (pcm.isEmpty) return;
     var peak = 0.0;
     for (final s in pcm) {
@@ -1586,6 +1601,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   _playWithInstrument();
                 case 'countIn':
                   setState(() => _countIn = !_countIn);
+                case 'articulate':
+                  setState(() => _articulate = !_articulate);
                 case 'loop':
                   setState(() => _loop = !_loop);
                 case 'loopBar':
@@ -1634,6 +1651,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 value: 'countIn',
                 checked: _countIn,
                 child: Text(l10n.tabCountIn),
+              ),
+              CheckedPopupMenuItem(
+                value: 'articulate',
+                checked: _articulate,
+                child: const Text('Articulate techniques'),
               ),
               CheckedPopupMenuItem(
                 value: 'loop',
