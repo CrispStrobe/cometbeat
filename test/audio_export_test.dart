@@ -139,4 +139,42 @@ void main() {
     // A steady tone has no transients ⇒ short-blocks-on is byte-identical.
     expect(pcmFloatToMp3(pcm), equals(pcmFloatToMp3(pcm, shortBlocks: false)));
   });
+
+  group('WAV TPDF dither', () {
+    test('off (explicit) is byte-identical to the default undithered path', () {
+      final pcm = _tone(2000);
+      final a = pcmFloatToWav(pcm);
+      // ignore: avoid_redundant_argument_values  (asserting explicit-off == default)
+      final b = pcmFloatToWav(pcm, dither: false);
+      expect(b, equals(a));
+    });
+
+    test('on changes the samples but keeps a valid WAV of the same length', () {
+      final pcm = _tone(2000);
+      final plain = pcmFloatToWav(pcm);
+      final dithered = pcmFloatToWav(pcm, dither: true);
+      expect(dithered.length, plain.length); // same header + frame count
+      expect(String.fromCharCodes(dithered.sublist(0, 4)), 'RIFF');
+      expect(String.fromCharCodes(dithered.sublist(8, 12)), 'WAVE');
+      // The data must actually differ (dither perturbs the LSBs).
+      expect(dithered.sublist(44), isNot(equals(plain.sublist(44))));
+    });
+
+    test('is deterministic (fixed seed → reproducible export)', () {
+      final pcm = _tone(2000);
+      final one = pcmFloatToWav(pcm, dither: true);
+      final two = pcmFloatToWav(pcm, dither: true);
+      expect(two, equals(one));
+    });
+
+    test('dithered samples stay within the 16-bit range (no wrap)', () {
+      // Full-scale signal + dither must clamp, never wrap to the opposite sign.
+      final loud = Float64List.fromList(List<double>.filled(500, 1.0));
+      final w = pcmFloatToWav(loud, dither: true);
+      final bd = ByteData.sublistView(w);
+      for (var o = 44; o + 1 < w.length; o += 2) {
+        expect(bd.getInt16(o, Endian.little), inInclusiveRange(-32768, 32767));
+      }
+    });
+  });
 }

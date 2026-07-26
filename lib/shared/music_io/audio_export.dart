@@ -23,6 +23,7 @@
 // percussive material (drums, beatbox, tracker/DAW mixes); it is byte-identical
 // to the long-only path when there are no transients.
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
@@ -50,6 +51,7 @@ Uint8List pcmFloatToWav(
   int? sourceSampleRate,
   Float64List? right,
   int bitDepth = 16,
+  bool dither = false,
 }) {
   if (bitDepth != 8 && bitDepth != 16 && bitDepth != 24 && bitDepth != 32) {
     throw ArgumentError.value(bitDepth, 'bitDepth', 'must be 8, 16, 24, or 32');
@@ -96,23 +98,37 @@ Uint8List pcmFloatToWav(
   writeAscii(36, 'data');
   bd.setUint32(40, dataSize, Endian.little);
 
+  // Deterministic (fixed-seed) TPDF dither, ±1 LSB triangular, added in the
+  // quantization domain before rounding. Decorrelates quantization error on
+  // quiet passages / fades. OFF by default → d==0 and the clamps are no-ops in
+  // range, so the output is byte-identical to the undithered path.
+  final rng = dither ? math.Random(0x0d17be5) : null;
   var offset = 44;
   void writeSample(double sample) {
     final clamped = sample.clamp(-1.0, 1.0);
+    final d = rng == null ? 0.0 : rng.nextDouble() - rng.nextDouble();
     switch (bitDepth) {
       case 8:
-        bytes[offset++] = (clamped * 127 + 128).round().clamp(0, 255);
+        bytes[offset++] = (clamped * 127 + 128 + d).round().clamp(0, 255);
       case 16:
-        bd.setInt16(offset, (clamped * 32767).round(), Endian.little);
+        bd.setInt16(
+          offset,
+          (clamped * 32767 + d).round().clamp(-32768, 32767),
+          Endian.little,
+        );
         offset += 2;
       case 24:
-        var v = (clamped * 8388607).round();
+        var v = (clamped * 8388607 + d).round().clamp(-8388608, 8388607);
         if (v < 0) v += 1 << 24;
         bytes[offset++] = v & 0xFF;
         bytes[offset++] = (v >> 8) & 0xFF;
         bytes[offset++] = (v >> 16) & 0xFF;
       case 32:
-        bd.setInt32(offset, (clamped * 2147483647).round(), Endian.little);
+        bd.setInt32(
+          offset,
+          (clamped * 2147483647 + d).round().clamp(-2147483648, 2147483647),
+          Endian.little,
+        );
         offset += 4;
     }
   }
@@ -318,6 +334,7 @@ extension AudioExportFormatX on AudioExportFormat {
     int wavBitDepth = 16,
     int bitrate = 128,
     bool shortBlocks = true,
+    bool dither = false,
     EncodeAudio? nativeEncoder,
     Mp3Encoder mp3Encoder = Mp3Encoder.dart,
   }) {
@@ -353,6 +370,7 @@ extension AudioExportFormatX on AudioExportFormat {
           sourceSampleRate: sampleRate,
           right: right,
           bitDepth: wavBitDepth,
+          dither: dither,
         ),
       AudioExportFormat.mp3 => pcmFloatToMp3(
           pcm,
@@ -440,6 +458,7 @@ Future<void> showAudioExportSheet(
   var selectedRate = sampleRate;
   var selectedWavBitDepth = 16;
   var selectedBitrate = 128;
+  var selectedDither = false;
   var selectedMp3Encoder = Mp3Encoder.dart;
   final rateChoices = _uniqueRates([sampleRate, kSampleRate, 48000, 32000]);
   // On web this loads the glint wasm; native returns immediately.
@@ -490,7 +509,7 @@ Future<void> showAudioExportSheet(
                   ),
                 ),
               const SizedBox(height: 10),
-              if (!selectedFormat.isCompressed)
+              if (!selectedFormat.isCompressed) ...[
                 _ExportChoiceRow<int>(
                   label: 'Bit depth',
                   values: const [8, 16, 24, 32],
@@ -498,8 +517,19 @@ Future<void> showAudioExportSheet(
                   labelFor: (depth) => '$depth-bit',
                   onSelected: (depth) =>
                       setSheetState(() => selectedWavBitDepth = depth),
-                )
-              else
+                ),
+                // TPDF dither: cleaner quiet passages / fades at the cost of a
+                // faint constant noise floor. Deterministic, off by default.
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Dither'),
+                  subtitle:
+                      const Text('Smoother fades (adds a faint noise floor)'),
+                  value: selectedDither,
+                  onChanged: (v) => setSheetState(() => selectedDither = v),
+                ),
+              ] else
                 _ExportChoiceRow<int>(
                   label: 'Bitrate',
                   values: const [128, 192, 320],
@@ -542,6 +572,7 @@ Future<void> showAudioExportSheet(
                       selectedBitrate,
                       shortBlocks,
                       selectedMp3Encoder,
+                      selectedDither,
                     );
                   },
                 ),
@@ -791,6 +822,7 @@ Future<void> _exportAs(
   int? bitrate,
   bool shortBlocks,
   Mp3Encoder mp3Encoder,
+  bool dither,
 ) async {
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
@@ -803,6 +835,7 @@ Future<void> _exportAs(
       wavBitDepth: wavBitDepth ?? 16,
       bitrate: bitrate ?? 128,
       shortBlocks: shortBlocks,
+      dither: dither,
       mp3Encoder: mp3Encoder,
     );
     final suggested = '$baseName.${fmt.ext}';
