@@ -44,7 +44,31 @@ Pending, in order:
    exports a fingered copy through the standard export sheet). The `T` glyph this
    bullet once waited on is in the library now, so thumb position engraves too.
    **Everything in this bullet is shipped; what remains in the arc is 2 and 3.**
-2. **More labels — MEASURED, and the approach changed (2026-07-26 spike).** Our OMR
+2. **More labels — THE ROUTE IS SYMBOLIC, NOT OMR (measured 2026-07-26).** OMR is a
+   dead end at 20% recall (trial below). The live route: **PDMX's `mxl.tar.gz`
+   (1.89 GB, 254,078 scores, every one `publicdomain` or `cc-zero`)** — we cached only
+   its `data.tar.gz` (MusicRender JSON), and **that format drops fingerings**: a census
+   of all 7,547 cached JSONs finds annotation classes Articulation / Notehead / Dynamic
+   / HairPin / Text / Tremolo / Slur / Pedal / Arpeggio / Symbol / Ottava / Bend /
+   Trill / Vibrato — **no Fingering class at all**, and the tarball is JSON-only
+   (199,989 json, 0 MusicXML). MusicXML keeps `<fingering>`, which is exactly how we
+   got our 193 labels from the 3,352 `.mxl` we happen to have. **Measured yield rate
+   in that sample: 45 fingered bowed parts / 3,352 scores = 1.34%**, so 254k scores
+   extrapolates to **~3,400 fingered bowed parts** — one licensed single-source
+   download (no crawling, no bot check, Zenodo hosts it for this purpose), against the
+   45 parts / 193 labels we have now. Do this before anything else.
+   Other licence-clean routes, ranked: **(a) annotate it ourselves** — the only route
+   to DENSE expert labels, and how TNUA (violin, 217k notes) was built; our app already
+   renders scores and the arranger can pre-fill so a cellist corrects rather than types.
+   **(b) in-app opt-in collection** from teachers (the ThumbSet model) — free, noisy,
+   needs a consent flow and is teacher- not child-facing. **(c) ask the TNUA authors
+   for a licence** (Academia Sinica; the paper is CC-BY, the dataset repo has no
+   licence) — outward-facing, so the maintainer's call. **(d) guitar transfer** —
+   GuitarSet is CC-BY 4.0 and already in our pipeline; pretrain on 35k guitar
+   (string,fret) columns, fine-tune on cello. Cheap to try, modest expectation.
+   **(e) synthetic labels from our own rules is CIRCULAR** — that is the DP; useful only
+   as augmentation. Previous OMR assessment follows.
+2. ~~**More labels — MEASURED (OMR spike).** Our OMR
    cannot carry fingerings *by construction*: it is the SMT model emitting `bekern` →
    Humdrum `**kern`, and no fingering exists in that vocabulary or in our kern reader,
    so scans would return notes and nothing else. Measured on self-rendered lines with
