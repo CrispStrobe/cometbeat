@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart'
     show LoopTiming, PatternCell, kPatternSteps;
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
@@ -10,14 +11,17 @@ import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/audio/transcription/engine_config.dart'
     show Backend, TranscriptionStep;
 import 'package:comet_beat/core/audio/wav_io.dart'
     show readWavPcm16, wavToMonoFloat;
+import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
+import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart';
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
@@ -38,6 +42,8 @@ import 'package:comet_beat/features/workshop/model/score_document.dart'
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
+import 'package:comet_beat/shared/widgets/fx_rack.dart';
+import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show setEquals;
@@ -907,6 +913,38 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   /// Opens the current tab in the full Score Workshop (reuses its public
   /// `initialScore` param — no edit to that screen).
+  /// E4 — pushes whichever screen [target] means, with the already-converted
+  /// document. The bridge did the conversion (and warned about any loss); this
+  /// only has to know the route.
+  void _openConvertedElsewhere(AppMode target, ConversionResult result) {
+    final document = result.document;
+    if (document == null) return;
+    switch (target) {
+      case AppMode.tracker:
+        if (document is! TrackerSong) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AdvancedTrackerScreen(initialSong: document),
+          ),
+        );
+      case AppMode.score:
+        if (document is! MultiPartScore) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CompositionWorkshopScreen(
+              initialScore: document,
+              initialNames: [_tracks[_active].name],
+            ),
+          ),
+        );
+      case AppMode.tab:
+      case AppMode.loop:
+      case AppMode.audio:
+        // Not offered — see the `targets` list on the menu.
+        break;
+    }
+  }
+
   void _openInScoreWorkshop() {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -1436,6 +1474,17 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             ],
           ),
           // Everything else — the many one-off / less-frequent actions.
+          // E4 — the shared "Open in…" action. Restricted to the two modes this
+          // screen can actually PUSH: converting to a destination it cannot
+          // open would convert the user's work and then drop it.
+          OpenInMenu(
+            from: AppMode.tab,
+            targets: const [AppMode.tracker, AppMode.score],
+            tuning: _doc.tuning,
+            capo: _capo,
+            documentBuilder: () => _doc,
+            onConverted: _openConvertedElsewhere,
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             tooltip: l10n.tabMenu,
@@ -1463,6 +1512,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   _promptPasteAscii();
                 case 'save':
                   _promptSave();
+                case 'rig':
+                  _showRigSheet();
                 case 'workshop':
                   _openInScoreWorkshop();
                 case 'clear':
@@ -1475,6 +1526,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 Icons.piano_outlined,
                 l10n.workshopPlayWithInstrument,
               ),
+              _menuItem('rig', Icons.graphic_eq, l10n.tabRig),
               CheckedPopupMenuItem(
                 value: 'countIn',
                 checked: _countIn,
@@ -1564,6 +1616,82 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   /// capo, tempo, transpose, techniques, track management) lives in the app-bar
   /// Settings sheet, not here.
   /// An icon+label overflow-menu row.
+  /// E2 — the per-track guitar rig: a preset picker plus the shared FX rack
+  /// over [TabTrack.fxChain]. Tab was the one mode with no effects at all.
+  void _showRigSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext)!;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: StatefulBuilder(
+              builder: (context, setSheetState) {
+                final track = _tracks[_active];
+                void apply(List<FxSpec> chain) {
+                  setState(() => track.fxChain = chain);
+                  setSheetState(() {});
+                }
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.tabRig,
+                      style: Theme.of(sheetContext).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.tabRigHint,
+                      style: Theme.of(sheetContext).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        for (final preset in GuitarFxPreset.values)
+                          ActionChip(
+                            key: ValueKey('tab-rig-${preset.name}'),
+                            label: Text(
+                              preset == GuitarFxPreset.clean
+                                  ? l10n.tabRigNone
+                                  : tabRigLabel(preset),
+                            ),
+                            onPressed: () => apply(tabRigChain(preset)),
+                          ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight:
+                            MediaQuery.of(sheetContext).size.height * 0.45,
+                      ),
+                      child: SingleChildScrollView(
+                        child: FxRack(
+                          chain: track.fxChain,
+                          dense: true,
+                          onChanged: apply,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   PopupMenuItem<String> _menuItem(
     String value,
     IconData icon,

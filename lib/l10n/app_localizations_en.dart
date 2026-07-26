@@ -2476,6 +2476,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabImport => 'Open a file';
 
   @override
+  String get tabRig => 'Guitar rig';
+
+  @override
+  String get tabRigNone => 'Clean (no effects)';
+
+  @override
+  String get tabRigHint =>
+      'Effects for this track only — a rhythm part can crunch while the lead fuzzes.';
+
+  @override
   String get tabMenu => 'Tab editor menu';
 
   @override

@@ -4670,6 +4670,24 @@ abstract class AppLocalizations {
   /// **'Open a file'**
   String get tabImport;
 
+  /// No description provided for @tabRig.
+  ///
+  /// In en, this message translates to:
+  /// **'Guitar rig'**
+  String get tabRig;
+
+  /// No description provided for @tabRigNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean (no effects)'**
+  String get tabRigNone;
+
+  /// No description provided for @tabRigHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects for this track only — a rhythm part can crunch while the lead fuzzes.'**
+  String get tabRigHint;
+
   /// No description provided for @tabMenu.
   ///
   /// In en, this message translates to:

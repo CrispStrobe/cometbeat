@@ -34,6 +34,7 @@ class OpenInMenu extends StatelessWidget {
     this.annotations,
     this.icon = const Icon(Icons.open_in_new),
     this.tooltip = 'Open in…',
+    this.targets,
   });
 
   /// The mode this menu is shown in.
@@ -56,6 +57,15 @@ class OpenInMenu extends StatelessWidget {
 
   final Widget icon;
   final String tooltip;
+
+  /// Restricts the menu to these modes (still intersected with what the bridge
+  /// can actually reach).
+  ///
+  /// A host needs this because CONVERTING and OPENING are different problems:
+  /// the bridge can produce a document for every reachable mode, but a screen
+  /// can only offer a destination it has a route to push. Offering one it
+  /// cannot open would convert the user's work and then drop it.
+  final List<AppMode>? targets;
 
   /// Whether [from] can reach anywhere at all.
   ///
@@ -113,7 +123,14 @@ class OpenInMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final targets = ProjectBridge.targetsFrom(from);
+    final reachable = ProjectBridge.targetsFrom(from);
+    final allowed = this.targets;
+    final targets = allowed == null
+        ? reachable
+        : [
+            for (final mode in reachable)
+              if (allowed.contains(mode)) mode,
+          ];
     return PopupMenuButton<AppMode>(
       key: const ValueKey('open-in'),
       tooltip: tooltip,
