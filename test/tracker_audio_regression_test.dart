@@ -295,6 +295,7 @@ void main() {
           // everything and reported success — an A/B that had effectively
           // never run. These are small and musically thin, but they exercise
           // the whole path and give the metrics a baseline that always works.
+          'musical.mod',
           'golden.mod',
           'golden.xm',
           'golden.it',
@@ -348,6 +349,7 @@ void main() {
         //
         // The licence-restricted modules are real music and DO gate.
         const reportOnly = {
+          'musical.mod',
           'golden.mod',
           'golden.xm',
           'golden.it',

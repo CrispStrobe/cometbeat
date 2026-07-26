@@ -77,10 +77,25 @@ SampleInstrument sampleInstrumentFromDoc(
   }
   // Loop points are in ORIGINAL-sample units → scale to the engine rate (output
   // index = original / ratio). loopLength 0 = no loop.
-  final loopStart = (sample.loopStart / ratio).round();
-  final loopLength = (sample.loopLength / ratio).round();
-  final sustainLoopStart = (sample.sustainLoopStart / ratio).round();
-  final sustainLoopLength = (sample.sustainLoopLength / ratio).round();
+  //
+  // CLAMPED to the resampled buffer, and that is not defensive tidying. The
+  // points are rounded independently of the data, so a whole-sample loop
+  // (loopStart 0, loopLength = length — much the commonest layout) could round
+  // to one sample PAST the end: 256 samples at 8363 Hz become 1349 at 44.1 kHz
+  // while the length rounds to 1350. `SampleInstrument.loops` then reads
+  // `0 + 1350 <= 1349` as false and silently switches looping OFF, so the note
+  // plays once and stops — a ~30 ms click where a sustained note belongs. No
+  // error, no warning; it showed up only as 14 dB of missing level against
+  // OpenMPT. Clamp the LENGTH, never the start, so a loop keeps its position.
+  final resampled = atEngineRate.length;
+  final loopStart = (sample.loopStart / ratio).round().clamp(0, resampled);
+  final loopLength =
+      (sample.loopLength / ratio).round().clamp(0, resampled - loopStart);
+  final sustainLoopStart =
+      (sample.sustainLoopStart / ratio).round().clamp(0, resampled);
+  final sustainLoopLength = (sample.sustainLoopLength / ratio)
+      .round()
+      .clamp(0, resampled - sustainLoopStart);
   return SampleInstrument(
     id,
     atEngineRate,
