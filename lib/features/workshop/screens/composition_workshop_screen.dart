@@ -48,7 +48,8 @@ import 'package:comet_beat/features/workshop/widgets/multi_part_canvas.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/midi_pitch.dart';
-import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
+import 'package:comet_beat/shared/music/music_picker.dart'
+    show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/score_theme.dart';
@@ -2170,8 +2171,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// Loads a melody from the shared music library (built-ins, saved songs,
   /// catalog, or an imported notation file) into this editor.
   Future<void> _loadFromMusicLibrary() async {
-    final score = await showMusicPicker(context);
-    if (score == null || !mounted) return;
+    final picked = await showMusicPickerWithLicense(context);
+    if (picked == null || !mounted) return;
+    final score = picked.score;
+    // Record the licence at the doorway — an editor can only honour an
+    // obligation it was told about.
+    noteProvenance(picked.provenance);
     final l10n = AppLocalizations.of(context)!;
     setState(() {
       if (score.parts.length > 1) {

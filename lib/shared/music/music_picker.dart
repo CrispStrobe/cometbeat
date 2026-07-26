@@ -11,6 +11,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/tracker_song_module.dart'
     show songFromModuleBytes;
+import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiTrackMidiToMultiPart;
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
@@ -109,14 +110,28 @@ const _kMusicExtensions = [
 
 /// Shows the music picker. Resolves to the chosen music as a [MultiPartScore],
 /// or null if cancelled.
-Future<MultiPartScore?> showMusicPicker(BuildContext context) {
-  return showModalBottomSheet<MultiPartScore>(
+/// A picked piece of music plus the licence it came with (null when it carries
+/// none — a built-in, or a file the user opened themselves).
+typedef PickedMusic = ({MultiPartScore score, LicensedWork? provenance});
+
+/// Pick music AND learn what it obliges.
+///
+/// The licence has to travel with the score: an editor can only honour an
+/// obligation it was told about, and this picker is the doorway the library
+/// uses into the Audio Editor, Tracker and Workshop alike. See
+/// `docs/CORPUS_LICENSING.md` (SA-propagation).
+Future<PickedMusic?> showMusicPickerWithLicense(BuildContext context) {
+  return showModalBottomSheet<PickedMusic>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
     builder: (_) => const _MusicPickerSheet(),
   );
 }
+
+/// Pick music, ignoring provenance — for callers that don't export.
+Future<MultiPartScore?> showMusicPicker(BuildContext context) async =>
+    (await showMusicPickerWithLicense(context))?.score;
 
 class _MusicPickerSheet extends StatelessWidget {
   const _MusicPickerSheet();
@@ -135,7 +150,8 @@ class _MusicPickerSheet extends StatelessWidget {
       );
       if (file == null) return;
       final score = decodeMusicFile(file.name, await file.readAsBytes());
-      navigator.pop(score);
+      // A file the user opened themselves declares nothing and owes nothing.
+      navigator.pop((score: score, provenance: null));
     } catch (_) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.musicPickerFailed)));
     }
@@ -144,13 +160,13 @@ class _MusicPickerSheet extends StatelessWidget {
   /// Browse the curated CometBeat catalog's Songs and Modules, fetch a chosen
   /// item, and convert it into a score for the caller's destination.
   Future<void> _browseCatalog(BuildContext context) async {
-    final score = await showModalBottomSheet<MultiPartScore>(
+    final picked = await showModalBottomSheet<PickedMusic>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (_) => const _CatalogMusicSheet(),
     );
-    if (score != null && context.mounted) Navigator.of(context).pop(score);
+    if (picked != null && context.mounted) Navigator.of(context).pop(picked);
   }
 
   @override
@@ -196,7 +212,12 @@ class _MusicPickerSheet extends StatelessWidget {
               _songTile(
                 context,
                 song.title,
-                () => Navigator.of(context).pop(MultiPartScore([song.score])),
+                () => Navigator.of(context).pop(
+                  (
+                    score: MultiPartScore([song.score]),
+                    provenance: null, // built-in, ours, owes nothing
+                  ),
+                ),
               ),
             _header(context, l10n.musicPickerYours),
             if (yours.isEmpty)
@@ -295,7 +316,22 @@ class _CatalogMusicSheetState extends State<_CatalogMusicSheet> {
         bytes,
         collection: item.collection,
       );
-      navigator.pop(score);
+      navigator.pop(
+        (
+          score: score,
+          // The catalog states a licence and an attribution per item; both are
+          // needed for the credit line, so carry them rather than re-deriving.
+          provenance: item.declaredLicense.trim().isEmpty
+              ? null
+              : LicensedWork(
+                  title: item.title,
+                  license: item.declaredLicense,
+                  creator: item.composer.trim().isEmpty ? null : item.composer,
+                  source: _source.name,
+                  url: item.sourceUrl,
+                ),
+        ),
+      );
     } catch (_) {
       if (mounted) setState(() => _fetching = false);
       messenger.showSnackBar(SnackBar(content: Text(l10n.musicPickerFailed)));

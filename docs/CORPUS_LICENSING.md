@@ -114,17 +114,17 @@ We classify all content strictly according to these definitions:
       `_addSavedInstrument` funnel and read from the CURRENT pool (remove the
       instrument, remove the obligation); **all five export paths gated** (audio,
       MIDI, MusicXML, ABC, module).
-    - **Workshop** — gate + `noteProvenance()` funnel in place on `_export`.
-      ⚠️ **Its populate step is genuinely incomplete and this is the honest
-      gap:** library scores arrive via the shared `showMusicPicker`, which
-      returns a bare `MultiPartScore` and has no licence plumbing, so nothing
-      currently calls `noteProvenance`. Threading it needs the picker (and the
-      Song Book behind it) to carry the item's licence alongside the score —
-      a wider change across shared surfaces. **Today's practical exposure is
-      nil**: `cometbeat_catalog_source.dart` gates the catalog so "CC-BY-SA and
-      unclear material never reach it" (it ships Tier A+B only), so no SA
-      material can arrive by that route. The gap matters the moment Tier C is
-      admitted, and for surfacing Tier B attribution.
+    - **Workshop** — full: gate on `_export`, populated via `noteProvenance()`
+      from the picker.
+    - **The shared picker now carries the licence.** `showMusicPickerWithLicense`
+      returns `({score, provenance})`; the catalog path builds a `LicensedWork`
+      from the item's `declaredLicense` + `composer` + `sourceUrl`, while
+      built-ins and files the user opened themselves return null (they owe
+      nothing). `showMusicPicker` stays as a thin unwrapping wrapper so callers
+      that don't export are unaffected. **All three editors record it**: the
+      Workshop via `noteProvenance`, the DAW onto the created clip, the Tracker
+      into its score-provenance list — so library music is covered as well as
+      library samples/instruments.
   - 📎 Also unified on the way: `SavedInstrument.needsAttribution` was a third
     hand-rolled copy of the rule (`license.contains('by')`), which also fired on
     CC BY-**NC** — material that must be BLOCKED, not merely credited. It now

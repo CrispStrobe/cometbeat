@@ -103,7 +103,8 @@ import 'package:comet_beat/features/workshop/screens/composition_workshop_screen
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
-import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
+import 'package:comet_beat/shared/music/music_picker.dart'
+    show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
 import 'package:comet_beat/shared/music_io/license_gate.dart';
@@ -2582,11 +2583,22 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _addPoolInstrument(inst);
   }
 
+  /// Licence provenance for MUSIC loaded from the library (as opposed to the
+  /// instrument pool, which is tracked per instrument above).
+  final List<LicensedWork> _scoreProvenance = [];
+
+  void _noteScoreProvenance(LicensedWork? work) {
+    if (work != null && !_scoreProvenance.contains(work)) {
+      _scoreProvenance.add(work);
+    }
+  }
+
   /// What exporting this song owes. Read from the CURRENT pool, so removing an
   /// instrument removes its obligation — the same rule the Audio Editor uses.
   LicenseObligations licenseObligations() => obligationsFor([
         for (final inst in _song.instruments)
           if (_instrumentProvenance[inst] case final work?) work,
+        ..._scoreProvenance,
       ]);
 
   /// Every export routes through here first: it states share-alike terms on the
@@ -3989,8 +4001,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   Future<void> _addMusic() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final score = await showMusicPicker(context);
-      if (!mounted || score == null) return;
+      final picked = await showMusicPickerWithLicense(context);
+      if (!mounted || picked == null) return;
+      final score = picked.score;
+      _noteScoreProvenance(picked.provenance);
       if (!_replaceMusicScore(score)) {
         messenger.showSnackBar(
           SnackBar(

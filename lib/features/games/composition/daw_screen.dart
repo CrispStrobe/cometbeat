@@ -41,7 +41,8 @@ import 'package:comet_beat/features/sound_lab/my_samples_sheet.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/features/sound_lab/sample_extractor_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
-import 'package:comet_beat/shared/music/music_picker.dart' show showMusicPicker;
+import 'package:comet_beat/shared/music/music_picker.dart'
+    show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music/score_router.dart'
     show showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
@@ -2337,9 +2338,15 @@ class _DawScreenState extends State<DawScreen>
   /// Pick actual MUSIC from the library (Song Book or a file import) and drop it
   /// onto a fresh lane as a re-voiceable ScoreSource clip.
   Future<void> _addMusic() async {
-    final score = await showMusicPicker(context);
-    if (score == null || !mounted) return;
-    _daw.addClip(ScoreSource(score), track: _daw.timeline.tracks.length);
+    final picked = await showMusicPickerWithLicense(context);
+    if (picked == null || !mounted) return;
+    _daw.addClip(
+      ScoreSource(picked.score),
+      track: _daw.timeline.tracks.length,
+      // Music from the library carries its licence in with the notes, the same
+      // way an imported sample does.
+      provenance: picked.provenance,
+    );
   }
 
   @override
