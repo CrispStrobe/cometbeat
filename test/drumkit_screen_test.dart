@@ -56,6 +56,49 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('long-press ghosts a pad hit; dynamics seed + round-trip + undo',
+      (tester) async {
+    // Seed with an accented kick — the ghost at step 0 travels in.
+    final seed = DrumRowsPattern(
+      {
+        Drum.kick: List<bool>.filled(16, false)
+          ..[0] = true
+          ..[8] = true,
+      },
+      velocities: {
+        Drum.kick: List<double>.filled(16, 1.0)..[0] = 0.45,
+      },
+    );
+    await pumpGame(tester, DrumkitScreen(initialBeat: seed));
+    final kit = _kit(tester);
+
+    // The incoming ghost is seeded onto the pads.
+    expect(kit.velocityAt(Drum.kick, 0), lessThan(1.0));
+    expect(kit.velocityAt(Drum.kick, 8), 1.0);
+
+    // Long-press cycles a normal hit → ghost and back.
+    kit.cycleVelocity(Drum.kick, 8);
+    await tester.pump();
+    expect(kit.velocityAt(Drum.kick, 8), lessThan(1.0));
+
+    // A Done round-trip carries BOTH ghosts back out.
+    final out = kit.currentPattern;
+    expect(out.velocities![Drum.kick]![0], lessThan(1.0));
+    expect(out.velocities![Drum.kick]![8], lessThan(1.0));
+
+    // Long-press an empty cell is a no-op.
+    kit.cycleVelocity(Drum.snare, 3);
+    await tester.pump();
+    expect(kit.velocityAt(Drum.snare, 3), 1.0);
+
+    // Undo reverts the last ghost edit (step 8 back to normal).
+    kit.undo();
+    await tester.pump();
+    expect(kit.velocityAt(Drum.kick, 8), 1.0);
+    expect(kit.velocityAt(Drum.kick, 0), lessThan(1.0)); // seeded ghost stays
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shares the beat to the bridge and loads a shared one back',
       (tester) async {
     await pumpGame(tester, const DrumkitScreen());

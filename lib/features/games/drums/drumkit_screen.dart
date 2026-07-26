@@ -56,6 +56,14 @@ abstract interface class DrumkitTester {
   void toggle(Drum drum, int step);
   int get hitCount;
 
+  /// Long-press a hit → cycle its dynamics ghost ↔ normal; read a hit's level.
+  void cycleVelocity(Drum drum, int step);
+  double velocityAt(Drum drum, int step);
+
+  /// The grid as the [DrumRowsPattern] a Done round-trip returns (carries the
+  /// ghost dynamics).
+  DrumRowsPattern get currentPattern;
+
   /// Undo/redo of every pattern change (grid edits, record takes, clear).
   bool get canUndo;
   bool get canRedo;
@@ -145,6 +153,18 @@ class _DrumkitScreenState extends State<DrumkitScreen>
     for (final d in Drum.values) d: List<bool>.filled(kPatternSteps, false),
   };
 
+  // Optional per-hit dynamics (ghost/normal), sparse and parallel to [_rows] —
+  // a missing lane/step means full velocity. Long-press a pad to ghost it.
+  static const _ghostVelocity = 0.45;
+  final Map<Drum, List<double>> _vels = {};
+
+  double _velAt(Drum drum, int step) {
+    final v = _vels[drum];
+    return (v != null && step < v.length) ? v[step] : 1.0;
+  }
+
+  bool get _hasGhost => _vels.values.any((r) => r.any((v) => v != 1.0));
+
   // Per-drum sound override: a library instrument (incl. SoundFont-backed
   // voices) replacing the built-in synth voice. Null = the synth drum. The
   // rendered one-shot is cached per voice so playback doesn't re-synthesize.
@@ -168,10 +188,13 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   /// The current grid width in steps (eighths): 8 per bar.
   int get _steps => LoopTiming.stepsPerBar * _bars;
 
-  // Undo/redo history of pattern snapshots (grid edits, record takes, clear).
+  // Undo/redo history of pattern snapshots (grid edits, record takes, clear) —
+  // carrying both the hits and their dynamics.
   static const _maxUndo = 50;
-  final List<Map<Drum, List<bool>>> _undoStack = [];
-  final List<Map<Drum, List<bool>>> _redoStack = [];
+  final List<({Map<Drum, List<bool>> rows, Map<Drum, List<double>> vels})>
+      _undoStack = [];
+  final List<({Map<Drum, List<bool>> rows, Map<Drum, List<double>> vels})>
+      _redoStack = [];
 
   // Tap-to-record: capture (drum, loop-relative ms) while recording, then
   // quantise onto the step grid on stop.
@@ -234,7 +257,10 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   /// overrides this is exactly the shared [DrumRowsPattern] render; otherwise
   /// each overridden drum's hits play its instrument's cached one-shot.
   Float64List _renderPattern() {
-    if (_drumVoice.isEmpty) return DrumRowsPattern(_rows).render(_timing);
+    if (_drumVoice.isEmpty) {
+      return DrumRowsPattern(_rows, velocities: _hasGhost ? _vels : null)
+          .render(_timing);
+    }
     final total = _timing.totalSamples;
     final out = Float64List(total);
     for (final drum in Drum.values) {
@@ -244,10 +270,11 @@ class _DrumkitScreenState extends State<DrumkitScreen>
       if (shot.isEmpty) continue;
       for (var s = 0; s < row.length; s++) {
         if (!row[s]) continue;
+        final g = _velAt(drum, s); // ghost dynamics scale the one-shot
         final start = (_timing.boundaryMs(s) * kSampleRate) ~/ 1000;
         final n = min(shot.length, total - start);
         for (var i = 0; i < n; i++) {
-          out[start + i] += shot[i];
+          out[start + i] += shot[i] * g;
         }
       }
     }
@@ -297,8 +324,17 @@ class _DrumkitScreenState extends State<DrumkitScreen>
         for (final e in _rows.entries) e.key: [...e.value],
       };
 
-  /// The current grid as a [DrumRowsPattern] — the round-trip Done result.
-  DrumRowsPattern get currentPattern => DrumRowsPattern(_snapshot());
+  Map<Drum, List<double>> _velSnapshot() => {
+        for (final e in _vels.entries) e.key: [...e.value],
+      };
+
+  /// The current grid as a [DrumRowsPattern] — the round-trip Done result;
+  /// carries the ghost dynamics so an accented beat travels back to Loop Studio.
+  @override
+  DrumRowsPattern get currentPattern => DrumRowsPattern(
+        _snapshot(),
+        velocities: _hasGhost ? _velSnapshot() : null,
+      );
 
   /// Seed the grid from [DrumkitScreen.initialBeat] (round-trip open). Sets the
   /// bar count to fit the incoming pattern so a 4/8-bar drums card round-trips
@@ -318,19 +354,39 @@ class _DrumkitScreenState extends State<DrumkitScreen>
         for (var i = 0; i < steps; i++) i < src.length && src[i],
       ];
     }
+    // Carry the incoming dynamics so a round-trip preserves ghost notes.
+    _vels.clear();
+    final seedVels = seed.velocities;
+    if (seedVels != null) {
+      for (final e in seedVels.entries) {
+        if (e.value.any((v) => v != 1.0)) {
+          _vels[e.key] = [
+            for (var i = 0; i < steps; i++)
+              i < e.value.length ? e.value[i] : 1.0,
+          ];
+        }
+      }
+    }
   }
 
   /// Record the current pattern before a mutation, and drop the redo branch.
   void _pushUndo() {
-    _undoStack.add(_snapshot());
+    _undoStack.add((rows: _snapshot(), vels: _velSnapshot()));
     if (_undoStack.length > _maxUndo) _undoStack.removeAt(0);
     _redoStack.clear();
   }
 
-  void _restore(Map<Drum, List<bool>> snap) {
+  void _restore(
+    ({Map<Drum, List<bool>> rows, Map<Drum, List<double>> vels}) snap,
+  ) {
     for (final d in Drum.values) {
-      _rows[d]!.setAll(0, snap[d]!);
+      _rows[d]!.setAll(0, snap.rows[d]!);
     }
+    _vels
+      ..clear()
+      ..addAll({
+        for (final e in snap.vels.entries) e.key: [...e.value],
+      });
   }
 
   @override
@@ -342,7 +398,7 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   @override
   void undo() {
     if (_undoStack.isEmpty) return;
-    _redoStack.add(_snapshot());
+    _redoStack.add((rows: _snapshot(), vels: _velSnapshot()));
     setState(() => _restore(_undoStack.removeLast()));
     _syncPlayback();
   }
@@ -350,7 +406,7 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   @override
   void redo() {
     if (_redoStack.isEmpty) return;
-    _undoStack.add(_snapshot());
+    _undoStack.add((rows: _snapshot(), vels: _velSnapshot()));
     setState(() => _restore(_redoStack.removeLast()));
     _syncPlayback();
   }
@@ -358,7 +414,35 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   @override
   void toggle(Drum drum, int step) {
     _pushUndo();
-    setState(() => _rows[drum]![step] = !_rows[drum]![step]);
+    setState(() {
+      final on = _rows[drum]![step] = !_rows[drum]![step];
+      // Clearing a hit resets its dynamics so re-adding it starts at normal.
+      if (!on && (_vels[drum]?.length ?? 0) > step) _vels[drum]![step] = 1.0;
+    });
+    _syncPlayback();
+  }
+
+  @override
+  double velocityAt(Drum drum, int step) => _velAt(drum, step);
+
+  /// Long-press a pad step → cycle its dynamics ghost ↔ normal (no-op when the
+  /// step has no hit). Mirrors the Loop Studio beat editor.
+  @override
+  void cycleVelocity(Drum drum, int step) {
+    if (step >= (_rows[drum]?.length ?? 0) || !_rows[drum]![step]) return;
+    _pushUndo();
+    setState(() {
+      final lane = _vels.putIfAbsent(
+        drum,
+        () => List<double>.filled(_rows[drum]!.length, 1.0),
+      );
+      if (lane.length < _rows[drum]!.length) {
+        lane.addAll(
+          List<double>.filled(_rows[drum]!.length - lane.length, 1.0),
+        );
+      }
+      lane[step] = lane[step] >= 1.0 ? _ghostVelocity : 1.0;
+    });
     _syncPlayback();
   }
 
@@ -406,6 +490,7 @@ class _DrumkitScreenState extends State<DrumkitScreen>
       for (final row in _rows.values) {
         row.fillRange(0, row.length, false);
       }
+      _vels.clear();
     });
     _syncPlayback();
   }
@@ -702,6 +787,7 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   void _loadPreset(DrumPreset preset) {
     _pushUndo();
     setState(() {
+      _vels.clear(); // a fresh preset starts at normal dynamics
       for (final d in Drum.values) {
         final src = preset.pattern.rows[d]!;
         // Tile the 2-bar preset across however many bars are set, so a longer
@@ -849,6 +935,7 @@ class _DrumkitScreenState extends State<DrumkitScreen>
     _pushUndo();
     final fitted = shared.rowsFitted(_steps);
     setState(() {
+      _vels.clear(); // SharedBeat carries no dynamics → start at normal
       for (final d in Drum.values) {
         _rows[d]!.setAll(0, fitted[d]!);
       }
@@ -902,6 +989,13 @@ class _DrumkitScreenState extends State<DrumkitScreen>
         _rows[d] = [
           for (var i = 0; i < newSteps; i++) i < old.length && old[i],
         ];
+        // Keep the dynamics aligned to the resized grid.
+        final oldV = _vels[d];
+        if (oldV != null) {
+          _vels[d] = [
+            for (var i = 0; i < newSteps; i++) i < oldV.length ? oldV[i] : 1.0,
+          ];
+        }
       }
       _bars = bars;
     });
@@ -1084,10 +1178,13 @@ class _DrumkitScreenState extends State<DrumkitScreen>
                                                   child: _StepCell(
                                                     step: _step,
                                                     on: _rows[drum]![s],
+                                                    velocity: _velAt(drum, s),
                                                     index: s,
                                                     scheme: scheme,
                                                     onTap: () =>
                                                         toggle(drum, s),
+                                                    onLongPress: () =>
+                                                        cycleVelocity(drum, s),
                                                   ),
                                                 ),
                                             ],
@@ -1233,6 +1330,8 @@ class _StepCell extends StatelessWidget {
     required this.index,
     required this.scheme,
     required this.onTap,
+    this.onLongPress,
+    this.velocity = 1.0,
   });
 
   final ValueListenable<int> step;
@@ -1240,6 +1339,12 @@ class _StepCell extends StatelessWidget {
   final int index;
   final ColorScheme scheme;
   final VoidCallback onTap;
+
+  /// Long-press a hit to cycle its dynamics ghost ↔ normal.
+  final VoidCallback? onLongPress;
+
+  /// Per-hit dynamics 0..1 — a ghost hit draws dimmer.
+  final double velocity;
 
   @override
   Widget build(BuildContext context) {
@@ -1251,10 +1356,13 @@ class _StepCell extends StatelessWidget {
         valueListenable: step,
         builder: (context, playing, _) => GestureDetector(
           onTap: onTap,
+          onLongPress: onLongPress,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: on
-                  ? scheme.primary
+                  ? scheme.primary.withValues(
+                      alpha: velocity >= 1.0 ? 1.0 : 0.4 + 0.6 * velocity,
+                    )
                   : (beat
                       ? scheme.surfaceContainerHighest
                       : scheme.surfaceContainerLow),
