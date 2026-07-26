@@ -52,11 +52,23 @@ Pending, in order:
    / HairPin / Text / Tremolo / Slur / Pedal / Arpeggio / Symbol / Ottava / Bend /
    Trill / Vibrato — **no Fingering class at all**, and the tarball is JSON-only
    (199,989 json, 0 MusicXML). MusicXML keeps `<fingering>`, which is exactly how we
-   got our 193 labels from the 3,352 `.mxl` we happen to have. **Measured yield rate
-   in that sample: 45 fingered bowed parts / 3,352 scores = 1.34%**, so 254k scores
-   extrapolates to **~3,400 fingered bowed parts** — one licensed single-source
-   download (no crawling, no bot check, Zenodo hosts it for this purpose), against the
-   45 parts / 193 labels we have now. Do this before anything else.
+   got our 193 labels from the 3,352 `.mxl` we happen to have. **DONE — mined 2026-07-26** (streaming scan of the
+   1.89 GB `mxl.tar.gz`, nothing extracted to disk): **254,035 scores → 1,538 with any
+   fingering → 236 bowed parts / 9,324 labels**, of which **39 cello parts / 893
+   labels**. ⚠ My own extrapolation from the classical slice said ~3,400 bowed parts —
+   **14× too high**, because the slice I sampled is far more fingered than the pop-heavy
+   corpus average. Take the measured numbers, not the rate.
+   ⚠⚠ **AND THIS IS NOT CLEARED.** PDMX is the one source whose axis-2 is
+   SELF-ATTESTED (see the PDMX OVERHAUL note in docs/CORPUS_LICENSING.md: a title scan
+   found 25 in-copyright holiday songs inside its CC0 slice). Direct corroboration in
+   this very mine: **32 of the 189 hit scores (17%) carry PDMX's own
+   `license_conflict=True`**. After dropping those: **201 bowed parts / 7,890 labels ·
+   34 cello parts / 760 labels**. The documented ship gate also requires
+   `composer_name` → Wikidata death ≤1955 (`bin/pdmx_pd_composer.py` +
+   `bin/wikidata_deaths.py`); that half is still to run over 157 metadata files, and
+   will cut further. **Until it runs, these labels are EVAL/DEV ONLY** — the same tier
+   as IDMT/classclef — and only the gate-passing subset may train shipped weights.
+   Artifacts on the VPS: `pdmx-cc0-midi/{mxl.tar.gz,scan_fingerings.py,bowed_fingerings.jsonl}`.
    Other licence-clean routes, ranked: **(a) annotate it ourselves** — the only route
    to DENSE expert labels, and how TNUA (violin, 217k notes) was built; our app already
    renders scores and the arranger can pre-fill so a cellist corrects rather than types.
