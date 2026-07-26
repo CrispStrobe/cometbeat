@@ -78,10 +78,11 @@ import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show
-        kFxSetSpeedFull,
+        kFxSetHighOffset,
         kFxSetPanbrelloWaveform,
         kFxSetPastNote,
-        kFxSetSoundControl;
+        kFxSetSoundControl,
+        kFxSetSpeedFull;
 
 /// Detects the module container format by signature; null if unrecognized.
 ModuleFormat? sniffModuleFormat(Uint8List bytes) {
@@ -291,15 +292,17 @@ ModuleDoc docFromMod(ModModule m) {
       return (0xE, (0x7 << 4) | val);
     case 0x5: // S5x — set panbrello waveform → kFxSetPanbrelloWaveform (0x15)
       return (kFxSetPanbrelloWaveform, val);
-    case 0xA: // SAx — high sample offset → kFxSetHighOffset (0x13)
-      return (0x13, val);
-    case 0x9: // S9x — sound control (surround/reverse) → kFxSetSoundControl
+    case 0xA: // SAx — high sample offset
+      return (kFxSetHighOffset, val);
+    case 0x9: // S9x — sound control (surround/reverse)
       // Carry the sound-control sub-nibble; the replayer acts on the audible
-      // ones (S90/S91 surround, S9E/S9F reverse) and ignores the rest. Use the
-      // named constant, NOT a literal — it used to be 0x14, colliding with
-      // kFxSetSpeedFull.
+      // ones (S90/S91 surround, S9E/S9F reverse) and ignores the rest.
+      //
+      // Named, NOT a literal: this READ path kept its raw 0x14 when the
+      // constant moved, so an S9x came back in as whatever then owned 0x14
+      // (set-speed). The writer had been converted to names; this side had not.
       return (kFxSetSoundControl, val);
-    case 0x7: // S7x — past-note / NNA control → kFxSetPastNote (0x17)
+    case 0x7: // S7x — past-note / NNA control
       // Carry the S7 sub-nibble; the replayer acts on the implemented ones
       // (S70/S71/S72 past-note cut/off/fade, S73–S76 set-NNA) and carries the
       // deferred envelope toggles (S77–S7C) as data.
