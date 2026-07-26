@@ -74,6 +74,10 @@ TrackerSong drumSongFromBeat(SharedBeat beat, {int stepsPerBeat = 2}) {
       rows: steps,
       stepsPerBeat: stepsPerBeat,
       tempoBpm: beat.tempoBpm.clamp(32, 255),
+      // D2: the beat's swing used to be dropped here, so a shuffled beat
+      // straightened out the moment it entered the Tracker. Found by the
+      // beat -> song -> beat round-trip test.
+      swing: beat.swing.clamp(0.0, 0.95),
     ),
     patterns: [TrackerPattern(name: '00', cells: cells)],
     order: const [0],

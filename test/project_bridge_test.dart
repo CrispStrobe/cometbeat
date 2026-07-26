@@ -18,11 +18,12 @@
 // ignore_for_file: avoid_redundant_argument_values
 
 import 'package:comet_beat/core/audio/loop_engine.dart' show PatternCell;
-import 'package:comet_beat/core/audio/tracker_engine.dart' show TrackerTiming;
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
+import 'package:comet_beat/core/audio/tracker_engine.dart'
+    show AdditiveInstrument, TrackerCell, TrackerChannel, TrackerTiming;
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/interop/loop_tab.dart';
 import 'package:comet_beat/core/interop/project_bridge.dart';
-import 'package:comet_beat/core/interop/symbolic_annotation.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -351,37 +352,115 @@ void main() {
       }
     });
 
-    test('a composed route reports BOTH converters findings', () {
-      // loop -> tracker goes via tab; the second leg's losses must not be
-      // dropped just because it ran last.
+    test('loop -> tracker KEEPS velocity now that the route is direct', () {
+      // D1. This edge used to go via Tab, which has no dynamics, so velocity
+      // was lost on the way. The direct route carries it in the volume column.
       final result = ProjectBridge.convert(
         from: AppMode.loop,
         to: AppMode.tracker,
         document: _loopTrack(),
       );
       expect(result.isUnsupported, isFalse);
+      final song = result.document! as TrackerSong;
+      final volumes = [
+        for (final cell in song.channels.first.cells)
+          if (cell.midi != null) cell.volume,
+      ];
+      expect(
+        volumes.any((v) => v != null && v < 1.0),
+        isTrue,
+        reason: 'the 0.5-velocity cell flattened out',
+      );
       expect(
         result.report.lost.any((s) => s.contains('velocity')),
-        isTrue,
-        reason: 'the loop -> tab leg lost velocity and did not say so',
+        isFalse,
+        reason: 'nothing should claim to have lost velocity any more',
       );
     });
 
-    test('a side-car from a composed route is merged, not replaced', () {
+    test('loop -> tracker keeps pitches the fretboard could not reach', () {
+      // The concrete failure of the old Tab detour: a note below the guitar's
+      // low E or above its top fret had nowhere to go.
+      const outOfRange = [
+        PatternCell(midis: [24], steps: 2), // C1
+        PatternCell(midis: [100], steps: 2), // E7
+      ];
       final result = ProjectBridge.convert(
         from: AppMode.loop,
         to: AppMode.tracker,
-        document: _loopTrack(),
+        document: outOfRange,
       );
-      // The loop -> tab leg recorded velocity; the tab -> tracker leg recorded
-      // durations. Both must be present.
-      expect(result.annotations.isNotEmpty, isTrue);
-      final hasVelocity = result.annotations.events.values
-          .any((m) => m.containsKey(AnnotationKeys.velocity));
-      final hasDuration = result.annotations.events.values
-          .any((m) => m.containsKey(AnnotationKeys.duration));
-      expect(hasVelocity, isTrue, reason: 'the first leg was overwritten');
-      expect(hasDuration, isTrue, reason: 'the second leg was dropped');
+      final song = result.document! as TrackerSong;
+      final notes = [
+        for (final cell in song.channels.first.cells)
+          if (cell.midi != null) cell.midi,
+      ];
+      expect(notes, [24, 100]);
+    });
+
+    test('loop -> tracker spreads a chord instead of truncating it', () {
+      const chord = [
+        PatternCell(midis: [60, 64, 67], steps: 8),
+      ];
+      final result = ProjectBridge.convert(
+        from: AppMode.loop,
+        to: AppMode.tracker,
+        document: chord,
+      );
+      final song = result.document! as TrackerSong;
+      expect(song.channels, hasLength(3));
+      expect(
+        [for (final c in song.channels) c.cells.first.midi],
+        [60, 64, 67],
+      );
+      expect(
+        result.report.approximated.any((s) => s.contains('spread')),
+        isTrue,
+      );
+    });
+
+    test('tracker -> loop takes a channel whole, without fretting it', () {
+      const timing = TrackerTiming(rows: 4, stepsPerBeat: 2);
+      final song = TrackerSong.fromParts(
+        channels: [
+          TrackerChannel(
+            id: 'bass',
+            instrument: const AdditiveInstrument('p', Instrument.piano),
+            rows: 4,
+            cells: const [
+              TrackerCell(midi: 24),
+              TrackerCell.empty,
+              TrackerCell(midi: 100),
+              TrackerCell.empty,
+            ],
+          ),
+        ],
+        timing: timing,
+        patterns: [
+          TrackerPattern(
+            name: '00',
+            cells: const [
+              [
+                TrackerCell(midi: 24),
+                TrackerCell.empty,
+                TrackerCell(midi: 100),
+                TrackerCell.empty,
+              ],
+            ],
+          ),
+        ],
+        order: const [0],
+      );
+      final result = ProjectBridge.convert(
+        from: AppMode.tracker,
+        to: AppMode.loop,
+        document: song,
+      );
+      final cells = result.document! as List<PatternCell>;
+      expect(cells.map((c) => c.midis).toList(), [
+        [24],
+        [100],
+      ]);
     });
   });
 }

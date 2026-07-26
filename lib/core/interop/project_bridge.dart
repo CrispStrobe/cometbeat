@@ -19,8 +19,12 @@
 // Pure Dart, no Flutter — the "Open in…" menu (C4) sits on top.
 
 import 'package:comet_beat/core/audio/loop_engine.dart' show PatternCell;
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
+import 'package:comet_beat/core/audio/tracker_engine.dart'
+    show AdditiveInstrument, TrackerChannel, TrackerTiming;
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/interop/loop_tab.dart';
+import 'package:comet_beat/core/interop/loop_tracker.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
 import 'package:comet_beat/core/interop/tab_tracker.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
@@ -231,17 +235,32 @@ abstract final class ProjectBridge {
       (AppMode.tracker, AppMode.loop) => _fromTracker(
           document,
           (song) {
-            // Via Tab, which is the only route that keeps the channel->string
-            // mapping; going through Score would re-derive it.
-            final tab = tabDocumentFromTrackerSong(
-              song,
-              annotations: annotations,
-              fallbackTuning: strings,
+            // D1: DIRECT. This used to detour through Tab, which fret-maps
+            // every pitch onto six strings — right for a guitar part, wrong for
+            // a piano channel and nonsense for a drum one. Both models are a
+            // monophonic-per-step grid already, so no detour is needed.
+            if (song.channels.isEmpty) {
+              return ConversionResult(
+                document: const <PatternCell>[],
+                report: ConversionReport()
+                  ..addLost('this song has no channels'),
+              );
+            }
+            final busiest = song.channels.reduce(
+              (a, b) => _noteCount(b) > _noteCount(a) ? b : a,
             );
-            final loop = loopCellsFromTabDocument(tab.doc, capo: capo);
+            final out = loopCellsFromTrackerChannel(busiest, song.timing);
+            final report = out.report;
+            if (song.channels.length > 1) {
+              report.addLost(
+                'the other ${song.channels.length - 1} channels — a loop track '
+                'is one voice',
+              );
+            }
             return ConversionResult(
-              document: loop.cells,
-              report: _mergeReports(tab.report, loop.report),
+              document: out.cells,
+              annotations: out.annotations,
+              report: report,
             );
           },
         ),
@@ -301,12 +320,43 @@ abstract final class ProjectBridge {
       (AppMode.loop, AppMode.tracker) => _fromLoop(
           document,
           (cells) {
-            final tab = tabDocumentFromLoopCells(cells, strings, capo: capo);
-            final song = trackerSongFromTabDocument(tab.doc, capo: capo);
+            // D1: DIRECT, for the same reason as above — and it also keeps
+            // CHORDS, by spreading them across as many channels as the widest
+            // one needs. The old Tab detour collapsed them onto a fretboard.
+            final steps = cells.fold<int>(0, (sum, c) => sum + c.steps);
+            final rows = steps < 1 ? 1 : steps;
+            final timing = TrackerTiming(
+              rows: rows,
+              stepsPerBeat: kLoopStepsPerBeatGrid,
+            );
+            final channels = trackerChannelsFromLoopCells(
+              cells,
+              timing,
+              idPrefix: 'loop',
+              instrument: const AdditiveInstrument('loop', Instrument.piano),
+            );
+            final report = ConversionReport();
+            if (channels.length > 1) {
+              report.addApproximated(
+                'chords spread across ${channels.length} channels — a channel '
+                'plays one note at a time',
+              );
+            }
             return ConversionResult(
-              document: song.song,
-              annotations: tab.annotations.merge(song.annotations),
-              report: _mergeReports(tab.report, song.report),
+              document: TrackerSong.fromParts(
+                channels: channels,
+                timing: timing,
+                patterns: [
+                  TrackerPattern(
+                    name: 'loop',
+                    cells: [
+                      for (final c in channels) List.of(c.cells),
+                    ],
+                  ),
+                ],
+                order: const [0],
+              ),
+              report: report,
             );
           },
         ),
@@ -357,28 +407,20 @@ abstract final class ProjectBridge {
         'Picks a playable fingering; drops velocity.',
       (AppMode.loop, AppMode.score) => 'Engraves the loop; drops velocity.',
       (AppMode.loop, AppMode.tracker) =>
-        'Fills one channel per string; drops velocity.',
+        'One channel per chord voice; keeps velocity.',
       (AppMode.tracker, AppMode.score) => 'Drops effect commands.',
       (AppMode.score, AppMode.tracker) => 'Quantizes onto the pattern grid.',
-      (AppMode.tracker, AppMode.loop) => 'Snaps to the loop grid.',
+      (AppMode.tracker, AppMode.loop) =>
+        'Takes the busiest channel onto the eighth-note grid.',
       _ => '',
     };
   }
 }
 
-/// Combines the reports of a route that composes two converters (Loop -> Tab ->
-/// Tracker, say). The result carries ONE report, so the second converter's
-/// findings must not be dropped on the floor just because it ran last.
-ConversionReport _mergeReports(ConversionReport a, ConversionReport b) {
-  final out = ConversionReport();
-  for (final what in [...a.lost, ...b.lost]) {
-    out.addLost(what);
-  }
-  for (final what in [...a.approximated, ...b.approximated]) {
-    out.addApproximated(what);
-  }
-  return out;
-}
+/// How many cells of [channel] carry a note — used to pick the channel that
+/// best represents a whole song as one loop track.
+int _noteCount(TrackerChannel channel) =>
+    channel.cells.where((c) => c.midi != null).length;
 
 // ── typed unwrapping ────────────────────────────────────────────────────────
 //
