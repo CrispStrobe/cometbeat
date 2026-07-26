@@ -54,6 +54,15 @@ is recorded in [HISTORY.md](HISTORY.md).
   `bb5a5bee`'s `mod_hard_pan.dart`/`tracker_replayer_walkflow.dart`/`.bak2/.orig/.rej`
   were pre-existing untracked cruft, already removed by `4a9c55d0`. — opus
 
+- **opus (tracker-complete)** · 🚧 **ACTIVE (residuals) — tracker MOD/XM/S3M/IT.**
+  Working the documented residuals: retain the unmapped **S3M header bytes**
+  (master vol / ultraClick / flags / createdWith / sampleFormat / channelSettings)
+  through `TrackerSong`; thread **procedural-voice state across streamer chunks**
+  (sfxr/fm/subtractive/OPL re-attack at chunk edges); **non-default IT MIDI
+  macros**; then **bit-exact OPL2** chip emulation. Hot files: `tracker_replayer.dart`,
+  `tracker_engine.dart`, `tracker_song.dart`, `mod/*.dart`. Everything prior
+  shipped + byte-identical. ⚠️ Loop/PatternCell work (`bb5a5bee`) is separate.
+  — opus
 - **opus (tracker-complete)** · ✅ **IDLE / last-shipped — tracker MOD/XM/S3M/IT
   renderer+editor complete.** Shipped to `main`: full **<500 MB streaming
   renderer** (every song shape, byte-identical; buddhia3 2.8 GB→~340 MB); resonant
