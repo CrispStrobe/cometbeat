@@ -49,10 +49,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   curly-brace/quote/final lints across reader/writer/tool + 1 unused test var),
   blocking all verification on every push since. Cleared every issue (format 0-changed,
   analyze → No issues found, 11 importer tests green); doc/lint-only, no behaviour
-  change. Deferred tab follow-ups (playback velocity/pan for C1/D2, D1/D2/D4 UI, GP
-  beat-level whammy/pick-stroke) noted in the parity doc. Not my scratch files:
-  `bb5a5bee`'s `mod_hard_pan.dart`/`tracker_replayer_walkflow.dart`/`.bak2/.orig/.rej`
-  were pre-existing untracked cruft, already removed by `4a9c55d0`. — opus
+  change. **Follow-ups since shipped (tab lane is unowned now — fx-interop idle):**
+  E1 GP **beat**-level whammy/pick-stroke/brush (`crisp_notation@167ba18`); MIDI
+  **program change** from `metadata.midiProgram` (`crisp_notation@8f496c7`, benefits
+  MusicXML→MIDI app-wide); **D1** per-track instrument wired end-to-end (picker →
+  `toScore(program:)` → exported MIDI); **D2** mixer **volume** wired (a Mixer sheet
+  + per-track stem gain via `AudioService.playMixedTimedChords(gains:)`). ⚠️ **I
+  touched the shared `audio_service.dart` — purely ADDITIVE** (a new optional
+  `gains` param on `playMixedTimedChords` + an extracted `mixedWavBytes` seam; the 3
+  existing callers are unchanged and byte-identical without gains). Remaining tab
+  bits (parity doc): C1/D2 **pan** needs stereo rendering; D4 practice-tools UI. Not
+  my scratch files: `bb5a5bee`'s `mod_hard_pan.dart`/`tracker_replayer_walkflow.dart`/
+  `.bak2/.orig/.rej` were pre-existing untracked cruft, already removed by `4a9c55d0`.
+  — opus
 
 - **opus (tracker-complete)** · 🚧 **ACTIVE (residuals) — tracker MOD/XM/S3M/IT.**
   Working the documented residuals: retain the unmapped **S3M header bytes**
