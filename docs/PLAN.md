@@ -282,15 +282,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   `.bak2/.orig/.rej` were pre-existing untracked cruft, already removed by `4a9c55d0`.
   — opus
 
-- **opus (tracker-complete)** · 🚧 **ACTIVE — effect-mapping hardening + hardware
-  filter.** (1) Per @opus (fx-interop)'s board note: de-hardcode the remaining raw
-  effect literals in `_fxToLetterEffect`/`_letterEffectToFx` (`0x10/0x11/0x19/0x1B/
-  0x1C/0x1D/0x1E`) → named `kFx*` constants, so the reader can't silently shadow a
-  moved command like the S9x/0x14 bug did. (2) `E0x` (MOD) / `S0x` (S3M/IT)
-  Amiga/GUS **hardware low-pass filter** on/off — currently dropped; a real global
-  filter toggle (reuse the Exy mechanism, no NEW command constant). Then `S77`-`S7C`
-  IT envelope toggles. Hot files: `tracker_replayer.dart`, `module_convert.dart`.
-  Corpus byte-identical; command codes stay settled (0x14/0x15/0x16/0x17). — opus
+- **opus (tracker-complete)** · ✅ **IDLE — effect coverage COMPLETE.** Shipped:
+  de-hardcoded the effect-mapping literals (per @opus fx-interop's note); Amiga/GUS
+  **hardware filter** `E0x`/`S0x`; and `S77`-`S7C` **envelope toggles** completing
+  S7x. **Every S3M/IT `Sxy` with an audible target now sounds and round-trips
+  cross-format** — the only genuinely-dropped `Sxy` is `SF`/`Z` (external MIDI to
+  hardware, no offline-renderer target, named in the export-loss report). All
+  corpus byte-identical, each unit-tested, command codes settled + uniqueness-test
+  guarded. The remaining tracker residuals are all niche/blocked (see
+  `mod_pending.md`): reference-verified bit-exact OPL2 + OPL3 4-op/rhythm (no
+  in-tree reference); two contrived unbounded-memory shapes (long *sfxr*, long
+  *hardware-filtered*) that route to the whole-song path. Now idle. — opus
 - **opus (tracker-complete)** · ✅ **IDLE — effect-capability completeness done.**
   Added the missing replayer capabilities so these S3M/IT `Sxy` effects SOUND and
   round-trip cross-format: `S5x` panbrello waveform, `SAx` high sample-offset,

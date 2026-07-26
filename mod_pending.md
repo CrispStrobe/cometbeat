@@ -95,13 +95,20 @@ header** (master vol / ultraClick / flags / createdWith / sampleFormat /
 channelSettings) now round-trips through the editor; **procedural-voice songs
 stream** (a 16-min FM song 1022 MB→272 MB, byte-identical) so **every song shape
 is <500 MB**; **non-default IT MIDI macros** (per-channel active-macro + z-eval);
-and a real **YM3812/OPL2 core**. **Genuinely remaining — all niche:** the
-cross-format effects `S5/S7/S9/SA/Z` (verified to have no faithful neutral
-equivalent — named in the export-loss report, not silently dropped);
-reference-verified **bit-exact** OPL2 (no in-tree YM3812 to diff against) + OPL3
-4-op/rhythm mode; and two contrived streaming edges left on the whole-song path —
-long **sfxr** songs (its sequential PRNG couples runs and a note can outlive its
-run) and a degenerate single-note-holds-whole-song. See the feature audit below.
+and a real **YM3812/OPL2 core**. **Effect-capability pass (2026-07-26) — now
+COMPLETE:** every S3M/IT `Sxy` with an audible target was given real replayer
+support and a cross-format map: `S5x` panbrello waveform, `SAx` high sample
+offset, `S9x` reverse/surround, `S7x` past-note/NNA + `S77`-`S7C` envelope
+toggles, and `S0x`/`E0x` Amiga/GUS hardware low-pass filter. The effect-mapping
+literals were de-hardcoded to named constants (a source-driven uniqueness test
+guards the command-code namespace). **The only `Sxy` still dropped is `SF`/`Z`
+(MIDI to external hardware — no offline-renderer target), named in the export-loss
+report.** **Genuinely remaining — all niche/blocked:** reference-verified
+**bit-exact** OPL2 (no in-tree YM3812 to diff against) + OPL3 4-op/rhythm mode;
+and three contrived unbounded-memory shapes left on the whole-song path — long
+**sfxr** songs (PRNG couples runs), long **hardware-filtered** songs (the global
+filter needs one continuous pass), and a degenerate single-note-holds-whole-song.
+See the feature audit below.
 
 ### Native-editing pass (raw command provenance + S3M header)
 
