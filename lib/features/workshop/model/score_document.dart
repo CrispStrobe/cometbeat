@@ -1640,6 +1640,26 @@ class ScoreDocument {
   GrandStaff buildGrandStaff() {
     final cached = _grandCache;
     if (cached != null) return cached;
+    // Two authored voices → a two-hand grand staff: voice 1 on the treble
+    // (right hand), voice 2 on the bass (left hand), so voice 2 is preserved
+    // instead of dropped. A single voice keeps the pitch auto-split below (high
+    // notes up, low notes down), which reads a one-line melody as a piano part.
+    if (hasVoice2) {
+      Score staff(List<EditorElement> voice, Clef clef) => Score(
+            clef: clef,
+            keySignature: keySignature,
+            timeSignature: timeSignature,
+            measures: reflow(
+              [for (final e in voice) e.toElement()],
+              timeSignature: timeSignature,
+              pickup: pickup,
+            ),
+          );
+      return _grandCache = GrandStaff(
+        upper: staff(_v1, Clef.treble),
+        lower: staff(_v2, Clef.bass),
+      );
+    }
     final upper = <MusicElement>[];
     final lower = <MusicElement>[];
     for (final e in _v1) {

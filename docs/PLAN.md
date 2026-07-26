@@ -29,6 +29,22 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (voice2-gaps)** · ✅ **SHIPPED (idle) — the grand-staff view keeps voice 2.**
+  Re-audited the Workshop "voice-2 gaps" backlog against the code (most was stale:
+  dynamics/lyrics harvest from BOTH voices in `buildScore`, slurs are shared,
+  cross-voice tap-select is wired via `voiceOfId`→`setActiveVoice`). The one real,
+  visible gap: `ScoreDocument.buildGrandStaff` engraved voice 1 only, silently
+  dropping voice 2 in the grand-staff (piano) view. Fixed: a two-voice document now
+  renders as a two-hand grand staff — **voice 1 on the treble (RH), voice 2 on the
+  bass (LH)** — while a single voice keeps the existing pitch auto-split. Wrote up
+  the three remaining substantial candidates (Advanced-Tracker menu grouping /
+  this / inspector bar-attributes) in root [PLAN.md](../PLAN.md) → *Scoped next
+  candidates*. **No hot shared files** — `score_document.dart` only (its own model)
+  + a test. Test: a 2-voice doc's grand staff has v1 treble / v2 bass; single-voice
+  pitch-split unchanged. Suites green (score/voice2 164, workshop 84). Follow-up
+  noted: dynamics/slurs/lyrics on the grand-staff view (both voices — a pre-existing
+  grand-staff limitation). Worktree `../mus-voice2`.
+
 - **opus (share-export)** · ✅ **SHIPPED (idle) — export hands off to the OS share
   sheet on mobile (AirDrop / Files / Messages).** Codex backlog item ("native share
   handoff … with a download fallback on web") — genuinely open: the export path used

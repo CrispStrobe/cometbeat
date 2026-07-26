@@ -221,6 +221,26 @@ void main() {
     expect(lower[1], isA<NoteElement>()); // C3 on the bass staff
   });
 
+  test('buildGrandStaff keeps voice 2 (v1 treble / v2 bass), not dropped', () {
+    final doc = ScoreDocument();
+    doc.insertNote(_p(Step.c), _quarter); // voice 1
+    doc.setActiveVoice(1);
+    doc.insertNote(_p(Step.g, octave: 2), _quarter); // voice 2
+    final gs = doc.buildGrandStaff();
+    final upper = gs.upper.measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .toList();
+    final lower = gs.lower.measures
+        .expand((m) => m.elements)
+        .whereType<NoteElement>()
+        .toList();
+    // A two-voice piece is a two-hand grand staff: voice 1 on the treble,
+    // voice 2 on the bass — voice 2 survives instead of being dropped.
+    expect(upper.map((n) => n.pitches.first.step), [Step.c]);
+    expect(lower.map((n) => n.pitches.first.step), [Step.g]);
+  });
+
   test('empty document renders a single whole-rest bar', () {
     final doc = ScoreDocument();
     expect(doc.isEmpty, isTrue);

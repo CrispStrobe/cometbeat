@@ -1139,13 +1139,18 @@ had already shipped, so this block was a trap for the next agent to redo:
 `WORKSHOP_PLAN`):
 - Richer inspector: multi-select view ✅ (edits a whole selection), rest
   properties ✅ (rest-length control, `opus (rest-props)`), bar-attribute editing
-  (⬜ still open — time-sig/key at a bar live in "Change from here…", not the
-  inspector proper).
+  (⬜ still open — see scoped item 3 below).
 - Categorized *insertion* palettes (dynamics / lines / repeats / text), distinct
   from the modification inspector.
-- Voice-2 v1 gaps: voice 2 carries no dynamics/lyrics/slurs; tuplets and mid-score
-  changes anchored while voice 2 is active stamp to voice-1 bars; cross-voice
-  tap-select is unwired; `buildGrandStaff` shows voice 1 only.
+- Voice-2 v1 gaps — **RE-AUDITED 2026-07-26 against the code; mostly stale:**
+  dynamics/lyrics on voice 2 ✅ (`buildScore` harvests markings from BOTH voices),
+  slurs ✅ (shared `_slurs`, `canSlur` reads the active voice), cross-voice
+  tap-select ✅ (`_onElementTap` follows `voiceOfId`→`setActiveVoice`). Still open:
+  `buildGrandStaff` showed voice 1 only (⬜ → **fixed by `opus (voice2-gaps)`**);
+  the grand-staff view still carries no dynamics/slurs/lyrics for EITHER voice
+  (pre-existing limitation, follow-up); mid-score meter/key changes are bar-level
+  and anchor on voice-1 bars by design (revisit only if per-voice changes are
+  wanted).
 - Grace-note LIST beyond a single run (a crisp_notation library ask); cross-part
   in-place ghost/drag note entry on `MultiPartView` (the "C11" ask).
 - Wire `Measure.actualDuration` into the pickup/anacrusis path; verify rendered
@@ -1156,6 +1161,33 @@ codex backlog): collapse the oversized Advanced-Tracker menu into Import/Open ·
 Library · Edit · View · Playback · Export groups and align its import/save
 vocabulary with Score Workshop; make the Beginner Tracker a genuinely capable kid
 live-loop surface (quick start, layer parts, record a voice, arrange sections).
+
+#### Scoped next candidates (2026-07-26, `opus` — clean picks are exhausted, these carry trade-offs)
+
+These are the substantial items left after the easy wins shipped; scoped here so
+whoever picks one starts from a plan, not a re-survey. Item 2 is being done now.
+
+1. **Advanced-Tracker menu grouping** (`advanced_tracker_screen.dart`, ~7.1k lines
+   — a HOT file; `opus (daw-suite)` is adjacent via the DAW/tracker round-trip, so
+   claim the board first and stay additive). The toolbar/app-bar region
+   (~`2363`–`2510`: scattered `IconButton`s + `PopupMenuButton`s) collapses into
+   logical groups — **Import/Open · Library · Edit · View · Playback · Export** —
+   preserving every existing action, and aligns the import/save wording with the
+   Score Workshop. Risk: the large `advanced_tracker_screen_test.dart` finds items
+   by text/icon, so navigation changes need matching test updates. Value: HIGH
+   (maintainer-flagged repeatedly). Do it as a pure regroup, no behaviour change.
+2. **Voice-2 gaps → `buildGrandStaff` keeps voice 2** (`score_document.dart`). Done
+   by `opus (voice2-gaps)`: a two-voice document now engraves as a two-hand grand
+   staff (voice 1 → treble / RH, voice 2 → bass / LH) instead of dropping voice 2;
+   a single voice keeps the pitch auto-split. The other voice-2 sub-gaps were found
+   stale (see the Voice-2 bullet above). Follow-up: carry dynamics/slurs/lyrics onto
+   the grand-staff view (both voices — a pre-existing grand-staff limitation).
+3. **Bar-attribute editing in the inspector** (`composition_workshop_screen.dart`
+   — HOT). Surface the current bar's **time signature / key signature** as direct,
+   inline inspector controls (for a single selection), instead of only via the
+   buried "Change from here…" dialog. Bounded + fully testable, but modest value:
+   it re-presents the existing mid-score-change mechanism, so mostly a
+   discoverability win. Reuse `_barChangeSummary` / the "Change from here" editor.
 
 ### Group 2 — pointers to live reference docs (detail lives there)
 
