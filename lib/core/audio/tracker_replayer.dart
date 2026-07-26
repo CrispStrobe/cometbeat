@@ -4481,18 +4481,29 @@ bool _channelChunkSafe(
   List<TrackerCell> cells, {
   required bool stereo,
   required bool nativeLongStereo,
+  required bool nativeLongMono,
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return true;
   if (channel.instrument is MultiSampleInstrument) {
-    // A native multi-sample (NNA-zone) channel streams ONLY when the song takes
-    // the bounded per-note-run stereo path (_renderLongNativeVariableStereo):
-    // a long (> 120 s) variable-timing STEREO song whose zones are all native
-    // samples and which carries no pan envelope. Every other multi-sample case
-    // (short/flow/mono songs use the full NNA _renderNativeTickZoneVoices; a pan
-    // envelope uses the mono long path) stays on the whole-song render.
-    return _isNativeLongStreamChannel(
+    // A native multi-sample (NNA-zone) channel streams ONLY on the bounded
+    // per-note-run render, gated to LONG songs whose whole-song NNA voice render
+    // ([_renderNativeTickZoneVoices]) would exceed the memory budget:
+    //   * STEREO via _renderLongNativeVariableStereo — a long (> 120 s)
+    //     variable-timing stereo song, no pan envelope; and
+    //   * MONO via _renderLongNativeVariable — a long (> 120 s) flow/variable
+    //     mono song with a per-tick effect.
+    // SHORT songs of either shape (and any not matching) stay on the whole-song
+    // NNA render (already < the ceiling for the corpus) — byte-identical.
+    if (stereo) {
+      return _isNativeLongStreamChannel(
+        channel,
+        nativeLongStereo: nativeLongStereo,
+      );
+    }
+    return _isNativeLongMonoStreamChannel(
       channel,
-      nativeLongStereo: nativeLongStereo,
+      cells,
+      nativeLongMono: nativeLongMono,
     );
   }
   if (_additiveOf(channel.instrument) != null) {
@@ -4521,6 +4532,7 @@ bool songCanStreamFlowVariable(TrackerSong song, {required bool stereo}) {
   final played = walkFlow(song);
   if (played.isEmpty) return false;
   final nativeLongStereo = _songUsesNativeLongStereo(song, played);
+  final nativeLongMono = _songUsesNativeLongMono(song, played);
   final channels = song.channels;
   for (var c = 0; c < channels.length; c++) {
     final cells = [
@@ -4531,6 +4543,7 @@ bool songCanStreamFlowVariable(TrackerSong song, {required bool stereo}) {
       cells,
       stereo: stereo,
       nativeLongStereo: nativeLongStereo,
+      nativeLongMono: nativeLongMono,
     )) {
       return false;
     }
@@ -4569,6 +4582,55 @@ bool _songUsesNativeLongStereo(TrackerSong song, List<PlayedRow> played) {
   if (!(song.usesPan || song.stereoOutput)) return false;
   if (!songUsesVariableTiming(song)) return false;
   return _FlowVarLayout(song, played).totalSamples > _nativeTickFullBufferLimit;
+}
+
+/// Whether [song]'s MONO render should route native multi-sample channels through
+/// the bounded per-note-run MONO stream ([_zoneRunRenderChunkMono], mirroring the
+/// whole-song bounded [_renderLongNativeVariable]) instead of the whole-song NNA
+/// voice render ([_renderNativeTickZoneVoices]): a MONO (unpanned) flow / variable
+/// song longer than [_nativeTickFullBufferLimit] that carries a native
+/// multi-sample channel. Below that length the whole-song NNA render fits the
+/// budget and is kept (byte-identical); only LONG songs — whose whole-song render
+/// would retain whole-song voice buffers per NNA voice — take the bounded stream.
+/// The whole corpus renders STEREO, so this MONO gate never reclassifies it.
+bool _songUsesNativeLongMono(TrackerSong song, List<PlayedRow> played) {
+  if (song.usesPan || song.stereoOutput) return false;
+  if (_FlowVarLayout(song, played).totalSamples <= _nativeTickFullBufferLimit) {
+    return false;
+  }
+  for (final ch in song.channels) {
+    final multi = ch.instrument;
+    if (multi is MultiSampleInstrument &&
+        multi.nativeVoiceSemantics &&
+        multi.zones.values
+            .every((z) => z is SampleInstrument && !z.normalize)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Whether a native multi-sample [channel] qualifies for the bounded per-note-run
+/// MONO streamer (mirroring [_renderLongNativeVariable]): its instrument has
+/// native voice semantics, every zone is a NATIVE (`normalize == false`) sample,
+/// and its flattened [cells] carry a per-tick effect — the gate that routes the
+/// whole-song render through the NNA voice path ([_renderNativeTickZoneVoices])
+/// this bounded render replaces. [nativeLongMono] is the song-level precondition
+/// (a LONG flow/variable MONO song, above the whole-song NNA memory budget).
+bool _isNativeLongMonoStreamChannel(
+  TrackerChannel channel,
+  List<TrackerCell> cells, {
+  required bool nativeLongMono,
+}) {
+  if (!nativeLongMono) return false;
+  final multi = channel.instrument;
+  if (multi is! MultiSampleInstrument || !multi.nativeVoiceSemantics) {
+    return false;
+  }
+  if (!multi.zones.values.every((z) => z is SampleInstrument && !z.normalize)) {
+    return false;
+  }
+  return _hasPerTickEffect(cells);
 }
 
 /// The per-row absolute sample boundaries ([rowStart], length `rows + 1`) and
@@ -5099,10 +5161,13 @@ List<_ChunkChannel> _planChunkChannels(
         song.patterns[pr.patternIndex].cells[c][pr.row],
     ];
     if (ch.muted || !cells.any((x) => !x.isEmpty)) continue;
-    // Native multi-sample (NNA-zone) channel — bounded per-note-run stereo path
-    // (mirrors _renderLongNativeVariableStereo). Gated to exactly the long
-    // variable stereo scenario by _isNativeLongStreamChannel (checked in
-    // songCanStreamFlowVariable), so its presence here implies stereo.
+    // Native multi-sample (NNA-zone) channel — bounded per-note-run path
+    // (mirrors _renderLongNativeVariableStereo for STEREO / _renderLongNative-
+    // Variable for MONO). Gated by _isNativeLongStreamChannel (stereo) /
+    // _isNativeLongMonoStreamChannel (mono) in songCanStreamFlowVariable, so it
+    // reaches here only for a LONG song of the matching shape. [regGain] is the
+    // per-region constant-power pan gain used by the STEREO render; the MONO
+    // render ([_zoneRunRenderChunkMono]) ignores it.
     if (ch.instrument is MultiSampleInstrument) {
       final runs = _planZoneRuns(ch, cells);
       final regions = _panRegionsVariable(
@@ -5332,6 +5397,144 @@ void _zoneRunRenderChunkStereo(
   }
 }
 
+/// The MONO sibling of [_zoneRunRenderChunkStereo]: renders a native
+/// multi-sample channel's note runs for rows `[rowFrom, rowTo)` into the
+/// chunk-local MONO mix (base absolute sample [sampleBase]), carrying each run's
+/// resumable tick-voice state ([_ZoneRun.readPos] / envelope / filter cursors)
+/// across chunk boundaries. Each run is confined to its own
+/// `[startStep, startStep+steps)` span (hard-cut at its end), released by a
+/// note-cut injected at `sustainSteps`, and its finished PRE-gain scalar is
+/// scaled by `channel.gain` and summed into the mix — byte-identical to the
+/// whole-song bounded per-note-run render [_renderLongNativeVariable] (which
+/// renders each run into a run buffer via [_renderSampleChannelIntoVariable] then
+/// adds `buf[i] == sv * gain`). The arithmetic is invariant to the run-local vs
+/// GLOBAL sample origin (every term is a sample difference or a global-index
+/// write), so this row-windowed global-coordinate render agrees bit-for-bit.
+void _zoneRunRenderChunkMono(
+  List<double> mix,
+  int sampleBase,
+  _ZoneChannelState zc,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<int> ticks,
+  int rowFrom,
+  int rowTo,
+) {
+  final gain = channel.gain;
+  final env = channel.volumeEnvelope;
+  final hasEnv = env != null && !env.isEmpty;
+  const declickSec = 0.003;
+  for (final run in zc.runs) {
+    final runEndRow = run.startStep + run.steps;
+    final r0 = max(run.startStep, rowFrom);
+    final r1 = min(runEndRow, rowTo);
+    if (r0 >= r1) continue;
+    final runEndSample = rowStart[runEndRow];
+    final cur = run.zone;
+    if (cur.sample.isEmpty) continue;
+    final voice = run.voice;
+    final baseMidi = cur.baseMidi;
+    final s = cur.sample;
+    final loops = cur.loops;
+    final pingPong = cur.pingPong;
+    final loopStart = cur.loopStart;
+    final loopLen = cur.loopLength;
+    final useSustainLoop = cur.sustainLoops;
+    final playbackLoopStart = useSustainLoop ? cur.sustainLoopStart : loopStart;
+    final playbackLoopLength = useSustainLoop ? cur.sustainLoopLength : loopLen;
+    final playbackPingPong = useSustainLoop ? cur.sustainPingPong : pingPong;
+    final playbackLoops = useSustainLoop || loops;
+    final cutRow =
+        run.sustainSteps < run.steps ? run.startStep + run.sustainSteps : -1;
+    for (var r = r0; r < r1; r++) {
+      final cell = r == cutRow ? TrackerCell.noteCut : cells[r];
+      voice.armRow(cell);
+      if (voice.releasedThisRow) run.releaseStartSample = rowStart[r];
+      if (voice.retriggeredThisRow) {
+        final os = cur.offsetScale;
+        run.readPos = cell.fxCmd == kFxSampleOffset
+            ? (cell.fxParam * 256 * os).toDouble()
+            : 0.0;
+        run.noteStartSample = rowStart[r];
+      }
+      if (!voice.active && !voice.released && !voice.hasPendingNote) continue;
+      final rowS = rowStart[r];
+      final rowE = rowStart[r + 1];
+      final tpr = ticks[r] < 1 ? 1 : ticks[r];
+      for (var k = 0; k < tpr; k++) {
+        final ts = rowS + ((rowE - rowS) * k) ~/ tpr;
+        final te = rowS + ((rowE - rowS) * (k + 1)) ~/ tpr;
+        final state = voice.tick(k, tpr);
+        if (state.retrigger) {
+          run.readPos = 0.0;
+          run.noteStartSample = ts;
+        }
+        if (!voice.active && !voice.released) continue;
+        final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+        for (var i = ts; i < te && i < runEndSample; i++) {
+          final activeLoopStart =
+              voice.released ? loopStart : playbackLoopStart;
+          final activeLoopLength =
+              voice.released ? loopLen : playbackLoopLength;
+          final activePingPong = voice.released ? pingPong : playbackPingPong;
+          final activeLoops = voice.released ? loops : playbackLoops;
+          final activeLoopEnd = activeLoopStart + activeLoopLength;
+          if (activeLoops &&
+              !activePingPong &&
+              activeLoopLength > 0 &&
+              run.readPos >= activeLoopEnd) {
+            run.readPos = activeLoopStart +
+                ((run.readPos - activeLoopStart) % activeLoopLength);
+          }
+          final sampleVal = _readLoopedSample(
+            s,
+            run.readPos,
+            activeLoops,
+            activePingPong,
+            activeLoopStart,
+            activeLoopLength,
+          );
+          if (sampleVal == null) break;
+          final t = (i - run.noteStartSample) / kSampleRate;
+          final attack = t < declickSec ? t / declickSec : 1.0;
+          final nativeEnv = cur.nativeVolumeEnvelope;
+          final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
+              (hasEnv ? env.levelAt(t * 1000) : 1.0);
+          final fadeRate = cur.nativeFadeout / 1024.0;
+          final relSamples = max(0, i - run.releaseStartSample);
+          final release = voice.released
+              ? (fadeRate > 0
+                  ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
+                  : exp(-relSamples / (0.03 * kSampleRate)))
+              : 1.0;
+          // Anti-click — mirror of the buffered [_renderSampleChannelIntoVariable]
+          // emit that [_renderLongNativeVariable] drives: a hard-cut residue tail
+          // vs. a soft-start fade-in, on the pre-gain filtered scalar. (filterOut
+          // is a pass-through when the zone is unfiltered.)
+          voice.updateFilterEnv(t * 1000);
+          final double sv;
+          if (voice.noteCut) {
+            sv = voice.residueStep();
+          } else {
+            final sg = voice.softStartGain();
+            final out =
+                voice.filterOut(sampleVal) * vol * attack * el * release * sg;
+            sv = voice.keepResidue(out);
+          }
+          mix[i - sampleBase] += sv * gain;
+          final pitch = cur.nativePitchEnvelope?.semitonesAt(
+                t * 1000,
+                released: voice.released,
+              ) ??
+              0.0;
+          run.readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+        }
+      }
+    }
+  }
+}
+
 /// Greedily groups played rows into chunks whose sample span reaches
 /// [kStreamChunkFrames], invoking [render] with each `[rowFrom, rowTo)` window
 /// and its absolute sample bounds. Row-aligned, so a chunk boundary never splits
@@ -5469,7 +5672,22 @@ void streamFlowVariableMonoPcm(
     final mix = Float64List(frames);
     Float64List? stem; // reused per-channel un-gained sample stem
     for (final cc in channels) {
-      if (cc.additive) {
+      if (cc.zone != null) {
+        // Native multi-sample (NNA-zone) channel — bounded per-note-run MONO
+        // render, writing each run's gained sample straight into the chunk mix
+        // (mirrors the whole-song bounded [_renderLongNativeVariable]).
+        _zoneRunRenderChunkMono(
+          mix,
+          sampleFrom,
+          cc.zone!,
+          cc.channel,
+          cc.cells,
+          layout.rowStart,
+          layout.ticks,
+          rowFrom,
+          rowTo,
+        );
+      } else if (cc.additive) {
         // Additive folds gain into volScale and writes the mix directly (matches
         // the whole-song `_renderChannelInto`/Variable additive branch).
         _additiveRenderRows(
