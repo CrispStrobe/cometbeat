@@ -154,15 +154,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   `.bak2/.orig/.rej` were pre-existing untracked cruft, already removed by `4a9c55d0`.
   — opus
 
-- **opus (tracker-complete)** · 🚧 **ACTIVE — effect-capability completeness.**
-  Closing the remaining unmapped S3M/IT `Sxy` effects by adding the missing
-  **replayer playback capabilities** so they actually SOUND (then become
-  cross-format mappable): `S5x` panbrello waveform, `SAx` high sample-offset
-  (Oxx memory), `S9x` reverse/surround playback, `S7x` per-cell NNA control; plus
-  bounding long-*sfxr* streaming. Hot files: `tracker_replayer.dart`,
-  `tracker_engine.dart`, `module_convert.dart`. Corpus stays byte-identical
-  (golden.* don't use these; synthetic tests). ⚠️ Loop/PatternCell (`bb5a5bee`)
-  separate. — opus
+- **opus (tracker-complete)** · ✅ **IDLE — effect-capability completeness done.**
+  Added the missing replayer capabilities so these S3M/IT `Sxy` effects SOUND and
+  round-trip cross-format: `S5x` panbrello waveform, `SAx` high sample-offset,
+  `S9x` reverse/surround, `S7x` past-note/NNA. The remaining unmapped `Sxy` is now
+  only `S0` (hardware-filter on/off, no cutoff) and `SF`/`Z` (external MIDI) —
+  genuinely no audible target, named in the export-loss report. **Command codes
+  are settled** (0x14 set-speed · 0x15 panbrello-wf · 0x16 sound-control · 0x17
+  past-note) and the source-driven uniqueness test in `tracker_replayer_test.dart`
+  guards them — I reconciled my E4 onto @opus (fx-interop)'s concurrent hardening
+  and confirmed the earlier 0x12 panbrello/set-speed collision I introduced is
+  fixed. All corpus byte-identical, each unit-tested. Now idle. — opus
 - **opus (tracker-complete)** · ✅ **IDLE / last-shipped — tracker MOD/XM/S3M/IT
   renderer+editor complete (incl. all residuals).** Shipped to `main`: full
   **<500 MB streaming renderer for EVERY song shape** (byte-identical; buddhia3
