@@ -107,6 +107,7 @@ void main() {
 
   late EncodeAudio encode;
   late OpusFileDecode decodeOpus;
+  late AudioFileDecode decodeAny;
 
   setUpAll(() {
     final loaded = loadGlintEncoder();
@@ -120,6 +121,9 @@ void main() {
     final dec = loadOpusFileDecoder();
     expect(dec, isNotNull, reason: 'cometbeat_opus_file_decode must resolve');
     decodeOpus = dec!;
+    final any = loadAudioDecoder();
+    expect(any, isNotNull, reason: 'glint_decode_audio must resolve');
+    decodeAny = any!;
   });
 
   testWidgets('the calibration signal is what we think it is', (_) async {
@@ -248,6 +252,40 @@ void main() {
     expect(
       _estimatePitch(decoded!.pcm, decoded.channels, 0, decoded.sampleRate),
       closeTo(440.0, 3.0),
+    );
+  });
+
+  testWidgets('both MP3 encoders produce a real, in-tune MP3', (_) async {
+    // MP3 is the one format with two implementations. Prove the SELECTION
+    // reaches different code and that both outputs are genuinely decodable —
+    // picking the wrong one is silent, since both yield a valid MP3.
+    final pcm = _tone(440, 1.5, rate: 44100);
+    final fromDart = AudioExportFormat.mp3.build(pcm, 44100, bitrate: 192);
+    final fromNative = AudioExportFormat.mp3.build(
+      pcm,
+      44100,
+      bitrate: 192,
+      mp3Encoder: Mp3Encoder.native,
+    );
+
+    for (final (bytes, who) in [(fromDart, 'dart'), (fromNative, 'native')]) {
+      expect(bytes.length, greaterThan(1000), reason: who);
+      expect(bytes[0], 0xFF, reason: '$who: MPEG frame sync');
+      expect(bytes[1] & 0xE0, 0xE0, reason: '$who: MPEG header');
+    }
+    expect(
+      fromNative,
+      isNot(equals(fromDart)),
+      reason: 'two different encoders must not produce identical bytes',
+    );
+
+    // The native one decodes back in tune (the Dart writer has its own golden
+    // + ffmpeg round-trip tests elsewhere).
+    final decoded = decodeAny(fromNative);
+    expect(decoded, isNotNull, reason: 'native MP3 must be decodable');
+    expect(
+      _estimatePitch(decoded!.pcm, decoded.channels, 0, decoded.sampleRate),
+      closeTo(440.0, 4.0),
     );
   });
 

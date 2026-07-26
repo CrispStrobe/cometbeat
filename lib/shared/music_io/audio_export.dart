@@ -250,6 +250,27 @@ Uint8List pcmFloatToNative(
   return bytes;
 }
 
+/// Which MP3 encoder to use. Two exist and they are genuinely different code:
+///
+/// * [dart] — our own pure-Dart port (`lib/core/audio/mp3/`). Works EVERYWHERE
+///   including web, and is the historical default, so its output is what the
+///   golden tests pin.
+/// * [native] — glint's C encoder through FFI or wasm. Faster, and the more
+///   mature of the two (it is the encoder the Dart one was ported from), but it
+///   only exists where the glint plugin/wasm loaded.
+///
+/// The default stays [dart] deliberately: it is the better-exercised path here
+/// and keeps exports byte-comparable across platforms. Flipping the default is
+/// a one-line change in [showAudioExportSheet] if the native one proves out.
+enum Mp3Encoder { dart, native }
+
+extension Mp3EncoderX on Mp3Encoder {
+  String get label => switch (this) {
+        Mp3Encoder.dart => 'Built-in',
+        Mp3Encoder.native => 'Native (faster)',
+      };
+}
+
 /// One exportable audio format.
 ///
 /// APPEND new values — the export UI and any future persisted project field
@@ -298,9 +319,18 @@ extension AudioExportFormatX on AudioExportFormat {
     int bitrate = 128,
     bool shortBlocks = true,
     EncodeAudio? nativeEncoder,
+    Mp3Encoder mp3Encoder = Mp3Encoder.dart,
   }) {
     final outRate = exportSampleRate ?? sampleRate;
-    final native = nativeFormat;
+    // MP3 can go through EITHER encoder. Asking for the native one where it
+    // isn't available falls back to the Dart writer rather than failing the
+    // export — unlike Opus/AAC, MP3 always has a working path, so refusing
+    // would be gratuitous.
+    var native = nativeFormat;
+    if (this == AudioExportFormat.mp3 && mp3Encoder == Mp3Encoder.native) {
+      final probe = nativeEncoder ?? nativeAudioEncoder();
+      if (probe != null) native = EncodedAudioFormat.mp3;
+    }
     if (native != null) {
       final encode = nativeEncoder ?? nativeAudioEncoder();
       if (encode == null) {
@@ -410,6 +440,7 @@ Future<void> showAudioExportSheet(
   var selectedRate = sampleRate;
   var selectedWavBitDepth = 16;
   var selectedBitrate = 128;
+  var selectedMp3Encoder = Mp3Encoder.dart;
   final rateChoices = _uniqueRates([sampleRate, kSampleRate, 48000, 32000]);
   // On web this loads the glint wasm; native returns immediately.
   await prepareNativeAudioEncoder();
@@ -477,6 +508,20 @@ Future<void> showAudioExportSheet(
                   onSelected: (bitrate) =>
                       setSheetState(() => selectedBitrate = bitrate),
                 ),
+              // Only for MP3, and only where both encoders actually exist —
+              // offering a choice of one is noise.
+              if (selectedFormat == AudioExportFormat.mp3 &&
+                  nativeAudioEncoder() != null) ...[
+                const SizedBox(height: 10),
+                _ExportChoiceRow<Mp3Encoder>(
+                  label: 'MP3 encoder',
+                  values: Mp3Encoder.values,
+                  selected: selectedMp3Encoder,
+                  labelFor: (e) => e.label,
+                  onSelected: (e) =>
+                      setSheetState(() => selectedMp3Encoder = e),
+                ),
+              ],
               const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerRight,
@@ -496,6 +541,7 @@ Future<void> showAudioExportSheet(
                       selectedWavBitDepth,
                       selectedBitrate,
                       shortBlocks,
+                      selectedMp3Encoder,
                     );
                   },
                 ),
@@ -602,6 +648,7 @@ Future<void> showAudioStemsExportSheet(
   }
 
   var format = AudioExportFormat.wav;
+  var mp3Encoder = Mp3Encoder.dart;
   await prepareNativeAudioEncoder();
   if (!context.mounted) return;
   final formats = availableAudioExportFormats();
@@ -625,6 +672,17 @@ Future<void> showAudioStemsExportSheet(
                 labelFor: (f) => _formatLabel(l10n, f),
                 onSelected: (f) => setDialog(() => format = f),
               ),
+              if (format == AudioExportFormat.mp3 &&
+                  nativeAudioEncoder() != null) ...[
+                const SizedBox(height: 8),
+                _ExportChoiceRow<Mp3Encoder>(
+                  label: 'MP3 encoder',
+                  values: Mp3Encoder.values,
+                  selected: mp3Encoder,
+                  labelFor: (e) => e.label,
+                  onSelected: (e) => setDialog(() => mp3Encoder = e),
+                ),
+              ],
               const SizedBox(height: 8),
               for (final s in sounding)
                 Text(
@@ -669,6 +727,7 @@ Future<void> showAudioStemsExportSheet(
         sampleRate,
         right: stem.right,
         shortBlocks: shortBlocks,
+        mp3Encoder: mp3Encoder,
       );
       if (perFilePrompt) {
         final location = await getSaveLocation(
@@ -731,6 +790,7 @@ Future<void> _exportAs(
   int? wavBitDepth,
   int? bitrate,
   bool shortBlocks,
+  Mp3Encoder mp3Encoder,
 ) async {
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
@@ -743,6 +803,7 @@ Future<void> _exportAs(
       wavBitDepth: wavBitDepth ?? 16,
       bitrate: bitrate ?? 128,
       shortBlocks: shortBlocks,
+      mp3Encoder: mp3Encoder,
     );
     final suggested = '$baseName.${fmt.ext}';
     final location = await getSaveLocation(

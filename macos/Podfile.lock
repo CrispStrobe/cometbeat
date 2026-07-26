@@ -4,7 +4,7 @@ PODS:
   - audioplayers_darwin (0.0.1):
     - Flutter
     - FlutterMacOS
-  - crispembed (0.15.0)
+  - crispembed (0.16.0)
   - file_selector_macos (0.0.1):
     - FlutterMacOS
   - flutter_soloud (0.0.1):
@@ -72,7 +72,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   aec_fullduplex: 8146c22506bf584cf739380d2b648c55cf6f6ca2
   audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
-  crispembed: 0658b7626c19f5fb05ca45a07afb0588ce68c166
+  crispembed: af844fb5afe152c3514922b6c9426b61ac7a49f9
   file_selector_macos: 9e9e068e90ebee155097d00e89ae91edb2374db7
   flutter_soloud: 93c20641a100d25bfbc84a8b86e867f350ef29ac
   flutter_tts: ae915565cc6948444b513acc8ee021993281e027

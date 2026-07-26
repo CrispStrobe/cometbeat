@@ -23,13 +23,33 @@ bytes, not extension**, so a mislabelled file still decodes.
 | Format | Native | Web | Path |
 | --- | :-: | :-: | --- |
 | WAV | ✅ | ✅ | `pcmFloatToWav` — pure Dart |
-| MP3 | ✅ | ✅ | `mp3Encode*` — pure Dart, CBR + VBR, mono/stereo/joint |
+| MP3 | ✅ | ✅ | **two encoders, user-selectable** — see below |
 | AAC-LC | ✅ | ✅ | glint (FFI / wasm) |
 | Ogg-Opus | ✅ | ✅ | glint (FFI / wasm) |
 | FLAC | ❌ | ❌ | glint decodes FLAC but ships **no FLAC encoder** |
 
 The export sheet only offers a format where its encoder actually resolved
 (`availableAudioExportFormats`), so nothing pickable can fail at save time.
+
+### MP3 has two encoders
+
+| `Mp3Encoder` | What | Where |
+| --- | --- | --- |
+| `.dart` (default) | our own port, `lib/core/audio/mp3/` — CBR + VBR, mono/stereo/joint | everywhere, incl. web |
+| `.native` | glint's C encoder, via FFI or wasm | wherever glint loaded |
+
+Both sheets show an **MP3 encoder** row, but only when both actually exist —
+offering a choice of one is noise.
+
+The default is `.dart` on purpose: it is the better-exercised path here (golden
++ ffmpeg round-trip tests pin its output) and keeps exports byte-comparable
+across platforms. glint's is the more mature encoder and is faster — it is what
+the Dart one was ported FROM — so flipping the default is reasonable once it has
+mileage; it is a one-line change.
+
+Asking for `.native` where glint is absent **falls back to the Dart writer**
+rather than failing. Unlike Opus/AAC, MP3 always has a working path, so refusing
+would be gratuitous.
 
 ## How it hangs together
 

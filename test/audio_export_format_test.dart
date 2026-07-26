@@ -180,6 +180,8 @@ void main() {
     });
   });
 
+  _mp3EncoderChoice();
+
   group('native formats route to the encoder', () {
     test('mono: PCM passes through unchanged, 1 channel', () {
       final fake = _FakeEncoder();
@@ -290,6 +292,90 @@ void main() {
         () => AudioExportFormat.opus.build(_ramp(500), 48000),
         throwsA(isA<StateError>()),
       );
+    });
+  });
+}
+
+/// MP3 has TWO encoders — our pure-Dart port and glint's C one. This pins which
+/// one each request actually reaches, because the failure mode is silent: the
+/// wrong encoder still produces a valid MP3, just different bytes (or, on a
+/// platform without glint, no file at all if we refused instead of falling
+/// back).
+void _mp3EncoderChoice() {
+  group('MP3 encoder selection', () {
+    test('the default is the pure-Dart encoder', () {
+      final fake = _FakeEncoder();
+      debugSetNativeAudioEncoder(fake.encode);
+      final bytes = AudioExportFormat.mp3.build(_ramp(4608), 44100);
+      expect(fake.calls, 0, reason: 'must NOT reach glint by default');
+      expect(bytes[0], 0xFF, reason: 'a real MP3 from the Dart writer');
+    });
+
+    test('asking for native routes to glint as MP3', () {
+      final fake = _FakeEncoder();
+      debugSetNativeAudioEncoder(fake.encode);
+      AudioExportFormat.mp3.build(
+        _ramp(4608),
+        44100,
+        mp3Encoder: Mp3Encoder.native,
+      );
+      expect(fake.calls, 1);
+      expect(fake.format, EncodedAudioFormat.mp3,
+          reason: 'not opus/aac by accident');
+    });
+
+    test('native MP3 falls back to Dart when glint is absent', () {
+      // Unlike Opus/AAC, MP3 always has a working path, so refusing would be
+      // gratuitous — a user picking "native" on web must still get a file.
+      debugSetNativeAudioEncoder(null);
+      final bytes = AudioExportFormat.mp3.build(
+        _ramp(4608),
+        44100,
+        mp3Encoder: Mp3Encoder.native,
+      );
+      expect(bytes.length, greaterThan(100));
+      expect(bytes[0], 0xFF);
+    });
+
+    test('the choice does not leak into the other formats', () {
+      final fake = _FakeEncoder();
+      debugSetNativeAudioEncoder(fake.encode);
+      // WAV stays pure Dart whatever the MP3 setting says.
+      final wav = AudioExportFormat.wav.build(
+        _ramp(500),
+        44100,
+        mp3Encoder: Mp3Encoder.native,
+      );
+      expect(String.fromCharCodes(wav.take(4)), 'RIFF');
+      expect(fake.calls, 0);
+      // Opus is always native, and Mp3Encoder.dart must not divert it.
+      AudioExportFormat.opus.build(
+        _ramp(500),
+        48000,
+        mp3Encoder: Mp3Encoder.dart,
+      );
+      expect(fake.calls, 1);
+      expect(fake.format, EncodedAudioFormat.opus);
+    });
+
+    test('bitrate reaches whichever encoder was chosen', () {
+      final fake = _FakeEncoder();
+      debugSetNativeAudioEncoder(fake.encode);
+      AudioExportFormat.mp3.build(
+        _ramp(4608),
+        44100,
+        bitrate: 320,
+        mp3Encoder: Mp3Encoder.native,
+      );
+      expect(fake.bitrateKbps, 320);
+    });
+
+    test('both encoders are labelled for the picker', () {
+      expect(Mp3Encoder.values.length, 2);
+      for (final e in Mp3Encoder.values) {
+        expect(e.label, isNotEmpty);
+      }
+      expect(Mp3Encoder.dart.index, 0, reason: 'default first');
     });
   });
 }
