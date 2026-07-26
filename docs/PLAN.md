@@ -115,16 +115,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-strings)** · 🚧 **ACTIVE — the string indicator (I–IV).** A fingering
-  digit alone does not say which string: a cello pitch sits on up to three of them,
-  each at a different position, so (pitch, finger) underdetermines the hand. Editions
-  answer that with a Roman numeral, and `Annotation` already renders text above a
-  staff AND writes it to MusicXML — so this is app-side only, no library work.
-  Marking rule: **at string CHANGES, skipping open strings** (an open pitch names its
-  own string), which is engraving practice and keeps the page readable; marking every
-  note would litter it. Rides in a `copyWith` copy like the fingerings do, so the
-  saved song stays untouched. Files: `core/notation/bowed_score_fingering.dart` +
-  `songs/song_screen.dart`. No ARB, no registry. Worktree `../mus-cello-fingering`.
+- **opus (cello-strings)** · ✅ **SHIPPED (idle) — string indications I–IV**
+  (`bea1c06b`). A fingering digit does not say which string — a cello pitch sits on
+  up to three, each at a different position — so editions print a Roman numeral, and
+  `Annotation` already renders text above a staff AND writes it to MusicXML: no
+  library work needed, the marks ride in the same `copyWith` copy as the fingerings.
+  **The rule is the work:** mark at a crossing, mark the opening stopped note (a
+  piece has to say where the hand starts), never mark an open string (an open pitch
+  names its own string). Two of my own expectations were wrong and are now pinned as
+  regression tests: the C-major scale produces **no** marks (both crossings land on
+  open strings — silence is the right answer, not a miss), and a stopped-to-stopped
+  crossing produces **two** (the crossing plus the opening note). The song screen's
+  toggle now shows the marked-up copy, so what is on screen is exactly what exports.
+  Verified by rendering to PNG: II over the opening E3, III at the crossing.
 
 - **opus (score-copywith)** · ✅ **SHIPPED (idle) — `copyWith` on Score +
   NoteElement, and a fingered part is now a FILE** (`crisp_notation@fb7a26d`,
