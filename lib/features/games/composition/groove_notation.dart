@@ -77,10 +77,7 @@ Score grooveScore(List<PatternCell> cells, {Clef clef = Clef.treble}) {
 /// material stays on treble so isolated low notes do not force a whole voice
 /// into ledger lines.
 Clef clefForGrooveCells(List<PatternCell> cells) {
-  final midis = [
-    for (final cell in cells)
-      if (cell.midis case final values?) ...values,
-  ]..sort();
+  final midis = _sortedMidis(cells);
   if (midis.isEmpty) return Clef.treble;
   final median = midis[midis.length ~/ 2];
   final low = midis.where((m) => m <= 60).length;
@@ -88,6 +85,72 @@ Clef clefForGrooveCells(List<PatternCell> cells) {
       ? Clef.bass
       : Clef.treble;
 }
+
+/// How a groove track should be engraved: on one staff, or on a grand staff.
+enum GrooveStaff {
+  /// One treble staff.
+  treble,
+
+  /// One bass staff.
+  bass,
+
+  /// A treble+bass grand staff — the track genuinely uses both ranges, so no
+  /// single clef can hold it without stacks of ledger lines.
+  grand,
+}
+
+/// Middle C. The split point between the two staves of a grand staff, and the
+/// boundary [clefForGrooveCells] already reasons about.
+const int _kMiddleC = 60;
+
+/// How far outside middle C a note has to sit before it counts as genuinely
+/// belonging to the other staff.
+///
+/// A third either way. Without a margin, a track hovering around middle C would
+/// flip to a grand staff on a single incidental B3, which is more staff than the
+/// music needs.
+const int _kStaffMargin = 4;
+
+/// The staff a groove track wants, based on the range it actually uses.
+///
+/// [Clef]-per-track was the old answer and it is wrong for anything wide: a
+/// bassline with a high fill, or a two-handed keyboard part, gets forced onto
+/// one staff and renders with piles of ledger lines. This returns
+/// [GrooveStaff.grand] when the track has real content on BOTH sides of middle C
+/// — which is exactly when a pianist would reach for two staves — and otherwise
+/// defers to [clefForGrooveCells] so the single-staff cases are unchanged.
+GrooveStaff grooveStaffForCells(List<PatternCell> cells) {
+  final midis = _sortedMidis(cells);
+  if (midis.isEmpty) return GrooveStaff.treble;
+
+  // "Real content", not "one stray note": require at least two notes clearly on
+  // each side, so a single low pickup or high grace note does not split the
+  // staff. A two-note track cannot be a grand staff by this rule, which is the
+  // right call — two notes are not a two-handed part.
+  var clearlyLow = 0;
+  var clearlyHigh = 0;
+  for (final midi in midis) {
+    if (midi < _kMiddleC - _kStaffMargin) clearlyLow++;
+    if (midi > _kMiddleC + _kStaffMargin) clearlyHigh++;
+  }
+  if (clearlyLow >= 2 && clearlyHigh >= 2) return GrooveStaff.grand;
+
+  // Deliberately NO separate "the span is wide" rule. One was tried and had to
+  // go: a >2-octave span fires on a treble line with a single low pickup, which
+  // is exactly the incidental note the count above is there to ignore — the span
+  // rule silently overrode it. And it was redundant anyway, because notes that
+  // bunch at two extremes (a low ostinato under a high line) already give two
+  // clear notes on each side. The count IS the rule.
+  return clefForGrooveCells(cells) == Clef.bass
+      ? GrooveStaff.bass
+      : GrooveStaff.treble;
+}
+
+/// Every sounding pitch in [cells], ascending.
+List<int> _sortedMidis(List<PatternCell> cells) => [
+      for (final cell in cells)
+        if (cell.midis case final values?) ...values,
+    ]..sort();
 
 /// Steps a [grooveScore] element occupies (reverse of the [_durations] grid).
 int _durationSteps(NoteDuration d) {

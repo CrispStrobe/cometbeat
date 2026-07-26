@@ -212,6 +212,46 @@ void main() {
     });
   });
 
+  group('the command value itself', () {
+    test('does not collide with any other internal effect command', () {
+      // 0x12 was tried first and collided with S5x (set panbrello waveform),
+      // which lives as a RAW hex literal in module_convert's internal->IT/S3M
+      // switch rather than as a kFx* constant — so enumerating the constants was
+      // not enough. `flutter analyze` caught it as an unreachable switch case;
+      // this pins the constants side so a rename cannot quietly re-collide.
+      const taken = <int>[
+        kFxArpeggio,
+        kFxPortaUp,
+        kFxPortaDown,
+        kFxTonePorta,
+        kFxVibrato,
+        kFxTonePortaVolSlide,
+        kFxVibratoVolSlide,
+        kFxTremolo,
+        kFxSetPan,
+        kFxSampleOffset,
+        kFxPositionJump,
+        kFxPatternBreak,
+        kFxExtended,
+        kFxSetSpeed,
+        kFxSetGlobalVolume,
+        kFxGlobalVolSlide,
+        kFxPanSlide,
+        kFxRetrigVolSlide,
+        kFxSetFilter,
+        kFxTremor,
+        kFxPanbrello,
+        kFxTempoSlide,
+      ];
+      expect(
+        taken,
+        isNot(contains(kFxSetSpeedFull)),
+        reason: 'kFxSetSpeedFull = 0x${kFxSetSpeedFull.toRadixString(16)} '
+            'collides with an existing command',
+      );
+    });
+  });
+
   group('the real module', () {
     test('buddhia3.it renders close to libopenmpt, not 47s short', () {
       // The fixture is licence-restricted and .gitignored, so skip when absent.

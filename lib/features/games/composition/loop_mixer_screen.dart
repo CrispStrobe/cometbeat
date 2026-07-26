@@ -71,6 +71,8 @@ import 'package:comet_beat/features/games/drums/drumkit_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart';
+import 'package:comet_beat/features/workshop/model/score_document.dart'
+    show grandStaffFromScore;
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
@@ -83,7 +85,13 @@ import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart'
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/step_grid.dart';
 import 'package:crisp_notation/crisp_notation.dart'
-    show Clef, HarmonicFunction, Score, StaffView, multiPartToMusicXml;
+    show
+        Clef,
+        GrandStaffView,
+        HarmonicFunction,
+        Score,
+        StaffView,
+        multiPartToMusicXml;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -215,6 +223,11 @@ abstract interface class LoopMixerTester {
   void stopAll();
   bool get scoreVisible;
   void toggleScorePanel();
+
+  /// Test seam: give a pitched track explicit cells, so a test can set up a
+  /// specific RANGE (e.g. one that straddles middle C) and assert how the score
+  /// panel engraves it. Mirrors `LoopEngine.setTrackCells`.
+  void debugSetTrackCells(String id, List<PatternCell> cells);
 
   /// The "Sound & Feel" inspector (holds tempo/style/harmony/key/scale/kit/
   /// swing/filter/sections). Advanced view only.
@@ -600,6 +613,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   bool get scoreVisible => _showScore;
   @override
   void toggleScorePanel() => setState(() => _showScore = !_showScore);
+
+  @override
+  void debugSetTrackCells(String id, List<PatternCell> cells) {
+    setState(() => _engine.setTrackCells(id, cells));
+  }
 
   bool _showScore = false;
 
@@ -2041,10 +2059,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       // staff tracks transposition once that UI lands (identity at C major).
       final cells = _engine.engravedCellsFor(track.id);
       Score? score;
-      Clef clef = Clef.treble;
+      // A track that genuinely uses both sides of middle C gets a GRAND staff.
+      // Forcing it into one clef (what this did before) buried the far end under
+      // ledger lines — the "hard-coded clef choices" the retirement map lists.
+      var staff = GrooveStaff.treble;
       if (cells != null) {
-        clef = clefForGrooveCells(cells);
-        score = grooveScore(cells, clef: clef);
+        staff = grooveStaffForCells(cells);
+        score = grooveScore(
+          cells,
+          clef: staff == GrooveStaff.bass ? Clef.bass : Clef.treble,
+        );
       } else {
         // Unpitched (drums / beatbox): a one-staff rhythm reduction.
         final variant = (_engine.variants[track.id] ?? 0)
@@ -2053,7 +2077,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         if (pattern is DrumRowsPattern) score = drumGrooveScore(pattern);
       }
       if (score == null) continue;
-      rows.add(_scoreStaffRow(l10n, track.id, score));
+      rows.add(_scoreStaffRow(l10n, track.id, score, staff: staff));
     }
     // Show up to three staves at once; more scroll. Each row is a fixed height
     // so the whole band is visible together, not one tall staff at a time.
@@ -2374,7 +2398,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       id == LoopEngine.beatTrackId ||
       _tuneTargets.contains(id);
 
-  Widget _scoreStaffRow(AppLocalizations l10n, String id, Score score) {
+  Widget _scoreStaffRow(
+    AppLocalizations l10n,
+    String id,
+    Score score, {
+    GrooveStaff staff = GrooveStaff.treble,
+  }) {
     final editable = _trackIsEditableById(id);
     return InkWell(
       // The score is an editing surface: tap a part's staff to open that
@@ -2428,6 +2457,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                           final id =
                               grooveNoteIdAtStep(score, step % totalSteps);
                           if (id != null) ids.add(id);
+                        }
+                        if (staff == GrooveStaff.grand) {
+                          // Two staves in the same row height, so the band
+                          // stays scannable — a grand staff is inherently
+                          // taller, hence the smaller staffSpace.
+                          return GrandStaffView(
+                            key: const ValueKey('loop-grand-staff'),
+                            grandStaff: grandStaffFromScore(score),
+                            staffSpace: 7,
+                            theme: kidsScoreTheme,
+                            highlightedIds: ids,
+                          );
                         }
                         return StaffView(
                           score: score,

@@ -109,7 +109,14 @@ const int kFxSetSpeed = 0xF; // Fxx — <0x20 set speed (ticks/row); ≥0x20 tem
 /// came out 47 s short of libopenmpt's.
 ///
 /// So IT/S3M `Axx` maps here instead, and the parameter is just the speed.
-const int kFxSetSpeedFull = 0x12;
+///
+/// Value note: pick a genuinely free slot if you ever add another command. The
+/// taken set is NOT just the `kFx*` constants below — `module_convert.dart`'s
+/// internal→IT/S3M switches use RAW hex literals, and 0x12 is already S5x
+/// (set panbrello waveform) there. Taken as of writing: 0x00–0x12, 0x19,
+/// 0x1B–0x1F. Free: 0x13–0x18, 0x1A. (`flutter analyze` catches a collision as
+/// an unreachable-switch-case, which is how 0x12 was caught here.)
+const int kFxSetSpeedFull = 0x13;
 const int kFxExtended =
     0xE; // Exy — sub-command in the high nibble of the param
 

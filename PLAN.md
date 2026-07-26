@@ -68,12 +68,27 @@ not a second playback engine.
   direct track controls; an Advanced view reveals the full matrix, per-track
   instruments, sends, effects, and arrangement. Remove redundant mode choices
   where they only lead to different non-editable copies of the same groove.
-- **Controls must be scannable.** Replace Chill/Groove/Fast tempo buttons with a
-  BPM slider plus numeric field. Group key, scale, swing, loop length, and sound
-  choices in the same compact settings bar pattern used by Score Workshop.
-- **Notation is a view of the document.** Show one or more voices/parts,
-  choosing treble, bass, or grand staff per range; notation follows the actual
-  selected tracks and has Start/Pause/Stop transport.
+- ✅ **Controls must be scannable — DONE (verified 2026-07-26).** The BPM control
+  is a slider (`loop_mixer_screen.dart` ~3685, `kMinTempoBpm`..`kMaxTempoBpm` →
+  `_setTempo`) PLUS a numeric field (~3702, `onSubmitted` → `_setTempo`), so
+  Chill/Groove/Fast is no longer the only tempo control. The style presets that
+  remain are GROOVE styles, not tempo — which the bullet explicitly allows.
+- ✅ **Notation is a view of the document — DONE (grand staff landed 2026-07-26).**
+  It engraves every enabled track, follows the selection, and shares the
+  transport. The missing piece was the clef: `clefForGrooveCells` returned ONE
+  clef, so a track straddling middle C was forced onto a single staff and its far
+  end vanished under ledger lines (the "hard-coded clef choices" the retirement
+  map lists under Replace). `grooveStaffForCells` (`groove_notation.dart`) now
+  returns `GrooveStaff.treble|bass|grand` from the range actually used, and
+  `_buildScorePanel` renders `GrandStaffView` for the grand case — reusing the
+  primitive the Tab Workshop already uses, not new notation code.
+  The rule is "at least two notes clearly on EACH side of middle C" (a third of
+  margin either way). A single low pickup or high grace note therefore does not
+  split the staff. A span-based rule was tried and removed: >2 octaves fires on a
+  treble line with one low pickup — exactly the incidental note the count guard
+  exists to ignore — and it was redundant, since notes bunched at two extremes
+  already give two clear notes per side. +20 tests (15 classifier boundaries,
+  5 widget).
 - **Verification.** Add pure tests for periodic loop rendering, boundary swaps,
   editable per-track events, and clef selection; add widget tests for the
   beginner/advanced workflow and transport states before removing old surfaces.
