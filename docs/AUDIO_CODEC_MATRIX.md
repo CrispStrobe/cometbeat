@@ -27,6 +27,7 @@ bytes, not extension**, so a mislabelled file still decodes.
 | AAC-LC | ✅ | ✅ | glint (FFI / wasm) |
 | Ogg-Opus | ✅ | ✅ | glint (FFI / wasm) |
 | FLAC | ❌ | ❌ | glint decodes FLAC but ships **no FLAC encoder** |
+| Ogg-Vorbis | ❌ | ❌ | decode-only; see below — and Opus makes it redundant for export |
 
 The export sheet only offers a format where its encoder actually resolved
 (`availableAudioExportFormats`), so nothing pickable can fail at save time.
@@ -88,6 +89,23 @@ with a comment saying what would have to change if that filter widened.
 work and was **never called from anywhere** — which is why `.sf3` on web was
 quietly broken too. Adding a readiness helper is not enough; something has to
 await it.
+
+## The two encoders we don't have, and why
+
+**FLAC and Vorbis are decode-only.** Neither is a wiring gap — glint ships no
+encoder for either, so lighting them up means writing one.
+
+Neither is worth doing for **export**: Opus already beats Vorbis at every
+bitrate, and offering two `.ogg` producers is a UX trap. The one thing Opus
+cannot substitute for is **writing `.sf3` SoundFonts**, which are by definition
+Vorbis-compressed — today we can only read them.
+
+A clean-room Vorbis encoder is more tractable than it sounds, because Vorbis
+**transmits its codebooks in the setup header**: an encoder ships its own books
+and never needs libvorbis's tuned ones. Scoped, unclaimed, with the cost
+honestly estimated:
+[`../../glint/docs/VORBIS_ENCODER_HANDOVER.md`](https://github.com/CrispStrobe/glint)
+(`docs/VORBIS_ENCODER_HANDOVER.md` in the glint repo).
 
 ## History worth keeping
 
