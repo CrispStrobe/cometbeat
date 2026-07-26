@@ -10,7 +10,7 @@
 //  2. Cross-format — S3M/IT `S5x` now maps to kFxSetPanbrelloWaveform (0x12)
 //     instead of the neutral (0,0), survives the round-trip back to Sxy, and
 //     moduleExportLossReport no longer lists S5 as an unmapped special (while
-//     S7/S9/SA and the IT Zxx filter/MIDI drop are still surfaced).
+//     SF and the IT Zxx filter/MIDI drop are still surfaced).
 //
 // Run: PATH="/usr/bin:$PATH" env -u GEM_HOME -u GEM_PATH -u RUBYOPT \
 //        flutter test test/panbrello_waveform_test.dart
@@ -145,17 +145,15 @@ void main() {
       );
     });
 
-    test('S7/SF are still reported as unmapped specials', () {
-      // S7x (past-note/NNA) still has no neutral equivalent. SA (high offset),
-      // S9 (surround/reverse) and S5 (panbrello wf) now map, so they are no
-      // longer named as drops.
+    test('SF is still reported as an unmapped special', () {
+      // SF (set MIDI macro) still has no neutral equivalent. SA (high offset),
+      // S9 (surround/reverse), S5 (panbrello wf) and now S7 (past-note/NNA →
+      // kFxSetPastNote) map, so none is named as a drop.
       final report =
-          moduleExportLossReport(_s3mSpecialDoc(0x72), ModuleFormat.mod);
+          moduleExportLossReport(_s3mSpecialDoc(0xF1), ModuleFormat.mod);
       expect(report, contains(ModuleExportLoss.unmappedSpecialEffects));
-      for (final s in const ['S7', 'SF']) {
-        expect(ModuleExportLoss.unmappedSpecialEffects, contains(s));
-      }
-      for (final s in const ['SA', 'S9', 'S5']) {
+      expect(ModuleExportLoss.unmappedSpecialEffects, contains('SF'));
+      for (final s in const ['SA', 'S9', 'S5', 'S7']) {
         expect(ModuleExportLoss.unmappedSpecialEffects, isNot(contains(s)));
       }
     });

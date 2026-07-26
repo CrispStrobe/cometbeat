@@ -215,11 +215,38 @@ const int kFxSetHighOffset = 0x13;
 /// pre-S9x behaviour.
 ///
 /// ⚠️ 0x16, not 0x14 — 0x14 is [kFxSetSpeedFull]. Do not read a "free list" out
-/// of a neighbouring comment: three commands collided in one afternoon that
-/// way, each author reasoning from a snapshot that another commit had already
-/// invalidated. `tracker_replayer_test.dart` reads THIS FILE and fails on any
-/// duplicate, so add the constant and let the test tell you.
+/// of a neighbouring comment: several commands collided that way, each author
+/// reasoning from a snapshot that another commit had already invalidated.
+/// `tracker_replayer_test.dart` reads THIS FILE and fails on any duplicate, so
+/// add the constant and let the test tell you.
 const int kFxSetSoundControl = 0x16;
+
+/// `S7x` — IT/S3M PAST-NOTE / NNA control, carried in the low nibble of the param
+/// (`_param & 0xF`). Honoured by the native NNA voice orchestration in
+/// [_renderNativeTickZoneVoices]:
+///   • `S70`/`S71`/`S72` — PAST-NOTE actions: cut / note-off (key-off) / fade the
+///     channel's currently-ringing BACKGROUND (NNA) voices — every overlapping
+///     voice that started on an EARLIER row than the command and is still active,
+///     leaving the foreground note (the run containing this row) untouched. `S70`
+///     hard-cuts at the command row, `S71` triggers the release (key-off) variant,
+///     `S72` applies the instrument's fade-out from the command row.
+///   • `S73`/`S74`/`S75`/`S76` — SET-NNA: install a per-channel override of the
+///     New-Note Action used for the PREDECESSOR of the NEXT note on this channel:
+///     cut / continue / note-off / note-fade. The override replaces the
+///     instrument's `nativeNna` (NOT the duplicate-check action) for subsequent
+///     notes on the channel until another `S7[3-6]` changes it. It is stored as
+///     the engine's INTERNAL action code (0 = cut, 1 = note-off/release, 2 = fade,
+///     3 = continue/leave), matching the switch that already consumes
+///     `nativeNnaOf`.
+///   • `S77`/`S78` vol-env off/on, `S79`/`S7A` pan-env off/on, `S7B`/`S7C`
+///     pitch/filter-env off/on — per-voice envelope TOGGLES. DEFERRED: the neutral
+///     command carries them cross-format (they round-trip as data), but the
+///     replayer does not yet enable/disable envelopes per voice, so they are a
+///     documented no-op for now. Implementing them needs per-voice envelope
+///     enable state threaded through the sample tick voices.
+/// With no `S7x` present a render is byte-identical to the pre-S7x behaviour.
+/// Command code 0x17 — 0x16 is [kFxSetSoundControl]; 0x12/0x18/0x1A remain free.
+const int kFxSetPastNote = 0x17;
 
 /// Zxx — set the resonant low-pass FILTER (IT effect 'Z'): `Z00..Z7F` set the
 /// cutoff (the param IS the 0..127 cutoff), `Z80..ZFF` set the resonance (param
@@ -1233,6 +1260,7 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
         cmd == kFxSetFilter ||
         cmd == kFxSetHighOffset ||
         cmd == kFxSetSoundControl ||
+        cmd == kFxSetPastNote ||
         cmd == kFxExtended) {
       return true;
     }
@@ -2465,6 +2493,13 @@ List<TrackerCell> _isolatedTickZoneCells(
   final voices = <_NativeTickZoneVoice>[];
   var startStep = 0;
 
+  // Per-channel SET-NNA override (S73–S76): the engine-internal action code that
+  // replaces the instrument's `nativeNna` for the predecessor of each subsequent
+  // note. `overrideAt[r]` is the override in force at row r (null = none), scanned
+  // forward so a `S7[3-6]` on an earlier row governs later notes. No `S7[3-6]`
+  // present ⇒ every entry is null ⇒ byte-identical to the pre-S7x decision.
+  final overrideAt = _setNnaOverrides(cells);
+
   // Pass 1: build voice metadata and resolve NNA/DCT actions WITHOUT rendering
   // any audio. Each note run walks the same as before; the only difference is
   // that no whole-song buffers are allocated here.
@@ -2486,6 +2521,7 @@ List<TrackerCell> _isolatedTickZoneCells(
           cells: voiceCells,
         );
         final newStart = rowStart[startStep];
+        final nnaOverride = overrideAt[startStep];
         for (final old in voices) {
           if (old.endSample <= newStart) continue;
           final duplicate = _isNativeTickDuplicate(
@@ -2493,7 +2529,11 @@ List<TrackerCell> _isolatedTickZoneCells(
             voice,
             nativeDctOf(zone),
           );
-          final action = duplicate ? nativeDcaOf(zone) : nativeNnaOf(old.zone);
+          // A set-NNA override (S73–S76) replaces the New-Note Action, but NOT
+          // the duplicate-check action (DCA), matching IT semantics.
+          final action = duplicate
+              ? nativeDcaOf(zone)
+              : (nnaOverride ?? nativeNnaOf(old.zone));
           switch (action) {
             case 0:
               old.endSample = newStart;
@@ -2511,6 +2551,12 @@ List<TrackerCell> _isolatedTickZoneCells(
     }
     startStep += runSteps;
   }
+
+  // Past-note actions (S70/S71/S72): apply cut / note-off / fade to the channel's
+  // BACKGROUND voices at the command row. The foreground voice (the note run
+  // spanning the command row — the one with the greatest start row ≤ r) is left
+  // alone; every earlier voice still active at the command sample is acted on.
+  _applyPastNoteActions(cells, rowStart, voices);
 
   // Pass 2: render and mix one voice at a time so voice buffers are never
   // co-resident. At most ~2 whole-song buffers (the note and its release
@@ -2565,6 +2611,75 @@ List<TrackerCell> _isolatedTickZoneCells(
     }
   }
   return (left: left, right: rightStem);
+}
+
+/// Forward scan of `S73`–`S76` (SET-NNA) commands into a per-row override of the
+/// engine-internal New-Note Action code (0 cut · 1 note-off · 2 fade · 3
+/// continue; null = no override). The value at row r is the most recent set-NNA
+/// at row ≤ r, so a command governs itself and every later note until changed.
+/// Returns an all-null list (allocation only) when no set-NNA is present.
+List<int?> _setNnaOverrides(List<TrackerCell> cells) {
+  final out = List<int?>.filled(cells.length, null);
+  int? cur;
+  for (var r = 0; r < cells.length; r++) {
+    final c = cells[r];
+    if (c.fxCmd == kFxSetPastNote) {
+      switch (c.fxParam & 0xF) {
+        case 0x3: // S73 — set NNA = cut
+          cur = 0;
+        case 0x4: // S74 — set NNA = continue (leave the predecessor ringing)
+          cur = 3;
+        case 0x5: // S75 — set NNA = note-off (key-off/release)
+          cur = 1;
+        case 0x6: // S76 — set NNA = note-fade
+          cur = 2;
+        // Other S7x sub-commands don't change the NNA override.
+      }
+    }
+    out[r] = cur;
+  }
+  return out;
+}
+
+/// Applies the `S70`/`S71`/`S72` PAST-NOTE actions to [voices] in place. For each
+/// command row the foreground voice (the note run spanning that row) is excluded
+/// and every earlier voice still active at the row's sample onset is cut (S70),
+/// keyed-off (S71) or faded (S72). No `S70`–`S72` present ⇒ no-op.
+void _applyPastNoteActions(
+  List<TrackerCell> cells,
+  List<int> rowStart,
+  List<_NativeTickZoneVoice> voices,
+) {
+  for (var r = 0; r < cells.length; r++) {
+    final c = cells[r];
+    if (c.fxCmd != kFxSetPastNote) continue;
+    final sub = c.fxParam & 0xF;
+    if (sub > 0x2) continue; // 0/1/2 = past-note cut/off/fade; 3+ handled above
+    final at = rowStart[r];
+    // Foreground = the voice with the greatest start row ≤ r (the run that owns
+    // this row). It is spared; the past/background voices are acted on.
+    _NativeTickZoneVoice? foreground;
+    for (final v in voices) {
+      if (v.startStep <= r &&
+          (foreground == null || v.startStep > foreground.startStep)) {
+        foreground = v;
+      }
+    }
+    for (final v in voices) {
+      if (identical(v, foreground)) continue;
+      if (v.startStep > r) continue; // not yet triggered at the command row
+      if (v.endSample <= at) continue; // already silent
+      switch (sub) {
+        case 0x0: // S70 — past-note cut
+          if (at < v.endSample) v.endSample = at;
+        case 0x1: // S71 — past-note off (key-off / release)
+          v.releaseAt ??= at;
+          v.releaseStep ??= r;
+        case 0x2: // S72 — past-note fade
+          v.fadeAt ??= at;
+      }
+    }
+  }
 }
 
 bool _isNativeTickDuplicate(

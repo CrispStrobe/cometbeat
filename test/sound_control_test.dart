@@ -1,7 +1,7 @@
 // test/sound_control_test.dart
 //
 // IT/S3M `S9x` SOUND-CONTROL playback (replayer command kFxSetSoundControl =
-// 0x14) and its cross-format mapping.
+// 0x17) and its cross-format mapping.
 //
 // The audible sub-commands:
 //   • S9E play FORWARD (default) · S9F play BACKWARD (reverse sample playback):
@@ -19,9 +19,9 @@
 //      no-surround defaults are unchanged.
 //   2. Surround — S91 renders the stereo output with R ≈ −L (anti-correlated);
 //      S90 restores normal centre panning (R ≈ +L).
-//   3. Cross-format — S3M/IT `S9x` now maps to kFxSetSoundControl (0x14) (it
-//      used to drop to (0,0)); the reverse map turns 0x14 back into `S9x`; and
-//      moduleExportLossReport no longer lists S9 (S7 still drops).
+//   3. Cross-format — S3M/IT `S9x` now maps to kFxSetSoundControl (0x17) (it
+//      used to drop to (0,0)); the reverse map turns 0x17 back into `S9x`; and
+//      moduleExportLossReport no longer lists S9 (nor S7, which now maps too).
 //
 // Run: PATH="/usr/bin:$PATH" env -u GEM_HOME -u GEM_PATH -u RUBYOPT \
 //        flutter test test/sound_control_test.dart
@@ -229,8 +229,8 @@ void main() {
     });
   });
 
-  group('cross-format — S3M/IT S9x maps to kFxSetSoundControl (0x14)', () {
-    test('S3M S91 → (0x14, 1); native kept for round-trip', () {
+  group('cross-format — S3M/IT S9x maps to kFxSetSoundControl (0x17)', () {
+    test('S3M S91 → (0x17, 1); native kept for round-trip', () {
       final cell = _s3mDoc(19, 0x91).patterns.first.rows.first.first;
       expect(cell.effect, kFxSetSoundControl, reason: 'was (0,0) before');
       expect(cell.effectParam, 0x1);
@@ -238,22 +238,22 @@ void main() {
       expect(cell.nativeEffectParam, 0x91);
     });
 
-    test('IT S9F → (0x14, 0xF)', () {
+    test('IT S9F → (0x17, 0xF)', () {
       final cell = _itDoc(19, 0x9F).patterns.first.rows.first.first;
       expect(cell.effect, kFxSetSoundControl);
       expect(cell.effectParam, 0xF);
       expect(cell.nativeEffect, 19);
     });
 
-    test('reverse: MOD-numbered 0x14 → S3M/IT S9x', () {
+    test('reverse: MOD-numbered 0x17 → S3M/IT S9x', () {
       final s3m =
           parseS3m(convertToS3m(_modSourcedDoc(kFxSetSoundControl, 0xE)));
       final sc = s3m.patterns.first.rows.first.first;
-      expect(sc.command, 19, reason: '0x14 → S letter-command');
+      expect(sc.command, 19, reason: '0x17 → S letter-command');
       expect(sc.info, (0x9 << 4) | 0xE, reason: 'S9E');
     });
 
-    test('moduleExportLossReport no longer lists S9, but still S7', () {
+    test('moduleExportLossReport no longer lists S9 (nor S7)', () {
       // An S9x doc: the export loss no longer names it as an unmapped special.
       final s9Report =
           moduleExportLossReport(_s3mDoc(19, 0x91), ModuleFormat.mod);
@@ -268,10 +268,15 @@ void main() {
         isNot(contains('surround')),
       );
 
-      // S7x (NNA / envelope control) still has no neutral equivalent.
+      // S7x (past-note / NNA control) now maps to kFxSetPastNote too, so it is
+      // likewise no longer named as an unmapped-special drop.
       final s7Report =
           moduleExportLossReport(_s3mDoc(19, 0x71), ModuleFormat.mod);
-      expect(s7Report, contains(ModuleExportLoss.unmappedSpecialEffects));
+      expect(
+        s7Report,
+        isNot(contains(ModuleExportLoss.unmappedSpecialEffects)),
+        reason: 'S7x now maps via kFxSetPastNote',
+      );
     });
   });
 }

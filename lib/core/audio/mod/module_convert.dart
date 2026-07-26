@@ -77,7 +77,11 @@ import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
-    show kFxSetSpeedFull, kFxSetPanbrelloWaveform, kFxSetSoundControl;
+    show
+        kFxSetSpeedFull,
+        kFxSetPanbrelloWaveform,
+        kFxSetPastNote,
+        kFxSetSoundControl;
 
 /// Detects the module container format by signature; null if unrecognized.
 ModuleFormat? sniffModuleFormat(Uint8List bytes) {
@@ -291,8 +295,15 @@ ModuleDoc docFromMod(ModModule m) {
       return (0x13, val);
     case 0x9: // S9x — sound control (surround/reverse) → kFxSetSoundControl
       // Carry the sound-control sub-nibble; the replayer acts on the audible
-      // ones (S90/S91 surround, S9E/S9F reverse) and ignores the rest.
-      return (0x14, val);
+      // ones (S90/S91 surround, S9E/S9F reverse) and ignores the rest. Use the
+      // named constant, NOT a literal — it used to be 0x14, colliding with
+      // kFxSetSpeedFull.
+      return (kFxSetSoundControl, val);
+    case 0x7: // S7x — past-note / NNA control → kFxSetPastNote (0x17)
+      // Carry the S7 sub-nibble; the replayer acts on the implemented ones
+      // (S70/S71/S72 past-note cut/off/fade, S73–S76 set-NNA) and carries the
+      // deferred envelope toggles (S77–S7C) as data.
+      return (kFxSetPastNote, val);
     case 0x6: // S6x — fine pattern delay; EEx is row delay in our engine
     case 0xE: // SEx — coarse pattern delay
       return (0xE, (0xE << 4) | val);
@@ -312,12 +323,10 @@ ModuleDoc docFromMod(ModModule m) {
       //     output filter, cf. the Amiga LED filter), NOT the IT resonant
       //     filter. kFxSetFilter needs a 0..127 cutoff/resonance value; "filter
       //     on" carries no cutoff, so mapping it to Zxx would fabricate one.
-      //   • S7x past-note / NNA / envelope control — instrument-layer state with
-      //     no per-cell neutral command (and no S3M/MOD/XM equivalent).
       //   • SFx set active MIDI macro — MIDI to external gear, no audible target.
-      // (SAx high sample offset → kFxSetHighOffset; S9x surround / reverse
-      // play → kFxSetSoundControl, both above. Names, not numbers — the numbers
-      // in comments here went stale three times in one afternoon.)
+      // (SAx high sample offset → kFxSetHighOffset; S9x surround / reverse play →
+      // kFxSetSoundControl; S7x past-note / NNA control → kFxSetPastNote, all
+      // above. Names, not numbers — the numbers in comments went stale repeatedly.)
       return (0, 0);
   }
 }
@@ -886,6 +895,8 @@ ModuleDoc docFromIt(ItModule m) {
         19,
         (0x9 << 4) | (param & 0xF)
       ); // S9x sound control (surround/rev)
+    case kFxSetPastNote: // 0x16
+      return (19, (0x7 << 4) | (param & 0xF)); // S7x past-note / NNA control
     case 0x10:
       return (22, param.clamp(0, 64)); // V global volume
     case 0x11:

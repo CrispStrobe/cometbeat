@@ -59,8 +59,8 @@ class ModuleExportLoss {
   /// Sxy control sub-commands with no faithful cross-format equivalent — they
   /// survive only a same-format export (S3M→S3M / IT→IT via native provenance).
   static const unmappedSpecialEffects =
-      'Some Sxy control effects are dropped: S0x set-filter toggle, S7x '
-      'NNA/envelope control, SFx MIDI macro.';
+      'Some Sxy control effects are dropped: S0x set-filter toggle, SFx MIDI '
+      'macro.';
 
   /// Cross-format samples are re-encoded to S3M PCM; AdLib/packed data is lost.
   static const s3mSampleReencode =
@@ -90,13 +90,9 @@ class ModuleExportLoss {
 const _s3mItRepresentableEffects = <int>{
   0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xD, 0xF, //
   // Keep in step with the `case` labels of `_fxToLetterEffect`. This is a hand
-  // copy of that switch, so it drifts silently: while the command numbers were
-  // being shuffled it still listed 0x12 (nothing maps there any more, so the
-  // report promised a command would survive when it is dropped) and omitted
-  // 0x15/0x16 (which do survive, so the report warned about a loss that never
-  // happened). Both directions mislead, and neither shows up as a test failure
-  // anywhere else.
-  0x10, 0x11, 0x13, 0x14, 0x15, 0x16, 0x19, 0x1B, 0x1D, 0x1E, 0x1F,
+  // copy of that switch, so it drifts silently — nothing maps at 0x12, while
+  // 0x15 (panbrello wf), 0x16 (sound control) and 0x17 (past-note) all survive.
+  0x10, 0x11, 0x13, 0x14, 0x15, 0x16, 0x17, 0x19, 0x1B, 0x1D, 0x1E, 0x1F,
 };
 
 /// True if [c]'s effect would be dropped when written through the S3M/IT
@@ -125,6 +121,7 @@ const _mappedSpecialSubs = <int>{
   0x4,
   0x5,
   0x6,
+  0x7,
   0x8,
   0x9,
   0xA,
@@ -135,10 +132,11 @@ const _mappedSpecialSubs = <int>{
 };
 
 /// True if [c] carries an S3M/IT `S` letter-command (19) whose sub-command has
-/// no neutral equivalent (S0/S7/SF) — dropped on any cross-format export. (SAx
-/// now maps to kFxSetHighOffset and S9x to kFxSetSoundControl, so neither is
-/// listed here.) Read from the native command, since the neutral effect column
-/// is already `(0, 0)` for these.
+/// no neutral equivalent (S0/SF) — dropped on any cross-format export. (SAx now
+/// maps to kFxSetHighOffset (0x13), S9x to kFxSetSoundControl (0x17), and S7x to
+/// kFxSetPastNote (0x17),
+/// so none is listed here.) Read from the native command, since the neutral
+/// effect column is already `(0, 0)` for these.
 bool _hasUnmappedSpecial(DocCell c) =>
     c.nativeEffect == 19 &&
     !_mappedSpecialSubs.contains((c.nativeEffectParam >> 4) & 0xF);

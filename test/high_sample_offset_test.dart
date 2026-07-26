@@ -219,7 +219,7 @@ void main() {
       expect(sc.info, (0xA << 4) | 0x3, reason: 'SA3');
     });
 
-    test('moduleExportLossReport no longer lists SA, but still S7/SF/Z', () {
+    test('moduleExportLossReport no longer lists SA/S7, but still SF/Z', () {
       // A SAx doc: the export loss no longer names it as an unmapped special.
       final saDoc = _s3mDoc(19, 0xA1);
       final saReport = moduleExportLossReport(saDoc, ModuleFormat.mod);
@@ -235,11 +235,15 @@ void main() {
       );
       expect(ModuleExportLoss.unmappedSpecialEffects, isNot(contains('SA')));
 
-      // S7x (NNA/envelope control) still has no neutral equivalent → reported.
+      // S7x (past-note / NNA control) now maps to kFxSetPastNote → not reported.
       final s7Report =
           moduleExportLossReport(_s3mDoc(19, 0x71), ModuleFormat.mod);
-      expect(s7Report, contains(ModuleExportLoss.unmappedSpecialEffects));
-      // SFx (set MIDI macro) likewise.
+      expect(
+        s7Report,
+        isNot(contains(ModuleExportLoss.unmappedSpecialEffects)),
+        reason: 'S7x now maps via kFxSetPastNote',
+      );
+      // SFx (set MIDI macro) still drops.
       final sfReport =
           moduleExportLossReport(_s3mDoc(19, 0xF1), ModuleFormat.mod);
       expect(sfReport, contains(ModuleExportLoss.unmappedSpecialEffects));
