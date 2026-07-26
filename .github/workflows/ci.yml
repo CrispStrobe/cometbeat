@@ -84,3 +84,66 @@ jobs:
           name: lcov
           path: cometbeat/coverage/lcov.info
           if-no-files-found: warn
+
+  # The app's Android build. Added 2026-07-26, when it first succeeded: it had
+  # been broken by a chain of three unrelated issues (crispembed calling the
+  # Gradle-9-removed Project.exec(), onnxruntime pinning compileSdk 33 against a
+  # dependency needing >=34, and the iOS-side blocker), and because nothing here
+  # ever built Android, all three sat undetected. Guard it so that cannot recur.
+  android-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cometbeat
+        uses: actions/checkout@v5
+        with:
+          path: cometbeat
+
+      - name: Checkout crisp_notation (sibling path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/crisp_notation
+          ref: main
+          path: crisp_notation
+
+      - name: Checkout CrispEmbed (sibling FFI path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/CrispEmbed
+          ref: main
+          path: CrispEmbed
+
+      - name: Checkout onnx_runtime_dart (sibling dev path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/onnx_runtime_dart
+          ref: main
+          path: onnx_runtime_dart
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: cometbeat
+        run: flutter pub get
+
+      - name: Build debug APK
+        working-directory: cometbeat
+        run: flutter build apk --debug
+
+      # The whole point of vendoring the codec: it has to reach the device.
+      - name: The glint encoder is actually in the APK
+        working-directory: cometbeat
+        run: |
+          set -e
+          APK=build/app/outputs/flutter-apk/app-debug.apk
+          unzip -l "$APK" | grep -E 'lib/.*/libglint_vorbis\.so' || {
+            echo "libglint_vorbis.so missing from the APK"; exit 1; }
