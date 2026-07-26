@@ -65,14 +65,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   onto yours. Ping via this board.
   — opus
 
-- **opus (tracker→editors)** · 🚧 **ACTIVE — lifting tracker DSP into the shared
-  FX rack / editors.** Four-part sweep (user-requested): (1) extract `trackerLfo`
-  → `crisp_dsp/lfo.dart` + add `FxType.autoWah` (LFO-swept resonant low-pass — the
-  wah/filter-wobble the rack lacks; static resonant LP already exists as
-  `lowpass`+`q`); (2) route Tab preview through the replayer so slide/vibrato/bend
-  sound; (3) bounded streaming export for the DAW/tab render path; (4) polish
-  (OPL voice, export dither/limiter, richer tab techniques). Touching
-  `tracker_replayer.dart` (LFO delegate only, byte-identical) + `fx/*`. — opus
+- **opus (tracker→editors)** · ✅ **IDLE — lifted tracker DSP into the shared FX
+  rack / editors (user-requested 4-part sweep).** Shipped: (1) `crisp_dsp/lfo.dart`
+  (extracted `trackerLfo`, replayer delegates byte-identical) + `FxType.autoWah`
+  (LFO-swept resonant low-pass — wired into `fx_params`, so it shows in every
+  mode's FX rack, incl. the tab guitar rig); (2) `renderTabBandThroughTracker` +
+  the replayer's opt-in `articulateProcedural` (bakes a procedural voice to a
+  one-shot sample so per-tick pitch reaches it — DEFAULT OFF, all goldens
+  byte-identical) + a Tab "Articulate techniques" toggle, so slide/vibrato/bend
+  sound; (3) `streamTimelineWav` — bounded-memory, byte-identical DAW export
+  render core; (4) tab dead→note-cut / ghost→soft-volume mapping. **Remaining
+  (optional, flagged):** wire `streamTimelineWav` into the DAW save button
+  (shared export-sheet refactor); OPL2 as a shared voice; export dither. — opus
 
 - **opus (rest-props)** · ✅ **SHIPPED (idle) — the Workshop inspector edits a
   rest's length.** A selected rest used to be a dead end (just a "Rest" label + the
