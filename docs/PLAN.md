@@ -43,6 +43,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (cello-positions)** · 🚧 **ACTIVE — the cello games beyond first position.**
+  `cello_first_position.dart` is a hand-typed 16-note table, so the Cello Corner's
+  finger quiz and "Play it" can only ever ask about first position. The arranger's
+  frame model already knows every position, so the note pool becomes DERIVED
+  (`celloNotesInPosition(n)`) with first position asserted equal to the hand-typed
+  table — the book stays the oracle, the geometry does the work. Adds a position
+  selector (1–4) to those two games. **No hot shared files:** new
+  `features/games/cello/cello_positions.dart` + the two cello screens; **no ARB**
+  (reuses the existing `tabPatternPosition` = "Position"), **no `game_registry.dart`**
+  (a selector inside the existing tiles, not new tiles), `cello_first_position.dart`
+  read-only. Worktree `../mus-cello-fingering`.
+
 - **opus (cello-fingering)** · ✅ **SHIPPED (idle) — auto-assigned cello fingerings,
   now on the cello play-along.** Step 1 (the arranger) is the bowed twin of the
   guitar tab arranger: same Sayegh/Viterbi optimum path, but the hidden state is a
