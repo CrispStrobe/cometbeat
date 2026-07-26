@@ -349,7 +349,6 @@ void main() {
         //
         // The licence-restricted modules are real music and DO gate.
         const reportOnly = {
-          'musical.mod',
           'golden.mod',
           'golden.xm',
           'golden.it',
@@ -484,22 +483,54 @@ void main() {
               // filtering, so this is a "still playing the same notes" gate,
               // not a fidelity score.
               if (strict) {
+                // Thresholds set from MEASURED values on musical.mod (spectral
+                // 0.920, level +3.8 dB, detune -17.1 cents), loose enough that
+                // two independent engines may differ in interpolation,
+                // envelopes and filtering — and still tight enough to have
+                // caught the loop-rescaling bug, which drove spectral to 0.746
+                // and level to -14.2 dB. A gate that would not have caught the
+                // last real bug is decoration.
                 expect(
                   cmp.spectral,
-                  greaterThan(0.5),
+                  greaterThan(0.85),
                   reason: 'spectra diverged ($cmp) — a tuning, sample-mapping '
                       'or envelope regression, not just a level difference',
                 );
+                expect(
+                  cmp.levelDb.abs(),
+                  lessThan(8.0),
+                  reason: 'level drifted ($cmp) — mixing or per-channel gain',
+                );
+                // NaN means the metric declined to answer; that is not a
+                // failure, and asserting on it would turn "no evidence" into a
+                // red.
+                if (!cmp.detune.isNaN) {
+                  expect(
+                    cmp.detune.abs(),
+                    lessThan(35.0),
+                    reason: 'tuning drifted ($cmp) — we already sit ~17 cents '
+                        'flat of OpenMPT; this catches it getting worse',
+                  );
+                }
               }
 
-              // Acceptable threshold: < 10 dB difference for minimal fixtures
-              // (Real modules should be < 3 dB; minimal fixtures have edge cases)
-              expect(
-                rmsDiffDb.abs(),
-                lessThan(10.0),
-                reason: 'Audio differs too much from OpenMPT reference '
-                    '($rmsDiffDb dB). Possible instrument or mixing regression.',
-              );
+              // Report-only fixtures must not gate on THIS either — it was the
+              // one assertion left outside the `strict` check, so golden.xm
+              // still failed it at 10.19 dB on material that is a single note
+              // playing a five-sample waveform. Note this is the NORMALISED
+              // difference, which is why it reads -10 dB where levelDeltaDb
+              // reads +9.45: it cannot see level at all (see `levelDeltaDb`).
+              if (strict) {
+                // Acceptable threshold: < 10 dB difference for minimal fixtures
+                // (Real modules should be < 3 dB; minimal ones have edge cases)
+                expect(
+                  rmsDiffDb.abs(),
+                  lessThan(10.0),
+                  reason: 'Audio differs too much from OpenMPT reference '
+                      '($rmsDiffDb dB). Possible instrument or mixing '
+                      'regression.',
+                );
+              }
             },
             // Generous on purpose. Each case does a full OFFLINE render of a
             // real module on both sides plus an FFT comparison, and the corpus
