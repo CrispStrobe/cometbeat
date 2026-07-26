@@ -44,7 +44,19 @@ Pending, in order:
    exports a fingered copy through the standard export sheet). The `T` glyph this
    bullet once waited on is in the library now, so thumb position engraves too.
    **Everything in this bullet is shipped; what remains in the arc is 2 and 3.**
-2. **More labels (the real lever).** Dense cello fingering barely exists: the
+2. **More labels — MEASURED, and the approach changed (2026-07-26 spike).** Our OMR
+   cannot carry fingerings *by construction*: it is the SMT model emitting `bekern` →
+   Humdrum `**kern`, and no fingering exists in that vocabulary or in our kern reader,
+   so scans would return notes and nothing else. Measured on self-rendered lines with
+   exact ground truth: tesseract with a `0-4` whitelist reads **0/8 lines exact,
+   9/64 digits**; and naive isolation ("everything above the top staff line") gets the
+   blob count right on **1/8** lines, because high notes put noteheads, stems and
+   ledger lines in that same band. Isolating fingering glyphs therefore needs real
+   layout analysis — which is a purpose-built OMR's job, not ours. **Route: Audiveris
+   (it has a fingering-digits topic) on long-PD method books, one measured trial
+   before any bulk download — and it needs consent for IMSLP's human-attestation
+   gate. Otherwise close this item, and item 3 with it.** Original assessment follows.
+2. ~~**More labels (the real lever).**~~ Dense cello fingering barely exists: the
    entire 42k-score corpus yields **193 printed fingers** on 4 files, and no public
    cello fingering dataset exists at all. The one avenue with volume is OMR over
    long-PD fingered method books (Dotzauer, Duport, Kummer, Lee, Franchomme,

@@ -155,17 +155,32 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-omr-spike)** · 🔬 **SPIKE (throwaway, measuring) — can a fingering
-  digit be READ off an engraved staff?** Item 2 of the cello arc assumed "get PD
-  scans, run OMR". That assumption is **wrong by construction**: our OMR is the SMT
-  model emitting `bekern` → Humdrum `**kern`, and neither the token vocabulary nor
-  our kern reader has any fingering representation at all — so scans would come back
-  with notes and no fingerings, and the acquisition would buy nothing. The real
-  question is therefore whether a separate DIGIT pass is feasible, and that can be
-  measured with no acquisition at all: we can render fingered parts ourselves, so the
-  ground truth is exact. Measuring with the tesseract already on this machine
-  (`/opt/homebrew/bin`) against our own renders. Throwaway — no product code unless
-  the number justifies it. Worktree `../mus-cello-fingering`.
+- **opus (cello-omr-spike)** · 🔬 **SPIKE DONE (throwaway, measured) — item 2 must
+  NOT be built in-house; it needs Audiveris + real scans, or it is closed.** Three
+  findings, cheapest first:
+  **(1) Structural, decisive, cost nothing.** Our OMR is the SMT model emitting
+  `bekern` → Humdrum `**kern`, and neither the token vocabulary nor our kern reader
+  has ANY fingering representation. So the plan as written — "get PD scans, run our
+  OMR" — buys notes and zero fingerings. That alone re-scopes item 2.
+  **(2) Off-the-shelf OCR does not read them.** I rendered 8 fingered cello lines
+  (exact ground truth, since we engrave them ourselves) and ran the tesseract on this
+  machine with a `0-4` whitelist: **0/8 lines exact, 9/64 digits positionally
+  correct** even after cropping to the band above the staff. Music-font fingering
+  glyphs are isolated stylised marks, not text lines; tesseract is the wrong tool.
+  **(3) And you cannot cheaply isolate them either.** The obvious trick — take
+  everything above the top staff line and segment blobs — gives the right blob count
+  on **1/8** lines, because for high notes the noteheads, stems and ledger lines are
+  in that same band. Separating the fingering strip needs staff/notehead/stem
+  removal, i.e. real layout analysis — precisely what a purpose-built OMR does and
+  what we would otherwise be reimplementing.
+  **⇒ Recommendation:** if fingering labels are wanted, the route is **Audiveris**
+  (it has an optional *fingering digits* recognition topic) run over long-PD method
+  books — which still needs the maintainer's consent for the IMSLP human-attestation
+  gate, and is worth one measured trial before any bulk download. If that is not
+  wanted, **close item 2**, and item 3 (fitting HMM tables) closes with it, since 193
+  labels cannot train anything. Everything else in the arc is shipped. No product
+  code from this spike; the numbers above are the deliverable, and they are MY crude
+  pipeline's, not a verdict on Audiveris.
 
 - **opus (cello-bowing)** · ✅ **SHIPPED (idle) — bowing marks** (`9587b9ba`).
   The song screen's cello toggle now marks up all three things a teacher writes on
