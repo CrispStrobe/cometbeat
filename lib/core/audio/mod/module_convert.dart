@@ -287,6 +287,8 @@ ModuleDoc docFromMod(ModModule m) {
       return (0xE, (0x7 << 4) | val);
     case 0x5: // S5x — set panbrello waveform → kFxSetPanbrelloWaveform (0x12)
       return (0x12, val);
+    case 0xA: // SAx — high sample offset → kFxSetHighOffset (0x13)
+      return (0x13, val);
     case 0x6: // S6x — fine pattern delay; EEx is row delay in our engine
     case 0xE: // SEx — coarse pattern delay
       return (0xE, (0xE << 4) | val);
@@ -310,9 +312,8 @@ ModuleDoc docFromMod(ModModule m) {
       //     no per-cell neutral command (and no S3M/MOD/XM equivalent).
       //   • S9x sound control (surround / reverse play) — the replayer has no
       //     surround or reverse-playback state.
-      //   • SAx high sample offset — modifies a FOLLOWING Oxx; kFxSampleOffset
-      //     keeps no high-offset memory, so SAx alone has no standalone effect.
       //   • SFx set active MIDI macro — MIDI to external gear, no audible target.
+      // (SAx high sample offset now maps → kFxSetHighOffset (0x13) above.)
       return (0, 0);
   }
 }
@@ -871,6 +872,8 @@ ModuleDoc docFromIt(ItModule m) {
       return (15, param); // O sample offset
     case 0x12:
       return (19, (0x5 << 4) | (param & 0xF)); // S5x set panbrello waveform
+    case 0x13:
+      return (19, (0xA << 4) | (param & 0xF)); // SAx high sample offset
     case 0x10:
       return (22, param.clamp(0, 64)); // V global volume
     case 0x11:

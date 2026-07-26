@@ -145,14 +145,17 @@ void main() {
       );
     });
 
-    test('S7/S9/SA are still reported as unmapped specials', () {
-      // S7x (past-note/NNA) still has no neutral equivalent.
+    test('S7/S9/SF are still reported as unmapped specials', () {
+      // S7x (past-note/NNA) still has no neutral equivalent. (SA high sample
+      // offset now maps → kFxSetHighOffset; see high_sample_offset_test.dart.)
       final report =
           moduleExportLossReport(_s3mSpecialDoc(0x72), ModuleFormat.mod);
       expect(report, contains(ModuleExportLoss.unmappedSpecialEffects));
-      for (final s in const ['S7', 'S9', 'SA']) {
+      for (final s in const ['S7', 'S9', 'SF']) {
         expect(ModuleExportLoss.unmappedSpecialEffects, contains(s));
       }
+      // SA is no longer named as a drop (it maps now).
+      expect(ModuleExportLoss.unmappedSpecialEffects, isNot(contains('SA')));
     });
 
     test('the IT Zxx filter/MIDI drop (Z) is still surfaced', () {

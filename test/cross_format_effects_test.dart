@@ -198,13 +198,13 @@ void main() {
     // Every remaining special sub-command that GENUINELY has no faithful
     // neutral/replayer equivalent (verified against the IT/ST3 spec):
     //   S0 set-filter toggle · S7 NNA/envelope control · S9 surround/reverse ·
-    //   SA high sample offset · SF set MIDI macro.
-    // (S5 panbrello waveform now maps → see panbrello_waveform_test.dart.)
+    //   SF set MIDI macro.
+    // (S5 panbrello waveform now maps → see panbrello_waveform_test.dart; SA
+    //  high sample offset now maps → see high_sample_offset_test.dart.)
     const droppedSubs = {
       0x0: 'S0 (set filter on/off)',
       0x7: 'S7 (NNA / envelope control)',
       0x9: 'S9 (surround / reverse)',
-      0xA: 'SA (high sample offset)',
       0xF: 'SF (set MIDI macro)',
     };
 

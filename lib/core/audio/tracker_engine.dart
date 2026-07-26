@@ -881,6 +881,11 @@ class SampleInstrument implements TrackerInstrument {
 
       // 9xx sample offset (classic MOD): start the sample at param×256. Read from
       // the triggering cell's effect column; the cells already carry it here.
+      // This offline note-run path has no per-channel high-offset memory, so it
+      // only ever renders the plain 9xx (high-offset 0). A channel carrying an
+      // S3M/IT `SAx` (kFxSetHighOffset) is routed to the tick-voice path by
+      // _hasPerTickEffect, where ReplayVoice.sampleReadStart combines the high
+      // offset — keeping this path byte-identical to its pre-SAx behaviour.
       final trigger = cells[startStep];
       final offset = trigger.fxCmd == 0x9
           ? (trigger.fxParam * 256 * offsetScale).round()

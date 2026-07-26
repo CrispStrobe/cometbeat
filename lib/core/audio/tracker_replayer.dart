@@ -172,6 +172,19 @@ const double kPanbrelloDepthPerUnit = 1 / 15;
 /// no MOD/XM equivalent, so cross-format importers map `S5x` here.
 const int kFxSetPanbrelloWaveform = 0x12;
 
+/// `SAx` — set the HIGH byte of the sample-start offset (S3M/IT special
+/// sub-command `S A x`). It seeds a per-channel high-offset MEMORY that a
+/// SUBSEQUENT [kFxSampleOffset] (`9xx`) combines with, following the IT/OpenMPT
+/// convention: the effective start = `(highOffset << 16) | (param9xx << 8)`
+/// samples — the `9xx` param is the MIDDLE byte (`param × 256`) and `SAx` adds
+/// the HIGH byte (`x × 65536`). The memory persists per channel until another
+/// `SAx` changes it (effect memory), and is honoured by the sample tick voices
+/// via [ReplayVoice.sampleReadStart]. S3M/IT-only (no MOD/XM equivalent), so
+/// cross-format importers map `SAx` here; with a 0 high-offset a plain `9xx`
+/// render is byte-identical to the classic behaviour. The next free command
+/// code after [kFxSetPanbrelloWaveform] (0x12).
+const int kFxSetHighOffset = 0x13;
+
 /// Zxx — set the resonant low-pass FILTER (IT effect 'Z'): `Z00..Z7F` set the
 /// cutoff (the param IS the 0..127 cutoff), `Z80..ZFF` set the resonance (param
 /// `& 0x7F`). Decoded per-voice in [ReplayVoice.armRow]; applied by the sample
@@ -362,6 +375,13 @@ class ReplayVoice {
   int _memTremor = 0; // Txy param (x = on ticks, y = off ticks)
   int _memPanbrelloSpeed = 0;
   int _memPanbrelloDepth = 0;
+
+  /// Sample-start HIGH offset (S3M/IT `SAx`, [kFxSetHighOffset]): the HIGH part
+  /// of the start offset a subsequent `9xx` ([kFxSampleOffset]) uses. Persists
+  /// per channel (effect memory) until another `SAx` sets it; 0 = the classic
+  /// `9xx` behaviour. See [sampleReadStart].
+  int _highOffset = 0;
+  int get highOffset => _highOffset;
 
   // LFO waveform select (E4x/E7x + S5x panbrello) + glissando control (E3x) —
   // persist across rows (and streaming chunks) like a real tracker's per-channel
@@ -757,6 +777,11 @@ class ReplayVoice {
         // S5x — persistent panbrello LFO waveform (0 sine/1 saw/2 square), like
         // the vibrato E4x / tremolo E7x waveform selects.
         _panbrelloWave = _param & 0xF;
+      case kFxSetHighOffset:
+        // SAx — SET the sample-start high-offset memory (a direct set, so a 0
+        // param is meaningful — it clears it). A subsequent 9xx combines it in
+        // [sampleReadStart]. Persists per channel until the next SAx.
+        _highOffset = _param;
       case kFxExtended:
         // One-time (tick-0) extended commands: fine porta and fine volume.
         switch (_exSub) {
@@ -788,6 +813,22 @@ class ReplayVoice {
   bool get retriggeredThisRow => _retriggered;
 
   bool get releasedThisRow => _releasedThisRow;
+
+  /// The sample read-start (in samples, BEFORE the instrument's [offsetScale])
+  /// for a freshly (re)triggered note carrying [cell]. Combines the `9xx`
+  /// ([kFxSampleOffset]) low/middle byte with the persistent `SAx`
+  /// ([kFxSetHighOffset]) high-offset memory, per the IT/OpenMPT convention:
+  ///   startSample = (highOffset << 16) | (param << 8)
+  /// i.e. the `9xx` param is the middle byte (`param × 256`) and `SAx` adds the
+  /// high byte (`x × 65536`). Returns 0 for a cell not carrying `9xx`. When the
+  /// high-offset memory is 0 this reduces to exactly `param × 256 × offsetScale`
+  /// — so a render with no preceding `SAx` is byte-identical to the classic
+  /// behaviour. Valid after [armRow] (which updates the high-offset memory).
+  double sampleReadStart(TrackerCell cell, double offsetScale) {
+    if (cell.fxCmd != kFxSampleOffset) return 0.0;
+    final start = (_highOffset << 16) | (cell.fxParam << 8);
+    return start * offsetScale;
+  }
 
   /// Advance one tick [k] (0-based within the row) and return the effective
   /// (pitch, volume0to64) to synthesize this tick. [ticksPerRow] is the row's
@@ -1097,7 +1138,9 @@ Float64List renderChannelPerNote(
 /// Whether [cells] carry any PER-TICK pitch/volume effect (porta/tone-porta/
 /// vibrato/tremolo/vol-slide/set-volume/arpeggio/extended) — the ones that need
 /// the tick voice to sound. Flow (Bxx/Dxx/E6x) and 9xx are handled elsewhere and
-/// don't count here.
+/// don't count here. SAx (kFxSetHighOffset) DOES count: it seeds the per-channel
+/// high-offset memory a later 9xx reads, so its channel must run the tick voice
+/// (armRow) even if it carries no other per-tick effect.
 bool _hasPerTickEffect(List<TrackerCell> cells) {
   for (final c in cells) {
     final cmd = c.fxCmd;
@@ -1115,6 +1158,7 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
         cmd == kFxPanbrello ||
         cmd == kFxSetPanbrelloWaveform ||
         cmd == kFxSetFilter ||
+        cmd == kFxSetHighOffset ||
         cmd == kFxExtended) {
       return true;
     }
@@ -1290,9 +1334,7 @@ double? readLoopedSampleForTest(
           cur.nativeFilterEnvelope,
         );
       }
-      readPos = cell.fxCmd == kFxSampleOffset
-          ? (cell.fxParam * 256 * os).toDouble()
-          : 0.0;
+      readPos = voice.sampleReadStart(cell, os);
       noteStartSample = rowStart[r];
     }
     if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
@@ -1491,8 +1533,7 @@ void _renderSampleChannelInto(
           cur.nativeFilterEnvelope,
         );
       }
-      readPos =
-          c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
+      readPos = voice.sampleReadStart(c, os);
       noteStartSample = timing.stepStartSample(r);
     }
     if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
@@ -1652,8 +1693,7 @@ void _renderSampleChannelIntoVariable(
           cur.nativeFilterEnvelope,
         );
       }
-      readPos =
-          c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
+      readPos = voice.sampleReadStart(c, os);
       noteStartSample = rowStart[r];
     }
     if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
@@ -4915,8 +4955,7 @@ void _sampleRenderRowsMono(
           scur.nativeFilterEnvelope,
         );
       }
-      st.readPos =
-          c.fxCmd == kFxSampleOffset ? (c.fxParam * 256 * os).toDouble() : 0.0;
+      st.readPos = voice.sampleReadStart(c, os);
       st.noteStartSample = rowStart[r];
     }
     final cur = st.cur;
@@ -5059,9 +5098,7 @@ void _sampleRenderRowsStereo(
           scur.nativeFilterEnvelope,
         );
       }
-      st.readPos = cell.fxCmd == kFxSampleOffset
-          ? (cell.fxParam * 256 * os).toDouble()
-          : 0.0;
+      st.readPos = voice.sampleReadStart(cell, os);
       st.noteStartSample = rowStart[r];
     }
     final cur = st.cur;
@@ -5695,9 +5732,7 @@ void _zoneRunRenderChunkStereo(
       if (voice.releasedThisRow) run.releaseStartSample = rowStart[r];
       if (voice.retriggeredThisRow) {
         final os = cur.offsetScale;
-        run.readPos = cell.fxCmd == kFxSampleOffset
-            ? (cell.fxParam * 256 * os).toDouble()
-            : 0.0;
+        run.readPos = voice.sampleReadStart(cell, os);
         run.noteStartSample = rowStart[r];
       }
       if (!voice.active && !voice.released && !voice.hasPendingNote) continue;
@@ -5842,9 +5877,7 @@ void _zoneRunRenderChunkMono(
       if (voice.releasedThisRow) run.releaseStartSample = rowStart[r];
       if (voice.retriggeredThisRow) {
         final os = cur.offsetScale;
-        run.readPos = cell.fxCmd == kFxSampleOffset
-            ? (cell.fxParam * 256 * os).toDouble()
-            : 0.0;
+        run.readPos = voice.sampleReadStart(cell, os);
         run.noteStartSample = rowStart[r];
       }
       if (!voice.active && !voice.released && !voice.hasPendingNote) continue;
