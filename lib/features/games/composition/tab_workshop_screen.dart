@@ -24,6 +24,7 @@ import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart';
+import 'package:comet_beat/features/games/composition/tab_chord_builder.dart';
 import 'package:comet_beat/features/games/composition/tab_chords.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_fx.dart';
@@ -635,6 +636,13 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
         name == null ? null : kGuitarChords[name],
       ),
     );
+  }
+
+  /// Attach an arbitrary [diagram] (e.g. one the chord builder voiced from a
+  /// root + quality) to the selected column, voicing its playable frets.
+  void _setChordDiagram(ChordDiagram? diagram) {
+    _snapshot();
+    setState(() => _doc.setChordVoicing(_selCol, diagram));
   }
 
   @override
@@ -2604,56 +2612,133 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   /// the selected column (or clears it).
   Future<void> _pickChord() async {
     final l10n = AppLocalizations.of(context)!;
+    // Chord-builder selection (root pitch class + quality index).
+    var buildRoot = 0;
+    var buildQuality = 0;
+    ChordDiagram builtDiagram() {
+      final (label, intervals) = kChordQualities[buildQuality];
+      return chordVoicing(
+        _doc.tuning,
+        buildRoot,
+        intervals,
+        name: chordName(buildRoot, label),
+      );
+    }
+
     final picked = await showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n.tabChordPick,
-                style: Theme.of(ctx).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  for (final entry in kGuitarChords.entries)
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Tap the diagram to attach it…
-                        InkWell(
-                          onTap: () => Navigator.of(ctx).pop(entry.key),
-                          child: ChordDiagramView(entry.value),
-                        ),
-                        // …or hear it first, without closing the picker.
-                        TextButton.icon(
-                          icon: const Icon(Icons.play_arrow, size: 16),
-                          label: Text(l10n.tabPatternPreview),
-                          onPressed: () =>
-                              _previewColumns(strumColumns(entry.value, _dur)),
-                        ),
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.tabChordPick,
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final entry in kGuitarChords.entries)
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Tap the diagram to attach it…
+                          InkWell(
+                            onTap: () => Navigator.of(ctx).pop(entry.key),
+                            child: ChordDiagramView(entry.value),
+                          ),
+                          // …or hear it first, without closing the picker.
+                          TextButton.icon(
+                            icon: const Icon(Icons.play_arrow, size: 16),
+                            label: Text(l10n.tabPatternPreview),
+                            onPressed: () => _previewColumns(
+                              strumColumns(entry.value, _dur),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const Divider(height: 24),
+                // Build ANY chord: root + quality → a voicing on this tuning.
+                Text(
+                  'Build a chord',
+                  style: Theme.of(ctx).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    DropdownButton<int>(
+                      value: buildRoot,
+                      onChanged: (v) => setSheet(() => buildRoot = v ?? 0),
+                      items: [
+                        for (var i = 0; i < kChordRoots.length; i++)
+                          DropdownMenuItem(
+                            value: i,
+                            child: Text(kChordRoots[i]),
+                          ),
                       ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                icon: const Icon(Icons.clear),
-                label: Text(l10n.tabChordNone),
-                onPressed: () => Navigator.of(ctx).pop(''),
-              ),
-            ],
+                    const SizedBox(width: 12),
+                    DropdownButton<int>(
+                      value: buildQuality,
+                      onChanged: (v) => setSheet(() => buildQuality = v ?? 0),
+                      items: [
+                        for (var i = 0; i < kChordQualities.length; i++)
+                          DropdownMenuItem(
+                            value: i,
+                            child: Text(kChordQualities[i].$1),
+                          ),
+                      ],
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: l10n.tabPatternPreview,
+                      icon: const Icon(Icons.play_arrow),
+                      onPressed: () =>
+                          _previewColumns(strumColumns(builtDiagram(), _dur)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ChordDiagramView(builtDiagram()),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    chordName(
+                      buildRoot,
+                      kChordQualities[buildQuality].$1,
+                    ),
+                  ),
+                  onPressed: () {
+                    _setChordDiagram(builtDiagram());
+                    Navigator.of(ctx).pop(); // applied already
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  icon: const Icon(Icons.clear),
+                  label: Text(l10n.tabChordNone),
+                  onPressed: () => Navigator.of(ctx).pop(''),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
-    if (picked == null) return;
+    if (picked == null) return; // builder applied inline, or dismissed
     setChordByName(picked.isEmpty ? null : picked);
   }
 
