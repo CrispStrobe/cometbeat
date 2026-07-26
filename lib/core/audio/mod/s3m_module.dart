@@ -1,8 +1,8 @@
 // lib/core/audio/mod/s3m_module.dart
 //
-// Model + format contract for the Scream Tracker 3 `.s3m` reader (implemented in
-// s3m_reader.dart). Pure Dart. Read-only for now (the module ecosystem has no
-// reusable writers — see docs/TRACKER_HANDOVER.md §6).
+// Model + format contract for Scream Tracker 3 `.s3m`, read by s3m_reader.dart
+// and WRITTEN by s3m_writer.dart (`writeS3m`, round-trip-verified:
+// `parseS3m(writeS3m(parseS3m(golden.s3m)))`). Pure Dart.
 //
 // ─── S3M byte layout (little-endian; the authoritative contract) ─────────────
 // HEADER (96 bytes @ 0x00):
