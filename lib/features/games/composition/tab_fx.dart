@@ -99,12 +99,12 @@ Float64List renderTabBandWithFx(
 /// only the note-rendering voice differs. The tracker renders at [kSampleRate],
 /// so the FX chain and any caller mixing this buffer must assume that rate.
 ///
-/// CAVEAT — the pitch techniques (vibrato/bend/slide) are audible only for a
-/// SAMPLE-backed [instrument]. The replayer's per-tick pitch engine resamples
-/// sample PCM, but a PROCEDURAL voice (the tab's default plucked-string, or any
-/// FM/sfxr voice) is rendered at a fixed pitch, so for those this plays the
-/// notes correctly but the pitch techniques are inaudible — identical to the dry
-/// path, never worse. Volume-oriented effects are unaffected.
+/// Techniques are audible for BOTH sample and procedural voices: it opts into
+/// the replayer's `articulateProcedural` path, which bakes a procedural voice
+/// (the tab's default plucked string, or any FM/sfxr voice) to a one-shot sample
+/// so the per-tick pitch engine can apply vibrato/bend/slide to it. That baking
+/// is a sampler tradeoff (pitch-independent timbre; a note held past the
+/// reference render decays out) — the right call for a preview.
 Float64List renderTabBandThroughTracker(
   List<TabTrack> tracks,
   TrackerInstrument instrument, {
@@ -126,7 +126,9 @@ Float64List renderTabBandThroughTracker(
       capo: capo + track.capo,
       tempoBpm: bpm,
     );
-    var pcm = _int16ToFloat64(replaySong(result.song).pcm);
+    var pcm = _int16ToFloat64(
+      replaySong(result.song, articulateProcedural: true).pcm,
+    );
     if (track.fxChain.isNotEmpty) {
       pcm = applyFxChain(pcm, track.fxChain, kSampleRate);
     }

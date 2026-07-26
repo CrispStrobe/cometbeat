@@ -79,18 +79,21 @@ void main() {
     }
   });
 
-  test('a procedural (plucked-string) voice plays but drops pitch techniques',
-      () {
+  test('a procedural (plucked-string) voice now hears pitch techniques', () {
+    // The default tab voice is procedural; the replayer's articulateProcedural
+    // path bakes it to a one-shot sample so vibrato reaches its pitch.
     const pluck = KarplusInstrument('tabString');
     final dry = renderTabBandThroughTracker(_band(_note(const {})), pluck);
     final vib = renderTabBandThroughTracker(
       _band(_note(const {TabTechnique.vibrato})),
       pluck,
     );
-    expect(dry, isNotEmpty, reason: 'the note still plays');
-    // Documented limitation: identical, because per-tick pitch is not applied
-    // to a procedural voice. This test pins that so a future fix flips it.
-    expect(_maxDiff(dry, vib), 0.0);
+    expect(dry, isNotEmpty);
+    expect(
+      _maxDiff(dry, vib),
+      greaterThan(0.01),
+      reason: 'baked-sample path must apply vibrato to a procedural voice',
+    );
   });
 
   test('output is finite and bounded', () {

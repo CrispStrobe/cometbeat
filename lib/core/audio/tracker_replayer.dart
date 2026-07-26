@@ -2029,9 +2029,47 @@ void _renderSampleChannelIntoVariable(
   );
 }
 
+/// Bakes a PROCEDURAL [inst] (a non-sample, non-additive voice — plucked string,
+/// FM, sfxr, subtractive) into a one-shot [SampleInstrument] so the per-tick
+/// sample voice ([_renderSampleChannelInto]) can apply pitch/volume effects to
+/// it. Renders ONE reference note — the channel's first sounding pitch, else
+/// middle C — across [timing], then roots that PCM at the reference MIDI.
+///
+/// This is a sampler tradeoff, and deliberately opt-in: the baked voice's timbre
+/// becomes pitch-independent (a real instrument's does not), and a note held
+/// longer than the reference render decays to silence. For a technique-
+/// articulated preview that is the right tradeoff; for a faithful offline render
+/// the caller leaves `articulateProcedural` off and the whole-channel render is
+/// used instead.
+SampleInstrument _bakeProceduralToSample(
+  TrackerInstrument inst,
+  List<TrackerCell> cells,
+  TrackerTiming timing,
+) {
+  var refMidi = 60;
+  for (final c in cells) {
+    final m = c.midi;
+    if (m != null && m > 0) {
+      refMidi = m;
+      break;
+    }
+  }
+  // One sustained reference note for the whole pattern, so any note the sample
+  // voice later plays is covered by the baked PCM.
+  final refCells = <TrackerCell>[
+    TrackerCell(midi: refMidi),
+    ...List<TrackerCell>.filled(cells.length - 1, TrackerCell.empty),
+  ];
+  final pcm = inst.renderChannel(refCells, timing);
+  return SampleInstrument('baked_${inst.id}', pcm, baseMidi: refMidi);
+}
+
 /// Renders one channel's [cells] into [mix] starting at [sampleOffset]. Additive
 /// voices synthesize per tick (honouring commands); other instruments fall back
 /// to the offline whole-channel render (unit-peak × gain), so they still sound.
+///
+/// [articulateProcedural] (default off) opts a procedural voice into the baked-
+/// sample tick path so its per-tick techniques sound — see the branch below.
 void _renderChannelInto(
   Float64List mix,
   TrackerChannel channel,
@@ -2040,6 +2078,7 @@ void _renderChannelInto(
   int ticksPerRow,
   int sampleOffset, {
   List<TrackerInstrument>? pool,
+  bool articulateProcedural = false,
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
 
@@ -2073,6 +2112,33 @@ void _renderChannelInto(
         ticksPerRow,
         sampleOffset,
         pool: pool,
+      );
+      return;
+    }
+    // Opt-in ([articulateProcedural], default OFF so every module/tracker render
+    // stays byte-identical): a PROCEDURAL voice (plucked/FM/sfxr — rendered at a
+    // FIXED pitch by its whole-channel render, so per-tick pitch/volume effects
+    // are otherwise silent) is BAKED to a one-shot sample and routed through the
+    // sample tick voice, so its techniques (vibrato/porta/tremolo/…) actually
+    // sound. The tab "articulate techniques" preview turns this on.
+    if (articulateProcedural &&
+        channel.instrument is! SampleInstrument &&
+        channel.instrument is! MultiSampleInstrument &&
+        _hasPerTickEffect(cells)) {
+      final baked = TrackerChannel(
+        id: channel.id,
+        instrument: _bakeProceduralToSample(channel.instrument, cells, timing),
+        rows: cells.length,
+        gain: channel.gain,
+        volumeEnvelope: channel.volumeEnvelope,
+      );
+      _renderSampleChannelInto(
+        mix,
+        baked,
+        cells,
+        timing,
+        ticksPerRow,
+        sampleOffset,
       );
       return;
     }
@@ -4008,6 +4074,7 @@ ReplayResult replaySong(
   TrackerSong song, {
   int ticksPerRow = kDefaultTicksPerRow,
   PcmDither? dither,
+  bool articulateProcedural = false,
 }) {
   song.syncCurrent();
   // A MID-SONG tempo/speed change needs per-row durations — render that first
@@ -4051,6 +4118,7 @@ ReplayResult replaySong(
         ticks,
         sampleOffset,
         pool: song.instruments,
+        articulateProcedural: articulateProcedural,
       );
     }
   }
