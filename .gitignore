@@ -63,3 +63,6 @@ test/fixtures/wild_local.*
 # committed; fetched by bin/fetch_wild_modules.dart, tested by module_wild_test.
 test/fixtures/wild/
 native/glint/src/.testbuild/
+
+# Android NDK/CMake build output (externalNativeBuild). Never commit it.
+.cxx/

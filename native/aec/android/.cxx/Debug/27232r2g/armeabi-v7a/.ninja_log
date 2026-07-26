@@ -1,5 +1,0 @@
-# ninja log v5
-0	78	1785051334297373220	CMakeFiles/aec_fullduplex.dir/aec_dsp.c.o	8fd96532f1b5a129
-0	91	1785051334311004956	CMakeFiles/aec_fullduplex.dir/aec_shim.c.o	8ce4c7aed9a6643e
-0	929	1785051335138198807	CMakeFiles/aec_fullduplex.dir/miniaudio_impl.c.o	37ca4452205fe3d3
-929	983	1785051335201070728	/Users/christianstrobele/code/mus-glint-encoder/build/aec_fullduplex/intermediates/cxx/Debug/27232r2g/obj/armeabi-v7a/libaec_fullduplex.so	fff4a9b9001de39d
