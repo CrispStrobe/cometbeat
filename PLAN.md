@@ -687,11 +687,29 @@ live-loop surface (quick start, layer parts, record a voice, arrange sections).
   cutoff/resonance + Zxx, per-voice biquad, gated so non-filter songs stay
   byte-identical); 4-point Catmull-Rom interpolation in the tick path (was linear);
   MultiPLAY-style note-on soft-start + hard-cut residue anti-click. Oracle A/B
-  unchanged (no regression). **Still open:** TPDF dither at the Int16 cast (opt-in
-  — adds noise / reproducibility considerations); 2× oversampling before the filter;
-  IT filter ENVELOPE + `\x87` MIDI-macro filter; and the last non-streaming path
-  (short/mono/flow native multi-sample songs — already <500 MB, a separate
-  byte-identical follow-up). Original v2 plan retained below for reference.
+  unchanged (no regression).
+
+  **Polish round SHIPPED (2026-07-26):** MOD tag-alias preservation
+  (OCTA/FLT8/CD81/M!K!); IT filter cutoff **envelope**; IT **MIDI-macro** filter
+  (F0F0 cutoff/resonance); **opt-in deterministic TPDF dither** (`--dither`,
+  default off = byte-identical); finished **cross-format Sxy** mapping + accurate
+  export-loss report (S0/S5/S7/S9/SA/Z verified genuinely unmappable, named in the
+  report); **streamed the last native path** (long mono native-NNA now <500 MB —
+  a 17.9-min song 264 MB flat); **OPL2 waveform-select + connection topology** for
+  AdLib synthesis; **velocity-range + non-sample multi-sample zones** (model +
+  render + editor). All corpus-byte-identical where required, oracle-gated where
+  output changed, each with unit tests.
+
+  **Dropped (proven pointless):** 2× oversampling of the resonant filter — the IT
+  filter is a linear biquad capped ~5.1 kHz, far below Nyquist, so it cannot
+  alias; oversampling only helps nonlinear/near-Nyquist filters.
+
+  **Genuinely remaining (small / niche):** IT `\x87` non-default MIDI macros +
+  per-channel active-macro selection; cycle-exact OPL2 (per-note ADSR operator
+  envelopes — the static-PCM AdLib synth can't express them); one contrived memory
+  edge (stereo + flow + non-variable + long + native — not corpus-exercised);
+  deeper native editors (raw effect-memory, native S3M header, in-place
+  flow-command editing, multi-split-per-note velocity UI). Original v2 plan below.
 
   Reference architecture studied: **MultiPLAY** (`github.com/logiclrd/MultiPLAY`,
   cloned at `../MultiPLAY`). It plays MOD/XM/S3M/IT in a few MB of RAM with good
