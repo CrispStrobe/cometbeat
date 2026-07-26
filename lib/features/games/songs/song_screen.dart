@@ -73,7 +73,7 @@ class _SongScreenState extends State<SongScreen> {
   // must not run on every rebuild. Positions 1–4 with extensions: what a learner
   // has. Off by default; the song may be for any instrument.
   bool _fingerings = false;
-  Map<String, List<int>>? _fingeringCache;
+  Score? _fingeredCache;
 
   /// Exports the song — as a fingered copy when the fingerings are on screen, so
   /// what you export is what you see. The marks are written INTO the exported
@@ -82,23 +82,20 @@ class _SongScreenState extends State<SongScreen> {
   /// cannot reach a file.
   void _export() => showMusicExportSheet(
         context,
-        multiPart: MultiPartScore([
-          if (_fingerings)
-            scoreWithBowedFingerings(
-              widget.score,
-              skill: BowedSkill.neckPositions,
-            )
-          else
-            widget.score,
-        ]),
+        multiPart:
+            MultiPartScore([_fingerings ? _fingeredScore : widget.score]),
         partNames: const [],
         baseName: _safeName(widget.title),
       );
 
-  Map<String, List<int>> get _celloFingerings =>
-      _fingeringCache ??= bowedFingeringDigits(
+  /// The song as a cellist would mark it up: fingering digits on the notes and a
+  /// Roman numeral where the string is not inferable. Written into a COPY — the
+  /// saved song never gains marks — and cached, because the arrange is a Viterbi
+  /// over the whole line rather than a per-note lookup.
+  Score get _fingeredScore => _fingeredCache ??= scoreWithBowedFingerings(
         widget.score,
         skill: BowedSkill.neckPositions,
+        markStrings: true,
       );
   late final ScoreAnalysis _analysis = analyze(widget.score);
   int _playToken = 0; // invalidates a running play loop
@@ -298,11 +295,11 @@ class _SongScreenState extends State<SongScreen> {
                       child: Stack(
                         children: [
                           MultiSystemView(
-                            score: widget.score,
+                            // The marked-up copy when the toggle is on, so what
+                            // is on screen is exactly what exports.
+                            score: _fingerings ? _fingeredScore : widget.score,
                             staffSpace: 11,
                             theme: kidsScoreTheme,
-                            extraFingerings:
-                                _fingerings ? _celloFingerings : const {},
                             controller: _regions,
                             highlightedIds: {
                               if (_highlightedId != null) _highlightedId!,

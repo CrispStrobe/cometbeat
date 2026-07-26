@@ -19,6 +19,8 @@ import 'package:crisp_notation/crisp_notation.dart'
     show
         MultiPartScore,
         MultiSystemView,
+        NoteElement,
+        Score,
         StaffSystem,
         multiPartToMusicXml,
         scoreFromGabc;
@@ -334,46 +336,46 @@ void main() {
     expect(find.text('Play'), findsOneWidget); // finished, reset to Play
   });
 
-  testWidgets('song screen: the fingering toggle engraves cello fingerings',
+  testWidgets('song screen: the fingering toggle marks the score up for cello',
       (tester) async {
-    // The toggle runs the bowed arranger over the song and hands the marks to
-    // MultiSystemView.extraFingerings, so the digits appear over the notation
-    // without the (immutable) Score being rebuilt.
+    // The toggle swaps the displayed score for a marked-up COPY: fingering digits
+    // on the notes, a Roman numeral where the string is not inferable. What is on
+    // screen is then exactly what exports, and the saved song is untouched.
     final sri = SriService(getNow: () => DateTime(2026, 7, 11));
     const song =
         Song(id: 't', title: 'Test', dsl: 'c3:q d3:q e3:q f3:q', lyrics: '');
     await tester.pumpWidget(_wrap(SongScreen(song: song), sri));
     await tester.pump();
 
-    MultiSystemView view() =>
-        tester.widget<MultiSystemView>(find.byType(MultiSystemView));
-    expect(view().extraFingerings, isEmpty); // off by default
-    // Exporting is reachable from the same screen — what you see is what you get.
+    List<NoteElement> notesOf(Score s) =>
+        s.measures.expand((m) => m.elements).whereType<NoteElement>().toList();
+    Score shown() =>
+        tester.widget<MultiSystemView>(find.byType(MultiSystemView)).score;
+
+    expect(notesOf(shown()).every((n) => n.fingerings.isEmpty), isTrue);
     expect(find.byIcon(Icons.ios_share), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.back_hand_outlined));
     await tester.pump();
 
-    final marks = view().extraFingerings;
-    expect(marks, isNotEmpty);
-    // C3-D3-F3 is not the open-C tetrachord (that is an octave lower): C3 is the
-    // fourth finger on the G string, then the hand crosses to the open D and
-    // stays in first position — 4, 0, 1, 2. Worth pinning precisely, because a
-    // plausible-but-wrong answer here would look just as reasonable on screen.
-    expect(marks.values.map((m) => m.single).toList(), [4, 0, 1, 2]);
+    // C3-D3-E3-F3 is not the open-C tetrachord (that is an octave lower): C3 is
+    // the fourth finger on the G string, then the hand crosses to the open D and
+    // stays in first position — 4, 0, 1, 2. A plausible-but-wrong answer would
+    // look just as reasonable on screen, which is why it is pinned.
+    expect(
+      notesOf(shown()).map((n) => n.fingerings.single).toList(),
+      [4, 0, 1, 2],
+    );
+    // The opening G-string note is marked; the rest follow from it.
+    expect(shown().annotations.map((a) => a.text).toList(), ['III']);
 
-    // The export sheet offers the formats, and the score it is handed carries the
-    // fingerings in its notes — a file cannot use the display-time channel.
-    await tester.tap(find.byIcon(Icons.ios_share));
-    await tester.pumpAndSettle();
-    expect(find.text('MusicXML'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 10)); // dismiss the sheet
-    await tester.pumpAndSettle();
+    // The song itself gained nothing — the marks live on a copy.
+    expect(notesOf(song.score).every((n) => n.fingerings.isEmpty), isTrue);
+    expect(song.score.annotations, isEmpty);
 
-    // And off again.
     await tester.tap(find.byIcon(Icons.back_hand));
     await tester.pump();
-    expect(view().extraFingerings, isEmpty);
+    expect(notesOf(shown()).every((n) => n.fingerings.isEmpty), isTrue);
   });
 
   testWidgets('song screen: To Multitrack sends the song as a DAW clip',

@@ -187,4 +187,82 @@ void main() {
       expect(stripped, original);
     });
   });
+
+  group('string indications', () {
+    /// E3-F3 on the D string, then B2-C3 on the G string: the crossing happens
+    /// between two STOPPED notes, which is exactly when the reader cannot infer
+    /// the string from the pitch alone.
+    Score crossing() {
+      var i = 0;
+      return Score(
+        clef: Clef.bass,
+        measures: [
+          Measure([
+            for (final p in const [
+              Pitch(Step.e, octave: 3),
+              Pitch(Step.f, octave: 3),
+              Pitch(Step.b, octave: 2),
+              Pitch(Step.c, octave: 3),
+            ])
+              NoteElement.note(p, NoteDuration.quarter, id: 'x${i++}'),
+          ]),
+        ],
+      );
+    }
+
+    test('marks where the string is not inferable: the start, and the crossing',
+        () {
+      final marks =
+          bowedStringMarks(crossing(), skill: BowedSkill.firstPosition);
+      // Two marks for four notes. The opening E3 is marked because a piece has
+      // to say where the hand starts — E3 lives on the D string in first
+      // position and on the G string higher up, and the pitch does not choose.
+      // Then the crossing to the G string. The two notes that merely continue a
+      // run get nothing.
+      expect(marks, {'x0': 'II', 'x2': 'III'});
+    });
+
+    test('a scale whose crossings land on open strings needs no marks at all',
+        () {
+      // C2 D2 E2 F2 | G2 A2 B2 C3 changes string twice, but each change lands on
+      // an open string, and an open pitch names its own string. Marking those
+      // would be clutter, so the right answer here is silence.
+      expect(
+        bowedStringMarks(_cScale(), skill: BowedSkill.firstPosition),
+        isEmpty,
+      );
+    });
+
+    test('an open string is never annotated', () {
+      final score = crossing();
+      final table = fingerBowedScore(score, skill: BowedSkill.firstPosition);
+      final marks = bowedStringMarks(score, skill: BowedSkill.firstPosition);
+      for (final id in marks.keys) {
+        expect(table[id]!.single.isOpen, isFalse, reason: id);
+      }
+    });
+
+    test('the copy carries them as annotations, and MusicXML keeps them', () {
+      final plain =
+          scoreWithBowedFingerings(crossing(), skill: BowedSkill.firstPosition);
+      final marked = scoreWithBowedFingerings(
+        crossing(),
+        skill: BowedSkill.firstPosition,
+        markStrings: true,
+      );
+      expect(plain.annotations, isEmpty);
+      expect(marked.annotations.map((a) => a.text), ['II', 'III']);
+      expect(scoreToMusicXml(marked), contains('III'));
+    });
+
+    test('the source score gains nothing', () {
+      final original = crossing();
+      scoreWithBowedFingerings(
+        original,
+        skill: BowedSkill.firstPosition,
+        markStrings: true,
+      );
+      expect(original.annotations, isEmpty);
+    });
+  });
 }

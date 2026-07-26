@@ -18,7 +18,7 @@
 
 import 'package:comet_beat/core/notation/bowed_arranger.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart'
-    show MusicElement, NoteElement, Score;
+    show Annotation, MusicElement, NoteElement, Score;
 
 /// Fingers the voice-1 line of a single-staff [score].
 ///
@@ -125,6 +125,7 @@ Score scoreWithBowedFingerings(
   BowedInstrument? instrument,
   BowedArrangeCost? cost,
   BowedPositionModel? model,
+  bool markStrings = false,
 }) {
   final marks = fingerBowedScore(
     score,
@@ -134,7 +135,20 @@ Score scoreWithBowedFingerings(
     model: model,
   );
   if (marks.isEmpty) return score;
+  final strings = markStrings
+      ? bowedStringMarks(
+          score,
+          skill: skill,
+          instrument: instrument,
+          cost: cost,
+          model: model,
+        )
+      : const <String, String>{};
   return score.copyWith(
+    annotations: [
+      ...score.annotations,
+      for (final entry in strings.entries) Annotation(entry.key, entry.value),
+    ],
     measures: [
       for (final measure in score.measures)
         measure.copyWith(
@@ -150,4 +164,48 @@ Score scoreWithBowedFingerings(
         ),
     ],
   );
+}
+
+/// Roman-numeral string indications for [score], keyed by note-element id:
+/// `I` (highest string) … `IV`.
+///
+/// Marks CHANGES of string, not every note. A fingering digit alone does not say
+/// which string — a cello pitch sits on up to three of them, each at a different
+/// position, so (pitch, finger) underdetermines the hand — but marking every note
+/// buries the page in numerals nobody reads. Engravers mark the change and trust
+/// the eye to carry it, and so does this.
+///
+/// Open strings are skipped: an open pitch names its own string, so a numeral over
+/// it says nothing. A move TO an open string still counts as a change, so the next
+/// stopped note gets its numeral.
+Map<String, String> bowedStringMarks(
+  Score score, {
+  required BowedSkill skill,
+  BowedInstrument? instrument,
+  BowedArrangeCost? cost,
+  BowedPositionModel? model,
+}) {
+  final table = fingerBowedScore(
+    score,
+    skill: skill,
+    instrument: instrument,
+    cost: cost,
+    model: model,
+  );
+  if (table.isEmpty) return const {};
+  final out = <String, String>{};
+  int? previousString;
+  for (final measure in score.measures) {
+    for (final element in measure.elements) {
+      if (element is! NoteElement) continue;
+      final marks = element.id == null ? null : table[element.id];
+      if (marks == null || marks.isEmpty) continue;
+      // A chord spans strings by definition; its lowest note carries the mark.
+      final stop = marks.reduce((a, b) => a.string > b.string ? a : b);
+      final changed = previousString == null || stop.string != previousString;
+      previousString = stop.string;
+      if (changed && !stop.isOpen) out[element.id!] = stop.roman;
+    }
+  }
+  return out;
 }
