@@ -43,12 +43,13 @@ is recorded in [HISTORY.md](HISTORY.md).
   tall-styled because `dart format` was run without `flutter pub get` first (no
   package_config → dart defaults to tall style + phantom 800-file diff). **GOTCHA for
   everyone: run `flutter pub get` BEFORE `dart format`** or you'll see/create bogus
-  reformats. ⚠️ **crisp_notation CI is red since 2026-07-23** — NOT the tab work: the
-  LilyPond-importer PR (`ca1fbbe`) landed `lilypond_ast.dart` with 101 undocumented
-  public members (`public_member_api_docs`, fatal) + 2 unformatted files + 1 unused
-  test var. Trivial parts are easy; the 101 doc comments belong to the importer author
-  (their active file — I did not touch it). My gpif change there is clean + its tests
-  pass. Deferred tab follow-ups (playback velocity/pan for C1/D2, D1/D2/D4 UI, GP
+  reformats. ✅ **crisp_notation CI FIXED** (`crisp_notation@94491b2`) — it had been
+  red since 2026-07-23: the LilyPond-importer PR (`ca1fbbe`) landed with the format +
+  `flutter analyze` gates failing (undocumented AST/lexer/parser public members +
+  curly-brace/quote/final lints across reader/writer/tool + 1 unused test var),
+  blocking all verification on every push since. Cleared every issue (format 0-changed,
+  analyze → No issues found, 11 importer tests green); doc/lint-only, no behaviour
+  change. Deferred tab follow-ups (playback velocity/pan for C1/D2, D1/D2/D4 UI, GP
   beat-level whammy/pick-stroke) noted in the parity doc. Not my scratch files:
   `bb5a5bee`'s `mod_hard_pan.dart`/`tracker_replayer_walkflow.dart`/`.bak2/.orig/.rej`
   were pre-existing untracked cruft, already removed by `4a9c55d0`. — opus
