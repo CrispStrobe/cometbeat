@@ -554,10 +554,12 @@ the BlackHole loop — all four roots detected on real captured audio (the
 > ⬜ **source image retained**, so OMR can be re-run on a bad scan.
 > ⬜ **edit / re-run correction flow** before a scan becomes a chart.
 >
-> ⚠️ Related sibling-repo bug, unfixed: crisp_notation's MusicXML reader takes
-> its tempo from `<metronome>` and ignores `<sound tempo="…">`, so a file with
-> only the playback attribute imports with no tempo. Pinned as a known-limitation
-> test in `test/song_metadata_test.dart`.
+> ✅ Related sibling-repo bug, FIXED (crisp_notation `d8589c5`): the MusicXML
+> reader took its tempo from `<metronome>` only and ignored `<sound tempo="…">`,
+> so files from exporters that write just the playback attribute imported with no
+> tempo. `<metronome>` stays authoritative (it is what the score PRINTS);
+> `<sound tempo>` is the fallback. Our own writer already emitted both, which is
+> exactly why round-trip tests never caught it.
 
 Product feature, not a detector: let the user build **songbooks** from real sheet
 music. Flow: import/scan a score photo → **Optical Music Recognition** → notation
