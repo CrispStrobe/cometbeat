@@ -42,8 +42,10 @@ void main() {
 
     test('a lead stays on one treble staff', () {
       // C5..G5.
-      expect(grooveStaffForCells(_cells([72, 74, 76, 77, 79])),
-          GrooveStaff.treble);
+      expect(
+        grooveStaffForCells(_cells([72, 74, 76, 77, 79])),
+        GrooveStaff.treble,
+      );
     });
 
     test('it agrees with clefForGrooveCells wherever it stays single-staff',
