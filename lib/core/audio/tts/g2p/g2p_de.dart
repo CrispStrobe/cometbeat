@@ -373,6 +373,13 @@ String ltsWordToIpaDe(String word) {
         i += 2;
         continue; // -er → ɜ
       }
+      // Unstressed final syllable -en/-el/-em → schwa (morgen, haben, tafel).
+      if ((c1s == 'n' || c1s == 'l' || c1s == 'm') &&
+          (at(i, 2) == 0 || at(i, 2) == 0x20 || at(i, 2) == 0x2d)) {
+        ipa.write('ə');
+        i++;
+        continue;
+      }
       ipa.write(_isOpenSyllable(w, i) ? 'eː' : 'ɛ');
       i++;
       continue;
@@ -407,7 +414,7 @@ String ltsWordToIpaDe(String word) {
       'm': 'm',
       'n': 'n',
       'p': 'p',
-      'r': 'r',
+      'r': 'ɾ', // espeak-DE tap allophone (coda/onset); vocalised -er → ɜ above
       't': 't',
       'v': 'f',
       'w': 'v',
@@ -436,7 +443,48 @@ String ltsWordToIpaDe(String word) {
     i++; // unknown
   }
 
-  return _applyFinalDevoicing(ipa.toString());
+  return _insertPrimaryStressDe(_applyFinalDevoicing(ipa.toString()));
+}
+
+// IPA vowel nuclei the German LTS can emit (base letters; length/breve marks
+// are non-vowel modifiers and skipped).
+const Set<String> _deVowels = {
+  'a',
+  'ɑ',
+  'e',
+  'ɛ',
+  'i',
+  'ɪ',
+  'o',
+  'ɔ',
+  'u',
+  'ʊ',
+  'ø',
+  'œ',
+  'y',
+  'ə',
+  'ɜ',
+  'ɐ',
+  'ʏ',
+  'æ',
+  'ɨ',
+};
+
+/// Insert a primary-stress mark ˈ immediately before the first vowel nucleus —
+/// espeak-ng's German default (native words stress the first full syllable).
+/// Prefix-shifted stress (be-/ge-/ver-/…) is a known limitation, left to the
+/// dictionary tiers.
+String _insertPrimaryStressDe(String ipa) {
+  if (ipa.contains('ˈ')) return ipa; // already stressed
+  final runes = ipa.runes.toList();
+  for (var k = 0; k < runes.length; k++) {
+    if (_deVowels.contains(String.fromCharCode(runes[k]))) {
+      final before = String.fromCharCodes(runes.sublist(0, k));
+      final after = String.fromCharCodes(runes.sublist(k));
+      return '$beforeˈ$after';
+    }
+  }
+  return ipa;
 }
 
 /// Single word → IPA (LTS path only, plus bundled lexicon).
@@ -501,13 +549,16 @@ List<String> _tokenize(String text) {
 }
 
 /// Full text → IPA string.
-String textToIpaDe(String text) {
+///
+/// [lookup] is an optional dictionary tier consulted per word BEFORE the
+/// lexicon/LTS fallback ([wordToIpaDe]); returning null defers to the rules.
+String textToIpaDe(String text, {String? Function(String word)? lookup}) {
   final words = _tokenize(text);
   final ipa = StringBuffer();
   for (final w in words) {
     if (w.length == 1 && _punctDe.contains(w)) continue;
     if (ipa.isNotEmpty) ipa.write(' ');
-    ipa.write(wordToIpaDe(w));
+    ipa.write(lookup?.call(w) ?? wordToIpaDe(w));
   }
   return ipa.toString();
 }

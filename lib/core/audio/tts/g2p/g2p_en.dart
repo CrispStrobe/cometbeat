@@ -183,6 +183,16 @@ List<String> _ltsPredict(String word) {
       continue;
     }
 
+    // "a" before "ll" → ɔː (all, call, small, ball, fall, tall, wall).
+    // Reliable except a few (shall) — the dictionary tiers correct those.
+    if (c == 'a' && c1 == 'l' && c2 == 'l') {
+      emit('AO', firstVowel ? 1 : 0);
+      emit('L', 0);
+      firstVowel = false;
+      i += 3;
+      continue;
+    }
+
     // Vowel digraphs.
     if (c == 'e' && (c1 == 'a' || c1 == 'e')) {
       emit('IY', firstVowel ? 1 : 0);
@@ -365,6 +375,13 @@ String _arpaSeqToIpa(List<String> phones) {
   return ipa.toString();
 }
 
+/// Convert a CMUdict-style ARPAbet phone list (e.g. `['HH','AH0','L','OW1']`)
+/// to espeak-style IPA using the same context-sensitive conversion as the LTS
+/// path (T-flapping, linking-ɹ, stress-dependent reductions). Public so the
+/// dictionary tier ([PronunciationDictionary.fromCmudict]) and the bundled-dict
+/// generator can turn public-domain CMUdict into IPA with our own mapping.
+String arpabetToIpa(List<String> arpaPhones) => _arpaSeqToIpa(arpaPhones);
+
 /// Single word → IPA (LTS path only: overrides / bundled lexicon / rules).
 String wordToIpaEn(String word) {
   final lower = word.toLowerCase();
@@ -449,7 +466,11 @@ List<String> _tokenize(String text) {
 
 /// Full text → IPA string (words joined by spaces; punctuation collapses to a
 /// space, mirroring the reference builtin path).
-String textToIpaEn(String text) {
+///
+/// [lookup] is an optional dictionary tier consulted per word BEFORE the
+/// lexicon/LTS fallback ([wordToIpaEn]); the phonemizer wires the injected +
+/// bundled dicts through it. Returning null defers to the rules.
+String textToIpaEn(String text, {String? Function(String word)? lookup}) {
   final words = _tokenize(_normalizeTechnicalTokens(text));
   final ipa = StringBuffer();
   for (final w in words) {
@@ -458,7 +479,7 @@ String textToIpaEn(String text) {
       continue;
     }
     if (ipa.isNotEmpty) ipa.write(' ');
-    ipa.write(wordToIpaEn(w));
+    ipa.write(lookup?.call(w) ?? wordToIpaEn(w));
   }
   return ipa.toString();
 }

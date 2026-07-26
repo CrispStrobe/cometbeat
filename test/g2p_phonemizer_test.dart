@@ -1,13 +1,14 @@
 // Tests for the pure-Dart Kokoro G2P phonemizer.
 //
 // dart:io is used HERE (test only, runs on the VM) to read the CrispASR
-// ground-truth TSVs. The library under test stays pure Dart.
+// ground-truth TSVs (espeak IPA — TEST ORACLE ONLY, never bundled) and, when
+// present, the full clean-licensed dicts (CMUdict PD / OLaPh MIT) to report the
+// production-ceiling accuracy. The library under test stays pure Dart.
 //
-// The built-in LTS G2P *approximates* espeak-ng, so exact match to the espeak
-// ground truth is not expected to be 100%. This test measures and prints the
-// honest exact-match and close-match (phoneme-set overlap) rates, separating
-// the bundled-lexicon subset from the pure-LTS (generalising) subset, and
-// asserts conservative floors so it documents the real numbers.
+// The rules + bundled dicts APPROXIMATE espeak-ng, so exact match to the espeak
+// ground truth is not 100%. This test measures and prints the honest exact and
+// close (phoneme-set overlap) rates, split into dict-covered / lexicon / pure-
+// LTS buckets, and asserts conservative floors that document the real numbers.
 
 import 'dart:io';
 
@@ -15,28 +16,30 @@ import 'package:comet_beat/core/audio/tts/g2p/g2p_de_lexicon.dart';
 import 'package:comet_beat/core/audio/tts/g2p/g2p_en_lexicon.dart';
 import 'package:comet_beat/core/audio/tts/g2p/g2p_phonemizer.dart';
 import 'package:comet_beat/core/audio/tts/g2p/kokoro_vocab.dart';
+import 'package:comet_beat/core/audio/tts/g2p/pron_dict.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ── Normalisation helpers for comparison ────────────────────────────────────
 
-const _zwj = '‍'; // zero-width joiner (espeak diphthong glue)
+const _zwj = '‍'; // U+200D zero-width joiner (espeak diphthong glue)
+const _nonSyll = '̯'; // U+032F combining inverted breve (non-syllabic marker)
 const _stress = {'ˈ', 'ˌ'};
-const _combining = {'̃', '̯', '̩', '͡'}; // tilde, breve, syllabic, tie
+const _combining = {'̃', '̯', '̩', '͡', '̪', '̬', '̥'};
 
-/// Normalise for exact comparison: drop ZWJ and stray tie/combining glue that
-/// differ only in representation, keep everything else (stress, length, vowels).
+/// Normalise for exact comparison: strip the two ways of writing the same
+/// diphthong tie (espeak's ZWJ vs our combining breve) — both drop to nothing
+/// under Kokoro tokenisation anyway — and keep stress/length/vowels.
 String _normExact(String s) {
   final b = StringBuffer();
   for (final r in s.runes) {
     final c = String.fromCharCode(r);
-    if (c == _zwj) continue;
+    if (c == _zwj || c == _nonSyll) continue;
     b.write(c);
   }
   return b.toString();
 }
 
-/// Reduce to a bag of "phoneme atoms" for overlap scoring: drop ZWJ, stress
-/// marks and combining diacritics; keep base IPA symbols.
+/// Bag of phoneme atoms: drop ZWJ/space/stress/combining, keep base symbols.
 List<String> _atoms(String s) {
   final out = <String>[];
   for (final r in s.runes) {
@@ -49,54 +52,59 @@ List<String> _atoms(String s) {
   return out;
 }
 
-/// Jaccard overlap of the phoneme-atom multisets (as sets).
 double _jaccard(String a, String b) {
   final sa = _atoms(a).toSet();
   final sb = _atoms(b).toSet();
   if (sa.isEmpty && sb.isEmpty) return 1.0;
-  final inter = sa.intersection(sb).length;
   final union = sa.union(sb).length;
-  return union == 0 ? 1.0 : inter / union;
+  return union == 0 ? 1.0 : sa.intersection(sb).length / union;
 }
 
-/// Locate a ground-truth TSV relative to the repo (mus/ → ../CrispASR/tools).
-File? _findTsv(String name) {
-  final candidates = [
-    '../CrispASR/tools/$name',
-    '${Directory.current.path}/../CrispASR/tools/$name',
-    '/Users/christianstrobele/code/CrispASR/tools/$name',
-  ];
-  for (final p in candidates) {
-    final f = File(p);
+File? _find(String name, List<String> dirs) {
+  for (final d in dirs) {
+    final f = File('$d/$name');
     if (f.existsSync()) return f;
   }
   return null;
 }
 
+File? _findTsv(String name) => _find(name, [
+      '../CrispASR/tools',
+      '${Directory.current.path}/../CrispASR/tools',
+      '/Users/christianstrobele/code/CrispASR/tools',
+    ]);
+
+// Scratch dir where the full clean dicts may have been downloaded (optional).
+File? _findDict(String name) => _find(name, [
+      '/private/tmp/claude-501/-Users-christianstrobele-code-mus/'
+          '8f182077-f4c7-48f0-afac-eac2a3af741a/scratchpad',
+      Directory.systemTemp.path,
+    ]);
+
 class _Report {
-  int total = 0;
-  int exact = 0;
-  int close = 0; // Jaccard >= 0.5
+  int total = 0, exact = 0, close = 0;
   double jaccardSum = 0;
-  int lexCovered = 0;
-  int lexExact = 0;
-  int ltsTotal = 0;
-  int ltsExact = 0;
-  int ltsClose = 0;
+  int dictCovered = 0, dictExact = 0;
+  int lexTotal = 0, lexExact = 0;
+  int ltsTotal = 0, ltsExact = 0, ltsClose = 0;
   final examples = <String>[];
 }
 
-_Report _evaluate(File tsv, String lang, Set<String> lexKeys) {
+_Report _evaluate(
+  File tsv,
+  String lang,
+  Set<String> lexKeys,
+  PronunciationDictionary bundled, {
+  PronunciationDictionary? inject,
+}) {
   final r = _Report();
-  final lines = tsv.readAsLinesSync();
-  for (final line in lines) {
+  for (final line in tsv.readAsLinesSync()) {
     if (line.trim().isEmpty) continue;
     final cols = line.split('\t');
-    if (cols.length < 2) continue;
-    if (cols[0] == 'word') continue; // header
+    if (cols.length < 2 || cols[0] == 'word') continue;
     final word = cols[0];
     final truth = _normExact(cols[1]);
-    final pred = _normExact(phonemizeToIpa(word, lang: lang));
+    final pred = _normExact(phonemizeToIpa(word, lang: lang, dict: inject));
 
     r.total++;
     final isExact = pred == truth;
@@ -105,17 +113,20 @@ _Report _evaluate(File tsv, String lang, Set<String> lexKeys) {
     if (isExact) r.exact++;
     if (jac >= 0.5) r.close++;
 
+    final inDict = (inject?.contains(word) ?? false) || bundled.contains(word);
     final inLex = lexKeys.contains(word.toLowerCase());
-    if (inLex) {
-      r.lexCovered++;
+    if (inDict) {
+      r.dictCovered++;
+      if (isExact) r.dictExact++;
+    } else if (inLex) {
+      r.lexTotal++;
       if (isExact) r.lexExact++;
     } else {
       r.ltsTotal++;
       if (isExact) r.ltsExact++;
       if (jac >= 0.5) r.ltsClose++;
     }
-
-    if (r.examples.length < 8) {
+    if (r.examples.length < 6) {
       r.examples.add('  $word → "$pred"  (espeak "$truth")  '
           'exact=$isExact jac=${jac.toStringAsFixed(2)}');
     }
@@ -123,10 +134,10 @@ _Report _evaluate(File tsv, String lang, Set<String> lexKeys) {
   return r;
 }
 
-void _print(String lang, _Report r) {
+void _print(String label, _Report r) {
   double pct(int a, int b) => b == 0 ? 0 : 100 * a / b;
   // ignore: avoid_print
-  print('\n═══ $lang ground truth (n=${r.total}) ═══');
+  print('\n═══ $label (n=${r.total}) ═══');
   // ignore: avoid_print
   print('  exact-match    : ${r.exact}/${r.total}  '
       '(${pct(r.exact, r.total).toStringAsFixed(1)}%)');
@@ -136,14 +147,15 @@ void _print(String lang, _Report r) {
   // ignore: avoid_print
   print('  mean Jaccard   : ${(r.jaccardSum / r.total).toStringAsFixed(3)}');
   // ignore: avoid_print
-  print('  lexicon subset : exact ${r.lexExact}/${r.lexCovered}');
+  print('  dict-covered   : exact ${r.dictExact}/${r.dictCovered} '
+      '(${pct(r.dictExact, r.dictCovered).toStringAsFixed(1)}%)');
   // ignore: avoid_print
-  print('  LTS-only subset: exact ${r.ltsExact}/${r.ltsTotal} '
+  print('  lexicon subset : exact ${r.lexExact}/${r.lexTotal}');
+  // ignore: avoid_print
+  print('  pure-LTS subset: exact ${r.ltsExact}/${r.ltsTotal} '
       '(${pct(r.ltsExact, r.ltsTotal).toStringAsFixed(1)}%), '
       'close ${r.ltsClose}/${r.ltsTotal} '
       '(${pct(r.ltsClose, r.ltsTotal).toStringAsFixed(1)}%)');
-  // ignore: avoid_print
-  print('  examples:');
   for (final e in r.examples) {
     // ignore: avoid_print
     print(e);
@@ -157,7 +169,6 @@ void main() {
       expect(t.length, greaterThanOrEqualTo(2));
       expect(t.first, kKokoroPadId);
       expect(t.last, kKokoroPadId);
-      // Interior ids are real vocab ids (0 only appears as the wrap pads here).
       final interior = t.sublist(1, t.length - 1);
       expect(interior, isNotEmpty);
       for (final id in interior) {
@@ -168,11 +179,10 @@ void main() {
     test('vocab is the 178-slot Kokoro space, pad "\$"=0', () {
       expect(kKokoroPadId, 0);
       expect(kKokoroTokenToId[r'$'], 0);
-      expect(kKokoroTokenToId['ˈ'], 156); // primary stress
-      expect(kKokoroTokenToId['ː'], 158); // length
-      expect(kKokoroTokenToId['ɡ'], 92); // script g
-      expect(kKokoroTokenToId[' '], 16); // space is a token
-      // Every id is within the 0..177 Kokoro range.
+      expect(kKokoroTokenToId['ˈ'], 156);
+      expect(kKokoroTokenToId['ː'], 158);
+      expect(kKokoroTokenToId['ɡ'], 92);
+      expect(kKokoroTokenToId[' '], 16);
       for (final id in kKokoroTokenToId.values) {
         expect(id, inInclusiveRange(0, 177));
       }
@@ -189,25 +199,66 @@ void main() {
 
   group('hand-picked unit cases', () {
     test('English words phonemize to plausible IPA', () {
-      expect(phonemizeToIpa('hello'), 'hɐlˈoʊ');
+      expect(phonemizeToIpa('hello', useBundledDict: false), 'hɐlˈoʊ');
       expect(phonemizeToIpa('world'), contains('w'));
-      // A word not in the lexicon still produces IPA via LTS.
       final lts = phonemizeToIpa('splunge');
       expect(lts, isNotEmpty);
       expect(lts, contains('l'));
     });
 
     test('German words phonemize to plausible IPA', () {
-      expect(phonemizeToIpa('hallo', lang: 'de'), 'hˈaloː');
-      expect(phonemizeToIpa('welt', lang: 'de'), 'vˈɛlt');
-      // LTS fallback for an OOV German word: sch→ʃ, open-syllable lengthening.
-      final lts = phonemizeToIpa('schlafenzimmerlampe', lang: 'de');
+      expect(
+        phonemizeToIpa('hallo', lang: 'de', useBundledDict: false),
+        'hˈaloː',
+      );
+      expect(
+        phonemizeToIpa('welt', lang: 'de', useBundledDict: false),
+        'vˈɛlt',
+      );
+      // German LTS now emits primary stress + tap r.
+      expect(
+        phonemizeToIpa('morgen', lang: 'de', useBundledDict: false),
+        'mˈɔɾɡən',
+      );
+      final lts = phonemizeToIpa('schlafenzimmer', lang: 'de');
       expect(lts, contains('ʃ'));
+      expect(lts, contains('ˈ')); // stress mark present
     });
 
-    test('empty / punctuation-only input yields just pad wrap', () {
-      final t = kokoroTokens('');
-      expect(t, [kKokoroPadId, kKokoroPadId]);
+    test('empty input yields just pad wrap', () {
+      expect(kokoroTokens(''), [kKokoroPadId, kKokoroPadId]);
+    });
+  });
+
+  group('injectable pronunciation dictionary', () {
+    test('injected dict overrides rules (case-insensitive)', () {
+      final d = PronunciationDictionary({'flibbertigibbet': 'fˈuːbɑː'});
+      expect(phonemizeToIpa('flibbertigibbet', dict: d), 'fˈuːbɑː');
+      expect(d.lookup('FLIBBERTIGIBBET'), isNotNull);
+    });
+
+    test('CMUdict parser converts ARPAbet to IPA', () {
+      final d = PronunciationDictionary.fromCmudict(
+        'hello HH AH0 L OW1\nworld W ER1 L D\n;;; comment\n',
+      );
+      expect(d.length, 2);
+      // CMUdict HH AH0 L OW1 → AH0 reduces to schwa ə (vs the espeak-tuned
+      // lexicon form hɐlˈoʊ); both are valid.
+      expect(d.lookup('hello'), 'həlˈoʊ');
+      expect(d.lookup('world'), contains('ɜː'));
+    });
+
+    test('espeak/OLaPh slash-wrapped TSV parser', () {
+      final d = PronunciationDictionary.fromTsv(
+        'word\tespeak_ipa\nhallo\t/hˈaloː/\n',
+        slashWrapped: true,
+      );
+      expect(d.lookup('hallo'), 'hˈaloː');
+    });
+
+    test('bundled dicts load and are non-trivial', () {
+      expect(bundledEnDict().length, greaterThan(1000));
+      expect(bundledDeDict().length, greaterThan(1000));
     });
   });
 
@@ -217,46 +268,80 @@ void main() {
       final de = _findTsv('g2p_ground_truth_de.tsv');
       if (en == null || de == null) {
         // ignore: avoid_print
-        print(
-          'ground-truth TSVs not found next to repo — skipping rate asserts',
-        );
+        print('ground-truth TSVs not found — skipping rate asserts');
         return;
       }
 
-      final enR = _evaluate(en, 'en', kEnLexicon.keys.toSet());
-      final deR = _evaluate(de, 'de', kDeLexicon.keys.toSet());
-      _print('EN', enR);
-      _print('DE', deR);
+      final enR = _evaluate(en, 'en', kEnLexicon.keys.toSet(), bundledEnDict());
+      final deR = _evaluate(de, 'de', kDeLexicon.keys.toSet(), bundledDeDict());
+      _print('EN out-of-box (rules + lexicon + bundled)', enR);
+      _print('DE out-of-box (rules + lexicon + bundled)', deR);
 
-      // Conservative floors set just below the measured rates (printed above).
-      // They document the real numbers and guard against regressions:
-      //   EN exact ≈32.5%, close ≈71.7% (LTS-only close ≈60.8%)
-      //   DE exact ≈26.6%, close ≈95.7% (LTS-only close ≈93.1%)
+      // Optional: production ceiling with the FULL clean dicts injected
+      // (CMUdict PD / OLaPh MIT), if the source files are available.
+      final cmu = _findDict('cmudict.dict');
+      final olaph = _findDict('olaph_de.txt');
+      if (cmu != null) {
+        final full =
+            PronunciationDictionary.fromCmudict(cmu.readAsStringSync());
+        _print(
+          'EN with full CMUdict injected (${full.length} words)',
+          _evaluate(
+            en,
+            'en',
+            kEnLexicon.keys.toSet(),
+            bundledEnDict(),
+            inject: full,
+          ),
+        );
+      }
+      if (olaph != null) {
+        final full = PronunciationDictionary.fromTsv(
+          olaph.readAsStringSync(),
+          slashWrapped: true,
+        );
+        _print(
+          'DE with full OLaPh injected (${full.length} words)',
+          _evaluate(
+            de,
+            'de',
+            kDeLexicon.keys.toSet(),
+            bundledDeDict(),
+            inject: full,
+          ),
+        );
+      }
+
+      // Conservative floors (just below measured; document the real numbers).
       expect(
         enR.exact / enR.total,
         greaterThanOrEqualTo(0.28),
-        reason: 'EN exact-match regressed',
+        reason: 'EN exact regressed',
       );
       expect(
         enR.close / enR.total,
         greaterThanOrEqualTo(0.66),
-        reason: 'EN close-match regressed',
+        reason: 'EN close regressed',
       );
       expect(
         deR.exact / deR.total,
-        greaterThanOrEqualTo(0.22),
-        reason: 'DE exact-match regressed',
+        greaterThanOrEqualTo(0.45),
+        reason: 'DE exact regressed',
       );
       expect(
         deR.close / deR.total,
         greaterThanOrEqualTo(0.90),
-        reason: 'DE close-match regressed',
+        reason: 'DE close regressed',
       );
-      // Pure-LTS generalisation floor (non-lexicon subset).
       expect(
         enR.ltsClose / enR.ltsTotal,
         greaterThanOrEqualTo(0.55),
-        reason: 'EN LTS-only close-match regressed',
+        reason: 'EN pure-LTS close regressed',
+      );
+      expect(
+        deR.ltsExact / deR.ltsTotal,
+        greaterThanOrEqualTo(0.30),
+        reason: 'DE pure-LTS exact regressed',
       );
     });
   });
