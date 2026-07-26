@@ -68,6 +68,7 @@ is recorded in [HISTORY.md](HISTORY.md).
 > Forks and any PR refs retain the objects independently either way.
 
 
+- **opus (tts-web)** · 🚧 **ACTIVE — pure-Dart G2P phonemizer → neural Kokoro TTS on web/wasm.** Context: `onnx_runtime_dart` (our pure-Dart ONNX runtime, web/wasm-safe) already has VERIFIED Kokoro-82M TTS parity (0.995) — so the neural voice CAN run on web; the only gap is text→phoneme (the FFI/GGUF path does g2p in C via libcrispasr; on web there's no FFI). Delegated the phonemizer to a capable agent: a **pure-Dart en+de G2P** (porting CrispASR's self-contained `../CrispASR/src/core/g2p_{en,de}.h` LTS rules — MIT/ours, NOT espeak-dependent) → IPA → Kokoro 178-token IDs (`../CrispASR/src/kokoro.cpp` vocab), validated vs `../CrispASR/tools/g2p_ground_truth_{en,de}.tsv`. New files only under `lib/core/audio/tts/g2p/` + a test — no collision with other work. Follow-up (separate): an `OnnxKokoroTtsBackend` wiring it + `onnx_runtime_dart` behind the existing `TtsBackend` seam so `_pick()` uses the neural voice on web. — opus
 - **opus (tab-parity)** · ✅ **SHIPPED (idle) — Guitar Tab Editor parity A0–E2 + CI unblock.**
   Full parity ladder done (`docs/TAB_EDITOR_PARITY.md`): A9 tempo map; B1–B10 all
   parametric techniques (bends/whammy/slides/tap/harmonic-kinds/palm-mute·let-ring·
