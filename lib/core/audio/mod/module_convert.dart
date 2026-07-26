@@ -315,8 +315,9 @@ ModuleDoc docFromMod(ModModule m) {
       //   • S7x past-note / NNA / envelope control — instrument-layer state with
       //     no per-cell neutral command (and no S3M/MOD/XM equivalent).
       //   • SFx set active MIDI macro — MIDI to external gear, no audible target.
-      // (SAx high sample offset → kFxSetHighOffset (0x13); S9x surround / reverse
-      // play → kFxSetSoundControl (0x14), both above.)
+      // (SAx high sample offset → kFxSetHighOffset; S9x surround / reverse
+      // play → kFxSetSoundControl, both above. Names, not numbers — the numbers
+      // in comments here went stale three times in one afternoon.)
       return (0, 0);
   }
 }
@@ -926,7 +927,7 @@ ModuleDoc docFromIt(ItModule m) {
     // dropped every IT/S3M full-range speed on export, which is the thing the
     // command exists for.
     case kFxSetSpeedFull: // A — set speed, full 1..255
-      return (1, param.clamp(1, 255));e)
+      return (1, param.clamp(1, 255));
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:
