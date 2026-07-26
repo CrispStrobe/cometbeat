@@ -4507,7 +4507,7 @@ bool _channelChunkSafe(
     // per-note-run render, gated to LONG songs whose whole-song NNA voice render
     // ([_renderNativeTickZoneVoices]) would exceed the memory budget:
     //   * STEREO via _renderLongNativeVariableStereo — a long (> 120 s)
-    //     variable-timing stereo song, no pan envelope; and
+    //     flow/variable stereo song, no pan envelope; and
     //   * MONO via _renderLongNativeVariable — a long (> 120 s) flow/variable
     //     mono song with a per-tick effect.
     // SHORT songs of either shape (and any not matching) stay on the whole-song
@@ -4574,7 +4574,7 @@ bool songCanStreamFlowVariable(TrackerSong song, {required bool stereo}) {
 /// has native voice semantics, every zone is a NATIVE (`normalize == false`)
 /// sample, and it carries no pan envelope (a pan envelope routes the whole-song
 /// render through the mono long path instead). [nativeLongStereo] is the
-/// song-level precondition (long variable-timing stereo song).
+/// song-level precondition (long flow / variable-timing stereo song).
 bool _isNativeLongStreamChannel(
   TrackerChannel channel, {
   required bool nativeLongStereo,
@@ -4591,14 +4591,21 @@ bool _isNativeLongStreamChannel(
   return penv == null || penv.isEmpty;
 }
 
-/// Whether [song]'s whole-song render takes the bounded per-note-run stereo path
-/// for native multi-sample channels ([_renderLongNativeVariableStereo]): a STEREO,
-/// variable-timing song longer than [_nativeTickFullBufferLimit]. Below that
-/// length (or in mono / flow) native multi channels use the full NNA voice render
-/// ([_renderNativeTickZoneVoices]), which the row-chunk streamer does not mirror.
+/// Whether [song]'s render routes native multi-sample channels through the
+/// bounded per-note-run STEREO stream ([_zoneRunRenderChunkStereo], mirroring the
+/// whole-song bounded [_renderLongNativeVariableStereo]) instead of the whole-song
+/// NNA voice render ([_renderNativeTickZoneVoices]): a STEREO (panned /
+/// stereoOutput) flow OR variable-timing song longer than
+/// [_nativeTickFullBufferLimit]. Below that length native multi channels use the
+/// full NNA voice render (already < the ceiling for the corpus) — byte-identical;
+/// only LONG songs — whose whole-song NNA render would retain a whole-song L/R
+/// mix plus per-voice buffers — take the bounded stream. Both timings qualify (the
+/// VARIABLE whole-song render already switched to [_renderLongNativeVariableStereo]
+/// above the budget; the FLOW / uniform whole-song render did NOT, which is the
+/// last unbounded shape this gate closes). Per-channel `noPenv` matching is left to
+/// [_isNativeLongStreamChannel].
 bool _songUsesNativeLongStereo(TrackerSong song, List<PlayedRow> played) {
   if (!(song.usesPan || song.stereoOutput)) return false;
-  if (!songUsesVariableTiming(song)) return false;
   return _FlowVarLayout(song, played).totalSamples > _nativeTickFullBufferLimit;
 }
 

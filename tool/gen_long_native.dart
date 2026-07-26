@@ -1,11 +1,15 @@
-// CLI memory gate: build a synthetic LONG (>15 min) MONO FLOW native
-// multi-sample (NNA-zone) song — the shape whose whole-song NNA voice render
+// CLI memory gate: build a synthetic LONG (>15 min) FLOW native multi-sample
+// (NNA-zone) song — the shape whose whole-song NNA voice render
 // ([_renderNativeTickZoneVoices]) would allocate multiple whole-song Float64
-// buffers — and render it through the bounded streaming CLI path
-// (writeSongWavStreaming → streamFlowVariableMonoPcm → _zoneRunRenderChunkMono).
-// Peak RSS must stay < 500 MB at any length. Measure with:
+// buffers — and render it through the bounded streaming CLI path. MONO routes
+// writeSongWavStreaming → streamFlowVariableMonoPcm → _zoneRunRenderChunkMono;
+// --stereo routes writeSongWavStreaming → streamFlowVariableStereoPcm →
+// _zoneRunRenderChunkStereo (the last unbounded shape: stereo + long + native +
+// flow/uniform non-variable timing). Peak RSS must stay < 500 MB at any length.
+// Measure with:
 //
 //   /usr/bin/time -l dart run tool/gen_long_native.dart /tmp/long.wav
+//   /usr/bin/time -l dart run tool/gen_long_native.dart --stereo /tmp/long.wav
 //
 // (grep "maximum resident set size").
 import 'dart:io';
@@ -36,15 +40,29 @@ MultiSampleInstrument _native() => MultiSampleInstrument(
       nativeVoiceSemantics: true,
     );
 
-TrackerPattern _pattern(String name, int rows, int notesEvery) {
+// One pattern column of native NNA notes: a new note every [notesEvery] rows
+// (its zone rotating through 48/60/72, offset by [phase] so parallel channels
+// overlap on DIFFERENT zones), a per-tick vibrato on every other row (which forces
+// the whole-song NNA render path). No key-off ⇒ overlapping NNA note runs.
+List<TrackerCell> _column(int rows, int notesEvery, int phase) {
   final zoneKeys = [48, 60, 72];
   final col = List<TrackerCell>.filled(rows, TrackerCell.empty);
   for (var r = 0; r < rows; r++) {
     col[r] = r % notesEvery == 0
-        ? TrackerCell(midi: zoneKeys[(r ~/ notesEvery) % zoneKeys.length])
+        ? TrackerCell(
+            midi: zoneKeys[(r ~/ notesEvery + phase) % zoneKeys.length])
         : const TrackerCell(fxCmd: kFxVibrato, fxParam: 0x38);
   }
-  return TrackerPattern(name: name, cells: [col]);
+  return col;
+}
+
+TrackerPattern _pattern(String name, int rows, int notesEvery, int channels) {
+  return TrackerPattern(
+    name: name,
+    cells: [
+      for (var c = 0; c < channels; c++) _column(rows, notesEvery, c),
+    ],
+  );
 }
 
 Future<void> main(List<String> args) async {
@@ -55,14 +73,30 @@ Future<void> main(List<String> args) async {
     orElse: () => '',
   );
   final cycles = cyclesArg.isEmpty ? 80 : int.parse(cyclesArg.split('=')[1]);
+  // --stereo → a STEREO (panned) song with two overlapping native channels; the
+  // last unbounded shape (stereo + long + native + flow non-variable timing),
+  // routed through streamFlowVariableStereoPcm → _zoneRunRenderChunkStereo.
+  final stereo = args.contains('--stereo');
+  final chanCount = stereo ? 2 : 1;
   // Two differing pattern lengths ⇒ FLOW (walk) render, NON-variable timing.
   // Default 80 × [64,48] rows = 8960 rows @ 120 ms/row ≈ 17.9 min.
   final song = TrackerSong.fromParts(
     channels: [
-      TrackerChannel(id: 'native', instrument: _native(), rows: 64),
+      for (var c = 0; c < chanCount; c++)
+        TrackerChannel(
+          id: 'native$c',
+          instrument: _native(),
+          rows: 64,
+          // Hard-pan the two channels apart so `usesPan` is true (STEREO) and
+          // the per-region pan gains are exercised in _zoneRunRenderChunkStereo.
+          pan: stereo ? (c == 0 ? -0.6 : 0.6) : 0.0,
+        ),
     ],
     timing: const TrackerTiming(tempoBpm: 125, rows: 64),
-    patterns: [_pattern('a', 64, 6), _pattern('b', 48, 6)],
+    patterns: [
+      _pattern('a', 64, 6, chanCount),
+      _pattern('b', 48, 6, chanCount),
+    ],
     order: [
       for (var i = 0; i < cycles; i++) ...[0, 1],
     ],
@@ -82,10 +116,11 @@ Future<void> main(List<String> args) async {
   sw.stop();
 
   final bytes = File(out).lengthSync();
-  final frames = (bytes - 44) ~/ 2;
+  final bytesPerFrame = stereo ? 4 : 2;
+  final frames = (bytes - 44) ~/ bytesPerFrame;
   final seconds = frames / kSampleRate;
   stdout.writeln(
-    'wrote $out: mono · $frames frames · '
+    'wrote $out: ${stereo ? 'stereo' : 'mono'} · $frames frames · '
     '${(seconds / 60).toStringAsFixed(1)} min · '
     'streamed in ${sw.elapsedMilliseconds} ms',
   );
