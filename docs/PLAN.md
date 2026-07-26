@@ -58,6 +58,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (score-copywith)** · 🚧 **ACTIVE — `copyWith` on Score / Measure /
+  NoteElement (crisp_notation), then fingered MusicXML.** The library has no way to
+  say "this score, plus one thing": `Score` has ~40 fields, `Measure` ~15,
+  `NoteElement` ~13, and the only existing full rebuild (`transposedBy`) enumerates
+  every field by hand. That is why fingerings had to be a display-only channel, and
+  why nobody can write them into an exported file. Adding `copyWith` once fixes it
+  for everyone. **The hazard is drift** — a `copyWith` that silently forgets a field
+  added later is worse than none — so each gets a `dart:mirrors` parity test that
+  fails when a constructor parameter has no `copyWith` counterpart (tests run on the
+  VM, so mirrors are available), plus per-field value tests. Then mus can export a
+  song's fingerings as real `<fingering>` marks. Sibling worktree
+  `../crisp_notation-copywith`; the shared clone stays on `main`. Files:
+  `model/{score,measure,element}.dart` — no overlap with the `<sound tempo>` work in
+  `musicxml/`. Worktree `../mus-cello-fingering`.
+
 - **opus (cello-print)** · ✅ **SHIPPED (idle) — print the fingered part**
   (`fb4bf4cd`, library `crisp_notation@51033ca`). Fingerings were screen-only; the
   PDF path (layoutPages → layoutSystems → engine.layout) now carries display-time
