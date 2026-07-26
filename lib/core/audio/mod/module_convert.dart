@@ -89,6 +89,7 @@ import 'package:comet_beat/core/audio/tracker_replayer.dart'
         kFxSetPastNote,
         kFxSetSoundControl,
         kFxSetSpeedFull,
+        kFxTempoSlide,
         kFxTremor;
 
 /// Detects the module container format by signature; null if unrecognized.
@@ -897,7 +898,7 @@ ModuleDoc docFromIt(ItModule m) {
       return (15, param); // O sample offset
     case kFxSetPanbrelloWaveform: // 0x15
       return (19, (0x5 << 4) | (param & 0xF)); // S5x set panbrello waveform
-    case 0x13:
+    case kFxSetHighOffset:
       return (19, (0xA << 4) | (param & 0xF)); // SAx high sample offset
     // Named, not a raw literal: a bare `case 0x14:` is how this switch kept
     // silently shadowing whichever command had been given that number most
@@ -944,7 +945,7 @@ ModuleDoc docFromIt(ItModule m) {
       return (9, param); // I tremor
     case kFxPanbrello:
       return (25, param); // Y panbrello
-    case 0x1F:
+    case kFxTempoSlide:
       return (20, param); // T tempo slide
     // Reachable again: S9x sound control moved to 0x16, so 0x14 is this
     // command alone. Dropping the case silenced the analyzer but also silently
