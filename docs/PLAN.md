@@ -29,6 +29,20 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (cello-fingering)** · 🚧 **ACTIVE — auto-assigned cello fingerings
+  (string · position · finger).** Generalising the guitar tab arranger's
+  Sayegh-Viterbi (`lib/features/games/composition/tab_arranger.dart`) to bowed
+  strings behind a pluggable hand model, with a skill cap (max position,
+  extensions/thumb off) so it fingers like a learner. No model asset, no training
+  data needed for this step — the literature's hard part (expert position choice)
+  is what beginners don't need. **No shared files touched:** the bowed state space
+  (string × position × hand mode) is different enough from guitar's per-column
+  `(string, fret)` set that sharing the Viterbi would force a
+  lowest-common-denominator abstraction and risk the guitar acceptance numbers, so
+  this is a sibling **`lib/core/notation/bowed_arranger.dart`** and
+  `tab_arranger.dart` is left alone. `cello_first_position.dart` becomes a test
+  oracle (read-only). Worktree `../mus-cello-fingering`.
+
 - **opus (glint-encoder)** · ✅ **SHIPPED (idle) — audio codecs, native + web at
   parity.** Vendored glint's encoder into `native/glint` and wired it on all five
   platforms; widened the web wasm shim (which already carried the full codec
