@@ -24,13 +24,61 @@ class ImportedSong {
   /// Canonical URL of the source work, or null.
   final String? sourceUrl;
 
+  /// Composer/arranger credit, or null when the source did not name one.
+  ///
+  /// These three fields are DERIVED from [musicXml] (see [withDerivedMetadata])
+  /// and stored alongside it rather than re-parsed. A songbook list needs them
+  /// for every row, and parsing a full MusicXML document per row to draw one
+  /// subtitle is the sort of thing that makes a twenty-song book feel broken.
+  /// They are a cache, so [musicXml] stays the source of truth.
+  final String? composer;
+
+  /// Circle-of-fifths position of the key signature (−7…+7), or null.
+  ///
+  /// The signature, NOT a tonality: two sharps means D major or B minor and the
+  /// file does not say which. `shared/key_signature_label.dart` renders the pair.
+  final int? keyFifths;
+
+  /// Initial metronome mark in quarter-notes per minute, or null.
+  final double? tempoBpm;
+
   const ImportedSong({
     required this.id,
     required this.title,
     required this.musicXml,
     this.attribution,
     this.sourceUrl,
+    this.composer,
+    this.keyFifths,
+    this.tempoBpm,
   });
+
+  /// This song with [composer]/[keyFifths]/[tempoBpm] read out of [musicXml].
+  ///
+  /// Returns the song unchanged if they are already set, so it is cheap to call
+  /// on load, and unchanged if the XML will not parse — a song that cannot be
+  /// read is still a song you can see in your book and delete.
+  ImportedSong withDerivedMetadata() {
+    if (composer != null && keyFifths != null && tempoBpm != null) return this;
+    try {
+      final s = score;
+      return ImportedSong(
+        id: id,
+        title: title,
+        musicXml: musicXml,
+        attribution: attribution,
+        sourceUrl: sourceUrl,
+        composer: composer ?? _blankToNull(s.metadata.composer),
+        keyFifths: keyFifths ?? s.keySignature.fifths,
+        tempoBpm: tempoBpm ?? s.tempo?.quarterBpm,
+      );
+    } catch (_) {
+      return this;
+    }
+  }
+
+  static String? _blankToNull(String? v) =>
+      (v == null || v.trim().isEmpty) ? null : v.trim();
 
   /// The first part as a single [Score] (karaoke/play-along/analysis use this).
   Score get score => scoreFromMusicXml(musicXml);
@@ -55,6 +103,11 @@ class ImportedSong {
         'xml': musicXml,
         if (attribution != null) 'attribution': attribution,
         if (sourceUrl != null) 'sourceUrl': sourceUrl,
+        // Written only when known, so a song saved before these existed and a
+        // song whose source names no composer look the same on disk.
+        if (composer != null) 'composer': composer,
+        if (keyFifths != null) 'keyFifths': keyFifths,
+        if (tempoBpm != null) 'tempoBpm': tempoBpm,
       };
 
   factory ImportedSong.fromJson(Map<String, dynamic> json) => ImportedSong(
@@ -63,6 +116,9 @@ class ImportedSong {
         musicXml: json['xml'] as String,
         attribution: json['attribution'] as String?,
         sourceUrl: json['sourceUrl'] as String?,
+        composer: json['composer'] as String?,
+        keyFifths: (json['keyFifths'] as num?)?.toInt(),
+        tempoBpm: (json['tempoBpm'] as num?)?.toDouble(),
       );
 }
 
@@ -138,8 +194,14 @@ class UserSongsService with ChangeNotifier {
       if (jsonString != null) {
         final map = json.decode(jsonString) as Map<String, dynamic>;
         _songs = [
+          // withDerivedMetadata(): songs saved before composer/key/tempo existed
+          // have none on disk, and showing a book of blanks would look like the
+          // feature is broken rather than like the data predates it. Deriving on
+          // load fills them in from the MusicXML that was always there; the next
+          // _save() persists the result, so this cost is paid once.
           for (final s in (map['songs'] as List? ?? []))
-            ImportedSong.fromJson(s as Map<String, dynamic>),
+            ImportedSong.fromJson(s as Map<String, dynamic>)
+                .withDerivedMetadata(),
         ];
         _sheets = [
           for (final s in (map['sheets'] as List? ?? []))
@@ -173,7 +235,10 @@ class UserSongsService with ChangeNotifier {
   }
 
   void addSong(ImportedSong song) {
-    _songs = [..._songs, song];
+    // Derive here too, so a freshly imported song shows its composer/key/tempo
+    // immediately instead of only after the next app start. Callers do not have
+    // to know the fields exist.
+    _songs = [..._songs, song.withDerivedMetadata()];
     notifyListeners();
     _save();
   }

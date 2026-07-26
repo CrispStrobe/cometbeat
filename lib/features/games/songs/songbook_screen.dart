@@ -11,6 +11,7 @@ import 'package:comet_beat/features/games/songs/song_book.dart'
 import 'package:comet_beat/features/games/songs/song_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/key_signature_label.dart';
 import 'package:crisp_notation/crisp_notation.dart' show scoreToMusicXml;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -89,6 +90,15 @@ class SongbookScreen extends StatelessWidget {
                     ),
                     leading: CircleAvatar(child: Text('${i + 1}')),
                     title: Text(song.title),
+                    // Composer · key · tempo, whichever the source actually
+                    // named. A book of twenty imports was twenty bare titles.
+                    subtitle: _metaLine(song) == null
+                        ? null
+                        : Text(
+                            _metaLine(song)!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -259,4 +269,17 @@ Future<void> createSongbook(BuildContext context) async {
   final name = await _promptName(context, l.songbookDefaultName);
   if (name == null) return;
   service.createCollection(name.isEmpty ? l.songbookDefaultName : name);
+}
+
+/// `"Bach · D / Bm · ♩=96"` from whatever metadata the song actually carries, or
+/// null when it carries none — so a song with nothing known shows no empty
+/// subtitle line rather than a stray separator.
+String? _metaLine(ImportedSong song) {
+  final parts = <String>[
+    if (song.composer != null) song.composer!,
+    if (song.keyFifths != null && keySignatureLabel(song.keyFifths!) != null)
+      keySignatureLabel(song.keyFifths!)!,
+    if (song.tempoBpm != null) tempoLabel(song.tempoBpm!),
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
 }
