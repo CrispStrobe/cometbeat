@@ -1068,11 +1068,31 @@ remaining numbers are the follow-up list:
 | **level** | **+3.76 dB** | **we are consistently LOUDER** |
 | **envelope correlation** | **0.222** | **loudness CONTOUR disagrees** |
 
-⬜ **Loudness parity (+3.8 dB).** Consistent, not noise. Most likely per-channel
-mix scaling or a preamp convention, but unverified. The decisive experiment is
-cheap: render the same material at 1 channel and at 4 and see whether the delta
-MOVES — if it does the fault is channel scaling, if it holds it is per-voice
-gain. `tool/make_musical_fixture.dart` can emit both.
+🔶 **Loudness parity — DIAGNOSED, and the main cause was a MISSING FEATURE.**
+The density sweep (1/2/3/4 active channels: +4.01 / +3.76 / +3.54 / +3.22 dB)
+ruled out summation — the gap is ~4 dB at a SINGLE channel and shrinks as
+channels are added, the shrinkage being our `tanh` limiter compressing the
+larger sum. A volume sweep (64/48/32/16) held it at 4.01–4.17 dB with both
+engines scaling linearly, so the volume MAPPING was right too.
+
+Comparing L and R separately found it: **openmpt123 pans MOD channels L-R-R-L at
+3:1, and we panned everything dead centre.** Full amplitude went into both
+channels instead of being split across them, and the arithmetic closes exactly —
+their mono downmix (0.1502+0.0501)/2 = 0.1002 against our 0.1588 is a ratio of
+1.586, i.e. **+4.00 dB**, the measured gap.
+
+✅ **Fixed** (`_protrackerPan` in `tracker_song_module.dart`): MOD now gets the
+Amiga layout, which is a real feature — a `.mod` stores no panning, so without
+it every module rendered mono-in-stereo and lost the wide ping-pong image the
+format is known for. Level gap **+4.01 dB → +2.68 dB**.
+
+⬜ **Residual ~2.7 dB is a GAIN CONVENTION, and is a product decision.**
+`_channelGain` uses a `0.6` base; matching the reference exactly would mean
+re-calibrating it, which changes how every module sounds in the app. Not a bug —
+neither convention is canonical — so it is recorded rather than quietly tuned.
+A smaller loose end: our measured split came out 3.6:1 where the reference is
+3:1, so something applies a little extra separation; worth a look if anyone is
+in that code.
 
 ⬜ **Envelope correlation 0.222.** The one number the loop fix barely moved
 (0.103 → 0.222). We now agree about *which* pitches sound and much less about

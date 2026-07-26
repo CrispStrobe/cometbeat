@@ -194,11 +194,37 @@ double _channelGain(ModuleDoc doc, int channelCount, int channel) {
   return base;
 }
 
+/// ProTracker's channel panning, which is a property of the HARDWARE rather
+/// than of the file — a `.mod` stores no panning at all, so it has to be
+/// supplied or every channel lands dead centre.
+///
+/// The Amiga wires its four voices **L R R L** and repeats that for the
+/// multi-channel variants. Real hardware is panned fully hard; that is
+/// exhausting on headphones, so trackers soften it, and this follows the de
+/// facto reference (openmpt123 renders 0.75/0.25, a 3:1 split) rather than
+/// inventing a third convention. In this file's LINEAR pan law — near side
+/// stays 1.0, far side becomes `1 - |pan|` — a 3:1 split is |pan| = 2/3.
+///
+/// Not cosmetic: without it a MOD is rendered mono-in-stereo, losing the wide
+/// ping-pong image that is one of the format's defining sounds. It is also why
+/// we measured **+4.0 dB** hotter than OpenMPT on every module — full amplitude
+/// was going into BOTH channels instead of being split across them.
+const double _kAmigaPanSeparation = 2 / 3;
+
+double _protrackerPan(int channel) => switch (channel % 4) {
+      0 || 3 => -_kAmigaPanSeparation,
+      _ => _kAmigaPanSeparation
+    };
+
 /// Resolve a channel's native header pan before falling back to the dominant
 /// sample's pan. S3M stores 16 coarse positions in the default-pan table;
 /// IT stores 0..64 with 32 as centre (100 is surround, which has no exact
-/// representation in the current stereo channel model).
+/// representation in the current stereo channel model). MOD stores none, so it
+/// gets the hardware's L-R-R-L layout ([_protrackerPan]).
 double _channelPanForChannel(ModuleDoc doc, int ins, int channel) {
+  if (doc.sourceFormat == ModuleFormat.mod && channel >= 0) {
+    return _protrackerPan(channel);
+  }
   if (doc.sourceFormat == ModuleFormat.it &&
       channel >= 0 &&
       channel < doc.channelPans.length) {
