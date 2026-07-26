@@ -6830,6 +6830,24 @@ abstract class AppLocalizations {
   /// **'That module has no samples to borrow.'**
   String get trackerBorrowEmpty;
 
+  /// No description provided for @trackerFxAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced effects'**
+  String get trackerFxAdvanced;
+
+  /// No description provided for @trackerFxCustomise.
+  ///
+  /// In en, this message translates to:
+  /// **'Customise these'**
+  String get trackerFxCustomise;
+
+  /// No description provided for @trackerFxCustomiseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the chosen effects into a full chain you can tweak, reorder and automate — the same effects the Audio Editor uses.'**
+  String get trackerFxCustomiseHint;
+
   /// No description provided for @trackerChangeEffect.
   ///
   /// In en, this message translates to:

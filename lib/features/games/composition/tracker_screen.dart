@@ -21,6 +21,7 @@ import 'dart:convert';
 
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/mod/mod.dart';
 import 'package:comet_beat/core/audio/mod/mod_bridge.dart';
 import 'package:comet_beat/core/audio/mod/module_convert.dart'
@@ -48,6 +49,7 @@ import 'package:comet_beat/features/sound_lab/my_instruments_sheet.dart'
     show showMyInstrumentsSheet;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
@@ -160,6 +162,12 @@ abstract interface class TrackerTester {
   /// The selected channel's insert effect, and a setter for it.
   List<TrackerChannelEffect> get channelEffects;
   void setChannelEffects(List<TrackerChannelEffect> fx);
+
+  /// E1 — the same chain in the shared [FxSpec] model, with real params. When
+  /// non-empty it takes over from [channelEffects] (the engine keeps the two
+  /// views from disagreeing), so this is the "advanced" face of one control.
+  List<FxSpec> get channelFxChain;
+  void setChannelFxChain(List<FxSpec> chain);
 
   // --- Arrangement (pattern slots + song) ---
   int get slotCount;
@@ -411,6 +419,15 @@ class _TrackerScreenState extends State<TrackerScreen>
   @override
   void setChannelEffects(List<TrackerChannelEffect> fx) {
     _engine.setChannelEffects(_selected, fx);
+    setState(() {});
+    _syncPlayback();
+  }
+
+  @override
+  List<FxSpec> get channelFxChain => _engine.channels[_selected].fxChain;
+  @override
+  void setChannelFxChain(List<FxSpec> chain) {
+    _engine.setChannelFxChain(_selected, chain);
     setState(() {});
     _syncPlayback();
   }
@@ -1511,6 +1528,7 @@ class _TrackerScreenState extends State<TrackerScreen>
             child: StatefulBuilder(
               builder: (context, setSheetState) {
                 final chain = _engine.channels[_selected].effects;
+                final fxChain = _engine.channels[_selected].fxChain;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1545,13 +1563,59 @@ class _TrackerScreenState extends State<TrackerScreen>
                     ),
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: chain.isEmpty
+                      onPressed: chain.isEmpty && fxChain.isEmpty
                           ? null
                           : () {
                               setChannelEffects(const []);
+                              setChannelFxChain(const []);
                               setSheetState(() {});
                             },
                       child: Text(l10n.trackerFxNone),
+                    ),
+                    // E1 — the same effects, with real params. Additive: the
+                    // chips above are still the quick path, and a channel that
+                    // only ever uses them renders through exactly the old code.
+                    const Divider(height: 24),
+                    ExpansionTile(
+                      key: const ValueKey('tracker-fx-advanced'),
+                      title: Text(l10n.trackerFxAdvanced),
+                      initiallyExpanded: fxChain.isNotEmpty,
+                      childrenPadding: const EdgeInsets.only(bottom: 8),
+                      children: [
+                        if (fxChain.isEmpty) ...[
+                          Text(
+                            l10n.trackerFxCustomiseHint,
+                            style: Theme.of(sheetContext).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton(
+                            key: const ValueKey('tracker-fx-customise'),
+                            onPressed: () {
+                              // Seed from what the user is CURRENTLY hearing,
+                              // so "customise" starts from their sound rather
+                              // than from silence.
+                              setChannelFxChain(
+                                fxChainForChannelPresets(chain),
+                              );
+                              setSheetState(() {});
+                            },
+                            child: Text(l10n.trackerFxCustomise),
+                          ),
+                        ],
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 360),
+                          child: SingleChildScrollView(
+                            child: FxRack(
+                              chain: fxChain,
+                              dense: true,
+                              onChanged: (next) {
+                                setChannelFxChain(next);
+                                setSheetState(() {});
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 );

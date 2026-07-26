@@ -3670,6 +3670,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get trackerBorrowEmpty => 'Dieses Modul hat keine Samples zum Leihen.';
 
   @override
+  String get trackerFxAdvanced => 'Erweiterte Effekte';
+
+  @override
+  String get trackerFxCustomise => 'Anpassen';
+
+  @override
+  String get trackerFxCustomiseHint =>
+      'Macht aus den gewählten Effekten eine vollständige Kette, die du verändern, umsortieren und automatisieren kannst — dieselben Effekte wie im Audio-Editor.';
+
+  @override
   String get trackerChangeEffect => 'Kanal-Effekt';
 
   @override

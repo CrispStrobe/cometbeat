@@ -3659,6 +3659,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackerBorrowEmpty => 'That module has no samples to borrow.';
 
   @override
+  String get trackerFxAdvanced => 'Advanced effects';
+
+  @override
+  String get trackerFxCustomise => 'Customise these';
+
+  @override
+  String get trackerFxCustomiseHint =>
+      'Turn the chosen effects into a full chain you can tweak, reorder and automate — the same effects the Audio Editor uses.';
+
+  @override
   String get trackerChangeEffect => 'Channel effect';
 
   @override
