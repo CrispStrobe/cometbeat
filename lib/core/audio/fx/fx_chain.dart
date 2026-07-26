@@ -481,8 +481,19 @@ Float64List _gainFx(
   );
 }
 
-Float64List _applyAutomatedFx(Float64List input, FxSpec fx, int sampleRate) {
-  if (input.isEmpty) return input;
+/// Drops points a project file should never have contained (non-finite times
+/// or values), clamps negative times to 0, sorts by time, and discards a
+/// parameter whose points all fell away.
+///
+/// Both the mono and the stereo renderer go through here so the SAME
+/// automation cannot render two different ways: a clip must not change shape
+/// the moment a pan makes it stereo.
+///
+/// [FxAutomationPoint.curve] is carried through. Rebuilding the point without
+/// it silently reset every ramp to linear at render time while the editor and
+/// the saved file both still showed the authored curve — audible only as "that
+/// fade isn't the shape I drew".
+Map<String, List<FxAutomationPoint>> _sanitizedAutomation(FxSpec fx) {
   final automation = <String, List<FxAutomationPoint>>{};
   for (final entry in fx.automation.entries) {
     final points = [
@@ -491,10 +502,17 @@ Float64List _applyAutomatedFx(Float64List input, FxSpec fx, int sampleRate) {
           FxAutomationPoint(
             ms: point.ms < 0 ? 0 : point.ms,
             value: point.value,
+            curve: point.curve,
           ),
     ]..sort((a, b) => a.ms.compareTo(b.ms));
     if (points.isNotEmpty) automation[entry.key] = points;
   }
+  return automation;
+}
+
+Float64List _applyAutomatedFx(Float64List input, FxSpec fx, int sampleRate) {
+  if (input.isEmpty) return input;
+  final automation = _sanitizedAutomation(fx);
   if (automation.isEmpty) {
     return _applyFx(input, fx.copyWith(automation: const {}), sampleRate);
   }
@@ -531,6 +549,15 @@ Float64List _applyAutomatedFx(Float64List input, FxSpec fx, int sampleRate) {
   int sampleRate,
 ) {
   if (left.isEmpty && right.isEmpty) return (left: left, right: right);
+  final automation = _sanitizedAutomation(fx);
+  if (automation.isEmpty) {
+    return _applyFxChainStereo(
+      left,
+      right,
+      [fx.copyWith(automation: const {})],
+      sampleRate,
+    );
+  }
   final block = math.max(64, (sampleRate / 50).round());
   final outLeft = Float64List(left.length);
   final outRight = Float64List(right.length);
@@ -538,7 +565,7 @@ Float64List _applyAutomatedFx(Float64List input, FxSpec fx, int sampleRate) {
     final end = math.min(left.length, start + block);
     final ms = start * 1000 / sampleRate;
     final params = {...fx.params};
-    for (final entry in fx.automation.entries) {
+    for (final entry in automation.entries) {
       params[entry.key] = _paramAutomationValue(
         entry.value,
         ms,

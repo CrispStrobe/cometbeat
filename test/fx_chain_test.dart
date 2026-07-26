@@ -215,6 +215,115 @@ void main() {
       expect(head, greaterThan(tail * 10));
     });
 
+    // Reads the level at a point one QUARTER of the way along the ramp. That
+    // is where the three curves genuinely separate: at the midpoint linear and
+    // sCurve both sit at 0.5, so a midpoint probe cannot tell them apart.
+    double quarterLevel(FxFadeCurve curve) {
+      final input = Float64List(_sampleRate)..fillRange(0, _sampleRate, 1);
+      final durationMs = input.length * 1000 / _sampleRate;
+      final fx = defaultFx(FxType.gain).copyWith(
+        params: {'gainDb': 0, 'mix': 1},
+        automation: {
+          'gainDb': [
+            FxAutomationPoint(ms: 0, value: -60, curve: curve),
+            FxAutomationPoint(ms: durationMs, value: 0),
+          ],
+        },
+      );
+      final out = applyFxChain(input, [fx], _sampleRate);
+      return out[(_sampleRate * 0.25).round()].abs();
+    }
+
+    test('the authored curve shapes the ramp — it is not always linear', () {
+      // The curve survives save/load and the editor draws it, so if it were
+      // dropped on the way to the DSP the ramp would still SOUND fine — just
+      // never like the one that was drawn. Nothing else would report it.
+      final linear = quarterLevel(FxFadeCurve.linear);
+      final exponential = quarterLevel(FxFadeCurve.exponential);
+      final sCurve = quarterLevel(FxFadeCurve.sCurve);
+
+      // t=0.25: linear→0.25, exponential→0.0625, sCurve→0.156. In dB terms
+      // that is a strictly quieter quarter-point for the curved ramps.
+      expect(
+        exponential,
+        lessThan(linear),
+        reason: 'an exponential ramp rises later than a linear one',
+      );
+      expect(
+        sCurve,
+        lessThan(linear),
+        reason: 'an S-curve eases in, so it is below linear at a quarter',
+      );
+      expect(sCurve, greaterThan(exponential));
+    });
+
+    test('mono and stereo render the same automation identically', () {
+      // Two code paths sample the same breakpoints. If they sanitise or read
+      // the curve differently, a clip changes shape the moment a pan makes it
+      // stereo — which is exactly when nobody is listening for it.
+      final mono = Float64List(_sampleRate)..fillRange(0, _sampleRate, 1);
+      final durationMs = mono.length * 1000 / _sampleRate;
+      final fx = defaultFx(FxType.gain).copyWith(
+        params: {'gainDb': 0, 'mix': 1},
+        automation: {
+          'gainDb': [
+            const FxAutomationPoint(
+              ms: 0,
+              value: -60,
+              curve: FxFadeCurve.exponential,
+            ),
+            FxAutomationPoint(ms: durationMs, value: 0),
+          ],
+        },
+      );
+
+      final monoOut = applyFxChain(mono, [fx], _sampleRate);
+      final stereoOut = applyFxChainStereo(
+        mono,
+        Float64List.fromList(mono),
+        [fx],
+        _sampleRate,
+      );
+      for (var i = 0; i < mono.length; i += 97) {
+        expect(
+          stereoOut.left[i],
+          closeTo(monoOut[i], 1e-12),
+          reason: 'stereo diverged from mono at sample $i',
+        );
+      }
+    });
+
+    test('malformed points are survived, not rendered', () {
+      // A hand-edited or truncated project file can carry these. The mono path
+      // already sorted/filtered them; the stereo path must not crash or emit
+      // NaN on the same input.
+      final mono = Float64List(1000)..fillRange(0, 1000, 1);
+      final fx = defaultFx(FxType.gain).copyWith(
+        params: {'gainDb': 0, 'mix': 1},
+        automation: {
+          'gainDb': [
+            const FxAutomationPoint(ms: 20, value: -12), // out of order
+            const FxAutomationPoint(ms: -5, value: 0), // negative time
+            const FxAutomationPoint(ms: double.nan, value: -6), // not finite
+          ],
+          'mix': const <FxAutomationPoint>[], // authored then emptied
+        },
+      );
+
+      for (final out in [
+        applyFxChain(mono, [fx], _sampleRate),
+        applyFxChainStereo(
+          mono,
+          Float64List.fromList(mono),
+          [fx],
+          _sampleRate,
+        ).left,
+      ]) {
+        expect(out.length, mono.length);
+        expect(out.every((v) => v.isFinite), isTrue);
+      }
+    });
+
     test('automation on a bypassed effect does nothing', () {
       final input = _sine();
       final fx = defaultFx(FxType.gain).copyWith(
