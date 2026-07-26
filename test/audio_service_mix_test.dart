@@ -78,4 +78,25 @@ void main() {
     expect(mono, isNotNull);
     expect(zeroPan, equals(mono));
   });
+
+  test('an in-play metronome click changes the mix (baked in, not silent)', () {
+    final audio = AudioService();
+    const part = <(List<int>, int)>[
+      ([60], 1000), // one long note across several beats
+    ];
+    final plain = audio.mixedWavBytes([part]);
+    final clicked = audio.mixedWavBytes([part], clickBeatMs: 250);
+    expect(plain, isNotNull);
+    expect(clicked, isNotNull);
+    expect(clicked, isNot(equals(plain))); // the clicks are in the WAV
+    expect(clicked!.length, plain!.length); // same timeline, not longer
+  });
+
+  test('a metronome with no music is still a silent no-op', () {
+    final audio = AudioService();
+    expect(
+      audio.mixedWavBytes([<(List<int>, int)>[]], clickBeatMs: 250),
+      isNull,
+    );
+  });
 }

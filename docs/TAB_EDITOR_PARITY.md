@@ -331,10 +331,13 @@ parametric technique end-to-end.
   restricts the loop to the cursor's bar (re-read each pass, so moving the cursor
   moves the loop), backed by an additive `toPlaybackEvents({from, to})` range with
   a tempo pre-roll (a mid-song slice starts at the right speed) and absolute
-  highlight ids. Tests: the toggles flip state (widget); the range + tempo pre-roll
-  + ramp/loop-range helpers (unit). **Phase D done end-to-end.** ⚠ remaining
-  refinement: a metronome click *during* play (blocked — one shared player;
-  count-in already exists).
+  highlight ids. A **Metronome** toggle bakes a click on every beat straight into
+  the mixed WAV (`AudioService.mixedWavBytes`'s new `clickBeatMs` + a public
+  `metronomeClickSamples`), so it shares the one audio player WITHOUT interrupting
+  the music — the "one shared player" limit is solved by mixing, not a second
+  player. Tests: the toggles flip state (widget); the range + tempo pre-roll +
+  ramp/loop-range helpers + the click-changes-the-WAV mix (unit). **Phase D done
+  end-to-end — the whole A0–E2 parity ladder is now modelled AND wired/playable.**
 - [x] **E1** rich GPIF export — the GPIF writer already carried bends (incl.
   multi-point curves) / slides / hammer / vibrato / harmonics (all kinds) /
   dynamics / staccato+accent / grace; extended it (crisp_notation@`ee05c33`) to

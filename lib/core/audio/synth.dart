@@ -760,10 +760,15 @@ Uint8List renderSfxFanfare() => _sfxWav([
 /// downbeat. Kept high and short to be unobtrusive; it does not need to be
 /// mic-safe by itself because the play-along only clicks during the (unscored)
 /// count-in (see metronome.dart's CountInClicker).
-Uint8List renderSfxTick({bool accent = false}) => _sfxWav([
-      _squareSweep(
-        accent ? 1760 : 1320,
-        accent ? 1760 : 1320,
-        accent ? 45 : 32,
-      ),
-    ]);
+Uint8List renderSfxTick({bool accent = false}) =>
+    _sfxWav([metronomeClickSamples(accent: accent)]);
+
+/// The raw samples of one metronome click (the same blip [renderSfxTick] wraps
+/// in a WAV), so a click can be MIXED into a rendered timeline instead of played
+/// on its own — an in-play metronome that shares the one audio player without
+/// interrupting the music. [accent]ed (higher/longer) on a downbeat.
+Float64List metronomeClickSamples({bool accent = false}) => _squareSweep(
+      accent ? 1760 : 1320,
+      accent ? 1760 : 1320,
+      accent ? 45 : 32,
+    );

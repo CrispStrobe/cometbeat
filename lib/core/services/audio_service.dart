@@ -157,14 +157,22 @@ class AudioService {
   /// [parts], default 1.0), so a mixer's per-track volume reaches the mix.
   /// [pans] optionally places each part in the stereo field (−1 left … +1
   /// right); when any part is panned the mix is rendered stereo, else mono
-  /// (byte-identical to the no-pan path).
+  /// (byte-identical to the no-pan path). [clickBeatMs] optionally bakes a
+  /// metronome click into the mix on every beat of that length (a practice
+  /// click that shares the one player without interrupting the music).
   Future<void> playMixedTimedChords(
     List<List<(List<int>, int)>> parts, {
     List<double>? gains,
     List<double>? pans,
+    int? clickBeatMs,
   }) {
     if (!soundOn) return Future.value(); // rendering is wasted while muted
-    final wav = mixedWavBytes(parts, gains: gains, pans: pans);
+    final wav = mixedWavBytes(
+      parts,
+      gains: gains,
+      pans: pans,
+      clickBeatMs: clickBeatMs,
+    );
     if (wav == null) return Future.value();
     return _play(wav);
   }
@@ -181,6 +189,7 @@ class AudioService {
     List<List<(List<int>, int)>> parts, {
     List<double>? gains,
     List<double>? pans,
+    int? clickBeatMs,
   }) {
     final v = voice;
     final timbre = v == null ? timbreFor(instrument) : null;
@@ -201,6 +210,27 @@ class AudioService {
       built.add((samples: samples, gain: gain, pan: pan));
     }
     if (built.isEmpty) return null;
+    // In-play metronome: a click stem with a blip on every beat, mixed in as its
+    // own (centre) stem so it never interrupts the music. Kept a touch quieter
+    // than the parts so it guides rather than dominates.
+    if (clickBeatMs != null && clickBeatMs > 0) {
+      final beatSamples = (clickBeatMs / 1000 * kSampleRate).round();
+      if (beatSamples > 0) {
+        final click = Float64List(totalSamples);
+        var beat = 0;
+        for (var off = 0; off < totalSamples; off += beatSamples) {
+          final blip = metronomeClickSamples(accent: beat == 0);
+          final n = off + blip.length <= totalSamples
+              ? blip.length
+              : totalSamples - off;
+          for (var j = 0; j < n; j++) {
+            click[off + j] += blip[j];
+          }
+          beat++;
+        }
+        built.add((samples: click, gain: 0.6, pan: 0.0));
+      }
+    }
     if (built.any((s) => s.pan != 0)) {
       return wavBytesStereo(
         mixStemsStereo(

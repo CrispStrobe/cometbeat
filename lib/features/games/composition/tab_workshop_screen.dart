@@ -221,6 +221,7 @@ abstract class TabWorkshopTester {
   /// Practice tools (D4): whether looping / the speed trainer are on.
   bool get debugLoop;
   bool get debugLoopBar;
+  bool get debugMetronome;
   bool get debugSpeedTrainer;
 
   /// 🔍 Desktop hover: drive the hover over a cell and read whether the corner
@@ -384,6 +385,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   bool _loop = false;
   bool _loopBar = false; // loop only the cursor's bar (implies looping)
   bool _speedTrainer = false;
+  bool _metronome = false; // an in-play click, baked into the mix
   int _playBpm = 120; // the tempo currently sounding (trainer may ramp it)
   List<int> _trainerTempos = const [];
   int _loopIndex = 0;
@@ -821,6 +823,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   bool get debugLoop => _loop;
   @override
   bool get debugLoopBar => _loopBar;
+  @override
+  bool get debugMetronome => _metronome;
   @override
   bool get debugSpeedTrainer => _speedTrainer;
   @override
@@ -1278,6 +1282,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       ],
       gains: [for (final t in audible) t.volume],
       pans: [for (final t in audible) t.pan],
+      clickBeatMs: _metronome ? (60000 / _playBpm).round() : null,
     );
     final schedule = <({int col, int start, int end, bool note})>[];
     var t = 0;
@@ -1557,6 +1562,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   setState(() => _loop = !_loop);
                 case 'loopBar':
                   setState(() => _loopBar = !_loopBar);
+                case 'metronome':
+                  setState(() => _metronome = !_metronome);
                 case 'speedTrainer':
                   setState(() => _speedTrainer = !_speedTrainer);
                 case 'mic':
@@ -1609,6 +1616,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 value: 'loopBar',
                 checked: _loopBar,
                 child: const Text('Loop bar'),
+              ),
+              CheckedPopupMenuItem(
+                value: 'metronome',
+                checked: _metronome,
+                child: const Text('Metronome'),
               ),
               CheckedPopupMenuItem(
                 value: 'speedTrainer',
