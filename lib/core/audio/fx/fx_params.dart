@@ -95,6 +95,8 @@ const _byName = <String, FxParamSpec>{
   'roomSize': FxParamSpec(key: 'roomSize', min: 0, max: 1),
   'damping': FxParamSpec(key: 'damping', min: 0, max: 1),
   'decay': FxParamSpec(key: 'decay', min: 0.1, max: 10, unit: 's'),
+  'seconds': FxParamSpec(key: 'seconds', min: 0.1, max: 8, unit: 's'),
+  'predelayMs': FxParamSpec(key: 'predelayMs', min: 0, max: 200, unit: 'ms'),
   'drive': FxParamSpec(key: 'drive', min: 0, max: 20),
   'bits': FxParamSpec(key: 'bits', min: 1, max: 16, integer: true),
   'stages': FxParamSpec(key: 'stages', min: 1, max: 12, integer: true),
@@ -125,6 +127,12 @@ const _byTypeAndName = <(FxType, String), FxParamSpec>{
   // The vocoder's carrier is a pitch, not a modulation frequency.
   (FxType.vocoder, 'carrierHz'):
       FxParamSpec(key: 'carrierHz', min: 40, max: 800, unit: 'Hz'),
+  // The convolution reverb's `decay` is a 0..1 SHAPE factor for its generated
+  // impulse, not a time — the algorithmic reverb's `decay` is in seconds. Same
+  // word, different quantity, which is exactly what this override table is for:
+  // without it the slider would offer 10 and read "0.50s".
+  (FxType.convolutionReverb, 'decay'):
+      FxParamSpec(key: 'decay', min: 0, max: 1),
 };
 
 /// Every editable param of [type], in the order [defaultFx] declares them —
@@ -157,6 +165,7 @@ String fxTypeLabel(FxType type) => switch (type) {
       FxType.gain => 'Gain',
       FxType.pan => 'Pan',
       FxType.reverb => 'Reverb',
+      FxType.convolutionReverb => 'Convolution reverb',
       FxType.delay => 'Delay',
       FxType.chorus => 'Chorus',
       FxType.flanger => 'Flanger',
@@ -212,6 +221,8 @@ String fxParamLabel(String key) => switch (key) {
       'roomSize' => 'Room',
       'damping' => 'Damping',
       'decay' => 'Decay',
+      'seconds' => 'Length',
+      'predelayMs' => 'Pre-delay',
       'drive' => 'Drive',
       'bits' => 'Bits',
       'stages' => 'Stages',
@@ -257,7 +268,10 @@ FxCategory fxCategory(FxType type) => switch (type) {
       FxType.ringMod =>
         FxCategory.modulation,
       FxType.distortion || FxType.bitCrush => FxCategory.drive,
-      FxType.reverb || FxType.delay => FxCategory.space,
+      FxType.reverb ||
+      FxType.convolutionReverb ||
+      FxType.delay =>
+        FxCategory.space,
       FxType.pitchShift || FxType.timeStretch => FxCategory.pitch,
       FxType.vocoder ||
       FxType.voiceShape ||
