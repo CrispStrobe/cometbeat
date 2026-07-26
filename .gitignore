@@ -3,6 +3,12 @@
 *.log
 *.pyc
 *.swp
+# Merge/patch detritus — never meant to be committed (a broad `git add` once
+# swept .orig/.bak2/.rej scratch into the tree, breaking analyze).
+*.orig
+*.rej
+*.bak
+*.bak2
 .DS_Store
 .atom/
 .build/
