@@ -37,11 +37,13 @@ Sound Library creation tools.
   arranging clips: samples from the library, extracted/imported material, and
   demo beat/tune. Sound design tools live in the Sound Library when the goal is
   creating/selecting an instrument.
-- **Voice Shaping is an audio FX module.** Shape a Voice is no longer an "add a
-  clip" action. The voice-shaping DSP should be exposed under Audio Editor FX so
-  it can process any WAV/sample/track/segment. Today that means a Voice Shaping
-  section in track inserts; later it can grow clip/segment modules and more FX
-  sections without changing the instrument picker model.
+- ✅ **Voice Shaping is an audio FX module — DONE (verified 2026-07-26).**
+  `voiceShape` / `voiceChipmunk` / `voiceDeep` / `voiceRobot` / `voiceRadio` are
+  `FxType` values with defaults in `fx_spec.dart`, and `daw_screen.dart`'s single
+  `_clipEffectTypes` list feeds **all four scopes** — `_trackFxEditor`,
+  `_masterFxEditor`, `_busEditor` and `_openClipInspector` — plus the marked-range
+  FX action. So the voice-shaping DSP already processes any clip, track, bus,
+  master or segment, which was the ask.
 
 ## Loop Studio consolidation (IN PROGRESS)
 
@@ -672,10 +674,21 @@ kept here so nothing is lost from the canonical plan.
   rpaths (it currently bakes the CI build path, so a downloaded dylib can't find
   `@rpath/libggml.0.dylib`); lay the libs in one flat dir (split across `src/` +
   `ggml/src/` today); optional `CrispasrSession.tab()` wrapper in the pub package.
-- ⬜ **OPEN (verified absent 2026-07-26)** `thesession_source.dart` — Irish-trad
-  ABC library source (specced, absent), with the no-LLM flag set. `lib/features/
-  library/sources/` currently holds cometbeat_catalog · commons · freepats ·
-  github_abc · gregobase · modarchive · openscore · vcsl, and no session source.
+- ❌ **DO NOT BUILD — settled as excluded (corrected 2026-07-26).**
+  `thesession_source.dart` was listed here as "specced, absent", which reads as
+  an invitation to implement it. It isn't one:
+  [docs/CORPUS_LICENSING.md](docs/CORPUS_LICENSING.md) — the authoritative doc —
+  lists thesession under **"Not reachable (settled)"** and states *"thesession.org
+  is ODbL **+ a no-LLM clause + composer-copyright risk** → excluded entirely;
+  hosting it on HF can't honour 'no LLM use'."* It also notes ODbL is Tier C
+  (share-alike), and **Tier C is not shippable at all until the app enforces
+  SA-propagation** — once SA content enters an Editor, every export/save/share
+  has to affirm SA on the output, which isn't built.
+  So this needs no code; it needed the two docs to stop disagreeing. If it is
+  ever revisited it starts with the SA-propagation work and a licence review, not
+  with a source adapter.
+  *(For context, `lib/features/library/sources/` holds cometbeat_catalog ·
+  commons · freepats · github_abc · gregobase · modarchive · openscore · vcsl.)*
 - IMSLP + CPDL/ChoralWiki conditional, country-gated library sources (A4) — gated
   behind the "real legal review" the scoping doc called for.
 - `DonationConfig` tile flip-on (A5) — `donation.dart` exists but stays disabled
@@ -728,13 +741,18 @@ had already shipped, so this block was a trap for the next agent to redo:
   reverb tail or an automation ramp reaches in from outside it. Those lanes fall
   back to a full render + slice: still exact, just without the saving. (Same
   philosophy as the Tracker's `songCanStreamFlowVariable`.)
-  ⬜ **Still to do for full P2.1, and it needs a coordination call:** driving
-  PLAYBACK off this (block-by-block, so faders/automation apply live instead of
-  on the next bake), live-playable instruments, and input monitoring. That part
-  overlaps the Tracker arc's §E3 (`flutter_soloud`) claim, and the Tracker just
-  shipped its own streaming mixer (Renderer v2.1) — there is probably ONE engine
-  to share rather than two. The windowed render above is deliberately the piece
-  that is useful on its own and commits nobody to an engine choice.
+  ⬜ **The rest of P2.1 is OWNED, not unclaimed — do not pick it up here.** The
+  coordination board settles it: *"real-time streaming engine (**= @tracker-ui
+  §E3, THEIRS**)"*, and `opus (tracker-ui)` is 🚧 ACTIVE. That covers driving
+  PLAYBACK block-by-block (so faders/automation apply live instead of on the next
+  bake), live-playable instruments, and input monitoring. The Tracker has also
+  already shipped its own streaming mixer (Renderer v2.1), so the engine likely
+  exists there to reuse.
+  The windowed render above was deliberately scoped to stop at that line: it is a
+  pure additive core function, useful on its own, and commits nobody to an engine
+  choice. **@tracker-ui: `renderTimelineWindowStereo` is ready to be the DAW's
+  block source when §E3 lands** — it already renders an arbitrary
+  `[from, to)` span byte-identically, which is the awkward half of block playback.
 - ✅ **DONE** P0.1 convolution reverb — `crisp_dsp/convolution_reverb.dart`
   (synthesized IR + FFT overlap-add) landed and is tested; as of 2026-07-26 it's
   also wired into the shared FX rack as `FxType.convolutionReverb`, where before
