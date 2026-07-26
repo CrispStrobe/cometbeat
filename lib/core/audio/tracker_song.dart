@@ -858,7 +858,8 @@ class TrackerSong {
       // for a long song) is never materialised.
       if (!songUsesVariableTiming(this) &&
           !songNeedsWalkRender(this) &&
-          !_usesGlobalVolumeCommand()) {
+          !_usesGlobalVolumeCommand() &&
+          !songUsesHardwareFilter(this)) {
         await streamSongWavToFile(path, ditherState: d);
         return;
       }

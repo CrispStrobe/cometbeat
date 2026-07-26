@@ -59,8 +59,7 @@ class ModuleExportLoss {
   /// Sxy control sub-commands with no faithful cross-format equivalent — they
   /// survive only a same-format export (S3M→S3M / IT→IT via native provenance).
   static const unmappedSpecialEffects =
-      'Some Sxy control effects are dropped: S0x set-filter toggle, SFx MIDI '
-      'macro.';
+      'Some Sxy control effects are dropped: SFx MIDI macro.';
 
   /// Cross-format samples are re-encoded to S3M PCM; AdLib/packed data is lost.
   static const s3mSampleReencode =
@@ -106,7 +105,7 @@ bool _letterEffectLost(DocCell c) {
   if (e == 0xC) return false; // set-volume → volume column
   if (e == 0xE) {
     final sub = (c.effectParam >> 4) & 0xF;
-    const roundTrips = {0x3, 0x4, 0x5, 0x6, 0x7, 0xC, 0xD, 0xE};
+    const roundTrips = {0x0, 0x3, 0x4, 0x5, 0x6, 0x7, 0xC, 0xD, 0xE};
     return !roundTrips.contains(sub);
   }
   return !_s3mItRepresentableEffects.contains(e);
@@ -115,6 +114,7 @@ bool _letterEffectLost(DocCell c) {
 /// S3M/IT `Sxy` sub-command nibbles that `_s3mSpecialToFx` (module_convert.dart)
 /// maps to a neutral effect. Any other sub-command drops on cross-format export.
 const _mappedSpecialSubs = <int>{
+  0x0,
   0x1,
   0x2,
   0x3,
@@ -132,11 +132,11 @@ const _mappedSpecialSubs = <int>{
 };
 
 /// True if [c] carries an S3M/IT `S` letter-command (19) whose sub-command has
-/// no neutral equivalent (S0/SF) — dropped on any cross-format export. (SAx now
-/// maps to kFxSetHighOffset (0x13), S9x to kFxSetSoundControl (0x17), and S7x to
-/// kFxSetPastNote (0x17),
-/// so none is listed here.) Read from the native command, since the neutral
-/// effect column is already `(0, 0)` for these.
+/// no neutral equivalent (only SF now) — dropped on any cross-format export. (SAx
+/// maps to kFxSetHighOffset (0x13), S9x to kFxSetSoundControl (0x17), S7x to
+/// kFxSetPastNote (0x17), and S0x — the hardware filter — now to E0x
+/// [kExSetHardwareFilter], so none of those is listed here.) Read from the native
+/// command, since the neutral effect column is already `(0, 0)` for these.
 bool _hasUnmappedSpecial(DocCell c) =>
     c.nativeEffect == 19 &&
     !_mappedSpecialSubs.contains((c.nativeEffectParam >> 4) & 0xF);

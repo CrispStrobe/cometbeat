@@ -140,6 +140,16 @@ const int kExTremoloWaveform = 0x7; // E7x — 0 sine · 1 saw(ramp) · 2 square
 const int kExPatternDelay =
     0xE; // EEx — repeat the current row x extra times (row-level, in walkFlow)
 
+/// E0x — toggle the Amiga/GUS HARDWARE output low-pass filter (the "LED" filter):
+/// `E00` turns it OFF, `E01` turns it ON. Unlike Zxx ([kFxSetFilter], a per-VOICE
+/// resonant filter with a 0..127 cutoff), this is a GLOBAL, fixed ~3.3 kHz
+/// one-pole low-pass over the whole MASTER MIX, toggled on/off and persisting
+/// across rows/orders until toggled again (see [hardwareFilterSchedule] /
+/// [_HardwareLowPass]). S3M/IT spell the SAME hardware filter `S0x`; cross-format
+/// importers map `S0x` ↔ `E0x` ([_s3mSpecialToFx] / [_fxToLetterEffect]). Default
+/// OFF → no filtering → a render is byte-identical to the pre-filter engine.
+const int kExSetHardwareFilter = 0x0;
+
 /// Rxy — retrigger the note every y ticks, applying volume change code x on each
 /// retrigger (the XM table). Not a 0x0–0xF nibble, so it never collides with the
 /// classic MOD commands; importers can map XM effect 0x1B onto it.
@@ -254,6 +264,12 @@ const int kFxSetPastNote = 0x17;
 /// tick voices via a stateful [Biquad] low-pass. Carried across streaming chunks
 /// with the rest of the voice state.
 const int kFxSetFilter = 0x1C;
+
+/// Corner frequency (Hz) of the Amiga/GUS HARDWARE output low-pass toggled by
+/// E0x/S0x ([kExSetHardwareFilter]). The classic Amiga "LED"/Paula filter and the
+/// ST3 SoundBlaster/GUS output filter both sit around ~3.3 kHz; modelled as a
+/// single-pole (6 dB/oct) low-pass over the master mix.
+const double kAmigaFilterCutoffHz = 3300.0;
 
 // --- IT resonant low-pass filter mapping (OpenMPT/IT formula) -----------------
 //
@@ -2253,6 +2269,156 @@ Float64List? globalVolumeEnvelope(
   return env;
 }
 
+// --- Amiga/GUS hardware output low-pass filter (E0x / S0x) --------------------
+//
+// A GLOBAL, fixed one-pole low-pass over the MASTER MIX, toggled on/off by E0x
+// (MOD/XM) and S0x (S3M/IT) — the same hardware filter (Amiga "LED"/Paula, ST3
+// SB/GUS output). It is NOT a per-voice command: it sits at the very output, so
+// it is applied AFTER the mix + global volume, right before PCM quantisation.
+// The toggle persists across rows AND order boundaries (like global volume),
+// starting OFF; a song with no E0x/S0x builds no schedule and renders
+// byte-identically to the pre-filter engine.
+
+/// Whether any cell in [rows] (row-major `rows[r][channel]`) carries the
+/// hardware-filter toggle E0x ([kFxExtended] with sub-nibble
+/// [kExSetHardwareFilter]) — the gate that decides whether a render pays for the
+/// [hardwareFilterSchedule] scan + the low-pass pass.
+bool _hasHardwareFilter(List<List<TrackerCell>> rows) {
+  for (final row in rows) {
+    for (final c in row) {
+      if (c.fxCmd == kFxExtended &&
+          ((c.fxParam >> 4) & 0xF) == kExSetHardwareFilter) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/// The per-sample ON/OFF schedule of the Amiga/GUS hardware low-pass over a
+/// played row sequence, driven by E0x (`E00` off · `E01`+ on). The filter
+/// persists across rows/orders, starting OFF. [rows] is row-major
+/// (`rows[r][channel]`); [rowStart] gives each row's start sample and
+/// [totalSamples] bounds the last row. Returns null when no E0x appears, so the
+/// caller skips the filter and the render stays byte-identical. First E0x on a
+/// row wins (scanned across channels). Entry i is 1 when the filter is ON for
+/// output sample i.
+Uint8List? hardwareFilterSchedule(
+  List<List<TrackerCell>> rows,
+  List<int> rowStart,
+  int totalSamples,
+) {
+  if (!_hasHardwareFilter(rows)) return null;
+  final sched = Uint8List(totalSamples);
+  var on = false;
+  for (var r = 0; r < rows.length; r++) {
+    int? toggle;
+    for (final c in rows[r]) {
+      if (c.fxCmd == kFxExtended &&
+          ((c.fxParam >> 4) & 0xF) == kExSetHardwareFilter) {
+        toggle ??= c.fxParam & 0xF;
+      }
+    }
+    if (toggle != null) on = toggle != 0; // E00 off, E01+ on
+    if (!on) continue;
+    final rowS = rowStart[r];
+    final rowE = r + 1 < rows.length ? rowStart[r + 1] : totalSamples;
+    for (var i = rowS; i < rowE && i < totalSamples; i++) {
+      sched[i] = 1;
+    }
+  }
+  return sched;
+}
+
+/// The one-pole (6 dB/oct) smoothing coefficient for a low-pass at [cutoffHz]:
+/// `alpha = dt / (RC + dt)`, `RC = 1 / (2π·fc)`, `dt = 1/sampleRate`.
+double _onePoleAlpha(double cutoffHz, double sampleRate) {
+  final dt = 1.0 / sampleRate;
+  final rc = 1.0 / (2.0 * pi * cutoffHz);
+  return dt / (rc + dt);
+}
+
+/// A fixed one-pole low-pass modelling the Amiga/GUS hardware output filter at
+/// [kAmigaFilterCutoffHz]. State (`_y`) carries across [process] calls AND across
+/// streaming chunk boundaries, so a streamed render matches the whole-song one.
+/// When the filter is OFF the sample passes through unchanged and the state
+/// TRACKS the input, so toggling back ON resumes without a discontinuity.
+class _HardwareLowPass {
+  _HardwareLowPass([
+    double cutoffHz = kAmigaFilterCutoffHz,
+    double sampleRate = kSampleRate + 0.0,
+  ]) : _alpha = _onePoleAlpha(cutoffHz, sampleRate);
+
+  final double _alpha;
+  double _y = 0.0;
+
+  double process(double x, bool on) {
+    if (on) {
+      _y += _alpha * (x - _y);
+      return _y;
+    }
+    _y = x;
+    return x;
+  }
+}
+
+/// Runs the Amiga/GUS hardware low-pass over [mix] in place for the sample ranges
+/// where E0x is ON (from [hardwareFilterSchedule] over [rows]/[starts]). A no-op
+/// (beyond the scan) when no E0x appears, so the common render stays
+/// byte-identical.
+void _applyHardwareFilterMix(
+  Float64List mix,
+  List<List<TrackerCell>> rows,
+  List<int> starts,
+) {
+  final sched = hardwareFilterSchedule(rows, starts, mix.length);
+  if (sched == null) return;
+  final lp = _HardwareLowPass();
+  for (var i = 0; i < mix.length; i++) {
+    mix[i] = lp.process(mix[i], sched[i] != 0);
+  }
+}
+
+/// The stereo sibling of [_applyHardwareFilterMix]: an INDEPENDENT one-pole runs
+/// over each of [left]/[right] (the hardware filter is spatially neutral but each
+/// output channel carries its own capacitor state).
+void _applyHardwareFilterStereo(
+  List<double> left,
+  List<double> right,
+  List<List<TrackerCell>> rows,
+  List<int> starts,
+) {
+  final sched = hardwareFilterSchedule(rows, starts, left.length);
+  if (sched == null) return;
+  final lpL = _HardwareLowPass();
+  final lpR = _HardwareLowPass();
+  for (var i = 0; i < left.length; i++) {
+    final on = sched[i] != 0;
+    left[i] = lpL.process(left[i], on);
+    right[i] = lpR.process(right[i], on);
+  }
+}
+
+/// Whether [song] carries the Amiga/GUS hardware-filter toggle (E0x / S0x) in any
+/// PLAYED pattern. The filter state persists across order boundaries (like global
+/// volume), so a per-order / per-chunk streamed render only matches the whole-song
+/// render when NO such command appears; used to route a filtered song onto the
+/// whole-song float streaming path (see [songCanStreamFlowVariable]).
+bool songUsesHardwareFilter(TrackerSong song) {
+  for (final o in song.order) {
+    if (o < 0 || o >= song.patterns.length) continue;
+    for (final column in song.patterns[o].cells) {
+      for (final cell in column) {
+        if (cell.fxCmd == kFxExtended &&
+            ((cell.fxParam >> 4) & 0xF) == kExSetHardwareFilter) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 // --- Stereo panning (Feature C) ----------------------------------------------
 //
 // Pan is a purely SPATIAL, post-mix operation: it never changes a voice's mono
@@ -3245,6 +3411,7 @@ ReplayResult replayPattern(
   }
   final (rows, starts) = _rowScan(cells, timing, 0);
   _applyGlobalVolumeMix(mix, rows, starts, ticks);
+  _applyHardwareFilterMix(mix, rows, starts);
   return ReplayResult(_mixToPcm(mix), const [RowTiming(0, 0, 0, 0)]);
 }
 
@@ -3358,6 +3525,7 @@ ReplayResult replayPatternStereo(
   }
   final (gvRows, gvStarts) = _rowScan(cells, timing, 0);
   _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticks);
+  _applyHardwareFilterStereo(left, right, gvRows, gvStarts);
   return ReplayResult(
     _interleaveToPcm(left, right),
     const [RowTiming(0, 0, 0, 0)],
@@ -3857,6 +4025,7 @@ ReplayResult replaySong(
   }
   _applyGlobalVolumeMix(mix, gvRows, gvStarts, ticks);
   _applySongGlobalVolume(mix, song.globalVolume);
+  _applyHardwareFilterMix(mix, gvRows, gvStarts);
   return ReplayResult(_mixToPcm(mix, dither), timingMap);
 }
 
@@ -3957,6 +4126,7 @@ int pcm16Sample(double x, [PcmDither? dither]) {
   _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticks);
   _applySongGlobalVolume(left, song.globalVolume);
   _applySongGlobalVolume(right, song.globalVolume);
+  _applyHardwareFilterStereo(left, right, gvRows, gvStarts);
   return (left: left, right: right, timingMap: timingMap);
 }
 
@@ -4000,6 +4170,7 @@ ReplayResult _replayFlow(
   );
   _applyGlobalVolumeMix(mix, gvRows, gvStarts, ticksPerRow);
   _applySongGlobalVolume(mix, song.globalVolume);
+  _applyHardwareFilterMix(mix, gvRows, gvStarts);
 
   final timingMap = [
     for (var i = 0; i < played.length; i++)
@@ -4048,6 +4219,7 @@ ReplayResult _replayFlow(
   _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, ticksPerRow);
   _applySongGlobalVolume(left, song.globalVolume);
   _applySongGlobalVolume(right, song.globalVolume);
+  _applyHardwareFilterStereo(left, right, gvRows, gvStarts);
   final timingMap = [
     for (var i = 0; i < played.length; i++)
       RowTiming(
@@ -4108,6 +4280,7 @@ ReplayResult _replayVariable(TrackerSong song, {PcmDither? dither}) {
       _flatRowScan(played, song, channels.length, (i) => rowStart[i]);
   _applyGlobalVolumeMix(mix, gvRows, gvStarts, song.initialSpeed);
   _applySongGlobalVolume(mix, song.globalVolume);
+  _applyHardwareFilterMix(mix, gvRows, gvStarts);
 
   final starts = _variableRowStartMs(song, played);
   final timingMap = [
@@ -4697,6 +4870,7 @@ const _nativeTickFullBufferLimit = kSampleRate * 120;
   _applyGlobalVolumeStereo(left, right, gvRows, gvStarts, song.initialSpeed);
   _applySongGlobalVolume(left, song.globalVolume);
   _applySongGlobalVolume(right, song.globalVolume);
+  _applyHardwareFilterStereo(left, right, gvRows, gvStarts);
 
   final starts = _variableRowStartMs(song, played);
   final timingMap = [
@@ -4877,6 +5051,12 @@ bool songCanStreamFlowVariable(TrackerSong song, {required bool stereo}) {
   if (!(songNeedsWalkRender(song) || songUsesVariableTiming(song))) {
     return false;
   }
+  // The Amiga/GUS hardware filter (E0x/S0x) is a whole-song time-varying output
+  // filter whose one-pole state persists across order/chunk boundaries. The
+  // bounded per-chunk streamer restarts state per chunk, so a filtered song
+  // routes onto the WHOLE-SONG float streaming path instead (where the filter is
+  // applied in one continuous pass) — byte-identical to the in-memory render.
+  if (songUsesHardwareFilter(song)) return false;
   final played = walkFlow(song);
   if (played.isEmpty) return false;
   final nativeLongStereo = _songUsesNativeLongStereo(song, played);

@@ -289,6 +289,9 @@ ModuleDoc docFromMod(ModModule m) {
 (int, int) _s3mSpecialToFx(int info) {
   final sub = (info >> 4) & 0xF, val = info & 0xF;
   switch (sub) {
+    case 0x0: // S0x — set hardware filter → E0x (kExSetHardwareFilter): the SAME
+      // Amiga/GUS output low-pass MOD/XM spell E0x (S00/E00 off, S01/E01 on).
+      return (0xE, (0x0 << 4) | val);
     case 0x1: // S1x — glissando control → E3x (kExGlissando)
       return (0xE, (0x3 << 4) | val);
     case 0x2: // S2x — set finetune → E5x (kExSetFinetune)
@@ -327,13 +330,12 @@ ModuleDoc docFromMod(ModModule m) {
       return (0xE, (0xD << 4) | val);
     default:
       // No faithful replayer equivalent → dropped (surfaced by the export-loss
-      // report). Re-examined now that kFxSetFilter (Zxx resonant low-pass)
-      // exists, and each still genuinely fails to map:
-      //   • S0x set filter — a COARSE hardware on/off toggle (the ST3 SB/GUS
-      //     output filter, cf. the Amiga LED filter), NOT the IT resonant
-      //     filter. kFxSetFilter needs a 0..127 cutoff/resonance value; "filter
-      //     on" carries no cutoff, so mapping it to Zxx would fabricate one.
+      // report). Remaining genuinely-unmapped sub-command:
       //   • SFx set active MIDI macro — MIDI to external gear, no audible target.
+      // (S0x set-filter — the COARSE hardware on/off toggle, ST3 SB/GUS output
+      //  filter / Amiga LED filter — now maps → E0x [kExSetHardwareFilter] above,
+      //  the SAME hardware filter MOD/XM spell E0x, rendered as a global master
+      //  low-pass. It is NOT the IT resonant Zxx filter [kFxSetFilter].)
       // (SAx high sample offset → kFxSetHighOffset; S9x surround / reverse play →
       // kFxSetSoundControl; S7x past-note / NNA control → kFxSetPastNote, all
       // above. Names, not numbers — the numbers in comments went stale repeatedly.)
@@ -923,6 +925,7 @@ ModuleDoc docFromIt(ItModule m) {
       // (MOD/XM still carry them 1:1).
       final val = param & 0xF;
       return switch ((param >> 4) & 0xF) {
+        0x0 => (19, (0x0 << 4) | val), // E0x hardware filter → S0x
         0x3 => (19, (0x1 << 4) | val), // E3x glissando      → S1x
         0x4 => (19, (0x3 << 4) | val), // E4x vibrato wave   → S3x
         0x5 => (19, (0x2 << 4) | val), // E5x set finetune   → S2x
