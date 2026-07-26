@@ -748,4 +748,56 @@ void main() {
       expect(n.section, 'Chorus');
     });
   });
+
+  group('A9 — tempo map', () {
+    // Two 4/4 bars of four quarters; a tempo change on bar 2.
+    TabDocument twoBars() => TabDocument(
+          tuning: Tuning.standardGuitar,
+          columns: [
+            for (var i = 0; i < 8; i++)
+              TabColumn(frets: {0: i}, duration: NoteDuration.quarter),
+          ],
+        );
+
+    test('setBarTempo stamps Measure.tempoChange on the bar', () {
+      final doc = twoBars();
+      doc.setBarTempo(4, 90); // bar 2 → 90 BPM
+      final measures = doc.toScore().measures;
+      expect(measures[0].tempoChange, isNull);
+      expect(measures[1].tempoChange?.bpm, 90);
+    });
+
+    test('setBarTempo anchors to the bar start and clears with null', () {
+      final doc = twoBars();
+      doc.setBarTempo(6, 72); // mid bar 2
+      expect(doc.columns[4].tempoChange, 72);
+      doc.setBarTempo(4, null);
+      expect(doc.columns[4].tempoChange, isNull);
+    });
+
+    test('a tempo change re-times playback from its bar on', () {
+      final doc = twoBars();
+      doc.setBarTempo(4, 60); // bar 2 at 60 BPM (quarter = 1000 ms)
+      final events = doc.toPlaybackEvents(bpm: 120); // bar 1: quarter = 500 ms
+      expect(events, hasLength(8));
+      expect(events[0].$2, 500); // bar 1 at 120
+      expect(events[4].$2, 1000); // bar 2 at 60
+    });
+
+    test('tempo change survives a Score round-trip', () {
+      final doc = twoBars();
+      doc.setBarTempo(4, 90);
+      final back = TabDocument.fromScore(doc.toScore(), Tuning.standardGuitar);
+      // the first column of bar 2 carries the tempo back
+      final barTwoFirst = back.columns[back.barBoundsAt(4).$1];
+      expect(barTwoFirst.tempoChange, 90);
+    });
+
+    test('copyWith can clear a nullable field explicitly', () {
+      const c = TabColumn(frets: {0: 0}, volta: 2, tempoChange: 100);
+      expect(c.copyWith(volta: null).volta, isNull);
+      expect(c.copyWith(volta: null).tempoChange, 100); // untouched
+      expect(c.copyWith().volta, 2); // omitted → unchanged
+    });
+  });
 }

@@ -30,9 +30,17 @@ export 'package:comet_beat/shared/midi_pitch.dart' show pitchFromMidi;
 /// | dead / ghost / harmonic | `tabNoteMarks` | ✓ | ✓ |
 enum TabTechnique { hammer, slide, bend, vibrato, dead, ghost, harmonic }
 
+/// Sentinel for [TabColumn.copyWith] so a nullable field can be *cleared*
+/// (passing an explicit `null`) as distinct from *left unchanged* (not passed).
+const Object _unset = Object();
+
 /// One time-step in a [TabDocument]: a map of string index → fret (a chord when
 /// more than one), the played [duration], and any [techniques]. String index
 /// 0 = the top tab line (highest-sounding string), matching [Tuning].
+///
+/// Immutable; every edit goes through [copyWith] (the named `with…` helpers are
+/// thin wrappers kept for the existing call sites). Nullable fields use the
+/// [_unset] sentinel so they can be explicitly cleared.
 class TabColumn {
   final Map<int, int> frets;
   final NoteDuration duration;
@@ -69,6 +77,11 @@ class TabColumn {
   /// note, or null. Anchored to this column's own note.
   final String? section;
 
+  /// A tempo change (BPM) that takes effect at this column's bar, or null.
+  /// Bar-level, anchored to the bar's first column (A9). `toScore` stamps
+  /// `Measure.tempoChange`; playback re-times from here on.
+  final double? tempoChange;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
@@ -81,191 +94,92 @@ class TabColumn {
     this.volta,
     this.navigation,
     this.section,
+    this.tempoChange,
   });
 
   bool get isEmpty => frets.isEmpty;
 
-  TabColumn withFret(int string, int fret) => TabColumn(
-        frets: {...frets, string: fret},
-        duration: duration,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
+  /// The one true copy operation. Pass a value to change a field; omit it to
+  /// keep the current one. For nullable fields, pass an explicit `null` to
+  /// clear (the [_unset] sentinel is what "omitted" looks like internally).
+  TabColumn copyWith({
+    Map<int, int>? frets,
+    NoteDuration? duration,
+    Set<TabTechnique>? techniques,
+    Object? chord = _unset,
+    bool? tieToNext,
+    Object? tuplet = _unset,
+    bool? startRepeat,
+    bool? endRepeat,
+    Object? volta = _unset,
+    Object? navigation = _unset,
+    Object? section = _unset,
+    Object? tempoChange = _unset,
+  }) =>
+      TabColumn(
+        frets: frets ?? this.frets,
+        duration: duration ?? this.duration,
+        techniques: techniques ?? this.techniques,
+        chord: chord == _unset ? this.chord : chord as ChordDiagram?,
+        tieToNext: tieToNext ?? this.tieToNext,
+        tuplet: tuplet == _unset ? this.tuplet : tuplet as (int, int)?,
+        startRepeat: startRepeat ?? this.startRepeat,
+        endRepeat: endRepeat ?? this.endRepeat,
+        volta: volta == _unset ? this.volta : volta as int?,
+        navigation: navigation == _unset
+            ? this.navigation
+            : navigation as NavigationMark?,
+        section: section == _unset ? this.section : section as String?,
+        tempoChange:
+            tempoChange == _unset ? this.tempoChange : tempoChange as double?,
       );
 
-  TabColumn withoutString(int string) => TabColumn(
+  TabColumn withFret(int string, int fret) =>
+      copyWith(frets: {...frets, string: fret});
+
+  TabColumn withoutString(int string) => copyWith(
         frets: {
           for (final e in frets.entries)
             if (e.key != string) e.key: e.value,
         },
-        duration: duration,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
       );
 
-  TabColumn withDuration(NoteDuration d) => TabColumn(
-        frets: frets,
-        duration: d,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
-      );
+  TabColumn withDuration(NoteDuration d) => copyWith(duration: d);
 
   /// Adds [t] if absent, else removes it.
-  TabColumn toggleTechnique(TabTechnique t) => TabColumn(
-        frets: frets,
-        duration: duration,
+  TabColumn toggleTechnique(TabTechnique t) => copyWith(
         techniques: techniques.contains(t)
             ? ({...techniques}..remove(t))
             : {...techniques, t},
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
       );
 
   /// Sets (or clears, when null) this column's chord diagram.
-  TabColumn withChord(ChordDiagram? c) => TabColumn(
-        frets: frets,
-        duration: duration,
-        techniques: techniques,
-        chord: c,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
-      );
+  TabColumn withChord(ChordDiagram? c) => copyWith(chord: c);
 
   /// Sets whether this note ties into the next column.
-  TabColumn withTie(bool tie) => TabColumn(
-        frets: frets,
-        duration: duration,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tie,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
-      );
+  TabColumn withTie(bool tie) => copyWith(tieToNext: tie);
 
   /// Sets (or clears, when null) this column's tuplet ratio.
-  TabColumn withTuplet((int, int)? ratio) => TabColumn(
-        frets: frets,
-        duration: duration,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: ratio,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
-      );
+  TabColumn withTuplet((int, int)? ratio) => copyWith(tuplet: ratio);
 
   /// Sets this column's bar repeat-barline flags.
-  TabColumn withRepeat({bool? start, bool? end}) => TabColumn(
-        frets: frets,
-        duration: duration,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: start ?? startRepeat,
-        endRepeat: end ?? endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
-      );
+  TabColumn withRepeat({bool? start, bool? end}) =>
+      copyWith(startRepeat: start ?? startRepeat, endRepeat: end ?? endRepeat);
 
   /// Sets (or clears, when null) this column's bar volta number.
-  TabColumn withVolta(int? v) => TabColumn(
-        frets: frets,
-        duration: duration,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: v,
-        navigation: navigation,
-        section: section,
-      );
+  TabColumn withVolta(int? v) => copyWith(volta: v);
 
   /// Sets (or clears, when null) this column's bar direction mark.
-  TabColumn withNavigation(NavigationMark? n) => TabColumn(
-        frets: frets,
-        duration: duration,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: n,
-        section: section,
-      );
+  TabColumn withNavigation(NavigationMark? n) => copyWith(navigation: n);
 
   /// Sets (or clears, when null) this column's section/rehearsal label.
-  TabColumn withSection(String? label) => TabColumn(
-        frets: frets,
-        duration: duration,
-        techniques: techniques,
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: label,
-      );
+  TabColumn withSection(String? label) => copyWith(section: label);
+
+  /// Sets (or clears, when null) this column's bar tempo change (BPM).
+  TabColumn withTempo(double? bpm) => copyWith(tempoChange: bpm);
 
   /// A deep copy (fresh frets/techniques collections) — for duplicating columns.
-  TabColumn copy() => TabColumn(
-        frets: {...frets},
-        duration: duration,
-        techniques: {...techniques},
-        chord: chord,
-        tieToNext: tieToNext,
-        tuplet: tuplet,
-        startRepeat: startRepeat,
-        endRepeat: endRepeat,
-        volta: volta,
-        navigation: navigation,
-        section: section,
-      );
+  TabColumn copy() => copyWith(frets: {...frets}, techniques: {...techniques});
 }
 
 /// Rhythm is measured on a **32nd-note grid** so every selectable value — down
@@ -472,6 +386,15 @@ class TabDocument {
     columns[first] = columns[first].withNavigation(mark);
   }
 
+  /// Sets (or clears, when null) the tempo change (BPM) of the BAR containing
+  /// [col] (anchored to that bar's first column, where [toScore] reads it).
+  void setBarTempo(int col, double? bpm) {
+    if (columns.isEmpty) return;
+    final (first, _) = barBoundsAt(col);
+    _ensure(first);
+    columns[first] = columns[first].withTempo(bpm);
+  }
+
   /// Sets (or clears, when null) the section/rehearsal label on the column at
   /// [col] (it shows above that note).
   void setSection(int col, String? label) {
@@ -636,6 +559,8 @@ class TabDocument {
             endRepeat: first?.endRepeat ?? false,
             volta: first?.volta,
             navigation: first?.navigation,
+            tempoChange:
+                first?.tempoChange == null ? null : Tempo(first!.tempoChange!),
           ),
         );
       }
@@ -739,10 +664,14 @@ class TabDocument {
   List<(List<int>, int)> toPlaybackEvents({int bpm = 120, int capo = 0}) {
     // Duration → ms straight from the note fraction (a whole note = 4 beats), so
     // it is exact for every value — a quarter is exactly 60000/bpm, no rounding
-    // drift from the 32nd-step grid.
-    final wholeMs = 60000 / bpm * 4;
-    // Written value × wholeMs, then scaled by a tuplet's normal/actual.
+    // drift from the 32nd-step grid. A column carrying a `tempoChange` (A9) sets
+    // the BPM from that point on, so the ms/step re-times mid-song.
+    var curBpm = bpm.toDouble();
+    // Written value × wholeMs (at the CURRENT tempo), scaled by a tuplet's
+    // normal/actual.
     int ms(TabColumn c) {
+      if (c.tempoChange != null) curBpm = c.tempoChange!;
+      final wholeMs = 60000 / curBpm * 4;
       final scale = c.tuplet == null ? 1.0 : c.tuplet!.$2 / c.tuplet!.$1;
       return (c.duration.toFraction().toDouble() * wholeMs * scale).round();
     }
@@ -827,6 +756,7 @@ class TabDocument {
     final endReps = <bool>[]; // per-column: bar closes a repeat
     final voltas = <int?>[]; // per-column: bar volta number
     final navs = <NavigationMark?>[]; // per-column: bar direction mark
+    final tempos = <double?>[]; // per-column: bar tempo change (BPM)
     final sections = <String?>[]; // per-column: section/rehearsal label
     final pinned = <int, Fretting>{}; // column index → explicit fingering
     var idx = 0;
@@ -853,6 +783,7 @@ class TabDocument {
           ties.add(el.tieToNext);
           sections.add(annById[el.id]);
           navs.add(null);
+          tempos.add(null);
           tuplets.add(null);
           startReps.add(false);
           endReps.add(false);
@@ -865,6 +796,7 @@ class TabDocument {
           ties.add(false);
           sections.add(null);
           navs.add(null);
+          tempos.add(null);
           tuplets.add(null);
           startReps.add(false);
           endReps.add(false);
@@ -894,6 +826,9 @@ class TabDocument {
       if (measure.navigation != null && measureStart < navs.length) {
         navs[measureStart] = measure.navigation;
       }
+      if (measure.tempoChange != null && measureStart < tempos.length) {
+        tempos[measureStart] = measure.tempoChange!.bpm;
+      }
     }
     if (midiCols.isEmpty) {
       return TabDocument(
@@ -921,6 +856,7 @@ class TabDocument {
             volta: voltas[i],
             navigation: navs[i],
             section: sections[i],
+            tempoChange: tempos[i],
           ),
       ],
     );

@@ -240,7 +240,13 @@ parametric technique end-to-end.
   `TabColumn.section` (rehearsal label) → a `Score.annotation` on that note; both
   round-trip. `setBarNavigation`/`setSection`. Tests: group A8. (UI controls for
   these land with the Tab-Editor UX pass, not the settings sheet.)
-- [ ] A9 … E2 — pending (scoped above)
+- [x] **A9** tempo map — `TabColumn.tempoChange` (BPM, bar-level, anchored to the
+  bar's first column); `toScore` stamps `Measure.tempoChange = Tempo(bpm)`;
+  `fromScore` reads it back (round-trip); `toPlaybackEvents` re-times ms/step from
+  that bar on; `setBarTempo`. `TabColumn` was refactored to a single `copyWith`
+  (sentinel-guarded nullable fields) — the named `with…` helpers are now thin
+  wrappers, ending the per-field copy-constructor sprawl. Tests: group A9.
+- [ ] B1 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.
