@@ -162,14 +162,17 @@ TabToTrackerResult trackerSongFromTabDocument(
       // so listing the set alone let a palm-muted riff come back open.
       if (column.palmMute) AnnotationKeys.palmMute: true,
       if (column.letRing) AnnotationKeys.letRing: true,
+      if (column.dynamic != null)
+        AnnotationKeys.dynamicLevel: column.dynamic!.name,
+      if (column.hairpin != null) AnnotationKeys.hairpin: column.hairpin!.name,
+      if (column.chord != null)
+        AnnotationKeys.chord: chordDiagramToAnnotation(column.chord!),
     });
 
     if (column.tuplet != null) {
       report.addApproximated('tuplets play at their written length');
     }
-    if (column.chord != null) {
-      report.addLost('chord diagrams');
-    }
+
     if (column.navigation != null ||
         column.startRepeat ||
         column.endRepeat ||
@@ -330,6 +333,9 @@ TrackerToTabResult tabDocumentFromTrackerSong(
         section: meta[AnnotationKeys.section] as String?,
         palmMute: meta[AnnotationKeys.palmMute] == true,
         letRing: meta[AnnotationKeys.letRing] == true,
+        dynamic: _dynamicFrom(meta[AnnotationKeys.dynamicLevel]),
+        hairpin: _hairpinFrom(meta[AnnotationKeys.hairpin]),
+        chord: chordDiagramFromAnnotation(meta[AnnotationKeys.chord]),
       ),
     );
   }
@@ -443,6 +449,22 @@ NavigationMark? _navigationFrom(Object? raw) {
   if (raw is! String) return null;
   for (final mark in NavigationMark.values) {
     if (mark.name == raw) return mark;
+  }
+  return null;
+}
+
+/// A `DynamicLevel` by name, or null.
+DynamicLevel? _dynamicFrom(Object? raw) {
+  for (final level in DynamicLevel.values) {
+    if (level.name == raw) return level;
+  }
+  return null;
+}
+
+/// A `HairpinType` by name, or null.
+HairpinType? _hairpinFrom(Object? raw) {
+  for (final type in HairpinType.values) {
+    if (type.name == raw) return type;
   }
   return null;
 }

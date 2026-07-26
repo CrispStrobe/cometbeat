@@ -91,6 +91,14 @@ abstract final class AnnotationKeys {
   static const palmMute = 'palmMute';
   static const letRing = 'letRing';
 
+  /// A `DynamicLevel.name`, and a `HairpinType.name` starting at this event.
+  /// Named `dynamicLevel` because `dynamic` is a Dart keyword.
+  static const dynamicLevel = 'dynamicLevel';
+  static const hairpin = 'hairpin';
+
+  /// A chord diagram, as [chordDiagramToAnnotation] writes it.
+  static const chord = 'chord';
+
   /// Tracker effect-column command + parameter.
   static const fxCmd = 'fxCmd';
   static const fxParam = 'fxParam';

@@ -11,7 +11,7 @@
 // when rebuilding one, possibly several hops later.
 
 import 'package:comet_beat/shared/midi_pitch.dart' show pitchFromMidi;
-import 'package:crisp_notation/crisp_notation.dart' show Tuning;
+import 'package:crisp_notation/crisp_notation.dart' show ChordDiagram, Tuning;
 
 /// A tuning as one MIDI number per string, top string first.
 List<int> tuningToAnnotation(Tuning tuning) =>
@@ -65,3 +65,41 @@ int? _asInt(Object? raw) => switch (raw) {
       final String value => int.tryParse(value),
       _ => null,
     };
+
+/// A chord diagram as a plain map, so it can sit in a side-car and round-trip
+/// through JSON.
+Map<String, Object?> chordDiagramToAnnotation(ChordDiagram chord) => {
+      'frets': List<int>.of(chord.frets),
+      if (chord.name != null) 'name': chord.name,
+      if (chord.fingers != null) 'fingers': List<int?>.of(chord.fingers!),
+      'baseFret': chord.baseFret,
+      'fretSpan': chord.fretSpan,
+      if (chord.barreFret != null) 'barreFret': chord.barreFret,
+    };
+
+/// The inverse of [chordDiagramToAnnotation]; null when [raw] is not one.
+///
+/// A diagram with no frets is not a diagram, so it comes back null rather than
+/// as an empty grid that would draw as a blank box.
+ChordDiagram? chordDiagramFromAnnotation(Object? raw) {
+  if (raw is! Map) return null;
+  final rawFrets = raw['frets'];
+  if (rawFrets is! List || rawFrets.isEmpty) return null;
+  final frets = <int>[];
+  for (final entry in rawFrets) {
+    final fret = _asInt(entry);
+    if (fret == null) return null;
+    frets.add(fret);
+  }
+  final rawFingers = raw['fingers'];
+  return ChordDiagram(
+    frets,
+    name: raw['name'] as String?,
+    fingers: rawFingers is List
+        ? [for (final finger in rawFingers) _asInt(finger)]
+        : null,
+    baseFret: _asInt(raw['baseFret']) ?? 1,
+    fretSpan: _asInt(raw['fretSpan']) ?? 4,
+    barreFret: _asInt(raw['barreFret']),
+  );
+}

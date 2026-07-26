@@ -997,6 +997,10 @@ class TabDocument {
   Score toScore({int capo = 0, int? program}) {
     final measures = <Measure>[];
     final voicings = <TabVoicing>[];
+    // A chord diagram belongs to the note it sits above, exactly as a voicing
+    // does — the Score model has a slot for it, and not filling it meant every
+    // diagram was dropped the moment a tab became a score.
+    final chordDiagrams = <PlacedChordDiagram>[];
     final bends = <Bend>[];
     final tremoloBars = <TremoloBar>[];
     final slideInOuts = <TabSlide>[];
@@ -1157,6 +1161,9 @@ class TabDocument {
           ),
         );
         voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
+        if (col.chord != null) {
+          chordDiagrams.add(PlacedChordDiagram(id, col.chord!));
+        }
         if (col.section != null) annotations.add(Annotation(id, col.section!));
         // Parametric expressions (B1–B3) — a point list wins over the flat flag.
         if (col.bend != null) bends.add(Bend.curve(id, col.bend!));
@@ -1234,6 +1241,7 @@ class TabDocument {
       keySignature: keySignature,
       measures: measures,
       tabVoicings: voicings,
+      chordDiagrams: chordDiagrams,
       bends: bends,
       tremoloBars: tremoloBars,
       slideInOuts: slideInOuts,
@@ -1374,6 +1382,9 @@ class TabDocument {
   /// dense polyphony. Behind a [capo] the open pitch rises, so frets shrink.
   static TabDocument fromScore(Score score, Tuning tuning, {int capo = 0}) {
     final voiced = {for (final v in score.tabVoicings) v.noteId: v.strings};
+    final diagrams = {
+      for (final d in score.chordDiagrams) d.elementId: d.diagram,
+    };
 
     // Read the techniques the notation already carries back onto their source
     // notes, so an imported .gp/MusicXML keeps its bends / slides / vibrato /
@@ -1642,6 +1653,7 @@ class TabDocument {
             navigation: navs[i],
             section: sections[i],
             tempoChange: tempos[i],
+            chord: ids[i] == null ? null : diagrams[ids[i]],
             bend: ids[i] == null ? null : bendCurve[ids[i]],
             whammy: ids[i] == null ? null : whammyCurve[ids[i]],
             slide: ids[i] == null ? null : slideKind[ids[i]],

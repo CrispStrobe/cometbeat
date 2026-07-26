@@ -132,6 +132,30 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
+- **opus (notation-carry)** · ✅ **SHIPPED (idle) — dynamics, hairpins and chord
+  diagrams cross every waypoint.** Last of the measured gaps from the
+  articulation entry. Measuring again paid off: I expected Score to hold all
+  three and it held only two — **the chord diagram was dropped the moment a tab
+  became a score**, in BOTH directions, because `TabDocument.toScore` never
+  filled `Score.chordDiagrams` (the model has had the slot all along, keyed by
+  note id exactly like `tabVoicings`). Tracker and Loop dropped all three.
+  Fix: `toScore` emits `PlacedChordDiagram` beside each voicing and `fromScore`
+  reads it back — the model's own mechanism, not a side-car workaround; plus new
+  `AnnotationKeys.dynamicLevel`/`hairpin`/`chord` carried on the tab↔tracker and
+  tab↔loop edges, restored under the same verified-fretting gate as
+  articulation. `chordDiagramTo/FromAnnotation` joins the shared codecs.
+  ⚠️ Decoding refuses to build an EMPTY diagram — a blank grid above the staff
+  draws, and reads as a chord nobody can play. Nonsense returns null instead.
+  ⚠️ Touched a shared file (`tab_document.dart`) — no active claim on it, and the
+  tab suites are green (136), but flagging it since it is the GP/MusicXML export
+  path too.
+  Also removed a now-false `report.addLost('chord diagrams')` on tab → tracker.
+  Tests: `interop_notation_carry_test.dart` (8). Green: interop + tab_document +
+  tab_arranger (293) and the tab/loop screens (136). analyze clean.
+  ⬜ **Still not carried** (measured): the parametric bend/whammy/slide CURVES
+  through Loop. Unlike the rest these need a decision — whether an approximated
+  curve beats none — so they stay a design question, not a mechanical carry. — opus
+
 - **opus (articulation-carry)** · ✅ **SHIPPED (idle) — HOW a tab is played
   survives every waypoint too.** Measured first, as with the fretting, and found
   two separate gaps: **Tracker dropped palm mute and let ring** (they are NOT

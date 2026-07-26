@@ -133,6 +133,9 @@ LoopToTabResult tabDocumentFromLoopCells(
     final techniques = <TabTechnique>{};
     var palmMute = false;
     var letRing = false;
+    DynamicLevel? dynamic;
+    HairpinType? hairpin;
+    ChordDiagram? chord;
     if (remembered != null) {
       final raw = notes.get(at, AnnotationKeys.techniques);
       if (raw is List) {
@@ -144,6 +147,9 @@ LoopToTabResult tabDocumentFromLoopCells(
       }
       palmMute = notes.get(at, AnnotationKeys.palmMute) == true;
       letRing = notes.get(at, AnnotationKeys.letRing) == true;
+      dynamic = _dynamicFrom(notes.get(at, AnnotationKeys.dynamicLevel));
+      hairpin = _hairpinFrom(notes.get(at, AnnotationKeys.hairpin));
+      chord = chordDiagramFromAnnotation(notes.get(at, AnnotationKeys.chord));
     }
 
     if ((cell.midis?.isNotEmpty ?? false) && fretting.isEmpty) {
@@ -165,6 +171,9 @@ LoopToTabResult tabDocumentFromLoopCells(
         techniques: techniques,
         palmMute: palmMute,
         letRing: letRing,
+        dynamic: dynamic,
+        hairpin: hairpin,
+        chord: chord,
       ),
     );
     step += cell.steps;
@@ -243,6 +252,19 @@ TabToLoopResult loopCellsFromTabDocument(
     }
     if (column.palmMute) out.set(at, AnnotationKeys.palmMute, true);
     if (column.letRing) out.set(at, AnnotationKeys.letRing, true);
+    if (column.dynamic != null) {
+      out.set(at, AnnotationKeys.dynamicLevel, column.dynamic!.name);
+    }
+    if (column.hairpin != null) {
+      out.set(at, AnnotationKeys.hairpin, column.hairpin!.name);
+    }
+    if (column.chord != null) {
+      out.set(
+        at,
+        AnnotationKeys.chord,
+        chordDiagramToAnnotation(column.chord!),
+      );
+    }
 
     cells.add(
       PatternCell(
@@ -327,3 +349,19 @@ double? _asDouble(Object? raw) => switch (raw) {
       final String v => double.tryParse(v),
       _ => null,
     };
+
+/// A `DynamicLevel` by name, or null.
+DynamicLevel? _dynamicFrom(Object? raw) {
+  for (final level in DynamicLevel.values) {
+    if (level.name == raw) return level;
+  }
+  return null;
+}
+
+/// A `HairpinType` by name, or null.
+HairpinType? _hairpinFrom(Object? raw) {
+  for (final type in HairpinType.values) {
+    if (type.name == raw) return type;
+  }
+  return null;
+}
