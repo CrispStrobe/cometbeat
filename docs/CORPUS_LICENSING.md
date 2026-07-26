@@ -92,15 +92,24 @@ We classify all content strictly according to these definitions:
     outright when `hasProblem` — incompatible copyleft, or NC/unstated material
     in the mix. Clips the user recorded or generated carry no provenance and owe
     nothing. +8 wiring tests on top of the 21 rule tests.
-  - ⬜ **Remaining to lift the hold generally — the other editors + the import
-    paths.** The Tracker's instruments and Workshop scores still have no
-    provenance field, and no import path POPULATES `Clip.provenance` yet (the
-    plumbing accepts it; the library→editor hand-off doesn't fill it in). Until
-    an imported work's licence is actually attached at import, the Audio Editor
-    gate only fires for material that something sets it on. Order of work: (1)
-    populate on the library→DAW import paths, (2) the same field on Tracker
-    instruments + Workshop scores, (3) their export/save/share sheets call
-    `obligationsFor` the way `daw_screen` now does.
+  - ✅ **Import paths POPULATE it (2026-07-26).** Every route into the Audio
+    Editor funnels through `addSampleClip`, so the licence attaches in one
+    place: a `SampleClip`'s `license`/`source`/`sourceUrl` become the clip's
+    `LicensedWork`. A clip with no declared licence carries nothing, which is
+    right — a recording or a file off the user's own disk owes nothing.
+    End-to-end tests cover the real path: importing a CC-BY-SA sample makes the
+    export dialog say the whole mix is CC BY-SA 4.0, and importing a CC-BY-NC
+    sample **disables the export button** (asserted on `onPressed == null`, not
+    just on the warning text — a gate that only warns isn't a gate).
+    **⇒ For the Audio Editor, the SA-propagation requirement is met.**
+  - ⬜ **Remaining to lift the hold GENERALLY — the other two editors.** The
+    Tracker's instruments and Workshop scores still have no provenance field, so
+    SA material reaching those surfaces is still unenforced. The Audio Editor is
+    now the worked example to copy: a `LicensedWork?` on the document model that
+    survives edits and save/load, one funnel that populates it on import, and an
+    export sheet that calls `obligationsFor` + refuses on `hasProblem`.
+    ⚠️ Both are other agents' lanes (@tracker-ui / @codex score-editor) — this
+    is a handoff, not a claim.
   - 📝 Worth knowing: `Gemeinfrei` alone classifies as **unknown**, not free —
     matching §"gemeinfrei / GEMA-frei ≠ free to bundle" below. A test pins that,
     because assuming otherwise is the obvious mistake.

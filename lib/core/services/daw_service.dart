@@ -136,7 +136,7 @@ class DawService extends ChangeNotifier {
   /// Append a clip from a module to [track] (auto-creating tracks up to it), at
   /// the next free slot. Modules send a SNAPSHOT source (a copy of their model),
   /// so further edits in the module don't retroactively change the sent clip.
-  void addClip(ClipSource source, {int track = 0}) {
+  void addClip(ClipSource source, {int track = 0, LicensedWork? provenance}) {
     _record();
     while (timeline.tracks.length <= track) {
       timeline.tracks.add(DawTrack(name: '${timeline.tracks.length + 1}'));
@@ -150,7 +150,9 @@ class DawService extends ChangeNotifier {
         source.instrument == null) {
       placed = source.withInstrument(lane.instrument);
     }
-    lane.clips.add(Clip(source: placed, startMs: _nextStartMs));
+    lane.clips.add(
+      Clip(source: placed, startMs: _nextStartMs, provenance: provenance),
+    );
     _nextStartMs += 2000;
     notifyListeners();
   }

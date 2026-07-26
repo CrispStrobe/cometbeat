@@ -2247,6 +2247,25 @@ class _DawScreenState extends State<DawScreen>
           ? SampleSource(pcm, key: 'sample:${clip.name}')
           : StereoSampleSource(pcm, right, key: 'sample:${clip.name}'),
       track: _daw.timeline.tracks.length,
+      // Carry the licence in with the audio. This is the point where an
+      // imported work's obligation either attaches or is lost forever — the
+      // export gate can only enforce what arrived here. A clip with no declared
+      // licence (the user's own recording, or a file off their disk) carries
+      // nothing, which is correct: it owes nothing.
+      provenance: _provenanceOf(clip),
+    );
+  }
+
+  /// A [SampleClip]'s licence, as a [LicensedWork] — or null when it doesn't
+  /// declare one.
+  LicensedWork? _provenanceOf(SampleClip clip) {
+    final license = clip.license?.trim() ?? '';
+    if (license.isEmpty) return null;
+    return LicensedWork(
+      title: clip.name,
+      license: license,
+      source: clip.source,
+      url: clip.sourceUrl,
     );
   }
 

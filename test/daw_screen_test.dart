@@ -1506,6 +1506,98 @@ void main() {
     expect(daw.clipCount, 0);
   });
 
+  testWidgets("an imported sample's licence reaches the export gate",
+      (tester) async {
+    // The end-to-end SA-propagation path: a share-alike sample is imported,
+    // its licence rides in on the clip, and the export dialog says the whole
+    // mix is now share-alike. If provenance is dropped anywhere along here,
+    // the obligation leaves the app silently.
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+
+    daw.addSampleClip(
+      SampleClip(
+        name: 'Auld Lang Syne (DE)',
+        sampleRate: kDawSampleRate,
+        pcm: _tone(kDawSampleRate ~/ 4),
+        source: 'Kinder wollen singen',
+        license: 'CC-BY-SA-4.0',
+        sourceUrl: 'https://www.kinder-wollen-singen.de',
+      ),
+    );
+    await tester.pump();
+
+    final ob = service.licenseObligations();
+    expect(ob.requiresShareAlike, isTrue);
+    expect(ob.shareAlikeLicense, 'CC BY-SA 4.0');
+    expect(ob.hasProblem, isFalse); // SA is exportable, just infectious
+
+    await tester.tap(find.byTooltip('Export sound'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('the whole of it is licensed CC BY-SA 4.0'),
+      findsOneWidget,
+    );
+    // Exportable — the notice informs, it doesn't block.
+    expect(find.text('Choose format'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('an unlicensed import carries no obligation', (tester) async {
+    // A file off the user's own disk declares nothing and owes nothing.
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    daw.addSampleClip(
+      SampleClip(
+        name: 'my recording',
+        sampleRate: kDawSampleRate,
+        pcm: _tone(1000),
+      ),
+    );
+    await tester.pump();
+    expect(service.licenseObligations().isClear, isTrue);
+    expect(service.timeline.tracks.last.clips.single.provenance, isNull);
+  });
+
+  testWidgets('NC material blocks the export outright', (tester) async {
+    await _pumpDaw(tester);
+    final daw = _daw(tester);
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    daw.addSampleClip(
+      SampleClip(
+        name: 'IDMT eval loop',
+        sampleRate: kDawSampleRate,
+        pcm: _tone(kDawSampleRate ~/ 4),
+        license: 'CC-BY-NC-4.0',
+      ),
+    );
+    await tester.pump();
+    expect(service.licenseObligations().hasProblem, isTrue);
+
+    await tester.tap(find.byTooltip('Export sound'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Cannot export'), findsOneWidget);
+    // The gate must actually refuse, not merely warn.
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Choose format'),
+    );
+    expect(button.onPressed, isNull);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('a My Samples clip is arranged, resampled to the timeline rate',
       (tester) async {
     await _pumpDaw(tester);
