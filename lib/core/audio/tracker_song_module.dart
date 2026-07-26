@@ -122,6 +122,19 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
     initialSpeed: doc.initialSpeed,
     stereoOutput: true,
     globalVolume: (doc.globalVolume / 128.0).clamp(0.0, 1.0),
+    // Retain the native S3M header metadata (master/mixing volume, ultra-click,
+    // flags, created-with version, sample format, per-channel settings) so a
+    // same-format S3M export re-emits the original values instead of defaults.
+    s3mHeader: doc.sourceFormat == ModuleFormat.s3m
+        ? S3mHeader(
+            masterVolume: doc.s3mMasterVolume,
+            ultraClick: doc.s3mUltraClick,
+            flags: doc.s3mFlags,
+            createdWith: doc.s3mCreatedWith,
+            sampleFormat: doc.s3mSampleFormat,
+            channelSettings: List<int>.from(doc.s3mChannelSettings),
+          )
+        : null,
   );
 }
 
@@ -815,6 +828,17 @@ ModuleDoc moduleDocFromSong(
               0x20 | (((channel.pan + 1) * 7.5).round().clamp(0, 15)),
           ]
         : const [],
+    // Re-emit the native S3M header metadata carried in from an S3M import so a
+    // same-format round-trip preserves it. Absent (authored/synthetic songs or
+    // a non-S3M source) → the ModuleDoc/writer defaults apply, unchanged.
+    s3mMasterVolume: song.s3mHeader?.masterVolume ?? 48,
+    s3mUltraClick: song.s3mHeader?.ultraClick ?? 0,
+    s3mFlags: song.s3mHeader?.flags ?? 0,
+    s3mCreatedWith: song.s3mHeader?.createdWith ?? 0x1320,
+    s3mSampleFormat: song.s3mHeader?.sampleFormat ?? 1,
+    s3mChannelSettings: song.s3mHeader == null
+        ? const []
+        : List<int>.from(song.s3mHeader!.channelSettings),
   );
 }
 

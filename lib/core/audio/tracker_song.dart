@@ -82,6 +82,41 @@ List<TrackerInstrument> defaultInstrumentPool() => <TrackerInstrument>[
       const AdditiveInstrument('musicBox', Instrument.musicBox),
     ];
 
+/// The native S3M header metadata that has no first-class representation in the
+/// editable [TrackerSong] model but must survive a same-format `.s3m`
+/// round-trip. Populated when a song is imported from an `.s3m`
+/// (see `songFromModuleDoc`); `null` for authored/synthetic songs and songs
+/// imported from other formats, in which case the S3M writer falls back to its
+/// documented defaults. Immutable + additive, so nothing else is affected.
+class S3mHeader {
+  const S3mHeader({
+    this.masterVolume = 48,
+    this.ultraClick = 0,
+    this.flags = 0,
+    this.createdWith = 0x1320,
+    this.sampleFormat = 1,
+    this.channelSettings = const [],
+  });
+
+  /// 0x33 master (mixing) volume.
+  final int masterVolume;
+
+  /// 0x34 ultra-click removal.
+  final int ultraClick;
+
+  /// 0x26 header flags.
+  final int flags;
+
+  /// 0x28 created-with tracker version (Cwt-v).
+  final int createdWith;
+
+  /// 0x2A sample format (1 = signed PCM, 2 = unsigned PCM).
+  final int sampleFormat;
+
+  /// 0x40 raw 32-byte per-channel settings — the L/R/mute class per channel.
+  final List<int> channelSettings;
+}
+
 class TrackerSong {
   TrackerSong._(
     this._engine,
@@ -92,6 +127,7 @@ class TrackerSong {
     this.initialSpeed,
     this.stereoOutput,
     this.globalVolume,
+    this.s3mHeader,
   );
 
   /// A new song with the default band ([defaultTrackerChannels]) and one empty
@@ -124,6 +160,7 @@ class TrackerSong {
       initialSpeed < 1 ? kDefaultTicksPerRow : initialSpeed,
       false,
       1.0,
+      null,
     );
   }
 
@@ -141,6 +178,7 @@ class TrackerSong {
     int initialSpeed = kDefaultTicksPerRow,
     bool stereoOutput = false,
     double globalVolume = 1.0,
+    S3mHeader? s3mHeader,
   }) {
     final engine = TrackerEngine(channels: channels, timing: timing);
     final pats = patterns.isEmpty
@@ -163,6 +201,7 @@ class TrackerSong {
       initialSpeed < 1 ? kDefaultTicksPerRow : initialSpeed,
       stereoOutput,
       globalVolume.clamp(0.0, 1.0),
+      s3mHeader,
     );
   }
 
@@ -194,6 +233,12 @@ class TrackerSong {
   /// use unity; imported tracker headers carry their native global volume.
   /// Editable via [setGlobalVolume] (native header).
   double globalVolume;
+
+  /// Native S3M header metadata retained across a same-format `.s3m`
+  /// round-trip (master/mixing volume, ultra-click, flags, created-with
+  /// version, sample format, per-channel settings). `null` for authored /
+  /// synthetic songs and non-S3M imports; the writer then uses its defaults.
+  final S3mHeader? s3mHeader;
 
   int _current;
 
@@ -1033,6 +1078,7 @@ class TrackerSong {
       initialSpeed: initialSpeed,
       stereoOutput: stereo,
       globalVolume: globalVolume,
+      s3mHeader: s3mHeader,
     );
   }
 
