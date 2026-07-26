@@ -3146,6 +3146,13 @@ class _DawScreenState extends State<DawScreen>
         range: useRange,
         stem: stemTrack == null ? null : _daw.timeline.tracks[stemTrack!].name,
       ),
+      // Bounded-memory save for the plain full mix (no stem/range/normalize):
+      // the sheet streams the WAV straight to disk for the native-rate/16-bit
+      // case instead of holding the whole file in RAM. Falls back to the baked
+      // [exportPcm] above for every other choice (and on web).
+      wavStreamProducer: (stemTrack == null && !useRange && !normalize)
+          ? (sink) => streamTimelineWav(_daw.timeline, onBytes: sink)
+          : null,
     );
   }
 

@@ -39,8 +39,17 @@ import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
         loadGlintEncoder;
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/music_io/stream_save.dart'
+    show streamBytesToFile;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+
+/// Produces a complete WAV byte stream in chunks via [sink] — the bounded-
+/// memory save path. A caller (the DAW) wraps `streamTimelineWav` so the WAV is
+/// rendered straight to disk at the timeline's NATIVE rate, 16-bit, never held
+/// whole in RAM. The sheet only uses it for the matching WAV / native-rate /
+/// 16-bit case (else it falls back to the in-memory [pcmFloatToWav] bake).
+typedef WavStreamProducer = void Function(void Function(List<int> chunk) sink);
 
 /// Clamps float PCM and wraps it in a WAV container. When [right] is given,
 /// both channels are interleaved into a stereo WAV. If [sourceSampleRate]
@@ -447,6 +456,7 @@ Future<void> showAudioExportSheet(
   int sampleRate = kSampleRate,
   Float64List? rightPcm,
   bool shortBlocks = true,
+  WavStreamProducer? wavStreamProducer,
 }) async {
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
@@ -573,6 +583,7 @@ Future<void> showAudioExportSheet(
                       shortBlocks,
                       selectedMp3Encoder,
                       selectedDither,
+                      wavStreamProducer,
                     );
                   },
                 ),
@@ -823,10 +834,36 @@ Future<void> _exportAs(
   bool shortBlocks,
   Mp3Encoder mp3Encoder,
   bool dither,
+  WavStreamProducer? wavStreamProducer,
 ) async {
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
+  final suggested = '$baseName.${fmt.ext}';
+  // Bounded-memory save: WAV at the native rate (no resample), 16-bit, no dither
+  // (the stream is undithered), with a producer supplied → stream straight to
+  // disk instead of baking the whole file in RAM.
+  final canStream = wavStreamProducer != null &&
+      fmt == AudioExportFormat.wav &&
+      (wavBitDepth ?? 16) == 16 &&
+      exportSampleRate == sampleRate &&
+      !dither;
   try {
+    final location = await getSaveLocation(
+      suggestedName: suggested,
+      acceptedTypeGroups: [
+        XTypeGroup(label: fmt.ext.toUpperCase(), extensions: [fmt.ext]),
+      ],
+    );
+    if (location == null) return;
+    // On web (or if the sink fails) streamBytesToFile returns false → fall
+    // through to the in-memory bake below, so behaviour is unchanged there.
+    if (canStream &&
+        await streamBytesToFile(location.path, wavStreamProducer)) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.audioExportSavedTo(location.path))),
+      );
+      return;
+    }
     final bytes = fmt.build(
       pcm,
       sampleRate,
@@ -838,14 +875,6 @@ Future<void> _exportAs(
       dither: dither,
       mp3Encoder: mp3Encoder,
     );
-    final suggested = '$baseName.${fmt.ext}';
-    final location = await getSaveLocation(
-      suggestedName: suggested,
-      acceptedTypeGroups: [
-        XTypeGroup(label: fmt.ext.toUpperCase(), extensions: [fmt.ext]),
-      ],
-    );
-    if (location == null) return;
     await XFile.fromData(bytes, name: suggested).saveTo(location.path);
     messenger.showSnackBar(
       SnackBar(content: Text(l10n.audioExportSavedTo(location.path))),
