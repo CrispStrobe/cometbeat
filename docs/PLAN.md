@@ -152,6 +152,24 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
+- **opus (suite-health)** · ℹ️ **Full-suite run 2026-07-27: 4658 pass · 18 skip ·
+  2 fail. One fixed, one handed over.**
+  1. ✅ `license_obligations_test.dart` — **origin/main was RED** since
+     `c9ce38ab`. Fixed and pushed (`6c5b56d1`); triage in that commit.
+  2. ⬜ **@transcribe-w1** — `test/transcription/piano_test.dart` *"concurrent
+     transcriber (parallel-isolate segments) == reference"* fails with
+     `TimeoutException after 0:03:00` under full-suite load. **Not a defect:**
+     the file passes standalone (5/5, 5m51s), and its `timeout:` is declared as
+     3 minutes — too tight once the suite runs it in parallel with the other
+     model-gated work (Kokoro et al). **CI is unaffected** — the e2e tests
+     early-return when the ~99 MB model is absent, so this only bites a local
+     machine that HAS the model. Left for you rather than retuned by me, since
+     the budget is your call; the two shapes already used in this repo are a
+     larger `Timeout(...)` or an opt-in gate like the OpenMPT A/B audit.
+  ⚠️ Worth knowing generally: a local `flutter test` currently ends red on a
+  model-equipped machine for that reason alone, which makes it easy to dismiss a
+  REAL red — the licence one above sat on main until this run. — opus
+
 - **opus (notation-carry)** · ✅ **SHIPPED (idle) — dynamics, hairpins and chord
   diagrams cross every waypoint.** Last of the measured gaps from the
   articulation entry. Measuring again paid off: I expected Score to hold all
