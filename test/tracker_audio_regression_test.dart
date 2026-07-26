@@ -333,8 +333,18 @@ void main() {
         // (b) Our golden.mod render is nearly SILENT in absolute terms — RMS
         //     0.00037, with 2 of 1323 envelope blocks above 1e-4.
         //
-        // Both may be artifacts of fixtures that were never meant to be audio
-        // references. Neither has been investigated.
+        // INVESTIGATED 2026-07-26: both are fixture artifacts. These files are
+        // a SINGLE NOTE playing a five-sample waveform (mod: 4ch/2 notes/8
+        // samples · xm: 1ch/1 note/5 · it: 1ch/1 note/5,10,10 · s3m:
+        // 1ch/1 note/8). The near-silence is 2 notes over 7.68 s of nothing;
+        // the level spread is two engines interpolating a 5-8 sample source
+        // differently; the short XM/IT renders are tail handling on a 4-row
+        // pattern. None of it says anything about musical fidelity.
+        //
+        // ⬜ What the A/B actually needs is MUSIC: either the restricted corpus
+        // present locally, or a small purpose-built fixture we author (and can
+        // therefore commit) with a few seconds of real notes across several
+        // channels. The metrics are ready; the material is what is missing.
         //
         // The licence-restricted modules are real music and DO gate.
         const reportOnly = {

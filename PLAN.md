@@ -833,11 +833,31 @@ own); **the reference was non-deterministic** (`openmpt123` defaults to
 run); **the old RMS check peak-normalised before differencing**, so it could not
 see a level error by construction — it rated `golden.mod` "-0.8 dB" where the
 real delta is **-16.4 dB**; and **our `golden.mod` render is nearly silent**
-(RMS 0.00037). ⬜ **Left open, deliberately, and unclaimed:** the per-format
-level disagreements (up to 16 dB, inconsistent in sign) and the 17%-short XM/IT
-renders. Both may be artifacts of fixtures never meant as audio references —
-neither is investigated. The golden.* fixtures are report-only for that reason;
-their measured numbers are recorded in the harness. *Original finding:*
+(RMS 0.00037). ✅ **Those anomalies are RESOLVED as fixture artifacts** (investigated
+2026-07-26). The golden.* files are far more degenerate than "minimal" suggests
+— they are **a single note playing a five-sample waveform**:
+
+| fixture | channels | note triggers | sample lengths |
+|---|---|---|---|
+| golden.mod | 4 | 2 | 8 |
+| golden.xm | 1 | 1 | 5 |
+| golden.it | 1 | 1 | 5, 10, 10 |
+| golden.s3m | 1 | 1 | 8 |
+
+So: golden.mod's "near silence" is 2 notes × 8 samples spread over 7.68 s of
+mostly nothing (peak 0.072, RMS 0.00037); the ±16 dB level spread is two engines
+disagreeing about interpolating a 5–8 sample source and about per-channel
+scaling; the 17%-short XM/IT renders are end-of-song/tail handling on a 4-row
+single-note pattern. **None of it is evidence about musical fidelity**, which is
+exactly why they stay report-only.
+
+⬜ **The real consequence, unclaimed:** the A/B still cannot say anything about
+fidelity, because it has no music to say it about. Either the licence-restricted
+corpus has to be present locally, or — better, and licence-clean because we
+author it — someone should commit a small **purpose-built musical fixture**: a
+few seconds of real notes across several channels, with a sample long enough to
+sustain. The metrics and the harness are ready for it; the material is what is
+missing. *Original finding:*
 `test/tracker_audio_regression_test.dart` renders through our pipeline and
 `openmpt123` and compares **duration + RMS deltas**. Their `reference_compare.py`
 compares duration, **envelope correlation**, **onset/lag alignment** and
