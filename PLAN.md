@@ -845,7 +845,28 @@ libm). **We are safe today** — our byte-identical gates compare two renders
 *inside one run*, and `mod_codec_test`'s golden compare is module **bytes**
 (parse→write, pure integer), not audio. The trap is ahead of us: if anyone
 commits a golden *rendered* WAV compared byte-exactly it will be intermittently
-red between macOS dev and Linux CI. Decide the policy before that happens.
+red between macOS dev and Linux CI.
+
+✅ **G2 — DECIDED + ENFORCED (`tracker_render_determinism_test.dart`).** The
+policy, in one line: **the render is deterministic PER PLATFORM, and that is
+all we claim.**
+
+* **Guaranteed, and now tested** for all four formats: rendering the same module
+  twice on the same machine gives byte-identical audio. Several suites already
+  leaned on this without stating it — every "byte-identical with the feature
+  added" gate compares two renders and would pass or fail spuriously if the
+  renderer wobbled — so it is the foundation those gates stand on and it has a
+  test of its own. A companion test proves the comparison can separate two
+  genuinely different modules, so the suite cannot pass vacuously.
+* **Not guaranteed:** bit-identical audio across platforms. `_tanh` is built on
+  `exp()`, which is platform libm. We have NOT measured our own divergence; the
+  reference measurement is ~0.01% of samples at ~115 dB down, i.e. inaudible.
+* **⚠️ The operating rule:** never commit a golden RENDERED WAV and compare it
+  byte-exactly — we develop on macOS and CI runs Linux, so it is an intermittent
+  red waiting to happen. Compare two renders made in the SAME run, or compare at
+  signal level with `test/support/audio_compare.dart`. Committing golden module
+  BYTES stays fine (`mod_codec_test`): parse→write is integer work with no libm
+  in it.
 
 **G3 — No Amiga hardware model.** Two concrete absences: the **LED low-pass
 filter** (~3.2 kHz, the "dull" Amiga mode) and a **Paula clock** with PAL
