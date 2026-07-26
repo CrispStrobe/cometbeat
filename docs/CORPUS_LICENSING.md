@@ -81,15 +81,26 @@ We classify all content strictly according to these definitions:
     It classifies via `LicensePolicy.classify` rather than matching strings
     itself — that is already the compliance spine, and a second opinion about
     what a licence means is the bug to avoid.
-  - ⬜ **Still needed to lift the Tier-C hold — the WIRING, which is a model
-    change, not a rule change.** Nothing carries provenance into the editors
-    yet: `SampleClip` has `source`/`license`/`sourceUrl`, but the Audio Editor's
-    `Clip`, the Tracker's instruments and Workshop scores do not. Until an
-    imported work's licence travels with it, `obligationsFor` has nothing to be
-    given at export time. Order of work: (1) a provenance field on the editor
-    document models, (2) populate it on every import path, (3) call
-    `obligationsFor` in the export/save/share sheets and surface
-    `noticeText()` / refuse on `hasProblem`.
+  - ✅ **WIRED in the Audio Editor (2026-07-26).** `Clip.provenance`
+    (`LicensedWork?`) travels with the clip — `copyWith` keeps it, so an edit
+    can't launder the licence away — and it is **saved in `.cbdaw`**, because an
+    obligation that disappears on reload looks discharged. A stored provenance
+    without a licence is dropped rather than resurrected as licence-free.
+    `DawService.licenseObligations()` reports what the arrangement owes right
+    now (delete the SA clip and the obligation goes with it); the export dialog
+    shows the notice **before** the format chooser and **disables export**
+    outright when `hasProblem` — incompatible copyleft, or NC/unstated material
+    in the mix. Clips the user recorded or generated carry no provenance and owe
+    nothing. +8 wiring tests on top of the 21 rule tests.
+  - ⬜ **Remaining to lift the hold generally — the other editors + the import
+    paths.** The Tracker's instruments and Workshop scores still have no
+    provenance field, and no import path POPULATES `Clip.provenance` yet (the
+    plumbing accepts it; the library→editor hand-off doesn't fill it in). Until
+    an imported work's licence is actually attached at import, the Audio Editor
+    gate only fires for material that something sets it on. Order of work: (1)
+    populate on the library→DAW import paths, (2) the same field on Tracker
+    instruments + Workshop scores, (3) their export/save/share sheets call
+    `obligationsFor` the way `daw_screen` now does.
   - 📝 Worth knowing: `Gemeinfrei` alone classifies as **unknown**, not free —
     matching §"gemeinfrei / GEMA-frei ≠ free to bundle" below. A test pins that,
     because assuming otherwise is the obvious mistake.

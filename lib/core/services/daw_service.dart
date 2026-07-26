@@ -13,6 +13,7 @@ import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart'
     show MultiPartScore;
 import 'package:flutter/foundation.dart';
@@ -2123,6 +2124,23 @@ class DawService extends ChangeNotifier {
     _peaks.clear();
     notifyListeners();
   }
+
+  /// What exporting/saving/sharing this arrangement owes: attribution,
+  /// share-alike on the OUTPUT, and anything that can't lawfully be included.
+  ///
+  /// Collected from the clips' own [Clip.provenance], so it reflects what is
+  /// actually in the arrangement right now — delete the share-alike clip and
+  /// the obligation goes with it. Clips the user recorded or generated carry no
+  /// provenance and contribute nothing.
+  ///
+  /// This is the app-side half of the SA-propagation requirement in
+  /// `docs/CORPUS_LICENSING.md`; the rule itself lives in
+  /// `core/licensing/license_obligations.dart`.
+  LicenseObligations licenseObligations() => obligationsFor([
+        for (final track in timeline.tracks)
+          for (final clip in track.clips)
+            if (clip.provenance != null) clip.provenance!,
+      ]);
 
   /// Bake the whole arrangement to one mono PCM buffer (only changed clips
   /// re-render, thanks to the per-source cache).

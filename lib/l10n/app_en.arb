@@ -855,6 +855,7 @@
   "dawClose": "Close",
   "dawMoveToLane": "Move to lane",
   "dawCurveHint": "Drag a point to shape the curve · tap to add · hold to remove",
+  "dawExportBlocked": "Cannot export",
   "dawExportFullMix": "Full mix",
   "dawExportStemsAll": "All as stems",
   "dawExportStemsSelected": "Selected as stems",

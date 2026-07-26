@@ -4250,6 +4250,12 @@ abstract class AppLocalizations {
   /// **'Drag a point to shape the curve · tap to add · hold to remove'**
   String get dawCurveHint;
 
+  /// No description provided for @dawExportBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot export'**
+  String get dawExportBlocked;
+
   /// No description provided for @dawExportFullMix.
   ///
   /// In en, this message translates to:

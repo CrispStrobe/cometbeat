@@ -6,7 +6,12 @@
 // hidden inside a share-alike name, and two copylefts that cannot legally be
 // merged.
 
+import 'dart:typed_data';
+
+import 'package:comet_beat/core/audio/daw_project.dart';
+import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/licensing/license_obligations.dart';
+import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 LicensedWork _w(String license, {String title = 'thing', String? creator}) =>
@@ -214,6 +219,113 @@ void main() {
       final o = obligationsFor([_w('CC0-1.0', title: 'Free thing')]);
       expect(o.works, hasLength(1));
       expect(o.attributable, isEmpty); // listed, but nothing owed
+    });
+  });
+
+  group('provenance travels with the arrangement', () {
+    // The rule is useless unless the obligation actually reaches an export, so
+    // these test the WIRING: a clip carries its licence, a saved project keeps
+    // it, and the service reports what the current arrangement owes.
+    Clip clipWith({LicensedWork? provenance}) => Clip(
+          source: SampleSource(Float64List(64)..fillRange(0, 64, 0.2)),
+          provenance: provenance,
+        );
+
+    test('a DAW clip carries its provenance and copyWith keeps it', () {
+      const work = LicensedWork(
+        title: 'Setting',
+        license: 'CC-BY-SA-4.0',
+        creator: 'U. Wolf',
+      );
+      final clip = clipWith(provenance: work);
+      expect(clip.provenance, work);
+      // An edit must not launder the licence away.
+      expect(clip.copyWith(gain: 0.5).provenance, work);
+    });
+
+    test('the service reports what the arrangement owes', () {
+      final s = DawService();
+      expect(s.licenseObligations().isClear, isTrue); // empty owes nothing
+
+      s.timeline.tracks[0].clips.add(
+        clipWith(
+          provenance: const LicensedWork(
+            title: 'Loop',
+            license: 'CC-BY-SA-4.0',
+            creator: 'A. Person',
+          ),
+        ),
+      );
+      final ob = s.licenseObligations();
+      expect(ob.requiresShareAlike, isTrue);
+      expect(ob.shareAlikeLicense, 'CC BY-SA 4.0');
+      expect(ob.noticeText(), contains('A. Person'));
+    });
+
+    test('removing the SA clip removes the obligation', () {
+      // It reflects what is IN the arrangement, not what once passed through.
+      final s = DawService();
+      s.timeline.tracks[0].clips.add(
+        clipWith(
+          provenance:
+              const LicensedWork(title: 'Loop', license: 'CC-BY-SA-4.0'),
+        ),
+      );
+      expect(s.licenseObligations().requiresShareAlike, isTrue);
+      s.timeline.tracks[0].clips.clear();
+      expect(s.licenseObligations().isClear, isTrue);
+    });
+
+    test("the user's own recordings carry no obligation", () {
+      final s = DawService();
+      s.timeline.tracks[0].clips.add(clipWith()); // no provenance
+      expect(s.licenseObligations().isClear, isTrue);
+    });
+
+    test('provenance survives a project save/load round-trip', () {
+      // An obligation that disappears on reload is worse than none — it looks
+      // discharged.
+      final t = DawTimeline(
+        tracks: [
+          DawTrack(
+            name: 'A',
+            clips: [
+              clipWith(
+                provenance: const LicensedWork(
+                  title: 'Setting',
+                  license: 'CC-BY-SA-4.0',
+                  creator: 'U. Wolf',
+                  source: 'Kinder wollen singen',
+                  url: 'https://example.org',
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      final back = projectFromJson(projectToJson(t));
+      final p = back.tracks.single.clips.single.provenance;
+      expect(p, isNotNull);
+      expect(p!.license, 'CC-BY-SA-4.0');
+      expect(p.creator, 'U. Wolf');
+      expect(p.source, 'Kinder wollen singen');
+      expect(p.url, 'https://example.org');
+      expect(obligationsFor([p]).requiresShareAlike, isTrue);
+    });
+
+    test('a stored provenance without a licence is dropped, not trusted', () {
+      // Better to carry no claim than to resurrect material as licence-free.
+      final t = DawTimeline(
+        tracks: [
+          DawTrack(name: 'A', clips: [clipWith()]),
+        ],
+      );
+      final json = projectToJson(t).replaceFirst(
+        '"clips":[{',
+        '"clips":[{"provenance":{"title":"X"},',
+      );
+      final back = projectFromJson(json);
+      expect(back.tracks.single.clips.single.provenance, isNull);
     });
   });
 

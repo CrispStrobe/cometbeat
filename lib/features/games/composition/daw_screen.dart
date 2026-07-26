@@ -3271,6 +3271,53 @@ class _DawScreenState extends State<DawScreen>
                         : 'Marked range: Set Mark In and Mark Out first',
                   ),
                   const SizedBox(height: 8),
+                  // Licence obligations from the clips actually in the mix.
+                  // Shown BEFORE the format chooser: a share-alike notice that
+                  // only appears after the file is written is too late.
+                  Builder(
+                    builder: (licCtx) {
+                      final ob = _daw.licenseObligations();
+                      if (ob.isClear) return const SizedBox.shrink();
+                      final scheme = Theme.of(licCtx).colorScheme;
+                      final small = Theme.of(licCtx).textTheme.bodySmall;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: ob.hasProblem
+                                ? scheme.errorContainer
+                                : scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (final c in ob.conflicts)
+                                Text(
+                                  c,
+                                  style: small?.copyWith(
+                                    color: scheme.onErrorContainer,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              for (final b in ob.blocking)
+                                Text(
+                                  '${AppLocalizations.of(licCtx)!.dawExportBlocked}'
+                                  ': ${b.creditLine}',
+                                  style: small?.copyWith(
+                                    color: scheme.onErrorContainer,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              if (ob.noticeText().isNotEmpty)
+                                Text(ob.noticeText(), style: small),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   Text(
                     'Duration ${_secondsLabel(selected.length / kDawSampleRate)}',
                   ),
@@ -3305,9 +3352,13 @@ class _DawScreenState extends State<DawScreen>
                 ),
               ),
               FilledButton(
-                onPressed: selected.isEmpty
-                    ? null
-                    : () => Navigator.of(ctx).pop('export'),
+                // Refuse when the mix can't lawfully be exported (incompatible
+                // copyleft, or NC/unstated material in it) — the point of
+                // computing obligations is that they can say no.
+                onPressed:
+                    selected.isEmpty || _daw.licenseObligations().hasProblem
+                        ? null
+                        : () => Navigator.of(ctx).pop('export'),
                 child: const Text('Choose format'),
               ),
             ],

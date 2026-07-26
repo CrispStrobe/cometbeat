@@ -2265,6 +2265,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Punkt ziehen zum Formen · tippen zum Hinzufügen · halten zum Entfernen';
 
   @override
+  String get dawExportBlocked => 'Export nicht möglich';
+
+  @override
   String get dawExportFullMix => 'Gesamter Mix';
 
   @override

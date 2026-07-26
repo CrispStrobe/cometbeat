@@ -25,9 +25,15 @@ import 'package:comet_beat/core/audio/fx/fx_chain.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/licensing/license_obligations.dart'
+    show LicensedWork;
 
 export 'package:comet_beat/core/audio/fx/fx_chain.dart';
 export 'package:comet_beat/core/audio/fx/fx_spec.dart';
+// Re-exported so anything holding a Clip can read its provenance without a
+// second import.
+export 'package:comet_beat/core/licensing/license_obligations.dart'
+    show LicensedWork;
 
 /// The default render rate (matches `synth.kSampleRate`), kept inline so this
 /// core stays dependency-light.
@@ -135,6 +141,7 @@ class Clip {
     this.trimStartMs = 0,
     this.trimEndMs = 0,
     this.effects = const [],
+    this.provenance,
   });
 
   final ClipSource source;
@@ -162,6 +169,17 @@ class Clip {
   /// before clip gain/fades and before the track insert.
   final List<DawClipEffect> effects;
 
+  /// Where this clip's audio came from and under what licence, when it came
+  /// from the library. Null for the user's own recordings and generated
+  /// material, which carry no obligation.
+  ///
+  /// This is what lets an export know what it owes: without provenance
+  /// travelling WITH the clip, `obligationsFor` has nothing to be given at
+  /// export time and share-alike material would leave the app silently. It is
+  /// saved in the project for the same reason — an obligation that disappears
+  /// on reload is worse than none, because it looks discharged.
+  final LicensedWork? provenance;
+
   Clip copyWith({
     double? startMs,
     double? gain,
@@ -175,6 +193,7 @@ class Clip {
     double? trimStartMs,
     double? trimEndMs,
     List<DawClipEffect>? effects,
+    LicensedWork? provenance,
   }) =>
       Clip(
         source: source,
@@ -190,6 +209,7 @@ class Clip {
         trimStartMs: trimStartMs ?? this.trimStartMs,
         trimEndMs: trimEndMs ?? this.trimEndMs,
         effects: effects ?? this.effects,
+        provenance: provenance ?? this.provenance,
       );
 }
 

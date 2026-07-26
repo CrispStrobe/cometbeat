@@ -777,6 +777,7 @@
   "dawClose": "Schließen",
   "dawMoveToLane": "In Spur verschieben",
   "dawCurveHint": "Punkt ziehen zum Formen · tippen zum Hinzufügen · halten zum Entfernen",
+  "dawExportBlocked": "Export nicht möglich",
   "dawExportFullMix": "Gesamter Mix",
   "dawExportStemsAll": "Alle einzeln",
   "dawExportStemsSelected": "Auswahl einzeln",

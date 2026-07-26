@@ -2257,6 +2257,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Drag a point to shape the curve · tap to add · hold to remove';
 
   @override
+  String get dawExportBlocked => 'Cannot export';
+
+  @override
   String get dawExportFullMix => 'Full mix';
 
   @override

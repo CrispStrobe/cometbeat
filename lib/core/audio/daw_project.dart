@@ -86,6 +86,10 @@ String projectToJson(
                 'trimEndMs': clip.trimEndMs,
                 if (clip.effects.isNotEmpty)
                   'effects': [for (final fx in clip.effects) fx.toJson()],
+                // Licence obligations must survive save/load: one that vanishes
+                // on reload is worse than none, because it looks discharged.
+                if (clip.provenance != null)
+                  'provenance': _provenanceToJson(clip.provenance!),
                 'pcm': base64Encode(_floatToInt16(r(clip.source))),
                 if (clip.source is StereoSampleSource)
                   'rightPcm': base64Encode(
@@ -190,6 +194,7 @@ DawTimeline projectFromJson(String json) {
             fadeOutCurve: fadeCurve_(c['fadeOutCurve']),
             trimStartMs: num_(c['trimStartMs']),
             trimEndMs: num_(c['trimEndMs']),
+            provenance: _provenanceFromJson(c['provenance']),
             effects: [
               if (c['effects'] case final effects? when effects is List)
                 for (final fx in effects)
@@ -278,4 +283,34 @@ Map<int, double> _parseBusSends(Object? value) {
     }
   }
   return sends;
+}
+
+/// A clip's licence provenance, as stored in the project.
+Map<String, dynamic> _provenanceToJson(LicensedWork w) => {
+      'title': w.title,
+      'license': w.license,
+      if (w.creator != null) 'creator': w.creator,
+      if (w.source != null) 'source': w.source,
+      if (w.url != null) 'url': w.url,
+    };
+
+/// Read a clip's provenance. A malformed or absent entry yields null (the clip
+/// simply carries no obligation) rather than failing the load — but a present
+/// one MUST keep its licence, so an entry without one is discarded instead of
+/// being resurrected as licence-free.
+LicensedWork? _provenanceFromJson(Object? raw) {
+  if (raw is! Map) return null;
+  final title = raw['title'];
+  final license = raw['license'];
+  if (title is! String || license is! String || license.trim().isEmpty) {
+    return null;
+  }
+  String? str(Object? v) => v is String && v.isNotEmpty ? v : null;
+  return LicensedWork(
+    title: title,
+    license: license,
+    creator: str(raw['creator']),
+    source: str(raw['source']),
+    url: str(raw['url']),
+  );
 }
