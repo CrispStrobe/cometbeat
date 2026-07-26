@@ -858,6 +858,120 @@ Float64List _sliceOrPad(Float64List buffer, int from, int to) {
   return out;
 }
 
+/// The frame count [renderTimelineStereo] would produce, computed WITHOUT
+/// allocating the whole-song mix — only the clip renders (cached in [cache]) and
+/// their placements. Clip effects preserve length (the FX-chain invariant), so a
+/// clip's contribution ends at `start + trimmedLength`. Share [cache] with a
+/// following [streamTimelineWav] so each clip renders once.
+int dawTimelineLengthSamples(
+  DawTimeline timeline, {
+  int sampleRate = kDawSampleRate,
+  Map<Object, Float64List>? cache,
+}) {
+  final store = cache ?? <Object, Float64List>{};
+  var total = 0;
+  final anySolo = timeline.tracks.any((t) => t.soloed);
+  for (final track in timeline.tracks) {
+    if (track.muted) continue;
+    if (anySolo && !track.soloed) continue;
+    for (final clip in track.clips) {
+      if (clip.muted) continue;
+      final rendered = store.putIfAbsent(
+        clip.source.cacheKey,
+        () => clip.source.render(sampleRate),
+      );
+      if (rendered.isEmpty) continue;
+      final pcm = _trimView(rendered, clip, sampleRate);
+      if (pcm.isEmpty) continue;
+      final start = (clip.startMs * sampleRate / 1000).round();
+      final end = start + pcm.length;
+      if (end > total) total = end;
+    }
+  }
+  return total;
+}
+
+/// Streams the timeline mix as a 16-bit little-endian **stereo** WAV in bounded
+/// memory: the mix is rendered in [blockSamples]-frame windows — each touching
+/// only the clips overlapping it, via [renderTimelineWindowStereo] — and each
+/// chunk of bytes (the 44-byte header first) is handed to [onBytes]. The
+/// whole-song mix is never allocated; peak memory is one window plus the
+/// (input-bounded) clip cache, so a twenty-minute arrangement exports in the
+/// memory of one window.
+///
+/// **Byte-identical** to
+/// `pcmFloatToWav(renderTimelineStereo(t).left, right: ….right, sampleRate: sr)`
+/// at the same [sampleRate] and 16-bit depth — the window render is a
+/// byte-identical slice of the full render (its own pinned invariant), and the
+/// header/sample encoding mirror `pcmFloatToWav`. Renders at the timeline's own
+/// rate (no export-time resample), so the caller must export at [sampleRate].
+///
+/// A typical file writer: `final s = File(path).openWrite();
+/// streamTimelineWav(t, onBytes: s.add); await s.close();`.
+void streamTimelineWav(
+  DawTimeline timeline, {
+  required void Function(List<int> bytes) onBytes,
+  int blockSamples = 1 << 15,
+  int sampleRate = kDawSampleRate,
+  Map<Object, Float64List>? cache,
+}) {
+  final store = cache ?? <Object, Float64List>{};
+  final frames =
+      dawTimelineLengthSamples(timeline, sampleRate: sampleRate, cache: store);
+  const channels = 2;
+  const blockAlign = channels * 2; // 16-bit
+  final dataSize = frames * blockAlign;
+
+  final header = Uint8List(44);
+  final hb = ByteData.sublistView(header);
+  void ascii(int o, String s) {
+    for (var i = 0; i < s.length; i++) {
+      header[o + i] = s.codeUnitAt(i);
+    }
+  }
+
+  ascii(0, 'RIFF');
+  hb.setUint32(4, 36 + dataSize, Endian.little);
+  ascii(8, 'WAVE');
+  ascii(12, 'fmt ');
+  hb.setUint32(16, 16, Endian.little);
+  hb.setUint16(20, 1, Endian.little); // PCM
+  hb.setUint16(22, channels, Endian.little);
+  hb.setUint32(24, sampleRate, Endian.little);
+  hb.setUint32(28, sampleRate * blockAlign, Endian.little);
+  hb.setUint16(32, blockAlign, Endian.little);
+  hb.setUint16(34, 16, Endian.little);
+  ascii(36, 'data');
+  hb.setUint32(40, dataSize, Endian.little);
+  onBytes(header);
+  if (frames == 0) return;
+
+  final block = blockSamples < 1 ? 1 : blockSamples;
+  for (var from = 0; from < frames; from += block) {
+    final to = from + block > frames ? frames : from + block;
+    final mix = renderTimelineWindowStereo(
+      timeline,
+      fromSample: from,
+      toSample: to,
+      sampleRate: sampleRate,
+      cache: store,
+    );
+    final n = to - from;
+    final bytes = Uint8List(n * blockAlign);
+    final bb = ByteData.sublistView(bytes);
+    var off = 0;
+    for (var i = 0; i < n; i++) {
+      final l = i < mix.left.length ? mix.left[i] : 0.0;
+      bb.setInt16(off, (l.clamp(-1.0, 1.0) * 32767).round(), Endian.little);
+      off += 2;
+      final r = i < mix.right.length ? mix.right[i] : 0.0;
+      bb.setInt16(off, (r.clamp(-1.0, 1.0) * 32767).round(), Endian.little);
+      off += 2;
+    }
+    onBytes(bytes);
+  }
+}
+
 Float64List renderTimeline(
   DawTimeline timeline, {
   int sampleRate = kDawSampleRate,
