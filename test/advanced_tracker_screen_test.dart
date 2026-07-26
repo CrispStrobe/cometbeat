@@ -87,6 +87,28 @@ void main() {
     expect(shared.isEmpty, isFalse);
   });
 
+  testWidgets('a soft note edited in the tracker shares its dynamics back',
+      (tester) async {
+    await pumpGame(tester, const AdvancedTrackerScreen());
+    final game = _game(tester);
+    game.setNote(0, 0, 60);
+    game.moveCursor(0, 0);
+    game.selectField(1); // the volume column (note·volume·effect·instrument)
+    game.typeVolume('1'); // a low volume → a soft note
+    await tester.pump();
+    final vol = game.volumeAt(0, 0);
+    expect(vol, isNotNull);
+    expect(vol!, lessThan(1.0));
+
+    // Sharing back publishes the note WITH its dynamics (not just the pitch).
+    MelodyBridge.instance.clear();
+    game.shareMelody();
+    final shared = MelodyBridge.instance.current!;
+    final cell = shared.cells.firstWhere((c) => c.midis?.contains(60) ?? false);
+    expect(cell.velocity, lessThan(1.0));
+    expect(tester.takeException(), isNull);
+  });
+
   group('auto-share-on-exit (Loop Studio Fine-tune round-trip)', () {
     testWidgets('publishes the edited melody on exit when enabled + edited',
         (tester) async {

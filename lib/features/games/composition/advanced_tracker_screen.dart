@@ -3844,9 +3844,15 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       for (var s = 0; s < steps; s++) s < cells.length ? cells[s].midi : null,
     ];
     if (rows.every((m) => m == null)) return false;
+    // Carry each note's dynamics (the tracker's per-cell volume) so a soft note
+    // edited in the pro tracker returns to the Loop as a soft note.
+    final vels = <double>[
+      for (var s = 0; s < steps; s++)
+        s < cells.length ? (cells[s].volume ?? 1.0) : 1.0,
+    ];
     MelodyBridge.instance.publish(
       SharedMelody(
-        cells: patternCellsFromMidiRows(rows),
+        cells: patternCellsFromMidiRows(rows, velocities: vels),
         tempoBpm: _song.timing.tempoBpm,
         source: 'advtracker',
       ),

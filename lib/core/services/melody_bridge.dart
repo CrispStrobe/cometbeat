@@ -57,6 +57,7 @@ class SharedMelody {
 List<PatternCell> patternCellsFromMidiRows(
   List<int?> rows, {
   int steps = kPatternSteps,
+  List<double>? velocities,
 }) {
   final cells = <PatternCell>[];
   var i = 0;
@@ -68,7 +69,17 @@ List<PatternCell> patternCellsFromMidiRows(
       if (next != null) break; // a fresh trigger starts a new cell
       len++;
     }
-    cells.add(PatternCell(midis: midi == null ? null : [midi], steps: len));
+    // A note carries the dynamics of its ONSET step (rests stay full/ignored).
+    final vel = (midi != null && velocities != null && i < velocities.length)
+        ? velocities[i]
+        : 1.0;
+    cells.add(
+      PatternCell(
+        midis: midi == null ? null : [midi],
+        steps: len,
+        velocity: vel,
+      ),
+    );
     i += len;
   }
   return cells;

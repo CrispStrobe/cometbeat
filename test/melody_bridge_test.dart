@@ -111,5 +111,19 @@ void main() {
       expect(rows[0], 62); // C+2
       expect(rows[8], 66); // E+2
     });
+
+    test('carries per-note dynamics from the onset step', () {
+      // C at step 0 (soft), rest, G at step 4 (normal).
+      final rows = <int?>[
+        60, null, null, null, 67, //
+        ...List<int?>.filled(11, null),
+      ];
+      final vels = <double>[0.4, 1, 1, 1, 1.0, ...List<double>.filled(11, 1)];
+      final cells = patternCellsFromMidiRows(rows, velocities: vels);
+      final c = cells.firstWhere((c) => c.midis?.contains(60) ?? false);
+      final g = cells.firstWhere((c) => c.midis?.contains(67) ?? false);
+      expect(c.velocity, closeTo(0.4, 1e-9)); // soft onset preserved
+      expect(g.velocity, 1.0); // normal note stays full
+    });
   });
 }
