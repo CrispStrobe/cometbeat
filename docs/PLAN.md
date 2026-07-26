@@ -58,18 +58,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-print)** · 🚧 **ACTIVE — print the fingered part.** You can SEE cello
-  fingerings on a song now, but not take them off the screen. The PDF exporter goes
-  through the layout, and the layout already accepts `extraFingerings`, so a
-  printable fingered part needs no model surgery: thread the marks through
-  `layoutPages` (crisp_notation, sibling worktree — the shared clone stays on main)
-  → `exportScoreToPdf` → an **Export…** action on the song screen that prints what
-  the toggle is showing. Reuses existing l10n (`workshopExport`, `workshopSavedTo`,
-  `musicExportFailed`) → **no ARB**. Touches `features/workshop/export/score_pdf.dart`
-  (one optional param, additive) + `songs/song_screen.dart`. ⚠ Deliberately NOT
-  doing MusicXML-with-fingerings: that needs the marks IN the model, and `Score`
-  has ~40 fields with no `copyWith`, so it is its own piece of work.
-  Worktree `../mus-cello-fingering`.
+- **opus (cello-print)** · ✅ **SHIPPED (idle) — print the fingered part**
+  (`fb4bf4cd`, library `crisp_notation@51033ca`). Fingerings were screen-only; the
+  PDF path (layoutPages → layoutSystems → engine.layout) now carries display-time
+  marks end to end, so `exportScoreToPdf(extraFingerings:)` + an **Export…** action
+  on the song screen print exactly what the toggle shows. The marks ride in as a
+  layout argument, never into the score — an exported fingered PDF leaves the saved
+  song untouched, because the fingering is our reading of the piece, not an edit to
+  it. **No ARB** (reused `workshopExport` / `workshopSavedTo` / `musicExportFailed`
+  and the Workshop's own save path). Tests assert what would otherwise only show on
+  paper: a fingered export differs from a bare one (a mark dropped anywhere in that
+  three-step chain yields a byte-identical PDF), and a mark for a note that is not
+  in the score prints nothing extra.
+  ⚠ **Also fixed someone else's red gate on the way:** `crisp_notation@d8589c5`
+  (`<sound tempo>` reader) landed unformatted and CI's *format + analyze* job was
+  failing on main while every other job passed; pushed as its own commit
+  (`crisp_notation@397a412`) so the file's owner can see exactly what moved.
+  ⚠ **Deferred, and it is the next real piece:** MusicXML-**with**-fingerings. That
+  needs the marks IN the model, and `Score` has ~40 fields with no `copyWith`, so
+  writing them means hand-cloning the whole score and silently dropping whichever
+  field is added next. The honest fix is `copyWith` on `Score`/`Measure`/`NoteElement`
+  in crisp_notation, with an exhaustive round-trip test per class — a library chore
+  worth doing once for everyone, not a cello feature.
 
 - **opus (cello-positions)** · ✅ **SHIPPED (idle) — the cello games drill positions
   1–4** (`6daeac99`). The finger quiz and "Play it" were locked to the nut because

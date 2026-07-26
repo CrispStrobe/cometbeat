@@ -33,7 +33,17 @@ what a learner doesn't need — which is why the capped profiles are the useful
 product and the uncapped one is the research problem.
 
 Pending, in order:
-1. **Consumers.** Nothing renders this yet. Cheapest real wins: fingering digits
+1. **Consumers — DONE.** Fingerings show on the cello play-along, on the song screen
+   (a toggle) and on the cello "Play it" staff; the games drill positions 1–4; and a
+   fingered part **prints** (Export… → PDF, marks passed as a layout argument so the
+   saved song is untouched). Remaining in this bullet: a **string indicator** (Roman
+   numerals — `Annotation` already renders text above a staff, but attaching one to
+   an imported score hits the same immutability wall as fingerings did), and
+   **MusicXML-with-fingerings**, which needs `copyWith` on `Score`/`Measure`/
+   `NoteElement` in crisp_notation (a library chore worth doing once, with an
+   exhaustive round-trip test per class, rather than hand-cloning at call sites).
+   Historic note — the original text of this bullet:
+1. ~~**Consumers.** Nothing renders this yet.~~ Cheapest real wins: fingering digits
    on cello parts in Song Book / play-along (copy `bowedFingeringDigits` into
    `NoteElement.fingerings`, which the layout engine already draws), a string
    indicator for the cello games, and lifting `cello_first_position.dart`'s games
