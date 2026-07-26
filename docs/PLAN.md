@@ -63,27 +63,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   `.bak2/.orig/.rej` were pre-existing untracked cruft, already removed by `4a9c55d0`.
   — opus
 
-- **opus (tracker-complete)** · 🚧 **ACTIVE (residuals) — tracker MOD/XM/S3M/IT.**
-  Working the documented residuals: retain the unmapped **S3M header bytes**
-  (master vol / ultraClick / flags / createdWith / sampleFormat / channelSettings)
-  through `TrackerSong`; thread **procedural-voice state across streamer chunks**
-  (sfxr/fm/subtractive/OPL re-attack at chunk edges); **non-default IT MIDI
-  macros**; then **bit-exact OPL2** chip emulation. Hot files: `tracker_replayer.dart`,
-  `tracker_engine.dart`, `tracker_song.dart`, `mod/*.dart`. Everything prior
-  shipped + byte-identical. ⚠️ Loop/PatternCell work (`bb5a5bee`) is separate.
-  — opus
 - **opus (tracker-complete)** · ✅ **IDLE / last-shipped — tracker MOD/XM/S3M/IT
-  renderer+editor complete.** Shipped to `main`: full **<500 MB streaming
-  renderer** (every song shape, byte-identical; buddhia3 2.8 GB→~340 MB); resonant
-  IT filter (+cutoff envelope, MIDI-macro); cubic interp + anti-click; opt-in TPDF
-  dither; S3M DP30 ADPCM + **dynamic OPL2 voice w/ ADSR**; MOD tag aliases; full
+  renderer+editor complete (incl. all residuals).** Shipped to `main`: full
+  **<500 MB streaming renderer for EVERY song shape** (byte-identical; buddhia3
+  2.8 GB→~340 MB; long procedural/native/stereo all bounded); resonant IT filter
+  (+cutoff envelope, MIDI-macro incl. per-channel active-macro + z-eval); cubic
+  interp + anti-click; opt-in TPDF dither; S3M DP30 ADPCM + a **YM3812/OPL2
+  emulation core** (log-sin/exp tables, EG/KSL, native-rate); MOD tag aliases; full
   cross-format effect mapping + export-loss report; velocity/non-sample zones;
-  **editable flow/order timeline**; raw native-command + S3M-header editors. All
-  corpus-byte-identical where required, oracle-gated where output changed, each
-  unit-tested; whole-project analyze clean. Residuals in `mod_pending.md`
-  (bit-exact OPL chip, non-default IT MIDI macros, a few unretained S3M header
-  bytes). Now idle. ⚠️ Loop/PatternCell work (`bb5a5bee`) is a separate
-  workstream — not mine. — opus
+  **editable flow/order timeline**; raw native-command + full **S3M-header**
+  editor/roundtrip. All corpus-byte-identical where required, oracle-gated where
+  output changed, each unit-tested; whole-project analyze clean. Only niche
+  residuals remain (see `mod_pending.md`): reference-verified bit-exact OPL2 (no
+  in-tree reference), OPL3/rhythm mode, long-*sfxr* streaming (PRNG-coupled) +
+  degenerate single-note. Now idle. ⚠️ Loop/PatternCell work (`bb5a5bee`) is a
+  separate workstream — not mine. — opus
 
 > ⛔ **`dart format` is a HARD CI GATE — and it runs FIRST.** `ci.yml` runs
 > `dart format --output=none --set-exit-if-changed .` *before* analyze and test.

@@ -72,9 +72,13 @@ unit-tested:
 - **S3M DP30 ADPCM** packed samples now decode to PCM (libopenmpt algorithm;
   algorithm/roundtrip-verified, no real packed `.s3m` fixture; degenerate input
   falls back to preserve-only).
-- **S3M AdLib/OPL** (type-2) instruments are now **audible** via a static 2-op FM
-  approximation of the patch at import (documented as an approximation, not a
-  cycle-exact OPL2 emulator); the instrument still re-exports byte-identically.
+- **S3M AdLib/OPL** (type-2) instruments now play through a **YM3812/OPL2
+  emulation core** (`opl2_core.dart`: 256-entry log-sin + exp tables, 4 waveforms,
+  attenuation-domain envelope generator with the standard AR/DR/SL/RR rate tables +
+  KSR + KSL, fixed-point phase accumulator, feedback, AM/VIB LFOs, native ~49716 Hz
+  render → resample). Algorithm-faithful (documented: not reference-verified
+  bit-exact — no in-tree YM3812 to diff against; OPL3 4-op / rhythm mode out of
+  scope). The instrument still re-exports byte-identically.
 - **Native flow/order timeline**: a pure `songFlowTimeline` (from `walkFlow`) plus
   a read-only Advanced Tracker view showing the played order sequence with its
   jump/break/loop/speed/tempo commands.
@@ -86,14 +90,18 @@ renderer** shipped (every song shape streams with carried voice state, flat RAM
 preservation shipped; the resonant filter, cubic interpolation, anti-click,
 dither, velocity/non-sample zones, **in-place flow editing**, raw
 effect-memory + native S3M header editors, and a **dynamic OPL2 voice with ADSR**
-all shipped. Genuinely remaining are only: the cross-format effects `S5/S7/S9/SA/Z`
-(verified to have no faithful neutral equivalent — named in the export-loss
-report, not silently dropped); non-default IT MIDI macros; bit-exact OPL2 chip
-emulation (log-sin/exp DAC ladder, OPL3 4-op, rhythm mode — the dynamic 2-op
-voice is faithful but not cycle-exact); a per-note re-attack at streamer chunk
-boundaries for procedural voices (sfxr/fm/subtractive/OPL — shared trade-off);
-and model-retention of a few S3M header bytes (master vol / ultraClick / flags /
-createdWith / channelSettings). See the feature audit below for per-feature state.
+all shipped. **Residuals pass (2026-07-26)** then closed the rest: the full **S3M
+header** (master vol / ultraClick / flags / createdWith / sampleFormat /
+channelSettings) now round-trips through the editor; **procedural-voice songs
+stream** (a 16-min FM song 1022 MB→272 MB, byte-identical) so **every song shape
+is <500 MB**; **non-default IT MIDI macros** (per-channel active-macro + z-eval);
+and a real **YM3812/OPL2 core**. **Genuinely remaining — all niche:** the
+cross-format effects `S5/S7/S9/SA/Z` (verified to have no faithful neutral
+equivalent — named in the export-loss report, not silently dropped);
+reference-verified **bit-exact** OPL2 (no in-tree YM3812 to diff against) + OPL3
+4-op/rhythm mode; and two contrived streaming edges left on the whole-song path —
+long **sfxr** songs (its sequential PRNG couples runs and a note can outlive its
+run) and a degenerate single-note-holds-whole-song. See the feature audit below.
 
 ### Native-editing pass (raw command provenance + S3M header)
 
