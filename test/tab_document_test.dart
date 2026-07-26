@@ -866,4 +866,116 @@ void main() {
       expect(c.withBend(null).slide, SlideInOut.outUpward); // untouched
     });
   });
+
+  group('B4–B6 — tap / harmonic kinds / articulations', () {
+    TabDocument oneNote() => TabDocument(
+          tuning: Tuning.standardGuitar,
+          columns: [const TabColumn(frets: {0: 5})],
+        );
+
+    test('B4 tap emits a Tap and round-trips', () {
+      final doc = oneNote()..setTap(0, true);
+      final score = doc.toScore();
+      expect(score.taps, hasLength(1));
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.tap, isTrue);
+    });
+
+    test('B5 a specific harmonic kind emits its style and round-trips', () {
+      final doc = oneNote()..setHarmonic(0, TabNoteStyle.artificialHarmonic);
+      final score = doc.toScore();
+      expect(
+        score.tabNoteMarks.single.style,
+        TabNoteStyle.artificialHarmonic,
+      );
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.harmonic, TabNoteStyle.artificialHarmonic);
+      // it is NOT also mapped onto the flat harmonic technique
+      expect(
+        back.columns.first.techniques,
+        isNot(contains(TabTechnique.harmonic)),
+      );
+    });
+
+    test('B5 the flat harmonic technique still round-trips as before', () {
+      final doc = oneNote()..toggleTechnique(0, TabTechnique.harmonic);
+      final score = doc.toScore();
+      expect(score.tabNoteMarks.single.style, TabNoteStyle.harmonic);
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.harmonic, TabNoteStyle.harmonic);
+    });
+
+    test('B6 palm-mute and let-ring emit self-spans and round-trip', () {
+      final doc = oneNote()
+        ..setPalmMute(0, true)
+        ..setLetRing(0, true);
+      final score = doc.toScore();
+      expect(score.palmMutes, hasLength(1));
+      expect(score.letRings, hasLength(1));
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(back.columns.first.palmMute, isTrue);
+      expect(back.columns.first.letRing, isTrue);
+    });
+
+    test('B6 a palm-mute SPAN over several notes flags every column', () {
+      // A hand-built score with a 3-note palm-mute span (import fidelity).
+      final score = Score(
+        clef: Clef.treble,
+        measures: [
+          Measure([
+            NoteElement(
+              pitches: [pitchFromMidi(64)],
+              duration: NoteDuration.quarter,
+              id: 'e0',
+            ),
+            NoteElement(
+              pitches: [pitchFromMidi(65)],
+              duration: NoteDuration.quarter,
+              id: 'e1',
+            ),
+            NoteElement(
+              pitches: [pitchFromMidi(67)],
+              duration: NoteDuration.quarter,
+              id: 'e2',
+            ),
+          ]),
+        ],
+        palmMutes: const [PalmMute('e0', 'e2')],
+      );
+      final doc = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(doc.columns.take(3).every((c) => c.palmMute), isTrue);
+    });
+
+    test('B6 articulations set on the note and round-trip', () {
+      final doc = oneNote()
+        ..toggleArticulation(0, Articulation.staccato)
+        ..toggleArticulation(0, Articulation.accent);
+      final score = doc.toScore();
+      final note =
+          score.measures.first.elements.whereType<NoteElement>().first;
+      expect(
+        note.articulations,
+        containsAll([Articulation.staccato, Articulation.accent]),
+      );
+      final back = TabDocument.fromScore(score, Tuning.standardGuitar);
+      expect(
+        back.columns.first.articulations,
+        containsAll([Articulation.staccato, Articulation.accent]),
+      );
+    });
+
+    test('toggleArticulation removes on second toggle; copy() is deep', () {
+      var c = const TabColumn(frets: {0: 5});
+      c = c.toggleArticulation(Articulation.tenuto);
+      expect(c.articulations, {Articulation.tenuto});
+      c = c.toggleArticulation(Articulation.tenuto);
+      expect(c.articulations, isEmpty);
+      // copy() must not alias the articulation set
+      final withArt = const TabColumn(frets: {0: 5})
+          .toggleArticulation(Articulation.marcato);
+      final dup = withArt.copy();
+      expect(dup.articulations, {Articulation.marcato});
+      expect(identical(dup.articulations, withArt.articulations), isFalse);
+    });
+  });
 }

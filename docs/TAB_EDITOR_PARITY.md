@@ -257,7 +257,21 @@ parametric technique end-to-end.
 - [x] **B3** slide-in/out — `TabColumn.slide: SlideInOut?` (scoop/fall in or out,
   distinct from the legato `TabTechnique.slide`) → `TabSlide(id, direction)`;
   `fromScore` reads the direction back; `setSlide`/`withSlide`. Tests: B1–B3.
-- [ ] B4 … E2 — pending (scoped above)
+- [x] **B4** hammer/pull + tap — `TabColumn.tap` → `Tap` in `toScore` (round-trip
+  via `score.taps`). Hammer-on vs pull-off stay the `TabTechnique.hammer` slur —
+  the h/p distinction is by pitch direction, which the notation slur conveys.
+  `setTap`/`withTap`. Tests: group B4–B6.
+- [x] **B5** harmonic kinds — `TabColumn.harmonic: TabNoteStyle?` (natural /
+  artificial / pinch / tapped / semi / feedback) → `TabNoteMark(id, style)`;
+  `fromScore` keeps the specific kind (dead/ghost still fold to flat techniques,
+  the flat `TabTechnique.harmonic` still round-trips as `harmonic`).
+  `setHarmonic`/`withHarmonic`. Tests: B4–B6.
+- [x] **B6** articulations — `TabColumn.palmMute`/`letRing` → self-span
+  `PalmMute(id,id)`/`LetRing(id,id)` (import reads multi-note spans and flags every
+  column in range); `TabColumn.articulations: Set<Articulation>` (staccato / tenuto
+  / accent / marcato / fermata …) set on `NoteElement.articulations`, read back on
+  import. `setPalmMute`/`setLetRing`/`toggleArticulation`. Tests: B4–B6.
+- [ ] B7 … E2 — pending (scoped above)
 
 Each completed step is recorded in [HISTORY.md](HISTORY.md); this file tracks the
 remaining scope. See also the root [PLAN.md](../PLAN.md) backlog pointer.

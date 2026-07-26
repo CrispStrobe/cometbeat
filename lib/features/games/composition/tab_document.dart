@@ -98,6 +98,26 @@ class TabColumn {
   /// note. Maps to `TabSlide(id, direction)` in `toScore`.
   final SlideInOut? slide;
 
+  /// Right-hand tapping on this note (B4) → `Tap` in `toScore`. (Hammer-on vs
+  /// pull-off stay the [TabTechnique.hammer] slur — the distinction is by pitch
+  /// direction, which the notation slur already conveys.)
+  final bool tap;
+
+  /// The harmonic KIND on this note (B5): natural / artificial / pinch / tapped
+  /// / semi / feedback. Null = no harmonic (the flat [TabTechnique.harmonic]
+  /// still gives a plain natural harmonic). Maps to `TabNoteMark(id, style)`.
+  final TabNoteStyle? harmonic;
+
+  /// Palm-mute this note (B6) → a self-span `PalmMute(id, id)` in `toScore`.
+  final bool palmMute;
+
+  /// Let this note ring (B6) → a self-span `LetRing(id, id)`.
+  final bool letRing;
+
+  /// Note articulations (B6): staccato / tenuto / accent / marcato / fermata …
+  /// set on the engraved `NoteElement.articulations`.
+  final Set<Articulation> articulations;
+
   const TabColumn({
     this.frets = const {},
     this.duration = NoteDuration.quarter,
@@ -114,6 +134,11 @@ class TabColumn {
     this.bend,
     this.whammy,
     this.slide,
+    this.tap = false,
+    this.harmonic,
+    this.palmMute = false,
+    this.letRing = false,
+    this.articulations = const {},
   });
 
   bool get isEmpty => frets.isEmpty;
@@ -137,6 +162,11 @@ class TabColumn {
     Object? bend = _unset,
     Object? whammy = _unset,
     Object? slide = _unset,
+    bool? tap,
+    Object? harmonic = _unset,
+    bool? palmMute,
+    bool? letRing,
+    Set<Articulation>? articulations,
   }) =>
       TabColumn(
         frets: frets ?? this.frets,
@@ -157,6 +187,12 @@ class TabColumn {
         bend: bend == _unset ? this.bend : bend as List<BendPoint>?,
         whammy: whammy == _unset ? this.whammy : whammy as List<BendPoint>?,
         slide: slide == _unset ? this.slide : slide as SlideInOut?,
+        tap: tap ?? this.tap,
+        harmonic:
+            harmonic == _unset ? this.harmonic : harmonic as TabNoteStyle?,
+        palmMute: palmMute ?? this.palmMute,
+        letRing: letRing ?? this.letRing,
+        articulations: articulations ?? this.articulations,
       );
 
   TabColumn withFret(int string, int fret) =>
@@ -212,8 +248,31 @@ class TabColumn {
   /// Sets (or clears, when null) this column's slide-in/out ornament (B3).
   TabColumn withSlide(SlideInOut? kind) => copyWith(slide: kind);
 
-  /// A deep copy (fresh frets/techniques collections) — for duplicating columns.
-  TabColumn copy() => copyWith(frets: {...frets}, techniques: {...techniques});
+  /// Sets whether this note is right-hand tapped (B4).
+  TabColumn withTap(bool on) => copyWith(tap: on);
+
+  /// Sets (or clears, when null) this column's harmonic kind (B5).
+  TabColumn withHarmonic(TabNoteStyle? kind) => copyWith(harmonic: kind);
+
+  /// Sets whether this note is palm-muted (B6).
+  TabColumn withPalmMute(bool on) => copyWith(palmMute: on);
+
+  /// Sets whether this note lets ring (B6).
+  TabColumn withLetRing(bool on) => copyWith(letRing: on);
+
+  /// Adds [a] if absent, else removes it (B6).
+  TabColumn toggleArticulation(Articulation a) => copyWith(
+        articulations: articulations.contains(a)
+            ? ({...articulations}..remove(a))
+            : {...articulations, a},
+      );
+
+  /// A deep copy (fresh mutable collections) — for duplicating columns.
+  TabColumn copy() => copyWith(
+        frets: {...frets},
+        techniques: {...techniques},
+        articulations: {...articulations},
+      );
 }
 
 /// Rhythm is measured on a **32nd-note grid** so every selectable value — down
@@ -454,6 +513,36 @@ class TabDocument {
     columns[col] = columns[col].withSlide(kind);
   }
 
+  /// Sets right-hand tapping on the column at [col] (B4).
+  void setTap(int col, bool on) {
+    _ensure(col);
+    columns[col] = columns[col].withTap(on);
+  }
+
+  /// Sets (or clears, when null) the harmonic kind on the column at [col] (B5).
+  void setHarmonic(int col, TabNoteStyle? kind) {
+    _ensure(col);
+    columns[col] = columns[col].withHarmonic(kind);
+  }
+
+  /// Sets palm-mute on the column at [col] (B6).
+  void setPalmMute(int col, bool on) {
+    _ensure(col);
+    columns[col] = columns[col].withPalmMute(on);
+  }
+
+  /// Sets let-ring on the column at [col] (B6).
+  void setLetRing(int col, bool on) {
+    _ensure(col);
+    columns[col] = columns[col].withLetRing(on);
+  }
+
+  /// Toggles articulation [a] on the column at [col] (B6).
+  void toggleArticulation(int col, Articulation a) {
+    _ensure(col);
+    columns[col] = columns[col].toggleArticulation(a);
+  }
+
   /// Sets the repeat barlines of the BAR containing [col] (anchored to that
   /// bar's first column, which is where [toScore] reads them).
   void setBarRepeat(int col, {bool? start, bool? end}) {
@@ -615,6 +704,9 @@ class TabDocument {
     final bends = <Bend>[];
     final tremoloBars = <TremoloBar>[];
     final slideInOuts = <TabSlide>[];
+    final taps = <Tap>[];
+    final palmMutes = <PalmMute>[];
+    final letRings = <LetRing>[];
     final marks = <TabNoteMark>[];
     final slurs = <Slur>[];
     final glissandos = <Glissando>[];
@@ -706,6 +798,7 @@ class TabDocument {
             duration: col.duration,
             id: id,
             tieToNext: col.tieToNext,
+            articulations: col.articulations,
           ),
         );
         voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
@@ -714,6 +807,11 @@ class TabDocument {
         if (col.bend != null) bends.add(Bend.curve(id, col.bend!));
         if (col.whammy != null) tremoloBars.add(TremoloBar.curve(id, col.whammy!));
         if (col.slide != null) slideInOuts.add(TabSlide(id, col.slide!));
+        // B4/B5/B6 note-scoped marks.
+        if (col.tap) taps.add(Tap(id));
+        if (col.harmonic != null) marks.add(TabNoteMark(id, col.harmonic!));
+        if (col.palmMute) palmMutes.add(PalmMute(id, id)); // self-span
+        if (col.letRing) letRings.add(LetRing(id, id));
         for (final t in col.techniques) {
           switch (t) {
             case TabTechnique.bend:
@@ -730,7 +828,10 @@ class TabDocument {
             case TabTechnique.ghost:
               marks.add(TabNoteMark(id, TabNoteStyle.ghost));
             case TabTechnique.harmonic:
-              marks.add(TabNoteMark(id, TabNoteStyle.harmonic));
+              // A specific harmonic kind (B5) supersedes the flat flag.
+              if (col.harmonic == null) {
+                marks.add(TabNoteMark(id, TabNoteStyle.harmonic));
+              }
             case TabTechnique.hammer:
               final n = nextNoteful(c);
               if (n != null) slurs.add(Slur(id, 't$n'));
@@ -752,6 +853,9 @@ class TabDocument {
       bends: bends,
       tremoloBars: tremoloBars,
       slideInOuts: slideInOuts,
+      taps: taps,
+      palmMutes: palmMutes,
+      letRings: letRings,
       tabNoteMarks: marks,
       slurs: slurs,
       glissandos: glissandos,
@@ -849,18 +953,22 @@ class TabDocument {
     for (final s in score.slurs) {
       mark(s.startId, TabTechnique.hammer);
     }
+    // B5 — a harmonic mark keeps its specific kind; dead/ghost stay flat flags.
+    final harmonicById = <String, TabNoteStyle>{};
     for (final m in score.tabNoteMarks) {
-      mark(
-        m.noteId,
-        switch (m.style) {
-          TabNoteStyle.dead => TabTechnique.dead,
-          TabNoteStyle.ghost => TabTechnique.ghost,
-          // natural / artificial / pinch / tapped / semi all fold onto our
-          // single harmonic flag until harmonic kinds land (step B5).
-          _ => TabTechnique.harmonic,
-        },
-      );
+      switch (m.style) {
+        case TabNoteStyle.dead:
+          mark(m.noteId, TabTechnique.dead);
+        case TabNoteStyle.ghost:
+          mark(m.noteId, TabTechnique.ghost);
+        default:
+          harmonicById[m.noteId] = m.style; // natural/artificial/pinch/…
+      }
     }
+    // B4 — right-hand taps.
+    final tapIds = {for (final t in score.taps) t.noteId};
+    // B6 — per-note articulations, captured during the element walk below.
+    final artById = <String, Set<Articulation>>{};
 
     final annById = <String, String>{};
     for (final a in score.annotations) {
@@ -895,6 +1003,9 @@ class TabDocument {
               if (fret >= 0) frets[s] = fret;
             }
             if (frets.isNotEmpty) pinned[idx] = frets;
+          }
+          if (el.id != null && el.articulations.isNotEmpty) {
+            artById[el.id!] = el.articulations;
           }
           midiCols.add(midis);
           durations.add(el.duration);
@@ -957,6 +1068,28 @@ class TabDocument {
         columns: [const TabColumn()],
       );
     }
+    // B6 — palm-mute / let-ring are id spans; flag every column in each range.
+    final idIndex = <String, int>{
+      for (var i = 0; i < ids.length; i++)
+        if (ids[i] != null) ids[i]!: i,
+    };
+    Set<int> spanRows(Iterable<(String, String)> spans) {
+      final out = <int>{};
+      for (final (startId, endId) in spans) {
+        final s = idIndex[startId];
+        final e = idIndex[endId];
+        if (s == null || e == null) continue;
+        for (var i = s; i <= e; i++) {
+          out.add(i);
+        }
+      }
+      return out;
+    }
+
+    final palmMuteRows =
+        spanRows(score.palmMutes.map((p) => (p.startId, p.endId)));
+    final letRingRows =
+        spanRows(score.letRings.map((l) => (l.startId, l.endId)));
     final arranged = arrangeTab(midiCols, tuning, capo: capo);
     return TabDocument(
       tuning: tuning,
@@ -979,6 +1112,13 @@ class TabDocument {
             bend: ids[i] == null ? null : bendCurve[ids[i]],
             whammy: ids[i] == null ? null : whammyCurve[ids[i]],
             slide: ids[i] == null ? null : slideKind[ids[i]],
+            tap: ids[i] != null && tapIds.contains(ids[i]),
+            harmonic: ids[i] == null ? null : harmonicById[ids[i]],
+            palmMute: palmMuteRows.contains(i),
+            letRing: letRingRows.contains(i),
+            articulations: ids[i] == null
+                ? const {}
+                : (artById[ids[i]] ?? const {}),
           ),
       ],
     );
