@@ -7,6 +7,46 @@ changelog it graduated from.
 
 ## Progression
 
+## Tracker DSP lifted into the shared editors (2026-07-26)
+
+A user-requested sweep to make the tracker's DSP reusable in the Audio Editor and
+Tab Editor. Five pieces shipped; the two remaining polish items were handed to the
+active `daw-suite` agent to avoid collisions on the export surface (see PLAN.md).
+
+- **Shared LFO + auto-wah** (`d3d17b70`). Extracted the tracker's `trackerLfo`
+  into `crisp_dsp/lfo.dart` (`lfoValue`; the replayer now delegates to it,
+  byte-identical). Added `FxType.autoWah` — an **LFO-swept resonant low-pass**
+  (the wah/filter-wobble the rack lacked; the static resonant LP already existed
+  as `lowpass`+`q`), built on the shared LFO and the biquad's click-free
+  `setFreq`. Wired into `fx_params` (label, filter category, Sine/Ramp/Square
+  picker), so it appears in every mode's FX rack — the Audio Editor chains and the
+  Tab guitar rig included.
+- **Tab techniques are audible** (`22420a4b`, `aecf508e`, `d43999d3`).
+  `renderTabBandThroughTracker` routes tab playback through the replayer, so a
+  column's playing techniques — already emitted as effect commands (slide→`3xx`,
+  vibrato→`4xy`, bend→`1xx`) — actually sound. The replayer gained an opt-in
+  `replaySong(articulateProcedural: true)` that **bakes a procedural voice to a
+  one-shot sample** so per-tick pitch reaches it (the tab's default plucked string
+  is procedural); DEFAULT OFF, so every module/tracker render stays
+  byte-identical. Surfaced as an opt-in "Articulate techniques" toggle in the Tab
+  Workshop.
+- **Bounded-memory DAW export render core** (`9244b14b`). `streamTimelineWav` +
+  `dawTimelineLengthSamples` (`daw_timeline.dart`) render a timeline to 16-bit
+  stereo WAV in fixed-size windows via `renderTimelineWindowStereo` — one window
+  of memory instead of the whole-song mix, byte-identical to
+  `pcmFloatToWav(renderTimelineStereo(...))` and independent of block size.
+- **Richer tab articulations** (`d65ed301`). Dead/muted note → percussive `ECx`
+  note-cut; ghost note → soft `Cxx` set-volume (lower priority than the pitch
+  techniques; the side-car keeps the full set for exact round-trips).
+- **OPL2/AdLib as a pickable app voice** (`8209adbc`). Two YM3812 presets (an FM
+  lead + an additive organ) in `kOplPresets` are exposed as `InstrumentOption`s in
+  `kTrackerInstruments`, so the authentic AdLib FM chip is selectable everywhere
+  the voice list is used — Settings, the voice picker, the tracker, and as a
+  tab/score voice (distinct from the generic 2-op `FmInstrument`). `OplInstrument`
+  now retains its raw patch bytes so it round-trips through the instrument codec.
+
+Each piece is unit-tested; all pre-existing goldens stayed byte-identical.
+
 ## Audio codecs — native + web at parity (2026-07-26)
 
 Completed `GLINT_ENCODER_HANDOVER.md` (now deleted) and then kept pulling the
