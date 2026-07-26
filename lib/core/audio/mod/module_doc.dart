@@ -10,11 +10,13 @@
 //     formats even though each format numbers octaves differently.
 //   • Sample PCM is normalized to [-1, 1] (Float64List) — the common currency
 //     (MOD/S3M Int8List /128, XM/IT already normalized).
-//   • Per-cell EFFECTS are dropped on the neutral model for now: command
-//     semantics differ per format (MOD nibble vs S3M/IT letters vs XM), so a
-//     faithful mapping needs a cross-format effect table (a documented follow-up).
-//     Notes + instrument + volume-column + samples + song structure convert
-//     cleanly, which is what "convert & play the tune" needs.
+//   • Per-cell EFFECTS ARE carried and mapped cross-format: [DocCell] holds a
+//     neutral MOD-numbered `effect`/`effectParam` PLUS the raw
+//     `nativeEffect`/`nativeEffectParam`, and module_convert.dart maps between
+//     each format's command set (MOD nibble ↔ S3M/IT letters ↔ XM) — every
+//     `Sxy` with an audible target now survives A→B. The residual drops (e.g.
+//     `SF`/`Z` external MIDI, native-only provenance) are reported honestly by
+//     module_export_report.dart, not silently lost.
 //   • Instruments are 1-based (matching the tracker cell convention). Generic
 //     cross-format conversions flatten XM/IT keymaps, while the Advanced
 //     Tracker song export path reconstructs native XM/IT instruments.
