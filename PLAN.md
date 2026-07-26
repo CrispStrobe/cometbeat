@@ -875,10 +875,21 @@ is a pure c5speed/finetune model. ➜ **`E0x` IS the Amiga filter command**, so
 this lands inside `@opus (tracker-complete)`'s claimed "E0x/S0x hardware filter"
 work — theirs to take, noted here so it is not lost.
 
-**G4 — We have no written non-goals.** They state theirs: no pre-1.17 OpenMPT
-bug-emulation (swing, legacy pattern loops, proprietary envelope release nodes),
-MPTM detected-but-refused, IT to `cmwt=0x0216`. Writing down what we refuse to
-chase is how a replayer stays finishable — ours is currently open-ended.
+⏸️ **G4 — NOT WRITABLE YET, and deliberately left open.** They state theirs: no
+pre-1.17 OpenMPT bug-emulation, MPTM detected-but-refused, IT to `cmwt=0x0216`.
+Writing down what we refuse to chase is how a replayer stays finishable — but a
+non-goals list is a SCOPE DECISION, not an engineering one, and ours is being
+actively expanded right now: OPL2/YM3812 emulation landed today, and effect
+completeness is an open claim. Declaring "we will not chase X" while someone is
+building X would be worse than having no list. **For the maintainer:** the only
+boundaries that look settled today are MPTM (absent from `ModuleFormat`, nobody
+building it), IT214/215 sample COMPRESSION on write (`it_writer.dart` states it
+is not implemented), and OpenMPT bug-emulation modes (never proposed). ⚠️ While
+checking this I found a **stale comment**: `s3m_reader.dart:160` still says "We
+do NOT emulate the OPL chip", but `opl_voice.dart` is now imported by both
+`tracker_replayer.dart` and `tracker_song_module.dart` — so we DO, alongside the
+reader's PCM approximation. Two paths may well be intended; the comment is not.
+** (tracker-complete) — your file, your call.**
 
 ✅ **G5 — DONE (`d6186fd2`).** `_kOpenMptPath` was pinned to one Cellar version,
 so a routine `brew upgrade` silently skipped the whole audit. Resolved from
