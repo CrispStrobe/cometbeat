@@ -29,6 +29,15 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tracker→editors)** · 🚧 **ACTIVE — lifting tracker DSP into the shared
+  FX rack / editors.** Four-part sweep (user-requested): (1) extract `trackerLfo`
+  → `crisp_dsp/lfo.dart` + add `FxType.autoWah` (LFO-swept resonant low-pass — the
+  wah/filter-wobble the rack lacks; static resonant LP already exists as
+  `lowpass`+`q`); (2) route Tab preview through the replayer so slide/vibrato/bend
+  sound; (3) bounded streaming export for the DAW/tab render path; (4) polish
+  (OPL voice, export dither/limiter, richer tab techniques). Touching
+  `tracker_replayer.dart` (LFO delegate only, byte-identical) + `fx/*`. — opus
+
 - **opus (pickup)** · ✅ **SHIPPED (idle) — an anacrusis now declares its length.**
   `reflow`'s `flush()` (`workshop/model/score_document.dart`) built the opening
   bar as `Measure(current, pickup: true, …)` and never set `actualDuration`. The
