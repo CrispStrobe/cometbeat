@@ -27,8 +27,9 @@
 // Pure Dart, no Flutter.
 
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/tracker_replay.dart' show kFxSetVolume;
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
-    show kFxPortaUp, kFxTonePorta, kFxVibrato;
+    show kExNoteCut, kFxExtended, kFxPortaUp, kFxTonePorta, kFxVibrato;
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
 import 'package:comet_beat/core/interop/tracker_song_flatten.dart';
@@ -47,6 +48,8 @@ const int kTabTrackerStepsPerBeat = 8;
 const int _kSlideParam = 0x20;
 const int _kVibratoParam = 0x44; // speed 4, depth 4
 const int _kBendParam = 0x18;
+const int _kDeadCutTicks = 2; // ECx — cut a dead/muted note at tick 2 (a chick)
+const int _kGhostVolume = 0x18; // Cxx — a ghost note at ~⅜ volume
 
 /// The result of converting a tab into a tracker song.
 class TabToTrackerResult {
@@ -353,6 +356,17 @@ TrackerToTabResult tabDocumentFromTrackerSong(
   }
   if (techniques.contains(TabTechnique.vibrato)) {
     return (kFxVibrato, _kVibratoParam);
+  }
+  // Articulations (lower priority than the pitch techniques above, so a
+  // slide+dead column still slides): a dead/muted note becomes a percussive
+  // ECx note-cut; a ghost note becomes a soft Cxx set-volume. Both are honored
+  // by the replayer's tick voice (and the tab "articulate" preview's baked
+  // procedural path), so they actually sound.
+  if (techniques.contains(TabTechnique.dead)) {
+    return (kFxExtended, (kExNoteCut << 4) | _kDeadCutTicks);
+  }
+  if (techniques.contains(TabTechnique.ghost)) {
+    return (kFxSetVolume, _kGhostVolume);
   }
   return (0, 0);
 }
