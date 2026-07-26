@@ -29,6 +29,16 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (pickup)** · 🚧 **ACTIVE — wiring `Measure.actualDuration` into the
+  anacrusis path** (the unclaimed Score Workshop backlog line). Touching
+  `lib/features/workshop/model/score_document.dart` (`reflow`'s `flush()`) and
+  adding a test. Concrete bug, verified before starting: `flush()` builds the
+  opening bar as `Measure(current, pickup: true, …)` and never sets
+  `actualDuration`, but crisp_notation's `tempoMapOf`
+  (`playback/tempo_map.dart:171`) advances by `actualDuration ?? meter`, so a
+  pickup bar advances a WHOLE bar — every tempo change after an anacrusis is
+  placed late by (full bar − pickup). — opus
+
 - **opus (interop)** · ✅ **SHIPPED (idle) — the interop matrix now runs against
   the real song book, and it found two truncation/fidelity bugs.**
   `test/interop_corpus_test.dart` puts all 10 bundled songs through every route
