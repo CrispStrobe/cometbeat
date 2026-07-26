@@ -18,6 +18,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/envelope.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/fm.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/subtractive.dart';
+import 'package:comet_beat/core/audio/macro_sequence.dart';
 import 'package:comet_beat/core/audio/mod/opl_voice.dart' show OplInstrument;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -52,6 +53,8 @@ Map<String, dynamic> instrumentToJson(TrackerInstrument instrument) {
       'type': 'additive',
       'id': instrument.id,
       'instrument': instrument.instrument.name,
+      if (instrument.macros.isNotEmpty)
+        'macros': [for (final m in instrument.macros) m.toJson()],
     };
   }
   if (instrument is SfxrInstrument) {
@@ -170,9 +173,16 @@ TrackerInstrument instrumentFromJson(Map<String, dynamic> json) {
   final id = (json['id'] as String?) ?? 'instrument';
   switch (type) {
     case 'additive':
+      final rawMacros = json['macros'];
       return AdditiveInstrument(
         id,
         Instrument.values.byName(json['instrument'] as String),
+        macros: rawMacros is List
+            ? [
+                for (final m in rawMacros)
+                  if (MacroSequence.fromJson(m) case final parsed?) parsed,
+              ]
+            : const [],
       );
     case 'sfxr':
       return SfxrInstrument(

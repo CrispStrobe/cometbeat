@@ -29,6 +29,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/subtractive.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart';
 import 'package:comet_beat/core/audio/fx/fx_chain.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
+import 'package:comet_beat/core/audio/macro_sequence.dart';
 import 'package:comet_beat/core/audio/mod/opl_voice.dart'
     show OplInstrument, kOplPresets;
 import 'package:comet_beat/core/audio/synth.dart';
@@ -359,11 +360,18 @@ abstract class TrackerInstrument {
 
 /// The Slice 0 instrument: one of the built-in additive [Instrument] voices.
 class AdditiveInstrument implements TrackerInstrument {
-  const AdditiveInstrument(this.id, this.instrument);
+  const AdditiveInstrument(this.id, this.instrument, {this.macros = const []});
 
   @override
   final String id;
   final Instrument instrument;
+
+  /// Optional per-tick instrument MACROS (roadmap §4) — volume/pitch/arpeggio
+  /// modulation applied during the per-tick synthesis in `tracker_replayer.dart`.
+  /// Empty (the default) means no modulation, so an existing render is unchanged.
+  /// Only honored on the per-tick (command/effect) render path, not the fast
+  /// whole-channel `renderChannel` fast path.
+  final List<MacroSequence> macros;
 
   @override
   Float64List renderChannel(

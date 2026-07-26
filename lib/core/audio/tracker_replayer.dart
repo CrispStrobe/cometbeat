@@ -73,6 +73,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/lfo.dart';
+import 'package:comet_beat/core/audio/macro_sequence.dart';
 import 'package:comet_beat/core/audio/mod/opl_voice.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -2180,6 +2181,29 @@ void _renderChannelInto(
   var tp = _timbreParamsOf(inst);
   final gain = channel.gain;
 
+  // §4 instrument macros (OPT-IN): per-tick volume/pitch/arpeggio modulation
+  // read from the channel's additive instrument. Empty (the default) → the
+  // arithmetic below is untouched, so an existing render stays byte-identical.
+  MacroSequence? volMacro, pitchMacro, arpMacro;
+  if (channel.instrument is AdditiveInstrument) {
+    for (final m in (channel.instrument as AdditiveInstrument).macros) {
+      if (m.isEmpty) continue;
+      switch (m.target) {
+        case MacroTarget.volume:
+          volMacro = m;
+        case MacroTarget.pitch:
+          pitchMacro = m;
+        case MacroTarget.arpeggio:
+          arpMacro = m;
+        case MacroTarget.pan:
+        case MacroTarget.duty:
+          break; // not applied on the additive path (documented follow-up)
+      }
+    }
+  }
+  final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
+  var macroTick = 0; // ticks since the current note-on (drives the macros)
+
   final voice = ReplayVoice();
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
@@ -2199,6 +2223,7 @@ void _renderChannelInto(
       voice.oscPhase = 0;
       voice.noteStartSample = sampleOffset + timing.stepStartSample(r);
       voice.noteSeconds = _runSeconds(cells, r, rows, timing);
+      macroTick = 0; // a fresh note-on restarts the macros
     }
     // A silent row: no live note and nothing pending to trigger this row.
     if (!voice.active && !voice.hasPendingNote) continue;
@@ -2217,10 +2242,23 @@ void _renderChannelInto(
         voice.oscPhase = 0;
         voice.noteStartSample = ts;
         voice.noteSeconds = _runSeconds(cells, r, rows, timing);
+        macroTick = 0; // an E9x/EDx (re)trigger restarts the macros
       }
       if (!voice.active) continue; // pre-delay silence / never triggered
-      final freq = _freqOfMidi(state.pitch);
-      final volScale = (state.volume / kMaxVolume) * voice.noteVolume * gain;
+      // Apply the macros to THIS tick's pitch/volume (no-op when absent, so the
+      // freq/volScale below are the exact original expressions).
+      var pitch = state.pitch;
+      var volScale = (state.volume / kMaxVolume) * voice.noteVolume * gain;
+      if (hasMacros) {
+        if (pitchMacro != null) pitch += pitchMacro.valueAt(macroTick);
+        if (arpMacro != null) pitch += arpMacro.valueAt(macroTick);
+        if (volMacro != null) {
+          volScale *=
+              volMacro.valueAt(macroTick, fallback: 64).clamp(0, 64) / 64.0;
+        }
+        macroTick++;
+      }
+      final freq = _freqOfMidi(pitch);
       final phaseInc = 2 * pi * freq / kSampleRate;
       for (var i = ts; i < te && i < mix.length; i++) {
         final t = (i - voice.noteStartSample) / kSampleRate;
