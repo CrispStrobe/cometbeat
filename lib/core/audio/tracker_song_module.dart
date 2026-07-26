@@ -766,6 +766,10 @@ ModuleDoc moduleDocFromSong(
     sourceFormat: targetFormat ?? ModuleFormat.mod,
     initialTempo: song.timing.tempoBpm.clamp(32, 255),
     initialSpeed: song.initialSpeed.clamp(1, 31),
+    // Carry the editable native global volume back out (0..1 → the doc's IT
+    // 0..128 scale). Authored songs default to unity (128), so a
+    // command-free export stays byte-identical; only an edited header changes.
+    globalVolume: (song.globalVolume * 128).round().clamp(0, 128),
     order: List<int>.of(song.order),
     patterns: patterns,
     samples: native?.samples ??

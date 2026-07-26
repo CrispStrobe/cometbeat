@@ -3109,5 +3109,12 @@
   "transcriptionBackendOnnxFfi": "ONNX (native)",
   "transcriptionBackendCrispasr": "GGUF (native)",
   "transcriptionF0ViterbiLabel": "Smooth pitch tracking",
-  "transcriptionF0ViterbiSubtitle": "Steadier notes, no octave jumps — a little slower (neural pitch only)"
+  "transcriptionF0ViterbiSubtitle": "Steadier notes, no octave jumps — a little slower (neural pitch only)",
+  "trackerNativeCommand": "Raw native command",
+  "trackerNativeCommandHint": "The original format command, preserved for same-format export",
+  "trackerNativeEffect": "Effect",
+  "trackerNativeParam": "Param",
+  "trackerModuleHeader": "Module header",
+  "trackerGlobalVolume": "Global volume",
+  "trackerInitialSpeed": "Initial speed"
 }

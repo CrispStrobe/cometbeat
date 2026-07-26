@@ -2769,5 +2769,12 @@
   "transcriptionBackendOnnxFfi": "ONNX (nativ)",
   "transcriptionBackendCrispasr": "GGUF (nativ)",
   "transcriptionF0ViterbiLabel": "Tonhöhe glätten",
-  "transcriptionF0ViterbiSubtitle": "Ruhigere Töne, keine Oktavsprünge – etwas langsamer (nur neuronale Tonhöhe)"
+  "transcriptionF0ViterbiSubtitle": "Ruhigere Töne, keine Oktavsprünge – etwas langsamer (nur neuronale Tonhöhe)",
+  "trackerNativeCommand": "Roher nativer Befehl",
+  "trackerNativeCommandHint": "Der ursprüngliche Formatbefehl, erhalten für den Export im selben Format",
+  "trackerNativeEffect": "Effekt",
+  "trackerNativeParam": "Param",
+  "trackerModuleHeader": "Modul-Header",
+  "trackerGlobalVolume": "Gesamtlautstärke",
+  "trackerInitialSpeed": "Anfangstempo (Speed)"
 }

@@ -8158,4 +8158,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transcriptionF0ViterbiSubtitle =>
       'Steadier notes, no octave jumps — a little slower (neural pitch only)';
+
+  @override
+  String get trackerNativeCommand => 'Raw native command';
+
+  @override
+  String get trackerNativeCommandHint =>
+      'The original format command, preserved for same-format export';
+
+  @override
+  String get trackerNativeEffect => 'Effect';
+
+  @override
+  String get trackerNativeParam => 'Param';
+
+  @override
+  String get trackerModuleHeader => 'Module header';
+
+  @override
+  String get trackerGlobalVolume => 'Global volume';
+
+  @override
+  String get trackerInitialSpeed => 'Initial speed';
 }

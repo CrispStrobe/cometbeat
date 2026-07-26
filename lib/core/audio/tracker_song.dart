@@ -183,8 +183,8 @@ class TrackerSong {
 
   /// The module/tracker speed in effect before any Fxx command (ticks per row).
   /// Authored app songs default to the classic 6; imported S3M/XM/IT files carry
-  /// their header speed here.
-  final int initialSpeed;
+  /// their header speed here. Editable via [setInitialSpeed] (native header).
+  int initialSpeed;
 
   /// Some imported trackers are conventionally rendered as stereo even when
   /// no explicit pan command occurs. Authored songs retain the mono default.
@@ -192,7 +192,8 @@ class TrackerSong {
 
   /// Module/container global output gain, normalized to 0..1. Authored songs
   /// use unity; imported tracker headers carry their native global volume.
-  final double globalVolume;
+  /// Editable via [setGlobalVolume] (native header).
+  double globalVolume;
 
   int _current;
 
@@ -697,6 +698,19 @@ class TrackerSong {
     final s = swing.clamp(0.0, 0.9);
     if (s == timing.swing) return;
     _engine.timing = timing.copyWith(swing: s);
+  }
+
+  /// Sets the module GLOBAL VOLUME (native S3M/IT/XM header field), normalized
+  /// to 0..1. Scales the whole mix on render and round-trips through the S3M/IT
+  /// writers (see [moduleDocFromSong]).
+  void setGlobalVolume(double value) {
+    globalVolume = value.clamp(0.0, 1.0);
+  }
+
+  /// Sets the module INITIAL SPEED (ticks per row before any Fxx), the native
+  /// S3M/XM/IT header speed. Clamped to the S3M-writable 1..31 range.
+  void setInitialSpeed(int speed) {
+    initialSpeed = speed.clamp(1, 31);
   }
 
   // --- Audio -------------------------------------------------------------

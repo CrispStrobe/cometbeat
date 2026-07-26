@@ -53,6 +53,7 @@ import 'package:comet_beat/core/audio/mod/module_flow_timeline.dart';
 import 'package:comet_beat/core/audio/sample_pitch.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/tracker_native_command.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show
         RowTiming,
@@ -3603,6 +3604,21 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 onChanged: (cmd, param) =>
                     _setCellCommand(channel, row, cmd, param),
               ),
+              const Divider(height: 20),
+              // The RAW native command this cell was imported with (its original
+              // format byte/letter-command), preserved for a same-format export.
+              // Editing it writes provenance directly, independent of the
+              // normalized effect column above.
+              _NativeCommandEditor(
+                l10n: l10n,
+                initialFormat: cell.nativeFormat,
+                initialEffect: cell.nativeEffect,
+                initialParam: cell.nativeEffectParam,
+                initialVolpan: cell.nativeVolpan,
+                onChanged: (format, effect, param) =>
+                    _setNativeCommand(channel, row, format, effect, param),
+                onClear: () => _clearNativeCommand(channel, row),
+              ),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
@@ -3634,6 +3650,37 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           fxParam: param,
         ),
       ),
+    );
+    _syncPlayback();
+  }
+
+  /// Writes the RAW native effect provenance onto a cell (the original format
+  /// command bytes preserved for same-format export). Does not touch the
+  /// normalized effect column.
+  void _setNativeCommand(
+    int channel,
+    int row,
+    String format,
+    int effect,
+    int param,
+  ) {
+    _pushUndo();
+    final cur = _song.engine.cellAt(channel, row);
+    setState(
+      () => _song.engine.setCell(
+        channel,
+        row,
+        setNativeEffect(cur, format: format, effect: effect, param: param),
+      ),
+    );
+    _syncPlayback();
+  }
+
+  void _clearNativeCommand(int channel, int row) {
+    _pushUndo();
+    final cur = _song.engine.cellAt(channel, row);
+    setState(
+      () => _song.engine.setCell(channel, row, clearNativeProvenance(cur)),
     );
     _syncPlayback();
   }
@@ -5310,6 +5357,65 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                       ),
                     ),
                     const Divider(height: 20),
+                    // Native module HEADER settings (S3M/IT/XM). Global volume
+                    // and initial speed are carried from the imported header and
+                    // now editable here; they round-trip through the S3M/IT
+                    // writers. Tempo and per-channel pan are edited by the tempo
+                    // control and the channel pan sliders; master volume,
+                    // ultraClick, flags and createdWith are not retained by the
+                    // editable model (documented import-loss in mod_pending.md).
+                    Text(
+                      l10n.trackerModuleHeader,
+                      style: Theme.of(ctx).textTheme.labelMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.volume_up, size: 18),
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          width: 96,
+                          child: Text(l10n.trackerGlobalVolume),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: _song.globalVolume.clamp(0.0, 1.0),
+                            label: '${(_song.globalVolume * 100).round()}%',
+                            divisions: 128,
+                            onChanged: (v) {
+                              setState(() => _song.setGlobalVolume(v));
+                              _syncPlayback();
+                              setSheet(() {});
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 44,
+                          child: Text(
+                            '${(_song.globalVolume * 100).round()}%',
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                    dropRow(
+                      l10n.trackerInitialSpeed,
+                      Icons.speed,
+                      DropdownButton<int>(
+                        value: _song.initialSpeed.clamp(1, 31),
+                        items: [
+                          for (var n = 1; n <= 31; n++)
+                            DropdownMenuItem(value: n, child: Text('$n')),
+                        ],
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setState(() => _song.setInitialSpeed(v));
+                          _syncPlayback();
+                          setSheet(() {});
+                        },
+                      ),
+                    ),
+                    const Divider(height: 20),
                     // Playback toggles.
                     Text(
                       l10n.trackerPlay,
@@ -6636,6 +6742,138 @@ class _CommandEditorState extends State<_CommandEditor> {
             widget.onChanged(_cmd, _param);
           },
         ),
+      ],
+    );
+  }
+}
+
+/// Edits the RAW native command a cell was imported with — its original
+/// format effect byte/letter-command and param, plus the source-format tag that
+/// gates same-format export. Independent of the normalized [_CommandEditor]
+/// above: this is the provenance channel (`nativeEffect`/`nativeEffectParam`/
+/// `nativeFormat`) that a same-format S3M/IT/XM/MOD export re-emits verbatim.
+class _NativeCommandEditor extends StatefulWidget {
+  const _NativeCommandEditor({
+    required this.l10n,
+    required this.initialFormat,
+    required this.initialEffect,
+    required this.initialParam,
+    required this.initialVolpan,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final AppLocalizations l10n;
+  final String? initialFormat;
+  final int initialEffect;
+  final int initialParam;
+  final int initialVolpan;
+  final void Function(String format, int effect, int param) onChanged;
+  final void Function() onClear;
+
+  @override
+  State<_NativeCommandEditor> createState() => _NativeCommandEditorState();
+}
+
+class _NativeCommandEditorState extends State<_NativeCommandEditor> {
+  static const _formats = ['mod', 's3m', 'xm', 'it'];
+
+  late String _format = widget.initialFormat ?? 's3m';
+  late int _effect = widget.initialEffect < 0 ? 0 : widget.initialEffect;
+  late int _param = widget.initialParam;
+
+  void _emit() => widget.onChanged(_format, _effect, _param);
+
+  @override
+  Widget build(BuildContext context) {
+    final decode = nativeEffectMnemonic(_format, _effect);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(widget.l10n.trackerNativeCommand),
+        const SizedBox(height: 2),
+        Text(
+          widget.l10n.trackerNativeCommandHint,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            // Source-format tag: only a matching export re-emits the command.
+            DropdownButton<String>(
+              value: _format,
+              items: [
+                for (final f in _formats)
+                  DropdownMenuItem(value: f, child: Text(f.toUpperCase())),
+              ],
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _format = v);
+                _emit();
+              },
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '$decode  '
+                '\$${_effect.toRadixString(16).toUpperCase().padLeft(2, '0')}'
+                '${_param.toRadixString(16).toUpperCase().padLeft(2, '0')}',
+                style: const TextStyle(
+                  fontFeatures: [FontFeature.tabularFigures()],
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (widget.initialFormat != null)
+              IconButton(
+                icon: const Icon(Icons.backspace_outlined, size: 18),
+                tooltip: widget.l10n.trackerClear,
+                onPressed: widget.onClear,
+              ),
+          ],
+        ),
+        // Raw effect byte 00–FF (MOD nibble / S3M+IT letter-command / XM byte).
+        Row(
+          children: [
+            SizedBox(width: 64, child: Text(widget.l10n.trackerNativeEffect)),
+            Expanded(
+              child: Slider(
+                value: _effect.toDouble(),
+                max: 255,
+                divisions: 255,
+                label: _effect.toRadixString(16).toUpperCase().padLeft(2, '0'),
+                onChanged: (v) {
+                  setState(() => _effect = v.round());
+                  _emit();
+                },
+              ),
+            ),
+          ],
+        ),
+        // Raw param byte 00–FF.
+        Row(
+          children: [
+            SizedBox(width: 64, child: Text(widget.l10n.trackerNativeParam)),
+            Expanded(
+              child: Slider(
+                value: _param.toDouble(),
+                max: 255,
+                divisions: 255,
+                label: _param.toRadixString(16).toUpperCase().padLeft(2, '0'),
+                onChanged: (v) {
+                  setState(() => _param = v.round());
+                  _emit();
+                },
+              ),
+            ),
+          ],
+        ),
+        if (widget.initialVolpan >= 0)
+          Text(
+            'vol \$'
+            '${widget.initialVolpan.toRadixString(16).toUpperCase().padLeft(2, '0')}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ],
     );
   }

@@ -88,6 +88,35 @@ cross-format effects (`S0`/`S5`/`S7`/`S9`/`SA`/`Z`); MOD tag-alias preservation
 deeper native editors (raw effect-memory, native S3M header, velocity zones,
 in-place flow *editing*). See the feature audit below for per-feature state.
 
+### Native-editing pass (raw command provenance + S3M header)
+
+Two remaining native-editing gaps were addressed (`tracker_native_command.dart`
++ Advanced Tracker UI), each with pure, unit-tested helpers
+(`test/native_command_edit_test.dart`) and the corpus kept byte-identical:
+
+- **Raw native-command view/edit (delivered).** The cell long-press inspector
+  now shows a cell's raw native provenance (`nativeFormat` / `nativeEffect` /
+  `nativeEffectParam` / `nativeVolpan`) as a hex + decoded mnemonic and lets you
+  edit the raw native effect byte/param directly, independent of the normalized
+  effect column. Pure helpers: `setNativeEffect`, `setNativeVolpan`,
+  `clearNativeProvenance`, `describeNativeEffect`, `nativeEffectMnemonic`. The
+  written provenance survives a same-format S3M/IT export → re-import (verified).
+- **Native S3M header settings.**
+  - *Newly editable:* **global volume** and **initial speed** — both were
+    imported onto `TrackerSong` but read-only; they now have `setGlobalVolume` /
+    `setInitialSpeed` and a "Module header" panel in the settings sheet. Global
+    volume was also previously *dropped* on a TrackerSong→S3M export
+    (`moduleDocFromSong` never wrote it back); it now round-trips.
+  - *Covered by existing controls (not duplicated):* **initial tempo** (tempo
+    dropdown / `setTempo`) and **default / per-channel pan** (channel pan
+    sliders / `setChannelPan`, round-tripped via the S3M default-pan table).
+  - *Not retained by the editable model (import-loss follow-up):* master/mixing
+    volume, ultraClick, flags, createdWith (Cwt-v), sampleFormat, and the raw
+    per-channel `channelSettings` bytes (L/R class) all stop at `ModuleDoc` and
+    are lost on a TrackerSong-mediated export. Making them editable needs new
+    `TrackerSong` fields carried in `songFromModuleDoc` + written in
+    `moduleDocFromSong`.
+
 ## Verification status
 
 | Item | Result | Scope and qualification |

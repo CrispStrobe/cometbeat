@@ -14881,6 +14881,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Steadier notes, no octave jumps — a little slower (neural pitch only)'**
   String get transcriptionF0ViterbiSubtitle;
+
+  /// No description provided for @trackerNativeCommand.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw native command'**
+  String get trackerNativeCommand;
+
+  /// No description provided for @trackerNativeCommandHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The original format command, preserved for same-format export'**
+  String get trackerNativeCommandHint;
+
+  /// No description provided for @trackerNativeEffect.
+  ///
+  /// In en, this message translates to:
+  /// **'Effect'**
+  String get trackerNativeEffect;
+
+  /// No description provided for @trackerNativeParam.
+  ///
+  /// In en, this message translates to:
+  /// **'Param'**
+  String get trackerNativeParam;
+
+  /// No description provided for @trackerModuleHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Module header'**
+  String get trackerModuleHeader;
+
+  /// No description provided for @trackerGlobalVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Global volume'**
+  String get trackerGlobalVolume;
+
+  /// No description provided for @trackerInitialSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial speed'**
+  String get trackerInitialSpeed;
 }
 
 class _AppLocalizationsDelegate

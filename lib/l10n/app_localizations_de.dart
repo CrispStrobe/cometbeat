@@ -8200,4 +8200,26 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get transcriptionF0ViterbiSubtitle =>
       'Ruhigere Töne, keine Oktavsprünge – etwas langsamer (nur neuronale Tonhöhe)';
+
+  @override
+  String get trackerNativeCommand => 'Roher nativer Befehl';
+
+  @override
+  String get trackerNativeCommandHint =>
+      'Der ursprüngliche Formatbefehl, erhalten für den Export im selben Format';
+
+  @override
+  String get trackerNativeEffect => 'Effekt';
+
+  @override
+  String get trackerNativeParam => 'Param';
+
+  @override
+  String get trackerModuleHeader => 'Modul-Header';
+
+  @override
+  String get trackerGlobalVolume => 'Gesamtlautstärke';
+
+  @override
+  String get trackerInitialSpeed => 'Anfangstempo (Speed)';
 }
