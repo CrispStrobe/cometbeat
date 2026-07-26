@@ -1313,8 +1313,12 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
           const ['musicxml'],
         );
       case 'midi':
+        // D1 — carry the active track's GM instrument into the exported MIDI so
+        // it plays with that voice, not the default piano.
         await _saveBytes(
-          scoreToMidi(score),
+          scoreToMidi(
+            _doc.toScore(capo: _capo, program: _tracks[_active].instrument),
+          ),
           '$base.mid',
           'MIDI',
           const ['mid'],
@@ -1919,6 +1923,30 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                               DropdownMenuItem(
                                 value: t,
                                 child: Text(_tuningLabel(t)),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    // Instrument (D1): the GM voice this track exports/plays as.
+                    Row(
+                      children: [
+                        const Icon(Icons.piano, size: 18),
+                        const SizedBox(width: 6),
+                        const Expanded(child: Text('Instrument')),
+                        DropdownButton<int?>(
+                          value: _tracks[_active].instrument,
+                          hint: const Text('Default'),
+                          onChanged: (p) {
+                            setState(() => _tracks[_active].instrument = p);
+                            refresh();
+                          },
+                          items: [
+                            const DropdownMenuItem(child: Text('Default')),
+                            for (final (program, name) in kTabInstruments)
+                              DropdownMenuItem(
+                                value: program,
+                                child: Text(name),
                               ),
                           ],
                         ),

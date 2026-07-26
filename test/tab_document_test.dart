@@ -1212,6 +1212,34 @@ void main() {
       final clicks = metronomeClicksMs(bpm: 120); // 1 bar, 4 beats @500ms
       expect(clicks, [0, 500, 1000, 1500]);
     });
+
+    test('D1 toScore(program:) tags the score + reaches exported MIDI', () {
+      final doc = TabDocument(
+        tuning: Tuning.standardGuitar,
+        columns: [
+          const TabColumn(frets: {0: 0}),
+        ],
+      );
+      expect(doc.toScore().metadata.midiProgram, isNull); // default
+      final score = doc.toScore(program: 24); // nylon guitar
+      expect(score.metadata.midiProgram, 24);
+      // …and it becomes a GM program change in the exported MIDI.
+      final midi = scoreToMidi(score);
+      final hasProgram = () {
+        for (var i = 0; i + 1 < midi.length; i++) {
+          if (midi[i] == 0xC0 && midi[i + 1] == 24) return true;
+        }
+        return false;
+      }();
+      expect(hasProgram, isTrue);
+    });
+
+    test('D1 tabInstrumentName maps the curated GM set', () {
+      expect(tabInstrumentName(24), 'Nylon Guitar');
+      expect(tabInstrumentName(33), 'Fingered Bass');
+      expect(tabInstrumentName(null), isNull);
+      expect(tabInstrumentName(999), isNull);
+    });
   });
 
   group('E1 — rich GPIF export', () {

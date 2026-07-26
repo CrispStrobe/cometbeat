@@ -299,9 +299,14 @@ parametric technique end-to-end.
   string voicings; per-note techniques on voice 2 are a follow-up); `fromScore`
   reconstructs it via the arranger. Round-trip tested. **Phase C done.**
 - [x] **D1** per-track instrument + capo — `TabTrack.instrument` (GM program) and
-  `TabTrack.capo` (per-track tuning already lives on the track's `doc`). Model +
-  tests. ⚠ playback voicing each track by its program + the toolbar edit UI are the
-  app-side follow-up.
+  `TabTrack.capo` (per-track tuning already lives on the track's `doc`). **Now
+  wired end-to-end:** a curated `kTabInstruments` GM set + a picker in the tab
+  settings sheet set the active track's instrument; `TabDocument.toScore({program})`
+  tags `Score.metadata.midiProgram`; `scoreToMidi` emits a GM program change
+  (crisp_notation@`8f496c7`), so the exported `.mid` plays with that voice. Tests:
+  group D1–D4 (program → metadata → MIDI). ⚠ in-app playback still uses the shared
+  single-voice synth (per-program *audition* is the remaining bit; GP track program
+  is a separate GPIF follow-up).
 - [x] **D2** mixer — `TabTrack.volume` (0..1) + `TabTrack.pan` (−1..1) alongside
   mute/solo. Model + tests. ⚠ the mixer sheet + pan/scale in playback are the
   app-side follow-up (the `(midis,ms)` merge tuple carries no gain/pan yet).

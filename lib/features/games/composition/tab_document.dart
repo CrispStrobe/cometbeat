@@ -563,6 +563,40 @@ const List<(String, int)> kDrumLines = [
 int? drumMidiForLine(int line) =>
     (line >= 0 && line < kDrumLines.length) ? kDrumLines[line].$2 : null;
 
+/// A curated set of General-MIDI instruments a tab track can sound with (D1),
+/// as `(program 0-based, name)`. Guitar/bass-forward, since that's what a tab
+/// editor mostly voices; the names are the standard GM vocabulary. A track's
+/// [TabTrack.instrument] holds the chosen program; `TabDocument.toScore`'s
+/// `program` carries it into `Score.metadata.midiProgram` → exported MIDI.
+const List<(int, String)> kTabInstruments = [
+  (24, 'Nylon Guitar'),
+  (25, 'Steel Guitar'),
+  (26, 'Jazz Guitar'),
+  (27, 'Clean Electric'),
+  (29, 'Overdrive Guitar'),
+  (30, 'Distortion Guitar'),
+  (32, 'Acoustic Bass'),
+  (33, 'Fingered Bass'),
+  (34, 'Picked Bass'),
+  (35, 'Fretless Bass'),
+  (0, 'Piano'),
+  (40, 'Violin'),
+  (48, 'Strings'),
+  (46, 'Harp'),
+  (105, 'Banjo'),
+  (56, 'Trumpet'),
+];
+
+/// The GM instrument name for [program], or null if it isn't in the curated
+/// [kTabInstruments] set.
+String? tabInstrumentName(int? program) {
+  if (program == null) return null;
+  for (final (p, name) in kTabInstruments) {
+    if (p == program) return name;
+  }
+  return null;
+}
+
 /// A bar range to loop while practising (D4), inclusive `[startBar, endBar]`.
 class LoopRange {
   final int startBar;
@@ -956,7 +990,11 @@ class TabDocument {
   /// the nut up). Fret numbers stay capo-relative, so the tab staff — which
   /// re-derives frets against the capo-shifted tuning — keeps showing the
   /// authored numbers, while the standard staff and playback sound transposed.
-  Score toScore({int capo = 0}) {
+  ///
+  /// [program] tags the score with a General-MIDI instrument (D1, a track's
+  /// [TabTrack.instrument]) → `Score.metadata.midiProgram`, so an exported MIDI
+  /// plays with that voice instead of the default piano.
+  Score toScore({int capo = 0, int? program}) {
     final measures = <Measure>[];
     final voicings = <TabVoicing>[];
     final bends = <Bend>[];
@@ -1211,6 +1249,9 @@ class TabDocument {
       glissandos: glissandos,
       vibratos: vibratos,
       annotations: annotations,
+      metadata: program == null
+          ? const ScoreMetadata()
+          : ScoreMetadata(midiProgram: program),
     );
   }
 
