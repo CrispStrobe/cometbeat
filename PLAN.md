@@ -798,6 +798,59 @@ Instruments are static per note run, lacking tick-level modulators.
 2. **Flow & Groove Commands:** Support Speed (`Fxx`), Pattern Break (`Dxx`), and Position Jump (`Bxx`). Rewrite `renderSong` as a dynamic state machine that respects these navigation commands.
 3. **Sub-row Timing:** Implement Note Delay (`EDx`) and Note Cut (`ECx`) directly in the offline renderer to allow complex swing and ghost notes.
 
+
+### 5. Replay fidelity — gaps found by comparing against an independent player
+
+Read across to **savage_modplayer** (Daniel Müller, Swift/macOS, WTFPL) — like
+ours an **independent replay engine rather than a libopenmpt wrapper**, covering
+MOD/S3M/XM/IT. It is player-only (no editing, no writers, no conversion), so the
+comparison is only useful on the *replay* axis; on scope we are the larger
+system. Two places we are already ahead and should not "learn" backwards:
+**Catmull-Rom interpolation** (they use linear) and **module writing** (they
+never attempt it — which is where most of our recent effect-mapping bugs lived).
+
+⚠️ **Take approaches and hardware facts, not expression.** WTFPL permits literal
+copying, but a Paula clock constant is a fact and "compare spectra as well as
+RMS" is a method; lifting Swift into Dart would buy nothing and muddy provenance.
+
+**G1 — Our reference-comparison metrics are too weak to catch a tuning error.**
+`test/tracker_audio_regression_test.dart` renders through our pipeline and
+`openmpt123` and compares **duration + RMS deltas**. Their `reference_compare.py`
+compares duration, **envelope correlation**, **onset/lag alignment** and
+**spectral similarity**. That gap is not academic for us: we convert Amiga
+periods to MIDI notes (`periodToMidi`/`midiToPeriod`) and render via
+`_freqOfMidi`, i.e. **A440 equal temperament rather than the Paula clock**. A
+systematic tuning offset from that choice leaves duration identical and RMS
+nearly identical — our harness would pass it. We have not measured whether we
+actually drift; the point is that **our current metrics cannot tell us**.
+*Do this first: the other gaps are hard to evaluate without it.*
+
+**G2 — No stated cross-platform determinism policy.** They document theirs and
+measured it: `tanh` in the limiter rounds differently in glibc vs Darwin libm →
+LSB shifts in ~0.01% of samples, ~115 dB down, inaudible. We have the same
+exposure (`tracker_replayer.dart` `_tanh` is built on `exp()`, still platform
+libm). **We are safe today** — our byte-identical gates compare two renders
+*inside one run*, and `mod_codec_test`'s golden compare is module **bytes**
+(parse→write, pure integer), not audio. The trap is ahead of us: if anyone
+commits a golden *rendered* WAV compared byte-exactly it will be intermittently
+red between macOS dev and Linux CI. Decide the policy before that happens.
+
+**G3 — No Amiga hardware model.** Two concrete absences: the **LED low-pass
+filter** (~3.2 kHz, the "dull" Amiga mode) and a **Paula clock** with PAL
+(3,546,894.6 Hz) / NTSC switching, pitch derived from clock ÷ output rate. Ours
+is a pure c5speed/finetune model. ➜ **`E0x` IS the Amiga filter command**, so
+this lands inside `@opus (tracker-complete)`'s claimed "E0x/S0x hardware filter"
+work — theirs to take, noted here so it is not lost.
+
+**G4 — We have no written non-goals.** They state theirs: no pre-1.17 OpenMPT
+bug-emulation (swing, legacy pattern loops, proprietary envelope release nodes),
+MPTM detected-but-refused, IT to `cmwt=0x0216`. Writing down what we refuse to
+chase is how a replayer stays finishable — ours is currently open-ended.
+
+**G5 — Harness brittleness (5 minutes).** `_kOpenMptPath` is pinned to
+`/opt/homebrew/Cellar/libopenmpt/0.8.7/bin/openmpt123` — one Homebrew version,
+macOS only. Resolve the binary from `PATH` instead.
+
 ## Consolidated backlog (2026-07-25 doc sweep)
 
 Pending work carried over when ~40 handover/scoping/status docs were consolidated.
