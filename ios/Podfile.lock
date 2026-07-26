@@ -1,48 +1,114 @@
 PODS:
+  - aec_fullduplex (0.1.0):
+    - Flutter
   - audioplayers_darwin (0.0.1):
     - Flutter
     - FlutterMacOS
+  - crispembed (0.16.0)
   - file_selector_ios (0.0.1):
     - Flutter
   - Flutter (1.0.0)
+  - flutter_soloud (0.0.1):
+    - Flutter
+  - flutter_tts (0.0.1):
+    - Flutter
+  - glint_vorbis (0.1.0):
+    - Flutter
+  - image_picker_ios (0.0.1):
+    - Flutter
   - integration_test (0.0.1):
     - Flutter
+  - onnxruntime (0.0.1):
+    - Flutter
+    - onnxruntime-objc (= 1.15.1)
+  - onnxruntime-c (1.15.1)
+  - onnxruntime-objc (1.15.1):
+    - onnxruntime-objc/Core (= 1.15.1)
+  - onnxruntime-objc/Core (1.15.1):
+    - onnxruntime-c (= 1.15.1)
   - package_info_plus (0.4.5):
+    - Flutter
+  - record_ios (2.0.0):
     - Flutter
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - url_launcher_ios (0.0.1):
+    - Flutter
 
 DEPENDENCIES:
+  - aec_fullduplex (from `.symlinks/plugins/aec_fullduplex/ios`)
   - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
+  - crispembed (from `.symlinks/plugins/crispembed/ios`)
   - file_selector_ios (from `.symlinks/plugins/file_selector_ios/ios`)
   - Flutter (from `Flutter`)
+  - flutter_soloud (from `.symlinks/plugins/flutter_soloud/ios`)
+  - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
+  - glint_vorbis (from `.symlinks/plugins/glint_vorbis/ios`)
+  - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - onnxruntime (from `.symlinks/plugins/onnxruntime/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
+  - record_ios (from `.symlinks/plugins/record_ios/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+
+SPEC REPOS:
+  trunk:
+    - onnxruntime-c
+    - onnxruntime-objc
 
 EXTERNAL SOURCES:
+  aec_fullduplex:
+    :path: ".symlinks/plugins/aec_fullduplex/ios"
   audioplayers_darwin:
     :path: ".symlinks/plugins/audioplayers_darwin/darwin"
+  crispembed:
+    :path: ".symlinks/plugins/crispembed/ios"
   file_selector_ios:
     :path: ".symlinks/plugins/file_selector_ios/ios"
   Flutter:
     :path: Flutter
+  flutter_soloud:
+    :path: ".symlinks/plugins/flutter_soloud/ios"
+  flutter_tts:
+    :path: ".symlinks/plugins/flutter_tts/ios"
+  glint_vorbis:
+    :path: ".symlinks/plugins/glint_vorbis/ios"
+  image_picker_ios:
+    :path: ".symlinks/plugins/image_picker_ios/ios"
   integration_test:
     :path: ".symlinks/plugins/integration_test/ios"
+  onnxruntime:
+    :path: ".symlinks/plugins/onnxruntime/ios"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
+  record_ios:
+    :path: ".symlinks/plugins/record_ios/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
+  url_launcher_ios:
+    :path: ".symlinks/plugins/url_launcher_ios/ios"
 
 SPEC CHECKSUMS:
+  aec_fullduplex: 1613d35f3d16bad3e0c775b207b90002f60686dc
   audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
+  crispembed: ef4a5eb1f4cd79fa3827b1746c89db0272cd0383
   file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_soloud: 272cc604453b6ca135f274045fb259e7c6426122
+  flutter_tts: 35ac3c7d42412733e795ea96ad2d7e05d0a75113
+  glint_vorbis: d7618ebfda8f66f6f1c98d4697fc33bc6b6e4aae
+  image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  onnxruntime: 2ab1957eb029c71d47f7bb35cc4efc9f0d297828
+  onnxruntime-c: ebdcfd8650bcbd10121c125262f99dea681b92a3
+  onnxruntime-objc: ae7acec7a3d03eaf072d340afed7a35635c1c2a6
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
+  record_ios: 390a30c7caaf8b5d0fb1cb1d2fd5064b48b4520c
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: 53a6aebc29ccee84c41f92f409fc20cd4ca011f1
 
 COCOAPODS: 1.17.0
