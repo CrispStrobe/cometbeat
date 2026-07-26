@@ -164,6 +164,10 @@ flutter:
   assets:
     - assets/images/
     - assets/sounds/
+    # Pre-baked neural-voice narration (WAVs + manifest.json) generated offline
+    # by tool/bake_narration.dart (Piper VITS, CC0 voices) — played instantly on
+    # web with zero client inference. Empty manifest until strings are baked in.
+    - assets/narration/
     # Bundled CC0 percussion one-shots (VCSL, public domain) for the tracker's
     # sound library — see assets/sounds/percussion/LICENSE.txt.
     - assets/sounds/percussion/

@@ -16,6 +16,8 @@
 // included. Speaking is best-effort — a platform with no voice for the locale
 // just stays quiet rather than throwing.
 
+import 'package:comet_beat/core/audio/tts/prebaked_narration.dart'
+    show PrebakedNarrationBackend;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -100,13 +102,21 @@ class TtsService with ChangeNotifier {
   TtsService({
     TtsBackend? backend,
     NeuralTts? neural,
+    PrebakedNarrationBackend? prebaked,
   })  : _injectedBackend = backend,
+        _prebaked = prebaked,
         _neural = neural?.backend,
         _neuralReady = neural?.ready,
         _neuralSupported = neural?.supported,
         _neuralDownload = neural?.download;
 
   final TtsBackend? _injectedBackend;
+
+  /// Optional pre-baked neural narration (bundled WAV assets). When the exact
+  /// text/lang is baked, it plays instantly — the only practical neural voice
+  /// on the web (runtime synthesis there would freeze the main isolate). Falls
+  /// through to the platform/neural voice when nothing is baked. Null = off.
+  final PrebakedNarrationBackend? _prebaked;
 
   /// The platform fallback (flutter_tts), created LAZILY on first narration.
   /// Building `FlutterTtsBackend()` eagerly instantiated the `flutter_tts`
@@ -183,8 +193,15 @@ class TtsService with ChangeNotifier {
     _speaking = true;
     notifyListeners();
     final langCode = voiceTag(locale);
-    final backend = await _pick();
-    await backend.speak(text, langCode: langCode);
+    // Prefer a pre-baked neural narration asset when one exists for this exact
+    // text/lang (instant, works on web); otherwise the platform/neural voice.
+    final prebaked = _prebaked;
+    if (prebaked != null && await prebaked.has(text, langCode)) {
+      await prebaked.speak(text, langCode: langCode);
+    } else {
+      final backend = await _pick();
+      await backend.speak(text, langCode: langCode);
+    }
   }
 
   Future<TtsBackend> _pick() async {

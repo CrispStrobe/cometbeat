@@ -1,3 +1,4 @@
+import 'package:comet_beat/core/audio/tts/prebaked_narration.dart';
 import 'package:comet_beat/core/audio/tts/tts_neural.dart';
 import 'package:comet_beat/core/audio/voice_options.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -76,7 +77,13 @@ class CometBeatApp extends StatelessWidget {
               play: audio.playWavBytes,
               stopPlayback: audio.stop,
             );
-            return TtsService(neural: neural);
+            // Pre-baked neural narration (bundled WAV assets) — the only
+            // practical neural voice on web; inert until strings are baked in.
+            final prebaked = PrebakedNarrationBackend(
+              play: audio.playWavBytes,
+              stopPlayback: audio.stop,
+            );
+            return TtsService(neural: neural, prebaked: prebaked);
           },
         ),
       ],
