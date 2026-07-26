@@ -835,16 +835,38 @@ The Studio UI (`tracker_screen.dart`) is functional but lacks the slick, real-ti
 
 **Implementation Steps:**
 1. ~~**Real-time Oscilloscopes & Meters:**~~ Tap the `_stem(channel)` cache in `TrackerEngine`. Pass this data to an `OscilloscopeWidget` using `CustomPainter` to draw vivid, real-time waveforms and VU meters per channel. (DONE)
-2. **Smooth Scrolling Matrix:** Evolve the grid rendering to support pixel-smooth playhead scrolling (rather than rigid row-by-row jumping) and a dynamic pattern matrix where channel loops can be visualized block-by-block.
-3. **Advanced Keyboard Handling:** Add `FocusNode` and `KeyEvent` handlers for lightning-fast multi-cell selection (shift+arrows), cross-channel copy/paste, and value interpolation directly in the grid.
+2. **Smooth Scrolling Matrix:** PARTIAL — the playhead already tracks a
+   FRACTIONAL within-row position (`_playFrac` in `advanced_tracker_screen.dart`,
+   drawn sub-row), but the auto-scroll that follows it still `jumpTo`s at row
+   granularity rather than easing. Genuinely-open remainder: ease the follow
+   scroll + a block-by-block pattern-matrix overview. Low priority (cosmetic).
+3. ~~**Advanced Keyboard Handling:**~~ (DONE — verified 2026-07-26, roadmap was
+   stale.) `advanced_tracker_screen.dart` has `HardwareKeyboard.isShiftPressed`
+   multi-cell selection (Shift+arrows), `_selectTrack`/`_selectPattern`,
+   cross-channel block copy/cut/paste/paste-mix/transpose/clear (a Block menu +
+   shortcuts, `_clipboard`), and value interpolation (`_interpolateBlock` volumes,
+   `_interpolateNotesBlock` chromatic, `_fillInstrumentBlock`). Test GAP: the
+   block ops have no unit coverage (the screen test covers only trim/env math) —
+   a documented follow-up.
 
-### 4. Deep Instrument Modulation (Macros & Envelopes)
+### 4. Deep Instrument Modulation (Macros & Envelopes) — CORE DONE (2026-07-26)
 **Current State:**
-Instruments are static per note run, lacking tick-level modulators.
+Per-tick instrument MACROS ship for the additive voice (see
+[docs/HISTORY.md](docs/HISTORY.md)). Sample-voice macros + a macro editor UI
+remain.
 
 **Implementation Steps:**
-1. **Macro Data Model:** Create a `MacroSequence` class for Volume, Panning, Pitch, and Arpeggio envelopes.
-2. **Tick-level Rendering:** Transition `mixStems` and `renderChannel` to evaluate notes tick-by-tick, updating the instrument's active frequency and amplitude based on the `MacroSequence`.
+1. ~~**Macro Data Model:**~~ (DONE) `MacroSequence` (`lib/core/audio/macro_sequence.dart`)
+   — a per-tick step table for volume/pitch/arpeggio/pan/duty with a sustain loop
+   and a release segment; pure + exhaustively tested.
+2. ~~**Tick-level Rendering (additive):**~~ (DONE) `AdditiveInstrument` carries an
+   optional `macros` list; the additive tick voice in `tracker_replayer.dart`
+   applies volume (amplitude), pitch and arpeggio (semitones) per tick from
+   note-on. OPT-IN — absent macros keep every render byte-identical. Codec
+   serializes them.
+3. **Remaining slices (open):** apply macros in the SAMPLE tick voice
+   (`_renderSampleChannelInto`) so sampled instruments modulate too; wire the
+   pan/duty targets; and a macro editor UI in `instrument_editor.dart`.
 
 ### 5. Comprehensive Effect Command Set & Flow Control
 **Current State:**

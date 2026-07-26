@@ -7,6 +7,27 @@ changelog it graduated from.
 
 ## Progression
 
+## Tracker instrument macros (roadmap §4 core, 2026-07-26)
+
+Per-tick instrument MACROS — the classic tracker/Furnace instrument envelope — for
+the additive voice.
+
+- **Model** (`c2b2647d`). `MacroSequence` (`lib/core/audio/macro_sequence.dart`):
+  a raw per-tick step table for a target (volume / pitch / arpeggio / pan / duty)
+  with a sustain loop and an optional release segment; pure `indexAt`/`valueAt` +
+  JSON, distinct from the point-interpolated `DocEnvelope`. 14 tests pin the
+  sustain/loop/release semantics.
+- **Additive rendering** (`74885afb`). `AdditiveInstrument` gains an optional
+  `macros` list; the per-tick additive voice in `tracker_replayer.dart` adds the
+  pitch + arpeggio macro (semitones) to the note and scales amplitude by the
+  volume macro (value/64), stepping once per tick from note-on and restarting on
+  every (re)trigger. **Opt-in** — with no macros the render is byte-for-byte the
+  original (86 replayer/replay goldens green). The instrument codec serializes
+  additive macros so they persist.
+
+Remaining (see PLAN.md §4): sample-voice macros, the pan/duty targets, and a
+macro editor UI.
+
 ## Tracker DSP lifted into the shared editors (2026-07-26)
 
 A user-requested sweep to make the tracker's DSP reusable in the Audio Editor and

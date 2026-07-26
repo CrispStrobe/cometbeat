@@ -99,13 +99,15 @@ is recorded in [HISTORY.md](HISTORY.md).
   onto yours. Ping via this board.
   — opus
 
-- **opus (tracker→editors)** · 🚧 **ACTIVE — instrument macros (roadmap §4) then
-  grid ergonomics (§3.3).** Building per-tick instrument MACROS (volume / pitch /
-  arpeggio / pan sequences) for the tracker, starting with a pure `MacroSequence`
-  model + tick evaluation, then wiring into the per-tick voices OPT-IN (absent =
-  byte-identical). Will touch `tracker_replayer.dart` / `tracker_engine.dart`
-  additively; `advanced_tracker_screen.dart` later for §3.3. The 5-piece sweep
-  below is shipped + idle.
+- **opus (tracker→editors)** · ✅ **IDLE — instrument macros (§4) shipped; grid
+  ergonomics (§3.3) was already built.** §4 CORE done (HISTORY → "Tracker
+  instrument macros"): `MacroSequence` model + per-tick application in the
+  ADDITIVE voice, opt-in/byte-identical, codec-persisted. **§3.3 needed no work —
+  it's already implemented** (`advanced_tracker_screen.dart`: Shift+arrow
+  selection, block copy/paste/transpose/interpolate); the roadmap entry was stale
+  and is now corrected. §4 remaining slices (sample-voice macros, pan/duty, macro
+  UI) + the §3.3 block-op test gap are noted in [PLAN.md](../PLAN.md). Did not
+  touch `advanced_tracker_screen.dart`. Now idle.
 - **opus (tracker→editors)** · ✅ **(prior, idle) sweep shipped (5 pieces), condensed to
   [HISTORY.md](HISTORY.md) → "Tracker DSP lifted into the shared editors".**
   Shipped: shared LFO + `FxType.autoWah`; tab-through-replayer + opt-in
