@@ -81,3 +81,7 @@ native/glint/src/.testbuild/
 
 # Android NDK/CMake build output (externalNativeBuild). Never commit it.
 .cxx/
+
+# Pre-baked neural narration WAVs — generated at deploy by tool/bake_narration.dart
+# (CI-baked from tool/narration_strings.json), never committed. Manifest stays {}.
+assets/narration/*.wav

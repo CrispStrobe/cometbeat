@@ -1,12 +1,1266 @@
 [
-  {"lang": "en", "text": "Tap a card — your band starts playing the instant you do. That's your loop, going round and round."},
-  {"lang": "en", "text": "Stack more cards to build the groove: drums, bass, chords, melody, sparkle. Everything fits, so you can't go wrong."},
-  {"lang": "en", "text": "Sing or Beatbox your own part — it records over two bars and joins the band as its own card."},
-  {"lang": "en", "text": "Tap ✎ on any card (or a note on the sheet music) to change what it plays — you hear the change right away."},
-  {"lang": "en", "text": "Stuck? Roll 🎲 for a surprise. Want more? Open the beat in the Drum Kit, or the whole song in the Tracker or Score Workshop."},
-  {"lang": "de", "text": "Tipp eine Karte an — deine Band spielt sofort los. Das ist dein Loop, immer im Kreis."},
-  {"lang": "de", "text": "Stapel weitere Karten für den Groove: Drums, Bass, Akkorde, Melodie, Sparkle. Alles passt zusammen — du kannst nichts falsch machen."},
-  {"lang": "de", "text": "Sing oder beatboxe deine eigene Spur — sie nimmt zwei Takte auf und wird zu einer eigenen Karte."},
-  {"lang": "de", "text": "Tipp ✎ auf einer Karte (oder eine Note in den Noten), um zu ändern, was sie spielt — du hörst es sofort."},
-  {"lang": "de", "text": "Keine Idee? Würfle 🎲 für eine Überraschung. Mehr willst du? Öffne den Beat im Schlagzeug oder den ganzen Song im Tracker oder Noten-Workshop."}
+  {
+    "lang": "de",
+    "text": "Allegro ist schnell, Presto sehr schnell. Dieselben vier Noten, nur schneller — hör den Unterschied."
+  },
+  {
+    "lang": "de",
+    "text": "Andere Akkorde ziehen WEG und wollen zurück nach Hause. Die Dominante zieht am stärksten — hör, wie sie gleich zum Zuhause zurücklehnt."
+  },
+  {
+    "lang": "de",
+    "text": "Ausdruck ist das WIE des Spielens. Ein Teil ist das Tempo: hör diese Phrase erst langsam, dann schnell."
+  },
+  {
+    "lang": "de",
+    "text": "Bläser brauchen deinen Atem. Holzbläser wie Flöte, Klarinette und Saxofon; Blechbläser wie Trompete, Posaune und Tuba."
+  },
+  {
+    "lang": "de",
+    "text": "C-Dur hat gar keine Vorzeichen. Hör dir C-Dur an — lauter weiße Tasten."
+  },
+  {
+    "lang": "de",
+    "text": "Celli und Posaunen nutzen ihn für ihre hohen Töne — so bleiben sie im Notensystem, statt über dem Bassschlüssel Hilfslinien zu stapeln."
+  },
+  {
+    "lang": "de",
+    "text": "Cello-Töne stehen im Bassschlüssel, dem System für tiefe Klänge. Dieser tiefe Ton ist C, deine dickste Saite."
+  },
+  {
+    "lang": "de",
+    "text": "Das Cello hat vier Saiten. Von tief nach hoch heißen sie C, G, D, A — die tiefste Saite ist die dickste."
+  },
+  {
+    "lang": "de",
+    "text": "Das eingestrichene C — das C in der Mitte des Klaviers — sitzt knapp über dem Bass-System, auf einer eigenen kleinen Hilfslinie."
+  },
+  {
+    "lang": "de",
+    "text": "Der Abstand zwischen zwei Tönen ist ein Intervall. Zähl die Buchstaben mit beiden Enden: C bis E ist C-D-E — eine Terz (3)."
+  },
+  {
+    "lang": "de",
+    "text": "Der Bassschlüssel (F-Schlüssel) setzt zwei Punkte um die Linie, die F bedeutet. Er steht für tiefe Töne — linke Hand, Cello, Bass."
+  },
+  {
+    "lang": "de",
+    "text": "Der Tenorschlüssel ist ein C-Schlüssel: die Mitte des Zeichens zeigt genau auf das eingestrichene C. Auf welcher Linie das Zeichen sitzt, DIESE Linie ist das c′."
+  },
+  {
+    "lang": "de",
+    "text": "Der Violinschlüssel (G-Schlüssel) windet sich um die Linie, die G bedeutet. Er steht für hohe Töne — rechte Hand, Flöte, Geige."
+  },
+  {
+    "lang": "de",
+    "text": "Der andere Teil ist die Lautstärke (Dynamik): dieselbe Phrase leise (p), dann laut (f). Bei Charade nennst du, was du gehört hast."
+  },
+  {
+    "lang": "de",
+    "text": "Die Dynamik sagt dir, wie laut du spielst. p (piano) heißt leise — und pp (pianissimo) sehr leise. Hör hin: das ist piano."
+  },
+  {
+    "lang": "de",
+    "text": "Die Form einer Note zeigt, wie LANG du sie hältst. Dieser offene Kopf ohne Hals ist eine ganze Note — ein langer Klang (4 Schläge)."
+  },
+  {
+    "lang": "de",
+    "text": "Die Synkope schiebt Noten NEBEN den Schlag, auf das „und“ dazwischen. Die Betonung kommt, wo dein Ohr sie nicht erwartet — das ist der Groove in Pop und Jazz."
+  },
+  {
+    "lang": "de",
+    "text": "Die Taktart bestimmt, welcher Schlag betont ist. Im 3/4-Takt zählst du 1-2-3, und wieder ist die 1 betont — der Schwung eines Walzers."
+  },
+  {
+    "lang": "de",
+    "text": "Die antwortende Phrase kehrt zu dem Ton zurück, mit dem die Melodie begann — ihrem Heimatton. Darum klingt sie abgeschlossen."
+  },
+  {
+    "lang": "de",
+    "text": "Die meisten Instrumente klingen so, wie sie notiert sind. Lies ein C, hör ein C — ganz einfach."
+  },
+  {
+    "lang": "de",
+    "text": "Die meisten Stücke beginnen auf Zählzeit 1 — dem betonten Taktanfang. Zähl „1-2-3-4“ und fang auf der 1 an."
+  },
+  {
+    "lang": "de",
+    "text": "Die untere ist der Bassschlüssel — meist deine linke Hand. Das eingestrichene C liegt in der Lücke dazwischen, auf einer eigenen kleinen Hilfslinie."
+  },
+  {
+    "lang": "de",
+    "text": "Die weißen Tasten heißen A H C D E F G und wiederholen sich das ganze Klavier hinauf. Die schwarzen Tasten stehen in kleinen Gruppen aus zwei und drei."
+  },
+  {
+    "lang": "de",
+    "text": "Die zwei Zahlen am Anfang sind die Taktart. Die obere Zahl sagt, wie viele Schläge in einen Takt passen — 4 heißt ein gleichmäßiger Vierer."
+  },
+  {
+    "lang": "de",
+    "text": "Diese Klaviertaste kann Fis oder Ges heißen — genau derselbe Klang, zwei Schreibweisen. Das sind „enharmonische“ Zwillinge."
+  },
+  {
+    "lang": "de",
+    "text": "Dieselbe Note gibt es an mehreren Stellen auf dem Griffbrett — verschiedene Saiten, verschiedene Bünde."
+  },
+  {
+    "lang": "de",
+    "text": "Dieses tiefe System ist der Bassschlüssel (der F-Schlüssel). Ein Cello oder die linke Hand liest hier. Seine Linien und Zwischenräume bedeuten andere Töne als der Violinschlüssel."
+  },
+  {
+    "lang": "de",
+    "text": "Diesmal ist die zweite Hälfte höher und landet auf einem neuen Grundton. Die Musik hat die Tonart gewechselt — das ist eine Modulation."
+  },
+  {
+    "lang": "de",
+    "text": "Dorisch ist wie Moll, aber die 6. Stufe ist erhöht — es klingt nach Moll mit einem helleren Schimmer. Diese eine Note ist das ganze Geheimnis!"
+  },
+  {
+    "lang": "de",
+    "text": "Drück einen Finger auf eine Saite, um sie zu verkürzen, dann wird der Ton höher. Das Stimmgerät hört zu und zeigt, ob du genau triffst."
+  },
+  {
+    "lang": "de",
+    "text": "Du kannst einen Akkord auch Ton für Ton von unten nach oben spielen — das ist ein Arpeggio."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Akkord fühlt sich wie ZUHAUSE an — ruhig und fertig. Wir nennen ihn Tonika. Hör hin: Das ist C-Dur, das Zuhause."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Akkord sind Töne, die GLEICHZEITIG klingen. Stapel drei Töne im Abstand und du hast einen Dreiklang — hier C E G."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Auftakt beginnt mit einer oder zwei Noten VOR dem ersten Taktstrich, die zur 1 hinführen. Hör hin — die Melodie holt Schwung."
+  },
+  {
+    "lang": "de",
+    "text": "Ein B ♭ senkt eine Note um einen Halbton. Des ist genau dieselbe Taste wie Cis — es lehnt sich nur von D herunter."
+  },
+  {
+    "lang": "de",
+    "text": "Ein BINDEBOGEN spannt sich über VERSCHIEDENE Tonhöhen. Spiel sie weich und ohne Lücke verbunden — das heißt legato."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Chor singt vier Linien zusammen: Sopran (am höchsten), Alt, Tenor, Bass (am tiefsten). Gleichzeitig erklingen sie als Akkord."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Doppelschlag (ein liegendes S) windet sich UM die Note: die Note darüber, die Note, die darunter, dann zurück. Ein Mordent ist nur ein kurzer Schlenker hinauf und zurück."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Dreiklang sind drei Töne — nimm einen, überspring einen, nimm den nächsten: C, E, G. Das ist C-Dur und klingt in sich ruhend."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Dur-Dreiklang klingt hell, ein Moll-Dreiklang weicher und trauriger. Hör dir beide an."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Ganzton sind zwei Halbtöne. C zu D ist ein Ganzton — dazwischen LIEGT eine schwarze Taste."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Griff, den du kennst, wie C…"
+  },
+  {
+    "lang": "de",
+    "text": "Ein HALTEBOGEN verbindet zwei Noten mit DERSELBEN Tonhöhe. Spiel die zweite nicht neu an — halte die erste durch beide hindurch. C mit C verbunden ist ein langes C."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Halbton ist der kleinste Schritt auf der Klaviatur — direkte Nachbarn, nichts dazwischen. E zu F ist ein Halbton: keine schwarze Taste dazwischen."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Kapodaster klemmt alle Saiten einen Bund höher — wie ein neuer Sattel weiter oben."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Keil > ist ein Akzent: gib dieser Note einen extra Schubs, damit sie hervorsticht."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Kreuz ♯ vor einer Note hebt sie um den kleinsten Schritt, einen Halbton. Cis liegt einen Hauch höher als C."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Punkt hinter der Note gibt die HÄLFTE ihres Wertes dazu: 2 Schläge + 1 = eine punktierte Halbe mit 3 Schlägen. Zähl „1-2-3“."
+  },
+  {
+    "lang": "de",
+    "text": "Ein Punkt über oder unter dem Notenkopf ist Staccato: kurz und abgesetzt spielen, mit Luft danach. (Achtung — ein Punkt NEBEN der Note macht sie stattdessen länger!)"
+  },
+  {
+    "lang": "de",
+    "text": "Ein SCHRITT geht zur Nachbar-Note — von einer Linie zum berührenden Zwischenraum, einen Buchstaben weiter: C zu D."
+  },
+  {
+    "lang": "de",
+    "text": "Ein SPRUNG überspringt eine — von einer Linie gleich zur nächsten Linie: C zu E. Sprünge klingen hüpfender als Schritte."
+  },
+  {
+    "lang": "de",
+    "text": "Ein kleines „m“ hinter dem Buchstaben heißt Moll: „Am“ ist a-Moll — dieselbe Familie, aber weicher und trauriger."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Dur-Tonleiter klingt hell und fröhlich. Hör, wie C-Dur nach oben steigt."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Dur-Tonleiter klingt hell und fröhlich. Hör, wie sie nach oben steigt."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Gitarre hat sechs Saiten. Von tief (dick) nach hoch (dünn): E, A, D, G, H, E — ja, an beiden Enden ein E!"
+  },
+  {
+    "lang": "de",
+    "text": "Eine Kadenz ist, wie eine Phrase endet — wie das Ende eines Satzes. Auf dem HEIMAT-Akkord zu enden klingt fertig, wie ein Punkt. Hör hin: weg, dann heim."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Marke gleitet über die Melodie. Sing oder spiel jeden Ton, wenn er die Linie erreicht — wie einem hüpfenden Ball folgen."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Melodie hat einen Grundton. Hier steigt sie auf und kehrt beide Male zum selben Grundton zurück — sie bleibt in einer Tonart."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Melodie ist eine kleine Reise aus Tönen — mal geht es aufwärts, mal wieder herunter. Summ mit, wenn sie steigt und fällt!"
+  },
+  {
+    "lang": "de",
+    "text": "Eine Melodie kann eine FRAGE stellen — sie bleibt oben in der Luft stehen, klingt noch nicht fertig, wie wartend."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Moll-Tonleiter klingt dunkler — ihre 3., 6. und 7. Stufe liegen etwas tiefer."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Moll-Tonleiter klingt dunkler, etwas traurig. Hör a-Moll."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Pause ist Stille — und sie wird mitgezählt wie eine Note. Hier heißt es: spielen, Pause, spielen, Pause — je ein Schlag."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Pause ist ein Schlag STILLE. Zähl sie mit, aber spiel nicht. Tippe auf Anhören und hör eine Pause."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Tonleiter ist eine Leiter aus Tönen, Stufe für Stufe nach oben. Das ist C-Dur: C D E F G A H C."
+  },
+  {
+    "lang": "de",
+    "text": "Eine Triole quetscht DREI gleiche Noten in denselben Schlag: „tri-o-le“. Darüber steht eine kleine 3."
+  },
+  {
+    "lang": "de",
+    "text": "Eine andere Melodie ist ein neuer Buchstabe — Teil B. Melodie, andere Melodie, dann wieder die erste ergibt die Form A-B-A. Ganz viele Lieder sind so gebaut!"
+  },
+  {
+    "lang": "de",
+    "text": "Eine ausgefüllte Note mit Hals ist eine Viertelnote — ein kurzer Schlag. Vier Viertel dauern so lang wie eine ganze Note."
+  },
+  {
+    "lang": "de",
+    "text": "Eine einzelne Achtelnote trägt ein Fähnchen am Hals. Hier trennt je eine Pause die Achtel, darum behält jede ihr eigenes Fähnchen."
+  },
+  {
+    "lang": "de",
+    "text": "Eine halbe Note dauert 2 Schläge, also füllen auch zwei Halbe einen 4/4-Takt."
+  },
+  {
+    "lang": "de",
+    "text": "Eine halbe Note dauert 2 Schläge. Zähl „1-2“, solange sie klingt."
+  },
+  {
+    "lang": "de",
+    "text": "Endest du auf einem anderen Akkord, hängt es in der Luft — wie ein Fragezeichen. Dein Ohr erwartet, dass mehr kommt. Hör hin: heim, dann weg."
+  },
+  {
+    "lang": "de",
+    "text": "Enge Intervalle klingen nah und sanft, weite offen und kräftig. Hör einen kleinen Abstand, dann einen großen."
+  },
+  {
+    "lang": "de",
+    "text": "Finde das C: die weiße Taste direkt LINKS von jeder ZWEIER-Gruppe schwarzer Tasten. Von C aus hinauf: C D E F G A H C."
+  },
+  {
+    "lang": "de",
+    "text": "Fine ist das Ende. Dal Segno (D.S.) springt zurück zum Zeichen, und eine Coda ist ein besonderer Schlussteil, zu dem du springst. Ordne jedem Zeichen seine Bedeutung zu!"
+  },
+  {
+    "lang": "de",
+    "text": "Fis und Ges klingen also gleich. Weitere Zwillinge: Cis=Des, Dis=Es, Gis=As, Ais=B."
+  },
+  {
+    "lang": "de",
+    "text": "Füll jeden Takt, bis die Schläge aufgehen. Vier Viertelnoten ergeben 4 Schläge — ein voller 4/4-Takt."
+  },
+  {
+    "lang": "de",
+    "text": "GROSSBUCHSTABEN meinen einen Dur-Akkord (I, IV, V); kleine Ziffern meinen Moll (ii, iii, vi). Auf Stufe 2 von C-Dur steht D F A — Akkord ii, d-Moll."
+  },
+  {
+    "lang": "de",
+    "text": "Gitarre kann man als Tabulatur (Tab) schreiben: sechs Linien, eine pro Saite. Eine Zahl ist der Bund zum Greifen; 0 heißt leere Saite."
+  },
+  {
+    "lang": "de",
+    "text": "Hör hin und zähl, wie viele einzelne Noten vorbeikommen. Hier sind es drei — zähl bei jedem neuen Klang eins weiter."
+  },
+  {
+    "lang": "de",
+    "text": "Hör hin. Wird es lauter oder leiser?"
+  },
+  {
+    "lang": "de",
+    "text": "Hör hin. Wird es schneller oder langsamer?"
+  },
+  {
+    "lang": "de",
+    "text": "Im 4/4-Takt zählst du immer 1-2-3-4. Die 1 ist der BETONTE Schlag — der, den du am stärksten klopfst. Die 2, 3 und 4 sind leichter."
+  },
+  {
+    "lang": "de",
+    "text": "In der ENGEN Lage stehen die oberen drei Stimmen dicht beieinander — die höchste Stimme und der Tenor liegen innerhalb einer Oktave."
+  },
+  {
+    "lang": "de",
+    "text": "In der WEITEN Lage sind die Oberstimmen gespreizt — die höchste Note liegt mehr als eine Oktave über dem Tenor."
+  },
+  {
+    "lang": "de",
+    "text": "Intervalle kennst du schon aus Liedern! Der Ruf des Kuckucks — „Kuck-uck“ — ist eine fallende kleine Terz. „Alle meine Entchen“ beginnt mit einer großen Sekunde aufwärts."
+  },
+  {
+    "lang": "de",
+    "text": "Ist die zweite Note auch nur einen Schritt höher oder tiefer, ist sie verschieden — und steht woanders. Hör hin: C, dann D."
+  },
+  {
+    "lang": "de",
+    "text": "Je größer der Abstand, desto größer die Zahl. C hinauf bis G ist eine Quinte (5): C-D-E-F-G."
+  },
+  {
+    "lang": "de",
+    "text": "Je höher eine Note im System sitzt, desto höher klingt sie. Tippe auf Anhören und hör, wie sie nach oben steigt!"
+  },
+  {
+    "lang": "de",
+    "text": "Je höher eine Note über das System steigt, desto mehr Hilfslinien braucht sie. Zähl sie wie die Sprossen einer Leiter."
+  },
+  {
+    "lang": "de",
+    "text": "Jede Linie und jeder Zwischenraum ist eine andere Trommel: ganz unten die große Trommel (Fußtritt), oben Snare und Becken. Von links nach rechts lesen und den Beat spielen."
+  },
+  {
+    "lang": "de",
+    "text": "Jede Note hat einen Buchstabennamen: A H C D E F G. Diese hier ist E — tippe auf Anhören."
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Aus wie vielen Tönen besteht ein Dreiklang?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Aus wie vielen Tönen besteht ein Septakkord?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: E zu F — Ganzton oder Halbton?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: In welche Richtung geht dieses Paar?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Ist das ein Schritt oder ein Sprung?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Klingen Fis und Ges gleich oder verschieden?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Punkte über den Noten bedeuten…?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Sind diese Oberstimmen eng oder weit?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Welchen Buchstabennamen hat diese Note?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Welcher Schlag ist im 4/4-Takt am stärksten?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Welches Zeichen ERHÖHT eine Note?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Wie viele Kreuze hat C-Dur?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Wie viele Schläge dauert diese ganze Note?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Wie viele Schläge füllen diesen 4/4-Takt?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Wie viele Schläge hat ein 3/4-Takt?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Wie viele verschiedene Töne hat eine Dur-Tonleiter, bevor sie sich wiederholt?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Zwei Achtel auf einem Schlag sind…?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: Zähl die Schritte von C bis E (C-D-E). Welche Zahl ist das?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt du: gleiche Tonhöhe unter einem Bogen — Halte- oder Bindebogen?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt hör hin: Sind diese zwei Töne gleich oder verschieden?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt hör hin: Wie viele Töne hörst du?"
+  },
+  {
+    "lang": "de",
+    "text": "Jetzt vier. Sie kommen schnell, also zähl jede sofort mit, wenn sie erklingt."
+  },
+  {
+    "lang": "de",
+    "text": "Keine Idee? Würfle 🎲 für eine Überraschung. Mehr willst du? Öffne den Beat im Schlagzeug oder den ganzen Song im Tracker oder Noten-Workshop."
+  },
+  {
+    "lang": "de",
+    "text": "Klavier schreibt man im SYSTEM aus zwei Notenzeilen, verbunden durch eine Klammer. Die obere ist der Violinschlüssel — meist deine rechte Hand."
+  },
+  {
+    "lang": "de",
+    "text": "Klaviernoten nutzen zwei Systeme zugleich: das obere für die rechte Hand, das untere für die linke. Hör dir beide zusammen an."
+  },
+  {
+    "lang": "de",
+    "text": "Liegen Achtel auf demselben Schlag, verbindet sie ein BALKEN statt der Fähnchen — derselbe Klang, nur übersichtlicher zu lesen."
+  },
+  {
+    "lang": "de",
+    "text": "Manche Zeichen sagen dir, wohin. Da Capo (D.C.) heißt „von vorn“ — spring zurück zum Anfang und spiel noch einmal."
+  },
+  {
+    "lang": "de",
+    "text": "Manche aber sind „transponierend“: eine Trompete in B liest ein C, doch heraus kommt ein B — etwas tiefer. Dieses Spiel rechnet das für dich um."
+  },
+  {
+    "lang": "de",
+    "text": "Meist landen die Noten genau AUF den Schlägen — zähl 1-2-3-4, und jede Note fällt auf eine Zahl. Ruhig und gerade."
+  },
+  {
+    "lang": "de",
+    "text": "Musik besteht aus Teilen. Hier ist eine kleine Melodie — nenn sie Teil A. Immer wenn sie wiederkommt, ist es wieder A."
+  },
+  {
+    "lang": "de",
+    "text": "Musik kann lauter werden (Crescendo) oder leiser verklingen (Diminuendo). Hör hin — dieser Ton wird lauter, dann leiser."
+  },
+  {
+    "lang": "de",
+    "text": "Musik kann schneller (Accelerando) oder langsamer (Ritardando) werden. Hör hin — die Schläge rücken zusammen, dann auseinander."
+  },
+  {
+    "lang": "de",
+    "text": "Musik kommt in Phrasen, wie Sätze. Diese hier steigt weg und bleibt in der Luft stehen — sie klingt wie eine FRAGE."
+  },
+  {
+    "lang": "de",
+    "text": "Musik steht auf fünf Linien, dem Notensystem. Noten sitzen auf den Linien und in den Zwischenräumen."
+  },
+  {
+    "lang": "de",
+    "text": "Musik wird durch Taktstriche in Takte geteilt. Eine Taktangabe wie 4/4 heißt: jeder Takt hat 4 Schläge."
+  },
+  {
+    "lang": "de",
+    "text": "Nimm auf dieselbe Weise NOCH einen Ton dazu (überspring einen, nimm den nächsten): C E G B. Das ist ein Septakkord — er klingt unruhig, als wollte er weiter."
+  },
+  {
+    "lang": "de",
+    "text": "Normalerweise teilt sich ein Schlag in ZWEI gleiche Hälften: „1-und“. Zwei Achtelnoten."
+  },
+  {
+    "lang": "de",
+    "text": "Nummeriere die Töne der Tonleiter von 1 bis 7. Auf jeder Stufe baust du einen Akkord und benennst ihn mit einer römischen Ziffer. Auf Stufe 1 von C-Dur steht C E G — Akkord I."
+  },
+  {
+    "lang": "de",
+    "text": "Passt eine Note nicht auf die fünf Linien, malen wir eine kleine Extra-Linie nur für sie — eine Hilfslinie. Das eingestrichene C hängt an einer, direkt unter dem Violinsystem."
+  },
+  {
+    "lang": "de",
+    "text": "Schlagwerk wird geschlagen — Trommeln, Xylophon und Triangel. Tasteninstrumente wie Klavier und Orgel spielen viele Töne zugleich."
+  },
+  {
+    "lang": "de",
+    "text": "Setz oben eine 3 und jeder Takt hat drei Schläge — der sanfte Schwung eines Walzers. Zähl 1-2-3, 1-2-3."
+  },
+  {
+    "lang": "de",
+    "text": "Sing oder beatboxe deine eigene Spur — sie nimmt zwei Takte auf und wird zu einer eigenen Karte."
+  },
+  {
+    "lang": "de",
+    "text": "Spiel den gezeigten Ton oder schrumme mit. Je dünner die Saite, desto höher klingt sie — vom tiefen E bis zum hohen E."
+  },
+  {
+    "lang": "de",
+    "text": "Stapel weitere Karten für den Groove: Drums, Bass, Akkorde, Melodie, Sparkle. Alles passt zusammen — du kannst nichts falsch machen."
+  },
+  {
+    "lang": "de",
+    "text": "Statt jedes Kreuz einzeln zu schreiben, setzen wir sie einmal ganz an den Anfang — die Vorzeichen der Tonart. Sie gelten fürs ganze Stück. Das hier ist G-Dur: ein Kreuz, Fis."
+  },
+  {
+    "lang": "de",
+    "text": "Streicher klingen, wenn man sie streicht oder zupft: Geige, Cello, Gitarre und Harfe."
+  },
+  {
+    "lang": "de",
+    "text": "Tipp eine Karte an — deine Band spielt sofort los. Das ist dein Loop, immer im Kreis."
+  },
+  {
+    "lang": "de",
+    "text": "Tipp ✎ auf einer Karte (oder eine Note in den Noten), um zu ändern, was sie spielt — du hörst es sofort."
+  },
+  {
+    "lang": "de",
+    "text": "Trommeln spielen keine hohen und tiefen Melodien — eine Trommel macht einfach BUMM oder TSS. Drum-Noten zeigen also WELCHE Trommel und WANN, keine Tonhöhe."
+  },
+  {
+    "lang": "de",
+    "text": "Töne können gebunden und weich sein (Legato) oder kurz und getrennt (Staccato). Hör hin — erst gebunden, dann kurz."
+  },
+  {
+    "lang": "de",
+    "text": "Um eine Stimme zu lesen, folge nur ihrer Linie: der Sopran ist die oberste Note, der Bass die unterste. Hör hin — erst oben, dann unten."
+  },
+  {
+    "lang": "de",
+    "text": "Verzierungen sind kleine Zeichen, die eine Note schmücken. Ein Triller (tr) wechselt schnell zwischen der Note und der direkt darüber."
+  },
+  {
+    "lang": "de",
+    "text": "Wenn Akkorde nach Hause → weg → nach Hause wandern, heißt diese kleine Reise zum Ruhepunkt eine Kadenz. Hör dir die ganze Reise an."
+  },
+  {
+    "lang": "de",
+    "text": "Wenn du eine Note suchst, ist JEDER ihrer Plätze richtig!"
+  },
+  {
+    "lang": "de",
+    "text": "Wenn eine Melodie steigt, ist jede Note höher als die davor — im Notenbild wandern die Noten nach oben, und der Klang geht hinauf."
+  },
+  {
+    "lang": "de",
+    "text": "Wenn sie fällt, ist jede Note tiefer als die davor — die Noten wandern nach unten, und der Klang sinkt."
+  },
+  {
+    "lang": "de",
+    "text": "Wähl ein Lied, das du kennst. Der Bildschirm zeigt seine Melodie als Notenreihe, von links nach rechts zu lesen."
+  },
+  {
+    "lang": "de",
+    "text": "Zu jedem Notenwert gibt es eine passende Pause. Eine halbe Note klingt 2 Schläge; eine halbe Pause ist 2 Schläge Stille."
+  },
+  {
+    "lang": "de",
+    "text": "Zwei Noten mit DERSELBEN Tonhöhe klingen genau gleich — wie ein Echo. Im Notenbild stehen sie an genau derselben Stelle."
+  },
+  {
+    "lang": "de",
+    "text": "f (forte) heißt laut, ff (fortissimo) sehr laut. Dieselben Noten noch einmal — jetzt forte."
+  },
+  {
+    "lang": "de",
+    "text": "Über einem Stück steht ein italienisches Wort für das Tempo. Largo ist sehr langsam, Adagio langsam. Hör hin — diese vier Noten sind Adagio."
+  },
+  {
+    "lang": "de",
+    "text": "Über einer Melodie stehen oft Akkordsymbole. Ein einfacher Buchstabe meint einen Dur-Akkord: „C“ sagt dir, spiel einen C-Dur-Akkord."
+  },
+  {
+    "lang": "de",
+    "text": "…dann gibt sie eine ANTWORT und kommt zum Zuhause herunter, zur Ruhe. Frage und Antwort ergeben einen Satz."
+  },
+  {
+    "lang": "de",
+    "text": "…klingt HÖHER. Mit dem Kapo im 2. Bund klingt der C-Griff wie ein D."
+  },
+  {
+    "lang": "de",
+    "text": "∨ heißt AUFSTRICH: Schieb von der Spitze zurück zum Frosch. Der ist leichter — gut für Auftakte und Anläufe."
+  },
+  {
+    "lang": "de",
+    "text": "⊓ heißt ABSTRICH: Zieh den Bogen vom Frosch (deiner Hand) zur Spitze. Das ist die schwerere Richtung — sie passt zu betonten Schlägen."
+  },
+  {
+    "lang": "en",
+    "text": "A SKIP jumps over one — a line straight to the next line: C to E. Skips sound bouncier than steps."
+  },
+  {
+    "lang": "en",
+    "text": "A SLUR curves over DIFFERENT pitches. Play them smoothly, joined with no gap between them — that's legato."
+  },
+  {
+    "lang": "en",
+    "text": "A STEP moves to the next-door note — a line to the space touching it, one letter along: C to D."
+  },
+  {
+    "lang": "en",
+    "text": "A TIE joins two notes of the SAME pitch. Don't play the second one — hold the first right through both. C tied to C is one long C."
+  },
+  {
+    "lang": "en",
+    "text": "A cadence is how a phrase ends — like the end of a sentence. Ending on the HOME chord sounds finished, like a full stop. Listen: away, then home."
+  },
+  {
+    "lang": "en",
+    "text": "A capo clamps all the strings up a fret — like a new nut higher up the neck."
+  },
+  {
+    "lang": "en",
+    "text": "A choir sings four lines together: Soprano (highest), Alto, Tenor, Bass (lowest). Sounded at the same time they make a chord."
+  },
+  {
+    "lang": "en",
+    "text": "A chord is notes played at the SAME time. Stack three notes a gap apart and you get a triad — here, C E G."
+  },
+  {
+    "lang": "en",
+    "text": "A different tune is a new letter — section B. Tune, different tune, then the first tune again makes the form A-B-A. Lots of songs are shaped this way!"
+  },
+  {
+    "lang": "en",
+    "text": "A dot above or below the notehead is staccato: play it short and detached, with air after it. (Careful — a dot BESIDE the note makes it longer instead!)"
+  },
+  {
+    "lang": "en",
+    "text": "A dot after a note adds HALF its value again: 2 beats + 1 = a dotted half note of 3 beats. Count ‘1-2-3’."
+  },
+  {
+    "lang": "en",
+    "text": "A filled note with a stem is a quarter note — one short beat. Four quarter notes last as long as one whole note."
+  },
+  {
+    "lang": "en",
+    "text": "A flat ♭ lowers a note by a semitone. D♭ is the very same key as C♯ — it just leans down from D."
+  },
+  {
+    "lang": "en",
+    "text": "A guitar has six strings. From low (thick) to high (thin): E, A, D, G, B, E — yes, an E at each end!"
+  },
+  {
+    "lang": "en",
+    "text": "A half note lasts 2 beats, so two half notes also fill a 4/4 measure."
+  },
+  {
+    "lang": "en",
+    "text": "A half note lasts 2 beats. Count ‘1-2’ while it rings."
+  },
+  {
+    "lang": "en",
+    "text": "A half step (semitone) is the smallest step on the keyboard — neighbours with nothing between. E to F is a half step: no black key between them."
+  },
+  {
+    "lang": "en",
+    "text": "A lone eighth note wears a flag on its stem. Here a rest splits the eighths apart, so each one keeps its own flag."
+  },
+  {
+    "lang": "en",
+    "text": "A major scale sounds bright and cheerful. Listen to C major climb up."
+  },
+  {
+    "lang": "en",
+    "text": "A major scale sounds bright and happy. Listen to it climb."
+  },
+  {
+    "lang": "en",
+    "text": "A major triad sounds bright; a minor triad sounds softer and sadder. Listen to both."
+  },
+  {
+    "lang": "en",
+    "text": "A marker slides along the tune. Sing or play each note as it reaches the line — like following a bouncing ball."
+  },
+  {
+    "lang": "en",
+    "text": "A melody is a little journey of notes — some step up, some come down. Hum along as it rises and falls!"
+  },
+  {
+    "lang": "en",
+    "text": "A minor scale sounds darker — its 3rd, 6th and 7th steps sit a little lower."
+  },
+  {
+    "lang": "en",
+    "text": "A minor scale sounds darker, a little sad. Listen to A minor."
+  },
+  {
+    "lang": "en",
+    "text": "A note's shape shows how LONG to hold it. This open oval with no stem is a whole note — a long sound (4 beats)."
+  },
+  {
+    "lang": "en",
+    "text": "A rest is a beat of SILENCE. Count it in your head, but don't play. Tap Listen to hear a beat of rest."
+  },
+  {
+    "lang": "en",
+    "text": "A rest is silence — and you count it, just like a note. Here it goes play, rest, play, rest — one beat each."
+  },
+  {
+    "lang": "en",
+    "text": "A scale is a ladder of notes climbing step by step. This is C major: C D E F G A B C."
+  },
+  {
+    "lang": "en",
+    "text": "A sharp ♯ in front of a note lifts it up by the smallest step, a semitone. C♯ is a hair higher than C."
+  },
+  {
+    "lang": "en",
+    "text": "A small ‘m’ after the letter means minor: ‘Am’ is A minor — the same family, but a softer, sadder colour."
+  },
+  {
+    "lang": "en",
+    "text": "A triad is three notes — take one, skip one, take the next, skip one: C, E, G. That is C major, and it sounds settled."
+  },
+  {
+    "lang": "en",
+    "text": "A triplet squeezes THREE equal notes into that same beat: \"trip-o-let\". It gets a little 3 above it."
+  },
+  {
+    "lang": "en",
+    "text": "A tune can ask a QUESTION — it stops high up in the air, sounding unfinished, as if it's waiting."
+  },
+  {
+    "lang": "en",
+    "text": "A tune has a home note. Here it climbs and comes back to the same home both times — it stays in one key."
+  },
+  {
+    "lang": "en",
+    "text": "A turn (a sideways S) curls AROUND the note: the note above, the note, the note below, then back. A mordent is just one quick flick up and back."
+  },
+  {
+    "lang": "en",
+    "text": "A wedge > is an accent: give that note an extra push so it stands out from its neighbours."
+  },
+  {
+    "lang": "en",
+    "text": "A whole step is two half steps. C to D is a whole step — there IS a black key between them."
+  },
+  {
+    "lang": "en",
+    "text": "Above a tune you'll see chord symbols. A plain letter means a major chord: ‘C’ tells you to play a C major chord."
+  },
+  {
+    "lang": "en",
+    "text": "Add one MORE note the same way (skip one, take the next) and you get a seventh chord: C E G B♭. It sounds restless — as if it wants to move on."
+  },
+  {
+    "lang": "en",
+    "text": "Allegro is fast, Presto very fast. The same four notes, just quicker — listen to the difference."
+  },
+  {
+    "lang": "en",
+    "text": "An upbeat (or pickup) starts with a note or two BEFORE the first barline, leading into beat 1. Listen — the tune leans in."
+  },
+  {
+    "lang": "en",
+    "text": "At the top of a piece an Italian word gives the speed. Largo is very slow, Adagio is slow. Listen — these four notes are Adagio."
+  },
+  {
+    "lang": "en",
+    "text": "But some are ‘transposing’: a trumpet in B♭ reads a C yet a B♭ comes out — a little lower. This game does that swap for you."
+  },
+  {
+    "lang": "en",
+    "text": "C major has no sharps or flats at all. Listen to C major — every note is a plain white key."
+  },
+  {
+    "lang": "en",
+    "text": "CAPITALS mean a major chord (I, IV, V); small letters mean minor (ii, iii, vi). On step 2 of C major sits D F A — chord ii, D minor."
+  },
+  {
+    "lang": "en",
+    "text": "Cello notes live on the bass clef, the staff for low sounds. This deep note is C, your thickest string."
+  },
+  {
+    "lang": "en",
+    "text": "Cellos and trombones use it for their higher notes — it keeps them on the staff instead of piling up ledger lines above the bass clef."
+  },
+  {
+    "lang": "en",
+    "text": "Change the top number to 3 and each measure has three beats — the gentle swing of a waltz. Count 1-2-3, 1-2-3."
+  },
+  {
+    "lang": "en",
+    "text": "Dorian is like minor, but its 6th step is raised — so it sounds minor with a brighter twist. That one note is the whole secret!"
+  },
+  {
+    "lang": "en",
+    "text": "Drums don't play high and low tunes — a drum just goes THUMP or TSS. So drum music shows WHICH drum and WHEN, not a pitch."
+  },
+  {
+    "lang": "en",
+    "text": "Dynamics tell you how loud to play. p (piano) means soft — and pp (pianissimo) is very soft. Listen: this is piano."
+  },
+  {
+    "lang": "en",
+    "text": "Each line and space is a different drum: low down is the bass drum you kick, higher up are the snare and cymbals. Read left to right and play the beat."
+  },
+  {
+    "lang": "en",
+    "text": "Ending on a different chord leaves it hanging, like a question mark — your ear expects more to come. Listen: home, then away."
+  },
+  {
+    "lang": "en",
+    "text": "Every note has a letter name: A B C D E F G. This one is E — tap Listen to hear it."
+  },
+  {
+    "lang": "en",
+    "text": "Every note value has a matching rest. A half note rings for 2 beats; a half rest is 2 beats of silence."
+  },
+  {
+    "lang": "en",
+    "text": "Expression is HOW you play. One part is the speed (tempo): listen to this phrase slow, then fast."
+  },
+  {
+    "lang": "en",
+    "text": "Fill each measure so the beats add up. Four quarter notes make 4 beats — one full 4/4 measure."
+  },
+  {
+    "lang": "en",
+    "text": "Find C: it's the white key just to the LEFT of every group of TWO black keys. From C, climb up C D E F G A B C."
+  },
+  {
+    "lang": "en",
+    "text": "Fine marks the end. Dal Segno (D.S.) jumps back to the sign, and a Coda is a special ending section you leap to. Match each sign to what it does!"
+  },
+  {
+    "lang": "en",
+    "text": "Guitar can be written as tab: six lines, one per string. A number is the fret to press; 0 means play the open string."
+  },
+  {
+    "lang": "en",
+    "text": "If the second note is even one step higher or lower, it is different — and it sits somewhere else on the staff. Listen: C then D."
+  },
+  {
+    "lang": "en",
+    "text": "In 4/4 you count 1-2-3-4 over and over. Beat 1 is the STRONG beat — the one you tap hardest. Beats 2, 3 and 4 are lighter."
+  },
+  {
+    "lang": "en",
+    "text": "In CLOSE position the top three voices are bunched together — the highest and the tenor sit within one octave."
+  },
+  {
+    "lang": "en",
+    "text": "In OPEN position the top voices are spread out — the highest note is more than an octave above the tenor."
+  },
+  {
+    "lang": "en",
+    "text": "Instead of marking every sharp, we write them once at the very start — a key signature. It applies to the whole piece. This is G major: one sharp, F♯."
+  },
+  {
+    "lang": "en",
+    "text": "Listen and count how many separate notes go by. Here there are three — count one for each new sound."
+  },
+  {
+    "lang": "en",
+    "text": "Listen. Is this getting louder or softer?"
+  },
+  {
+    "lang": "en",
+    "text": "Listen. Is this speeding up or slowing down?"
+  },
+  {
+    "lang": "en",
+    "text": "Middle C — the note in the middle of the piano — sits just above the bass staff, on its own little ledger line."
+  },
+  {
+    "lang": "en",
+    "text": "Most instruments sound the note they read. Read a C, hear a C — simple."
+  },
+  {
+    "lang": "en",
+    "text": "Most tunes start on beat 1 — the strong downbeat. Count ‘1-2-3-4’ and begin on the 1."
+  },
+  {
+    "lang": "en",
+    "text": "Music can grow louder (a crescendo) or fade away softer (a diminuendo). Listen — this note gets louder, then softer."
+  },
+  {
+    "lang": "en",
+    "text": "Music can speed up (accelerando) or slow down (ritardando). Listen — the beats get closer, then further apart."
+  },
+  {
+    "lang": "en",
+    "text": "Music comes in phrases, like sentences. This one climbs away and stops in the air — it sounds like a QUESTION."
+  },
+  {
+    "lang": "en",
+    "text": "Music is built from sections. Here is a little tune — call it section A. Whenever it comes back, it is A again."
+  },
+  {
+    "lang": "en",
+    "text": "Music is split into measures (bars) by barlines. A time signature like 4/4 means each measure holds 4 beats."
+  },
+  {
+    "lang": "en",
+    "text": "Music is written on five lines called a staff. Notes sit on the lines and in the spaces between them."
+  },
+  {
+    "lang": "en",
+    "text": "Narrow intervals sound close and gentle; wide ones sound open and bold. Listen to a small gap, then a big one."
+  },
+  {
+    "lang": "en",
+    "text": "Normally a beat splits into TWO even halves: \"1-and\". Two eighth notes."
+  },
+  {
+    "lang": "en",
+    "text": "Notes can be smooth and connected (legato) or short and detached (staccato). Listen — smooth first, then short."
+  },
+  {
+    "lang": "en",
+    "text": "Now four. They come quickly, so count each one the moment it arrives."
+  },
+  {
+    "lang": "en",
+    "text": "Now listen: are these two notes the same or different?"
+  },
+  {
+    "lang": "en",
+    "text": "Now listen: how many notes do you hear?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: E to F — whole step or half step?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: are these upper voices close or open?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: count the steps from C up to E (C-D-E). What number is it?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: do F♯ and G♭ sound the same or different?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: dots over the notes mean…?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: how many beats are in a 3/4 measure?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: how many beats does this whole note last?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: how many beats fill this 4/4 measure?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: how many different notes does a major scale have before it repeats?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: how many notes are in a seventh chord?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: how many notes build a triad (a basic chord)?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: how many sharps does C major have?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: in 4/4, which beat is the strongest?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: is this a step or a skip?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: same pitch under a curve — tie or slur?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: two eighths joined on one beat are…?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: what letter name is this note?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: which sign RAISES a note?"
+  },
+  {
+    "lang": "en",
+    "text": "Now you try: which way does this pair go?"
+  },
+  {
+    "lang": "en",
+    "text": "Number the notes of the scale 1 to 7. Build a chord on each step and name it with a Roman numeral. On step 1 of C major sits C E G — chord I."
+  },
+  {
+    "lang": "en",
+    "text": "One chord feels like HOME — settled and finished. We call it the Tonic. Listen: this is C major, home base."
+  },
+  {
+    "lang": "en",
+    "text": "Ornaments are little signs that dress up a note. A trill (tr) shakes quickly between the note and the one just above it."
+  },
+  {
+    "lang": "en",
+    "text": "Other chords pull AWAY and want to return home. The Dominant tugs the hardest — hear how it leans right back to home."
+  },
+  {
+    "lang": "en",
+    "text": "Percussion is struck — drums, xylophone and triangle. Keyboards like the piano and organ play many notes at once."
+  },
+  {
+    "lang": "en",
+    "text": "Piano music uses two staves at once: the top staff for your right hand, the bottom staff for your left. Hear both together."
+  },
+  {
+    "lang": "en",
+    "text": "Pick a song you know. The screen shows its tune as a line of notes, read left to right."
+  },
+  {
+    "lang": "en",
+    "text": "Play the note shown, or strum along. The thinner the string, the higher it sings — from low E up to high E."
+  },
+  {
+    "lang": "en",
+    "text": "Press a finger onto a string to shorten it and the note gets higher. The tuner listens and shows if you're spot on."
+  },
+  {
+    "lang": "en",
+    "text": "Sing or Beatbox your own part — it records over two bars and joins the band as its own card."
+  },
+  {
+    "lang": "en",
+    "text": "So F♯ and G♭ sound identical. Other twins: C♯=D♭, D♯=E♭, G♯=A♭, A♯=B♭."
+  },
+  {
+    "lang": "en",
+    "text": "So a shape you know, like C…"
+  },
+  {
+    "lang": "en",
+    "text": "So when you look for a note, tapping ANY of its spots is right!"
+  },
+  {
+    "lang": "en",
+    "text": "Some signs tell you where to go. Da Capo (D.C.) means \"from the top\" — jump back to the very beginning and play again."
+  },
+  {
+    "lang": "en",
+    "text": "Stack more cards to build the groove: drums, bass, chords, melody, sparkle. Everything fits, so you can't go wrong."
+  },
+  {
+    "lang": "en",
+    "text": "Strings sing when you bow or pluck them: the violin, cello, guitar and harp."
+  },
+  {
+    "lang": "en",
+    "text": "Stuck? Roll 🎲 for a surprise. Want more? Open the beat in the Drum Kit, or the whole song in the Tracker or Score Workshop."
+  },
+  {
+    "lang": "en",
+    "text": "Syncopation pushes notes OFF the beat, onto the \"and\" in between. The accent lands where your ear didnt expect it — thats the kick you feel in pop and jazz."
+  },
+  {
+    "lang": "en",
+    "text": "Tap a card — your band starts playing the instant you do. That's your loop, going round and round."
+  },
+  {
+    "lang": "en",
+    "text": "Tap ✎ on any card (or a note on the sheet music) to change what it plays — you hear the change right away."
+  },
+  {
+    "lang": "en",
+    "text": "The answering phrase comes back to the note the tune started from — its home note. That is why it sounds finished."
+  },
+  {
+    "lang": "en",
+    "text": "The bass clef (F-clef) puts two dots around the line that means F. It is used for lower notes — left hand, cello, bass."
+  },
+  {
+    "lang": "en",
+    "text": "The bottom one is bass — usually your left hand. Middle C sits in the gap between the two staves, on its own little ledger line."
+  },
+  {
+    "lang": "en",
+    "text": "The cello has four strings. From low to high they are C, G, D, A — the lowest string is the thickest."
+  },
+  {
+    "lang": "en",
+    "text": "The distance between two notes is an interval. Count the letters including both ends: C to E is C-D-E — a 3rd."
+  },
+  {
+    "lang": "en",
+    "text": "The higher a note climbs above the staff, the more ledger lines it needs. Count them like the rungs of a ladder."
+  },
+  {
+    "lang": "en",
+    "text": "The higher a note sits on the staff, the higher it sounds. Tap Listen and hear these notes climb!"
+  },
+  {
+    "lang": "en",
+    "text": "The meter decides which beat is strong. In 3/4 you count 1-2-3, and the 1 is strong again — that's the lilt of a waltz."
+  },
+  {
+    "lang": "en",
+    "text": "The other part is how loud (dynamics): the same phrase soft (p), then loud (f). Charades asks you to name what you heard."
+  },
+  {
+    "lang": "en",
+    "text": "The piano writes on a GRAND STAFF: two staves joined by a brace. The top one is treble — usually your right hand."
+  },
+  {
+    "lang": "en",
+    "text": "The same note lives in several spots on the fretboard — different strings, different frets."
+  },
+  {
+    "lang": "en",
+    "text": "The tenor clef is a C-clef: the middle of the sign points straight at middle C. Wherever the sign sits, that line IS middle C."
+  },
+  {
+    "lang": "en",
+    "text": "The treble clef (G-clef) curls around the line that means G. It is used for higher notes — right hand, flute, violin."
+  },
+  {
+    "lang": "en",
+    "text": "The two numbers at the start are the time signature. The top number is how many beats fill each measure — 4 means a steady four."
+  },
+  {
+    "lang": "en",
+    "text": "The white keys are named A B C D E F G, repeating up the whole piano. The black keys sit in little groups of two and three."
+  },
+  {
+    "lang": "en",
+    "text": "The wider the gap, the bigger the number. C up to G is a 5th: C-D-E-F-G."
+  },
+  {
+    "lang": "en",
+    "text": "This low staff is the bass clef (the F-clef). A cello or a left hand reads here. Its lines and spaces spell different notes than the treble clef."
+  },
+  {
+    "lang": "en",
+    "text": "This piano key can be written as F♯ or G♭ — the very same sound, spelled two ways. They are ‘enharmonic’ twins."
+  },
+  {
+    "lang": "en",
+    "text": "This time the second half is lifted higher, landing on a new home note. The music has changed key — that is modulation."
+  },
+  {
+    "lang": "en",
+    "text": "To read one voice, follow only its line: the soprano is the top note, the bass the bottom. Listen — top voice, then bottom."
+  },
+  {
+    "lang": "en",
+    "text": "Two notes at the SAME pitch sound exactly alike — like an echo. On the staff they sit in the very same place."
+  },
+  {
+    "lang": "en",
+    "text": "Usually the notes land right ON the beats — count 1-2-3-4 and each note lands on a number. Steady and square."
+  },
+  {
+    "lang": "en",
+    "text": "When a melody climbs, every note is higher than the one before — on the staff the notes walk upward, and the sound rises."
+  },
+  {
+    "lang": "en",
+    "text": "When a note won't fit on the five lines, we add a tiny extra line just for it — a ledger line. Middle C hangs on one, right below the treble staff."
+  },
+  {
+    "lang": "en",
+    "text": "When chords travel home → away → home, that little journey to a resting point is a cadence. Listen to the whole trip."
+  },
+  {
+    "lang": "en",
+    "text": "When eighths share a beat they are joined by a BEAM instead of flags — the same sound, just tidier to read."
+  },
+  {
+    "lang": "en",
+    "text": "When it falls, every note is lower than the one before — the notes walk down the staff, and the sound sinks."
+  },
+  {
+    "lang": "en",
+    "text": "Winds need your breath. Woodwinds like the flute, clarinet and saxophone; brass like the trumpet, trombone and tuba."
+  },
+  {
+    "lang": "en",
+    "text": "You already know intervals from songs! A cuckoos call — “Kuck-uck” — is a falling minor 3rd. “Alle meine Entchen” starts with a major 2nd going up."
+  },
+  {
+    "lang": "en",
+    "text": "You can also play a chord one note at a time, bottom to top — that's an arpeggio."
+  },
+  {
+    "lang": "en",
+    "text": "f (forte) means loud, and ff (fortissimo) very loud. The same notes again — now forte."
+  },
+  {
+    "lang": "en",
+    "text": "…sounds HIGHER. With the capo on the 2nd fret, that C shape rings out as a D."
+  },
+  {
+    "lang": "en",
+    "text": "…then it gives an ANSWER, coming back down to rest at home. A question and its answer make a phrase."
+  },
+  {
+    "lang": "en",
+    "text": "∨ means UP-bow: push from the tip back toward the frog. It's lighter — good for upbeats and lead-ins."
+  },
+  {
+    "lang": "en",
+    "text": "⊓ means DOWN-bow: pull the bow from the frog (your hand) toward the tip. It's the heavier direction, so it suits strong beats."
+  }
 ]
