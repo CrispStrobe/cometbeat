@@ -29,6 +29,18 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tracker-complete)** · 🚧 **ACTIVE — tracker MOD/XM/S3M/IT renderer/editor.**
+  Shipped: full <500 MB streaming renderer (byte-identical), resonant IT filter
+  (+cutoff env, MIDI-macro), cubic interp + anti-click, opt-in TPDF dither, S3M
+  DP30/OPL2, cross-format effect table, velocity/non-sample zones, export-loss
+  report, flow timeline. **Hot files I touch:** `tracker_replayer.dart`,
+  `tracker_engine.dart`, `tracker_song.dart`, `advanced_tracker_screen.dart`,
+  `instrument_editor.dart`, `mod/*.dart`, ARBs. Now working the remaining
+  deferred items (in-place flow-command editing, native S3M header / raw
+  effect-memory editors, contrived stereo-native memory edge, cycle-exact OPL).
+  ⚠️ Loop/PatternCell/note-velocity work (`bb5a5bee`) is a SEPARATE workstream —
+  not mine. — opus
+
 > ⛔ **`dart format` is a HARD CI GATE — and it runs FIRST.** `ci.yml` runs
 > `dart format --output=none --set-exit-if-changed .` *before* analyze and test.
 > An unformatted file doesn't just fail that step — **it stops analyze and test
