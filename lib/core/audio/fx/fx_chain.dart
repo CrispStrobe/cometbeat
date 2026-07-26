@@ -15,13 +15,14 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart'
-    show BiquadKind, biquadFx;
+    show Biquad, BiquadKind, biquadFx;
 import 'package:comet_beat/core/audio/crisp_dsp/convolution_reverb.dart'
     show convolutionReverbFx;
 import 'package:comet_beat/core/audio/crisp_dsp/distortion.dart'
     show DistortionKind, distortionFx;
 import 'package:comet_beat/core/audio/crisp_dsp/dynamics.dart'
     show compressorFx, compressorFxStereo, gateFx, gateFxStereo;
+import 'package:comet_beat/core/audio/crisp_dsp/lfo.dart' show lfoValue;
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
     show
         chorusFx,
@@ -342,6 +343,17 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
         predelayMs: p('predelayMs', 0),
         mix: p('mix', 0.35),
       ),
+    FxType.autoWah => _autoWahFx(
+        input,
+        sampleRate: sampleRate,
+        baseFreq: p('baseFreq', 350),
+        octaves: p('octaves', 2.5),
+        rateHz: p('rateHz', 1.2),
+        depth: p('depth', 1),
+        q: p('q', 4),
+        waveform: p('waveform', 0).round(),
+        mix: p('mix', 1),
+      ),
     FxType.compressor => compressorFx(
         input,
         sampleRate: sampleRate.toDouble(),
@@ -657,6 +669,51 @@ Float64List _tremoloFx(
     final lfo = (1 + math.sin(2 * math.pi * hz * i / sampleRate)) * 0.5;
     final amp = 1 - d + d * lfo;
     final wet = input[i] * amp;
+    out[i] = input[i] * (1 - m) + wet * m;
+  }
+  return out;
+}
+
+/// Auto-wah: one resonant low-pass [Biquad] whose cutoff is swept by the shared
+/// tracker LFO ([lfoValue]) between [baseFreq] and `baseFreq · 2^octaves`. The
+/// cutoff is retuned every sample via [Biquad.setFreq] — which recomputes the
+/// coefficients WITHOUT clearing the filter memory — so a fast sweep never
+/// clicks (the same trick the tracker's IT filter uses across streaming chunks).
+///
+/// [depth] (0..1) scales how much of the sweep is applied (0 pins the cutoff at
+/// [baseFreq]); [waveform] picks the LFO shape (0 sine / 1 ramp / 2 square).
+Float64List _autoWahFx(
+  Float64List input, {
+  required int sampleRate,
+  double baseFreq = 350,
+  double octaves = 2.5,
+  double rateHz = 1.2,
+  double depth = 1,
+  double q = 4,
+  int waveform = 0,
+  double mix = 1,
+}) {
+  final m = mix.clamp(0.0, 1.0);
+  if (m == 0 || input.isEmpty) return Float64List.fromList(input);
+  final nyquist = sampleRate / 2;
+  final base = baseFreq.clamp(20.0, nyquist - 1).toDouble();
+  final sweep = octaves.clamp(0.0, 8.0) * depth.clamp(0.0, 1.0);
+  final hz = rateHz.clamp(0.01, 40.0).toDouble();
+  // Resonant Q > 0.707 gives the vocal "wah" peak; construct once, retune below.
+  final filter = Biquad(
+    BiquadKind.lowpass,
+    freq: base,
+    sampleRate: sampleRate.toDouble(),
+    q: q.clamp(0.1, 24.0).toDouble(),
+  );
+  final out = Float64List(input.length);
+  final twoPiRate = 2 * math.pi * hz / sampleRate;
+  for (var i = 0; i < input.length; i++) {
+    // LFO in [0, 1]: 0 → base cutoff, 1 → base·2^sweep.
+    final lfo01 = (lfoValue(waveform, twoPiRate * i) + 1) * 0.5;
+    final cutoff = base * math.pow(2.0, sweep * lfo01).toDouble();
+    filter.setFreq(cutoff.clamp(1.0, nyquist - 1).toDouble());
+    final wet = filter.process(input[i]);
     out[i] = input[i] * (1 - m) + wet * m;
   }
   return out;

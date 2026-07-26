@@ -72,6 +72,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/biquad.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/lfo.dart';
 import 'package:comet_beat/core/audio/mod/opl_voice.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -385,17 +386,7 @@ class ReplayResult {
 /// 0 = sine, 1 = ramp-down (sawtooth), 2 = square. Anything else (incl. the
 /// classic "random", 3) falls back to sine so the pure trajectory stays
 /// deterministic for tests.
-double trackerLfo(int waveform, double phase) {
-  switch (waveform & 3) {
-    case 1: // ramp down: +1 at the start of a cycle, sloping to −1
-      final t = ((phase / (2 * pi)) % 1.0 + 1.0) % 1.0;
-      return 1.0 - 2.0 * t;
-    case 2: // square
-      return sin(phase) >= 0 ? 1.0 : -1.0;
-    default: // 0 sine (and 3 random ≈ sine, kept deterministic)
-      return sin(phase);
-  }
-}
+double trackerLfo(int waveform, double phase) => lfoValue(waveform, phase);
 
 /// The Rxy (retrigger + volslide) volume change for code [x], applied to volume
 /// [v] on each retrigger — the classic XM table (0/8 = no change; 1–5 subtract

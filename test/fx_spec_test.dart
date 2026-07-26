@@ -66,6 +66,7 @@ void main() {
         // Appended, never inserted: these names ARE the on-disk form, so
         // reordering silently repoints saved projects at the wrong effect.
         'convolutionReverb',
+        'autoWah',
       ]);
     });
   });

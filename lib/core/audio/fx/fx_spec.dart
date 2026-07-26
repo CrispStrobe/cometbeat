@@ -157,6 +157,15 @@ enum FxType {
   /// impulse response), where [reverb] is algorithmic Freeverb. The DSP was
   /// already written and tested but only reachable from the Voice Lab.
   convolutionReverb,
+
+  /// Auto-wah — a resonant low-pass whose cutoff is SWEPT by an LFO, the
+  /// wah/filter-wobble the rack lacked (the static resonant low-pass is
+  /// [lowpass]+`q`; [tremolo] sweeps amplitude, [phaser] sweeps all-pass notches,
+  /// but nothing swept a resonant low-pass). Built on the tracker's shared
+  /// `crisp_dsp/lfo.dart` shape and the biquad's click-free `setFreq`, so the
+  /// sweep never clicks. Appended for the same `.cbdaw` name-stability reason as
+  /// the O11 block above.
+  autoWah,
 }
 
 enum FxPreset { vocalPolish, lofiCrunch, wideSpace, robotVoice }
@@ -321,6 +330,21 @@ FxSpec defaultFx(FxType type) => switch (type) {
       FxType.voiceRadio => const FxSpec(
           type: FxType.voiceRadio,
           params: {'mix': 1},
+        ),
+      // A gentle vocal/guitar wah: a low base cutoff swept up ~2.5 octaves at
+      // ~1.2 Hz with a resonant Q. `waveform` selects the LFO shape (0 sine /
+      // 1 ramp / 2 square) via the shared tracker LFO.
+      FxType.autoWah => const FxSpec(
+          type: FxType.autoWah,
+          params: {
+            'baseFreq': 350,
+            'octaves': 2.5,
+            'rateHz': 1.2,
+            'depth': 1,
+            'q': 4,
+            'waveform': 0,
+            'mix': 1,
+          },
         ),
     };
 

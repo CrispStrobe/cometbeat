@@ -186,7 +186,10 @@ void main() {
           if (spec.isChoice) choices.add('$type.${spec.key}');
         }
       }
-      expect(choices, ['FxType.distortion.kind']);
+      expect(choices, [
+        'FxType.distortion.kind',
+        'FxType.autoWah.waveform',
+      ]);
     });
   });
 

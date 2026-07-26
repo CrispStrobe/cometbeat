@@ -87,6 +87,15 @@ const _byName = <String, FxParamSpec>{
   'carrierHz': FxParamSpec(key: 'carrierHz', min: 20, max: 2000, unit: 'Hz'),
   'q': FxParamSpec(key: 'q', min: 0.1, max: 12),
   'rateHz': FxParamSpec(key: 'rateHz', min: 0.05, max: 12, unit: 'Hz'),
+  'baseFreq': FxParamSpec(key: 'baseFreq', min: 20, max: 8000, unit: 'Hz'),
+  'octaves': FxParamSpec(key: 'octaves', min: 0, max: 6, unit: 'oct'),
+  'waveform': FxParamSpec(
+    key: 'waveform',
+    min: 0,
+    max: 2,
+    integer: true,
+    choices: ['Sine', 'Ramp', 'Square'],
+  ),
   'depth': FxParamSpec(key: 'depth', min: 0, max: 1),
   'depthMs': FxParamSpec(key: 'depthMs', min: 0.1, max: 20, unit: 'ms'),
   'feedback': FxParamSpec(key: 'feedback', min: 0, max: 0.95),
@@ -191,6 +200,7 @@ String fxTypeLabel(FxType type) => switch (type) {
       FxType.voiceDeep => 'Deep voice',
       FxType.voiceRobot => 'Robot',
       FxType.voiceRadio => 'Radio',
+      FxType.autoWah => 'Auto-wah',
     };
 
 /// A short label for one param — the slider caption.
@@ -213,6 +223,9 @@ String fxParamLabel(String key) => switch (key) {
       'carrierHz' => 'Carrier',
       'q' => 'Resonance',
       'rateHz' => 'Rate',
+      'baseFreq' => 'Base',
+      'octaves' => 'Sweep',
+      'waveform' => 'Shape',
       'depth' => 'Depth',
       'depthMs' => 'Depth',
       'feedback' => 'Feedback',
@@ -258,7 +271,8 @@ FxCategory fxCategory(FxType type) => switch (type) {
       FxType.notch ||
       FxType.peakingEq ||
       FxType.lowShelf ||
-      FxType.highShelf =>
+      FxType.highShelf ||
+      FxType.autoWah =>
         FxCategory.filter,
       FxType.compressor || FxType.gate => FxCategory.dynamics,
       FxType.chorus ||
