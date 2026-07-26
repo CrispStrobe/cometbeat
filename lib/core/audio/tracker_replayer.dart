@@ -201,6 +201,27 @@ const int kFxSetPanbrelloWaveform = 0x12;
 /// code after [kFxSetPanbrelloWaveform] (0x12).
 const int kFxSetHighOffset = 0x13;
 
+/// `S9x` — IT/S3M SOUND-CONTROL sub-command, carried in the low nibble of the
+/// param (`_param & 0xF`). The two audible pairs are honoured by the sample tick
+/// voices:
+///   • `S9E` (0xE) — play FORWARD (the default); `S9F` (0xF) — play BACKWARD,
+///     i.e. reverse sample playback: the read pointer DECREMENTS. A fresh
+///     backward trigger with no `9xx` offset seeds at the sample end and walks
+///     down to index 0, where a one-shot is exhausted (see [_readLoopedSample]'s
+///     `backward` guard). For a LOOPING sample the pointer wraps back up by one
+///     loop length at the loop start (a bounded reverse loop). Set on the voice
+///     as [ReplayVoice.playBackward]; it persists per channel until cleared.
+///   • `S90` (0x0) — surround OFF (the default); `S91` (0x1) — surround ON: the
+///     classic IT pseudo-surround, rendering the note CENTRE with the RIGHT
+///     output channel PHASE-INVERTED (R = −L) in the STEREO path. In the MONO
+///     render surround has no audible effect (there is only one channel), so it
+///     is a documented no-op there. Set on the voice as [ReplayVoice.surround].
+/// Other `S9x` sub-commands (no audible target) are carried but ignored. With
+/// the defaults (forward, surround-off) a render is byte-identical to the
+/// pre-S9x behaviour. The next free command code after [kFxSetHighOffset]
+/// (0x13); 0x12 is shared by set-speed-full / set-panbrello-waveform.
+const int kFxSetSoundControl = 0x14;
+
 /// Zxx — set the resonant low-pass FILTER (IT effect 'Z'): `Z00..Z7F` set the
 /// cutoff (the param IS the 0..127 cutoff), `Z80..ZFF` set the resonance (param
 /// `& 0x7F`). Decoded per-voice in [ReplayVoice.armRow]; applied by the sample
@@ -398,6 +419,19 @@ class ReplayVoice {
   /// `9xx` behaviour. See [sampleReadStart].
   int _highOffset = 0;
   int get highOffset => _highOffset;
+
+  /// Sample playback DIRECTION (S3M/IT `S9E`/`S9F`, [kFxSetSoundControl]): false
+  /// = forward (the default), true = backward (reverse). Persists per channel
+  /// until another `S9E`/`S9F` flips it; the sample tick voices decrement the
+  /// read pointer when true. A voice that never sets it is byte-identical.
+  bool _playBackward = false;
+  bool get playBackward => _playBackward;
+
+  /// Pseudo-SURROUND flag (S3M/IT `S90`/`S91`, [kFxSetSoundControl]): false =
+  /// off (normal panning, the default), true = on (render the note centre with
+  /// the RIGHT channel phase-inverted, R = −L, in the stereo path). Persists per
+  /// channel until another `S90`/`S91` toggles it. No audible effect in mono.
+  bool surround = false;
 
   // LFO waveform select (E4x/E7x + S5x panbrello) + glissando control (E3x) —
   // persist across rows (and streaming chunks) like a real tracker's per-channel
@@ -798,6 +832,19 @@ class ReplayVoice {
         // param is meaningful — it clears it). A subsequent 9xx combines it in
         // [sampleReadStart]. Persists per channel until the next SAx.
         _highOffset = _param;
+      case kFxSetSoundControl:
+        // S9x sound control — the audible sub-commands set persistent per-voice
+        // playback state (honoured by the sample tick voices). Others are no-ops.
+        switch (_param & 0xF) {
+          case 0x0: // S90 — surround OFF (normal panning)
+            surround = false;
+          case 0x1: // S91 — surround ON (centre, R phase-inverted)
+            surround = true;
+          case 0xE: // S9E — play FORWARD
+            _playBackward = false;
+          case 0xF: // S9F — play BACKWARD (reverse sample playback)
+            _playBackward = true;
+        }
       case kFxExtended:
         // One-time (tick-0) extended commands: fine porta and fine volume.
         switch (_exSub) {
@@ -845,6 +892,17 @@ class ReplayVoice {
     final start = (_highOffset << 16) | (cell.fxParam << 8);
     return start * offsetScale;
   }
+
+  /// The read-start for a freshly (re)triggered note, honouring reverse playback
+  /// (`S9F`, [playBackward]). Forward (the default) returns [fwdStart] unchanged
+  /// — byte-identical. A BACKWARD voice with no `9xx` offset ([fwdStart] == 0)
+  /// seeds at the sample END ([sampleLen] − 1), from which the read pointer
+  /// decrements toward 0; a backward voice that DOES carry a `9xx` starts from
+  /// that offset and walks down. [sampleLen] is the current sample's length.
+  double reverseSeed(double fwdStart, int sampleLen) =>
+      _playBackward && fwdStart == 0.0 && sampleLen > 0
+          ? (sampleLen - 1).toDouble()
+          : fwdStart;
 
   /// Advance one tick [k] (0-based within the row) and return the effective
   /// (pitch, volume0to64) to synthesize this tick. [ticksPerRow] is the row's
@@ -1175,6 +1233,7 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
         cmd == kFxSetPanbrelloWaveform ||
         cmd == kFxSetFilter ||
         cmd == kFxSetHighOffset ||
+        cmd == kFxSetSoundControl ||
         cmd == kFxExtended) {
       return true;
     }
@@ -1232,8 +1291,9 @@ double? _readLoopedSample(
   bool loops,
   bool pingPong,
   int loopStart,
-  int loopLen,
-) {
+  int loopLen, {
+  bool backward = false,
+}) {
   if (sample.isEmpty) return null;
   var src = readPos;
   if (loops && loopLen > 0) {
@@ -1249,7 +1309,10 @@ double? _readLoopedSample(
 
   var idx = src.floor();
   if (!loops) {
-    if (idx >= sample.length - 1) return null;
+    // One-shot exhaustion: forward runs off the END, backward runs off the
+    // START (index 0). A forward render never sets [backward], so this is
+    // byte-identical to the classic top-only guard.
+    if (backward ? idx < 0 : idx >= sample.length - 1) return null;
   } else {
     if (idx < 0 || idx >= sample.length) {
       final span = loopLen > 0 ? loopLen : sample.length;
@@ -1350,7 +1413,10 @@ double? readLoopedSampleForTest(
           cur.nativeFilterEnvelope,
         );
       }
-      readPos = voice.sampleReadStart(cell, os);
+      readPos = voice.reverseSeed(
+        voice.sampleReadStart(cell, os),
+        cur is SampleInstrument ? cur.sample.length : 0,
+      );
       noteStartSample = rowStart[r];
     }
     if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
@@ -1383,7 +1449,7 @@ double? readLoopedSampleForTest(
       final te = rowS + ((rowE - rowS) * (k + 1)) ~/ tpr;
       final state = voice.tick(k, tpr);
       if (state.retrigger) {
-        readPos = 0.0;
+        readPos = voice.playBackward ? (sample.length - 1).toDouble() : 0.0;
         noteStartSample = ts;
       }
       if (!voice.active && !voice.released) continue;
@@ -1394,7 +1460,16 @@ double? readLoopedSampleForTest(
         final activePingPong = voice.released ? pingPong : playbackPingPong;
         final activeLoops = voice.released ? loops : playbackLoops;
         final activeLoopEnd = activeLoopStart + activeLoopLength;
-        if (activeLoops &&
+        if (voice.playBackward) {
+          // Reverse loop wrap (see the mono path): a backward pointer off the
+          // FRONT of a forward loop jumps back up by one loop length.
+          if (activeLoops &&
+              !activePingPong &&
+              activeLoopLength > 0 &&
+              readPos < activeLoopStart) {
+            readPos += activeLoopLength;
+          }
+        } else if (activeLoops &&
             !activePingPong &&
             activeLoopLength > 0 &&
             readPos >= activeLoopEnd) {
@@ -1408,6 +1483,7 @@ double? readLoopedSampleForTest(
           activePingPong,
           activeLoopStart,
           activeLoopLength,
+          backward: voice.playBackward,
         );
         if (value == null) break;
         final rightValue = sampleRight == null
@@ -1419,6 +1495,7 @@ double? readLoopedSampleForTest(
                   activePingPong,
                   activeLoopStart,
                   activeLoopLength,
+                  backward: voice.playBackward,
                 ) ??
                 0.0;
         // Per-voice resonant low-pass (IT initial cutoff/resonance + Zxx + the
@@ -1457,7 +1534,15 @@ double? readLoopedSampleForTest(
         } else {
           final sg = voice.softStartGain();
           final double cl, cr;
-          if (sampleRight != null) {
+          if (voice.surround) {
+            // IT/S3M pseudo-surround (S91): render the note CENTRE with the
+            // RIGHT channel PHASE-INVERTED, i.e. R = −L. Pan / stereo-sample
+            // balance is bypassed while surround is on; the left value drives
+            // both channels so the anti-correlation is exact.
+            final centre = fValue * amount * sg;
+            cl = centre;
+            cr = -centre;
+          } else if (sampleRight != null) {
             final leftGain = pan > 0 ? 1.0 - pan : 1.0;
             final rightGain = pan < 0 ? 1.0 + pan : 1.0;
             cl = fValue * amount * leftGain * sg;
@@ -1478,7 +1563,8 @@ double? readLoopedSampleForTest(
               released: voice.released,
             ) ??
             0.0;
-        readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+        final incr = pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+        readPos += voice.playBackward ? -incr : incr;
       }
     }
   }
@@ -1549,7 +1635,10 @@ void _renderSampleChannelInto(
           cur.nativeFilterEnvelope,
         );
       }
-      readPos = voice.sampleReadStart(c, os);
+      readPos = voice.reverseSeed(
+        voice.sampleReadStart(c, os),
+        cur is SampleInstrument ? cur.sample.length : 0,
+      );
       noteStartSample = timing.stepStartSample(r);
     }
     if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
@@ -1577,7 +1666,7 @@ void _renderSampleChannelInto(
       final te = rowStart + ((rowEnd - rowStart) * (k + 1)) ~/ ticksPerRow;
       final state = voice.tick(k, ticksPerRow);
       if (state.retrigger) {
-        readPos = 0.0;
+        readPos = voice.playBackward ? (s.length - 1).toDouble() : 0.0;
         noteStartSample = ts;
       }
       if (!voice.active && !voice.released) continue;
@@ -1588,7 +1677,16 @@ void _renderSampleChannelInto(
         final activePingPong = voice.released ? pingPong : playbackPingPong;
         final activeLoops = voice.released ? loops : playbackLoops;
         final activeLoopEnd = activeLoopStart + activeLoopLength;
-        if (activeLoops &&
+        if (voice.playBackward) {
+          // Reverse loop wrap: a backward pointer that walks off the FRONT of a
+          // forward loop jumps back up by one loop length (bounded reverse loop).
+          if (activeLoops &&
+              !activePingPong &&
+              activeLoopLength > 0 &&
+              readPos < activeLoopStart) {
+            readPos += activeLoopLength;
+          }
+        } else if (activeLoops &&
             !activePingPong &&
             activeLoopLength > 0 &&
             readPos >= activeLoopEnd) {
@@ -1602,8 +1700,9 @@ void _renderSampleChannelInto(
           activePingPong,
           activeLoopStart,
           activeLoopLength,
+          backward: voice.playBackward,
         );
-        if (sampleVal == null) break; // one-shot: sample exhausted
+        if (sampleVal == null) break; // one-shot: sample exhausted (front/back)
         final t = (i - noteStartSample) / kSampleRate;
         final attack = t < declickSec ? t / declickSec : 1.0;
         final nativeEnv = cur.nativeVolumeEnvelope;
@@ -1632,7 +1731,8 @@ void _renderSampleChannelInto(
               released: voice.released,
             ) ??
             0.0;
-        readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+        final incr = pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+        readPos += voice.playBackward ? -incr : incr;
       }
     }
   }

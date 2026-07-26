@@ -289,6 +289,10 @@ ModuleDoc docFromMod(ModModule m) {
       return (0x12, val);
     case 0xA: // SAx — high sample offset → kFxSetHighOffset (0x13)
       return (0x13, val);
+    case 0x9: // S9x — sound control (surround/reverse) → kFxSetSoundControl
+      // Carry the sound-control sub-nibble; the replayer acts on the audible
+      // ones (S90/S91 surround, S9E/S9F reverse) and ignores the rest.
+      return (0x14, val);
     case 0x6: // S6x — fine pattern delay; EEx is row delay in our engine
     case 0xE: // SEx — coarse pattern delay
       return (0xE, (0xE << 4) | val);
@@ -310,10 +314,9 @@ ModuleDoc docFromMod(ModModule m) {
       //     on" carries no cutoff, so mapping it to Zxx would fabricate one.
       //   • S7x past-note / NNA / envelope control — instrument-layer state with
       //     no per-cell neutral command (and no S3M/MOD/XM equivalent).
-      //   • S9x sound control (surround / reverse play) — the replayer has no
-      //     surround or reverse-playback state.
       //   • SFx set active MIDI macro — MIDI to external gear, no audible target.
-      // (SAx high sample offset now maps → kFxSetHighOffset (0x13) above.)
+      // (SAx high sample offset → kFxSetHighOffset (0x13); S9x surround / reverse
+      // play → kFxSetSoundControl (0x14), both above.)
       return (0, 0);
   }
 }
@@ -871,9 +874,17 @@ ModuleDoc docFromIt(ItModule m) {
     case 0x9:
       return (15, param); // O sample offset
     case 0x12:
+      // 0x12 is shared by kFxSetPanbrelloWaveform and kFxSetSpeedFull (a
+      // pre-existing constant collision); the panbrello reverse-map wins for
+      // this value, so a neutral 0x12 exports as S5x set-panbrello-waveform.
       return (19, (0x5 << 4) | (param & 0xF)); // S5x set panbrello waveform
     case 0x13:
       return (19, (0xA << 4) | (param & 0xF)); // SAx high sample offset
+    case 0x14:
+      return (
+        19,
+        (0x9 << 4) | (param & 0xF)
+      ); // S9x sound control (surround/rev)
     case 0x10:
       return (22, param.clamp(0, 64)); // V global volume
     case 0x11:
@@ -910,8 +921,8 @@ ModuleDoc docFromIt(ItModule m) {
       return (25, param); // Y panbrello
     case 0x1F:
       return (20, param); // T tempo slide
-    case kFxSetSpeedFull:
-      return (1, param.clamp(1, 255)); // A — speed, unambiguous
+    // (kFxSetSpeedFull shares code 0x12 with kFxSetPanbrelloWaveform above, so
+    // it is handled by that `case 0x12` — no separate clause here.)
     case 0xF:
       return param < 0x20 ? (1, param) : (20, param); // A speed / T tempo
     default:

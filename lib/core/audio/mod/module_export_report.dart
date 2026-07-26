@@ -60,7 +60,7 @@ class ModuleExportLoss {
   /// survive only a same-format export (S3M→S3M / IT→IT via native provenance).
   static const unmappedSpecialEffects =
       'Some Sxy control effects are dropped: S0x set-filter toggle, S7x '
-      'NNA/envelope control, S9x surround/reverse, SFx MIDI macro.';
+      'NNA/envelope control, SFx MIDI macro.';
 
   /// Cross-format samples are re-encoded to S3M PCM; AdLib/packed data is lost.
   static const s3mSampleReencode =
@@ -119,6 +119,7 @@ const _mappedSpecialSubs = <int>{
   0x5,
   0x6,
   0x8,
+  0x9,
   0xA,
   0xB,
   0xC,
@@ -127,10 +128,10 @@ const _mappedSpecialSubs = <int>{
 };
 
 /// True if [c] carries an S3M/IT `S` letter-command (19) whose sub-command has
-/// no neutral equivalent (S0/S7/S9/SF) — dropped on any cross-format export.
-/// (SAx now maps to kFxSetHighOffset, so it is no longer listed here.) Read from
-/// the native command, since the neutral effect column is already `(0, 0)` for
-/// these.
+/// no neutral equivalent (S0/S7/SF) — dropped on any cross-format export. (SAx
+/// now maps to kFxSetHighOffset and S9x to kFxSetSoundControl, so neither is
+/// listed here.) Read from the native command, since the neutral effect column
+/// is already `(0, 0)` for these.
 bool _hasUnmappedSpecial(DocCell c) =>
     c.nativeEffect == 19 &&
     !_mappedSpecialSubs.contains((c.nativeEffectParam >> 4) & 0xF);

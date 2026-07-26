@@ -17,7 +17,7 @@
 //      than a `9xx` starting at the plain (highOffset 0) position, so it sounds.
 //   3. The cross-format map — S3M/IT `SAx` now maps to the neutral 0x13 command
 //      (was dropped to (0,0)), and moduleExportLossReport no longer lists SA
-//      (but still names S7/S9 and the IT Z filter drop).
+//      (but still names S7/SF and the IT Z filter drop).
 //
 // Run: PATH="/usr/bin:$PATH" env -u GEM_HOME -u GEM_PATH -u RUBYOPT \
 //        flutter test test/high_sample_offset_test.dart
@@ -219,7 +219,7 @@ void main() {
       expect(sc.info, (0xA << 4) | 0x3, reason: 'SA3');
     });
 
-    test('moduleExportLossReport no longer lists SA, but still S7/S9/Z', () {
+    test('moduleExportLossReport no longer lists SA, but still S7/SF/Z', () {
       // A SAx doc: the export loss no longer names it as an unmapped special.
       final saDoc = _s3mDoc(19, 0xA1);
       final saReport = moduleExportLossReport(saDoc, ModuleFormat.mod);
@@ -239,10 +239,10 @@ void main() {
       final s7Report =
           moduleExportLossReport(_s3mDoc(19, 0x71), ModuleFormat.mod);
       expect(s7Report, contains(ModuleExportLoss.unmappedSpecialEffects));
-      // S9x (surround / reverse) likewise.
-      final s9Report =
-          moduleExportLossReport(_s3mDoc(19, 0x91), ModuleFormat.mod);
-      expect(s9Report, contains(ModuleExportLoss.unmappedSpecialEffects));
+      // SFx (set MIDI macro) likewise.
+      final sfReport =
+          moduleExportLossReport(_s3mDoc(19, 0xF1), ModuleFormat.mod);
+      expect(sfReport, contains(ModuleExportLoss.unmappedSpecialEffects));
       // The IT Zxx resonant filter / MIDI macro still drops cross-format.
       final zReport =
           moduleExportLossReport(_itDoc(26, 0x40), ModuleFormat.mod);

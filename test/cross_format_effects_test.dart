@@ -197,14 +197,13 @@ void main() {
   group('unmapped Sxy sub-commands drop and are export-loss-reported', () {
     // Every remaining special sub-command that GENUINELY has no faithful
     // neutral/replayer equivalent (verified against the IT/ST3 spec):
-    //   S0 set-filter toggle · S7 NNA/envelope control · S9 surround/reverse ·
-    //   SF set MIDI macro.
+    //   S0 set-filter toggle · S7 NNA/envelope control · SF set MIDI macro.
     // (S5 panbrello waveform now maps → see panbrello_waveform_test.dart; SA
-    //  high sample offset now maps → see high_sample_offset_test.dart.)
+    //  high sample offset now maps → see high_sample_offset_test.dart; S9
+    //  surround/reverse now maps → see sound_control_test.dart.)
     const droppedSubs = {
       0x0: 'S0 (set filter on/off)',
       0x7: 'S7 (NNA / envelope control)',
-      0x9: 'S9 (surround / reverse)',
       0xF: 'SF (set MIDI macro)',
     };
 
@@ -247,7 +246,7 @@ void main() {
 
     test('a same-format S3M export does NOT flag the Sxy drop (native kept)',
         () {
-      final doc = _s3mDoc(19, 0x91); // S9 surround
+      final doc = _s3mDoc(19, 0x71); // S7 NNA/envelope control
       final report = moduleExportLossReport(doc, ModuleFormat.s3m);
       expect(report, isNot(contains(ModuleExportLoss.unmappedSpecialEffects)));
     });
