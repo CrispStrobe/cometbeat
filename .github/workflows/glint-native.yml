@@ -1,0 +1,142 @@
+name: glint-native
+
+# Builds + tests the vendored glint codec plugin (native/glint/) everywhere the
+# app ships. Modelled on aec-native.yml, but this plugin IS a dependency of the
+# app, so a red run here is a real breakage.
+#
+# Two jobs, because they catch different things:
+#   1. lib-and-tests — compiles the C++ and runs the encode -> decode -> assert
+#      round-trip on all three desktop OSes. This is the only place the code
+#      meets MSVC and libstdc++; a developer machine gives you neither.
+#   2. example-build — builds a throwaway app that depends on the plugin, on all
+#      five platforms, so the real per-platform packaging (podspec / src CMake /
+#      gradle NDK) is exercised, not just the compiler.
+
+on:
+  push:
+    paths:
+      - 'native/glint/**'
+      - '.github/workflows/glint-native.yml'
+  pull_request:
+    paths:
+      - 'native/glint/**'
+      - '.github/workflows/glint-native.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: glint-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1) C++ portability + codec correctness. No Flutter needed — the round-trip
+  #    harness is plain C++/ctest, so this job is cheap and fails fast.
+  lib-and-tests:
+    name: lib-and-tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure + build (Release)
+        shell: bash
+        run: |
+          cmake -S native/glint/src -B build \
+            -DCMAKE_BUILD_TYPE=Release -DGLINT_BUILD_TESTS=ON
+          cmake --build build --config Release -j 4
+
+      # 34 assertions: a 440 Hz tone survives Opus encode+decode by PITCH (never
+      # sample rate — Opus decodes at 48 kHz), hard-panned stereo neither
+      # collapses nor swaps, MP3/AAC carry valid MPEG/ADTS sync, malformed input
+      # is rejected rather than crashed on, and 250 encode/free cycles do not
+      # grow RSS (a mismatched glint_free shows up there and nowhere else).
+      - name: Round-trip tests
+        shell: bash
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      # Cheap tripwire: the whole point of vendoring the encoder is that these
+      # resolve. A silently-missing symbol would otherwise only surface as a
+      # null encoder at runtime, on a user's device.
+      - name: Exported symbols
+        shell: bash
+        run: |
+          set -e
+          find build -name 'glint_vorbis.dll' -o -name 'libglint_vorbis.so' \
+            -o -name 'libglint_vorbis.dylib' | head -1 > /tmp/lib.txt
+          LIB="$(cat /tmp/lib.txt)"
+          echo "library: $LIB"
+          test -n "$LIB"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            # No nm on the Windows runner; dumpbin lives behind the VS shell, so
+            # just assert the DLL exists and is non-trivial. The link step above
+            # already proves the symbols resolved.
+            test -s "$LIB"
+          else
+            for sym in glint_encode_audio glint_free cometbeat_opus_file_decode; do
+              nm -g --defined-only "$LIB" 2>/dev/null | grep -q "$sym" \
+                || nm -gU "$LIB" 2>/dev/null | grep -q "$sym" \
+                || { echo "MISSING SYMBOL: $sym"; exit 1; }
+              echo "ok: $sym"
+            done
+          fi
+
+      # The vendored tree must stay a verbatim copy of glint, and the generated
+      # source list / Apple forwarders must match what is actually in src/.
+      # If this drifts, someone hand-edited a vendored file or forgot to re-run
+      # sync_glint.sh — both are silent failures otherwise.
+      - name: sync_glint.sh outputs are in sync
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cd native/glint
+          n_cpp=$(ls src/*.cpp | wc -l)
+          n_listed=$(grep -c 'CMAKE_CURRENT_SOURCE_DIR' src/glint_sources.cmake)
+          n_macos=$(ls macos/Classes/*.cpp | wc -l)
+          n_ios=$(ls ios/Classes/*.cpp | wc -l)
+          echo "src/*.cpp=$n_cpp cmake=$n_listed macos=$n_macos ios=$n_ios"
+          # Arithmetic, not string, compare: BSD `wc -l` pads with spaces and
+          # `test "  47" = "47"` is false. Caught locally on macOS.
+          test "$n_cpp" -eq "$n_listed"
+          test "$n_cpp" -eq "$n_macos"
+          test "$n_cpp" -eq "$n_ios"
+
+  # 2) Per-platform plugin packaging, via a throwaway example app.
+  example-build:
+    name: example-build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest,   name: macos,   create: macos,   build: "macos --debug",             desktop: macos }
+          - { os: ubuntu-latest,  name: linux,   create: linux,   build: "linux --debug",             desktop: linux }
+          - { os: windows-latest, name: windows, create: windows, build: "windows --debug",           desktop: windows }
+          - { os: macos-latest,   name: ios,     create: ios,     build: "ios --debug --no-codesign", desktop: "" }
+          - { os: ubuntu-latest,  name: android, create: android, build: "apk --debug",               desktop: "" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Linux desktop build deps
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev clang cmake pkg-config
+      - name: Generate example, add plugin, build (${{ matrix.name }})
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.desktop }}" ]; then
+            flutter config --enable-${{ matrix.desktop }}-desktop
+          fi
+          # Forward slashes: on Windows the runner paths use backslashes, which
+          # are invalid JSON escapes inside `pub add`'s inline dependency map.
+          EXDIR="${RUNNER_TEMP//\\//}/glint_example"
+          PLUGIN_PATH="${GITHUB_WORKSPACE//\\//}/native/glint"
+          flutter create --template=app --platforms=${{ matrix.create }} --project-name glint_example "$EXDIR"
+          cd "$EXDIR"
+          flutter pub add "glint_vorbis:{\"path\":\"${PLUGIN_PATH}\"}"
+          flutter build ${{ matrix.build }}

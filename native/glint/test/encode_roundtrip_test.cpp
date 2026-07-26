@@ -14,7 +14,12 @@
 // Build:  cmake -B build -DGLINT_BUILD_TESTS=ON native/glint/src
 //         cmake --build build && ctest --test-dir build --output-on-failure
 
+#if defined(_WIN32)
+#include <windows.h>
+#include <psapi.h>
+#else
 #include <sys/resource.h>
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -130,12 +135,18 @@ double rms(const float* pcm, int frames, int ch, int channel) {
 }
 
 long peak_rss_kb() {
+#if defined(_WIN32)
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (!GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) return 0;
+    return static_cast<long>(pmc.PeakWorkingSetSize / 1024);
+#else
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
 #ifdef __APPLE__
     return ru.ru_maxrss / 1024;  // bytes on Darwin
 #else
     return ru.ru_maxrss;  // kilobytes on Linux
+#endif
 #endif
 }
 

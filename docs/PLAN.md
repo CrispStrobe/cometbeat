@@ -341,9 +341,30 @@ Verification (render → decode → assert, not "it compiled"):
 `flutter test`** — so "no encoder in headless tests" is false here. The unit
 tests therefore pin the encoder rather than trusting the ambient probe.
 
-**Remaining:** a per-platform `flutter build` on iOS/Android/Windows/Linux is
-the final confirmation (macOS is verified locally) — same standing caveat as
-`native/aec`. **FLAC export stays out: glint decodes FLAC and has no FLAC
+**Per-platform status (2026-07-26):** macOS full app build + live integration
+test green; **iOS** full `flutter build ios` green (the bundled
+`glint_vorbis.framework`, arm64, exports the encoder); **Android** compiles for
+all three ABIs via the NDK with 16 KB-aligned LOAD segments; **Linux** builds
+under GCC 13 / libstdc++ with the whole round-trip suite green. **Windows**
+had a real defect — see below — fixed and proven, with a genuine MSVC build now
+running in CI. New workflow `.github/workflows/glint-native.yml` builds the lib
++ tests on all three desktops and an example app on all five platforms, so this
+stops being a manual chore.
+
+**Windows bug found and fixed:** MSVC's `<cmath>` does not define `M_PI` without
+`_USE_MATH_DEFINES`, and five vendored files use it — the Windows build *would
+have failed*. Reproduced exactly (`'M_PI' was not declared in this scope`) by
+cross-compiling under strict `-std=c++17`, then fixed in `src/CMakeLists.txt`
+rather than in the sources, since `sync_glint.sh` would overwrite any edit to a
+verbatim-vendored file on the next re-vendor.
+
+**Two unrelated blockers in the separate CrispEmbed repo were fixed to get the
+mobile builds through** (neither caused by this work): its Android
+`build.gradle` called `exec {}` inside `doLast`, which Gradle 9 removed
+(migrated to the injected `ExecOperations` service); and its podspec requires
+iOS 15 while the app targeted 13, so the app's deployment target moved to
+**15.0** — that drops no hardware, since iOS 15 runs on the same devices as
+iOS 13 (iPhone 6s+). **FLAC export stays out: glint decodes FLAC and has no FLAC
 encoder.** Native MP3 is reachable through the binding but the export sheet
 still offers the pure-Dart MP3 writer, so web and native behave identically —
 switching that is a separate, deliberate quality call.

@@ -77,13 +77,31 @@ a real app build).
 
 ## Verification status
 
+CI does the per-platform work: **`.github/workflows/glint-native.yml`** builds
+the library and runs the round-trip tests on Linux / macOS / Windows, then
+builds a throwaway example app on all five platforms. That job is the authority
+— it is the only place this code meets **MSVC** and **libstdc++**.
+
 - ✅ Decode set compiles standalone and matches ffmpeg frame-for-frame; the
   `.sf3` oracle decodes FluidR3Mono.sf3 in tune (1.7–2.9¢). See `docs/ORACLE.md`.
-- ✅ Encode set links and round-trips (the native test above, 34 assertions).
-- ✅ The `Classes/` forwarders compile with the exact podspec flags (c++17,
-  libc++).
-- ⏳ A full per-platform `flutter build` (iOS/Android/Windows/Linux) is the final
-  confirmation — verify on CI before relying on a given platform, as with
-  `native/aec`. macOS is verified locally.
+- ✅ Encode set links and round-trips — 34 assertions, verified locally on
+  **macOS** (full app build + live integration test) and on **Linux** (GCC 13 /
+  libstdc++, whole suite green).
+- ✅ **Android**: compiles for arm64-v8a / armeabi-v7a / x86_64 via the NDK,
+  symbols exported, LOAD segments 16 KB-aligned.
+- ✅ **iOS**: full `flutter build ios` succeeds; the bundled
+  `glint_vorbis.framework` (arm64) exports `glint_encode_audio`, `glint_free`
+  and `cometbeat_opus_file_decode`.
+- ⚠️ **Windows**: the M_PI hazard below was found and fixed, and the fix was
+  proven by reproducing MSVC's exact failure under a strict-ANSI cross-compile.
+  A genuine MSVC build happens on CI — trust that run, not this line.
+
+### Windows gotcha, if you touch the build
+
+MSVC's `<cmath>` does **not** define `M_PI` unless `_USE_MATH_DEFINES` is set
+before it is included, and five vendored files use `M_PI`. `src/CMakeLists.txt`
+defines it for `WIN32`. It is fixed **there, not in the sources**, because
+everything under `src/` except our three local files is a verbatim copy and
+`sync_glint.sh` would overwrite any edit on the next re-vendor.
 
 Re-vendor: `GLINT_DIR=~/code/glint ./sync_glint.sh`.
