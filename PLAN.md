@@ -658,13 +658,24 @@ kept here so nothing is lost from the canonical plan.
 
 ### Group 1 — residuals from deleted docs (no other home)
 
+> ⚠️ **This list is STALE in places — check before you build.** An audit on
+> 2026-07-26 found **nine** of its items already shipped (the whole Audio-FX
+> block bar one, and the starter-module generator), because the list was frozen
+> when ~40 docs were consolidated and never re-checked against the code. Each
+> line below now says ✅/⬜ with `file:symbol` evidence where it's been verified.
+> **If you pick something up, grep for it first** — with this many agents, a
+> stale to-do costs more than a missing one. Items with no marker are unverified,
+> not necessarily open.
+
 **Tab / labeler / library** (was `TABCNN_GGML_HANDBACK`, `LIBRARIES_AND_TAB_SCOPING`):
 - CrispASR-side (external repo): ship `libcrispasr` with `@loader_path`-relative
   rpaths (it currently bakes the CI build path, so a downloaded dylib can't find
   `@rpath/libggml.0.dylib`); lay the libs in one flat dir (split across `src/` +
   `ggml/src/` today); optional `CrispasrSession.tab()` wrapper in the pub package.
-- `thesession_source.dart` — Irish-trad ABC library source (specced, absent), with
-  the no-LLM flag set.
+- ⬜ **OPEN (verified absent 2026-07-26)** `thesession_source.dart` — Irish-trad
+  ABC library source (specced, absent), with the no-LLM flag set. `lib/features/
+  library/sources/` currently holds cometbeat_catalog · commons · freepats ·
+  github_abc · gregobase · modarchive · openscore · vcsl, and no session source.
 - IMSLP + CPDL/ChoralWiki conditional, country-gated library sources (A4) — gated
   behind the "real legal review" the scoping doc called for.
 - `DonationConfig` tile flip-on (A5) — `donation.dart` exists but stays disabled
@@ -695,16 +706,25 @@ had already shipped, so this block was a trap for the next agent to redo:
   `freqRamp` slide but no envelope; the additive voice has neither.
 
 **Samples** (was `CC0_SAMPLE_SOURCE_HANDOFF`):
-- Optional "starter-module generator": a pure `starterPattern(style, channels,
-  steps)` helper + a Tracker action that `setCell`-fills a beat/riff from assigned
-  CC0 samples.
+- ✅ **DONE (verified 2026-07-26)** — "starter-module generator" shipped as
+  `starterBeatHits` in `lib/features/library/starter_pattern.dart` (pure, with
+  `test/starter_pattern_test.dart`) plus the Tracker action wired in
+  `advanced_tracker_screen.dart` (`case 'starterBeat'`).
 
 **DAW real-time engine** (was `SOUND_AND_DAW_ROADMAP` P2.1):
-- P2.1 real-time streaming audio engine — replace offline-render-then-play with a
-  streamed graph (live faders, live-playable instruments, input monitoring,
-  per-block insert processing, responsive automation). Unlocks the last DAW gaps;
-  overlaps the Tracker audio arc's §E3 (`flutter_soloud`) claim. Also confirm the
-  P0.1 convolution reverb landed (only biquad + dynamics verified present).
+- ⬜ **OPEN (verified 2026-07-26), and the biggest thing left in the DAW.**
+  `renderTimeline` is still a whole-buffer offline render, so playback is
+  bake-then-play: faders/automation only take effect on the next bake, nothing is
+  live-playable, and there's no input monitoring. Replacing it with a streamed
+  graph unlocks the remaining DAW gaps.
+  ⚠️ **Needs coordination before anyone starts** — it overlaps the Tracker audio
+  arc's §E3 (`flutter_soloud`) claim, and the Tracker has just finished its own
+  streaming-mixer work (Renderer v2.1), so there may be a shared engine to reuse
+  rather than two streamed graphs.
+- ✅ **DONE** P0.1 convolution reverb — `crisp_dsp/convolution_reverb.dart`
+  (synthesized IR + FFT overlap-add) landed and is tested; as of 2026-07-26 it's
+  also wired into the shared FX rack as `FxType.convolutionReverb`, where before
+  it was reachable only from the Voice Lab.
 
 **Score Workshop** (was `WORKSHOP_G6_HANDOVER`, `WORKSHOP_NEXT_HANDOVER`,
 `WORKSHOP_PLAN`):
