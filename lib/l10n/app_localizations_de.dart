@@ -1587,7 +1587,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get loopMixerBeatEditHint =>
-      'Tippe ins Raster, um deinen eigenen Beat zu bauen.';
+      'Tippe ins Raster, um einen Beat zu bauen — halte einen Schlag für einen leisen Ghost-Schlag.';
 
   @override
   String get loopMixerTuneEdit => 'Melodie bearbeiten';

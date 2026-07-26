@@ -1135,6 +1135,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('beat accents: long-press ghosts a drums-card hit; token + undo',
+      (tester) async {
+    await pumpGame(tester, const LoopMixerScreen());
+    final game = _game(tester); // 'drums' card is the default beat target
+
+    // Ensure a kick hit exists at step 2, then long-press to ghost it.
+    if (!(game.debugBeatPattern?.rows[Drum.kick]?[2] ?? false)) {
+      game.debugEditBeatCell(Drum.kick, 2);
+      await tester.pump();
+    }
+    expect(game.debugBeatPattern!.rows[Drum.kick]![2], isTrue);
+
+    // Long-press an empty cell is a no-op (no hit to ghost).
+    if (game.debugBeatPattern?.rows[Drum.snare]?[3] ?? false) {
+      game.debugEditBeatCell(Drum.snare, 3); // turn it off
+      await tester.pump();
+    }
+    game.debugCycleBeatVelocity(Drum.snare, 3);
+    await tester.pump();
+    expect(game.debugBeatPattern!.velocities?[Drum.snare]?[3] ?? 1.0, 1.0);
+
+    final before = game.debugRenderLoop();
+    game.debugCycleBeatVelocity(Drum.kick, 2);
+    await tester.pump();
+    expect(game.debugBeatPattern!.velocities![Drum.kick]![2], lessThan(1.0));
+    expect(game.debugRenderLoop(), isNot(equals(before)));
+
+    final token = game.grooveToken; // snapshot WITH the ghost
+
+    // Undo reverts the ghost back to a normal hit.
+    game.undo();
+    await tester.pump();
+    expect(game.debugBeatPattern?.velocities?[Drum.kick]?[2] ?? 1.0, 1.0);
+
+    // Reloading the snapshot restores the ghost (survives the share token).
+    expect(game.loadGrooveToken(token), isTrue);
+    await tester.pump();
+    expect(game.debugBeatPattern!.velocities![Drum.kick]![2], lessThan(1.0));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('LM-UX4b: tapping the tune grid builds/edits the melody',
       (tester) async {
     await pumpGame(tester, const LoopMixerScreen());

@@ -227,6 +227,9 @@ abstract interface class LoopMixerTester {
   void debugEditBeatCell(Drum drum, int step);
   DrumRowsPattern? get debugBeatPattern;
 
+  /// Long-press a drum hit — cycle its dynamics ghost ↔ normal.
+  void debugCycleBeatVelocity(Drum drum, int step);
+
   /// Which drum track the beat editor targets ('drums' card or captured 'beat').
   void debugSetBeatTarget(String id);
 
@@ -621,6 +624,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void debugEditBeatCell(Drum drum, int step) =>
       _toggleBeatEditCell(drum, step);
   @override
+  void debugCycleBeatVelocity(Drum drum, int step) =>
+      _cycleBeatCellVelocity(drum, step);
+  @override
   void debugSetBeatTarget(String id) => setState(() => _beatTarget = id);
   @override
   void debugApplyDrumKitEdit(DrumRowsPattern edited) =>
@@ -651,25 +657,44 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     );
   }
 
-  /// Toggle one cell of the beat grid and re-render (LM-UX4). Reads/writes the
-  /// TARGET drum track (the drums card via a drum override, or the captured
-  /// beat), preserving the other lanes.
-  void _toggleBeatEditCell(Drum drum, int step) {
+  /// The target pattern's rows + per-hit velocities copied into fresh mutable
+  /// maps of [_beatSteps] length (velocity defaults to full where absent).
+  ({Map<Drum, List<bool>> rows, Map<Drum, List<double>> vels})
+      _beatEditGrids() {
     final steps = _beatSteps;
     final p = _beatTargetPattern;
     final rows = <Drum, List<bool>>{};
+    final vels = <Drum, List<double>>{};
     if (p != null) {
       for (final e in p.rows.entries) {
         final row = List<bool>.filled(steps, false);
+        final vel = List<double>.filled(steps, 1.0);
+        final pv = p.velocities?[e.key];
         for (var i = 0; i < e.value.length && i < steps; i++) {
           row[i] = e.value[i];
+          if (pv != null && i < pv.length) vel[i] = pv[i];
         }
         rows[e.key] = row;
+        vels[e.key] = vel;
       }
     }
-    final lane = rows.putIfAbsent(drum, () => List<bool>.filled(steps, false));
-    lane[step] = !lane[step];
-    final pattern = DrumRowsPattern(rows);
+    return (rows: rows, vels: vels);
+  }
+
+  /// The per-hit velocity the beat grid shows at (drum, step) — full if none.
+  double _beatVelAt(Drum drum, int step) {
+    final v = _beatTargetPattern?.velocities?[drum];
+    return (v != null && step < v.length) ? v[step] : 1.0;
+  }
+
+  /// Writes an edited beat grid back to the target and re-renders. Velocities
+  /// ride along only when some hit is a ghost, so plain on/off beats stay clean.
+  void _writeBeatPattern(
+    Map<Drum, List<bool>> rows,
+    Map<Drum, List<double>> vels,
+  ) {
+    final hasGhost = vels.values.any((r) => r.any((v) => v != 1.0));
+    final pattern = DrumRowsPattern(rows, velocities: hasGhost ? vels : null);
     if (_beatTarget == LoopEngine.beatTrackId) {
       _engine.setUserBeatTrack(pattern);
       _engine.enabled.add(LoopEngine.beatTrackId);
@@ -679,6 +704,33 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     }
     setState(() {});
     _restartGroove();
+  }
+
+  /// Toggle one cell of the beat grid and re-render (LM-UX4). Reads/writes the
+  /// TARGET drum track (the drums card via a drum override, or the captured
+  /// beat), preserving the other lanes AND their dynamics.
+  void _toggleBeatEditCell(Drum drum, int step) {
+    final g = _beatEditGrids();
+    final lane =
+        g.rows.putIfAbsent(drum, () => List<bool>.filled(_beatSteps, false));
+    g.vels.putIfAbsent(drum, () => List<double>.filled(_beatSteps, 1.0));
+    lane[step] = !lane[step];
+    if (!lane[step]) {
+      g.vels[drum]![step] = 1.0; // clearing a hit resets its dynamics
+    }
+    _writeBeatPattern(g.rows, g.vels);
+  }
+
+  /// Long-press a drum hit → cycle its dynamics ghost ↔ normal, mirroring the
+  /// tune editor's soft/normal. No-op on an empty cell.
+  void _cycleBeatCellVelocity(Drum drum, int step) {
+    final g = _beatEditGrids();
+    final lane = g.rows[drum];
+    if (lane == null || step >= lane.length || !lane[step]) return;
+    final vel =
+        g.vels.putIfAbsent(drum, () => List<double>.filled(_beatSteps, 1.0));
+    vel[step] = vel[step] >= 1.0 ? _softVelocity : 1.0;
+    _writeBeatPattern(g.rows, g.vels);
   }
 
   // LM-UX4b/c: the tune (pitched) step-editor — reuses the shared StepGridView.
@@ -2180,12 +2232,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                       Expanded(
                         child: GestureDetector(
                           onTap: () => _toggleBeatEditCell(drum, s),
+                          // Long-press a hit → ghost ↔ normal (dynamics), the
+                          // beat twin of the tune editor's soft/normal.
+                          onLongPress: () => _cycleBeatCellVelocity(drum, s),
                           child: Container(
                             height: 24,
                             margin: const EdgeInsets.all(1),
                             decoration: BoxDecoration(
+                              // A ghost hit draws dimmer so dynamics are visible.
                               color: on(drum, s)
-                                  ? scheme.primary
+                                  ? scheme.primary.withValues(
+                                      alpha: _beatVelAt(drum, s) >= 1.0
+                                          ? 1.0
+                                          : 0.4 + 0.6 * _beatVelAt(drum, s),
+                                    )
                                   : (s % 4 == 0
                                       ? scheme.surfaceContainerHighest
                                       : scheme.surfaceContainerHigh),

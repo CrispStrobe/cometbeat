@@ -2975,7 +2975,7 @@ abstract class AppLocalizations {
   /// No description provided for @loopMixerBeatEditHint.
   ///
   /// In en, this message translates to:
-  /// **'Tap the grid to build your own beat.'**
+  /// **'Tap the grid to build a beat — hold a hit to make it a soft ghost note.'**
   String get loopMixerBeatEditHint;
 
   /// No description provided for @loopMixerTuneEdit.

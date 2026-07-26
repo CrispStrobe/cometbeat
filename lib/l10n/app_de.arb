@@ -529,7 +529,7 @@
   "loopMixerComboFullBand": "Ganze Band",
   "loopMixerScore": "Als Noten zeigen",
   "loopMixerBeatEdit": "Beat bearbeiten",
-  "loopMixerBeatEditHint": "Tippe ins Raster, um deinen eigenen Beat zu bauen.",
+  "loopMixerBeatEditHint": "Tippe ins Raster, um einen Beat zu bauen — halte einen Schlag für einen leisen Ghost-Schlag.",
   "loopMixerTuneEdit": "Melodie bearbeiten",
   "loopMixerTuneEditHint": "Tippe ins Raster, um eine Melodie zu bauen — tippe eine Note nochmal für länger, halte sie für leise.",
   "loopMixerTuneMine": "Meine Melodie",

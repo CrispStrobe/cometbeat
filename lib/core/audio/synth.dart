@@ -641,17 +641,21 @@ Float64List renderDrumPattern(
   required int totalMs,
   int sampleRate = kSampleRate,
   DrumKit kit = kDrumKitClean,
+  List<double>? gains,
 }) {
   final totalSamples = (totalMs * sampleRate) ~/ 1000;
   final out = Float64List(totalSamples);
   final oneShots = <Drum, Float64List>{};
-  for (final (atMs, drum) in hits) {
+  for (var h = 0; h < hits.length; h++) {
+    final (atMs, drum) = hits[h];
+    // Per-hit gain (dynamics) — parallel to [hits]; null = every hit at full.
+    final g = gains == null ? 1.0 : gains[h];
     final shot =
         oneShots[drum] ??= renderDrum(drum, sampleRate: sampleRate, kit: kit);
     final start = (atMs * sampleRate) ~/ 1000;
     final n = min(shot.length, totalSamples - start);
     for (var i = 0; i < n; i++) {
-      out[start + i] += shot[i];
+      out[start + i] += shot[i] * g;
     }
   }
   return out;

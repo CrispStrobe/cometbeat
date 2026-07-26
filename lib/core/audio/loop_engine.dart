@@ -238,26 +238,45 @@ void applyCellVelocities(
 
 /// An unpitched pattern: one boolean hit row per drum voice.
 class DrumRowsPattern extends LoopPattern {
-  const DrumRowsPattern(this.rows);
+  const DrumRowsPattern(this.rows, {this.velocities});
 
   /// Each row has [kPatternSteps] entries.
   final Map<Drum, List<bool>> rows;
+
+  /// Optional per-hit dynamics 0..1 (1 = normal, lower = ghost), parallel to
+  /// [rows]. Null (or a missing lane/step) = full — so a plain on/off pattern
+  /// is unchanged and pre-accent share tokens/specs stay byte-identical.
+  final Map<Drum, List<double>>? velocities;
+
+  double _velAt(Drum drum, int step) {
+    final v = velocities?[drum];
+    if (v == null || step >= v.length) return 1.0;
+    return v[step];
+  }
 
   @override
   Float64List render(
     LoopTiming timing, {
     int transpose = 0,
     DrumKit kit = kDrumKitClean,
-  }) =>
-      renderDrumPattern(
-        [
-          for (final MapEntry(key: drum, value: row) in rows.entries)
-            for (var step = 0; step < row.length; step++)
-              if (row[step]) (timing.boundaryMs(step), drum),
-        ],
-        totalMs: timing.totalMs,
-        kit: kit,
-      );
+  }) {
+    final hits = <(int, Drum)>[];
+    final gains = <double>[];
+    for (final MapEntry(key: drum, value: row) in rows.entries) {
+      for (var step = 0; step < row.length; step++) {
+        if (row[step]) {
+          hits.add((timing.boundaryMs(step), drum));
+          gains.add(_velAt(drum, step));
+        }
+      }
+    }
+    return renderDrumPattern(
+      hits,
+      totalMs: timing.totalMs,
+      kit: kit,
+      gains: gains,
+    );
+  }
 }
 
 /// Euclidean rhythm E([hits], [steps]): distributes hits as evenly as
@@ -494,8 +513,10 @@ class GrooveSpec {
     this.userCells,
     this.userInstrument,
     this.beatRows,
+    this.beatVels,
     this.trackOverrides,
     this.drumOverrides,
+    this.drumOverrideVels,
     this.trackVoices,
   });
 
@@ -535,6 +556,11 @@ class GrooveSpec {
   /// by drum name — a share token carries the captured beat too.
   final Map<Drum, List<bool>>? beatRows;
 
+  /// Optional per-hit dynamics for [beatRows] (parallel lists, 1 = normal).
+  /// Only serialized when some hit is a ghost, so pre-accent tokens are
+  /// byte-identical.
+  final Map<Drum, List<double>>? beatVels;
+
   /// Symbolic edits replacing built-in pitched tracks. These must travel with
   /// save slots and share tokens just like the captured user tracks.
   final Map<String, List<PatternCell>>? trackOverrides;
@@ -542,6 +568,9 @@ class GrooveSpec {
   /// Edited hit-grids replacing built-in DRUM tracks (e.g. the 'drums' card),
   /// keyed by track id → drum-name → step string. Travels like [trackOverrides].
   final Map<String, Map<Drum, List<bool>>>? drumOverrides;
+
+  /// Optional per-hit dynamics for [drumOverrides] (parallel lists, 1 = normal).
+  final Map<String, Map<Drum, List<double>>>? drumOverrideVels;
 
   /// Serializable per-track instrument overrides. SoundFont references are
   /// intentionally omitted because their source file is not embedded here.
@@ -583,8 +612,10 @@ class GrooveSpec {
         userInstrument:
             json['u'] is Map ? (json['u'] as Map)['i'] as String? : null,
         beatRows: _beatRowsFromJson(json['b']),
+        beatVels: _drumVelsFromJson(json['bv']),
         trackOverrides: _trackOverridesFromJson(json['o']),
         drumOverrides: _drumOverridesFromJson(json['dr']),
+        drumOverrideVels: _drumOverrideVelsFromJson(json['drv']),
         trackVoices: _trackVoicesFromJson(json['iv']),
       );
 
@@ -626,6 +657,8 @@ class GrooveSpec {
           'b': {
             for (final e in beatRows!.entries) e.key.name: rowToString(e.value),
           },
+        if (beatVels != null && _drumVelsHaveGhost(beatVels!))
+          'bv': _drumVelsToJson(beatVels!),
         if (trackOverrides != null && trackOverrides!.isNotEmpty)
           'o': {
             for (final id in trackOverrides!.keys.toList()..sort())
@@ -638,6 +671,13 @@ class GrooveSpec {
                 for (final e in drumOverrides![id]!.entries)
                   e.key.name: rowToString(e.value),
               },
+          },
+        if (drumOverrideVels != null &&
+            drumOverrideVels!.values.any(_drumVelsHaveGhost))
+          'drv': {
+            for (final id in drumOverrideVels!.keys.toList()..sort())
+              if (_drumVelsHaveGhost(drumOverrideVels![id]!))
+                id: _drumVelsToJson(drumOverrideVels![id]!),
           },
         if (trackVoices != null && trackVoices!.isNotEmpty)
           'iv': {
@@ -719,6 +759,49 @@ Map<String, TrackerInstrument>? _trackVoicesFromJson(dynamic json) {
     }
   }
   return voices.isEmpty ? null : voices;
+}
+
+/// True if any lane carries a non-full (ghost/accent) hit — the gate for
+/// emitting velocity json at all, so a plain on/off beat stays byte-identical.
+bool _drumVelsHaveGhost(Map<Drum, List<double>> vels) =>
+    vels.values.any((row) => row.any((v) => v != 1.0));
+
+/// Per-lane velocity lists → json, dropping lanes that are all-normal.
+Map<String, dynamic> _drumVelsToJson(Map<Drum, List<double>> vels) => {
+      for (final e in vels.entries)
+        if (e.value.any((v) => v != 1.0))
+          e.key.name: [
+            for (final v in e.value) double.parse(v.toStringAsFixed(2)),
+          ],
+    };
+
+/// Parses per-lane velocity lists from token json; null on structural
+/// violation (a foreign token must never crash or smuggle data). Values are
+/// clamped to 0..1.
+Map<Drum, List<double>>? _drumVelsFromJson(dynamic json) {
+  if (json is! Map) return null;
+  final out = <Drum, List<double>>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    final drum = Drum.values.asNameMap()[key];
+    if (drum == null || value is! List) return null;
+    out[drum] = [
+      for (final v in value)
+        if (v is num) v.toDouble().clamp(0.0, 1.0) else 1.0,
+    ];
+  }
+  return out.isEmpty ? null : out;
+}
+
+/// Per-track drum-override velocities from token json (id → {drum: [vels]}).
+Map<String, Map<Drum, List<double>>>? _drumOverrideVelsFromJson(dynamic json) {
+  if (json is! Map) return null;
+  final out = <String, Map<Drum, List<double>>>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    if (key is! String) return null;
+    final vels = _drumVelsFromJson(value);
+    if (vels != null) out[key] = vels;
+  }
+  return out.isEmpty ? null : out;
 }
 
 /// Parses beat rows from token json; null on any structural violation.
@@ -1658,6 +1741,8 @@ class LoopEngine {
             ? null
             : (_userTrack!.variants.first as MelodicPattern).instrument.name,
         beatRows: (_userBeatTrack?.variants.first as DrumRowsPattern?)?.rows,
+        beatVels:
+            (_userBeatTrack?.variants.first as DrumRowsPattern?)?.velocities,
         trackOverrides: {
           for (final entry in _cellOverrides.entries)
             entry.key: List<PatternCell>.of(entry.value),
@@ -1668,6 +1753,14 @@ class LoopEngine {
               for (final r in entry.value.rows.entries)
                 r.key: List<bool>.of(r.value),
             },
+        },
+        drumOverrideVels: {
+          for (final entry in _drumOverrides.entries)
+            if (entry.value.velocities != null)
+              entry.key: {
+                for (final r in entry.value.velocities!.entries)
+                  r.key: List<double>.of(r.value),
+              },
         },
         trackVoices: {
           for (final entry in _trackVoices.entries)
@@ -1694,7 +1787,7 @@ class LoopEngine {
     }
     final beatRows = next.beatRows;
     if (beatRows != null) {
-      setUserBeatTrack(DrumRowsPattern(beatRows));
+      setUserBeatTrack(DrumRowsPattern(beatRows, velocities: next.beatVels));
     } else {
       _userBeatTrack = null;
     }
@@ -1718,10 +1811,13 @@ class LoopEngine {
           if (known.contains(entry.key) &&
               entry.key != userTrackId &&
               entry.key != beatTrackId)
-            entry.key: DrumRowsPattern({
-              for (final r in entry.value.entries)
-                r.key: List<bool>.of(r.value),
-            }),
+            entry.key: DrumRowsPattern(
+              {
+                for (final r in entry.value.entries)
+                  r.key: List<bool>.of(r.value),
+              },
+              velocities: next.drumOverrideVels?[entry.key],
+            ),
       });
     _trackVoices
       ..clear()
