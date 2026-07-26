@@ -220,6 +220,7 @@ abstract class TabWorkshopTester {
 
   /// Practice tools (D4): whether looping / the speed trainer are on.
   bool get debugLoop;
+  bool get debugLoopBar;
   bool get debugSpeedTrainer;
 
   /// 🔍 Desktop hover: drive the hover over a cell and read whether the corner
@@ -381,6 +382,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   // Practice tools (D4): loop the piece, and a speed trainer that ramps the
   // tempo one step per loop up to the authored [_bpm].
   bool _loop = false;
+  bool _loopBar = false; // loop only the cursor's bar (implies looping)
   bool _speedTrainer = false;
   int _playBpm = 120; // the tempo currently sounding (trainer may ramp it)
   List<int> _trainerTempos = const [];
@@ -818,6 +820,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   @override
   bool get debugLoop => _loop;
   @override
+  bool get debugLoopBar => _loopBar;
+  @override
   bool get debugSpeedTrainer => _speedTrainer;
   @override
   (String, String?)? debugInspectInfo(int col, int string) {
@@ -1253,14 +1257,24 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     // Audio: every track sounding together. Highlight: the ACTIVE track's own
     // column timeline (that's what the preview shows). [_playBpm] is the authored
     // [_bpm] normally, or the speed trainer's current ramp step.
-    final events = _doc.toPlaybackEvents(bpm: _playBpm, capo: _capo);
+    // "Loop bar" restricts playback to the cursor's bar (re-read each pass, so
+    // moving the cursor moves the loop); otherwise the whole piece plays.
+    final (from, to) =
+        _loopBar ? _doc.barBoundsAt(_selCol) : (0, _doc.columns.length);
+    final events =
+        _doc.toPlaybackEvents(bpm: _playBpm, capo: _capo, from: from, to: to);
     // Mix each audible track as its own stem, scaled by its mixer volume (D2),
     // so per-track balance is audible instead of a flat merge.
     final audible = audibleTracks(_tracks).toList();
     context.read<AudioService>().playMixedTimedChords(
       [
         for (final t in audible)
-          t.doc.toPlaybackEvents(bpm: _playBpm, capo: _capo),
+          t.doc.toPlaybackEvents(
+            bpm: _playBpm,
+            capo: _capo,
+            from: from,
+            to: to,
+          ),
       ],
       gains: [for (final t in audible) t.volume],
       pans: [for (final t in audible) t.pan],
@@ -1269,7 +1283,10 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     var t = 0;
     for (var c = 0; c < events.length; c++) {
       final (midis, ms) = events[c];
-      schedule.add((col: c, start: t, end: t + ms, note: midis.isNotEmpty));
+      // The schedule keeps ABSOLUTE column ids so the right column lights up
+      // even when only a slice is playing.
+      schedule
+          .add((col: from + c, start: t, end: t + ms, note: midis.isNotEmpty));
       t += ms;
     }
     if (_ticker.isActive) _ticker.stop();
@@ -1295,7 +1312,7 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   void _onTick(Duration elapsed) {
     final ms = elapsed.inMilliseconds;
     if (ms >= _totalMs) {
-      if (_loop && _playing) {
+      if ((_loop || _loopBar) && _playing) {
         // Speed trainer: step the tempo up one rung per loop, holding at target.
         if (_speedTrainer && _trainerTempos.isNotEmpty) {
           _loopIndex++;
@@ -1538,6 +1555,8 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                   setState(() => _countIn = !_countIn);
                 case 'loop':
                   setState(() => _loop = !_loop);
+                case 'loopBar':
+                  setState(() => _loopBar = !_loopBar);
                 case 'speedTrainer':
                   setState(() => _speedTrainer = !_speedTrainer);
                 case 'mic':
@@ -1585,6 +1604,11 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
                 value: 'loop',
                 checked: _loop,
                 child: const Text('Loop'),
+              ),
+              CheckedPopupMenuItem(
+                value: 'loopBar',
+                checked: _loopBar,
+                child: const Text('Loop bar'),
               ),
               CheckedPopupMenuItem(
                 value: 'speedTrainer',

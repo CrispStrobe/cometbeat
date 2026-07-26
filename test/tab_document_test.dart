@@ -1213,6 +1213,33 @@ void main() {
       expect(clicks, [0, 500, 1000, 1500]);
     });
 
+    test('D4 toPlaybackEvents(from:to:) plays only that column range', () {
+      // Two 4/4 bars of four quarters (fret = index, so each column differs).
+      final doc = TabDocument(
+        tuning: guitar,
+        columns: [
+          for (var i = 0; i < 8; i++) TabColumn(frets: {0: i}),
+        ],
+      );
+      expect(doc.toPlaybackEvents(), hasLength(8)); // whole piece
+      final barTwo = doc.toPlaybackEvents(from: 4, to: 8);
+      expect(barTwo, hasLength(4)); // just bar 2
+      // its first sounding note is column 4 (fret 4 on the top string).
+      expect(barTwo.first.$1.single, guitar.strings[0].midiNumber + 4);
+    });
+
+    test('D4 a sliced range pre-rolls a mid-song tempo change', () {
+      final doc = TabDocument(
+        tuning: guitar,
+        columns: [
+          for (var i = 0; i < 8; i++) TabColumn(frets: {0: i}),
+        ],
+      )..setBarTempo(4, 60); // bar 2 at 60 BPM (quarter = 1000 ms)
+      // Playing bar 2 alone still honours its tempo change.
+      final barTwo = doc.toPlaybackEvents(from: 4, to: 8);
+      expect(barTwo.first.$2, 1000); // 60 BPM quarter, not 500
+    });
+
     test('D1 toScore(program:) tags the score + reaches exported MIDI', () {
       final doc = TabDocument(
         tuning: Tuning.standardGuitar,

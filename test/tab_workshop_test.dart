@@ -330,6 +330,12 @@ void main() {
 
     await tester.tap(find.byTooltip(l10n.tabMenu));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Loop bar'));
+    await tester.pump();
+    expect(_tab(tester).debugLoopBar, isTrue);
+
+    await tester.tap(find.byTooltip(l10n.tabMenu));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Speed trainer'));
     await tester.pump();
     expect(_tab(tester).debugSpeedTrainer, isTrue);

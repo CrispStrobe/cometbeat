@@ -327,10 +327,14 @@ parametric technique end-to-end.
   `metronomeClicksMs`) **now wired**: a **Loop** toggle (⋮ menu) repeats playback
   instead of stopping at the end, and a **Speed trainer** toggle ramps the tempo
   one `speedTrainerTempos` step per loop up to the authored BPM (playback re-times
-  via a new `_playBpm`; the ticker restart drives each pass). Tests: the toggles
-  flip state (widget) + the ramp/loop-range helpers (unit). **Phase D done
-  end-to-end.** ⚠ remaining refinements: a *bar-range* loop (loops the whole
-  piece today) and a metronome click *during* play (count-in already exists).
+  via a new `_playBpm`; the ticker restart drives each pass). A **Loop bar** toggle
+  restricts the loop to the cursor's bar (re-read each pass, so moving the cursor
+  moves the loop), backed by an additive `toPlaybackEvents({from, to})` range with
+  a tempo pre-roll (a mid-song slice starts at the right speed) and absolute
+  highlight ids. Tests: the toggles flip state (widget); the range + tempo pre-roll
+  + ramp/loop-range helpers (unit). **Phase D done end-to-end.** ⚠ remaining
+  refinement: a metronome click *during* play (blocked — one shared player;
+  count-in already exists).
 - [x] **E1** rich GPIF export — the GPIF writer already carried bends (incl.
   multi-point curves) / slides / hammer / vibrato / harmonics (all kinds) /
   dynamics / staccato+accent / grace; extended it (crisp_notation@`ee05c33`) to

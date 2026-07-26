@@ -1309,7 +1309,17 @@ class TabDocument {
   /// A `(midi pitches, ms)` timeline for `AudioService.playTimedChords`, at
   /// [bpm] (a quarter note = 60000/bpm ms). [capo] raises every pitch by that
   /// many semitones so playback matches a clamped nut (see [toScore]).
-  List<(List<int>, int)> toPlaybackEvents({int bpm = 120, int capo = 0}) {
+  ///
+  /// [from]/[to] optionally restrict the timeline to the half-open column range
+  /// `[from, to)` (a bar-range practice loop). The tempo in effect at [from] is
+  /// pre-rolled from any earlier `tempoChange`, and a tie is clamped to the
+  /// range, so a mid-song slice still plays at the right speed and length.
+  List<(List<int>, int)> toPlaybackEvents({
+    int bpm = 120,
+    int capo = 0,
+    int from = 0,
+    int? to,
+  }) {
     // Duration → ms straight from the note fraction (a whole note = 4 beats), so
     // it is exact for every value — a quarter is exactly 60000/bpm, no rounding
     // drift from the 32nd-step grid. A column carrying a `tempoChange` (A9) sets
@@ -1330,15 +1340,22 @@ class TabDocument {
                 ..sort((a, b) => a.key.compareTo(b.key))))
             tuning.strings[e.key].midiNumber + e.value + capo,
         ];
+    final start0 = from.clamp(0, columns.length);
+    final end0 = (to ?? columns.length).clamp(start0, columns.length);
+    // Pre-roll the tempo state so a range starting mid-song plays at the tempo
+    // that was already in effect there.
+    for (var i = 0; i < start0; i++) {
+      if (columns[i].tempoChange != null) curBpm = columns[i].tempoChange!;
+    }
     final out = <(List<int>, int)>[];
-    var c = 0;
-    while (c < columns.length) {
+    var c = start0;
+    while (c < end0) {
       // A tie sustains one note across columns: emit ONE sound (the attacking
       // column's pitches) whose length is the whole tied chain — the following
-      // columns don't re-attack.
+      // columns don't re-attack. A tie is clamped to [end0].
       final start = c;
       var dur = ms(columns[c]);
-      while (columns[c].tieToNext && c + 1 < columns.length) {
+      while (columns[c].tieToNext && c + 1 < end0) {
         c++;
         dur += ms(columns[c]);
       }
