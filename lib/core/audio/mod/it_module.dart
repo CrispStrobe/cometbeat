@@ -265,10 +265,22 @@ class ItInstrument {
 /// a MIDI event to external gear with no audible target in this offline renderer;
 /// it is parsed and ignored.
 ///
-/// DEFERRED: per-channel active-macro selection (`\SFx`). The active parametric
-/// macro is assumed to be 0 (the IT default), which is what all real modules that
-/// do not explicitly switch macros use. Full `z`-parameter arithmetic beyond the
-/// direct substitution is likewise a follow-up.
+/// ACTIVE-MACRO SELECTION: which of the 16 parametric SFx macros a `Zxx`
+/// (0x00..0x7F) runs is per-channel state, set by the `SFx` effect (IT `S`
+/// command value 0xF0..0xFF selects SF0..SFF). [resolveZxxFilterParam] takes the
+/// channel's active macro index; the caller (module_convert) tracks it per
+/// channel. The default is 0 (SF0), so a module that never switches macros is
+/// resolved exactly as before.
+///
+/// `z`-EVALUATION: the value byte of a filter macro (the part after the
+/// `F0F000`/`F0F001` prefix) is evaluated by [_evalFilterValue]. It supports the
+/// whole-byte parameter (`F0F000z` / bare `F0F000`), a fixed hex byte
+/// (`F0F00040`), and the nibble-combined form where `z` supplies the low nibble
+/// beside a fixed high nibble (`F0F0004z` → `0x40 | (param & 0x0F)`). Other
+/// `z`-arithmetic forms (multiple `z`, `z` in the high nibble, running-value or
+/// multi-command SysEx strings) are NOT evaluated for the filter — they only
+/// arise in MIDI-out macros to external gear, which have no audible target here
+/// and are parsed-and-ignored regardless.
 class ItMidiMacros {
   const ItMidiMacros({
     required this.global,
@@ -304,15 +316,21 @@ class ItMidiMacros {
   /// when the resolved macro is NOT a recognized filter macro (a MIDI-out macro
   /// with no audible target — parse-and-ignore).
   ///
+  /// [activeMacro] is the channel's currently selected parametric macro index
+  /// (0..15), set by the `SFx` effect; it selects which SFx macro a parametric
+  /// `Zxx` (0x00..0x7F) runs. It defaults to 0 (SF0), so a channel that never
+  /// issues `SFx` resolves exactly as the IT default.
+  ///
   /// For the DEFAULT filter macro set (SF0 = `F0F000z` cutoff, fixed Zxx[n] =
   /// `F0F001nn` resonance) this returns [value] unchanged, i.e. it is identical to
   /// the direct `Zxx→filter` mapping (Z00..Z7F cutoff, Z80..ZFF resonance).
-  int? resolveZxxFilterParam(int value) {
+  int? resolveZxxFilterParam(int value, [int activeMacro = 0]) {
     final String macro;
     final int? param;
     if (value < 0x80) {
-      // Parametric: active macro assumed 0 (see class doc). `z` ← low 7 bits.
-      macro = sfx.isNotEmpty ? sfx[0] : '';
+      // Parametric: run the channel's active SFx macro. `z` ← low 7 bits.
+      final idx = activeMacro & 0x0F;
+      macro = idx < sfx.length ? sfx[idx] : '';
       param = value & 0x7F;
     } else {
       final idx = value & 0x7F;
@@ -335,8 +353,8 @@ class ItMidiMacros {
       macro.replaceAll(RegExp(r'\s+'), '').toUpperCase();
 
   /// Recognize a filter macro string: `F0F000`→cutoff, `F0F001`→resonance,
-  /// followed by either the `z` placeholder (→[param]) or two hex digits (a fixed
-  /// value). Returns the kFxSetFilter param, or null if not a filter macro.
+  /// followed by an evaluable value field (see [_evalFilterValue]). Returns the
+  /// kFxSetFilter param, or null if not a recognized/evaluable filter macro.
   static int? _recognizeFilterParam(String macro, int? param) {
     final s = _clean(macro);
     final bool cutoff;
@@ -347,18 +365,39 @@ class ItMidiMacros {
     } else {
       return null;
     }
-    final rest = s.substring(6);
-    int? val;
-    if (rest.startsWith('Z')) {
-      val = param; // parameter substitution
-    } else if (rest.length >= 2) {
-      val = int.tryParse(rest.substring(0, 2), radix: 16);
-    } else if (rest.isEmpty) {
-      val = param; // "F0F000"/"F0F001" alone → take the parameter
-    }
+    var val = _evalFilterValue(s.substring(6), param);
     if (val == null) return null;
     val &= 0x7F;
     return cutoff ? val : (0x80 | val);
+  }
+
+  /// Evaluate the value byte of a filter macro — the part after the `F0F000` /
+  /// `F0F001` prefix — with the parametric `z` substituted from [param] (the
+  /// low 7 bits of the `Zxx` value, or null for a fixed macro that carries its
+  /// own value). Returns the 0..255 value, or null when the field is a form this
+  /// renderer does not evaluate.
+  ///
+  /// Evaluated forms:
+  ///   • empty / `z`      → the whole parameter byte (`F0F000` alone, `F0F000z`);
+  ///   • `HH` (two hex)   → a fixed byte (`F0F00040` → 0x40);
+  ///   • `Hz` (hex + `z`) → fixed high nibble, `z`'s low nibble supplies the low
+  ///                        nibble (`F0F0004z` → `0x40 | (param & 0x0F)`).
+  /// Anything else (multiple `z`, `z` in the high nibble, longer multi-byte or
+  /// running-value SysEx) returns null — those forms only occur in MIDI-out
+  /// macros with no audible filter target here.
+  static int? _evalFilterValue(String rest, int? param) {
+    if (rest.isEmpty || rest == 'Z') return param; // whole-byte parameter
+    if (!rest.contains('Z')) {
+      // Fixed hex: take the first value byte.
+      final hex = rest.length >= 2 ? rest.substring(0, 2) : rest;
+      return int.tryParse(hex, radix: 16);
+    }
+    // Nibble-combined form `Hz`: fixed high nibble + `z` as the low nibble.
+    if (rest.length == 2 && rest[1] == 'Z' && param != null) {
+      final hi = int.tryParse(rest[0], radix: 16);
+      if (hi != null) return (hi << 4) | (param & 0x0F);
+    }
+    return null; // other z-arithmetic forms are not evaluated (see doc)
   }
 }
 

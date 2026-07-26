@@ -559,7 +559,12 @@ ModuleDoc docFromXm(XmModule m) {
 /// differences are `X` (pan is 0x00..0xFF, not ..0x80) and `T` (T0x/T1x are tempo
 /// SLIDES, only T20+ sets tempo). Shares [_s3mSpecialToFx] for `Sxy`. Verified
 /// against libopenmpt — see docs/ORACLE.md. No-equivalents return `(0, 0)`.
-(int, int) _itEffectToFx(int cmd, int value, ItMidiMacros? macros) {
+(int, int) _itEffectToFx(
+  int cmd,
+  int value,
+  ItMidiMacros? macros, [
+  int activeMacro = 0,
+]) {
   switch (cmd) {
     case 1: // A — set speed
       return value == 0 ? (0, 0) : (0xF, value < 0x20 ? value : 0x1F);
@@ -617,10 +622,12 @@ ModuleDoc docFromXm(XmModule m) {
       // resonance selector in its high bit (decoded in ReplayVoice). This is the
       // pre-macro behavior, kept byte-identical for every file without a MidiCfg.
       if (macros == null) return (0x1C, value);
-      // With a MidiCfg, resolve Zxx THROUGH the module's macro table. A recognized
-      // filter macro (F0F000 cutoff / F0F001 resonance) routes to kFxSetFilter; a
-      // non-filter macro (MIDI to external gear) has no audible target → dropped.
-      final filterParam = macros.resolveZxxFilterParam(value);
+      // With a MidiCfg, resolve Zxx THROUGH the module's macro table, running the
+      // channel's active parametric macro ([activeMacro], set by SFx) for the
+      // 0x00..0x7F range. A recognized filter macro (F0F000 cutoff / F0F001
+      // resonance) routes to kFxSetFilter; a non-filter macro (MIDI to external
+      // gear) has no audible target → dropped.
+      final filterParam = macros.resolveZxxFilterParam(value, activeMacro);
       return filterParam == null ? (0, 0) : (0x1C, filterParam);
     default:
       // Z MIDI-macro (\x87…) — no neutral equivalent (dropped).
@@ -683,6 +690,14 @@ ModuleDoc docFromIt(ItModule m) {
   // resolves the PLAYED note → the actual sample (and the note to sound). A note
   // without its own instrument reuses the channel's last one. Sample-mode files
   // keep `instrument` as the sample number directly.
+  // Per-channel active parametric MIDI macro (0..15), set by the `SFx` effect
+  // (IT `S` command value 0xF0..0xFF → SF0..SFF). Default 0 (SF0). This is
+  // runtime playback state; the Doc model is static per pattern, so we carry it
+  // across patterns in storage order — the order-list play sequence is not
+  // simulated. The common case (SFx then Zxx in the same pattern/channel) is
+  // exact, and with no SFx anywhere every channel stays 0, byte-identical to the
+  // pre-active-macro behavior.
+  final activeMacro = <int, int>{};
   final patterns = <DocPattern>[];
   for (final pat in m.patterns) {
     final ch = pat.channelCount;
@@ -714,8 +729,18 @@ ModuleDoc docFromIt(ItModule m) {
         }
 
         final vol = (c.volpan >= 0 && c.volpan <= 64) ? c.volpan : -1;
-        final (fxCmd, fxParam) =
-            _itEffectToFx(c.command, c.commandValue, m.midiMacros);
+        // SFx (S command, value 0xF0..0xFF) selects this channel's active
+        // parametric macro; apply it before resolving this row's effect so a
+        // Zxx later in the channel resolves through the selected SFx macro.
+        if (c.command == 19 && c.commandValue >= 0xF0) {
+          activeMacro[ci] = c.commandValue & 0x0F;
+        }
+        final (fxCmd, fxParam) = _itEffectToFx(
+          c.command,
+          c.commandValue,
+          m.midiMacros,
+          activeMacro[ci] ?? 0,
+        );
         cells.add(
           DocCell(
             note: docNote,
