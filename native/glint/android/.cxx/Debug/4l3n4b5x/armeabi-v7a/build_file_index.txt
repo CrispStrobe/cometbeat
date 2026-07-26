@@ -1,0 +1,2 @@
+/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/CMakeLists.txt
+/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/glint_sources.cmake

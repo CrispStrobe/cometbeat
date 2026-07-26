@@ -15,7 +15,13 @@
 //         cmake --build build && ctest --test-dir build --output-on-failure
 
 #if defined(_WIN32)
+// NOMINMAX before windows.h, or its min/max MACROS eat the std::min calls in
+// estimate_pitch and MSVC reports "error C2589: '(': illegal token on right
+// side of '::'". Caught by CI, which is the only place this meets MSVC.
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+// psapi.h must follow windows.h — it depends on its typedefs.
 #include <psapi.h>
 #else
 #include <sys/resource.h>

@@ -1,0 +1,237 @@
+[
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/aac_coder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_coder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_coder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/aac_encoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_encoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_encoder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/aac_mdct.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_mdct.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_mdct.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/aac_psy.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_psy.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_psy.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/aac_tns.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_tns.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/aac_tns.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/bitstream.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/bitstream.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/bitstream.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/encode_audio_c_api.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/encode_audio_c_api.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/encode_audio_c_api.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/encoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/encoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/encoder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/flac_c_api.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/flac_c_api.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/flac_c_api.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/flac_decoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/flac_decoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/flac_decoder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/glint_free_shim.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/glint_free_shim.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/glint_free_shim.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/huffman.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/huffman.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/huffman.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/mdct.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/mdct.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/mdct.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_analysis.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_analysis.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_analysis.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_c_api.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_c_api.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_c_api.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_bands.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_bands.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_bands.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_decoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_decoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_decoder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_enc_bands.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_enc_bands.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_enc_bands.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_enc_energy.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_enc_energy.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_enc_energy.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_enc_vq.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_enc_vq.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_enc_vq.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_encoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_encoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_encoder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_energy.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_energy.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_energy.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_pitch.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_pitch.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_pitch.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_celt_rate.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_rate.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_celt_rate.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_cwrs.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_cwrs.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_cwrs.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_decoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_decoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_decoder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_ec.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_ec.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_ec.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_file_c_api.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_file_c_api.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_file_c_api.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_laplace.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_laplace.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_laplace.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_mdct.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_mdct.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_mdct.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_ms_decoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_ms_decoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_ms_decoder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_ogg.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_ogg.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_ogg.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_silk_decoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_decoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_decoder.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_silk_excitation.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_excitation.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_excitation.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_silk_frame.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_frame.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_frame.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_silk_indices.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_indices.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_indices.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_silk_nlsf.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_nlsf.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_nlsf.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_silk_plc.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_plc.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_plc.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_silk_resampler.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_resampler.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_resampler.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/opus_silk_stereo.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_stereo.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/opus_silk_stereo.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/psycho.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/psycho.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/psycho.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/quantize.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/quantize.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/quantize.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/resample.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/resample.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/resample.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/reservoir.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/reservoir.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/reservoir.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/subband.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/subband.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/subband.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/vorbis_c_api.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/vorbis_c_api.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/vorbis_c_api.cpp"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/android/.cxx/Debug/4l3n4b5x/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Dglint_vorbis_EXPORTS -I/Users/christianstrobele/code/mus-glint-encoder/native/glint/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++17 -o CMakeFiles/glint_vorbis.dir/vorbis_decoder.cpp.o -c /Users/christianstrobele/code/mus-glint-encoder/native/glint/src/vorbis_decoder.cpp",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/glint/src/vorbis_decoder.cpp"
+}
+]

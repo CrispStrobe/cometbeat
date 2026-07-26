@@ -1,0 +1,17 @@
+[
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/aec/android/.cxx/Debug/27232r2g/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Daec_fullduplex_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=gnu11 -o CMakeFiles/aec_fullduplex.dir/aec_dsp.c.o -c /Users/christianstrobele/code/mus-glint-encoder/native/aec/src/aec_dsp.c",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/aec/src/aec_dsp.c"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/aec/android/.cxx/Debug/27232r2g/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Daec_fullduplex_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=gnu11 -o CMakeFiles/aec_fullduplex.dir/aec_shim.c.o -c /Users/christianstrobele/code/mus-glint-encoder/native/aec/src/aec_shim.c",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/aec/src/aec_shim.c"
+},
+{
+  "directory": "/Users/christianstrobele/code/mus-glint-encoder/native/aec/android/.cxx/Debug/27232r2g/x86_64",
+  "command": "/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang --target=x86_64-none-linux-android21 --sysroot=/Users/christianstrobele/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -DDART_SHARED_LIB -Daec_fullduplex_EXPORTS -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -std=gnu11 -o CMakeFiles/aec_fullduplex.dir/miniaudio_impl.c.o -c /Users/christianstrobele/code/mus-glint-encoder/native/aec/src/miniaudio_impl.c",
+  "file": "/Users/christianstrobele/code/mus-glint-encoder/native/aec/src/miniaudio_impl.c"
+}
+]

@@ -1,0 +1,3 @@
+/Users/christianstrobele/code/mus-glint-encoder/native/aec/android/.cxx/Debug/27232r2g/arm64-v8a/CMakeFiles/aec_fullduplex.dir
+/Users/christianstrobele/code/mus-glint-encoder/native/aec/android/.cxx/Debug/27232r2g/arm64-v8a/CMakeFiles/edit_cache.dir
+/Users/christianstrobele/code/mus-glint-encoder/native/aec/android/.cxx/Debug/27232r2g/arm64-v8a/CMakeFiles/rebuild_cache.dir
