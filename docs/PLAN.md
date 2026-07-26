@@ -29,6 +29,30 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tab-parity)** · ✅ **SHIPPED (idle) — Guitar Tab Editor parity A0–E2 + CI unblock.**
+  Full parity ladder done (`docs/TAB_EDITOR_PARITY.md`): A9 tempo map; B1–B10 all
+  parametric techniques (bends/whammy/slides/tap/harmonic-kinds/palm-mute·let-ring·
+  articulations/trill·tremolo/grace/strum·pick/fingering); C1 dynamics + C2 second
+  voice; D1–D4 per-track instrument·mixer·drum-tab·practice helpers; E1 rich GPIF
+  (extended the crisp_notation writer @`ee05c33` for palm-mute/let-ring/tap/fingering)
+  + E2 PDF export. `TabColumn` refactored to a single `copyWith`; every technique now
+  survives import→edit→export (round-trip tests). ~50 new tab_document tests, 139
+  tab-suite green. **Touched `tab_workshop_screen.dart` (E2 PDF menu entry, additive)
+  — fx-interop is on E2 there too; my change is one menu item + import, pre-fx.**
+  ⚠️ **Also fixed the mus CI format gate** (`56c3dbae`): my E1 test group landed
+  tall-styled because `dart format` was run without `flutter pub get` first (no
+  package_config → dart defaults to tall style + phantom 800-file diff). **GOTCHA for
+  everyone: run `flutter pub get` BEFORE `dart format`** or you'll see/create bogus
+  reformats. ⚠️ **crisp_notation CI is red since 2026-07-23** — NOT the tab work: the
+  LilyPond-importer PR (`ca1fbbe`) landed `lilypond_ast.dart` with 101 undocumented
+  public members (`public_member_api_docs`, fatal) + 2 unformatted files + 1 unused
+  test var. Trivial parts are easy; the 101 doc comments belong to the importer author
+  (their active file — I did not touch it). My gpif change there is clean + its tests
+  pass. Deferred tab follow-ups (playback velocity/pan for C1/D2, D1/D2/D4 UI, GP
+  beat-level whammy/pick-stroke) noted in the parity doc. Not my scratch files:
+  `bb5a5bee`'s `mod_hard_pan.dart`/`tracker_replayer_walkflow.dart`/`.bak2/.orig/.rej`
+  were pre-existing untracked cruft, already removed by `4a9c55d0`. — opus
+
 - **opus (tracker-complete)** · 🚧 **ACTIVE — tracker MOD/XM/S3M/IT renderer/editor.**
   Shipped: full <500 MB streaming renderer (byte-identical), resonant IT filter
   (+cutoff env, MIDI-macro), cubic interp + anti-click, opt-in TPDF dither, S3M
