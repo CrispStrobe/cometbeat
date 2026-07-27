@@ -326,6 +326,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
     await tester.pumpAndSettle();
+    // The effect menu grows as the rack does, so the voice entries are far
+    // enough down to need scrolling into view before they can be tapped.
+    await tester.ensureVisible(find.text('Robot').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Robot').last);
     await tester.pumpAndSettle();
 
@@ -346,6 +350,10 @@ void main() {
     await tester.tap(find.text('Master FX'));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    // The effect menu grows as the rack does, so the voice entries are far
+    // enough down to need scrolling into view before they can be tapped.
+    await tester.ensureVisible(find.text('Voice shape').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Voice shape').last);
     await tester.pumpAndSettle();
@@ -404,9 +412,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Tremolo').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Tremolo').last);
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Vocoder').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Vocoder').last);
     await tester.pumpAndSettle();
@@ -507,6 +519,8 @@ void main() {
     await tester.tap(find.text('Master FX'));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline).last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Tremolo').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Tremolo').last);
     await tester.pumpAndSettle();

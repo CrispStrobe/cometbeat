@@ -310,6 +310,11 @@ const kDawClipEffectTypes = <DawClipEffectType>[
   DawClipEffectType.peakingEq,
   DawClipEffectType.lowShelf,
   DawClipEffectType.highShelf,
+  // A2 — the broad curves, with the other tone shaping.
+  DawClipEffectType.tilt,
+  DawClipEffectType.loudness,
+  DawClipEffectType.deEmphasis,
+  DawClipEffectType.contrast,
   DawClipEffectType.phaser,
   DawClipEffectType.autoWah,
   // A1 — the rest of the filter set, kept with the other filters. The gentle
@@ -337,6 +342,7 @@ const kDawClipEffectTypes = <DawClipEffectType>[
   DawClipEffectType.deEsser,
   DawClipEffectType.multibandCompressor,
   DawClipEffectType.pitchShift,
+  DawClipEffectType.pitchBend,
   DawClipEffectType.timeStretch,
   DawClipEffectType.tremolo,
   DawClipEffectType.vocoder,

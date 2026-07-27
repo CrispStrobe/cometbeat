@@ -172,6 +172,18 @@ const _byName = <String, FxParamSpec>{
   'window': FxParamSpec(key: 'window', min: 8, max: 512, integer: true),
   'threshold': FxParamSpec(key: 'threshold', min: 0.1, max: 1),
   'strength': FxParamSpec(key: 'strength', min: 0, max: 2),
+  // A2 / A6.
+  'tiltDb': FxParamSpec(key: 'tiltDb', min: -12, max: 12, unit: 'dB'),
+  'pivotHz': FxParamSpec(key: 'pivotHz', min: 200, max: 8000, unit: 'Hz'),
+  'curve': FxParamSpec(
+    key: 'curve',
+    min: 0,
+    max: 1,
+    integer: true,
+    choices: ['50 µs', '75 µs'],
+  ),
+  'endSemitones':
+      FxParamSpec(key: 'endSemitones', min: -24, max: 24, unit: 'st'),
 };
 
 /// Ranges that differ for one specific effect, where the same word means
@@ -198,6 +210,11 @@ const _byTypeAndName = <(FxType, String), FxParamSpec>{
       FxParamSpec(key: 'freq', min: 40, max: 120, unit: 'Hz'),
   // A hum notch has to be needle-narrow or it takes the bass with it.
   (FxType.humRemove, 'q'): FxParamSpec(key: 'q', min: 5, max: 100),
+  // `amount` is a 0..1 blend everywhere else; on the loudness curve it is HOW
+  // FAR BELOW reference you are listening, in dB. Same word, different quantity
+  // — exactly what this override table is for.
+  (FxType.loudness, 'amount'):
+      FxParamSpec(key: 'amount', min: 0, max: 30, unit: 'dB'),
   // A crossfeed delay is the width of a HEAD, not a musical delay — sub-
   // millisecond. The general `delayMs` range (up to 2 s) would make the useful
   // part of the control a pixel wide.
@@ -291,6 +308,11 @@ String fxTypeLabel(FxType type) => switch (type) {
       FxType.noiseReduce => 'Noise reduction',
       FxType.declick => 'De-click',
       FxType.declip => 'De-clip',
+      FxType.tilt => 'Tilt',
+      FxType.loudness => 'Loudness',
+      FxType.deEmphasis => 'De-emphasis',
+      FxType.contrast => 'Presence',
+      FxType.pitchBend => 'Pitch bend',
     };
 
 /// A short label for one param — the slider caption.
@@ -366,6 +388,10 @@ String fxParamLabel(String key) => switch (key) {
       'window' => 'Window',
       'threshold' => 'Threshold',
       'strength' => 'Strength',
+      'tiltDb' => 'Tilt',
+      'pivotHz' => 'Pivot',
+      'curve' => 'Curve',
+      'endSemitones' => 'To',
       _ => key,
     };
 
@@ -471,6 +497,10 @@ FxCategory fxCategory(FxType type) => switch (type) {
       FxType.peakingEq ||
       FxType.lowShelf ||
       FxType.highShelf ||
+      FxType.tilt ||
+      FxType.loudness ||
+      FxType.deEmphasis ||
+      FxType.contrast ||
       FxType.autoWah ||
       FxType.allpass ||
       FxType.onePoleLowpass ||
@@ -496,7 +526,10 @@ FxCategory fxCategory(FxType type) => switch (type) {
       FxType.convolutionReverb ||
       FxType.delay =>
         FxCategory.space,
-      FxType.pitchShift || FxType.timeStretch => FxCategory.pitch,
+      FxType.pitchShift ||
+      FxType.timeStretch ||
+      FxType.pitchBend =>
+        FxCategory.pitch,
       FxType.vocoder ||
       FxType.voiceShape ||
       FxType.voiceChipmunk ||

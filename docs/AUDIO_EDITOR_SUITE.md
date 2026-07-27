@@ -115,10 +115,10 @@ Status key: ✅ have it · 🔶 partial · ⬜ to build.
 ### A2 — Tone curves
 | Op | Meaning | Status |
 |---|---|---|
-| tilt EQ | one knob, dark↔bright | ⬜ A2 |
-| loudness compensation | equal-loudness-contour-shaped volume | ⬜ A2 |
-| de-emphasis / recording curves | the fixed historical IIR curves | ⬜ A2 |
-| presence / contrast | phase-distortion "louder without louder" | ⬜ A2 |
+| tilt EQ | one knob, dark↔bright — a complementary shelf PAIR so the pivot holds | ✅ |
+| loudness compensation | lifts the extremes as you listen quieter; bass more than treble | ✅ |
+| de-emphasis | the fixed 50/75 µs curves, as a two-way choice | ✅ |
+| presence / contrast | odd-symmetric shaping that leaves the peaks alone | ✅ |
 | auto-wah | LFO-swept resonant LP | ✅ (shipped by the tracker→editors agent) |
 
 ### A3 — Dynamics (`crisp_dsp/dynamics.dart` has compressor + gate)
@@ -159,7 +159,7 @@ Status key: ✅ have it · 🔶 partial · ⬜ to build.
 | pitch shift (tempo kept) | | ✅ |
 | tempo change (pitch kept) | | ✅ |
 | speed change (both together) | | ✅ `resampleClip` |
-| pitch **bend envelope** | timed pitch changes across the clip, not one constant | ⬜ A6 |
+| pitch **bend envelope** | `pitchBend`, length-preserving (a tape stop, not a re-length) | ✅ |
 | stretch quality tiers | window/overlap exposed; a quality knob | 🔶 A6 |
 | high-quality rate conversion | band-limited SRC with quality tiers + explicit anti-alias filter | 🔶 A6 |
 | up/down-sample (raw) | with and without filtering, for the deliberate aliasing sound | ⬜ A6 |
@@ -274,16 +274,16 @@ F2b the GUI's label + param tables deleted, derived    ✅ SHIPPED (unplanned)
 F3  chain string as copy/paste preset in the GUI
 
 A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo ✅
-A5  restoration ✅    A6  time/pitch          A2  tone curves      A7  generators
+A5  restoration ✅    A6  time/pitch 🔶       A2  tone curves ✅   A7  generators ✅
 
-B1  pad/repeat/split-on-silence/splice        B3  full stats
+B1  pad/repeat/split-on-silence/splice ✅     B3  full stats ✅
 B2  dither+noise shaping ✅                   B4  VAD ✅   B5  spectrogram CLI ✅
 
 C1  .cbdaw v2 — models survive save           ✅ SHIPPED
 C2  drum + groove round-trip                  ✅ SHIPPED
 C3  universal Open-in via ProjectBridge       ✅ SHIPPED
-C4  tab fidelity inbound
-C5  transcribe-this-clip
+C4  tab fidelity inbound                      ✅ SHIPPED (other agent)
+C5  transcribe-this-clip                      ✅ SHIPPED (other agent)
 C6  lane-level send        C7  rack in every mode
 
 D…  as pulled

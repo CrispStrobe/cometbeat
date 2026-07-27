@@ -199,6 +199,9 @@ void main() {
         // A4 — auto-pan reuses the shared tracker LFO shapes, so it inherits
         // `waveform`'s choice descriptor rather than inventing a second one.
         'FxType.autoPan.waveform',
+        // A2 — the de-emphasis curve is one of two constants, not a free
+        // number, so it is a choice like the others.
+        'FxType.deEmphasis.curve',
       ]);
     });
   });

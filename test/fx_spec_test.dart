@@ -91,6 +91,12 @@ void main() {
         'noiseReduce',
         'declick',
         'declip',
+        // A2 tone curves + A6's pitch envelope.
+        'tilt',
+        'loudness',
+        'deEmphasis',
+        'contrast',
+        'pitchBend',
       ]);
     });
   });

@@ -46,7 +46,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/phaser.dart' show phaserFx;
 import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart'
     show granularPitchShift, granularPitchShiftStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
-    show resampleCubic;
+    show resampleCubic, resampleGlide;
 import 'package:comet_beat/core/audio/crisp_dsp/restoration.dart'
     show declickFx, declipFx, dcShiftFx, humRemoveFx, noiseReduceFx;
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart'
@@ -62,6 +62,8 @@ import 'package:comet_beat/core/audio/crisp_dsp/stereo_ops.dart'
         swapChannelsFx;
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
     show timeStretch, timeStretchStereo;
+import 'package:comet_beat/core/audio/crisp_dsp/tone_curves.dart'
+    show contrastFx, deEmphasisFx, loudnessFx, tiltEqFx;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
     show VoiceEffect, applyVoiceEffect, voiceShapeFx, voiceShapeFxStereo;
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
@@ -266,6 +268,38 @@ Float64List applyFxChain(
   int sampleRate,
 ) =>
     _applyFxChainStereo(left, right, effects, sampleRate);
+
+/// A pitch envelope over the whole buffer, via a gliding resample.
+///
+/// Same length as the input: the glide is spread across the clip and the output
+/// window is fixed, so a rising bend runs off the end of the source and fades
+/// out — which is exactly what a tape stop or a vinyl brake does — instead of
+/// silently changing the clip's length under the arrangement.
+Float64List _pitchBendFx(
+  Float64List input, {
+  required double startSemitones,
+  required double endSemitones,
+  required double mix,
+}) {
+  final out = Float64List(input.length);
+  final m = mix.clamp(0.0, 1.0);
+  if (m == 0 || input.isEmpty || startSemitones == endSemitones) {
+    out.setAll(0, input);
+    return out;
+  }
+  final wet = resampleGlide(
+    input,
+    ratioStart: math.pow(2, startSemitones / 12).toDouble(),
+    ratioEnd: math.pow(2, endSemitones / 12).toDouble(),
+    glideSamples: input.length,
+    outLen: input.length,
+  );
+  for (var i = 0; i < input.length; i++) {
+    final w = i < wet.length ? wet[i] : 0.0;
+    out[i] = (1 - m) * input[i] + m * w;
+  }
+  return out;
+}
 
 Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
   if (fx.automation.isNotEmpty) {
@@ -540,6 +574,42 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
         input,
         threshold: p('threshold', 0.95),
         strength: p('strength', 1),
+        mix: p('mix', 1),
+      ),
+    // A2 — the broad tone curves.
+    FxType.tilt => tiltEqFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        tiltDb: p('tiltDb', 0),
+        pivotHz: p('pivotHz', 1000),
+        mix: p('mix', 1),
+      ),
+    FxType.loudness => loudnessFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        amount: p('amount', 10),
+        mix: p('mix', 1),
+      ),
+    // The param is a CHOICE index (0 = 50 µs, 1 = 75 µs), not the number of
+    // microseconds — the two curves are the whole vocabulary here.
+    FxType.deEmphasis => deEmphasisFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        microseconds: p('curve', 0).round() == 1 ? 75 : 50,
+        mix: p('mix', 1),
+      ),
+    FxType.contrast => contrastFx(
+        input,
+        amount: p('amount', 0.5),
+        mix: p('mix', 1),
+      ),
+    // A6 — a pitch envelope. Length-preserving on purpose: reading faster runs
+    // out of source and the tail goes quiet (which is what a tape stop sounds
+    // like), rather than the clip changing length under the arrangement.
+    FxType.pitchBend => _pitchBendFx(
+        input,
+        startSemitones: p('semitones', 0),
+        endSemitones: p('endSemitones', -12),
         mix: p('mix', 1),
       ),
     FxType.compressor => compressorFx(

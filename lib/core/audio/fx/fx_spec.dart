@@ -251,6 +251,23 @@ enum FxType {
 
   /// Rebuild the tops of clipped peaks.
   declip,
+
+  // A2 — the broad tone curves, and A6's pitch envelope. Appended, as always.
+
+  /// Tilt the whole spectrum around a pivot — one knob for darker/brighter.
+  tilt,
+
+  /// Lift the extremes for quiet listening (equal-loudness compensation).
+  loudness,
+
+  /// The standard 50/75 µs de-emphasis curve.
+  deEmphasis,
+
+  /// Presence — cut through without getting louder.
+  contrast,
+
+  /// A pitch envelope across the clip: tape-stop, vinyl brake, a scoop.
+  pitchBend,
 }
 
 enum FxPreset { vocalPolish, lofiCrunch, wideSpace, robotVoice }
@@ -493,6 +510,34 @@ FxSpec defaultFx(FxType type) => switch (type) {
       FxType.declip => const FxSpec(
           type: FxType.declip,
           params: {'threshold': 0.95, 'strength': 1, 'mix': 1},
+        ),
+      // A2. A tilt of 0 is a no-op, so an unedited one changes nothing.
+      FxType.tilt => const FxSpec(
+          type: FxType.tilt,
+          params: {'tiltDb': 0, 'pivotHz': 1000, 'mix': 1},
+        ),
+      FxType.loudness => const FxSpec(
+          type: FxType.loudness,
+          params: {'amount': 10, 'mix': 1},
+        ),
+      // 50 µs is the CD/European constant; 75 is the North-American one.
+      // 'curve' is a CHOICE INDEX (0 = 50 µs, 1 = 75 µs), not a number of
+      // microseconds — naming it `microseconds` and defaulting it to 50 made a
+      // value that was simultaneously out of the choice's range and read as
+      // an index by the dispatch.
+      FxType.deEmphasis => const FxSpec(
+          type: FxType.deEmphasis,
+          params: {'curve': 0, 'mix': 1},
+        ),
+      FxType.contrast => const FxSpec(
+          type: FxType.contrast,
+          params: {'amount': 0.5, 'mix': 1},
+        ),
+      // A6. Defaults to the classic tape-stop: no offset at the start, an
+      // octave down by the end.
+      FxType.pitchBend => const FxSpec(
+          type: FxType.pitchBend,
+          params: {'semitones': 0, 'endSemitones': -12, 'mix': 1},
         ),
       FxType.compressor => const FxSpec(
           type: FxType.compressor,

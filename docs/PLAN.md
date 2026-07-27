@@ -1857,8 +1857,38 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
     chain string at once). `biquadRaw` covers the escape-hatch need with five
     named params. A real FIR-from-a-file needs a different carrier — a separate
     design, not a slice of this one.
-- [ ] **A2 tone curves** — tilt EQ · loudness compensation · de-emphasis curves ·
-  presence/contrast.
+- [x] **A2 tone curves** — `tilt` · `loudness` · `deEmphasis` · `contrast`
+  (presence), in new `crisp_dsp/tone_curves.dart`. The biquads answer "remove
+  this frequency"; these answer "make it darker / make it sound right quietly /
+  make it cut through", so each is one or two knobs over a fixed shape.
+  * **tilt is a complementary shelf PAIR**, not a single shelf: one shelf moves
+    the overall level as well as the balance, which is why one-knob tone
+    controls built that way always need the fader afterwards. A test pins that
+    the pivot holds still, and another that it is NOT a low-pass (the top
+    survives a −12 dB tilt).
+  * loudness lifts the bass more than the treble, because the contours steepen
+    faster at the bottom — equal shelves would be a different effect. It is
+    explicitly a broad approximation: nothing here knows the playback level, so
+    a "calibrated" version would be a lie.
+  * presence is odd-symmetric waveshaping that leaves the PEAKS untouched — the
+    "louder without louder" property, pinned by a test, plus one asserting it
+    introduces no DC (an asymmetric shaper would, and the repair tools would
+    then have to remove it).
+- [x] **A6 (part)** — `pitchBend`, a pitch envelope across the clip (tape stop,
+  vinyl brake, a scoop), over the existing `resampleGlide`. **Length-preserving
+  on purpose:** reading faster runs out of source and the tail fades, which is
+  what a tape stop sounds like, rather than the clip silently changing length
+  under the arrangement.
+  ⛔ A6's remaining items are NOT effects and are deliberately left: stretch
+  quality tiers and high-quality rate conversion belong to the export/resample
+  path, not to `FxSpec` (they change the sample RATE, which a same-buffer effect
+  cannot), and "raw up/downsample" is that same path with the anti-aliasing
+  turned off. Scoping them properly means touching `resample.dart` and the
+  export sheet, which is a separate slice.
+  ⚠ One real inconsistency caught by the registry tests while wiring this: I
+  named the de-emphasis choice `microseconds` and defaulted it to `50`, so the
+  value was simultaneously out of its own 0..1 choice range and read as an index
+  by the dispatch. Renamed to `curve`, like the other choice params.
 - [x] **A3 dynamics** — a **look-ahead limiter**, a **de-esser** and a
   **multiband compressor**. Re-scoped against the code first, which changed the
   list:
