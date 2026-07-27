@@ -296,6 +296,7 @@ void main() {
           // never run. These are small and musically thin, but they exercise
           // the whole path and give the metrics a baseline that always works.
           'musical.mod',
+          'effects.mod',
           'golden.mod',
           'golden.xm',
           'golden.it',
@@ -357,6 +358,18 @@ void main() {
 
         for (final fixtureName in testModules) {
           final strict = !reportOnly.contains(fixtureName);
+          // Per-fixture, because different material legitimately agrees to a
+          // different degree: plain sustained notes track OpenMPT closely,
+          // while pitch-BENDING effects diverge more and honestly should.
+          // One shared number would either be too loose for `musical.mod` or
+          // too tight for `effects.mod`.
+          final minSpectral = fixtureName == 'effects.mod' ? 0.80 : 0.85;
+          // effects.mod measures −25.4 cents where musical.mod measures −17.0.
+          // That extra ~8 cents on effect material is UNEXPLAINED (portamento
+          // and vibrato compute pitch, so they may be amplifying the offset),
+          // and gating on a number we cannot account for would bless a possible
+          // bug as the baseline. Reported, not asserted, until it is understood.
+          final gateDetune = fixtureName != 'effects.mod';
           test(
             '$fixtureName matches OpenMPT reference',
             () async {
@@ -492,7 +505,7 @@ void main() {
                 // last real bug is decoration.
                 expect(
                   cmp.spectral,
-                  greaterThan(0.85),
+                  greaterThan(minSpectral),
                   reason: 'spectra diverged ($cmp) — a tuning, sample-mapping '
                       'or envelope regression, not just a level difference',
                 );
@@ -504,7 +517,7 @@ void main() {
                 // NaN means the metric declined to answer; that is not a
                 // failure, and asserting on it would turn "no evidence" into a
                 // red.
-                if (!cmp.detune.isNaN) {
+                if (gateDetune && !cmp.detune.isNaN) {
                   expect(
                     cmp.detune.abs(),
                     lessThan(35.0),

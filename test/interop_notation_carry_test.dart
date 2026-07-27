@@ -21,8 +21,7 @@ const _chord = ChordDiagram(
   [-1, 3, 2, 0, 1, 0],
   name: 'C',
   fingers: [null, 3, 2, null, 1, null],
-  baseFret: 1,
-  fretSpan: 4,
+  // baseFret 1 and fretSpan 4 are the defaults.
 );
 
 TabDocument _tab() {
@@ -94,7 +93,9 @@ void main() {
   group('the chord-diagram codec', () {
     test('round-trips every field', () {
       expect(
-          chordDiagramFromAnnotation(chordDiagramToAnnotation(_chord)), _chord);
+        chordDiagramFromAnnotation(chordDiagramToAnnotation(_chord)),
+        _chord,
+      );
     });
 
     test('a barre and a raised base fret survive', () {
@@ -106,7 +107,9 @@ void main() {
         barreFret: 1,
       );
       expect(
-          chordDiagramFromAnnotation(chordDiagramToAnnotation(barre)), barre);
+        chordDiagramFromAnnotation(chordDiagramToAnnotation(barre)),
+        barre,
+      );
     });
 
     test('nonsense decodes to null rather than an empty grid', () {

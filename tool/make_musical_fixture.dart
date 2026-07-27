@@ -111,4 +111,71 @@ void main() {
   File('test/fixtures/musical.mod').writeAsBytesSync(bytes);
   stdout.writeln('wrote test/fixtures/musical.mod (${bytes.length} bytes): '
       '$channels ch · $patterns patterns × $rows rows · speed 6/125');
+
+  _writeEffectsFixture(wave);
+}
+
+/// `effects.mod` — the same idea aimed at EFFECT commands rather than notes.
+///
+/// `musical.mod` is deliberately effect-free, so the A/B could not see an
+/// arpeggio / portamento / vibrato / volume-slide regression at all: every one
+/// of those alters pitch or level over time while leaving the note list
+/// untouched, which is exactly what duration and note-spelling checks miss.
+///
+/// One effect family per CHANNEL, so a failure localises to a command instead
+/// of to "effects". Each channel plays ONE long note and then lets its effect
+/// work on it, which is what makes the difference measurable — an effect
+/// applied to a click has nothing to modulate.
+void _writeEffectsFixture(Float64List wave) {
+  const rows = 64;
+  const channels = 4;
+
+  // MOD command numbers pass through `_modEffectFor` unchanged for effect <=
+  // 0xF, so these are literally the format's own commands.
+  const portaUp = 0x1; // 1xx — bend pitch up
+  const portaDown = 0x2; // 2xx — bend pitch down
+  const vibrato = 0x4; // 4xy — x speed, y depth
+  const volSlide = 0xA; // Axy — x up, y down
+
+  final rowList = <List<DocCell>>[];
+  for (var r = 0; r < rows; r++) {
+    final cells = List<DocCell>.filled(channels, DocCell.empty);
+
+    // Every channel restarts its note every 16 rows, so each effect gets four
+    // fresh runs rather than drifting ever further from where it started.
+    final phase = r % 16;
+    if (phase == 0) {
+      for (var c = 0; c < channels; c++) {
+        cells[c] = DocCell(note: 60 + c * 5, instrument: 1);
+      }
+    } else {
+      // Arpeggio is command 0x0, which is also DocCell's default effect — so
+      // the param alone says it. 0x47 cycles base, +4, +7: a major chord.
+      cells[0] = const DocCell(effectParam: 0x47);
+      cells[1] = const DocCell(effect: vibrato, effectParam: 0x35);
+      // Bend up for the first half of the run, back down for the second, so
+      // the note returns near its start and a one-sided error cannot hide.
+      cells[2] = phase < 8
+          ? const DocCell(effect: portaUp, effectParam: 0x04)
+          : const DocCell(effect: portaDown, effectParam: 0x04);
+      cells[3] = phase < 8
+          ? const DocCell(effect: volSlide, effectParam: 0x01) // fade down
+          : const DocCell(effect: volSlide, effectParam: 0x10); // and back up
+    }
+    rowList.add(cells);
+  }
+
+  final doc = ModuleDoc(
+    sourceFormat: ModuleFormat.mod,
+    title: 'cometbeat fx ref',
+    channelCount: channels,
+    order: const [0],
+    samples: [DocSample(name: 'saw4', pcm: wave, loopLength: wave.length)],
+    patterns: [DocPattern(rowList, channels)],
+  );
+
+  final bytes = convertToMod(doc);
+  File('test/fixtures/effects.mod').writeAsBytesSync(bytes);
+  stdout.writeln('wrote test/fixtures/effects.mod (${bytes.length} bytes): '
+      'arpeggio · vibrato · portamento · volume slide, one per channel');
 }

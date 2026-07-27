@@ -1100,10 +1100,21 @@ in that code.
 at pitch or mixing. Worth chasing after loudness, since a level error would
 muddy any envelope measurement.
 
-⬜ **Effect-coverage fixture.** `musical.mod` is deliberately effect-free, so the
-A/B cannot see an arpeggio / portamento / vibrato / volume-slide regression. A
-second generated fixture closes that; the generator already exists and a
-separate file keeps a failure localised to effects rather than to notes.
+✅ **Effect-coverage fixture — DONE.** `test/fixtures/effects.mod` (same
+generator): one effect family per CHANNEL — arpeggio `0xy` · vibrato `4xy` ·
+portamento `1xx`/`2xx` · volume slide `Axy` — each working on ONE long note, so
+the effect has something to modulate. Bends go up then back down within each
+16-row run, so a one-sided error cannot hide. It GATES (spectral > 0.80; the
+threshold is per-fixture because pitch-bending material honestly diverges more
+than plain notes, and one shared number would be too loose for `musical.mod` or
+too tight for this).
+
+⬜ **First finding from it, unexplained: effect material is ~8 cents FLATTER.**
+`effects.mod` measures **−25.4 cents** against `musical.mod`'s −17.0. Portamento
+and vibrato compute pitch, so they plausibly amplify whatever the base offset
+is — which would tie it to G3 — but that is a guess. **Detune is deliberately
+NOT gated on this fixture**: gating a number we cannot account for would bless a
+possible bug as the baseline.
 
 ## Consolidated backlog (2026-07-25 doc sweep)
 
