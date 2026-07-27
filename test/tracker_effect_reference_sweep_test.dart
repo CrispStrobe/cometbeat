@@ -82,7 +82,27 @@ const double _kMaxExcessDeviation = 0.10;
 /// the fix landed the sweep printed "KNOWN OPEN now passing? drop the
 /// exemption" on both, which is what this list is for: an exemption that
 /// announces its own obsolescence instead of quietly outliving the bug.
-const _kKnownOpenDefects = <String>{};
+const _kKnownOpenDefects = <String>{
+  // PLAN.md §6 X9. Two measured, format-SPECIFIC portamento gaps that the
+  // fine-slide routing did not close. They are listed rather than skipped so
+  // the numbers print every run, and the flag inverts to "now passing? drop the
+  // exemption" the moment someone fixes one.
+  //
+  // IT plain porta (0.683 / 0.544 where S3M is 1.000 for the same command):
+  // most likely IT's LINEAR frequency slides — IT files carry a linear-slides
+  // flag and libopenmpt honours it, while we slide the period. That would also
+  // explain why IT's FINE porta is perfect: once-per-row steps are small enough
+  // for the two curves to agree.
+  //
+  // S3M fine porta (0.857 / 0.828 where IT is 1.000): S3M-specific scaling. The
+  // extra-fine variant sits at 0.987 — a quarter of the step and roughly a
+  // quarter of the error — which points at a constant factor rather than a
+  // wrong mechanism.
+  'porta_down_Exx.it',
+  'porta_up_Fxx.it',
+  'fine_porta_down_EFx.s3m',
+  'fine_porta_up_FFx.s3m',
+};
 
 const _kPeriodModelDependent = {
   'porta_up',
@@ -121,13 +141,15 @@ void main() {
   // set is ProTracker's), `flow/` is one order-list SHAPE per file emitted into
   // all four formats, and `sample/` is one property of the PLAYBACK layer per
   // file (all XM — MOD samples are 8-bit forward-loop only, so a MOD fixture
-  // cannot exercise ping-pong or 16-bit at all). The flow set is what catches a per-format encoding
+  // cannot exercise ping-pong or 16-bit at all). `fmt/` is one S3M/IT LETTER
+  // command per file — the effects MOD has no encoding for, so nothing in `fx/`
+  // can reach them. The flow set is what catches a per-format encoding
   // difference — the same song written four ways must render to the same thing,
   // and the references agree on that even where the formats encode it
   // differently.
   const extensions = ['.mod', '.xm', '.s3m', '.it'];
   final fixtures = <String>[];
-  for (final name in ['fx', 'flow', 'sample']) {
+  for (final name in ['fx', 'flow', 'sample', 'fmt']) {
     final dir = Directory('test/fixtures/$name');
     if (!dir.existsSync()) continue;
     fixtures.addAll(
@@ -175,7 +197,7 @@ void main() {
           if (s < ourWorst) ourWorst = s;
         }
         final gap = refAgree - ourWorst;
-        final knownOpen = _kKnownOpenDefects.contains(stem);
+        final knownOpen = _kKnownOpenDefects.contains(name);
         final exempt = knownOpen ||
             (!kPortaPeriodAccurate && _kPeriodModelDependent.contains(stem));
         final over = gap > _kMaxExcessDeviation;
@@ -184,7 +206,7 @@ void main() {
                 ? '  <-- KNOWN OPEN now passing? drop the exemption'
                 : '')
             : knownOpen
-                ? '  <-- KNOWN OPEN defect (PLAN.md §6 X3/X4, effect memory)'
+                ? '  <-- KNOWN OPEN defect — see _kKnownOpenDefects'
                 : exempt
                     ? '  (semitone pitch model — set PORTA_PERIOD=1)'
                     : '  <-- OUTSIDE';

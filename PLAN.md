@@ -2002,6 +2002,67 @@ each other — they disagree about what a one-shot does after its end (fade vs
 hard stop). We sit inside that spread at 0.974, so nothing is wrong, but it is
 another case where there is no single right answer to gate on.
 
+#### X9 continued (2026-07-27) — the S3M/IT command set, and a stale comment
+
+Every fixture in `fx/` is a MOD, so nothing reached the S3M/IT letter commands.
+`fmt/` adds one per file, written as **both** S3M and IT — sharing a command set
+means a divergence in one and not the other localises the fault to that reader.
+
+**Fine PORTAMENTO was badly broken.** S3M/IT overload the portamento parameter
+by RANGE: `0xF0`–`0xFF` is a FINE slide (low nibble, once on tick 0), `0xE0`–
+`0xEF` an EXTRA-fine one (quarter units, also once), and only below `0xE0` is it
+the ordinary per-tick slide. We passed the whole byte through as a normal slide,
+so `EF4` — four period units once — became a slide of **244 units every tick**:
+
+| fixture | before | after |
+| --- | --- | --- |
+| `fine_porta_up_FFx.it` | **0.131** | **1.000** |
+| `fine_porta_down_EFx.it` | 0.510 | **1.000** |
+| `extrafine_porta_down_EEx.it` | 0.458 | **1.000** |
+| `extrafine_porta_down_EEx.s3m` | 0.455 | 0.987 |
+
+The replayer already had `E1x`/`E2x` (MOD's own once-per-tick-0 fine porta), so
+this was routing, not a new mechanism. libxmp confirms the semantics exactly:
+fine is `fslide = ±fxp`, extra-fine `fslide = ±0.25 * fxp`. ⚠️ Extra-fine is
+therefore APPROXIMATED — we have no quarter-unit command, so it maps to fine
+with `x ~/ 4`: right for the common `EE4`, and rounds to nothing below it.
+`E1x`/`E2x` were also missing from the REVERSE map, so a fine porta was silently
+dropped on export even once the reader could produce one.
+
+⬜ **Two format-specific gaps remain, measured and listed in the sweep's
+`_kKnownOpenDefects` so they print every run:**
+
+| | S3M | IT |
+| --- | --- | --- |
+| plain `Exx`/`Fxx` | **1.000** | 0.683 / 0.544 |
+| fine `EFx`/`FFx` | 0.857 / 0.828 | **1.000** |
+
+The inversion is the clue. IT's plain porta most likely wants **linear frequency
+slides** (IT carries a linear-slides flag that libopenmpt honours; we slide the
+period) — which would also explain why IT's FINE porta is perfect, since
+once-per-row steps are small enough for the two curves to agree. S3M's fine
+porta looks like a constant scaling factor: the extra-fine variant is a quarter
+of the step and roughly a quarter of the error (0.987 vs 0.857).
+
+**Two method notes, both corrections to my own reasoning:**
+
+1. ⚠️ **The "fine slides are approximated as a normal slide" comment sent me
+   after the wrong effect.** I expected the VOLUME slides to be broken and built
+   the fixtures to prove it. Every `Dxy` form measures 1.000 — but see (2)
+   before believing that. The portamento family, which the comment does not
+   mention, was the one that was wrong.
+2. ⚠️ **Those volume-slide 1.000s are not evidence.** Spectral similarity is a
+   cosine of magnitude spectra and therefore amplitude-invariant, so it cannot
+   see a volume effect at all — the same trap that hid tremolo's 4× depth in X2.
+   `DFx` may well be as wrong as `EFx` was; the metric simply cannot say.
+   ⬜ **The volume-slide fixtures need an ENVELOPE measurement before anyone
+   concludes anything from them.**
+3. ⚠️ I repeated X1's own fixture mistake — holding a slide for all 31 rows runs
+   it off the period table, so clamping dominates and the references disagree
+   about their clamp policies rather than about our slide. Bounding the hold to
+   8 rows moved `porta_down_Exx.s3m` from 0.982 to 1.000 with no code change at
+   all. The lesson was already written down; I still had to relearn it.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,

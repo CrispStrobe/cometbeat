@@ -78,6 +78,9 @@ import 'package:comet_beat/core/audio/mod/xm_reader.dart';
 import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show
+        kExFinePortaDown,
+        kExFinePortaUp,
+        kFxExtended,
         kFxGlobalVolSlide,
         kFxPanbrello,
         kFxPanSlide,
@@ -243,6 +246,20 @@ int decimalBreakParam(int row) {
   return ((r ~/ 10) << 4) | (r % 10);
 }
 
+/// Splits an S3M/IT portamento parameter into the ordinary per-tick slide or
+/// one of the two once-per-row FINE forms.
+///
+/// [plainFx] is our per-tick command (`0x1` up / `0x2` down) and [fineSub] the
+/// matching `Exy` sub-command (`kExFinePortaUp`/`kExFinePortaDown`).
+(int, int) _portaWithFine(int info, int plainFx, int fineSub) {
+  if (info >= 0xF0) return (kFxExtended, (fineSub << 4) | (info & 0xF));
+  if (info >= 0xE0) {
+    // Extra fine: quarter units. Approximated — see the note at the call site.
+    return (kFxExtended, (fineSub << 4) | ((info & 0xF) ~/ 4));
+  }
+  return (plainFx, info);
+}
+
 /// The inverse of [decimalBreakParam]: our decimal-coded parameter → the row.
 int breakRowOfDecimalParam(int param) => (param >> 4) * 10 + (param & 0xF);
 
@@ -266,10 +283,25 @@ int breakRowOfDecimalParam(int param) => (param >> 4) * 10 + (param & 0xF);
     case 4: // D — volume slide (Dxy: x up / y down — matches our Axy; fine
       //     slides with an 0xF nibble are approximated as a normal slide)
       return (0xA, info);
+    // S3M/IT overload the portamento parameter by RANGE: 0xF0-0xFF is a FINE
+    // slide (the low nibble, applied ONCE on tick 0) and 0xE0-0xEF is an
+    // EXTRA-fine one (quarter units, also once). Only below 0xE0 is it the
+    // ordinary per-tick slide. We passed the whole byte through as a normal
+    // slide, so `EF4` — four period units once — became a slide of 244 units
+    // EVERY tick. Measured against libopenmpt and libxmp, which agree at 1.000:
+    // fine porta up read 0.131, fine porta down 0.456, extra-fine 0.455.
+    //
+    // The replayer already has `E1x`/`E2x` (MOD's own fine porta, once on tick
+    // 0), so this is a routing fix, not a new mechanism.
+    //
+    // ⚠️ EXTRA-fine is approximated: it moves a QUARTER period unit per unit and
+    // we have no quarter-unit command, so it maps to fine with `x ~/ 4`. That is
+    // right in magnitude for the common `EE4` (= one unit) and rounds to nothing
+    // below `EE4`. Recorded rather than hidden — see PLAN.md §6 X9.
     case 5: // E — portamento down
-      return (0x2, info);
+      return _portaWithFine(info, 0x2, kExFinePortaDown);
     case 6: // F — portamento up
-      return (0x1, info);
+      return _portaWithFine(info, 0x1, kExFinePortaUp);
     case 7: // G — tone portamento
       return (0x3, info);
     case 8: // H — vibrato
@@ -639,10 +671,10 @@ ModuleDoc docFromXm(XmModule m) {
       return (0xD, decimalBreakParam(value));
     case 4: // D — volume slide
       return (0xA, value);
-    case 5: // E — portamento down
-      return (0x2, value);
+    case 5: // E — portamento down — same fine/extra-fine ranges as S3M.
+      return _portaWithFine(value, 0x2, kExFinePortaDown);
     case 6: // F — portamento up
-      return (0x1, value);
+      return _portaWithFine(value, 0x1, kExFinePortaUp);
     case 7: // G — tone portamento
       return (0x3, value);
     case 8: // H — vibrato
@@ -964,6 +996,11 @@ ModuleDoc docFromIt(ItModule m) {
       final val = param & 0xF;
       return switch ((param >> 4) & 0xF) {
         0x0 => (19, (0x0 << 4) | val), // E0x hardware filter → S0x
+        // E1x/E2x fine porta → `FFx`/`EFx`. These were absent, so a fine
+        // porta was silently DROPPED on export to S3M/IT even once the reader
+        // learned to produce it.
+        0x1 => (6, 0xF0 | val), // E1x fine porta up   → FFx
+        0x2 => (5, 0xF0 | val), // E2x fine porta down → EFx
         0x3 => (19, (0x1 << 4) | val), // E3x glissando      → S1x
         0x4 => (19, (0x3 << 4) | val), // E4x vibrato wave   → S3x
         0x5 => (19, (0x2 << 4) | val), // E5x set finetune   → S2x
