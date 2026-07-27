@@ -373,9 +373,18 @@ Concretely, three of my own calls flip:
   point. It starts enabled. `removeExtraTrack` refuses base-band tracks rather
   than hiding them, and drops the copy's settings so a reused id cannot inherit
   them. Automation lanes are deep-copied (same aliasing trap as section copy).
-  10 tests. ⬜ **No UI yet** — the track-card row is at its width limit and its
-  long-press is taken by voice-picking, so this needs its own home. ⬜ Arbitrary
-  add + rename still open.
+  10 tests. ✅ **UI shipped** — a chip per track in the inspector ("Add another
+  track"): tap to copy, long-press a copy to remove it, so adding and removing
+  live in one place. ⬜ Arbitrary add + rename still open.
+  ⚠️ **Two things the first copy broke, because ids were assumed to be known
+  ones:** `_trackColors[id]!` threw a null check and `_trackLabel` fell through
+  its default, rendering every copy as "Sparkle". Copies now inherit their
+  source's colour and read as "Bass 2" — strip the `-N` suffix until a known id
+  is found, so a copy of a copy resolves too.
+  ⚠️ Wiring remove to the CARD's delete button overflowed that row by 23px —
+  the same row that broke 14 tests before — and widening the lane columns did
+  NOT fix it. The control moved to the chip instead, which is the better design
+  anyway. **Treat that row as full.**
   `kLoopMixerTracks` being a fixed curated band was justified above as
   "defensible for 6+". Under the Scratch model that is exactly backwards —
   Scratch lets a child add unlimited sprites, and the ceiling is the point.
