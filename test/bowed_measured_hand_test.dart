@@ -30,7 +30,7 @@ void main() {
       jsonDecode(File('test/data/spd_cello01_measured.json').readAsStringSync())
           as List;
 
-  int measuredPosition(Map n) =>
+  int measuredPosition(Map<String, dynamic> n) =>
       ((n['semitones'] as num) - ((n['finger'] as int) - 1) - 1).round();
 
   test('the measured stops land on integer positions of our frame model', () {
@@ -47,13 +47,13 @@ void main() {
   test('we choose the player own string in ordinary positions', () {
     final got = arrangeBowed(
       [
-        for (final n in notes) [(n as Map)['midi'] as int],
+        for (final n in notes) [(n as Map<String, dynamic>)['midi'] as int],
       ],
       skill: BowedSkill.advanced,
     );
     var loAgree = 0, loTot = 0, hiAgree = 0, hiTot = 0;
     for (var i = 0; i < notes.length; i++) {
-      final n = notes[i] as Map;
+      final n = notes[i] as Map<String, dynamic>;
       final ok = got.columns[i].single.string == n['string'];
       if (measuredPosition(n) <= 4) {
         loTot++;
