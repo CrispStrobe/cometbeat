@@ -8429,10 +8429,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'per-note velocity (a score carries dynamics marks, not values)';
 
   @override
-  String get reasonClampedToNut =>
-      'a note below string 1 open was clamped to the nut';
-
-  @override
   String get reasonFingeringChosen =>
       'fingering chosen for you — a score does not say which string';
 
@@ -8451,4 +8447,40 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get reasonTuningAssumed =>
       'tuning assumed — the song did not carry one';
+
+  @override
+  String reasonClampedToNut(int string) {
+    return 'a note below string $string open was clamped to the nut';
+  }
+
+  @override
+  String reasonOtherChannels(int count) {
+    return 'the other $count channels — a loop track is one voice';
+  }
+
+  @override
+  String reasonChordsSpread(int count) {
+    return 'chords spread across $count channels — a channel plays one note at a time';
+  }
+
+  @override
+  String reasonFingeringChosenN(int count) {
+    return 'fingering chosen for the $count notes without a stored voicing';
+  }
+
+  @override
+  String reasonPitchedChannels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pitched channels (a beat holds drums only)',
+      one: 'one pitched channel (a beat holds drums only)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reasonChannelMismatch(int count, int strings) {
+    return 'channel count ($count) does not match the $strings-string tuning';
+  }
 }

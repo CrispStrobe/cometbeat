@@ -15374,12 +15374,6 @@ abstract class AppLocalizations {
   /// **'per-note velocity (a score carries dynamics marks, not values)'**
   String get reasonVelocityScore;
 
-  /// No description provided for @reasonClampedToNut.
-  ///
-  /// In en, this message translates to:
-  /// **'a note below string 1 open was clamped to the nut'**
-  String get reasonClampedToNut;
-
   /// No description provided for @reasonFingeringChosen.
   ///
   /// In en, this message translates to:
@@ -15409,6 +15403,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'tuning assumed — the song did not carry one'**
   String get reasonTuningAssumed;
+
+  /// No description provided for @reasonClampedToNut.
+  ///
+  /// In en, this message translates to:
+  /// **'a note below string {string} open was clamped to the nut'**
+  String reasonClampedToNut(int string);
+
+  /// No description provided for @reasonOtherChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'the other {count} channels — a loop track is one voice'**
+  String reasonOtherChannels(int count);
+
+  /// No description provided for @reasonChordsSpread.
+  ///
+  /// In en, this message translates to:
+  /// **'chords spread across {count} channels — a channel plays one note at a time'**
+  String reasonChordsSpread(int count);
+
+  /// No description provided for @reasonFingeringChosenN.
+  ///
+  /// In en, this message translates to:
+  /// **'fingering chosen for the {count} notes without a stored voicing'**
+  String reasonFingeringChosenN(int count);
+
+  /// No description provided for @reasonPitchedChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{one pitched channel (a beat holds drums only)} other{{count} pitched channels (a beat holds drums only)}}'**
+  String reasonPitchedChannels(int count);
+
+  /// No description provided for @reasonChannelMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'channel count ({count}) does not match the {strings}-string tuning'**
+  String reasonChannelMismatch(int count, int strings);
 }
 
 class _AppLocalizationsDelegate

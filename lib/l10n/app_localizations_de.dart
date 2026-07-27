@@ -8477,10 +8477,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Velocity je Note (eine Partitur trägt Dynamikzeichen, keine Werte)';
 
   @override
-  String get reasonClampedToNut =>
-      'eine Note unter der leeren Saite 1 wurde zum Sattel geklemmt';
-
-  @override
   String get reasonFingeringChosen =>
       'Fingersatz für dich gewählt — eine Partitur sagt nicht, welche Saite';
 
@@ -8498,4 +8494,40 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reasonTuningAssumed => 'Stimmung angenommen — das Lied trug keine';
+
+  @override
+  String reasonClampedToNut(int string) {
+    return 'eine Note unter der leeren Saite $string wurde zum Sattel geklemmt';
+  }
+
+  @override
+  String reasonOtherChannels(int count) {
+    return 'die anderen $count Kanäle — ein Loop-Track ist einstimmig';
+  }
+
+  @override
+  String reasonChordsSpread(int count) {
+    return 'Akkorde auf $count Kanäle verteilt — ein Kanal spielt eine Note zur Zeit';
+  }
+
+  @override
+  String reasonFingeringChosenN(int count) {
+    return 'Fingersatz für die $count Noten ohne gespeicherte Griffweise gewählt';
+  }
+
+  @override
+  String reasonPitchedChannels(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count melodische Kanäle (ein Beat trägt nur Schlagzeug)',
+      one: 'ein melodischer Kanal (ein Beat trägt nur Schlagzeug)',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reasonChannelMismatch(int count, int strings) {
+    return 'Kanalzahl ($count) passt nicht zur $strings-saitigen Stimmung';
+  }
 }

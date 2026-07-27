@@ -288,16 +288,26 @@ class ConversionReport {
   /// The l10n key for a reason [message], or null to show it verbatim.
   String? keyFor(String message) => reasonKeys[message];
 
+  /// Ordered arguments for a DYNAMIC reason's localized template (interpolated
+  /// counts). Empty for a static reason. The UI feeds these to the parameterized
+  /// ARB getter named by [keyFor].
+  final Map<String, List<Object>> reasonArgs = {};
+
+  /// The template arguments for a reason [message] (empty when static).
+  List<Object> argsFor(String message) => reasonArgs[message] ?? const [];
+
   bool get lossless => lost.isEmpty && approximated.isEmpty;
 
-  void addLost(String what, [String? key]) {
+  void addLost(String what, [String? key, List<Object>? args]) {
     if (!lost.contains(what)) lost.add(what);
     if (key != null) reasonKeys[what] = key;
+    if (args != null) reasonArgs[what] = args;
   }
 
-  void addApproximated(String what, [String? key]) {
+  void addApproximated(String what, [String? key, List<Object>? args]) {
     if (!approximated.contains(what)) approximated.add(what);
     if (key != null) reasonKeys[what] = key;
+    if (args != null) reasonArgs[what] = args;
   }
 
   @override

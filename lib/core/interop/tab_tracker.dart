@@ -250,7 +250,9 @@ TrackerToTabResult tabDocumentFromTrackerSong(
   if (channels.length != tuning.stringCount) {
     report.addApproximated(
       'channel count (${channels.length}) does not match the '
-      '${tuning.stringCount}-string tuning',
+          '${tuning.stringCount}-string tuning',
+      'reasonChannelMismatch',
+      [channels.length, tuning.stringCount],
     );
   }
 
@@ -285,6 +287,8 @@ TrackerToTabResult tabDocumentFromTrackerSong(
       if (fret < 0) {
         report.addApproximated(
           'a note below string ${s + 1} open was clamped to the nut',
+          'reasonClampedToNut',
+          [s + 1],
         );
       }
       frets[s] = fret < 0 ? 0 : fret;

@@ -289,7 +289,9 @@ abstract final class ProjectBridge {
             if (channels.length > 1) {
               report.addLost(
                 'the other ${channels.length - 1} channels — a loop track '
-                'is one voice',
+                    'is one voice',
+                'reasonOtherChannels',
+                [channels.length - 1],
               );
             }
             return ConversionResult(
@@ -323,13 +325,17 @@ abstract final class ProjectBridge {
             // note is. Report exactly the notes actually being invented.
             final notes = _scoreNoteCount(part);
             final voiced = part.tabVoicings.length.clamp(0, notes);
-            if (voiced < notes) {
+            if (voiced == 0 && notes > 0) {
               report.addApproximated(
-                voiced == 0
-                    ? 'fingering chosen for you — a score does not say which '
-                        'string'
-                    : 'fingering chosen for the ${notes - voiced} notes '
-                        'without a stored voicing',
+                'fingering chosen for you — a score does not say which string',
+                'reasonFingeringChosen',
+              );
+            } else if (voiced < notes) {
+              report.addApproximated(
+                'fingering chosen for the ${notes - voiced} notes '
+                    'without a stored voicing',
+                'reasonFingeringChosenN',
+                [notes - voiced],
               );
             }
             if (mp.parts.length > 1) {
@@ -400,7 +406,9 @@ abstract final class ProjectBridge {
             if (channels.length > 1) {
               report.addApproximated(
                 'chords spread across ${channels.length} channels — a channel '
-                'plays one note at a time',
+                    'plays one note at a time',
+                'reasonChordsSpread',
+                [channels.length],
               );
             }
             return ConversionResult(

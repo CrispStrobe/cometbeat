@@ -2852,10 +2852,15 @@
   "reasonPartsBeyondFirst": "Stimmen nach der ersten (eine Tabulatur hat nur eine)",
   "reasonSnappedLoopGrid": "Noten auf das Achtelnoten-Loop-Raster gerastet",
   "reasonVelocityScore": "Velocity je Note (eine Partitur trägt Dynamikzeichen, keine Werte)",
-  "reasonClampedToNut": "eine Note unter der leeren Saite 1 wurde zum Sattel geklemmt",
   "reasonFingeringChosen": "Fingersatz für dich gewählt — eine Partitur sagt nicht, welche Saite",
   "reasonLengthsRounded": "Notenlängen auf den nächsten Notenwert gerundet",
   "reasonStringFretLoop": "Saite und Bund (ein Loop-Track trägt Tonhöhen)",
   "reasonTabNotWholeBars": "die Tabulatur füllt keine ganzen Takte — der Loop wird keine saubere Länge haben",
-  "reasonTuningAssumed": "Stimmung angenommen — das Lied trug keine"
+  "reasonTuningAssumed": "Stimmung angenommen — das Lied trug keine",
+  "reasonClampedToNut": "eine Note unter der leeren Saite {string} wurde zum Sattel geklemmt",
+  "reasonOtherChannels": "die anderen {count} Kanäle — ein Loop-Track ist einstimmig",
+  "reasonChordsSpread": "Akkorde auf {count} Kanäle verteilt — ein Kanal spielt eine Note zur Zeit",
+  "reasonFingeringChosenN": "Fingersatz für die {count} Noten ohne gespeicherte Griffweise gewählt",
+  "reasonPitchedChannels": "{count, plural, one{ein melodischer Kanal (ein Beat trägt nur Schlagzeug)} other{{count} melodische Kanäle (ein Beat trägt nur Schlagzeug)}}",
+  "reasonChannelMismatch": "Kanalzahl ({count}) passt nicht zur {strings}-saitigen Stimmung"
 }

@@ -117,6 +117,8 @@ TrackerToBeatResult sharedBeatFromTrackerSong(
       pitchedChannels == 1
           ? 'one pitched channel (a beat holds drums only)'
           : '$pitchedChannels pitched channels (a beat holds drums only)',
+      'reasonPitchedChannels',
+      [pitchedChannels],
     );
   }
 

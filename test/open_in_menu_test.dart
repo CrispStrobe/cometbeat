@@ -189,16 +189,15 @@ void main() {
     final docs = <AppMode, Object>{
       AppMode.score: score,
       AppMode.tracker: trackerSongFromMultiPart(score),
-      AppMode.loop: const [PatternCell(midis: [60], steps: 2)],
+      AppMode.loop: const [
+        PatternCell(midis: [60], steps: 2)
+      ],
       AppMode.tab: _tab(),
     };
-    // Reasons that legitimately stay English: dynamic (interpolated counts) and
-    // the bounce reason (shown in the "cannot open" dialog, never as a bullet).
+    // The only reason that legitimately stays English is the bounce (shown in
+    // the "cannot open" dialog, never as a loss bullet). Every loss-dialog
+    // reason — static AND dynamic (parameterized counts) — is now localized.
     const allowEnglish = [
-      'channel count', // "channel count (N) does not match…"
-      'the other', // "the other N channels…"
-      'chords spread', // "chords spread across N channels…"
-      'notes without a stored voicing', // "fingering chosen for the N notes…"
       'everything symbolic', // the bounce, not a loss bullet
     ];
     final de = AppLocalizationsDe();

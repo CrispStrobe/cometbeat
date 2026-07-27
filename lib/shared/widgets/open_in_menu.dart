@@ -41,8 +41,6 @@ String localizedModeLabel(AppLocalizations l10n, AppMode mode) =>
 /// keyed here / at its site, or a known dynamic one. Returns null for the
 /// dynamic reasons (interpolated counts), which show English verbatim.
 String? _staticReasonKey(String message) => switch (message) {
-      'a note below string 1 open was clamped to the nut' =>
-        'reasonClampedToNut',
       'fingering chosen for you — a score does not say which string' =>
         'reasonFingeringChosen',
       'note lengths rounded to the nearest note value' =>
@@ -57,15 +55,18 @@ String? _staticReasonKey(String message) => switch (message) {
 
 /// The localized text for a [ConversionReport] reason. It resolves the reason's
 /// l10n key in order — first a key the bridge tagged at the call site
-/// ([ConversionReport.keyFor]), then the central static map ([_staticReasonKey])
-/// for sub-converter reasons — and falls back to the English [message] for a
-/// dynamic/one-off reason (an interpolated count), a documented remainder.
+/// ([ConversionReport.keyFor], which also carries [ConversionReport.argsFor] for
+/// a DYNAMIC reason's counts), then the central static map ([_staticReasonKey])
+/// for sub-converter reasons — and falls back to the English [message] only for a
+/// reason with no key at all.
 String localizedReason(
   AppLocalizations l10n,
   ConversionReport report,
   String message,
 ) {
   final key = report.keyFor(message) ?? _staticReasonKey(message);
+  final a = report.argsFor(message);
+  int arg(int i) => a[i] as int;
   return switch (key) {
     'reasonEffectColumns' => l10n.reasonEffectColumns,
     'reasonNoChannels' => l10n.reasonNoChannels,
@@ -73,12 +74,18 @@ String localizedReason(
     'reasonPartsBeyondFirst' => l10n.reasonPartsBeyondFirst,
     'reasonSnappedLoopGrid' => l10n.reasonSnappedLoopGrid,
     'reasonVelocityScore' => l10n.reasonVelocityScore,
-    'reasonClampedToNut' => l10n.reasonClampedToNut,
     'reasonFingeringChosen' => l10n.reasonFingeringChosen,
     'reasonLengthsRounded' => l10n.reasonLengthsRounded,
     'reasonStringFretLoop' => l10n.reasonStringFretLoop,
     'reasonTabNotWholeBars' => l10n.reasonTabNotWholeBars,
     'reasonTuningAssumed' => l10n.reasonTuningAssumed,
+    // Dynamic (interpolated counts): the args ride along on the report.
+    'reasonClampedToNut' => l10n.reasonClampedToNut(arg(0)),
+    'reasonOtherChannels' => l10n.reasonOtherChannels(arg(0)),
+    'reasonChordsSpread' => l10n.reasonChordsSpread(arg(0)),
+    'reasonFingeringChosenN' => l10n.reasonFingeringChosenN(arg(0)),
+    'reasonPitchedChannels' => l10n.reasonPitchedChannels(arg(0)),
+    'reasonChannelMismatch' => l10n.reasonChannelMismatch(arg(0), arg(1)),
     _ => message,
   };
 }
