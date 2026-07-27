@@ -1330,11 +1330,36 @@ the three references agree with each other** (task X0's rule), not an absolute.
 **So the "sweeping" a listener heard is PORTAMENTO, not vibrato** — vibrato and
 tremolo are fine, and the whole pitch-slide family is not.
 
-**B1 — `9xx` sample offset renders silence.** rms 0.00000 against ~0.100 from
-all three references. The fixture offsets BEYOND the sample end (`9x02` = 512
-into a 256-sample loop), so this is specifically the out-of-range case: the
-references keep sounding, we kill the channel. ⚠️ Also add an IN-range offset
-fixture before fixing, so the fix is not tuned to the edge case alone.
+✅ **B1 — FIXED (ungated; a plain bug). spectral 0.000 → 0.986** out-of-range,
+**0.994** in-range, against three references that agree at 1.000.
+
+**It was NOT `9xx` in general — only offsets past the sample end.** Splitting
+the fixture proved it: in-range already worked (0.156 rms vs refs 0.112, i.e.
+only the known gain convention), while out-of-range was digital silence. Those
+would have been different fixes, which is why the in-range fixture came first.
+
+**Cause:** `tracker_engine.dart` guarded the whole render block with
+`offset < source.length`, so an out-of-range offset skipped it entirely. The
+boundary was exact — with a 1349-sample buffer `9x00` sounded and `9x01`
+(start 1350, ONE past the end) was already silent.
+
+ProTracker does not refuse: it clamps the play length to one word
+(`pt2_replayer.c` sampleOffset, `else { ch->n_length = 1; }`) and on a LOOPING
+sample Paula's loop takes over, so the note keeps sounding — which is why all
+three references render it at full level. The fix wraps the offset into the loop
+when there is one, and **leaves the guard in place for one-shot samples**, where
+silence remains correct. That asymmetry is the fix, not an oversight in it.
+
+⚠️ **Two ways I nearly got this wrong, both caught by measuring:**
+1. I reasoned from `tracker_replayer.dart`'s read loop, which HAS a wrap and
+   should have handled it — my source reading predicted working audio and
+   contradicted the measurement. The offline note-run path in
+   `tracker_engine.dart` is what actually renders here. When source reading and
+   measurement disagree, the code being read is probably not the code running.
+2. The first regression test asserted on the render's PEAK, which cannot tell
+   two offsets apart on a looping sample (both halves play either way). It
+   passed vacuously until rewritten to measure the START of the note, which is
+   the only place the read pointer's origin is visible.
 
 ✅ **B2 — FIXED (ungated; a plain bug, not a design choice). spectral
 0.859 → 0.996**, which is closer to the references than they are to each other

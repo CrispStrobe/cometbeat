@@ -950,9 +950,25 @@ class SampleInstrument implements TrackerInstrument {
       // _hasPerTickEffect, where ReplayVoice.sampleReadStart combines the high
       // offset — keeping this path byte-identical to its pre-SAx behaviour.
       final trigger = cells[startStep];
-      final offset = trigger.fxCmd == 0x9
+      var offset = trigger.fxCmd == 0x9
           ? (trigger.fxParam * 256 * offsetScale).round()
           : 0;
+      // An offset PAST the end of the sample must not silence the note.
+      //
+      // ProTracker clamps the play length to 1 word rather than refusing
+      // (`pt2_replayer.c` sampleOffset: `else { ch->n_length = 1; }`), and on a
+      // LOOPING sample Paula's loop then takes over — so the note keeps
+      // sounding. libopenmpt, libxmp and micromod all agree, rendering our
+      // out-of-range fixture at ~0.112 rms where we produced digital silence
+      // (PLAN.md §6 B1): the `offset < source.length` guard below skipped the
+      // whole render block. The boundary was exact — `9x01` at one sample past
+      // the end was already silent.
+      //
+      // A one-shot sample has no loop to fall back on, so there silence is
+      // right and the guard still applies.
+      if (offset >= source.length && loops && loopLength > 0) {
+        offset = loopStart + ((offset - loopStart) % loopLength);
+      }
       if (midi != null && offset < source.length) {
         final src =
             offset > 0 ? Float64List.sublistView(source, offset) : source;
