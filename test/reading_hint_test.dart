@@ -95,4 +95,49 @@ void main() {
       expect(find.byIcon(Icons.lightbulb_outline), findsNothing);
     });
   });
+
+  group('readingHintText (localised)', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    testWidgets('spells every interval arm — same/step/skip/far, up & down',
+        (tester) async {
+      final texts = <String, String>{};
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => SettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en'), Locale('de')],
+            home: Builder(
+              builder: (context) {
+                // Treble landmarks: C4, E4 (bottom line), B4 (middle), F5 (top).
+                String t(Pitch p) => readingHintText(context, Clef.treble, p);
+                texts['same'] = t(const Pitch(Step.c, octave: 4)); // 0
+                texts['stepUp'] = t(const Pitch(Step.d, octave: 4)); // +1
+                texts['stepDown'] = t(const Pitch(Step.b, octave: 3)); // -1
+                texts['skipUp'] = t(const Pitch(Step.g, octave: 4)); // +2
+                texts['skipDown'] = t(const Pitch(Step.a, octave: 3)); // -2
+                texts['farUp'] = t(const Pitch(Step.c, octave: 6)); // +4
+                texts['farDown'] = t(const Pitch(Step.c, octave: 2)); // -14
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Every arm produced a non-empty phrase.
+      expect(texts.values, everyElement(isNotEmpty));
+      // The seven arms are distinct phrasings.
+      expect(texts.values.toSet().length, 7);
+      // The "far" arms carry the diatonic distance.
+      expect(texts['farUp'], contains('4'));
+      expect(texts['farDown'], contains('14'));
+    });
+  });
 }
