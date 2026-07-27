@@ -116,6 +116,78 @@ void main() {
     expect(await without.downloadNeuralVoice(const Locale('en')), isFalse);
   });
 
+  test('routes to the onnxFfi backend when it reports ready (no crispasr)',
+      () async {
+    final platform = _FakeBackend();
+    final onnx = _FakeBackend();
+    final tts = TtsService(
+      backend: platform,
+      onnx: _holder(onnx, ready: true),
+    );
+    await tts.speak('Ein Test', locale: const Locale('de'));
+    expect(onnx.spoken, [('Ein Test', 'de-DE')]);
+    expect(platform.spoken, isEmpty);
+  });
+
+  test('falls back to platform when the onnxFfi backend is not ready',
+      () async {
+    final platform = _FakeBackend();
+    final onnx = _FakeBackend();
+    final tts = TtsService(
+      backend: platform,
+      onnx: _holder(onnx, ready: false),
+    );
+    await tts.speak('A test', locale: const Locale('en'));
+    expect(platform.spoken, [('A test', 'en-US')]);
+    expect(onnx.spoken, isEmpty);
+  });
+
+  test('crispasr-FFI outranks onnxFfi when both are ready', () async {
+    final platform = _FakeBackend();
+    final crispasr = _FakeBackend();
+    final onnx = _FakeBackend();
+    final tts = TtsService(
+      backend: platform,
+      neural: _holder(crispasr, ready: true),
+      onnx: _holder(onnx, ready: true),
+    );
+    await tts.speak('A test', locale: const Locale('en'));
+    expect(crispasr.spoken, [('A test', 'en-US')]);
+    expect(onnx.spoken, isEmpty);
+    expect(platform.spoken, isEmpty);
+  });
+
+  test('onnxFfi is used over crispasr-FFI when only onnx is ready', () async {
+    final platform = _FakeBackend();
+    final crispasr = _FakeBackend();
+    final onnx = _FakeBackend();
+    final tts = TtsService(
+      backend: platform,
+      neural: _holder(crispasr, ready: false),
+      onnx: _holder(onnx, ready: true),
+    );
+    await tts.speak('A test', locale: const Locale('en'));
+    expect(onnx.spoken, [('A test', 'en-US')]);
+    expect(crispasr.spoken, isEmpty);
+  });
+
+  test('an onnxFfi readiness throw is treated as not available', () async {
+    final platform = _FakeBackend();
+    final onnx = _FakeBackend();
+    final tts = TtsService(
+      backend: platform,
+      onnx: NeuralTts(
+        backend: onnx,
+        ready: () async => throw StateError('no ORT'),
+        supported: () async => true,
+        download: (_) async => false,
+      ),
+    );
+    await tts.speak('A test', locale: const Locale('en'));
+    expect(platform.spoken, [('A test', 'en-US')]);
+    expect(onnx.spoken, isEmpty);
+  });
+
   test('downloadNeuralVoice forwards the locale tag + notifies', () async {
     String? gotLang;
     var notified = 0;

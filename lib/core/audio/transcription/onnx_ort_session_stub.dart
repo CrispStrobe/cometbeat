@@ -18,5 +18,12 @@ class OrtFfiSession {
   ) =>
       const {};
 
+  /// Native-only: no ORT here, so multi-input inference yields nothing.
+  Map<String, Float32List> runMulti(
+    Map<String, ({List<num> data, List<int> shape, bool int64})> inputs,
+    List<String> outputNames,
+  ) =>
+      const {};
+
   void dispose() {}
 }

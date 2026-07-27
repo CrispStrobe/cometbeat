@@ -103,13 +103,16 @@ class TtsService with ChangeNotifier {
   TtsService({
     TtsBackend? backend,
     NeuralTts? neural,
+    NeuralTts? onnx,
     PrebakedNarrationBackend? prebaked,
   })  : _injectedBackend = backend,
         _prebaked = prebaked,
         _neural = neural?.backend,
         _neuralReady = neural?.ready,
         _neuralSupported = neural?.supported,
-        _neuralDownload = neural?.download;
+        _neuralDownload = neural?.download,
+        _onnx = onnx?.backend,
+        _onnxReady = onnx?.ready;
 
   final TtsBackend? _injectedBackend;
 
@@ -136,6 +139,13 @@ class TtsService with ChangeNotifier {
   final Future<bool> Function()? _neuralReady;
   final Future<bool> Function()? _neuralSupported;
   final Future<bool> Function(String lang)? _neuralDownload;
+
+  /// Optional native-ONNX-Runtime neural backend (Piper VITS over the
+  /// `onnxruntime` FFI plugin — the [TtsEngine.onnxFfi] path). Native-only (null
+  /// on web / io-less builds). Selected by the engine resolver AFTER crispasr-FFI
+  /// when its `ready` probe passes (native ORT loadable + a voice cached).
+  final TtsBackend? _onnx;
+  final Future<bool> Function()? _onnxReady;
 
   /// Whether a neural backend exists on this build (before any probe).
   bool get hasNeural => _neural != null;
@@ -229,14 +239,24 @@ class TtsService with ChangeNotifier {
         // treat a probe failure as "not available"
       }
     }
+    final onnx = _onnx;
+    final onnxReady = _onnxReady;
+    if (onnx != null && onnxReady != null) {
+      try {
+        if (await onnxReady()) set.add(TtsEngine.onnxFfi);
+      } catch (_) {
+        // treat a probe failure as "not available"
+      }
+    }
     return set;
   }
 
   /// The live backend for a resolved engine, or null if not wired yet.
   TtsBackend? _backendFor(TtsEngine e) => switch (e) {
         TtsEngine.crispasrFfi => _neural,
+        TtsEngine.onnxFfi => _onnx,
         TtsEngine.platform => _backend,
-        // onnxFfi / pureDartOnnx / crispasrWasm attach here as they land.
+        // pureDartOnnx / crispasrWasm attach here as they land.
         _ => null,
       };
 
@@ -263,12 +283,14 @@ class TtsService with ChangeNotifier {
       notifyListeners();
     }
     await _neural?.stop();
+    await _onnx?.stop();
     await _backend.stop();
   }
 
   @override
   void dispose() {
     _neural?.stop();
+    _onnx?.stop();
     _backend.stop();
     super.dispose();
   }

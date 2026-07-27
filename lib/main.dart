@@ -1,3 +1,4 @@
+import 'package:comet_beat/core/audio/tts/onnx_ort_tts_factory.dart';
 import 'package:comet_beat/core/audio/tts/prebaked_narration.dart';
 import 'package:comet_beat/core/audio/tts/tts_neural.dart';
 import 'package:comet_beat/core/audio/voice_options.dart';
@@ -77,13 +78,19 @@ class CometBeatApp extends StatelessWidget {
               play: audio.playWavBytes,
               stopPlayback: audio.stop,
             );
+            // Native ONNX-Runtime (Piper VITS) neural voice — the onnxFfi
+            // engine; null off-native. Ranks after crispasr-FFI in the resolver.
+            final onnx = createOnnxOrtTts(
+              play: audio.playWavBytes,
+              stopPlayback: audio.stop,
+            );
             // Pre-baked neural narration (bundled WAV assets) — the only
             // practical neural voice on web; inert until strings are baked in.
             final prebaked = PrebakedNarrationBackend(
               play: audio.playWavBytes,
               stopPlayback: audio.stop,
             );
-            return TtsService(neural: neural, prebaked: prebaked);
+            return TtsService(neural: neural, onnx: onnx, prebaked: prebaked);
           },
         ),
       ],

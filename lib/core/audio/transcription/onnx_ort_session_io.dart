@@ -78,6 +78,53 @@ class OrtFfiSession {
     }
   }
 
+  /// Run MULTIPLE inputs of MIXED type (int64 or float32) in one pass and return
+  /// each requested output flattened to a row-major [Float32List].
+  ///
+  /// Each input carries its flat row-major [data] (as `List<num>`), its [shape],
+  /// and an [int64] flag selecting the tensor's element type: `true` builds an
+  /// `Int64List` (e.g. token/id + length inputs), `false` a `Float32List` (e.g.
+  /// scales). This is what a TTS graph like Piper VITS needs (`input`+
+  /// `input_lengths` int64, `scales` float32) — the single-input [run] above
+  /// stays untouched for the transcription callers. Frees every native tensor it
+  /// allocates in a `finally`.
+  Map<String, Float32List> runMulti(
+    Map<String, ({List<num> data, List<int> shape, bool int64})> inputs,
+    List<String> outputNames,
+  ) {
+    final tensors = <String, OrtValue>{};
+    final runOptions = OrtRunOptions();
+    List<OrtValue?>? outs;
+    try {
+      inputs.forEach((name, spec) {
+        // Int64List / Float32List share only `TypedData`, so keep the branches
+        // separate — each passes a concrete List to createTensorWithDataList.
+        final tensor = spec.int64
+            ? OrtValueTensor.createTensorWithDataList(
+                Int64List.fromList([for (final v in spec.data) v.toInt()]),
+                spec.shape,
+              )
+            : OrtValueTensor.createTensorWithDataList(
+                Float32List.fromList([for (final v in spec.data) v.toDouble()]),
+                spec.shape,
+              );
+        tensors[name] = tensor;
+      });
+      outs = _session.run(runOptions, tensors, outputNames);
+      final result = <String, Float32List>{};
+      for (var i = 0; i < outputNames.length; i++) {
+        result[outputNames[i]] = _flatFloat(outs[i]?.value);
+      }
+      return result;
+    } finally {
+      for (final t in tensors.values) {
+        t.release();
+      }
+      runOptions.release();
+      outs?.forEach((o) => o?.release());
+    }
+  }
+
   void dispose() => _session.release();
 }
 
