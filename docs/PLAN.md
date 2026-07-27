@@ -486,17 +486,42 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (pdmx-normalise)** · 🚧 **ACTIVE — composer-name normalisation for the PD
-  gate (maintainer-authorised).** ⚠ **Touching shared corpus tooling:**
-  `bin/pdmx_pd_composer.py` on the VPS, which gates the PUBLIC catalog — so:
-  normalisation only (no gate-rule change), measured as a dry run first, and the
-  catalog is NOT re-emitted by me. The gate currently returns UNKNOWN for `"J.S.
-  BACH"` (initials) and `"Luigi Boccherini (1743-1805)"` (a string carrying its own
-  death year) — formatting failures, not copyright ones, and 132 of 189 rows in the
-  fingering mine landed in that bucket. Plan: strip parenthetical life-dates (and use
-  them as corroboration), expand initials, strip trailing roles/suffixes, then
-  re-verdict and report how many rows recover — catalog-wide, not just for cello.
-  Worktree `../mus-cello-fingering` (script work is VPS-side).
+- **opus (pdmx-normalise)** · ✅ **SHIPPED (idle) — composer-name normalisation for
+  the PD gate + the agreement metric decomposed** (`a1de6857`; VPS
+  `bin/pdmx_pd_composer.py`, backup `.bak-prenorm`).
+  **(1) Normalisation, measured against the REAL gate as baseline:** PD verdicts go
+  **122 → 158 (+30%)** on a random 1,500-score PDMX sample and **40 → 66 (+65%)** on
+  the fingering mine, with every RECENT/ALIVE rejection unchanged (Hozier, John
+  Williams, Kreisler, Toby Fox, ZUN all still rejected). The rule is untouched — only
+  the string handed to the resolver: parenthetical life-dates dropped, name suffixes
+  dropped, embedded newlines collapsed, `"J.S."` → `"J. S."`, and the name-sanity
+  check taught that a single-letter token matches a label token starting with it
+  (still requiring one FULL token match, so `"J.S. Smith"` cannot ride in on
+  initials). `life_hint()` added for AUDIT only — the uploader's own dates are the
+  self-attestation the gate exists to distrust, and are sometimes wrong (`"Antonio
+  Lotti (1667 - 1760)"` vs Wikidata 1740). ⚠ **The catalog is NOT re-emitted by me** —
+  extrapolating the +30%, PDMX's 3,426 catalog rows imply roughly **+1,000 recoverable
+  PD rows**; re-running the gate and re-emitting belongs to the catalog owner.
+  ⚠ Name ambiguity remains: `"John Williams"` resolves to a different John Williams
+  (d.1983) — harmless here since both are rejected, but a reminder that a bare common
+  name is weak evidence.
+  **(2) The 50%-vs-90% question, answered by decomposition:** exact-finger agreement
+  conflates a determinate axis with a subjective one. Over both gold sets (248
+  labels): **exact finger 52.0%, string agreement 92.7%**, zero impossible labels. We
+  are already >90% on the axis that has a right answer; the residual is
+  position-on-the-same-string, which is where ten professionals disagree with each
+  other (F1 .24–.31 in the literature). New permanent test
+  `test/bowed_agreement_axes_test.dart` defends the string axis as the real floor.
+  A weight fix for the 19 open-vs-stopped disagreements was **tested and falsified**
+  (leave-one-piece-out: no change at open-cost 0.0/0.4/1.0, worse at 2.0/4.0).
+  **(3) And there IS a cello dataset after all** — correcting my earlier "nothing
+  exists": the **String Performance Dataset (SPD)** (*Audio Matters Too!*, ACM TOG
+  2024) is cello + violin, 120 pieces / 3.0 h, 23 camera views, with 3D hand +
+  instrument motion and audio-derived hand-string CONTACTS. Full set is request-access
+  (Google Form); a public **Apache-2.0** HF mirror (`shiyi098/string_performance_dataset-SPD`)
+  carries one demo piece + models. Caveat: its string/position come from a
+  Pitch-Finger model constrained by real mocap — measured hands, not a player's
+  notated intent — so it is a different kind of label from an edition's fingering.
 
 - **opus (cello-labels)** · ✅ **SHIPPED (idle) — the cello arc is COMPLETE; items 2
   and 3 closed with numbers** (`4a5d00b3`). Full PDMX mine + the documented ship gate:
