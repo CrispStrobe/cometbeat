@@ -67,4 +67,29 @@ void main() {
     mixer.setLoop(Float64List.fromList([7, 7]), preservePhase: false);
     expect(mixer.position, 0);
   });
+
+  test('BufferedSink accumulates, reports length, and clears', () {
+    final sink = BufferedSink();
+    expect(sink.length, 0);
+    sink.write(Float64List.fromList([1, 2, 3]));
+    sink.write(Float64List.fromList([4, 5]));
+    expect(sink.length, 5);
+    expect(sink.samples, [1, 2, 3, 4, 5]);
+    sink.clear();
+    expect(sink.length, 0);
+    expect(sink.samples, isEmpty);
+  });
+
+  test('loopLength reflects the source; empty loops are rejected', () {
+    final mixer = StreamingMixer(Float64List.fromList([1, 2, 3, 4]));
+    expect(mixer.loopLength, 4);
+    expect(
+      () => StreamingMixer(Float64List(0)),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      () => mixer.setLoop(Float64List(0)),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
 }
