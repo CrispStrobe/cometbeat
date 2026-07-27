@@ -51,4 +51,32 @@ void main() {
     }
     expect(report.orphanGames, isEmpty, reason: 'every game should be placed');
   });
+
+  test('report surfaces dangling refs and untrained concepts (synthetic)', () {
+    // The real inventory has neither, so build a report that has both to cover
+    // those report() branches.
+    final synthetic = CoverageReport(
+      concepts: const [
+        Concept('c1', GradeBand.g12, ConceptArea.reading, 'Ghost ref', [
+          'ghost_game',
+        ]),
+        Concept('c2', GradeBand.g34, ConceptArea.pulse, 'No game', []),
+        Concept('c3', GradeBand.g12, ConceptArea.pulse, 'One game', [
+          'real_game',
+        ]),
+      ],
+      registeredGameIds: const {'real_game'},
+    );
+
+    expect(synthetic.danglingRefs, hasLength(1)); // c1 → ghost_game
+    expect(synthetic.untrained.map((c) => c.id), ['c2']);
+    // c1 and c3 each name exactly one game → both "thin".
+    expect(synthetic.thin.map((c) => c.id), containsAll(['c1', 'c3']));
+
+    final text = synthetic.report();
+    expect(text, contains('DANGLING'));
+    expect(text, contains('ghost_game'));
+    expect(text, contains('UNTRAINED'));
+    expect(text, contains('No game'));
+  });
 }
