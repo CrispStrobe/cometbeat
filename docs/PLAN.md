@@ -683,6 +683,51 @@ is recorded in [HISTORY.md](HISTORY.md).
   contributed to crisp_notation. The only remaining route to dense labels is a cellist
   annotating for a few hours with the arranger pre-filling — a decision, not a task.
 
+- **opus (cello-vision-read)** · 🚧 **ACTIVE — transcribing PD cello methods by
+  SIGHT, not OMR; the method is settled and the first labels are in.** Touching only
+  scratchpad + `test/data/` (no shared files). The maintainer's correction that framed
+  this: a capable vision model should **read the page as a person reads it** and write
+  the `.ly`/`.krn`/MusicXML directly — no staff-line detection, notehead centroids or
+  component scans. That is now auto-memory `vision-read-not-omr`.
+  **The framing is worth more than the model.** Same model, same page, one prompt
+  change: the OMR-framed agent spent ~40 min / 195k tokens on 47 tool calls to yield
+  **13 notes and 2 fingerings**; the sight-reading agent yielded **44 notes and 79 of
+  88 fingering slots** in ~27 min. Four agents that were mid-way through building
+  notehead template correlators were killed. Ratio ≈ **6× more labels for less spend**,
+  so treat "wrote an OMR pipeline" as a bug in the prompt, not a hard task.
+  **⭐ The find — Tillière, *Méthode pour le violoncelle*, printed p.17.** This page
+  states in TYPE the three things a symbolic corpus can never carry: the **string**
+  (`4.e Corde` … `1.re Corde`), the **position** (a `2.e P.`…`5.e P.` label over every
+  bar) and the **finger** (a digit under every note). One page ≈ 96 étude labels plus a
+  position-scale block — against **248** total gold labels from mining all of PDMX.
+  Line 1 (C string) is read: an E♭ major sequence, three-note groups rising stepwise
+  then mirroring, **24 labels with string + position + finger**.
+  **It corroborates our hand model.** Bars 1/2/4 print a WHOLE TONE between fingers 1
+  and 2 (E♭–F–G under 1–2–4) — the older French *position mixte*, i.e. exactly the frame
+  `bowed_arranger.dart` models as `extendedForward`. Bar 3, though, prints G–A♭–B♭ under
+  1–2–3 (semitone then whole tone), which no standard cello frame yields; checked twice
+  at 8×, **recorded as printed and deliberately NOT regularised** — silently fixing it
+  would destroy the evidence either way. Any transcriber of these pages must be told
+  this, or they will "correct" the extensions away.
+  ⚠ **Not cleared, and not in the acceptance suite:** Tillière d.1790 is long PD, but
+  the EDITION is unidentified (plate 5176, 19th-c French) and the fingerings may be an
+  editorial layer. Per the editor-not-composer rule it stays in the scratchpad marked
+  `licence: UNCONFIRMED` until the edition and its editor's death year are established.
+  **Working process** (recommended for whoever continues): read the page yourself first
+  to establish the interpretive key, then hand each line to an agent as an *independent
+  second reader* — double-keying, as in manuscript transcription. Disagreements localise
+  exactly where the scan is ambiguous, which one pass cannot tell you. It has already
+  paid: a cross-shaped glyph I flagged as "4 or thumb `+`" was resolved to an old-style
+  **4** with a filled counter, because the same glyph stands over C3/E3 where a thumb is
+  physically impossible. Corollary: a running agent's transcript is unreadable to the
+  parent, so ask for a compact final summary and honest `%% UNSURE` markers.
+  **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
+  engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
+  17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
+  78; PDF↔print offset ≈ +13. Tillière (photocopy-grade, 1071×1640 @150 ppi) p.17 ff.
+  ⚠ Extract with `pdfimages -j`, NOT `pdftoppm -r 300`: these PDFs wrap low-res scans
+  (122–150 ppi), so rendering at 300 dpi is slow and upscales without adding detail.
+
 - **opus (cello-omr-trial)** · 🔬 **TRIAL DONE (measured) — Audiveris DOES recover
   printed cello fingerings, at low recall, with detectable errors.** Ran Audiveris
   5.11 over one page of a PD 19th-c. Dotzauer Op.175 print (a PD Internet Archive
