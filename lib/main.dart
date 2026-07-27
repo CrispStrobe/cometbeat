@@ -1,5 +1,6 @@
 import 'package:comet_beat/core/audio/tts/onnx_ort_tts_factory.dart';
 import 'package:comet_beat/core/audio/tts/prebaked_narration.dart';
+import 'package:comet_beat/core/audio/tts/tts_asset_cache.dart';
 import 'package:comet_beat/core/audio/tts/tts_neural.dart';
 import 'package:comet_beat/core/audio/voice_options.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -84,11 +85,18 @@ class CometBeatApp extends StatelessWidget {
               play: audio.playWavBytes,
               stopPlayback: audio.stop,
             );
-            // Pre-baked neural narration (bundled WAV assets) — the only
-            // practical neural voice on web; inert until strings are baked in.
+            // Pre-baked neural narration. Default (BUNDLED MODE): WAVs read from
+            // the app assets — the practical neural voice on web, inert until
+            // strings are baked in. If built with
+            // `--dart-define=NARRATION_PACK_BASE=<https url>` (PACK MODE): clips
+            // are fetched from that host + cached (IndexedDB on web) instead of
+            // bundled, so the web build ships without the ~40 MB of audio (#7).
+            const packBase = String.fromEnvironment('NARRATION_PACK_BASE');
             final prebaked = PrebakedNarrationBackend(
               play: audio.playWavBytes,
               stopPlayback: audio.stop,
+              cache: packBase.isEmpty ? null : createTtsAssetCache(),
+              remoteBase: packBase.isEmpty ? null : packBase,
             );
             return TtsService(neural: neural, onnx: onnx, prebaked: prebaked)
               ..loadNarrationPrefs();

@@ -102,13 +102,15 @@ changes the math. Full method/evidence: auto-memory `crispasr-wasm-tts-rtf-nogo`
   persisted per language (SharedPreferences) and applied via `setVoice` before
   each utterance. The tile shows only when the OS offers ≥2 voices. (The gap-1
   engine preference now persists too.)
-- **✅ Narration packs on web (pack mode).** `PrebakedNarrationBackend` can serve
-  narration WAVs from the asset cache (IndexedDB on web, files native) instead of
-  bundling ~40 MB of audio: construct it with a `cache` + `remoteBase`, call
-  `prefetch(...)` to warm the cache from a hosted pack, and clips then play from
-  IndexedDB. Fully opt-in — with no `cache` it is unchanged BUNDLED MODE.
-  *Operational step still pending:* host a narration pack (baked WAVs on a
-  CORS-enabled URL) + a manifest, then wire `remoteBase` + a `prefetch` call.
+- **✅ Narration packs on web (pack mode) — app-side complete.** `PrebakedNarrationBackend`
+  can serve narration WAVs from the asset cache (IndexedDB on web, files native)
+  instead of bundling ~40 MB of audio. It's wired end-to-end: `main.dart` switches
+  to pack mode when built with `--dart-define=NARRATION_PACK_BASE=<https url>`
+  (default = unchanged BUNDLED MODE reading `rootBundle`); `TtsService.prefetchNarration`
+  + the tutorial sheet warm a tutorial's clips into IndexedDB on open; `speak`
+  plays from the cache. **Only the ops step remains (#7):** bake the WAVs (CI
+  `narration-bake.yml`), host them + the manifest on a CORS-enabled URL, then build
+  with that `--dart-define`. No further app code needed.
 
 ## iOS / Android HD wiring — handover (build + embed, on-device verify)
 

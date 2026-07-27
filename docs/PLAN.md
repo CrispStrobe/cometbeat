@@ -42,11 +42,11 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (tts-followups)** · 🚧 **ACTIVE — TTS follow-up queue (1–3, 5–7).** Working
+- **opus (tts-followups)** · ✅ **idle — TTS follow-up queue (1–3, 5–7): #1–#3 + #7-app-side shipped; #5/#6/#7-hosting handed over.** Working
   the 6-item queue in the *TTS narration* section (auto-narrate-on-example →
   prefetch wiring → settings persistence test → iOS/Android + macOS embed handovers
-  → narration-pack hosting), in order. **#1–#3 SHIPPED** (auto-read; prefetch wiring; settings persistence test); now
-  on **#5–#7 (device/ops handovers)**. Additive, rebase-before-push. — opus
+  → narration-pack hosting), in order. **#1–#3 SHIPPED**; **#7 app-side (pack-mode `--dart-define`) SHIPPED**; **#5/#6/#7-hosting**
+  = documented device/signing/ops handovers (not doable headlessly). **Queue done.** — opus (idle) Additive, rebase-before-push. — opus
 - **opus (unit-tests)** · 🚧 **coverage sweep — 11 pure modules now covered (~107 tests over 3 pushes),
   more to come.** Data-driven: surveyed `lib/core`/`shared`/
   pure-`features` for files with zero test reference, then added exact + property
@@ -3102,13 +3102,20 @@ and hand over the on-device/ops step.
    defaults + round-trips (sound/narration/auto-read booleans, the other UI
    booleans, noteNaming/scoreFont enums, the handwritten shim, locale set+clear,
    voiceId→instrument). Test-only, zero regression risk.
-5. **iOS/Android HD embed.** Build the `.so` (NDK present) / reuse the existing
-   xcframework; embed in a **release worktree** (not the shared `ios/`/`android/`
-   projects) + on-device verify. No Dart change — `defaultLibName` resolves it.
-6. **macOS release `.app` embed + App Store flow.** Copy-Files-to-Frameworks phase
-   + Developer-ID re-sign (needs the maintainer's signing identity).
-7. **Host a narration pack.** Bake WAVs → CORS host + manifest → set `remoteBase`
-   + the item-2 `prefetch` call, so web ships without the ~40 MB of bundled audio.
+5. **iOS/Android HD embed — CODE COMPLETE, native build/embed = device handover.**
+   No Dart change needed (`defaultLibName` resolves `libcrispasr.so` / the
+   `crispasr.framework`; the neural probe lights the HD tile once the lib loads).
+   Remaining = build the `.so` (NDK present) / reuse the existing xcframework +
+   embed in a **release worktree** + verify on a device — documented step-by-step
+   in `docs/TTS_ARCHITECTURE.md`. Not doable headlessly here (needs a device).
+6. **macOS release `.app` embed — HANDOVER (needs signing).** `tool/bundle_macos_tts.sh`
+   + the Copy-Files-to-Frameworks phase are documented in `docs/TTS_MACOS.md`;
+   the release embed + Developer-ID re-sign need the maintainer's signing identity.
+7. **Host a narration pack — APP-SIDE COMPLETE, hosting = ops handover.** `main.dart`
+   switches to pack mode on `--dart-define=NARRATION_PACK_BASE=<url>` (default =
+   unchanged bundled mode); prefetch + cache playback are wired (#2). Remaining =
+   bake WAVs (CI `narration-bake.yml`) + host them + manifest on a CORS URL, then
+   build with that dart-define. No further app code.
 
 ### Extending the syllabus toward bachelor level (2026-07-17)
 The grade-1–10 spine is the floor; the concept map extends **upward toward
