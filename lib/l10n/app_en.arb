@@ -613,6 +613,7 @@
   "loopMixerUndo": "Undo",
   "loopMixerRedo": "Redo",
   "loopMixerDeleteTrack": "Remove this track",
+  "loopMixerTrackLength": "How often this track repeats — tap to make it shorter, so it drifts against the others",
   "loopMixerPan": "Left ↔ right (double-tap to centre)",
   "loopMixerMore": "More",
   "loopMixerGroupView": "View",

@@ -35,6 +35,7 @@ import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart'
     show crossfadePcm16Seam;
+import 'package:comet_beat/core/audio/loop_track_length.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
@@ -235,6 +236,11 @@ abstract interface class LoopMixerTester {
   /// specific RANGE (e.g. one that straddles middle C) and assert how the score
   /// panel engraves it. Mirrors `LoopEngine.setTrackCells`.
   void debugSetTrackCells(String id, List<PatternCell> cells);
+
+  /// This track's loop length in steps, and the whole loop's — so a test can
+  /// prove the badge changed what actually plays, not just what is drawn.
+  int trackSteps(String id);
+  int get loopSteps;
 
   /// The "Sound & Feel" inspector (holds tempo/style/harmony/key/scale/kit/
   /// swing/filter/sections). Advanced view only.
@@ -620,6 +626,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   bool get scoreVisible => _showScore;
   @override
   void toggleScorePanel() => setState(() => _showScore = !_showScore);
+
+  @override
+  int trackSteps(String id) => _engine.trackSteps(id);
+  @override
+  int get loopSteps => _engine.timing.totalSteps;
 
   @override
   void debugSetTrackCells(String id, List<PatternCell> cells) {
@@ -2139,6 +2150,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         onTap: () => _toggle(track.id),
         onCycleVariant: () => _cycleVariant(track.id),
         onRollVariant: () => _rollVariant(track.id),
+        steps: _engine.trackSteps(track.id),
+        onCycleSteps: () => _cycleTrackSteps(track.id),
+        stepsTooltip: l10n.loopMixerTrackLength,
         onLevel: (v) => _setLevel(track.id, v),
         pan: _engine.panOf(track.id),
         onPan: (v) => _setPan(track.id, v),
@@ -2900,6 +2914,21 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void _cycleVariant(String id) {
     setState(() => _engine.cycleVariant(id));
     if (_engine.enabled.contains(id)) _syncPlayback();
+  }
+
+  /// Steps this track's loop length to the next allowed value, wrapping back to
+  /// the full 2-bar grid.
+  ///
+  /// Tap-to-cycle rather than a slider or a menu: the whole point is that you
+  /// hear what changed, and the child's next tap is the undo. Always resyncs —
+  /// unlike a variant change, a length change can alter the LOOP's length, so
+  /// the player needs the new buffer even if this track is muted.
+  void _cycleTrackSteps(String id) {
+    final current = _engine.trackSteps(id);
+    final i = kLoopTrackLengths.indexOf(current);
+    final next = kLoopTrackLengths[(i + 1) % kLoopTrackLengths.length];
+    setState(() => _engine.setTrackSteps(id, next));
+    _syncPlayback();
   }
 
   void _rollVariant(String id) {
@@ -4469,6 +4498,9 @@ class _TrackCard extends StatelessWidget {
     required this.level,
     required this.onTap,
     required this.onCycleVariant,
+    required this.steps,
+    required this.onCycleSteps,
+    required this.stepsTooltip,
     required this.onRollVariant,
     required this.onLevel,
     required this.onSolo,
@@ -4494,6 +4526,11 @@ class _TrackCard extends StatelessWidget {
   final double level;
   final VoidCallback onTap;
   final VoidCallback onCycleVariant;
+
+  /// This track's loop length in eighth-steps ([kPatternSteps] = the full grid).
+  final int steps;
+  final VoidCallback onCycleSteps;
+  final String stepsTooltip;
   final VoidCallback onRollVariant;
   final ValueChanged<double> onLevel;
   final VoidCallback onSolo;
@@ -4587,6 +4624,42 @@ class _TrackCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                // Loop length. Shown only when this track is SHORTER than the
+                // others: at full length it is the default everybody already
+                // has, and a badge reading "16" on every card would be noise.
+                // The control stays reachable either way — the tap target is
+                // the variant badge's neighbour, and a child who shortens one
+                // track can tap it back.
+                // Deliberately smaller than the variant badge and with a
+                // tighter gutter: this row was already within a pixel of
+                // overflowing on a narrow card, and a 1px RenderFlex overflow
+                // is a test failure, not a cosmetic one. Full length draws a
+                // dimmed ∞ so the control is still discoverable without
+                // shouting on every card.
+                if (!compact) ...[
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: stepsTooltip,
+                    child: GestureDetector(
+                      key: Key('loop-steps-$label'),
+                      onTap: onCycleSteps,
+                      child: CircleAvatar(
+                        radius: 10,
+                        backgroundColor: foreground.withValues(
+                          alpha: steps == kPatternSteps ? 0.10 : 0.22,
+                        ),
+                        child: Text(
+                          steps == kPatternSteps ? '∞' : '$steps',
+                          style: TextStyle(
+                            color: foreground,
+                            fontWeight: FontWeight.bold,
+                            fontSize: steps == kPatternSteps ? 12 : 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 // A small keyboard glyph marks a track voiced by a saved
                 // instrument (long-press to change / reset).
                 if (voiced) ...[

@@ -299,6 +299,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   Worktree `../mus-rest-props`.
 
 - **opus (loop-seq)** · 🚧 **ACTIVE — Loop Studio sequencer-parity slices.**
+  ✅ **L1 per-track pattern length (polymeter) SHIPPED** — core
+  (`loop_track_length.dart`), engine (vamp path), and a tap-to-cycle badge on
+  each track card (∞ = full grid). Shorten the bass to 3 and it comes round 16×
+  while the drums come round 3×; the loop itself grows to the lcm (6 bars) so
+  the short track is never clipped at the seam. A groove with nothing shortened
+  renders **byte-for-byte** as before (pinned). ⚠️ Not under a chord
+  progression — the timing getter says so rather than emitting a wrong buffer.
+  ⚠️ **The track card's Row is within ~1px of RenderFlex overflow on a narrow
+  card** — adding a 34px badge broke 14 tests in `loop_mixer_test.dart`. Mine is
+  now radius 10 with a 4px gutter. If you add anything to that row, run
+  `loop_mixer_test.dart` before assuming it fits.
+  Next: **L3 copy/duplicate**, then L2 session grid.
   Scoped in [PLAN.md](../PLAN.md) → *"Loop Studio — sequencer-parity slices"*
   (L1–L6, with what is already at parity so nobody rebuilds it). Building **L1
   per-track pattern length (polymeter)** first. Touching

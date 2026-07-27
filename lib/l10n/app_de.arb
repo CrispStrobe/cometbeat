@@ -548,6 +548,7 @@
   "loopMixerUndo": "Rückgängig",
   "loopMixerRedo": "Wiederholen",
   "loopMixerDeleteTrack": "Diese Spur entfernen",
+  "loopMixerTrackLength": "Wie oft diese Spur wiederholt — tippen, um sie kürzer zu machen; dann verschiebt sie sich gegen die anderen",
   "loopMixerPan": "Links ↔ rechts (Doppeltippen zum Zentrieren)",
   "loopMixerMore": "Mehr",
   "loopMixerGroupView": "Ansicht",

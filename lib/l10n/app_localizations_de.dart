@@ -1651,6 +1651,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerDeleteTrack => 'Diese Spur entfernen';
 
   @override
+  String get loopMixerTrackLength =>
+      'Wie oft diese Spur wiederholt — tippen, um sie kürzer zu machen; dann verschiebt sie sich gegen die anderen';
+
+  @override
   String get loopMixerPan => 'Links ↔ rechts (Doppeltippen zum Zentrieren)';
 
   @override

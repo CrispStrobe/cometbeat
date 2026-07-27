@@ -1647,6 +1647,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerDeleteTrack => 'Remove this track';
 
   @override
+  String get loopMixerTrackLength =>
+      'How often this track repeats — tap to make it shorter, so it drifts against the others';
+
+  @override
   String get loopMixerPan => 'Left ↔ right (double-tap to centre)';
 
   @override

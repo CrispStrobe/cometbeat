@@ -3086,6 +3086,12 @@ abstract class AppLocalizations {
   /// **'Remove this track'**
   String get loopMixerDeleteTrack;
 
+  /// No description provided for @loopMixerTrackLength.
+  ///
+  /// In en, this message translates to:
+  /// **'How often this track repeats — tap to make it shorter, so it drifts against the others'**
+  String get loopMixerTrackLength;
+
   /// No description provided for @loopMixerPan.
   ///
   /// In en, this message translates to:
