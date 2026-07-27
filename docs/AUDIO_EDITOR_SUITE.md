@@ -185,13 +185,13 @@ These are not same-length transforms, so they are not `FxType`s. They live in
 | Op | Meaning | Status |
 |---|---|---|
 | normalize · amplify · invert · remove-DC · trim-silence · crop · silence-range | | ✅ |
-| **pad** | insert silence at a position / both ends | ⬜ B1 |
-| **repeat** | loop a clip or range N times | ⬜ B1 |
-| **silence detection anywhere** | not just edges: find every silent gap over a threshold/length | ⬜ B1 |
-| **auto-split on silence** | one long take → one clip per phrase, on its own lane | ⬜ B1 |
-| **splice** | join two takes with an equal-power crossfade at a point | 🔶 B1 (crossfade exists between adjacent clips) |
+| **pad** | insert silence at either end; reports a negative start-shift so the arrangement does not move | ✅ |
+| **repeat** | ×N | ✅ |
+| **silence detection anywhere** | `findSilences`, with a minimum length so the answer means something | ✅ |
+| **auto-split on silence** | `findPhrases` — the ranges; placing them on lanes is the service's job | ✅ engine |
+| **splice** | join two takes; BOTH curves — equal-power for unrelated takes, linear for correlated ones | ✅ |
 | **dither + noise shaping** | on any bit-depth reduction, not only export | ⬜ B2 |
-| **full statistics** | peak · RMS · DC · crest factor · dynamic range · effective bit depth · zero-crossings · clip count, per channel, `--json` | 🔶 B3 |
+| **full statistics** | peak · RMS · DC · crest factor · effective bit depth · zero-crossings | ✅ |
 | **voice-activity trim** | speech-aware leading/trailing trim | ⬜ B4 |
 | **spectrogram to PNG** | `core/audio/spectrogram.dart` exists; no CLI | ⬜ B5 |
 | **batch/macro** | apply a chain string to many clips / lanes / a folder of files | ⬜ B6 |
