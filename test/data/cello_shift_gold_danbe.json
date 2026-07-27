@@ -1,0 +1,324 @@
+{
+ "note": "SHIFT ground truth: where the hand MOVES. Every note carries the position label printed above its bar, so a change of label between adjacent notes is a labelled shift. This is the only source we have for that axis.",
+ "source": "Tilliere, Methode de Violoncelle, nouvelle edition revue et augmentee par J. Danbe (A. Noel, plate A.N. 4380), printed page 19: \u00abEtude des cinq positions sur les quatre cordes\u00bb.",
+ "licence": "PD. Tilliere d.1790; Danbe 1840-1905 -> PD since 1976.",
+ "provenance": "Sight-read from a 72 ppi scan, no OMR. Position labels are set in TYPE above each bar and are large and unambiguous; the pitches are the harder read. Line 1's printed caption says '1e Corde' but the music is the C string by pitch \u2014 a MISPRINT in the edition, caught by checking the caption against the notes. Line 4 was never transcribed (its reader was stopped); line 3 is partial. 60 notes, 15 labelled position changes.",
+ "scoring": "Compare SHIFT POINTS, not position numbers: gold_shift[i] = (position[i] != position[i-1]); ours = (anchor[i] != anchor[i-1]). This is deliberately convention-independent \u2014 Danbe's position NUMBERING is a French scheme we have not mapped to ours, and assuming such a mapping has already caused two errors in this arc. Report precision and recall separately: false positives are the hand moving where the source keeps it still, which is the failure `shiftBase` was added to fix.",
+ "lines": [
+  {
+   "name": "etude_des_cinq_positions__line_1__printed_caption_1e_Corde__ACTUALLY_4e_Corde",
+   "notes": [
+    {
+     "midi": 39,
+     "finger": 1,
+     "position": "2.e P."
+    },
+    {
+     "midi": 41,
+     "finger": 2,
+     "position": "2.e P."
+    },
+    {
+     "midi": 43,
+     "finger": 4,
+     "position": "2.e P."
+    },
+    {
+     "midi": 41,
+     "finger": 1,
+     "position": "3.e P."
+    },
+    {
+     "midi": 43,
+     "finger": 2,
+     "position": "3.e P."
+    },
+    {
+     "midi": 44,
+     "finger": 3,
+     "position": "3.e P."
+    },
+    {
+     "midi": 43,
+     "finger": 1,
+     "position": "4.e P."
+    },
+    {
+     "midi": 44,
+     "finger": 2,
+     "position": "4.e P."
+    },
+    {
+     "midi": 46,
+     "finger": 3,
+     "position": "4.e P."
+    },
+    {
+     "midi": 45,
+     "finger": 1,
+     "position": "5.e P."
+    },
+    {
+     "midi": 46,
+     "finger": 2,
+     "position": "5.e P."
+    },
+    {
+     "midi": 48,
+     "finger": 3,
+     "position": "5.e P."
+    },
+    {
+     "midi": 48,
+     "finger": 3,
+     "position": "5.e P."
+    },
+    {
+     "midi": 46,
+     "finger": 2,
+     "position": "5.e P."
+    },
+    {
+     "midi": 45,
+     "finger": 1,
+     "position": "5.e P."
+    },
+    {
+     "midi": 46,
+     "finger": 3,
+     "position": "4.e P."
+    },
+    {
+     "midi": 44,
+     "finger": 2,
+     "position": "4.e P."
+    },
+    {
+     "midi": 43,
+     "finger": 1,
+     "position": "4.e P."
+    },
+    {
+     "midi": 44,
+     "finger": 3,
+     "position": "3.e P."
+    },
+    {
+     "midi": 43,
+     "finger": 2,
+     "position": "3.e P."
+    },
+    {
+     "midi": 41,
+     "finger": 1,
+     "position": "3.e P."
+    },
+    {
+     "midi": 43,
+     "finger": 4,
+     "position": "2.e P."
+    },
+    {
+     "midi": 41,
+     "finger": 2,
+     "position": "2.e P."
+    },
+    {
+     "midi": 39,
+     "finger": 1,
+     "position": "2.e P."
+    }
+   ]
+  },
+  {
+   "name": "etude_des_cinq_positions__line_2__3e_Corde",
+   "notes": [
+    {
+     "midi": 46,
+     "finger": 1,
+     "position": "2.e P."
+    },
+    {
+     "midi": 48,
+     "finger": 2,
+     "position": "2.e P."
+    },
+    {
+     "midi": 50,
+     "finger": 3,
+     "position": "2.e P."
+    },
+    {
+     "midi": 48,
+     "finger": 1,
+     "position": "3.e P."
+    },
+    {
+     "midi": 50,
+     "finger": 2,
+     "position": "3.e P."
+    },
+    {
+     "midi": 51,
+     "finger": 3,
+     "position": "3.e P."
+    },
+    {
+     "midi": 50,
+     "finger": 1,
+     "position": "4.e P."
+    },
+    {
+     "midi": 52,
+     "finger": 2,
+     "position": "4.e P."
+    },
+    {
+     "midi": 53,
+     "finger": 3,
+     "position": "4.e P."
+    },
+    {
+     "midi": 52,
+     "finger": 1,
+     "position": "5.e P."
+    },
+    {
+     "midi": 53,
+     "finger": 2,
+     "position": "5.e P."
+    },
+    {
+     "midi": 55,
+     "finger": 3,
+     "position": "5.e P."
+    },
+    {
+     "midi": 55,
+     "finger": 3,
+     "position": "5.e P."
+    },
+    {
+     "midi": 53,
+     "finger": 2,
+     "position": "5.e P."
+    },
+    {
+     "midi": 52,
+     "finger": 1,
+     "position": "5.e P."
+    },
+    {
+     "midi": 53,
+     "finger": 3,
+     "position": "4.e P."
+    },
+    {
+     "midi": 52,
+     "finger": 2,
+     "position": "4.e P."
+    },
+    {
+     "midi": 50,
+     "finger": 1,
+     "position": "4.e P."
+    },
+    {
+     "midi": 51,
+     "finger": 3,
+     "position": "3.e P."
+    },
+    {
+     "midi": 50,
+     "finger": 2,
+     "position": "3.e P."
+    },
+    {
+     "midi": 48,
+     "finger": 1,
+     "position": "3.e P."
+    },
+    {
+     "midi": 50,
+     "finger": 3,
+     "position": "2.e P."
+    },
+    {
+     "midi": 48,
+     "finger": 2,
+     "position": "2.e P."
+    },
+    {
+     "midi": 46,
+     "finger": 1,
+     "position": "2.e P."
+    }
+   ]
+  },
+  {
+   "name": "etude_des_cinq_positions__line_3__2e_Corde",
+   "notes": [
+    {
+     "midi": 53,
+     "finger": 1,
+     "position": "2.e P."
+    },
+    {
+     "midi": 55,
+     "finger": 2,
+     "position": "2.e P."
+    },
+    {
+     "midi": 57,
+     "finger": 4,
+     "position": "2.e P."
+    },
+    {
+     "midi": 55,
+     "finger": 1,
+     "position": "3.e P."
+    },
+    {
+     "midi": 57,
+     "finger": 2,
+     "position": "3.e P."
+    },
+    {
+     "midi": 59,
+     "finger": 4,
+     "position": "3.e P."
+    },
+    {
+     "midi": 57,
+     "finger": 1,
+     "position": "4.e P."
+    },
+    {
+     "midi": 59,
+     "finger": 3,
+     "position": "4.e P."
+    },
+    {
+     "midi": 60,
+     "finger": 4,
+     "position": "4.e P."
+    },
+    {
+     "midi": 59,
+     "finger": 1,
+     "position": "5.e P."
+    },
+    {
+     "midi": 60,
+     "finger": 2,
+     "position": "5.e P."
+    },
+    {
+     "midi": 62,
+     "finger": 4,
+     "position": "5.e P."
+    }
+   ]
+  }
+ ]
+}
