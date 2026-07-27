@@ -81,4 +81,38 @@ void main() {
       closeTo(0.3, 1e-12),
     );
   });
+
+  group('crossfadeLoopSeam (float) — the standalone seam helper', () {
+    test('makes the last sample equal the first (seamless loop)', () {
+      final ramp = Float64List.fromList(List.generate(512, (i) => i / 511));
+      final out = crossfadeLoopSeam(ramp, fadeSamples: 64);
+      expect(out.length, ramp.length);
+      expect(out.first, closeTo(out.last, 1e-12));
+    });
+
+    test('passes an already-seamless buffer through untouched', () {
+      final flat = _const(0.5, 512);
+      expect(identical(crossfadeLoopSeam(flat), flat), isTrue);
+    });
+
+    test('passes a too-short buffer through untouched', () {
+      final tiny = Float64List.fromList([0.0, 1.0, 0.0]);
+      expect(identical(crossfadeLoopSeam(tiny, fadeSamples: 64), tiny), isTrue);
+    });
+  });
+
+  group('crossfadePcm16Seam (int16)', () {
+    test('makes the last sample equal the first', () {
+      final ramp =
+          Int16List.fromList(List.generate(512, (i) => i * 60 - 15000));
+      final out = crossfadePcm16Seam(ramp, fadeSamples: 64);
+      expect(out.length, ramp.length);
+      expect(out.first, out.last);
+    });
+
+    test('passes a near-seamless buffer through untouched', () {
+      final flat = Int16List.fromList(List.filled(512, 100));
+      expect(identical(crossfadePcm16Seam(flat), flat), isTrue);
+    });
+  });
 }

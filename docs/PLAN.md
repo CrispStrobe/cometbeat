@@ -29,8 +29,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (unit-tests)** · 🚧 **coverage sweep — 7 previously-untested pure modules
-  now covered (63 tests, 2 pushes), more to come.** Data-driven: surveyed `lib/core`/`shared`/
+- **opus (unit-tests)** · 🚧 **coverage sweep — 11 pure modules now covered (~107 tests over 3 pushes),
+  more to come.** Data-driven: surveyed `lib/core`/`shared`/
   pure-`features` for files with zero test reference, then added exact + property
   tests for the highest-value pure logic (FFI/native + generated-data files skipped
   — not unit-testable). New: `narration_key_test` (cross-platform TTS cache keys),
@@ -40,7 +40,11 @@ is recorded in [HISTORY.md](HISTORY.md).
   `chord_quality_test` (Harte↔symbol↔intervals round-trip + all fallbacks),
   `symbol_catalog_test` (note-value durations/rests/lookup) and
   `source_registry_test` (library sources non-empty/unique/named). **Test-only, no `lib` changes** — zero regression risk.
-  Whole-project analyze clean. Continuing the sweep next (more pure-logic gaps).
+  Whole-project analyze clean. Continuing the sweep next. Latest pass went finer than file-level: a
+  function-level survey (public functions never named in any test) found
+  `github_abc_source` (fake-HTTP browse/parse), `fir` (convolveFir/designHilbert),
+  the loop-seam crossfades (`crossfadeLoopSeam`/`crossfadePcm16Seam`) and the
+  XM/IT `c5speed`↔finetune tuning conversions.
   Worktree `../mus-tests`.
 
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
