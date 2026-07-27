@@ -35,6 +35,7 @@ class OpenInMenu extends StatelessWidget {
     this.icon = const Icon(Icons.open_in_new),
     this.tooltip = 'Open in…',
     this.targets,
+    this.keyPrefix = '',
   });
 
   /// The mode this menu is shown in.
@@ -66,6 +67,11 @@ class OpenInMenu extends StatelessWidget {
   /// can only offer a destination it has a route to push. Offering one it
   /// cannot open would convert the user's work and then drop it.
   final List<AppMode>? targets;
+
+  /// Prefixes every internal widget key (default ''), so two menus can coexist
+  /// on one screen (e.g. a "copy" door and an in-place "replace" door) without
+  /// colliding on `ValueKey('open-in')`. Empty keeps the original keys.
+  final String keyPrefix;
 
   /// Whether [from] can reach anywhere at all.
   ///
@@ -113,6 +119,7 @@ class OpenInMenu extends StatelessWidget {
         builder: (context) => _LossDialog(
           target: target,
           report: result.report,
+          keyPrefix: keyPrefix,
         ),
       );
       if (proceed != true) return;
@@ -132,7 +139,7 @@ class OpenInMenu extends StatelessWidget {
               if (allowed.contains(mode)) mode,
           ];
     return PopupMenuButton<AppMode>(
-      key: const ValueKey('open-in'),
+      key: ValueKey('${keyPrefix}open-in'),
       tooltip: tooltip,
       icon: icon,
       onSelected: (target) => _pick(context, target),
@@ -142,7 +149,7 @@ class OpenInMenu extends StatelessWidget {
         // question the user has at that moment.
         if (targets.isEmpty)
           PopupMenuItem<AppMode>(
-            key: const ValueKey('open-in-none'),
+            key: ValueKey('${keyPrefix}open-in-none'),
             enabled: false,
             child: Text(
               'Audio is not notes yet — use Transcribe first.',
@@ -152,7 +159,7 @@ class OpenInMenu extends StatelessWidget {
         for (final target in targets)
           PopupMenuItem<AppMode>(
             value: target,
-            key: ValueKey('open-in-${target.name}'),
+            key: ValueKey('${keyPrefix}open-in-${target.name}'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -173,16 +180,21 @@ class OpenInMenu extends StatelessWidget {
 }
 
 class _LossDialog extends StatelessWidget {
-  const _LossDialog({required this.target, required this.report});
+  const _LossDialog({
+    required this.target,
+    required this.report,
+    this.keyPrefix = '',
+  });
 
   final AppMode target;
   final ConversionReport report;
+  final String keyPrefix;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AlertDialog(
-      key: const ValueKey('open-in-loss-dialog'),
+      key: ValueKey('${keyPrefix}open-in-loss-dialog'),
       title: Text('Open in ${appModeLabel(target)}?'),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,12 +218,12 @@ class _LossDialog extends StatelessWidget {
       ),
       actions: [
         TextButton(
-          key: const ValueKey('open-in-cancel'),
+          key: ValueKey('${keyPrefix}open-in-cancel'),
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
         FilledButton(
-          key: const ValueKey('open-in-confirm'),
+          key: ValueKey('${keyPrefix}open-in-confirm'),
           onPressed: () => Navigator.of(context).pop(true),
           child: const Text('Open anyway'),
         ),

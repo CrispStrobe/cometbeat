@@ -3849,6 +3849,13 @@ class _DawScreenState extends State<DawScreen>
                         if (_openACopyIn(sheetCtx, track, index)
                             case final openIn?)
                           openIn,
+                        // The in-place twin: convert, edit in the other editor,
+                        // and the edit REPLACES this clip (it becomes the edited
+                        // mode) so mixing continues on it. Same loss warning; the
+                        // replacement is undoable.
+                        if (_openAndReplaceIn(sheetCtx, track, index)
+                            case final replaceIn?)
+                          replaceIn,
                         // Split at the playhead — only when it falls inside the clip.
                         TextButton.icon(
                           onPressed: canSplitClip(track, index, playheadMs)
@@ -4062,6 +4069,73 @@ class _DawScreenState extends State<DawScreen>
           case AppMode.loop:
           case AppMode.audio:
             break; // not offered — see the doc comment.
+        }
+      },
+    );
+  }
+
+  /// The IN-PLACE twin of [_openACopyIn]: convert to the chosen mode, edit
+  /// there, and the returned document REPLACES this clip's source (the clip
+  /// becomes the edited mode) so mixing continues on the very same clip. Same
+  /// lossy-conversion warning as the copy door; the source-replace is undoable.
+  /// Offered for the same clip kinds the copy door supports (score/tracker).
+  Widget? _openAndReplaceIn(BuildContext sheetCtx, int track, int index) {
+    final source = _daw.clipSourceAt(track, index);
+    final AppMode from;
+    final Object document;
+    if (source is ScoreSource) {
+      from = AppMode.score;
+      document = source.score;
+    } else if (source is TrackerSource) {
+      from = AppMode.tracker;
+      document = source.song;
+    } else {
+      return null;
+    }
+    return OpenInMenu(
+      from: from,
+      documentBuilder: () => document,
+      targets: const [AppMode.score, AppMode.tab, AppMode.tracker],
+      tooltip: 'Open & replace via…',
+      keyPrefix: 'replace-',
+      icon: const Icon(Icons.sync_alt),
+      onConverted: (target, result) {
+        final converted = result.document;
+        if (converted == null) return;
+        Navigator.of(sheetCtx).pop();
+        switch (target) {
+          case AppMode.score:
+            if (converted is MultiPartScore) {
+              openScoreInWorkshop(
+                context,
+                converted,
+                onReturn: (edited) =>
+                    _daw.replaceScoreClipSource(source, edited),
+              );
+            }
+          case AppMode.tab:
+            final asScore = _clipAsScore(from, document);
+            if (asScore != null) {
+              openScoreInTab(
+                context,
+                asScore,
+                // Tab sends a SCORE back, so the clip returns as a score clip.
+                onReturn: (edited) =>
+                    _daw.replaceScoreClipSource(source, edited),
+              );
+            }
+          case AppMode.tracker:
+            if (converted is TrackerSong) {
+              openTrackerSong(
+                context,
+                converted,
+                onReturn: (edited) =>
+                    _daw.replaceTrackerClipSource(source, edited),
+              );
+            }
+          case AppMode.loop:
+          case AppMode.audio:
+            break;
         }
       },
     );

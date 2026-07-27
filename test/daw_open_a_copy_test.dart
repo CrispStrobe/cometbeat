@@ -286,4 +286,70 @@ void main() {
     final sounded = cells.expand((c) => c).where((c) => c.midi != null).length;
     expect(sounded, greaterThanOrEqualTo(3));
   });
+
+  group('open & replace — the in-place twin of the copy door', () {
+    testWidgets('score & tracker clips offer it; a recording does not',
+        (tester) async {
+      await _pumpDaw(tester);
+      _service(tester).addClip(TrackerSource(_song()));
+      await tester.pumpAndSettle();
+      await _openInspector(tester, '🎹');
+      expect(find.byKey(const ValueKey('replace-open-in')), findsOneWidget);
+      // The copy door and the replace door coexist without a key collision.
+      expect(find.byKey(const ValueKey('open-in')), findsOneWidget);
+    });
+
+    testWidgets('a recording offers neither door', (tester) async {
+      await _pumpDaw(tester);
+      _service(tester).addClip(SampleSource(Float64List(kDawSampleRate)));
+      await tester.pumpAndSettle();
+      await _openInspector(tester, '🎵');
+      expect(find.byKey(const ValueKey('replace-open-in')), findsNothing);
+    });
+
+    testWidgets('replacing routes the edited document back into the SAME clip',
+        (tester) async {
+      // The load-bearing difference from the copy door: this REPLACES the
+      // source in place. Driven directly through the onReturn mechanism the
+      // door wires (replaceScoreClipSource) — the clip changes type, count 1.
+      await _pumpDaw(tester);
+      final service = _service(tester);
+      service.addClip(TrackerSource(_song()));
+      await tester.pumpAndSettle();
+      final track =
+          service.timeline.tracks.indexWhere((t) => t.clips.isNotEmpty);
+      expect(service.isTrackerClip(track, 0), isTrue);
+
+      final source = service.clipSourceAt(track, 0);
+      service.replaceScoreClipSource(source, _score());
+      await tester.pump();
+
+      // Same slot, now a score clip — the mix continues on it, not a fork.
+      expect(service.clipCount, 1);
+      expect(service.clipSourceAt(track, 0), isA<ScoreSource>());
+      expect(service.isTrackerClip(track, 0), isFalse);
+    });
+
+    testWidgets('confirming a lossy replace opens the target editor',
+        (tester) async {
+      await _pumpDaw(tester);
+      _service(tester).addClip(TrackerSource(_song()));
+      await tester.pumpAndSettle();
+      await _openInspector(tester, '🎹');
+
+      await tester.tap(find.byKey(const ValueKey('replace-open-in')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('replace-open-in-score')));
+      await tester.pumpAndSettle();
+      if (find
+          .byKey(const ValueKey('replace-open-in-loss-dialog'))
+          .evaluate()
+          .isNotEmpty) {
+        await tester.tap(find.byKey(const ValueKey('replace-open-in-confirm')));
+      }
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(CompositionWorkshopScreen), findsOneWidget);
+    });
+  });
 }
