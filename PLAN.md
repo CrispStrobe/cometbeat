@@ -1134,11 +1134,27 @@ out at coarse blocks, but our gap is if anything WORSE at 186 ms (0.16). So the
 divergence lives at the **note-and-above** timescale, i.e. per-note length/sustain
 or per-channel mixing levels, NOT the note edges. It is also **separate from the
 level**: we sit ~+2.5 dB (the known 4/3 gain-convention item), which envelope
-correlation is amplitude-invariant to. **Next (for whoever fixes it — likely the
-ladder owner, it's core note-render/mixing DSP):** compare per-note lengths and
-per-channel RMS-over-time against a reference — do our notes sustain/cut at the
-same rows, and do the four voices carry the same relative level over the song?
-*Original finding:*
+correlation is amplitude-invariant to.
+
+🟢 **RESOLVED as a NON-BUG (2026-07-27, further pass) — it's inter-voice phase,
+not a fidelity fault; the metric should not gate it.** Ruled out the two remaining
+suspects by measuring, and found the cause: **(3) NOT panning/mono-fold.**
+`usesPan=true`, channel pans `[-0.67,+0.67,+0.67,-0.67]` (the correct L-R-R-L,
+matching openmpt123's 0.75/0.25 split), and `renderSongWav` already emits STEREO
+— the mono-fold and stereo-fold envelope correlations are identical (~0.22), so
+panning is right. **(4) NOT per-voice dynamics or note length.** Soloing each of
+the 4 channels (`toggleSolo`) shows every voice is individually FLAT at ~0.135
+RMS the whole song — no voice rests, decays or over-sustains; they all play the
+looped saw continuously, exactly as a MOD should (empty cells sustain, there is
+no note-off effect). So the notes, their lengths and their per-voice levels are
+right. What differs is the FULL-MIX fine structure: with several voices at
+unison/octave, the summed loudness is set by their **relative phase**, and ours
+differs from the references' because the references share a sample-retrigger
+phase convention we don't reproduce. This is a **sub-perceptual DSP detail**
+(interference between phase-locked voices), not notes/timing/level/pan — so on
+`musical.mod` the envelope-correlation residual is NOT a red and should not be
+gated as one. The only lever is sample-retrigger phase; the audible payoff is
+≈nil, so it is documented and closed rather than chased. *Original finding:*
 `test/tracker_audio_regression_test.dart` renders through our pipeline and
 `openmpt123` and compares **duration + RMS deltas**. Their `reference_compare.py`
 compares duration, **envelope correlation**, **onset/lag alignment** and

@@ -57,19 +57,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   — opus (tracker→editors)
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — LEADING the ladder: `musical.mod`
-  loudness-contour gap INVESTIGATED (full table in root PLAN.md §"Replay
-  fidelity", line ~1076).** Turned the "unclaimed, uninvestigated" env-correlation
-  0.222 into a rigorous, root-narrowed finding via the X0 baseline: the references
-  agree on the loudness contour at **0.97–0.98 at every timescale**, we're the
-  outlier at ~0.23 → REAL fault. RULED OUT (by measuring, not reading) both a lag
-  artifact (lag 0) and the per-note attack transient (gap is worse at coarse
-  blocks, so it's note-LEVEL loudness, not note-edge declick). Distinct from the
-  +2.5 dB gain item. 🤝 **To the ladder owner:** the fix is core note-render/mixing
-  DSP (per-note length/sustain or per-channel level over time) — YOUR territory; I
-  did NOT touch `tracker_replayer.dart`/`tracker_engine.dart`, only recorded the
-  diagnosis + the next experiment (compare per-note lengths & per-channel
-  RMS-over-time vs a reference). Diagnosis-only commit, no code change.
-  — opus (tracker→editors)
+  loudness-contour gap RESOLVED as a NON-BUG (full write-up in root PLAN.md
+  §"Replay fidelity", line ~1076).** Drove the "unclaimed, uninvestigated"
+  env-correlation 0.222 to ground via the X0 baseline (refs agree 0.97–0.98 at
+  every timescale; we're the outlier at ~0.23) and ruled out FOUR candidate
+  causes by measuring, not reading: (1) not lag (0 samples), (2) not the per-note
+  attack transient (gap worse at coarse blocks), (3) not panning — `usesPan=true`,
+  pans ±0.67 L-R-R-L, already stereo, mono/stereo folds identical, (4) not
+  per-voice dynamics — soloing each of the 4 voices shows all flat at ~0.135, so
+  notes/lengths/levels are right. What's left is FULL-MIX inter-voice PHASE
+  (unison/octave voices interfere with a different relative phase than the refs,
+  which share a sample-retrigger-phase convention). Sub-perceptual, not a
+  notes/timing/level/pan fault → the metric should NOT gate it. Documented + closed
+  rather than chased. **No code change** — did NOT touch the note-render DSP. This
+  clears a standing "unclaimed" red off the ladder without a risky every-render
+  fix. — opus (tracker→editors)
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — replay-fidelity ladder X5
   (partial): E6x/EEx flow semantics pinned.** TEST-ONLY
