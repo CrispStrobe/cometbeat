@@ -308,6 +308,59 @@ user can change the actual notes/hits.
 - Record, import, and play-in actions always create editable track events first;
   rendering to audio is an explicit bounce operation into Audio mode.
 
+### Loop Studio — sequencer-parity slices (scoped 2026-07-27)
+
+Grounded in a read of `loop_mixer_screen.dart` + `loop_engine.dart`, not in the
+docs — **correction first: the "Loop Mixer has no step editor by design" line in
+CLAUDE.md and auto-memory is STALE.** Loop Studio has tap-to-build grids for
+both pitched and drum tracks ("Edit the tune" / "Edit the beat", hold-for-ghost).
+The Tracker is the DEEP editor, not the only one.
+
+Already at sequencer parity, so do not rebuild these: transport with BPM slider
++ numeric field, undo, bar readout, count-in; per-track mute/solo/level/pan/
+instrument/send; pattern **variants**; **scenes that store per-track variants**
+(`GrooveScene(enabled, variants)` — a real Ableton-style scene, not just on/off);
+scene chaining; arrangement bounce; master FX; quantize; global swing; sing/
+beatbox capture into symbolic events; notation projection + MusicXML.
+
+The gaps below are verified absent (grep counts of 0 where claimed). Ordered by
+musical payoff per unit of work, which is NOT the order they are numbered in.
+
+- ⬜ **L1 — per-track pattern length (polymeter).** *Do this first.*
+  `LoopTiming.bars` is global and there is no per-track length anywhere. A short
+  pattern against a longer one (3-step hat under a 4-step bass) is the signature
+  groovebox move, is instantly legible to a child ("make it shorter — now it
+  keeps changing"), and the renderer already tiles patterns to the loop length.
+  **Design constraint a fresh agent must resolve, not skip:** the engine renders
+  ONE loop buffer and repeats it gaplessly, so simply truncating a 3-step
+  pattern at the loop boundary re-aligns the phase every cycle — that is a
+  clipped tail, not polymeter. The rendered buffer has to span the lcm of the
+  global length and the track lengths, **capped** (suggest ≤ 8 bars) with the
+  cap reported rather than silently applied. Tests: a 3-against-4 render is NOT
+  equal to the same pattern tiled at 4, and the cap is honoured.
+- ⬜ **L3 — copy / duplicate.** Zero matches for duplicating a section, scene or
+  pattern. "Copy A to B, change one thing" is how sequencer users actually work;
+  without it every variation is built from nothing. Cheapest big workflow win.
+- ⬜ **L2 — show the session grid.** The tracks × sections matrix ALREADY EXISTS
+  in the data (each scene stores a variant per track) and is presented as a row
+  of section buttons. Rendering the matrix exposes shipped power with no model
+  risk. Pure UI.
+- ⬜ **L5 — visible queued launch.** `_launchScene` applies state immediately
+  while the audio swaps at the loop seam. The behaviour is right and the
+  FEEDBACK is missing: no pending state, so correct musical timing reads as lag.
+  Small, and it is what makes a performance surface feel professional.
+- ⬜ **L4 — per-section repeat counts (real song mode).** Chaining advances one
+  pass per section, so A×4 B×2 A×4 is unsayable. Extends `renderArrangement`.
+- ⬜ **L6 — per-track swing, then automation.** Swing is global
+  (`LoopTiming.swing`); no parameter movement over the loop. Real, lower
+  priority for this audience.
+
+**Deliberately NOT planned** (decisions, not oversights — reopen only with the
+maintainer): arbitrary add/remove/rename of tracks, because `kLoopMixerTracks`
+is a curated band and that is defensible for 6+ (if it is ever wanted, start
+with *duplicate an existing track*, not an instrument tree); and a full
+automation matrix or MIDI clock, which belong to the Tracker and Audio Editor.
+
 ### Integration and retirement map
 
 - **Keep and integrate:** `LoopEngine` timing/pattern model, `LoopStack` undo /

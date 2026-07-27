@@ -235,6 +235,13 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
+- **opus (loop-seq)** · 🚧 **ACTIVE — Loop Studio sequencer-parity slices.**
+  Scoped in [PLAN.md](../PLAN.md) → *"Loop Studio — sequencer-parity slices"*
+  (L1–L6, with what is already at parity so nobody rebuilds it). Building **L1
+  per-track pattern length (polymeter)** first. Touching
+  `lib/core/audio/loop_engine.dart` + `loop_mixer_screen.dart` — shout if you
+  are in either. — opus
+
 - **opus (suite-speed)** · ✅ **SHIPPED (idle) — two opt-in tiers; `flutter test`
   no longer pays for ONNX inference and long renders by default.**
   Maintainer asked for a faster suite; picked the "heavy tiers behind flags"
