@@ -11,6 +11,8 @@ import 'package:comet_beat/core/audio/transcription/hubert_model_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
 
+import '../support/slow_tests.dart';
+
 const String _dir = 'test/transcription';
 const int _sr = 16000;
 
@@ -45,6 +47,15 @@ Float32List readBin(String path) {
 }
 
 void main() {
+  // Gated: see test/support/slow_tests.dart. Every test here needs a model.
+  if (!kRunModelE2e) {
+    test(
+      describeSkip('MODEL_E2E', 'HuBERT model inference'),
+      () {},
+    );
+    return;
+  }
+
   test(
     'ContentVec encoder matches onnxruntime (cosine ~1.0)',
     () async {

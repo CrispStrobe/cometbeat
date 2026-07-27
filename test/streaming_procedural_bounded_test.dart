@@ -24,6 +24,8 @@ import 'package:comet_beat/core/audio/tracker_replayer.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/slow_tests.dart';
+
 /// A minimal, non-blank OPL2 patch (carrier-only, both operators sustaining), so
 /// a held note rings for its whole run.
 List<int> _oplPatch() {
@@ -118,6 +120,15 @@ Future<Uint8List> _streamedBytes(TrackerSong song) async {
 }
 
 void main() {
+  // Gated: see test/support/slow_tests.dart for why and how to run it.
+  if (!kRunHeavy) {
+    test(
+      describeSkip('HEAVY', '1m34s — byte-identical streaming renders across every voice'),
+      () {},
+    );
+    return;
+  }
+
   final voices = <String, TrackerInstrument Function()>{
     'FM': () => FmInstrument.preset('ep', kFmPresets['ePiano']!),
     'Subtractive': () =>

@@ -9,6 +9,8 @@ import 'package:comet_beat/core/audio/transcription/harmony_model_store.dart';
 import 'package:comet_beat/core/audio/transcription/model_license.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/slow_tests.dart';
+
 const _sr = 22050;
 
 // A harmonically-rich note (a few harmonics) — BTC ignores pure sines.
@@ -58,6 +60,15 @@ Future<HarmonyBundle?> _tryBundle() async {
 }
 
 void main() {
+  // Gated: see test/support/slow_tests.dart. Every test here needs a model.
+  if (!kRunModelE2e) {
+    test(
+      describeSkip('MODEL_E2E', 'harmony model inference'),
+      () {},
+    );
+    return;
+  }
+
   test(
     'a sustained C major triad is recognised as C',
     () async {

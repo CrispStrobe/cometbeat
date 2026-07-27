@@ -14,6 +14,8 @@ import 'package:comet_beat/core/audio/tts/piper/piper_synth.dart';
 import 'package:comet_beat/core/audio/tts/piper/piper_voice_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/slow_tests.dart';
+
 void main() {
   group('Piper phonemes (pure)', () {
     const cfg = '{"audio":{"sample_rate":16000},'
@@ -46,6 +48,14 @@ void main() {
   });
 
   group('Piper end-to-end synthesis (gated on voice download)', () {
+    // Gated: see test/support/slow_tests.dart.
+    if (!kRunModelE2e) {
+      test(
+        describeSkip('MODEL_E2E', 'Piper TTS inference'),
+        () {},
+      );
+      return;
+    }
     Future<void> runLang(String lang, String text) async {
       final store = PiperVoiceStore();
       final cfgJson = await store.loadConfigJson(lang);

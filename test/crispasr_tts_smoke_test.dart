@@ -15,12 +15,23 @@ import 'package:comet_beat/core/audio/tts/kokoro_model_store.dart';
 import 'package:crispasr/crispasr.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/slow_tests.dart';
+
 String _env(String k, String fallback) =>
     Platform.environment[k]?.isNotEmpty == true
         ? Platform.environment[k]!
         : fallback;
 
 void main() {
+  // Gated: see test/support/slow_tests.dart. Every test here needs a model.
+  if (!kRunModelE2e) {
+    test(
+      describeSkip('MODEL_E2E', 'CrispASR TTS model downloads'),
+      () {},
+    );
+    return;
+  }
+
   final lib = _env(
     'COMET_CRISPASR_LIB',
     '/Users/christianstrobele/code/CrispASR/build/src/libcrispasr.dylib',

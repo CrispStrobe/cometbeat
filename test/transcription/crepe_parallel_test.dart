@@ -12,6 +12,8 @@ import 'package:comet_beat/core/audio/transcription/crepe_model_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
 
+import '../support/slow_tests.dart';
+
 Future<OnnxModel?> _tryModel() async {
   final home = Platform.environment['HOME'] ?? '';
   for (final dir in [
@@ -61,6 +63,14 @@ void main() {
   });
 
   group('parallel path parity (model-gated)', () {
+    // Gated: see test/support/slow_tests.dart.
+    if (!kRunModelE2e) {
+      test(
+        describeSkip('MODEL_E2E', 'CREPE parallel-path parity'),
+        () {},
+      );
+      return;
+    }
     test(
       'crepeF0Async on the pool == crepeF0 sync, frame-for-frame',
       () async {

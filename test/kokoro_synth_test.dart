@@ -17,6 +17,8 @@ import 'package:comet_beat/core/audio/tts/kokoro/kokoro_synth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
 
+import 'support/slow_tests.dart';
+
 void main() {
   group('KokoroSynth pure helpers (no model)', () {
     test('voiceFromBytes reinterprets little-endian float32', () {
@@ -54,6 +56,14 @@ void main() {
   });
 
   group('Kokoro end-to-end synthesis (gated on model download)', () {
+    // Gated: see test/support/slow_tests.dart.
+    if (!kRunModelE2e) {
+      test(
+        describeSkip('MODEL_E2E', '1m57s — Kokoro TTS inference'),
+        () {},
+      );
+      return;
+    }
     test(
       'text → phonemes → Kokoro → non-silent audio',
       () async {

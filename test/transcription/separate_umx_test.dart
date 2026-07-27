@@ -10,7 +10,18 @@ import 'package:comet_beat/core/audio/transcription/separate_umx_model_store.dar
 import 'package:comet_beat/core/audio/transcription/stems.dart' show Stems;
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/slow_tests.dart';
+
 void main() {
+  // Gated: see test/support/slow_tests.dart. Every test here needs a model.
+  if (!kRunModelE2e) {
+    test(
+      describeSkip('MODEL_E2E', 'UMX stem separation'),
+      () {},
+    );
+    return;
+  }
+
   test(
     'separateVocal produces a finite same-length stem',
     () async {

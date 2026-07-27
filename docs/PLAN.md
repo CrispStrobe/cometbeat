@@ -233,6 +233,42 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
+- **opus (suite-speed)** · ✅ **SHIPPED (idle) — two opt-in tiers; `flutter test`
+  no longer pays for ONNX inference and long renders by default.**
+  Maintainer asked for a faster suite; picked the "heavy tiers behind flags"
+  trade-off, so **all app-behaviour and widget coverage still runs by default**.
+  **One place defines it: `test/support/slow_tests.dart`** — `kRunModelE2e`,
+  `kRunHeavy`, `describeSkip`, plus the rationale and the measurements.
+  ```
+  flutter test                                    # default: everything else
+  flutter test --dart-define=MODEL_E2E=1          # ONNX e2e / parity
+  flutter test --dart-define=HEAVY=1              # long renders, CLI subprocesses
+  ```
+  **MODEL_E2E** (needs a cached model; CI never ran these anyway): piano ·
+  kokoro · piper · spleeter · rmvpe · crepe · crepe_parallel · crepe_ort_parity ·
+  fcpe · harmony_model · hubert · separate_umx · crispasr_tts_smoke.
+  **HEAVY** (pure compute, just slow): native_tick_zone_reuse ·
+  streaming_procedural_bounded · aec_offline · fxproc_cli · mp3_decoder.
+  Every gate leaves a **named, visible skip** — a test that silently disappears
+  reads as coverage that exists. Both directions verified per file: default
+  skips in seconds, and the flags really do run the tests (the HEAVY five: 80
+  tests, 1m56s, green).
+  ⚠️ **`String.fromEnvironment` + non-empty, never `bool.fromEnvironment`** —
+  the bool form only accepts literal `true`, so `=1` silently leaves a flag OFF.
+  Documented in `slow_tests.dart`; it has already cost this repo once.
+  📊 **Numbers, and an honest caveat.** piano alone spanned **18m01s** of a
+  32m49s run (next file: 3m07s); gating it took the suite **32m52s → 24m41s**,
+  green. Later wall-clocks are NOT clean: `ps` shows **three other worktrees
+  (`mus`, `mus-tests`, `mus-daw-suite`) running suites concurrently**, load
+  average 70–107 on 8 cores. The last full run was green (4764 pass · 19 skip ·
+  0 fail) but took 27m27s at load 106 — that is contention, not content.
+  ⛔ **Measured and rejected: `-j 8`.** On this 4P+4E machine it is markedly
+  SLOWER (1279 tests at 18:40 vs 1968 at 9:52 at the default `-j 4`) and it
+  pushed `rmvpe_test` past its timeout. Do not "optimise" concurrency here.
+  ⚠️ **The real remaining lever is not in the code:** four agents share one
+  8-core Mac. A trustworthy <10-minute number needs either a quiet machine or
+  fewer concurrent suites — worth a maintainer decision. — opus
+
 - **opus (suite-health)** · ℹ️ **Full-suite run 2026-07-27: 4658 pass · 18 skip ·
   2 fail. One fixed, one handed over.**
   1. ✅ `license_obligations_test.dart` — **origin/main was RED** since

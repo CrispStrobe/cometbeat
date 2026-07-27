@@ -20,6 +20,8 @@ import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/slow_tests.dart';
+
 /// A cell with a command (and optional note) — terse authoring.
 TrackerCell fx(int cmd, int param, {int? midi}) =>
     TrackerCell(midi: midi, fxCmd: cmd, fxParam: param);
@@ -36,6 +38,15 @@ int _checksum(Uint8List bytes) {
 }
 
 void main() {
+  // Gated: see test/support/slow_tests.dart for why and how to run it.
+  if (!kRunHeavy) {
+    test(
+      describeSkip('HEAVY', '3m29s — full offline renders of two native IT modules'),
+      () {},
+    );
+    return;
+  }
+
   group('native tick-zone deferred render', () {
     test('wonderfulpain.it renders a stable, non-empty WAV', () {
       final file = File('test/fixtures/wonderfulpain.it');

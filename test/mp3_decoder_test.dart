@@ -10,6 +10,8 @@ import 'package:comet_beat/core/audio/mp3/mp3_decoder.dart';
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/slow_tests.dart';
+
 /// Best-lag, best-gain SNR (dB) of [dec] vs [ref] (codec delay ⇒ align).
 double _snr(Float64List ref, Float64List dec) {
   final n = math.min(ref.length, dec.length);
@@ -58,6 +60,15 @@ Float64List _chan(Float64List interleaved, int ch, int nch) {
 }
 
 void main() {
+  // Gated: see test/support/slow_tests.dart for why and how to run it.
+  if (!kRunHeavy) {
+    test(
+      describeSkip('HEAVY', 'encode/decode round-trips over full-length audio'),
+      () {},
+    );
+    return;
+  }
+
   const sr = 44100;
 
   test('mono encode → decode round-trips (SNR ≥ 40 dB)', () {

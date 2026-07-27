@@ -25,6 +25,8 @@ import 'package:comet_beat/core/audio/synth.dart' show wavBytesStereo;
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/slow_tests.dart';
+
 Future<ProcessResult> _fxproc(List<String> args) =>
     Process.run('dart', ['run', 'bin/fxproc.dart', ...args]);
 
@@ -62,6 +64,15 @@ void _writeStereoTone(String path, {int seconds = 1, int rate = 44100}) {
 }
 
 void main() {
+  // Gated: see test/support/slow_tests.dart for why and how to run it.
+  if (!kRunHeavy) {
+    test(
+      describeSkip('HEAVY', '1m02s — spawns the fxproc CLI as a subprocess per case'),
+      () {},
+    );
+    return;
+  }
+
   late Directory dir;
   late String tone;
   late String stereo;

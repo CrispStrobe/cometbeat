@@ -20,6 +20,7 @@ import 'package:comet_beat/core/audio/transcription/route.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
 
+import '../support/slow_tests.dart';
 import 'note_metrics.dart';
 
 const _sr = 44100;
@@ -128,6 +129,14 @@ void main() {
   });
 
   group('CREPE end-to-end (model-gated)', () {
+    // Gated: see test/support/slow_tests.dart.
+    if (!kRunModelE2e) {
+      test(
+        describeSkip('MODEL_E2E', 'CREPE model inference'),
+        () {},
+      );
+      return;
+    }
     late final OnnxModel? model;
     setUpAll(() async {
       model = await _tryModel();

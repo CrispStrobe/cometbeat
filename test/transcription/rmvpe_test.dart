@@ -7,6 +7,8 @@ import 'package:comet_beat/core/audio/transcription/rmvpe.dart';
 import 'package:comet_beat/core/audio/transcription/rmvpe_model_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/slow_tests.dart';
+
 void main() {
   group('RMVPE decode (deterministic, no model)', () {
     test('a single-bin salience peak decodes to that bin frequency', () {
@@ -29,6 +31,14 @@ void main() {
   });
 
   group('RMVPE end-to-end (model-gated)', () {
+    // Gated: see test/support/slow_tests.dart.
+    if (!kRunModelE2e) {
+      test(
+        describeSkip('MODEL_E2E', '~361 MB model, minutes of inference'),
+        () {},
+      );
+      return;
+    }
     test(
       'a 220 Hz tone recovers ~220 Hz',
       () async {

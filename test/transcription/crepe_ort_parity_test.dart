@@ -22,6 +22,8 @@ import 'package:comet_beat/core/audio/transcription/crepe_model_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
 
+import '../support/slow_tests.dart';
+
 Future<OnnxModel?> _tryModel() async {
   final home = Platform.environment['HOME'] ?? '';
   for (final dir in [
@@ -38,6 +40,15 @@ Future<OnnxModel?> _tryModel() async {
 }
 
 void main() {
+  // Gated: see test/support/slow_tests.dart. Every test here needs a model.
+  if (!kRunModelE2e) {
+    test(
+      describeSkip('MODEL_E2E', 'CREPE/onnxruntime frame parity'),
+      () {},
+    );
+    return;
+  }
+
   test('crepeF0 reproduces the onnxruntime pipeline frame-for-frame', () async {
     final model = await _tryModel();
     if (model == null) {

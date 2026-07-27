@@ -12,6 +12,8 @@ import 'package:comet_beat/core/audio/transcription/stems.dart' show Separator;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onnx_runtime_dart/onnx_runtime_dart.dart';
 
+import '../support/slow_tests.dart';
+
 const int _sr = 44100;
 const String _dir = 'test/transcription';
 
@@ -74,6 +76,14 @@ void main() {
   });
 
   group('Spleeter end-to-end (model-gated)', () {
+    // Gated: see test/support/slow_tests.dart.
+    if (!kRunModelE2e) {
+      test(
+        describeSkip('MODEL_E2E', '1m20s — 4-stem separation'),
+        () {},
+      );
+      return;
+    }
     Future<Map<String, OnnxModel>?> tryLoad(SpleeterConfig cfg) async {
       try {
         return await SpleeterModelStore(config: cfg).load();

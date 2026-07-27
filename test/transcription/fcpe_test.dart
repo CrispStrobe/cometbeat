@@ -8,7 +8,18 @@ import 'package:comet_beat/core/audio/transcription/fcpe.dart';
 import 'package:comet_beat/core/audio/transcription/fcpe_model_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/slow_tests.dart';
+
 void main() {
+  // Gated: see test/support/slow_tests.dart. Every test here needs a model.
+  if (!kRunModelE2e) {
+    test(
+      describeSkip('MODEL_E2E', 'FCPE model inference'),
+      () {},
+    );
+    return;
+  }
+
   test(
     'a 220 Hz tone recovers ~220 Hz; pooled == sync',
     () async {

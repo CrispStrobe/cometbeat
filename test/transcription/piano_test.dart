@@ -31,9 +31,7 @@ import 'package:comet_beat/core/audio/transcription/route.dart'
     show NeuralTranscriber;
 import 'package:flutter_test/flutter_test.dart';
 
-/// Opt-in for the two expensive end-to-end tests. See the note above.
-const String _modelE2eRaw = String.fromEnvironment('MODEL_E2E');
-final bool _modelE2e = _modelE2eRaw.isNotEmpty && _modelE2eRaw != '0';
+import '../support/slow_tests.dart';
 
 const String _dir = 'test/transcription';
 const int _sr = 16000;
@@ -132,10 +130,10 @@ void main() {
   });
 
   group('Piano end-to-end (model-gated + opt-in)', () {
-    if (!_modelE2e) {
-      test('skipped — pass --dart-define=MODEL_E2E=1 to run', () {
+    if (!kRunModelE2e) {
+      test(describeSkip('MODEL_E2E', '~8-16 min of ONNX inference'), () {
         // A visible, named skip: a silently absent test reads as coverage that
-        // does not exist. The two below take ~8 minutes of CPU between them.
+        // does not exist.
       });
       return;
     }

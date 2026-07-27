@@ -9,6 +9,8 @@ import 'package:comet_beat/core/audio/aec_offline.dart';
 import 'package:comet_beat/core/audio/echo_canceller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/slow_tests.dart';
+
 const _sr = 44100;
 
 /// A deterministic broadband-ish reference (a few sines) — excites the adaptive
@@ -85,6 +87,15 @@ Uint8List _interleave(Float64List mic, Float64List ref) {
 }
 
 void main() {
+  // Gated: see test/support/slow_tests.dart for why and how to run it.
+  if (!kRunHeavy) {
+    test(
+      describeSkip('HEAVY', '0m58s — offline echo-cancellation sweeps'),
+      () {},
+    );
+    return;
+  }
+
   const n = 1024 * 40;
 
   test('cancels a linear echo — high ERLE', () {
