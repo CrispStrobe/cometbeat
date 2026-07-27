@@ -40,7 +40,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   `chord_quality_test` (Harte↔symbol↔intervals round-trip + all fallbacks),
   `symbol_catalog_test` (note-value durations/rests/lookup) and
   `source_registry_test` (library sources non-empty/unique/named). **Test-only, no `lib` changes** — zero regression risk.
-  Whole-project analyze clean. Continuing the sweep next. Latest pass went finer than file-level: a
+  Whole-project analyze clean. Added a **CurriculumLevelScreen widget test** (renders every real curriculum level — title/topics — without throwing) + more function-level pure tests (`mixStemsFloat`, `drumKitById`, `grooveStyleById`, library-voice id/name). ⚠️ **A full coverage report is infrastructure-blocked here:** `flutter test --coverage` aborts collection with `Cannot add event while adding stream` (multiple isolate/process-spawning tests — cli/roundtrip/stream-export/regression), and the full suite is too slow to finish under coverage in one run; individual tests are all healthy. Continuing the sweep next. Latest pass went finer than file-level: a
   function-level survey (public functions never named in any test) found
   `github_abc_source` (fake-HTTP browse/parse), `fir` (convolveFir/designHilbert),
   the loop-seam crossfades (`crossfadeLoopSeam`/`crossfadePcm16Seam`) and the
