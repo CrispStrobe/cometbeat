@@ -229,6 +229,25 @@ class TrackerSong {
   /// no explicit pan command occurs. Authored songs retain the mono default.
   final bool stereoOutput;
 
+  /// True when this song came from a ProTracker MOD, whose EFFECT MEMORY rules
+  /// differ from XM/S3M/IT's.
+  ///
+  /// ProTracker's `portaUp`, `portaDown` and `volumeSlide` read the row's
+  /// parameter directly (`ch->n_cmd`), so a bare `100` or `A00` does NOTHING.
+  /// XM, S3M and IT all latch instead, and a zero parameter reuses the last
+  /// one. `3xx` tone portamento and `4xy` vibrato latch in ProTracker too, so
+  /// the rule is per-COMMAND rather than a blanket per-format one.
+  ///
+  /// Measured on `test/fixtures/fx/mem_porta_up.mod`, where libopenmpt, libxmp
+  /// and micromod agree at 1.000 spectral: latching `1xx` put us at 0.270 and
+  /// `2xx` at 0.531, while `3xx` — which genuinely does latch — was already
+  /// 1.000. That control is what identified it as the rule rather than the
+  /// mechanism. PLAN.md §6 X3/X4.
+  ///
+  /// Mutable, defaulting to false, so authored songs and every non-MOD import
+  /// keep the tracker-general behaviour; `songFromModuleBytes` sets it.
+  bool protrackerEffectMemory = false;
+
   /// Module/container global output gain, normalized to 0..1. Authored songs
   /// use unity; imported tracker headers carry their native global volume.
   /// Editable via [setGlobalVolume] (native header).

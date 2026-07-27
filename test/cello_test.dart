@@ -149,24 +149,24 @@ void main() {
     final cello = kLearningModules.firstWhere((m) => m.id == 'cello');
 
     Widget wrap() => MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => SettingsService()),
-        ChangeNotifierProvider<SriService>.value(value: sri),
-        ChangeNotifierProvider(create: (_) => DebugService()),
-        Provider<AudioService>(create: (_) => AudioService()),
-        ChangeNotifierProvider<ProgressService>.value(value: progress),
-      ],
-      child: MaterialApp(
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('en'), Locale('de')],
-        home: ModuleScreen(module: cello),
-      ),
-    );
+          providers: [
+            ChangeNotifierProvider(create: (_) => SettingsService()),
+            ChangeNotifierProvider<SriService>.value(value: sri),
+            ChangeNotifierProvider(create: (_) => DebugService()),
+            Provider<AudioService>(create: (_) => AudioService()),
+            ChangeNotifierProvider<ProgressService>.value(value: progress),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en'), Locale('de')],
+            home: ModuleScreen(module: cello),
+          ),
+        );
 
     await tester.pumpWidget(wrap());
     await tester.pump();

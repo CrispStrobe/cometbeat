@@ -12,6 +12,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/karplus.dart' show karplusPluck;
 import 'package:comet_beat/core/audio/crisp_dsp/sample_edit.dart'
     show peakMagnitude, removeDcOffset, trimPcm;
 import 'package:comet_beat/core/audio/daw_timeline.dart' show Clip;
@@ -174,7 +175,38 @@ enum GeneratorShape {
   triangle,
   whiteNoise,
   pinkNoise,
-  silence
+  silence,
+
+  // A7 — the rest. Appended; the CLI matches these by NAME.
+
+  /// −6 dB/octave noise: heavier than pink, the sound of distant thunder. Made
+  /// by integrating white noise, which is exactly what "one more pole" means.
+  brownNoise,
+
+  /// +3 dB/octave — pink's mirror image, rising rather than falling. What
+  /// dither noise looks like once it has been shaped.
+  blueNoise,
+
+  /// +6 dB/octave, the mirror of brown. Differentiated white noise.
+  violetNoise,
+
+  /// A LINEAR frequency sweep from `freq` to `endFreq` — equal Hz per second,
+  /// so it spends most of its time in the top octave. The right shape when the
+  /// question is about a fixed frequency range.
+  sweep,
+
+  /// A LOGARITHMIC sweep — equal OCTAVES per second, so every octave gets the
+  /// same time. The right shape for anything judged by ear, since that is how
+  /// hearing is spaced.
+  logSweep,
+
+  /// A plucked string (Karplus–Strong). The DSP existed in
+  /// `crisp_dsp/karplus.dart` and was unreachable from the generator.
+  pluck,
+
+  /// A single full-scale sample, then silence — the measurement signal. Send it
+  /// through any effect and what comes out IS that effect's impulse response.
+  impulse,
 }
 
 /// A steady (un-enveloped) test / building-block signal: [samples] long at
@@ -190,24 +222,89 @@ Float64List generateWave({
   required int samples,
   required int sampleRate,
   double freq = 440,
+  double endFreq = 20000,
   double amp = 0.5,
   int seed = 0,
 }) {
   final out = Float64List(samples <= 0 ? 0 : samples);
   if (out.isEmpty || shape == GeneratorShape.silence) return out;
 
-  if (shape == GeneratorShape.whiteNoise || shape == GeneratorShape.pinkNoise) {
+  // A7 — the shapes that are not a steady oscillator.
+  if (shape == GeneratorShape.impulse) {
+    out[0] = amp;
+    return out;
+  }
+  if (shape == GeneratorShape.pluck) {
+    return karplusPluck(
+      freq: freq,
+      samples: samples,
+      sampleRate: sampleRate,
+      amp: amp,
+      seed: seed,
+    );
+  }
+  if (shape == GeneratorShape.sweep || shape == GeneratorShape.logSweep) {
+    final from = math.max(0.1, freq);
+    final to = math.max(0.1, endFreq);
+    // The phase is INTEGRATED rather than computed per sample from an
+    // instantaneous frequency: a sweep built as sin(2π·f(t)·t) is a different
+    // (and wrong) signal, because t multiplies the whole changing frequency and
+    // the phase jumps. Integrating keeps it continuous, which is the difference
+    // between a sweep and a sweep with a click in it.
+    var phase = 0.0;
+    for (var i = 0; i < samples; i++) {
+      final t = i / (samples - 1 == 0 ? 1 : samples - 1);
+      final f = shape == GeneratorShape.sweep
+          ? from + (to - from) * t
+          : from * math.pow(to / from, t).toDouble();
+      out[i] = amp * math.sin(phase);
+      phase += 2 * math.pi * f / sampleRate;
+    }
+    return out;
+  }
+
+  const noises = {
+    GeneratorShape.whiteNoise,
+    GeneratorShape.pinkNoise,
+    GeneratorShape.brownNoise,
+    GeneratorShape.blueNoise,
+    GeneratorShape.violetNoise,
+  };
+  if (noises.contains(shape)) {
     final r = math.Random(seed);
     var b0 = 0.0, b1 = 0.0, b2 = 0.0;
+    // The rising colours are made by DIFFERENTIATING (each sample minus the
+    // last, which is +6 dB/oct) and the falling ones by INTEGRATING (a running
+    // sum, −6 dB/oct); pink and blue are the half-strength versions, which is
+    // why pink needs a filter bank and blue can be had by differentiating it.
+    var previous = 0.0;
+    var running = 0.0;
     for (var i = 0; i < samples; i++) {
       final white = r.nextDouble() * 2 - 1;
-      if (shape == GeneratorShape.whiteNoise) {
-        out[i] = white;
-      } else {
-        b0 = 0.99886 * b0 + white * 0.0555179;
-        b1 = 0.99332 * b1 + white * 0.0750759;
-        b2 = 0.96900 * b2 + white * 0.1538520;
-        out[i] = b0 + b1 + b2 + white * 0.3104856;
+      switch (shape) {
+        case GeneratorShape.whiteNoise:
+          out[i] = white;
+        case GeneratorShape.pinkNoise:
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          out[i] = b0 + b1 + b2 + white * 0.3104856;
+        case GeneratorShape.brownNoise:
+          // Leaky integration — a pure sum wanders off as a DC drift.
+          running = (running + white * 0.02).clamp(-1.0, 1.0);
+          out[i] = running;
+        case GeneratorShape.blueNoise:
+          b0 = 0.99886 * b0 + white * 0.0555179;
+          b1 = 0.99332 * b1 + white * 0.0750759;
+          b2 = 0.96900 * b2 + white * 0.1538520;
+          final pink = b0 + b1 + b2 + white * 0.3104856;
+          out[i] = pink - previous;
+          previous = pink;
+        case GeneratorShape.violetNoise:
+          out[i] = white - previous;
+          previous = white;
+        default:
+          out[i] = white;
       }
     }
     // Noise has no fixed bound (the pink filter's sum in particular overshoots

@@ -364,6 +364,7 @@ class AdditiveInstrument implements TrackerInstrument {
 
   @override
   final String id;
+
   final Instrument instrument;
 
   /// Optional per-tick instrument MACROS (roadmap §4) — volume/pitch/arpeggio
@@ -2011,6 +2012,24 @@ class TrackerChannel {
   }
 
   final String id;
+
+  /// ProTracker effect-memory rules apply to this channel's playback.
+  ///
+  /// ProTracker's `portaUp`, `portaDown` and `volumeSlide` read the ROW's
+  /// parameter (`ch->n_cmd`), so a bare `100` or `A00` does nothing; XM, S3M
+  /// and IT latch instead and a zero parameter repeats the last value. `3xx`
+  /// and `4xy` latch under both, so the difference is per-COMMAND. Measured
+  /// against three engines agreeing at 1.000 spectral, latching `1xx` put us at
+  /// 0.270 and `2xx` at 0.531 (PLAN.md §6 X3/X4).
+  ///
+  /// It lives on the CHANNEL, which is admittedly an odd home for a song-level
+  /// format rule. The reason is reach: every render path in `tracker_replayer`
+  /// already receives a [TrackerChannel], so the flag arrives at all ten
+  /// `ReplayVoice` construction sites without threading a parameter through ten
+  /// helper signatures and ~35 call sites. That threading was tried first and
+  /// abandoned — the cascade ran deeper than the helpers it started with.
+  /// `songFromModuleDoc` sets it on every channel of a MOD import.
+  bool protrackerMemory = false;
 
   /// Mutable so a channel can be re-voiced at runtime (e.g. assigning a freshly
   /// recorded [SampleInstrument] to the voice channel). Go through
