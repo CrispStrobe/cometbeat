@@ -1422,6 +1422,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   small 16ths did not survive them, so the reader spent its one permitted native extraction
   and found a digit that reads `4` on the strip but is a `1` in the native blow-up.
 
+  **Nachtrag «101 Übungsstücke» (printed p.47 ff) — the shift hunt starts here, and p.48
+  says AIM HIGHER.** 134 notes / 89 digits / 27 forced strings saved, open-string check
+  passes (22 zeros, all on C2/G2/D3/A3) — but **only ONE inferred shift on the whole page**:
+  piece 4 stays in first position and uses string crossings instead of hand movement. The
+  early Übungsstücke are too easy to generate shift evidence. **Target the LATER numbers**,
+  where positions are actually used.
+  • ⚠ They are **DUETS**, not single-line exercises — every system is a brace of two bass-clef
+  staves, and in piece 5 the roles REVERSE (Vc.II carries the digits in tenor clef while Vc.I
+  runs an unfingered staccato line). My brief assumed melodies; it was wrong again.
+  • ⭐ **Absence of digits does NOT mean unfingered.** Bars 10 and 18 print no digits because
+  each is note-for-note a repeat of bar 9 / bar 17 — **the plate fingers only the first
+  occurrence**. Anyone mining a fingered edition will otherwise score those as missing data.
+  Generalise: a repeated bar inherits its fingering.
+  • The open-string check earned its keep positively, not just as a guard: one `0` forced a
+  note to be open G2 rather than B2, and five zeros in a bar pinned an entire open-G pedal.
+  • The page's ONE printed string indication is a `IIª` telling the player to take a c′ on the
+  D string in the same hand position that gives e′ with finger 1 on the A string — i.e. the
+  label exists precisely to stop a shift. Worth having when we model string-vs-shift choice.
+  🔧 **`precut.py --native` added.** Two readers INDEPENDENTLY reported that the half-width
+  strips (0.59× downscales) do not resolve noteheads on dense melody engraving, though they
+  were fine for scale tables and position charts. `--native` computes a grid where no tile is
+  downscaled (4×5 = 20 tiles of 1393×1500 for these pages). Both modes stay: fidelity for
+  dense pages, fewer tiles for sparse ones.
+  ⚙️ Incremental writes saved their 3rd and 4th agent: both p.48/p.49 readers died mid-read
+  (a stall and a network error) with 202 notes already on disk, and both RESUMED from their
+  transcripts rather than restarting.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
