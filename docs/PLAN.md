@@ -452,6 +452,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (cello-labels)** · 🚧 **ACTIVE — close item 2/3, keep the gate-clean labels as
+  an ACCEPTANCE corpus.** The PDMX mine + the documented ship gate are done and the
+  verdict is negative for training: of 254,035 scores → 236 fingered bowed parts →
+  **51 parts / 1,282 labels survive the gate**, of which **6 cello parts / 121 cello
+  labels** — i.e. the whole 254k corpus yields LESS shippable cello supervision than
+  the four CC0 files mined on day one (193). So item 2 closes as a training route and
+  item 3 (fitting HMM tables) closes with it. What is worth keeping is the corpus as
+  a **second acceptance slice**: different scores, named PD composers (Mahler, Wagner,
+  Ravel, Beethoven, Vivaldi, Paganini, Kreutzer, Grieg, Sarasate), which widens the
+  regression floor from 193 to ~314 cello labels. Committing it as its own fixture
+  (not merged into the existing one, so the old floor stays comparable) with the gate
+  recorded per row. Touches only `test/data/` + `test/bowed_arranger_accept_test.dart`.
+  Worktree `../mus-cello-fingering`.
+
 - **opus (cello-omr-trial)** · 🔬 **TRIAL DONE (measured) — Audiveris DOES recover
   printed cello fingerings, at low recall, with detectable errors.** Ran Audiveris
   5.11 over one page of a PD 19th-c. Dotzauer Op.175 print (a PD Internet Archive
