@@ -416,11 +416,18 @@ that seam.
   pair, so sliding a track across the field is not the same as scaling it.
   Both default to null, so a groove without automation is byte-identical.
   ⬜ **Filter automation is NOT in this arc** — see the correction above.
-- ⬜ **A4 — UI.** Draw the lane over the per-track row in the inspector.
-  **Needs a product decision before starting:** per-eighth-step values (16 of
-  them, blocky, matches the tune/beat grids a child already uses, one tap per
-  value) versus a smooth breakpoint curve (expressive, but drawing curves on a
-  phone for a six-year-old is a different product). Default to per-step.
+- ✅ **A4 — UI.** SHIPPED, per-eighth-step (maintainer chose the recommendation).
+  A 16-cell bar strip per track in the inspector under "Volume shape": tap a
+  step to cycle it (full → ⅔ → ⅓ → silent → full), hold the track name to clear
+  the lane. Same tap-to-cycle as the tune grid, the beat grid, the loop-length
+  badge and the swing badge — a child who can build a beat can build a fade
+  without learning a gesture.
+  ⚠️ **Cycling back to flat DROPS the lane rather than storing a flat one.**
+  "No lane" must stay distinguishable from "a flat lane" or the byte-identical
+  guarantee every automation slice rests on is lost. Pinned by a test.
+  ⬜ **Only the LEVEL lane has an editor.** Pan renders (A3) but has no UI yet;
+  it wants a second strip or a parameter switch, and a decision about whether a
+  6+ audience needs one at all.
 
 ### Integration and retirement map
 

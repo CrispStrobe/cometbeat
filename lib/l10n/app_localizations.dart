@@ -3284,6 +3284,12 @@ abstract class AppLocalizations {
   /// **'tap to give this track its own swing (– follows the groove)'**
   String get loopMixerSwingPerTrackHint;
 
+  /// No description provided for @loopMixerAutomation.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume shape'**
+  String get loopMixerAutomation;
+
   /// No description provided for @loopMixerMasterFx.
   ///
   /// In en, this message translates to:

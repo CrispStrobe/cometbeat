@@ -1758,6 +1758,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'tippen für eigenen Swing dieser Spur (– folgt dem Groove)';
 
   @override
+  String get loopMixerAutomation => 'Lautstärke-Verlauf';
+
+  @override
   String get loopMixerMasterFx => 'Master-Effekte';
 
   @override
