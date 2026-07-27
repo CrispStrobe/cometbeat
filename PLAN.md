@@ -1282,8 +1282,13 @@ does, not from ambition; revise freely, but revise it *deliberately*.
    only where they map onto our own filter (`Zxx` cutoff/resonance); macros
    addressing outboard gear are carried as data and ignored.
 6. **Writers target round-trip fidelity, not authoring parity.** We write what
-   we can read back losslessly. IT214/215 sample compression stays unimplemented
-   (`it_writer.dart` says so) — uncompressed output is correct, just larger.
+   we can read back losslessly. A COMPRESSED IT stays compressed on a same-format
+   round-trip — the reader retains the IT214/215 blocks in `ItSample.rawData` and
+   the writer re-emits them verbatim (Flg 0x08), with `ItModule.createdWith`
+   carrying the module-wide 214/215 delta stage (verified byte-for-byte,
+   `it_writer_test`). What is NOT implemented is a fresh IT214 *bit-packer*, so a
+   synthetic or edited sample (no retained blocks) writes uncompressed — correct,
+   just larger.
 
 **The test of a good non-goal is that it closes an argument.** If one of these
 starts costing real musical accuracy — a module people actually want to hear

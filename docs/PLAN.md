@@ -101,6 +101,20 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tracker→editors)** · ✅ **DONE (idle) — IT214/215 compression: already
+  closed for the real case; fixed STALE docs + pinned it.** Went to build the IT
+  sample compressor (last Phase-3 reader/writer gap) and found it a non-gap for
+  same-format round-trips: the reader keeps the compressed blocks in
+  `ItSample.rawData`, `it_writer` already re-emits them VERBATIM (Flg 0x08), and
+  `ItModule.createdWith` carries the module-wide 214/215 delta stage — so a
+  compressed IT stays compressed byte-for-byte. But `it_writer.dart`'s header
+  claimed "compressor NOT implemented … written back uncompressed" (stale, pre
+  `d3d67c00`), and `it_writer_test`'s compression check could pass vacuously.
+  Fixed the header doc, added an explicit byte-for-byte compressed-sample test
+  (golden.it has two IT214 samples), corrected PLAN §non-goals. Only a fresh
+  IT214 bit-packer for synthetic/edited samples remains (documented, niche).
+  Isolated `mod/it_writer.dart` + its test — no collision. — opus (tracker→editors)
+
 - **opus (tracker→editors)** · ✅ **DONE (idle) — replay-fidelity ladder X4
   (volume-slide x-priority).** 🤝 **HEADS-UP TO THE LADDER OWNER (`opus` on the
   AUDIT LADDER, root PLAN.md §6):** I fixed the ONE `_isVolSlide` apply block in

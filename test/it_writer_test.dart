@@ -62,6 +62,31 @@ void main() {
         }
       }
     });
+
+    test('a COMPRESSED sample stays compressed, byte-for-byte (IT214/215)', () {
+      // golden.it carries IT214/215-compressed samples. The writer re-emits their
+      // retained blocks verbatim (Flg 0x08) rather than re-quantizing to
+      // uncompressed, so a same-format round-trip is byte-lossless — this pins
+      // that path so the check above cannot pass vacuously on an all-uncompressed
+      // fixture, and guards against the writer regressing to "always uncompressed".
+      final compressed =
+          m0.samples.where((s) => s.compressed && s.rawData != null).toList();
+      expect(
+        compressed,
+        isNotEmpty,
+        reason: 'the fixture must exercise the compressed path',
+      );
+      for (var i = 0; i < m0.samples.length; i++) {
+        final s0 = m0.samples[i], s1 = m1.samples[i];
+        if (!s0.compressed) continue;
+        expect(s1.rawData, isNotNull, reason: 'sample $i lost its blocks');
+        expect(
+          s1.rawData,
+          s0.rawData,
+          reason: 'sample $i compressed blocks were not preserved verbatim',
+        );
+      }
+    });
   });
 
   group('hand-built module round-trips (multi-channel, note-off, 8/16-bit)',

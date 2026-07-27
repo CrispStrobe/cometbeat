@@ -5,12 +5,20 @@
 // via parseIt to an equivalent module. Used by the cross-format converters
 // (docToIt/convertToIt in module_convert.dart) so any module → `.it`.
 //
-// Writes SAMPLE MODE (InsNum = 0; a cell's "instrument" is a sample number) and
-// UNCOMPRESSED sample data. The IT214/215 sample compressor is NOT implemented —
-// samples read from a compressed source are written back uncompressed (their PCM
-// is preserved; the `compressed` flag is not). IT uses absolute u32 file offsets,
-// so — unlike S3M — NO paragraph alignment is needed; just lay out sequentially
-// and patch the offset tables + each sample header's data pointer.
+// Writes SAMPLE MODE (InsNum = 0; a cell's "instrument" is a sample number).
+//
+// SAMPLE DATA: a freshly-built / edited sample is written UNCOMPRESSED (signed,
+// Cvt 0x01) — we do not run the IT214/215 bit-packer. But a sample READ from a
+// compressed source keeps its original compressed blocks in [ItSample.rawData],
+// and those are written back VERBATIM with the Flg 0x08 (compressed) bit set, so
+// a same-format round-trip stays compressed and byte-lossless — the same
+// retained-blob strategy the MOD/S3M writers use. The IT214-vs-215 delta stage
+// is module-wide (Cwt/v ≥ 0x0215), and [ItModule.createdWith] carries the
+// original Cwt/v through, so the retained blocks decode with the right stage.
+// (Only a sample with no rawData — synthetic, or edited so the blob is stale —
+// falls back to the uncompressed path.) IT uses absolute u32 file offsets, so —
+// unlike S3M — NO paragraph alignment is needed; just lay out sequentially and
+// patch the offset tables + each sample header's data pointer.
 //
 // ─── Output layout (little-endian; must satisfy parseIt) ─────────────────────
 // HEADER (0xC0 bytes):
