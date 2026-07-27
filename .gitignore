@@ -85,3 +85,6 @@ native/glint/src/.testbuild/
 # Pre-baked neural narration WAVs — generated at deploy by tool/bake_narration.dart
 # (CI-baked from tool/narration_strings.json), never committed. Manifest stays {}.
 assets/narration/*.wav
+
+# iOS HD TTS framework — fetched in CI from a CrispASR release, never committed
+ios/Frameworks/crispasr.xcframework

@@ -77,6 +77,19 @@ jobs:
           ref: main
           path: onnx_runtime_dart
 
+      # iOS HD TTS: fetch the prebuilt crispasr.xcframework (device+sim slices)
+      # from its CrispASR release rather than committing 80 MB to this repo. The
+      # Runner project embeds + signs it (see the Embed Frameworks phase); the
+      # build step asserts it landed in the signed .app.
+      - name: Fetch crispasr.xcframework (iOS HD TTS embed)
+        run: |
+          set -euo pipefail
+          mkdir -p ios/Frameworks
+          curl -fsSL -o /tmp/crispasr-ios.zip \
+            https://github.com/CrispStrobe/CrispASR/releases/download/ios-xcframework-20260727/crispasr-ios.xcframework.zip
+          unzip -qo /tmp/crispasr-ios.zip -d ios/Frameworks/
+          test -d ios/Frameworks/crispasr.xcframework && echo "crispasr.xcframework fetched"
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -186,6 +199,16 @@ jobs:
           echo "built: $IPA"
           unzip -qo "$IPA" -d /tmp/ipa_check
           codesign --verify --deep --strict --verbose=2 /tmp/ipa_check/Payload/Runner.app 2>&1 | tail -2
+          # TTS iOS embed check: prove libcrispasr actually shipped inside the
+          # signed .app and is itself validly signed. mus builds green WITHOUT it
+          # (crispasr loads lazily at runtime), so a plain green dry-run wouldn't
+          # prove the embed — this assertion does.
+          APP=/tmp/ipa_check/Payload/Runner.app
+          echo "== embedded frameworks =="; ls "$APP/Frameworks" || true
+          test -e "$APP/Frameworks/crispasr.framework" \
+            || { echo "::error::crispasr.framework NOT embedded in the .app"; exit 1; }
+          codesign --verify --strict --verbose=2 "$APP/Frameworks/crispasr.framework"
+          echo "crispasr.framework embedded + validly signed"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
