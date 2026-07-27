@@ -44,9 +44,13 @@ void main() {
 
   testWidgets('there is a tappable cell per step', (tester) async {
     final game = await _open(tester);
+    expect(kPatternSteps, 16, reason: 'the strip is sized to the grid');
     expect(find.byKey(const Key('loop-auto-drums-0')), findsOneWidget);
-    expect(find.byKey(Key('loop-auto-drums-${kPatternSteps - 1}')),
-        findsOneWidget);
+    expect(
+      find.byKey(const Key('loop-auto-drums-15')),
+      findsOneWidget,
+      reason: 'kPatternSteps is 16, so the last cell is 15',
+    );
 
     await tester.tap(find.byKey(const Key('loop-auto-drums-0')));
     await tester.pump(const Duration(milliseconds: 50));
@@ -64,8 +68,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect(game.automationAt('drums', 0), 1.0);
-    expect(game.hasAutomationFor('drums'), isFalse,
-        reason: 'a flat lane should not be stored');
+    expect(
+      game.hasAutomationFor('drums'),
+      isFalse,
+      reason: 'a flat lane should not be stored',
+    );
   });
 
   testWidgets('steps are independent', (tester) async {
