@@ -192,4 +192,19 @@ void main() {
     );
     expect(src.browse, throwsA(isA<CometbeatCatalogUnavailable>()));
   });
+
+  test('kind factories, metadata, exception message, cache clear', () {
+    final http = _fakeHttp(const {});
+    expect(CometbeatCatalogSource.sounds(http), isA<CometbeatCatalogSource>());
+    expect(CometbeatCatalogSource.scores(http), isA<CometbeatCatalogSource>());
+    expect(CometbeatCatalogSource.modules(http), isA<CometbeatCatalogSource>());
+    expect(CometbeatCatalogSource.all(http), isA<CometbeatCatalogSource>());
+
+    final src = CometbeatCatalogSource(http);
+    expect(src.homepage, contains('huggingface.co'));
+    expect(src.licenseSummary, isNotEmpty);
+
+    expect(const CometbeatCatalogUnavailable('boom').toString(), 'boom');
+    CometbeatCatalogSource.clearSharedCache(); // idempotent, no throw
+  });
 }
