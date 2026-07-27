@@ -737,12 +737,47 @@ is recorded in [HISTORY.md](HISTORY.md).
   **4** with a filled counter, because the same glyph stands over C3/E3 where a thumb is
   physically impossible. Corollary: a running agent's transcript is unreadable to the
   parent, so ask for a compact final summary and honest `%% UNSURE` markers.
+  **⭐⭐ THE FINDING THAT RESHAPES THE TASK: these methods use TWO DIFFERENT FINGERING
+  SYSTEMS, and only one of them is what our arranger models.**
+  • **Tillière = DIATONIC** — one finger per scale degree, so the hand spacing follows the
+  key's tone/semitone pattern and changes bar to bar by design. Found by cross-reading two
+  lines of the same étude (an independent reading of the `3.e Corde` line explained what I
+  had wrongly filed as an engraver's slip on the `4.e Corde` line: bar 3's G–A♭–B♭ under
+  1‑2‑3 is the system working, not a defect — **that "anomaly" claim is retracted**).
+  • **Romberg = FRAME-BASED** — he states it in prose: hand spans a minor third by default,
+  a major third is taken 1‑2‑4 by extension with the hand staying in position.
+  ⚠ **Consequence: scoring the arranger against Tillière is a CATEGORY ERROR.** Agreement
+  there measures whether a frame model coincides with a diatonic one, which is not the
+  question. **Romberg is the aligned gold; Tillière is a different school** and its labels
+  should be kept as a labelled contrast set, not folded into the same accuracy number.
+  Open: whether Danbé's c.1905 revision modernised the fingering toward frames — worth
+  checking, it would date the shift.
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
   78; PDF↔print offset ≈ +13. Tillière (photocopy-grade, 1071×1640 @150 ppi) p.17 ff.
   ⚠ Extract with `pdfimages -j`, NOT `pdftoppm -r 300`: these PDFs wrap low-res scans
-  (122–150 ppi), so rendering at 300 dpi is slow and upscales without adding detail.
+  (72–150 ppi), so rendering at 300 dpi is slow and upscales without adding detail.
+  **⭐ THE RICHEST SOURCE FOUND — Tillière *nouvelle édition* revue et augmentée par
+  J. DANBÉ** (A. Noël succ. to Mackar & Noël, 22–23 Passage des Panoramas Paris; plate
+  `A.N. 4380`; imp. C. G. Röder; BnF copy). **Jules Danbé 1840–1905 → PD since 1976**, so
+  this one clears on a NAMED reviser, no anonymous-work argument needed. (Its title-page
+  "Tous droits réservés pour tous pays" is an expired historical notice; it revives nothing.)
+  Only 72 ppi (1024×1493) but the type is crisp and large — legibility beat the Tillière
+  photocopy at twice the ppi, so **judge a scan by its typography, not its dpi**.
+  It carries **the same étude** as the Ikelmer print in a cleaner engraving → use it to settle
+  the one unresolved digit (bars 1/8: `4` on the C-string line vs `3` on the G-string line;
+  two careful readings disagree, lowest bar of each, where the stretch is widest).
+  ⭐ And it holds three things we have **zero** gold for:
+  • `Gammes dans toutes les positions du pouce` — scales through THUMB positions 1–12. Our
+    `BowedHandMode.thumb` has never been checked against a printed source.
+  • `Du doigté de la tierce mineure et majeure` — the minor-vs-major-third fingering question
+    head-on, i.e. Romberg's rule and our extension modes.
+  • `Des doubles notes` — thirds, sixths, octaves, fifths: multi-note COLUMNS, which no gold
+    set we own contains.
+  Plus `Gammes majeures`/`mineures` in all keys and fingered repertoire (Haydn, Tchaikovsky,
+  Mendelssohn). A Spanish issue of the same method is also in hand (notes from printed p.17);
+  ⚠ verify whether it is the same plates before treating it as independent data.
   **⭐ MEASURED — Romberg p.22 «Tonleiter in G dur», 11 notes read by eye
   (`p22_tonleiter_gdur.ly`): finger 10/11, STRING 11/11**, identical at all three skill
   levels. Against 50.3% / 58.2% on the PDMX sets. Two firsts here: Romberg's method is
