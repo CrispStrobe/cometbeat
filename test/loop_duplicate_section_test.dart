@@ -41,8 +41,11 @@ void main() {
     await tester.pump();
 
     expect(game.sceneIsEmpty(1), isFalse, reason: 'the copy landed in B');
-    expect(game.enabledTracks, {'drums', 'bass'},
-        reason: 'the copy plays what the original played');
+    expect(
+      game.enabledTracks,
+      {'drums', 'bass'},
+      reason: 'the copy plays what the original played',
+    );
   });
 
   testWidgets('editing the copy does NOT edit the original', (tester) async {
@@ -103,8 +106,11 @@ void main() {
 
     game.launchScene(0);
     await tester.pump();
-    expect(game.enabledTracks, {'drums'},
-        reason: 'the edit after duplicating went into A');
+    expect(
+      game.enabledTracks,
+      {'drums'},
+      reason: 'the edit after duplicating went into A',
+    );
   });
 
   testWidgets('duplicating an empty section does nothing', (tester) async {
