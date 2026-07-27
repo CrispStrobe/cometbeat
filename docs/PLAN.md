@@ -183,6 +183,15 @@ is recorded in [HISTORY.md](HISTORY.md).
     tooling (`tool/coverage/`) is committed so the next tier is a re-run away.
     **Full write-up: [`docs/COVERAGE_REPORT.md`](COVERAGE_REPORT.md)** (harness,
     80% baseline, per-file results table, methodology + traps, ceiling analysis).
+    - **Follow-up tiers closed (~31 files raised, 27 to 100%):** the 83–90% pure
+      tier — `streaming_mixer`, `license_policy` labels, `sample_pitch`,
+      `sound_library`, `coverage_gaps`, `sri_item_label`, and the **library-source
+      parser domain** (`modarchive`/`gregobase`/`cometbeat_catalog` + earlier
+      `source_registry`/`github_abc`), plus the 332-line `tracker_instrument_codec`
+      (87→100: native envelopes/macros, OPL/pulse/additive round-trips). Sweep now
+      at the diminishing-returns boundary: what's left (`bowed_arranger` +28
+      scattered edge branches, `sample_extractor`, `primers`-data) needs bespoke
+      per-line domain analysis over already-heavily-tested files.
 
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
   grand-staff view (the deferred bit).** Follow-up to `grandstaff-markings`, which

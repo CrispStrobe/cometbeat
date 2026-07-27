@@ -163,6 +163,18 @@ enum labels, and one-branch edges the main suites skipped:
 cometbeat's shared-cache-hit path (only active for the real index URL, so tests
 can't cross-contaminate) are integration paths, not unit gaps.
 
+| `core/audio/tracker_instrument_codec.dart` | 87 → **100** | a sample's native volume/pan envelopes + macros, isSerializable multi/percussion arms, exception message, OPL / pulse-macros / additive-macros round-trips | `cb24b14d` |
+
+### Where the pure-logic sweep ends
+
+After the codec (a 332-line pure file → 100%), the remaining 83–90% files are
+**not** clean closeable wins: `bowed_arranger` (89%) has 28 *scattered* edge
+branches across a ~940-line notation arranger already covered by five test files
+— each line needs bespoke domain analysis; `sample_extractor` (89%) and
+`primers` (83%, tutorial *data*) are similar. That is the diminishing-returns
+boundary for the pure tier: past it, cost-per-covered-line rises sharply for
+edge cases the five-plus existing suites already largely exercise.
+
 ### Earlier in the same campaign (pre-harness, additive suites)
 
 | File(s) | What | Commit |
