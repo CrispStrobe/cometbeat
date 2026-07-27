@@ -28,16 +28,12 @@ void main() {
             '${fingered.length} fingered, ${score.measures.length} measures, '
             'clef ${score.clef}, key ${score.keySignature.fifths}');
         print(
-            '   fingerings: ${fingered.map((n) => n.fingerings.join()).join(' ')}');
+          '   fingerings: ${fingered.map((n) => n.fingerings.join()).join(' ')}',
+        );
         print('   unsure markers: ${'%% UNSURE'.allMatches(src).length}');
       } catch (e) {
         print('$name: PARSE FAILED — $e');
       }
     }
   });
-}
-
-extension on String {
-  Iterable<Match> allMatches(String s) =>
-      RegExp(RegExp.escape(this)).allMatches(s);
 }

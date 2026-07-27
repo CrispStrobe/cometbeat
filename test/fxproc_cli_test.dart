@@ -68,7 +68,9 @@ void main() {
   if (!kRunHeavy) {
     test(
       describeSkip(
-          'HEAVY', '1m02s — spawns the fxproc CLI as a subprocess per case'),
+        'HEAVY',
+        '1m02s — spawns the fxproc CLI as a subprocess per case',
+      ),
       () {},
     );
     return;

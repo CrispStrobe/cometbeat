@@ -123,8 +123,10 @@ void main() {
   // Gated: see test/support/slow_tests.dart for why and how to run it.
   if (!kRunHeavy) {
     test(
-      describeSkip('HEAVY',
-          '1m34s — byte-identical streaming renders across every voice'),
+      describeSkip(
+        'HEAVY',
+        '1m34s — byte-identical streaming renders across every voice',
+      ),
       () {},
     );
     return;

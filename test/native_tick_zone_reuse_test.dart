@@ -42,7 +42,9 @@ void main() {
   if (!kRunHeavy) {
     test(
       describeSkip(
-          'HEAVY', '3m29s — full offline renders of two native IT modules'),
+        'HEAVY',
+        '3m29s — full offline renders of two native IT modules',
+      ),
       () {},
     );
     return;
