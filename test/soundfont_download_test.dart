@@ -103,4 +103,20 @@ void main() {
     expect(await cache.read('x'), [9, 8, 7]);
     expect(cache.pathFor('x'), '${dir.path}/x.sf');
   });
+
+  test('cacheDir honours the override, else falls back home-relative', () {
+    // With an explicit override, that path wins verbatim.
+    expect(IoSoundFontCache(cacheDirOverride: '/tmp/sf').cacheDir(), '/tmp/sf');
+
+    // With no override, it respects COMET_SOUNDFONT_DIR or falls back to a
+    // home-relative cache path.
+    final dir = IoSoundFontCache().cacheDir();
+    expect(dir, isNotEmpty);
+    final env = Platform.environment['COMET_SOUNDFONT_DIR'];
+    if (env == null || env.isEmpty) {
+      expect(dir, endsWith('/.cache/comet_beat/soundfonts'));
+    } else {
+      expect(dir, env);
+    }
+  });
 }
