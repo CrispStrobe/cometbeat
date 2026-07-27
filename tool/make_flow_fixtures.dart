@@ -33,6 +33,11 @@ const _rows = 64;
 const _channels = 4;
 const _breakTargetRow = 16;
 
+/// Hoisted so the `doc(...)` calls below stay short enough that the formatter
+/// does not split the literal across lines.
+const _twoPatterns = [0, 1];
+const _threePatterns = [0, 1, 2];
+
 /// A short looped saw, same shape as the effect fixtures so the two sets sound
 /// like the same instrument and their numbers stay comparable.
 Float64List _wave() {
@@ -116,10 +121,7 @@ void main() {
   // large, obvious divergence rather than a subtle one.
   _emit(
     'break_row16',
-    doc('flow break row16', const [
-      0,
-      1
-    ], [
+    doc('flow break row16', _twoPatterns, [
       _notes(
         0,
         lastRow: DocCell(
@@ -137,15 +139,11 @@ void main() {
   // classic source of divergence between replayers.
   _emit(
     'jump_and_break',
-    doc('flow jump+break', const [
-      0,
-      1,
-      2
-    ], [
+    doc('flow jump+break', _threePatterns, [
       _notes(0),
       _notes(
         1,
-        lastRow: DocCell(
+        lastRow: const DocCell(
           effect: kFxPositionJump,
           effectParam: 2,
         ),

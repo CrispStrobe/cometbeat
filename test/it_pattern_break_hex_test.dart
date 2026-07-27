@@ -115,9 +115,8 @@ void main() {
     test('MOD, S3M and XM keep the decimal coding untouched', () {
       // The fix must be confined to IT. These three genuinely are decimal, and
       // re-coding them would break the formats that were right all along.
-      final cell = parseMod(convertToMod(_docBreakingTo(16)))
-          .patterns[0]
-          .rows[63][0];
+      final cell =
+          parseMod(convertToMod(_docBreakingTo(16))).patterns[0].rows[63][0];
       expect(cell.effect, 0xD);
       expect(cell.effectParam, 0x16);
     });

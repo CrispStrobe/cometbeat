@@ -408,7 +408,10 @@ List<TrackerInstrument> _nativeInstrumentPool(ModuleDoc doc, int tempo) {
           // envelope correlation against both was 0.09. Spectral similarity
           // against the references was 0.73 where the other three formats sat
           // at 0.999. See PLAN.md §6 X8.
-          polyphonic: false,
+          //
+          // The flag is simply NOT PASSED — false is its default and the
+          // analyzer rejects restating a default. This comment, plus
+          // `test/xm_channel_monophony_test.dart`, is what guards it.
         ),
       );
       offset += instrument.samples.length;

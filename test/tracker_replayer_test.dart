@@ -209,16 +209,23 @@ void main() {
 
   group('vibrato (4xy)', () {
     test('is a zero-mean sine on pitch, bounded by the depth', () {
-      // speed 1, depth 8 ⇒ ±1 semitone; a full cycle is 32 ticks.
+      // speed 8, depth 8 ⇒ ±1 semitone.
+      //
+      // The window is chosen so a WHOLE number of cycles fits, which is what
+      // makes the zero-mean assertion exact. Two things decide it (PLAN.md §6
+      // X2): a full cycle is 64 LFO steps, not 32, and the LFO does not run on
+      // tick 0 — ProTracker triggers voices there and runs the per-tick effect
+      // handler only on ticks 1..speed-1. So an 8-tick row advances the LFO 7
+      // times, and 8 rows give 56 steps at speed 8 = 448 = exactly 7 cycles.
+      // The 8 tick-0 samples sit at the base, which is the mean, so they do not
+      // bias it.
       final cells = [
-        fx(kFxVibrato, 0x18, midi: 60),
-        fx(kFxVibrato, 0x00),
-        fx(kFxVibrato, 0x00),
-        fx(kFxVibrato, 0x00),
+        fx(kFxVibrato, 0x88, midi: 60),
+        for (var i = 0; i < 7; i++) fx(kFxVibrato, 0x00),
       ];
-      final t = traceChannel(cells, ticksPerRow: 8); // 4×8 = 32 ticks = 1 cycle
+      final t = traceChannel(cells, ticksPerRow: 8);
       final all = <double>[];
-      for (var r = 0; r < 4; r++) {
+      for (var r = 0; r < 8; r++) {
         for (var k = 0; k < 8; k++) {
           all.add(t.pitchAt(r, k));
         }
@@ -235,16 +242,19 @@ void main() {
 
   group('tremolo (7xy)', () {
     test('is a zero-mean sine on volume', () {
+      // Same window arithmetic as the vibrato test above: 8 rows of 8 ticks at
+      // speed 8 is exactly 7 cycles of the 64-step LFO, counting the 7 effect
+      // ticks per row. Base volume 32 with depth 8 swings ±31.9 (the real
+      // ProTracker depth is 255/64 per unit), which just fits 0..64 without
+      // clamping — clamping would break the zero-mean assertion, not the code.
       final cells = [
         fx(kFxSetVolume, 0x20, midi: 60), // C-4 at volume 32
-        fx(kFxTremolo, 0x18), // speed 1, depth 8
-        fx(kFxTremolo, 0x00),
-        fx(kFxTremolo, 0x00),
-        fx(kFxTremolo, 0x00),
+        fx(kFxTremolo, 0x88), // speed 8, depth 8
+        for (var i = 0; i < 7; i++) fx(kFxTremolo, 0x00),
       ];
-      final t = traceChannel(cells, ticksPerRow: 8); // rows 1..4 = 32 ticks
+      final t = traceChannel(cells, ticksPerRow: 8);
       final all = <double>[];
-      for (var r = 1; r < 5; r++) {
+      for (var r = 1; r < 9; r++) {
         for (var k = 0; k < 8; k++) {
           all.add(t.volumeAt(r, k));
         }
@@ -1670,15 +1680,19 @@ void main() {
 
   group('audit fixes', () {
     test('6xy continues vibrato with its own memory (does not corrupt it)', () {
-      // 4-1-8 arms vibrato (speed 1, depth 8 ⇒ ±1 st). 6-0-4 must NOT reparse
+      // 4-8-8 arms vibrato (speed 8, depth 8 ⇒ ±1 st). 6-0-4 must NOT reparse
       // its param as vib speed/depth — the vibrato keeps swinging ±1 st.
+      //
+      // Speed 8 rather than 1: at the true 64-step cycle rate (PLAN.md §6 X2) a
+      // speed of 1 needs 64 effect ticks to come round, and these four rows do
+      // not reach the far half of the swing.
       final cells = [
-        fx(kFxVibrato, 0x18, midi: 60),
+        fx(kFxVibrato, 0x88, midi: 60),
         fx(kFxVibratoVolSlide, 0x04),
         fx(kFxVibratoVolSlide, 0x04),
         fx(kFxVibratoVolSlide, 0x04),
       ];
-      final t = traceChannel(cells, ticksPerRow: 8); // 32 ticks = one cycle
+      final t = traceChannel(cells, ticksPerRow: 8);
       final all = <double>[];
       for (var r = 0; r < 4; r++) {
         for (var k = 0; k < 8; k++) {
