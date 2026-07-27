@@ -837,10 +837,13 @@ remain.
    voice too, and `TrackerSong.usesMacros` routes a macro'd song through the tick
    replayer so `renderSongWav` actually sounds them (was silently taking the fast
    offline path).
-4. **Remaining slices (open):** macros on the STEREO (`replaySongStereo`, used for
-   PANNED songs) and variable-timing tick paths — currently a macro on a panned or
-   mid-song-tempo-change song is not applied; the pan/duty targets; and a macro
-   editor UI in `instrument_editor.dart`.
+4. ~~**Stereo path + pan target:**~~ (DONE) macros apply in the stereo tick voice
+   (`_renderSampleChannelStereoTicks`) — used for PANNED songs — including the PAN
+   target (meaningful only in stereo); additive stereo already worked via the
+   mono-delegate-then-pan path.
+5. **Remaining slices (open):** the VARIABLE-TIMING tick paths (a macro on a
+   mid-song-tempo-change / pattern-break song is not applied); the DUTY target
+   (needs a pulse/square voice); and a macro editor UI in `instrument_editor.dart`.
 
 ### 5. Comprehensive Effect Command Set & Flow Control
 **Current State:**

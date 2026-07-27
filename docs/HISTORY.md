@@ -37,9 +37,14 @@ both the additive and the sample voice.
   path (which renders at a fixed timbre) — macros now actually sound in playback
   for an unpanned song. Macro-free songs are unaffected.
 
-Remaining (see PLAN.md §4): the STEREO (panned, `replaySongStereo`) + variable-
-timing tick paths don't apply macros yet, plus the pan/duty targets and a macro
-editor UI.
+- **Stereo path + pan target** (`ebc5786b`). Macros apply in the stereo tick voice
+  (`_renderSampleChannelStereoTicks`) too — so a PANNED song (which renders through
+  `replaySongStereo`) modulates — including the PAN target (meaningful only in
+  stereo). Additive macros already worked in stereo (that path delegates to the
+  mono voice, then pans). Opt-in/byte-identical as everywhere.
+
+Remaining (see PLAN.md §4): the variable-timing tick paths don't apply macros
+yet, plus the duty target and a macro editor UI.
 
 ## Tracker DSP lifted into the shared editors (2026-07-26)
 

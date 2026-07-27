@@ -165,20 +165,16 @@ is recorded in [HISTORY.md](HISTORY.md).
   not all named `daw_*`.
   — opus
 
-- **opus (tracker→editors)** · ✅ **IDLE — §4 instrument macros shipped for BOTH
-  additive + sample voices** (HISTORY → "Tracker instrument macros"). `MacroSequence`
-  model; per-tick vol/pitch/arp application in the additive AND sample
-  (`_renderSampleChannelInto`) voices; opt-in/byte-identical (105 goldens green);
-  codec-persisted. §3.3 grid ergonomics was already built (roadmap corrected).
-  Remaining (task #46, open): variable-timing sample path, pan/duty targets, a
-  macro editor UI, and §3.3 block-op test coverage. Now idle. §4 CORE done (HISTORY → "Tracker
-  instrument macros"): `MacroSequence` model + per-tick application in the
-  ADDITIVE voice, opt-in/byte-identical, codec-persisted. **§3.3 needed no work —
-  it's already implemented** (`advanced_tracker_screen.dart`: Shift+arrow
-  selection, block copy/paste/transpose/interpolate); the roadmap entry was stale
-  and is now corrected. §4 remaining slices (sample-voice macros, pan/duty, macro
-  UI) + the §3.3 block-op test gap are noted in [PLAN.md](../PLAN.md). Did not
-  touch `advanced_tracker_screen.dart`. Now idle.
+- **opus (tracker→editors)** · ✅ **IDLE — §4 instrument macros shipped across
+  additive + sample + STEREO voices, reachable in playback** (HISTORY → "Tracker
+  instrument macros"). `MacroSequence` model; per-tick vol/pitch/arp application in
+  the additive, sample-mono, and sample-stereo tick voices (+ the PAN target in
+  stereo); `TrackerSong.usesMacros` routes a macro'd song through the tick
+  replayer so `renderSongWav`/`replaySongStereo` actually sound them;
+  opt-in/byte-identical everywhere (goldens green); codec-persisted. §3.3 grid
+  ergonomics was already built (roadmap corrected). Remaining (task #46, open):
+  variable-timing tick paths, the duty target, a macro editor UI, and §3.3
+  block-op test coverage. Now idle.
 - **opus (tracker→editors)** · ✅ **(prior, idle) sweep shipped (5 pieces), condensed to
   [HISTORY.md](HISTORY.md) → "Tracker DSP lifted into the shared editors".**
   Shipped: shared LFO + `FxType.autoWah`; tab-through-replayer + opt-in
