@@ -36,9 +36,11 @@
 //     semitone spacing is wide enough for the reach to be a distinct technique.
 //  3. THUMB POSITION. High up, the thumb comes over the neck and stops the string
 //     like a movable nut — a completely different geometry (thumb + 1-2-3, no
-//     4th finger, wider steps). Modelled as its own mode, unlocked only from the
-//     octave harmonic upward and with a large entry cost, since a player commits
-//     to it for a passage rather than one note.
+//     4th finger, wider steps). Modelled as its own mode with a large entry cost,
+//     since a player commits to it for a passage rather than one note. Unlocked
+//     from 10 semitones up, NOT the octave harmonic: Becker's own edition of
+//     Kummer prints his «Einsatz» at 10, and leave-one-page-out over three of his
+//     scale pages agrees (see [thumbEntry] on the cello).
 //
 // The arranger is deliberately UNTRAINED. Published bowed-string fingering models
 // (HMM: Nagata/Sako/Kitamura; BLSTM: Jen et al. 2021 + the TNUA dataset;
@@ -137,8 +139,9 @@ class BowedInstrument {
   final int extensionMaxPosition;
 
   /// Lowest anchor (semitones above the open string) at which thumb position is
-  /// available; 12 = the octave harmonic, where players normally enter it. Null
-  /// when the instrument has no thumb position (violin, viola).
+  /// available. The octave harmonic (12) is where players are usually *taught* to
+  /// enter it, but printed practice puts it lower — see the cello's value below.
+  /// Null when the instrument has no thumb position (violin, viola).
   final int? thumbEntry;
 
   /// Thumb-position frame as semitone offsets from the thumb, paired positionally
@@ -173,7 +176,17 @@ class BowedInstrument {
     maxNeckPosition: 7,
     allowsExtensions: true,
     extensionMaxPosition: 4,
-    thumbEntry: 12,
+    // 10, not the octave harmonic at 12. Evidence, three independent lines:
+    //  1. Hugo Becker's own edition of Kummer Op.60 prints his C-dur «Einsatz» with
+    //     the thumb at exactly 10 semitones — C4 on the D string and G4 on the A
+    //     string, a pure fifth, thumb glyph on both noteheads (his p.32).
+    //  2. Leave-one-page-out over three independently-read scale pages (p14/15/16,
+    //     20 systems, 1056 notes): 12 -> 10 improves agreement on EVERY page, by
+    //     4.1 / 6.8 / 6.4 points.
+    //  3. Below 10 the gains stop generalising — p15 is flat at 55.4% for 10, 9 and
+    //     8 — so the higher-scoring 8 is overfitting one page. 10 is the value that
+    //     survives the held-out check AND matches the printed placement.
+    thumbEntry: 10,
     thumbFrame: const [0, 2, 4, 5],
   );
 
