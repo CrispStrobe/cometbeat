@@ -2320,9 +2320,36 @@ already round-trip **in place**. The gaps:
 - [ ] **C6** Lane-level send (clip-level exists). **C7** surface the shared rack
   in Tracker/Loop/Tab/Score too, with the chain string as interchange.
 
-**Pillar D — DAW-grade extras** (as pulled): ripple delete/insert · clip groups +
-nudge · per-clip gain envelope · LUFS + true-peak + correlation metering · take
-lanes/comping · a real tempo map (bpm is one number today).
+**Pillar D — DAW-grade extras** (as pulled)
+- [x] **D4 loudness metering** — `crisp_dsp/loudness.dart` + `--loudness`.
+  Integrated / short-term / momentary **LUFS**, **true peak** in dBTP, and stereo
+  **correlation**. Peak and RMS answer "how big are the numbers"; none of them
+  answer "how loud does this SOUND", which is what every delivery target is
+  written in.
+  * clean-room from the published broadcast standard — K-weighting, the −0.691
+    calibration constant, the −70 LUFS absolute gate and the −10 LU relative
+    gate are all part of the definition, which is a description of a measurement
+    rather than anyone's code;
+  * the tests are mostly CALIBRATION, not self-consistency: a full-scale 1 kHz
+    sine in both channels reads ~0 LUFS, halving the amplitude costs 6 LU, and
+    mono reads ~3 LU below the same thing in stereo. Getting the absolute
+    constant wrong is the easiest mistake here and the hardest to notice,
+    because every relative comparison still looks right.
+  * **gating is the point**: a test pins that padding a master with silence does
+    NOT change its loudness, which a naive average would get wrong;
+  * **true peak** oversamples before taking the peak, because a signal can sit
+    under 0 dBFS at every sample and still overshoot between them — what a
+    converter or a lossy encoder then clips. Linear interpolation understates it
+    slightly, so it is a floor on the overshoot; that is the safe direction for
+    a warning.
+  * **correlation** predicts what a stereo meter cannot show you: strongly
+    negative material largely disappears when folded to mono, which is what a
+    phone speaker does. The CLI flags both risks inline (`⚠ over −1 dBTP`,
+    `⚠ mono-fold risk`).
+  Tests: `loudness_test` (16).
+- [ ] **D1** ripple delete/insert · **D2** clip groups + nudge · **D3** per-clip
+  gain envelope · **D5** take lanes/comping · **D6** a real tempo map (bpm is
+  one number today).
 
 **Non-goals** (stated so they are not re-litigated): a real-time audio graph (the
 app is offline render-then-play *by design*), third-party plugin hosting, and

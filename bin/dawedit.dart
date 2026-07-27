@@ -24,6 +24,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/loudness.dart';
 import 'package:comet_beat/core/audio/daw_edits.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart'
     show Clip, SampleSource;
@@ -56,6 +57,7 @@ Ops (applied in the order given):
   --find-silence [THR]   list the silent gaps (threshold fraction, default 0.01)
   --split-silence [THR]  list the PHRASES between them, as A:B ranges
   --full-stats           peak/RMS plus DC, crest factor, bit depth, crossings
+  --loudness             LUFS (integrated/short/momentary), true peak, phase
   --vad [MARGIN_DB]      trim to where the VOICE is (frame-based, default 8 dB)
   --dither BITS[:shape]  reduce to BITS with TPDF dither; ":shape" noise-shapes
   --spectrogram OUT.png  paint the spectrum over time (see --max-hz, --grey)
@@ -141,6 +143,7 @@ void main(List<String> args) {
       case '--dither':
         ops.add((a, requireValue(a)));
       case '--full-stats':
+      case '--loudness':
         ops.add((a, null));
       case '--spectrogram':
         ops.add((a, requireValue(a)));
@@ -351,6 +354,19 @@ void _apply(
       _take(a, ditherTake(a.left, a.right, bits: bits, noiseShaping: shape));
       stdout.writeln(
         'dither → $bits-bit${shape ? ', noise-shaped' : ''}',
+      );
+    case '--loudness':
+      final l = measureLoudness(a.left, a.right, sampleRate: a.sampleRate);
+      stdout.writeln(
+        '  loudness: ${l.integratedLufs.toStringAsFixed(1)} LUFS integrated · '
+        '${l.shortTermLufs.toStringAsFixed(1)} short · '
+        '${l.momentaryLufs.toStringAsFixed(1)} momentary',
+      );
+      stdout.writeln(
+        '  delivery: ${l.truePeakDb.toStringAsFixed(2)} dBTP'
+        '${l.truePeakDb > -1 ? ' ⚠ over −1 dBTP' : ''} · '
+        'phase ${l.correlation.toStringAsFixed(2)}'
+        '${l.correlation < 0 ? ' ⚠ mono-fold risk' : ''}',
       );
     case '--full-stats':
       _printFullStats(a);
