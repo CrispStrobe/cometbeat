@@ -48,7 +48,7 @@ class OpenInMenu extends StatelessWidget {
     this.capo = 0,
     this.annotations,
     this.icon = const Icon(Icons.open_in_new),
-    this.tooltip = 'Open in…',
+    this.tooltip,
     this.targets,
     this.keyPrefix = '',
   });
@@ -72,7 +72,11 @@ class OpenInMenu extends StatelessWidget {
   final SymbolicAnnotations? annotations;
 
   final Widget icon;
-  final String tooltip;
+
+  /// The button's tooltip. Null falls back to the localized "Open in…" — a
+  /// caller passes its own (e.g. "Open a copy in…") when the door means
+  /// something more specific.
+  final String? tooltip;
 
   /// Restricts the menu to these modes (still intersected with what the bridge
   /// can actually reach).
@@ -159,7 +163,7 @@ class OpenInMenu extends StatelessWidget {
           ];
     return PopupMenuButton<AppMode>(
       key: ValueKey('${keyPrefix}open-in'),
-      tooltip: tooltip,
+      tooltip: tooltip ?? l10n.openInTooltip,
       icon: icon,
       onSelected: (target) => _pick(context, target),
       itemBuilder: (context) => [

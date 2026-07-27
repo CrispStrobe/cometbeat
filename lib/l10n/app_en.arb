@@ -3176,5 +3176,8 @@
   "appModeLoop": "Loop Studio",
   "appModeScore": "Score",
   "appModeTab": "Tab",
-  "appModeAudio": "Audio"
+  "appModeAudio": "Audio",
+  "openInTooltip": "Open in…",
+  "openInCopyTooltip": "Open a copy in…",
+  "openInReplaceTooltip": "Open & replace via…"
 }

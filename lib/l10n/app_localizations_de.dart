@@ -8384,4 +8384,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get appModeAudio => 'Audio';
+
+  @override
+  String get openInTooltip => 'Öffnen in …';
+
+  @override
+  String get openInCopyTooltip => 'Kopie öffnen in …';
+
+  @override
+  String get openInReplaceTooltip => 'Öffnen & ersetzen über …';
 }

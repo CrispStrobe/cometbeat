@@ -64,12 +64,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   change" headers, Cancel/Open anyway/OK, the audio hint, and the FIVE mode names
   (`localizedModeLabel` bypasses the Flutter-free `appModeLabel`); wired via
   `AppLocalizations`; added the delegates to `open_in_menu_test`'s bare MaterialApps
-  + a German end-to-end test (38 open-in tests green). ⬜ **Documented follow-up
-  (still English):** the per-edge report REASONS (`report.lost`/`approximated`) and
-  the menu SUBTITLES (`ProjectBridge.describeEdge`) are generated in the Flutter-free
-  bridge, and the caller-supplied tooltips ("Open a copy in…", "Open & replace via…"
-  in `daw_screen`) — all a deeper pass that must thread localized strings into pure
-  Dart or move them to the widget layer. ⚠️ touched shared `app_en.arb`/`app_de.arb`
+  + a German end-to-end test (38 open-in tests green). **Follow-up (2nd pass, same
+  day): the tooltips are now localized too** — the widget's default is
+  `tooltip ?? l10n.openInTooltip`, and `daw_screen` passes localized copy/replace
+  tooltips (`openInCopyTooltip`/`openInReplaceTooltip`); the two Trackers + Tab
+  Workshop inherit the localized default. Also fixed a STALE `describeEdge`
+  subtitle: `(tab→score)` said "drops string and fret" — C4 made it lossless, so it
+  now reads "Keeps pitches AND the string/fret (in the side-car)". ⬜ **Remaining
+  English (deeper follow-up):** the per-edge report REASONS
+  (`report.lost`/`approximated`) and the menu SUBTITLES (`ProjectBridge.describeEdge`)
+  are generated in the Flutter-free bridge — localizing them wants structured
+  reason/edge CODES the widget maps, or moving the text to the widget layer.
+  ⚠️ touched shared `app_en.arb`/`app_de.arb`
   (append-only, regenerated `app_localizations*`) — no existing key changed.
   — opus (tracker→editors)
 

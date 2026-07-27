@@ -15223,6 +15223,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Audio'**
   String get appModeAudio;
+
+  /// No description provided for @openInTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in…'**
+  String get openInTooltip;
+
+  /// No description provided for @openInCopyTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a copy in…'**
+  String get openInCopyTooltip;
+
+  /// No description provided for @openInReplaceTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open & replace via…'**
+  String get openInReplaceTooltip;
 }
 
 class _AppLocalizationsDelegate

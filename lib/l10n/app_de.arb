@@ -2826,5 +2826,8 @@
   "appModeLoop": "Loop Studio",
   "appModeScore": "Partitur",
   "appModeTab": "Tabulatur",
-  "appModeAudio": "Audio"
+  "appModeAudio": "Audio",
+  "openInTooltip": "Öffnen in …",
+  "openInCopyTooltip": "Kopie öffnen in …",
+  "openInReplaceTooltip": "Öffnen & ersetzen über …"
 }
