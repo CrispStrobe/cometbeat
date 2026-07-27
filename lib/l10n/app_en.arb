@@ -3156,5 +3156,41 @@
   "trackerNativeParam": "Param",
   "trackerModuleHeader": "Module header",
   "trackerGlobalVolume": "Global volume",
-  "trackerInitialSpeed": "Initial speed"
+  "trackerInitialSpeed": "Initial speed",
+  "openInCannotTitle": "Cannot open in {mode}",
+  "@openInCannotTitle": {
+    "placeholders": { "mode": { "type": "String" } }
+  },
+  "openInAudioNotNotes": "Audio is not notes yet — use Transcribe first.",
+  "openInLossTitle": "Open in {mode}?",
+  "@openInLossTitle": {
+    "placeholders": { "mode": { "type": "String" } }
+  },
+  "openInLossLost": "This will not come across:",
+  "openInLossChanged": "This will change:",
+  "openInCancel": "Cancel",
+  "openInConfirm": "Open anyway",
+  "openInOk": "OK",
+  "appModeTracker": "Tracker",
+  "appModeLoop": "Loop Studio",
+  "appModeScore": "Score",
+  "appModeTab": "Tab",
+  "appModeAudio": "Audio",
+  "openInTooltip": "Open in…",
+  "openInCopyTooltip": "Open a copy in…",
+  "openInReplaceTooltip": "Open & replace via…",
+  "openInEdgeAlreadyHere": "Already here.",
+  "openInEdgeToAudio": "Renders to audio — notes are not editable.",
+  "openInEdgeFromAudio": "Needs transcription.",
+  "openInEdgeTabTracker": "Keeps string and fret — one channel per string.",
+  "openInEdgeTrackerTab": "Reads each channel as a string. Bring the side-car for techniques.",
+  "openInEdgeTabScore": "Keeps pitches AND the string/fret (in the side-car).",
+  "openInEdgeScoreTab": "Picks a playable fingering for you.",
+  "openInEdgeToLoopGrid": "Snaps to the eighth-note loop grid.",
+  "openInEdgeLoopTab": "Picks a playable fingering; drops velocity.",
+  "openInEdgeLoopScore": "Engraves the loop; drops velocity.",
+  "openInEdgeLoopTracker": "One channel per chord voice; keeps velocity.",
+  "openInEdgeTrackerScore": "Drops effect commands.",
+  "openInEdgeScoreTracker": "Quantizes onto the pattern grid.",
+  "openInEdgeTrackerLoop": "Takes the busiest channel onto the eighth-note grid."
 }

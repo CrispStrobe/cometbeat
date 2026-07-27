@@ -63,7 +63,7 @@ import 'app_localizations_en.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en'),
+    Locale('en')
   ];
 
   /// Spoken form of a raised cello position, e.g. raised 2nd. Cello positions are numbered by letter name; a chromatic step between two of them is the lower one raised.
@@ -15139,6 +15139,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Initial speed'**
   String get trackerInitialSpeed;
+
+  /// No description provided for @openInCannotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot open in {mode}'**
+  String openInCannotTitle(String mode);
+
+  /// No description provided for @openInAudioNotNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio is not notes yet — use Transcribe first.'**
+  String get openInAudioNotNotes;
+
+  /// No description provided for @openInLossTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in {mode}?'**
+  String openInLossTitle(String mode);
+
+  /// No description provided for @openInLossLost.
+  ///
+  /// In en, this message translates to:
+  /// **'This will not come across:'**
+  String get openInLossLost;
+
+  /// No description provided for @openInLossChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'This will change:'**
+  String get openInLossChanged;
+
+  /// No description provided for @openInCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get openInCancel;
+
+  /// No description provided for @openInConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Open anyway'**
+  String get openInConfirm;
+
+  /// No description provided for @openInOk.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get openInOk;
+
+  /// No description provided for @appModeTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracker'**
+  String get appModeTracker;
+
+  /// No description provided for @appModeLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Studio'**
+  String get appModeLoop;
+
+  /// No description provided for @appModeScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get appModeScore;
+
+  /// No description provided for @appModeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Tab'**
+  String get appModeTab;
+
+  /// No description provided for @appModeAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get appModeAudio;
+
+  /// No description provided for @openInTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in…'**
+  String get openInTooltip;
+
+  /// No description provided for @openInCopyTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a copy in…'**
+  String get openInCopyTooltip;
+
+  /// No description provided for @openInReplaceTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Open & replace via…'**
+  String get openInReplaceTooltip;
+
+  /// No description provided for @openInEdgeAlreadyHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Already here.'**
+  String get openInEdgeAlreadyHere;
+
+  /// No description provided for @openInEdgeToAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Renders to audio — notes are not editable.'**
+  String get openInEdgeToAudio;
+
+  /// No description provided for @openInEdgeFromAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs transcription.'**
+  String get openInEdgeFromAudio;
+
+  /// No description provided for @openInEdgeTabTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps string and fret — one channel per string.'**
+  String get openInEdgeTabTracker;
+
+  /// No description provided for @openInEdgeTrackerTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Reads each channel as a string. Bring the side-car for techniques.'**
+  String get openInEdgeTrackerTab;
+
+  /// No description provided for @openInEdgeTabScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps pitches AND the string/fret (in the side-car).'**
+  String get openInEdgeTabScore;
+
+  /// No description provided for @openInEdgeScoreTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Picks a playable fingering for you.'**
+  String get openInEdgeScoreTab;
+
+  /// No description provided for @openInEdgeToLoopGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Snaps to the eighth-note loop grid.'**
+  String get openInEdgeToLoopGrid;
+
+  /// No description provided for @openInEdgeLoopTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Picks a playable fingering; drops velocity.'**
+  String get openInEdgeLoopTab;
+
+  /// No description provided for @openInEdgeLoopScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Engraves the loop; drops velocity.'**
+  String get openInEdgeLoopScore;
+
+  /// No description provided for @openInEdgeLoopTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'One channel per chord voice; keeps velocity.'**
+  String get openInEdgeLoopTracker;
+
+  /// No description provided for @openInEdgeTrackerScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Drops effect commands.'**
+  String get openInEdgeTrackerScore;
+
+  /// No description provided for @openInEdgeScoreTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantizes onto the pattern grid.'**
+  String get openInEdgeScoreTracker;
+
+  /// No description provided for @openInEdgeTrackerLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Takes the busiest channel onto the eighth-note grid.'**
+  String get openInEdgeTrackerLoop;
 }
 
 class _AppLocalizationsDelegate
@@ -15168,9 +15348,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

@@ -4146,6 +4146,7 @@ class _DawScreenState extends State<DawScreen>
     final source = _daw.clipSourceAt(track, index);
     final sym = _clipSymbolicDoc(source);
     if (sym == null) return null;
+    final l10n = AppLocalizations.of(context)!;
     final from = sym.$1;
     final document = sym.$2;
     return OpenInMenu(
@@ -4157,7 +4158,7 @@ class _DawScreenState extends State<DawScreen>
         AppMode.tracker,
         AppMode.loop,
       ],
-      tooltip: 'Open a copy in…',
+      tooltip: l10n.openInCopyTooltip,
       icon: const Icon(Icons.call_split),
       onConverted: (target, result) {
         final converted = result.document;
@@ -4203,6 +4204,7 @@ class _DawScreenState extends State<DawScreen>
     final source = _daw.clipSourceAt(track, index);
     final sym = _clipSymbolicDoc(source);
     if (sym == null) return null;
+    final l10n = AppLocalizations.of(context)!;
     final from = sym.$1;
     final document = sym.$2;
     return OpenInMenu(
@@ -4214,7 +4216,7 @@ class _DawScreenState extends State<DawScreen>
         AppMode.tracker,
         AppMode.loop,
       ],
-      tooltip: 'Open & replace via…',
+      tooltip: l10n.openInReplaceTooltip,
       keyPrefix: 'replace-',
       icon: const Icon(Icons.sync_alt),
       onConverted: (target, result) {

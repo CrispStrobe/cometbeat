@@ -16,6 +16,8 @@
 import 'package:comet_beat/core/audio/loop_engine.dart' show PatternCell;
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
+import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/l10n/app_localizations_en.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 import 'package:flutter/material.dart';
@@ -33,10 +35,14 @@ Future<List<(AppMode, ConversionResult)>> _pump(
   WidgetTester tester, {
   required AppMode from,
   required Object Function() document,
+  Locale? locale,
 }) async {
   final converted = <(AppMode, ConversionResult)>[];
   await tester.pumpWidget(
     MaterialApp(
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         appBar: AppBar(
           actions: [
@@ -161,6 +167,45 @@ void main() {
     expect(converted.single.$2.lossless, isTrue);
   });
 
+  test('the localized EN edge subtitles mirror describeEdge (drift guard)', () {
+    // The widget shows localizedEdgeSubtitle; its EN values must equal the
+    // bridge's describeEdge, so the two do not drift (the widget tests above
+    // assert describeEdge's text appears under the default locale).
+    final en = AppLocalizationsEn();
+    for (final from in AppMode.values) {
+      for (final to in AppMode.values) {
+        expect(
+          localizedEdgeSubtitle(en, from, to),
+          ProjectBridge.describeEdge(from, to),
+          reason: '$from → $to subtitle drifted from describeEdge',
+        );
+      }
+    }
+  });
+
+  testWidgets('the dialog chrome is localized (German)', (t) async {
+    // The menu's own chrome — the loss dialog's title, its buttons and the
+    // mode name — follows the app locale. (The per-edge report REASONS are
+    // still English; they come from the Flutter-free bridge — a follow-up.)
+    await _pump(
+      t,
+      from: AppMode.tab,
+      document: _tab,
+      locale: const Locale('de'),
+    );
+    await t.tap(find.byKey(const ValueKey('open-in')));
+    await t.pumpAndSettle();
+    // Tab → Loop is lossy, so the confirm dialog appears — in German.
+    await t.tap(find.byKey(const ValueKey('open-in-loop')));
+    await t.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('open-in-loss-dialog')), findsOneWidget);
+    expect(find.text('In Loop Studio öffnen?'), findsOneWidget);
+    expect(find.text('Das geht dabei verloren:'), findsOneWidget);
+    expect(find.text('Abbrechen'), findsOneWidget);
+    expect(find.text('Trotzdem öffnen'), findsOneWidget);
+  });
+
   testWidgets('an unsupported target explains itself instead of failing',
       (t) async {
     final converted = await _pump(t, from: AppMode.loop, document: _loopTrack);
@@ -204,6 +249,8 @@ void main() {
       await t.pumpWidget(
         MaterialApp(
           key: ValueKey('host-$from'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             appBar: AppBar(
               actions: [

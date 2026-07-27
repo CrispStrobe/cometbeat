@@ -8294,4 +8294,104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackerInitialSpeed => 'Initial speed';
+
+  @override
+  String openInCannotTitle(String mode) {
+    return 'Cannot open in $mode';
+  }
+
+  @override
+  String get openInAudioNotNotes =>
+      'Audio is not notes yet — use Transcribe first.';
+
+  @override
+  String openInLossTitle(String mode) {
+    return 'Open in $mode?';
+  }
+
+  @override
+  String get openInLossLost => 'This will not come across:';
+
+  @override
+  String get openInLossChanged => 'This will change:';
+
+  @override
+  String get openInCancel => 'Cancel';
+
+  @override
+  String get openInConfirm => 'Open anyway';
+
+  @override
+  String get openInOk => 'OK';
+
+  @override
+  String get appModeTracker => 'Tracker';
+
+  @override
+  String get appModeLoop => 'Loop Studio';
+
+  @override
+  String get appModeScore => 'Score';
+
+  @override
+  String get appModeTab => 'Tab';
+
+  @override
+  String get appModeAudio => 'Audio';
+
+  @override
+  String get openInTooltip => 'Open in…';
+
+  @override
+  String get openInCopyTooltip => 'Open a copy in…';
+
+  @override
+  String get openInReplaceTooltip => 'Open & replace via…';
+
+  @override
+  String get openInEdgeAlreadyHere => 'Already here.';
+
+  @override
+  String get openInEdgeToAudio => 'Renders to audio — notes are not editable.';
+
+  @override
+  String get openInEdgeFromAudio => 'Needs transcription.';
+
+  @override
+  String get openInEdgeTabTracker =>
+      'Keeps string and fret — one channel per string.';
+
+  @override
+  String get openInEdgeTrackerTab =>
+      'Reads each channel as a string. Bring the side-car for techniques.';
+
+  @override
+  String get openInEdgeTabScore =>
+      'Keeps pitches AND the string/fret (in the side-car).';
+
+  @override
+  String get openInEdgeScoreTab => 'Picks a playable fingering for you.';
+
+  @override
+  String get openInEdgeToLoopGrid => 'Snaps to the eighth-note loop grid.';
+
+  @override
+  String get openInEdgeLoopTab => 'Picks a playable fingering; drops velocity.';
+
+  @override
+  String get openInEdgeLoopScore => 'Engraves the loop; drops velocity.';
+
+  @override
+  String get openInEdgeLoopTracker =>
+      'One channel per chord voice; keeps velocity.';
+
+  @override
+  String get openInEdgeTrackerScore => 'Drops effect commands.';
+
+  @override
+  String get openInEdgeScoreTracker => 'Quantizes onto the pattern grid.';
+
+  @override
+  String get openInEdgeTrackerLoop =>
+      'Takes the busiest channel onto the eighth-note grid.';
 }

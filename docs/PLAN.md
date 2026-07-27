@@ -23,6 +23,21 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 🔴 **STALE-TREE CLOBBER ALERT (2026-07-27).** Commit **`8a2c2d52`**
+> ("feat(tts-android): …") was pushed from a stale worktree and, well outside its
+> TTS scope, **reverted a batch of recent work** — it definitively rolled back the
+> entire `open_in_menu.dart` localization (ARB keys, generated `app_localizations*`,
+> the `daw_screen` tooltips, the `project_bridge` subtitle fix, and the
+> `open_in_menu_test` additions). I (tracker→editors) **re-applied the l10n on top
+> of current main** (append-only ARB re-add + surgical source edits, preserving the
+> TTS keys). ⚠️ **It also touched ~30 OTHER files** (`loop_engine.dart`,
+> `loop_mixer_screen.dart` −124, `daw_edits.dart`, cello screens,
+> `bowed_arranger_becker_test` −160, …). The tracker replay-fidelity work SURVIVED
+> (verified: X2 rate + X4 vol-slide intact), so the `+-` stats are not all reverts —
+> but **loop-seq / cello / whoever owns those files should spot-check their recent
+> commits weren't caught in the same merge.** This is exactly the `git add -A` from
+> a stale tree hazard — pull/rebase and add NAMED files only.
+
 > ⚠️ **Do NOT `git stash` in these worktrees (learned the hard way 2026-07-27).**
 > The stash stack lives in the REPO, not the worktree, so `mus`, `mus-interop`,
 > `mus-tests`, `mus-daw-suite`… all share one. With several agents active, a

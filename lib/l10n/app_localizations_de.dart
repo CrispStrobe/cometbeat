@@ -8337,4 +8337,109 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trackerInitialSpeed => 'Anfangstempo (Speed)';
+
+  @override
+  String openInCannotTitle(String mode) {
+    return 'Kann nicht in $mode geöffnet werden';
+  }
+
+  @override
+  String get openInAudioNotNotes =>
+      'Audio ist noch keine Noten – zuerst „Transkribieren“ verwenden.';
+
+  @override
+  String openInLossTitle(String mode) {
+    return 'In $mode öffnen?';
+  }
+
+  @override
+  String get openInLossLost => 'Das geht dabei verloren:';
+
+  @override
+  String get openInLossChanged => 'Das ändert sich:';
+
+  @override
+  String get openInCancel => 'Abbrechen';
+
+  @override
+  String get openInConfirm => 'Trotzdem öffnen';
+
+  @override
+  String get openInOk => 'OK';
+
+  @override
+  String get appModeTracker => 'Tracker';
+
+  @override
+  String get appModeLoop => 'Loop Studio';
+
+  @override
+  String get appModeScore => 'Partitur';
+
+  @override
+  String get appModeTab => 'Tabulatur';
+
+  @override
+  String get appModeAudio => 'Audio';
+
+  @override
+  String get openInTooltip => 'Öffnen in …';
+
+  @override
+  String get openInCopyTooltip => 'Kopie öffnen in …';
+
+  @override
+  String get openInReplaceTooltip => 'Öffnen & ersetzen über …';
+
+  @override
+  String get openInEdgeAlreadyHere => 'Schon hier.';
+
+  @override
+  String get openInEdgeToAudio =>
+      'Wird zu Audio – Noten sind dann nicht mehr editierbar.';
+
+  @override
+  String get openInEdgeFromAudio => 'Braucht Transkription.';
+
+  @override
+  String get openInEdgeTabTracker =>
+      'Behält Saite und Bund – ein Kanal pro Saite.';
+
+  @override
+  String get openInEdgeTrackerTab =>
+      'Liest jeden Kanal als Saite. Für Techniken den Side-Car mitnehmen.';
+
+  @override
+  String get openInEdgeTabScore =>
+      'Behält Tonhöhen UND Saite/Bund (im Side-Car).';
+
+  @override
+  String get openInEdgeScoreTab =>
+      'Wählt einen spielbaren Fingersatz für dich.';
+
+  @override
+  String get openInEdgeToLoopGrid =>
+      'Rastet auf das Achtelnoten-Loop-Raster ein.';
+
+  @override
+  String get openInEdgeLoopTab =>
+      'Wählt einen spielbaren Fingersatz; verwirft die Velocity.';
+
+  @override
+  String get openInEdgeLoopScore =>
+      'Setzt den Loop in Noten; verwirft die Velocity.';
+
+  @override
+  String get openInEdgeLoopTracker =>
+      'Ein Kanal pro Akkordstimme; behält die Velocity.';
+
+  @override
+  String get openInEdgeTrackerScore => 'Verwirft Effektbefehle.';
+
+  @override
+  String get openInEdgeScoreTracker => 'Quantisiert auf das Pattern-Raster.';
+
+  @override
+  String get openInEdgeTrackerLoop =>
+      'Nimmt den vollsten Kanal auf das Achtelnoten-Raster.';
 }
