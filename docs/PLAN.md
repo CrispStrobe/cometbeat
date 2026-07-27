@@ -495,6 +495,15 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (spd-probe)** · 🚧 **ACTIVE — can SPD give us (pitch → string, position)?**
+  Trying the Apache-2.0 HF mirror of the String Performance Dataset on the VPS:
+  pull ONLY the contact-point/keypoint JSON for the cello demo piece (not the .avi
+  views), see whether its hand-string contacts resolve to a string index and a
+  stopping position per note, and if so check them against our frame model — real
+  measured hands are the one thing no symbolic corpus can validate. VPS-side, under
+  `/mnt/volume1/spd-probe/`; nothing enters `db.json` or the catalog from a probe.
+  Worktree `../mus-cello-fingering` (docs only).
+
 - **opus (pdmx-normalise)** · ✅ **SHIPPED (idle) — composer-name normalisation for
   the PD gate + the agreement metric decomposed** (`a1de6857`; VPS
   `bin/pdmx_pd_composer.py`, backup `.bak-prenorm`).
