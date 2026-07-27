@@ -61,8 +61,11 @@ void main() {
       isTrue,
       reason: 'cycling should reach a length that lengthens the loop',
     );
-    expect(game.loopSteps % kPatternSteps, 0,
-        reason: 'the grid must still land whole');
+    expect(
+      game.loopSteps % kPatternSteps,
+      0,
+      reason: 'the grid must still land whole',
+    );
   });
 
   testWidgets('cycling all the way round returns to the full grid',
