@@ -1051,6 +1051,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   (0,+1,+3 or 1‑3‑4 = 0,+2,+3). That is exactly our `extendedForward` vs `neck` split, with the
   source labelling which is which. 24 labelled extension frames.
 
+  **⭐⭐ MEASURED on Becker p.18's position table — and it found a defect no
+  finger-counting metric could see.** 72 hand frames, each 3 notes on one NAMED string in
+  one NAMED position, 24 of them marked `⁓⁓⁓` = extended. Arranged bar by bar (the table
+  has no melodic continuity, so one long sequence would invent shifts the page never implies):
+  `string 72/72 (100%) · ANCHOR 72/72 (100%) · finger 195/216 (90%) · frame 48/72 (67%)`.
+  • **The position axis is 100%.** That is the axis the literature calls hard (F1 .24–.31
+  across ten annotators) — on a labelled reference table our geometry reproduces it exactly.
+  Also independent confirmation of the naming fix: the page records `1ste Position` = 2
+  semitones above the open string, then 2te=3, 2te erhöhte=4, 3te=5, 3te erhöhte=6 — the
+  exact table now encoded in `celloPositionName`.
+  • 🐞 **But we choose an extension 0 times out of 24.** The diagnostic line:
+  `gold=EXTENDED · ours=neck,neck,neck · anchors=1,2,2 · fingers=1,2,4 · gold=1,2,4`.
+  We emit **Becker's exact fingering** and reach it by **shifting the hand mid-bar** instead
+  of extending a stationary one. Right fingers, wrong hand — and the wrong one: a mid-group
+  shift risks the audible glissando Becker forbids («die Hand nicht aus der gehabten Lage
+  bringen»). Cause is a weight ORDERING, not a missing feature: a 1-semitone anchor move
+  costs `shift × 1` while an extension costs `extension` per note held, so sliding is cheaper
+  than stretching for a short group and the extension modes never win.
+  • ⚠ **The lesson is about our metrics, not just our weights.** Every acceptance number we
+  have ever quoted counts FINGERS, and this defect is invisible to all of them — 90% finger
+  agreement sits on top of 0/24 frame agreement. It took a source that labels the frame
+  itself to surface it. Future fingering metrics should score the frame as well as the digit.
+  • **NOT fixed:** re-ordering `shift` vs `extension` moves every acceptance number, so it
+  needs the same LOPO protocol that validated `thumbEntry`. Best candidate is the **reshape
+  cost** already proposed from the Romberg E2 disagreement — a cellist pays to CHANGE hand
+  shape, not per note spent in one — which would address both findings at once.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
