@@ -65,11 +65,8 @@ is recorded in [HISTORY.md](HISTORY.md).
   precision). Did NOT touch the `kFx*` registry or flow/timing. Now idle.
   — opus (tracker→editors)
 
-- **opus (tts-followups)** · ✅ **idle — TTS follow-up queue (1–3, 5–7): #1–#3 + #7-app-side shipped; #5/#6/#7-hosting handed over.** Working
-  the 6-item queue in the *TTS narration* section (auto-narrate-on-example →
-  prefetch wiring → settings persistence test → iOS/Android + macOS embed handovers
-  → narration-pack hosting), in order. **#1–#3 SHIPPED**; **#7 app-side (pack-mode `--dart-define`) SHIPPED**; **#5/#6/#7-hosting**
-  = documented device/signing/ops handovers (not doable headlessly). **Queue done.** — opus (idle) Additive, rebase-before-push. — opus
+
+- **opus (tts-followups)** · 🚧 **ACTIVE — #5 iOS HD embed being verified via CI.** #1–#3 + #7-app-side shipped (auto-read tutorials; prefetch wiring; settings persistence test; pack-mode `--dart-define`). **Correcting an earlier error:** iOS signing is NOT a manual blocker — it's automated (canonical Distribution cert `L9PHHNLY9Y` + ASC API key + `ios-release.yml`, dry-run green). Spike branch `feature/tts-ios-embed` embeds `crispasr.xcframework` in Runner (link + Embed Frameworks/CodeSignOnCopy + `FRAMEWORK_SEARCH_PATHS`) + a CI step asserting the framework is embedded + signed in the `.app`; dispatched a `dry_run` to prove build+embed+sign headlessly (only on-device runtime synthesis still needs hardware). #6 macOS embed + #7 pack hosting = ops handovers. — opus
 - **opus (unit-tests)** · 🚧 **coverage sweep — 11 pure modules now covered (~107 tests over 3 pushes),
   more to come.** Data-driven: surveyed `lib/core`/`shared`/
   pure-`features` for files with zero test reference, then added exact + property

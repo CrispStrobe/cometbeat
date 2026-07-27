@@ -119,15 +119,28 @@ Native HD (`crispasrFfi` Kokoro) is macOS-only today; iOS/Android need the
 `CrispASR.defaultLibName()` already probes `libcrispasr.so` (Android) and
 `crispasr.framework/crispasr` / `libcrispasr.dylib` (iOS), so once the lib is
 where the loader searches, `neuralSupported()` returns true and the HD tile
-appears automatically. What remains is a native build + embed, kept OUT of the
-shared `ios/`/`android/` projects (parallel agents build them — do it in a
-release worktree), and verified on a device/emulator (not possible headlessly):
+appears automatically. What remains is a native build + embed.
 
-- **iOS** — a prebuilt `crispasr.xcframework` already exists at
-  `../CrisperWeaver/ios/Frameworks/crispasr.xcframework` (reference), or rebuild
-  with `../CrispASR/build-xcframework.sh` (`BUILD_SHARED_LIBS=OFF`,
-  `GGML_METAL=ON`, iOS min 16.4). Add it to the Runner target (Embed & Sign);
-  the framework's `crispasr` binary is on the loader path → cascade resolves it.
+**Signing is NOT a blocker** (an earlier note here wrongly implied a manual
+"signing identity" was needed). Per `../appstore.md`, this account signs
+non-interactively: a canonical Distribution cert (`L9PHHNLY9Y`, `.p12` in GitHub
+secrets) + an App Store Connect API key, and CometBeat's `ios-release.yml`
+already builds+signs on a `macos-latest` runner (dry-run green). So the embed can
+be **verified headlessly in CI** — a `workflow_dispatch` `dry_run=true` builds,
+signs, and (with the added assertion) confirms `crispasr.framework` is embedded +
+validly signed in the exported `.app`. The **only** part CI build+sign can't cover
+is whether the voice actually *synthesizes at runtime* — that needs a device, or a
+simulator integration test (the xcframework carries an `ios-arm64-simulator`
+slice). The embed itself is kept OUT of the shared `ios/`/`android/` projects on
+`main` (parallel agents build them) — do it on a release branch/worktree.
+
+- **iOS** — a prebuilt `crispasr.xcframework` (device + simulator slices, ~80 MB)
+  exists at `../CrisperWeaver/ios/Frameworks/crispasr.xcframework`, or rebuild with
+  `../CrispASR/build-xcframework.sh` (`BUILD_SHARED_LIBS=OFF`, `GGML_METAL=ON`, iOS
+  min 16.4). Add it to the Runner target's link + Embed Frameworks (CodeSignOnCopy)
+  phases + `FRAMEWORK_SEARCH_PATHS` (see the `feature/tts-ios-embed` spike); the
+  framework's `crispasr` binary is on the loader path → cascade resolves it. For a
+  clean `main` merge, deliver the 80 MB via CI-build or host+fetch, not a git commit.
 - **Android** — cross-compile per ABI with `../CrispASR/build-android.sh` (NDK
   present: 26.3 / 28.2; use `-DBUILD_SHARED_LIBS=OFF` to avoid a `libggml.so`
   clash). Drop the result at
