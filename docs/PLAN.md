@@ -193,11 +193,14 @@ is recorded in [HISTORY.md](HISTORY.md).
   instrument macros"). `MacroSequence` model; per-tick vol/pitch/arp application in
   the additive, sample-mono, and sample-stereo tick voices (+ the PAN target in
   stereo); `TrackerSong.usesMacros` routes a macro'd song through the tick
-  replayer so `renderSongWav`/`replaySongStereo` actually sound them;
-  opt-in/byte-identical everywhere (goldens green); codec-persisted. §3.3 grid
-  ergonomics was already built (roadmap corrected). Remaining (task #46, open):
-  variable-timing tick paths, the duty target, a macro editor UI, and §3.3
-  block-op test coverage. Now idle.
+  replayer so `renderSongWav`/`replaySongStereo` actually sound them; plus the
+  MONO variable-timing path (`_replayVariable`); opt-in/byte-identical everywhere
+  (goldens green); codec-persisted. §3.3 grid ergonomics was already built
+  (roadmap corrected). Remaining (task #46): the STEREO variable-timing path
+  (rarest), the duty target, §3.3 block-op tests, and a **macro editor UI** —
+  which lives in `instrument_editor.dart`, the tracker-instrument agent's hot file
+  (velocity ranges just landed), so it should be coordinated with / handed to that
+  agent rather than built in parallel. Now idle.
 - **opus (tracker→editors)** · ✅ **(prior, idle) sweep shipped (5 pieces), condensed to
   [HISTORY.md](HISTORY.md) → "Tracker DSP lifted into the shared editors".**
   Shipped: shared LFO + `FxType.autoWah`; tab-through-replayer + opt-in

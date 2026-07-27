@@ -841,9 +841,17 @@ remain.
    (`_renderSampleChannelStereoTicks`) — used for PANNED songs — including the PAN
    target (meaningful only in stereo); additive stereo already worked via the
    mono-delegate-then-pan path.
-5. **Remaining slices (open):** the VARIABLE-TIMING tick paths (a macro on a
-   mid-song-tempo-change / pattern-break song is not applied); the DUTY target
-   (needs a pulse/square voice); and a macro editor UI in `instrument_editor.dart`.
+5. ~~**Mono variable-timing path:**~~ (DONE) macros apply in the mono
+   variable-timing render (`_renderChannelIntoVariable` additive loop +
+   `_renderSampleChannelIntoVariable`), so a non-default-speed / mid-song-
+   tempo-change song modulates.
+6. **Remaining slices (open):** the STEREO variable-timing path
+   (`_replayVariableStereoFloat` — a song that is BOTH panned AND mid-song-tempo,
+   the rarest intersection); the DUTY target (needs a pulse/square voice); and a
+   **macro editor UI** in `instrument_editor.dart` — the piece that makes macros
+   user-authorable. ⚠️ `instrument_editor.dart` is the tracker-instrument agent's
+   hot file (velocity ranges just landed), so the editor UI should be coordinated
+   with / handed to them rather than built in parallel.
 
 ### 5. Comprehensive Effect Command Set & Flow Control
 **Current State:**
