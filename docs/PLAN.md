@@ -29,6 +29,19 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
+  grand-staff view (the deferred bit).** Follow-up to `grandstaff-markings`, which
+  had left the two-id spans off. `buildGrandStaff` now carries **slurs and hairpins**
+  too: each span goes on a staff only when BOTH endpoints landed there. Slurs are
+  created within the active voice (`slurSelected` reads `_elements`), so in the
+  two-voice path every span is same-voice → same-staff (clean); only the rare
+  cross-staff span in the single-voice pitch-split path (a slur across middle C) is
+  dropped — this two-Score grand staff can't carry a span between staves. So the
+  grand-staff view is now fully faithful (notes + dynamics + lyrics + slurs +
+  hairpins). **No hot shared files** — `score_document.dart` only + a test. Suites
+  green (markings/score_document 92, workshop 85), whole-project analyze clean.
+  Worktree `../mus-gs-slurs`.
+
 - **opus (grandstaff-markings)** · ✅ **SHIPPED (idle) — dynamics + lyrics on the
   grand-staff view.** Follow-up to `voice2-gaps`: `buildGrandStaff` engraved notes
   but carried NO dynamics/lyrics for either voice. Now each note's dynamic + lyric

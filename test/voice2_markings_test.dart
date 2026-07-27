@@ -64,6 +64,29 @@ void main() {
     );
   });
 
+  test('slurs + hairpins land on the grand staff by the voice that owns them',
+      () {
+    final d = ScoreDocument();
+    final a = d.insertNote(_p(Step.c), _quarter); // voice 1 → treble
+    final b = d.insertNote(_p(Step.d), _quarter);
+    d.selectByIds([a, b]);
+    d.slurSelected(); // a voice-1 slur
+    d.hairpinSelected(HairpinType.crescendo); // and a voice-1 hairpin
+    d.setActiveVoice(1);
+    final c = d.insertNote(_p(Step.e, octave: 2), _quarter); // voice 2 → bass
+    final e = d.insertNote(_p(Step.f, octave: 2), _quarter);
+    d.selectByIds([c, e]);
+    d.slurSelected(); // a voice-2 slur
+
+    final gs = d.buildGrandStaff();
+    // Voice-1 spans on the treble, voice-2 span on the bass — none dropped,
+    // none cross-staff.
+    expect(gs.upper.slurs.map((s) => (s.startId, s.endId)), [(a, b)]);
+    expect(gs.upper.hairpins.map((h) => (h.startId, h.endId)), [(a, b)]);
+    expect(gs.lower.slurs.map((s) => (s.startId, s.endId)), [(c, e)]);
+    expect(gs.lower.hairpins, isEmpty);
+  });
+
   test('voice-2 dynamic + lyric survive save → reopen', () {
     final d = ScoreDocument();
     d.insertNote(_p(Step.c), _quarter);

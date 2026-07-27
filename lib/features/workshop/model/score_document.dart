@@ -1642,8 +1642,11 @@ class ScoreDocument {
     if (cached != null) return cached;
     // Markings ride by element id, so each note's dynamic/lyric goes on the
     // staff that ends up holding that note (crisp_notation matches ids within a
-    // Score). Slurs span two ids and can land cross-staff here, so they're left
-    // off the grand-staff view for now.
+    // Score). Slurs and hairpins are two-id spans: they go on a staff only when
+    // BOTH endpoints landed there. Same-voice spans (all of them, in the
+    // two-voice path) are clean; a rare cross-staff span in the single-voice
+    // pitch-split path — a slur across middle C — is dropped, since this simple
+    // two-Score grand staff can't carry a span between staves.
     List<DynamicMarking> dynamicsFor(Iterable<EditorElement> notes) => [
           for (final e in notes)
             if (!e.isRest && e.dynamic != null)
@@ -1655,23 +1658,40 @@ class ScoreDocument {
               for (final v in _lyrics[e.id]!.entries)
                 Lyric(e.id, v.value, verse: v.key),
         ];
+    List<Slur> slursFor(Set<String> ids) => [
+          for (final s in _slurs)
+            if (ids.contains(s.startId) && ids.contains(s.endId)) s,
+        ];
+    List<Hairpin> hairpinsFor(Set<String> ids) => [
+          for (final h in _hairpins)
+            if (ids.contains(h.startId) && ids.contains(h.endId)) h,
+        ];
     // Two authored voices → a two-hand grand staff: voice 1 on the treble
     // (right hand), voice 2 on the bass (left hand), so voice 2 is preserved
     // instead of dropped. A single voice keeps the pitch auto-split below (high
     // notes up, low notes down), which reads a one-line melody as a piano part.
     if (hasVoice2) {
-      Score staff(List<EditorElement> voice, Clef clef) => Score(
-            clef: clef,
-            keySignature: keySignature,
+      Score staff(List<EditorElement> voice, Clef clef) {
+        final ids = {
+          for (final e in voice)
+            if (!e.isRest) e.id,
+        };
+        return Score(
+          clef: clef,
+          keySignature: keySignature,
+          timeSignature: timeSignature,
+          measures: reflow(
+            [for (final e in voice) e.toElement()],
             timeSignature: timeSignature,
-            measures: reflow(
-              [for (final e in voice) e.toElement()],
-              timeSignature: timeSignature,
-              pickup: pickup,
-            ),
-            dynamics: dynamicsFor(voice),
-            lyrics: lyricsFor(voice),
-          );
+            pickup: pickup,
+          ),
+          dynamics: dynamicsFor(voice),
+          lyrics: lyricsFor(voice),
+          slurs: slursFor(ids),
+          hairpins: hairpinsFor(ids),
+        );
+      }
+
       return _grandCache = GrandStaff(
         upper: staff(_v1, Clef.treble),
         lower: staff(_v2, Clef.bass),
@@ -1695,6 +1715,8 @@ class ScoreDocument {
         lowerNotes.add(e);
       }
     }
+    final upperIds = {for (final e in upperNotes) e.id};
+    final lowerIds = {for (final e in lowerNotes) e.id};
     return _grandCache = GrandStaff(
       upper: Score(
         clef: Clef.treble,
@@ -1703,6 +1725,8 @@ class ScoreDocument {
         measures: reflow(upper, timeSignature: timeSignature, pickup: pickup),
         dynamics: dynamicsFor(upperNotes),
         lyrics: lyricsFor(upperNotes),
+        slurs: slursFor(upperIds),
+        hairpins: hairpinsFor(upperIds),
       ),
       lower: Score(
         clef: Clef.bass,
@@ -1711,6 +1735,8 @@ class ScoreDocument {
         measures: reflow(lower, timeSignature: timeSignature, pickup: pickup),
         dynamics: dynamicsFor(lowerNotes),
         lyrics: lyricsFor(lowerNotes),
+        slurs: slursFor(lowerIds),
+        hairpins: hairpinsFor(lowerIds),
       ),
     );
   }
