@@ -1073,10 +1073,30 @@ Fixed + swept by `module_loop_rescale_test.dart` (13 rates × 6 lengths). The
 fixture measured the repair: **spectral similarity 0.746 → 0.920** and level
 −14.20 dB → +3.76 dB against OpenMPT.
 
-⬜ **Still open on this fixture, unclaimed:** envelope correlation is 0.222 — we
-agree with OpenMPT about the pitches now, much less about the loudness CONTOUR,
-which points at note envelopes/volume ramping rather than at pitch. And we sit
-~3.8 dB louder overall. Neither is investigated. *Original finding:*
+🟡 **INVESTIGATED (2026-07-27, opus tracker→editors) — a REAL note-level loudness
+fault, and NOT the two things it looked like.** Measured `musical.mod` ours vs
+openmpt123 + micromod + xmp with `audio_compare` + `reference_players`:
+
+| block | ours↔openmpt | ours↔micromod | **openmpt↔micromod (refs)** |
+| --- | --- | --- | --- |
+| 512 (12 ms) | 0.233 | 0.238 | **0.971** |
+| 2048 (46 ms) | 0.310 | 0.295 | **0.973** |
+| 8192 (186 ms) | 0.161 | 0.160 | **0.982** |
+
+The X0 baseline settles it: the independent references agree on the loudness
+CONTOUR at 0.97–0.98 at every timescale, and **we** are the outlier at ~0.23 —
+so it is a real fault, not metric noise. Two hypotheses RULED OUT by measuring:
+(1) it is **not a lag artifact** — `bestLagSamples` is 0. (2) it is **not the
+per-note attack transient** (the 4 ms declick ramp / soft-start): that would wash
+out at coarse blocks, but our gap is if anything WORSE at 186 ms (0.16). So the
+divergence lives at the **note-and-above** timescale, i.e. per-note length/sustain
+or per-channel mixing levels, NOT the note edges. It is also **separate from the
+level**: we sit ~+2.5 dB (the known 4/3 gain-convention item), which envelope
+correlation is amplitude-invariant to. **Next (for whoever fixes it — likely the
+ladder owner, it's core note-render/mixing DSP):** compare per-note lengths and
+per-channel RMS-over-time against a reference — do our notes sustain/cut at the
+same rows, and do the four voices carry the same relative level over the song?
+*Original finding:*
 `test/tracker_audio_regression_test.dart` renders through our pipeline and
 `openmpt123` and compares **duration + RMS deltas**. Their `reference_compare.py`
 compares duration, **envelope correlation**, **onset/lag alignment** and

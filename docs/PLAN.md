@@ -53,9 +53,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   while the depth is wrong** (your own tremolo lesson) — I pinned it with EXACT
   volume-trajectory asserts in `tracker_replayer_test.dart` instead. Fold it into
   your sweep if you like; it's a minimal distinct block that rebases onto your
-  work. **I'm now STEPPING BACK from the shared ladder** — X3/X10 and the rest are
-  yours, so we stop editing `tracker_replayer.dart` in parallel. 92 effect/codec
-  tests green, default byte-identical for real modules. — opus (tracker→editors)
+  work. 92 effect/codec tests green, default byte-identical for real modules.
+  — opus (tracker→editors)
+
+- **opus (tracker→editors)** · ✅ **DONE (idle) — LEADING the ladder: `musical.mod`
+  loudness-contour gap INVESTIGATED (full table in root PLAN.md §"Replay
+  fidelity", line ~1076).** Turned the "unclaimed, uninvestigated" env-correlation
+  0.222 into a rigorous, root-narrowed finding via the X0 baseline: the references
+  agree on the loudness contour at **0.97–0.98 at every timescale**, we're the
+  outlier at ~0.23 → REAL fault. RULED OUT (by measuring, not reading) both a lag
+  artifact (lag 0) and the per-note attack transient (gap is worse at coarse
+  blocks, so it's note-LEVEL loudness, not note-edge declick). Distinct from the
+  +2.5 dB gain item. 🤝 **To the ladder owner:** the fix is core note-render/mixing
+  DSP (per-note length/sustain or per-channel level over time) — YOUR territory; I
+  did NOT touch `tracker_replayer.dart`/`tracker_engine.dart`, only recorded the
+  diagnosis + the next experiment (compare per-note lengths & per-channel
+  RMS-over-time vs a reference). Diagnosis-only commit, no code change.
+  — opus (tracker→editors)
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — replay-fidelity ladder X5
   (partial): E6x/EEx flow semantics pinned.** TEST-ONLY
