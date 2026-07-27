@@ -190,9 +190,9 @@ These are not same-length transforms, so they are not `FxType`s. They live in
 | **silence detection anywhere** | `findSilences`, with a minimum length so the answer means something | ✅ |
 | **auto-split on silence** | `findPhrases` — the ranges; placing them on lanes is the service's job | ✅ engine |
 | **splice** | join two takes; BOTH curves — equal-power for unrelated takes, linear for correlated ones | ✅ |
-| **dither + noise shaping** | on any bit-depth reduction, not only export | ⬜ B2 |
+| **dither + noise shaping** | `ditherTake` + `--dither BITS[:shape]`; the shaper's high-pass NTF verified by measuring BOTH bands | ✅ |
 | **full statistics** | peak · RMS · DC · crest factor · effective bit depth · zero-crossings | ✅ |
-| **voice-activity trim** | speech-aware leading/trailing trim | ⬜ B4 |
+| **voice-activity trim** | frame energies + a measured floor + hysteresis; absolute level only as a tiebreak when there is no contrast | ✅ |
 | **spectrogram to PNG** | `spectrogram_png.dart` + `--spectrogram out.png`, with a frequency crop | ✅ |
 | **batch** | `--batch DIR --out DIR` over a folder; one bad file is skipped by name, not fatal | ✅ |
 
@@ -277,7 +277,7 @@ A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo ✅
 A5  restoration ✅    A6  time/pitch          A2  tone curves      A7  generators
 
 B1  pad/repeat/split-on-silence/splice        B3  full stats
-B2  dither+noise shaping                      B4  VAD      B5  spectrogram CLI ✅
+B2  dither+noise shaping ✅                   B4  VAD ✅   B5  spectrogram CLI ✅
 
 C1  .cbdaw v2 — models survive save           ✅ SHIPPED
 C2  drum + groove round-trip                  ✅ SHIPPED

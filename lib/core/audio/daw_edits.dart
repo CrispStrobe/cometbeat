@@ -591,3 +591,171 @@ FullStats fullStatsOf(
     zeroCrossings: crossings,
   );
 }
+
+// ---------------------------------------------------------------------------
+// B4/B2 — trimming by what is SPEECH, and reducing bit depth honestly.
+// ---------------------------------------------------------------------------
+
+/// The level below which a recording with no dynamic contrast is treated as
+/// room tone rather than as content — the tiebreak in [voiceActivityTrim] when
+/// the relative test cannot decide. About −45 dBFS: quiet enough that no
+/// intentional take sits under it, loud enough to cover a noisy room.
+const double kVoiceFloorDb = -45;
+
+/// Trim the take to where the voice actually is.
+///
+/// [trimSilenceTake] compares single samples against a fixed threshold, which is
+/// the wrong test for speech twice over: a consonant can be quieter than the
+/// room tone that precedes it (so a threshold high enough to ignore the room
+/// eats the word), and a threshold low enough to keep the word keeps the room.
+///
+/// This works on FRAMES and on a floor it measures rather than one it is told:
+/// the noise level is taken as a low percentile of the frame energies, and a
+/// frame counts as voice when it stands [marginDb] above that. Two further
+/// rules do most of the work:
+///
+///   * **hysteresis** — it takes several consecutive loud frames to declare a
+///     start and several quiet ones to declare an end, so one cough does not
+///     open the gate and one glottal stop does not close it mid-word;
+///   * **[padMs]** — the kept region is widened at both ends, because the true
+///     onset of a word is quieter than its body and cutting exactly at the
+///     detected frame audibly clips the attack.
+///
+/// Returns the trimmed take with [BakedTake.startShiftMs] set to the removed
+/// lead, so a caller can slide the clip and keep the audio where it sounded.
+/// A take with no detectable voice comes back EMPTY, which callers already treat
+/// as "leave it alone" (the same contract as [trimSilenceTake]).
+BakedTake voiceActivityTrim(
+  Float64List left,
+  Float64List? right, {
+  required int sampleRate,
+  double frameMs = 20,
+  double marginDb = 8,
+  double padMs = 60,
+  int holdFrames = 3,
+}) {
+  final frame = math.max(1, (frameMs * sampleRate / 1000).round());
+  final frames = left.length ~/ frame;
+  if (frames < 3) return bakedTake(left, right);
+
+  // Frame energies, in dB.
+  final energies = Float64List(frames);
+  for (var f = 0; f < frames; f++) {
+    var sum = 0.0;
+    for (var i = f * frame; i < (f + 1) * frame; i++) {
+      final l = left[i];
+      sum += l * l;
+      if (right != null && i < right.length) sum += right[i] * right[i];
+    }
+    energies[f] = amplitudeToDb(math.sqrt(sum / frame));
+  }
+
+  // The floor, measured: the 20th percentile of frame energy is what this
+  // recording sounds like when nobody is talking.
+  final sorted = Float64List.fromList(energies)..sort();
+  final floorDb = sorted[(frames * 0.2).floor().clamp(0, frames - 1)];
+  final threshold = floorDb + marginDb;
+
+  // A recording with NO dynamic contrast defeats the whole method: the
+  // percentile lands on the signal itself and nothing clears the margin. Two
+  // very different files look like this — one that is voice from the first
+  // sample to the last, and one that is nothing but room tone — and they want
+  // opposite answers, so the relative test cannot decide between them.
+  //
+  // Absolute level is the only evidence left, so it is what breaks the tie:
+  // material sitting below [kVoiceFloorDb] is a room, and anything louder is
+  // content that simply never stops. Reaching for an absolute threshold is
+  // exactly what this function exists to avoid, which is why it is confined to
+  // the case where the better test has already failed.
+  final loudest = sorted.last;
+  if (loudest - floorDb < marginDb) {
+    final median = sorted[frames ~/ 2];
+    return median < kVoiceFloorDb
+        ? bakedTake(Float64List(0))
+        : bakedTake(left, right);
+  }
+
+  final hold = holdFrames < 1 ? 1 : holdFrames;
+  var firstVoiced = -1;
+  var lastVoiced = -1;
+  var run = 0;
+  for (var f = 0; f < frames; f++) {
+    if (energies[f] > threshold) {
+      run++;
+      if (run >= hold) {
+        firstVoiced = firstVoiced < 0 ? f - hold + 1 : firstVoiced;
+        lastVoiced = f;
+      }
+    } else {
+      run = 0;
+    }
+  }
+  if (firstVoiced < 0) return bakedTake(Float64List(0));
+
+  final pad = (padMs * sampleRate / 1000).round();
+  final from = math.max(0, firstVoiced * frame - pad);
+  final to = math.min(left.length, (lastVoiced + 1) * frame + pad);
+  if (from == 0 && to == left.length) return bakedTake(left, right);
+
+  return (
+    left: trimPcm(left, from, to),
+    right: right == null ? null : trimPcm(right, from, to),
+    startShiftMs: from * 1000 / sampleRate,
+  );
+}
+
+/// Reduce to [bits] of resolution, with dither and optional noise shaping.
+///
+/// Quantising without dither correlates the rounding error with the signal,
+/// which is heard as a gritty distortion that FOLLOWS the music instead of a
+/// steady hiss — worst exactly where it is most audible, on a quiet fade. TPDF
+/// dither (the difference of two uniform random values) decorrelates it: the
+/// error becomes noise, which the ear ignores far more readily than distortion.
+///
+/// [noiseShaping] then moves that noise where it matters less. The quantisation
+/// error of each sample is fed back into the next, filtered so the error energy
+/// is pushed out of the 2–4 kHz band the ear is most sensitive to and up into
+/// the top octave. The total noise POWER goes up; the audible noise goes down.
+/// That trade is only worth making at the end of a chain, which is why it is
+/// off by default.
+///
+/// [seed] fixes the dither so a render is reproducible — a test that cannot
+/// repeat its own noise cannot assert anything about it.
+BakedTake ditherTake(
+  Float64List left,
+  Float64List? right, {
+  int bits = 16,
+  bool noiseShaping = false,
+  int seed = 0x0d17be5,
+}) {
+  final depth = bits.clamp(2, 24);
+  final steps = (1 << (depth - 1)).toDouble();
+  final random = math.Random(seed);
+
+  Float64List quantise(Float64List source) {
+    final out = Float64List(source.length);
+    var error1 = 0.0;
+    var error2 = 0.0;
+    for (var i = 0; i < source.length; i++) {
+      // Feed the previous errors forward so the NOISE transfer function is a
+      // high-pass. With e[n] = quantised − shaped, the output noise is
+      // e[n] + h1·e[n−1] + h2·e[n−2], so a (1 − z⁻¹)² shape needs h1 = −2,
+      // h2 = +1; backing off slightly keeps the loop stable at low bit depths.
+      //
+      // The signs matter and are easy to get backwards — mine were, and the
+      // result quietly BOOSTED the 2–4 kHz band it was supposed to clear. The
+      // test that measures both bands is what caught it.
+      final shaped =
+          noiseShaping ? source[i] - 1.8 * error1 + 0.9 * error2 : source[i];
+      final dither = (random.nextDouble() - random.nextDouble()) / steps;
+      final target = shaped + dither;
+      final quantised = (target * steps).roundToDouble() / steps;
+      error2 = error1;
+      error1 = quantised - shaped;
+      out[i] = quantised.clamp(-1.0, 1.0);
+    }
+    return out;
+  }
+
+  return bakedTake(quantise(left), right == null ? null : quantise(right));
+}

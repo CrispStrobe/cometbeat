@@ -257,10 +257,10 @@ is recorded in [HISTORY.md](HISTORY.md).
   had no host) · A3 dynamics (look-ahead limiter · de-esser · multiband) · A4 the
   channel/stereo ops.
   · A5 restoration (noise reduction · hum · de-click · de-clip · DC).
-  **Next:** A2 tone curves · A6 time/pitch · A7 generators · B1–B6 the non-FX
-  editor ops (pad/repeat/split-on-silence · dither · full stats · VAD ·
-  spectrogram CLI · batch). (C4 tab fretting inbound + C5 "Transcribe this clip"
-  are now SHIPPED by `opus (tracker→editors)` — see its entry below.)
+  **Next:** A2 tone curves · A6 time/pitch · A7 generators. **Pillar B is now
+  complete** (B1 structural ops · B2 dither+shaping · B3 full stats · B4 VAD ·
+  B5 spectrogram PNG · B6 batch), and C4/C5 were shipped by
+  `opus (tracker→editors)`, so **Pillar C is complete** too.
   **Rack is now 50 effects**, every one reachable from the GUI *and* the CLI with
   no per-effect UI or CLI code — the F1/F2 lever has held across five DSP slices.
   A "learn the noise from the marked range" service op is the natural next step
@@ -1814,15 +1814,51 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
 
 **Pillar B — non-FX editor ops** (`daw_edits.dart` → service → `bin/dawedit.dart`
 → inspector, the same three-way testability as O1–O6)
-- [ ] **B1** pad · repeat · silence detection *anywhere* (not just edges) ·
-  auto-split a long take into one clip per phrase · splice with equal-power
-  crossfade.
-- [ ] **B2** dither + noise shaping on any bit-depth reduction, not just export.
-- [ ] **B3** full statistics — peak/RMS/DC/crest/dynamic range/effective bit
-  depth/zero-crossings, per channel, `--json`.
-- [ ] **B4** voice-activity trim. **B5** spectrogram → PNG from the CLI
-  (`core/audio/spectrogram.dart` exists, no CLI). **B6** batch/macro: a chain
-  string over many clips, lanes, or a folder.
+- [x] **B1** `padTake` · `repeatTake` · `findSilences` (anywhere, not just the
+  edges) · `findPhrases` (the complement — one range per phrase, which is what
+  "split this take" needs) · `spliceTakes`. CLI: `--pad`, `--repeat`,
+  `--splice FILE[:MS]`, `--find-silence`, `--split-silence`.
+  * pad reports a NEGATIVE `startShiftMs`, so a caller placing the take on a
+    timeline slides the clip back by the lead and nothing moves;
+  * a negative pad is zero, not a trim — reinterpreting it would be a surprising
+    way to lose audio;
+  * `minLengthMs` is what makes silence detection useful: without it every zero
+    crossing of a quiet passage is a "silence".
+  * ⚠ **splice offers BOTH curves because my first justification was backwards.**
+    Equal-power adds POWERS, so two copies of the same audio read **+3 dB** at
+    the join and *linear* is what holds the level there; equal-power is right for
+    UNRELATED takes (the usual splice) and stays the default. Both pinned.
+- [x] **B2** `ditherTake` — bit-depth reduction with TPDF dither and optional
+  **noise shaping** (plain TPDF already shipped in export). CLI:
+  `--dither BITS[:shape]`.
+  * ⚠ **the shaper's signs were backwards and only a test that measured the
+    claim caught it.** With `e[n] = quantised − shaped` the output noise is
+    `e[n] + h1·e[n−1] + h2·e[n−2]`, so a `(1 − z⁻¹)²` high-pass needs h1 = −2,
+    h2 = +1; I had +1.8/−0.9, which BOOSTED the 2–4 kHz band it exists to clear.
+    The test asserts both halves (less where the ear is sharp AND more where it
+    is not) — checking only the first would pass for a shaper that merely
+    removed noise.
+- [x] **B3** `fullStatsOf` — the measurements that say whether a file is HEALTHY
+  rather than how loud it is: DC offset (invisible on a level meter), crest
+  factor (says "over-compressed" when no loudness figure will), effective bit
+  depth (a 24-bit file landing on 16-bit boundaries was converted, not
+  recorded), zero crossings. CLI: `--full-stats`.
+- [x] **B4** `voiceActivityTrim` — frame energies, a floor MEASURED as a low
+  percentile rather than supplied, hysteresis, and an onset pad. CLI: `--vad`.
+  * ⚠ **no dynamic contrast defeats the method**: the percentile lands on the
+    signal, and a take that is voice throughout looks identical to one that is
+    all room. My first cut returned EMPTY for both — backwards for the first.
+    Absolute level breaks the tie (`kVoiceFloorDb` −45 dBFS), confined to where
+    the better test already failed; both sides pinned.
+- [x] **B5** spectrogram → PNG (`core/audio/spectrogram_png.dart`). CLI:
+  `--spectrogram out.png [--max-hz N] [--grey]`. Kept OUT of `spectrogram.dart`
+  so a caller wanting only the numbers does not pay for an image encoder; each
+  row takes the LOUDEST bin it covers, since averaging hides a narrow tone.
+  Tests assert the picture is READABLE (right row bright, axes the right way).
+- [x] **B6** batch — `--batch DIR --out DIR` over a folder.
+  * ⚠ **one bad file must not abandon the run**, and mine did: `_read` reported
+    errors with `exit()`, which no `try` can catch. Split into `_readOrThrow`
+    (batch, skips and names the file) and `_read` (single file, prints + exits).
 
 **Pillar C — five modes, one document.** The converters already exist
 (`ProjectBridge`, with honest per-route loss reports) and score/tracker clips

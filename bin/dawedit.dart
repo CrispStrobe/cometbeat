@@ -56,6 +56,8 @@ Ops (applied in the order given):
   --find-silence [THR]   list the silent gaps (threshold fraction, default 0.01)
   --split-silence [THR]  list the PHRASES between them, as A:B ranges
   --full-stats           peak/RMS plus DC, crest factor, bit depth, crossings
+  --vad [MARGIN_DB]      trim to where the VOICE is (frame-based, default 8 dB)
+  --dither BITS[:shape]  reduce to BITS with TPDF dither; ":shape" noise-shapes
   --spectrogram OUT.png  paint the spectrum over time (see --max-hz, --grey)
   --max-hz HZ            crop the spectrogram's top (music lives low; try 5000)
   --grey                 greyscale spectrogram instead of the heat ramp
@@ -127,7 +129,10 @@ void main(List<String> args) {
       case '--trim-silence':
       case '--find-silence':
       case '--split-silence':
+      case '--vad':
         ops.add((a, maybeValue()));
+      case '--dither':
+        ops.add((a, requireValue(a)));
       case '--full-stats':
         ops.add((a, null));
       case '--spectrogram':
@@ -312,6 +317,34 @@ void _apply(
           '  ${r.startMs.toStringAsFixed(1)}:${r.endMs.toStringAsFixed(1)}',
         );
       }
+    case '--vad':
+      final margin = value == null ? 8.0 : double.parse(value);
+      final before = a.left.length;
+      final take = voiceActivityTrim(
+        a.left,
+        a.right,
+        marginDb: margin,
+        sampleRate: a.sampleRate,
+      );
+      if (take.left.isEmpty) {
+        stdout.writeln('vad → no voice found above $margin dB, kept');
+        return;
+      }
+      _take(a, take);
+      stdout.writeln(
+        'vad → cut ${take.startShiftMs.toStringAsFixed(1)} ms off the front, '
+        '${_msOf(a)} ms left (was '
+        '${(before * 1000 / a.sampleRate).toStringAsFixed(1)})',
+      );
+    case '--dither':
+      final parts = value!.split(':');
+      final bits = int.tryParse(parts.first);
+      if (bits == null) _fail('--dither needs a bit depth, got "$value"');
+      final shape = parts.length > 1 && parts[1].startsWith('s');
+      _take(a, ditherTake(a.left, a.right, bits: bits, noiseShaping: shape));
+      stdout.writeln(
+        'dither → $bits-bit${shape ? ', noise-shaped' : ''}',
+      );
     case '--full-stats':
       _printFullStats(a);
     case '--spectrogram':
