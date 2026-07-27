@@ -193,7 +193,7 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   final _clock = Stopwatch();
   late final Ticker _ticker;
   final _step = ValueNotifier<int>(-1);
-  // Drives the GarageBand-style visual kit: pieces flash on the step clock, and
+  // Drives the realistic visual kit: pieces flash on the step clock, and
   // on a live pad tap via this controller.
   final _visual = DrumKitVisualController();
   // Horizontal scroll for the step grid when the pattern is wider than the

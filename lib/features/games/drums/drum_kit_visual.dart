@@ -1,4 +1,4 @@
-// A GarageBand-style VISUAL drum kit that lights up as it plays. A drawn kit
+// A realistic VISUAL drum kit that lights up as it plays. A drawn kit
 // (cymbals · toms · snare · kick · hi-hat · accents) whose pieces flash and
 // glow the instant their [Drum] sounds — driven by the step sequencer during
 // playback/recording, and by [DrumKitVisualController.flash] on a live pad tap.
@@ -59,8 +59,8 @@ class DrumKitVisual extends StatefulWidget {
   final bool Function(Drum drum, int step) hitAt;
   final DrumKitVisualController? controller;
 
-  /// Tapping a drawn piece fires its [Drum] — the kit is playable, GarageBand
-  /// style. (The screen routes this to its pad handler, so a tap auditions the
+  /// Tapping a drawn piece fires its [Drum] — the kit is playable, not just a
+  /// readout. (The screen routes this to its pad handler, so a tap auditions the
   /// drum and, while recording, is captured onto the grid.)
   final ValueChanged<Drum>? onHit;
   final List<Drum> drums;
@@ -230,7 +230,7 @@ class _Piece {
 }
 
 // An acoustic kit seen from the front, painted back-to-front. Only the acoustic
-// core is drawn (like GarageBand's kit); clap/rim/cowbell live in the pads/grid.
+// core is drawn (a photo-real acoustic kit); clap/rim/cowbell live in the pads/grid.
 const _kBrass = Color(0xFFCBA23A); // cymbal gold
 const _kRed = Color(0xFF9B2A2A); // glossy shell red
 const _kSteel = Color(0xFFAAB2BC); // snare steel

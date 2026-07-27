@@ -1,4 +1,4 @@
-// The GarageBand-style visual kit: pieces glow when their Drum sounds — driven
+// The realistic visual kit: pieces glow when their Drum sounds — driven
 // by the step clock (playback/recording) and by a live pad-tap controller. Pure
 // widget test, no audio.
 

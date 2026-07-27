@@ -280,6 +280,16 @@ mental models over one shared project/document model, not five unrelated apps:
 5. **Audio** — the DAW: clips, regions, recording, buses, automation, inserts,
    Voice Shaping and future FX, mixing, and final export.
 
+> **Workstation parity (scoped 2026-07-27) → [docs/WORKSTATION_PARITY.md](docs/WORKSTATION_PARITY.md).**
+> The maintainer ask is that Tracker, Audio Editor and Loop Studio become as
+> powerful and as intuitive as a full professional workstation. That doc is the
+> scoping: the engines are ahead of the product, and what is missing is a
+> **shell** — one `Project`, one transport, one undo, one mixer, one keymap —
+> plus **live links** instead of copies between modes. It cross-references the
+> per-surface backlogs below rather than duplicating them, and it raises one
+> decision for the maintainer (**D-RT**: whether to add a bounded real-time
+> *preview bus* alongside the offline renderer).
+
 ### Loop Studio UX contract
 
 Loop Studio opens directly into an audible, editable project. The first screen
@@ -319,7 +329,7 @@ The Tracker is the DEEP editor, not the only one.
 Already at sequencer parity, so do not rebuild these: transport with BPM slider
 + numeric field, undo, bar readout, count-in; per-track mute/solo/level/pan/
 instrument/send; pattern **variants**; **scenes that store per-track variants**
-(`GrooveScene(enabled, variants)` — a real Ableton-style scene, not just on/off);
+(`GrooveScene(enabled, variants)` — a real session-grid scene, not just on/off);
 scene chaining; arrangement bounce; master FX; quantize; global swing; sing/
 beatbox capture into symbolic events; notation projection + MusicXML.
 

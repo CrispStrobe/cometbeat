@@ -63,7 +63,7 @@ then **[needs-engine]** a `setCellInstrument`.
 - **Per-channel VU meters:** reuse the existing `_ChannelMeter` idiom; drive
   peak/RMS from the rendered stem (we already cache loop PCM for the scope). A
   cheap version: sample `renderLoopPcm()` per channel at the playhead.
-- **On-screen piano keyboard** at the bottom (MilkyTracker/Renoise feel) that
+- **On-screen piano keyboard** at the bottom (classic tracker feel) that
   (a) lights notes as they sound (from the same timing map as A1) and (b) is
   tappable for note entry on touch (reusing the multi-octave piano the Score
   Workshop already ships). Doubles as the touch note-entry surface.
