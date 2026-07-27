@@ -215,6 +215,37 @@ ModuleDoc docFromMod(ModModule m) {
   );
 }
 
+/// The highest pattern-break row our decimal-coded parameter can carry.
+///
+/// The two nibbles hold tens and units, so row 159 is 0xF9 and row 160 would
+/// need a tens digit of 16. MOD/S3M patterns are 64 rows so this never binds
+/// there; only an IT pattern (up to 200 rows) can name a row we cannot encode.
+const int kMaxDecimalBreakRow = 159;
+
+/// A row number → our canonical decimal-coded `Dxx`/`Cxx` parameter (row 16 →
+/// 0x16), which is what MOD, S3M and XM store on disk, what `setPatternBreak`
+/// writes, and what the replayer decodes.
+///
+/// **Impulse Tracker is the exception: it stores the row as plain hex** (row 16
+/// → 0x10). We used to pass IT's parameter through untouched in both
+/// directions, which was self-consistent — every doc→IT→doc round-trip passed —
+/// and wrong against every other player, because only an external reader ever
+/// saw the on-disk byte.
+///
+/// Measured with `tool/make_flow_fixtures.dart`, which writes one song into all
+/// four formats: libopenmpt rendered our MOD, S3M and XM to 13.541 s each and
+/// the IT to 12.821 s — 0.72 s short, exactly the six rows between landing on
+/// row 16 and landing on row 22. libxmp agreed (13.440 vs 12.720). Both
+/// references model the split explicitly; libxmp even gives IT its own effect,
+/// `FX_IT_BREAK`, commented "like FX_BREAK with hex parameter".
+int decimalBreakParam(int row) {
+  final r = row.clamp(0, kMaxDecimalBreakRow);
+  return ((r ~/ 10) << 4) | (r % 10);
+}
+
+/// The inverse of [decimalBreakParam]: our decimal-coded parameter → the row.
+int breakRowOfDecimalParam(int param) => (param >> 4) * 10 + (param & 0xF);
+
 /// Maps an S3M letter-command (A=1..Z=26) + info byte to our MOD-numbered
 /// `(fxCmd, fxParam)` (the DocCell effect column). S3M's command SET differs from
 /// MOD's numbering, so this is a real translation. Verified against libopenmpt
@@ -604,8 +635,8 @@ ModuleDoc docFromXm(XmModule m) {
       return value == 0 ? (0, 0) : (kFxSetSpeedFull, value.clamp(1, 255));
     case 2: // B — position jump
       return (0xB, value);
-    case 3: // C — pattern break
-      return (0xD, value);
+    case 3: // C — pattern break. IT's row parameter is HEX, ours is decimal.
+      return (0xD, decimalBreakParam(value));
     case 4: // D — volume slide
       return (0xA, value);
     case 5: // E — portamento down
@@ -866,12 +897,16 @@ ModuleDoc docFromIt(ItModule m) {
 
 /// Doc MOD-numbered `(fxCmd, fxParam)` → an S3M/IT letter-command number
 /// (A=1, B=2, …) and its info/value byte — the inverse of [_s3mEffectToFx] /
-/// [_itEffectToFx]. [directPan] true for IT (its X pan is 0x00–0xFF direct),
-/// false for S3M (X pan is 0x00–0x80, so halve). `0xC` set-volume routes to the
+/// [_itEffectToFx]. [isIt] selects between the two formats wherever they
+/// disagree: IT's `X` pan is 0x00–0xFF direct where S3M's is 0x00–0x80 (so
+/// halve), and IT's `C` break row is plain HEX where S3M's is decimal-coded.
+/// It was called `directPan` when the pan was the only known difference, which
+/// is how the break-row difference came to be missed — the flag already meant
+/// "is this IT", and naming it after one consequence hid the others. `0xC` set-volume routes to the
 /// volume column instead (see the writers). Supported extended commands are
 /// emitted as their S3M/IT special equivalents; unknown commands return
 /// `(0, 0)` (no command).
-(int, int) _fxToLetterEffect(int cmd, int param, {required bool directPan}) {
+(int, int) _fxToLetterEffect(int cmd, int param, {required bool isIt}) {
   switch (cmd) {
     case 0x0:
       return param == 0 ? (0, 0) : (10, param); // J arpeggio (0 = none)
@@ -893,7 +928,7 @@ ModuleDoc docFromIt(ItModule m) {
       // X pan: IT is 0x00–0xFF direct; S3M is 0x00–0x80, so halve. ROUND (not
       // truncate) so full-right 0xFF → 0x80 and the reader's ×2 recovers 0xFF
       // exactly, instead of 0x7F → 0xFE.
-      return (24, directPan ? param : (param / 2).round().clamp(0, 0x80));
+      return (24, isIt ? param : (param / 2).round().clamp(0, 0x80));
     case 0x9:
       return (15, param); // O sample offset
     case kFxSetPanbrelloWaveform: // 0x15
@@ -919,7 +954,9 @@ ModuleDoc docFromIt(ItModule m) {
     case 0xB:
       return (2, param); // B position jump
     case 0xD:
-      return (3, param); // C pattern break
+      // C pattern break. Our parameter is decimal-coded; S3M reads it that way
+      // too, but IT reads the row as plain hex.
+      return (3, isIt ? breakRowOfDecimalParam(param) : param);
     case 0xE:
       // Exy extended → S3M/IT `Sxy` (command 19). The sub-commands our readers
       // round-trip survive; other Exy have no S3M/IT equivalent and are dropped
@@ -1212,7 +1249,7 @@ S3mCell _s3mCellFrom(DocCell c, {required bool preserveNative}) {
       : (c.effect == 0xC ? c.effectParam.clamp(0, 64) : S3mCell.noVolume);
   final (command, info) = preserveNative && c.nativeEffect >= 0
       ? (c.nativeEffect, c.nativeEffectParam)
-      : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: false);
+      : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, isIt: false);
   return S3mCell(
     note: c.noteOff ? S3mCell.noteOff : _midiToS3mNote(c.note),
     instrument: c.instrument.clamp(0, 255),
@@ -1338,7 +1375,7 @@ ItCell _itCellFrom(DocCell c, {required bool preserveNative}) {
           : (c.effect == 0xC ? c.effectParam.clamp(0, 64) : -1);
   final (command, value) = preserveNative && c.nativeEffect >= 0
       ? (c.nativeEffect, c.nativeEffectParam)
-      : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, directPan: true);
+      : _fxToLetterEffect(c.effect, c.effectParam & 0xFF, isIt: true);
   return ItCell(
     // IT note 255 = note-off (writeIt emits it since it != -1).
     note: preserveNative && c.nativeNote >= 0
