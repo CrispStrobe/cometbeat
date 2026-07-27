@@ -134,6 +134,40 @@ void main() {
     expect(decodeTabEmissions(frames), isEmpty);
   });
 
+  test('the vanilla variant feeds raw magnitude (no gpfx dB re-scale)', () {
+    final mono = Float64List(88);
+    for (var i = 0; i < mono.length; i++) {
+      mono[i] = 0.3 * math.sin(2 * math.pi * 4 * i / 16);
+    }
+    final frames = tabcnnEmitWithRunner(
+      mono,
+      cqt: _fakeCqt(),
+      run: _fakeRunner,
+      sampleRate: 22050,
+      variant: TabCnnVariant.vanilla,
+    );
+    expect(frames.nFrames, greaterThan(0));
+    // The fake runner still drives the fret through, whichever normalization.
+    for (final f in decodeTabEmissions(frames)) {
+      expect(f[0], 5);
+    }
+  });
+
+  test('a non-native sample rate is resampled to the model rate', () {
+    // 44.1 kHz input ≠ kTabCnnSampleRate (22.05 kHz) → the resample path runs.
+    final mono = Float64List(176);
+    for (var i = 0; i < mono.length; i++) {
+      mono[i] = 0.3 * math.sin(2 * math.pi * 4 * i / 16);
+    }
+    final frames = tabcnnEmitWithRunner(
+      mono,
+      cqt: _fakeCqt(),
+      run: _fakeRunner,
+    );
+    expect(frames.nFrames, greaterThan(0));
+    expect(frames.logProbs.length, frames.nFrames * 6 * 21);
+  });
+
   // Real-model smoke — only when the assets are present locally. Verifies the
   // onnx wiring runs end-to-end and emits well-formed [T,6,21] log-probs.
   testWidgets('TabCnnModelStore + real model emit (COMET_TABCNN_DIR gated)',
