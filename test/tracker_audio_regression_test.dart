@@ -363,6 +363,14 @@ void main() {
           // while pitch-BENDING effects diverge more and honestly should.
           // One shared number would either be too loose for `musical.mod` or
           // too tight for `effects.mod`.
+          // ⚠️ These are ABSOLUTE thresholds and that is the wrong baseline —
+          // see PLAN.md §6 task X0. A listener told the two apart on
+          // effects.mod while this gate passed at 0.87, because the number to
+          // beat is not 0.80: it is how well the INDEPENDENT engines agree
+          // with each other on the same fixture (libopenmpt ↔ libxmp measure
+          // 0.926 there, and our envelope correlation is half theirs). Until
+          // X0 re-bases these on inter-reference agreement, treat a pass here
+          // as "no gross regression", NOT as "we match the references".
           final minSpectral = fixtureName == 'effects.mod' ? 0.80 : 0.85;
           // effects.mod measures −25.4 cents where musical.mod measures −17.0.
           // That extra ~8 cents on effect material is UNEXPLAINED (portamento

@@ -1117,6 +1117,114 @@ and the Paula-clock A/B confirmed it: with the gate on, effects.mod moves
 −25.4 → **−5.3** alongside musical.mod's −17.0 → **−1.3**. Same root cause.
 **Detune stays ungated on this fixture** until the gate's fate is decided.
 
+
+### 6. Replay-fidelity AUDIT LADDER — scoped tasks (opened 2026-07-27)
+
+**Why this exists.** A listening test on `~/Desktop/mod-tuning-ab/raw/` found that
+BOTH our renders — default and Paula-clock — diverge audibly from libopenmpt,
+libxmp and micromod on the SWEEPING effects, in a way the Paula switch does not
+explain. The measurements agree and I had under-read them:
+
+| effects.mod | spectral | envelope |
+| --- | --- | --- |
+| libopenmpt ↔ libxmp (*the references agreeing*) | **0.926** | 0.630 |
+| ours B (paula) ↔ libopenmpt | 0.882 | 0.363 |
+| ours B (paula) ↔ libxmp | 0.869 | 0.301 |
+| ours A (default) ↔ libxmp | 0.851 | 0.078 |
+
+⚠️ **Calibration lesson: my gate was set against the wrong baseline.** I gated
+`effects.mod` at spectral > 0.80, so 0.87 PASSED — while the two references
+agree at 0.93 and our envelope correlation is half theirs. The right reference
+point is *how well the independent engines agree with each other*; anything
+materially below that is our deviation. **Re-set the gates that way (task X0).**
+
+**What this section is not:** one bug. Effects are several independent
+mechanisms (per-tick rate, depth scaling, waveform, memory/recall semantics,
+tick-0 handling), so "effects are off" has to be split before it can be fixed.
+
+#### Oracles now available (all verified working this session)
+
+| tool | formats | gives us |
+| --- | --- | --- |
+| `openmpt123` (libopenmpt) | MOD/XM/S3M/IT | audio; the de-facto standard |
+| `xmp` (libxmp) | MOD/XM/S3M/IT | audio; independent codebase |
+| `mod2wav` (micromod) | MOD | audio; accuracy-focused |
+| `xm2wav` (ibxm) | MOD/XM/S3M | audio; same author, different engine |
+| MultiPLAY | MOD/XM/S3M/IT/MTM | audio; **uses the 8363 convention** — outlier on MOD tuning, still useful elsewhere |
+| pt2-clone | MOD | SOURCE only (GUI, no headless render) — authoritative on ProTracker semantics |
+| **NodMOD** (Python) | MOD/XM/S3M | STRUCTURE + an independent flow/timing model (`iter_playback_rows` → pattern/row/start_sec/speed/tempo). No audio, no IT. |
+| `test/support/audio_compare.dart` | — | level · envelope · lag · spectral · detune |
+
+Build/run notes: `xmp` via Homebrew; MultiPLAY `make bare`; micromod
+`cc mod2wav.c micromod.c`; ibxm `cc xm2wav.c ibxm.c`; NodMOD `PYTHONPATH=<clone>/src`.
+
+#### The ladder — check each stage before trusting the next
+
+**X0 — Re-baseline every A/B gate against inter-reference agreement.**
+Measure how far apart libopenmpt/libxmp/ibxm are on each fixture, and gate our
+deviation relative to THAT, not an absolute. Done when a render that a listener
+can distinguish from the references fails the gate.
+
+**X1 — One effect per fixture.** `effects.mod` runs four effects on four
+channels at once, so a failure cannot be localised — which is why it read as
+"effects are a bit off" instead of naming a command. Emit one fixture per
+effect (arpeggio `0xy`, porta up/down `1xx`/`2xx`, tone porta `3xx`, vibrato
+`4xy`, tremolo `7xy`, volume slide `Axy`, offset `9xx`, and the `Exy`
+sub-commands we claim), each a single sounding channel. Done when every claimed
+command has a fixture and a measured deviation.
+
+**X2 — Vibrato/tremolo depth, rate and waveform.** The user-audible one. Check
+per-tick step, depth scaling, waveform table (sine/ramp/square), whether the
+LFO retriggers on a new note, and tick-0 behaviour. Oracle: X1 fixtures vs
+three engines + pt2-clone's source for ProTracker semantics.
+
+**X3 — Portamento family.** `1xx`/`2xx` step per tick, `3xx` target snapping,
+period clamping at the table edges, and effect MEMORY (a bare `300` continuing
+the previous rate) — memory bugs are invisible on a single-row fixture and
+obvious on a sustained one.
+
+**X4 — Volume slide + tremor semantics.** `Axy` per-tick vs per-row, the
+"both nibbles set" ambiguity ProTracker and later trackers resolve differently,
+and interaction with `5xy`/`6xy` (porta/vibrato + volume slide combinations).
+
+**X5 — Timing/flow against NodMOD.** `iter_playback_rows()` yields
+(pattern, row, start_sec, end_sec, speed, tempo) from an independent
+implementation. Compare against our `songFlowTimeline`/`resolveTimingMap` over
+a corpus of order-list shapes: `Bxx` jumps, `Dxx` breaks, `E6x` pattern loops,
+mid-song speed/tempo changes. **No audio needed, so this one can run in CI.**
+
+**X6 — Reader field audit, per format.** Our codec tests are self round-trips
+(`parse(write(x)) == x`), which cannot catch a misunderstanding our reader and
+writer SHARE. Cross-check parsed structure against NodMOD (MOD/XM/S3M) and
+against `openmpt123 --info`. IT has no structural oracle — treat it as the
+highest-risk reader and lean on audio there.
+
+**X7 — Writer audit: our writer → THEIR reader.** Write each format from a
+known doc, load it with NodMOD and libopenmpt, assert the structure matches
+what was authored. `probe_file` already reports zero warnings on our MOD; make
+that a test rather than a one-off, and extend to XM/S3M.
+
+**X8 — Fixture independence.** `musical.mod`/`effects.mod` are written by OUR
+writer, so a writer bug is baked into every A/B that uses them. Author the same
+content with NodMOD and confirm both files render identically; any difference
+is our writer, not our replay.
+
+**X9 — Extend the A/B to XM/S3M/IT.** `convertToXm`/`convertToS3m`/`convertToIt`
+already exist, so the same musical content can be emitted in all four formats.
+⚠️ Expect DIFFERENT failure modes, not the same one four times: XM/S3M/IT store
+an explicit sample rate per sample, so the MOD tuning question does not recur —
+what these probe is envelopes, NNA, volume/pan models and effect semantics.
+IT is thinnest on oracles (libopenmpt + libxmp only) and richest in features,
+so it carries the most risk.
+
+**X10 — Sample-playback layer.** Interpolation, loop wrap (see the one-sample
+rescale bug already fixed), 8- vs 16-bit and stereo sample paths, `9xx` offset
+clamping, ping-pong loops. Oracle: single-note fixtures per case.
+
+Ordering: **X0 → X1** first (they make everything else measurable), then X5 and
+X6/X7 (cheap, CI-able, no audio), then X2/X3/X4 on the isolated fixtures, then
+X9/X10. X8 whenever a result looks impossible.
+
 ## Consolidated backlog (2026-07-25 doc sweep)
 
 Pending work carried over when ~40 handover/scoping/status docs were consolidated.
