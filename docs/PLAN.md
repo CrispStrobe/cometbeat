@@ -73,13 +73,17 @@ is recorded in [HISTORY.md](HISTORY.md).
 > assuming: 22 created files checked for existence + 15 content markers across
 > the shared files I had edited. **A7 was the only casualty.**
 >
-> ⚠️ **A quieter hazard from the same event: FORMATTER VERSION SKEW.** My
-> `dart format` renders switch expressions with deeper indentation than the
-> version that formatted the cello screens, so a repo-wide format in my worktree
-> silently rewrote eight files I do not own. I reverted that churn rather than
-> committing it — but anyone formatting paths they do not own will keep
-> producing it, and it makes a real clobber much harder to see in a diff.
-> **Format named paths, or pin one formatter version.**
+> ❌ **CORRECTION — I called this "formatter version skew" and I was wrong.**
+> I saw `dart format` rewriting eight cello files I do not own and concluded two
+> formatter versions disagreed. They do not: `8a2c2d52` had reverted those files
+> to an older, UNFORMATTED state, so my format run was correctly bringing them
+> back to the current standard — the diff was another symptom of the clobber,
+> not a second hazard. Verified after `d04c35a1` formatted them:
+> `dart format --set-exit-if-changed lib/features/games/cello/` is clean on
+> Dart 3.12.2. **No formatter pinning is needed; disregard the advice I gave
+> here.** The reusable lesson is narrower and still worth having: an unexpected
+> format diff in files you did not touch is evidence about the FILES, and worth
+> reading rather than reverting on sight.
 > a stale tree hazard — pull/rebase and add NAMED files only.
 
 > ⚠️ **Do NOT `git stash` in these worktrees (learned the hard way 2026-07-27).**
