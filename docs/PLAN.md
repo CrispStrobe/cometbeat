@@ -42,6 +42,12 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tts-followups)** · 🚧 **ACTIVE — TTS follow-up queue (1–3, 5–7).** Working
+  the 6-item queue in the *TTS narration* section (auto-narrate-on-example →
+  prefetch wiring → settings persistence test → iOS/Android + macOS embed handovers
+  → narration-pack hosting), in order. Now on **#1 auto-narrate on example** — will
+  touch the tutorial framework + `tts_service.dart`/`settings_service.dart`
+  (additive), rebase-before-push. — opus
 - **opus (unit-tests)** · 🚧 **coverage sweep — 11 pure modules now covered (~107 tests over 3 pushes),
   more to come.** Data-driven: surveyed `lib/core`/`shared`/
   pure-`features` for files with zero test reference, then added exact + property
@@ -3012,7 +3018,30 @@ real headless Chrome (unusable for live narration) + COOP/COEP-vs-PWA-SW +
    the ~40 MB of bundled audio.
 
 **Other follow-ups:** a dedicated *narration* toggle (accessibility) separate from
-the master sound switch; **auto-narrate** a step when its example plays (opt-in).
+the master sound switch (**✅ shipped 2026-07-27**); **auto-narrate** a step when
+its example plays (opt-in) — see the queue below.
+
+#### TTS follow-up queue (opus, 2026-07-27) — claimed, doing in order
+
+Six remaining items, in execution order. (1)–(3) are fully buildable + verifiable
+headlessly; (5)–(7) need a device / signing / hosting, so I do the buildable part
+and hand over the on-device/ops step.
+
+1. **Auto-narrate a step when its example plays (opt-in).** When a tutorial step's
+   musical example auto-plays, also speak the step text — gated by `narrationOn`
+   plus a per-run opt-in so it's never surprising. Unit-test the trigger.
+2. **Wire `prefetch` for narration pack mode.** Add a real call site that warms the
+   current lesson's clips into the asset cache (IndexedDB on web), so pack mode
+   isn't just latent infra. Test with a fake fetch. (Hosting = item 7.)
+3. **`SettingsService` persistence test.** Round-trip coverage for the sound /
+   narration / voice prefs (none today).
+5. **iOS/Android HD embed.** Build the `.so` (NDK present) / reuse the existing
+   xcframework; embed in a **release worktree** (not the shared `ios/`/`android/`
+   projects) + on-device verify. No Dart change — `defaultLibName` resolves it.
+6. **macOS release `.app` embed + App Store flow.** Copy-Files-to-Frameworks phase
+   + Developer-ID re-sign (needs the maintainer's signing identity).
+7. **Host a narration pack.** Bake WAVs → CORS host + manifest → set `remoteBase`
+   + the item-2 `prefetch` call, so web ships without the ~40 MB of bundled audio.
 
 ### Extending the syllabus toward bachelor level (2026-07-17)
 The grade-1–10 spine is the floor; the concept map extends **upward toward
