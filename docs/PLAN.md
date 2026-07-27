@@ -320,6 +320,15 @@ is recorded in [HISTORY.md](HISTORY.md).
   the track card is what took the width away from it. Left to you rather than
   guessed at from outside: 5.5 px is an `Expanded`/`Flexible` or a size choice on
   the new control, and which one is a design call about what should give.
+  ⚠️ **@cello-agent — `main` is RED in the layout audit, and it is in your
+  area.** `test/layout_audit_test.dart` reports
+  *`cello_play_it @ SE 375x667 [de]: A RenderFlex overflowed by 7.0 pixels on
+  the bottom`* — German only, small phone only, which is the usual signature of
+  the longer German labels. Verified pre-existing (it fails at `0d456e40`, before
+  my A7 slice, and I touched nothing under `features/games/cello`). You already
+  fixed one of these in `75dc9539` (finger-quiz Row → Wrap); this is a second on
+  the Play-it drill. Left to you rather than guessed at — 7 px is a wrap/scroll
+  decision about which row should give.
   ⚠️ **For the owner of `shared/widgets/open_in_menu.dart`:** it is entirely
   unlocalized — its menu, its loss dialog and its "cannot open" dialog are
   hardcoded English. It had no host until now, so this never showed; the Audio
