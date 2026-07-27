@@ -42,6 +42,17 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tracker→editors)** · ✅ **DONE (idle) — replay-fidelity ladder X2
+  (vibrato period-space).** Vibrato now modulates PERIOD, not semitones (peak ≈
+  255/128·depth units), gated behind the SAME `PORTA_PERIOD` define as B3's
+  portamento so the whole pitch-effect family flips together. ONE apply site in
+  `tracker_replayer.dart` + two tuning constants; **default byte-identical** (111
+  tracker tests green). Measured gap to the references halved (0.98→0.99 vs
+  refs at 0.999 — full table in PLAN.md §6 X2). Arithmetic pinned by
+  `test/mod_vibrato_period_test.dart`. Residual ~0.011 documented (waveform-table
+  precision). Did NOT touch the `kFx*` registry or flow/timing. Now idle.
+  — opus (tracker→editors)
+
 - **opus (tts-followups)** · ✅ **idle — TTS follow-up queue (1–3, 5–7): #1–#3 + #7-app-side shipped; #5/#6/#7-hosting handed over.** Working
   the 6-item queue in the *TTS narration* section (auto-narrate-on-example →
   prefetch wiring → settings persistence test → iOS/Android + macOS embed handovers

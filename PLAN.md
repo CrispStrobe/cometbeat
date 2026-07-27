@@ -1447,15 +1447,36 @@ Re-swept all 14 fixtures with the three fixes in force
 On several fixtures we now sit CLOSER to each reference than they sit to each
 other, which is the most that can be asked of a fourth implementation.
 
-⬜ **The only residual: vibrato, ~0.02.** Inside the "ok" band and an order of
-magnitude below what portamento was, but it is the one number that did not go to
-zero, and `6xy` tracks it exactly (0.022 vs 0.020) — consistent with one shared
-LFO rather than two faults. Candidates, in the order worth checking: the depth
-scale (`kVibratoDepthSemitonesPerUnit`, another "musical approximation" constant
-of the same family as the portamento one that turned out wrong), the waveform
-table, and whether the LFO advances on tick 0. ⚠️ Note vibrato is applied in
-SEMITONES like portamento was — the same period-vs-pitch question applies and is
-the first thing to check.
+✅ **X2 (vibrato) — MOSTLY FIXED (gated `--dart-define=PORTA_PERIOD=1`, shares the
+porta gate). Gap to the references roughly halved.** The depth-scale/space
+hypothesis held: vibrato was applied in SEMITONES with a flat depth, exactly like
+portamento before B3. ProTracker modulates PERIOD — `(vibratoTable[pos]·y) >> 7`,
+table peaking at 255, so peak wobble ≈ `255/128·y` period units — which is
+shallower than the old `y/8` semitone model AND correctly-shaped (a period wobble
+is not a constant-semitone wobble). Fixed the ONE apply site in
+`tracker_replayer.dart` (`kVibratoPeriodPerDepthUnit`, `kVibratoPeriodAccurate`
+aliased to the porta gate so the whole pitch-effect family flips together);
+default byte-identical, 111 tracker tests green. Measured against openmpt123 +
+micromod (which agree at 0.999), PAULA_CLOCK=1:
+
+| fixture | refs agree | ours default | ours PERIOD |
+| --- | --- | --- | --- |
+| `vibrato.mod` | 0.999 | 0.981 / 0.979 | **0.989 / 0.986** |
+| `vibvol_6xy.mod` | 0.999 | 0.981 / 0.977 | **0.989 / 0.987** |
+
+Arithmetic pinned by `test/mod_vibrato_period_test.dart` (runs everywhere; the
+audio A/B is opt-in). ⚠️ The rate was already correct — pt2 advances
+`n_vibratoPos += hi<<2` and looks up `(pos>>2)&31`, i.e. index `+= hi` per tick,
+a full 32-step cycle in `32/speed` ticks, which is exactly `kVibratoRadPerSpeedUnit
+= 2π/32`. Only depth + space were wrong.
+
+⬜ **Residual: vibrato ~0.011** (was 0.020). Halved but not gone, and `6xy`
+still tracks `4xy` exactly (one shared LFO). The remaining candidate is the
+WAVEFORM TABLE: `trackerLfo` is a continuous sine, ProTracker a 32-entry
+quantized table (`vibratoTable`), so the harmonic content differs slightly. Tick-0
+is NOT it — `_vibPhase` resets to 0 on a new note and sin(0)=0, so applying on
+tick 0 adds nothing. Depth-scale is spent. Worth a table-shape pass if the number
+matters; it is comfortably inside the "ok" band now.
 
 **Method note for whoever picks this up.** All three bugs were found by
 measuring one effect at a time against three independent players, then reading

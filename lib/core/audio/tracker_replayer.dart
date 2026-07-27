@@ -380,7 +380,29 @@ double slidePitchByPeriod(double pitch, double delta) {
 }
 
 /// Vibrato depth: semitones per depth-unit (y). 8 ⇒ ±1 semitone.
+///
+/// This is the DEFAULT (semitone-space) model, the vibrato twin of
+/// [kPortaSemitonesPerUnit] — a musical approximation, not period-accurate. Under
+/// [kVibratoPeriodAccurate] it is replaced by [kVibratoPeriodPerDepthUnit].
 const double kVibratoDepthSemitonesPerUnit = 1 / 8;
+
+/// Period-accurate vibrato depth: PERIOD units per depth-unit (y), at the LFO's
+/// peak. ProTracker adds `(vibratoTable[pos] * y) >> 7` to the period, with the
+/// table peaking at 255, so the peak period wobble is `255/128 · y` units
+/// (`pt2_replayer.c` vibrato). `trackerLfo` is that table normalized to ±1.
+///
+/// This is the vibrato half of the same period-vs-pitch correction B3 made for
+/// portamento (see [kPortaPeriodAccurate]): a fixed semitone depth is ~1.6× too
+/// deep AND wrong in shape, because a period wobble is not a constant-semitone
+/// wobble. In force only under [kVibratoPeriodAccurate].
+const double kVibratoPeriodPerDepthUnit = 255.0 / 128.0;
+
+/// Vibrato (and 6xy) run period-accurate when the PORTA_PERIOD gate is on — the
+/// whole pitch-effect family shares one switch, so an A/B flips porta + vibrato
+/// together (which is how PLAN.md §6's audio comparison was run). Default OFF,
+/// so default output is byte-identical. `final`, not `const`, because it mirrors
+/// [kPortaPeriodAccurate], which is read from the environment.
+final bool kVibratoPeriodAccurate = kPortaPeriodAccurate;
 
 /// Vibrato phase advance (radians) per speed-unit (x), per tick. A full cycle
 /// takes 32/x ticks.
@@ -1107,10 +1129,20 @@ class ReplayVoice {
     }
     if (_isTonePorta && _glissando) effPitch = effPitch.roundToDouble();
 
-    // Vibrato: zero-mean LFO (E4x waveform) on pitch; phase advances each tick.
+    // Vibrato: zero-mean LFO (E4x waveform); phase advances each tick.
     if (_isVibrato) {
-      final depth = _memVibDepth * kVibratoDepthSemitonesPerUnit;
-      effPitch = pitch + depth * trackerLfo(_vibWave, _vibPhase);
+      final lfo = trackerLfo(_vibWave, _vibPhase);
+      if (kVibratoPeriodAccurate) {
+        // Hardware modulates PERIOD, not pitch: a positive table value ADDS to
+        // the period (lowering pitch), so a positive LFO bends the note DOWN —
+        // the sign is the hardware's, not the semitone model's. Depth scales in
+        // period units; the wobble is shallower and correctly-shaped vs the
+        // semitone approximation (see kVibratoPeriodPerDepthUnit).
+        final periodOffset = _memVibDepth * kVibratoPeriodPerDepthUnit * lfo;
+        effPitch = slidePitchByPeriod(pitch, periodOffset);
+      } else {
+        effPitch = pitch + _memVibDepth * kVibratoDepthSemitonesPerUnit * lfo;
+      }
       _vibPhase += _memVibSpeed * kVibratoRadPerSpeedUnit;
     }
 
