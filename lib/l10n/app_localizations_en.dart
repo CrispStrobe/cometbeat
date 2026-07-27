@@ -1752,7 +1752,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'tap to give this track its own swing (– follows the groove)';
 
   @override
-  String get loopMixerAutomation => 'Volume shape';
+  String get loopMixerAutomation => 'Shape over the loop';
+
+  @override
+  String get loopMixerAutomationVolume => 'Volume';
+
+  @override
+  String get loopMixerAutomationPan => 'Left / right';
+
+  @override
+  String get loopMixerAutomationFilter => 'Tone';
+
+  @override
+  String get loopMixerAutomationHint =>
+      'tap a square to shape this track across the loop; hold the name to clear it';
 
   @override
   String get loopMixerDuplicateTrack => 'Add another track';
@@ -1760,6 +1773,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get loopMixerDuplicateTrackHint =>
       'tap to add a copy of this track, with all its settings';
+
+  @override
+  String get loopMixerAddTrack => 'Add a new track';
+
+  @override
+  String get loopMixerAddTrackHint => 'tap a part to add a fresh one of it';
+
+  @override
+  String get loopMixerAddEmpty => 'Empty';
+
+  @override
+  String get loopMixerAddEmptyHint =>
+      'add a silent track and draw your own tune into it';
+
+  @override
+  String get loopMixerTrackEmpty => 'Track';
+
+  @override
+  String get loopMixerRenameTrack => 'Rename a track';
+
+  @override
+  String get loopMixerRenameTrackHint => 'tap to give this track your own name';
+
+  @override
+  String get loopMixerRenameHint => 'e.g. Ukulele';
+
+  @override
+  String get loopMixerTrackFilter => 'Tone per track';
+
+  @override
+  String get loopMixerTrackFilterHint =>
+      'tap to make this track darker or thinner (– leaves it alone, ~ means the shape below is driving it)';
 
   @override
   String get loopMixerMasterFx => 'Master effects';

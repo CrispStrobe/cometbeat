@@ -335,12 +335,31 @@ abstract interface class LoopMixerTester {
   void removeCopy(String id);
   List<String> get trackIds;
 
+  /// D1 — adds a fresh track playing an authored role, or an empty one, and
+  /// names a track. [trackLabelOf] is what the player actually reads.
+  void addRoleTrack(String roleId);
+  void addEmptyTrack();
+  bool isEmptyTrack(String id);
+  void renameTrack(String id, String? name);
+  String trackLabelOf(String id);
+
   /// A track's level-automation lane: the value at a step, a way to step it,
   /// and whether the track has a lane at all.
   double automationAt(String id, int step);
   bool hasAutomationFor(String id);
   void cycleAutomationStep(String id, int step);
   void clearAutomation(String id);
+
+  /// D2 — which parameter the one lane strip is editing, and the lane of any
+  /// parameter rather than just the level.
+  AutomationParam get automationParam;
+  void setAutomationParam(AutomationParam param);
+  double automationAtParam(String id, AutomationParam param, int step);
+  bool hasAutomationForParam(String id, AutomationParam param);
+
+  /// D3 — a track's own tone control, and a way to step it.
+  double trackFilterOf(String id);
+  void cycleTrackFilter(String id);
 
   /// A track's swing, whether it has its OWN, and a way to step it.
   double trackSwingOf(String id);
@@ -1117,6 +1136,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   List<String> get trackIds => [for (final t in _engine.tracks) t.id];
   @override
+  void addRoleTrack(String roleId) => _addRoleTrack(roleId);
+  @override
+  void addEmptyTrack() => _addEmptyTrack();
+  @override
+  bool isEmptyTrack(String id) => _engine.isEmptyTrack(id);
+  @override
+  void renameTrack(String id, String? name) =>
+      setState(() => _engine.setTrackName(id, name));
+  @override
+  String trackLabelOf(String id) =>
+      _trackLabel(AppLocalizations.of(context)!, id);
+  @override
   double automationAt(String id, int step) =>
       _engine.automationFor(id, AutomationParam.level)?.at(step) ?? 1.0;
   @override
@@ -1127,6 +1158,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       _cycleAutomationStep(id, step);
   @override
   void clearAutomation(String id) => _clearAutomation(id);
+  @override
+  AutomationParam get automationParam => _autoParam;
+  @override
+  void setAutomationParam(AutomationParam param) => _setAutomationParam(param);
+  @override
+  double automationAtParam(String id, AutomationParam param, int step) =>
+      _engine.automationFor(id, param)?.at(step) ?? param.neutral;
+  @override
+  bool hasAutomationForParam(String id, AutomationParam param) =>
+      _engine.automationFor(id, param) != null;
+  @override
+  double trackFilterOf(String id) => _engine.trackFilter(id);
+  @override
+  void cycleTrackFilter(String id) => _cycleTrackFilter(id);
   @override
   double trackSwingOf(String id) => _engine.trackSwing(id);
   @override
@@ -3560,11 +3605,22 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     'sparkle': Color(0xFF3949AB), // A indigo
     'voice': Color(0xFF8E24AA), // B purple — the singer's own layer
     'beat': Color(0xFF00897B), // teal — the beatboxer's own layer
+    // An EMPTY track is not a copy of anything, so it has nothing to inherit a
+    // colour from — the `_sourceIdOf` fallback would leave it grey and unnamed.
+    // Slate: deliberately not one of the pitch-class colours, because it is not
+    // yet any particular part.
+    'track': Color(0xFF546E7A),
   };
 
-  /// A track's name. A duplicate reads as "Bass 2" rather than falling through
-  /// to the unknown-id default, which labelled every copy "Sparkle".
+  /// A track's name: the player's own if they gave it one, else the app's.
+  ///
+  /// A duplicate reads as "Bass 2" rather than falling through to the
+  /// unknown-id default, which labelled every copy "Sparkle"; an empty track
+  /// reads as "Track 2" until it is renamed, which is exactly why renaming
+  /// exists — "Track 2" says nothing about what is on it.
   String _trackLabel(AppLocalizations l10n, String id) {
+    final given = _engine.trackName(id);
+    if (given != null) return given;
     final source = _sourceIdOf(id);
     if (source != id) {
       final n = id.substring(source.length).replaceAll('-', ' ').trim();
@@ -3580,6 +3636,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         'melody' => l10n.loopMixerTrackMelody,
         'voice' => l10n.loopMixerTrackVoice,
         'beat' => l10n.loopMixerTrackBeat,
+        'track' => l10n.loopMixerTrackEmpty,
         _ => l10n.loopMixerTrackSparkle,
       };
 
@@ -4074,8 +4131,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           _trackSwingRow(l10n),
         ),
         _inspectorSection(
+          l10n.loopMixerAddTrack,
+          _addTrackRow(l10n),
+        ),
+        _inspectorSection(
           l10n.loopMixerDuplicateTrack,
           _duplicateRow(l10n),
+        ),
+        _renameRow(l10n),
+        _inspectorSection(
+          l10n.loopMixerTrackFilter,
+          _trackFilterRow(l10n),
         ),
         _inspectorSection(
           l10n.loopMixerAutomation,
@@ -4241,50 +4307,96 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     );
   }
 
-  /// The values a tapped automation step cycles through.
+  /// The values a tapped automation step cycles through, per parameter.
   ///
-  /// Four, not a continuous drag: this is the same tap-to-cycle the tune grid,
-  /// the beat grid, the loop-length badge and the swing badge all use, and a
-  /// child who can already build a beat can build a fade with no new gesture.
+  /// A ladder, not a continuous drag: this is the same tap-to-cycle the tune
+  /// grid, the beat grid, the loop-length badge and the swing badge all use, and
+  /// a child who can already build a beat can build a fade with no new gesture.
   /// A continuous curve would be more expressive and a different product.
-  static const List<double> _levelLadder = [1.0, 0.66, 0.33, 0.0];
+  ///
+  /// Every ladder STARTS at that parameter's neutral value, because the last
+  /// rung has to wrap back to it — cycling all the way round is how a lane is
+  /// undone, and a lane that has gone neutral everywhere is dropped rather than
+  /// stored. That rule is what keeps "no lane" distinguishable from "a flat
+  /// lane", which is what keeps an un-automated groove byte-identical.
+  static const Map<AutomationParam, List<double>> _ladders = {
+    AutomationParam.level: [1.0, 0.66, 0.33, 0.0],
+    // Centre, then across the field left to right.
+    AutomationParam.pan: [0.5, 0.0, 0.25, 0.75, 1.0],
+    // Off, then darker and darker, then thinner and thinner.
+    AutomationParam.filter: [0.5, 0.25, 0.0, 0.75, 1.0],
+  };
 
-  /// Steps one cell of [id]'s level lane. Creates the lane on first touch.
-  void _cycleAutomationStep(String id, int step) {
-    final existing = _engine.automationFor(id, AutomationParam.level) ??
-        AutomationLane.neutral(AutomationParam.level, kPatternSteps);
+  /// Which parameter the one strip is currently editing.
+  ///
+  /// One strip with a switch rather than a strip per parameter (the
+  /// maintainer's call): three stacked 16-cell grids per track would fill the
+  /// inspector with a matrix, and the point of the grid is that it is the same
+  /// gesture everywhere, not that it is everywhere at once.
+  AutomationParam _autoParam = AutomationParam.level;
+
+  void _setAutomationParam(AutomationParam p) {
+    if (p == _autoParam) return;
+    setState(() => _autoParam = p);
+  }
+
+  String _autoParamLabel(AppLocalizations l10n, AutomationParam p) =>
+      switch (p) {
+        AutomationParam.level => l10n.loopMixerAutomationVolume,
+        AutomationParam.pan => l10n.loopMixerAutomationPan,
+        AutomationParam.filter => l10n.loopMixerAutomationFilter,
+      };
+
+  /// Steps one cell of [id]'s lane for the parameter on show. Creates the lane
+  /// on first touch, and drops it again when it cycles back to neutral.
+  void _cycleAutomationStep(String id, int step, [AutomationParam? param]) {
+    final p = param ?? _autoParam;
+    final ladder = _ladders[p]!;
+    final existing = _engine.automationFor(id, p) ??
+        AutomationLane.neutral(p, kPatternSteps);
     final current = existing.at(step);
-    var i = _levelLadder.indexWhere((v) => (v - current).abs() < 1e-6);
+    var i = ladder.indexWhere((v) => (v - current).abs() < 1e-6);
     if (i < 0) i = 0;
-    final next = existing.withStep(
-      step,
-      _levelLadder[(i + 1) % _levelLadder.length],
-    );
+    final next = existing.withStep(step, ladder[(i + 1) % ladder.length]);
     setState(() {
-      // A lane that is neutral everywhere is dropped rather than stored: "no
-      // lane" has to stay distinguishable from "a flat lane", because that is
-      // what lets a groove without automation render byte-for-byte as before.
-      _engine.setAutomation(
-        id,
-        AutomationParam.level,
-        next.isNeutralFor(AutomationParam.level) ? null : next,
-      );
+      _engine.setAutomation(id, p, next.isNeutralFor(p) ? null : next);
     });
     _syncPlayback();
   }
 
-  /// Clears [id]'s level lane.
-  void _clearAutomation(String id) {
-    if (_engine.automationFor(id, AutomationParam.level) == null) return;
-    setState(() => _engine.setAutomation(id, AutomationParam.level, null));
+  /// Clears [id]'s lane for the parameter on show.
+  void _clearAutomation(String id, [AutomationParam? param]) {
+    final p = param ?? _autoParam;
+    if (_engine.automationFor(id, p) == null) return;
+    setState(() => _engine.setAutomation(id, p, null));
     _syncPlayback();
   }
 
-  /// One 16-step level lane per track: tap a step to cycle it, hold the track
-  /// name to clear the lane.
+  /// One 16-step lane per track for the parameter on show: tap a step to cycle
+  /// it, hold the track name to clear the lane, switch parameters above.
   Widget _automationRows(AppLocalizations l10n) => Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final p in AutomationParam.values)
+                ChoiceChip(
+                  key: Key('loop-auto-param-${p.name}'),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  label: Text(
+                    _autoParamLabel(l10n, p),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  selected: _autoParam == p,
+                  onSelected: (_) => _setAutomationParam(p),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
           for (final track in _engine.tracks)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 1),
@@ -4311,19 +4423,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                           onTap: () => _cycleAutomationStep(track.id, s),
                           child: SizedBox(
                             height: 18,
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              child: FractionallySizedBox(
-                                heightFactor: _autoHeight(track.id, s),
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: _colorFor(track.id),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  child: const SizedBox.expand(),
-                                ),
-                              ),
-                            ),
+                            child: _autoCell(track.id, s),
                           ),
                         ),
                       ),
@@ -4334,12 +4434,97 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         ],
       );
 
-  /// A step's bar height: the lane value, or full when there is no lane.
-  double _autoHeight(String id, int step) {
-    final lane = _engine.automationFor(id, AutomationParam.level);
-    final v = lane == null ? 1.0 : lane.at(step);
-    // Never zero, or a silenced step would vanish and look untappable.
-    return v < 0.08 ? 0.08 : v;
+  /// One lane cell, drawn the way its parameter actually behaves.
+  ///
+  /// Volume is one-sided, so it is a bar growing from the floor — the shape of
+  /// a fader. Pan and tone are two-sided and NOT the same two-sidedness: pan is
+  /// a position in space, so its marker slides left and right; tone is an amount
+  /// of brightness, so it grows up (thinner) or down (darker) from the middle.
+  /// Drawing all three as the same bar would have been less code and would have
+  /// made a hard-left pan look like a fade-out.
+  Widget _autoCell(String id, int step) {
+    final colour = _colorFor(id);
+    final lane = _engine.automationFor(id, _autoParam);
+    final v = lane == null ? _autoParam.neutral : lane.at(step);
+    if (_autoParam == AutomationParam.level) {
+      return Align(
+        alignment: Alignment.bottomCenter,
+        child: FractionallySizedBox(
+          // Never zero, or a silenced step would vanish and look untappable.
+          heightFactor: v < 0.08 ? 0.08 : v,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colour,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+    }
+    final scheme = Theme.of(context).colorScheme;
+    // A faint full cell under both two-sided drawings, so an untouched step is
+    // still visibly a target rather than an empty gap.
+    final bed = DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: const SizedBox.expand(),
+    );
+    if (_autoParam == AutomationParam.pan) {
+      return Stack(
+        children: [
+          Positioned.fill(child: bed),
+          Align(
+            // −1 = hard left … +1 = hard right, which is where the sound is.
+            alignment: Alignment(v * 2 - 1, 0),
+            child: FractionallySizedBox(
+              widthFactor: 0.34,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colour,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    // Tone: a bar growing OUT of the middle — up for thinner, down for darker.
+    // A step left alone shows only the bed, which is right: neutral means the
+    // filter is doing nothing at all there.
+    final amount = ((v - 0.5) * 2).clamp(-1.0, 1.0);
+    Widget half(double fill, Alignment from) => Expanded(
+          child: fill == 0
+              ? const SizedBox.expand()
+              : Align(
+                  alignment: from,
+                  child: FractionallySizedBox(
+                    heightFactor: fill < 0.12 ? 0.12 : fill,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colour,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+        );
+    return Stack(
+      children: [
+        Positioned.fill(child: bed),
+        Column(
+          children: [
+            half(amount > 0 ? amount : 0, Alignment.bottomCenter),
+            half(amount < 0 ? -amount : 0, Alignment.topCenter),
+          ],
+        ),
+      ],
+    );
   }
 
   /// Swing ladder for one track: follow the groove, then straight, light,
@@ -4423,6 +4608,203 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                     style: const TextStyle(fontSize: 12),
                   ),
                   onPressed: () => _duplicateTrack(track.id),
+                ),
+              ),
+            ),
+        ],
+      );
+
+  /// Adds a fresh track playing [roleId], and its chip row below.
+  void _addRoleTrack(String roleId) {
+    if (_engine.addRoleTrack(roleId) == null) return;
+    setState(() {});
+    _syncPlayback();
+  }
+
+  void _addEmptyTrack() {
+    _engine.addEmptyTrack();
+    setState(() {});
+    _syncPlayback();
+  }
+
+  /// The five authored roles, then Empty.
+  ///
+  /// Roles first because the ＋ has to land on something that PLAYS: a blank
+  /// page is the one outcome a first tap must not produce. Empty last because
+  /// it is the end of the ladder rather than the start of it — but it is there,
+  /// which is what stops the band being a fixed roster.
+  ///
+  /// In the inspector, not on the track card: that card's row is full, and the
+  /// one time a control was added to it the row overflowed by 23px and took
+  /// fourteen tests with it. Treat that row as full.
+  Widget _addTrackRow(AppLocalizations l10n) => Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          // The roles of the style in play, so switching to Chill offers Chill's
+          // band rather than the default one's.
+          for (final role in grooveStyleById(_engine.styleId).tracks)
+            Tooltip(
+              message: l10n.loopMixerAddTrackHint,
+              child: ActionChip(
+                key: Key('loop-add-${role.id}'),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                avatar: CircleAvatar(
+                  backgroundColor: _colorFor(role.id),
+                  radius: 8,
+                ),
+                label: Text(
+                  _baseTrackLabel(l10n, role.id),
+                  style: const TextStyle(fontSize: 12),
+                ),
+                onPressed: () => _addRoleTrack(role.id),
+              ),
+            ),
+          Tooltip(
+            message: l10n.loopMixerAddEmptyHint,
+            child: ActionChip(
+              key: const Key('loop-add-empty'),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              avatar: const Icon(Icons.add, size: 16),
+              label: Text(
+                l10n.loopMixerAddEmpty,
+                style: const TextStyle(fontSize: 12),
+              ),
+              onPressed: _addEmptyTrack,
+            ),
+          ),
+        ],
+      );
+
+  /// Renames [id], or clears the name back to the app's own with a blank entry.
+  Future<void> _renameTrack(String id) async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(text: _engine.trackName(id) ?? '');
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(l10n.loopMixerRenameTrack),
+        content: TextField(
+          key: const Key('loop-rename-field'),
+          controller: controller,
+          autofocus: true,
+          maxLength: 40,
+          decoration: InputDecoration(hintText: l10n.loopMixerRenameHint),
+          onSubmitted: (v) => Navigator.pop(dialog, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: Text(l10n.loopMixerCancel),
+          ),
+          TextButton(
+            key: const Key('loop-rename-ok'),
+            onPressed: () => Navigator.pop(dialog, controller.text),
+            child: Text(l10n.loopMixerSave),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || name == null) return;
+    setState(() => _engine.setTrackName(id, name));
+  }
+
+  /// One chip per ADDED track: tap to rename it.
+  ///
+  /// Hidden while there are none, like the session grid: the base band is
+  /// already named in the player's own language, and a rename row over five
+  /// tracks that do not need it is noise. "Track 2" is what makes this
+  /// necessary, so it appears exactly when a track called that exists.
+  Widget _renameRow(AppLocalizations l10n) {
+    final added = [
+      for (final t in _engine.tracks)
+        if (_engine.isExtraTrack(t.id)) t,
+    ];
+    if (added.isEmpty) return const SizedBox.shrink();
+    return _inspectorSection(
+      l10n.loopMixerRenameTrack,
+      Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final track in added)
+            Tooltip(
+              message: l10n.loopMixerRenameTrackHint,
+              child: ActionChip(
+                key: Key('loop-rename-${track.id}'),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                avatar: CircleAvatar(
+                  backgroundColor: _colorFor(track.id),
+                  radius: 8,
+                ),
+                label: Text(
+                  _trackLabel(l10n, track.id),
+                  style: const TextStyle(fontSize: 12),
+                ),
+                onPressed: () => _renameTrack(track.id),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Tone ladder for one track: off, darker, darkest, thinner, thinnest, off.
+  ///
+  /// The same tap-to-cycle badge as swing and loop length, for the same reason:
+  /// you hear the change and the next tap is the way back. A slider per track
+  /// would need a row each and would not fit beside the lane strip.
+  static const List<double> _trackFilterLadder = [0, -0.5, -0.9, 0.5, 0.9];
+
+  void _cycleTrackFilter(String id) {
+    final current = _engine.trackFilter(id);
+    var i = _trackFilterLadder.indexWhere((v) => (v - current).abs() < 1e-6);
+    if (i < 0) i = 0;
+    setState(() {
+      _engine.setTrackFilter(
+        id,
+        _trackFilterLadder[(i + 1) % _trackFilterLadder.length],
+      );
+    });
+    _syncPlayback();
+  }
+
+  /// One badge per track: its tone, `–` when it is left alone, or `~` when the
+  /// lane below is driving it — the lane REPLACES this knob, and a badge still
+  /// reading `-9` under a lane that ignores it would be a lie.
+  Widget _trackFilterRow(AppLocalizations l10n) => Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final track in _engine.tracks)
+            Tooltip(
+              message: '${_trackLabel(l10n, track.id)} · '
+                  '${l10n.loopMixerTrackFilterHint}',
+              child: GestureDetector(
+                key: Key('loop-filter-${track.id}'),
+                onTap: () => _cycleTrackFilter(track.id),
+                child: Chip(
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  avatar: CircleAvatar(
+                    backgroundColor: _colorFor(track.id),
+                    radius: 8,
+                  ),
+                  label: Text(
+                    _engine.automationFor(track.id, AutomationParam.filter) !=
+                            null
+                        ? '~'
+                        : _engine.trackFilter(track.id) == 0
+                            ? '–'
+                            : (_engine.trackFilter(track.id) * 10)
+                                .round()
+                                .toString(),
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
               ),
             ),

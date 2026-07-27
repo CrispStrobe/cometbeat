@@ -3287,8 +3287,32 @@ abstract class AppLocalizations {
   /// No description provided for @loopMixerAutomation.
   ///
   /// In en, this message translates to:
-  /// **'Volume shape'**
+  /// **'Shape over the loop'**
   String get loopMixerAutomation;
+
+  /// No description provided for @loopMixerAutomationVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get loopMixerAutomationVolume;
+
+  /// No description provided for @loopMixerAutomationPan.
+  ///
+  /// In en, this message translates to:
+  /// **'Left / right'**
+  String get loopMixerAutomationPan;
+
+  /// No description provided for @loopMixerAutomationFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Tone'**
+  String get loopMixerAutomationFilter;
+
+  /// No description provided for @loopMixerAutomationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tap a square to shape this track across the loop; hold the name to clear it'**
+  String get loopMixerAutomationHint;
 
   /// No description provided for @loopMixerDuplicateTrack.
   ///
@@ -3301,6 +3325,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'tap to add a copy of this track, with all its settings'**
   String get loopMixerDuplicateTrackHint;
+
+  /// No description provided for @loopMixerAddTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a new track'**
+  String get loopMixerAddTrack;
+
+  /// No description provided for @loopMixerAddTrackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tap a part to add a fresh one of it'**
+  String get loopMixerAddTrackHint;
+
+  /// No description provided for @loopMixerAddEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty'**
+  String get loopMixerAddEmpty;
+
+  /// No description provided for @loopMixerAddEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'add a silent track and draw your own tune into it'**
+  String get loopMixerAddEmptyHint;
+
+  /// No description provided for @loopMixerTrackEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Track'**
+  String get loopMixerTrackEmpty;
+
+  /// No description provided for @loopMixerRenameTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename a track'**
+  String get loopMixerRenameTrack;
+
+  /// No description provided for @loopMixerRenameTrackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tap to give this track your own name'**
+  String get loopMixerRenameTrackHint;
+
+  /// No description provided for @loopMixerRenameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Ukulele'**
+  String get loopMixerRenameHint;
+
+  /// No description provided for @loopMixerTrackFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Tone per track'**
+  String get loopMixerTrackFilter;
+
+  /// No description provided for @loopMixerTrackFilterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tap to make this track darker or thinner (– leaves it alone, ~ means the shape below is driving it)'**
+  String get loopMixerTrackFilterHint;
 
   /// No description provided for @loopMixerMasterFx.
   ///

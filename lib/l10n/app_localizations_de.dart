@@ -1758,7 +1758,20 @@ class AppLocalizationsDe extends AppLocalizations {
       'tippen für eigenen Swing dieser Spur (– folgt dem Groove)';
 
   @override
-  String get loopMixerAutomation => 'Lautstärke-Verlauf';
+  String get loopMixerAutomation => 'Verlauf über den Loop';
+
+  @override
+  String get loopMixerAutomationVolume => 'Lautstärke';
+
+  @override
+  String get loopMixerAutomationPan => 'Links / rechts';
+
+  @override
+  String get loopMixerAutomationFilter => 'Klang';
+
+  @override
+  String get loopMixerAutomationHint =>
+      'auf ein Kästchen tippen, um diese Spur über den Loop zu formen; Namen halten löscht den Verlauf';
 
   @override
   String get loopMixerDuplicateTrack => 'Weitere Spur hinzufügen';
@@ -1766,6 +1779,40 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get loopMixerDuplicateTrackHint =>
       'tippen für eine Kopie dieser Spur samt aller Einstellungen';
+
+  @override
+  String get loopMixerAddTrack => 'Neue Spur hinzufügen';
+
+  @override
+  String get loopMixerAddTrackHint =>
+      'auf eine Stimme tippen, um eine frische davon zu bekommen';
+
+  @override
+  String get loopMixerAddEmpty => 'Leer';
+
+  @override
+  String get loopMixerAddEmptyHint =>
+      'eine stille Spur hinzufügen und selbst eine Melodie hineinmalen';
+
+  @override
+  String get loopMixerTrackEmpty => 'Spur';
+
+  @override
+  String get loopMixerRenameTrack => 'Spur umbenennen';
+
+  @override
+  String get loopMixerRenameTrackHint =>
+      'tippen, um dieser Spur einen eigenen Namen zu geben';
+
+  @override
+  String get loopMixerRenameHint => 'z. B. Ukulele';
+
+  @override
+  String get loopMixerTrackFilter => 'Klang pro Spur';
+
+  @override
+  String get loopMixerTrackFilterHint =>
+      'tippen, um diese Spur dunkler oder dünner zu machen (– lässt sie in Ruhe, ~ heißt: der Verlauf unten steuert sie)';
 
   @override
   String get loopMixerMasterFx => 'Master-Effekte';
