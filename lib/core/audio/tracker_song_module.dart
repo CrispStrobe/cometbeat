@@ -113,7 +113,10 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
       if (o >= 0 && o < patterns.length) o,
   ];
 
-  return TrackerSong.fromParts(
+  // ProTracker's effect-memory rules differ from every other format's, and the
+  // replayer cannot tell where a song came from, so the importer records it.
+  // See [TrackerSong.protrackerEffectMemory].
+  final song = TrackerSong.fromParts(
     channels: band,
     timing: timing,
     patterns: patterns,
@@ -136,6 +139,15 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
           )
         : null,
   );
+  // ProTracker's effect memory is per-COMMAND and differs from every other
+  // format's; the replayer cannot tell where a song came from, so the importer
+  // records it. The flag rides each CHANNEL because that is what every render
+  // path already receives — see [TrackerChannel.protrackerMemory].
+  song.protrackerEffectMemory = doc.sourceFormat == ModuleFormat.mod;
+  for (final ch in song.channels) {
+    ch.protrackerMemory = song.protrackerEffectMemory;
+  }
+  return song;
 }
 
 /// For each channel, the 1-based sample index it triggers most often (0 = none).

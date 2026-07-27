@@ -526,6 +526,15 @@ int retrigVolume(int v, int x) {
 }
 
 class ReplayVoice {
+  ReplayVoice({this.protrackerMemory = false});
+
+  /// ProTracker effect-memory rules: `1xx`, `2xx` and `Axy` take the ROW's
+  /// parameter with no latching, so a bare `100`/`A00` does nothing, where
+  /// XM/S3M/IT reuse the last value. `3xx` and `4xy` latch under BOTH rules —
+  /// the difference is per-command, not a blanket switch. Comes from
+  /// [TrackerChannel.protrackerMemory]; see there for why it rides the channel.
+  final bool protrackerMemory;
+
   /// Current base pitch as a FRACTIONAL MIDI note (porta/tone-porta move this).
   double pitch = 0;
 
@@ -976,9 +985,17 @@ class ReplayVoice {
     // Effect memory + immediate (tick-0) commands.
     switch (_cmd) {
       case kFxPortaUp:
-        if (_param != 0) _memPortaUp = _param;
+        // ProTracker does NOT latch this: `portaUp`/`portaDown` read
+        // `ch->n_cmd` directly, so a bare `100` slides by zero. Storing the
+        // parameter unconditionally reproduces that and leaves the apply site
+        // below unchanged, ignorant of which rule is in force.
+        if (_param != 0 || protrackerMemory) _memPortaUp = _param;
       case kFxPortaDown:
-        if (_param != 0) _memPortaDown = _param;
+        // ProTracker does NOT latch this: `portaUp`/`portaDown` read
+        // `ch->n_cmd` directly, so a bare `200` slides by zero. Storing the
+        // parameter unconditionally reproduces that and leaves the apply site
+        // below unchanged, ignorant of which rule is in force.
+        if (_param != 0 || protrackerMemory) _memPortaDown = _param;
       case kFxTonePorta:
         if (_param != 0) _memTonePorta = _param;
       case kFxVibrato:
@@ -989,15 +1006,17 @@ class ReplayVoice {
         // 6xy = CONTINUE the vibrato (reuse the existing speed/depth memory) +
         // volume slide xy. The param is the SLIDE amount, not vib speed/depth —
         // do NOT touch the vibrato memory (would corrupt/invent vibrato).
-        if (_param != 0) _memVolSlide = _param;
+        if (_param != 0 || protrackerMemory) _memVolSlide = _param;
       case kFxTremolo:
         final x = (_param >> 4) & 0xF, y = _param & 0xF;
         if (x != 0) _memTremSpeed = x;
         if (y != 0) _memTremDepth = y;
       case kFxTonePortaVolSlide:
-        if (_param != 0) _memVolSlide = _param;
+        if (_param != 0 || protrackerMemory) _memVolSlide = _param;
       case kFxVolumeSlide:
-        if (_param != 0) _memVolSlide = _param;
+        // Same rule: ProTracker's `volumeSlide` reads the row's parameter, so
+        // `A00` changes nothing where XM/S3M/IT repeat the last slide.
+        if (_param != 0 || protrackerMemory) _memVolSlide = _param;
       case kFxSetVolume:
         volume = _param.clamp(0, kMaxVolume);
       case kFxRetrigVolSlide:
@@ -1324,8 +1343,13 @@ class ChannelTrace {
 ChannelTrace traceChannel(
   List<TrackerCell> cells, {
   int ticksPerRow = kDefaultTicksPerRow,
+  bool protrackerMemory = false,
 }) {
-  final voice = ReplayVoice();
+  // Defaults to the tracker-general rules, so every existing caller is
+  // unaffected; pass [protrackerMemory] to trace a MOD's per-command effect
+  // memory (`1xx`/`2xx`/`Axy` do not latch). See
+  // [TrackerChannel.protrackerMemory].
+  final voice = ReplayVoice(protrackerMemory: protrackerMemory);
   final pitch = <List<double>>[];
   final volume = <List<double>>[];
   final retrigger = <List<bool>>[];
@@ -1637,7 +1661,7 @@ double? readLoopedSampleForTest(
   const declickSec = 0.003;
   final rows = cells.length;
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice();
+  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
   var readPos = 0.0;
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -1913,7 +1937,7 @@ void _renderSampleChannelInto(
   final stem = Float64List(timing.totalSamples);
   final rows = cells.length;
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice();
+  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
   var readPos = 0.0; // fractional index into the current sample
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -2124,7 +2148,7 @@ void _renderSampleChannelIntoVariable(
   final stemLen = rowStart[rows];
   final stem = useSink ? Float64List(0) : Float64List(stemLen);
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice();
+  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
   var readPos = 0.0;
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -2389,7 +2413,7 @@ void _renderPulseChannelInto(
   }
   var macroTick = 0;
   const declickSec = 0.003;
-  final voice = ReplayVoice();
+  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
   var phase = 0.0;
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
@@ -2598,7 +2622,7 @@ void _renderChannelInto(
   final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
   var macroTick = 0; // ticks since the current note-on (drives the macros)
 
-  final voice = ReplayVoice();
+  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
     // Per-cell instrument: switch the additive timbre if the cell names an
@@ -4952,7 +4976,7 @@ void _renderChannelIntoVariable(
   final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
   var macroTick = 0;
 
-  final voice = ReplayVoice();
+  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
     if (cellInst > 0 && pool != null && cellInst - 1 < pool.length) {
@@ -5832,7 +5856,9 @@ class _FlowVarLayout {
 
 /// Persistent additive-voice state carried across chunk boundaries.
 class _AddChunkState {
-  final ReplayVoice voice = ReplayVoice();
+  _AddChunkState({bool protrackerMemory = false})
+      : voice = ReplayVoice(protrackerMemory: protrackerMemory);
+  final ReplayVoice voice;
   ({
     List<double> harmonics,
     double attackSec,
@@ -5844,8 +5870,9 @@ class _AddChunkState {
 /// Persistent sample-voice state carried across chunk boundaries (the read
 /// pointer + envelope cursors that make a note ring past a chunk edge).
 class _SampChunkState {
-  _SampChunkState(this.cur);
-  final ReplayVoice voice = ReplayVoice();
+  _SampChunkState(this.cur, {bool protrackerMemory = false})
+      : voice = ReplayVoice(protrackerMemory: protrackerMemory);
+  final ReplayVoice voice;
   TrackerInstrument? cur;
   double readPos = 0.0;
   int noteStartSample = 0;
@@ -6257,12 +6284,18 @@ void _sampleRenderRowsStereo(
 /// tick-voice state (read pointer + envelope cursors) is carried across chunk
 /// boundaries so a run that straddles a chunk edge stays continuous.
 class _ZoneRun {
-  _ZoneRun(this.startStep, this.steps, this.sustainSteps, this.zone);
+  _ZoneRun(
+    this.startStep,
+    this.steps,
+    this.sustainSteps,
+    this.zone, {
+    bool protrackerMemory = false,
+  }) : voice = ReplayVoice(protrackerMemory: protrackerMemory);
   final int startStep;
   final int steps;
   final int sustainSteps;
   final SampleInstrument zone;
-  final ReplayVoice voice = ReplayVoice();
+  final ReplayVoice voice;
   double readPos = 0.0;
   int noteStartSample = 0;
   int releaseStartSample = 0;
@@ -6595,7 +6628,7 @@ List<_ChunkChannel> _planChunkChannels(
         ch,
         cells,
         false,
-        _SampChunkState(ch.instrument),
+        _SampChunkState(ch.instrument, protrackerMemory: ch.protrackerMemory),
         zone: _ZoneChannelState(runs, regGain),
       );
       out.add(zoneCc);
@@ -6615,7 +6648,7 @@ List<_ChunkChannel> _planChunkChannels(
         ch,
         cells,
         false,
-        _SampChunkState(ch.instrument),
+        _SampChunkState(ch.instrument, protrackerMemory: ch.protrackerMemory),
         proc:
             _ProcChannelState(runs, scale, layout.variable, layout, ch, cells),
       );
@@ -6641,7 +6674,9 @@ List<_ChunkChannel> _planChunkChannels(
       continue;
     }
     final additive = _additiveOf(ch.instrument) != null;
-    final state = additive ? _AddChunkState() : _SampChunkState(ch.instrument);
+    final state = additive
+        ? _AddChunkState(protrackerMemory: ch.protrackerMemory)
+        : _SampChunkState(ch.instrument, protrackerMemory: ch.protrackerMemory);
     // A native sample tick voice pans per sample from `rowPan`, which the
     // whole-song _renderSampleChannelStereoTicks seeds with the channel's base
     // pan (8xx/Pxy then slide it). The mono path never reads rowPan, so seeding
@@ -6689,7 +6724,15 @@ List<_ZoneRun> _planZoneRuns(TrackerChannel channel, List<TrackerCell> cells) {
         cells[startStep].volume,
       );
       if (zone is SampleInstrument) {
-        runs.add(_ZoneRun(startStep, steps, sustainSteps, zone));
+        runs.add(
+          _ZoneRun(
+            startStep,
+            steps,
+            sustainSteps,
+            zone,
+            protrackerMemory: channel.protrackerMemory,
+          ),
+        );
       }
     }
     startStep += steps;
