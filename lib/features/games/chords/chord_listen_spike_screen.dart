@@ -20,15 +20,24 @@ String _candidateName(BuildContext context, ChordCandidate c) =>
     '${spelledMidiName(context, 60 + c.rootPc, withOctave: false)}${c.suffix}';
 
 class ChordListenSpikeScreen extends StatefulWidget {
-  const ChordListenSpikeScreen({super.key});
+  const ChordListenSpikeScreen({super.key, this.debugChords});
+
+  /// Test-only seam: when provided, the screen listens to this stream instead
+  /// of opening the microphone, so the detection→display path can be exercised
+  /// headlessly. Never set in production — the real mic service stays
+  /// unconstructed while this is non-null.
+  @visibleForTesting
+  final Stream<ChordReading>? debugChords;
 
   @override
   State<ChordListenSpikeScreen> createState() => _ChordListenSpikeScreenState();
 }
 
 class _ChordListenSpikeScreenState extends State<ChordListenSpikeScreen> {
-  late final MicrophonePitchService _service =
-      MicrophonePitchService(chordDetector: ChordDetector());
+  // Lazily created so the fake-capture test path never constructs the plugin.
+  MicrophonePitchService? _serviceOrNull;
+  MicrophonePitchService get _service =>
+      _serviceOrNull ??= MicrophonePitchService(chordDetector: ChordDetector());
   StreamSubscription<ChordReading>? _sub;
 
   ChordReading _reading = ChordReading.silent();
@@ -36,9 +45,21 @@ class _ChordListenSpikeScreenState extends State<ChordListenSpikeScreen> {
   bool _listening = false;
 
   @override
+  void initState() {
+    super.initState();
+    final debug = widget.debugChords;
+    if (debug != null) {
+      _listening = true;
+      _sub = debug.listen((r) {
+        if (mounted) setState(() => _reading = r);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _sub?.cancel();
-    _service.dispose();
+    _serviceOrNull?.dispose();
     super.dispose();
   }
 

@@ -31,14 +31,24 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class FreeSingScreen extends StatefulWidget {
-  const FreeSingScreen({super.key});
+  const FreeSingScreen({super.key, this.debugReadings});
+
+  /// Test-only seam: when provided, the screen records from this stream of
+  /// pitch readings instead of opening the microphone, so the capture→trace→
+  /// display path can be exercised headlessly. Never set in production — the
+  /// real mic service stays unconstructed while this is non-null.
+  @visibleForTesting
+  final Stream<PitchReading>? debugReadings;
 
   @override
   State<FreeSingScreen> createState() => _FreeSingScreenState();
 }
 
 class _FreeSingScreenState extends State<FreeSingScreen> {
-  final MicrophonePitchService _service = MicrophonePitchService();
+  // Lazily created so the fake-capture test path never constructs the plugin.
+  MicrophonePitchService? _serviceOrNull;
+  MicrophonePitchService get _service =>
+      _serviceOrNull ??= MicrophonePitchService();
   final MelodyRecorder _recorder = MelodyRecorder();
   final Stopwatch _clock = Stopwatch();
   StreamSubscription<PitchReading>? _sub;
@@ -52,9 +62,20 @@ class _FreeSingScreenState extends State<FreeSingScreen> {
   ({PitchCaptureError reason, String? detail})? _error;
 
   @override
+  void initState() {
+    super.initState();
+    final debug = widget.debugReadings;
+    if (debug != null) {
+      _recording = true;
+      _clock.start();
+      _sub = debug.listen(_onReading);
+    }
+  }
+
+  @override
   void dispose() {
     _sub?.cancel();
-    _service.dispose();
+    _serviceOrNull?.dispose();
     super.dispose();
   }
 
