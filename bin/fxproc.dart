@@ -54,8 +54,14 @@ A chain is effects separated by "|", each "name key=value key=value":
   * 0..1 params take a percentage             * out-of-range values clamp
     (mix=20%)                                   and say so
 
+Batch: process every .wav in a folder with the same chain.
+
+  dart run bin/fxproc.dart --batch in/ --out out/ --chain "noiseReduce | limiter"
+
 Options:
   --chain "<chain>"   the effect chain (repeatable; stages concatenate)
+  --batch DIR         process every .wav in DIR (needs --out)
+  --out DIR           where batch results go (created if missing)
   --list [effect]     print the rack, or one effect's params and ranges
   --stats             peak/RMS before and after
   --mono              downmix to mono before processing
@@ -80,6 +86,8 @@ void main(List<String> args) {
   var mono = false;
   var dryRun = false;
   var play = false;
+  String? batchDir;
+  String? outDir;
 
   // Legacy flags.
   var effect = '';
@@ -99,6 +107,10 @@ void main(List<String> args) {
     switch (a) {
       case '--chain':
         chainParts.add(require(a));
+      case '--batch':
+        batchDir = require(a);
+      case '--out':
+        outDir = require(a);
       case '--list':
         listing = true;
         // The effect name is optional, so only consume a following token when
@@ -161,6 +173,19 @@ void main(List<String> args) {
     if (parsed.isEmpty) _fail('The chain is empty.');
 
     stdout.writeln('Chain: ${formatFxChain(parsed.chain)}');
+
+    if (batchDir != null) {
+      if (outDir == null) _fail('--batch needs --out <dir>');
+      _runBatch(
+        batchDir,
+        outDir,
+        parsed.chain,
+        stats: stats,
+        mono: mono,
+      );
+      return;
+    }
+
     if (dryRun) {
       for (final fx in parsed.chain) {
         stdout.write(fxCatalogText(only: fx.type));
@@ -247,6 +272,66 @@ void main(List<String> args) {
   if (play) _play(positional[1]);
 }
 
+/// Apply [chain] to every `.wav` in [inDir], writing results to [outDir].
+///
+/// One bad file does not abandon the run. A batch is used precisely when there
+/// are too many files to babysit, so a folder with one unreadable WAV in it must
+/// still process the other ninety-nine and say which one it skipped — stopping
+/// at the first problem would be the least useful possible behaviour.
+void _runBatch(
+  String inDir,
+  String outDir,
+  List<FxSpec> chain, {
+  required bool stats,
+  required bool mono,
+}) {
+  final source = Directory(inDir);
+  if (!source.existsSync()) _fail('no such folder: $inDir');
+  final target = Directory(outDir)..createSync(recursive: true);
+
+  final files = source
+      .listSync()
+      .whereType<File>()
+      .where((f) => f.path.toLowerCase().endsWith('.wav'))
+      .toList()
+    ..sort((a, b) => a.path.compareTo(b.path));
+  if (files.isEmpty) _fail('no .wav files in $inDir');
+
+  var done = 0;
+  var failed = 0;
+  for (final file in files) {
+    final name = file.uri.pathSegments.last;
+    final outPath = '${target.path}/$name';
+    try {
+      final audio = _readOrThrow(file.path, forceMono: mono);
+      final right = audio.right ?? audio.left;
+      final out = applyFxChainStereo(
+        audio.left,
+        right,
+        chain,
+        audio.sampleRate,
+      );
+      final widened = audio.right == null && !_identical(out.left, out.right);
+      final result = _Audio(
+        out.left,
+        audio.right == null && !widened ? null : out.right,
+        audio.sampleRate,
+      );
+      File(outPath).writeAsBytesSync(_wav(result));
+      done++;
+      stdout.writeln('  $name → ${_ms(result)} ms');
+      if (stats) _printStats('    ', result);
+    } on Object catch (error) {
+      failed++;
+      stderr.writeln('  $name SKIPPED: $error');
+    }
+  }
+  stdout.writeln(
+    'Batch: $done written to ${target.path}'
+    '${failed > 0 ? ', $failed skipped' : ''}',
+  );
+}
+
 void _list(String? only) {
   if (only == null) {
     stdout.writeln('The FX rack — ${FxType.values.length} effects.');
@@ -285,20 +370,31 @@ class _Audio {
 String _ms(_Audio a) =>
     (a.left.length * 1000 / a.sampleRate).toStringAsFixed(1);
 
-_Audio _read(String path, {required bool forceMono}) {
+/// Read a WAV, THROWING on anything unreadable.
+///
+/// Separate from [_read] because the two callers need opposite behaviour: a
+/// single-file run should print and exit, but a BATCH must be able to skip one
+/// bad file and keep going — and a reader that calls `exit` cannot be caught, so
+/// one unreadable file would abandon the other ninety-nine. (It did, until a
+/// batch over a folder containing a junk .wav proved it.)
+_Audio _readOrThrow(String path, {required bool forceMono}) {
   final file = File(path);
-  if (!file.existsSync()) _fail('no such file: $path');
-  final WavData wav;
-  try {
-    wav = readWavPcm16(file.readAsBytesSync());
-  } catch (e) {
-    stderr.writeln('fxproc: not a readable PCM16 WAV: $e');
-    exit(1);
-  }
+  if (!file.existsSync()) throw const FormatException('no such file');
+  final wav = readWavPcm16(file.readAsBytesSync());
   final rate = wav.sampleRate < 1 ? 44100 : wav.sampleRate;
   if (forceMono) return _Audio(wavToMonoFloat(wav), null, rate);
   final channels = wavToChannels(wav);
   return _Audio(channels.left, channels.right, rate);
+}
+
+_Audio _read(String path, {required bool forceMono}) {
+  try {
+    return _readOrThrow(path, forceMono: forceMono);
+  } on FormatException catch (e) {
+    if (!File(path).existsSync()) _fail('no such file: $path');
+    stderr.writeln('fxproc: not a readable PCM16 WAV: $e');
+    exit(1);
+  }
 }
 
 Uint8List _wav(_Audio a) {

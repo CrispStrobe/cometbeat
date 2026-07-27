@@ -27,6 +27,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/daw_edits.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart'
     show Clip, SampleSource;
+import 'package:comet_beat/core/audio/spectrogram_png.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes, wavBytesStereo;
 import 'package:comet_beat/core/audio/wav_io.dart';
 
@@ -55,6 +56,9 @@ Ops (applied in the order given):
   --find-silence [THR]   list the silent gaps (threshold fraction, default 0.01)
   --split-silence [THR]  list the PHRASES between them, as A:B ranges
   --full-stats           peak/RMS plus DC, crest factor, bit depth, crossings
+  --spectrogram OUT.png  paint the spectrum over time (see --max-hz, --grey)
+  --max-hz HZ            crop the spectrogram's top (music lives low; try 5000)
+  --grey                 greyscale spectrogram instead of the heat ramp
 
 Generator: shape = sine | square | saw | triangle | whiteNoise | pinkNoise | silence
   --amp N                generator peak, 0..1 (default 0.5)
@@ -85,6 +89,8 @@ void main(List<String> args) {
   var amp = 0.5;
   var seed = 0;
   var play = false;
+  double? maxHz;
+  var grey = false;
 
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
@@ -124,6 +130,13 @@ void main(List<String> args) {
         ops.add((a, maybeValue()));
       case '--full-stats':
         ops.add((a, null));
+      case '--spectrogram':
+        ops.add((a, requireValue(a)));
+      case '--max-hz':
+        maxHz = double.tryParse(requireValue(a));
+      case '--grey':
+      case '--gray':
+        grey = true;
       case '--amplify':
       case '--crop':
       case '--silence':
@@ -160,7 +173,7 @@ void main(List<String> args) {
   }
 
   for (final (op, value) in ops) {
-    _apply(audio, op, value);
+    _apply(audio, op, value, maxHz: maxHz, grey: grey);
   }
 
   if (outPath == null) {
@@ -178,7 +191,13 @@ void main(List<String> args) {
   if (play) _play(outPath);
 }
 
-void _apply(_Audio a, String op, String? value) {
+void _apply(
+  _Audio a,
+  String op,
+  String? value, {
+  double? maxHz,
+  bool grey = false,
+}) {
   switch (op) {
     case '--stats':
       _printStats(a);
@@ -295,6 +314,28 @@ void _apply(_Audio a, String op, String? value) {
       }
     case '--full-stats':
       _printFullStats(a);
+    case '--spectrogram':
+      // Painted from the MONO fold: a spectrogram of one channel would answer
+      // a question nobody asked, and two stacked pictures need a layout
+      // decision that belongs in the app, not here.
+      final mono = a.right == null
+          ? a.left
+          : Float64List.fromList([
+              for (var i = 0; i < a.left.length; i++)
+                (a.left[i] + (i < a.right!.length ? a.right![i] : 0)) / 2,
+            ]);
+      final png = pcmToSpectrogramPng(
+        mono,
+        sampleRate: a.sampleRate,
+        maxHz: maxHz,
+        height: 480,
+        palette: grey ? SpectrogramPalette.grey : SpectrogramPalette.heat,
+      );
+      File(value!).writeAsBytesSync(png);
+      stdout.writeln(
+        'spectrogram → $value'
+        '${maxHz == null ? '' : ' (up to ${maxHz.round()} Hz)'}',
+      );
   }
 }
 
