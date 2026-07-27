@@ -151,9 +151,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   regenerated from the FX registry (whole rack, stereo, `--list`) · F2b the
   GUI's hand-written label + param tables deleted and derived from the same
   registry · A1 the rest of the filter set (6 effects) · C1 `.cbdaw` v2, so a
-  saved project keeps its clips **editable**, not just audible.
-  **Next:** A3 dynamics (compand/multiband/limiter) · A4 channel & stereo ops ·
-  C2 drum + groove round-trip · C3 universal "Open in…" via `ProjectBridge`.
+  saved project keeps its clips **editable**, not just audible · C2 drum +
+  groove round-trip, so every source kind the DAW holds can now go home.
+  **Next:** C3 universal "Open in…" via `ProjectBridge` (the CROSS-kind half:
+  a beat → Tracker, a groove → Score, with the loss report shown BEFORE the
+  user commits — the routing and the reports already exist in
+  `core/interop/project_bridge.dart`, the Audio Editor just does not ask it) ·
+  A3 dynamics (compand/multiband/limiter) · A4 channel & stereo ops.
+  ⚠ **Interop status, precisely:** every clip kind now opens its OWN editor
+  exactly (score/tab/tracker/drum/groove — no conversion, nothing approximated),
+  and that survives a save. What is still missing is opening a clip in a
+  DIFFERENT mode's editor (C3), tab fretting surviving the trip inbound (C4),
+  and audio → notes via Transcribe (C5).
   **Files I touch:** `core/audio/fx/*` (additive — new `FxType`s are APPENDED,
   never reordered, since `.cbdaw` stores effects by name), `core/audio/crisp_dsp/*`
   (new files), `daw_edits.dart`, `daw_project.dart`, `daw_clip_source_codec.dart`,
