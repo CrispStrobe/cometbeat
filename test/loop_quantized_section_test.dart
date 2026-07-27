@@ -45,8 +45,11 @@ void main() {
   testWidgets('with quantize ON a section arms instead of jumping',
       (tester) async {
     final game = await _twoSections(tester);
-    expect(game.isPlaying, isTrue,
-        reason: 'quantize only applies while running');
+    expect(
+      game.isPlaying,
+      isTrue,
+      reason: 'quantize only applies while running',
+    );
     final before = {...game.enabledTracks};
 
     game.launchScene(1);
@@ -57,8 +60,11 @@ void main() {
     game.debugLoopWrap();
     await tester.pump();
     expect(game.pendingScene, isNull);
-    expect(game.enabledTracks, {'drums', 'bass'},
-        reason: 'it landed on the beat');
+    expect(
+      game.enabledTracks,
+      {'drums', 'bass'},
+      reason: 'it landed on the beat',
+    );
   });
 
   testWidgets('tapping the armed section again disarms it', (tester) async {
