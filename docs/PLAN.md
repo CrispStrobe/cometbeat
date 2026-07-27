@@ -426,7 +426,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   bug — note it still defaults to its old `loopsPerScene: 2` when no counts are
   given, so existing exports are byte-identical. Launching a section restarts
   its count, or a half-finished pass would cut the new one short. 5 tests.
-  **L1–L5 all shipped. Remaining: L6 per-track swing, then automation.**
+  ✅ **L6 per-track swing SHIPPED (engine).** Swing was one number for the whole
+  groove; a track can now have its own (`setTrackSwing(id, v)` / null = follow
+  the global), so a swung hat sits over a straight bass.
+  ⚠️ **The invariant this rests on, do not break it:** swing may vary per track
+  only because it CANNOT change a stem's length — `boundaryMs` delays odd steps
+  and a loop spans an even number of them, so every stem still ends on the same
+  sample. That is what keeps stems aligned and the seam click-free. A test pins
+  the rendered length across swing values, including combined with a shortened
+  (polymeter) track. If a future swing model moves the final boundary, per-track
+  swing has to go with it.
+  ⚠️ **A swing change can be legitimately INAUDIBLE:** a part that plays only on
+  the beat has no odd steps to delay. The bass is such a part, which briefly
+  fooled me into reading "no change" as a broken feature. Pinned as its own test
+  so the next person suspects the pattern before the code.
+  ⬜ **No UI yet** — the track card row is at its width limit (see the L1c
+  warning) and card long-press is taken by voice-picking, so this needs a home:
+  the sound inspector is the obvious one, next to the global swing control.
+  9 tests. **L1–L6 engine work complete; automation deliberately NOT started —
+  it is the first item that adds a new dimension to the model rather than
+  exposing something already there, so it wants a maintainer decision.**
   Scoped in [PLAN.md](../PLAN.md) → *"Loop Studio — sequencer-parity slices"*
   (L1–L6, with what is already at parity so nobody rebuilds it). Building **L1
   per-track pattern length (polymeter)** first. Touching

@@ -1712,6 +1712,45 @@ class LoopEngine {
     _clearRenderCaches();
   }
 
+  /// Per-track swing (absent = the groove's global swing).
+  ///
+  /// Giving one track its own shuffle while the rest stay straight is how a
+  /// groove gets a human feel — a swung hat over a straight bass.
+  final Map<String, double> _trackSwing = {};
+
+  /// [id]'s swing, or the global one.
+  double trackSwing(String id) => _trackSwing[id] ?? _swing;
+
+  /// Sets [id]'s swing, or clears it back to the global value with null.
+  void setTrackSwing(String id, double? value) {
+    if (value == null) {
+      if (_trackSwing.remove(id) == null) return;
+    } else {
+      // Same range as the global `swing` setter above.
+      final v = value.clamp(0.0, 0.6);
+      if (_trackSwing[id] == v) return;
+      _trackSwing[id] = v;
+    }
+    _clearRenderCaches();
+  }
+
+  /// [timing], but swung the way this track asks.
+  ///
+  /// Safe to vary per track because swing does NOT change a stem's length:
+  /// `boundaryMs` only delays ODD steps, and a loop spans an even number of
+  /// them, so every stem still ends on the same sample. That is the invariant
+  /// keeping stems aligned and the seam click-free — if a future swing model
+  /// moved the final boundary, per-track swing would have to go.
+  LoopTiming _timingFor(String id) {
+    final own = trackSwing(id);
+    if (own == _swing) return timing;
+    return LoopTiming(
+      tempoBpm: _tempoBpm,
+      swing: own,
+      bars: timing.bars,
+    );
+  }
+
   /// Per-track pattern length in eighth-steps (absent = the full 2-bar grid).
   ///
   /// A shorter track loops sooner than the rest — the groovebox move where a
@@ -2235,7 +2274,8 @@ class LoopEngine {
     final drumOv = _drumOverrides[track.id];
     final ov = drumOv != null ? '#do${identityHashCode(drumOv)}' : '';
     final key = '${track.id}#$variant#${_progression?.id ?? 'vamp'}#$voice$ov'
-        '#len${trackSteps(track.id)}#loop$_loopSteps';
+        '#len${trackSteps(track.id)}#loop$_loopSteps'
+        '#sw${trackSwing(track.id).toStringAsFixed(3)}';
     return _stemCache[key] ??= _renderStem(track, variant);
   }
 
@@ -2253,7 +2293,8 @@ class LoopEngine {
     final drumOverride = _drumOverrides[track.id];
     if (drumOverride != null) {
       if (prog == null) {
-        return _fitRows(track.id, drumOverride).render(timing, kit: _kit);
+        return _fitRows(track.id, drumOverride)
+            .render(_timingFor(track.id), kit: _kit);
       }
       final twoBars = drumOverride.render(_vampTiming, kit: _kit);
       final reps = prog.degrees.length ~/ 2;
@@ -2277,7 +2318,7 @@ class LoopEngine {
           ? renderCellsWithInstrument(cs, voice, tm, transpose: t)
           : renderCells(cs, inst, tm, transpose: t);
       if (prog == null) {
-        return one(timing, _fitCells(track.id, cellsOverride));
+        return one(_timingFor(track.id), _fitCells(track.id, cellsOverride));
       }
       final twoBars = one(_vampTiming, cellsOverride);
       final reps = prog.degrees.length ~/ 2;
@@ -2289,12 +2330,13 @@ class LoopEngine {
     }
 
     if (prog == null) {
+      final tm = _timingFor(track.id);
       final pat = track.variants[variant];
       if (voice != null && pat is MelodicPattern) {
         return renderCellsWithInstrument(
           _fitCells(track.id, pat.cells),
           voice,
-          timing,
+          tm,
           transpose: t,
         );
       }
@@ -2309,15 +2351,15 @@ class LoopEngine {
           return renderCells(
             _fitCells(track.id, pat.cells),
             pat.instrument,
-            timing,
+            tm,
             transpose: t,
           );
         }
         if (pat is DrumRowsPattern) {
-          return _fitRows(track.id, pat).render(timing, kit: _kit);
+          return _fitRows(track.id, pat).render(tm, kit: _kit);
         }
       }
-      return pat.render(timing, transpose: t, kit: _kit);
+      return pat.render(tm, transpose: t, kit: _kit);
     }
 
     final follower = track.chordFollower;
