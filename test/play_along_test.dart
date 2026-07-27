@@ -196,4 +196,77 @@ void main() {
       expect(e.finished, isTrue);
     });
   });
+
+  group('chart + engine accessors', () {
+    test('copyWith changes only the tempo', () {
+      const base = PlayAlongCharts.celloFirstPosition;
+      final slow = base.copyWith(bpm: base.bpm ~/ 2);
+      expect(slow.bpm, base.bpm ~/ 2);
+      expect(slow.name, base.name);
+      expect(slow.notes, base.notes);
+      expect(slow.octaveAgnostic, base.octaveAgnostic);
+      expect(slow.totalMs, greaterThan(base.totalMs)); // slower → longer
+
+      // With no bpm, it keeps the original (the `?? this.bpm` fall-through).
+      expect(base.copyWith().bpm, base.bpm);
+    });
+
+    test('scaledStarScore maps hit fraction to fixed thresholds', () {
+      const t = [1, 2, 3];
+      expect(scaledStarScore(0, 10, t), 0); // no hits
+      expect(scaledStarScore(5, 0, t), 0); // empty chart
+      expect(scaledStarScore(9, 10, t), 3); // >= 90% → thresholds[2]
+      expect(scaledStarScore(7, 10, t), 2); // >= 70% → thresholds[1]
+      expect(scaledStarScore(1, 10, t), 1); // any hit → 1
+    });
+
+    test('loop getters reflect setLoop and its clearing', () {
+      final e = PlayAlongEngine(PlayAlongCharts.celloFirstPosition);
+      expect(e.isLooping, isFalse);
+      expect(e.loopStartBeat, isNull);
+      expect(e.loopEndBeat, isNull);
+
+      e.setLoop(1, 3);
+      expect(e.isLooping, isTrue);
+      expect(e.loopStartBeat, 1);
+      expect(e.loopEndBeat, 3);
+
+      e.setLoop(3, 1); // end <= start → cleared
+      expect(e.isLooping, isFalse);
+      expect(e.loopStartBeat, isNull);
+    });
+
+    test('nextIndex points to the upcoming note, then -1 when none remain', () {
+      final e = PlayAlongEngine(
+        PlayAlongCharts.celloFirstPosition,
+        leadInBeats: 0,
+      );
+      expect(e.nextIndex, 0); // at the start, the first note is upcoming
+      e.update(
+        elapsedMs: 1000 * e.chart.beatMs,
+        reading: PitchReading.silent(),
+      );
+      expect(e.nextIndex, -1); // advanced past every note
+    });
+
+    test('judged counts finalized notes; reset returns to a fresh state', () {
+      final engine = _run(
+        PlayAlongCharts.celloFirstPosition,
+        (active) =>
+            active == null ? PitchReading.silent() : _reading(active.note.midi),
+      );
+      expect(engine.judged, engine.notes.length);
+      expect(engine.hits, greaterThan(0));
+
+      engine.reset();
+      expect(engine.hits, 0);
+      expect(engine.judged, 0);
+      expect(engine.accuracy, 0.0);
+      expect(
+        engine.notes.every((n) => n.result == NoteResult.pending),
+        isTrue,
+      );
+      expect(engine.inCountIn, isTrue); // clock rewound behind the lead-in
+    });
+  });
 }
