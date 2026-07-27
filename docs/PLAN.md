@@ -109,8 +109,13 @@ is recorded in [HISTORY.md](HISTORY.md).
   `../mus-daw-parity`, branch `feature/daw-parity`.** Maintainer ask: make the
   app as powerful and as intuitive as a full professional workstation, across
   **Tracker · Audio Editor · Loop Studio** (UX · feature parity · interop).
-  Deliverable = **`docs/WORKSTATION_PARITY.md`** — a scoping doc grounded in a
-  read of the code, not the docs. Headline finding: *the engines are ahead of
+  Deliverables = **`docs/WORKSTATION_PARITY.md`** (the reasoning, grounded in a
+  read of the code rather than the docs) + **the executable ladder in the root
+  `PLAN.md`** → *"Workstation parity — the executable ladder"* — **39 tasks in
+  dependency order**, each with Goal · Depends · Files · Build · Acceptance ·
+  Size, plus the traps a fresh agent would otherwise hit. ⚠️ Their IDs are
+  **`WS-`-prefixed** because this board already uses `L1`–`L6`, `A1`–`A4` and
+  `D1`–`D4` for different Loop Studio work — `WS-L3` is not `L3`. Headline finding: *the engines are ahead of
   the product; what is missing is a shell.* Three structural gaps — **S1** five
   documents / five transports / five undo stacks / five save formats, and
   `ProjectBridge` converts to a **copy** not a live link; **S2** offline
