@@ -211,6 +211,29 @@ enum FxType {
   /// Three-band compressor with a detector per band, so the kick stops steering
   /// the vocal.
   multibandCompressor,
+
+  // A4 — the channel/stereo-field ops. These need BOTH channels at once, so
+  // unlike every other effect they cannot be run per-channel; the chain gives
+  // each an explicit stereo case and passes a mono buffer through untouched.
+
+  /// The general 2×2 channel matrix — the escape hatch of the channel ops.
+  remix,
+
+  /// Swap left and right.
+  swapChannels,
+
+  /// Mid/side width: 0 mono, 1 unchanged, 2 twice as wide.
+  stereoWidth,
+
+  /// Remove what both channels share — the "take the centre out" trick.
+  centreCancel,
+
+  /// Headphone crossfeed: a little of each channel into the opposite ear,
+  /// delayed and dulled, the way a head does it.
+  crossfeed,
+
+  /// Sweep the image side to side with an LFO.
+  autoPan,
 }
 
 enum FxPreset { vocalPolish, lofiCrunch, wideSpace, robotVoice }
@@ -393,6 +416,43 @@ FxSpec defaultFx(FxType type) => switch (type) {
             'makeupDb': 0,
             'mix': 1,
           },
+        ),
+      // A4. The identity matrix: an unedited remix passes audio through
+      // untouched, so adding one is never a surprise.
+      FxType.remix => const FxSpec(
+          type: FxType.remix,
+          params: {
+            'leftFromLeft': 1,
+            'leftFromRight': 0,
+            'rightFromLeft': 0,
+            'rightFromRight': 1,
+            'mix': 1,
+          },
+        ),
+      FxType.swapChannels =>
+        const FxSpec(type: FxType.swapChannels, params: {'mix': 1}),
+      FxType.stereoWidth => const FxSpec(
+          type: FxType.stereoWidth,
+          params: {'width': 1.4, 'mix': 1},
+        ),
+      FxType.centreCancel => const FxSpec(
+          type: FxType.centreCancel,
+          params: {'amount': 1, 'mix': 1},
+        ),
+      // A modest default: enough to unclench a hard-panned mix on headphones,
+      // not enough to read as an effect.
+      FxType.crossfeed => const FxSpec(
+          type: FxType.crossfeed,
+          params: {
+            'amount': 0.4,
+            'delayMs': 0.3,
+            'cutoffHz': 700,
+            'mix': 1,
+          },
+        ),
+      FxType.autoPan => const FxSpec(
+          type: FxType.autoPan,
+          params: {'rateHz': 0.5, 'depth': 0.8, 'waveform': 0, 'mix': 1},
         ),
       FxType.compressor => const FxSpec(
           type: FxType.compressor,

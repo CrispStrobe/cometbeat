@@ -41,7 +41,8 @@ void main() {
   // Gated: see test/support/slow_tests.dart for why and how to run it.
   if (!kRunHeavy) {
     test(
-      describeSkip('HEAVY', '3m29s — full offline renders of two native IT modules'),
+      describeSkip(
+          'HEAVY', '3m29s — full offline renders of two native IT modules'),
       () {},
     );
     return;

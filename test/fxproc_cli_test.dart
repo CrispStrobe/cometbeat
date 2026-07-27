@@ -67,7 +67,8 @@ void main() {
   // Gated: see test/support/slow_tests.dart for why and how to run it.
   if (!kRunHeavy) {
     test(
-      describeSkip('HEAVY', '1m02s — spawns the fxproc CLI as a subprocess per case'),
+      describeSkip(
+          'HEAVY', '1m02s — spawns the fxproc CLI as a subprocess per case'),
       () {},
     );
     return;

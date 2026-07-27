@@ -50,6 +50,14 @@ import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart'
     show reverbFx, reverbFxStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart' show ringModFx;
+import 'package:comet_beat/core/audio/crisp_dsp/stereo_ops.dart'
+    show
+        autoPanFx,
+        centreCancelFx,
+        crossfeedFx,
+        remixFx,
+        stereoWidthFx,
+        swapChannelsFx;
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
     show timeStretch, timeStretchStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
@@ -192,6 +200,50 @@ Float64List applyFxChain(
           mix: p('mix', 1),
           sampleRate: sampleRate,
         ),
+      // A4 — the ops that need both channels. These MUST be listed here: the
+      // fallback below runs an effect on each channel independently, which for
+      // a channel op would silently do nothing at all.
+      FxType.remix => remixFx(
+          outLeft,
+          outRight,
+          leftFromLeft: p('leftFromLeft', 1),
+          leftFromRight: p('leftFromRight', 0),
+          rightFromLeft: p('rightFromLeft', 0),
+          rightFromRight: p('rightFromRight', 1),
+          mix: p('mix', 1),
+        ),
+      FxType.swapChannels =>
+        swapChannelsFx(outLeft, outRight, mix: p('mix', 1)),
+      FxType.stereoWidth => stereoWidthFx(
+          outLeft,
+          outRight,
+          width: p('width', 1.4),
+          mix: p('mix', 1),
+        ),
+      FxType.centreCancel => centreCancelFx(
+          outLeft,
+          outRight,
+          amount: p('amount', 1),
+          mix: p('mix', 1),
+        ),
+      FxType.crossfeed => crossfeedFx(
+          outLeft,
+          outRight,
+          sampleRate: sampleRate.toDouble(),
+          amount: p('amount', 0.4),
+          delayMs: p('delayMs', 0.3),
+          cutoffHz: p('cutoffHz', 700),
+          mix: p('mix', 1),
+        ),
+      FxType.autoPan => autoPanFx(
+          outLeft,
+          outRight,
+          sampleRate: sampleRate.toDouble(),
+          rateHz: p('rateHz', 0.5),
+          depth: p('depth', 0.8),
+          waveform: p('waveform', 0).round(),
+          mix: p('mix', 1),
+        ),
       _ => (
           left: _applyFx(outLeft, fx, sampleRate),
           right: _applyFx(outRight, fx, sampleRate),
@@ -222,6 +274,19 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
     FxType.gain => _gainFx(input, gainDb: p('gainDb', 0), mix: p('mix', 1)),
     // The mono wrapper folds the stereo render after the full FX graph.
     FxType.pan => Float64List.fromList(input),
+    // A4 — every channel op is defined by the RELATIONSHIP between the two
+    // channels, so on a mono buffer there is nothing to relate to and the
+    // honest answer is to pass it through. (Swapping one channel, widening a
+    // field with no width, or cancelling a centre that is the whole signal are
+    // all either no-ops or destroy-everything; a pass-through is the only one
+    // that is not surprising.) The real work is in the stereo dispatch.
+    FxType.remix ||
+    FxType.swapChannels ||
+    FxType.stereoWidth ||
+    FxType.centreCancel ||
+    FxType.crossfeed ||
+    FxType.autoPan =>
+      Float64List.fromList(input),
     FxType.reverb => reverbFx(
         input,
         roomSize: p('roomSize', 0.7),

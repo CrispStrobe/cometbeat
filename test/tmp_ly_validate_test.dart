@@ -27,7 +27,8 @@ void main() {
         print('$name: PARSED  ${notes.length} notes, '
             '${fingered.length} fingered, ${score.measures.length} measures, '
             'clef ${score.clef}, key ${score.keySignature.fifths}');
-        print('   fingerings: ${fingered.map((n) => n.fingerings.join()).join(' ')}');
+        print(
+            '   fingerings: ${fingered.map((n) => n.fingerings.join()).join(' ')}');
         print('   unsure markers: ${'%% UNSURE'.allMatches(src).length}');
       } catch (e) {
         print('$name: PARSE FAILED — $e');
@@ -37,5 +38,6 @@ void main() {
 }
 
 extension on String {
-  Iterable<Match> allMatches(String s) => RegExp(RegExp.escape(this)).allMatches(s);
+  Iterable<Match> allMatches(String s) =>
+      RegExp(RegExp.escape(this)).allMatches(s);
 }

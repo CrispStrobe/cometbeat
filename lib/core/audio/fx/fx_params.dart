@@ -152,6 +152,15 @@ const _byName = <String, FxParamSpec>{
   'lowRatio': FxParamSpec(key: 'lowRatio', min: 1, max: 20, unit: ':1'),
   'midRatio': FxParamSpec(key: 'midRatio', min: 1, max: 20, unit: ':1'),
   'highRatio': FxParamSpec(key: 'highRatio', min: 1, max: 20, unit: ':1'),
+  // A4 — channel and stereo field. The matrix coefficients reach ±2 so a
+  // deliberate polarity flip or a boost is expressible, not just a blend.
+  'leftFromLeft': FxParamSpec(key: 'leftFromLeft', min: -2, max: 2),
+  'leftFromRight': FxParamSpec(key: 'leftFromRight', min: -2, max: 2),
+  'rightFromLeft': FxParamSpec(key: 'rightFromLeft', min: -2, max: 2),
+  'rightFromRight': FxParamSpec(key: 'rightFromRight', min: -2, max: 2),
+  'width': FxParamSpec(key: 'width', min: 0, max: 4, unit: 'x'),
+  'amount': FxParamSpec(key: 'amount', min: 0, max: 1),
+  'cutoffHz': FxParamSpec(key: 'cutoffHz', min: 100, max: 8000, unit: 'Hz'),
 };
 
 /// Ranges that differ for one specific effect, where the same word means
@@ -172,6 +181,11 @@ const _byTypeAndName = <(FxType, String), FxParamSpec>{
   // without it the slider would offer 10 and read "0.50s".
   (FxType.convolutionReverb, 'decay'):
       FxParamSpec(key: 'decay', min: 0, max: 1),
+  // A crossfeed delay is the width of a HEAD, not a musical delay — sub-
+  // millisecond. The general `delayMs` range (up to 2 s) would make the useful
+  // part of the control a pixel wide.
+  (FxType.crossfeed, 'delayMs'):
+      FxParamSpec(key: 'delayMs', min: 0.05, max: 2, unit: 'ms'),
   // A steep filter is worth reaching for precisely at the edges of the
   // spectrum — a rumble cut at 30 Hz, a hiss cut at 16 kHz — so its corner
   // spans the whole audible range rather than the general 20..18000.
@@ -249,6 +263,12 @@ String fxTypeLabel(FxType type) => switch (type) {
       FxType.limiter => 'Limiter',
       FxType.deEsser => 'De-esser',
       FxType.multibandCompressor => 'Multiband compressor',
+      FxType.remix => 'Channel matrix',
+      FxType.swapChannels => 'Swap channels',
+      FxType.stereoWidth => 'Stereo width',
+      FxType.centreCancel => 'Centre cancel',
+      FxType.crossfeed => 'Crossfeed',
+      FxType.autoPan => 'Auto-pan',
     };
 
 /// A short label for one param — the slider caption.
@@ -309,6 +329,13 @@ String fxParamLabel(String key) => switch (key) {
       'lowRatio' => 'Low ratio',
       'midRatio' => 'Mid ratio',
       'highRatio' => 'High ratio',
+      'leftFromLeft' => 'L from L',
+      'leftFromRight' => 'L from R',
+      'rightFromLeft' => 'R from L',
+      'rightFromRight' => 'R from R',
+      'width' => 'Width',
+      'amount' => 'Amount',
+      'cutoffHz' => 'Dullness',
       _ => key,
     };
 
@@ -378,12 +405,24 @@ enum FxCategory {
   drive,
   space,
   pitch,
-  voice
+  voice,
+
+  /// A4 — the ops defined by the RELATIONSHIP between the two channels. Their
+  /// own group rather than filed under level, because "what the stereo image
+  /// does" is the question a user has when reaching for any of them.
+  stereo,
 }
 
 /// The category [type] belongs to.
 FxCategory fxCategory(FxType type) => switch (type) {
       FxType.gain || FxType.pan => FxCategory.level,
+      FxType.remix ||
+      FxType.swapChannels ||
+      FxType.stereoWidth ||
+      FxType.centreCancel ||
+      FxType.crossfeed ||
+      FxType.autoPan =>
+        FxCategory.stereo,
       FxType.lowpass ||
       FxType.highpass ||
       FxType.bandpass ||
@@ -436,4 +475,5 @@ String fxCategoryLabel(FxCategory category) => switch (category) {
       FxCategory.space => 'Space',
       FxCategory.pitch => 'Pitch & time',
       FxCategory.voice => 'Voice',
+      FxCategory.stereo => 'Stereo & channels',
     };

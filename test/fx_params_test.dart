@@ -196,6 +196,9 @@ void main() {
         'FxType.distortion.kind',
         'FxType.autoWah.waveform',
         'FxType.sincFilter.shape',
+        // A4 — auto-pan reuses the shared tracker LFO shapes, so it inherits
+        // `waveform`'s choice descriptor rather than inventing a second one.
+        'FxType.autoPan.waveform',
       ]);
     });
   });

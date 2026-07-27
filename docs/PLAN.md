@@ -158,11 +158,14 @@ is recorded in [HISTORY.md](HISTORY.md).
   saved project keeps its clips **editable**, not just audible · C2 drum +
   groove round-trip, so every source kind the DAW holds can now go home · C3
   cross-mode "Open a copy in…" (hosting the already-built `OpenInMenu`, which
-  had no host) · A3 dynamics (look-ahead limiter · de-esser · multiband).
-  **Next:** A4 channel & stereo ops (remix matrix · swap · mid/side ·
-  out-of-phase extraction · crossfeed) · A5 restoration (spectral noise
-  reduction is the big one) · C4 tab fretting surviving the trip inbound ·
-  C5 "Transcribe this clip".
+  had no host) · A3 dynamics (look-ahead limiter · de-esser · multiband) · A4 the
+  channel/stereo ops.
+  **Next:** A5 restoration (spectral noise reduction is the big one, and the
+  radix-2 FFT already exists in `chroma_analysis.dart`) · A2 tone curves ·
+  A6/A7 · B1–B6 the non-FX editor ops · C4 tab fretting inbound · C5
+  "Transcribe this clip".
+  **Rack is now 45 effects**, every one of them reachable from the GUI *and* the
+  CLI with no per-effect UI or CLI code.
   ⚠ **Interop status, precisely:** every clip kind opens its OWN editor exactly
   (score/tab/tracker/drum/groove — no conversion, nothing approximated) and that
   survives a save; score and tracker clips can additionally open a CONVERTED
@@ -1330,9 +1333,25 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
   Tests: `dynamics_zoo_fx_test` (13), each asserting the PROPERTY that makes the
   effect what it claims to be — dynamics are the easiest DSP to test wrongly,
   because "it got quieter" passes for almost any bug.
-- [ ] **A4 channels/stereo** — swap · **remix matrix** · mid/side encode+decode ·
-  out-of-phase (centre-cancel) extraction · headphone crossfeed · balance ·
-  auto-pan.
+- [x] **A4 channels/stereo** — `remix` (the general 2×2 matrix) · `swapChannels`
+  · `stereoWidth` (mid/side) · `centreCancel` · `crossfeed` · `autoPan`, in a new
+  `FxCategory.stereo` group. New DSP `crisp_dsp/stereo_ops.dart`.
+  * **These are the first effects that cannot be run per-channel.** Every other
+    effect in the rack is a per-channel transform, so the stereo path can run it
+    on left and right independently; a channel op is defined by the RELATIONSHIP
+    between the two, so it needs an explicit case in the STEREO dispatch. Get
+    that wrong and the op does *nothing at all*, which reads as "subtle" rather
+    than "broken" — so there is a test whose whole job is to run every channel op
+    on a stereo input it must change, and require a change.
+  * on a MONO buffer they pass through, deliberately: there is no second channel
+    to relate to, and inventing one would be worse than doing nothing.
+  * `remix` is the escape hatch (like `biquadRaw`) and genuinely subsumes swap, a
+    mono fold, a balance and a polarity flip — asserted. The named effects exist
+    because "swap the channels" is easier to find than four numbers.
+  * `centreCancel`'s doc says what it actually does rather than promising "vocal
+    removal": it takes the bass and kick with it, and the centred part's reverb
+    is stereo and stays behind.
+  Tests: `stereo_ops_fx_test` (20).
 - [ ] **A5 restoration** — DC shift · **noise profile → spectral reduction** (the
   most-wanted repair tool; the radix-2 FFT already exists in
   `chroma_analysis.dart`) · hum comb · click/crackle repair · de-clip.

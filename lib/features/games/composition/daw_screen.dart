@@ -276,6 +276,13 @@ abstract interface class DawTester {
 const kDawClipEffectTypes = <DawClipEffectType>[
   DawClipEffectType.gain,
   DawClipEffectType.pan,
+  // A4 — the stereo field, next to the other level controls.
+  DawClipEffectType.stereoWidth,
+  DawClipEffectType.autoPan,
+  DawClipEffectType.swapChannels,
+  DawClipEffectType.centreCancel,
+  DawClipEffectType.crossfeed,
+  DawClipEffectType.remix,
   DawClipEffectType.reverb,
   DawClipEffectType.delay,
   DawClipEffectType.chorus,

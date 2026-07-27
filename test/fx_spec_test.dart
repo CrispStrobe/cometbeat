@@ -78,6 +78,13 @@ void main() {
         'limiter',
         'deEsser',
         'multibandCompressor',
+        // A4 — the channel/stereo ops.
+        'remix',
+        'swapChannels',
+        'stereoWidth',
+        'centreCancel',
+        'crossfeed',
+        'autoPan',
       ]);
     });
   });

@@ -136,13 +136,13 @@ Status key: ✅ have it · 🔶 partial · ⬜ to build.
 | Op | Meaning | Status |
 |---|---|---|
 | pan / width | constant-power pan, M/S width | ✅ |
-| swap channels | | ⬜ A4 |
-| remix matrix | arbitrary `out[i] = Σ w·in[j]`, incl. up/down-mix | ⬜ A4 |
-| mid/side encode + decode | as explicit ops, so M and S can be processed apart | ⬜ A4 |
-| out-of-phase extraction | side-only — the classic centre-cancel / instrumental trick | ⬜ A4 |
-| headphone crossfeed | binaural fatigue reducer | ⬜ A4 |
-| balance / per-channel gain | | ⬜ A4 |
-| auto-pan | LFO pan | ⬜ A4 |
+| swap channels | | ✅ |
+| remix matrix | the general 2×2; subsumes swap, mono fold, balance, polarity | ✅ |
+| mid/side width | `stereoWidth` — the mid stays put, the side scales | ✅ |
+| out-of-phase extraction | `centreCancel` — honest about taking the bass with it | ✅ |
+| headphone crossfeed | delayed + dulled opposite channel | ✅ |
+| balance / per-channel gain | via `remix` | ✅ |
+| auto-pan | constant-power LFO pan, shared tracker LFO shapes | ✅ |
 
 ### A5 — Restoration
 | Op | Meaning | Status |
@@ -273,7 +273,7 @@ F2  bin/fxproc.dart regenerated from the registry      ✅ SHIPPED
 F2b the GUI's label + param tables deleted, derived    ✅ SHIPPED (unplanned)
 F3  chain string as copy/paste preset in the GUI
 
-A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo
+A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo ✅
 A5  restoration       A6  time/pitch          A2  tone curves      A7  generators
 
 B1  pad/repeat/split-on-silence/splice        B3  full stats
