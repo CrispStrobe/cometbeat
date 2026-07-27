@@ -398,6 +398,45 @@ Still genuinely out of scope, for reasons that are NOT about audience: MIDI
 clock and a full automation matrix belong to the Tracker and the Audio Editor,
 which is a mode-boundary decision, not a capability ceiling.
 
+### Loop Studio — DECIDED by the maintainer 2026-07-27 (build these)
+
+Four open questions, answered. These are decisions, not suggestions — the
+reasoning behind each is in the audience correction above (CometBeat scales up
+to students and hobbyists; Scratch/TinkerCAD model).
+
+- ⬜ **D1 — "Add a track" = roles AND empty (option C).** The ＋ offers the five
+  authored roles (drums / bass / chords / melody / sparkle) *and* an "empty"
+  entry, with the role list first so nothing is ever a blank page but the
+  ceiling is uncapped. A role-add arrives with that role's authored patterns and
+  variants and plays immediately; an empty-add arrives silent for the tune grid.
+  **Rename matters only for empty tracks** ("Track 6" means nothing) — do it
+  with the empty path, not before.
+  Build on `duplicateTrack`/`removeExtraTrack` (`loop_engine.dart`), which
+  already handle the extra-track roster, id allocation and settings cleanup.
+  ⚠️ Copies/new tracks are NOT in `_trackColors` or `_trackLabel` — see the
+  `_sourceIdOf` fallback; an empty track needs its own colour + name, not a
+  suffix fallback. ⚠️ The track-card row is FULL (23px overflow); put any new
+  control in the inspector.
+- ⬜ **D2 — pan automation gets a parameter SWITCH (option A).** One 16-cell
+  strip per track with a Volume / Pan toggle above it, not two strips. The
+  render path already exists (A3); this is the editor. Reuse
+  `_cycleAutomationStep` with the param as an argument, and keep the
+  "cycling back to neutral DROPS the lane" rule — it is what preserves the
+  byte-identical guarantee.
+- ⬜ **D3 — build a PER-TRACK FILTER, then automate it.** Approved as real work.
+  Today `_masterFilter` is global and `AutomationParam.filter` renders nothing.
+  A biquad per track in the mix path; the payoff is the filter sweep (dull the
+  bass while the hats stay bright, then open it across the loop). Do the filter
+  FIRST, then wire `AutomationParam.filter` through the same envelope seam
+  `mixStems` already takes.
+- ⬜ **D4 — PORT the two orphaned tests, do not drop them.**
+  `test/generator_shapes_test.dart` (238 lines) and
+  `test/mod_effect_memory_test.dart` (218) were deleted by `8a2c2d52` and no
+  longer compile against current code. Recover them with
+  `git show 8a2c2d52^:<path>` and port to the current API. **@tracker-* /
+  whoever owns the generator:** this is yours — the APIs moved for reasons only
+  you know, and that coverage is silently absent until it is back.
+
 ### Loop Studio — automation lanes (scoped 2026-07-27, NOT started)
 
 L1–L6 all exposed structure that already existed. **Automation is the first item
