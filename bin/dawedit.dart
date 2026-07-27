@@ -62,9 +62,13 @@ Ops (applied in the order given):
   --max-hz HZ            crop the spectrogram's top (music lives low; try 5000)
   --grey                 greyscale spectrogram instead of the heat ramp
 
-Generator: shape = sine | square | saw | triangle | whiteNoise | pinkNoise | silence
+Generator shapes:
+  sine square saw triangle pluck impulse silence
+  whiteNoise pinkNoise brownNoise blueNoise violetNoise
+  sweep logSweep        (from <freq> to --to, over the given seconds)
   --amp N                generator peak, 0..1 (default 0.5)
-  --seed N               noise seed (default 0)
+  --seed N               noise / pluck seed (default 0)
+  --to HZ                the end frequency for a sweep (default 20000)
 
   --play                 play the result when done (afplay/ffplay/aplay)
 ''';
@@ -90,6 +94,7 @@ void main(List<String> args) {
   String? generate;
   var amp = 0.5;
   var seed = 0;
+  var toFreq = 20000.0;
   var play = false;
   double? maxHz;
   var grey = false;
@@ -119,6 +124,8 @@ void main(List<String> args) {
         amp = double.tryParse(requireValue(a)) ?? amp;
       case '--seed':
         seed = int.tryParse(requireValue(a)) ?? seed;
+      case '--to':
+        toFreq = double.tryParse(requireValue(a)) ?? toFreq;
       case '--play':
         play = true;
       case '--stats':
@@ -161,7 +168,7 @@ void main(List<String> args) {
   if (generate != null) {
     if (positional.isEmpty) _fail('--generate needs an output .wav path');
     outPath = positional.first;
-    audio = _generate(generate, amp: amp, seed: seed);
+    audio = _generate(generate, amp: amp, seed: seed, endFreq: toFreq);
     stdout.writeln(
       'Generated $generate '
       '(${audio.left.length} samples @ ${audio.sampleRate} Hz)',
@@ -475,7 +482,12 @@ void _printStats(_Audio a) {
   );
 }
 
-_Audio _generate(String spec, {required double amp, required int seed}) {
+_Audio _generate(
+  String spec, {
+  required double amp,
+  required int seed,
+  double endFreq = 20000,
+}) {
   final parts = spec.split(':');
   final shape = GeneratorShape.values.firstWhere(
     (s) => s.name.toLowerCase() == parts.first.toLowerCase(),
@@ -493,6 +505,7 @@ _Audio _generate(String spec, {required double amp, required int seed}) {
       samples: (seconds * rate).round(),
       sampleRate: rate,
       freq: freq,
+      endFreq: endFreq,
       amp: amp,
       seed: seed,
     ),

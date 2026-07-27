@@ -168,11 +168,11 @@ Status key: ✅ have it · 🔶 partial · ⬜ to build.
 | Op | Meaning | Status |
 |---|---|---|
 | sine/square/saw/triangle/white/pink/silence | | ✅ |
-| brown / blue / violet noise | the rest of the colour set | ⬜ A7 |
-| sweep / chirp | linear + log frequency ramps (the measurement signal) | ⬜ A7 |
-| plucked string | Karplus-Strong — `crisp_dsp/karplus.dart` already exists, unreachable from here | ⬜ A7 |
+| brown / blue / violet noise | integrated / differentiated white | ✅ |
+| sweep / chirp | linear + log, phase INTEGRATED so there is no click | ✅ |
+| plucked string | Karplus–Strong — the DSP existed, now reachable | ✅ |
 | multi-shape with per-shape ramps + envelope | | ⬜ A7 |
-| DTMF / test tones / impulse | | ⬜ A7 |
+| impulse | the measurement signal — through an effect it IS the response | ✅ (DTMF not built) |
 
 ---
 
@@ -274,7 +274,7 @@ F2b the GUI's label + param tables deleted, derived    ✅ SHIPPED (unplanned)
 F3  chain string as copy/paste preset in the GUI
 
 A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo ✅
-A5  restoration ✅    A6  time/pitch          A2  tone curves      A7  generators
+A5  restoration ✅    A6  time/pitch          A2  tone curves      A7  generators ✅
 
 B1  pad/repeat/split-on-silence/splice        B3  full stats
 B2  dither+noise shaping ✅                   B4  VAD ✅   B5  spectrogram CLI ✅

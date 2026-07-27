@@ -1578,22 +1578,50 @@ class _DawScreenState extends State<DawScreen>
         GeneratorShape.whiteNoise => l10n.dawShapeWhiteNoise,
         GeneratorShape.pinkNoise => l10n.dawShapePinkNoise,
         GeneratorShape.silence => l10n.dawShapeSilence,
+        // A7 — left untranslated on purpose, the same call the FX rack makes
+        // for its effect names: these are established audio-engineering terms
+        // that appear in English in every tool the user will meet, and the
+        // alternative is seven new keys in the hot shared ARBs to invent
+        // German for "violet noise".
+        GeneratorShape.brownNoise => 'Brown noise',
+        GeneratorShape.blueNoise => 'Blue noise',
+        GeneratorShape.violetNoise => 'Violet noise',
+        GeneratorShape.sweep => 'Sweep (linear)',
+        GeneratorShape.logSweep => 'Sweep (log)',
+        GeneratorShape.pluck => 'Plucked string',
+        GeneratorShape.impulse => 'Impulse',
       };
+
+  /// Whether a frequency control means anything for [shape].
+  ///
+  /// Listed as what IS pitched rather than what is not: a new noise colour
+  /// added to the enum should default to hiding the control, not to showing a
+  /// frequency slider that does nothing.
+  static bool _shapeIsPitched(GeneratorShape shape) => const {
+        GeneratorShape.sine,
+        GeneratorShape.square,
+        GeneratorShape.saw,
+        GeneratorShape.triangle,
+        GeneratorShape.sweep,
+        GeneratorShape.logSweep,
+        GeneratorShape.pluck,
+      }.contains(shape);
 
   /// O7 — build a tone / noise / silence clip from scratch onto a new lane.
   Future<void> _generateClipDialog() async {
     final l10n = AppLocalizations.of(context)!;
     var shape = GeneratorShape.sine;
     var freq = 440.0;
+    var endFreq = 8000.0;
     var seconds = 2.0;
     var amp = 0.5;
     final made = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) {
-          final pitched = shape != GeneratorShape.silence &&
-              shape != GeneratorShape.whiteNoise &&
-              shape != GeneratorShape.pinkNoise;
+          final pitched = _shapeIsPitched(shape);
+          final sweeping =
+              shape == GeneratorShape.sweep || shape == GeneratorShape.logSweep;
           return AlertDialog(
             title: Text(l10n.dawGenerate),
             content: SizedBox(
@@ -1618,7 +1646,10 @@ class _DawScreenState extends State<DawScreen>
                   ),
                   // Frequency only means something for the tone shapes.
                   if (pitched) ...[
-                    Text('${l10n.dawFrequency} ${freq.round()} Hz'),
+                    Text(
+                      '${l10n.dawFrequency} ${freq.round()} Hz'
+                      '${sweeping ? ' → ${endFreq.round()} Hz' : ''}',
+                    ),
                     Slider(
                       value: freq,
                       min: 20,
@@ -1627,6 +1658,15 @@ class _DawScreenState extends State<DawScreen>
                       onChanged: (v) => setDialog(() => freq = v),
                     ),
                   ],
+                  // A sweep needs somewhere to sweep TO.
+                  if (sweeping)
+                    Slider(
+                      value: endFreq,
+                      min: 40,
+                      max: 20000,
+                      label: '${endFreq.round()} Hz',
+                      onChanged: (v) => setDialog(() => endFreq = v),
+                    ),
                   Text('${l10n.dawLength} ${seconds.toStringAsFixed(1)} s'),
                   Slider(
                     value: seconds,
@@ -1659,7 +1699,13 @@ class _DawScreenState extends State<DawScreen>
       ),
     );
     if (made != true) return;
-    generateClip(shape: shape, freq: freq, seconds: seconds, amp: amp);
+    generateClip(
+      shape: shape,
+      freq: freq,
+      endFreq: endFreq,
+      seconds: seconds,
+      amp: amp,
+    );
   }
 
   /// Ocenaudio's "Amplify": pick a gain in dB and bake it into the clip.
@@ -2563,12 +2609,14 @@ class _DawScreenState extends State<DawScreen>
   void generateClip({
     required GeneratorShape shape,
     double freq = 440,
+    double endFreq = 20000,
     double seconds = 2,
     double amp = 0.5,
   }) {
     _daw.addGeneratedClip(
       shape: shape,
       freq: freq,
+      endFreq: endFreq,
       seconds: seconds,
       amp: amp,
     );

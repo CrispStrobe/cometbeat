@@ -22,11 +22,11 @@ enum CelloString {
 
   /// Localized display name (German B = H handled by the ARB files).
   String label(AppLocalizations l10n) => switch (this) {
-    CelloString.c => l10n.noteNameC,
-    CelloString.g => l10n.noteNameG,
-    CelloString.d => l10n.noteNameD,
-    CelloString.a => l10n.noteNameA,
-  };
+        CelloString.c => l10n.noteNameC,
+        CelloString.g => l10n.noteNameG,
+        CelloString.d => l10n.noteNameD,
+        CelloString.a => l10n.noteNameA,
+      };
 }
 
 class CelloNote {

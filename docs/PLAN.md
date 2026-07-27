@@ -1840,9 +1840,32 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
   where repair tools go wrong.
 - [ ] **A6 time/pitch** — pitch **bend envelope** · stretch quality tiers ·
   high-quality rate conversion with explicit anti-aliasing · raw up/downsample.
-- [ ] **A7 generators** — brown/blue/violet noise · sweep/chirp (lin+log) ·
-  plucked string (`crisp_dsp/karplus.dart` exists but is unreachable here) ·
-  multi-shape with ramps + envelope · impulse/DTMF.
+- [x] **A7 generators** — `brownNoise` · `blueNoise` · `violetNoise` ·
+  `sweep` (linear) · `logSweep` · `pluck` · `impulse`, on `GeneratorShape`, so
+  they reach the CLI (`--generate logSweep:20:4 --to 18000`) AND the app's
+  Generate dialog. `karplusPluck` already existed in `crisp_dsp/` and was
+  unreachable from the generator; the pluck is now that DSP.
+  * the rising colours are DIFFERENTIATED white noise and the falling ones
+    INTEGRATED (leaky, or a pure sum wanders off as DC drift) — the same
+    ±6 dB/oct relationship the names describe;
+  * a sweep INTEGRATES its phase. Written the obvious way as `sin(2π·f(t)·t)`
+    it is a different and wrong signal — t multiplies the whole changing
+    frequency and the phase jumps, which is audible as a click. A test bounds
+    the largest sample-to-sample step to catch exactly that.
+  * the GUI dialog gained an end-frequency slider (a sweep needs somewhere to
+    sweep TO) and `_shapeIsPitched` now lists what IS pitched rather than what
+    is not, so a noise colour added later hides the frequency control by
+    default instead of showing one that does nothing.
+  * ⚠ the seven new names are deliberately **untranslated**, the same call the
+    FX rack makes for effect names: they are established audio-engineering terms
+    that appear in English in every tool the user will meet, and the alternative
+    was seven new keys in the hot shared ARBs to invent German for "violet
+    noise". Reconsider if the maintainer wants them localised.
+  Tests: `generator_shapes_test` (12), each measuring the SPECTRAL SHAPE or the
+  trajectory claimed — which end a colour leans on, where a sweep is at its
+  midpoint (geometric mean for log, arithmetic for linear), that a pluck is
+  pitched and decays, and that an impulse through a reverb yields that reverb's
+  impulse response.
 
 **Pillar B — non-FX editor ops** (`daw_edits.dart` → service → `bin/dawedit.dart`
 → inspector, the same three-way testability as O1–O6)
