@@ -1093,6 +1093,36 @@ is recorded in [HISTORY.md](HISTORY.md).
   trade (strips remove the tiling busywork that cost earlier agents 30 min each, at the price
   of one extraction when a glyph is genuinely contested).
 
+  **⭐ ROMBERG p.31 «Von der Applicatur» — 28 systems that ARE the neck frame.** A 4-column
+  (one per string) x 7-row (hand up one semitone per row) table: 112 noteheads, 100 digits,
+  and **every single cell is four notes fingered `1 2 3 4` on four CONSECUTIVE SEMITONES**.
+  That is `fingerStep: 1` and `neckFingers: [1,2,3,4]` spanning a minor third, demonstrated
+  28 independent times by the composer himself (d.1841, no editorial layer).
+  • **`firstPositionOffset: 2` confirmed by a THIRD source**, and mechanically: the reader
+  checked all 112 notes against `open_string + 2 + (row−1) + (finger−1)` and got 112/112.
+  The printed italic note-names agreed with its notehead reading 24/24.
+  • ⚠ **Correction to my own reading:** I saw `A Saite. PRIMA 1ma` and took `PRIMA` for a
+  POSITION label. It is the STRING (prima corda = A) — the same `Ia/IIa/IIIa/IVa` convention
+  as Becker pp.16/18. **Romberg prints NO position number on this page at all.** A useful
+  contrast with Becker, who names every position: the numbering scheme is an editor's
+  apparatus, not something the older source needed.
+  • ⚠ **A prose rule that must be RECONCILED, not merged, with the one I quoted from p.22:**
+  *"Bis zur ersten Octave werden alle Terzen, seien es grosse oder kleine, mit vier Fingern
+  genommen, wobei jedoch einer von den vieren unbenutzt bleibt. Von dem hohen A an werden die
+  Terzen mit drei Fingern genommen…"* — thirds taken with four fingers, one left UNUSED, and
+  from high A upward with three. Earlier I quoted p.22 as "a major third is taken 1‑2‑4 with
+  the first finger stretching". These are not obviously the same statement, and I am not going
+  to synthesise them from a second-hand quote: whoever models this should read both pages
+  together. It also explains where the table stops — the A column ends on `gis'`, one semitone
+  short of the high A.
+  • *"Der Daumen bleibt, wie bisher, dem zweiten Finger gegenüber liegen … er gleitet, dem
+  zweiten Finger gegenüber, ohne alle Anstrengung mit fort."* — the thumb BEHIND the neck sits
+  opposite finger 2 and travels with the hand. We model no behind-the-neck thumb (it stops no
+  string), which this supports as the right omission.
+  • Not smoothed: row 1 prints no digits in the A/G/C columns but DOES in the D column
+  (recorded absent, not filled in by analogy); `ces`/`fes` spellings; a double sharp `fisfis`
+  the page's own footnote exists to explain; and a printer's slip *"der esten Lage"* left as set.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
