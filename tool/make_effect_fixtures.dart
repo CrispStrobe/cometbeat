@@ -42,7 +42,11 @@ Float64List _wave() {
 }
 
 /// One fixture: [cellFor] supplies channel 0's cell for each row.
-void _emit(String name, Float64List wave, DocCell Function(int row) cellFor) {
+void _emit(
+  String name,
+  Float64List wave,
+  DocCell Function(int row) cellFor,
+) {
   final doc = ModuleDoc(
     sourceFormat: ModuleFormat.mod,
     title: 'fx $name',
@@ -151,6 +155,18 @@ void main() {
     );
   });
 
+  // 9xx again, but landing INSIDE the sample — the ordinary case. Without
+  // this, the only offset evidence is the out-of-range edge above.
+  _emit('offset_9xx_inrange', _longWave(), (r) {
+    if (r % 8 != 0) return DocCell.empty;
+    return const DocCell(
+      note: _note,
+      instrument: 1,
+      effect: 0x9,
+      effectParam: 0x02,
+    );
+  });
+
   // ECx / EDx — note cut and note delay, sub-row TIMING rather than pitch.
   _emit('notecut_ECx', wave, (r) {
     if (r % 4 != 0) return DocCell.empty;
@@ -172,4 +188,27 @@ void main() {
   });
 
   stdout.writeln('done — one sounding channel each, 32 rows, speed 6/125');
+}
+
+/// A longer wave, so a `9xx` offset can land INSIDE the sample.
+///
+/// `9xx` counts in units of 256 samples, so `9x02` is 512 in — past the end of
+/// the 256-sample wave every other fixture uses. That makes the default offset
+/// fixture an OUT-OF-RANGE test, which is a legitimate edge but tells you
+/// nothing about whether ordinary offsets work. This one is 2048 samples so
+/// `9x02` lands a quarter of the way through with plenty left to play.
+Float64List _longWave() {
+  const n = 2048;
+  final out = Float64List(n);
+  for (var i = 0; i < n; i++) {
+    // Four cycles across the buffer, so an offset lands at an audibly
+    // different phase rather than somewhere indistinguishable.
+    final phase = 2 * math.pi * 4 * i / n;
+    var v = 0.0;
+    for (var k = 1; k <= 4; k++) {
+      v += math.sin(phase * k) / k;
+    }
+    out[i] = v / 2.0834;
+  }
+  return out;
 }

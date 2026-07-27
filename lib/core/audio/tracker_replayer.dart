@@ -336,6 +336,49 @@ double itFilterCutoffHzMod(
 /// Semitones per porta param-unit, per tick (1xx/2xx/3xx). 16 units ≈ 1 st/tick.
 const double kPortaSemitonesPerUnit = 1 / 16;
 
+/// Slide portamento in PERIOD space, the way the hardware does — opt-in:
+///
+///   flutter test --dart-define=PORTA_PERIOD=1 …
+///
+/// ProTracker does `period -= param` per tick, clamped to [113, 856]
+/// (`pt2_replayer.c` `portaUp`/`portaDown`). Period and pitch are related
+/// logarithmically (`f = clock / period`), so a linear PERIOD step is not a
+/// constant SEMITONE step — the slide accelerates as the period shrinks, and
+/// its size depends on where the note started. Our semitone model above cannot
+/// reproduce that at more than one point, which is why PLAN.md §6 X1 measured
+/// `1xx` at 0.549 and `2xx` at 0.689 spectral against three references that
+/// agree with each other at 1.000.
+///
+/// Concretely, over the X1 fixture (param 4, 48 ticks from period 428):
+/// ProTracker bends 10.3 semitones, we bend a flat 12.0.
+///
+/// Gated rather than simply switched, because the semitone model is a
+/// DELIBERATE choice ("chosen for a pleasant musical feel", above) — changing
+/// it changes every module's slides, so it wants the same A/B treatment the
+/// Paula clock got.
+const String _portaPeriodRaw = String.fromEnvironment('PORTA_PERIOD');
+final bool kPortaPeriodAccurate =
+    _portaPeriodRaw.isNotEmpty && _portaPeriodRaw != '0';
+
+/// ProTracker's legal period window; the hardware clamps to it.
+const double kModMinPeriod = 113;
+const double kModMaxPeriod = 856;
+
+/// Our `pitch` (fractional semitones, 60 = the reference note) as an Amiga
+/// period. Period 428 is `modPeriods` index 12, which import maps to MIDI 60.
+double periodForPitch(double pitch) => 428.0 * pow(2.0, (60.0 - pitch) / 12.0);
+
+/// The inverse of [periodForPitch].
+double pitchForPeriod(double period) =>
+    60.0 - 12.0 * (log(period / 428.0) / ln2);
+
+/// One tick of a period-space slide: [delta] period units (negative = up in
+/// pitch), clamped to the hardware window, returned as a pitch.
+double slidePitchByPeriod(double pitch, double delta) {
+  final p = (periodForPitch(pitch) + delta).clamp(kModMinPeriod, kModMaxPeriod);
+  return pitchForPeriod(p);
+}
+
 /// Vibrato depth: semitones per depth-unit (y). 8 ⇒ ±1 semitone.
 const double kVibratoDepthSemitonesPerUnit = 1 / 8;
 
@@ -830,6 +873,13 @@ class ReplayVoice {
         released = false;
         _retriggered = true;
         noteVolume = cell.volume ?? 1.0;
+        // A note that names a SAMPLE restores the channel volume, exactly as
+        // ProTracker reloads `n_volume` from the sample; a note without one
+        // keeps whatever volume is in force. Without this, `ECx`'s persistent
+        // `volume = 0` (see below) would silence the channel for the rest of
+        // the song instead of just the cut note — which is what the first cut
+        // of that fix did, halving the level of everything after it.
+        if (cell.instrument > 0) volume = kMaxVolume;
         _vibPhase = 0;
         _tremPhase = 0;
         _panbrelloPhase = 0;
@@ -1018,21 +1068,40 @@ class ReplayVoice {
 
     // Porta up / down: move `pitch` on ticks > 0.
     if (_cmd == kFxPortaUp && k > 0) {
-      pitch += _memPortaUp * kPortaSemitonesPerUnit;
+      // Period DOWN raises pitch — see [slidePitchByPeriod].
+      pitch = kPortaPeriodAccurate
+          ? slidePitchByPeriod(pitch, -_memPortaUp.toDouble())
+          : pitch + _memPortaUp * kPortaSemitonesPerUnit;
       effPitch = pitch;
     } else if (_cmd == kFxPortaDown && k > 0) {
-      pitch -= _memPortaDown * kPortaSemitonesPerUnit;
+      pitch = kPortaPeriodAccurate
+          ? slidePitchByPeriod(pitch, _memPortaDown.toDouble())
+          : pitch - _memPortaDown * kPortaSemitonesPerUnit;
       effPitch = pitch;
     }
 
     // Tone porta: slide toward the target, never overshoot. With glissando
     // (E3x) on, the OUTPUT snaps to whole semitones while the slide continues.
     if (_isTonePorta && k > 0) {
-      final step = _memTonePorta * kPortaSemitonesPerUnit;
-      if (pitch < targetPitch) {
-        pitch = min(targetPitch, pitch + step);
-      } else if (pitch > targetPitch) {
-        pitch = max(targetPitch, pitch - step);
+      if (kPortaPeriodAccurate) {
+        // Same period-space slide as 1xx/2xx, but stopping AT the target
+        // instead of running on. Compared in PERIOD space so the "do not
+        // overshoot" test matches the direction the hardware is actually
+        // moving: sliding up in pitch means the period is DECREASING.
+        final target = periodForPitch(targetPitch);
+        final current = periodForPitch(pitch);
+        final step = _memTonePorta.toDouble();
+        final next = current > target
+            ? max(target, current - step)
+            : min(target, current + step);
+        pitch = pitchForPeriod(next.clamp(kModMinPeriod, kModMaxPeriod));
+      } else {
+        final step = _memTonePorta * kPortaSemitonesPerUnit;
+        if (pitch < targetPitch) {
+          pitch = min(targetPitch, pitch + step);
+        } else if (pitch > targetPitch) {
+          pitch = max(targetPitch, pitch - step);
+        }
       }
       effPitch = pitch;
     }
@@ -1075,6 +1144,14 @@ class ReplayVoice {
         _tremPhase = 0;
         _panbrelloPhase = 0;
       } else if (_exSub == kExNoteCut && k >= _exVal) {
+        // ProTracker sets the CHANNEL volume to zero (`pt2_replayer.c`
+        // noteCut: `ch->n_volume = 0`), and it stays zero until a new note or
+        // a volume command. Setting only the per-tick `effVol` cut the note
+        // for the rest of its own row and then let it come back on the next
+        // one, because `effVol` is recomputed from `volume` every tick — the
+        // note rang on through rows that should have been silent, measuring
+        // 3.6x the references' level (PLAN.md §6 B2).
+        volume = 0;
         effVol = 0;
         noteCut = true; // hard cut → emit a residue tail, not an instant zero
       }

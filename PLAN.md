@@ -1336,13 +1336,59 @@ into a 256-sample loop), so this is specifically the out-of-range case: the
 references keep sounding, we kill the channel. ⚠️ Also add an IN-range offset
 fixture before fixing, so the fix is not tuned to the edge case alone.
 
-**B2 — `ECx` note cut does not cut.** Our rms is 3.6× the references (0.127 vs
-0.035) — the note rings on through the cut tick.
+✅ **B2 — FIXED (ungated; a plain bug, not a design choice). spectral
+0.859 → 0.996**, which is closer to the references than they are to each other
+(0.990). Residual level is +2.6 dB, i.e. only the known gain convention.
 
-**B3 — portamento `1xx`/`2xx` diverges badly**, and `3xx`/`5xy` follow it, which
-is what you would expect if the shared per-tick period step is wrong rather than
-three separate faults. Fix `1xx`/`2xx` first and re-measure `3xx`/`5xy` before
-treating them as separate bugs.
+**Cause: the cut was per-tick, not persistent.** ProTracker's `ECx` sets the
+CHANNEL volume — `ch->n_volume = 0` (`pt2_replayer.c` `noteCut`) — and it stays
+zero until something restores it. We set only the per-tick `effVol`, which is
+recomputed from `volume` on every tick, so the note went quiet for the rest of
+its own row and came back on the next one.
+
+⚠️ **The first version of this fix was WORSE than the bug, and the measurement
+caught it.** Setting `volume = 0` persistently silenced the channel for the rest
+of the song: nothing ever restored it, because a new note did not reset channel
+volume at all. Spectral looked excellent (0.994) while RMS fell to HALF the
+references — content right, level wrong. ProTracker reloads `n_volume` from the
+sample whenever a note names one, so the fix needs both halves: `ECx` sets
+`volume = 0`, and a note carrying an instrument restores it.
+
+**A note without an instrument number deliberately keeps the current volume** —
+that is the ProTracker rule, and it is what makes `Cxx` followed by bare notes
+behave. Getting this half-right in either direction is silent: too sticky and
+the song fades out, too eager and every `Cxx` is forgotten on the next note.
+
+✅ **B3 — FIXED (gated `--dart-define=PORTA_PERIOD=1`). The whole slide family
+now matches all three references EXACTLY.**
+
+| effect | before | after |
+| --- | --- | --- |
+| `1xx` porta up | 0.549 | **1.000** |
+| `2xx` porta down | 0.689 | **1.000** |
+| `3xx` tone porta | 0.963 | **1.000** |
+| `5xy` porta + vol slide | 0.918 | **1.000** |
+
+**Cause: we slid PITCH where the hardware slides PERIOD.** ProTracker does
+`period -= param` per tick, clamped to [113, 856] (`pt2_replayer.c`
+`portaUp`/`portaDown`), and period↔pitch is logarithmic — so a linear period
+step is not a constant semitone step. It accelerates as the period shrinks, and
+how far a param bends depends on where the note started, which a fixed
+`kPortaSemitonesPerUnit` can only get right at ONE point. Over the X1 fixture
+(param 4, 48 ticks from period 428) ProTracker bends **10.3** semitones; the old
+model bent a flat **12.0** — 1.7 st adrift at the end and wrong in SHAPE
+throughout, which is what a listener hears as the sweep being off.
+
+Gated rather than switched, because the semitone model was a DELIBERATE choice —
+"chosen for a pleasant musical feel" in `tracker_replayer.dart`. Flipping it
+changes every module's slides, so it gets the same A/B treatment as the Paula
+clock. Arithmetic pinned by `test/mod_porta_period_test.dart`, which runs
+everywhere (the audio A/B needs external players and only runs opt-in).
+
+The hypothesis in the original entry held: `3xx` and `5xy` WERE downstream of the
+same step — no separate diagnosis was needed, only the same conversion applied
+to the tone-porta path. Worth remembering when B1/B2 are picked up: measure the
+family, fix the shared mechanism, re-measure before splitting into more bugs.
 
 ⚠️ **Fixture-design lesson, worth keeping.** The first `porta_up` run showed the
 three references agreeing with each other at only **0.555**, which looked like
