@@ -62,6 +62,24 @@ is recorded in [HISTORY.md](HISTORY.md).
 > (verified: X2 rate + X4 vol-slide intact), so the `+-` stats are not all reverts —
 > but **loop-seq / cello / whoever owns those files should spot-check their recent
 > commits weren't caught in the same merge.** This is exactly the `git add -A` from
+>
+> ✅ **daw-suite checked in (2026-07-27).** It reverted my **entire A7 generator
+> slice**: deleted `test/generator_shapes_test.dart` (−238) and rolled
+> `daw_edits.dart` + `daw_screen.dart` back past the work, so `brownNoise`/
+> `blueNoise`/`violetNoise`/`sweep`/`logSweep`/`pluck`/`impulse` and
+> `_shapeIsPitched` were gone from main. It reverted them CONSISTENTLY, so main
+> still compiled and no test failed — which is why it went unnoticed. Restored
+> from my own `e4f0a10e` (`9adc7b9b`). I audited the rest of the arc rather than
+> assuming: 22 created files checked for existence + 15 content markers across
+> the shared files I had edited. **A7 was the only casualty.**
+>
+> ⚠️ **A quieter hazard from the same event: FORMATTER VERSION SKEW.** My
+> `dart format` renders switch expressions with deeper indentation than the
+> version that formatted the cello screens, so a repo-wide format in my worktree
+> silently rewrote eight files I do not own. I reverted that churn rather than
+> committing it — but anyone formatting paths they do not own will keep
+> producing it, and it makes a real clobber much harder to see in a diff.
+> **Format named paths, or pin one formatter version.**
 > a stale tree hazard — pull/rebase and add NAMED files only.
 
 > ⚠️ **Do NOT `git stash` in these worktrees (learned the hard way 2026-07-27).**
@@ -2005,7 +2023,20 @@ chain tuned by ear pastes into a test and vice versa.
   ⚠ Effect labels moved to the shared sentence-case vocabulary (`Low Pass` →
   `Low-pass`, `Voice: Robot` → `Robot`); `gate` gained the better name
   `Noise gate` in the registry rather than losing it.
-- [ ] **F3** Chain string as a copy/paste preset in the app's FX rack.
+- [x] **F3** Chain string as a copy/paste preset — Copy/Paste on the master and
+  track FX racks, over new `setMasterEffects`/`setTrackEffects` (undoable, and
+  cloned on the way in so a caller's list cannot mutate the timeline behind the
+  service's back).
+  * this closes the loop the whole arc rests on: the codec could always print a
+    chain and read one back, but nothing could get the text OUT of the app or
+    INTO it, so the two faces shared a format they could never exchange. Copy
+    yields exactly what `--chain` takes.
+  * copying an AUTOMATED chain warns that automation is dropped — the one thing
+    the string form cannot carry, and losing it silently would be found much
+    later, after the pasted copy had been edited;
+  * pasting nonsense reports it rather than doing nothing.
+  Tests: `fx_chain_clipboard_test` (7), incl. the round trip through a mocked
+  clipboard.
 
 **Pillar A — DSP vocabulary** (each: `FxType` + defaults + ranges + dispatch +
 DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
