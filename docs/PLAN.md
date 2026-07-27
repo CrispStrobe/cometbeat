@@ -29,16 +29,17 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (unit-tests)** · 🚧 **coverage sweep — 5 previously-untested pure modules
-  now covered (48 tests), more to come.** Data-driven: surveyed `lib/core`/`shared`/
+- **opus (unit-tests)** · 🚧 **coverage sweep — 7 previously-untested pure modules
+  now covered (63 tests, 2 pushes), more to come.** Data-driven: surveyed `lib/core`/`shared`/
   pure-`features` for files with zero test reference, then added exact + property
   tests for the highest-value pure logic (FFI/native + generated-data files skipped
   — not unit-testable). New: `narration_key_test` (cross-platform TTS cache keys),
   `karplus_test` (Karplus-Strong DSP — length/silence-edges/determinism/peak-norm/
   attack-declick/decay), `g2p_en_test` + `g2p_de_test` (grapheme→IPA — exact ARPABET
   reductions/T-flap/linking-ɹ + property tests, lexicon-backed words by property),
-  `chord_quality_test` (Harte↔symbol↔intervals, every vocab entry round-trips +
-  all fallback branches). **Test-only, no `lib` changes** — zero regression risk.
+  `chord_quality_test` (Harte↔symbol↔intervals round-trip + all fallbacks),
+  `symbol_catalog_test` (note-value durations/rests/lookup) and
+  `source_registry_test` (library sources non-empty/unique/named). **Test-only, no `lib` changes** — zero regression risk.
   Whole-project analyze clean. Continuing the sweep next (more pure-logic gaps).
   Worktree `../mus-tests`.
 
