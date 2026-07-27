@@ -465,6 +465,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
+- **opus (pdmx-normalise)** · 🚧 **ACTIVE — composer-name normalisation for the PD
+  gate (maintainer-authorised).** ⚠ **Touching shared corpus tooling:**
+  `bin/pdmx_pd_composer.py` on the VPS, which gates the PUBLIC catalog — so:
+  normalisation only (no gate-rule change), measured as a dry run first, and the
+  catalog is NOT re-emitted by me. The gate currently returns UNKNOWN for `"J.S.
+  BACH"` (initials) and `"Luigi Boccherini (1743-1805)"` (a string carrying its own
+  death year) — formatting failures, not copyright ones, and 132 of 189 rows in the
+  fingering mine landed in that bucket. Plan: strip parenthetical life-dates (and use
+  them as corroboration), expand initials, strip trailing roles/suffixes, then
+  re-verdict and report how many rows recover — catalog-wide, not just for cello.
+  Worktree `../mus-cello-fingering` (script work is VPS-side).
+
 - **opus (cello-labels)** · ✅ **SHIPPED (idle) — the cello arc is COMPLETE; items 2
   and 3 closed with numbers** (`4a5d00b3`). Full PDMX mine + the documented ship gate:
   254,035 scores → 236 fingered bowed parts → 51 parts / 1,282 labels cleared → **net
