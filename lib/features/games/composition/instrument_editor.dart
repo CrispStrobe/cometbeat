@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/macro_sequence.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytesStereo;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -671,6 +672,10 @@ class _SampleEditor extends StatelessWidget {
             ),
           ),
         ),
+        _MacroSection(
+          macros: inst.macros,
+          onChanged: (macros) => onChanged(inst.copyWith(macros: macros)),
+        ),
       ],
     );
   }
@@ -1214,4 +1219,305 @@ class _EnvelopeIndexRow extends StatelessWidget {
           onChanged: onChanged,
         ),
       );
+}
+
+// ─── §4 instrument-macro editor ──────────────────────────────────────────────
+
+String _macroTargetLabel(MacroTarget t) => switch (t) {
+      MacroTarget.volume => 'Volume',
+      MacroTarget.pitch => 'Pitch',
+      MacroTarget.arpeggio => 'Arpeggio',
+      MacroTarget.pan => 'Pan',
+      MacroTarget.duty => 'Duty',
+    };
+
+String _macroSummary(MacroSequence m) {
+  final parts = <String>['${m.values.length} steps'];
+  if (m.hasLoop) parts.add('loop ${m.loopStart}–${m.loopEnd}');
+  if (m.releaseStart != null) parts.add('rel ${m.releaseStart}');
+  return parts.join(' · ');
+}
+
+/// The per-instrument macro list in the sample editor: add (one per target),
+/// edit (a bar editor + loop/release), or remove §4 macros.
+class _MacroSection extends StatelessWidget {
+  const _MacroSection({required this.macros, required this.onChanged});
+  final List<MacroSequence> macros;
+  final ValueChanged<List<MacroSequence>> onChanged;
+
+  Future<void> _edit(BuildContext context, int index) async {
+    final edited = await showDialog<MacroSequence>(
+      context: context,
+      builder: (_) => _MacroEditorDialog(initial: macros[index]),
+    );
+    if (edited == null) return;
+    onChanged(List<MacroSequence>.of(macros)..[index] = edited);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final used = macros.map((m) => m.target).toSet();
+    final available =
+        MacroTarget.values.where((t) => !used.contains(t)).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Text(
+                'Instrument Macros',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const Spacer(),
+              if (available.isNotEmpty)
+                PopupMenuButton<MacroTarget>(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Add macro',
+                  onSelected: (t) =>
+                      onChanged([...macros, MacroSequence.defaultFor(t)]),
+                  itemBuilder: (_) => [
+                    for (final t in available)
+                      PopupMenuItem(
+                        value: t,
+                        child: Text(_macroTargetLabel(t)),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        if (macros.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Text('No macros — add one to modulate the note per tick.'),
+          ),
+        for (var i = 0; i < macros.length; i++)
+          ListTile(
+            key: ValueKey('macro_${macros[i].target.name}'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(_macroTargetLabel(macros[i].target)),
+            subtitle: Text(_macroSummary(macros[i])),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.tune),
+                  tooltip: 'Edit macro',
+                  onPressed: () => _edit(context, i),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Remove macro',
+                  onPressed: () =>
+                      onChanged(List<MacroSequence>.of(macros)..removeAt(i)),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Edits one [MacroSequence]: a drag-to-set bar editor for the step values, step
+/// count +/-, and loop / release points. Returns the edited macro on Done.
+class _MacroEditorDialog extends StatefulWidget {
+  const _MacroEditorDialog({required this.initial});
+  final MacroSequence initial;
+  @override
+  State<_MacroEditorDialog> createState() => _MacroEditorDialogState();
+}
+
+class _MacroEditorDialogState extends State<_MacroEditorDialog> {
+  late MacroSequence _m = widget.initial;
+
+  DropdownButton<int> _indexDropdown(int? value, ValueChanged<int?> onChanged) {
+    final n = _m.values.length;
+    return DropdownButton<int>(
+      value: value,
+      hint: const Text('None'),
+      items: [
+        const DropdownMenuItem(child: Text('None')),
+        for (var i = 0; i < n; i++)
+          DropdownMenuItem(value: i, child: Text('$i')),
+      ],
+      onChanged: onChanged,
+    );
+  }
+
+  void _setLoop({int? start, int? end, bool startSet = false}) {
+    final ls = startSet ? start : _m.loopStart;
+    final le = startSet ? _m.loopEnd : end;
+    final ok = ls != null && le != null && le >= ls;
+    setState(() {
+      _m = _m.copyWith(
+        loopStart: ls,
+        loopEnd: le,
+        clearLoop: !ok,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (lo, hi) = MacroSequence.rangeOf(_m.target);
+    final n = _m.values.length;
+    return AlertDialog(
+      title: Text('${_macroTargetLabel(_m.target)} macro'),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              height: 140,
+              child: _MacroBars(
+                macro: _m,
+                onSetValue: (i, v) => setState(() => _m = _m.withValueAt(i, v)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text('Range $lo…$hi · drag a bar to set its value'),
+            Row(
+              children: [
+                const Text('Steps'),
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: n > 1
+                      ? () => setState(() => _m = _m.withLength(n - 1))
+                      : null,
+                ),
+                Text('$n'),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: n < 64
+                      ? () => setState(() => _m = _m.withLength(n + 1))
+                      : null,
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                const Text('Loop'),
+                const SizedBox(width: 8),
+                _indexDropdown(
+                  _m.loopStart,
+                  (v) => _setLoop(start: v, startSet: true),
+                ),
+                const Text('to'),
+                _indexDropdown(_m.loopEnd, (v) => _setLoop(end: v)),
+              ],
+            ),
+            Row(
+              children: [
+                const Text('Release at'),
+                const SizedBox(width: 8),
+                _indexDropdown(
+                  _m.releaseStart,
+                  (v) => setState(
+                    () => _m =
+                        _m.copyWith(releaseStart: v, clearRelease: v == null),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_m),
+          child: const Text('Done'),
+        ),
+      ],
+    );
+  }
+}
+
+/// A drag-to-set bar chart of a macro's step values, mapped to the target range.
+class _MacroBars extends StatelessWidget {
+  const _MacroBars({required this.macro, required this.onSetValue});
+  final MacroSequence macro;
+  final void Function(int index, int value) onSetValue;
+
+  @override
+  Widget build(BuildContext context) {
+    final (lo, hi) = MacroSequence.rangeOf(macro.target);
+    final scheme = Theme.of(context).colorScheme;
+    return LayoutBuilder(
+      builder: (context, c) {
+        final w = c.maxWidth, h = c.maxHeight;
+        void handle(Offset p) {
+          final n = macro.values.length;
+          if (n == 0 || w <= 0 || h <= 0) return;
+          final i = (p.dx / w * n).floor().clamp(0, n - 1);
+          final frac = (1 - p.dy / h).clamp(0.0, 1.0);
+          onSetValue(i, (lo + frac * (hi - lo)).round());
+        }
+
+        return GestureDetector(
+          onTapDown: (d) => handle(d.localPosition),
+          onPanDown: (d) => handle(d.localPosition),
+          onPanUpdate: (d) => handle(d.localPosition),
+          child: CustomPaint(
+            size: Size(w, h),
+            painter: _MacroBarsPainter(macro, lo, hi, scheme),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MacroBarsPainter extends CustomPainter {
+  _MacroBarsPainter(this.macro, this.lo, this.hi, this.scheme);
+  final MacroSequence macro;
+  final int lo, hi;
+  final ColorScheme scheme;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = scheme.surfaceContainerHighest,
+    );
+    final n = macro.values.length;
+    if (n == 0 || hi <= lo) return;
+    final bw = size.width / n;
+    // Zero baseline (for signed ranges the neutral value sits inside the range).
+    final zeroFrac = (0 - lo) / (hi - lo);
+    final zeroY = size.height * (1 - zeroFrac.clamp(0.0, 1.0));
+    if (lo < 0) {
+      canvas.drawLine(
+        Offset(0, zeroY),
+        Offset(size.width, zeroY),
+        Paint()..color = scheme.outlineVariant,
+      );
+    }
+    final bar = Paint()..color = scheme.primary;
+    for (var i = 0; i < n; i++) {
+      final frac = (macro.values[i] - lo) / (hi - lo);
+      final y = size.height * (1 - frac.clamp(0.0, 1.0));
+      final inLoop =
+          macro.hasLoop && i >= macro.loopStart! && i <= macro.loopEnd!;
+      bar.color = inLoop ? scheme.tertiary : scheme.primary;
+      final top = lo < 0 ? (y < zeroY ? y : zeroY) : y;
+      final bottom = lo < 0 ? (y < zeroY ? zeroY : y) : size.height;
+      canvas.drawRect(
+        Rect.fromLTRB(i * bw + 1, top, (i + 1) * bw - 1, bottom),
+        bar,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MacroBarsPainter old) =>
+      old.macro != macro || old.lo != lo || old.hi != hi;
 }

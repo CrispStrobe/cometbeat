@@ -800,6 +800,7 @@ class SampleInstrument implements TrackerInstrument {
     int? nativeFadeout,
     int? filterCutoff,
     int? filterResonance,
+    List<MacroSequence>? macros,
   }) =>
       SampleInstrument(
         id ?? this.id,
@@ -826,6 +827,7 @@ class SampleInstrument implements TrackerInstrument {
         nativeFadeout: nativeFadeout ?? this.nativeFadeout,
         filterCutoff: filterCutoff ?? this.filterCutoff,
         filterResonance: filterResonance ?? this.filterResonance,
+        macros: macros ?? this.macros,
       );
 
   bool get loops =>

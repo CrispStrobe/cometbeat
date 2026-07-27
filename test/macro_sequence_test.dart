@@ -113,6 +113,59 @@ void main() {
     });
   });
 
+  group('editor helpers', () {
+    test('rangeOf gives each target its units', () {
+      expect(MacroSequence.rangeOf(MacroTarget.volume), (0, 64));
+      expect(MacroSequence.rangeOf(MacroTarget.pitch), (-24, 24));
+      expect(MacroSequence.rangeOf(MacroTarget.pan), (-32, 32));
+      expect(MacroSequence.rangeOf(MacroTarget.duty), (0, 63));
+    });
+
+    test('defaultFor is 4 flat neutral steps', () {
+      int only(MacroTarget t) {
+        final v = MacroSequence.defaultFor(t).values;
+        expect(v, hasLength(4));
+        expect(v.toSet(), hasLength(1)); // flat
+        return v.first;
+      }
+
+      expect(only(MacroTarget.volume), 64);
+      expect(only(MacroTarget.pitch), 0);
+      expect(only(MacroTarget.duty), 32);
+    });
+
+    test('withValueAt sets and clamps a step', () {
+      const m = MacroSequence(target: MacroTarget.volume, values: [10, 20, 30]);
+      expect(m.withValueAt(1, 50).values, [10, 50, 30]);
+      expect(m.withValueAt(1, 999).values, [10, 64, 30]); // clamp to max
+      expect(m.withValueAt(1, -5).values, [10, 0, 30]); // clamp to min
+      expect(m.withValueAt(9, 1).values, [10, 20, 30]); // out of range → no-op
+    });
+
+    test('withLength grows by repeating the last value and shrinks', () {
+      const m = MacroSequence(target: MacroTarget.pitch, values: [1, 2, 3]);
+      expect(m.withLength(5).values, [1, 2, 3, 3, 3]);
+      expect(m.withLength(2).values, [1, 2]);
+      expect(m.withLength(0).values, [1]); // min 1
+    });
+
+    test('withLength drops loop/release points that fall out of range', () {
+      const m = MacroSequence(
+        target: MacroTarget.volume,
+        values: [1, 2, 3, 4, 5],
+        loopStart: 2,
+        loopEnd: 4,
+        releaseStart: 3,
+      );
+      final shrunk = m.withLength(3); // indices 3,4 gone
+      expect(shrunk.hasLoop, isFalse);
+      expect(shrunk.releaseStart, isNull);
+      // A loop fully inside the new range survives.
+      final kept = m.withLength(4); // 0..3; loopEnd 4 gone → loop dropped
+      expect(kept.hasLoop, isFalse);
+    });
+  });
+
   group('json', () {
     test('round-trips a full macro', () {
       const m = MacroSequence(

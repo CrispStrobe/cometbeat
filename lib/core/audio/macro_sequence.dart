@@ -137,6 +137,58 @@ class MacroSequence {
         if (releaseStart != null) 'releaseStart': releaseStart,
       };
 
+  /// The editable value range for [target] — what a macro editor clamps steps
+  /// to. `(min, max)`, in the target's own units (volume 0..64, pitch/arp
+  /// ±semitones, pan ±32, duty 0..63).
+  static (int, int) rangeOf(MacroTarget target) => switch (target) {
+        MacroTarget.volume => (0, 64),
+        MacroTarget.pitch => (-24, 24),
+        MacroTarget.arpeggio => (-24, 24),
+        MacroTarget.pan => (-32, 32),
+        MacroTarget.duty => (0, 63),
+      };
+
+  /// A sensible starter macro for [target]: four flat steps at the neutral value
+  /// (full volume / no offset / centre / mid-duty), for the editor to shape.
+  static MacroSequence defaultFor(MacroTarget target) {
+    final neutral = switch (target) {
+      MacroTarget.volume => 64,
+      MacroTarget.duty => 32,
+      MacroTarget.pitch || MacroTarget.arpeggio || MacroTarget.pan => 0,
+    };
+    return MacroSequence(target: target, values: List.filled(4, neutral));
+  }
+
+  /// This macro with step [index] set to [value] (clamped to [rangeOf]). Out of
+  /// range indices return the macro unchanged.
+  MacroSequence withValueAt(int index, int value) {
+    if (index < 0 || index >= values.length) return this;
+    final (lo, hi) = rangeOf(target);
+    final next = List<int>.of(values);
+    next[index] = value.clamp(lo, hi);
+    return copyWith(values: next);
+  }
+
+  /// This macro resized to [length] steps (min 1): growth repeats the last value,
+  /// shrink truncates. Loop/release points that fall outside the new range are
+  /// dropped so the result is always self-consistent.
+  MacroSequence withLength(int length) {
+    final n = length < 1 ? 1 : length;
+    final last = values.isEmpty ? 0 : values.last;
+    final next = <int>[
+      for (var i = 0; i < n; i++) i < values.length ? values[i] : last,
+    ];
+    int? keep(int? p) => (p != null && p >= 0 && p < n) ? p : null;
+    final ls = keep(loopStart), le = keep(loopEnd);
+    return MacroSequence(
+      target: target,
+      values: next,
+      loopStart: (ls != null && le != null && le >= ls) ? ls : null,
+      loopEnd: (ls != null && le != null && le >= ls) ? le : null,
+      releaseStart: keep(releaseStart),
+    );
+  }
+
   /// Decodes a macro; returns null on anything malformed (a corrupt macro costs
   /// modulation, never the instrument).
   static MacroSequence? fromJson(Object? raw) {
