@@ -193,8 +193,8 @@ These are not same-length transforms, so they are not `FxType`s. They live in
 | **dither + noise shaping** | on any bit-depth reduction, not only export | ⬜ B2 |
 | **full statistics** | peak · RMS · DC · crest factor · effective bit depth · zero-crossings | ✅ |
 | **voice-activity trim** | speech-aware leading/trailing trim | ⬜ B4 |
-| **spectrogram to PNG** | `core/audio/spectrogram.dart` exists; no CLI | ⬜ B5 |
-| **batch/macro** | apply a chain string to many clips / lanes / a folder of files | ⬜ B6 |
+| **spectrogram to PNG** | `spectrogram_png.dart` + `--spectrogram out.png`, with a frequency crop | ✅ |
+| **batch** | `--batch DIR --out DIR` over a folder; one bad file is skipped by name, not fatal | ✅ |
 
 ---
 
@@ -277,7 +277,7 @@ A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo ✅
 A5  restoration ✅    A6  time/pitch          A2  tone curves      A7  generators
 
 B1  pad/repeat/split-on-silence/splice        B3  full stats
-B2  dither+noise shaping                      B4  VAD      B5  spectrogram CLI
+B2  dither+noise shaping                      B4  VAD      B5  spectrogram CLI ✅
 
 C1  .cbdaw v2 — models survive save           ✅ SHIPPED
 C2  drum + groove round-trip                  ✅ SHIPPED
