@@ -23,8 +23,11 @@ void main() {
     test('it is immutable — editing returns a new lane', () {
       final lane = AutomationLane([0, 0, 0]);
       final edited = lane.withStep(1, 1);
-      expect(lane.values, [0.0, 0.0, 0.0],
-          reason: 'the original must not move');
+      expect(
+        lane.values,
+        [0.0, 0.0, 0.0],
+        reason: 'the original must not move',
+      );
       expect(edited.values, [0.0, 1.0, 0.0]);
       expect(() => lane.values[0] = 1, throwsUnsupportedError);
     });
@@ -47,8 +50,10 @@ void main() {
       // This is what lets a lane sit on a polymeter track without special
       // cases: index by step, wrap, done.
       final lane = AutomationLane([0, 1, 0.5]);
-      expect([for (var s = 0; s < 7; s++) lane.at(s)],
-          [0.0, 1.0, 0.5, 0.0, 1.0, 0.5, 0.0]);
+      expect(
+        [for (var s = 0; s < 7; s++) lane.at(s)],
+        [0.0, 1.0, 0.5, 0.0, 1.0, 0.5, 0.0],
+      );
     });
 
     test('a negative step wraps too, it does not throw', () {
@@ -67,11 +72,15 @@ void main() {
       expect(AutomationParam.filter.valueAt(0.5), 0, reason: 'unfiltered');
     });
 
-    test("each parameter knows the value that leaves it alone", () {
-      for (final p in AutomationParam.values) {
-        expect(p.valueAt(p.neutral), 0 == p.valueAt(p.neutral) ? 0 : 1,
-            reason: '${p.name} neutral should be a no-op value');
-      }
+    test('each parameter knows the value that leaves it alone', () {
+      // Neutral maps to the value that changes nothing: full gain for level,
+      // and zero (centre / unfiltered) for the two-sided ones.
+      expect(AutomationParam.level.valueAt(AutomationParam.level.neutral), 1);
+      expect(AutomationParam.pan.valueAt(AutomationParam.pan.neutral), 0);
+      expect(
+        AutomationParam.filter.valueAt(AutomationParam.filter.neutral),
+        0,
+      );
       expect(AutomationParam.level.neutral, 1);
       expect(AutomationParam.pan.neutral, 0.5);
     });
@@ -97,7 +106,7 @@ void main() {
           AutomationParam.pan: AutomationLane([1, 0]),
         },
         'drums': {
-          AutomationParam.filter: AutomationLane([0.25])
+          AutomationParam.filter: AutomationLane([0.25]),
         },
       };
       expect(automationFromJson(automationToJson(lanes)), lanes);
@@ -123,26 +132,26 @@ void main() {
     });
 
     test('malformed lanes are skipped rather than throwing', () {
-      expect(automationFromJson(null), isEmpty);
-      expect(automationFromJson('nonsense'), isEmpty);
-      expect(automationFromJson({'bass': 'nope'}), isEmpty);
-      expect(
-          automationFromJson({
-            'bass': {'level': 'nope'}
-          }),
-          isEmpty);
-      expect(
-          automationFromJson({
-            'bass': {'level': <double>[]}
-          }),
-          isEmpty);
-      expect(
-          automationFromJson({
-            'bass': {
-              'level': [null]
-            }
-          }),
-          isEmpty);
+      const notALane = 'nope';
+      final cases = <Object?>[
+        null,
+        'nonsense',
+        {'bass': notALane},
+        {
+          'bass': {'level': notALane},
+        },
+        {
+          'bass': {'level': <double>[]},
+        },
+        {
+          'bass': {
+            'level': [null],
+          },
+        },
+      ];
+      for (final raw in cases) {
+        expect(automationFromJson(raw), isEmpty, reason: '$raw');
+      }
     });
 
     test('numbers survive a JSON round trip as ints or strings', () {
