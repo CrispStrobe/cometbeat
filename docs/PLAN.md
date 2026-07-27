@@ -134,6 +134,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
+- **opus (loop-d1d4)** · 🚧 **ACTIVE — the maintainer's four Loop Studio decisions
+  (D1–D4, root `PLAN.md`).** Worktree `../mus-mixer-d1d4`, branch
+  `feature/mixer-d1d4`, branched off `ec9d4d12`. **D4 is already answered: both
+  orphaned tests (`test/generator_shapes_test.dart`, `test/mod_effect_memory_test.dart`)
+  restore from `git show 8a2c2d52^:<path>` and pass VERBATIM — no port needed.**
+  The "no longer compiles" note predates `9adc7b9b` (A7 generator restore); the
+  APIs they cover (`generateWave`/`GeneratorShape`, `traceChannel`/
+  `protrackerMemory`) are all present again. Both files are back, 22 tests green.
+  ⚠️ **Hot shared files I am editing:** `lib/core/audio/loop_engine.dart`,
+  `lib/features/games/composition/loop_mixer_screen.dart`,
+  `lib/core/audio/synth.dart` (additive optional param on `mixStems`),
+  `lib/core/audio/loop_automation.dart`, the ARBs + generated `app_localizations*`.
+  All additive; the byte-identical-render guarantee is asserted, not assumed. — opus
+
 - **opus (tracker→editors)** · ✅ **DONE (idle) — loss-dialog REASON l10n: the
   infrastructure + the static bridge reasons (EN/DE).** The Open-in loss dialog's
   reason bullets were the last English in the menu. Added an ADDITIVE key channel
