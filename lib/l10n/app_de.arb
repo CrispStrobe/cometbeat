@@ -582,6 +582,8 @@
   "loopMixerSwingPerTrack": "Swing pro Spur",
   "loopMixerSwingPerTrackHint": "tippen für eigenen Swing dieser Spur (– folgt dem Groove)",
   "loopMixerAutomation": "Lautstärke-Verlauf",
+  "loopMixerDuplicateTrack": "Weitere Spur hinzufügen",
+  "loopMixerDuplicateTrackHint": "tippen für eine Kopie dieser Spur samt aller Einstellungen",
   "loopMixerMasterFx": "Master-Effekte",
   "loopMixerMasterFxHint": "Effekte auf den ganzen Mix. Sie laufen \u00fcber die Loop-Naht hinweg, Hallfahnen brechen also nicht auf der Eins ab.",
   "loopMixerSend": "Raum-Effekt (Hall / Echo)",

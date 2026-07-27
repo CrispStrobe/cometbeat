@@ -3290,6 +3290,18 @@ abstract class AppLocalizations {
   /// **'Volume shape'**
   String get loopMixerAutomation;
 
+  /// No description provided for @loopMixerDuplicateTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another track'**
+  String get loopMixerDuplicateTrack;
+
+  /// No description provided for @loopMixerDuplicateTrackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tap to add a copy of this track, with all its settings'**
+  String get loopMixerDuplicateTrackHint;
+
   /// No description provided for @loopMixerMasterFx.
   ///
   /// In en, this message translates to:

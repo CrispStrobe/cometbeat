@@ -330,6 +330,11 @@ abstract interface class LoopMixerTester {
   /// The section armed to launch at the next seam, if any.
   int? get pendingScene;
 
+  /// Adds a copy of a track / removes one, and the current roster.
+  void duplicateTrack(String id);
+  void removeCopy(String id);
+  List<String> get trackIds;
+
   /// A track's level-automation lane: the value at a step, a way to step it,
   /// and whether the track has a lane at all.
   double automationAt(String id, int step);
@@ -1105,6 +1110,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void launchScene(int i) => _launchScene(i);
   @override
   bool sceneIsEmpty(int i) => _scenes[i] == null;
+  @override
+  void duplicateTrack(String id) => _duplicateTrack(id);
+  @override
+  void removeCopy(String id) => _removeCopy(id);
+  @override
+  List<String> get trackIds => [for (final t in _engine.tracks) t.id];
   @override
   double automationAt(String id, int step) =>
       _engine.automationFor(id, AutomationParam.level)?.at(step) ?? 1.0;
@@ -2231,9 +2242,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       step: _step,
       active: _engine.enabled.contains(track.id),
       beatsPerBar: LoopTiming.beatsPerBar,
-      color: _trackColors[track.id]!,
+      color: _colorFor(track.id),
       child: _TrackCard(
-        color: _trackColors[track.id]!,
+        color: _colorFor(track.id),
         shape: creatureShapeFor(track.id),
         label: _trackLabel(l10n, track.id),
         active: _engine.enabled.contains(track.id),
@@ -3551,7 +3562,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     'beat': Color(0xFF00897B), // teal — the beatboxer's own layer
   };
 
-  String _trackLabel(AppLocalizations l10n, String id) => switch (id) {
+  /// A track's name. A duplicate reads as "Bass 2" rather than falling through
+  /// to the unknown-id default, which labelled every copy "Sparkle".
+  String _trackLabel(AppLocalizations l10n, String id) {
+    final source = _sourceIdOf(id);
+    if (source != id) {
+      final n = id.substring(source.length).replaceAll('-', ' ').trim();
+      return '${_baseTrackLabel(l10n, source)} $n';
+    }
+    return _baseTrackLabel(l10n, id);
+  }
+
+  String _baseTrackLabel(AppLocalizations l10n, String id) => switch (id) {
         'drums' => l10n.loopMixerTrackDrums,
         'bass' => l10n.loopMixerTrackBass,
         'chords' => l10n.loopMixerTrackChords,
@@ -4052,6 +4074,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           _trackSwingRow(l10n),
         ),
         _inspectorSection(
+          l10n.loopMixerDuplicateTrack,
+          _duplicateRow(l10n),
+        ),
+        _inspectorSection(
           l10n.loopMixerAutomation,
           _automationRows(l10n),
         ),
@@ -4149,7 +4175,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: _sceneHasTrack(i, track.id)
-                                ? (_trackColors[track.id] ?? scheme.primary)
+                                ? _colorFor(track.id)
                                 : scheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(4),
                           ),
@@ -4291,7 +4317,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                                 heightFactor: _autoHeight(track.id, s),
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
-                                    color: _trackColors[track.id],
+                                    color: _colorFor(track.id),
                                     borderRadius: BorderRadius.circular(2),
                                   ),
                                   child: const SizedBox.expand(),
@@ -4334,6 +4360,75 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _syncPlayback();
   }
 
+  /// The id a duplicate was made from: `bass-2` → `bass`, `bass-2-2` → `bass`.
+  ///
+  /// Copies are not in the colour or label tables, and a `!` on those maps threw
+  /// the moment the first copy was drawn. Inheriting from the source is also
+  /// what a player expects: a copy of the bass should look like the bass.
+  String _sourceIdOf(String id) {
+    var base = id;
+    while (!_trackColors.containsKey(base)) {
+      final cut = base.lastIndexOf('-');
+      if (cut <= 0) return id;
+      base = base.substring(0, cut);
+    }
+    return base;
+  }
+
+  Color _colorFor(String id) =>
+      _trackColors[id] ?? _trackColors[_sourceIdOf(id)] ?? Colors.grey;
+
+  /// Adds a copy of [id] and jumps the user to it.
+  /// Removes a duplicate (the base band is refused by the engine).
+  void _removeCopy(String id) {
+    if (!_engine.removeExtraTrack(id)) return;
+    setState(() {});
+    _syncPlayback();
+  }
+
+  void _duplicateTrack(String id) {
+    final copy = _engine.duplicateTrack(id);
+    if (copy == null) return;
+    setState(() {});
+    _syncPlayback();
+  }
+
+  /// One chip per track: tap to add a copy of it.
+  ///
+  /// In the inspector rather than on the track card: that card's row is already
+  /// a pixel from overflowing, and adding a delete button for copies tipped it
+  /// over by 23px the moment the first copy appeared. Long-press a copy's chip
+  /// to remove it, so adding and removing live in the same place.
+  Widget _duplicateRow(AppLocalizations l10n) => Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final track in _engine.tracks)
+            Tooltip(
+              message: l10n.loopMixerDuplicateTrackHint,
+              child: GestureDetector(
+                onLongPress: _engine.isExtraTrack(track.id)
+                    ? () => _removeCopy(track.id)
+                    : null,
+                child: ActionChip(
+                  key: Key('loop-dup-${track.id}'),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  avatar: CircleAvatar(
+                    backgroundColor: _colorFor(track.id),
+                    radius: 8,
+                  ),
+                  label: Text(
+                    _trackLabel(l10n, track.id),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  onPressed: () => _duplicateTrack(track.id),
+                ),
+              ),
+            ),
+        ],
+      );
+
   /// One badge per track: its own swing, or `–` when it follows the groove.
   Widget _trackSwingRow(AppLocalizations l10n) => Wrap(
         spacing: 6,
@@ -4350,7 +4445,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                   visualDensity: VisualDensity.compact,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   avatar: CircleAvatar(
-                    backgroundColor: _trackColors[track.id],
+                    backgroundColor: _colorFor(track.id),
                     radius: 8,
                   ),
                   label: Text(

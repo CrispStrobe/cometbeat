@@ -651,6 +651,8 @@
   "loopMixerSwingPerTrack": "Swing per track",
   "loopMixerSwingPerTrackHint": "tap to give this track its own swing (– follows the groove)",
   "loopMixerAutomation": "Volume shape",
+  "loopMixerDuplicateTrack": "Add another track",
+  "loopMixerDuplicateTrackHint": "tap to add a copy of this track, with all its settings",
   "loopMixerMasterFx": "Master effects",
   "loopMixerMasterFxHint": "Effects on the whole mix. They run across the loop seam, so tails carry over instead of dropping out on the downbeat.",
   "loopMixerSend": "Space effect (reverb / echo)",

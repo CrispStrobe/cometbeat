@@ -1761,6 +1761,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerAutomation => 'Lautstärke-Verlauf';
 
   @override
+  String get loopMixerDuplicateTrack => 'Weitere Spur hinzufügen';
+
+  @override
+  String get loopMixerDuplicateTrackHint =>
+      'tippen für eine Kopie dieser Spur samt aller Einstellungen';
+
+  @override
   String get loopMixerMasterFx => 'Master-Effekte';
 
   @override

@@ -1755,6 +1755,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerAutomation => 'Volume shape';
 
   @override
+  String get loopMixerDuplicateTrack => 'Add another track';
+
+  @override
+  String get loopMixerDuplicateTrackHint =>
+      'tap to add a copy of this track, with all its settings';
+
+  @override
   String get loopMixerMasterFx => 'Master effects';
 
   @override
