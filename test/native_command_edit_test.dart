@@ -213,4 +213,65 @@ void main() {
   test('kSampleRate is available for song construction', () {
     expect(kSampleRate, greaterThan(0));
   });
+
+  group('XM and fallback mnemonics', () {
+    test('XM numeric, letter, and unknown commands', () {
+      expect(nativeEffectMnemonic('xm', 0x04), '4 — Vibrato'); // numeric
+      expect(nativeEffectMnemonic('xm', 0x10), 'G — Set global volume');
+      expect(nativeEffectMnemonic('xm', 0x21), 'X — Extra-fine portamento');
+      expect(nativeEffectMnemonic('xm', 0x12), 'I'); // letter, no label
+      expect(nativeEffectMnemonic('xm', 0x2F), '0x2F'); // unknown numeric
+    });
+
+    test('unknown format → hex byte; negative → em dash; out-of-table → hex',
+        () {
+      expect(nativeEffectMnemonic('wut', 0x0C), '0x0C'); // default case
+      expect(nativeEffectMnemonic(null, 5), '0x05');
+      expect(nativeEffectMnemonic('s3m', -1), '—'); // effect < 0
+      expect(nativeEffectMnemonic('mod', 0x14), '0x14'); // MOD nibble overflow
+      expect(nativeEffectMnemonic('s3m', 30), '0x1E'); // letter out of 1..26
+    });
+  });
+
+  group('native volume/pan provenance', () {
+    test('setNativeVolpan sets, describes, and clears', () {
+      const c = TrackerCell(midi: 60);
+      final withVol = setNativeVolpan(c, format: 'it', volpan: 0x20);
+      expect(hasNativeProvenance(withVol), isTrue);
+      expect(describeNativeEffect(withVol), contains('vol'));
+
+      final cleared = setNativeVolpan(withVol, format: 'it', volpan: -1);
+      expect(cleared.nativeVolpan, lessThan(0));
+    });
+
+    test('describeNativeEffect shows both the effect and the volpan', () {
+      var c = setNativeEffect(
+        const TrackerCell(midi: 60),
+        format: 's3m',
+        effect: 4,
+        param: 0x10,
+      );
+      c = setNativeVolpan(c, format: 's3m', volpan: 0x30);
+      final desc = describeNativeEffect(c);
+      expect(desc, contains('S3M'));
+      expect(desc, contains('vol'));
+    });
+
+    test('clearNativeProvenance strips the effect and volpan bytes', () {
+      var c = setNativeEffect(
+        const TrackerCell(midi: 60),
+        format: 'mod',
+        effect: 0xA,
+        param: 0x20,
+      );
+      c = setNativeVolpan(c, format: 'mod', volpan: 0x10);
+      expect(hasNativeProvenance(c), isTrue);
+
+      c = clearNativeProvenance(c);
+      // The raw effect and volpan bytes are gone (the format tag may linger).
+      expect(c.nativeEffect, lessThan(0));
+      expect(c.nativeVolpan, lessThan(0));
+      expect(describeNativeEffect(c), isNot(contains('vol')));
+    });
+  });
 }
