@@ -18,6 +18,7 @@
 
 import 'package:comet_beat/core/audio/tts/prebaked_narration.dart'
     show PrebakedNarrationBackend;
+import 'package:comet_beat/core/audio/tts/tts_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -204,15 +205,53 @@ class TtsService with ChangeNotifier {
     }
   }
 
-  Future<TtsBackend> _pick() async {
+  /// The user's engine preference (settings). [TtsEngine.auto] → the resolver
+  /// picks the best usable path for the platform.
+  TtsEngine _preferred = TtsEngine.auto;
+  TtsEngine get preferredEngine => _preferred;
+  set preferredEngine(TtsEngine e) {
+    if (_preferred == e) return;
+    _preferred = e;
+    notifyListeners();
+  }
+
+  /// Which engines can synthesize RIGHT NOW (runtime + model ready). Grows as
+  /// the onnx-FFI / pure-Dart-onnx / crispasr-wasm backends land; for now only
+  /// crispasr-FFI (when its lib+model are ready) beyond the always-on platform.
+  Future<Set<TtsEngine>> _availableEngines() async {
+    final set = <TtsEngine>{TtsEngine.platform};
     final neural = _neural;
     final ready = _neuralReady;
     if (neural != null && ready != null) {
       try {
-        if (await ready()) return neural;
+        if (await ready()) set.add(TtsEngine.crispasrFfi);
       } catch (_) {
-        // fall through to the platform backend
+        // treat a probe failure as "not available"
       }
+    }
+    return set;
+  }
+
+  /// The live backend for a resolved engine, or null if not wired yet.
+  TtsBackend? _backendFor(TtsEngine e) => switch (e) {
+        TtsEngine.crispasrFfi => _neural,
+        TtsEngine.platform => _backend,
+        // onnxFfi / pureDartOnnx / crispasrWasm attach here as they land.
+        _ => null,
+      };
+
+  /// Resolves the interactive-synthesis backend through the shared engine
+  /// framework (platform + availability + the user's preference), with the
+  /// platform voice as the guaranteed floor.
+  Future<TtsBackend> _pick() async {
+    final chain = resolveTtsEngines(
+      isWeb: kIsWeb,
+      available: await _availableEngines(),
+      preferred: _preferred,
+    );
+    for (final e in chain) {
+      final b = _backendFor(e);
+      if (b != null) return b;
     }
     return _backend;
   }

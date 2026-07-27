@@ -41,6 +41,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   hairpins). **No hot shared files** — `score_document.dart` only + a test. Suites
   green (markings/score_document 92, workshop 85), whole-project analyze clean.
   Worktree `../mus-gs-slurs`.
+- **opus (tts-engines)** · 🚧 **ACTIVE — close all TTS gaps: unify the engine paths (maintainer-directed).** Building the TTS twin of the transcription `Backend` framework so every path is selectable with sensible per-platform defaults. **(1) DONE — `tts_engine.dart`**: `TtsEngine {auto,platform,prebaked,crispasrFfi,onnxFfi,pureDartOnnx,crispasrWasm}` + `resolveTtsEngines(isWeb, available, preferred)` (native → crispasr-FFI>onnx-FFI>pure-Dart-onnx>platform; web → crispasr-wasm>platform, pure-Dart-onnx excluded live = single-thread freeze); `TtsService._pick` now routes through it + a `preferredEngine` setting hook; 7+17 tests green. **NEXT (this arc):** (2) unified TTS model/asset manager incl. the WEB `fetch`+IndexedDB downloader (the real missing infra; today only pre-baked assets reach web); (3) wire native ORT (`onnx_ort_session`) as an `onnxFfi` TTS backend (Kokoro/Piper ONNX, GPU); (4) — moonshot, large/uncertain — a Kokoro `crispasr.wasm` + JS-interop seam for live neural on web. ⚠️ Touches shared `tts_service.dart` (additive) + will add `settings_screen` picker; coordinating, additive, rebase-before-push. — opus
 
 - **opus (grandstaff-markings)** · ✅ **SHIPPED (idle) — dynamics + lyrics on the
   grand-staff view.** Follow-up to `voice2-gaps`: `buildGrandStaff` engraved notes
