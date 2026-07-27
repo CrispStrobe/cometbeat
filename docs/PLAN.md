@@ -185,12 +185,14 @@ is recorded in [HISTORY.md](HISTORY.md).
   cross-mode "Open a copy in…" (hosting the already-built `OpenInMenu`, which
   had no host) · A3 dynamics (look-ahead limiter · de-esser · multiband) · A4 the
   channel/stereo ops.
-  **Next:** A5 restoration (spectral noise reduction is the big one, and the
-  radix-2 FFT already exists in `chroma_analysis.dart`) · A2 tone curves ·
-  A6/A7 · B1–B6 the non-FX editor ops · C4 tab fretting inbound · C5
-  "Transcribe this clip".
-  **Rack is now 45 effects**, every one of them reachable from the GUI *and* the
-  CLI with no per-effect UI or CLI code.
+  · A5 restoration (noise reduction · hum · de-click · de-clip · DC).
+  **Next:** A2 tone curves · A6 time/pitch · A7 generators · B1–B6 the non-FX
+  editor ops (pad/repeat/split-on-silence · dither · full stats · VAD ·
+  spectrogram CLI · batch) · C4 tab fretting inbound · C5 "Transcribe this clip".
+  **Rack is now 50 effects**, every one reachable from the GUI *and* the CLI with
+  no per-effect UI or CLI code — the F1/F2 lever has held across five DSP slices.
+  A "learn the noise from the marked range" service op is the natural next step
+  for `noiseReduce` (the DSP already accepts a profile; only the UI is missing).
   ⚠ **Interop status, precisely:** every clip kind opens its OWN editor exactly
   (score/tab/tracker/drum/groove — no conversion, nothing approximated) and that
   survives a save; score and tracker clips can additionally open a CONVERTED
@@ -1490,9 +1492,30 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
     removal": it takes the bass and kick with it, and the centred part's reverb
     is stereo and stays behind.
   Tests: `stereo_ops_fx_test` (20).
-- [ ] **A5 restoration** — DC shift · **noise profile → spectral reduction** (the
-  most-wanted repair tool; the radix-2 FFT already exists in
-  `chroma_analysis.dart`) · hum comb · click/crackle repair · de-clip.
+- [x] **A5 restoration** — `dcShift` · `humRemove` (harmonic notch comb) ·
+  `noiseReduce` (spectral subtraction) · `declick` · `declip`, in a new
+  `FxCategory.restoration` group. New DSP `crisp_dsp/restoration.dart`, reusing
+  the app's own radix-2 FFT (inverse via the conjugate identity, so there is one
+  transform to be right about).
+  * ⚠ **The self-adaptive noise estimator cannot tell a SUSTAINED tone from
+    noise, and nothing of that shape can.** Its premise is "noise is what is
+    always there"; a drone or a held chord is always there too, so it lands in
+    the profile and gets subtracted as hiss. Found by a test that failed
+    honestly (a steady 440 Hz fixture came out at 0.022 of its level), and kept:
+    the limitation is now DOCUMENTED on `noiseProfile` and **pinned by a test
+    that asserts it happens**, next to one showing the escape hatch — a profile
+    learned from a silent range fixes exactly that case, and `noiseReduceFx`
+    accepts one.
+  * the residual floor is deliberate and tested: subtracting a bin all the way
+    to zero makes isolated survivors shimmer between frames ("musical noise"),
+    which is more distracting than the hiss was.
+  * `declip` reconstructs a plausible arc over a flat top and its doc says
+    *plausible* — the height is inferred from the run length, which is the only
+    evidence there is. That distinction matters to someone deciding whether to
+    re-record.
+  Tests: `restoration_fx_test` (20). Nearly every one is a PAIR — the damage
+  went away, and the signal that should have survived did; the second half is
+  where repair tools go wrong.
 - [ ] **A6 time/pitch** — pitch **bend envelope** · stretch quality tiers ·
   high-quality rate conversion with explicit anti-aliasing · raw up/downsample.
 - [ ] **A7 generators** — brown/blue/violet noise · sweep/chirp (lin+log) ·

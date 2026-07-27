@@ -147,11 +147,11 @@ Status key: ✅ have it · 🔶 partial · ⬜ to build.
 ### A5 — Restoration
 | Op | Meaning | Status |
 |---|---|---|
-| DC shift | deliberate offset (we have DC *removal*) | ⬜ A5 |
-| noise profile → spectral reduction | learn a noise fingerprint from a marked range, subtract it spectrally. **The single most-wanted repair tool**; we already have a radix-2 FFT in `chroma_analysis.dart` | ⬜ A5 |
-| hum removal | fundamental + harmonic notch comb (50/60 Hz) | ⬜ A5 |
-| click / crackle removal | derivative-outlier detect + interpolate | ⬜ A5 |
-| de-clip | reconstruct flat-topped peaks | ⬜ A5 |
+| DC shift | deliberate offset | ✅ |
+| noise profile → spectral reduction | ✅ self-adaptive by default, or from a supplied profile. ⚠ the adaptive estimator cannot tell a *sustained* tone from noise — documented and pinned by a test; a learned profile is the fix |
+| hum removal | fundamental + harmonic notch comb (50/60 Hz) | ✅ |
+| click / crackle removal | median-step outlier detect + interpolate | ✅ |
+| de-clip | plausible arc over a flat top (a reconstruction, not a recovery) | ✅ |
 
 ### A6 — Time & pitch (`time_stretch.dart`, `pitch_shift.dart`, `resample.dart`)
 | Op | Meaning | Status |
@@ -274,7 +274,7 @@ F2b the GUI's label + param tables deleted, derived    ✅ SHIPPED (unplanned)
 F3  chain string as copy/paste preset in the GUI
 
 A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo ✅
-A5  restoration       A6  time/pitch          A2  tone curves      A7  generators
+A5  restoration ✅    A6  time/pitch          A2  tone curves      A7  generators
 
 B1  pad/repeat/split-on-silence/splice        B3  full stats
 B2  dither+noise shaping                      B4  VAD      B5  spectrogram CLI

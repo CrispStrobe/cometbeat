@@ -161,6 +161,17 @@ const _byName = <String, FxParamSpec>{
   'width': FxParamSpec(key: 'width', min: 0, max: 4, unit: 'x'),
   'amount': FxParamSpec(key: 'amount', min: 0, max: 1),
   'cutoffHz': FxParamSpec(key: 'cutoffHz', min: 100, max: 8000, unit: 'Hz'),
+  // A5 — restoration.
+  'offset': FxParamSpec(key: 'offset', min: -0.5, max: 0.5),
+  'harmonics': FxParamSpec(key: 'harmonics', min: 1, max: 20, integer: true),
+  // Over 1 subtracts MORE than the estimate — sometimes needed, always the
+  // first thing to turn down when it starts warbling.
+  'reduction': FxParamSpec(key: 'reduction', min: 0, max: 3),
+  'floorAmount': FxParamSpec(key: 'floorAmount', min: 0, max: 0.5),
+  'sensitivity': FxParamSpec(key: 'sensitivity', min: 2, max: 50),
+  'window': FxParamSpec(key: 'window', min: 8, max: 512, integer: true),
+  'threshold': FxParamSpec(key: 'threshold', min: 0.1, max: 1),
+  'strength': FxParamSpec(key: 'strength', min: 0, max: 2),
 };
 
 /// Ranges that differ for one specific effect, where the same word means
@@ -181,6 +192,12 @@ const _byTypeAndName = <(FxType, String), FxParamSpec>{
   // without it the slider would offer 10 and read "0.50s".
   (FxType.convolutionReverb, 'decay'):
       FxParamSpec(key: 'decay', min: 0, max: 1),
+  // Hum is a MAINS frequency — 50 or 60 — so the useful span is tiny and the
+  // general 20..18000 would bury it.
+  (FxType.humRemove, 'freq'):
+      FxParamSpec(key: 'freq', min: 40, max: 120, unit: 'Hz'),
+  // A hum notch has to be needle-narrow or it takes the bass with it.
+  (FxType.humRemove, 'q'): FxParamSpec(key: 'q', min: 5, max: 100),
   // A crossfeed delay is the width of a HEAD, not a musical delay — sub-
   // millisecond. The general `delayMs` range (up to 2 s) would make the useful
   // part of the control a pixel wide.
@@ -269,6 +286,11 @@ String fxTypeLabel(FxType type) => switch (type) {
       FxType.centreCancel => 'Centre cancel',
       FxType.crossfeed => 'Crossfeed',
       FxType.autoPan => 'Auto-pan',
+      FxType.dcShift => 'DC shift',
+      FxType.humRemove => 'Hum removal',
+      FxType.noiseReduce => 'Noise reduction',
+      FxType.declick => 'De-click',
+      FxType.declip => 'De-clip',
     };
 
 /// A short label for one param — the slider caption.
@@ -336,6 +358,14 @@ String fxParamLabel(String key) => switch (key) {
       'width' => 'Width',
       'amount' => 'Amount',
       'cutoffHz' => 'Dullness',
+      'offset' => 'Offset',
+      'harmonics' => 'Harmonics',
+      'reduction' => 'Reduction',
+      'floorAmount' => 'Residual floor',
+      'sensitivity' => 'Sensitivity',
+      'window' => 'Window',
+      'threshold' => 'Threshold',
+      'strength' => 'Strength',
       _ => key,
     };
 
@@ -399,6 +429,11 @@ double _snappedStep(double raw) {
 /// user.
 enum FxCategory {
   level,
+
+  /// A5 — the repair tools. Their own group because they answer a different
+  /// question from every other effect: not "how should this sound" but "what is
+  /// wrong with this recording".
+  restoration,
   filter,
   dynamics,
   modulation,
@@ -416,6 +451,12 @@ enum FxCategory {
 /// The category [type] belongs to.
 FxCategory fxCategory(FxType type) => switch (type) {
       FxType.gain || FxType.pan => FxCategory.level,
+      FxType.dcShift ||
+      FxType.humRemove ||
+      FxType.noiseReduce ||
+      FxType.declick ||
+      FxType.declip =>
+        FxCategory.restoration,
       FxType.remix ||
       FxType.swapChannels ||
       FxType.stereoWidth ||
@@ -476,4 +517,5 @@ String fxCategoryLabel(FxCategory category) => switch (category) {
       FxCategory.pitch => 'Pitch & time',
       FxCategory.voice => 'Voice',
       FxCategory.stereo => 'Stereo & channels',
+      FxCategory.restoration => 'Repair',
     };

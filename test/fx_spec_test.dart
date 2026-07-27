@@ -85,6 +85,12 @@ void main() {
         'centreCancel',
         'crossfeed',
         'autoPan',
+        // A5 — restoration.
+        'dcShift',
+        'humRemove',
+        'noiseReduce',
+        'declick',
+        'declip',
       ]);
     });
   });

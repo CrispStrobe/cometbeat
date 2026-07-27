@@ -234,6 +234,23 @@ enum FxType {
 
   /// Sweep the image side to side with an LFO.
   autoPan,
+
+  // A5 — restoration. These repair a recording rather than colour it.
+
+  /// Add a constant DC offset (the inverse of removing one).
+  dcShift,
+
+  /// Notch out mains hum and its harmonics.
+  humRemove,
+
+  /// Spectral noise reduction — subtract an estimated noise floor per bin.
+  noiseReduce,
+
+  /// Repair clicks and crackle by interpolating across them.
+  declick,
+
+  /// Rebuild the tops of clipped peaks.
+  declip,
 }
 
 enum FxPreset { vocalPolish, lofiCrunch, wideSpace, robotVoice }
@@ -453,6 +470,29 @@ FxSpec defaultFx(FxType type) => switch (type) {
       FxType.autoPan => const FxSpec(
           type: FxType.autoPan,
           params: {'rateHz': 0.5, 'depth': 0.8, 'waveform': 0, 'mix': 1},
+        ),
+      // A5. A zero shift is a no-op, so an unedited dcShift changes nothing.
+      FxType.dcShift => const FxSpec(
+          type: FxType.dcShift,
+          params: {'offset': 0, 'mix': 1},
+        ),
+      // 50 Hz is the European mains; 60 for the Americas and Japan. Six
+      // harmonics reach 300 Hz, which is where audible hum lives.
+      FxType.humRemove => const FxSpec(
+          type: FxType.humRemove,
+          params: {'freq': 50, 'harmonics': 6, 'q': 30, 'mix': 1},
+        ),
+      FxType.noiseReduce => const FxSpec(
+          type: FxType.noiseReduce,
+          params: {'reduction': 1, 'floorAmount': 0.06, 'mix': 1},
+        ),
+      FxType.declick => const FxSpec(
+          type: FxType.declick,
+          params: {'sensitivity': 8, 'window': 64, 'mix': 1},
+        ),
+      FxType.declip => const FxSpec(
+          type: FxType.declip,
+          params: {'threshold': 0.95, 'strength': 1, 'mix': 1},
         ),
       FxType.compressor => const FxSpec(
           type: FxType.compressor,

@@ -47,6 +47,8 @@ import 'package:comet_beat/core/audio/crisp_dsp/pitch_shift.dart'
     show granularPitchShift, granularPitchShiftStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
     show resampleCubic;
+import 'package:comet_beat/core/audio/crisp_dsp/restoration.dart'
+    show declickFx, declipFx, dcShiftFx, humRemoveFx, noiseReduceFx;
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart'
     show reverbFx, reverbFxStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/ring_mod.dart' show ringModFx;
@@ -506,6 +508,38 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
         attackMs: p('attackMs', 10),
         releaseMs: p('releaseMs', 120),
         makeupDb: p('makeupDb', 0),
+        mix: p('mix', 1),
+      ),
+    // A5 — restoration.
+    FxType.dcShift => dcShiftFx(
+        input,
+        offset: p('offset', 0),
+        mix: p('mix', 1),
+      ),
+    FxType.humRemove => humRemoveFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 50),
+        harmonics: p('harmonics', 6).round(),
+        q: p('q', 30),
+        mix: p('mix', 1),
+      ),
+    FxType.noiseReduce => noiseReduceFx(
+        input,
+        reduction: p('reduction', 1),
+        floorAmount: p('floorAmount', 0.06),
+        mix: p('mix', 1),
+      ),
+    FxType.declick => declickFx(
+        input,
+        sensitivity: p('sensitivity', 8),
+        window: p('window', 64).round(),
+        mix: p('mix', 1),
+      ),
+    FxType.declip => declipFx(
+        input,
+        threshold: p('threshold', 0.95),
+        strength: p('strength', 1),
         mix: p('mix', 1),
       ),
     FxType.compressor => compressorFx(

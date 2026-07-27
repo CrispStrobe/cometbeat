@@ -321,6 +321,13 @@ const kDawClipEffectTypes = <DawClipEffectType>[
   DawClipEffectType.biquadRaw,
   DawClipEffectType.hilbert,
   DawClipEffectType.convolutionReverb,
+  // A5 — the repair tools, before the creative ones: a recording gets fixed
+  // first and shaped second.
+  DawClipEffectType.noiseReduce,
+  DawClipEffectType.humRemove,
+  DawClipEffectType.declick,
+  DawClipEffectType.declip,
+  DawClipEffectType.dcShift,
   DawClipEffectType.compressor,
   DawClipEffectType.gate,
   // A3 — with the other dynamics.
