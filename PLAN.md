@@ -391,11 +391,18 @@ multiply — which is exactly where `applyCellVelocities` already operates. Reus
 that seam.
 
 **Slices, smallest shippable first:**
-- ⬜ **A1 — model + codec.** Lane type, `GrooveSpec` field, share-token and save
+- ✅ **A1 — model + codec.** SHIPPED. Lane type, `GrooveSpec` field, share-token and save
   round-trip. Pure, no audio, no UI.
-- ⬜ **A2 — render ONE lane (level).** Applied post-normalisation. The guard
-  test is the important one: a groove with no lanes must render **byte-for-byte**
-  as before, exactly as polymeter had to.
+- ✅ **A2 — render the level lane.** SHIPPED. `mixStems` grew an optional
+  `envelopes` parameter parallel to `stems`, applied AFTER unit-peak × gain;
+  null (the default) leaves its inner loop untouched, so every other caller —
+  the Tracker included — is byte-identical. The engine passes null entirely
+  unless `hasAutomation`. Guard test in place: no lanes ⇒ byte-for-byte as
+  before, and setting-then-clearing returns the original bytes.
+  ⚠️ **Mono path only.** The panned (`_anyPanned`) path uses `mixStemsStereo`,
+  which has no envelope parameter yet — a panned track currently ignores its
+  level lane. Do A3 there rather than bolting pan automation onto a mixer that
+  cannot express level automation.
 - ⬜ **A3 — pan + filter** on the same seam, once level proves the shape.
 - ⬜ **A4 — UI.** Draw the lane over the per-track row in the inspector.
   **Needs a product decision before starting:** per-eighth-step values (16 of

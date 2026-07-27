@@ -26,6 +26,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart';
 import 'package:comet_beat/core/audio/fx/fx_chain.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
+import 'package:comet_beat/core/audio/loop_automation.dart';
 import 'package:comet_beat/core/audio/loop_instrument_render.dart'
     show renderCellsWithInstrument;
 import 'package:comet_beat/core/audio/loop_track_length.dart';
@@ -1712,6 +1713,53 @@ class LoopEngine {
     _clearRenderCaches();
   }
 
+  /// Automation lanes — a per-track value that MOVES across the loop.
+  ///
+  /// A2 renders [AutomationParam.level] only; pan and filter follow on the same
+  /// seam. Empty = no automation anywhere, which is the case that must stay
+  /// byte-identical to a build without this feature.
+  final AutomationLanes _automation = {};
+
+  /// [id]'s lane for [param], or null when it has none.
+  AutomationLane? automationFor(String id, AutomationParam param) =>
+      _automation[id]?[param];
+
+  /// Sets or clears [id]'s lane for [param].
+  void setAutomation(String id, AutomationParam param, AutomationLane? lane) {
+    final byParam = _automation[id];
+    if (lane == null) {
+      if (byParam == null || byParam.remove(param) == null) return;
+      if (byParam.isEmpty) _automation.remove(id);
+    } else {
+      if (byParam != null && byParam[param] == lane) return;
+      (_automation[id] ??= {})[param] = lane;
+    }
+    _clearRenderCaches();
+  }
+
+  /// True when any track has any lane — the fast path out of every automation
+  /// cost when a groove does not use it.
+  bool get hasAutomation => _automation.isNotEmpty;
+
+  /// [id]'s level lane sampled to one multiplier per SAMPLE, or null.
+  ///
+  /// Null rather than a flat array when there is no lane, so the mixer can skip
+  /// the multiply entirely and the render stays byte-identical.
+  Float64List? _levelEnvelope(String id) {
+    final lane = automationFor(id, AutomationParam.level);
+    if (lane == null || lane.isEmpty) return null;
+    final samples = timing.totalSamples;
+    final steps = timing.totalSteps;
+    final out = Float64List(samples);
+    for (var i = 0; i < samples; i++) {
+      // Which eighth-step this sample falls in; the lane wraps, so a lane
+      // shorter than the loop repeats across it.
+      final step = (i * steps) ~/ samples;
+      out[i] = AutomationParam.level.valueAt(lane.at(step));
+    }
+    return out;
+  }
+
   /// Per-track swing (absent = the groove's global swing).
   ///
   /// Giving one track its own shuffle while the rest stay straight is how a
@@ -2437,18 +2485,26 @@ class LoopEngine {
         ),
       );
     }
+    final mixed = [
+      for (final track in tracks)
+        if (enabled.contains(track.id)) track,
+    ];
     return wavBytes(
       _applySend(
         mixStems(
           [
-            for (final track in tracks)
-              if (enabled.contains(track.id))
-                (
-                  samples: stem(track),
-                  gain: track.gain * (levels[track.id] ?? 1.0).clamp(0.0, 1.0),
-                ),
+            for (final track in mixed)
+              (
+                samples: stem(track),
+                gain: track.gain * (levels[track.id] ?? 1.0).clamp(0.0, 1.0),
+              ),
           ],
           totalSamples: total,
+          // Null when nothing is automated, so the mixer's inner loop is
+          // untouched and the render is byte-identical to before.
+          envelopes: hasAutomation
+              ? [for (final track in mixed) _levelEnvelope(track.id)]
+              : null,
         ),
       ),
     );

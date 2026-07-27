@@ -195,18 +195,31 @@ double _tanh(double x) {
 /// longer than [totalSamples] are zero-padded / truncated, which absorbs any
 /// per-segment sample-rounding drift between tracks. An empty [stems] list is
 /// [totalSamples] of silence.
-Int16List mixStems(List<MixStem> stems, {required int totalSamples}) {
+/// [envelopes], when given, is parallel to [stems]: a per-sample multiplier
+/// applied AFTER the unit-peak normalisation and gain. That ordering is the
+/// whole point — a level automation folded into the samples BEFORE normalisation
+/// would be divided straight back out by the peak it just changed. A null entry
+/// (or a null list) leaves that stem exactly as it was.
+Int16List mixStems(
+  List<MixStem> stems, {
+  required int totalSamples,
+  List<Float64List?>? envelopes,
+}) {
   final mix = Float64List(totalSamples);
-  for (final stem in stems) {
+  for (var s = 0; s < stems.length; s++) {
+    final stem = stems[s];
     var peak = 0.0;
     for (final v in stem.samples) {
       if (v.abs() > peak) peak = v.abs();
     }
     if (peak == 0) continue;
     final scale = stem.gain / peak;
+    final env =
+        (envelopes != null && s < envelopes.length) ? envelopes[s] : null;
     final n = min(stem.samples.length, totalSamples);
     for (var i = 0; i < n; i++) {
-      mix[i] += stem.samples[i] * scale;
+      final e = env == null ? 1.0 : (i < env.length ? env[i] : env.last);
+      mix[i] += stem.samples[i] * scale * e;
     }
   }
   final samples = Int16List(totalSamples);
