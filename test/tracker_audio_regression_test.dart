@@ -42,6 +42,7 @@ import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/audio_compare.dart';
+import 'support/reference_players.dart';
 
 /// Opt-in flag for the heavy OpenMPT A/B comparison, matching the
 /// `String.fromEnvironment` pattern in `test/bench_arrange_test.dart`.
@@ -70,24 +71,14 @@ import 'support/audio_compare.dart';
 const _openMptAbRaw = String.fromEnvironment('OPENMPT_AB');
 final _openMptAb = _openMptAbRaw.isNotEmpty && _openMptAbRaw != '0';
 
-// OpenMPT binary path (Homebrew install location)
-/// Resolved from PATH, falling back to the Homebrew prefix. It used to be
-/// pinned to one Cellar version, so a routine `brew upgrade` silently skipped
-/// the whole audit.
-final String _kOpenMptPath = _resolveOpenMpt();
+// The reference players and the WAV reader live in `support/reference_players.dart`
+// — this harness and the per-effect sweep both need them, and two copies of a
+// WAV chunk walker is one copy too many.
+final String _kOpenMptPath = kOpenMptPath;
+const _kSampleRate = kReferenceSampleRate;
 
-String _resolveOpenMpt() {
-  final which = Process.runSync('which', ['openmpt123']);
-  if (which.exitCode == 0) {
-    final path = (which.stdout as String).trim();
-    if (path.isNotEmpty && File(path).existsSync()) return path;
-  }
-  return '/opt/homebrew/bin/openmpt123';
-}
-
-const _kSampleRate = 44100;
-
-/// A second and third INDEPENDENT player, used to calibrate the gates.
+/// The worst pairwise spectral agreement among the reference renders — the bar
+/// our own render is judged against. Null when fewer than two are available.
 ///
 /// PLAN.md §6 X0: an absolute threshold is the wrong baseline. Two engines
 /// never agree perfectly — they differ in interpolation, envelopes and
@@ -95,58 +86,6 @@ const _kSampleRate = 44100;
 /// **how closely the independent engines agree with each other on this
 /// material**. Gating at a fixed 0.80 let a deviation through that a listener
 /// could hear, because the references agreed at 0.93 on the same fixture.
-///
-/// Both are optional: with only one reference present the harness falls back to
-/// the old absolute thresholds and says so.
-///   libxmp:   brew install xmp
-///   micromod: cc -O2 -o mod2wav mod2wav.c micromod.c   (martincameron/micromod)
-String? _resolveOptional(String binary) {
-  final which = Process.runSync('which', [binary]);
-  if (which.exitCode != 0) return null;
-  final path = (which.stdout as String).trim();
-  return path.isNotEmpty && File(path).existsSync() ? path : null;
-}
-
-final String? _kXmpPath = _resolveOptional('xmp');
-final String? _kMicromodPath = _resolveOptional('mod2wav');
-
-/// Renders through libxmp, or null when `xmp` is not installed.
-Future<Uint8List?> _renderWithXmp(String fixturePath) async {
-  final exe = _kXmpPath;
-  if (exe == null) return null;
-  final dir = Directory.systemTemp.createTempSync('xmp_ref_');
-  try {
-    final out = '${dir.path}/out.wav';
-    final r = await Process.run(
-      exe,
-      ['-d', 'wav', '-o', out, '-f', '$_kSampleRate', fixturePath],
-    );
-    if (r.exitCode != 0 || !File(out).existsSync()) return null;
-    return File(out).readAsBytesSync();
-  } finally {
-    dir.deleteSync(recursive: true);
-  }
-}
-
-/// Renders through micromod, or null when `mod2wav` is not on PATH.
-/// MOD only — micromod does not read XM/S3M/IT.
-Future<Uint8List?> _renderWithMicromod(String fixturePath) async {
-  final exe = _kMicromodPath;
-  if (exe == null || !fixturePath.toLowerCase().endsWith('.mod')) return null;
-  final dir = Directory.systemTemp.createTempSync('micromod_ref_');
-  try {
-    final out = '${dir.path}/out.wav';
-    final r =
-        await Process.run(exe, [fixturePath, out, '-rate', '$_kSampleRate']);
-    if (r.exitCode != 0 || !File(out).existsSync()) return null;
-    return File(out).readAsBytesSync();
-  } finally {
-    dir.deleteSync(recursive: true);
-  }
-}
-
-/// The worst pairwise spectral agreement among the reference renders — the bar
-/// our own render is judged against. Null when fewer than two are available.
 double? _interReferenceAgreement(List<Float64List> refs) {
   if (refs.length < 2) return null;
   var worst = 1.0;
@@ -162,114 +101,6 @@ double? _interReferenceAgreement(List<Float64List> refs) {
 /// Loads test fixture bytes
 Uint8List _fixture(String name) =>
     File('test/fixtures/$name').readAsBytesSync();
-
-/// Renders module with OpenMPT to WAV bytes (stereo, 16-bit, 44100 Hz)
-Future<Uint8List> _renderWithOpenMpt(String fixturePath) async {
-  final tempDir = Directory.systemTemp.createTempSync('tracker_regression_');
-  try {
-    // Copy fixture to temp dir (openmpt123 creates output in same dir as input)
-    final fixtureName = fixturePath.split('/').last;
-    final tempFixture = '${tempDir.path}/$fixtureName';
-    await File(fixturePath).copy(tempFixture);
-
-    final result = await Process.run(
-      _kOpenMptPath,
-      [
-        '--render',
-        '--samplerate', '$_kSampleRate',
-        '--channels', '2',
-        '--no-float', // 16-bit integer
-        // Dither is RANDOM and openmpt123 defaults it on (`--dither 1`) for
-        // 16-bit output, so the reference differed on every run. Level and
-        // envelope shrugged it off, but on thin material it was enough to move
-        // the cross-correlation peak — the same A/B reported lags of 21504 and
-        // 29696 samples for identical inputs. Our own render is byte-identical
-        // run to run (verified), so switching dither off makes the whole
-        // comparison reproducible.
-        '--dither', '0',
-        tempFixture,
-      ],
-      workingDirectory: tempDir.path,
-    );
-
-    if (result.exitCode != 0) {
-      throw Exception('OpenMPT render failed: ${result.stderr}');
-    }
-
-    // OpenMPT creates a .wav file with the same base name
-    final outputPath = '$tempFixture.wav';
-    final wavFile = File(outputPath);
-    if (!wavFile.existsSync()) {
-      throw Exception(
-        'OpenMPT did not create expected output file: $outputPath',
-      );
-    }
-
-    return await wavFile.readAsBytes();
-  } finally {
-    tempDir.deleteSync(recursive: true);
-  }
-}
-
-/// Extracts mono PCM from stereo 16-bit WAV (averages L+R)
-/// Mono PCM from ANY 16-bit PCM WAV, whatever its channel count.
-///
-/// This used to be TWO functions — one that downmixed stereo (used for the
-/// OpenMPT reference) and one that assumed mono (used for our render). Our
-/// renderer has since gained stereo output, so our side was being read as twice
-/// as many "samples" of interleaved L/R: every module reported a duration ratio
-/// of almost exactly 2.0, and the RMS/spectrum comparisons after it were
-/// matching interleaved L/R against a mono downmix, which is meaningless.
-///
-/// So there is one reader now, and it reads the channel count from the header
-/// rather than assuming it. A renderer that changes its channel layout again
-/// cannot break the comparison this way twice.
-Float64List _wavToMonoPcm(Uint8List wavBytes) {
-  final data = ByteData.sublistView(wavBytes);
-  if (wavBytes.length < 44) return Float64List(0);
-
-  // Walk the chunk list rather than trusting a fixed 44-byte header — a WAV
-  // with a LIST/fact chunk would otherwise shift every sample.
-  var channels = 1;
-  var bitsPerSample = 16;
-  var dataOffset = -1;
-  var dataBytes = 0;
-  var pos = 12; // past "RIFF" + size + "WAVE"
-  while (pos + 8 <= wavBytes.length) {
-    final id = String.fromCharCodes(wavBytes.sublist(pos, pos + 4));
-    final size = data.getUint32(pos + 4, Endian.little);
-    final body = pos + 8;
-    if (id == 'fmt ' && body + 16 <= wavBytes.length) {
-      channels = data.getUint16(body + 2, Endian.little);
-      bitsPerSample = data.getUint16(body + 14, Endian.little);
-    } else if (id == 'data') {
-      dataOffset = body;
-      dataBytes = size;
-      break;
-    }
-    pos = body + size + (size.isOdd ? 1 : 0);
-  }
-  if (dataOffset < 0 || channels < 1 || bitsPerSample != 16) {
-    return Float64List(0);
-  }
-
-  final available = wavBytes.length - dataOffset;
-  final usable =
-      dataBytes > 0 && dataBytes <= available ? dataBytes : available;
-  final bytesPerFrame = 2 * channels;
-  final frames = usable ~/ bytesPerFrame;
-  final pcm = Float64List(frames);
-  for (var i = 0; i < frames; i++) {
-    var sum = 0.0;
-    for (var c = 0; c < channels; c++) {
-      sum +=
-          data.getInt16(dataOffset + i * bytesPerFrame + c * 2, Endian.little) /
-              32768.0;
-    }
-    pcm[i] = sum / channels;
-  }
-  return pcm;
-}
 
 /// Computes RMS (root mean square) of PCM signal
 double _rms(Float64List pcm) {
@@ -470,7 +301,7 @@ void main() {
 
               // 3. Render with OpenMPT (industry standard)
               final openmptWav =
-                  await _renderWithOpenMpt('test/fixtures/$fixtureName');
+                  await renderWithOpenMpt('test/fixtures/$fixtureName');
               expect(
                 openmptWav.length,
                 greaterThan(44),
@@ -478,8 +309,8 @@ void main() {
               );
 
               // 4. Extract PCM data
-              final ourPcm = _wavToMonoPcm(ourWav);
-              final openmptPcm = _wavToMonoPcm(openmptWav);
+              final ourPcm = wavToMonoPcm(ourWav);
+              final openmptPcm = wavToMonoPcm(openmptWav);
 
               // 5. Duration check: allow 10% tolerance (tempo rounding, sample length differences)
               final ourDuration = ourPcm.length / _kSampleRate;
@@ -572,11 +403,11 @@ void main() {
               // engines agree with each other, not against a constant.
               final refPcms = <Float64List>[openmptPcm];
               for (final wav in [
-                await _renderWithXmp('test/fixtures/$fixtureName'),
-                await _renderWithMicromod('test/fixtures/$fixtureName'),
+                await renderWithXmp('test/fixtures/$fixtureName'),
+                await renderWithMicromod('test/fixtures/$fixtureName'),
               ]) {
                 if (wav != null && wav.length > 44) {
-                  refPcms.add(_wavToMonoPcm(wav));
+                  refPcms.add(wavToMonoPcm(wav));
                 }
               }
               final refAgree = _interReferenceAgreement(refPcms);
@@ -729,7 +560,7 @@ void main() {
           );
 
           // Check that the render produced actual audio
-          final pcm = _wavToMonoPcm(wav);
+          final pcm = wavToMonoPcm(wav);
           final peak = pcm.reduce((a, b) => max(a.abs(), b.abs()));
           expect(
             peak,

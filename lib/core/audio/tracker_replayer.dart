@@ -404,15 +404,40 @@ const double kVibratoPeriodPerDepthUnit = 255.0 / 128.0;
 /// [kPortaPeriodAccurate], which is read from the environment.
 final bool kVibratoPeriodAccurate = kPortaPeriodAccurate;
 
-/// Vibrato phase advance (radians) per speed-unit (x), per tick. A full cycle
-/// takes 32/x ticks.
-const double kVibratoRadPerSpeedUnit = 2 * pi / 32;
+/// Vibrato phase advance (radians) per speed-unit (x), per tick.
+///
+/// ProTracker adds `x*4` to an **8-bit** position each tick and indexes a
+/// 32-entry table with `(pos >> 2) & 0x1F`, taking the sign from `pos < 128`.
+/// The position wraps every 256 units, so a full cycle takes 256/(4x) =
+/// **64/x ticks**. We had 32/x, i.e. every vibrato in every module ran at
+/// exactly twice its intended rate — the residual PLAN.md §6 X1 measured at
+/// 0.02 and could not explain. No reading of the format gives 32/x; this was a
+/// plain bug, not one of the deliberate approximations, so it is fixed
+/// unconditionally rather than behind the period-accuracy gate.
+const double kVibratoRadPerSpeedUnit = 2 * pi / 64;
 
 /// Tremolo depth: volume units (0..64) per depth-unit (y).
-const double kTremoloDepthPerUnit = 1.0;
+///
+/// ProTracker computes `(sineTable[i] * y) >> 6` — one shift LESS than vibrato,
+/// so 255·y/64, nearly four volume units per depth-unit. We had 1.0, a quarter
+/// of the real swing. Cosine-based spectral similarity is amplitude-invariant
+/// and so read tremolo at 0.999 while it was four times too shallow; the
+/// envelope correlation is the metric that sees this.
+const double kTremoloDepthPerUnit = 255 / 64;
 
-/// Tremolo phase advance (radians) per speed-unit (x), per tick.
-const double kTremoloRadPerSpeedUnit = 2 * pi / 32;
+/// Tremolo phase advance (radians) per speed-unit (x), per tick — same 64/x
+/// cycle as vibrato, and it had the same doubled rate.
+const double kTremoloRadPerSpeedUnit = 2 * pi / 64;
+
+/// Panbrello phase advance, deliberately left at the old 32/x.
+///
+/// Panbrello is an IT/S3M effect; ProTracker has no such command, so the 64/x
+/// rule above is not evidence about it. IT's own rule is different again (a
+/// 256-entry table stepped by the speed nibble → 256/x). Rather than let a
+/// ProTracker finding silently change an untested effect, panbrello keeps the
+/// behaviour it has always had. ⬜ Unverified against a reference — see the
+/// PLAN.md §6 ladder.
+const double kPanbrelloRadPerSpeedUnit = 2 * pi / 32;
 
 /// The full channel volume (classic tracker 0..64).
 const int kMaxVolume = 64;
@@ -453,6 +478,28 @@ class ReplayResult {
 /// classic "random", 3) falls back to sine so the pure trajectory stays
 /// deterministic for tests.
 double trackerLfo(int waveform, double phase) => lfoValue(waveform, phase);
+
+/// ProTracker's vibrato/tremolo shape in [-1, 1], as the hardware computes it —
+/// i.e. in the sense that gets ADDED to the period (vibrato) or the volume
+/// (tremolo).
+///
+/// Sine and square agree with [trackerLfo]; the RAMP does not. ProTracker's is
+/// `pos < 128 ? +(i<<3) : -(255 - (i<<3))`, which traced over a whole cycle is a
+/// RISING sawtooth — 0 up to +1, then a jump to −1 and back up to 0. Our
+/// [lfoValue] ramp is the falling one, so reusing it here would invert E41
+/// vibrato. Rare command, cheap to get right, and the kind of thing that is
+/// invisible until someone's module sounds wrong.
+double protrackerLfo(int waveform, double phase) {
+  switch (waveform & 3) {
+    case 1: // ramp — rising sawtooth in period space (a fall in PITCH)
+      final t = ((phase / (2 * pi)) % 1.0 + 1.0) % 1.0;
+      return t < 0.5 ? 2 * t : 2 * t - 2;
+    case 2: // square — full deflection, sign flips at the half cycle
+      return sin(phase) >= 0 ? 1.0 : -1.0;
+    default: // sine (and 3 "random", kept deterministic)
+      return sin(phase);
+  }
+}
 
 /// The Rxy (retrigger + volslide) volume change for code [x], applied to volume
 /// [v] on each retrigger — the classic XM table (0/8 = no change; 1–5 subtract
@@ -567,6 +614,20 @@ class ReplayVoice {
   double _vibPhase = 0;
   double _tremPhase = 0;
   double _panbrelloPhase = 0;
+
+  /// Restart the vibrato/tremolo LFOs for a freshly triggered note.
+  ///
+  /// ProTracker zeroes the LFO position on a new note UNLESS the waveform
+  /// select carries bit 2 — `E44`..`E47` for vibrato, `E74`..`E77` for tremolo.
+  /// That is the classic "continue through the note" flag, and it is why the
+  /// waveform nibble runs 0..7 rather than 0..3: the low two bits pick the
+  /// shape, bit 2 says whether to retrigger. We reset unconditionally, so a
+  /// module using the continue flag got its LFO restarted on every note.
+  void _retriggerLfos() {
+    if ((_vibWave & 4) == 0) _vibPhase = 0;
+    if ((_tremWave & 4) == 0) _tremPhase = 0;
+    _panbrelloPhase = 0;
+  }
 
   // --- IT resonant low-pass filter (initial cutoff/resonance + Zxx) ----------
   // Current filter parameters: cutoff 0..127 (127 = fully open), resonance
@@ -884,9 +945,7 @@ class ReplayVoice {
           released = false;
           _retriggered = true;
           noteVolume = cell.volume ?? 1.0;
-          _vibPhase = 0;
-          _tremPhase = 0;
-          _panbrelloPhase = 0;
+          _retriggerLfos();
         }
       } else {
         pitch = m;
@@ -902,9 +961,7 @@ class ReplayVoice {
         // the song instead of just the cut note — which is what the first cut
         // of that fix did, halving the level of everything after it.
         if (cell.instrument > 0) volume = kMaxVolume;
-        _vibPhase = 0;
-        _tremPhase = 0;
-        _panbrelloPhase = 0;
+        _retriggerLfos();
       }
     } else if (cell.volume != null) {
       // A volume-column-only cell (no note) sets the RINGING note's volume — a
@@ -1130,8 +1187,14 @@ class ReplayVoice {
     if (_isTonePorta && _glissando) effPitch = effPitch.roundToDouble();
 
     // Vibrato: zero-mean LFO (E4x waveform); phase advances each tick.
-    if (_isVibrato) {
-      final lfo = trackerLfo(_vibWave, _vibPhase);
+    //
+    // Tick 0 is EXCLUDED. ProTracker reads the row and triggers voices on tick
+    // 0 and runs the per-tick effect handler only on ticks 1..speed-1, so the
+    // note sounds at its unbent period for its first tick and the LFO neither
+    // applies nor advances. Running it on tick 0 too added a tick of phase per
+    // row.
+    if (_isVibrato && k > 0) {
+      final lfo = protrackerLfo(_vibWave, _vibPhase);
       if (kVibratoPeriodAccurate) {
         // Hardware modulates PERIOD, not pitch: a positive table value ADDS to
         // the period (lowering pitch), so a positive LFO bends the note DOWN —
@@ -1141,15 +1204,18 @@ class ReplayVoice {
         final periodOffset = _memVibDepth * kVibratoPeriodPerDepthUnit * lfo;
         effPitch = slidePitchByPeriod(pitch, periodOffset);
       } else {
-        effPitch = pitch + _memVibDepth * kVibratoDepthSemitonesPerUnit * lfo;
+        // MINUS, so the approximation bends the same DIRECTION as the hardware
+        // path above. Adding here made the two branches disagree about which
+        // way a vibrato starts.
+        effPitch = pitch - _memVibDepth * kVibratoDepthSemitonesPerUnit * lfo;
       }
       _vibPhase += _memVibSpeed * kVibratoRadPerSpeedUnit;
     }
 
-    // Tremolo: zero-mean LFO (E7x waveform) on volume; phase advances each tick.
-    if (_cmd == kFxTremolo) {
+    // Tremolo: zero-mean LFO (E7x waveform) on volume; same tick-0 rule.
+    if (_cmd == kFxTremolo && k > 0) {
       final depth = _memTremDepth * kTremoloDepthPerUnit;
-      effVol = (volume + depth * trackerLfo(_tremWave, _tremPhase))
+      effVol = (volume + depth * protrackerLfo(_tremWave, _tremPhase))
           .clamp(0.0, kMaxVolume + 0.0);
       _tremPhase += _memTremSpeed * kTremoloRadPerSpeedUnit;
     }
@@ -1158,7 +1224,7 @@ class ReplayVoice {
       effPan = _memPanbrelloDepth *
           kPanbrelloDepthPerUnit *
           trackerLfo(_panbrelloWave, _panbrelloPhase);
-      _panbrelloPhase += _memPanbrelloSpeed * kVibratoRadPerSpeedUnit;
+      _panbrelloPhase += _memPanbrelloSpeed * kPanbrelloRadPerSpeedUnit;
     }
 
     // Volume slide (A / 5 / 6): move `volume` on ticks > 0.

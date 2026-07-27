@@ -27,14 +27,25 @@ void main() {
   });
 
   group('E4x vibrato waveform', () {
-    test('square vibrato deviates by exactly ±depth every tick', () {
+    // NB tick 0 is excluded throughout this group. ProTracker reads the row and
+    // triggers voices on tick 0 and runs the per-tick effect handler only on
+    // ticks 1..speed-1, so a vibrato'd note sounds UNBENT for its first tick.
+    // These loops used to start at 0 and passed because the LFO also advanced
+    // on tick 0 — the bug and the test agreed with each other. See PLAN.md §6
+    // X2.
+    test('square vibrato deviates by exactly ±depth on every effect tick', () {
       const depth = 8 * kVibratoDepthSemitonesPerUnit; // 4xy depth nibble = 8
       // Row 0: note + E42 (select square waveform). Row 1: vibrato 4-8-8.
       final t = traceChannel([
         const TrackerCell(midi: 60, fxCmd: kFxExtended, fxParam: 0x42),
         const TrackerCell(fxCmd: kFxVibrato, fxParam: 0x88),
       ]);
-      for (var k = 0; k < kDefaultTicksPerRow; k++) {
+      expect(
+        t.pitchAt(1, 0),
+        closeTo(60, 1e-9),
+        reason: 'tick 0 carries the note, not the vibrato',
+      );
+      for (var k = 1; k < kDefaultTicksPerRow; k++) {
         expect(
           (t.pitchAt(1, k) - 60).abs(),
           closeTo(depth, 1e-9),
@@ -50,24 +61,44 @@ void main() {
         const TrackerCell(fxCmd: kFxVibrato, fxParam: 0x88),
       ]);
       final anyIntermediate = [
-        for (var k = 0; k < kDefaultTicksPerRow; k++)
+        for (var k = 1; k < kDefaultTicksPerRow; k++)
           (t.pitchAt(1, k) - 60).abs(),
       ].any((d) => d < depth - 1e-6);
       expect(anyIntermediate, isTrue);
+    });
+
+    test('the sine bends DOWN first, as lengthening the period does', () {
+      // ProTracker ADDS the first LFO lobe to the period, and a longer period
+      // is a lower pitch. We used to add it to the pitch instead, so every
+      // vibrato started by bending up — a half-cycle out of phase with the
+      // hardware and every reference player.
+      final t = traceChannel([
+        const TrackerCell(midi: 60),
+        const TrackerCell(fxCmd: kFxVibrato, fxParam: 0x48),
+      ]);
+      // Tick 0 is not an effect tick, and tick 1 reads the table BEFORE
+      // advancing it — position 0, the zero crossing — so the earliest tick
+      // that can show a direction at all is tick 2.
+      expect(t.pitchAt(1, 1), closeTo(60, 1e-9));
+      expect(t.pitchAt(1, 2), lessThan(60));
     });
   });
 
   group('E7x tremolo waveform', () {
     test('square tremolo swings volume by exactly ±depth', () {
       const depth = 8 * kTremoloDepthPerUnit; // 7xy depth nibble = 8
-      const base = kMaxVolume - 16; // mid volume so ±depth stays in range
+      // Centre the base volume: the real depth is ~4 units per nibble
+      // (`>> 6`, not vibrato's `>> 7`), so a nibble of 8 swings ±31.9 and
+      // anything but a mid-scale base would clamp. The old base of 48 only
+      // worked because the depth was a quarter of what the hardware uses.
+      const base = kMaxVolume ~/ 2;
       final t = traceChannel([
         const TrackerCell(midi: 60, fxCmd: kFxSetVolume, fxParam: base),
         // E72: select the square tremolo waveform.
         const TrackerCell(fxCmd: kFxExtended, fxParam: 0x72),
         const TrackerCell(fxCmd: kFxTremolo, fxParam: 0x88),
       ]);
-      for (var k = 0; k < kDefaultTicksPerRow; k++) {
+      for (var k = 1; k < kDefaultTicksPerRow; k++) {
         expect((t.volumeAt(2, k) - base).abs(), closeTo(depth, 1e-9));
       }
     });
