@@ -5355,6 +5355,12 @@ bool songCanStreamFlowVariable(TrackerSong song, {required bool stereo}) {
   // routes onto the WHOLE-SONG float streaming path instead (where the filter is
   // applied in one continuous pass) — byte-identical to the in-memory render.
   if (songUsesHardwareFilter(song)) return false;
+  // §4 instrument macros modulate per tick from note-on; the per-chunk streamer
+  // restarts voice state per chunk (so a macro's tick counter would reset mid-
+  // note). A macro'd song routes onto the whole-song replay path instead — which
+  // applies macros on every voice — keeping the feature airtight. Macro-free
+  // songs are unaffected (byte-identical streaming as before).
+  if (song.usesMacros) return false;
   final played = walkFlow(song);
   if (played.isEmpty) return false;
   final nativeLongStereo = _songUsesNativeLongStereo(song, played);

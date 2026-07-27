@@ -870,7 +870,11 @@ class TrackerSong {
       if (!songUsesVariableTiming(this) &&
           !songNeedsWalkRender(this) &&
           !_usesGlobalVolumeCommand() &&
-          !songUsesHardwareFilter(this)) {
+          !songUsesHardwareFilter(this) &&
+          // §4 macros need the per-tick replayer; the per-order chunk streamer
+          // renders each order independently, so a macro'd song routes onto the
+          // whole-song stereo float path (songStereoFloat) instead.
+          !usesMacros) {
         await streamSongWavToFile(path, ditherState: d);
         return;
       }
@@ -894,6 +898,7 @@ class TrackerSong {
         usesCommands ||
         usesInstruments ||
         usesEnvelopes ||
+        usesMacros ||
         songNeedsWalkRender(this)) {
       // Flow / variable-timing MONO with only chunk-safe channels: as above but
       // for the mono mix — no whole-song Float64 accumulator, flat RAM.
