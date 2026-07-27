@@ -156,17 +156,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   GUI's hand-written label + param tables deleted and derived from the same
   registry · A1 the rest of the filter set (6 effects) · C1 `.cbdaw` v2, so a
   saved project keeps its clips **editable**, not just audible · C2 drum +
-  groove round-trip, so every source kind the DAW holds can now go home.
-  **Next:** C3 universal "Open in…" via `ProjectBridge` (the CROSS-kind half:
-  a beat → Tracker, a groove → Score, with the loss report shown BEFORE the
-  user commits — the routing and the reports already exist in
-  `core/interop/project_bridge.dart`, the Audio Editor just does not ask it) ·
-  A3 dynamics (compand/multiband/limiter) · A4 channel & stereo ops.
-  ⚠ **Interop status, precisely:** every clip kind now opens its OWN editor
-  exactly (score/tab/tracker/drum/groove — no conversion, nothing approximated),
-  and that survives a save. What is still missing is opening a clip in a
-  DIFFERENT mode's editor (C3), tab fretting surviving the trip inbound (C4),
-  and audio → notes via Transcribe (C5).
+  groove round-trip, so every source kind the DAW holds can now go home · C3
+  cross-mode "Open a copy in…" (hosting the already-built `OpenInMenu`, which
+  had no host).
+  **Next:** A3 dynamics (compand/multiband/limiter) · A4 channel & stereo ops ·
+  C4 tab fretting surviving the trip inbound · C5 "Transcribe this clip".
+  ⚠ **Interop status, precisely:** every clip kind opens its OWN editor exactly
+  (score/tab/tracker/drum/groove — no conversion, nothing approximated) and that
+  survives a save; score and tracker clips can additionally open a CONVERTED
+  copy in another mode, with the cost named first. Still missing: tab fretting
+  surviving the trip INBOUND (C4 — a tab arrives as a score, so its string/fret
+  choice dies at the door and the Tab Workshop re-frets from scratch), and
+  audio → notes via Transcribe (C5).
+  ⚠️ **For the owner of `shared/widgets/open_in_menu.dart`:** it is entirely
+  unlocalized — its menu, its loss dialog and its "cannot open" dialog are
+  hardcoded English. It had no host until now, so this never showed; the Audio
+  Editor's new door makes it user-visible in a de/en app. Left to you rather
+  than half-localized from my side, which would leave the dialogs mismatched.
   **Files I touch:** `core/audio/fx/*` (additive — new `FxType`s are APPENDED,
   never reordered, since `.cbdaw` stores effects by name), `core/audio/crisp_dsp/*`
   (new files), `daw_edits.dart`, `daw_project.dart`, `daw_clip_source_codec.dart`,
