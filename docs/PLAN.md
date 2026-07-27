@@ -29,6 +29,19 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (unit-tests)** · 🚧 **coverage sweep — 5 previously-untested pure modules
+  now covered (48 tests), more to come.** Data-driven: surveyed `lib/core`/`shared`/
+  pure-`features` for files with zero test reference, then added exact + property
+  tests for the highest-value pure logic (FFI/native + generated-data files skipped
+  — not unit-testable). New: `narration_key_test` (cross-platform TTS cache keys),
+  `karplus_test` (Karplus-Strong DSP — length/silence-edges/determinism/peak-norm/
+  attack-declick/decay), `g2p_en_test` + `g2p_de_test` (grapheme→IPA — exact ARPABET
+  reductions/T-flap/linking-ɹ + property tests, lexicon-backed words by property),
+  `chord_quality_test` (Harte↔symbol↔intervals, every vocab entry round-trips +
+  all fallback branches). **Test-only, no `lib` changes** — zero regression risk.
+  Whole-project analyze clean. Continuing the sweep next (more pure-logic gaps).
+  Worktree `../mus-tests`.
+
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
   grand-staff view (the deferred bit).** Follow-up to `grandstaff-markings`, which
   had left the two-id spans off. `buildGrandStaff` now carries **slurs and hairpins**
