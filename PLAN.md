@@ -865,9 +865,14 @@ remain.
    applies volume (amplitude), pitch and arpeggio (semitones) per tick from
    note-on. OPT-IN — absent macros keep every render byte-identical. Codec
    serializes them.
-3. **Remaining slices (open):** apply macros in the SAMPLE tick voice
-   (`_renderSampleChannelInto`) so sampled instruments modulate too; wire the
-   pan/duty targets; and a macro editor UI in `instrument_editor.dart`.
+3. ~~**Sample-voice + reachability:**~~ (DONE) macros apply in the sample tick
+   voice too, and `TrackerSong.usesMacros` routes a macro'd song through the tick
+   replayer so `renderSongWav` actually sounds them (was silently taking the fast
+   offline path).
+4. **Remaining slices (open):** macros on the STEREO (`replaySongStereo`, used for
+   PANNED songs) and variable-timing tick paths — currently a macro on a panned or
+   mid-song-tempo-change song is not applied; the pan/duty targets; and a macro
+   editor UI in `instrument_editor.dart`.
 
 ### 5. Comprehensive Effect Command Set & Flow Control
 **Current State:**

@@ -32,8 +32,14 @@ both the additive and the sample voice.
   Opt-in — macro-free samples keep the whole-channel dispatch and are
   byte-identical. Codec serializes sample macros.
 
-Remaining (see PLAN.md §4): the variable-timing sample path, the pan/duty
-targets, and a macro editor UI.
+- **Reachability** (`a88691e2`). `TrackerSong.usesMacros` joins the `renderSongWav`
+  routing so a macro'd song uses the tick replayer instead of the fast offline
+  path (which renders at a fixed timbre) — macros now actually sound in playback
+  for an unpanned song. Macro-free songs are unaffected.
+
+Remaining (see PLAN.md §4): the STEREO (panned, `replaySongStereo`) + variable-
+timing tick paths don't apply macros yet, plus the pan/duty targets and a macro
+editor UI.
 
 ## Tracker DSP lifted into the shared editors (2026-07-26)
 
