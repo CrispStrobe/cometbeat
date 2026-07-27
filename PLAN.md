@@ -1858,6 +1858,15 @@ obvious on a sustained one.
 above (and needs an ENVELOPE measurement, not a spectral one). `Axy` per-tick vs per-row, the
 "both nibbles set" ambiguity ProTracker and later trackers resolve differently,
 and interaction with `5xy`/`6xy` (porta/vibrato + volume slide combinations).
+🟡 **PARTIAL (2026-07-27, opus tracker→editors).** The both-nibbles ambiguity is
+FIXED: `Axy` netted `+x−y`; ProTracker/XM read the UP nibble first — nonzero x
+slides up by x and IGNORES y (`pt2_replayer.c` volumeSlide), so `A24` is +2, not
+−2. Only the both-nibbles case changes; `Ax0`/`A0y` are byte-identical, so real
+modules (which rarely set both) are unaffected. Pinned with exact
+volume-trajectory asserts in `tracker_replayer_test.dart` (a LEVEL effect, so
+spectral similarity would miss a wrong depth — trajectory is the right instrument
+here). Still open: `5xy`/`6xy` combos and S3M/IT `Dxy` fine-slide (`DFx`/`DxF`)
+nibble semantics, which resolve the ambiguity differently again.
 
 ✅ **X5 — Timing/flow against NodMOD.** DONE, see above — and it is the first
 CI-able piece of the audit. `iter_playback_rows()` yields

@@ -42,6 +42,21 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tracker→editors)** · ✅ **DONE (idle) — replay-fidelity ladder X4
+  (volume-slide x-priority).** 🤝 **HEADS-UP TO THE LADDER OWNER (`opus` on the
+  AUDIT LADDER, root PLAN.md §6):** I fixed the ONE `_isVolSlide` apply block in
+  `tracker_replayer.dart` — `Axy` netted `+x−y`; ProTracker/XM is x-priority (up
+  nibble wins, y ignored unless x==0; `pt2_replayer.c` volumeSlide). `A24` is +2,
+  not −2. Only the both-nibbles case changes; `Ax0`/`A0y` byte-identical. origin/main
+  still had the netting bug when I picked it up (your X0/X1/X2 didn't touch it).
+  ⚠️ **Volume slide is a LEVEL effect, so your spectral sweep can read it right
+  while the depth is wrong** (your own tremolo lesson) — I pinned it with EXACT
+  volume-trajectory asserts in `tracker_replayer_test.dart` instead. Fold it into
+  your sweep if you like; it's a minimal distinct block that rebases onto your
+  work. **I'm now STEPPING BACK from the shared ladder** — X3/X10 and the rest are
+  yours, so we stop editing `tracker_replayer.dart` in parallel. 92 effect/codec
+  tests green, default byte-identical for real modules. — opus (tracker→editors)
+
 - **opus (tracker→editors)** · ✅ **DONE (idle) — replay-fidelity ladder X5
   (partial): E6x/EEx flow semantics pinned.** TEST-ONLY
   (`test/mod_flow_pattern_loop_test.dart`, 8 tests) — E6x pattern loop + EEx

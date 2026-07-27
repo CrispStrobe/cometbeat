@@ -1228,9 +1228,15 @@ class ReplayVoice {
     }
 
     // Volume slide (A / 5 / 6): move `volume` on ticks > 0.
+    //
+    // x-PRIORITY, not net: ProTracker/XM read the UP nibble first — a nonzero x
+    // slides UP by x and IGNORES y; only when x == 0 does y slide DOWN
+    // (`pt2_replayer.c` volumeSlide). `A24` is +2, not −2. Netting (`+x−y`) was a
+    // bug that only ever bit the both-nibbles-set case (rare, but the hardware
+    // never nets), so single-nibble slides (`Ax0`/`A0y`) are unchanged.
     if (_isVolSlide && k > 0) {
       final x = (_memVolSlide >> 4) & 0xF, y = _memVolSlide & 0xF;
-      volume = (volume + x - y).clamp(0, kMaxVolume);
+      volume = (x > 0 ? volume + x : volume - y).clamp(0, kMaxVolume);
       if (_cmd != kFxTremolo) effVol = volume.toDouble();
     }
 

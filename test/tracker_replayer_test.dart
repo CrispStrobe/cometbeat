@@ -288,6 +288,31 @@ void main() {
       expect(t.volumeAt(1, 5), closeTo(44, 1e-9)); // 64 − 4×5
       expect(t.volumeAt(2, 0), closeTo(44, 1e-9)); // persisted
     });
+
+    test('Axy is x-PRIORITY when both nibbles are set (up wins, y ignored)',
+        () {
+      // ProTracker/XM read the up nibble first: A24 slides UP by 2 and ignores
+      // the 4 — it is NOT a net −2. Only the both-nibbles case is affected; this
+      // pins the fix against the old `+x−y` netting bug (X4).
+      final cells = [
+        fx(kFxSetVolume, 0x20, midi: 60), // start at 32 so up is visible
+        fx(kFxVolumeSlide, 0x24), // x=2 up, y=4 down → x wins → +2/tick
+        const TrackerCell(),
+      ];
+      final t = traceChannel(cells);
+      expect(t.volumeAt(1, 0), 32); // tick 0 holds
+      expect(t.volumeAt(1, 5), closeTo(42, 1e-9)); // 32 + 2×5, NOT 32 − 2×5
+    });
+
+    test('A0y still slides down (x == 0 falls through to y)', () {
+      final cells = [
+        fx(kFxSetVolume, 0x40, midi: 60),
+        fx(kFxVolumeSlide, 0x03), // x=0 → down 3/tick
+        const TrackerCell(),
+      ];
+      final t = traceChannel(cells);
+      expect(t.volumeAt(1, 5), closeTo(49, 1e-9)); // 64 − 3×5
+    });
   });
 
   group('effect memory', () {
