@@ -34,6 +34,7 @@ import 'package:comet_beat/core/audio/mod/opl_voice.dart'
     show OplInstrument, kOplPresets;
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_effects.dart';
+import 'package:comet_beat/core/audio/tracker_profile.dart';
 import 'package:comet_beat/core/audio/tracker_replay.dart';
 
 export 'package:comet_beat/core/audio/tracker_effects.dart' show TrackerEffect;
@@ -2013,54 +2014,19 @@ class TrackerChannel {
 
   final String id;
 
-  /// ProTracker effect-memory rules apply to this channel's playback.
+  /// The replay rules this channel plays under — see [ReplayProfile].
   ///
-  /// ProTracker's `portaUp`, `portaDown` and `volumeSlide` read the ROW's
-  /// parameter (`ch->n_cmd`), so a bare `100` or `A00` does nothing; XM, S3M
-  /// and IT latch instead and a zero parameter repeats the last value. `3xx`
-  /// and `4xy` latch under both, so the difference is per-COMMAND. Measured
-  /// against three engines agreeing at 1.000 spectral, latching `1xx` put us at
-  /// 0.270 and `2xx` at 0.531 (PLAN.md §6 X3/X4).
+  /// This replaced three separate booleans (`protrackerMemory`,
+  /// `volumeSlideAllTicks`, `linearSlides`) that arrived one investigation at a
+  /// time, each threaded by hand through the same eight `ReplayVoice`
+  /// construction sites. One of those threads got missed and a defaulted
+  /// parameter hid it, so the next quirk belongs in the profile as a field
+  /// rather than as a fourth boolean here.
   ///
-  /// It lives on the CHANNEL, which is admittedly an odd home for a song-level
-  /// format rule. The reason is reach: every render path in `tracker_replayer`
-  /// already receives a [TrackerChannel], so the flag arrives at all ten
-  /// `ReplayVoice` construction sites without threading a parameter through ten
-  /// helper signatures and ~35 call sites. That threading was tried first and
-  /// abandoned — the cascade ran deeper than the helpers it started with.
-  /// `songFromModuleDoc` sets it on every channel of a MOD import.
-  bool protrackerMemory = false;
-
-  /// S3M/IT apply volume slides on EVERY tick, including tick 0; MOD and XM
-  /// skip the first. libxmp models it as `QUIRK_VSALL` ("volume slides in all
-  /// frames") and sets it for the ScreamTracker family.
-  ///
-  /// We skipped tick 0 for every format, so an S3M/IT slide moved one step per
-  /// row less than it should. Invisible to the audit's spectral gate — which is
-  /// amplitude-invariant and cannot see a volume effect at all — and caught only
-  /// once the sweep grew an ENVELOPE metric: `volslide_up_Dx0` read 1.000
-  /// spectral and 0.71 envelope against references agreeing at 1.00.
-  /// PLAN.md §6.
-  bool volumeSlideAllTicks = false;
-
-  /// IT and XM slide pitch LINEARLY (a fixed interval per unit); MOD and S3M
-  /// slide the Amiga PERIOD, which is the same step in a different space and so
-  /// bends by a different amount depending where the note sits.
-  ///
-  /// Both formats carry a header flag for it and libopenmpt honours it. We
-  /// always slid the period, which is right for MOD/S3M and wrong for IT/XM.
-  /// Measured on the same command written into both formats — a perfect mirror
-  /// image, which is what makes the diagnosis certain rather than plausible:
-  ///
-  ///                       period model      linear model
-  ///   porta_*.it          0.683 / 0.544     1.000 / 1.000
-  ///   porta_*.s3m         1.000 / 1.000     0.685 / 0.543
-  ///
-  /// So the slide model is a per-FORMAT property, not the single global switch
-  /// `PORTA_PERIOD` treats it as. This flag takes precedence over that gate for
-  /// IT/XM and leaves MOD/S3M entirely to it, so the maintainer's pending
-  /// decision about the MOD default is untouched. PLAN.md §6.
-  bool linearSlides = false;
+  /// Defaults to [ReplayProfile.native]: a channel that nobody told otherwise
+  /// is one of OUR songs, not a ProTracker import. `songFromModuleDoc` sets the
+  /// format's profile on import.
+  ReplayProfile profile = ReplayProfile.native;
 
   /// Mutable so a channel can be re-voiced at runtime (e.g. assigning a freshly
   /// recorded [SampleInstrument] to the voice channel). Go through

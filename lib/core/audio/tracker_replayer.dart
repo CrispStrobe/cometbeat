@@ -77,9 +77,15 @@ import 'package:comet_beat/core/audio/macro_sequence.dart';
 import 'package:comet_beat/core/audio/mod/opl_voice.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/tracker_profile.dart';
+
 import 'package:comet_beat/core/audio/tracker_replay.dart'
     show kFxVolumeSlide, kFxSetVolume, kDefaultTicksPerRow;
 import 'package:comet_beat/core/audio/tracker_song.dart';
+// Re-exported so every existing importer of this file keeps seeing
+// periodForPitch / slidePitchByPeriod / kPortaSemitonesPerUnit / PitchDomain /
+// ReplayProfile at the same address they always did.
+export 'package:comet_beat/core/audio/tracker_profile.dart';
 
 // --- Command nibbles ---------------------------------------------------------
 
@@ -333,9 +339,6 @@ double itFilterCutoffHzMod(
 // Chosen for a pleasant musical feel; documented so the trajectory tests pin
 // them.
 
-/// Semitones per porta param-unit, per tick (1xx/2xx/3xx). 16 units ≈ 1 st/tick.
-const double kPortaSemitonesPerUnit = 1 / 16;
-
 /// Slide portamento in PERIOD space, the way the hardware does — opt-in:
 ///
 ///   flutter test --dart-define=PORTA_PERIOD=1 …
@@ -359,43 +362,6 @@ const double kPortaSemitonesPerUnit = 1 / 16;
 const String _portaPeriodRaw = String.fromEnvironment('PORTA_PERIOD');
 final bool kPortaPeriodAccurate =
     _portaPeriodRaw.isNotEmpty && _portaPeriodRaw != '0';
-
-/// ProTracker's legal period window; the hardware clamps to it.
-const double kModMinPeriod = 113;
-const double kModMaxPeriod = 856;
-
-/// Our `pitch` (fractional semitones, 60 = the reference note) as an Amiga
-/// period. Period 428 is `modPeriods` index 12, which import maps to MIDI 60.
-double periodForPitch(double pitch) => 428.0 * pow(2.0, (60.0 - pitch) / 12.0);
-
-/// The inverse of [periodForPitch].
-double pitchForPeriod(double period) =>
-    60.0 - 12.0 * (log(period / 428.0) / ln2);
-
-/// One tick of a period-space slide: [delta] period units (negative = up in
-/// pitch), clamped to the hardware window, returned as a pitch.
-double slidePitchByPeriod(double pitch, double delta) {
-  final p = (periodForPitch(pitch) + delta).clamp(kModMinPeriod, kModMaxPeriod);
-  return pitchForPeriod(p);
-}
-
-/// Vibrato depth: semitones per depth-unit (y). 8 ⇒ ±1 semitone.
-///
-/// This is the DEFAULT (semitone-space) model, the vibrato twin of
-/// [kPortaSemitonesPerUnit] — a musical approximation, not period-accurate. Under
-/// [kVibratoPeriodAccurate] it is replaced by [kVibratoPeriodPerDepthUnit].
-const double kVibratoDepthSemitonesPerUnit = 1 / 8;
-
-/// Period-accurate vibrato depth: PERIOD units per depth-unit (y), at the LFO's
-/// peak. ProTracker adds `(vibratoTable[pos] * y) >> 7` to the period, with the
-/// table peaking at 255, so the peak period wobble is `255/128 · y` units
-/// (`pt2_replayer.c` vibrato). `trackerLfo` is that table normalized to ±1.
-///
-/// This is the vibrato half of the same period-vs-pitch correction B3 made for
-/// portamento (see [kPortaPeriodAccurate]): a fixed semitone depth is ~1.6× too
-/// deep AND wrong in shape, because a period wobble is not a constant-semitone
-/// wobble. In force only under [kVibratoPeriodAccurate].
-const double kVibratoPeriodPerDepthUnit = 255.0 / 128.0;
 
 /// Vibrato (and 6xy) run period-accurate when the PORTA_PERIOD gate is on — the
 /// whole pitch-effect family shares one switch, so an A/B flips porta + vibrato
@@ -526,33 +492,23 @@ int retrigVolume(int v, int x) {
 }
 
 class ReplayVoice {
-  ReplayVoice({
-    this.protrackerMemory = false,
-    this.volumeSlideAllTicks = false,
-    this.linearSlides = false,
-  });
+  ReplayVoice({this.profile = ReplayProfile.native});
 
-  /// IT/XM slide pitch linearly; MOD/S3M slide the Amiga period. See
-  /// [TrackerChannel.linearSlides] for the measurement that settled it.
+  /// The source format's replay rules. See [ReplayProfile].
+  final ReplayProfile profile;
+
+  /// The pitch space this voice actually bends in.
   ///
-  /// When set, the semitone (linear) path is used regardless of the
-  /// `PORTA_PERIOD` gate — that gate governs MOD/S3M only.
-  final bool linearSlides;
-
-  /// Whether THIS voice should bend in period space: the hardware model, gated
-  /// for MOD/S3M and never right for a linear-slide IT/XM.
-  bool get _periodSlides => kPortaPeriodAccurate && !linearSlides;
-
-  /// S3M/IT slide volume on EVERY tick, including tick 0; MOD and XM skip the
-  /// first. See [TrackerChannel.volumeSlideAllTicks].
-  final bool volumeSlideAllTicks;
-
-  /// ProTracker effect-memory rules: `1xx`, `2xx` and `Axy` take the ROW's
-  /// parameter with no latching, so a bare `100`/`A00` does nothing, where
-  /// XM/S3M/IT reuse the last value. `3xx` and `4xy` latch under BOTH rules —
-  /// the difference is per-command, not a blanket switch. Comes from
-  /// [TrackerChannel.protrackerMemory]; see there for why it rides the channel.
-  final bool protrackerMemory;
+  /// ⚠️ The `PORTA_PERIOD` gate is applied HERE and nowhere else. It is the
+  /// last remnant of treating the slide model as a global switch rather than a
+  /// per-format property, and it survives only so this refactor stays
+  /// behaviour-neutral; the next commit deletes it and `profile.pitch` becomes
+  /// the whole answer. Authored songs are unaffected either way — they are
+  /// [ReplayProfile.native], which is linear regardless.
+  PitchDomain get _domain =>
+      profile.pitch == PitchDomain.amigaPeriod && !kPortaPeriodAccurate
+          ? PitchDomain.linearFrequency
+          : profile.pitch;
 
   /// Current base pitch as a FRACTIONAL MIDI note (porta/tone-porta move this).
   double pitch = 0;
@@ -1008,13 +964,13 @@ class ReplayVoice {
         // `ch->n_cmd` directly, so a bare `100` slides by zero. Storing the
         // parameter unconditionally reproduces that and leaves the apply site
         // below unchanged, ignorant of which rule is in force.
-        if (_param != 0 || protrackerMemory) _memPortaUp = _param;
+        if (_param != 0 || !profile.latchPortaParam) _memPortaUp = _param;
       case kFxPortaDown:
         // ProTracker does NOT latch this: `portaUp`/`portaDown` read
         // `ch->n_cmd` directly, so a bare `200` slides by zero. Storing the
         // parameter unconditionally reproduces that and leaves the apply site
         // below unchanged, ignorant of which rule is in force.
-        if (_param != 0 || protrackerMemory) _memPortaDown = _param;
+        if (_param != 0 || !profile.latchPortaParam) _memPortaDown = _param;
       case kFxTonePorta:
         if (_param != 0) _memTonePorta = _param;
       case kFxVibrato:
@@ -1025,17 +981,17 @@ class ReplayVoice {
         // 6xy = CONTINUE the vibrato (reuse the existing speed/depth memory) +
         // volume slide xy. The param is the SLIDE amount, not vib speed/depth —
         // do NOT touch the vibrato memory (would corrupt/invent vibrato).
-        if (_param != 0 || protrackerMemory) _memVolSlide = _param;
+        if (_param != 0 || !profile.latchVolSlideParam) _memVolSlide = _param;
       case kFxTremolo:
         final x = (_param >> 4) & 0xF, y = _param & 0xF;
         if (x != 0) _memTremSpeed = x;
         if (y != 0) _memTremDepth = y;
       case kFxTonePortaVolSlide:
-        if (_param != 0 || protrackerMemory) _memVolSlide = _param;
+        if (_param != 0 || !profile.latchVolSlideParam) _memVolSlide = _param;
       case kFxVolumeSlide:
         // Same rule: ProTracker's `volumeSlide` reads the row's parameter, so
         // `A00` changes nothing where XM/S3M/IT repeat the last slide.
-        if (_param != 0 || protrackerMemory) _memVolSlide = _param;
+        if (_param != 0 || !profile.latchVolSlideParam) _memVolSlide = _param;
       case kFxSetVolume:
         volume = _param.clamp(0, kMaxVolume);
       case kFxRetrigVolSlide:
@@ -1186,40 +1142,17 @@ class ReplayVoice {
     // Porta up / down: move `pitch` on ticks > 0.
     if (_cmd == kFxPortaUp && k > 0) {
       // Period DOWN raises pitch — see [slidePitchByPeriod].
-      pitch = _periodSlides
-          ? slidePitchByPeriod(pitch, -_memPortaUp.toDouble())
-          : pitch + _memPortaUp * kPortaSemitonesPerUnit;
+      pitch = _domain.slideUp(pitch, _memPortaUp.toDouble());
       effPitch = pitch;
     } else if (_cmd == kFxPortaDown && k > 0) {
-      pitch = _periodSlides
-          ? slidePitchByPeriod(pitch, _memPortaDown.toDouble())
-          : pitch - _memPortaDown * kPortaSemitonesPerUnit;
+      pitch = _domain.slideUp(pitch, -_memPortaDown.toDouble());
       effPitch = pitch;
     }
 
     // Tone porta: slide toward the target, never overshoot. With glissando
     // (E3x) on, the OUTPUT snaps to whole semitones while the slide continues.
     if (_isTonePorta && k > 0) {
-      if (_periodSlides) {
-        // Same period-space slide as 1xx/2xx, but stopping AT the target
-        // instead of running on. Compared in PERIOD space so the "do not
-        // overshoot" test matches the direction the hardware is actually
-        // moving: sliding up in pitch means the period is DECREASING.
-        final target = periodForPitch(targetPitch);
-        final current = periodForPitch(pitch);
-        final step = _memTonePorta.toDouble();
-        final next = current > target
-            ? max(target, current - step)
-            : min(target, current + step);
-        pitch = pitchForPeriod(next.clamp(kModMinPeriod, kModMaxPeriod));
-      } else {
-        final step = _memTonePorta * kPortaSemitonesPerUnit;
-        if (pitch < targetPitch) {
-          pitch = min(targetPitch, pitch + step);
-        } else if (pitch > targetPitch) {
-          pitch = max(targetPitch, pitch - step);
-        }
-      }
+      pitch = _domain.toward(pitch, targetPitch, _memTonePorta.toDouble());
       effPitch = pitch;
     }
     if (_isTonePorta && _glissando) effPitch = effPitch.roundToDouble();
@@ -1233,20 +1166,10 @@ class ReplayVoice {
     // row.
     if (_isVibrato && k > 0) {
       final lfo = protrackerLfo(_vibWave, _vibPhase);
-      if (kVibratoPeriodAccurate && !linearSlides) {
-        // Hardware modulates PERIOD, not pitch: a positive table value ADDS to
-        // the period (lowering pitch), so a positive LFO bends the note DOWN —
-        // the sign is the hardware's, not the semitone model's. Depth scales in
-        // period units; the wobble is shallower and correctly-shaped vs the
-        // semitone approximation (see kVibratoPeriodPerDepthUnit).
-        final periodOffset = _memVibDepth * kVibratoPeriodPerDepthUnit * lfo;
-        effPitch = slidePitchByPeriod(pitch, periodOffset);
-      } else {
-        // MINUS, so the approximation bends the same DIRECTION as the hardware
-        // path above. Adding here made the two branches disagree about which
-        // way a vibrato starts.
-        effPitch = pitch - _memVibDepth * kVibratoDepthSemitonesPerUnit * lfo;
-      }
+      // Both domains bend DOWN on a positive lobe; the sign and the per-domain
+      // depth scaling live in [PitchDomain.vibrato]. Two branches here is
+      // exactly how they came to disagree about direction.
+      effPitch = _domain.vibrato(pitch, _memVibDepth, lfo);
       _vibPhase += _memVibSpeed * kVibratoRadPerSpeedUnit;
     }
 
@@ -1272,7 +1195,7 @@ class ReplayVoice {
     // (`pt2_replayer.c` volumeSlide). `A24` is +2, not −2. Netting (`+x−y`) was a
     // bug that only ever bit the both-nibbles-set case (rare, but the hardware
     // never nets), so single-nibble slides (`Ax0`/`A0y`) are unchanged.
-    if (_isVolSlide && (k > 0 || volumeSlideAllTicks)) {
+    if (_isVolSlide && (k > 0 || profile.volumeSlideOnTick0)) {
       final x = (_memVolSlide >> 4) & 0xF, y = _memVolSlide & 0xF;
       volume = (x > 0 ? volume + x : volume - y).clamp(0, kMaxVolume);
       if (_cmd != kFxTremolo) effVol = volume.toDouble();
@@ -1362,13 +1285,12 @@ class ChannelTrace {
 ChannelTrace traceChannel(
   List<TrackerCell> cells, {
   int ticksPerRow = kDefaultTicksPerRow,
-  bool protrackerMemory = false,
+  ReplayProfile profile = ReplayProfile.native,
 }) {
-  // Defaults to the tracker-general rules, so every existing caller is
-  // unaffected; pass [protrackerMemory] to trace a MOD's per-command effect
-  // memory (`1xx`/`2xx`/`Axy` do not latch). See
-  // [TrackerChannel.protrackerMemory].
-  final voice = ReplayVoice(protrackerMemory: protrackerMemory);
+  // Defaults to [ReplayProfile.native] — our own authoring rules — so every
+  // existing caller is unaffected. Pass a tracker's profile to trace what a
+  // MOD/XM/S3M/IT would do.
+  final voice = ReplayVoice(profile: profile);
   final pitch = <List<double>>[];
   final volume = <List<double>>[];
   final retrigger = <List<bool>>[];
@@ -1680,11 +1602,7 @@ double? readLoopedSampleForTest(
   const declickSec = 0.003;
   final rows = cells.length;
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice(
-    protrackerMemory: channel.protrackerMemory,
-    volumeSlideAllTicks: channel.volumeSlideAllTicks,
-    linearSlides: channel.linearSlides,
-  );
+  final voice = ReplayVoice(profile: channel.profile);
   var readPos = 0.0;
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -1960,11 +1878,7 @@ void _renderSampleChannelInto(
   final stem = Float64List(timing.totalSamples);
   final rows = cells.length;
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice(
-    protrackerMemory: channel.protrackerMemory,
-    volumeSlideAllTicks: channel.volumeSlideAllTicks,
-    linearSlides: channel.linearSlides,
-  );
+  final voice = ReplayVoice(profile: channel.profile);
   var readPos = 0.0; // fractional index into the current sample
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -2175,11 +2089,7 @@ void _renderSampleChannelIntoVariable(
   final stemLen = rowStart[rows];
   final stem = useSink ? Float64List(0) : Float64List(stemLen);
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice(
-    protrackerMemory: channel.protrackerMemory,
-    volumeSlideAllTicks: channel.volumeSlideAllTicks,
-    linearSlides: channel.linearSlides,
-  );
+  final voice = ReplayVoice(profile: channel.profile);
   var readPos = 0.0;
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -2444,11 +2354,7 @@ void _renderPulseChannelInto(
   }
   var macroTick = 0;
   const declickSec = 0.003;
-  final voice = ReplayVoice(
-    protrackerMemory: channel.protrackerMemory,
-    volumeSlideAllTicks: channel.volumeSlideAllTicks,
-    linearSlides: channel.linearSlides,
-  );
+  final voice = ReplayVoice(profile: channel.profile);
   var phase = 0.0;
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
@@ -2657,11 +2563,7 @@ void _renderChannelInto(
   final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
   var macroTick = 0; // ticks since the current note-on (drives the macros)
 
-  final voice = ReplayVoice(
-    protrackerMemory: channel.protrackerMemory,
-    volumeSlideAllTicks: channel.volumeSlideAllTicks,
-    linearSlides: channel.linearSlides,
-  );
+  final voice = ReplayVoice(profile: channel.profile);
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
     // Per-cell instrument: switch the additive timbre if the cell names an
@@ -5015,11 +4917,7 @@ void _renderChannelIntoVariable(
   final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
   var macroTick = 0;
 
-  final voice = ReplayVoice(
-    protrackerMemory: channel.protrackerMemory,
-    volumeSlideAllTicks: channel.volumeSlideAllTicks,
-    linearSlides: channel.linearSlides,
-  );
+  final voice = ReplayVoice(profile: channel.profile);
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
     if (cellInst > 0 && pool != null && cellInst - 1 < pool.length) {
@@ -5899,8 +5797,8 @@ class _FlowVarLayout {
 
 /// Persistent additive-voice state carried across chunk boundaries.
 class _AddChunkState {
-  _AddChunkState({bool protrackerMemory = false})
-      : voice = ReplayVoice(protrackerMemory: protrackerMemory);
+  _AddChunkState({ReplayProfile profile = ReplayProfile.native})
+      : voice = ReplayVoice(profile: profile);
   final ReplayVoice voice;
   ({
     List<double> harmonics,
@@ -5913,8 +5811,8 @@ class _AddChunkState {
 /// Persistent sample-voice state carried across chunk boundaries (the read
 /// pointer + envelope cursors that make a note ring past a chunk edge).
 class _SampChunkState {
-  _SampChunkState(this.cur, {bool protrackerMemory = false})
-      : voice = ReplayVoice(protrackerMemory: protrackerMemory);
+  _SampChunkState(this.cur, {ReplayProfile profile = ReplayProfile.native})
+      : voice = ReplayVoice(profile: profile);
   final ReplayVoice voice;
   TrackerInstrument? cur;
   double readPos = 0.0;
@@ -6332,8 +6230,8 @@ class _ZoneRun {
     this.steps,
     this.sustainSteps,
     this.zone, {
-    bool protrackerMemory = false,
-  }) : voice = ReplayVoice(protrackerMemory: protrackerMemory);
+    ReplayProfile profile = ReplayProfile.native,
+  }) : voice = ReplayVoice(profile: profile);
   final int startStep;
   final int steps;
   final int sustainSteps;
@@ -6671,7 +6569,7 @@ List<_ChunkChannel> _planChunkChannels(
         ch,
         cells,
         false,
-        _SampChunkState(ch.instrument, protrackerMemory: ch.protrackerMemory),
+        _SampChunkState(ch.instrument, profile: ch.profile),
         zone: _ZoneChannelState(runs, regGain),
       );
       out.add(zoneCc);
@@ -6691,7 +6589,7 @@ List<_ChunkChannel> _planChunkChannels(
         ch,
         cells,
         false,
-        _SampChunkState(ch.instrument, protrackerMemory: ch.protrackerMemory),
+        _SampChunkState(ch.instrument, profile: ch.profile),
         proc:
             _ProcChannelState(runs, scale, layout.variable, layout, ch, cells),
       );
@@ -6718,8 +6616,8 @@ List<_ChunkChannel> _planChunkChannels(
     }
     final additive = _additiveOf(ch.instrument) != null;
     final state = additive
-        ? _AddChunkState(protrackerMemory: ch.protrackerMemory)
-        : _SampChunkState(ch.instrument, protrackerMemory: ch.protrackerMemory);
+        ? _AddChunkState(profile: ch.profile)
+        : _SampChunkState(ch.instrument, profile: ch.profile);
     // A native sample tick voice pans per sample from `rowPan`, which the
     // whole-song _renderSampleChannelStereoTicks seeds with the channel's base
     // pan (8xx/Pxy then slide it). The mono path never reads rowPan, so seeding
@@ -6773,7 +6671,7 @@ List<_ZoneRun> _planZoneRuns(TrackerChannel channel, List<TrackerCell> cells) {
             steps,
             sustainSteps,
             zone,
-            protrackerMemory: channel.protrackerMemory,
+            profile: channel.profile,
           ),
         );
       }

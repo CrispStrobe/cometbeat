@@ -87,6 +87,13 @@ final _writers = <String, Uint8List Function(ModuleDoc)>{
   'it': convertToIt,
 };
 
+/// The profile a `protracker: true/false` case should trace under.
+///
+/// The tests contrast ProTracker's rules with the tracker-general ones; the
+/// latter are what our OWN authored songs use, which is [ReplayProfile.native].
+ReplayProfile _profile(bool protracker) =>
+    protracker ? ReplayProfile.protracker : ReplayProfile.native;
+
 void main() {
   group('the importer marks only MOD', () {
     for (final entry in _writers.entries) {
@@ -94,13 +101,25 @@ void main() {
           () {
         final song = songFromModuleBytes(entry.value(_statedOnce(0x1, 0x04)));
         expect(song.protrackerEffectMemory, entry.key == 'mod');
-        // And it must reach the channels, which is what the render paths read.
+        // And the PROFILE must reach the channels, which is what the render
+        // paths read. The profile carries every per-format rule at once now,
+        // so this also covers the pitch domain and the volume-slide tick.
+        final want = switch (entry.key) {
+          'mod' => ReplayProfile.protracker,
+          'xm' => ReplayProfile.fastTracker,
+          's3m' => ReplayProfile.screamTracker,
+          _ => ReplayProfile.impulse,
+        };
+        expect(
+          song.channels.every((c) => identical(c.profile, want)),
+          isTrue,
+          reason: '${entry.key} channels must carry ${want.name}',
+        );
         expect(
           song.channels
-              .every((c) => c.protrackerMemory == (entry.key == 'mod')),
+              .every((c) => !c.profile.latchPortaParam == (entry.key == 'mod')),
           isTrue,
-          reason: 'the flag has to be on the CHANNELS, not just the song — '
-              'that is the copy every render path actually sees',
+          reason: 'only ProTracker declines to latch a porta parameter',
         );
       });
     }
@@ -129,7 +148,7 @@ void main() {
         for (var i = 0; i < 7; i++)
           bare ? TrackerCell(fxCmd: effect) : const TrackerCell(),
       ];
-      final t = traceChannel(cells, protrackerMemory: protracker);
+      final t = traceChannel(cells, profile: _profile(protracker));
       return t.pitchAt(cells.length - 1, kDefaultTicksPerRow - 1);
     }
 
@@ -178,7 +197,7 @@ void main() {
         const TrackerCell(fxCmd: 0xA, fxParam: 0x02),
         for (var i = 0; i < 7; i++) const TrackerCell(fxCmd: 0xA),
       ];
-      final t = traceChannel(cells, protrackerMemory: protracker);
+      final t = traceChannel(cells, profile: _profile(protracker));
       return t.volumeAt(cells.length - 1, kDefaultTicksPerRow - 1);
     }
 
@@ -206,12 +225,12 @@ void main() {
       for (var i = 0; i < 10; i++) const TrackerCell(fxCmd: 0x3),
     ];
     for (final protracker in [true, false]) {
-      final t = traceChannel(cells, protrackerMemory: protracker);
+      final t = traceChannel(cells, profile: _profile(protracker));
       expect(
         t.pitchAt(cells.length - 1, kDefaultTicksPerRow - 1),
         greaterThan(61.0),
         reason: 'a bare 300 must CONTINUE toward the target '
-            '(protrackerMemory: $protracker)',
+            '(profile: ${_profile(protracker).name})',
       );
     }
   });

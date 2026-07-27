@@ -26,6 +26,7 @@ import 'package:comet_beat/core/audio/mod/xm_module.dart'
     show XmEnvelope, XmInstrument;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument, kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/core/audio/tracker_profile.dart';
 import 'package:comet_beat/core/audio/tracker_song.dart';
 
 /// Parses raw module [bytes] and imports them (throws the reader's
@@ -139,23 +140,21 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
           )
         : null,
   );
-  // ProTracker's effect memory is per-COMMAND and differs from every other
-  // format's; the replayer cannot tell where a song came from, so the importer
-  // records it. The flag rides each CHANNEL because that is what every render
-  // path already receives — see [TrackerChannel.protrackerMemory].
+  // Every replay quirk of the source format, in one value. See
+  // [ReplayProfile] — this used to be three separate booleans set here, each
+  // threaded through the replayer by hand.
+  //
+  // A song we AUTHORED keeps [ReplayProfile.native], which is the default on
+  // TrackerChannel; only an import gets a tracker's rules.
   song.protrackerEffectMemory = doc.sourceFormat == ModuleFormat.mod;
-  // S3M/IT slide volume on every tick including the first; MOD and XM skip
-  // tick 0. See [TrackerChannel.volumeSlideAllTicks].
-  final vsall = doc.sourceFormat == ModuleFormat.s3m ||
-      doc.sourceFormat == ModuleFormat.it;
-  // IT/XM bend pitch linearly; MOD/S3M bend the Amiga period. See
-  // [TrackerChannel.linearSlides].
-  final linear = doc.sourceFormat == ModuleFormat.it ||
-      doc.sourceFormat == ModuleFormat.xm;
+  final profile = switch (doc.sourceFormat) {
+    ModuleFormat.mod => ReplayProfile.protracker,
+    ModuleFormat.xm => ReplayProfile.fastTracker,
+    ModuleFormat.s3m => ReplayProfile.screamTracker,
+    ModuleFormat.it => ReplayProfile.impulse,
+  };
   for (final ch in song.channels) {
-    ch.protrackerMemory = song.protrackerEffectMemory;
-    ch.volumeSlideAllTicks = vsall;
-    ch.linearSlides = linear;
+    ch.profile = profile;
   }
   return song;
 }
