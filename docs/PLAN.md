@@ -498,14 +498,30 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (spd-probe)** · 🚧 **ACTIVE — can SPD give us (pitch → string, position)?**
-  Trying the Apache-2.0 HF mirror of the String Performance Dataset on the VPS:
-  pull ONLY the contact-point/keypoint JSON for the cello demo piece (not the .avi
-  views), see whether its hand-string contacts resolve to a string index and a
-  stopping position per note, and if so check them against our frame model — real
-  measured hands are the one thing no symbolic corpus can validate. VPS-side, under
-  `/mnt/volume1/spd-probe/`; nothing enters `db.json` or the catalog from a probe.
-  Worktree `../mus-cello-fingering` (docs only).
+- **opus (spd-probe)** · ✅ **SHIPPED (idle) — YES, SPD gives exactly the data we
+  need, and it validates the frame model** (`18d6eccc`). Pulled only the 6.5 MB
+  contact-point JSON of the Apache-2.0 demo piece (not the 80 MB-per-view videos),
+  read SPD's own published keypoint layout (contact point 150, string endpoints
+  142–149, used-finger joints 151–154), projected each contact onto the four string
+  segments → **(string, length ratio → semitones above open, finger)** per frame, and
+  segmented 659 frames into **45 note events**. Their string order is ours
+  (A3/D3/G2/C2).
+  **Result 1 — the frame model is right, measured rather than transcribed:** reading
+  each measured stop as `anchor = semitones − (finger − 1)` lands on INTEGER positions
+  (1, 2, 3, 4, 6, 7, 8, 9, 10, 11), not arbitrary fractions. A real hand sits on our
+  grid.
+  **Result 2 — agreement splits exactly where it should:** in positions 1–4 (ordinary
+  playing) we choose the player's own string **95% (19/20)**, independently confirming
+  the 92.7% measured against printed editions from a completely different kind of
+  evidence. Above that the excerpt is a **shifting exercise** climbing one string on
+  purpose and we agree 36% — the arranger optimising for ease while the player
+  optimised for practice. The test states that rather than treating 36% as failure.
+  Committed as `test/data/spd_cello01_measured.json` + `bowed_measured_hand_test.dart`
+  with the Apache-2.0 statement of changes in `test/data/README.md`; no SPD source
+  file is redistributed. ⚠ Their labels come from a Pitch-Finger model constrained by
+  mocap — strong evidence of what the hand DID, weak evidence of what a teacher would
+  WRITE. The other 119 pieces are request-access (Google Form) — a maintainer decision
+  if we ever want the full set.
 
 - **opus (pdmx-normalise)** · ✅ **SHIPPED (idle) — composer-name normalisation for
   the PD gate + the agreement metric decomposed** (`a1de6857`; VPS
