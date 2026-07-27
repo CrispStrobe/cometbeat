@@ -335,8 +335,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   would edit the original and you would only find out after building the whole
   arrangement. Refuses when all four slots are taken rather than clobbering one.
   5 tests incl. both traps. Localised de/en.
-  Next: **L2 session grid** (the tracks × sections matrix already exists in the
-  data), then L5 queued-launch feedback, L4 per-section repeats.
+  ✅ **L2 session grid SHIPPED** — the tracks × sections matrix, in the sound
+  inspector under the section pads. The data was always there (each scene stores
+  an enabled set AND a variant per track); it was only ever drawn as four
+  lettered pads, so you could launch a section but never see inside it. Cells
+  show the variant letter in the track's colour; **tapping one edits that
+  SECTION, not the live mix** — so you can prepare the next section while the
+  current one keeps playing, which is the point of a session view. Editing the
+  section that IS playing applies immediately. Hidden until a section exists (an
+  empty 7×4 grid is noise on a child's screen). 6 tests.
+  ⚠️ **`pumpAndSettle` never settles on this screen** (it animates
+  continuously) — a widget test using it ran 8+ minutes and failed. Use bounded
+  `pump(Duration(...))`. Also: the grid lives in the inspector, which is CLOSED
+  by default, so a widget test must call `toggleInspector()` first.
+  Next: L5 queued-launch feedback, L4 per-section repeats, L6 per-track swing.
   Scoped in [PLAN.md](../PLAN.md) → *"Loop Studio — sequencer-parity slices"*
   (L1–L6, with what is already at parity so nobody rebuilds it). Building **L1
   per-track pattern length (polymeter)** first. Touching

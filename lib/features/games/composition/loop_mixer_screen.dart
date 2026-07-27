@@ -318,6 +318,11 @@ abstract interface class LoopMixerTester {
   /// Copies the section now playing into the next free slot and launches it.
   /// False when every slot is taken.
   bool duplicateSection();
+
+  /// Whether [id] plays in section [i], and a way to change that — the session
+  /// grid's cell state.
+  bool sceneHasTrack(int i, String id);
+  void toggleSceneTrack(int i, String id);
   bool get isChaining;
   void toggleChain();
 
@@ -1042,6 +1047,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void launchScene(int i) => _launchScene(i);
   @override
   bool sceneIsEmpty(int i) => _scenes[i] == null;
+  @override
+  bool sceneHasTrack(int i, String id) => _sceneHasTrack(i, id);
+  @override
+  void toggleSceneTrack(int i, String id) => _toggleSceneTrack(i, id);
   @override
   bool duplicateSection() => _duplicateSection(AppLocalizations.of(context)!);
   @override
@@ -3926,7 +3935,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             ),
           ),
         ),
-        _inspectorSection(l10n.loopMixerArrange, _sceneRow(l10n)),
+        _inspectorSection(
+          l10n.loopMixerArrange,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sceneRow(l10n),
+              _sceneGrid(l10n),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -3947,6 +3966,102 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           child: _soundInspectorContent(l10n),
         ),
       );
+
+  /// L2 — the session grid: which tracks play in which section.
+  ///
+  /// The data for this has existed since sections shipped (each `GrooveScene`
+  /// stores an enabled set AND a variant per track); it was only ever shown as
+  /// four lettered pads, so you could launch a section but never see what was
+  /// in it, let alone change one thing about it.
+  ///
+  /// Hidden until at least one section is captured. An empty 7×4 grid of
+  /// nothing is noise on a child's screen, and the pads above already teach
+  /// how to make the first one.
+  Widget _sceneGrid(AppLocalizations l10n) {
+    if (!hasScenes) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final track in _engine.tracks)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      _trackLabel(l10n, track.id),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ),
+                  for (var i = 0; i < _scenes.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: GestureDetector(
+                        key: Key('loop-cell-${track.id}-$i'),
+                        onTap: _scenes[i] == null
+                            ? null
+                            : () => _toggleSceneTrack(i, track.id),
+                        child: Container(
+                          width: 30,
+                          height: 18,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _sceneHasTrack(i, track.id)
+                                ? (_trackColors[track.id] ?? scheme.primary)
+                                : scheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: _sceneHasTrack(i, track.id)
+                              ? Text(
+                                  String.fromCharCode(
+                                    65 + (_scenes[i]!.variants[track.id] ?? 0),
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool _sceneHasTrack(int i, String id) =>
+      _scenes[i]?.enabled.contains(id) ?? false;
+
+  /// Turns [id] on or off inside section [i] — editing the section itself
+  /// rather than the live mix.
+  ///
+  /// If that section is the one playing, the change is applied immediately so
+  /// you hear it; otherwise it waits there until the section is launched.
+  void _toggleSceneTrack(int i, String id) {
+    final scene = _scenes[i];
+    if (scene == null) return;
+    final next = {...scene.enabled};
+    if (!next.remove(id)) next.add(id);
+    setState(() {
+      _scenes[i] = GrooveScene(next, {...scene.variants});
+      if (_chainIndex == i) {
+        _discardSolo();
+        _engine.applyScene(_scenes[i]!);
+      }
+    });
+    if (_chainIndex == i) _syncPlayback();
+  }
 
   // §G-1 arrangement: 4 scene pads (tap = launch, long-press = capture) + a
   // chain toggle that auto-advances the captured scenes at each seam.
