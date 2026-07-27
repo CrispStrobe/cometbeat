@@ -80,17 +80,37 @@ void main() {
       });
     }
 
-    test('an un-mapped Exy (E1x) survives MOD/XM but drops on S3M/IT', () {
-      // E1x fine-porta has no S3M/IT letter equivalent our reader maps, so it
-      // rides MOD/XM's shared Exy numbering but is dropped by S3M/IT.
+    test('E1x fine porta now round-trips through S3M/IT as FFx', () {
+      // This test used to assert the OPPOSITE — that E1x was dropped by S3M/IT
+      // because "it has no letter equivalent our reader maps". It does have
+      // one: `FFx` (fine porta up), and `EFx` for E2x down. The reverse map
+      // simply lacked the case, so a fine porta was silently discarded on
+      // export while the reader had no way to produce one either.
+      //
+      // Both halves are wired now (PLAN.md §6 X9), so the effect survives every
+      // format. MOD/XM keep the literal Exy encoding; S3M/IT carry it as the
+      // range-coded portamento parameter and read it back to the same cell.
       for (final fmt in ModuleFormat.values) {
         final c = _cellAfter(0xE, 0x14, fmt);
         if (_modStyleExtended.contains(fmt)) {
           expect(c.effect, 0xE, reason: '${fmt.name} keeps E1x');
           expect(c.effectParam, 0x14);
         } else {
-          expect(c.effect, 0, reason: '${fmt.name} drops un-mapped E1x');
+          expect(
+            c.effect,
+            0xE,
+            reason: '${fmt.name} must now PRESERVE E1x via FFx, not drop it',
+          );
+          expect(c.effectParam, 0x14, reason: '${fmt.name} E1x param');
         }
+      }
+    });
+
+    test('E2x fine porta down round-trips too', () {
+      for (final fmt in ModuleFormat.values) {
+        final c = _cellAfter(0xE, 0x24, fmt);
+        expect(c.effect, 0xE, reason: '${fmt.name} keeps E2x');
+        expect(c.effectParam, 0x24, reason: '${fmt.name} E2x param');
       }
     });
 
