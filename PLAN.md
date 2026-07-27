@@ -1428,6 +1428,43 @@ fixtures (0.2424 vs 0.1818) — that is the known open gain-convention item, not
 a new finding, and it is why these verdicts use SPECTRAL similarity rather than
 level.
 
+
+#### X1 CLOSED (2026-07-27) — every effect fixture now agrees with the references
+
+Re-swept all 14 fixtures with the three fixes in force
+(`--dart-define=PAULA_CLOCK=1 --dart-define=PORTA_PERIOD=1`):
+
+| fixture | refs agree | ours | gap |
+| --- | --- | --- | --- |
+| `1xx` / `2xx` / `3xx` / `5xy` portamento | 1.000 | **1.000** | 0.000 |
+| `9xx` offset, in-range and past-the-end | 1.000 | 1.000 / 0.999 | ~0 |
+| `ECx` note cut | 0.990 | **0.996** | −0.006 |
+| `EDx` note delay | 1.000 | 0.999 | 0.000 |
+| `0xy` arpeggio | 0.984 | 0.994 | −0.010 |
+| `7xy` tremolo · `Axy` volume slides | 0.999 / 1.000 | 0.999 / 1.000 | 0.000 |
+| `4xy` vibrato · `6xy` vibrato+volslide | 0.999 | 0.979 / 0.977 | **0.020 / 0.022** |
+
+On several fixtures we now sit CLOSER to each reference than they sit to each
+other, which is the most that can be asked of a fourth implementation.
+
+⬜ **The only residual: vibrato, ~0.02.** Inside the "ok" band and an order of
+magnitude below what portamento was, but it is the one number that did not go to
+zero, and `6xy` tracks it exactly (0.022 vs 0.020) — consistent with one shared
+LFO rather than two faults. Candidates, in the order worth checking: the depth
+scale (`kVibratoDepthSemitonesPerUnit`, another "musical approximation" constant
+of the same family as the portamento one that turned out wrong), the waveform
+table, and whether the LFO advances on tick 0. ⚠️ Note vibrato is applied in
+SEMITONES like portamento was — the same period-vs-pitch question applies and is
+the first thing to check.
+
+**Method note for whoever picks this up.** All three bugs were found by
+measuring one effect at a time against three independent players, then reading
+`pt2-clone`'s source for the authoritative rule — not by reading our code first.
+Twice my source reading actively contradicted the measurement and the
+measurement was right. Fix the mechanism, then re-measure the whole family
+before splitting anything into separate bugs; `3xx`/`5xy` needed no diagnosis of
+their own once `1xx`/`2xx` were right.
+
 #### The ladder — check each stage before trusting the next
 
 **X0 — Re-baseline every A/B gate against inter-reference agreement.**
