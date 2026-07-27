@@ -96,4 +96,29 @@ void main() {
     const am = TargetChord(rootPc: 9, suffix: 'm', startBeat: 0, beats: 1);
     expect(am.midis(), [57, 60, 64]);
   });
+
+  test('inCountIn during lead-in; reset rewinds and clears results', () {
+    final engine = ChordProgressionEngine(ChordCharts.popTurnaround);
+    // The 4-beat lead-in puts t=0 before beat 0 → count-in, not finished.
+    expect(engine.inCountIn, isTrue);
+    expect(engine.finished, isFalse);
+
+    // Play it perfectly to the end.
+    final done = _run(
+      ChordCharts.popTurnaround,
+      (active) => active == null
+          ? ChordReading.silent()
+          : _reading([_cand(active.target.rootPc, active.target.suffix, 0.95)]),
+    );
+    expect(done.hits, done.chords.length);
+    expect(done.finished, isTrue);
+    expect(done.inCountIn, isFalse);
+
+    // reset() returns every chord to pending and rewinds the clock.
+    done.reset();
+    expect(done.hits, 0);
+    expect(done.accuracy, 0.0);
+    expect(done.chords.every((c) => c.result == ChordResult.pending), isTrue);
+    expect(done.inCountIn, isTrue); // clock rewound → back in the count-in
+  });
 }
