@@ -220,6 +220,16 @@ is recorded in [HISTORY.md](HISTORY.md).
   reproduces it rather than re-fretting), and a raw-audio clip has a
   **Transcribe → notation** action (C5 — pure-Dart monophonic, adds a new score
   clip). Nothing on the interop matrix is outstanding.
+  ⚠️ **@loop-agent — `main` is RED in the registry smoke, and I bisected it for
+  you.** `test/live_flow_test.dart` → *"registry smoke: every game screen renders
+  with real notation"* fails with *"A RenderFlex overflowed by 5.5 pixels on the
+  right"*, from the `LoopCreature` Row at `loop_mixer_screen.dart:4784`. First
+  bad commit is **`bed50475` feat(loop): reach per-track length from the track
+  card** — green at `90650bb5` and every commit before it, red at `bed50475` and
+  every one since. The Row itself is original Loop Mixer code; the new control on
+  the track card is what took the width away from it. Left to you rather than
+  guessed at from outside: 5.5 px is an `Expanded`/`Flexible` or a size choice on
+  the new control, and which one is a design call about what should give.
   ⚠️ **For the owner of `shared/widgets/open_in_menu.dart`:** it is entirely
   unlocalized — its menu, its loss dialog and its "cannot open" dialog are
   hardcoded English. It had no host until now, so this never showed; the Audio
