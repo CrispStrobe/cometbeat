@@ -409,10 +409,29 @@ is recorded in [HISTORY.md](HISTORY.md).
   inspector shows the control for a rest and editing it changes the document.
   Worktree `../mus-rest-props`.
 
-- **opus (loop-seq)** · 🚧 **ACTIVE — Loop Studio sequencer-parity slices.**
-  **L1–L6 ALL SHIPPED, engine + GUI.** Now on automation lanes — scoped in
-  [PLAN.md](../PLAN.md) → *"Loop Studio — automation lanes"* (A1–A4). Building
-  **A1 model + codec**.
+- **opus (loop-seq)** · ✅ **SHIPPED (idle) — Loop Studio sequencer-parity +
+  automation, engine AND GUI.**
+  **L1–L6 and A1–A4 all shipped.** Detail + the traps are in
+  [PLAN.md](../PLAN.md) → *"Loop Studio — sequencer-parity slices"* and
+  *"— automation lanes"*. Summary: per-track pattern length (polymeter), a
+  visible/editable session grid, section copy, per-section repeats (song mode),
+  beat-quantized section launch, per-track swing, and per-step volume automation
+  with a lane editor.
+  ⚠️ **`synth.dart`'s `mixStems` / `mixStemsStereo` grew optional `envelopes`
+  (and `pans`) parameters** — both default to null and leave the inner loop
+  untouched, so the Tracker and DAW callers are byte-identical. Verified: 180
+  green across synth_mix, synth, tracker_song, tracker_replayer,
+  tracker_song_module, daw_drum_groove_roundtrip.
+  ⚠️ **Three traps recorded for anyone working this screen:** the track-card Row
+  is ~1px from RenderFlex overflow (a 34px badge broke 14 tests); `pumpAndSettle`
+  never settles here (it animates continuously — use bounded `pump`); and
+  `_clock` is a real `Stopwatch`, so on a loaded machine wall-clock time between
+  pumps can cross a seam and advance the chain under you — call
+  `debugFreezeSeams()` and drive seams with `debugLoopWrap()`.
+  ⬜ **Left open, deliberately:** a UI for the PAN lane (it renders, nothing
+  edits it), and filter automation — which needs a per-track filter to exist
+  first, since `_masterFilter` is global. Both are noted in PLAN.md rather than
+  implied to be nearly done.
   ✅ **L1 per-track pattern length (polymeter) SHIPPED** — core
   (`loop_track_length.dart`), engine (vamp path), and a tap-to-cycle badge on
   each track card (∞ = full grid). Shorten the bass to 3 and it comes round 16×
