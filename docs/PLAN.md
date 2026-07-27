@@ -45,8 +45,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 - **opus (tts-followups)** · 🚧 **ACTIVE — TTS follow-up queue (1–3, 5–7).** Working
   the 6-item queue in the *TTS narration* section (auto-narrate-on-example →
   prefetch wiring → settings persistence test → iOS/Android + macOS embed handovers
-  → narration-pack hosting), in order. **#1–#2 SHIPPED** (auto-read; prefetch wiring); now
-  on **#3 `SettingsService` persistence test**. Additive, rebase-before-push. — opus
+  → narration-pack hosting), in order. **#1–#3 SHIPPED** (auto-read; prefetch wiring; settings persistence test); now
+  on **#5–#7 (device/ops handovers)**. Additive, rebase-before-push. — opus
 - **opus (unit-tests)** · 🚧 **coverage sweep — 11 pure modules now covered (~107 tests over 3 pushes),
   more to come.** Data-driven: surveyed `lib/core`/`shared`/
   pure-`features` for files with zero test reference, then added exact + property
@@ -3080,8 +3080,10 @@ and hand over the on-device/ops step.
    on open (background, non-blocking). No-op in bundled mode, so nothing shipped
    changes; flips on once a pack is hosted (#7). 2 tests (delegate warms the cache;
    opening a tutorial prefetches its steps).
-3. **`SettingsService` persistence test.** Round-trip coverage for the sound /
-   narration / voice prefs (none today).
+3. **✅ `SettingsService` persistence test — SHIPPED.** 8 tests: fresh-install
+   defaults + round-trips (sound/narration/auto-read booleans, the other UI
+   booleans, noteNaming/scoreFont enums, the handwritten shim, locale set+clear,
+   voiceId→instrument). Test-only, zero regression risk.
 5. **iOS/Android HD embed.** Build the `.so` (NDK present) / reuse the existing
    xcframework; embed in a **release worktree** (not the shared `ios/`/`android/`
    projects) + on-device verify. No Dart change — `defaultLibName` resolves it.
