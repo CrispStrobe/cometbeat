@@ -3260,6 +3260,12 @@ abstract class AppLocalizations {
   /// **'All four sections are used — free one first'**
   String get loopMixerSectionsFull;
 
+  /// No description provided for @loopMixerRepeats.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeats'**
+  String get loopMixerRepeats;
+
   /// No description provided for @loopMixerMasterFx.
   ///
   /// In en, this message translates to:

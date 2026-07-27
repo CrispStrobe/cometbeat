@@ -1737,6 +1737,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'All four sections are used — free one first';
 
   @override
+  String get loopMixerRepeats => 'Repeats';
+
+  @override
   String get loopMixerMasterFx => 'Master effects';
 
   @override

@@ -2109,18 +2109,26 @@ class LoopEngine {
   /// the "it's just one loop" → "a whole arranged track" export. Only the layer
   /// set changes per section (tempo/key/kit/etc. stay), so every section is the
   /// same loop length. Restores the pre-call layer state; empty in → empty out.
+  /// Renders [scenes] end to end. [repeats] gives each scene its own number of
+  /// passes (A×4, B×2, A×4); when it is null every scene plays [loopsPerScene]
+  /// times, which is the older whole-arrangement behaviour.
   Float64List renderArrangement(
     List<GrooveScene> scenes, {
     int loopsPerScene = 2,
+    List<int>? repeats,
   }) {
     if (scenes.isEmpty || loopsPerScene < 1) return Float64List(0);
     final saved = captureScene();
     final sections = <Float64List>[];
     var total = 0;
-    for (final scene in scenes) {
+    for (var s = 0; s < scenes.length; s++) {
+      final scene = scenes[s];
       applyScene(scene);
       final mono = wavToMonoFloat(readWavPcm16(renderLoop()));
-      for (var i = 0; i < loopsPerScene; i++) {
+      final passes = (repeats != null && s < repeats.length)
+          ? (repeats[s] < 1 ? 1 : repeats[s])
+          : loopsPerScene;
+      for (var i = 0; i < passes; i++) {
         sections.add(mono);
         total += mono.length;
       }

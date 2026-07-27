@@ -324,6 +324,11 @@ abstract interface class LoopMixerTester {
   /// The section armed to launch at the next seam, if any.
   int? get pendingScene;
 
+  /// How many loops section [i] plays before the chain advances, and a way to
+  /// step it.
+  int sceneRepeats(int i);
+  void cycleSceneRepeats(int i);
+
   bool sceneHasTrack(int i, String id);
   void toggleSceneTrack(int i, String id);
   bool get isChaining;
@@ -1022,6 +1027,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// instantly, so the same screen behaved two different ways — arm a track and
   /// it waits for the beat, tap a section and it jumps. Now both wait.
   int? _pendingScene;
+
+  /// How many loops each section plays before the chain moves on — A×4, B×2.
+  ///
+  /// Defaults to 1, i.e. exactly the chain behaviour that shipped: one pass per
+  /// section. The export has always used 2, and that difference stays until
+  /// someone sets a value here, at which point BOTH follow it — a section that
+  /// plays four times on screen and twice in the export would be a bug.
+  final List<int> _sceneRepeats = List<int>.filled(4, 1);
+
+  /// Passes completed on the current section.
+  int _chainPass = 0;
   String? _soloTrack;
   Set<String>? _enabledBeforeSolo;
 
@@ -1060,6 +1076,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   bool sceneIsEmpty(int i) => _scenes[i] == null;
   @override
+  int sceneRepeats(int i) => _sceneRepeats[i];
+  @override
+  void cycleSceneRepeats(int i) => _cycleSceneRepeats(i);
+  @override
   bool sceneHasTrack(int i, String id) => _sceneHasTrack(i, id);
   @override
   void toggleSceneTrack(int i, String id) => _toggleSceneTrack(i, id);
@@ -1073,7 +1093,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   bool get hasScenes => _scenes.any((s) => s != null);
   @override
   Float64List debugRenderArrangement() =>
-      _engine.renderArrangement(_capturedScenes());
+      _engine.renderArrangement(_capturedScenes(), repeats: _capturedRepeats());
   @override
   Uint8List debugRenderLoop() => _engine.renderLoop();
   @override
@@ -2836,6 +2856,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       _discardSolo();
       _engine.applyScene(scene);
       _chainIndex = i;
+      _chainPass = 0;
     });
     _syncPlayback();
     _checkCombo();
@@ -2871,6 +2892,23 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     setState(() => _chaining = !_chaining);
   }
 
+  /// Repeats for [_capturedScenes], in the same order — empty slots are skipped
+  /// in both, so the two lists stay aligned.
+  List<int> _capturedRepeats() => [
+        for (var i = 0; i < _scenes.length; i++)
+          if (_scenes[i] != null) _sceneRepeats[i],
+      ];
+
+  /// Steps section [i]'s repeat count: 1 → 2 → 4 → 8 → 1.
+  void _cycleSceneRepeats(int i) {
+    const ladder = [1, 2, 4, 8];
+    final next = ladder[(ladder.indexOf(_sceneRepeats[i]) + 1) % ladder.length];
+    setState(() {
+      _sceneRepeats[i] = next;
+      if (_chainIndex == i && _chainPass >= next) _chainPass = 0;
+    });
+  }
+
   // The captured scenes, in A→D order (skipping empty slots).
   List<GrooveScene> _capturedScenes() => [
         for (final s in _scenes)
@@ -2888,6 +2926,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   // At a seam, advance the chain to the next non-empty scene and launch it.
   void _advanceChain() {
     if (!_chaining) return;
+    // Hold this section for its repeat count before moving on.
+    _chainPass++;
+    if (_chainPass < _sceneRepeats[_chainIndex]) return;
+    _chainPass = 0;
     for (var step = 1; step <= _scenes.length; step++) {
       final next = (_chainIndex + step) % _scenes.length;
       if (_scenes[next] != null) {
@@ -4074,6 +4116,45 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 ],
               ),
             ),
+          // Repeats: how many times each section plays before the chain moves
+          // on. Only meaningful once sections are chained, but shown always so
+          // it is discoverable before you turn chaining on.
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 64,
+                  child: Text(
+                    l10n.loopMixerRepeats,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+                for (var i = 0; i < _scenes.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: GestureDetector(
+                      key: Key('loop-repeats-$i'),
+                      onTap: _scenes[i] == null
+                          ? null
+                          : () => _cycleSceneRepeats(i),
+                      child: SizedBox(
+                        width: 30,
+                        height: 16,
+                        child: Center(
+                          child: Text(
+                            _scenes[i] == null ? '' : '×${_sceneRepeats[i]}',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );

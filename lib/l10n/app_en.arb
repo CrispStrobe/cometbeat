@@ -642,6 +642,7 @@
   "loopMixerInfinite": "Infinite mode — every loop a little different",
   "loopMixerDuplicateSection": "Copy this section to a new one",
   "loopMixerSectionsFull": "All four sections are used — free one first",
+  "loopMixerRepeats": "Repeats",
   "loopMixerMasterFx": "Master effects",
   "loopMixerMasterFxHint": "Effects on the whole mix. They run across the loop seam, so tails carry over instead of dropping out on the downbeat.",
   "loopMixerSend": "Space effect (reverb / echo)",

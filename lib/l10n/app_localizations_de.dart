@@ -1743,6 +1743,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Alle vier Abschnitte sind belegt — erst einen frei machen';
 
   @override
+  String get loopMixerRepeats => 'Wiederh.';
+
+  @override
   String get loopMixerMasterFx => 'Master-Effekte';
 
   @override

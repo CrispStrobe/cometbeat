@@ -398,7 +398,18 @@ is recorded in [HISTORY.md](HISTORY.md).
   seam by calling `_launchScene` re-reads `_quantize` (still on, still running)
   and simply RE-ARMS it, so it never lands. Hence `_applySceneNow`, which
   bypasses the check; two tests caught this.
-  6 tests. Next: L4 per-section repeats, L6 per-track swing.
+  6 tests.
+  ✅ **L4 per-section repeats SHIPPED — real song mode.** Chaining advanced after
+  exactly one pass, so an arrangement could only be "one of each, round and
+  round". Each section now holds for its own count (×1 → ×2 → ×4 → ×8, a
+  `×N` row under the session grid), so A×4 B×2 A×4 is sayable. **Default is 1,
+  i.e. exactly what shipped**, so an existing chain is unchanged until someone
+  asks for more. `renderArrangement` takes the per-scene counts, because a
+  section that plays four times on screen and twice in the export would be a
+  bug — note it still defaults to its old `loopsPerScene: 2` when no counts are
+  given, so existing exports are byte-identical. Launching a section restarts
+  its count, or a half-finished pass would cut the new one short. 5 tests.
+  **L1–L5 all shipped. Remaining: L6 per-track swing, then automation.**
   Scoped in [PLAN.md](../PLAN.md) → *"Loop Studio — sequencer-parity slices"*
   (L1–L6, with what is already at parity so nobody rebuilds it). Building **L1
   per-track pattern length (polymeter)** first. Touching
