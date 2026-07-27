@@ -8337,4 +8337,48 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trackerInitialSpeed => 'Anfangstempo (Speed)';
+
+  @override
+  String openInCannotTitle(String mode) {
+    return 'Kann nicht in $mode geöffnet werden';
+  }
+
+  @override
+  String get openInAudioNotNotes =>
+      'Audio ist noch keine Noten – zuerst „Transkribieren“ verwenden.';
+
+  @override
+  String openInLossTitle(String mode) {
+    return 'In $mode öffnen?';
+  }
+
+  @override
+  String get openInLossLost => 'Das geht dabei verloren:';
+
+  @override
+  String get openInLossChanged => 'Das ändert sich:';
+
+  @override
+  String get openInCancel => 'Abbrechen';
+
+  @override
+  String get openInConfirm => 'Trotzdem öffnen';
+
+  @override
+  String get openInOk => 'OK';
+
+  @override
+  String get appModeTracker => 'Tracker';
+
+  @override
+  String get appModeLoop => 'Loop Studio';
+
+  @override
+  String get appModeScore => 'Partitur';
+
+  @override
+  String get appModeTab => 'Tabulatur';
+
+  @override
+  String get appModeAudio => 'Audio';
 }

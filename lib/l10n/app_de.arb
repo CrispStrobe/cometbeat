@@ -2812,5 +2812,18 @@
   "trackerNativeParam": "Param",
   "trackerModuleHeader": "Modul-Header",
   "trackerGlobalVolume": "Gesamtlautstärke",
-  "trackerInitialSpeed": "Anfangstempo (Speed)"
+  "trackerInitialSpeed": "Anfangstempo (Speed)",
+  "openInCannotTitle": "Kann nicht in {mode} geöffnet werden",
+  "openInAudioNotNotes": "Audio ist noch keine Noten – zuerst „Transkribieren“ verwenden.",
+  "openInLossTitle": "In {mode} öffnen?",
+  "openInLossLost": "Das geht dabei verloren:",
+  "openInLossChanged": "Das ändert sich:",
+  "openInCancel": "Abbrechen",
+  "openInConfirm": "Trotzdem öffnen",
+  "openInOk": "OK",
+  "appModeTracker": "Tracker",
+  "appModeLoop": "Loop Studio",
+  "appModeScore": "Partitur",
+  "appModeTab": "Tabulatur",
+  "appModeAudio": "Audio"
 }

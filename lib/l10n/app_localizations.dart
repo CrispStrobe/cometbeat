@@ -95,7 +95,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en'),
+    Locale('en')
   ];
 
   /// Spoken form of a raised cello position, e.g. raised 2nd. Cello positions are numbered by letter name; a chromatic step between two of them is the lower one raised.
@@ -15139,6 +15139,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Initial speed'**
   String get trackerInitialSpeed;
+
+  /// No description provided for @openInCannotTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot open in {mode}'**
+  String openInCannotTitle(String mode);
+
+  /// No description provided for @openInAudioNotNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio is not notes yet — use Transcribe first.'**
+  String get openInAudioNotNotes;
+
+  /// No description provided for @openInLossTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in {mode}?'**
+  String openInLossTitle(String mode);
+
+  /// No description provided for @openInLossLost.
+  ///
+  /// In en, this message translates to:
+  /// **'This will not come across:'**
+  String get openInLossLost;
+
+  /// No description provided for @openInLossChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'This will change:'**
+  String get openInLossChanged;
+
+  /// No description provided for @openInCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get openInCancel;
+
+  /// No description provided for @openInConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Open anyway'**
+  String get openInConfirm;
+
+  /// No description provided for @openInOk.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get openInOk;
+
+  /// No description provided for @appModeTracker.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracker'**
+  String get appModeTracker;
+
+  /// No description provided for @appModeLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop Studio'**
+  String get appModeLoop;
+
+  /// No description provided for @appModeScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Score'**
+  String get appModeScore;
+
+  /// No description provided for @appModeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Tab'**
+  String get appModeTab;
+
+  /// No description provided for @appModeAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get appModeAudio;
 }
 
 class _AppLocalizationsDelegate
@@ -15168,9 +15246,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

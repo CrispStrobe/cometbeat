@@ -56,6 +56,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   work. 92 effect/codec tests green, default byte-identical for real modules.
   — opus (tracker→editors)
 
+- **opus (tracker→editors)** · ✅ **DONE (idle) — localized `open_in_menu.dart`
+  dialog chrome (EN/DE).** Closes the l10n hand-off the DAW-suite left on this file:
+  its cross-mode "Open in…" menu, loss dialog and cannot-open dialog were hardcoded
+  English, now user-visible in the de/en app. Added ARB keys (EN+DE) for the dialog
+  titles (with a `{mode}` placeholder), the "This will not come across / This will
+  change" headers, Cancel/Open anyway/OK, the audio hint, and the FIVE mode names
+  (`localizedModeLabel` bypasses the Flutter-free `appModeLabel`); wired via
+  `AppLocalizations`; added the delegates to `open_in_menu_test`'s bare MaterialApps
+  + a German end-to-end test (38 open-in tests green). ⬜ **Documented follow-up
+  (still English):** the per-edge report REASONS (`report.lost`/`approximated`) and
+  the menu SUBTITLES (`ProjectBridge.describeEdge`) are generated in the Flutter-free
+  bridge, and the caller-supplied tooltips ("Open a copy in…", "Open & replace via…"
+  in `daw_screen`) — all a deeper pass that must thread localized strings into pure
+  Dart or move them to the widget layer. ⚠️ touched shared `app_en.arb`/`app_de.arb`
+  (append-only, regenerated `app_localizations*`) — no existing key changed.
+  — opus (tracker→editors)
+
 - **opus (tracker→editors)** · ✅ **DONE (idle) — LEADING the ladder: `musical.mod`
   loudness-contour gap RESOLVED as a NON-BUG (full write-up in root PLAN.md
   §"Replay fidelity", line ~1076).** Drove the "unclaimed, uninvestigated"
