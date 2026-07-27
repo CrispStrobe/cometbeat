@@ -146,7 +146,12 @@ void main() {
 
     test('a slur makes shifting expensive enough to prefer the extension', () {
       // Weight the extension so that, unslurred, the shift is the cheaper route…
-      const cost = BowedArrangeCost(extension: 2.5);
+      //
+      // `shiftBase: 0.0` is pinned deliberately: this test is about
+      // [BowedArrangeCost.slurShiftScale] alone, and the shipped `shiftBase` (0.5)
+      // now makes a stationary hand win on its own — which is the point of that
+      // term, but it would mask the one this test exists to measure.
+      const cost = BowedArrangeCost(extension: 2.5, shiftBase: 0.0);
       final unslurred =
           arrangeBowed(passage, skill: BowedSkill.neckPositions, cost: cost);
       expect(unslurred.columns[2].single.mode, BowedHandMode.neck);

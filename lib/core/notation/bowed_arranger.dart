@@ -310,6 +310,7 @@ class BowedSkill {
 class BowedArrangeCost {
   const BowedArrangeCost({
     this.shift = 1.0,
+    this.shiftBase = 0.5,
     this.slurShiftScale = 2.0,
     this.stringCross = 0.3,
     this.height = 0.05,
@@ -322,6 +323,25 @@ class BowedArrangeCost {
 
   /// Per semitone of frame-anchor movement between adjacent columns.
   final double shift;
+
+  /// Flat cost of moving the hand AT ALL, independent of distance.
+  ///
+  /// [shift] alone is linear in semitones, which makes a one-semitone creep the
+  /// cheapest move available — cheaper than holding an extension — and printed
+  /// practice says the opposite: Romberg forbids it in words ("muss die Stellung
+  /// der Hand nicht verrückt, sondern der kleine Finger … gestreckt werden"), and
+  /// Becker marks the same figures as extensions. Re-placing the hand costs
+  /// something regardless of how far it travels: the intonation has to be found
+  /// again.
+  ///
+  /// 0.5 was chosen on three legs measured together, which is what every earlier
+  /// attempt at this defect lacked — see `docs/PLAN.md`. At 0.5 the p.18 frame
+  /// agreement goes 48/72 -> 65/72 (0 -> 17 extensions correctly chosen), the CC0
+  /// repertoire RISES 50.3% -> 53.9%, and leave-one-page-out over the three Becker
+  /// scale plates improves all three with none regressing. 0.75 regresses p15 and
+  /// 0.25 leaves the frame defect unfixed, so the window is narrow and 0.5 sits in
+  /// it on evidence rather than on a best score.
+  final double shiftBase;
 
   /// [shift] is multiplied by this when the previous note is slurred into this
   /// one — shifting inside a bow stroke risks an audible glissando, so players
@@ -964,6 +984,7 @@ double _transition(
   var out = 0.0;
   if (from != null && to != null) {
     final shift = (to.anchor - from.anchor).abs().toDouble();
+    if (shift > 0) out += cost.shiftBase;
     out += shift * cost.shift * (slurred ? cost.slurShiftScale : 1.0);
   }
   if (fromStops.isNotEmpty && toStops.isNotEmpty) {
