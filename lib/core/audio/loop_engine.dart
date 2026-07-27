@@ -505,6 +505,9 @@ class GrooveSpec {
     this.variants = const {},
     this.levels = const {},
     this.pans = const {},
+    this.filters = const {},
+    this.extraTracks = const {},
+    this.trackNames = const {},
     this.tempoBpm = 100,
     this.swing = 0,
     this.progressionId,
@@ -529,6 +532,27 @@ class GrooveSpec {
   /// Per-track stereo pan −1..1 (missing/0 = centre). Travels with save slots
   /// and share tokens like [levels].
   final Map<String, double> pans;
+
+  /// Per-track filter −1 (dark) … 0 (off) … +1 (thin). Missing/0 = off. Travels
+  /// like [levels] and [pans]: it is part of how a track sounds, not a live
+  /// performance control like the MASTER filter, which stays out of the spec.
+  final Map<String, double> filters;
+
+  /// Tracks the player added, id → the role they were made from (`'bass'` for a
+  /// bass copy or a bass add), or the empty string for an empty track.
+  ///
+  /// Without this a groove could grow tracks but never save them: everything
+  /// else here is keyed BY track id, and [LoopEngine.applySpec] drops ids it
+  /// does not recognise — so a restored groove kept the settings of tracks that
+  /// no longer existed and silently threw them away. Omitted when empty, so a
+  /// groove using only the base band tokenises exactly as it did before.
+  final Map<String, String> extraTracks;
+
+  /// Player-given names, id → name. Only added tracks are ever renamed (the
+  /// base band is named by the app in the player's language), so this is empty
+  /// for almost every groove.
+  final Map<String, String> trackNames;
+
   final int tempoBpm;
   final double swing;
 
@@ -595,6 +619,13 @@ class GrooveSpec {
               .cast<String, num>()
               .map((k, v) => MapEntry(k, v.toDouble().clamp(-1.0, 1.0))),
         },
+        filters: {
+          ...(json['fl'] as Map? ?? const {})
+              .cast<String, num>()
+              .map((k, v) => MapEntry(k, v.toDouble().clamp(-1.0, 1.0))),
+        },
+        extraTracks: _extraTracksFromJson(json['xt']),
+        trackNames: _trackNamesFromJson(json['xn']),
         // Untrusted: a hand-edited token must not divide the timing math by 0
         // (or by a negative). Clamped like `levels`/`swing` already are.
         tempoBpm: (json['t'] as num? ?? 100)
@@ -641,6 +672,23 @@ class GrooveSpec {
             for (final e in pans.entries)
               if (e.value != 0.0)
                 e.key: double.parse(e.value.toStringAsFixed(2)),
+          },
+        // Same rule again: omitted while every track is unfiltered.
+        if (filters.values.any((f) => f != 0.0))
+          'fl': {
+            for (final e in filters.entries)
+              if (e.value != 0.0)
+                e.key: double.parse(e.value.toStringAsFixed(2)),
+          },
+        if (extraTracks.isNotEmpty)
+          'xt': {
+            for (final id in extraTracks.keys.toList()..sort())
+              id: extraTracks[id],
+          },
+        if (trackNames.isNotEmpty)
+          'xn': {
+            for (final id in trackNames.keys.toList()..sort())
+              id: trackNames[id],
           },
         't': tempoBpm,
         if (swing != 0) 's': double.parse(swing.toStringAsFixed(2)),
@@ -744,6 +792,39 @@ Map<String, List<PatternCell>>? _trackOverridesFromJson(dynamic json) {
     if (cells != null) overrides[key] = cells;
   }
   return overrides.isEmpty ? null : overrides;
+}
+
+/// Parses the added-track roster (id → role id, `''` = an empty track).
+///
+/// Untrusted like every other token field: a non-string entry is skipped rather
+/// than throwing, and an id is capped in length so a hostile token cannot make
+/// the roster enormous. The role is NOT validated here — [LoopEngine.applySpec]
+/// resolves it against the style actually in use and drops what it cannot find,
+/// which is the only place that knows.
+Map<String, String> _extraTracksFromJson(dynamic json) {
+  if (json is! Map) return const {};
+  final out = <String, String>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    if (key is! String || key.isEmpty || key.length > 64) continue;
+    if (value is! String || value.length > 64) continue;
+    out[key] = value;
+  }
+  return out;
+}
+
+/// Parses player-given track names. Length-capped for the same reason, and
+/// trimmed so a name of pure whitespace reads as no name at all.
+Map<String, String> _trackNamesFromJson(dynamic json) {
+  if (json is! Map) return const {};
+  final out = <String, String>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    if (key is! String || key.isEmpty || key.length > 64) continue;
+    if (value is! String) continue;
+    final name = value.trim();
+    if (name.isEmpty || name.length > 40) continue;
+    out[key] = name;
+  }
+  return out;
 }
 
 /// Parses embedded track voices defensively. Unsupported or malformed voices
@@ -1574,8 +1655,59 @@ class LoopEngine {
         ..._extraTracks,
       ];
 
+  /// What each added track was made from: its id → the base-band role id it
+  /// carries (`'bass'`), or [emptyTrackRole] for one added empty.
+  ///
+  /// This is what makes an added track SAVEABLE. Everything else about a track
+  /// is keyed by id and already travels in the spec; the one thing that could
+  /// not be reconstructed was that the track existed at all and where its
+  /// patterns came from.
+  final Map<String, String> _extraRoles = {};
+
+  /// The role an empty track carries: none.
+  static const emptyTrackRole = '';
+
+  /// The instrument an empty track plays once notes are drawn into it.
+  ///
+  /// Piano rather than the voice track's flute: an empty track is drawn on the
+  /// tune grid a note at a time, and a percussive attack makes each tap audible
+  /// as a separate event, where a sustained flute blurs a run into one line.
+  static const emptyTrackInstrument = Instrument.piano;
+
+  /// What an empty track plays: one rest filling the grid. It renders silence,
+  /// which is what makes the FIRST note drawn into it audible on its own.
+  static const _emptyPattern = MelodicPattern(
+    emptyTrackInstrument,
+    [PatternCell(steps: kPatternSteps)],
+  );
+
   /// Whether [id] is a copy, and so may be removed again.
   bool isExtraTrack(String id) => _extraTracks.any((t) => t.id == id);
+
+  /// Whether [id] is an added EMPTY track — the only kind that starts silent
+  /// and the only kind whose name is meaningless until it is renamed.
+  bool isEmptyTrack(String id) => _extraRoles[id] == emptyTrackRole;
+
+  /// The added-track roster (id → role), for the spec.
+  Map<String, String> get extraTrackRoles => Map.unmodifiable(_extraRoles);
+
+  /// Player-given track names, id → name. Empty for a groove nobody renamed.
+  final Map<String, String> _trackNames = {};
+
+  /// [id]'s player-given name, or null when it still uses the app's own.
+  String? trackName(String id) => _trackNames[id];
+
+  /// Names [id], or clears the name with null / blank. A name is trimmed and
+  /// capped at 40 characters — the label it lands in is one line on a chip.
+  void setTrackName(String id, String? name) {
+    final trimmed = name?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      _trackNames.remove(id);
+    } else {
+      _trackNames[id] =
+          trimmed.length > 40 ? trimmed.substring(0, 40) : trimmed;
+    }
+  }
 
   /// An id like `bass-2` that nothing is using yet.
   String _freeTrackId(String from) {
@@ -1609,8 +1741,13 @@ class LoopEngine {
       ),
     );
 
+    // A copy of a copy still records the ROLE, not the copy it came from, so a
+    // restored groove rebuilds it from a pattern set that will still exist.
+    _extraRoles[copy] = _extraRoles[id] ?? id;
+
     levels[copy] = levels[id] ?? 1.0;
     pans[copy] = pans[id] ?? 0.0;
+    if (_trackFilters.containsKey(id)) _trackFilters[copy] = _trackFilters[id]!;
     variants[copy] = variants[id] ?? 0;
     if (_trackSteps.containsKey(id)) _trackSteps[copy] = _trackSteps[id]!;
     if (_trackSwing.containsKey(id)) _trackSwing[copy] = _trackSwing[id]!;
@@ -1630,14 +1767,86 @@ class LoopEngine {
     return copy;
   }
 
+  /// Adds a track playing [roleId]'s authored patterns — a second bass, a
+  /// second drum kit — returning its id, or null if [roleId] is not a role in
+  /// the current band.
+  ///
+  /// Unlike [duplicateTrack] this carries NO settings across: it is a fresh
+  /// instance of the role, not a copy of the one already playing. It does start
+  /// on a variant no enabled track of that role is using, though, because two
+  /// tracks playing the identical pattern in unison are indistinguishable from
+  /// one louder track — tapping "add a bass" and hearing only a volume bump
+  /// reads as broken. With a free variant you hear a second PART.
+  ///
+  /// It starts enabled, for the same reason a copy does: you asked to hear it.
+  String? addRoleTrack(String roleId) {
+    final role = _baseTracks.where((t) => t.id == roleId).firstOrNull;
+    if (role == null) return null;
+    final id = _freeTrackId(roleId);
+
+    _extraTracks.add(
+      LoopTrack(
+        id: id,
+        gain: role.gain,
+        variants: role.variants,
+        chordFollower: role.chordFollower,
+      ),
+    );
+    _extraRoles[id] = roleId;
+
+    final taken = {
+      for (final t in tracks)
+        if (t.id != id && enabled.contains(t.id) && _roleOf(t.id) == roleId)
+          _variantOf(t),
+    };
+    for (var v = 0; v < role.variants.length; v++) {
+      if (!taken.contains(v)) {
+        if (v != 0) variants[id] = v;
+        break;
+      }
+    }
+
+    enabled.add(id);
+    _clearRenderCaches();
+    return id;
+  }
+
+  /// The role a track carries: itself for the base band, its source role for an
+  /// added one.
+  String _roleOf(String id) => _extraRoles[id] ?? id;
+
+  /// Adds a silent pitched track, returning its id.
+  ///
+  /// The uncapped end of the ladder: a track with nothing in it, for a part the
+  /// authored band does not have. It arrives ENABLED but silent — every cell is
+  /// a rest — so drawing the first note on the tune grid is immediately audible
+  /// rather than needing the track switched on afterwards.
+  String addEmptyTrack() {
+    final id = _freeTrackId('track');
+    _extraTracks.add(
+      LoopTrack(
+        id: id,
+        gain: 0.5,
+        variants: const [_emptyPattern],
+      ),
+    );
+    _extraRoles[id] = emptyTrackRole;
+    enabled.add(id);
+    _clearRenderCaches();
+    return id;
+  }
+
   /// Removes a copy. A base-band track is refused rather than hidden — losing
   /// the drums to a stray tap would be worse than refusing the tap.
   bool removeExtraTrack(String id) {
     if (!isExtraTrack(id)) return false;
     _extraTracks.removeWhere((t) => t.id == id);
+    _extraRoles.remove(id);
+    _trackNames.remove(id);
     enabled.remove(id);
     levels.remove(id);
     pans.remove(id);
+    _trackFilters.remove(id);
     variants.remove(id);
     _trackSteps.remove(id);
     _trackSwing.remove(id);
@@ -1850,6 +2059,139 @@ class LoopEngine {
   Float64List? _levelEnvelope(String id) =>
       _envelope(id, AutomationParam.level);
 
+  // --- D3: a filter per TRACK ------------------------------------------------
+  //
+  // The master filter has always been one knob over the whole mix, which can
+  // only make everything dull at once. The move worth having is the opposite:
+  // dull the bass while the hats stay bright, then open it across the loop. That
+  // needs the filter to be per track, and it needs to be real DSP rather than a
+  // scalar, which is why `AutomationParam.filter` rendered nothing until now.
+
+  /// Per-track one-knob filter, −1 (full low-pass, dark) … 0 (off) … +1 (full
+  /// high-pass, thin). Absent = 0 = the track is untouched.
+  ///
+  /// Same knob as [masterFilter] and the same cutoff mapping, so "all the way
+  /// left is muffled" means the same thing on a track as on the master. Unlike
+  /// the master's, this one is part of the spec: it belongs to the track the way
+  /// its level and pan do, so it has to survive a save slot.
+  final Map<String, double> _trackFilters = {};
+
+  /// [id]'s filter position (0 = off).
+  double trackFilter(String id) => _trackFilters[id] ?? 0.0;
+
+  /// Sets [id]'s filter (clamped −1..1). Exactly 0 is stored as "no filter", so
+  /// a track that has been swept back to the middle costs nothing again.
+  void setTrackFilter(String id, double value) {
+    final v = value.clamp(-1.0, 1.0);
+    if (trackFilter(id) == v) return;
+    if (v == 0) {
+      _trackFilters.remove(id);
+    } else {
+      _trackFilters[id] = v;
+    }
+    _clearRenderCaches();
+  }
+
+  /// The cutoff one filter position means. Null = no filtering at all.
+  ///
+  /// Shared with [_applyMasterFilter] so the two knobs sweep identically: a
+  /// log sweep down to ~250 Hz on the low-pass side, up to ~3.5 kHz on the
+  /// high-pass side, both at a gentle Q that colours rather than resonates.
+  static ({BiquadKind kind, double freq})? _filterShape(double v) {
+    if (v == 0) return null;
+    if (v < 0) {
+      return (
+        kind: BiquadKind.lowpass,
+        freq: 18000 * pow(250 / 18000, -v).toDouble(),
+      );
+    }
+    return (
+      kind: BiquadKind.highpass,
+      freq: 20 * pow(3500 / 20, v).toDouble(),
+    );
+  }
+
+  /// The filter insert for [id], or null when the track has neither a filter
+  /// position nor a filter lane — in which case its stem reaches the mix
+  /// untouched, which is what keeps an unfiltered groove byte-identical.
+  Float64List Function(Float64List)? _trackFilterInsert(String id) {
+    final lane = automationFor(id, AutomationParam.filter);
+    final fixed = trackFilter(id);
+    if (lane == null && fixed == 0) return null;
+    return (x) => _filterStem(x, fixed: fixed, lane: lane);
+  }
+
+  /// Runs one normalised stem through its filter.
+  ///
+  /// Two things here are not obvious:
+  ///
+  /// TWO COPIES, KEEP THE SECOND — the same trick [_applySend] uses. A biquad
+  /// starts with zero memory, but a loop's first sample follows its LAST one, so
+  /// a single pass renders a filter that has not converged yet and the seam
+  /// clicks. Filtering two copies and keeping the second gives the filter the
+  /// previous iteration's history, i.e. the periodic steady state.
+  ///
+  /// BOTH FILTERS ALWAYS RUN when there is a lane. A lane can cross the middle,
+  /// and one [Biquad] has one fixed kind, so the low-pass and high-pass are both
+  /// fed every sample and the position selects between them. That is not waste
+  /// for its own sake: at the crossing the low-pass sits at ~18 kHz and the
+  /// high-pass at ~20 Hz, so both are essentially dry and the switch is
+  /// inaudible. Picking one filter per render and jumping to the other mid-loop
+  /// would restart its memory and click.
+  Float64List _filterStem(
+    Float64List x, {
+    required double fixed,
+    AutomationLane? lane,
+  }) {
+    final n = x.length;
+    if (n == 0) return x;
+    const sr = kSampleRate * 1.0;
+    const q = 0.9;
+
+    // The position at each sample: the lane if there is one (which REPLACES the
+    // knob, exactly as the level and pan lanes replace theirs), else the knob.
+    //
+    // Indexed against the LOOP's length, not this stem's: a stem can be shorter
+    // than the loop (mixStems truncates and pads), and scaling the lane into the
+    // stem instead would speed the sweep up on exactly those tracks.
+    final steps = timing.totalSteps;
+    final samples = timing.totalSamples;
+    double positionAt(int i) => lane == null
+        ? fixed
+        : AutomationParam.filter.valueAt(lane.at((i * steps) ~/ samples));
+
+    final lp = Biquad(BiquadKind.lowpass, freq: 18000, sampleRate: sr, q: q);
+    final hp = Biquad(BiquadKind.highpass, freq: 20, sampleRate: sr, q: q);
+    final out = Float64List(n);
+    var lastV = double.nan;
+    // Pass 0 warms the filters up, pass 1 is the buffer that is kept.
+    for (var pass = 0; pass < 2; pass++) {
+      for (var i = 0; i < n; i++) {
+        final v = positionAt(i);
+        if (v != lastV) {
+          final shape = _filterShape(v);
+          // setFreq retunes WITHOUT clearing the memory, which is what lets a
+          // stepped lane sweep without a click at every step boundary.
+          if (shape != null) {
+            (shape.kind == BiquadKind.lowpass ? lp : hp).setFreq(shape.freq);
+          }
+          lastV = v;
+        }
+        final dry = x[i];
+        final wetLp = lp.process(dry);
+        final wetHp = hp.process(dry);
+        if (pass == 1) out[i] = v == 0 ? dry : (v < 0 ? wetLp : wetHp);
+      }
+    }
+    return out;
+  }
+
+  /// True when any track carries a filter position or a filter lane — the fast
+  /// path out of building insert closures for a groove that uses neither.
+  bool get _anyTrackFiltered =>
+      _trackFilters.isNotEmpty ||
+      _automation.values.any((p) => p.containsKey(AutomationParam.filter));
+
   /// Per-track swing (absent = the groove's global swing).
   ///
   /// Giving one track its own shuffle while the rest stay straight is how a
@@ -1973,6 +2315,9 @@ class LoopEngine {
           for (final e in pans.entries)
             if (e.value != 0.0) e.key: e.value,
         },
+        filters: {..._trackFilters},
+        extraTracks: {..._extraRoles},
+        trackNames: {..._trackNames},
         tempoBpm: _tempoBpm,
         swing: _swing,
         progressionId: _progression?.id,
@@ -2035,7 +2380,48 @@ class LoopEngine {
     } else {
       _userBeatTrack = null;
     }
+    // Rebuild the added tracks BEFORE `known` is taken, or every setting keyed
+    // to one of them would be dropped as an unknown id below. A role that no
+    // longer exists in this style is skipped rather than guessed at — the track
+    // is gone, and its settings go with it.
+    _extraTracks.clear();
+    _extraRoles.clear();
+    for (final id in next.extraTracks.keys.toList()..sort()) {
+      final role = next.extraTracks[id]!;
+      if (id.isEmpty || _baseTracks.any((t) => t.id == id)) continue;
+      if (role == emptyTrackRole) {
+        _extraTracks.add(
+          LoopTrack(
+            id: id,
+            gain: 0.5,
+            variants: const [_emptyPattern],
+          ),
+        );
+        _extraRoles[id] = emptyTrackRole;
+        continue;
+      }
+      final source = _baseTracks.where((t) => t.id == role).firstOrNull ??
+          (role == userTrackId ? _userTrack : null) ??
+          (role == beatTrackId ? _userBeatTrack : null);
+      if (source == null) continue;
+      _extraTracks.add(
+        LoopTrack(
+          id: id,
+          gain: source.gain,
+          variants: source.variants,
+          chordFollower: source.chordFollower,
+        ),
+      );
+      _extraRoles[id] = role;
+    }
+
     final known = tracks.map((t) => t.id).toSet();
+    _trackNames
+      ..clear()
+      ..addAll({
+        for (final e in next.trackNames.entries)
+          if (known.contains(e.key)) e.key: e.value,
+      });
     final overrideEntries = next.trackOverrides?.entries ??
         const <MapEntry<String, List<PatternCell>>>[];
     _cellOverrides
@@ -2092,6 +2478,20 @@ class LoopEngine {
         for (final e in next.pans.entries)
           if (known.contains(e.key)) e.key: e.value.clamp(-1.0, 1.0),
       });
+    _trackFilters
+      ..clear()
+      ..addAll({
+        for (final e in next.filters.entries)
+          if (known.contains(e.key) && e.value != 0.0)
+            e.key: e.value.clamp(-1.0, 1.0),
+      });
+    // Length, swing and automation do not travel in the spec, so they are left
+    // alone for tracks that survive — but a track the loaded groove does NOT
+    // have must not leave its settings behind for a future track to inherit by
+    // reusing the id. That is the same trap [removeExtraTrack] avoids.
+    _trackSteps.removeWhere((id, _) => !known.contains(id));
+    _trackSwing.removeWhere((id, _) => !known.contains(id));
+    _automation.removeWhere((id, _) => !known.contains(id));
     tempoBpm = next.tempoBpm;
     swing = next.swing;
     key = next.key;
@@ -2179,22 +2579,17 @@ class LoopEngine {
   Int16List applySendForTest(Int16List pcm) => _applySend(pcm);
 
   // The mix-bus cutoff for the current knob: a log sweep so the move feels even.
+  // Low-pass from ~18 kHz (barely there) down to ~250 Hz (deep muffle);
+  // high-pass from ~20 Hz (open) up to ~3.5 kHz (thin). The mapping lives in
+  // [_filterShape] so the per-TRACK filter sweeps identically.
   Float64List _applyMasterFilter(Float64List f) {
-    final v = _masterFilter;
-    if (v == 0) return f;
-    const sr = kSampleRate * 1.0;
-    if (v < 0) {
-      // Low-pass from ~18 kHz (barely there) down to ~250 Hz (deep muffle).
-      final cutoff = 18000 * pow(250 / 18000, -v).toDouble();
-      return biquadFx(f, sampleRate: sr, freq: cutoff, q: 0.9);
-    }
-    // High-pass from ~20 Hz (open) up to ~3.5 kHz (thin).
-    final cutoff = 20 * pow(3500 / 20, v).toDouble();
+    final shape = _filterShape(_masterFilter);
+    if (shape == null) return f;
     return biquadFx(
       f,
-      kind: BiquadKind.highpass,
-      sampleRate: sr,
-      freq: cutoff,
+      kind: shape.kind,
+      sampleRate: kSampleRate * 1.0,
+      freq: shape.freq,
       q: 0.9,
     );
   }
@@ -2586,6 +2981,9 @@ class LoopEngine {
                       _envelope(t.id, AutomationParam.pan),
                   ]
                 : null,
+            inserts: _anyTrackFiltered
+                ? [for (final t in panned) _trackFilterInsert(t.id)]
+                : null,
           ),
         ),
       );
@@ -2609,6 +3007,11 @@ class LoopEngine {
           // untouched and the render is byte-identical to before.
           envelopes: hasAutomation
               ? [for (final track in mixed) _levelEnvelope(track.id)]
+              : null,
+          // Same rule for the per-track filter: no filter anywhere, no inserts,
+          // and the mix takes exactly the path it took before D3.
+          inserts: _anyTrackFiltered
+              ? [for (final track in mixed) _trackFilterInsert(track.id)]
               : null,
         ),
       ),

@@ -200,10 +200,18 @@ double _tanh(double x) {
 /// whole point — a level automation folded into the samples BEFORE normalisation
 /// would be divided straight back out by the peak it just changed. A null entry
 /// (or a null list) leaves that stem exactly as it was.
+/// [inserts] is the same idea for DSP rather than a multiplier: a per-stem
+/// transform (a per-track filter) run on the NORMALISED stem, before gain and
+/// the level envelope. It sits after normalisation for the reason above — a
+/// filter that removed most of a stem's energy would otherwise be handed a peak
+/// that had already compensated for it — and before the fader, which is the
+/// order a console gives you: insert, then level. An insert must return a buffer
+/// of the same length it was given.
 Int16List mixStems(
   List<MixStem> stems, {
   required int totalSamples,
   List<Float64List?>? envelopes,
+  List<Float64List Function(Float64List)?>? inserts,
 }) {
   final mix = Float64List(totalSamples);
   for (var s = 0; s < stems.length; s++) {
@@ -217,6 +225,22 @@ Int16List mixStems(
     final env =
         (envelopes != null && s < envelopes.length) ? envelopes[s] : null;
     final n = min(stem.samples.length, totalSamples);
+    final insert = (inserts != null && s < inserts.length) ? inserts[s] : null;
+    if (insert != null) {
+      // Gain is a scalar and the insert is linear, so pulling it out to AFTER
+      // the filter changes nothing about the result and keeps the multiply
+      // identical to the plain path.
+      final norm = Float64List(n);
+      for (var i = 0; i < n; i++) {
+        norm[i] = stem.samples[i] / peak;
+      }
+      final wet = insert(norm);
+      for (var i = 0; i < n; i++) {
+        final e = env == null ? 1.0 : (i < env.length ? env[i] : env.last);
+        mix[i] += wet[i] * stem.gain * e;
+      }
+      continue;
+    }
     for (var i = 0; i < n; i++) {
       final e = env == null ? 1.0 : (i < env.length ? env[i] : env.last);
       mix[i] += stem.samples[i] * scale * e;
@@ -268,7 +292,9 @@ typedef MixStemPan = ({Float64List samples, double gain, double pan});
 /// per-sample level multiplier applied after unit-peak × gain, and a per-sample
 /// pan position (−1…1) replacing the stem's fixed [MixStemPan.pan]. A null
 /// entry leaves that stem exactly as it was, so a mix with neither is
-/// byte-identical to one from before they existed.
+/// byte-identical to one from before they existed. [inserts] is the stereo
+/// twin of [mixStems]' — a per-stem transform on the normalised stem, before
+/// gain, level and the pan law.
 ///
 /// Pan has to be recomputed per sample rather than pre-multiplied: the
 /// constant-power law is a cos/sin pair, so sliding a track across the field is
@@ -278,6 +304,7 @@ Int16List mixStemsStereo(
   required int totalSamples,
   List<Float64List?>? envelopes,
   List<Float64List?>? pans,
+  List<Float64List Function(Float64List)?>? inserts,
 }) {
   final left = Float64List(totalSamples);
   final right = Float64List(totalSamples);
@@ -296,9 +323,22 @@ Int16List mixStemsStereo(
         (envelopes != null && st < envelopes.length) ? envelopes[st] : null;
     final panLane = (pans != null && st < pans.length) ? pans[st] : null;
     final n = min(stem.samples.length, totalSamples);
+    final insert =
+        (inserts != null && st < inserts.length) ? inserts[st] : null;
+    // Same ordering as the mono path: normalise, filter, then gain — which for
+    // a scalar gain is arithmetically the pre-multiplied `scale` it replaces.
+    Float64List? wet;
+    if (insert != null) {
+      final norm = Float64List(n);
+      for (var i = 0; i < n; i++) {
+        norm[i] = stem.samples[i] / peak;
+      }
+      wet = insert(norm);
+    }
     for (var i = 0; i < n; i++) {
       final e = env == null ? 1.0 : (i < env.length ? env[i] : env.last);
-      final s = stem.samples[i] * scale * e;
+      final s =
+          wet == null ? stem.samples[i] * scale * e : wet[i] * stem.gain * e;
       if (panLane == null) {
         left[i] += s * lGain;
         right[i] += s * rGain;
