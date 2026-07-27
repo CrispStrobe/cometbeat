@@ -820,7 +820,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   parent, so ask for a compact final summary and honest `%% UNSURE` markers.
   **⭐⭐ THE FINDING THAT RESHAPES THE TASK: these methods use TWO DIFFERENT FINGERING
   SYSTEMS, and only one of them is what our arranger models.**
-  • **Tillière = CONTESTED between readings, do not treat as settled.** I first concluded
+  • ✅ **DISPUTE RESOLVED — and BOTH readings were right.** The cleaner Danbé print settles
+  it: the edition genuinely prints **`4` on étude lines 1, 3, 4 and `3` on line 2**. The
+  glyphs differ in topology (two stacked bowls vs. crossbar + right-hand vertical + diagonal),
+  not in stroke weight, and each line's bar 8 mirrors its own bar 1 consistently. So my `4`
+  on the C-string line and the second reader's `3` on the G-string line were both correct
+  readings of genuinely different digits. **Double-keying did not find an error, it found real
+  variation** — which a single reading would have silently flattened. Keep the practice.
+  ⚠ It also caught a **MISPRINT**: Danbé étude line 1 is captioned `1e Corde.` but is the
+  **C string (4.e)** by pitch. Cross-check caption against pitch; trust neither alone.
+  ⚖ **Balance now favours FRAME-BASED for Tillière**: 3 of 4 lines finger two whole tones as
+  `1-2-4` (the extension), only the G-string line uses `1-2-3`. So the diatonic hypothesis is
+  down to one line of four and is probably wrong as a general claim — treat line 2 as the
+  outlier to explain, not the rule. (Trail of my own flip-flops kept below deliberately.)
+  • **Tillière = was CONTESTED between readings.** I first concluded
   "DIATONIC — one finger per scale degree" from the `3.e Corde` line, which prints 1‑2‑3 in
   all eight bars regardless of interval content. ⚠ **A third reading contradicts that:** the
   `1.re Corde` line prints bars 2/3 as **1‑3‑4** (whole tone then semitone = the ORDINARY
