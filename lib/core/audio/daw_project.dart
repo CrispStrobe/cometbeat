@@ -106,6 +106,10 @@ String projectToJson(
                 'trimEndMs': clip.trimEndMs,
                 if (clip.effects.isNotEmpty)
                   'effects': [for (final fx in clip.effects) fx.toJson()],
+                if (clip.gainAutomation.isNotEmpty)
+                  'gainAutomation': [
+                    for (final point in clip.gainAutomation) point.toJson(),
+                  ],
                 // Licence obligations must survive save/load: one that vanishes
                 // on reload is worse than none, because it looks discharged.
                 if (clip.provenance != null)
@@ -262,6 +266,12 @@ DawTimeline projectFromJson(
                 for (final fx in effects)
                   if (DawClipEffect.fromJson(fx) case final parsed?) parsed,
             ],
+            gainAutomation: [
+              if (c['gainAutomation'] case final points? when points is List)
+                for (final point in points)
+                  if (DawAutomationPoint.fromJson(point) case final parsed?)
+                    parsed,
+            ]..sort((a, b) => a.ms.compareTo(b.ms)),
           ),
         );
       }

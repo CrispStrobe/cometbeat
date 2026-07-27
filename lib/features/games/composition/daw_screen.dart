@@ -2100,6 +2100,35 @@ class _DawScreenState extends State<DawScreen>
     );
   }
 
+  /// D3 — draw a gain envelope over one clip.
+  ///
+  /// Seeded with a flat line across the clip when it has none, because the
+  /// shared points dialog edits an EXISTING curve and returns null for an empty
+  /// one — there would otherwise be no way to make a first envelope.
+  Future<void> _editClipEnvelope(int track, int index) async {
+    final existing = _daw.clipGainAutomation(track, index);
+    final duration = _daw.clipDurationMs(track, index);
+    final seeded = existing.isNotEmpty
+        ? existing
+        : [
+            const DawAutomationPoint(ms: 0, value: 1),
+            DawAutomationPoint(ms: math.max(duration, 1), value: 1),
+          ];
+    final edited = await _fxAutomationPointsDialog(
+      context,
+      label: 'clip gain',
+      min: 0,
+      max: 2,
+      // A gain multiplier reads in hundredths; the same step the mix and gain
+      // sliders use.
+      step: 0.01,
+      points: seeded,
+    );
+    if (edited == null) return;
+    _daw.setClipGainAutomation(track, index, edited);
+    if (_playing) play();
+  }
+
   Future<List<DawAutomationPoint>?> _fxAutomationPointsDialog(
     BuildContext ctx, {
     required String label,
@@ -4035,6 +4064,18 @@ class _DawScreenState extends State<DawScreen>
                         if (_transcribeAction(sheetCtx, track, index)
                             case final transcribe?)
                           transcribe,
+                        // D3 — ride the level across THIS take without
+                        // splitting it. Distinct from the lane automation in
+                        // the track menu: that one is anchored to the timeline,
+                        // this shape moves with the clip.
+                        TextButton.icon(
+                          onPressed: () async {
+                            Navigator.of(sheetCtx).pop();
+                            await _editClipEnvelope(track, index);
+                          },
+                          icon: const Icon(Icons.show_chart),
+                          label: const Text('Clip envelope'),
+                        ),
                         // Split at the playhead — only when it falls inside the clip.
                         TextButton.icon(
                           onPressed: canSplitClip(track, index, playheadMs)

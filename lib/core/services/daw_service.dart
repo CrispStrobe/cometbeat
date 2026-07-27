@@ -1281,8 +1281,34 @@ class DawService extends ChangeNotifier {
         trimStartMs: clip.trimStartMs,
         trimEndMs: clip.trimEndMs,
         effects: clip.effects,
+        gainAutomation: clip.gainAutomation,
         provenance: clip.provenance,
       );
+
+  /// D3 — set a clip's own gain envelope (points in ms from the CLIP's start).
+  ///
+  /// Distinct from [setTrackGainAutomationInRange], which is anchored to the
+  /// timeline: this shape belongs to the take and moves with it. Pass an empty
+  /// list to clear.
+  void setClipGainAutomation(
+    int track,
+    int index,
+    List<DawAutomationPoint> points,
+  ) {
+    if (!_validClipTarget(track, index)) return;
+    _record();
+    final clips = timeline.tracks[track].clips;
+    clips[index] = clips[index].copyWith(
+      gainAutomation: [...points]..sort((a, b) => a.ms.compareTo(b.ms)),
+    );
+    notifyListeners();
+  }
+
+  /// A clip's own gain envelope (empty when it has none).
+  List<DawAutomationPoint> clipGainAutomation(int track, int index) =>
+      _validClipTarget(track, index)
+          ? timeline.tracks[track].clips[index].gainAutomation
+          : const [];
 
   /// Voice one score clip through [inst] (null = default synth). No-op on a
   /// non-score clip.

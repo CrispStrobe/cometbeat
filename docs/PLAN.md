@@ -2479,8 +2479,26 @@ already round-trip **in place**. The gaps:
     segment, and every consumer here asks "which beat is this" — which a
     fine-grained staircase answers to any precision anyone can hear.
   Tests: `daw_tempo_map_test` (21).
-- [ ] **D2** clip groups + nudge · **D3** per-clip gain envelope · **D5** take
-  lanes/comping.
+- [x] **D3 per-clip gain envelope** — `Clip.gainAutomation`, drawn with the
+  existing curve editor from the clip inspector.
+  * the lane already had automation, so the question is why a second kind
+    exists, and the answer is the anchor: lane automation is anchored to the
+    **timeline** and stays put when a clip moves under it (right for a fade
+    across a section); a clip envelope belongs to the **take** and travels with
+    it (right for riding one phrase). Without it, shaping a single take means
+    splitting the clip just to set a gain. A test moves the same clip and
+    asserts the shape moved too.
+  * indexed from the clip's own start in BOTH render paths, so the windowed
+    renderer still agrees byte-for-byte with the full one — an envelope indexed
+    from the wrong origin would break that only for clips that do not start at
+    zero, which is what the test uses.
+  * outside the authored points the multiplier is 1, so a partial envelope
+    leaves the rest of the take alone; persisted only when non-empty.
+  * seeded flat across the clip when opening the editor on a clip that has none
+    — the shared points dialog edits an EXISTING curve and returns null for an
+    empty one, so there would otherwise be no way to make a first envelope.
+  Tests: `daw_clip_envelope_test` (9).
+- [ ] **D2** clip groups + nudge · **D5** take lanes/comping.
 
 **Non-goals** (stated so they are not re-litigated): a real-time audio graph (the
 app is offline render-then-play *by design*), third-party plugin hosting, and

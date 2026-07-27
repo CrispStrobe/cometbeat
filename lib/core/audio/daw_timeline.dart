@@ -141,6 +141,7 @@ class Clip {
     this.trimStartMs = 0,
     this.trimEndMs = 0,
     this.effects = const [],
+    this.gainAutomation = const [],
     this.provenance,
   });
 
@@ -169,6 +170,19 @@ class Clip {
   /// before clip gain/fades and before the track insert.
   final List<DawClipEffect> effects;
 
+  /// D3 — a gain envelope over THIS clip, in ms from the clip's own start.
+  ///
+  /// The lane already has [DawTrack.gainAutomation], and this is deliberately
+  /// not the same thing: lane automation is anchored to the TIMELINE, so it
+  /// stays put when a clip moves under it, which is what you want for a fade
+  /// across a section. A clip envelope belongs to the take — move the clip and
+  /// the shape goes with it — which is what you want for riding one phrase, and
+  /// is why the alternative today is splitting the clip just to set a gain.
+  ///
+  /// Outside the authored points the multiplier is 1, so a partial envelope
+  /// leaves the rest of the clip alone.
+  final List<DawAutomationPoint> gainAutomation;
+
   /// Where this clip's audio came from and under what licence, when it came
   /// from the library. Null for the user's own recordings and generated
   /// material, which carry no obligation.
@@ -193,6 +207,7 @@ class Clip {
     double? trimStartMs,
     double? trimEndMs,
     List<DawClipEffect>? effects,
+    List<DawAutomationPoint>? gainAutomation,
     LicensedWork? provenance,
   }) =>
       Clip(
@@ -209,6 +224,7 @@ class Clip {
         trimStartMs: trimStartMs ?? this.trimStartMs,
         trimEndMs: trimEndMs ?? this.trimEndMs,
         effects: effects ?? this.effects,
+        gainAutomation: gainAutomation ?? this.gainAutomation,
         provenance: provenance ?? this.provenance,
       );
 }
@@ -457,6 +473,7 @@ DawStereoMix renderTimelineStereo(
           int fadeOut,
           DawFadeCurve fadeInCurve,
           DawFadeCurve fadeOutCurve,
+          List<DawAutomationPoint> envelope,
         })>,
   )>[];
   var totalSamples = 0;
@@ -477,6 +494,7 @@ DawStereoMix renderTimelineStereo(
       int fadeOut,
       DawFadeCurve fadeInCurve,
       DawFadeCurve fadeOutCurve,
+      List<DawAutomationPoint> envelope,
     })>[];
     for (final clip in track.clips) {
       if (clip.muted) continue;
@@ -518,6 +536,7 @@ DawStereoMix renderTimelineStereo(
           fadeOut: (clip.fadeOutMs * sampleRate / 1000).round(),
           fadeInCurve: clip.fadeInCurve,
           fadeOutCurve: clip.fadeOutCurve,
+          envelope: clip.gainAutomation,
         ),
       );
       final end = start + stereoPositioned.left.length;
@@ -549,6 +568,7 @@ DawStereoMix renderTimelineStereo(
               int fadeOut,
               DawFadeCurve fadeInCurve,
               DawFadeCurve fadeOutCurve,
+              List<DawAutomationPoint> envelope,
             })>
         places,
   ) {
@@ -565,7 +585,12 @@ DawStereoMix renderTimelineStereo(
           final down = fadeCurveValue((n - i) / p.fadeOut, p.fadeOutCurve);
           if (down < env) env = down;
         }
-        final gain = p.gain * env;
+        // D3 — the clip's own envelope, indexed from ITS start so the shape
+        // travels with the take.
+        final shaped = p.envelope.isEmpty
+            ? env
+            : env * clipEnvelopeAt(p.envelope, i * 1000 / sampleRate);
+        final gain = p.gain * shaped;
         if (p.stereo) {
           final leftGain = p.pan <= 0 ? 1.0 : math.cos(p.pan * math.pi / 2);
           final rightGain = p.pan >= 0 ? 1.0 : math.cos(p.pan * math.pi / 2);
@@ -826,7 +851,10 @@ DawStereoMix renderTimelineWindowStereo(
           final down = fadeCurveValue((total - i) / fadeOut, clip.fadeOutCurve);
           if (down < env) env = down;
         }
-        final gain = gainBase * env;
+        final shaped = clip.gainAutomation.isEmpty
+            ? env
+            : env * clipEnvelopeAt(clip.gainAutomation, i * 1000 / sampleRate);
+        final gain = gainBase * shaped;
         final at = start + i - from;
         if (isStereo) {
           final lg = pan <= 0 ? 1.0 : math.cos(pan * math.pi / 2);
@@ -1024,6 +1052,16 @@ void _applyTrackGainAutomation(
     final ms = i * 1000 / sampleRate;
     lane[i] *= _trackAutomationValue(points, ms);
   }
+}
+
+/// The clip envelope's multiplier at [msIntoClip] — 1 outside the authored
+/// points, so a partial envelope leaves the rest of the clip alone.
+///
+/// Indexed from the CLIP's start rather than the timeline's, which is the whole
+/// difference from lane automation: the shape travels with the take.
+double clipEnvelopeAt(List<DawAutomationPoint> points, double msIntoClip) {
+  if (points.isEmpty) return 1;
+  return _trackAutomationValue(points, msIntoClip);
 }
 
 double _trackAutomationValue(List<DawAutomationPoint> points, double ms) {
