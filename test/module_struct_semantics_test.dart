@@ -3,13 +3,18 @@
 // empty/identity factories, or the per-format cell isEmpty/==/hashCode — the
 // coverage map flagged each around 55-62%. Pin them here.
 import 'package:comet_beat/core/audio/mod/it_module.dart';
+import 'package:comet_beat/core/audio/mod/mod_module.dart';
 import 'package:comet_beat/core/audio/mod/s3m_module.dart';
 import 'package:comet_beat/core/audio/mod/xm_module.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('format exceptions carry a named message', () {
-    test('XM / S3M / IT toString', () {
+    test('MOD / XM / S3M / IT toString', () {
+      expect(
+        const ModFormatException('too short').toString(),
+        'ModFormatException: too short',
+      );
       expect(
         const XmFormatException('bad sig').toString(),
         'XmFormatException: bad sig',
@@ -22,6 +27,23 @@ void main() {
         const ItFormatException('no IMPM').toString(),
         'ItFormatException: no IMPM',
       );
+    });
+  });
+
+  group('ModCell', () {
+    test('default is empty; a period/sample makes it non-empty', () {
+      expect(const ModCell().isEmpty, isTrue);
+      expect(ModCell.empty.isEmpty, isTrue);
+      expect(const ModCell(period: 428).isEmpty, isFalse);
+      expect(const ModCell(sample: 1).isEmpty, isFalse);
+    });
+    test('equality and hashCode', () {
+      const a = ModCell(sample: 1, period: 428, effect: 12, effectParam: 64);
+      const b = ModCell(sample: 1, period: 428, effect: 12, effectParam: 64);
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(const ModCell(sample: 2, period: 428)));
+      expect(a, isNot(const ModCell(sample: 1, period: 428)));
     });
   });
 
