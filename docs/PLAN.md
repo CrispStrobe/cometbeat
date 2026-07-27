@@ -114,13 +114,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   STATIC reasons, and the widget localizes via `localizedReason` (EN mirrors the
   bridge, drift-guarded). So the common fully-tagged edges (score→tracker,
   tracker→score, →loop, score→tab-parts) now show a fully-German loss dialog.
-  ⬜ **Remainder (documented):** the DYNAMIC reasons (interpolated counts —
-  "the other N channels") need parameterized keys, and the sub-converter reasons
-  (`loop_tab`/`tab_tracker`/`loop_tracker`/`drum_tracker`) are still English — a
-  delegating edge (tab→loop) shows a mix. Those want the same additive key channel
-  applied at their sites (now trivial — the infra is there). Isolated:
-  `symbolic_annotation.dart` (model) + `project_bridge.dart` (6 tags) +
-  `open_in_menu.dart` + ARB. 61 interop tests green. — opus (tracker→editors)
+  **Follow-up (done, 2nd pass): the sub-converter reasons are localized too** —
+  via a central message→key fallback in `localizedReason` (zero churn on
+  `loop_tab`/`tab_tracker`/… — their call sites are untouched), 6 more static
+  reasons EN/DE, plus a COMPREHENSIVE drift guard that enumerates every edge's
+  reasons and asserts each is translated except a documented dynamic allowlist. So
+  the common loss dialogs are now fully German and cannot silently regress. ⬜
+  **Only remainder:** the truly DYNAMIC reasons (interpolated counts — "the other
+  N channels") need parameterized ARB keys + the report carrying the param; the
+  additive key channel is in place for that. Isolated: `symbolic_annotation.dart` +
+  `project_bridge.dart` + `open_in_menu.dart` + ARB. 13 interop tests green.
+  — opus (tracker→editors)
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — IT214/215 compression: already
   closed for the real case; fixed STALE docs + pinned it.** Went to build the IT
