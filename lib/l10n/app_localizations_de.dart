@@ -8176,6 +8176,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ttsEnginePlatform => 'Gerätestimme';
 
   @override
+  String get ttsVoicePickerTitle => 'Vorlesestimme';
+
+  @override
+  String get ttsVoicePickerSubtitle => 'Installierte Gerätestimme wählen';
+
+  @override
+  String get ttsVoicePickerDefault => 'Standard';
+
+  @override
   String get ttsHdVoiceReady => 'An — Vorlesen nutzt die natürliche Stimme';
 
   @override

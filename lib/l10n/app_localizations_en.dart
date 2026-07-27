@@ -8135,6 +8135,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsEnginePlatform => 'Device voice';
 
   @override
+  String get ttsVoicePickerTitle => 'Narration voice';
+
+  @override
+  String get ttsVoicePickerSubtitle => 'Pick an installed device voice';
+
+  @override
+  String get ttsVoicePickerDefault => 'Device default';
+
+  @override
   String get ttsHdVoiceReady => 'On — narration uses the natural voice';
 
   @override

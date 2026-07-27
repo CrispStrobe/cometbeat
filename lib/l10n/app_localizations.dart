@@ -14834,6 +14834,24 @@ abstract class AppLocalizations {
   /// **'Device voice'**
   String get ttsEnginePlatform;
 
+  /// No description provided for @ttsVoicePickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Narration voice'**
+  String get ttsVoicePickerTitle;
+
+  /// No description provided for @ttsVoicePickerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick an installed device voice'**
+  String get ttsVoicePickerSubtitle;
+
+  /// No description provided for @ttsVoicePickerDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Device default'**
+  String get ttsVoicePickerDefault;
+
   /// No description provided for @ttsHdVoiceReady.
   ///
   /// In en, this message translates to:

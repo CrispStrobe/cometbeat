@@ -16,12 +16,15 @@
 // included. Speaking is best-effort — a platform with no voice for the locale
 // just stays quiet rather than throwing.
 
+import 'dart:convert';
+
 import 'package:comet_beat/core/audio/tts/prebaked_narration.dart'
     show PrebakedNarrationBackend;
 import 'package:comet_beat/core/audio/tts/tts_engine.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// The speech engine behind [TtsService]. Swappable for tests and for a future
 /// neural backend.
@@ -34,9 +37,54 @@ abstract class TtsBackend {
   Future<void> stop();
 }
 
+/// One selectable on-device platform voice (Apple/Android/web). `name` +
+/// `locale` are what `flutter_tts.setVoice` needs; kept as an opaque pair.
+@immutable
+class TtsVoiceOption {
+  const TtsVoiceOption({required this.name, required this.locale});
+  final String name;
+  final String locale;
+
+  Map<String, String> toMap() => {'name': name, 'locale': locale};
+
+  /// Persist form: JSON `{name, locale}` — robust to any characters in a
+  /// voice name (spaces, dots, dashes).
+  String encode() => jsonEncode({'name': name, 'locale': locale});
+  static TtsVoiceOption? decode(String? s) {
+    if (s == null || s.isEmpty) return null;
+    try {
+      final m = jsonDecode(s) as Map<String, dynamic>;
+      final name = m['name'] as String?;
+      final locale = m['locale'] as String?;
+      if (name == null || locale == null) return null;
+      return TtsVoiceOption(name: name, locale: locale);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is TtsVoiceOption && other.name == name && other.locale == locale;
+  @override
+  int get hashCode => Object.hash(name, locale);
+}
+
+/// A backend that can enumerate + select the OS's on-device voices. Only the
+/// platform (`flutter_tts`) backend implements this — neural backends have a
+/// single fixed voice. [TtsService] checks with `is PlatformVoiceControl`.
+abstract interface class PlatformVoiceControl {
+  /// The on-device voices whose locale starts with [langPrefix] (e.g. `de`).
+  Future<List<TtsVoiceOption>> availableVoices(String langPrefix);
+
+  /// Use [voice] for subsequent utterances (null ⇒ the OS default for the
+  /// utterance's language).
+  Future<void> applyVoice(TtsVoiceOption? voice);
+}
+
 /// The real backend, driving the `flutter_tts` plugin. Every call is guarded:
 /// on a platform/locale without a voice it degrades to silence, never a crash.
-class FlutterTtsBackend implements TtsBackend {
+class FlutterTtsBackend implements TtsBackend, PlatformVoiceControl {
   FlutterTtsBackend() {
     // A calm, child-friendly cadence. Rates are best-effort per platform.
     _tts
@@ -48,14 +96,57 @@ class FlutterTtsBackend implements TtsBackend {
   final FlutterTts _tts = FlutterTts();
   String? _lang;
 
+  /// The voice [TtsService] asked us to use next (null ⇒ OS default). Applied
+  /// lazily in [speak] so we set it exactly once per change.
+  TtsVoiceOption? _voice;
+  TtsVoiceOption? _appliedVoice;
+
+  @override
+  Future<void> applyVoice(TtsVoiceOption? voice) async => _voice = voice;
+
+  @override
+  Future<List<TtsVoiceOption>> availableVoices(String langPrefix) async {
+    try {
+      final raw = await _tts.getVoices;
+      if (raw is! List) return const [];
+      final prefix = langPrefix.toLowerCase();
+      final out = <TtsVoiceOption>[];
+      final seen = <String>{};
+      for (final v in raw) {
+        if (v is! Map) continue;
+        final name = v['name']?.toString();
+        final locale = v['locale']?.toString();
+        if (name == null || locale == null) continue;
+        if (!locale.toLowerCase().startsWith(prefix)) continue;
+        if (!seen.add('$name|$locale')) continue;
+        out.add(TtsVoiceOption(name: name, locale: locale));
+      }
+      out.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      return out;
+    } catch (_) {
+      return const [];
+    }
+  }
+
   @override
   Future<void> speak(String text, {required String langCode}) async {
     if (text.trim().isEmpty) return;
     try {
       await _tts.stop();
-      if (_lang != langCode) {
-        await _tts.setLanguage(langCode);
-        _lang = langCode;
+      final voice = _voice;
+      if (voice != null) {
+        // A chosen voice fixes the language too; set it only when it changed.
+        if (_appliedVoice != voice) {
+          await _tts.setVoice(voice.toMap());
+          _appliedVoice = voice;
+          _lang = null; // force a setLanguage if we later drop back to default
+        }
+      } else {
+        _appliedVoice = null;
+        if (_lang != langCode) {
+          await _tts.setLanguage(langCode);
+          _lang = langCode;
+        }
       }
       await _tts.speak(text);
     } catch (_) {
@@ -211,6 +302,12 @@ class TtsService with ChangeNotifier {
       await prebaked.speak(text, langCode: langCode);
     } else {
       final backend = await _pick();
+      // For the platform voice, apply the user's chosen OS voice (if any) for
+      // this language before speaking. Neural backends have a fixed voice.
+      if (backend is PlatformVoiceControl) {
+        await (backend as PlatformVoiceControl)
+            .applyVoice(_chosenVoices[_baseLang(langCode)]);
+      }
       await backend.speak(text, langCode: langCode);
     }
   }
@@ -222,6 +319,76 @@ class TtsService with ChangeNotifier {
   set preferredEngine(TtsEngine e) {
     if (_preferred == e) return;
     _preferred = e;
+    notifyListeners();
+    SharedPreferences.getInstance()
+        .then((p) => p.setString(_enginePrefKey, e.name))
+        .ignore();
+  }
+
+  // ── On-device platform voice selection (Apple/Android/web) ────────────────
+  static const _enginePrefKey = 'tts_engine';
+  static const _voicePrefix = 'tts_voice_';
+
+  /// The user's chosen platform voice per base language (`de`/`en`). Empty ⇒
+  /// the OS default. Read by [speak] and applied to the platform backend.
+  final Map<String, TtsVoiceOption> _chosenVoices = {};
+
+  static String _baseLang(String langCode) =>
+      langCode.toLowerCase().split(RegExp('[-_]')).first;
+
+  /// The chosen platform voice for [langCode], or null (OS default).
+  TtsVoiceOption? chosenNarrationVoice(String langCode) =>
+      _chosenVoices[_baseLang(langCode)];
+
+  /// The on-device voices available for [langCode] — only meaningful for the
+  /// platform voice (empty for a build/backend without OS voice control). This
+  /// touches the platform plugin, so call it from a user action, not startup.
+  Future<List<TtsVoiceOption>> narrationVoices(String langCode) async {
+    final b = _backend;
+    if (b is PlatformVoiceControl) {
+      return (b as PlatformVoiceControl).availableVoices(_baseLang(langCode));
+    }
+    return const [];
+  }
+
+  /// Choose [voice] (null ⇒ OS default) for [langCode]; persists + notifies.
+  Future<void> chooseNarrationVoice(
+    String langCode,
+    TtsVoiceOption? voice,
+  ) async {
+    final lang = _baseLang(langCode);
+    if (voice == null) {
+      _chosenVoices.remove(lang);
+    } else {
+      _chosenVoices[lang] = voice;
+    }
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    if (voice == null) {
+      await prefs.remove('$_voicePrefix$lang');
+    } else {
+      await prefs.setString('$_voicePrefix$lang', voice.encode());
+    }
+  }
+
+  /// Load persisted TTS prefs (engine preference + per-language voice choices).
+  /// Deliberately does NOT touch the lazy platform backend, so app startup and
+  /// the screenshot-capture path stay free of any flutter_tts plugin calls.
+  Future<void> loadNarrationPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final eng = prefs.getString(_enginePrefKey);
+    if (eng != null) {
+      for (final e in TtsEngine.values) {
+        if (e.name == eng) {
+          _preferred = e;
+          break;
+        }
+      }
+    }
+    for (final lang in const ['de', 'en']) {
+      final v = TtsVoiceOption.decode(prefs.getString('$_voicePrefix$lang'));
+      if (v != null) _chosenVoices[lang] = v;
+    }
     notifyListeners();
   }
 

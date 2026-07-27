@@ -155,6 +155,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const _HdVoiceTile(),
           const _VoiceEngineTile(),
+          const _NarrationVoiceTile(),
           const _VoiceModelsTile(),
           const _TranscriptionEngineSection(),
           const SizedBox(height: 20),
@@ -408,6 +409,78 @@ class _VoiceEngineTile extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Picks which on-device OS voice narrates — Apple/Android/browser voices via
+/// `flutter_tts.getVoices`. Lets a user choose a better/enhanced installed voice
+/// with NO download. Shown only when the OS offers ≥2 voices for the current
+/// language (with 0–1 there's nothing to pick, so no noise tile).
+class _NarrationVoiceTile extends StatefulWidget {
+  const _NarrationVoiceTile();
+
+  @override
+  State<_NarrationVoiceTile> createState() => _NarrationVoiceTileState();
+}
+
+class _NarrationVoiceTileState extends State<_NarrationVoiceTile> {
+  List<TtsVoiceOption> _voices = const [];
+  bool _loaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loaded) _load();
+  }
+
+  Future<void> _load() async {
+    _loaded = true;
+    TtsService? tts;
+    try {
+      tts = context.read<TtsService>();
+    } on ProviderNotFoundException {
+      return;
+    }
+    final lang = TtsService.voiceTag(Localizations.localeOf(context));
+    final voices = await tts.narrationVoices(lang);
+    if (mounted) setState(() => _voices = voices);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_voices.length < 2) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    final tts = context.watch<TtsService>();
+    final lang = TtsService.voiceTag(Localizations.localeOf(context));
+    final current = tts.chosenNarrationVoice(lang);
+    // Guard: the persisted choice may not be in the OS's current list.
+    final value = _voices.contains(current) ? current : null;
+    return ListTile(
+      leading: const Icon(Icons.settings_voice_outlined),
+      title: Text(l10n.ttsVoicePickerTitle),
+      subtitle: Text(l10n.ttsVoicePickerSubtitle),
+      trailing: DropdownButton<TtsVoiceOption?>(
+        value: value,
+        underline: const SizedBox.shrink(),
+        onChanged: (v) => tts.chooseNarrationVoice(lang, v),
+        items: [
+          DropdownMenuItem<TtsVoiceOption?>(
+            child: Text(l10n.ttsVoicePickerDefault),
+          ),
+          for (final v in _voices)
+            DropdownMenuItem<TtsVoiceOption?>(
+              value: v,
+              child: Text(_voiceLabel(v)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// A compact label: the voice name, plus its region if it adds info.
+  String _voiceLabel(TtsVoiceOption v) {
+    final region = v.locale.split(RegExp('[-_]')).skip(1).join('-');
+    return region.isEmpty ? v.name : '${v.name} ($region)';
   }
 }
 

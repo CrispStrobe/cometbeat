@@ -90,7 +90,8 @@ class CometBeatApp extends StatelessWidget {
               play: audio.playWavBytes,
               stopPlayback: audio.stop,
             );
-            return TtsService(neural: neural, onnx: onnx, prebaked: prebaked);
+            return TtsService(neural: neural, onnx: onnx, prebaked: prebaked)
+              ..loadNarrationPrefs();
           },
         ),
       ],
