@@ -187,6 +187,65 @@ void main() {
     );
   });
 
+  // --- X3/X4: effect MEMORY -------------------------------------------------
+  //
+  // Every fixture above restates its parameter on every row, so none of them
+  // can see a memory bug at all. These state the parameter ONCE and then send
+  // the bare zero-parameter form, which is where ProTracker's rules diverge
+  // sharply from FastTracker's — and our replayer serves all four formats from
+  // one implementation, so it can only match one of them.
+  //
+  // ProTracker (`pt2_replayer.c`):
+  //   * `1xx`/`2xx` portaUp/portaDown read `ch->n_cmd` DIRECTLY. No memory at
+  //     all: a bare `100` slides by zero.
+  //   * `Axy` volumeSlide likewise — a bare `A00` changes nothing.
+  //   * `3xx` tonePortamento DOES latch (`if (param > 0) n_toneportspeed = …`).
+  //   * `4xy` vibrato latches each nibble separately.
+  // So the memory is per-command, not a blanket rule, and the two that latch
+  // are exactly the two we would expect to.
+
+  // 1xx with the parameter given ONCE. Under ProTracker rows 2..8 do nothing;
+  // under a blanket-memory model they keep sliding, and the note ends up a long
+  // way from where the hardware leaves it.
+  _emit('mem_porta_up', wave, (r) {
+    if (r == 0) return const DocCell(note: _note, instrument: 1);
+    if (r == 1) return const DocCell(effect: 0x1, effectParam: 0x04);
+    return r <= 8 ? const DocCell(effect: 0x1) : DocCell.empty;
+  });
+
+  _emit('mem_porta_down', wave, (r) {
+    if (r == 0) return const DocCell(note: _note, instrument: 1);
+    if (r == 1) return const DocCell(effect: 0x2, effectParam: 0x04);
+    return r <= 8 ? const DocCell(effect: 0x2) : DocCell.empty;
+  });
+
+  // Axy the same way. Volume is a level effect, so the spectral metric is
+  // nearly blind to it (it is amplitude-invariant) — read the sweep's duration
+  // and level columns, or the envelope correlation, not the spectral number.
+  _emit('mem_volslide', wave, (r) {
+    if (r == 0) {
+      return const DocCell(
+        note: _note,
+        instrument: 1,
+        effect: 0xC,
+        effectParam: 0x30,
+      );
+    }
+    if (r == 1) return const DocCell(effect: 0xA, effectParam: 0x02);
+    return r <= 12 ? const DocCell(effect: 0xA) : DocCell.empty;
+  });
+
+  // 3xx, the one that SHOULD latch. It is the control: if the two above are
+  // wrong and this one is right, the fault is a blanket memory rule rather than
+  // a broken memory mechanism.
+  _emit('mem_tone_porta', wave, (r) {
+    if (r == 0) return const DocCell(note: _note, instrument: 1);
+    if (r == 4) {
+      return const DocCell(note: _note + 7, effect: 0x3, effectParam: 0x04);
+    }
+    return r <= 20 ? const DocCell(effect: 0x3) : DocCell.empty;
+  });
+
   stdout.writeln('done — one sounding channel each, 32 rows, speed 6/125');
 }
 

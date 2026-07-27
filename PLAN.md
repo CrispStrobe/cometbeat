@@ -1770,6 +1770,65 @@ IT has no NodMOD walker at all, which is exactly why the ladder calls it the
 highest-risk reader: fewest oracles, most features. Its flow is covered here only
 indirectly, through the audio sweep.
 
+#### X3/X4 DIAGNOSED, NOT FIXED (2026-07-27) — effect memory is per-command
+
+The 14 existing effect fixtures all restate their parameter on every row, so
+none of them could see a memory bug. Four new ones state it ONCE and then send
+the bare zero-parameter form, which is where ProTracker and FastTracker diverge.
+
+From `pt2_replayer.c`, the rule is **per-command, not per-format-and-blanket**:
+
+| command | ProTracker | XM / S3M / IT |
+| --- | --- | --- |
+| `1xx` / `2xx` porta up/down | reads `ch->n_cmd` — **no memory**, `100` slides by 0 | latch |
+| `Axy` volume slide | reads the row's parameter — **no memory** | latch |
+| `3xx` tone porta | **latches** (`if (param > 0) n_toneportspeed = …`) | latch |
+| `4xy` vibrato | **latches**, each nibble separately | latch |
+
+We latch everything, which is the tracker-general rule applied to MOD as well.
+Measured against three engines that agree with each other at 1.000:
+
+| fixture | refs | ours |
+| --- | --- | --- |
+| `mem_porta_up` | 1.000 | **0.270** |
+| `mem_porta_down` | 1.000 | **0.531** |
+| `mem_volslide` | 1.000 | 0.994 ⚠️ see below |
+| `mem_tone_porta` (control) | 1.000 | **1.000** ✅ |
+
+The control is what makes the diagnosis solid: `3xx` — the command that
+genuinely does latch — is already perfect, so the fault is the blanket RULE, not
+a broken memory mechanism. ⚠️ `mem_volslide`'s 0.994 means little: spectral
+similarity is amplitude-invariant, so it is nearly blind to a volume effect
+(the same trap that hid tremolo's 4× depth in X2). It needs an envelope
+measurement before anyone concludes `Axy` is fine.
+
+**Why it is not fixed here, and exactly what the fix is.** The correct rule
+depends on the SOURCE FORMAT, and the format is not available at replay time.
+`ReplayVoice` has no song reference; the flag has to come from the importer
+(`doc.sourceFormat == ModuleFormat.mod`) and thread through roughly thirty call
+sites across seven private render helpers, plus the public `traceChannel` that
+many test files use. I started it — making the `ReplayVoice` parameter
+*required* so the compiler enumerates all ten construction sites rather than
+letting a default hide one, which is the lesson from X5's missed fifth site —
+and then reverted, rather than leave a wide half-converted diff in the file
+another agent is actively editing.
+
+The shape of the fix, once someone takes it:
+
+1. `bool protrackerEffectMemory` on `TrackerSong`, default false, set by the
+   module importer for `ModuleFormat.mod` only.
+2. `ReplayVoice({required this.protrackerMemory})` — required, not defaulted.
+3. In the latch switch, `if (_param != 0 || protrackerMemory) _mem… = _param;`
+   for `1xx`, `2xx`, `Axy`, `5xy` and `6xy`. Storing the parameter
+   unconditionally reproduces ProTracker without the apply sites needing to know
+   which rule is in force — no other change is needed.
+4. Leave `3xx`, `4xy` and `7xy` latching as they are.
+
+`mem_porta_up` and `mem_porta_down` are listed in the sweep's
+`_kKnownOpenDefects`, so the numbers are **printed and flagged on every run**
+rather than skipped, and the flag inverts to "now passing? drop the exemption"
+if someone fixes it.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,
@@ -1789,12 +1848,14 @@ retrigger flag ignored, the ramp inverted. ⬜ Left open: tremolo depth
 re-measured with an envelope metric, and panbrello's rate against an IT
 reference.
 
-**X3 — Portamento family.** `1xx`/`2xx` step per tick, `3xx` target snapping,
+🚧 **X3 — Portamento family.** Effect MEMORY diagnosed (above) and not yet
+fixed; the rest stands. `1xx`/`2xx` step per tick, `3xx` target snapping,
 period clamping at the table edges, and effect MEMORY (a bare `300` continuing
 the previous rate) — memory bugs are invisible on a single-row fixture and
 obvious on a sustained one.
 
-**X4 — Volume slide + tremor semantics.** `Axy` per-tick vs per-row, the
+🚧 **X4 — Volume slide + tremor semantics.** `Axy`'s memory rule diagnosed
+above (and needs an ENVELOPE measurement, not a spectral one). `Axy` per-tick vs per-row, the
 "both nibbles set" ambiguity ProTracker and later trackers resolve differently,
 and interaction with `5xy`/`6xy` (porta/vibrato + volume slide combinations).
 
