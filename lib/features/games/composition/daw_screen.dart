@@ -23,6 +23,8 @@ import 'package:comet_beat/core/audio/daw_edits.dart'
     show ClipStats, GeneratorShape, clipStatsOf;
 import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
+import 'package:comet_beat/core/audio/fx/fx_chain_codec.dart'
+    show formatFxChain, fxChainStringIsLossless, parseFxChain;
 import 'package:comet_beat/core/audio/fx/fx_params.dart'
     show fxParamCaption, fxParamSpecs, fxSliderStep, fxTypeLabel;
 import 'package:comet_beat/core/audio/loop_engine.dart'
@@ -88,7 +90,8 @@ import 'package:crisp_notation/crisp_notation.dart'
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/scheduler.dart' show Ticker;
-import 'package:flutter/services.dart' show KeyDownEvent, LogicalKeyboardKey;
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, KeyDownEvent, LogicalKeyboardKey;
 import 'package:provider/provider.dart';
 
 /// Test handle onto the running arranger.
@@ -636,6 +639,10 @@ class _DawScreenState extends State<DawScreen>
                   ),
               ],
             ),
+            _chainClipboardActions(ctx, _daw.trackEffects(track), (chain) {
+              _daw.setTrackEffects(track, chain);
+              setDialog(() {});
+            }),
             PopupMenuButton<DawClipEffectPreset>(
               tooltip: 'Apply preset',
               icon: const Icon(Icons.auto_fix_high),
@@ -726,6 +733,73 @@ class _DawScreenState extends State<DawScreen>
     );
   }
 
+  /// F3 — the chain string as a copy/paste preset.
+  ///
+  /// The same text `bin/fxproc.dart --chain` takes, so a chain tuned by ear in
+  /// the app pastes straight into a terminal or a test, and one found in a test
+  /// pastes back. That round trip is the whole reason the codec exists; without
+  /// these two buttons it only ever ran in one direction.
+  Widget _chainClipboardActions(
+    BuildContext ctx,
+    List<DawClipEffect> effects,
+    void Function(List<DawClipEffect> chain) onReplace,
+  ) =>
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: 'Copy chain',
+            icon: const Icon(Icons.content_copy),
+            onPressed: effects.isEmpty
+                ? null
+                : () async {
+                    final text = formatFxChain(effects);
+                    await Clipboard.setData(ClipboardData(text: text));
+                    // The State's `mounted`, because the snackbar goes through
+                    // the State's context — guarding the dialog's context would
+                    // be checking the wrong thing.
+                    if (!mounted) return;
+                    // Automation has no syntax in the string form, so say so
+                    // rather than let it vanish silently on the way back.
+                    final lossy = !fxChainStringIsLossless(effects);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          lossy ? '$text\n(automation is not copied)' : text,
+                        ),
+                      ),
+                    );
+                  },
+          ),
+          IconButton(
+            tooltip: 'Paste chain',
+            icon: const Icon(Icons.content_paste),
+            onPressed: () async {
+              final data = await Clipboard.getData(Clipboard.kTextPlain);
+              final text = data?.text?.trim() ?? '';
+              if (!mounted || text.isEmpty) return;
+              final parsed = parseFxChain(text);
+              if (!parsed.ok || parsed.isEmpty) {
+                // Report rather than silently doing nothing: the user just
+                // pasted something they believed was a chain.
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      parsed.errors.isEmpty
+                          ? 'That is not an effect chain.'
+                          : parsed.errors.first,
+                    ),
+                  ),
+                );
+                return;
+              }
+              onReplace(parsed.chain);
+              if (_playing) play();
+            },
+          ),
+        ],
+      );
+
   Future<void> _masterFxMenu() async {
     await showDialog<void>(
       context: context,
@@ -758,6 +832,10 @@ class _DawScreenState extends State<DawScreen>
           children: [
             Text('Output bus', style: Theme.of(ctx).textTheme.labelLarge),
             const Spacer(),
+            _chainClipboardActions(ctx, effects, (chain) {
+              _daw.setMasterEffects(chain);
+              setDialog(() {});
+            }),
             PopupMenuButton<DawClipEffectPreset>(
               tooltip: 'Apply preset',
               icon: const Icon(Icons.auto_fix_high),
@@ -1584,22 +1662,50 @@ class _DawScreenState extends State<DawScreen>
         GeneratorShape.whiteNoise => l10n.dawShapeWhiteNoise,
         GeneratorShape.pinkNoise => l10n.dawShapePinkNoise,
         GeneratorShape.silence => l10n.dawShapeSilence,
+        // A7 — left untranslated on purpose, the same call the FX rack makes
+        // for its effect names: these are established audio-engineering terms
+        // that appear in English in every tool the user will meet, and the
+        // alternative is seven new keys in the hot shared ARBs to invent
+        // German for "violet noise".
+        GeneratorShape.brownNoise => 'Brown noise',
+        GeneratorShape.blueNoise => 'Blue noise',
+        GeneratorShape.violetNoise => 'Violet noise',
+        GeneratorShape.sweep => 'Sweep (linear)',
+        GeneratorShape.logSweep => 'Sweep (log)',
+        GeneratorShape.pluck => 'Plucked string',
+        GeneratorShape.impulse => 'Impulse',
       };
+
+  /// Whether a frequency control means anything for [shape].
+  ///
+  /// Listed as what IS pitched rather than what is not: a new noise colour
+  /// added to the enum should default to hiding the control, not to showing a
+  /// frequency slider that does nothing.
+  static bool _shapeIsPitched(GeneratorShape shape) => const {
+        GeneratorShape.sine,
+        GeneratorShape.square,
+        GeneratorShape.saw,
+        GeneratorShape.triangle,
+        GeneratorShape.sweep,
+        GeneratorShape.logSweep,
+        GeneratorShape.pluck,
+      }.contains(shape);
 
   /// O7 — build a tone / noise / silence clip from scratch onto a new lane.
   Future<void> _generateClipDialog() async {
     final l10n = AppLocalizations.of(context)!;
     var shape = GeneratorShape.sine;
     var freq = 440.0;
+    var endFreq = 8000.0;
     var seconds = 2.0;
     var amp = 0.5;
     final made = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) {
-          final pitched = shape != GeneratorShape.silence &&
-              shape != GeneratorShape.whiteNoise &&
-              shape != GeneratorShape.pinkNoise;
+          final pitched = _shapeIsPitched(shape);
+          final sweeping =
+              shape == GeneratorShape.sweep || shape == GeneratorShape.logSweep;
           return AlertDialog(
             title: Text(l10n.dawGenerate),
             content: SizedBox(
@@ -1624,7 +1730,10 @@ class _DawScreenState extends State<DawScreen>
                   ),
                   // Frequency only means something for the tone shapes.
                   if (pitched) ...[
-                    Text('${l10n.dawFrequency} ${freq.round()} Hz'),
+                    Text(
+                      '${l10n.dawFrequency} ${freq.round()} Hz'
+                      '${sweeping ? ' → ${endFreq.round()} Hz' : ''}',
+                    ),
                     Slider(
                       value: freq,
                       min: 20,
@@ -1633,6 +1742,15 @@ class _DawScreenState extends State<DawScreen>
                       onChanged: (v) => setDialog(() => freq = v),
                     ),
                   ],
+                  // A sweep needs somewhere to sweep TO.
+                  if (sweeping)
+                    Slider(
+                      value: endFreq,
+                      min: 40,
+                      max: 20000,
+                      label: '${endFreq.round()} Hz',
+                      onChanged: (v) => setDialog(() => endFreq = v),
+                    ),
                   Text('${l10n.dawLength} ${seconds.toStringAsFixed(1)} s'),
                   Slider(
                     value: seconds,
@@ -1665,7 +1783,13 @@ class _DawScreenState extends State<DawScreen>
       ),
     );
     if (made != true) return;
-    generateClip(shape: shape, freq: freq, seconds: seconds, amp: amp);
+    generateClip(
+      shape: shape,
+      freq: freq,
+      endFreq: endFreq,
+      seconds: seconds,
+      amp: amp,
+    );
   }
 
   /// Ocenaudio's "Amplify": pick a gain in dB and bake it into the clip.
@@ -2569,12 +2693,14 @@ class _DawScreenState extends State<DawScreen>
   void generateClip({
     required GeneratorShape shape,
     double freq = 440,
+    double endFreq = 20000,
     double seconds = 2,
     double amp = 0.5,
   }) {
     _daw.addGeneratedClip(
       shape: shape,
       freq: freq,
+      endFreq: endFreq,
       seconds: seconds,
       amp: amp,
     );

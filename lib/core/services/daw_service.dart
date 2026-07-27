@@ -1601,6 +1601,25 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replace the master chain wholesale — what pasting a chain string does.
+  ///
+  /// Cloned on the way in, like the preset path: a caller that keeps a
+  /// reference to the list it passed must not be able to mutate the timeline
+  /// behind the service's back and skip the undo snapshot.
+  void setMasterEffects(List<DawClipEffect> effects) {
+    _record();
+    timeline.effects = _cloneEffectChain(effects);
+    notifyListeners();
+  }
+
+  /// The track twin of [setMasterEffects].
+  void setTrackEffects(int track, List<DawClipEffect> effects) {
+    if (track < 0 || track >= timeline.tracks.length) return;
+    _record();
+    timeline.tracks[track].effects = _cloneEffectChain(effects);
+    notifyListeners();
+  }
+
   void applyMasterEffectPreset(
     DawClipEffectPreset preset, {
     bool append = false,
