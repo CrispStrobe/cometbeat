@@ -1696,6 +1696,29 @@ void _renderSampleChannelInto(
   var noteStartSample = 0;
   var releaseStartSample = 0;
 
+  // §4 sample-voice macros (OPT-IN): per-tick volume/pitch/arpeggio modulation
+  // read from the channel's sample instrument. Empty (the default) → the vol/incr
+  // expressions below are untouched, so an existing render stays byte-identical.
+  MacroSequence? volMacro, pitchMacro, arpMacro;
+  if (channel.instrument is SampleInstrument) {
+    for (final m in (channel.instrument as SampleInstrument).macros) {
+      if (m.isEmpty) continue;
+      switch (m.target) {
+        case MacroTarget.volume:
+          volMacro = m;
+        case MacroTarget.pitch:
+          pitchMacro = m;
+        case MacroTarget.arpeggio:
+          arpMacro = m;
+        case MacroTarget.pan:
+        case MacroTarget.duty:
+          break; // not applied on the sample path (documented follow-up)
+      }
+    }
+  }
+  final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
+  var macroTick = 0; // ticks since the current note-on (drives the macros)
+
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
     if (cellInst > 0 &&
@@ -1749,9 +1772,20 @@ void _renderSampleChannelInto(
       if (state.retrigger) {
         readPos = voice.playBackward ? (s.length - 1).toDouble() : 0.0;
         noteStartSample = ts;
+        macroTick = 0; // a fresh note-on restarts the macros
       }
       if (!voice.active && !voice.released) continue;
-      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      var vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      // Macro modulation for THIS tick (no-op when absent → byte-identical).
+      var macroSemis = 0.0;
+      if (hasMacros) {
+        if (volMacro != null) {
+          vol *= volMacro.valueAt(macroTick, fallback: 64).clamp(0, 64) / 64.0;
+        }
+        if (pitchMacro != null) macroSemis += pitchMacro.valueAt(macroTick);
+        if (arpMacro != null) macroSemis += arpMacro.valueAt(macroTick);
+        macroTick++;
+      }
       for (var i = ts; i < te && i < stem.length; i++) {
         final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
         final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
@@ -1814,7 +1848,8 @@ void _renderSampleChannelInto(
                 ) ??
                 0.0)
             : 0.0;
-        final incr = pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+        final incr =
+            pow(2.0, (state.pitch - baseMidi + pitch + macroSemis) / 12.0);
         readPos += voice.playBackward ? -incr : incr;
       }
     }
@@ -2098,13 +2133,15 @@ void _renderChannelInto(
   final inst = _additiveOf(channel.instrument);
   if (inst == null) {
     // A SAMPLE channel that carries per-tick pitch/volume effects (porta/
-    // vibrato/tremolo/Cxx/Axy/arp/extended) renders through the sample TICK
-    // voice so those effects actually SOUND (the whole-channel render can't do
-    // per-tick modulation). Effect-free sample channels — and sfxr/percussion —
-    // keep the unchanged non-additive render below (byte-identical).
+    // vibrato/tremolo/Cxx/Axy/arp/extended), a resonant filter, or §4 instrument
+    // MACROS renders through the sample TICK voice so those actually SOUND (the
+    // whole-channel render can't do per-tick modulation). Effect-free,
+    // filter-free, macro-free sample channels — and sfxr/percussion — keep the
+    // unchanged non-additive render below (byte-identical).
     if (channel.instrument is SampleInstrument &&
         (_hasPerTickEffect(cells) ||
-            (channel.instrument as SampleInstrument).hasFilter)) {
+            (channel.instrument as SampleInstrument).hasFilter ||
+            (channel.instrument as SampleInstrument).macros.isNotEmpty)) {
       _renderSampleChannelInto(
         mix,
         channel,

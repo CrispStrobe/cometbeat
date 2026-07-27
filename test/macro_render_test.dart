@@ -4,6 +4,7 @@
 // re-checked here against a no-macro baseline).
 
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/macro_sequence.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
@@ -97,6 +98,53 @@ void main() {
       maxDiff = max(maxDiff, (plain[i] - arp[i]).abs());
     }
     expect(maxDiff, greaterThan(100), reason: 'the arpeggio must be audible');
+  });
+
+  group('sample voice', () {
+    List<int> renderSample(List<MacroSequence> macros) {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      final pcm = List<double>.generate(
+        4410,
+        (i) => sin(2 * pi * 220 * i / 44100),
+      );
+      song.engine.setChannelInstrument(
+        0,
+        SampleInstrument(
+          'tone',
+          Float64List.fromList(pcm),
+          loopLength: 4410, // loop so a held note keeps sounding (baseMidi 60)
+          macros: macros,
+        ),
+      );
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      return replaySong(song).pcm;
+    }
+
+    test('a fade-to-zero volume macro ducks a sample note', () {
+      final plain = renderSample(const []);
+      final faded = renderSample(const [
+        MacroSequence(
+          target: MacroTarget.volume,
+          values: [64, 32, 16, 0],
+          loopStart: 3,
+          loopEnd: 3,
+        ),
+      ]);
+      expect(plain.any((v) => v != 0), isTrue);
+      expect(_rms(faded), lessThan(_rms(plain) * 0.6));
+    });
+
+    test('a +12 pitch macro raises a sample note (more zero-crossings)', () {
+      final plain = renderSample(const []);
+      final up = renderSample(const [
+        MacroSequence(target: MacroTarget.pitch, values: [12]),
+      ]);
+      final n = min(plain.length, up.length);
+      expect(
+        _crossings(up, 0, n),
+        greaterThan(_crossings(plain, 0, n) * 1.5),
+      );
+    });
   });
 
   test('macros survive a codec round-trip on an additive instrument', () {

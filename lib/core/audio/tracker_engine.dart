@@ -665,6 +665,7 @@ class SampleInstrument implements TrackerInstrument {
     this.nativeFadeout = 0,
     this.filterCutoff = -1,
     this.filterResonance = 0,
+    this.macros = const [],
   });
 
   /// Records-once: applies [fx] to [raw] and keeps the result as the sample.
@@ -722,6 +723,12 @@ class SampleInstrument implements TrackerInstrument {
   /// voices are byte-identical to a filterless render.
   final int filterCutoff;
   final int filterResonance;
+
+  /// Optional per-tick instrument MACROS (roadmap §4) — volume/pitch/arpeggio
+  /// modulation applied per tick in the replayer's sample-tick voice
+  /// ([_renderSampleChannelInto]). Empty (the default) means no modulation, so an
+  /// existing render is byte-identical.
+  final List<MacroSequence> macros;
 
   /// Whether this instrument engages the low-pass: an enabled cutoff below the
   /// fully-open 127, any resonance, or a filter-cutoff envelope (which modulates

@@ -129,6 +129,8 @@ Map<String, dynamic> instrumentToJson(TrackerInstrument instrument) {
       'nativeDct': instrument.nativeDct,
       'nativeDca': instrument.nativeDca,
       'nativeFadeout': instrument.nativeFadeout,
+      if (instrument.macros.isNotEmpty)
+        'macros': [for (final m in instrument.macros) m.toJson()],
       'envelope': _envelopeToJson(instrument.envelope),
       // PCM as base64 Float32 (little-endian) — inaudibly lossy, half the size
       // of Float64 and standard for audio.
@@ -256,6 +258,12 @@ TrackerInstrument instrumentFromJson(Map<String, dynamic> json) {
         nativeDct: (json['nativeDct'] as num?)?.toInt() ?? 0,
         nativeDca: (json['nativeDca'] as num?)?.toInt() ?? 0,
         nativeFadeout: (json['nativeFadeout'] as num?)?.toInt() ?? 0,
+        macros: json['macros'] is List
+            ? [
+                for (final e in json['macros'] as List)
+                  if (MacroSequence.fromJson(e) case final parsed?) parsed,
+              ]
+            : const [],
       );
     case 'multiSample':
       return MultiSampleInstrument(
