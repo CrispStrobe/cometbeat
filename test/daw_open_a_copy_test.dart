@@ -22,11 +22,12 @@ import 'package:comet_beat/core/audio/daw_timeline.dart'
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum;
 import 'package:comet_beat/core/audio/tracker_song.dart';
-import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart'
     show AdvancedTrackerScreen;
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
+import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart'
+    show LoopMixerScreen;
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
     show trackerSongFromMultiPart;
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart'
@@ -240,14 +241,11 @@ void main() {
     });
   });
 
-  group('only reachable destinations are offered', () {
-    testWidgets('Loop is not offered — the Audio Editor cannot push it',
+  group('all four other modes are offered', () {
+    testWidgets('Loop is now offered too (seeds the user track from cells)',
         (tester) async {
-      // OpenInMenu.targets exists precisely so a screen cannot offer a
-      // destination it has no route to. The bridge CAN convert to Loop, but a
-      // loop document is the sung user track's cells and seeding a groove from
-      // them needs the Loop Mixer's own track vocabulary — offering it would
-      // convert the user's work and then have nowhere to put it.
+      // The Loop Mixer is seeded from the converted cells via a GrooveSpec whose
+      // 'voice' track holds them — so the once-dropped Loop target is now live.
       await _pumpDaw(tester);
       _service(tester).addClip(ScoreSource(_score()));
       await tester.pumpAndSettle();
@@ -257,17 +255,29 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('open-in-tab')), findsOneWidget);
       expect(find.byKey(const ValueKey('open-in-tracker')), findsOneWidget);
-      expect(find.byKey(const ValueKey('open-in-loop')), findsNothing);
+      expect(find.byKey(const ValueKey('open-in-loop')), findsOneWidget);
     });
 
-    test('the bridge itself still reaches Loop — this is a UI limit', () {
-      // Stated as a test so the day the Loop Mixer can be seeded from cells,
-      // whoever removes the restriction knows the bridge was never the blocker.
-      expect(ProjectBridge.canConvert(AppMode.score, AppMode.loop), isTrue);
-      expect(
-        ProjectBridge.targetsFrom(AppMode.score),
-        contains(AppMode.loop),
-      );
+    testWidgets('picking Loop opens the Loop Mixer', (tester) async {
+      await _pumpDaw(tester);
+      _service(tester).addClip(ScoreSource(_score()));
+      await tester.pumpAndSettle();
+      await _openInspector(tester, '🎼');
+
+      await tester.tap(find.byKey(const ValueKey('open-in')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('open-in-loop')));
+      await tester.pumpAndSettle();
+      // Score → Loop snaps to the eighth grid, so it warns; confirm and go.
+      if (find
+          .byKey(const ValueKey('open-in-loss-dialog'))
+          .evaluate()
+          .isNotEmpty) {
+        await tester.tap(find.byKey(const ValueKey('open-in-confirm')));
+      }
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(LoopMixerScreen), findsOneWidget);
     });
   });
 

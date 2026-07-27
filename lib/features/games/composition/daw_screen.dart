@@ -26,7 +26,13 @@ import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/fx/fx_params.dart'
     show fxParamCaption, fxParamSpecs, fxSliderStep, fxTypeLabel;
 import 'package:comet_beat/core/audio/loop_engine.dart'
-    show DrumRowsPattern, LoopEngine, LoopTiming, kPatternSteps;
+    show
+        DrumRowsPattern,
+        GrooveSpec,
+        LoopEngine,
+        LoopTiming,
+        PatternCell,
+        kPatternSteps;
 import 'package:comet_beat/core/audio/synth.dart'
     show Drum, kSampleRate, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
@@ -4036,6 +4042,14 @@ class _DawScreenState extends State<DawScreen>
     return null;
   }
 
+  /// Wraps a converted loop document (a cells list) as a [GrooveSpec] whose
+  /// USER ('voice') track holds those cells, so the Loop Mixer can be seeded from
+  /// it — the bridge produces cells, the Loop Mixer speaks grooves.
+  GrooveSpec _loopSpecFromCells(List<PatternCell> cells) => GrooveSpec(
+        userCells: cells,
+        enabled: {LoopEngine.userTrackId},
+      );
+
   /// C3 — "Open a copy in…" for a clip whose model is a document the
   /// [ProjectBridge] can convert (now including drum + groove via
   /// [_clipSymbolicDoc]).
@@ -4053,12 +4067,9 @@ class _DawScreenState extends State<DawScreen>
   /// user's original with a degraded version of itself; "Send to Audio Editor"
   /// from the target editor adds it as a new clip instead, which keeps both.
   ///
-  /// Only the three modes the Audio Editor can actually PUSH are offered. The
-  /// bridge can also reach Loop, but a loop document is the sung user track's
-  /// cells and seeding a groove from them needs the Loop Mixer's own track
-  /// vocabulary — offering it here would convert the user's work and then have
-  /// nowhere to put it, which is exactly what `OpenInMenu.targets` exists to
-  /// prevent.
+  /// All four other modes are offered now: score / tab / tracker directly, and
+  /// LOOP by seeding the Loop Mixer's user track from the converted cells (see
+  /// [_loopSpecFromCells]) — the restriction that once dropped Loop is gone.
   Widget? _openACopyIn(BuildContext sheetCtx, int track, int index) {
     final source = _daw.clipSourceAt(track, index);
     final sym = _clipSymbolicDoc(source);
@@ -4068,7 +4079,12 @@ class _DawScreenState extends State<DawScreen>
     return OpenInMenu(
       from: from,
       documentBuilder: () => document,
-      targets: const [AppMode.score, AppMode.tab, AppMode.tracker],
+      targets: const [
+        AppMode.score,
+        AppMode.tab,
+        AppMode.tracker,
+        AppMode.loop,
+      ],
       tooltip: 'Open a copy in…',
       icon: const Icon(Icons.call_split),
       onConverted: (target, result) {
@@ -4093,8 +4109,14 @@ class _DawScreenState extends State<DawScreen>
           case AppMode.tracker:
             if (converted is TrackerSong) openTrackerSong(context, converted);
           case AppMode.loop:
+            // The loop document is a cells list; seed the Loop Mixer's user
+            // ('voice') track from it. "Send to Audio Editor" there adds a new
+            // groove clip (copy), leaving this one untouched.
+            if (converted is List<PatternCell>) {
+              openGroove(context, _loopSpecFromCells(converted));
+            }
           case AppMode.audio:
-            break; // not offered — see the doc comment.
+            break; // a bounce, not a conversion — see the doc comment.
         }
       },
     );
@@ -4114,7 +4136,12 @@ class _DawScreenState extends State<DawScreen>
     return OpenInMenu(
       from: from,
       documentBuilder: () => document,
-      targets: const [AppMode.score, AppMode.tab, AppMode.tracker],
+      targets: const [
+        AppMode.score,
+        AppMode.tab,
+        AppMode.tracker,
+        AppMode.loop,
+      ],
       tooltip: 'Open & replace via…',
       keyPrefix: 'replace-',
       icon: const Icon(Icons.sync_alt),
@@ -4153,6 +4180,16 @@ class _DawScreenState extends State<DawScreen>
               );
             }
           case AppMode.loop:
+            // Seed the Loop Mixer's user track from the loop cells; its edited
+            // groove replaces this clip (it becomes a groove clip).
+            if (converted is List<PatternCell>) {
+              openGroove(
+                context,
+                _loopSpecFromCells(converted),
+                onReturn: (edited) =>
+                    _daw.replaceGrooveClipSource(source, edited),
+              );
+            }
           case AppMode.audio:
             break;
         }
