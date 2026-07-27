@@ -2,6 +2,19 @@
 // audio that lands on disk. This is the guard on the CLI *wiring* — the edit
 // maths itself is covered headlessly in daw_edits_test.dart. It also proves the
 // edit path stays Flutter-free: `dart run` (not `flutter test`) executes it.
+//
+// ⏱ Every test here SPAWNS A PROCESS, so the default 30-second budget is the
+// wrong one — it is sized for an in-process unit test, and a `dart run` on a
+// busy machine takes far longer than the work it is doing. Three cases here
+// failed in a full-suite run at load average 38 and all passed in isolation
+// seconds later; a timeout that depends on what else is running is a flake, not
+// a signal. (`fxproc_cli_test` carries the same note for the same reason.)
+//
+// If suite RUNTIME rather than flakiness is the concern, the other lever is the
+// heavy-test gate — but that trades away the coverage, so it is a call for
+// whoever owns runtime rather than something to do by reflex here.
+@Timeout(Duration(minutes: 3))
+library;
 
 import 'dart:io';
 
