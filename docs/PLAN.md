@@ -1123,6 +1123,37 @@ is recorded in [HISTORY.md](HISTORY.md).
   (recorded absent, not filled in by analogy); `ces`/`fes` spellings; a double sharp `fisfis`
   the page's own footnote exists to explain; and a printer's slip *"der esten Lage"* left as set.
 
+  **⭐⭐ ROMBERG STATES THE PREMISE OF THIS WHOLE FILE, in 1840** (p.78, «Von den
+  Doppelgriffen»): *«…denn die Violinspieler haben zwei Terzen in den Fingern und der
+  Violoncellist nur eine.»* — violinists have TWO thirds under the fingers, the cellist only
+  ONE. That is exactly the claim `bowed_arranger.dart`'s header opens with (a cellist's four
+  fingers span a minor third where a violinist's span a perfect fourth), and it is why the
+  bowed arranger is a separate file from the guitar one. Sourced now, not asserted.
+  • Also: *«Da der Fingersatz zu Doppelgriffen sehr schwer zu finden ist, so habe ich ihn bei
+  allen Noten bemerkt. Die Bezeichnung gilt aber meisst für die unterste Saite.»* — he fingers
+  EVERY note of a double stop precisely because the fingering is hard to find. ⚠ The second
+  sentence ("the marking mostly applies to the lowest string") sits in some tension with the
+  stacked-row reading and should be weighed by anyone using these dyads.
+  • **66 dyad columns, 111 digits, 0 thumb signs.** Stacked-digit mapping CONFIRMED rather than
+  assumed, by two columns where only one reading is physical: a `3`/`0` pair can only be open
+  A3 over F♯3 (there is no open F♯), and `4`/`1` can only be G3 under B3.
+  • **Octaves are all NECK octaves** (`0` + `4`, open string plus 4th finger on the next string)
+  — no thumb octave, no thumb glyph on the page. Matches Becker p.30.
+  • ⚠ **Fifths: NONE on this page**, so the Romberg-vs-Becker fifth convention is **NOT settled**
+  — recorded as an open question rather than guessed. (Becker prints the same digit twice for a
+  barré; whether Romberg does the same is still unknown.)
+  • Honest gap, and a real limit of the source: only **10 of 66** columns are fully pitched. At
+  125 ppi the staff lines do not survive under dyad noteheads + two digit rows + string labels,
+  so absolute pitch for most of systems 2–3 is `null`, while the DIGITS are still high
+  confidence. 9 columns are flagged `interval_plausibility: "suspect"` where a digit-pair
+  derivation yields a 7th inside a fast beamed figure — likelier a row-alignment artifact.
+  ⚠ **MY PAGE MAPPING WAS WRONG and the "+18 offset" DRIFTS.** I cut PDF 96 as printed 78; PDF
+  96 is printed **76**, and «Von den Doppelgriffen» is PDF **98**. The reader caught it with a
+  40 dpi thumbnail sweep and re-cut. Do not trust a single global offset for this book — verify
+  per page against the printed page number.
+  🔧 Tooling: `precut.py`'s upscale is capped by WIDTH, so tall narrow content still comes out
+  small; a 3-column re-cut (`fine_cut.py`) gets 3x instead of 2x on this page.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
