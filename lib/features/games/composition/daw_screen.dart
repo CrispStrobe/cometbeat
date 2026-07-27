@@ -1938,6 +1938,26 @@ class _DawScreenState extends State<DawScreen>
     if (_playing) play();
   }
 
+  /// D1 — remove the marked span AND the time it occupied.
+  ///
+  /// Deliberately not scoped to the selected lanes, unlike its neighbours in
+  /// this menu: rippling some lanes and not others slides the arrangement out
+  /// of sync with itself. "Just here" is what Silence is for.
+  void _rippleDeleteMarkedRange() {
+    if (!_hasFxRange) return;
+    _daw.rippleDelete(_rangeStartMs, _rangeEndMs);
+    setState(() {});
+    if (_playing) play();
+  }
+
+  /// D1 — open the marked span as empty time, sliding everything after it.
+  void _rippleInsertMarkedRange() {
+    if (!_hasFxRange) return;
+    _daw.rippleInsert(_rangeStartMs, _rangeEndMs - _rangeStartMs);
+    setState(() {});
+    if (_playing) play();
+  }
+
   void _setRangeMuted(bool muted) {
     if (!_hasFxRange) return;
     _daw.setClipMutedInRange(
@@ -4900,6 +4920,21 @@ class _DawScreenState extends State<DawScreen>
                                   _hasFxRange ? _cropToMarkedRange : null,
                               leadingIcon: const Icon(Icons.crop),
                               child: Text(l10n.dawRangeCrop),
+                            ),
+                            // D1. English labels, like the FX rack's: "ripple"
+                            // is the term every DAW uses and the one a user
+                            // searching for this behaviour will look for.
+                            MenuItemButton(
+                              onPressed:
+                                  _hasFxRange ? _rippleDeleteMarkedRange : null,
+                              leadingIcon: const Icon(Icons.compress),
+                              child: const Text('Ripple delete'),
+                            ),
+                            MenuItemButton(
+                              onPressed:
+                                  _hasFxRange ? _rippleInsertMarkedRange : null,
+                              leadingIcon: const Icon(Icons.expand),
+                              child: const Text('Ripple insert'),
                             ),
                           ],
                           builder: (context, controller, _) =>

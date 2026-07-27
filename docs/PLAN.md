@@ -2422,9 +2422,25 @@ already round-trip **in place**. The gaps:
     phone speaker does. The CLI flags both risks inline (`⚠ over −1 dBTP`,
     `⚠ mono-fold risk`).
   Tests: `loudness_test` (16).
-- [ ] **D1** ripple delete/insert · **D2** clip groups + nudge · **D3** per-clip
-  gain envelope · **D5** take lanes/comping · **D6** a real tempo map (bpm is
-  one number today).
+- [x] **D1 ripple delete / insert** — `rippleDelete` / `rippleInsert` on
+  `DawService`, in the marked-range menu beside Silence and Crop.
+  * the distinction from the verbs already there is the whole point:
+    `silenceRange` cuts audio out and leaves a HOLE, so everything later keeps
+    the time it was recorded at; a ripple removes the TIME, so the arrangement
+    closes up behind it. Both are wanted, and a test asserts them side by side
+    so neither can drift into the other.
+  * ripple applies to **every lane**, deliberately unlike its menu neighbours:
+    rippling some lanes and not others slides the arrangement out of sync with
+    itself, which is never what anyone means. "Just here" is what Silence is for.
+  * a clip straddling an insertion point is **split**, not relocated — moving it
+    whole would silently move audio the user did not select, and the edit would
+    look like it worked.
+  * **markers ripple too**, and a marker inside a removed range is DROPPED
+    rather than slid to the seam: it pointed at something that no longer exists,
+    and relocating it would invent a cue nobody placed.
+  Tests: `daw_ripple_test` (16).
+- [ ] **D2** clip groups + nudge · **D3** per-clip gain envelope · **D5** take
+  lanes/comping · **D6** a real tempo map (bpm is one number today).
 
 **Non-goals** (stated so they are not re-litigated): a real-time audio graph (the
 app is offline render-then-play *by design*), third-party plugin hosting, and

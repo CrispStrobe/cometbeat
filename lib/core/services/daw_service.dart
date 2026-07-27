@@ -2011,6 +2011,118 @@ class DawService extends ChangeNotifier {
   int cropToRange(Iterable<int> tracks, double startMs, double endMs) =>
       _removeClipsAroundRange(tracks, startMs, endMs, removeInside: false);
 
+  /// **Ripple delete**: cut the range out AND close the gap — everything after
+  /// it slides earlier by the range's length.
+  ///
+  /// The difference from [silenceRange] is the whole point, and it is the
+  /// difference between two different edits. Silencing leaves a hole, so
+  /// anything later keeps the time it was recorded at; rippling removes TIME
+  /// itself, so a passage cut from the middle of an arrangement does not leave
+  /// a bar of nothing where it was. Both are wanted, which is why both exist.
+  ///
+  /// Applies to EVERY lane, not the selected ones. A ripple on some lanes and
+  /// not others would slide the arrangement out of sync with itself, which is
+  /// never what anyone means — the selection-scoped verb for "just here" is
+  /// [silenceRange].
+  ///
+  /// Markers ripple too: a marker is a position in time, and leaving one
+  /// pointing at a bar that has moved is worse than not having it.
+  int rippleDelete(double startMs, double endMs) {
+    final rangeStart = math.min(startMs, endMs);
+    final rangeEnd = math.max(startMs, endMs);
+    final span = rangeEnd - rangeStart;
+    if (span <= _minSplitMs || timeline.tracks.isEmpty) return 0;
+
+    _record();
+    var removed = 0;
+    for (final track in timeline.tracks) {
+      removed += editClipsAroundRange(
+        track.clips,
+        rangeStart,
+        rangeEnd,
+        removeInside: true,
+        durationOf: _durationOf,
+        minSplitMs: _minSplitMs,
+      );
+      // Close the gap: everything that began at or after the cut moves back by
+      // exactly what was removed.
+      for (var i = 0; i < track.clips.length; i++) {
+        final clip = track.clips[i];
+        if (clip.startMs >= rangeEnd - 1e-9) {
+          track.clips[i] = clip.copyWith(startMs: clip.startMs - span);
+        }
+      }
+    }
+    _rippleMarkers(rangeEnd, -span, dropBetween: (rangeStart, rangeEnd));
+    notifyListeners();
+    return removed;
+  }
+
+  /// **Ripple insert**: open [durationMs] of empty time at [atMs], sliding
+  /// everything from there onward later.
+  ///
+  /// The complement of [rippleDelete] — room for a bar that was forgotten.
+  /// A clip straddling the insertion point is SPLIT, because the alternative
+  /// (moving it whole) would silently relocate audio the user did not select.
+  void rippleInsert(double atMs, double durationMs) {
+    if (durationMs <= 0 || timeline.tracks.isEmpty) return;
+    _record();
+    for (final track in timeline.tracks) {
+      // Split anything that spans the point, so the halves can part company.
+      for (var i = 0; i < track.clips.length; i++) {
+        final clip = track.clips[i];
+        final duration = _durationOf(clip);
+        if (_canSplitClipWindow(clip.startMs, duration, atMs)) {
+          final offset = atMs - clip.startMs;
+          final cut = clip.trimStartMs + offset;
+          track.clips[i] = clip.copyWith(trimEndMs: cut, fadeOutMs: 0);
+          track.clips.insert(
+            i + 1,
+            clip.copyWith(
+              startMs: clip.startMs + offset,
+              trimStartMs: cut,
+              fadeInMs: 0,
+            ),
+          );
+          i++;
+        }
+      }
+      for (var i = 0; i < track.clips.length; i++) {
+        final clip = track.clips[i];
+        if (clip.startMs >= atMs - 1e-9) {
+          track.clips[i] = clip.copyWith(startMs: clip.startMs + durationMs);
+        }
+      }
+    }
+    _rippleMarkers(atMs, durationMs);
+    notifyListeners();
+  }
+
+  /// Slide markers at or after [fromMs] by [deltaMs], dropping any that fell
+  /// inside a removed range (they point at nothing now).
+  void _rippleMarkers(
+    double fromMs,
+    double deltaMs, {
+    (double, double)? dropBetween,
+  }) {
+    final kept = <DawMarker>[];
+    for (final marker in timeline.markers) {
+      if (dropBetween != null &&
+          marker.ms > dropBetween.$1 &&
+          marker.ms < dropBetween.$2) {
+        continue;
+      }
+      kept.add(
+        marker.ms >= fromMs - 1e-9
+            ? marker.copyWith(ms: math.max(0, marker.ms + deltaMs))
+            : marker,
+      );
+    }
+    timeline.markers
+      ..clear()
+      ..addAll(kept..sort((a, b) => a.ms.compareTo(b.ms)));
+  }
+
   /// Split every clip at both range bounds, then drop the segments on one side.
   /// A sliver too short to split (< [_minSplitMs] from a bound) is decided by
   /// its midpoint, so it lands on whichever side it mostly belongs to.
