@@ -57,7 +57,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   function-level survey (public functions never named in any test) found
   `github_abc_source` (fake-HTTP browse/parse), `fir` (convolveFir/designHilbert),
   the loop-seam crossfades (`crossfadeLoopSeam`/`crossfadePcm16Seam`) and the
-  XM/IT `c5speed`↔finetune tuning conversions.
+  XM/IT `c5speed`↔finetune tuning conversions. **Latest pushes (73da2e2a):**
+  fake-capture **stream seams** for the two mic screens — `debugChords` on
+  ChordListenSpikeScreen + `debugReadings` on FreeSingScreen (default-off,
+  `@visibleForTesting`, mic service now lazy so the plugin is never constructed
+  in tests) → cover the detection→display path headlessly (chord name + runner-up
+  chip; sung-note name); the **licence export gate** dialog (`confirmLicenseObligations`
+  — clear→true/no-dialog, blocking→Close-only/false, share-alike→Agree/Cancel);
+  and two MP3-DSP contracts the golden roundtrips only hit transitively —
+  `mp3_reservoir` (bit-budget bookkeeping: main_data_begin banking/cap, byte-exact
+  main-data reconstruction) + `mp3_psycho` (src-band Parseval, tonality∈[0,1]
+  tonal>noisy, mask ATH-floor + monotonicity). Pure-logic surface now near
+  exhausted; remaining untested files are FFI/stub/platform wrappers + generated
+  data tables (not unit-testable).
   Worktree `../mus-tests`.
 
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
