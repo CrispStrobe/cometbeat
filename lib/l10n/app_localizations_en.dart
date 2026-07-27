@@ -8133,6 +8133,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialReadAloud => 'Read aloud';
 
   @override
+  String get tutorialAutoRead => 'Read each step aloud';
+
+  @override
   String get ttsHdVoiceTitle => 'Natural voice (HD)';
 
   @override

@@ -14828,6 +14828,12 @@ abstract class AppLocalizations {
   /// **'Read aloud'**
   String get tutorialReadAloud;
 
+  /// No description provided for @tutorialAutoRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read each step aloud'**
+  String get tutorialAutoRead;
+
   /// No description provided for @ttsHdVoiceTitle.
   ///
   /// In en, this message translates to:

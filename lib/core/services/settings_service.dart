@@ -24,6 +24,7 @@ class SettingsService with ChangeNotifier {
   static const _scoreFontKey = 'score_font';
   static const _soundOnKey = 'sound_on';
   static const _narrationOnKey = 'narration_on';
+  static const _autoReadTutorialsKey = 'auto_read_tutorials';
   static const _showNoteNamesKey = 'show_note_names';
   static const _smartTabFingeringKey = 'smart_tab_fingering';
 
@@ -34,6 +35,7 @@ class SettingsService with ChangeNotifier {
   ScoreFont _scoreFont = ScoreFont.bravura;
   bool _soundOn = true;
   bool _narrationOn = true;
+  bool _autoReadTutorials = false;
   bool _showNoteNames = false;
   bool _smartTabFingering = true;
   Instrument _instrument = Instrument.piano;
@@ -50,6 +52,11 @@ class SettingsService with ChangeNotifier {
   /// Narration also still obeys [soundOn] (off ⇒ everything is silent). On by
   /// default. Gates [TtsService.speak] via the mirror in main.dart.
   bool get narrationOn => _narrationOn;
+
+  /// Auto-read tutorials: when on, each tutorial step is narrated aloud as it
+  /// becomes visible (hands-free for a pre-reader). Opt-in — **off by default**
+  /// so narration is never a surprise; still obeys [narrationOn]/[soundOn].
+  bool get autoReadTutorials => _autoReadTutorials;
 
   /// The additive timbre for pitched playback (the classic 4-way choice; also
   /// the fallback when a richer [voice] is selected).
@@ -121,6 +128,7 @@ class SettingsService with ChangeNotifier {
             : ScoreFont.bravura);
     _soundOn = prefs.getBool(_soundOnKey) ?? true;
     _narrationOn = prefs.getBool(_narrationOnKey) ?? true;
+    _autoReadTutorials = prefs.getBool(_autoReadTutorialsKey) ?? false;
     _showNoteNames = prefs.getBool(_showNoteNamesKey) ?? false;
     _smartTabFingering = prefs.getBool(_smartTabFingeringKey) ?? true;
     _applyScoreFont();
@@ -204,6 +212,13 @@ class SettingsService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_narrationOnKey, value);
+  }
+
+  Future<void> setAutoReadTutorials(bool value) async {
+    _autoReadTutorials = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoReadTutorialsKey, value);
   }
 
   Future<void> setInstrument(Instrument instrument) =>

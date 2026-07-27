@@ -7,6 +7,7 @@
 // [maybeShowTutorial] (open once on a game's first visit, then remember).
 
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/tts_service.dart';
 import 'package:comet_beat/features/games/widgets/playing_staff.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -63,6 +64,8 @@ class _TutorialSheetState extends State<_TutorialSheet> {
   final PageController _pages = PageController();
   int _index = 0;
   TtsService? _tts;
+  SettingsService? _settings;
+  bool _initNarrated = false;
 
   @override
   void didChangeDependencies() {
@@ -75,7 +78,23 @@ class _TutorialSheetState extends State<_TutorialSheet> {
     } on ProviderNotFoundException {
       _tts = null;
     }
+    try {
+      _settings = context.read<SettingsService>();
+    } on ProviderNotFoundException {
+      _settings = null;
+    }
+    // Auto-read (opt-in): narrate the FIRST step once the sheet is up. Deferred
+    // to a post-frame callback so it doesn't fight the open animation, and
+    // guarded so it fires exactly once.
+    if (!_initNarrated && _tts != null && _autoRead) {
+      _initNarrated = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _readAloud();
+      });
+    }
   }
+
+  bool get _autoRead => _settings?.autoReadTutorials ?? false;
 
   @override
   void dispose() {
@@ -89,6 +108,19 @@ class _TutorialSheetState extends State<_TutorialSheet> {
       widget.tutorial.steps[_index].text,
       locale: Localizations.localeOf(context),
     );
+  }
+
+  /// Toggle auto-read for tutorials (persisted). Turning it ON reads the current
+  /// step right away so the effect is immediate + obvious.
+  void _toggleAutoRead() {
+    final next = !_autoRead;
+    _settings?.setAutoReadTutorials(next);
+    setState(() {}); // refresh the toggle icon (we read the setting, not watch)
+    if (next) {
+      _readAloud();
+    } else {
+      _tts?.stop();
+    }
   }
 
   bool get _isLast => _index == widget.tutorial.steps.length - 1;
@@ -121,8 +153,8 @@ class _TutorialSheetState extends State<_TutorialSheet> {
             children: [
               Row(
                 children: [
-                  // Balances the read-aloud button so the title stays centred.
-                  if (_tts != null) const SizedBox(width: 48),
+                  // Balances the two trailing buttons so the title stays centred.
+                  if (_tts != null) const SizedBox(width: 96),
                   Expanded(
                     child: Text(
                       widget.tutorial.title,
@@ -130,12 +162,24 @@ class _TutorialSheetState extends State<_TutorialSheet> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  if (_tts != null)
+                  if (_tts != null) ...[
+                    IconButton(
+                      icon: Icon(
+                        _autoRead
+                            ? Icons.auto_stories_rounded
+                            : Icons.auto_stories_outlined,
+                        color: _autoRead ? theme.colorScheme.primary : null,
+                      ),
+                      tooltip: l10n.tutorialAutoRead,
+                      isSelected: _autoRead,
+                      onPressed: _toggleAutoRead,
+                    ),
                     IconButton(
                       icon: const Icon(Icons.record_voice_over_rounded),
                       tooltip: l10n.tutorialReadAloud,
                       onPressed: _readAloud,
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 8),
@@ -145,6 +189,7 @@ class _TutorialSheetState extends State<_TutorialSheet> {
                   onPageChanged: (i) {
                     _tts?.stop(); // don't talk over the next step
                     setState(() => _index = i);
+                    if (_autoRead) _readAloud(); // hands-free: read each step
                   },
                   itemCount: steps.length,
                   itemBuilder: (context, i) => _StepView(step: steps[i]),

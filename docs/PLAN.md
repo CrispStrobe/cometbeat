@@ -45,9 +45,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 - **opus (tts-followups)** · 🚧 **ACTIVE — TTS follow-up queue (1–3, 5–7).** Working
   the 6-item queue in the *TTS narration* section (auto-narrate-on-example →
   prefetch wiring → settings persistence test → iOS/Android + macOS embed handovers
-  → narration-pack hosting), in order. Now on **#1 auto-narrate on example** — will
-  touch the tutorial framework + `tts_service.dart`/`settings_service.dart`
-  (additive), rebase-before-push. — opus
+  → narration-pack hosting), in order. **#1 auto-read tutorial steps SHIPPED**; now
+  on **#2 wire `prefetch` for narration pack mode**. Additive, rebase-before-push. — opus
 - **opus (unit-tests)** · 🚧 **coverage sweep — 11 pure modules now covered (~107 tests over 3 pushes),
   more to come.** Data-driven: surveyed `lib/core`/`shared`/
   pure-`features` for files with zero test reference, then added exact + property
@@ -766,11 +765,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   parent, so ask for a compact final summary and honest `%% UNSURE` markers.
   **⭐⭐ THE FINDING THAT RESHAPES THE TASK: these methods use TWO DIFFERENT FINGERING
   SYSTEMS, and only one of them is what our arranger models.**
-  • **Tillière = DIATONIC** — one finger per scale degree, so the hand spacing follows the
-  key's tone/semitone pattern and changes bar to bar by design. Found by cross-reading two
-  lines of the same étude (an independent reading of the `3.e Corde` line explained what I
-  had wrongly filed as an engraver's slip on the `4.e Corde` line: bar 3's G–A♭–B♭ under
-  1‑2‑3 is the system working, not a defect — **that "anomaly" claim is retracted**).
+  • **Tillière = CONTESTED between readings, do not treat as settled.** I first concluded
+  "DIATONIC — one finger per scale degree" from the `3.e Corde` line, which prints 1‑2‑3 in
+  all eight bars regardless of interval content. ⚠ **A third reading contradicts that:** the
+  `1.re Corde` line prints bars 2/3 as **1‑3‑4** (whole tone then semitone = the ORDINARY
+  cello frame) and bar 1 as **1‑2‑4** (the extension) — which is frame-based, not diatonic.
+  So the diatonic claim rested on ONE line and another line refutes it. **Withdrawn as a
+  conclusion**; it is now one of two live hypotheses (a) Tillière is diatonic and the
+  `1.re Corde` digits are misread, (b) Tillière is frame-based and the `3.e Corde` uniform
+  1‑2‑3 is misread. Arbiter = the cleaner Danbé engraving of the same étude (in flight).
+  What DOES survive: my earlier "bar 3 is anomalous / an engraver's slip" claim is still
+  retracted — under either hypothesis it is systematic, not a defect.
   • **Romberg = FRAME-BASED** — he states it in prose: hand spans a minor third by default,
   a major third is taken 1‑2‑4 by extension with the hand staying in position.
   ⚠ **Consequence: scoring the arranger against Tillière is a CATEGORY ERROR.** Agreement
@@ -3048,9 +3053,12 @@ Six remaining items, in execution order. (1)–(3) are fully buildable + verifia
 headlessly; (5)–(7) need a device / signing / hosting, so I do the buildable part
 and hand over the on-device/ops step.
 
-1. **Auto-narrate a step when its example plays (opt-in).** When a tutorial step's
-   musical example auto-plays, also speak the step text — gated by `narrationOn`
-   plus a per-run opt-in so it's never surprising. Unit-test the trigger.
+1. **✅ Auto-read tutorial steps (opt-in) — SHIPPED.** `SettingsService.autoReadTutorials`
+   (persisted, default off) + a discoverable auto-read toggle in the tutorial-sheet
+   header; each step's text is narrated as it becomes visible (initial step +
+   on page-change), gated by `narrationOn`. The musical example stays a deliberate
+   tap (never talk over the melody). 3 widget tests (auto-read on/off, toggle
+   flips+persists+reads-now); full analyze clean.
 2. **Wire `prefetch` for narration pack mode.** Add a real call site that warms the
    current lesson's clips into the asset cache (IndexedDB on web), so pack mode
    isn't just latent infra. Test with a fake fetch. (Hosting = item 7.)
