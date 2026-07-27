@@ -22,6 +22,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/daw_edits.dart'
     show ClipStats, GeneratorShape, clipStatsOf;
 import 'package:comet_beat/core/audio/daw_sources.dart';
+import 'package:comet_beat/core/audio/daw_tempo_map.dart' show TempoMap;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/fx/fx_chain_codec.dart'
     show formatFxChain, fxChainStringIsLossless, parseFxChain;
@@ -5082,6 +5083,8 @@ class _DawScreenState extends State<DawScreen>
                         child: CustomPaint(
                           painter: _BeatGridPainter(
                             beatPx: daw.beatMs / 1000 * _pxPerSecond,
+                            tempoMap: daw.tempoMap,
+                            pxPerMs: _pxPerSecond / 1000,
                             color: scheme.outlineVariant.withValues(alpha: 0.5),
                           ),
                         ),
@@ -5551,16 +5554,49 @@ class _DawScreenState extends State<DawScreen>
   }
 }
 
-/// Faint vertical lines every [beatPx], marking the beat grid clips snap to.
+/// Faint vertical lines marking the beat grid clips snap to.
+///
+/// Takes the TEMPO MAP rather than a single spacing (D6): once the tempo can
+/// change, "a line every N pixels" is not the grid any more, and a painter that
+/// only knows one number cannot draw the right thing. The constant-tempo case
+/// still walks a fixed step, because that is the overwhelming majority and the
+/// map's own fast path.
 class _BeatGridPainter extends CustomPainter {
-  _BeatGridPainter({required this.beatPx, required this.color});
+  _BeatGridPainter({
+    required this.beatPx,
+    required this.color,
+    this.tempoMap,
+    this.pxPerMs,
+  });
+
+  /// Spacing at the opening tempo — used when the tempo never changes.
   final double beatPx;
   final Color color;
 
+  /// The project tempo over time. Null (or constant) keeps the fixed step.
+  final TempoMap? tempoMap;
+
+  /// Pixels per millisecond, needed to place a beat that is not on a fixed
+  /// step. Null falls back to the fixed step.
+  final double? pxPerMs;
+
   @override
   void paint(Canvas canvas, Size size) {
-    if (beatPx < 4) return; // too dense to be useful
     final paint = Paint()..color = color;
+    final map = tempoMap;
+    final scale = pxPerMs;
+
+    if (map != null && !map.isConstant && scale != null && scale > 0) {
+      // Ask the map where the beats actually are.
+      for (final ms in map.beatTimes(size.width / scale)) {
+        final x = ms * scale;
+        if (x <= 0 || x >= size.width) continue;
+        canvas.drawRect(Rect.fromLTWH(x, 0, 1, size.height), paint);
+      }
+      return;
+    }
+
+    if (beatPx < 4) return; // too dense to be useful
     for (var x = beatPx; x < size.width; x += beatPx) {
       canvas.drawRect(Rect.fromLTWH(x, 0, 1, size.height), paint);
     }
@@ -5568,7 +5604,10 @@ class _BeatGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BeatGridPainter old) =>
-      old.beatPx != beatPx || old.color != color;
+      old.beatPx != beatPx ||
+      old.color != color ||
+      old.pxPerMs != pxPerMs ||
+      !identical(old.tempoMap, tempoMap);
 }
 
 /// Draws a clip's downsampled [peaks] (0..1) as a centre-line waveform that

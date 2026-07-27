@@ -11,6 +11,7 @@ import 'package:comet_beat/core/audio/daw_edits.dart';
 import 'package:comet_beat/core/audio/daw_project.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart'
     show DrumSource, GrooveSource, ScoreSource, TrackerSource;
+import 'package:comet_beat/core/audio/daw_tempo_map.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart'
     show DrumRowsPattern, GrooveSpec, LoopTiming;
@@ -64,6 +65,10 @@ class DawService extends ChangeNotifier {
   }
 
   _Snapshot _capture() => _Snapshot(
+        // The tempo map is immutable and replaced wholesale, so holding the
+        // instance IS the copy — and it must be here, or `setTempoAt`'s
+        // `_record()` would promise an undo it cannot deliver.
+        tempoMap: tempoMap,
         effects: _cloneEffectChain(timeline.effects),
         buses: _cloneBuses(timeline.buses),
         tracks: [
@@ -88,6 +93,7 @@ class DawService extends ChangeNotifier {
       );
 
   void _restore(_Snapshot s) {
+    tempoMap = s.tempoMap;
     timeline.effects = _cloneEffectChain(s.effects);
     timeline.buses
       ..clear()
@@ -381,18 +387,39 @@ class DawService extends ChangeNotifier {
     );
   }
 
-  /// Project tempo — the snap grid is one beat at this tempo, so clips line up
-  /// rhythmically rather than to an arbitrary millisecond grid.
-  double bpm = 120;
+  /// The project's tempo over time (D6). A new project has one tempo
+  /// throughout, which is what the old single-`bpm` field meant.
+  TempoMap tempoMap = TempoMap.constant(120);
 
-  /// One beat in ms at [bpm].
+  /// The tempo at the START of the project.
+  ///
+  /// Kept as a plain get/set because almost everything — the toolbar, the
+  /// snap grid on a loop, every existing caller — wants exactly this and
+  /// should not have to know about the map. Setting it re-tempos the OPENING
+  /// segment only; later changes stay where the user put them.
+  double get bpm => tempoMap.changes.first.bpm;
+
+  /// One beat in ms at the opening tempo. Only meaningful where the tempo is
+  /// constant — use [tempoMap] for anything that spans a change.
   double get beatMs => 60000 / bpm;
 
   /// Drag-snap grid in ms (0 = off). When on, [moveClip] rounds a clip's start
-  /// to the nearest [beatMs], so clips land on the beat.
+  /// to the nearest beat.
+  ///
+  /// Still a millisecond value because it doubles as the on/off flag and as the
+  /// grid for a constant-tempo project, which is the overwhelming majority.
+  /// Where the tempo VARIES, [snapPosition] uses the map instead, so the two
+  /// cannot disagree.
   double snapMs = 0;
 
   bool get snapOn => snapMs > 0;
+
+  /// [ms] snapped to the musical grid — the beat, wherever it actually falls.
+  double snapPosition(double ms) {
+    if (!snapOn) return ms;
+    if (tempoMap.isConstant) return (ms / snapMs).roundToDouble() * snapMs;
+    return tempoMap.snapToBeat(ms);
+  }
 
   /// Toggle drag-snapping on/off (a view preference — not an undoable edit).
   void toggleSnap() {
@@ -400,11 +427,32 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Set the project tempo (clamped to a sane 40–300 BPM); if snapping is on,
+  /// Set the opening tempo (clamped to a sane 40–300 BPM); if snapping is on,
   /// the grid follows the new beat length.
   void setBpm(double value) {
-    bpm = value.clamp(40, 300);
+    final clamped = value.clamp(kMinBpm, kMaxBpm);
+    tempoMap = tempoMap.withChange(TempoChange(ms: 0, bpm: clamped));
     if (snapMs > 0) snapMs = beatMs;
+    notifyListeners();
+  }
+
+  /// Add or replace a tempo change at [ms] (D6). Undoable, unlike [setBpm]:
+  /// changing the opening tempo is a setting, but putting a tempo change in the
+  /// middle of an arrangement is an EDIT to the piece.
+  void setTempoAt(double ms, double bpm) {
+    _record();
+    tempoMap = tempoMap.withChange(
+      TempoChange(ms: math.max(0, ms), bpm: bpm.clamp(kMinBpm, kMaxBpm)),
+    );
+    notifyListeners();
+  }
+
+  /// Remove the tempo change at [ms]. The opening one cannot be removed — the
+  /// piece has to start at some tempo.
+  void removeTempoAt(double ms) {
+    if (ms <= 0 || tempoMap.isConstant) return;
+    _record();
+    tempoMap = tempoMap.withoutChangeAt(ms);
     notifyListeners();
   }
 
@@ -413,8 +461,10 @@ class DawService extends ChangeNotifier {
   /// clip coalesce into a single undo entry.
   void moveClip(int track, int index, double startMs) {
     _coalesced(('move', track, index));
-    var v = startMs < 0 ? 0.0 : startMs;
-    if (snapMs > 0) v = (v / snapMs).round() * snapMs;
+    // Snapping goes through the tempo map, so a drag lands on the beat even
+    // where the tempo changes — the millisecond grid is only correct while the
+    // tempo is constant.
+    final v = snapPosition(startMs < 0 ? 0.0 : startMs);
     final clips = timeline.tracks[track].clips;
     clips[index] = clips[index].copyWith(startMs: v);
     notifyListeners();
@@ -2456,6 +2506,7 @@ class DawService extends ChangeNotifier {
   /// so a save is cheap.
   String saveProject() => projectToJson(
         timeline,
+        tempoMap: tempoMap,
         render: (s) => _cache.putIfAbsent(
           s.cacheKey,
           () => s.render(kDawSampleRate),
@@ -2473,6 +2524,9 @@ class DawService extends ChangeNotifier {
     final warm = <Object, Float64List>{};
     // May throw before we mutate anything.
     final loaded = projectFromJson(json, warmCache: warm);
+    // A project written before D6, or one with a constant tempo, carries no
+    // map — keep the opening tempo the app already has rather than resetting it.
+    tempoMap = projectTempoFromJson(json) ?? TempoMap.constant(bpm);
     timeline.effects = _cloneEffectChain(loaded.effects);
     timeline.buses
       ..clear()
@@ -2498,12 +2552,16 @@ class DawService extends ChangeNotifier {
 /// A structural snapshot of the arrangement for undo/redo.
 class _Snapshot {
   _Snapshot({
+    required this.tempoMap,
     required this.effects,
     required this.buses,
     required this.tracks,
     required this.nextStartMs,
     required this.markers,
   });
+
+  /// Immutable and replaced wholesale, so the instance is the copy.
+  final TempoMap tempoMap;
   final List<DawClipEffect> effects;
   final List<DawBus> buses;
   final List<DawTrack> tracks;

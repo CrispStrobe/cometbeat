@@ -2452,8 +2452,34 @@ already round-trip **in place**. The gaps:
     rather than slid to the seam: it pointed at something that no longer exists,
     and relocating it would invent a cue nobody placed.
   Tests: `daw_ripple_test` (16).
+- [x] **D6 a real tempo map** — `core/audio/daw_tempo_map.dart`. A single `bpm`
+  is enough to draw a grid for a loop and nothing else: the moment a piece slows
+  into a section, "one beat = 60000/bpm ms" stops being true, and the grid,
+  snapping and any future bar/beat readout inherit the error.
+  * the two questions are INVERSES — `beatAtMs` and `msAtBeat` — and the
+    load-bearing test is that they round-trip **across a change**. A map that
+    gets one direction right and the other wrong looks perfect at a constant
+    tempo and desynchronises exactly where it is needed.
+  * `bpm` still means the OPENING tempo and still get/sets, so the toolbar and
+    every existing caller are untouched; `setBpm` re-tempos the opening segment
+    and leaves later changes where the user put them.
+  * a mid-arrangement change is **undoable**, unlike the opening tempo: one is a
+    setting, the other is an edit to the piece.
+  * snapping routes through `snapPosition`, which keeps the plain millisecond
+    grid while the tempo is constant (the overwhelming majority) and asks the
+    map where the beat actually is when it varies — so the two can never
+    disagree. The **grid painter** takes the map for the same reason: "a line
+    every N pixels" is not the grid any more.
+  * persisted only when the tempo actually VARIES — a constant-tempo project has
+    nothing to say that the default does not cover, and an absent key reads
+    identically on a build predating D6.
+  * ⛔ **gradual tempo curves are deliberately not modelled** (an accelerando as
+    a ramp rather than a staircase): different integral, a curve shape per
+    segment, and every consumer here asks "which beat is this" — which a
+    fine-grained staircase answers to any precision anyone can hear.
+  Tests: `daw_tempo_map_test` (21).
 - [ ] **D2** clip groups + nudge · **D3** per-clip gain envelope · **D5** take
-  lanes/comping · **D6** a real tempo map (bpm is one number today).
+  lanes/comping.
 
 **Non-goals** (stated so they are not re-litigated): a real-time audio graph (the
 app is offline render-then-play *by design*), third-party plugin hosting, and

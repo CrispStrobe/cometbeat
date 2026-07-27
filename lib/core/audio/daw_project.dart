@@ -26,6 +26,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/daw_clip_source_codec.dart';
+import 'package:comet_beat/core/audio/daw_tempo_map.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 
 /// Renders a source to PCM — injectable so the service can render through its
@@ -45,6 +46,7 @@ String projectToJson(
   DawTimeline timeline, {
   int sampleRate = kDawSampleRate,
   SourceRender? render,
+  TempoMap? tempoMap,
 }) {
   final r = render ?? (s) => s.render(sampleRate);
   return jsonEncode({
@@ -54,6 +56,10 @@ String projectToJson(
       'effects': [for (final fx in timeline.effects) fx.toJson()],
     if (timeline.markers.isNotEmpty)
       'markers': [for (final m in timeline.markers) m.toJson()],
+    // Only written when the tempo actually varies: a constant-tempo project
+    // has nothing to say here that the app's own default does not cover, and
+    // an absent key reads identically on an older build.
+    if (tempoMap != null && !tempoMap.isConstant) 'tempo': tempoMap.toJson(),
     if (timeline.buses.isNotEmpty)
       'buses': [
         for (final bus in timeline.buses)
@@ -133,6 +139,20 @@ String projectToJson(
 ///
 /// Throws [FormatException] on malformed input — callers catch it to report a
 /// bad/corrupt project file.
+/// The tempo map a project carried, or null when it had none (a constant-tempo
+/// project, or one written before D6). Read separately from the timeline
+/// because tempo lives on the SERVICE, not on the arrangement.
+TempoMap? projectTempoFromJson(String json) {
+  try {
+    final decoded = jsonDecode(json);
+    if (decoded is! Map) return null;
+    final tempo = decoded['tempo'];
+    return tempo is List ? TempoMap.fromJson(tempo) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 DawTimeline projectFromJson(
   String json, {
   Map<Object, Float64List>? warmCache,
