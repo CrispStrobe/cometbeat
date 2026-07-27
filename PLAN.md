@@ -1478,6 +1478,9 @@ is NOT it — `_vibPhase` resets to 0 on a new note and sin(0)=0, so applying on
 tick 0 adds nothing. Depth-scale is spent. Worth a table-shape pass if the number
 matters; it is comfortably inside the "ok" band now.
 
+✅ **X2 CLOSED (2026-07-27) — it was the RATE, and none of the guesses above.**
+See the X2 section below; the residual is gone in both configurations.
+
 **Method note for whoever picks this up.** All three bugs were found by
 measuring one effect at a time against three independent players, then reading
 `pt2-clone`'s source for the authoritative rule — not by reading our code first.
@@ -1523,6 +1526,152 @@ real fixtures pass with the current fixes. It is a much better constant than 0.8
 the references disagree wildly, the gate goes slack with them. That is the right
 failure direction (never a false red), not a free lunch.
 
+#### X2 CLOSED (2026-07-27) — the vibrato residual was a doubled LFO rate
+
+The PLAN guessed depth scale, waveform table, or the period-vs-pitch question,
+by analogy with portamento. All three guesses were wrong. Reading ProTracker's
+replayer instead: it adds `x*4` to an **8-bit** position each tick and indexes a
+32-entry table with `(pos >> 2) & 0x1F`, taking the sign from `pos < 128`. The
+position wraps every 256 units, so a full cycle is 256/(4x) = **64/x ticks**. We
+used 32/x — **every vibrato in every module ran at exactly twice its intended
+rate**. No reading of the format yields 32/x; this was a plain bug, not one of
+the deliberate musical approximations.
+
+Three more findings fell out of the same read:
+
+- **Tremolo's depth is `>> 6` where vibrato's is `>> 7`** — ~4 volume units per
+  depth-unit, not the 1.0 we used. Every tremolo swung a quarter as far as it
+  should, and `7xF` should cover almost the whole 0–64 range.
+- **Neither LFO runs on tick 0.** ProTracker reads the row and triggers voices on
+  tick 0 and runs the per-tick effect handler only on ticks 1..speed−1, so a
+  vibrato'd note sounds unbent for its first tick and the LFO neither applies nor
+  advances. We ran it on every tick, adding a tick of phase per row.
+- **Bit 2 of the waveform select is a "don't retrigger" flag** (`E44`–`E47`,
+  `E74`–`E77`) — which is why the nibble runs 0..7 for three shapes. We reset
+  unconditionally, so a module using it had its LFO restarted on every note.
+
+Also: ProTracker's RAMP, expressed in period space, is a *rising* sawtooth,
+where our general-purpose `lfoValue` ramp falls. Reusing it would have inverted
+`E41`, so vibrato/tremolo now go through a `protrackerLfo` that matches the
+hardware; `trackerLfo` is unchanged for panbrello and the FX rack.
+
+**Panbrello was deliberately left alone.** It rode the vibrato constant, but
+ProTracker has no panbrello — the 64/x finding is not evidence about it, and
+IT's own rule is different again (256/x). It got its own constant preserving its
+existing behaviour rather than letting a ProTracker finding silently change an
+untested effect. ⬜ Still unverified against any reference.
+
+**Measured, full sweep, three engines** (`tracker_effect_reference_sweep_test`):
+
+| fixture | before | shipped default | `PORTA_PERIOD=1` | refs agree |
+| --- | --- | --- | --- | --- |
+| `4xy` vibrato | 0.979 | **0.994** | **0.999** | 0.999 |
+| `6xy` vib+volslide | 0.977 | **0.994** | **0.999** | 0.999 |
+| `0xy` arpeggio | 0.976 | 0.976 | **0.994** | 0.984 |
+| `EDx` note delay | 0.983 | 0.983 | **0.999** | 1.000 |
+| `9xx` offset | 0.986 | 0.986 | **0.999** | 1.000 |
+
+Under `PORTA_PERIOD=1` **every one of the 14 effect fixtures now sits at or
+inside the spread of the reference players** — arpeggio and note-cut are closer
+to each reference than the references are to each other. In the shipped default
+only the four portamento fixtures remain adrift, and that is the documented
+semitone-model decision below, not a defect.
+
+**Method note.** The same discipline as X1 paid again, and the PLAN's own
+hypothesis list was the thing that was wrong: measuring named the family
+(vibrato AND `6xy`, one shared LFO), and reading the authoritative source named
+the cause. Guessing from our own constants would have sent me to the depth
+scale, which was fine.
+
+⚠️ **Metric caveat worth remembering.** Spectral similarity is a cosine of
+magnitude spectra and is therefore **amplitude-invariant**, so it read tremolo
+at 0.999 while its depth was four times too shallow. A pure amplitude effect
+needs the envelope correlation; the spectral number cannot see it. ⬜ Tremolo
+depth is fixed but has NOT been re-measured with an envelope-based metric.
+
+#### New instrument: `test/tracker_effect_reference_sweep_test.dart`
+
+X1's per-effect measurements were ad hoc. They are now a committed opt-in
+sweep — one line per fixture, refs-agree vs ours vs gap, over every reference
+binary present — plus `test/support/reference_players.dart`, which both audit
+harnesses share instead of keeping two copies of a WAV chunk walker.
+
+```
+flutter test --dart-define=OPENMPT_AB=1 test/tracker_effect_reference_sweep_test.dart
+flutter test --dart-define=OPENMPT_AB=1 --dart-define=PORTA_PERIOD=1 \
+  --dart-define=PAULA_CLOCK=1 test/tracker_effect_reference_sweep_test.dart
+```
+
+It reports per effect and asserts once, so a reference-player upgrade cannot
+redden the suite over a third decimal. The four portamento fixtures are exempt
+from the assertion when the gate is off, by name and with the reason attached.
+
+#### X9 partly DONE (2026-07-27) — one song, four formats, two bugs
+
+The effect fixtures all live in one pattern and are all MOD, so they cannot see
+the order list or anything format-specific. `tool/make_flow_fixtures.dart` emits
+the opposite: almost no effects, a real jump/break, written out as **MOD and XM
+and S3M and IT**. Because it is the same song four ways, the reference players
+agree with each other across all four — which turns "do we match a reference"
+into the much sharper "do our four formats agree the way theirs do".
+
+It found two bugs in its first run.
+
+**IT's pattern-break row is HEX; everyone else's is decimal (X6/X7).** Our
+canonical `Dxx`/`Cxx` parameter is decimal-coded into the two nibbles — row 16
+is 0x16 — which is what MOD, S3M and XM store, what `setPatternBreak` writes and
+what the replayer decodes. The IT converter passed the parameter through
+untouched in BOTH directions, so an IT we wrote said 0x16 and every other player
+read that as hex 0x16 = row 22.
+
+It was invisible to round-trip testing *because* it was wrong in both
+directions: our reader undid our writer's mistake and every doc→IT→doc test
+passed. Only an external reader could see it. libopenmpt rendered our MOD, S3M
+and XM to 13.541 s each and our IT to 12.821 s — 0.72 s short, exactly the six
+rows between row 16 and row 22; libxmp agreed (13.440 vs 12.720). Both
+references model the split explicitly, libxmp giving IT its own effect
+(`FX_IT_BREAK`, commented "like FX_BREAK with hex parameter").
+
+Fixed in `module_convert.dart` at the two IT conversion sites, with
+`decimalBreakParam`/`breakRowOfDecimalParam`. The shared writer flag
+`directPan` — which already meant "is this IT" — is now `isIt`, because naming a
+format flag after one of its consequences is how the second consequence came to
+be missed. ⬜ Note the canonical form cannot express a break to a row above 159
+(the nibbles hold tens and units); only IT can name one, and it clamps.
+
+**XM channels were polyphonic (X8).** Our XM importer built each instrument as
+`MultiSampleInstrument(polyphonic: true)` — the flag whose own doc comment reads
+"notes are not choked by subsequent notes on the channel (drum kit mode)". Every
+note in every XM rang on forever and SUMMED with its successors. FastTracker II
+has no NNA — that is IT's addition, which is why the IT pool sets
+`nativeVoiceSemantics` alongside `polyphonic`.
+
+MOD, S3M and IT sat at 0.999 spectral against the references while the XM sat at
+**0.731**, at the same duration — so a content bug, not a flow one. Our XM
+render measured 3.4x the RMS of our own MOD render of the same song and 6x
+libopenmpt's, saturating the limiter hard enough that the envelope correlation
+against both was 0.09. With the flag removed, XM joins the others at **0.999**.
+
+**Two methodological notes, both of which cost a wrong conclusion first.**
+
+1. *"The same song in two formats must render at the same LEVEL" is not a real
+   invariant.* Per-format mixing volume is implementation-defined and the
+   references disagree with each other substantially — libopenmpt renders our
+   S3M at 0.493 of the MOD level, libxmp at 0.353; XM is 0.676 against 0.901.
+   My first regression test asserted cross-format level equality and failed on
+   IT for a reason that was not a bug. What IS invariant is that voices must not
+   ACCUMULATE.
+2. *A before/after experiment can be invalidated by the stale test-kernel
+   cache.* Flipping the flag and re-running reported the OLD behaviour twice,
+   which read as "the flag does not matter" and nearly buried a confirmed bug.
+   Print the value under test and check it changed. (My flip script also used
+   BSD `sed` with `\|` alternation, which silently matches nothing on macOS —
+   two independent ways to run an experiment that never ran.) The regression
+   test was then verified red-then-green by hand, and a first version that used
+   a REPEATED note passed with the defect in place: the channel walker appears
+   to fold consecutive identical triggers into one run, so the notes must
+   differ.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,
@@ -1536,10 +1685,11 @@ effect (arpeggio `0xy`, porta up/down `1xx`/`2xx`, tone porta `3xx`, vibrato
 sub-commands we claim), each a single sounding channel. Done when every claimed
 command has a fixture and a measured deviation.
 
-**X2 — Vibrato/tremolo depth, rate and waveform.** The user-audible one. Check
-per-tick step, depth scaling, waveform table (sine/ramp/square), whether the
-LFO retriggers on a new note, and tick-0 behaviour. Oracle: X1 fixtures vs
-three engines + pt2-clone's source for ProTracker semantics.
+✅ **X2 — Vibrato/tremolo depth, rate and waveform.** DONE, see above. Rate was
+2× (the residual), tremolo depth 4× shallow, tick 0 wrongly an effect tick, the
+retrigger flag ignored, the ramp inverted. ⬜ Left open: tremolo depth
+re-measured with an envelope metric, and panbrello's rate against an IT
+reference.
 
 **X3 — Portamento family.** `1xx`/`2xx` step per tick, `3xx` target snapping,
 period clamping at the table edges, and effect MEMORY (a bare `300` continuing
@@ -1556,23 +1706,30 @@ implementation. Compare against our `songFlowTimeline`/`resolveTimingMap` over
 a corpus of order-list shapes: `Bxx` jumps, `Dxx` breaks, `E6x` pattern loops,
 mid-song speed/tempo changes. **No audio needed, so this one can run in CI.**
 
-**X6 — Reader field audit, per format.** Our codec tests are self round-trips
+🚧 **X6 — Reader field audit, per format.** Partly done: the IT pattern-break
+reader is fixed (above). The general audit stands. Our codec tests are self round-trips
 (`parse(write(x)) == x`), which cannot catch a misunderstanding our reader and
 writer SHARE. Cross-check parsed structure against NodMOD (MOD/XM/S3M) and
 against `openmpt123 --info`. IT has no structural oracle — treat it as the
 highest-risk reader and lean on audio there.
 
-**X7 — Writer audit: our writer → THEIR reader.** Write each format from a
+🚧 **X7 — Writer audit: our writer → THEIR reader.** Partly done, and this is
+exactly how the IT break bug surfaced — our writer against libopenmpt's and
+libxmp's readers. Generalise it. Write each format from a
 known doc, load it with NodMOD and libopenmpt, assert the structure matches
 what was authored. `probe_file` already reports zero warnings on our MOD; make
 that a test rather than a one-off, and extend to XM/S3M.
 
-**X8 — Fixture independence.** `musical.mod`/`effects.mod` are written by OUR
+✅ **X8 — XM channel polyphony** (renumbered into use above; the fixture-
+independence item below keeps the label in the original ordering). ⬜ **Fixture
+independence** is still open: `musical.mod`/`effects.mod` are written by OUR
 writer, so a writer bug is baked into every A/B that uses them. Author the same
 content with NodMOD and confirm both files render identically; any difference
 is our writer, not our replay.
 
-**X9 — Extend the A/B to XM/S3M/IT.** `convertToXm`/`convertToS3m`/`convertToIt`
+🚧 **X9 — Extend the A/B to XM/S3M/IT.** Started, and it paid immediately (two
+bugs, above) — the FLOW fixtures now ship in all four formats. Still to do: the
+effect fixtures in all four, plus envelopes/NNA. `convertToXm`/`convertToS3m`/`convertToIt`
 already exist, so the same musical content can be emitted in all four formats.
 ⚠️ Expect DIFFERENT failure modes, not the same one four times: XM/S3M/IT store
 an explicit sample rate per sample, so the MOD tuning question does not recur —

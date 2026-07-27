@@ -394,7 +394,21 @@ List<TrackerInstrument> _nativeInstrumentPool(ModuleDoc doc, int tempo) {
         MultiSampleInstrument(
           'xm${instrumentIndex + 1}',
           zones,
-          polyphonic: true,
+          // NOT polyphonic. An XM channel is monophonic: a new note replaces
+          // whatever the channel was playing, and FastTracker II has no NNA to
+          // say otherwise (that is IT's addition, which is why the IT pool
+          // below sets `nativeVoiceSemantics` alongside `polyphonic`).
+          //
+          // This was `polyphonic: true`, which means "notes are not choked by
+          // subsequent notes on the channel" — drum-kit mode. Every note in an
+          // XM therefore rang on forever and SUMMED with its successors: on
+          // `test/fixtures/flow/break_row16.*`, our XM render came out at 3.4x
+          // the RMS of our own MOD render of the SAME song (0.462 vs 0.136)
+          // and 6x libopenmpt's, saturating the limiter badly enough that the
+          // envelope correlation against both was 0.09. Spectral similarity
+          // against the references was 0.73 where the other three formats sat
+          // at 0.999. See PLAN.md §6 X8.
+          polyphonic: false,
         ),
       );
       offset += instrument.samples.length;
