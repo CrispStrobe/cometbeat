@@ -144,8 +144,13 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
   // records it. The flag rides each CHANNEL because that is what every render
   // path already receives — see [TrackerChannel.protrackerMemory].
   song.protrackerEffectMemory = doc.sourceFormat == ModuleFormat.mod;
+  // S3M/IT slide volume on every tick including the first; MOD and XM skip
+  // tick 0. See [TrackerChannel.volumeSlideAllTicks].
+  final vsall = doc.sourceFormat == ModuleFormat.s3m ||
+      doc.sourceFormat == ModuleFormat.it;
   for (final ch in song.channels) {
     ch.protrackerMemory = song.protrackerEffectMemory;
+    ch.volumeSlideAllTicks = vsall;
   }
   return song;
 }

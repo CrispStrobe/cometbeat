@@ -79,6 +79,8 @@ import 'package:comet_beat/core/audio/mod/xm_writer.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
     show
         kExFinePortaDown,
+        kExFineVolDown,
+        kExFineVolUp,
         kExFinePortaUp,
         kFxExtended,
         kFxGlobalVolSlide,
@@ -246,6 +248,31 @@ int decimalBreakParam(int row) {
   return ((r ~/ 10) << 4) | (r % 10);
 }
 
+/// Splits an S3M/IT volume-slide parameter into the ordinary per-tick slide or
+/// one of the once-per-row FINE forms.
+///
+/// `Dxy` is per-tick when one nibble is zero, but `DFy` is a fine slide DOWN by
+/// y and `DxF` a fine slide UP by x — applied once, on tick 0. We mapped the
+/// whole byte onto MOD's `Axy`, which is why `module_convert` used to carry the
+/// note "fine slides with an 0xF nibble are approximated as a normal slide".
+/// That was not an approximation: `DF2` is a step of 2 ONCE, and the `A F2` it
+/// became slid by 15 EVERY tick.
+///
+/// It hid for so long because the audit's only gate was spectral similarity,
+/// which is amplitude-invariant and cannot see a volume effect at all — every
+/// one of these fixtures read 1.000. The envelope metric (PLAN.md §6) put them
+/// at 0.58–0.63 against references agreeing at 1.00.
+///
+/// ⚠️ `DFF` is ambiguous — both nibbles are 0xF — and every tracker resolves it
+/// as fine DOWN, which is what falls out of testing the down case first.
+(int, int) _volSlideWithFine(int info) {
+  final x = (info >> 4) & 0xF;
+  final y = info & 0xF;
+  if (x == 0xF && y != 0) return (kFxExtended, (kExFineVolDown << 4) | y);
+  if (y == 0xF && x != 0) return (kFxExtended, (kExFineVolUp << 4) | x);
+  return (0xA, info);
+}
+
 /// Splits an S3M/IT portamento parameter into the ordinary per-tick slide or
 /// one of the two once-per-row FINE forms.
 ///
@@ -280,9 +307,8 @@ int breakRowOfDecimalParam(int param) => (param >> 4) * 10 + (param & 0xF);
       return (0xB, info);
     case 3: // C — pattern break (row param, decimal like MOD's Dxx)
       return (0xD, info);
-    case 4: // D — volume slide (Dxy: x up / y down — matches our Axy; fine
-      //     slides with an 0xF nibble are approximated as a normal slide)
-      return (0xA, info);
+    case 4: // D — volume slide; the 0xF-nibble forms are FINE, once per row.
+      return _volSlideWithFine(info);
     // S3M/IT overload the portamento parameter by RANGE: 0xF0-0xFF is a FINE
     // slide (the low nibble, applied ONCE on tick 0) and 0xE0-0xEF is an
     // EXTRA-fine one (quarter units, also once). Only below 0xE0 is it the
@@ -669,8 +695,8 @@ ModuleDoc docFromXm(XmModule m) {
       return (0xB, value);
     case 3: // C — pattern break. IT's row parameter is HEX, ours is decimal.
       return (0xD, decimalBreakParam(value));
-    case 4: // D — volume slide
-      return (0xA, value);
+    case 4: // D — volume slide; same fine forms as S3M.
+      return _volSlideWithFine(value);
     case 5: // E — portamento down — same fine/extra-fine ranges as S3M.
       return _portaWithFine(value, 0x2, kExFinePortaDown);
     case 6: // F — portamento up
@@ -1001,6 +1027,10 @@ ModuleDoc docFromIt(ItModule m) {
         // learned to produce it.
         0x1 => (6, 0xF0 | val), // E1x fine porta up   → FFx
         0x2 => (5, 0xF0 | val), // E2x fine porta down → EFx
+        // EAx/EBx fine volume → `DxF`/`DFx`. Absent like E1x/E2x were, so a
+        // fine volume slide was dropped on export as well as misread on import.
+        0xA => (4, (val << 4) | 0xF), // EAx fine vol up   → DxF
+        0xB => (4, 0xF0 | val), // EBx fine vol down → DFx
         0x3 => (19, (0x1 << 4) | val), // E3x glissando      → S1x
         0x4 => (19, (0x3 << 4) | val), // E4x vibrato wave   → S3x
         0x5 => (19, (0x2 << 4) | val), // E5x set finetune   → S2x

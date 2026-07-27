@@ -2031,6 +2031,18 @@ class TrackerChannel {
   /// `songFromModuleDoc` sets it on every channel of a MOD import.
   bool protrackerMemory = false;
 
+  /// S3M/IT apply volume slides on EVERY tick, including tick 0; MOD and XM
+  /// skip the first. libxmp models it as `QUIRK_VSALL` ("volume slides in all
+  /// frames") and sets it for the ScreamTracker family.
+  ///
+  /// We skipped tick 0 for every format, so an S3M/IT slide moved one step per
+  /// row less than it should. Invisible to the audit's spectral gate — which is
+  /// amplitude-invariant and cannot see a volume effect at all — and caught only
+  /// once the sweep grew an ENVELOPE metric: `volslide_up_Dx0` read 1.000
+  /// spectral and 0.71 envelope against references agreeing at 1.00.
+  /// PLAN.md §6.
+  bool volumeSlideAllTicks = false;
+
   /// Mutable so a channel can be re-voiced at runtime (e.g. assigning a freshly
   /// recorded [SampleInstrument] to the voice channel). Go through
   /// [TrackerEngine.setChannelInstrument] so caches are invalidated.

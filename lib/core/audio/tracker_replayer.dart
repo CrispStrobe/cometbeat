@@ -526,7 +526,14 @@ int retrigVolume(int v, int x) {
 }
 
 class ReplayVoice {
-  ReplayVoice({this.protrackerMemory = false});
+  ReplayVoice({
+    this.protrackerMemory = false,
+    this.volumeSlideAllTicks = false,
+  });
+
+  /// S3M/IT slide volume on EVERY tick, including tick 0; MOD and XM skip the
+  /// first. See [TrackerChannel.volumeSlideAllTicks].
+  final bool volumeSlideAllTicks;
 
   /// ProTracker effect-memory rules: `1xx`, `2xx` and `Axy` take the ROW's
   /// parameter with no latching, so a bare `100`/`A00` does nothing, where
@@ -1253,7 +1260,7 @@ class ReplayVoice {
     // (`pt2_replayer.c` volumeSlide). `A24` is +2, not −2. Netting (`+x−y`) was a
     // bug that only ever bit the both-nibbles-set case (rare, but the hardware
     // never nets), so single-nibble slides (`Ax0`/`A0y`) are unchanged.
-    if (_isVolSlide && k > 0) {
+    if (_isVolSlide && (k > 0 || volumeSlideAllTicks)) {
       final x = (_memVolSlide >> 4) & 0xF, y = _memVolSlide & 0xF;
       volume = (x > 0 ? volume + x : volume - y).clamp(0, kMaxVolume);
       if (_cmd != kFxTremolo) effVol = volume.toDouble();
@@ -1661,7 +1668,10 @@ double? readLoopedSampleForTest(
   const declickSec = 0.003;
   final rows = cells.length;
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
+  final voice = ReplayVoice(
+    protrackerMemory: channel.protrackerMemory,
+    volumeSlideAllTicks: channel.volumeSlideAllTicks,
+  );
   var readPos = 0.0;
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -1937,7 +1947,10 @@ void _renderSampleChannelInto(
   final stem = Float64List(timing.totalSamples);
   final rows = cells.length;
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
+  final voice = ReplayVoice(
+    protrackerMemory: channel.protrackerMemory,
+    volumeSlideAllTicks: channel.volumeSlideAllTicks,
+  );
   var readPos = 0.0; // fractional index into the current sample
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -2148,7 +2161,10 @@ void _renderSampleChannelIntoVariable(
   final stemLen = rowStart[rows];
   final stem = useSink ? Float64List(0) : Float64List(stemLen);
   var cur = channel.instrument is SampleInstrument ? channel.instrument : null;
-  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
+  final voice = ReplayVoice(
+    protrackerMemory: channel.protrackerMemory,
+    volumeSlideAllTicks: channel.volumeSlideAllTicks,
+  );
   var readPos = 0.0;
   var noteStartSample = 0;
   var releaseStartSample = 0;
@@ -2413,7 +2429,10 @@ void _renderPulseChannelInto(
   }
   var macroTick = 0;
   const declickSec = 0.003;
-  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
+  final voice = ReplayVoice(
+    protrackerMemory: channel.protrackerMemory,
+    volumeSlideAllTicks: channel.volumeSlideAllTicks,
+  );
   var phase = 0.0;
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
@@ -2622,7 +2641,10 @@ void _renderChannelInto(
   final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
   var macroTick = 0; // ticks since the current note-on (drives the macros)
 
-  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
+  final voice = ReplayVoice(
+    protrackerMemory: channel.protrackerMemory,
+    volumeSlideAllTicks: channel.volumeSlideAllTicks,
+  );
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
     // Per-cell instrument: switch the additive timbre if the cell names an
@@ -4976,7 +4998,10 @@ void _renderChannelIntoVariable(
   final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
   var macroTick = 0;
 
-  final voice = ReplayVoice(protrackerMemory: channel.protrackerMemory);
+  final voice = ReplayVoice(
+    protrackerMemory: channel.protrackerMemory,
+    volumeSlideAllTicks: channel.volumeSlideAllTicks,
+  );
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
     if (cellInst > 0 && pool != null && cellInst - 1 < pool.length) {

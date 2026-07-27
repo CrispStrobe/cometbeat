@@ -2063,6 +2063,53 @@ of the step and roughly a quarter of the error (0.987 vs 0.857).
    8 rows moved `porta_down_Exx.s3m` from 0.982 to 1.000 with no code change at
    all. The lesson was already written down; I still had to relearn it.
 
+#### The sweep gains an ENVELOPE metric (2026-07-27) — and it found three things
+
+The audit's only gate was spectral similarity, which is a cosine of magnitude
+spectra and therefore **amplitude-invariant**. It cannot see a volume effect at
+all. That blind spot had already hidden tremolo's depth being 4× too shallow
+(X2) and was why every `Dxy` fixture read 1.000 without that meaning anything
+(X9). So `Axy`, `Dxy`, `Cxx`, `7xy` and the volume column were effectively
+ungated.
+
+The sweep now reports envelope correlation (Pearson over the RMS envelope —
+scale-invariant but SHAPE-sensitive, which is what a fade is) on the same
+inter-reference baseline, and gates on it under two conditions: the references
+must agree about the envelope (≥0.5) **and** that envelope must actually move
+(a 90th/10th percentile ratio ≥1.6). The second condition matters — a sustained
+note has a flat envelope and Pearson between two flat signals is dominated by
+whatever ripple each render happens to have, which produced false reds on pure
+PITCH fixtures until it was added.
+
+It found three things immediately:
+
+1. ✅ **S3M/IT fine VOLUME slides were misread**, exactly as the stale comment
+   said and exactly as spectral could not see. `DFy` is a fine slide DOWN by y
+   and `DxF` a fine slide UP by x, applied ONCE on tick 0; we mapped the whole
+   byte to MOD's per-tick `Axy`. `fine_volslide_down_DFx` **0.63 → 0.98**
+   envelope. `EAx`/`EBx` were missing from the reverse map too, so a fine volume
+   slide was dropped on export as well.
+2. ✅ **S3M/IT slide volume on EVERY tick, including tick 0**; MOD and XM skip
+   the first. libxmp models it as `QUIRK_VSALL` and sets it for the
+   ScreamTracker family. Fixed via `TrackerChannel.volumeSlideAllTicks`, the
+   same path as the effect-memory flag. ⚠️ **Source-justified but NOT confirmed
+   by measurement** — the finding below masks it.
+3. ⬜ **The VOLUME COLUMN does not set the channel volume.** Our replayer maps a
+   cell's volume onto `noteVolume`, a 0..1 per-note multiplier, while `Axy`
+   slides `volume`, the 0..64 CHANNEL volume — which is still at its default of
+   64. So a slide UP from a quiet volume-column note starts already clamped and
+   does nothing, where the references ramp 8 → 64.
+
+   The ASYMMETRY is what identified it: the DOWN fixtures start at 64, which is
+   the default, and pass at 1.00; only the UP fixtures fail. A rate error would
+   have hit both.
+
+   **Not fixed**, deliberately: `TrackerCell.volume` is shared with the app's own
+   authoring — the Loop Mixer's ghost notes use it as a multiplier — so making it
+   set the channel volume changes song semantics, not just module import. That is
+   a decision about the tracker's own model, not a bug fix. The four affected
+   fixtures are in `_kKnownOpenDefects` and print every run.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,

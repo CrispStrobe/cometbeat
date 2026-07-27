@@ -59,6 +59,35 @@ final _ab = _abRaw.isNotEmpty && _abRaw != '0';
 /// direction (never a false red), not a free lunch.
 const double _kMaxExcessDeviation = 0.10;
 
+/// How much the references must agree about an ENVELOPE before we gate on it.
+const double _kEnvelopeFloor = 0.5;
+
+/// How much the reference envelope must actually MOVE before we gate on it.
+///
+/// A sustained note has a near-flat envelope, and Pearson correlation between
+/// two near-flat signals is dominated by whatever ripple each render happens to
+/// have — high between two references that share it, low against a third
+/// implementation, and meaningless in both cases. Gating on that produced false
+/// reds on pure PITCH fixtures, where the envelope is not the effect under test.
+///
+/// So the gate also requires the reference envelope to span a real dynamic
+/// range: a loud-to-quiet ratio of at least this much between its 90th and 10th
+/// percentile. A fade, a cut or a tremolo clears it easily; a held note does
+/// not, and is reported without being gated.
+const double _kEnvelopeDynamicRange = 1.6;
+
+/// The 90th/10th percentile ratio of [pcm]'s loudness envelope — "does this
+/// render actually get louder and quieter".
+double _envelopeDynamicRange(Float64List pcm) {
+  final env = rmsEnvelope(pcm);
+  if (env.length < 8) return 1;
+  final sorted = Float64List.fromList(env)..sort();
+  final lo = sorted[(sorted.length * 0.1).floor()];
+  final hi = sorted[(sorted.length * 0.9).floor()];
+  if (lo <= 1e-9) return hi <= 1e-9 ? 1 : double.infinity;
+  return hi / lo;
+}
+
 /// Fixtures whose deviation is a KNOWN, deliberate consequence of the default
 /// pitch model, and which are therefore reported but not gated unless
 /// `PORTA_PERIOD=1` selects the hardware model.
@@ -98,6 +127,23 @@ const _kKnownOpenDefects = <String>{
   // extra-fine variant sits at 0.987 — a quarter of the step and roughly a
   // quarter of the error — which points at a constant factor rather than a
   // wrong mechanism.
+  // The VOLUME COLUMN does not set the channel volume. Our replayer maps a
+  // cell's volume onto `noteVolume`, a 0..1 per-note multiplier, while `Axy`
+  // slides `volume`, the 0..64 CHANNEL volume — which is still at its default
+  // 64. So a slide UP from a quiet volume-column note starts already clamped
+  // and does nothing, where the references ramp 8 -> 64. Diagnosed by the
+  // asymmetry: the DOWN fixtures start at 64, which is the default, and pass.
+  //
+  // Not fixed here because `TrackerCell.volume` is shared with the app's own
+  // authoring (the Loop Mixer's ghost notes use it as a multiplier), so making
+  // it set the channel volume changes song semantics, not just import.
+  'volslide_up_Dx0.s3m',
+  'volslide_up_Dx0.it',
+  'fine_volslide_up_DxF.s3m',
+  'fine_volslide_up_DxF.it',
+  // The extra-fine porta approximation (x ~/ 4) shifts our pitch just enough to
+  // change the loop-wrap ripple, which the envelope metric sees.
+  'extrafine_porta_down_EEx.s3m',
   'porta_down_Exx.it',
   'porta_up_Fxx.it',
   'fine_porta_down_EFx.s3m',
@@ -110,6 +156,29 @@ const _kPeriodModelDependent = {
   'tone_porta',
   'tonevol_5xy',
 };
+
+/// The worst pairwise ENVELOPE agreement among the references.
+///
+/// Spectral similarity is a cosine of magnitude spectra and is therefore
+/// amplitude-INVARIANT: it cannot see a volume effect at all. That blind spot
+/// hid tremolo's depth being 4x too shallow while the fixture read 0.999 (§6
+/// X2), and it is why every `Dxy` volume-slide fixture reads 1.000 without that
+/// being evidence of anything (§6 X9).
+///
+/// Envelope correlation is Pearson over the RMS envelope — scale-invariant but
+/// SHAPE-sensitive, which is exactly what a fade is. A slide that runs four
+/// times too fast has a different shape and shows up here even though the
+/// spectrum is untouched.
+double _worstPairwiseEnvelope(List<Float64List> pcms) {
+  var worst = 1.0;
+  for (var i = 0; i < pcms.length; i++) {
+    for (var j = i + 1; j < pcms.length; j++) {
+      final e = envelopeCorrelation(pcms[i], pcms[j]);
+      if (e < worst) worst = e;
+    }
+  }
+  return worst;
+}
 
 double _worstPairwise(List<Float64List> pcms) {
   var worst = 1.0;
@@ -196,11 +265,28 @@ void main() {
           final s = spectralSimilarity(ours, r);
           if (s < ourWorst) ourWorst = s;
         }
+
+        // The ENVELOPE, on the same relative baseline. Gated only where the
+        // references AGREE on an envelope shape (`_kEnvelopeFloor`): a steady
+        // note has a flat envelope, and Pearson over two flat signals is
+        // meaningless, so demanding agreement there would be noise, not a test.
+        final refEnv = _worstPairwiseEnvelope(refs);
+        var ourEnvWorst = 1.0;
+        for (final r in refs) {
+          final e = envelopeCorrelation(ours, r);
+          if (e < ourEnvWorst) ourEnvWorst = e;
+        }
+        final envGap = refEnv - ourEnvWorst;
+        final envRange = _envelopeDynamicRange(refs.first);
+        final envGated =
+            refEnv >= _kEnvelopeFloor && envRange >= _kEnvelopeDynamicRange;
         final gap = refAgree - ourWorst;
         final knownOpen = _kKnownOpenDefects.contains(name);
         final exempt = knownOpen ||
             (!kPortaPeriodAccurate && _kPeriodModelDependent.contains(stem));
         final over = gap > _kMaxExcessDeviation;
+        final envOver = envGated && envGap > _kMaxExcessDeviation;
+        final envFlag = envOver && !knownOpen ? '  <-- ENVELOPE OUTSIDE' : '';
         final flag = !over
             ? (knownOpen
                 ? '  <-- KNOWN OPEN now passing? drop the exemption'
@@ -215,13 +301,19 @@ void main() {
         // NUMBER of rows, which the spectral number only sees indirectly.
         final ourSec = ours.length / kReferenceSampleRate;
         final refSec = refs.first.length / kReferenceSampleRate;
+        final envCol = envGated
+            ? 'env ${refEnv.toStringAsFixed(2)}/${ourEnvWorst.toStringAsFixed(2)}'
+            : 'env  --  ';
         print('  ${name.padRight(24)} refs ${refAgree.toStringAsFixed(3)} · '
             'ours ${ourWorst.toStringAsFixed(3)} · '
             'gap ${gap.toStringAsFixed(3)} · '
+            '$envCol · '
             '${ourSec.toStringAsFixed(2)}s vs ${refSec.toStringAsFixed(2)}s '
-            '(${refs.length} engines)$flag');
+            '(${refs.length} engines)$flag$envFlag');
         if (over && !exempt) {
           offenders.add('$name (gap ${gap.toStringAsFixed(3)})');
+        } else if (envOver && !exempt) {
+          offenders.add('$name (ENVELOPE gap ${envGap.toStringAsFixed(3)})');
         }
       }
       print('');
