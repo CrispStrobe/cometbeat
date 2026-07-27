@@ -72,6 +72,41 @@ Pending, in order:
    The 55 new labels ship as a second acceptance slice
    (`test/data/cello_fingering_gold_pd.json`, 58.2% agreement vs the first set's 50.3%).
 
+2b. **The label landscape, measured (2026-07-27) — the pattern is structural.**
+   Every licence-clean corpus we can reach is UNFINGERED, and every fingered corpus is
+   not licence-clean. That is not bad luck: fingering is editorial labour, so whoever
+   does it either sells it or uploads it under a licence they do not own.
+   * **PDMX** 254,078 scores, CC0/PD-tagged → **55 net new cello labels** after the
+     documented gate (which rejected Hozier, John Williams, Kreisler…).
+   * **Mutopia** — licence-clean (CC-BY/PD) AND digital-native LilyPond, 157 cello
+     `.ly` files: sampled 40, **exactly 1 carries fingering marks** (5 of them).
+     Engravers of PD repertoire simply do not finger.
+   * **`cellist/Lilypond-Sheet-Music`** — 4,979 `.ly`, cello-heavy, actively
+     maintained… and **no licence at all** → all-rights-reserved by default, the
+     ClassTab trap. Not usable, not even as a control we could publish about.
+   * **SPD** — the one corpus with exactly the right labels (string+position+finger,
+     ~10k cello notes) is **non-commercial and non-redistributable**. Dropped.
+   * **PD teaching material is abundant and was never the blocker**: Dotzauer's
+     *Violoncellschule* / 113 Études / Op.120, Lee Op.31, Kummer Op.57, Duport's 21
+     Studies, Popper, Klengel, Werner — all PD by age, all *scans*. **Extraction is the
+     blocker** (Audiveris ~20% recall, and our own OMR cannot represent a fingering at
+     all).
+   **Oracles that need no corpus at all**, in order of value:
+   (a) **Self-generated labelled audio** — record a cello playing known (string,
+   finger). Licence-free by construction, and we already ship the mic + pitch
+   detector; string-from-timbre is a tractable MIR task since the same pitch has a
+   different spectrum on each string. Half an hour of deliberate playing is thousands
+   of labelled frames. (b) **GuitarSet, CC-BY 4.0** — 35k labelled (string, fret)
+   columns for the *same decision structure*, already in our pipeline, legitimately
+   licensed for shipped weights. (c) **Our own geometry as a validator** — already
+   earning its keep (it rejected an OMR "finger 0" on F♯4 that no open string can
+   sound).
+   ⚠ **Not yet checked (VPS was down):** our own corpus's **1,220 `.ly`** files and
+   **565 cello-bearing `.krn`** were never scanned for fingerings — every scan so far
+   covered MusicXML/mscx only. LilyPond writes fingerings as `-1`…`-4` and Humdrum has
+   a `**fing` spine. The Mutopia sample says expect little, but it is a real gap and
+   cheap to close.
+
 3. **Learned emission — CLOSED with item 2.** 248 labels cannot fit transition/emission
    tables that beat authored weights, let alone train a neural emission model. The seam
    stays (`BowedPositionModel`, the bowed twin of `TabPositionModel`) so a model can
