@@ -2891,14 +2891,36 @@ App-Store caveats in `docs/TTS_MACOS.md`; cascade unit-tested. Shared `macos/`
 Xcode project intentionally NOT modified (multi-agent safety) — the release
 Frameworks embed is documented for a release worktree.
 
+**Engine-unification arc — SHIPPED + evaluated (2026-07-26/27).** The four-slice
+prototype above grew into a full engine framework — overview now in
+**`docs/TTS_ARCHITECTURE.md`**. Shipped since: `tts_engine.dart`
+resolver + Settings **Voice engine** picker (gap 1); native **ONNX-Runtime Piper
+VITS** as the `onnxFfi` voice (gap 3); a **unified model/asset manager** with a
+web `fetch`+**IndexedDB** downloader + Settings **Voice models** screen (gap 2);
+the **OS voice picker** (Settings → Narration voice — pick an installed
+Apple/Android/web on-device voice, no download) + **engine-pref persistence**; and
+web **narration pack mode** (`PrebakedNarrationBackend` serves WAVs from the asset
+cache / IndexedDB instead of bundling — opt-in). **On-device platform speech is
+the always-on floor on every platform incl. web** (`SpeechSynthesis`, verified
+live).
+
+**Gap 4 — live web neural via `crispasr.wasm`: EVALUATED, NO-GO (measured).** Built
+single-thread + multithreaded `crispasr.wasm` and measured **~10× real-time** in
+real headless Chrome (unusable for live narration) + COOP/COEP-vs-PWA-SW +
+135 MB download. Web HD stays pre-baked WAV + the downloader. Evidence: auto-memory
+`crispasr-wasm-tts-rtf-nogo`.
+
 **Remaining work:**
-1. **Release `.app` embed** — add the Copy-Files-to-Frameworks phase (per
-   `docs/TTS_MACOS.md`) in a release worktree + Developer-ID re-sign; then
-   **iOS** xcframework, **Android** `.so` per-ABI, **web** WASM. Each platform
-   falls back to flutter_tts until its lib ships. (The HD-voice tile then works.)
+1. **iOS/Android HD embed** — documented handover in `docs/TTS_ARCHITECTURE.md`
+   (no Dart change — `defaultLibName` resolves the lib; build via CrispASR
+   `build-xcframework.sh` / `build-android.sh`, embed in a release worktree,
+   verify on device). macOS release `.app` embed likewise per `docs/TTS_MACOS.md`.
 2. **German quality** (optional): fetch the `kokoro-de-hui-base` backbone (a second
    ~135 MB model) + route `-l de` for a cleaner German phonemizer; expose
    `set_length_scale` as a kid-friendly slower rate.
+3. **Narration pack hosting** (finishes pack mode): bake WAVs → host on a
+   CORS URL + manifest → set `remoteBase` + a `prefetch` call so web ships without
+   the ~40 MB of bundled audio.
 
 **Other follow-ups:** a dedicated *narration* toggle (accessibility) separate from
 the master sound switch; **auto-narrate** a step when its example plays (opt-in).

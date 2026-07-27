@@ -23,6 +23,7 @@ class SettingsService with ChangeNotifier {
   static const _handwrittenKey = 'handwritten_notes'; // legacy (pre-multi-font)
   static const _scoreFontKey = 'score_font';
   static const _soundOnKey = 'sound_on';
+  static const _narrationOnKey = 'narration_on';
   static const _showNoteNamesKey = 'show_note_names';
   static const _smartTabFingeringKey = 'smart_tab_fingering';
 
@@ -32,6 +33,7 @@ class SettingsService with ChangeNotifier {
   bool _colorScaffold = false;
   ScoreFont _scoreFont = ScoreFont.bravura;
   bool _soundOn = true;
+  bool _narrationOn = true;
   bool _showNoteNames = false;
   bool _smartTabFingering = true;
   Instrument _instrument = Instrument.piano;
@@ -42,6 +44,12 @@ class SettingsService with ChangeNotifier {
   /// SFX, ticks, backing) is silenced via [AudioService]; the microphone is
   /// unaffected, so intonation games still work. On by default.
   bool get soundOn => _soundOn;
+
+  /// Read-aloud narration switch — independent of [soundOn], so a child can keep
+  /// game sounds while turning the spoken lesson/how-to text off (or vice versa).
+  /// Narration also still obeys [soundOn] (off ⇒ everything is silent). On by
+  /// default. Gates [TtsService.speak] via the mirror in main.dart.
+  bool get narrationOn => _narrationOn;
 
   /// The additive timbre for pitched playback (the classic 4-way choice; also
   /// the fallback when a richer [voice] is selected).
@@ -112,6 +120,7 @@ class SettingsService with ChangeNotifier {
             ? ScoreFont.petaluma
             : ScoreFont.bravura);
     _soundOn = prefs.getBool(_soundOnKey) ?? true;
+    _narrationOn = prefs.getBool(_narrationOnKey) ?? true;
     _showNoteNames = prefs.getBool(_showNoteNamesKey) ?? false;
     _smartTabFingering = prefs.getBool(_smartTabFingeringKey) ?? true;
     _applyScoreFont();
@@ -188,6 +197,13 @@ class SettingsService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_soundOnKey, value);
+  }
+
+  Future<void> setNarrationOn(bool value) async {
+    _narrationOn = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_narrationOnKey, value);
   }
 
   Future<void> setInstrument(Instrument instrument) =>

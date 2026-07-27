@@ -277,6 +277,11 @@ class TtsService with ChangeNotifier {
   /// off, narration is silent along with the rest of the app.
   bool soundOn = true;
 
+  /// Read-aloud switch, mirrored from SettingsService — independent of [soundOn]
+  /// so a user can silence narration while keeping game sounds (or vice versa).
+  /// When off, [speak] no-ops. On by default.
+  bool narrationOn = true;
+
   /// True while an utterance has been requested and not yet stopped. Purely for
   /// UI affordance (e.g. a speaking indicator); best-effort, not frame-accurate.
   bool get isSpeaking => _speaking;
@@ -291,7 +296,7 @@ class TtsService with ChangeNotifier {
   /// the text is blank. Interrupts any current utterance. Prefers the neural
   /// backend when it's ready, else the platform voice.
   Future<void> speak(String text, {required Locale locale}) async {
-    if (!soundOn || text.trim().isEmpty) return;
+    if (!soundOn || !narrationOn || text.trim().isEmpty) return;
     _speaking = true;
     notifyListeners();
     final langCode = voiceTag(locale);

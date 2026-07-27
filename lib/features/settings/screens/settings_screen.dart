@@ -153,6 +153,28 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ),
+          Card(
+            child: SwitchListTile(
+              secondary: Icon(
+                settings.narrationOn
+                    ? Icons.record_voice_over_rounded
+                    : Icons.voice_over_off_rounded,
+              ),
+              title: Text(l10n.narrationOnLabel),
+              subtitle: Text(l10n.narrationOnSubtitle),
+              value: settings.narrationOn,
+              onChanged: (v) {
+                settings.setNarrationOn(v);
+                if (!v) {
+                  try {
+                    context.read<TtsService>().stop();
+                  } on ProviderNotFoundException {
+                    /* no TtsService in this tree (some tests) */
+                  }
+                }
+              },
+            ),
+          ),
           const _HdVoiceTile(),
           const _VoiceEngineTile(),
           const _NarrationVoiceTile(),

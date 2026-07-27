@@ -6099,6 +6099,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Noten, Akkorde und Klangeffekte (das Mikrofon bleibt an)';
 
   @override
+  String get narrationOnLabel => 'Vorlesen';
+
+  @override
+  String get narrationOnSubtitle => 'Lektions- und Hilfetexte laut vorlesen';
+
+  @override
   String get muteTooltip => 'Ton aus';
 
   @override

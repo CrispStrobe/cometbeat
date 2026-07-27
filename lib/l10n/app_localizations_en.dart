@@ -6075,6 +6075,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Notes, chords and sound effects (the microphone still works)';
 
   @override
+  String get narrationOnLabel => 'Read aloud';
+
+  @override
+  String get narrationOnSubtitle => 'Speak lesson and how-to text out loud';
+
+  @override
   String get muteTooltip => 'Mute sound';
 
   @override

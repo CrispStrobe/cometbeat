@@ -2123,6 +2123,8 @@
   "showTimerLabel": "Zeit anzeigen",
   "soundOnLabel": "Ton",
   "soundOnSubtitle": "Noten, Akkorde und Klangeffekte (das Mikrofon bleibt an)",
+  "narrationOnLabel": "Vorlesen",
+  "narrationOnSubtitle": "Lektions- und Hilfetexte laut vorlesen",
   "muteTooltip": "Ton aus",
   "unmuteTooltip": "Ton an",
   "howToPlayTooltip": "Spielhilfe",

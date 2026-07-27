@@ -103,6 +103,7 @@ class CometBeatApp extends StatelessWidget {
             ..voice = settings.voice;
           context.read<AudioService>().soundOn = settings.soundOn;
           context.read<TtsService>().soundOn = settings.soundOn;
+          context.read<TtsService>().narrationOn = settings.narrationOn;
           _ensureLibraryVoiceResolved(settings);
           return MaterialApp(
             onGenerateTitle: (context) =>

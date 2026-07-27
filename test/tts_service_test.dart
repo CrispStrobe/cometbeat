@@ -44,6 +44,20 @@ void main() {
     expect(fake.spoken, isEmpty);
   });
 
+  test('the narration switch silences narration but is independent of soundOn',
+      () async {
+    final fake = _FakeBackend();
+    // Narration off while sound stays on → no speech.
+    final tts = TtsService(backend: fake)..narrationOn = false;
+    expect(tts.soundOn, isTrue);
+    await tts.speak('should stay silent', locale: const Locale('en'));
+    expect(fake.spoken, isEmpty);
+    // Turning it back on speaks again.
+    tts.narrationOn = true;
+    await tts.speak('now audible', locale: const Locale('en'));
+    expect(fake.spoken, [('now audible', 'en-US')]);
+  });
+
   test('blank text is a no-op', () async {
     final fake = _FakeBackend();
     final tts = TtsService(backend: fake);

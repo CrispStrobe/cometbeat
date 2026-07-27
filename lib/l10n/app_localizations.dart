@@ -11216,6 +11216,18 @@ abstract class AppLocalizations {
   /// **'Notes, chords and sound effects (the microphone still works)'**
   String get soundOnSubtitle;
 
+  /// No description provided for @narrationOnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Read aloud'**
+  String get narrationOnLabel;
+
+  /// No description provided for @narrationOnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speak lesson and how-to text out loud'**
+  String get narrationOnSubtitle;
+
   /// No description provided for @muteTooltip.
   ///
   /// In en, this message translates to:

@@ -2456,6 +2456,8 @@
   "showTimerLabel": "Show your time",
   "soundOnLabel": "Sound",
   "soundOnSubtitle": "Notes, chords and sound effects (the microphone still works)",
+  "narrationOnLabel": "Read aloud",
+  "narrationOnSubtitle": "Speak lesson and how-to text out loud",
   "muteTooltip": "Mute sound",
   "unmuteTooltip": "Turn sound on",
   "howToPlayTooltip": "How to play",
