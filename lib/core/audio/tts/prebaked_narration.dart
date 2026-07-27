@@ -16,6 +16,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/tts/narration_key.dart';
+import 'package:comet_beat/core/audio/tts/tts_asset_cache.dart';
+import 'package:comet_beat/core/audio/tts/tts_model_manager.dart'
+    show ByteFetcher, httpByteFetch;
 import 'package:comet_beat/core/services/tts_service.dart' show TtsBackend;
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -56,10 +59,16 @@ class PrebakedNarrationBackend implements TtsBackend {
     PrebakedNarration? narration,
     Future<Uint8List> Function(String assetPath)? loadAsset,
     this.stopPlayback,
+    TtsAssetCache? cache,
+    String? remoteBase,
+    ByteFetcher? fetch,
   })  : narration = narration ?? PrebakedNarration(),
         _loadAsset = loadAsset ??
             ((p) async =>
-                (await rootBundle.load('assets/$p')).buffer.asUint8List());
+                (await rootBundle.load('assets/$p')).buffer.asUint8List()),
+        _cache = cache,
+        _remoteBase = remoteBase,
+        _fetch = fetch ?? httpByteFetch;
 
   /// Plays a finished WAV (e.g. AudioService.playWavBytes).
   final Future<void> Function(Uint8List wav) play;
@@ -67,16 +76,60 @@ class PrebakedNarrationBackend implements TtsBackend {
   final Future<Uint8List> Function(String assetPath) _loadAsset;
   final Future<void> Function()? stopPlayback;
 
-  /// Whether [text]/[langCode] has a bundled narration asset.
-  Future<bool> has(String text, String langCode) async =>
-      (await narration.assetFor(text, langCode)) != null;
+  /// PACK MODE (opt-in): when a [cache] is supplied, narration WAVs live in the
+  /// asset cache (IndexedDB on web, files native) instead of being bundled — so
+  /// a web build can ship WITHOUT the ~40 MB of baked audio and fetch/cache
+  /// clips on demand from [remoteBase]. With no cache this is BUNDLED MODE and
+  /// behaves exactly as before (WAVs read from `rootBundle`). The manifest value
+  /// (e.g. `narration/<hash>.wav`) doubles as the cache key and the remote path.
+  final TtsAssetCache? _cache;
+  final String? _remoteBase;
+  final ByteFetcher _fetch;
+
+  /// Whether [text]/[langCode] can be served RIGHT NOW without a network round
+  /// trip: bundled mode ⇒ the manifest has it (bundled); pack mode ⇒ it's cached
+  /// (else the caller safely falls back to the platform voice — [prefetch] warms
+  /// the cache for next time).
+  Future<bool> has(String text, String langCode) async {
+    final asset = await narration.assetFor(text, langCode);
+    if (asset == null) return false;
+    final cache = _cache;
+    if (cache == null) return true; // bundled
+    return cache.has(asset);
+  }
 
   @override
   Future<void> speak(String text, {required String langCode}) async {
     final asset = await narration.assetFor(text, langCode);
     if (asset == null) return; // not prebaked → caller falls back
-    final wav = await _loadAsset(asset);
-    await play(wav);
+    final cache = _cache;
+    if (cache == null) {
+      await play(await _loadAsset(asset)); // bundled
+      return;
+    }
+    final wav = await cache.read(asset);
+    if (wav != null) await play(wav); // pack mode: cached only (has() gated it)
+  }
+
+  /// PACK MODE only: fetch + cache any not-yet-cached clips for [items] (each a
+  /// `(text, langCode)`), so a later [has]/[speak] serves them from IndexedDB.
+  /// No-op in bundled mode or without a [remoteBase]. Returns the count newly
+  /// cached. Best-effort — a failed fetch is skipped, never thrown.
+  Future<int> prefetch(Iterable<(String, String)> items) async {
+    final cache = _cache;
+    final base = _remoteBase;
+    if (cache == null || base == null) return 0;
+    var cached = 0;
+    for (final (text, langCode) in items) {
+      final asset = await narration.assetFor(text, langCode);
+      if (asset == null || await cache.has(asset)) continue;
+      final bytes = await _fetch('$base/$asset');
+      if (bytes != null && bytes.length > 44) {
+        await cache.write(asset, bytes);
+        cached++;
+      }
+    }
+    return cached;
   }
 
   @override
