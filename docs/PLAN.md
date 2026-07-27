@@ -519,8 +519,22 @@ is recorded in [HISTORY.md](HISTORY.md).
   with the Apache-2.0 statement of changes in `test/data/README.md`; no SPD source
   file is redistributed. ⚠ Their labels come from a Pitch-Finger model constrained by
   mocap — strong evidence of what the hand DID, weak evidence of what a teacher would
-  WRITE. The other 119 pieces are request-access (Google Form) — a maintainer decision
-  if we ever want the full set.
+  WRITE.
+  **Correction to my own "validation, not training" line:** at 30 fps (the repo's own
+  rate) the 659-frame demo is ~22 s and yielded 45 notes ≈ 2 notes/s, so SPD's 3.0 h
+  implies **~21,600 notes total, perhaps ~10k of them cello**, each with (string,
+  position, finger) — about 40× our 248 labels, and the right order of magnitude for
+  fitting HMM tables. So it plausibly IS training data, gated on three things:
+  **(a) LICENCE** — unstated publicly for the full set (the Apache-2.0 declaration is
+  on the partial HF mirror); Apache-2.0 would mean shippable weights, research-only
+  would mean eval-tier. **(b) CIRCULARITY** — their note-level labels come from their
+  own Pitch-Finger model, mitigated by re-deriving from the raw keypoints as this
+  probe does. **(c) SKEW** — a corpus of scales/études teaches exercise fingering
+  rather than repertoire fingering, which is exactly the 36%-vs-95% split measured
+  here. Also the individual-style limit the violin literature flags: TNUA used TEN
+  violinists because fingering is personal, and SPD's player count is small.
+  Full set: **https://docs.google.com/forms/d/e/1FAIpQLSerl0IYztq7QkGqXc2X2jWFS7-rz3hvvYIUNce2NOfVGFPKAw/viewform**
+  — a request identifies the requester, so it is the maintainer's to send, not mine.
 
 - **opus (pdmx-normalise)** · ✅ **SHIPPED (idle) — composer-name normalisation for
   the PD gate + the agreement metric decomposed** (`a1de6857`; VPS
