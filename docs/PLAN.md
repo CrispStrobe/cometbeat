@@ -142,6 +142,8 @@ is recorded in [HISTORY.md](HISTORY.md).
     fallbacks), or is a big DSP core exercised by golden/render suites (`midi_render`
     pedal paths, `tracker_replayer`, `aec_offline`) or a widget body. The coverage
     tooling (`tool/coverage/`) is committed so the next tier is a re-run away.
+    **Full write-up: [`docs/COVERAGE_REPORT.md`](COVERAGE_REPORT.md)** (harness,
+    80% baseline, per-file results table, methodology + traps, ceiling analysis).
 
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
   grand-staff view (the deferred bit).** Follow-up to `grandstaff-markings`, which

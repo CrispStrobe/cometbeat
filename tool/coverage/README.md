@@ -26,7 +26,10 @@ Whole-`lib/` line coverage was **80.0%** (61,890 / 77,385 lines, 532 / 601
 files loaded). The worst-covered files are almost all FFI / native-transcription
 / ONNX-model-store / plugin wrappers (integration-tested, not unit-testable) and
 platform export-shell barrels; the pure-logic gaps the map surfaced were closed
-to 100% file-by-file (rhythm_quantize, reading_hint, chord_progression,
-module_doc DocCell, xm/s3m/it structs, source_registry, module_flow_timeline).
+to 100% file-by-file.
+
+**Full findings, the per-file results table, the methodology, the two coverage
+traps, and the unit-testable-ceiling analysis are in
+[`docs/COVERAGE_REPORT.md`](../../docs/COVERAGE_REPORT.md).**
 
 `coverage/` itself is gitignored; only this tooling is tracked.
