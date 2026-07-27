@@ -46,28 +46,30 @@ own death year). Both are in gold set 1. A normalisation pass would recover rows
 across the whole catalog, not just here; that belongs to whoever owns
 `bin/pdmx_pd_composer.py`.
 
-## `spd_cello01_measured.json` — 45 notes, a measured hand
+## ~~`spd_cello01_measured.json`~~ — REMOVED 2026-07-27, licence
 
-Not an editor's marks: where a cellist's fingers physically **were**. Derived from
-the **String Performance Dataset (SPD)** demo piece `cello01`, published at
-<https://huggingface.co/datasets/shiyi098/string_performance_dataset-SPD> under
-**Apache-2.0** (Yitong Jin et al., *Audio Matters Too! Enhancing Markerless Motion
-Capture with Audio Signals for String Performance Capture*, ACM TOG 2024). Their
-pipeline recovers a fingerboard contact point per frame from multi-view motion
-capture plus audio-detected hand-string contacts.
+A 45-note table derived from the String Performance Dataset (SPD) demo piece was
+briefly committed here and has been removed. SPD's own access terms are
+**non-commercial research only**, and explicitly: *"You agree not to reproduce,
+modified, duplicate, copy, sell, trade, resell or exploit any portion of the images
+and **any portion of derived data** in any form to any third party"* and *"not to
+further copy, publish or distribute any portion of the Dataset"* (internal copies at
+a single site are permitted).
 
-**What we did to it (Apache-2.0 §4b, statement of changes):** read their published
-keypoint layout (contact point at index 150, string endpoints 142–149, used-finger
-joints 151–154), projected each contact point onto the four string segments to get
-a string index and a length ratio, converted the ratio to semitones above the open
-string, matched the used-finger tip to one of the four hand tips to recover a finger
-number, and segmented consecutive agreeing frames into 45 note events. No SPD source
-file is redistributed here — only this derived table.
+A derived note table in a **public** repo is exactly what that forbids, and this app
+is commercial, so the NC clause rules SPD out for us regardless.
 
-⚠ Their string/position is itself derived from a Pitch-Finger model constrained by
-the measured hand, so it is strong evidence of what the hand DID and weaker evidence
-of what a teacher would WRITE. Used accordingly: to validate the geometry, not to
-score fingering taste.
+⚠ **Why it was committed in the first place, and the lesson:** the partial mirror at
+`huggingface.co/datasets/shiyi098/string_performance_dataset-SPD` declares
+**apache-2.0**, which permits both redistribution and commercial use. That tag
+contradicts the authors' stated terms. We have spent this whole arc establishing
+that **a licence field is a claim, not a clearance** — ModArchive's uploader tags,
+PDMX's self-attested CC0 — and this is the same trap, walked into with a mirror's
+metadata. When a tag and the owner's own terms disagree, the terms win.
+
+The MEASUREMENTS made with it remain valid and are recorded in `docs/PLAN.md` (they
+are facts about our arranger, not a portion of their data), but nothing in this repo
+depends on SPD any more.
 
 ## What these are not
 
