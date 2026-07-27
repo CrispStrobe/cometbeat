@@ -1,5 +1,10 @@
 # Neural TTS on macOS — bundling `libcrispasr`
 
+> For the overall TTS design (engine framework, per-platform on-device voices,
+> the model manager, and licensing) see **[TTS_ARCHITECTURE.md](TTS_ARCHITECTURE.md)**.
+> This doc is just the macOS `libcrispasr` bundling detail.
+
+
 The neural (CrispASR/Kokoro) narration voice needs the native `libcrispasr`
 engine at runtime. `libcrispasr` is only ~9.6 MB, but it pulls in **8 more
 dylibs** — the ggml runtimes (`libggml*.dylib` ×5) and the Homebrew audio codecs
@@ -67,9 +72,12 @@ in the Xcode project changes.
   `crispasr.framework/crispasr` as a candidate); build libcrispasr for
   `ios-arm64`, wrap + embed. On-device build required.
 - **Android**: `.so` per ABI (`arm64-v8a`, `x86_64`) under `jniLibs`; NDK build.
-- **Web**: CrispASR has a 4.3 MB WASM build, but the `crispasr` Dart package's
-  web path is unproven here — web currently uses the `flutter_tts` (browser
-  SpeechSynthesis) voice via the null-stub facade.
+- **Web**: web's on-device voice is the browser **Web Speech API
+  (`SpeechSynthesis`)** via `flutter_tts` (verified live in the build) — instant,
+  free, no download. HD on web = **pre-baked WAV narration** + the model
+  manager's fetch/IndexedDB downloader. Live neural via `crispasr.wasm` was built
+  and measured at **~10× real-time (NO-GO)** — details in
+  [TTS_ARCHITECTURE.md](TTS_ARCHITECTURE.md) §"Web live-neural".
 
 Until a platform ships its lib, that platform silently falls back to
-`flutter_tts` and the HD-voice tile stays hidden.
+`flutter_tts` (its on-device voice) and the HD-voice tile stays hidden.
