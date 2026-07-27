@@ -113,7 +113,15 @@ is recorded in [HISTORY.md](HISTORY.md).
     `rhythm_quantize` (78→100), `reading_hint` (55→100), `chord_progression` (83→100),
     `module_doc` DocCell semantics, `xm/s3m/it` struct semantics, `source_registry`
     (defaultHttpGet via http.runWithClient+MockClient, 71→100), `module_flow_timeline`
-    (85→100). Each verified by re-running scoped coverage on the file.
+    (85→100). Each verified by re-running scoped coverage on the file. **More closed
+    since (all →100, scoped-verified):** `sri_item_label` (60→100, every SRI-namespace
+    label arm), `debug_service` (68→100, load/enableMenu/setUnlockAll persistence +
+    no-op returns), `mod_module` (MOD struct semantics), `play_along` (84→100, loop
+    getters/nextIndex/judged/reset/scaledStarScore), `tracker_native_command` (74→100,
+    XM mnemonics + native volpan provenance). **12 files driven to 100% off the map;**
+    remaining low-coverage is FFI/native-transcription/ONNX/plugin wrappers + big
+    DSP files (midi_render, tracker_replayer, aec_offline) partially covered by
+    integration suites.
 
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
   grand-staff view (the deferred bit).** Follow-up to `grandstaff-markings`, which
