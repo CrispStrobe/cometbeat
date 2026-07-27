@@ -96,7 +96,7 @@ class _BowingScreenState extends State<BowingScreen>
               _wholeNote,
               id: 'n',
               articulations: {
-                _down ? Articulation.downBow : Articulation.upBow
+                _down ? Articulation.downBow : Articulation.upBow,
               },
             ),
           ]),
