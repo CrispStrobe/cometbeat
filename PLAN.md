@@ -1204,6 +1204,59 @@ tick-0 handling), so "effects are off" has to be split before it can be fixed.
 Build/run notes: `xmp` via Homebrew; MultiPLAY `make bare`; micromod
 `cc mod2wav.c micromod.c`; ibxm `cc xm2wav.c ibxm.c`; NodMOD `PYTHONPATH=<clone>/src`.
 
+
+#### X1 RESULT (2026-07-27) — the effects that deviate, named
+
+13 per-effect fixtures (`tool/make_effect_fixtures.dart` → `test/fixtures/fx/`),
+one effect on one sounding channel each, rendered through our A and B and
+through libopenmpt / libxmp / micromod. **Deviation is judged against how well
+the three references agree with each other** (task X0's rule), not an absolute.
+
+| effect | refs agree | ours (B) | gap | verdict |
+| --- | --- | --- | --- | --- |
+| `9xx` sample offset | 1.000 | **0.000** | 1.000 | **BROKEN — we render SILENCE** |
+| `1xx` porta up | 1.000 | 0.549 | 0.451 | **deviates** |
+| `2xx` porta down | 1.000 | 0.689 | 0.311 | **deviates** |
+| `ECx` note cut | 0.990 | 0.859 | 0.131 | **deviates — the note is not cut** |
+| `5xy` porta + vol slide | 1.000 | 0.918 | 0.082 | deviates |
+| `3xx` tone porta | 1.000 | 0.963 | 0.037 | suspect |
+| `0xy` arpeggio | 0.984 | 0.994 | −0.010 | ok |
+| `4xy` vibrato | 0.999 | 0.979 | 0.020 | ok |
+| `7xy` tremolo | 0.999 | 0.999 | 0.000 | ok |
+| `6xy` vibrato + vol slide | 0.999 | 0.977 | 0.022 | ok |
+| `Axy` vol slide up/down | 1.000 | 1.000 | 0.000 | ok |
+| `EDx` note delay | 1.000 | 0.999 | 0.000 | ok |
+
+**So the "sweeping" a listener heard is PORTAMENTO, not vibrato** — vibrato and
+tremolo are fine, and the whole pitch-slide family is not.
+
+**B1 — `9xx` sample offset renders silence.** rms 0.00000 against ~0.100 from
+all three references. The fixture offsets BEYOND the sample end (`9x02` = 512
+into a 256-sample loop), so this is specifically the out-of-range case: the
+references keep sounding, we kill the channel. ⚠️ Also add an IN-range offset
+fixture before fixing, so the fix is not tuned to the edge case alone.
+
+**B2 — `ECx` note cut does not cut.** Our rms is 3.6× the references (0.127 vs
+0.035) — the note rings on through the cut tick.
+
+**B3 — portamento `1xx`/`2xx` diverges badly**, and `3xx`/`5xy` follow it, which
+is what you would expect if the shared per-tick period step is wrong rather than
+three separate faults. Fix `1xx`/`2xx` first and re-measure `3xx`/`5xy` before
+treating them as separate bugs.
+
+⚠️ **Fixture-design lesson, worth keeping.** The first `porta_up` run showed the
+three references agreeing with each other at only **0.555**, which looked like
+"even the references disagree". They do not — holding the bend for all 31 rows
+slides the note off the end of the period table, so the fixture was measuring
+each engine's CLAMP policy. Bounding the bend to 8 rows moved inter-reference
+agreement to **1.000** and our gap from 0.158 to 0.451. A fixture that pushes an
+effect past its legal range measures the edge, not the effect.
+
+ℹ️ Our peak is consistently 1.333× the references on these single-channel
+fixtures (0.2424 vs 0.1818) — that is the known open gain-convention item, not
+a new finding, and it is why these verdicts use SPECTRAL similarity rather than
+level.
+
 #### The ladder — check each stage before trusting the next
 
 **X0 — Re-baseline every A/B gate against inter-reference agreement.**
