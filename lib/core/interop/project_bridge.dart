@@ -447,8 +447,7 @@ abstract final class ProjectBridge {
         'Keeps string and fret — one channel per string.',
       (AppMode.tracker, AppMode.tab) =>
         'Reads each channel as a string. Bring the side-car for techniques.',
-      (AppMode.tab, AppMode.score) =>
-        'Keeps pitches AND the string/fret (in the side-car).',
+      (AppMode.tab, AppMode.score) => 'Keeps pitches; drops string and fret.',
       (AppMode.score, AppMode.tab) => 'Picks a playable fingering for you.',
       (AppMode.tab, AppMode.loop) ||
       (AppMode.score, AppMode.loop) =>

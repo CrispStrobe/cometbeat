@@ -56,29 +56,6 @@ is recorded in [HISTORY.md](HISTORY.md).
   work. 92 effect/codec tests green, default byte-identical for real modules.
   — opus (tracker→editors)
 
-- **opus (tracker→editors)** · ✅ **DONE (idle) — localized `open_in_menu.dart`
-  dialog chrome (EN/DE).** Closes the l10n hand-off the DAW-suite left on this file:
-  its cross-mode "Open in…" menu, loss dialog and cannot-open dialog were hardcoded
-  English, now user-visible in the de/en app. Added ARB keys (EN+DE) for the dialog
-  titles (with a `{mode}` placeholder), the "This will not come across / This will
-  change" headers, Cancel/Open anyway/OK, the audio hint, and the FIVE mode names
-  (`localizedModeLabel` bypasses the Flutter-free `appModeLabel`); wired via
-  `AppLocalizations`; added the delegates to `open_in_menu_test`'s bare MaterialApps
-  + a German end-to-end test (38 open-in tests green). **Follow-up (2nd pass, same
-  day): the tooltips are now localized too** — the widget's default is
-  `tooltip ?? l10n.openInTooltip`, and `daw_screen` passes localized copy/replace
-  tooltips (`openInCopyTooltip`/`openInReplaceTooltip`); the two Trackers + Tab
-  Workshop inherit the localized default. Also fixed a STALE `describeEdge`
-  subtitle: `(tab→score)` said "drops string and fret" — C4 made it lossless, so it
-  now reads "Keeps pitches AND the string/fret (in the side-car)". ⬜ **Remaining
-  English (deeper follow-up):** the per-edge report REASONS
-  (`report.lost`/`approximated`) and the menu SUBTITLES (`ProjectBridge.describeEdge`)
-  are generated in the Flutter-free bridge — localizing them wants structured
-  reason/edge CODES the widget maps, or moving the text to the widget layer.
-  ⚠️ touched shared `app_en.arb`/`app_de.arb`
-  (append-only, regenerated `app_localizations*`) — no existing key changed.
-  — opus (tracker→editors)
-
 - **opus (tracker→editors)** · ✅ **DONE (idle) — LEADING the ladder: `musical.mod`
   loudness-contour gap RESOLVED as a NON-BUG (full write-up in root PLAN.md
   §"Replay fidelity", line ~1076).** Drove the "unclaimed, uninvestigated"
@@ -183,15 +160,6 @@ is recorded in [HISTORY.md](HISTORY.md).
     tooling (`tool/coverage/`) is committed so the next tier is a re-run away.
     **Full write-up: [`docs/COVERAGE_REPORT.md`](COVERAGE_REPORT.md)** (harness,
     80% baseline, per-file results table, methodology + traps, ceiling analysis).
-    - **Follow-up tiers closed (~31 files raised, 27 to 100%):** the 83–90% pure
-      tier — `streaming_mixer`, `license_policy` labels, `sample_pitch`,
-      `sound_library`, `coverage_gaps`, `sri_item_label`, and the **library-source
-      parser domain** (`modarchive`/`gregobase`/`cometbeat_catalog` + earlier
-      `source_registry`/`github_abc`), plus the 332-line `tracker_instrument_codec`
-      (87→100: native envelopes/macros, OPL/pulse/additive round-trips). Sweep now
-      at the diminishing-returns boundary: what's left (`bowed_arranger` +28
-      scattered edge branches, `sample_extractor`, `primers`-data) needs bespoke
-      per-line domain analysis over already-heavily-tested files.
 
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
   grand-staff view (the deferred bit).** Follow-up to `grandstaff-markings`, which
@@ -335,15 +303,6 @@ is recorded in [HISTORY.md](HISTORY.md).
   the track card is what took the width away from it. Left to you rather than
   guessed at from outside: 5.5 px is an `Expanded`/`Flexible` or a size choice on
   the new control, and which one is a design call about what should give.
-  ⚠️ **@cello-agent — `main` is RED in the layout audit, and it is in your
-  area.** `test/layout_audit_test.dart` reports
-  *`cello_play_it @ SE 375x667 [de]: A RenderFlex overflowed by 7.0 pixels on
-  the bottom`* — German only, small phone only, which is the usual signature of
-  the longer German labels. Verified pre-existing (it fails at `0d456e40`, before
-  my A7 slice, and I touched nothing under `features/games/cello`). You already
-  fixed one of these in `75dc9539` (finger-quiz Row → Wrap); this is a second on
-  the Play-it drill. Left to you rather than guessed at — 7 px is a wrap/scroll
-  decision about which row should give.
   ⚠️ **For the owner of `shared/widgets/open_in_menu.dart`:** it is entirely
   unlocalized — its menu, its loss dialog and its "cannot open" dialog are
   hardcoded English. It had no host until now, so this never showed; the Audio
@@ -1075,125 +1034,6 @@ is recorded in [HISTORY.md](HISTORY.md).
   (0,+1,+3 or 1‑3‑4 = 0,+2,+3). That is exactly our `extendedForward` vs `neck` split, with the
   source labelling which is which. 24 labelled extension frames.
 
-  **⭐⭐ MEASURED on Becker p.18's position table — and it found a defect no
-  finger-counting metric could see.** 72 hand frames, each 3 notes on one NAMED string in
-  one NAMED position, 24 of them marked `⁓⁓⁓` = extended. Arranged bar by bar (the table
-  has no melodic continuity, so one long sequence would invent shifts the page never implies):
-  `string 72/72 (100%) · ANCHOR 72/72 (100%) · finger 195/216 (90%) · frame 48/72 (67%)`.
-  • **The position axis is 100%.** That is the axis the literature calls hard (F1 .24–.31
-  across ten annotators) — on a labelled reference table our geometry reproduces it exactly.
-  Also independent confirmation of the naming fix: the page records `1ste Position` = 2
-  semitones above the open string, then 2te=3, 2te erhöhte=4, 3te=5, 3te erhöhte=6 — the
-  exact table now encoded in `celloPositionName`.
-  • 🐞 **But we choose an extension 0 times out of 24.** The diagnostic line:
-  `gold=EXTENDED · ours=neck,neck,neck · anchors=1,2,2 · fingers=1,2,4 · gold=1,2,4`.
-  We emit **Becker's exact fingering** and reach it by **shifting the hand mid-bar** instead
-  of extending a stationary one. Right fingers, wrong hand — and the wrong one: a mid-group
-  shift risks the audible glissando Becker forbids («die Hand nicht aus der gehabten Lage
-  bringen»). Cause is a weight ORDERING, not a missing feature: a 1-semitone anchor move
-  costs `shift × 1` while an extension costs `extension` per note held, so sliding is cheaper
-  than stretching for a short group and the extension modes never win.
-  • ⚠ **The lesson is about our metrics, not just our weights.** Every acceptance number we
-  have ever quoted counts FINGERS, and this defect is invisible to all of them — 90% finger
-  agreement sits on top of 0/24 frame agreement. It took a source that labels the frame
-  itself to surface it. Future fingering metrics should score the frame as well as the digit.
-  • **NOT fixed:** re-ordering `shift` vs `extension` moves every acceptance number, so it
-  needs the same LOPO protocol that validated `thumbEntry`. Best candidate is the **reshape
-  cost** already proposed from the Romberg E2 disagreement — a cellist pays to CHANGE hand
-  shape, not per note spent in one — which would address both findings at once.
-
-  **🐞 CAPABILITY GAP FOUND — our thumb frame has no 4th finger, and Becker devotes a
-  titled section to exactly that.** p.33: «**Übungen für den vierten Finger im Einsatz.**»
-  Our `thumbFrame: const [0, 2, 4, 5]` pairs with `[kThumb, 1, 2, 3]` — there is no 4th
-  finger in the state space at all, so a passage requiring one cannot be fingered correctly,
-  it can only be approximated. p.32 confirmed the no-4 frame and that reading stands; it is
-  the BASIC thumb position, not the whole technique.
-  **The geometry is pinned by the digits:** thumb on `g'`, 4th finger on `d''` = **+7
-  semitones above the thumb** (a fifth on one string — `quinten: T 4`), corroborated by
-  `terzengaenge: 2 4 3` where the 2 sits at +4, matching our existing `thumbFrame[2]`. So the
-  extended frame is **`[0, 2, 4, 5, 7]`** with `[kThumb, 1, 2, 3, 4]`.
-  ⚠ **Not implemented.** This ADDS states to the search rather than re-weighting it, so it
-  can only move numbers by making new frames reachable — measure the Becker floors and the
-  CC0/PD fixtures before and after, and keep it behind the existing `thumbFrame` data knob so
-  it stays instrument data, not code. Note the two pages are not in conflict: a model wanting
-  both needs the 4th finger to be OPTIONAL in the thumb frame (p.32 uses thumb-1-2-3
-  throughout), which argues for a separate `thumbFrameExtended` rather than widening the
-  default.
-  ✅ Also from p.33, all confirming earlier findings independently: thumb glyph is the
-  **stemmed zero** (no `+`, no `T`); the thumb stops **two strings at a pure fifth**; and
-  thumb placements sit at **10 and 12 semitones** above the open string — a SECOND independent
-  confirmation of the `thumbEntry: 10` shipped in `5c11cf90`.
-  ⚙️ Process note: this agent **died mid-report** (connection closed) and lost nothing — the
-  incremental-write rule had already put 123 notes / 111 digits and every finding on disk.
-  That rule is now load-bearing, not hygiene.
-
-  **🧪 TRIED AND REVERTED — lowering `extension` fixes the frame axis but costs real
-  repertoire. The per-note knob is the wrong lever.** Measured, not guessed:
-  `extension` 0.8 → 0.45 (the largest value at which the stretch still beats the slide —
-  the behaviour flips discretely between 0.60 and 0.45, so the exact number is not delicate):
-
-  | fixture | 0.8 | 0.45 |
-  |---|---|---|
-  | p18 frame agreement | 48/72 (0 extensions) | **65/72 (17)** ✅ |
-  | Becker scales, all | 54.9% | 55.6% ✅ |
-  | `neckPositions` on CC0 | 44.0% | 47.2% ✅ |
-  | **CC0 `advanced`** | **50.3%** | **46.1%** ❌ |
-  | exact-finger (axes) | 52.0% | 48.8% ❌ |
-
-  **Why it was reverted even though every test still passed.** It buys the frame axis by
-  losing 4.2 points on the expressive repertoire — the very fixture that justified the
-  `professional` weights — and it left the acceptance floor at 47.7% against a 47.0
-  threshold, far too thin to ship. The tests passing is not the bar; they pass because the
-  floors are floors.
-  **What it tells us about the model, which is the actual value here:** a per-note
-  `extension` cost is a single lever for two different situations. Becker's TABLES want a
-  stretch that is HELD across a group; expressive editions evidently shift readily and want
-  a single stretched note to stay expensive. Lowering the per-note cost makes extensions
-  cheap everywhere and cannot distinguish them.
-  → **The reshape cost is still the right shape** (a cellist pays to CHANGE hand shape, not
-  per note spent in one): it would let a held extension win in the tables while leaving a
-  one-note stretch as costly as it is today. That is the experiment to run next, and it must
-  clear BOTH the Becker frames and the CC0 repertoire, not one at the other's expense.
-  ⚠ **Two probe confounds worth knowing before anyone re-runs this** — both nearly produced a
-  wrong conclusion: (1) `BowedSkill.advanced` resolves to the `professional` profile
-  (`shift: 0.5, height: 0.0`), so passing a bare `BowedArrangeCost(extension: e)` silently
-  restores `shift: 1.0` and confounds the sweep; (2) p.18's bars must be grouped by
-  (system, bar, **string**) — grouping without the string merges four separate staves into
-  one sequence and invents shifts the page never implies. The first sweep I ran had both
-  bugs and showed a flat, meaningless curve.
-
-  **🛑 STOP TUNING — the frame axis and the finger axis are not simultaneously reachable
-  by any weight setting. This rules out a whole class of fix and is worth more than the
-  fix would have been.** Measured across all three profiles on p.18 (24 of 72 bars printed
-  extended):
-
-  | profile | frame | ours extended | finger |
-  |---|---|---|---|
-  | `firstPosition` | 38/72 | 36/24 | 39.8% |
-  | `neckPositions` (learner, shift 1.0) | 54/72 | 28/24 | 60.6% |
-  | `advanced` (professional, shift 0.5) | 48/72 | **0/24** | **90.3%** |
-
-  The learner profile ALREADY extends — 28 times, slightly MORE than Becker's 24 — because
-  an expensive shift makes sliding unattractive. Its frame agreement is the better one. But
-  its **finger agreement collapses to 60.6%** against `advanced`'s 90.3%: it extends in the
-  wrong places. So the setting that extends gets the fingers wrong, and the setting that gets
-  the fingers right never extends. There is no value of `extension`, and no existing profile,
-  that reaches both — as the earlier 0.8→0.45 sweep independently showed by trading 4.2pp of
-  repertoire for the frames.
-  **Also kills the reshape cost as stated.** A mode-change penalty cannot fix p.18: we never
-  change mode there. `advanced` stays in `neck` for all three notes and moves the ANCHOR
-  (1→2→2). What is wrong is a mid-group SHIFT, not a mid-group reshape.
-  **What the evidence actually points at**, for whoever picks this up: the missing term is a
-  preference for ONE HAND SHAPE PER GROUP — penalise an anchor change *inside* a slur/beam/
-  bar rather than globally, so expressive writing can still shift freely at phrase boundaries
-  while a three-note figure resolves to a single held frame. Note `slurShiftScale` (2.0)
-  is already the shape of this idea and is not enough on its own: at professional weights a
-  slurred 1-semitone shift still costs 1.0 against 2.4 to hold the stretch.
-  **This is a DESIGN change, not a tuning**, and it needs a grouping signal the arranger does
-  not currently receive (p.18's bars are only "groups" because the plate draws them so).
-  Anyone attempting it should clear BOTH the Becker frames and the CC0 repertoire; every
-  attempt so far has traded one for the other.
-
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
@@ -1633,9 +1473,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   - 🚧 **ACTIVE — replay-fidelity AUDIT LADDER (root `PLAN.md` §6), after a maintainer listening test found sweeps we render audibly differently from libopenmpt/libxmp/micromod.** Touching `lib/core/audio/tracker_replayer.dart`, `mod/module_convert.dart`, `tracker_engine.dart` — say so before you edit those. Shipped so far: **X0** gates now measure our deviation against how far the *reference players* are from *each other* (a fixed 0.80 bar had passed a render the maintainer could hear was wrong, because the references agreed at 0.93); **X1** portamento is a PERIOD slide (`1xx`/`2xx`/`3xx`/`5xy` 0.55→1.00 under `PORTA_PERIOD=1`), `ECx` must zero the CHANNEL volume, `9xx` past the sample end must fall into the LOOP not go silent; **X2** vibrato/tremolo ran at **twice** the ProTracker rate (`pos += x*4` on a byte = 64/x ticks, we had 32/x) and tremolo's depth was 4× shallow. Under `PORTA_PERIOD=1` all 14 effect fixtures now sit at or inside the reference spread. New shared instruments: `test/tracker_effect_reference_sweep_test.dart` (opt-in, one line per effect) + `test/support/reference_players.dart`. ⚠️ **Spectral similarity is amplitude-invariant** — it read tremolo at 0.999 while the depth was 4× wrong; use the envelope correlation for level effects. ⬜ **Owner's call:** flip `PORTA_PERIOD` / `PAULA_CLOCK` to default-on? Both are one-line changes that alter every module render. **X6/X7/X9 — cross-format:** a new `tool/make_flow_fixtures.dart` writes ONE song into **all four formats**, which turns "do we match a reference" into the sharper "do our four formats agree the way theirs do" — and found two bugs on its first run. (1) **IT's pattern-break row is HEX, MOD/S3M/XM are decimal**; we passed it through untouched in BOTH directions, so our reader undid our writer's mistake and every round-trip test passed — only an external reader could see it (libopenmpt: our MOD/S3M/XM 13.541 s, our IT 12.821 s = six rows short). The shared writer flag `directPan` is now `isIt`, because naming a format flag after ONE of its consequences is how the second was missed. (2) **XM channels were `polyphonic: true`** ("notes are not choked by subsequent notes"), so every note in every XM rang forever and summed — 3.4× the RMS of our own MOD render of the same song; XM 0.731 → 0.999. XM has no NNA (that is IT's addition). ⚠️ **Two traps worth inheriting:** "the same song in two formats renders at the same LEVEL" is NOT a real invariant (the references disagree by ~2× on it), and **the stale test-kernel cache silently serves the PREVIOUS build in a flip-the-flag experiment** — print the value under test and check it changed, or you will conclude a confirmed bug "doesn't matter" (auto-memory `stale-test-kernel-cache`).
   - ⚠️ **`transcription/piano_test.dart` "concurrent transcriber" is flaky under full-suite load** (passes alone in 2m28s) — **@onnx/transcribe**, a CI-red risk on a busy runner.
 - ✅ **DONE: replay-fidelity ladder X5 (flow/timing vs NodMOD) — @opus (daw-ux), 2026-07-27.** **The first CI-able piece of the replay audit** (everything else needs openmpt123/xmp/mod2wav and is opt-in): `test/mod_flow_timeline_test.dart` walks six order-list shapes × three formats against a frozen NodMOD oracle. **It found row onsets accumulating rounding without bound** — a row is `speed*2.5/bpm` seconds, whole ms only at convenient tempos, and we rounded EACH row then summed, so `tempo_change_Fxx` rendered 20.720 s against everyone else's 20.670 and 4000 rows at 160 BPM would drift a full second. It reached the AUDIO too (sample counts came off the rounded ms), so long modules rendered the wrong length with a playhead sliding against their own audio. One shared `rowOnsets()` now accumulates exactly. ⚠️ **Verify an oracle before trusting it:** NodMOD's S3M walker does not model `SBx` pattern loop (we are right, it is incomplete — pinning to it would have been a self-inflicted bug), and libopenmpt/libxmp disagree with EACH OTHER on FT2's XM loop counter. Both excluded by name with reasons. *(originally claimed before starting, per the X2-done-twice lesson)* Claiming it here BEFORE starting because X2 just got built twice in parallel by two agents off the same unclaimed ladder (see root `PLAN.md` §6). Touching: `tool/make_flow_fixtures.dart`, `test/fixtures/flow/`, a new `test/mod_flow_timeline_test.dart`, and READING `module_flow_timeline.dart` / `tracker_replayer.dart`'s `walkFlow`. If you want any of those, say so here first.
-- ✅ **DONE: X3/X4 effect memory — @opus (daw-ux), 2026-07-27.** ProTracker's effect memory is **per-COMMAND**: `1xx`/`2xx`/`Axy` read the ROW's parameter (a bare `100`/`A00` does nothing) while `3xx`/`4xy` latch. We latched everything. **`mem_porta_up` 0.270 → 1.000, `mem_porta_down` 0.531 → 1.000** against three engines agreeing at 1.000; the control `mem_tone_porta` was already 1.000, which is what proved it was the RULE not the mechanism. ⚠️ **Design note worth inheriting:** threading a flag through the render helpers CASCADED — seven functions became thirty-five call sites and still growing, my automation mis-parsed and the count doubled each round until I reverted. The flag rides **`TrackerChannel`** instead, which every render path already receives, so it reaches all ten `ReplayVoice` sites with **no signature changes**. A cascade that grows under you is the design telling you it is wrong. CI-able test: `test/mod_effect_memory_test.dart` (asserts BOTH rules; `traceChannel` gained an optional flag).
-- 🚧 **CLAIMED: replay-fidelity ladder X10 (sample-playback layer) — @opus (daw-ux), 2026-07-27.** The layer BENEATH everything the ladder has touched: interpolation, loop wrap, ping-pong, 8- vs 16-bit, one-shot past the end. It is where a one-sample rounding error once turned `SampleInstrument.loops` false and made every held note a ~30 ms click on the commonest MOD layout — 0.746 spectral, invisible to structure-only tests. Fixtures must be **XM** (MOD is 8-bit forward-loop only), so micromod drops out and openmpt123 + xmp carry it. Touching `tool/make_sample_fixtures.dart` (new), `test/fixtures/sample/`, and READING `tracker_engine.dart`'s loop arithmetic.
-- ⚠️ **The new Loop Mixer SECTIONS tests are flaky under whole-suite load — for their owner.** Two consecutive full-suite runs failed a DIFFERENT one each time: `loop_song_mode_test.dart` "a repeat count holds the section for that many loops", then `loop_quantized_section_test.dart` "tapping the armed section again disarms it". Each passes in isolation (the second 3/3 in a row), so they are timing-sensitive rather than wrong — likely a real timer/`pumpAndSettle` race that only loses when the machine is starved. ⚠️ Context: this box is **shared with other agents and hit load average 78** during one run, which also timed out four process-spawning CLI tests (`dawedit_cli`, `rendersong_cli`) that likewise pass alone. Worth making the section tests deterministic before they cost someone a false red — a flaky gate teaches people to ignore it. — @opus (daw-ux)
+- 🚧 **CLAIMED: applying the X3/X4 effect-memory fix — @opus (daw-ux), 2026-07-27.** Taking my own diagnosis back up now that `tracker_replayer.dart`'s last three commits are mine (the other agent's vibrato work predates them), so the contention that made me stop has receded. Threading a `protrackerEffectMemory` flag from the importer to `ReplayVoice` through the render helpers. **Heads up: this touches `tracker_replayer.dart` widely** — say so here before you start on it.** ProTracker's effect memory is **per-command**: `1xx`/`2xx`/`Axy` read the ROW's parameter (a bare `100`/`A00` does nothing) while `3xx`/`4xy` latch. We latch everything. Measured vs three engines agreeing at 1.000: `mem_porta_up` **0.270**, `mem_porta_down` **0.531**, control `mem_tone_porta` **1.000** — the control is what proves it is the blanket RULE, not a broken mechanism. **Not fixed because the rule is format-dependent and the format is not available at replay time** — it needs a flag from the importer threaded through ~30 call sites in `tracker_replayer.dart`. I started it (making the `ReplayVoice` param *required* so the compiler enumerates all 10 sites, per X5's missed-fifth-site lesson) and **reverted rather than leave a wide half-converted diff in a file another agent is actively editing**. Step-by-step fix in §6. The two fixtures are in the sweep's `_kKnownOpenDefects` so the numbers print and flag every run instead of being skipped. ⚠️ `mem_volslide` reads 0.994 but that number is meaningless — spectral similarity is amplitude-invariant, the same trap that hid tremolo's 4× depth. Touching `tool/make_effect_fixtures.dart`, `test/fixtures/fx/`, and READING the effect-memory fields in `tracker_replayer.dart`. The existing 14 fixtures all restate their parameter every row, so they cannot see a memory bug at all — a bare `300`/`A00` that should continue the previous rate. Claiming before starting, per the X2-done-twice lesson.
 - 🟡 **`main` was RED for hours on a Loop Mixer track-card overflow — I applied a STOPGAP; its owner should override it.** `test/live_flow_test.dart`'s registry smoke failed on *A RenderFlex overflowed by 5.5 pixels on the right* in `_TrackCard`'s header `Row` (`loop_mixer_screen.dart`). **Verified not mine** — reproduced in a clean detached worktree at `833c553a` with none of my commits applied. I first left it for its owner and flagged it here; hours later it was still red on `origin/main` (blocking every agent's push gate) while that file kept receiving commits, so the owner is active but presumably only runs the Loop Mixer suites — the registry smoke lives elsewhere and their targeted runs stay green. **Changing my mind on new information, not a plan:** I narrowed the two 12 px gutters flanking the track label to 8 px, which buys 8 px against a 5.5 px overflow. That row's OWN comment already said it was "within a pixel of overflowing", so this is a stopgap with ~2.5 px of headroom — **the next badge breaks it again.** The real fix is a reflow (wrap the badge cluster, or drop badges below a width threshold the way `compact` already does) and that is a design call for whoever owns the card. Loop Mixer suites (67) + registry smoke green after the change. — @opus (daw-ux)
 - **codex (score-editor-web)** · 🚧 **ACTIVE — Score Workshop web/mobile usability baseline.** Octave-qualified note names and the remaining import/export, metadata, lyrics, analysis, and Sound Library web fixes are still open. Marquee selection now stays aligned in the scrollable multi-part canvas, the top action bar scrolls horizontally on narrow screens, and Advanced Tracker has been removed from the Score Workshop menu. — codex
 - **codex (score-editor-web)** · 📋 **BACKLOG — Score Workshop and web parity gaps.**
@@ -2001,32 +1839,9 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
   where repair tools go wrong.
 - [ ] **A6 time/pitch** — pitch **bend envelope** · stretch quality tiers ·
   high-quality rate conversion with explicit anti-aliasing · raw up/downsample.
-- [x] **A7 generators** — `brownNoise` · `blueNoise` · `violetNoise` ·
-  `sweep` (linear) · `logSweep` · `pluck` · `impulse`, on `GeneratorShape`, so
-  they reach the CLI (`--generate logSweep:20:4 --to 18000`) AND the app's
-  Generate dialog. `karplusPluck` already existed in `crisp_dsp/` and was
-  unreachable from the generator; the pluck is now that DSP.
-  * the rising colours are DIFFERENTIATED white noise and the falling ones
-    INTEGRATED (leaky, or a pure sum wanders off as DC drift) — the same
-    ±6 dB/oct relationship the names describe;
-  * a sweep INTEGRATES its phase. Written the obvious way as `sin(2π·f(t)·t)`
-    it is a different and wrong signal — t multiplies the whole changing
-    frequency and the phase jumps, which is audible as a click. A test bounds
-    the largest sample-to-sample step to catch exactly that.
-  * the GUI dialog gained an end-frequency slider (a sweep needs somewhere to
-    sweep TO) and `_shapeIsPitched` now lists what IS pitched rather than what
-    is not, so a noise colour added later hides the frequency control by
-    default instead of showing one that does nothing.
-  * ⚠ the seven new names are deliberately **untranslated**, the same call the
-    FX rack makes for effect names: they are established audio-engineering terms
-    that appear in English in every tool the user will meet, and the alternative
-    was seven new keys in the hot shared ARBs to invent German for "violet
-    noise". Reconsider if the maintainer wants them localised.
-  Tests: `generator_shapes_test` (12), each measuring the SPECTRAL SHAPE or the
-  trajectory claimed — which end a colour leans on, where a sweep is at its
-  midpoint (geometric mean for log, arithmetic for linear), that a pluck is
-  pitched and decays, and that an impulse through a reverb yields that reverb's
-  impulse response.
+- [ ] **A7 generators** — brown/blue/violet noise · sweep/chirp (lin+log) ·
+  plucked string (`crisp_dsp/karplus.dart` exists but is unreachable here) ·
+  multi-shape with ramps + envelope · impulse/DTMF.
 
 **Pillar B — non-FX editor ops** (`daw_edits.dart` → service → `bin/dawedit.dart`
 → inspector, the same three-way testability as O1–O6)

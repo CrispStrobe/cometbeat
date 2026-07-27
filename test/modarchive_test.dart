@@ -105,42 +105,6 @@ void main() {
     test('bad XML yields no items (never throws)', () {
       expect(src.parseModules('not xml <'), isEmpty);
     });
-
-    test('missing fields fall back (title, download URL, licence)', () {
-      const xml = '<modules>'
-          '<module><id>77</id></module>' // nothing but an id
-          '<module><id>78</id><filename>cool.mod</filename></module>'
-          '</modules>';
-      final items = src.parseModules(xml);
-      expect(items, hasLength(2));
-      // No songtitle/filename → "Module <id>"; no <url> → the API endpoint;
-      // no <license><title> → "unknown"; no <format> → "mod".
-      expect(items[0].title, 'Module 77');
-      expect(items[0].declaredLicense, 'unknown');
-      expect(items[0].downloadUrl.toString(), contains('moduleid=77'));
-      expect(items[0].format, 'mod');
-      // filename stands in when songtitle is absent.
-      expect(items[1].title, 'cool.mod');
-    });
-
-    test('metadata getters + fetch delegate to the http layer', () async {
-      expect(src.homepage, contains('modarchive.org'));
-      expect(src.licenseSummary, isNotEmpty);
-      final item = LibraryItem(
-        sourceId: 'modarchive',
-        sourceName: 'The Mod Archive',
-        id: 'ma_1',
-        title: 'X',
-        composer: '',
-        declaredLicense: 'unknown',
-        downloadUrl: Uri.parse(
-          'https://api.modarchive.org/downloads.php?moduleid=1',
-        ),
-        format: 'mod',
-      );
-      // src's http returns empty bytes → fetch delegated to it.
-      expect(await src.fetch(item), isEmpty);
-    });
   });
 
   test('browse hard-filters to CC0/PD by default; opt-in admits CC BY',

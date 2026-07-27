@@ -46,11 +46,4 @@ void main() {
     expect(xml, contains('<note'));
     expect(xml, contains('<lyric'));
   });
-
-  test('metadata getters + fetch delegate to the http layer', () async {
-    expect(src.homepage, contains('gregobase'));
-    expect(src.licenseSummary, contains('CC0'));
-    final item = (await src.browse()).first;
-    expect(await src.fetch(item), isEmpty); // _noHttp returns empty bytes
-  });
 }

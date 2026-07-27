@@ -129,8 +129,8 @@ Pitch? _naturalOf(int midi) {
 }
 
 CelloString _stringOf(int index) => switch (index) {
-      0 => CelloString.a,
-      1 => CelloString.d,
-      2 => CelloString.g,
-      _ => CelloString.c,
-    };
+  0 => CelloString.a,
+  1 => CelloString.d,
+  2 => CelloString.g,
+  _ => CelloString.c,
+};

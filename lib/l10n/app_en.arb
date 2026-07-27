@@ -650,7 +650,6 @@
   "loopMixerRepeats": "Repeats",
   "loopMixerSwingPerTrack": "Swing per track",
   "loopMixerSwingPerTrackHint": "tap to give this track its own swing (– follows the groove)",
-  "loopMixerAutomation": "Volume shape",
   "loopMixerMasterFx": "Master effects",
   "loopMixerMasterFxHint": "Effects on the whole mix. They run across the loop seam, so tails carry over instead of dropping out on the downbeat.",
   "loopMixerSend": "Space effect (reverb / echo)",
@@ -3157,27 +3156,5 @@
   "trackerNativeParam": "Param",
   "trackerModuleHeader": "Module header",
   "trackerGlobalVolume": "Global volume",
-  "trackerInitialSpeed": "Initial speed",
-  "openInCannotTitle": "Cannot open in {mode}",
-  "@openInCannotTitle": {
-    "placeholders": { "mode": { "type": "String" } }
-  },
-  "openInAudioNotNotes": "Audio is not notes yet — use Transcribe first.",
-  "openInLossTitle": "Open in {mode}?",
-  "@openInLossTitle": {
-    "placeholders": { "mode": { "type": "String" } }
-  },
-  "openInLossLost": "This will not come across:",
-  "openInLossChanged": "This will change:",
-  "openInCancel": "Cancel",
-  "openInConfirm": "Open anyway",
-  "openInOk": "OK",
-  "appModeTracker": "Tracker",
-  "appModeLoop": "Loop Studio",
-  "appModeScore": "Score",
-  "appModeTab": "Tab",
-  "appModeAudio": "Audio",
-  "openInTooltip": "Open in…",
-  "openInCopyTooltip": "Open a copy in…",
-  "openInReplaceTooltip": "Open & replace via…"
+  "trackerInitialSpeed": "Initial speed"
 }

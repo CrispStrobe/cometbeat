@@ -1758,9 +1758,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'tippen für eigenen Swing dieser Spur (– folgt dem Groove)';
 
   @override
-  String get loopMixerAutomation => 'Lautstärke-Verlauf';
-
-  @override
   String get loopMixerMasterFx => 'Master-Effekte';
 
   @override
@@ -8340,57 +8337,4 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trackerInitialSpeed => 'Anfangstempo (Speed)';
-
-  @override
-  String openInCannotTitle(String mode) {
-    return 'Kann nicht in $mode geöffnet werden';
-  }
-
-  @override
-  String get openInAudioNotNotes =>
-      'Audio ist noch keine Noten – zuerst „Transkribieren“ verwenden.';
-
-  @override
-  String openInLossTitle(String mode) {
-    return 'In $mode öffnen?';
-  }
-
-  @override
-  String get openInLossLost => 'Das geht dabei verloren:';
-
-  @override
-  String get openInLossChanged => 'Das ändert sich:';
-
-  @override
-  String get openInCancel => 'Abbrechen';
-
-  @override
-  String get openInConfirm => 'Trotzdem öffnen';
-
-  @override
-  String get openInOk => 'OK';
-
-  @override
-  String get appModeTracker => 'Tracker';
-
-  @override
-  String get appModeLoop => 'Loop Studio';
-
-  @override
-  String get appModeScore => 'Partitur';
-
-  @override
-  String get appModeTab => 'Tabulatur';
-
-  @override
-  String get appModeAudio => 'Audio';
-
-  @override
-  String get openInTooltip => 'Öffnen in …';
-
-  @override
-  String get openInCopyTooltip => 'Kopie öffnen in …';
-
-  @override
-  String get openInReplaceTooltip => 'Öffnen & ersetzen über …';
 }

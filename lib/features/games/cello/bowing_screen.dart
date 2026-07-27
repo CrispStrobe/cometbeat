@@ -75,9 +75,9 @@ class _BowingScreenState extends State<BowingScreen>
     final correct = down == _down;
     if (_tapped == null || !answeredWrong) {
       context.read<SriService>().recordResponse(
-            'cello.bowing.${_down ? 'down' : 'up'}',
-            correct,
-          );
+        'cello.bowing.${_down ? 'down' : 'up'}',
+        correct,
+      );
     }
     context.read<AudioService>().playMidiNote(_pitch.midiNumber);
     setState(() {
@@ -88,20 +88,18 @@ class _BowingScreenState extends State<BowingScreen>
   }
 
   Score get _score => Score(
-        clef: Clef.bass,
-        measures: [
-          Measure([
-            NoteElement.note(
-              _pitch,
-              _wholeNote,
-              id: 'n',
-              articulations: {
-                _down ? Articulation.downBow : Articulation.upBow
-              },
-            ),
-          ]),
-        ],
-      );
+    clef: Clef.bass,
+    measures: [
+      Measure([
+        NoteElement.note(
+          _pitch,
+          _wholeNote,
+          id: 'n',
+          articulations: {_down ? Articulation.downBow : Articulation.upBow},
+        ),
+      ]),
+    ],
+  );
 
   Widget _bowButton(BuildContext context, {required bool down}) {
     final l10n = AppLocalizations.of(context)!;
@@ -112,10 +110,10 @@ class _BowingScreenState extends State<BowingScreen>
         backgroundColor: !selected
             ? null
             : down == _down
-                ? Colors.green
-                : down == _tapped
-                    ? Colors.redAccent
-                    : null,
+            ? Colors.green
+            : down == _tapped
+            ? Colors.redAccent
+            : null,
         textStyle: Theme.of(
           context,
         ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),

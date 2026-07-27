@@ -70,9 +70,9 @@ class _CelloStringQuizScreenState extends State<CelloStringQuizScreen>
 
     if (_tapped == null || !answeredWrong) {
       context.read<SriService>().recordResponse(
-            'cello.string.${_target.pitch.step.name}${_target.pitch.octave}',
-            correct,
-          );
+        'cello.string.${_target.pitch.step.name}${_target.pitch.octave}',
+        correct,
+      );
     }
 
     if (correct) {
@@ -148,11 +148,11 @@ class _CelloStringQuizScreenState extends State<CelloStringQuizScreen>
                                 color: _tapped == null
                                     ? null
                                     : string == _target.string &&
-                                            _tapped == _target.string
-                                        ? Colors.green
-                                        : string == _tapped
-                                            ? Colors.redAccent
-                                            : null,
+                                          _tapped == _target.string
+                                    ? Colors.green
+                                    : string == _tapped
+                                    ? Colors.redAccent
+                                    : null,
                                 onTap: () => _onAnswer(string),
                               ),
                             ),

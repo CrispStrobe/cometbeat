@@ -16,23 +16,8 @@
 
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
-import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Tuning;
 import 'package:flutter/material.dart';
-
-/// A mode's name in the user's language. The pure-Dart [appModeLabel] cannot see
-/// [AppLocalizations] (it is Flutter-free), so the localized name lives here,
-/// where the menu and its dialogs have a [BuildContext]. English mirrors
-/// [appModeLabel]; the per-edge loss REASONS still come from the bridge in
-/// English (a deeper, follow-up localization).
-String localizedModeLabel(AppLocalizations l10n, AppMode mode) =>
-    switch (mode) {
-      AppMode.tracker => l10n.appModeTracker,
-      AppMode.loop => l10n.appModeLoop,
-      AppMode.score => l10n.appModeScore,
-      AppMode.tab => l10n.appModeTab,
-      AppMode.audio => l10n.appModeAudio,
-    };
 
 /// An "Open in…" overflow action.
 ///
@@ -48,7 +33,7 @@ class OpenInMenu extends StatelessWidget {
     this.capo = 0,
     this.annotations,
     this.icon = const Icon(Icons.open_in_new),
-    this.tooltip,
+    this.tooltip = 'Open in…',
     this.targets,
     this.keyPrefix = '',
   });
@@ -72,11 +57,7 @@ class OpenInMenu extends StatelessWidget {
   final SymbolicAnnotations? annotations;
 
   final Widget icon;
-
-  /// The button's tooltip. Null falls back to the localized "Open in…" — a
-  /// caller passes its own (e.g. "Open a copy in…") when the door means
-  /// something more specific.
-  final String? tooltip;
+  final String tooltip;
 
   /// Restricts the menu to these modes (still intersected with what the bridge
   /// can actually reach).
@@ -111,20 +92,17 @@ class OpenInMenu extends StatelessWidget {
     );
 
     if (!context.mounted) return;
-    final l10n = AppLocalizations.of(context)!;
 
     if (result.isUnsupported) {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(
-            l10n.openInCannotTitle(localizedModeLabel(l10n, target)),
-          ),
+          title: Text('Cannot open in ${appModeLabel(target)}'),
           content: Text(result.unsupportedReason!),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.openInOk),
+              child: const Text('OK'),
             ),
           ],
         ),
@@ -152,7 +130,6 @@ class OpenInMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final reachable = ProjectBridge.targetsFrom(from);
     final allowed = this.targets;
     final targets = allowed == null
@@ -163,7 +140,7 @@ class OpenInMenu extends StatelessWidget {
           ];
     return PopupMenuButton<AppMode>(
       key: ValueKey('${keyPrefix}open-in'),
-      tooltip: tooltip ?? l10n.openInTooltip,
+      tooltip: tooltip,
       icon: icon,
       onSelected: (target) => _pick(context, target),
       itemBuilder: (context) => [
@@ -175,7 +152,7 @@ class OpenInMenu extends StatelessWidget {
             key: ValueKey('${keyPrefix}open-in-none'),
             enabled: false,
             child: Text(
-              l10n.openInAudioNotNotes,
+              'Audio is not notes yet — use Transcribe first.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -187,7 +164,7 @@ class OpenInMenu extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(localizedModeLabel(l10n, target)),
+                Text(appModeLabel(target)),
                 // The static cost of the edge, so the user can choose before
                 // committing rather than being warned after.
                 Text(
@@ -216,24 +193,24 @@ class _LossDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       key: ValueKey('${keyPrefix}open-in-loss-dialog'),
-      title: Text(l10n.openInLossTitle(localizedModeLabel(l10n, target))),
+      title: Text('Open in ${appModeLabel(target)}?'),
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           if (report.lost.isNotEmpty) ...[
-            Text(l10n.openInLossLost, style: theme.textTheme.bodyMedium),
+            Text(
+              'This will not come across:',
+              style: theme.textTheme.bodyMedium,
+            ),
             const SizedBox(height: 4),
-            // The per-edge reason strings themselves are still English (they are
-            // generated in the Flutter-free bridge) — a documented follow-up.
             for (final what in report.lost) Text('•  $what'),
             const SizedBox(height: 12),
           ],
           if (report.approximated.isNotEmpty) ...[
-            Text(l10n.openInLossChanged, style: theme.textTheme.bodyMedium),
+            Text('This will change:', style: theme.textTheme.bodyMedium),
             const SizedBox(height: 4),
             for (final what in report.approximated) Text('•  $what'),
           ],
@@ -243,12 +220,12 @@ class _LossDialog extends StatelessWidget {
         TextButton(
           key: ValueKey('${keyPrefix}open-in-cancel'),
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.openInCancel),
+          child: const Text('Cancel'),
         ),
         FilledButton(
           key: ValueKey('${keyPrefix}open-in-confirm'),
           onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l10n.openInConfirm),
+          child: const Text('Open anyway'),
         ),
       ],
     );

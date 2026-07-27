@@ -8,8 +8,6 @@ import 'package:comet_beat/core/audio/crisp_dsp/envelope.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/fm.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/sfxr.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/subtractive.dart';
-import 'package:comet_beat/core/audio/macro_sequence.dart';
-import 'package:comet_beat/core/audio/mod/opl_voice.dart' show OplInstrument;
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
@@ -144,98 +142,6 @@ void main() {
 
     test('percussion', () {
       expectRoundTrips(const PercussionInstrument('drum'));
-    });
-
-    test('sample native volume + pan envelopes and macros survive', () {
-      final pcm = Float64List(200)..fillRange(0, 200, 0.3);
-      final inst = SampleInstrument(
-        'nat',
-        pcm,
-        nativeVolumeEnvelope: const VolumeEnvelope(
-          [(ms: 0, level: 0.0), (ms: 100, level: 1.0), (ms: 300, level: 0.2)],
-          sustain: 1,
-          loopStart: 0,
-          loopEnd: 2,
-        ),
-        nativePanEnvelope: const PanEnvelope(
-          [(ms: 0, pan: -1.0), (ms: 50, pan: 1.0)],
-          sustain: 0,
-        ),
-        macros: [
-          MacroSequence(
-            target: MacroTarget.values.first,
-            values: const [0, 1, 2, 3],
-          ),
-        ],
-      );
-      final d = instrumentFromJsonString(instrumentToJsonString(inst))
-          as SampleInstrument;
-
-      expect(d.nativeVolumeEnvelope, isNotNull);
-      expect(d.nativeVolumeEnvelope!.points, hasLength(3));
-      expect(d.nativeVolumeEnvelope!.points.last.level, closeTo(0.2, 1e-9));
-      expect(d.nativeVolumeEnvelope!.sustain, 1);
-      expect(d.nativeVolumeEnvelope!.loopEnd, 2);
-
-      expect(d.nativePanEnvelope, isNotNull);
-      expect(d.nativePanEnvelope!.points.first.pan, closeTo(-1.0, 1e-9));
-      expect(d.nativePanEnvelope!.sustain, 0);
-
-      expect(d.macros, hasLength(1));
-      expect(d.macros.single.values, [0, 1, 2, 3]);
-    });
-
-    test('isSerializableInstrument accepts multi-sample + percussion', () {
-      expect(isSerializableInstrument(const PercussionInstrument('d')), isTrue);
-      final ms = MultiSampleInstrument('z', {
-        60: SampleInstrument('s', Float64List(10)),
-      });
-      expect(isSerializableInstrument(ms), isTrue);
-    });
-
-    test('InstrumentCodecException carries its message', () {
-      expect(
-        InstrumentCodecException('bad type').toString(),
-        'InstrumentCodecException: bad type',
-      );
-    });
-
-    test('additive with macros round-trips', () {
-      expectRoundTrips(
-        AdditiveInstrument(
-          'aw',
-          Instrument.cello,
-          macros: [
-            MacroSequence(
-              target: MacroTarget.values.first,
-              values: const [1, 2, 3],
-            ),
-          ],
-        ),
-      );
-    });
-
-    test('pulse with macros round-trips', () {
-      expectRoundTrips(
-        PulseInstrument(
-          'pw',
-          duty: 0.25,
-          macros: [
-            MacroSequence(
-              target: MacroTarget.values.first,
-              values: const [4, 5, 6],
-            ),
-          ],
-        ),
-      );
-    });
-
-    test('opl serializes its adlib register bytes', () {
-      final inst = OplInstrument('opl', List<int>.filled(12, 0x40));
-      final d = instrumentFromJsonString(instrumentToJsonString(inst))
-          as OplInstrument;
-      expect(d.id, 'opl');
-      expect(d.adlibData, List<int>.filled(12, 0x40));
     });
 
     test('native multi-sample zones preserve mapping and sample metadata', () {

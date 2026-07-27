@@ -942,7 +942,6 @@ class DawService extends ChangeNotifier {
   void addGeneratedClip({
     required GeneratorShape shape,
     double freq = 440,
-    double endFreq = 20000,
     double seconds = 2,
     double amp = 0.5,
     int seed = 0,
@@ -954,7 +953,6 @@ class DawService extends ChangeNotifier {
       shape: shape,
       samples: (seconds * kDawSampleRate).round(),
       freq: freq,
-      endFreq: endFreq,
       sampleRate: kDawSampleRate,
       amp: amp,
       seed: seed,

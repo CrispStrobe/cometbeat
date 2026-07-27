@@ -88,3 +88,6 @@ assets/narration/*.wav
 
 # iOS HD TTS framework — fetched in CI from a CrispASR release, never committed
 ios/Frameworks/crispasr.xcframework
+
+# Android HD TTS libs — fetched in CI from a CrispASR release, never committed
+android/app/src/main/jniLibs/

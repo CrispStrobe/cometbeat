@@ -1,0 +1,90 @@
+name: Android HD TTS embed check
+
+# Spike/verification (dispatch-only): proves libcrispasr can be embedded in the
+# Android APK for the HD TTS voice, the same way ios-release.yml proves the iOS
+# framework embed. Fetches the prebuilt .so (arm64-v8a) from a CrispASR release
+# into jniLibs (no 90 MB in git), builds a debug APK, and asserts the lib is
+# actually bundled. No signing/device needed. Kept OUT of the main ci.yml so the
+# default Android build stays lean until shipping the HD voice is decided.
+
+on:
+  # Dispatch-only: proven capability, re-runnable on demand. Not wired into the
+  # default Android build (ci.yml) — that stays lean until shipping the HD voice
+  # is decided (it embeds a ~90 MB .so).
+  workflow_dispatch:
+
+jobs:
+  android-embed-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout cometbeat
+        uses: actions/checkout@v5
+        with:
+          path: cometbeat
+
+      - name: Checkout crisp_notation (sibling path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/crisp_notation
+          ref: main
+          path: crisp_notation
+
+      - name: Checkout CrispEmbed (sibling FFI path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/CrispEmbed
+          ref: main
+          path: CrispEmbed
+
+      - name: Checkout onnx_runtime_dart (sibling dev path dependency)
+        uses: actions/checkout@v5
+        with:
+          repository: CrispStrobe/onnx_runtime_dart
+          ref: main
+          path: onnx_runtime_dart
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.4
+          channel: stable
+          cache: true
+
+      # Fetch the prebuilt libcrispasr.so (+ libc++_shared.so) for arm64-v8a from
+      # a CrispASR release into jniLibs — Flutter/Gradle auto-bundle jniLibs/<abi>
+      # into the APK's lib/<abi>. No 90 MB committed to this repo.
+      - name: Fetch crispasr jniLibs (arm64-v8a)
+        working-directory: cometbeat
+        run: |
+          set -euo pipefail
+          mkdir -p android/app/src/main/jniLibs
+          curl -fsSL -o /tmp/crispasr-android.zip \
+            https://github.com/CrispStrobe/CrispASR/releases/download/ios-xcframework-20260727/crispasr-android-arm64.zip
+          unzip -qo /tmp/crispasr-android.zip -d android/app/src/main/jniLibs/
+          test -f android/app/src/main/jniLibs/arm64-v8a/libcrispasr.so \
+            && echo "libcrispasr.so staged in jniLibs"
+
+      - name: Install dependencies
+        working-directory: cometbeat
+        run: flutter pub get
+
+      - name: Build debug APK
+        working-directory: cometbeat
+        run: flutter build apk --debug
+
+      # The point of the embed: libcrispasr must actually reach the device.
+      - name: libcrispasr.so is actually in the APK
+        working-directory: cometbeat
+        run: |
+          set -e
+          APK=build/app/outputs/flutter-apk/app-debug.apk
+          echo "== native libs in the APK =="
+          unzip -l "$APK" | grep -E 'lib/.*\.so' || true
+          unzip -l "$APK" | grep -E 'lib/arm64-v8a/libcrispasr\.so' || {
+            echo "::error::libcrispasr.so missing from the APK"; exit 1; }
+          echo "libcrispasr.so embedded in the APK"
