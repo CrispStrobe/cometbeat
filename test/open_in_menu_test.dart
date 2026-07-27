@@ -96,26 +96,28 @@ void main() {
     final converted = await _pump(t, from: AppMode.tab, document: _tab);
     await t.tap(find.byKey(const ValueKey('open-in')));
     await t.pumpAndSettle();
-    await t.tap(find.byKey(const ValueKey('open-in-score')));
+    await t.tap(find.byKey(const ValueKey('open-in-loop')));
     await t.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('open-in-loss-dialog')), findsOneWidget);
-    // Tab -> Score drops the string/fret choice; the user must be told.
+    // Tab -> Loop drops the string/fret choice (a loop track is bare pitches);
+    // the user must be told. (Tab -> Score keeps it now, via the tabVoicings
+    // side-car — see the C4 lossless test below.)
     expect(find.textContaining('string and fret'), findsOneWidget);
     expect(converted, isEmpty, reason: 'it converted before being confirmed');
 
     await t.tap(find.byKey(const ValueKey('open-in-confirm')));
     await t.pumpAndSettle();
     expect(converted, hasLength(1));
-    expect(converted.single.$1, AppMode.score);
-    expect(converted.single.$2.document, isA<MultiPartScore>());
+    expect(converted.single.$1, AppMode.loop);
+    expect(converted.single.$2.document, isA<List<PatternCell>>());
   });
 
   testWidgets('cancelling a lossy conversion does nothing at all', (t) async {
     final converted = await _pump(t, from: AppMode.tab, document: _tab);
     await t.tap(find.byKey(const ValueKey('open-in')));
     await t.pumpAndSettle();
-    await t.tap(find.byKey(const ValueKey('open-in-score')));
+    await t.tap(find.byKey(const ValueKey('open-in-loop')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('open-in-cancel')));
     await t.pumpAndSettle();
@@ -136,6 +138,26 @@ void main() {
     expect(find.byKey(const ValueKey('open-in-loss-dialog')), findsNothing);
     expect(converted, hasLength(1));
     expect(converted.single.$1, AppMode.tracker);
+    expect(converted.single.$2.lossless, isTrue);
+  });
+
+  testWidgets(
+      'Tab -> Score is lossless now — the fretting rides in the '
+      'side-car (C4)', (t) async {
+    // The string/fret choice used to be reported dropped on this edge. It is
+    // not: TabDocument.toScore records it in Score.tabVoicings, so the score
+    // carries the exact fingering and a trip back to Tab reproduces it. A
+    // lossless edge must go straight through with no loss dialog.
+    final converted = await _pump(t, from: AppMode.tab, document: _tab);
+    await t.tap(find.byKey(const ValueKey('open-in')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('open-in-score')));
+    await t.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('open-in-loss-dialog')), findsNothing);
+    expect(converted, hasLength(1));
+    expect(converted.single.$1, AppMode.score);
+    expect(converted.single.$2.document, isA<MultiPartScore>());
     expect(converted.single.$2.lossless, isTrue);
   });
 

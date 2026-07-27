@@ -7,6 +7,39 @@ changelog it graduated from.
 
 ## Progression
 
+## Cross-mode interop — the full matrix, both directions (C-series, 2026-07-27)
+
+Every DAW clip can now move between the five editors and come home. The rule the
+whole matrix rests on: **symbolic info is never flattened until an explicit
+bounce**, and only the way back from *audio* is a guess.
+
+- **Round-trip + copy doors.** "Open a copy in…" (forks a converted copy) and
+  "Open & replace via…" (`fa9dbcda`, edits round-trip back and REPLACE the clip
+  so mixing continues on it) coexist via `OpenInMenu`'s `keyPrefix`.
+- **Every symbolic kind, every target** (`7164912e`, `d4408aff`). `_clipSymbolicDoc`
+  reads a drum beat as a percussion tracker song and a groove as its engraved
+  score, so score/tracker/drum/groove all get both doors; Loop is a live target
+  (the Loop Mixer is seeded from converted cells via a `GrooveSpec`).
+- **C5 — Transcribe-this-clip.** A raw-audio (`SampleSource`) clip has a
+  **Transcribe → notation** inspector action: `transcribePcmToScore` (new mono-PCM
+  entry in `transcription_service.dart`, pure-Dart monophonic — no model
+  download) turns its PCM into a Score added as a NEW `ScoreSource` clip. The
+  audio stays; the score is a sibling. This is the one-way door back the matrix
+  reserved for an explicit feature (audio has no symbolic model to convert).
+- **C4 — tab fretting survives inbound.** `TabDocument.toScore` records each
+  string/fret in `Score.tabVoicings` and `fromScore` honours it, so a tab that
+  enters the DAW as a score keeps its exact fingering and re-opens in Tab
+  unchanged. Corrected the two stale `ConversionReport` messages in
+  `project_bridge.dart`: **tab→score is lossless** now, and **score→tab
+  approximates only the notes without a stored voicing** — the loss dialog no
+  longer warns about a fretting that is actually preserved.
+
+Tests: `transcribe_pcm_to_score_test`, the C5 group in `daw_open_a_copy_test`,
+the C4 report group in `interop_fretting_carry_test`; `open_in_menu_test` +
+`tab_rig_open_in_test` updated (tab→score goes straight through). The property
+suite `interop_report_honesty_test` still passes — a changed round trip never
+reports itself lossless.
+
 ## Tracker instrument macros (roadmap §4 core, 2026-07-26)
 
 Per-tick instrument MACROS — the classic tracker/Furnace instrument envelope — for

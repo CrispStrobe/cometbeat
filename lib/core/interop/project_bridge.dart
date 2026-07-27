@@ -228,8 +228,11 @@ abstract final class ProjectBridge {
               ..docMeta[AnnotationKeys.sourceMode] = 'tab'
               ..docMeta[AnnotationKeys.capo] = capo
               ..docMeta[AnnotationKeys.tuning] = tuningToAnnotation(doc.tuning),
-            report: ConversionReport()
-              ..addLost('string and fret choice (a score carries pitches)'),
+            // Lossless: `toScore` records each column's string/fret in the
+            // score's `tabVoicings` side-car (C4), so the exact fretting rides
+            // along and a later trip back to Tab reproduces it note-for-note —
+            // it is no longer "chosen for you".
+            report: ConversionReport(),
           ),
         ),
 
@@ -306,16 +309,28 @@ abstract final class ProjectBridge {
       (AppMode.score, AppMode.tab) => _fromScore(
           document,
           (mp) {
-            final report = ConversionReport()
-              ..addApproximated(
-                'fingering chosen for you — a score does not say which string',
+            final part = mp.parts.first;
+            final report = ConversionReport();
+            // The auto-fretter only picks a string for notes that DON'T already
+            // carry a voicing (C4). A score that came from Tab has one per note,
+            // so nothing is guessed; a hand-engraved score has none, so every
+            // note is. Report exactly the notes actually being invented.
+            final notes = _scoreNoteCount(part);
+            final voiced = part.tabVoicings.length.clamp(0, notes);
+            if (voiced < notes) {
+              report.addApproximated(
+                voiced == 0
+                    ? 'fingering chosen for you — a score does not say which '
+                        'string'
+                    : 'fingering chosen for the ${notes - voiced} notes '
+                        'without a stored voicing',
               );
+            }
             if (mp.parts.length > 1) {
               report.addLost('parts beyond the first (a tab holds one part)');
             }
             return ConversionResult(
-              document:
-                  TabDocument.fromScore(mp.parts.first, strings, capo: capo),
+              document: TabDocument.fromScore(part, strings, capo: capo),
               report: report,
             );
           },
@@ -455,6 +470,12 @@ abstract final class ProjectBridge {
 /// best represents a whole song as one loop track.
 int _noteCount(TrackerChannel channel) =>
     channel.cells.where((c) => c.midi != null).length;
+
+/// How many sounding notes/chords [score] holds — compared against the stored
+/// [Score.tabVoicings] count to report exactly how many notes a score→tab
+/// conversion has to invent a fingering for (one voicing entry per note).
+int _scoreNoteCount(Score score) =>
+    score.measures.expand((m) => m.elements).whereType<NoteElement>().length;
 
 // ── typed unwrapping ────────────────────────────────────────────────────────
 //

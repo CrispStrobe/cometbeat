@@ -193,18 +193,22 @@ is recorded in [HISTORY.md](HISTORY.md).
   · A5 restoration (noise reduction · hum · de-click · de-clip · DC).
   **Next:** A2 tone curves · A6 time/pitch · A7 generators · B1–B6 the non-FX
   editor ops (pad/repeat/split-on-silence · dither · full stats · VAD ·
-  spectrogram CLI · batch) · C4 tab fretting inbound · C5 "Transcribe this clip".
+  spectrogram CLI · batch). (C4 tab fretting inbound + C5 "Transcribe this clip"
+  are now SHIPPED by `opus (tracker→editors)` — see its entry below.)
   **Rack is now 50 effects**, every one reachable from the GUI *and* the CLI with
   no per-effect UI or CLI code — the F1/F2 lever has held across five DSP slices.
   A "learn the noise from the marked range" service op is the natural next step
   for `noiseReduce` (the DSP already accepts a profile; only the UI is missing).
-  ⚠ **Interop status, precisely:** every clip kind opens its OWN editor exactly
-  (score/tab/tracker/drum/groove — no conversion, nothing approximated) and that
-  survives a save; score and tracker clips can additionally open a CONVERTED
-  copy in another mode, with the cost named first. Still missing: tab fretting
-  surviving the trip INBOUND (C4 — a tab arrives as a score, so its string/fret
-  choice dies at the door and the Tab Workshop re-frets from scratch), and
-  audio → notes via Transcribe (C5).
+  ⚠ **Interop status, precisely (updated 2026-07-27 — now COMPLETE):** every
+  clip kind opens its OWN editor exactly (score/tab/tracker/drum/groove — no
+  conversion, nothing approximated) and that survives a save; every symbolic clip
+  kind (score/tracker/drum/groove) can additionally open a CONVERTED copy OR
+  round-trip-and-replace in any of the four other modes (Loop included), with the
+  cost named first. Tab fretting now survives INBOUND (C4 — a tab enters as a
+  score with its string/fret in `Score.tabVoicings`, so the Tab Workshop
+  reproduces it rather than re-fretting), and a raw-audio clip has a
+  **Transcribe → notation** action (C5 — pure-Dart monophonic, adds a new score
+  clip). Nothing on the interop matrix is outstanding.
   ⚠️ **For the owner of `shared/widgets/open_in_menu.dart`:** it is entirely
   unlocalized — its menu, its loss dialog and its "cannot open" dialog are
   hardcoded English. It had no host until now, so this never showed; the Audio
@@ -249,9 +253,9 @@ is recorded in [HISTORY.md](HISTORY.md).
   so we won't collide. I'll confine my `daw_screen.dart` edits to the interop
   methods and rebase-before-push. Ping here if this bites. — opus (tracker→editors)
 
-- **opus (tracker→editors)** · 🚧 **ACTIVE — cross-mode interop (maintainer
-  directive, 2026-07-27); core SHIPPED, refinements remain.** Taking over the
-  C-series from `daw-suite` (handoff note above). **Shipped:** (1) **"Open &
+- **opus (tracker→editors)** · ✅ **DONE (idle) — cross-mode interop COMPLETE
+  (maintainer directive, 2026-07-27).** Took over the C-series from `daw-suite`
+  (handoff note above); the whole arc is now shipped. **Shipped:** (1) **"Open &
   replace via…"** (`fa9dbcda`) — the in-place twin of "Open a copy in…": a
   cross-mode edit round-trips back and REPLACES the clip (it becomes the edited
   mode), so mixing continues on it; the copy door stays (kept both, per
@@ -259,11 +263,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   groove clips get the cross-mode door** (`7164912e`) — `_clipSymbolicDoc` reads a
   drum beat as a percussion tracker song (beat→tracker, lossless) and a groove as
   its engraved score (`grooveParts`), on BOTH doors. Symbolic never flattened
-  until an explicit bounce. **Remaining:** Loop as a cross-mode TARGET (needs the
-  Loop Mixer seedable from a converted `List<PatternCell>` — its own-editor door
-  already opens groove clips); C4 tab fretting surviving inbound (via the
-  side-car); C5 Transcribe-this-clip (raw audio → symbolic). Touching
-  `daw_screen.dart` (interop only) + `open_in_menu.dart`; rebase-before-push.
+  until an explicit bounce. (3) **Loop as a cross-mode TARGET** (`d4408aff`) — the
+  Loop Mixer is seeded from a converted `List<PatternCell>` via a `GrooveSpec`
+  whose `voice` track holds them, so the once-dropped Loop edge is live on both
+  doors. (4) **C5 Transcribe-this-clip** — a raw-audio (`SampleSource`) clip now
+  has a **"Transcribe → notation"** inspector action: renders its PCM and runs the
+  pure-Dart monophonic transcriber (`transcribePcmToScore`, no model download) to
+  add a NEW `ScoreSource` clip; non-destructive (the audio stays). This is the
+  one-way door back the matrix always reserved for an explicit feature. (5) **C4
+  tab fretting inbound** — the mechanism already existed (`TabDocument.toScore`
+  records each string/fret in `Score.tabVoicings`, `fromScore` honours it), so a
+  tab that enters the DAW as a score keeps its exact fingering and re-opens in Tab
+  unchanged. Fixed the two STALE loss reports in `project_bridge.dart` that still
+  claimed the fretting was dropped: tab→score is now reported **lossless**, and
+  score→tab approximates **only** the notes lacking a stored voicing (a score that
+  came from tab warns about nothing). Truthful loss dialog. Tests: `transcribe_pcm_to_score_test`,
+  C5 group in `daw_open_a_copy_test`, C4 report group in `interop_fretting_carry_test`;
+  updated `open_in_menu_test` + `tab_rig_open_in_test` (tab→score no longer warns).
+  Touched `daw_screen.dart` (interop only), `project_bridge.dart`,
+  `transcription_service.dart` (additive helper). Now idle.
 
 - **opus (tracker→editors)** · ✅ **(prior, idle) §4 instrument macros COMPLETE, long
   tail included (2026-07-27)** (HISTORY → "Tracker instrument macros"). Macros run

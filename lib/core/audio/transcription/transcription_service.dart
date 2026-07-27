@@ -46,6 +46,37 @@ typedef TranscriptionResult = ({
 /// the probe (a user toggle), and [a4] for the tuning reference.
 ///
 /// Never throws on empty/degenerate audio — returns an empty-measure Score.
+/// Transcribe already-decoded mono PCM straight to a [Score] — the entry a DAW
+/// clip (which holds its samples, not a WAV file) uses to get notes back from
+/// audio. Same pipeline as [transcribeRecording] minus the WAV decode; defaults
+/// to the pure-Dart monophonic engine so it always runs with no model download.
+Future<Score> transcribePcmToScore(
+  Float64List mono, {
+  int sampleRate = 44100,
+  double a4 = 440,
+  NeuralTranscriber? neural,
+  F0Estimator? f0,
+  TranscriptionEngine? forceEngine = TranscriptionEngine.monophonic,
+}) async {
+  final routed = await transcribeAuto(
+    mono,
+    sampleRate: sampleRate,
+    a4: a4,
+    neural: neural,
+    f0: f0,
+    forceEngine: forceEngine,
+  );
+  final grid = detectRhythm(mono, sampleRate: sampleRate);
+  final meter = estimateMeter(grid);
+  final raw = transcribeToScore(
+    routed.notes,
+    grid,
+    beatsPerBar: meter.beatsPerBar,
+    clef: chooseClef(routed.notes),
+  );
+  return respell(raw, fifths: estimateKey(routed.notes).fifths);
+}
+
 Future<TranscriptionResult> transcribeRecording(
   Uint8List wavBytes, {
   double a4 = 440,

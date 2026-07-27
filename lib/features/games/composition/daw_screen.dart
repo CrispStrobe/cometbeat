@@ -38,6 +38,8 @@ import 'package:comet_beat/core/audio/synth.dart'
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
+import 'package:comet_beat/core/audio/transcription/transcription_service.dart'
+    show transcribePcmToScore;
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/interop/project_bridge.dart'
     show AppMode, ProjectBridge;
@@ -3874,6 +3876,12 @@ class _DawScreenState extends State<DawScreen>
                         if (_openAndReplaceIn(sheetCtx, track, index)
                             case final replaceIn?)
                           replaceIn,
+                        // C5 — the way back for a raw recording: no symbolic
+                        // model to convert, so transcribe its audio onto a new
+                        // notation clip (the audio stays).
+                        if (_transcribeAction(sheetCtx, track, index)
+                            case final transcribe?)
+                          transcribe,
                         // Split at the playhead — only when it falls inside the clip.
                         TextButton.icon(
                           onPressed: canSplitClip(track, index, playheadMs)
@@ -4028,6 +4036,63 @@ class _DawScreenState extends State<DawScreen>
   /// GROOVE as its engraved score (`grooveParts`) — so both get a cross-mode door
   /// too. Null for a raw recording (no symbolic model — Transcribe is the only
   /// route) or a purely-percussive groove (nothing to engrave).
+  /// C5 — the one-way door back. A raw-audio clip (a recording, an import, a
+  /// bounce) has no symbolic model to convert, so the only way to get notes out
+  /// of it is to *listen*: run the pure-Dart monophonic transcriber over its PCM
+  /// and drop the detected melody onto a NEW notation clip. Non-destructive —
+  /// the audio clip stays put; the score is a sibling you can then re-voice,
+  /// open in any editor, or bounce back. Null for any clip that already has a
+  /// symbolic model ([_clipSymbolicDoc] handles those; you'd never transcribe a
+  /// score back from its own audio).
+  Widget? _transcribeAction(BuildContext sheetCtx, int track, int index) {
+    final source = _daw.clipSourceAt(track, index);
+    if (source is! SampleSource && source is! StereoSampleSource) return null;
+    return TextButton.icon(
+      key: const ValueKey('transcribe-clip'),
+      onPressed: () => _transcribeClipToScore(sheetCtx, track, index),
+      icon: const Icon(Icons.lyrics_outlined),
+      label: const Text('Transcribe → notation'),
+    );
+  }
+
+  /// Renders the clip's PCM (whatever the source is) and transcribes it to a
+  /// score with the always-available monophonic engine (no model download), then
+  /// adds the result as a fresh, independently editable [ScoreSource] clip.
+  Future<void> _transcribeClipToScore(
+    BuildContext sheetCtx,
+    int track,
+    int index,
+  ) async {
+    final source = _daw.clipSourceAt(track, index);
+    Navigator.of(sheetCtx).pop();
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text('Transcribing the audio…')),
+      );
+    try {
+      final pcm = source.render(kDawSampleRate);
+      // kDawSampleRate is the transcriber's default rate; passing it would trip
+      // avoid_redundant_argument_values.
+      final score = await transcribePcmToScore(pcm);
+      if (!mounted) return;
+      _daw.addClip(ScoreSource.single(score));
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Added a notation clip transcribed from the audio.'),
+          ),
+        );
+    } catch (e) {
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('Could not transcribe: $e')));
+    }
+  }
+
   (AppMode, Object)? _clipSymbolicDoc(ClipSource source) {
     if (source is ScoreSource) return (AppMode.score, source.score);
     if (source is TrackerSource) return (AppMode.tracker, source.song);

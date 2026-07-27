@@ -157,4 +157,69 @@ void main() {
       }
     });
   });
+
+  group('the report matches what the side-car preserves (C4)', () {
+    test('tab → score no longer warns about lost fretting', () {
+      final out = ProjectBridge.convert(
+        from: AppMode.tab,
+        to: AppMode.score,
+        document: _tab(Tuning.standardGuitar),
+      );
+      // The string/fret choice rides in `tabVoicings`, so the conversion loses
+      // nothing — the old "string and fret choice (a score carries pitches)"
+      // warning was stale.
+      expect(out.report.lossless, isTrue);
+      final notes = [...out.report.lost, ...out.report.approximated]
+          .join(' ')
+          .toLowerCase();
+      expect(notes, isNot(contains('fret')));
+    });
+
+    test('score → tab does not invent a fingering when one is already stored',
+        () {
+      // A score that came FROM a tab carries a voicing per note, so the
+      // round-trip back honours it instead of re-arranging.
+      final fromTab = ProjectBridge.convert(
+        from: AppMode.tab,
+        to: AppMode.score,
+        document: _tab(Tuning.standardGuitar),
+      );
+      final back = ProjectBridge.convert(
+        from: AppMode.score,
+        to: AppMode.tab,
+        document: fromTab.document!,
+      );
+      expect(
+        back.report.lossless,
+        isTrue,
+        reason: 'every note had a stored voicing, so nothing was invented',
+      );
+    });
+
+    test('score → tab still warns for a hand-engraved score with no voicings',
+        () {
+      final plain = MultiPartScore([
+        Score(
+          clef: Clef.treble,
+          measures: [
+            Measure([
+              NoteElement.note(const Pitch(Step.c), NoteDuration.quarter),
+              NoteElement.note(const Pitch(Step.e), NoteDuration.quarter),
+            ]),
+          ],
+        ),
+      ]);
+      final out = ProjectBridge.convert(
+        from: AppMode.score,
+        to: AppMode.tab,
+        document: plain,
+      );
+      expect(
+        out.report.approximated,
+        isNotEmpty,
+        reason:
+            'no stored voicing means the fingering really is chosen for you',
+      );
+    });
+  });
 }

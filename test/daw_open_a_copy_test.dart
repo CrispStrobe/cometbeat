@@ -14,6 +14,7 @@
 // opens as a COPY — routing it back into the source clip would overwrite the
 // user's original with a degraded version of itself.
 
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/daw_sources.dart';
@@ -68,6 +69,19 @@ TrackerSong _song() => trackerSongFromMultiPart(_score());
 DrumRowsPattern _beat() => DrumRowsPattern({
       Drum.kick: [for (var i = 0; i < kPatternSteps; i++) i % 4 == 0],
     });
+
+/// A sustained A4 tone. Two seconds so the timeline clip is wide enough for its
+/// badge to be a reliable tap target (a sub-second clip squashes the badge under
+/// the corner status icon), and long enough for the monophonic transcriber to
+/// lock onto a note.
+Float64List _toneA4() {
+  const n = 2 * kDawSampleRate;
+  final out = Float64List(n);
+  for (var i = 0; i < n; i++) {
+    out[i] = 0.6 * sin(2 * pi * 440 * i / kDawSampleRate);
+  }
+  return out;
+}
 
 Future<void> _pumpDaw(WidgetTester tester) => pumpGame(
       tester,
@@ -376,6 +390,55 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.byType(CompositionWorkshopScreen), findsOneWidget);
+    });
+  });
+
+  group('C5 — the way back: transcribe a recording to notation', () {
+    // The complement to "a recording gets no cross-mode door". A waveform has no
+    // symbolic model to convert, but it can still be LISTENED to — the explicit
+    // transcription feature the earlier test promised. It appears only on raw
+    // audio and produces a NEW notation clip, leaving the recording in place.
+    testWidgets('a recording offers Transcribe → notation', (tester) async {
+      await _pumpDaw(tester);
+      _service(tester).addClip(SampleSource(_toneA4()));
+      await tester.pumpAndSettle();
+      await _openInspector(tester, '🎵');
+      expect(find.byKey(const ValueKey('transcribe-clip')), findsOneWidget);
+    });
+
+    testWidgets('a clip that already has notes does not offer it',
+        (tester) async {
+      await _pumpDaw(tester);
+      _service(tester).addClip(ScoreSource(_score()));
+      await tester.pumpAndSettle();
+      await _openInspector(tester, '🎼');
+      expect(find.byKey(const ValueKey('transcribe-clip')), findsNothing);
+    });
+
+    testWidgets('transcribing adds a new notation clip; the audio stays',
+        (tester) async {
+      await _pumpDaw(tester);
+      final service = _service(tester);
+      service.addClip(SampleSource(_toneA4()));
+      await tester.pumpAndSettle();
+      expect(service.clipCount, 1);
+      await _openInspector(tester, '🎵');
+
+      // Transcription is real CPU work behind an await; runAsync lets it finish.
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const ValueKey('transcribe-clip')));
+      });
+      await tester.pumpAndSettle();
+
+      expect(service.clipCount, 2);
+      var scoreClips = 0;
+      for (var t = 0; t < service.timeline.tracks.length; t++) {
+        final clips = service.timeline.tracks[t].clips;
+        for (var i = 0; i < clips.length; i++) {
+          if (service.clipSourceAt(t, i) is ScoreSource) scoreClips++;
+        }
+      }
+      expect(scoreClips, 1, reason: 'the transcription became a score clip');
     });
   });
 }

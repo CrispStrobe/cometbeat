@@ -111,21 +111,28 @@ void main() {
       expect(find.byKey(const ValueKey('open-in-audio')), findsNothing);
     });
 
-    testWidgets('Tab -> Score warns that the fingering will not come across',
+    testWidgets('Tab -> Score is lossless now, so it opens straight away',
         (t) async {
+      // The fingering used to be reported dropped on this edge. It is not:
+      // TabDocument.toScore records each string/fret in Score.tabVoicings (C4),
+      // so the score carries the exact fretting and the edge is lossless — it
+      // must open the Score editor directly, with no loss dialog.
       await _open(t);
       await t.tap(find.byKey(const ValueKey('open-in')));
       await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('open-in-score')));
-      await t.pumpAndSettle();
+      // Bounded pumps, not pumpAndSettle: this pushes the Composition Workshop,
+      // which animates — the timeout would be the route WORKING, not failing.
+      for (var i = 0; i < 6; i++) {
+        await t.pump(const Duration(milliseconds: 120));
+      }
 
-      expect(find.byKey(const ValueKey('open-in-loss-dialog')), findsOneWidget);
-      expect(find.textContaining('string and fret'), findsOneWidget);
-
-      await t.tap(find.byKey(const ValueKey('open-in-cancel')));
-      await t.pumpAndSettle();
-      // Cancelling leaves the user exactly where they were.
-      expect(find.byType(TabWorkshopScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('open-in-loss-dialog')), findsNothing);
+      expect(
+        find.byType(TabWorkshopScreen),
+        findsNothing,
+        reason: 'the Score editor was never pushed',
+      );
     });
 
     testWidgets('Tab -> Tracker is lossless, so it opens straight away',
