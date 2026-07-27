@@ -151,7 +151,12 @@ void main() {
           expect(pianoMidiVelocity(events[i]), closeTo(r['vel'] as num, 2));
         }
       },
-      timeout: const Timeout(Duration(minutes: 3)),
+      // Measured 2026-07-27 on the dev Mac: 6m32s alone. The old 3-minute
+      // budget never fired here — this test blocks in synchronous FFI
+      // inference, so the timer has no event loop to run on and the test
+      // overruns its own timeout silently. The budget is stated honestly now:
+      // long enough to be real, short enough to still catch a hang.
+      timeout: const Timeout(Duration(minutes: 15)),
     );
 
     test(
@@ -177,7 +182,13 @@ void main() {
           expect(events[i].onMs, closeTo((r['onMs'] as num).toDouble(), 15.0));
         }
       },
-      timeout: const Timeout(Duration(minutes: 3)),
+      // Measured 2026-07-27: 1m43s alone — but this one runs its inference in
+      // parallel isolates, so unlike the test above it leaves the event loop
+      // free and its timeout REALLY fires. Under a full-suite run, competing
+      // with the other model-gated work for the same cores, it crossed 3
+      // minutes and failed the whole suite for no defect. 1.75x headroom was
+      // never enough for a CPU-bound test sharing a machine.
+      timeout: const Timeout(Duration(minutes: 15)),
     );
   });
 }

@@ -218,19 +218,29 @@ is recorded in [HISTORY.md](HISTORY.md).
   2 fail. One fixed, one handed over.**
   1. ✅ `license_obligations_test.dart` — **origin/main was RED** since
      `c9ce38ab`. Fixed and pushed (`6c5b56d1`); triage in that commit.
-  2. ⬜ **@transcribe-w1** — `test/transcription/piano_test.dart` *"concurrent
-     transcriber (parallel-isolate segments) == reference"* fails with
-     `TimeoutException after 0:03:00` under full-suite load. **Not a defect:**
-     the file passes standalone (5/5, 5m51s), and its `timeout:` is declared as
-     3 minutes — too tight once the suite runs it in parallel with the other
-     model-gated work (Kokoro et al). **CI is unaffected** — the e2e tests
-     early-return when the ~99 MB model is absent, so this only bites a local
-     machine that HAS the model. Left for you rather than retuned by me, since
-     the budget is your call; the two shapes already used in this repo are a
-     larger `Timeout(...)` or an opt-in gate like the OpenMPT A/B audit.
-  ⚠️ Worth knowing generally: a local `flutter test` currently ends red on a
-  model-equipped machine for that reason alone, which makes it easy to dismiss a
-  REAL red — the licence one above sat on main until this run. — opus
+  2. ✅ **`piano_test.dart` timeouts — FIXED (maintainer asked me to take it).**
+     Timed both model-gated tests alone first, and the numbers told a better
+     story than "the budget is too tight":
+     · *runtime parity* — **6m32s alone, and it PASSES** against a declared
+       3-minute timeout. It overruns its own budget by more than double because
+       it blocks in synchronous FFI inference: with no free event loop the timer
+       never gets to fire, so that timeout was decorative.
+     · *concurrent transcriber* — **1m43s alone**, and its timeout DOES fire,
+       because it awaits parallel isolates and leaves the loop free. 1.75×
+       headroom for a CPU-bound test sharing a machine is not headroom, so a
+       full-suite run pushed it past 3 minutes and failed the suite for no
+       defect.
+     Both now declare **15 minutes**, with the measurements and the
+     blocking-vs-isolate asymmetry written at each site so nobody has to
+     re-derive why two neighbouring tests behave differently.
+     **Verified: a full `flutter test` now ends `All tests passed!` — 4694 pass ·
+     18 skip · 0 fail (32m52s), no failure markers anywhere in the log.**
+     @transcribe-w1: the parity test's inert timeout is yours to judge — making
+     it enforceable means not blocking the loop, which is a real change.
+  ⚠️ Worth keeping true: the suite ends GREEN again, so a red now means
+  something. Both of today's reds were found only because someone ran the whole
+  thing — the licence one had sat on main since `c9ce38ab`, unnoticed precisely
+  because the run always ended red anyway. — opus
 
 - **opus (notation-carry)** · ✅ **SHIPPED (idle) — dynamics, hairpins and chord
   diagrams cross every waypoint.** Last of the measured gaps from the
