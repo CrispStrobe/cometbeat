@@ -1180,6 +1180,125 @@ is recorded in [HISTORY.md](HISTORY.md).
   🔧 Tooling: `precut.py`'s upscale is capped by WIDTH, so tall narrow content still comes out
   small; a 3-column re-cut (`fine_cut.py`) gets 3x instead of 2x on this page.
 
+  **⭐⭐ MEASURED on Becker p.18's position table — and it found a defect no
+  finger-counting metric could see.** 72 hand frames, each 3 notes on one NAMED string in
+  one NAMED position, 24 of them marked `⁓⁓⁓` = extended. Arranged bar by bar (the table
+  has no melodic continuity, so one long sequence would invent shifts the page never implies):
+  `string 72/72 (100%) · ANCHOR 72/72 (100%) · finger 195/216 (90%) · frame 48/72 (67%)`.
+  • **The position axis is 100%.** That is the axis the literature calls hard (F1 .24–.31
+  across ten annotators) — on a labelled reference table our geometry reproduces it exactly.
+  Also independent confirmation of the naming fix: the page records `1ste Position` = 2
+  semitones above the open string, then 2te=3, 2te erhöhte=4, 3te=5, 3te erhöhte=6 — the
+  exact table now encoded in `celloPositionName`.
+  • 🐞 **But we choose an extension 0 times out of 24.** The diagnostic line:
+  `gold=EXTENDED · ours=neck,neck,neck · anchors=1,2,2 · fingers=1,2,4 · gold=1,2,4`.
+  We emit **Becker's exact fingering** and reach it by **shifting the hand mid-bar** instead
+  of extending a stationary one. Right fingers, wrong hand — and the wrong one: a mid-group
+  shift risks the audible glissando Becker forbids («die Hand nicht aus der gehabten Lage
+  bringen»). Cause is a weight ORDERING, not a missing feature: a 1-semitone anchor move
+  costs `shift × 1` while an extension costs `extension` per note held, so sliding is cheaper
+  than stretching for a short group and the extension modes never win.
+  • ⚠ **The lesson is about our metrics, not just our weights.** Every acceptance number we
+  have ever quoted counts FINGERS, and this defect is invisible to all of them — 90% finger
+  agreement sits on top of 0/24 frame agreement. It took a source that labels the frame
+  itself to surface it. Future fingering metrics should score the frame as well as the digit.
+  • **NOT fixed:** re-ordering `shift` vs `extension` moves every acceptance number, so it
+  needs the same LOPO protocol that validated `thumbEntry`. Best candidate is the **reshape
+  cost** already proposed from the Romberg E2 disagreement — a cellist pays to CHANGE hand
+  shape, not per note spent in one — which would address both findings at once.
+
+  **🐞 CAPABILITY GAP FOUND — our thumb frame has no 4th finger, and Becker devotes a
+  titled section to exactly that.** p.33: «**Übungen für den vierten Finger im Einsatz.**»
+  Our `thumbFrame: const [0, 2, 4, 5]` pairs with `[kThumb, 1, 2, 3]` — there is no 4th
+  finger in the state space at all, so a passage requiring one cannot be fingered correctly,
+  it can only be approximated. p.32 confirmed the no-4 frame and that reading stands; it is
+  the BASIC thumb position, not the whole technique.
+  **The geometry is pinned by the digits:** thumb on `g'`, 4th finger on `d''` = **+7
+  semitones above the thumb** (a fifth on one string — `quinten: T 4`), corroborated by
+  `terzengaenge: 2 4 3` where the 2 sits at +4, matching our existing `thumbFrame[2]`. So the
+  extended frame is **`[0, 2, 4, 5, 7]`** with `[kThumb, 1, 2, 3, 4]`.
+  ⚠ **Not implemented.** This ADDS states to the search rather than re-weighting it, so it
+  can only move numbers by making new frames reachable — measure the Becker floors and the
+  CC0/PD fixtures before and after, and keep it behind the existing `thumbFrame` data knob so
+  it stays instrument data, not code. Note the two pages are not in conflict: a model wanting
+  both needs the 4th finger to be OPTIONAL in the thumb frame (p.32 uses thumb-1-2-3
+  throughout), which argues for a separate `thumbFrameExtended` rather than widening the
+  default.
+  ✅ Also from p.33, all confirming earlier findings independently: thumb glyph is the
+  **stemmed zero** (no `+`, no `T`); the thumb stops **two strings at a pure fifth**; and
+  thumb placements sit at **10 and 12 semitones** above the open string — a SECOND independent
+  confirmation of the `thumbEntry: 10` shipped in `5c11cf90`.
+  ⚙️ Process note: this agent **died mid-report** (connection closed) and lost nothing — the
+  incremental-write rule had already put 123 notes / 111 digits and every finding on disk.
+  That rule is now load-bearing, not hygiene.
+
+  **🧪 TRIED AND REVERTED — lowering `extension` fixes the frame axis but costs real
+  repertoire. The per-note knob is the wrong lever.** Measured, not guessed:
+  `extension` 0.8 → 0.45 (the largest value at which the stretch still beats the slide —
+  the behaviour flips discretely between 0.60 and 0.45, so the exact number is not delicate):
+
+  | fixture | 0.8 | 0.45 |
+  |---|---|---|
+  | p18 frame agreement | 48/72 (0 extensions) | **65/72 (17)** ✅ |
+  | Becker scales, all | 54.9% | 55.6% ✅ |
+  | `neckPositions` on CC0 | 44.0% | 47.2% ✅ |
+  | **CC0 `advanced`** | **50.3%** | **46.1%** ❌ |
+  | exact-finger (axes) | 52.0% | 48.8% ❌ |
+
+  **Why it was reverted even though every test still passed.** It buys the frame axis by
+  losing 4.2 points on the expressive repertoire — the very fixture that justified the
+  `professional` weights — and it left the acceptance floor at 47.7% against a 47.0
+  threshold, far too thin to ship. The tests passing is not the bar; they pass because the
+  floors are floors.
+  **What it tells us about the model, which is the actual value here:** a per-note
+  `extension` cost is a single lever for two different situations. Becker's TABLES want a
+  stretch that is HELD across a group; expressive editions evidently shift readily and want
+  a single stretched note to stay expensive. Lowering the per-note cost makes extensions
+  cheap everywhere and cannot distinguish them.
+  → **The reshape cost is still the right shape** (a cellist pays to CHANGE hand shape, not
+  per note spent in one): it would let a held extension win in the tables while leaving a
+  one-note stretch as costly as it is today. That is the experiment to run next, and it must
+  clear BOTH the Becker frames and the CC0 repertoire, not one at the other's expense.
+  ⚠ **Two probe confounds worth knowing before anyone re-runs this** — both nearly produced a
+  wrong conclusion: (1) `BowedSkill.advanced` resolves to the `professional` profile
+  (`shift: 0.5, height: 0.0`), so passing a bare `BowedArrangeCost(extension: e)` silently
+  restores `shift: 1.0` and confounds the sweep; (2) p.18's bars must be grouped by
+  (system, bar, **string**) — grouping without the string merges four separate staves into
+  one sequence and invents shifts the page never implies. The first sweep I ran had both
+  bugs and showed a flat, meaningless curve.
+
+  **🛑 STOP TUNING — the frame axis and the finger axis are not simultaneously reachable
+  by any weight setting. This rules out a whole class of fix and is worth more than the
+  fix would have been.** Measured across all three profiles on p.18 (24 of 72 bars printed
+  extended):
+
+  | profile | frame | ours extended | finger |
+  |---|---|---|---|
+  | `firstPosition` | 38/72 | 36/24 | 39.8% |
+  | `neckPositions` (learner, shift 1.0) | 54/72 | 28/24 | 60.6% |
+  | `advanced` (professional, shift 0.5) | 48/72 | **0/24** | **90.3%** |
+
+  The learner profile ALREADY extends — 28 times, slightly MORE than Becker's 24 — because
+  an expensive shift makes sliding unattractive. Its frame agreement is the better one. But
+  its **finger agreement collapses to 60.6%** against `advanced`'s 90.3%: it extends in the
+  wrong places. So the setting that extends gets the fingers wrong, and the setting that gets
+  the fingers right never extends. There is no value of `extension`, and no existing profile,
+  that reaches both — as the earlier 0.8→0.45 sweep independently showed by trading 4.2pp of
+  repertoire for the frames.
+  **Also kills the reshape cost as stated.** A mode-change penalty cannot fix p.18: we never
+  change mode there. `advanced` stays in `neck` for all three notes and moves the ANCHOR
+  (1→2→2). What is wrong is a mid-group SHIFT, not a mid-group reshape.
+  **What the evidence actually points at**, for whoever picks this up: the missing term is a
+  preference for ONE HAND SHAPE PER GROUP — penalise an anchor change *inside* a slur/beam/
+  bar rather than globally, so expressive writing can still shift freely at phrase boundaries
+  while a three-note figure resolves to a single held frame. Note `slurShiftScale` (2.0)
+  is already the shape of this idea and is not enough on its own: at professional weights a
+  slurred 1-semitone shift still costs 1.0 against 2.4 to hold the stretch.
+  **This is a DESIGN change, not a tuning**, and it needs a grouping signal the arranger does
+  not currently receive (p.18's bars are only "groups" because the plate draws them so).
+  Anyone attempting it should clear BOTH the Becker frames and the CC0 repertoire; every
+  attempt so far has traded one for the other.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
