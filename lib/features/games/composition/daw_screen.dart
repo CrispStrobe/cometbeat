@@ -16,6 +16,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/beat_to_tracker.dart'
+    show drumSongFromBeat;
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/daw_edits.dart'
     show ClipStats, GeneratorShape, clipStatsOf;
@@ -24,7 +26,7 @@ import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/fx/fx_params.dart'
     show fxParamCaption, fxParamSpecs, fxSliderStep, fxTypeLabel;
 import 'package:comet_beat/core/audio/loop_engine.dart'
-    show DrumRowsPattern, LoopTiming, kPatternSteps;
+    show DrumRowsPattern, LoopEngine, LoopTiming, kPatternSteps;
 import 'package:comet_beat/core/audio/synth.dart'
     show Drum, kSampleRate, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
@@ -34,9 +36,12 @@ import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
 import 'package:comet_beat/core/interop/project_bridge.dart'
     show AppMode, ProjectBridge;
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/core/services/beat_bridge.dart' show SharedBeat;
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/automation_curve_editor.dart';
 import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
+import 'package:comet_beat/features/games/composition/groove_notation.dart'
+    show grooveParts;
 import 'package:comet_beat/features/games/composition/spectrogram_view.dart'
     show showSpectrogramDialog;
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
@@ -4004,8 +4009,36 @@ class _DawScreenState extends State<DawScreen>
     );
   }
 
+  /// The `(from-mode, document)` a clip exposes to the cross-mode doors, or null
+  /// when it has none. Score and Tracker clips hand their model directly; a DRUM
+  /// beat is read as a percussion tracker song (beat→tracker, lossless) and a
+  /// GROOVE as its engraved score (`grooveParts`) — so both get a cross-mode door
+  /// too. Null for a raw recording (no symbolic model — Transcribe is the only
+  /// route) or a purely-percussive groove (nothing to engrave).
+  (AppMode, Object)? _clipSymbolicDoc(ClipSource source) {
+    if (source is ScoreSource) return (AppMode.score, source.score);
+    if (source is TrackerSource) return (AppMode.tracker, source.song);
+    if (source is DrumSource) {
+      final beat = SharedBeat(
+        rows: source.pattern.rows,
+        tempoBpm: source.timing.tempoBpm,
+        swing: source.timing.swing,
+      );
+      return (AppMode.tracker, drumSongFromBeat(beat));
+    }
+    if (source is GrooveSource) {
+      final parts = grooveParts(
+        LoopEngine()..applySpec(source.spec),
+        nameOf: (id) => id,
+      );
+      return parts == null ? null : (AppMode.score, parts.score);
+    }
+    return null;
+  }
+
   /// C3 — "Open a copy in…" for a clip whose model is a document the
-  /// [ProjectBridge] can convert.
+  /// [ProjectBridge] can convert (now including drum + groove via
+  /// [_clipSymbolicDoc]).
   ///
   /// Distinct from the exact "Open in editor" door above it, and deliberately
   /// so. That one hands the clip's OWN model to its OWN editor and takes the
@@ -4028,17 +4061,10 @@ class _DawScreenState extends State<DawScreen>
   /// prevent.
   Widget? _openACopyIn(BuildContext sheetCtx, int track, int index) {
     final source = _daw.clipSourceAt(track, index);
-    final AppMode from;
-    final Object document;
-    if (source is ScoreSource) {
-      from = AppMode.score;
-      document = source.score;
-    } else if (source is TrackerSource) {
-      from = AppMode.tracker;
-      document = source.song;
-    } else {
-      return null;
-    }
+    final sym = _clipSymbolicDoc(source);
+    if (sym == null) return null;
+    final from = sym.$1;
+    final document = sym.$2;
     return OpenInMenu(
       from: from,
       documentBuilder: () => document,
@@ -4081,17 +4107,10 @@ class _DawScreenState extends State<DawScreen>
   /// Offered for the same clip kinds the copy door supports (score/tracker).
   Widget? _openAndReplaceIn(BuildContext sheetCtx, int track, int index) {
     final source = _daw.clipSourceAt(track, index);
-    final AppMode from;
-    final Object document;
-    if (source is ScoreSource) {
-      from = AppMode.score;
-      document = source.score;
-    } else if (source is TrackerSource) {
-      from = AppMode.tracker;
-      document = source.song;
-    } else {
-      return null;
-    }
+    final sym = _clipSymbolicDoc(source);
+    if (sym == null) return null;
+    final from = sym.$1;
+    final document = sym.$2;
     return OpenInMenu(
       from: from,
       documentBuilder: () => document,

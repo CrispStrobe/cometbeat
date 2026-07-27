@@ -116,17 +116,33 @@ void main() {
       expect(find.byKey(const ValueKey('open-in')), findsNothing);
     });
 
-    testWidgets('a beat does not — it still has its own door', (tester) async {
-      // A drum grid is not a ProjectBridge document, and the Drum Kit door
-      // (C2) already gives it an EXACT way home, which is strictly better than
-      // a conversion. Not a gap; a deliberate absence.
+    testWidgets('a beat now gets the cross-mode door too (via drum→tracker)',
+        (tester) async {
+      // Maintainer directive (reverses the earlier deliberate absence): a drum
+      // grid has no ProjectBridge document of its own, but it reads LOSSLESSLY
+      // as a percussion tracker song, so it earns the cross-mode door as well.
+      // Its exact Drum Kit "Open in editor" door stays too (strictly better when
+      // you just want the beat back).
       await _pumpDaw(tester);
       _service(tester)
           .addClip(DrumSource(_beat(), const LoopTiming(tempoBpm: 100)));
       await tester.pumpAndSettle();
       await _openInspector(tester, '🥁');
       expect(find.text('Open in editor'), findsOneWidget);
-      expect(find.byKey(const ValueKey('open-in')), findsNothing);
+      expect(find.byKey(const ValueKey('open-in')), findsOneWidget);
+    });
+
+    testWidgets('a groove gets it too (via grooveParts→score)', (tester) async {
+      // A groove with a pitched track engraves to a score, so it earns the
+      // cross-mode door; a purely-percussive groove would not (nothing to
+      // engrave) — that's the grooveParts-null case.
+      await _pumpDaw(tester);
+      _service(tester)
+          .addClip(GrooveSource(const GrooveSpec(enabled: {'melody'})));
+      await tester.pumpAndSettle();
+      await _openInspector(tester, '🎛️');
+      expect(find.text('Open in editor'), findsOneWidget);
+      expect(find.byKey(const ValueKey('open-in')), findsOneWidget);
     });
   });
 
