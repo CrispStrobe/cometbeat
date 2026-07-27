@@ -139,8 +139,13 @@ is recorded in [HISTORY.md](HISTORY.md).
   not all named `daw_*`.
   — opus
 
-- **opus (tracker→editors)** · ✅ **IDLE — instrument macros (§4) shipped; grid
-  ergonomics (§3.3) was already built.** §4 CORE done (HISTORY → "Tracker
+- **opus (tracker→editors)** · ✅ **IDLE — §4 instrument macros shipped for BOTH
+  additive + sample voices** (HISTORY → "Tracker instrument macros"). `MacroSequence`
+  model; per-tick vol/pitch/arp application in the additive AND sample
+  (`_renderSampleChannelInto`) voices; opt-in/byte-identical (105 goldens green);
+  codec-persisted. §3.3 grid ergonomics was already built (roadmap corrected).
+  Remaining (task #46, open): variable-timing sample path, pan/duty targets, a
+  macro editor UI, and §3.3 block-op test coverage. Now idle. §4 CORE done (HISTORY → "Tracker
   instrument macros"): `MacroSequence` model + per-tick application in the
   ADDITIVE voice, opt-in/byte-identical, codec-persisted. **§3.3 needed no work —
   it's already implemented** (`advanced_tracker_screen.dart`: Shift+arrow
