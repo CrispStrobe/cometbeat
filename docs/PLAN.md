@@ -23,6 +23,19 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> ⚠️ **Do NOT `git stash` in these worktrees (learned the hard way 2026-07-27).**
+> The stash stack lives in the REPO, not the worktree, so `mus`, `mus-interop`,
+> `mus-tests`, `mus-daw-suite`… all share one. With several agents active, a
+> `stash` / `stash pop` pair is not a safe round trip: someone else can push a
+> stash in between, and you pop THEIR work into YOUR tree — it landed 10 `UU`
+> conflicts in tracker files, and the commit it was guarding silently did not
+> happen. Use `git add <named files> && git commit`, then
+> `git fetch origin main && git rebase origin/main`. Avoid `git add -A`: the
+> tree usually holds other agents' untracked scratch files. If a pop does go
+> wrong the stash entry is KEPT, so `git reset --hard HEAD` is safe for them —
+> check `git stash list` is the same length before and after, and back your own
+> new files up outside the repo first.
+
 > **Board swept 2026-07-25.** The 114 `✅ SHIPPED/idle` entries that had
 > accumulated here were condensed into [HISTORY.md](HISTORY.md) → *"2026-07-25 —
 > Documentation consolidation"*. Pending work is on the canonical
