@@ -4174,44 +4174,68 @@ bool songUsesVariableTiming(TrackerSong song) {
   return false;
 }
 
-/// The wall-clock duration (ms) of a played row, honouring BOTH its tempo and
-/// its SPEED (ticks/row). Classic tracker tick duration is `2500 / BPM` ms, so
-/// a row is `speed * 2500 / BPM`. At speed 6 this matches the app's default
-/// 4-steps-per-beat grid: `6 * 2500 / BPM == 60000 / BPM / 4`.
-int _rowMsFor(int tempoBpm, int ticks) =>
-    ((ticks <= 0 ? kDefaultTicksPerRow : ticks) * 2500 / tempoBpm).round();
+// There used to be a `_rowMsFor(tempo, ticks)` here returning a row's duration
+// ROUNDED to whole milliseconds, and four callers that accumulated its result.
+// That rounding is precisely the bug [rowOnsets] exists to remove, so the
+// function is gone rather than left available: every row boundary, in
+// milliseconds or in samples, now comes from one exact accumulator. If you find
+// yourself wanting a single row's duration as an int, take the difference of
+// two `rowOnsets` entries instead of reintroducing the rounding.
+
+/// The onset of each played row, in units of [perSecond] units per second —
+/// 1000 for milliseconds, [kSampleRate] for samples. The result has
+/// `played.length + 1` entries; the last is the end of the song.
+///
+/// What matters here is WHERE the rounding happens. A classic tracker row lasts
+/// `speed * 2.5 / bpm` seconds, which is a whole number of milliseconds only at
+/// convenient tempos: 125 BPM at speed 6 is exactly 120 ms, but 160 BPM is
+/// 93.75 and 80 BPM is 187.5. Rounding each row and then ADDING the rounded
+/// values compounds the error in one direction forever.
+///
+/// It was doing exactly that. On `test/fixtures/flow/tempo_change_Fxx.mod` our
+/// render came out 20.720 s where libopenmpt, libxmp and NodMOD all agree on
+/// 20.670 — 50 ms long, from +0.25 ms on each of 24 rows at 160 BPM and +0.5 ms
+/// on each of 88 rows at 80 BPM. The error is unbounded: it grows with the row
+/// count, so a long module at an awkward tempo drifts by seconds, and the
+/// playhead drifts against the audio because both read this.
+///
+/// Accumulating the exact duration and rounding only at each boundary holds the
+/// error below half a unit no matter how long the song is. (PLAN.md §6 X5.)
+List<int> rowOnsets(List<PlayedRow> played, int defaultBpm, int perSecond) {
+  final out = List<int>.filled(played.length + 1, 0);
+  var seconds = 0.0;
+  for (var i = 0; i < played.length; i++) {
+    out[i] = (seconds * perSecond).round();
+    final bpm = played[i].tempoBpm > 0 ? played[i].tempoBpm : defaultBpm;
+    final ticks = played[i].ticksPerRow <= 0
+        ? kDefaultTicksPerRow
+        : played[i].ticksPerRow;
+    seconds += ticks * 2.5 / bpm;
+  }
+  out[played.length] = (seconds * perSecond).round();
+  return out;
+}
 
 /// The accumulated onset (ms) of each played row, honouring per-row tempo. Entry
 /// `i` is the ms offset where played row `i` begins; the sum of all step
 /// durations is the song length ([variableSongTotalMs]).
-List<int> _variableRowStartMs(TrackerSong song, List<PlayedRow> played) {
-  final def = song.timing.tempoBpm;
-  final starts = List<int>.filled(played.length, 0);
-  var acc = 0;
-  for (var i = 0; i < played.length; i++) {
-    starts[i] = acc;
-    acc += _rowMsFor(
-      played[i].tempoBpm > 0 ? played[i].tempoBpm : def,
-      played[i].ticksPerRow,
-    );
-  }
-  return starts;
-}
+List<int> _variableRowStartMs(TrackerSong song, List<PlayedRow> played) =>
+    rowOnsets(played, song.timing.tempoBpm, 1000).sublist(0, played.length);
 
 /// The total song length (ms) as the SUM of per-row durations under a mid-song
 /// tempo change — used by [TrackerSong.songTotalMs] when [songUsesVariableTiming].
-int variableSongTotalMs(TrackerSong song) {
-  final played = walkFlow(song);
-  final def = song.timing.tempoBpm;
-  var ms = 0;
-  for (final p in played) {
-    ms += _rowMsFor(
-      p.tempoBpm > 0 ? p.tempoBpm : def,
-      p.ticksPerRow,
-    );
-  }
-  return ms;
-}
+int variableSongTotalMs(TrackerSong song) =>
+    rowOnsets(walkFlow(song), song.timing.tempoBpm, 1000).last;
+
+/// The total song length in SAMPLES under a mid-song tempo/speed change.
+///
+/// Deliberately not `songTotalMs * kSampleRate / 1000`: milliseconds are a
+/// coarser grid than samples (one ms is 44.1 of them), so going through the
+/// rounded millisecond total put the transport up to a millisecond away from
+/// the render it is supposed to describe. Both now come from the same exact
+/// accumulator, so they agree to the sample.
+int variableSongTotalSamples(TrackerSong song) =>
+    rowOnsets(walkFlow(song), song.timing.tempoBpm, kSampleRate).last;
 
 /// Expands [song]'s order/pattern/row walk under the flow rules (Bxx jump, Dxx
 /// break, E6x pattern loop) into the flat sequence of rows actually played. Bxx
@@ -4785,17 +4809,16 @@ ReplayResult _replayVariable(TrackerSong song, {PcmDither? dither}) {
   final n = played.length;
 
   // Per-row sample boundaries: rowStart[i]..rowStart[i+1] is played row i.
-  final rowStart = List<int>.filled(n + 1, 0);
+  // Exact, via [rowOnsets] — this is the MONO variable path, and it is the one
+  // I missed when the stereo path was made exact. The suite caught it as the
+  // render disagreeing with `songTotalSamples`: half the renderer had stopped
+  // compounding its rounding and half had not.
+  final rowStart = rowOnsets(played, def, kSampleRate);
   final ticks = List<int>.filled(n, kDefaultTicksPerRow);
-  var acc = 0;
   for (var i = 0; i < n; i++) {
-    rowStart[i] = acc;
     ticks[i] = played[i].ticksPerRow;
-    final tempo = played[i].tempoBpm > 0 ? played[i].tempoBpm : def;
-    final stepMs = _rowMsFor(tempo, played[i].ticksPerRow);
-    acc += (stepMs * kSampleRate / 1000).round();
   }
-  rowStart[n] = acc;
+  final acc = rowStart[n];
 
   final mix = Float64List(acc);
   for (var c = 0; c < channels.length; c++) {
@@ -5273,17 +5296,14 @@ const _nativeTickFullBufferLimit = kSampleRate * 120;
   final def = song.timing.tempoBpm;
   final n = played.length;
 
-  final rowStart = List<int>.filled(n + 1, 0);
+  // Sample boundaries straight from the exact row durations — NOT from the
+  // per-row millisecond value, which rounds and compounds (see [rowOnsets]).
+  final rowStart = rowOnsets(played, def, kSampleRate);
   final ticks = List<int>.filled(n, kDefaultTicksPerRow);
-  var acc = 0;
   for (var i = 0; i < n; i++) {
-    rowStart[i] = acc;
     ticks[i] = played[i].ticksPerRow;
-    final tempo = played[i].tempoBpm > 0 ? played[i].tempoBpm : def;
-    acc +=
-        (_rowMsFor(tempo, played[i].ticksPerRow) * kSampleRate / 1000).round();
   }
-  rowStart[n] = acc;
+  final acc = rowStart[n];
 
   final left = Float32List(acc);
   final right = Float32List(acc);
@@ -5761,16 +5781,15 @@ class _FlowVarLayout {
         variable = songUsesVariableTiming(song) {
     final n = played.length;
     if (variable) {
-      final def = song.timing.tempoBpm;
-      var acc = 0;
-      for (var i = 0; i < n; i++) {
-        rowStart[i] = acc;
-        ticks[i] = played[i].ticksPerRow;
-        final tempo = played[i].tempoBpm > 0 ? played[i].tempoBpm : def;
-        acc += (_rowMsFor(tempo, played[i].ticksPerRow) * kSampleRate / 1000)
-            .round();
+      // Exact sample boundaries — see [rowOnsets]; deriving them from the
+      // rounded per-row millisecond value compounded the error.
+      final onsets = rowOnsets(played, song.timing.tempoBpm, kSampleRate);
+      for (var i = 0; i <= n; i++) {
+        rowStart[i] = onsets[i];
       }
-      rowStart[n] = acc;
+      for (var i = 0; i < n; i++) {
+        ticks[i] = played[i].ticksPerRow;
+      }
       flatTiming = null;
     } else {
       final base = effectiveTiming(song);

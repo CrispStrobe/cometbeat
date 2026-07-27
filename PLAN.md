@@ -1701,6 +1701,75 @@ longer period is a lower pitch) while the semitone fallback still added to the
 pitch, so flipping the gate reversed which way every vibrato started. Both
 branches now bend down.
 
+#### X5 CLOSED (2026-07-27) — and it found row timing drifting without bound
+
+`test/mod_flow_timeline_test.dart` compares our `resolveTimingMap` against
+**NodMOD** (github.com/erodola/nodmod, MIT), which walks a module's order list
+in Python and yields every visited row with its onset, speed and tempo. Frozen
+into `test/fixtures/flow/nodmod_timeline.json` by
+`tool/nodmod_timeline_oracle.py` rather than shelled out to at test time — which
+is the point: **this is the first piece of the replay audit that runs on CI.**
+Everything else needs `openmpt123` / `xmp` / `mod2wav` and is opt-in, so the
+numbers that found the vibrato rate and the IT break never guard a push.
+
+Six order-list shapes × three formats: `Dxx` break to row 16, `Dxx` break to row
+0, `Bxx` jump interacting with a break, `E6x` pattern loop, mid-song speed
+change, mid-song tempo change.
+
+**The find: our row onsets accumulated rounding, without bound.** A row lasts
+`speed * 2.5 / bpm` seconds, which is a whole number of milliseconds only at
+convenient tempos — 125 BPM at speed 6 is exactly 120 ms, but 160 BPM is 93.75
+and 80 BPM is 187.5. `_rowMsFor` rounded EACH row and the callers added the
+rounded values, so the error only ever grew in one direction:
+
+| | ours | libopenmpt / libxmp / NodMOD |
+| --- | --- | --- |
+| `tempo_change_Fxx.mod` render | 20.720 s | **20.670 s** |
+| last row onset | 20.532 s | **20.483 s** |
+
++0.25 ms on each of 24 rows at 160 BPM, +0.5 ms on each of 88 rows at 80 BPM =
+the 50 ms measured. It is **unbounded** — 4000 rows at 160 BPM drift a full
+second — and it reached BOTH the audio and the playhead, because the sample
+counts were derived from the rounded millisecond value rather than from the tick
+duration. So a long module at an awkward tempo rendered the wrong LENGTH and its
+playhead slid against its own audio. 125 BPM at speed 6 happens to be exact,
+which is why the default fixtures never showed it.
+
+Fixed with one shared `rowOnsets(played, defaultBpm, perSecond)` that accumulates
+the exact duration and rounds only at each boundary — error below half a unit
+forever, whatever the length. Verified red-then-green by restoring the old
+arithmetic: it fails at row 23 of `tempo_change_Fxx.mod`.
+
+`_rowMsFor` — the round-a-single-row-to-whole-milliseconds helper — is **deleted**
+rather than left available, since its rounding was the bug. Every row boundary,
+in milliseconds or samples, now comes from the one accumulator.
+
+⚠️ **Converting the FIRST four call sites left a fifth, and the suite caught it.**
+The mono variable render path had its own copy of the accumulate-rounded loop, so
+for a while the stereo renderer was exact and the mono one was not. It surfaced
+as `midsong_timing_acceptance_test` failing on render-vs-`songTotalSamples`
+(135 samples apart), not as anything that looked like timing — a half-converted
+invariant reads as an unrelated inconsistency. `songTotalSamples` was also
+derived as `songTotalMs * rate / 1000`; a millisecond is 44.1 samples, so the
+transport sat up to a millisecond from the render it describes. It now shares
+the accumulator too, and the two agree to the sample.
+
+**⚠️ The oracle is not ground truth everywhere, and checking it first paid.**
+Two entries are deliberately excluded, with reasons recorded in the generator:
+
+- `pattern_loop_E6x.s3m` — NodMOD's S3M walker handles A/T/B/C/SE but **not
+  `SBx`**, S3M's pattern loop, so it reports 128 rows where the loop makes it
+  146. Both audio references render 17.5 s, agreeing with 146 — i.e. **we are
+  right and the oracle is incomplete.** Pinning our correct behaviour to it would
+  have been a self-inflicted bug.
+- `pattern_loop_E6x.xm` — libopenmpt renders 16.66 s, libxmp 17.52 s. The
+  **references disagree with each other** about FT2's loop-counter semantics, so
+  there is no ground truth to freeze. ⬜ Open question, not a defect of ours.
+
+IT has no NodMOD walker at all, which is exactly why the ladder calls it the
+highest-risk reader: fewest oracles, most features. Its flow is covered here only
+indirectly, through the audio sweep.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,
@@ -1729,7 +1798,8 @@ obvious on a sustained one.
 "both nibbles set" ambiguity ProTracker and later trackers resolve differently,
 and interaction with `5xy`/`6xy` (porta/vibrato + volume slide combinations).
 
-**X5 — Timing/flow against NodMOD.** `iter_playback_rows()` yields
+✅ **X5 — Timing/flow against NodMOD.** DONE, see above — and it is the first
+CI-able piece of the audit. `iter_playback_rows()` yields
 (pattern, row, start_sec, end_sec, speed, tempo) from an independent
 implementation. Compare against our `songFlowTimeline`/`resolveTimingMap` over
 a corpus of order-list shapes: `Bxx` jumps, `Dxx` breaks, `E6x` pattern loops,

@@ -27,7 +27,7 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/mod/module_convert.dart';
 import 'package:comet_beat/core/audio/mod/module_doc.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
-    show kFxPatternBreak, kFxPositionJump;
+    show kFxExtended, kFxPatternBreak, kFxPositionJump, kFxSetSpeed;
 
 const _rows = 64;
 const _channels = 4;
@@ -62,12 +62,24 @@ int _breakParam(int row) => ((row ~/ 10) << 4) | (row % 10);
 /// A pattern whose rows carry a note every [every] rows, so the render has
 /// enough structure for a misplaced landing row to show up as a different
 /// sequence rather than just a different length.
-DocPattern _notes(int pattern, {int every = 4, DocCell? lastRow}) {
+///
+/// [at] replaces channel 0's cell on the named rows — that is where the flow
+/// commands go. A replaced row loses its note, which is deliberate: a flow
+/// command that fires on a row you can HEAR is ambiguous in a timeline diff,
+/// because you cannot tell a missing row from a silent one.
+DocPattern _notes(
+  int pattern, {
+  int every = 4,
+  DocCell? lastRow,
+  Map<int, DocCell> at = const {},
+}) {
   return DocPattern(
     [
       for (var r = 0; r < _rows; r++)
         [
-          if (r == _rows - 1 && lastRow != null)
+          if (at.containsKey(r))
+            at[r]!
+          else if (r == _rows - 1 && lastRow != null)
             lastRow
           else if (r % every == 0)
             // Walk the scale so each row is distinguishable by ear and by
@@ -148,6 +160,77 @@ void main() {
           effectParam: 2,
         ),
       ),
+      _notes(2),
+    ]),
+  );
+
+  // E6x — pattern loop. E60 marks the loop start, E6x jumps back to it x more
+  // times. Rows 8..16 therefore play THREE times: once through, then twice more.
+  //
+  // This is the flow command with the most implementation-defined corners (where
+  // the loop point lives when a pattern is re-entered, whether the counter is
+  // per-channel, what a nested loop does), so it is the one most worth holding
+  // against an independent implementation rather than against our own reading.
+  _emit(
+    'pattern_loop_E6x',
+    doc('flow pattern loop', _twoPatterns, [
+      _notes(
+        0,
+        at: {
+          8: const DocCell(effect: kFxExtended, effectParam: 0x60),
+          16: const DocCell(effect: kFxExtended, effectParam: 0x62),
+        },
+      ),
+      _notes(1),
+    ]),
+  );
+
+  // Fxx below 0x20 — mid-song SPEED (ticks per row). Halving the speed halves
+  // every subsequent row's duration, so a timeline that applies the change one
+  // row late, or applies it to the wrong side of the row, drifts visibly and
+  // never recovers.
+  _emit(
+    'speed_change_Fxx',
+    doc('flow speed change', _twoPatterns, [
+      _notes(
+        0,
+        at: {
+          16: const DocCell(effect: kFxSetSpeed, effectParam: 0x03),
+          32: const DocCell(effect: kFxSetSpeed, effectParam: 0x0C),
+        },
+      ),
+      _notes(
+        1,
+        at: {8: const DocCell(effect: kFxSetSpeed, effectParam: 0x06)},
+      ),
+    ]),
+  );
+
+  // Fxx at 0x20 and above — mid-song TEMPO (BPM). Same command, different
+  // meaning by threshold, which is exactly the sort of overload a reader gets
+  // half right: 0x20 must be a tempo of 32, not a speed of 32.
+  _emit(
+    'tempo_change_Fxx',
+    doc('flow tempo change', _twoPatterns, [
+      _notes(
+        0,
+        at: {
+          16: const DocCell(effect: kFxSetSpeed, effectParam: 0xA0), // 160 BPM
+          40: const DocCell(effect: kFxSetSpeed, effectParam: 0x50), // 80 BPM
+        },
+      ),
+      _notes(1),
+    ]),
+  );
+
+  // Dxx with a zero parameter — by far the commonest break in real modules, and
+  // the one case where decimal and hex agree, so it isolates "does the break
+  // fire at all" from "is the row decoded right".
+  _emit(
+    'break_row0',
+    doc('flow break row0', _threePatterns, [
+      _notes(0, lastRow: const DocCell(effect: kFxPatternBreak)),
+      _notes(1, at: {31: const DocCell(effect: kFxPatternBreak)}),
       _notes(2),
     ]),
   );

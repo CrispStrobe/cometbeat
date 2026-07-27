@@ -1032,7 +1032,18 @@ class TrackerSong {
 
   /// Total rendered song length in samples (sums each played pattern's own
   /// length under [songTotalMs]).
-  int get songTotalSamples => (songTotalMs * kSampleRate) ~/ 1000;
+  /// The song length in samples.
+  ///
+  /// Under a mid-song tempo/speed change this comes from the same exact
+  /// accumulator the renderer uses, NOT from `songTotalMs * rate / 1000` — a
+  /// millisecond is 44.1 samples, so routing through the rounded millisecond
+  /// total left the transport up to a millisecond away from the render it
+  /// describes.
+  int get songTotalSamples {
+    syncCurrent();
+    if (songUsesVariableTiming(this)) return variableSongTotalSamples(this);
+    return (songTotalMs * kSampleRate) ~/ 1000;
+  }
 
   // --- Bounded-memory streaming / range export ---------------------------
   //
