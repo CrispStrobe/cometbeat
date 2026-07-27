@@ -74,6 +74,10 @@ void main() {
         'biquadRaw',
         'sincFilter',
         'hilbert',
+        // A3 — the dynamics, appended for the same reason.
+        'limiter',
+        'deEsser',
+        'multibandCompressor',
       ]);
     });
   });

@@ -305,6 +305,10 @@ const kDawClipEffectTypes = <DawClipEffectType>[
   DawClipEffectType.convolutionReverb,
   DawClipEffectType.compressor,
   DawClipEffectType.gate,
+  // A3 — with the other dynamics.
+  DawClipEffectType.limiter,
+  DawClipEffectType.deEsser,
+  DawClipEffectType.multibandCompressor,
   DawClipEffectType.pitchShift,
   DawClipEffectType.timeStretch,
   DawClipEffectType.tremolo,

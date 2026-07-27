@@ -125,11 +125,11 @@ Status key: ✅ have it · 🔶 partial · ⬜ to build.
 | Op | Meaning | Status |
 |---|---|---|
 | compressor / gate | threshold·ratio·knee·attack·release·makeup | ✅ |
-| companding, multi-segment | a piecewise dB-in→dB-out transfer curve with its own attack/decay — the general case that subsumes compressor, expander and gate | ⬜ A3 |
-| multiband companding | crossover into N bands, a curve per band | ⬜ A3 |
-| look-ahead limiter | true ceiling with no pumping (master's tanh knee is a soft-clip, not a limiter) | ⬜ A3 |
-| expander / downward expansion | the gate's continuous cousin | ⬜ A3 |
-| de-esser | band-sidechained compression | ⬜ A3 |
+| companding, multi-segment | ⛔ **dropped** — an N-point transfer curve cannot live in `FxSpec.params` (a fixed map of *named* doubles), the same limit that dropped arbitrary FIR. `compressor` + `gate` span the two-slope shape. |
+| multiband compression | 3 bands, a detector each; splitter reconstructs exactly | ✅ |
+| look-ahead limiter | true ceiling, no overshoot on the first transient | ✅ |
+| expander / downward expansion | ✅ already — `gate` IS a downward expander (threshold·ratio·range); a second name for it was dropped |
+| de-esser | band-split compression — the body does not pump | ✅ |
 | overdrive / distortion / bit-crush | | ✅ |
 
 ### A4 — Channels & stereo field
@@ -273,7 +273,7 @@ F2  bin/fxproc.dart regenerated from the registry      ✅ SHIPPED
 F2b the GUI's label + param tables deleted, derived    ✅ SHIPPED (unplanned)
 F3  chain string as copy/paste preset in the GUI
 
-A1  filter zoo ✅     A3  dynamics zoo        A4  channel/stereo zoo
+A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo
 A5  restoration       A6  time/pitch          A2  tone curves      A7  generators
 
 B1  pad/repeat/split-on-silence/splice        B3  full stats

@@ -21,7 +21,14 @@ import 'package:comet_beat/core/audio/crisp_dsp/convolution_reverb.dart'
 import 'package:comet_beat/core/audio/crisp_dsp/distortion.dart'
     show DistortionKind, distortionFx;
 import 'package:comet_beat/core/audio/crisp_dsp/dynamics.dart'
-    show compressorFx, compressorFxStereo, gateFx, gateFxStereo;
+    show
+        compressorFx,
+        compressorFxStereo,
+        deEsserFx,
+        gateFx,
+        gateFxStereo,
+        lookaheadLimiterFx,
+        multibandCompressorFx;
 import 'package:comet_beat/core/audio/crisp_dsp/fir.dart'
     show FirShape, hilbertFx, sincFilterFx;
 import 'package:comet_beat/core/audio/crisp_dsp/lfo.dart' show lfoValue;
@@ -401,6 +408,39 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
     FxType.hilbert => hilbertFx(
         input,
         taps: p('taps', 127).round(),
+        mix: p('mix', 1),
+      ),
+    // A3.
+    FxType.limiter => lookaheadLimiterFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        ceilingDb: p('ceilingDb', -0.3),
+        lookaheadMs: p('lookaheadMs', 5),
+        releaseMs: p('releaseMs', 100),
+        mix: p('mix', 1),
+      ),
+    FxType.deEsser => deEsserFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        freq: p('freq', 6000),
+        thresholdDb: p('thresholdDb', -28),
+        ratio: p('ratio', 6),
+        attackMs: p('attackMs', 1),
+        releaseMs: p('releaseMs', 60),
+        mix: p('mix', 1),
+      ),
+    FxType.multibandCompressor => multibandCompressorFx(
+        input,
+        sampleRate: sampleRate.toDouble(),
+        lowHz: p('lowHz', 200),
+        highHz: p('highHz', 3000),
+        thresholdDb: p('thresholdDb', -24),
+        lowRatio: p('lowRatio', 1),
+        midRatio: p('midRatio', 1),
+        highRatio: p('highRatio', 1),
+        attackMs: p('attackMs', 10),
+        releaseMs: p('releaseMs', 120),
+        makeupDb: p('makeupDb', 0),
         mix: p('mix', 1),
       ),
     FxType.compressor => compressorFx(

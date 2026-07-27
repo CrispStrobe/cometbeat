@@ -158,9 +158,11 @@ is recorded in [HISTORY.md](HISTORY.md).
   saved project keeps its clips **editable**, not just audible · C2 drum +
   groove round-trip, so every source kind the DAW holds can now go home · C3
   cross-mode "Open a copy in…" (hosting the already-built `OpenInMenu`, which
-  had no host).
-  **Next:** A3 dynamics (compand/multiband/limiter) · A4 channel & stereo ops ·
-  C4 tab fretting surviving the trip inbound · C5 "Transcribe this clip".
+  had no host) · A3 dynamics (look-ahead limiter · de-esser · multiband).
+  **Next:** A4 channel & stereo ops (remix matrix · swap · mid/side ·
+  out-of-phase extraction · crossfeed) · A5 restoration (spectral noise
+  reduction is the big one) · C4 tab fretting surviving the trip inbound ·
+  C5 "Transcribe this clip".
   ⚠ **Interop status, precisely:** every clip kind opens its OWN editor exactly
   (score/tab/tracker/drum/groove — no conversion, nothing approximated) and that
   survives a save; score and tracker clips can additionally open a CONVERTED
@@ -1271,10 +1273,30 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
     design, not a slice of this one.
 - [ ] **A2 tone curves** — tilt EQ · loudness compensation · de-emphasis curves ·
   presence/contrast.
-- [ ] **A3 dynamics** — multi-segment **companding** (the general case that
-  subsumes compressor/expander/gate) · **multiband** companding · look-ahead
-  **limiter** (the master's tanh knee is a soft-clip, not a limiter) · expander ·
-  de-esser.
+- [x] **A3 dynamics** — a **look-ahead limiter**, a **de-esser** and a
+  **multiband compressor**. Re-scoped against the code first, which changed the
+  list:
+  * `gateFx` is already documented and built as a downward EXPANDER (threshold ·
+    ratio · range), so a separate `expander` would have been a second name for
+    the same thing — dropped rather than duplicated;
+  * `limiterFx` already existed but was **dead code** (defined, never called,
+    never exposed) *and* is a fast compressor, which is not a limiter: its gain
+    comes from a peak it has already passed, so the transient that triggered it
+    goes out over the ceiling. New `lookaheadLimiterFx` delays the signal while
+    the detector reads ahead, so the gain is already down when the peak arrives.
+    A test pins exactly this, comparing the two — the old one overshoots to 0.6+
+    where the new one holds the ceiling;
+  * ⛔ **arbitrary multi-segment companding is NOT built**, for the same reason
+    arbitrary FIR was dropped in A1: an N-point transfer curve cannot live in
+    `FxSpec.params` (a fixed map of NAMED doubles). Compressor + gate already
+    span the two-slope shape, which is the useful case.
+  * the multiband splitter is **A1's payoff**: it splits with the complementary
+    one-poles, so the three bands sum back to the input EXACTLY and an untouched
+    multiband compressor is a true no-op (asserted). A splitter that did not
+    reconstruct would put a notch at every crossover.
+  Tests: `dynamics_zoo_fx_test` (13), each asserting the PROPERTY that makes the
+  effect what it claims to be — dynamics are the easiest DSP to test wrongly,
+  because "it got quieter" passes for almost any bug.
 - [ ] **A4 channels/stereo** — swap · **remix matrix** · mid/side encode+decode ·
   out-of-phase (centre-cancel) extraction · headphone crossfeed · balance ·
   auto-pan.

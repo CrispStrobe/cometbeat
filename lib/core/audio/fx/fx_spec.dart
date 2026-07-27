@@ -196,6 +196,21 @@ enum FxType {
   /// Hilbert transformer: every frequency shifted 90°, magnitudes untouched.
   /// The building block the stereo-field tools are made of.
   hilbert,
+
+  // A3 — the dynamics the rack was missing. Appended, as always.
+
+  /// A LOOK-AHEAD peak limiter — nothing leaves above the ceiling. Distinct
+  /// from [compressor] at a high ratio, which computes its gain from a peak it
+  /// has already passed and therefore lets that peak out.
+  limiter,
+
+  /// De-esser: compresses only the sibilant band, so the body of a voice does
+  /// not pump every time an "s" arrives.
+  deEsser,
+
+  /// Three-band compressor with a detector per band, so the kick stops steering
+  /// the vocal.
+  multibandCompressor,
 }
 
 enum FxPreset { vocalPolish, lofiCrunch, wideSpace, robotVoice }
@@ -334,6 +349,49 @@ FxSpec defaultFx(FxType type) => switch (type) {
             'decay': 0.5,
             'predelayMs': 0,
             'mix': 0.35,
+          },
+        ),
+      // A3. A limiter's ceiling sits just under full scale, and its look-ahead
+      // is a few ms — long enough to catch a transient, short enough that the
+      // latency is inaudible even if a caller ever plays it live.
+      FxType.limiter => const FxSpec(
+          type: FxType.limiter,
+          params: {
+            'ceilingDb': -0.3,
+            'lookaheadMs': 5,
+            'releaseMs': 100,
+            'mix': 1,
+          },
+        ),
+      // Sibilance lives around 5–8 kHz; the default threshold is low because a
+      // de-esser should only catch the peaks that stick out.
+      FxType.deEsser => const FxSpec(
+          type: FxType.deEsser,
+          params: {
+            'freq': 6000,
+            'thresholdDb': -28,
+            'ratio': 6,
+            'attackMs': 1,
+            'releaseMs': 60,
+            'mix': 1,
+          },
+        ),
+      // Ratios default to 1 in every band — an untouched multiband compressor
+      // returns its input EXACTLY (the splitter reconstructs), so adding one to
+      // a chain does nothing until it is dialled in.
+      FxType.multibandCompressor => const FxSpec(
+          type: FxType.multibandCompressor,
+          params: {
+            'lowHz': 200,
+            'highHz': 3000,
+            'thresholdDb': -24,
+            'lowRatio': 1,
+            'midRatio': 1,
+            'highRatio': 1,
+            'attackMs': 10,
+            'releaseMs': 120,
+            'makeupDb': 0,
+            'mix': 1,
           },
         ),
       FxType.compressor => const FxSpec(

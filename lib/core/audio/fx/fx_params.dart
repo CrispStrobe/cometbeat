@@ -144,6 +144,14 @@ const _byName = <String, FxParamSpec>{
   'b2': FxParamSpec(key: 'b2', min: -4, max: 4),
   'a1': FxParamSpec(key: 'a1', min: -2, max: 2),
   'a2': FxParamSpec(key: 'a2', min: -1, max: 1),
+  // A3 — dynamics.
+  'ceilingDb': FxParamSpec(key: 'ceilingDb', min: -24, max: 0, unit: 'dB'),
+  'lookaheadMs': FxParamSpec(key: 'lookaheadMs', min: 0.1, max: 50, unit: 'ms'),
+  'lowHz': FxParamSpec(key: 'lowHz', min: 40, max: 1000, unit: 'Hz'),
+  'highHz': FxParamSpec(key: 'highHz', min: 1000, max: 12000, unit: 'Hz'),
+  'lowRatio': FxParamSpec(key: 'lowRatio', min: 1, max: 20, unit: ':1'),
+  'midRatio': FxParamSpec(key: 'midRatio', min: 1, max: 20, unit: ':1'),
+  'highRatio': FxParamSpec(key: 'highRatio', min: 1, max: 20, unit: ':1'),
 };
 
 /// Ranges that differ for one specific effect, where the same word means
@@ -238,6 +246,9 @@ String fxTypeLabel(FxType type) => switch (type) {
       FxType.biquadRaw => 'Biquad (coefficients)',
       FxType.sincFilter => 'Steep filter',
       FxType.hilbert => 'Hilbert (90°)',
+      FxType.limiter => 'Limiter',
+      FxType.deEsser => 'De-esser',
+      FxType.multibandCompressor => 'Multiband compressor',
     };
 
 /// A short label for one param — the slider caption.
@@ -291,6 +302,13 @@ String fxParamLabel(String key) => switch (key) {
       'b2' => 'b2',
       'a1' => 'a1',
       'a2' => 'a2',
+      'ceilingDb' => 'Ceiling',
+      'lookaheadMs' => 'Look-ahead',
+      'lowHz' => 'Low split',
+      'highHz' => 'High split',
+      'lowRatio' => 'Low ratio',
+      'midRatio' => 'Mid ratio',
+      'highRatio' => 'High ratio',
       _ => key,
     };
 
@@ -381,7 +399,12 @@ FxCategory fxCategory(FxType type) => switch (type) {
       FxType.sincFilter ||
       FxType.hilbert =>
         FxCategory.filter,
-      FxType.compressor || FxType.gate => FxCategory.dynamics,
+      FxType.compressor ||
+      FxType.gate ||
+      FxType.limiter ||
+      FxType.deEsser ||
+      FxType.multibandCompressor =>
+        FxCategory.dynamics,
       FxType.chorus ||
       FxType.flanger ||
       FxType.phaser ||

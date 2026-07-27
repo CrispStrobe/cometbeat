@@ -214,7 +214,7 @@ String fxCatalogText({FxType? only}) {
     }
     final params = defaultFx(type).params.keys.join(' ');
     buffer.writeln(
-      '  ${type.name.padRight(18)}${fxTypeLabel(type).padRight(21)} '
+      '  ${type.name.padRight(20)}${fxTypeLabel(type).padRight(21)} '
       '${params.isEmpty ? '' : '($params)'}',
     );
   }
