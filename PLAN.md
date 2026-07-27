@@ -1734,6 +1734,15 @@ and interaction with `5xy`/`6xy` (porta/vibrato + volume slide combinations).
 implementation. Compare against our `songFlowTimeline`/`resolveTimingMap` over
 a corpus of order-list shapes: `Bxx` jumps, `Dxx` breaks, `E6x` pattern loops,
 mid-song speed/tempo changes. **No audio needed, so this one can run in CI.**
+🟡 **PARTIAL (2026-07-27).** The NodMOD oracle is not installed on this machine,
+but the flow commands are DISCRETE and exactly computable by hand, so the two
+that had zero coverage — **E6x pattern loop** and **EEx pattern delay** (the
+trickiest, per-channel-counter ones) — are now pinned deterministically in
+`test/mod_flow_pattern_loop_test.dart` (E6x span plays x+1×, E60 sets the start,
+EEx repeats a row x+1×, Fxx speed/tempo split at 0x20, and the per-visit timeline
+grouping). `walkFlow` was verified ProTracker-correct against pt2-clone's rules.
+The FULL NodMOD cross-check (start_sec/end_sec timing over a Bxx/Dxx corpus)
+still wants NodMOD cloned — left open.
 
 🚧 **X6 — Reader field audit, per format.** Partly done: the IT pattern-break
 reader is fixed (above). The general audit stands. Our codec tests are self round-trips

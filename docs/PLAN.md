@@ -42,6 +42,18 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tracker→editors)** · ✅ **DONE (idle) — replay-fidelity ladder X5
+  (partial): E6x/EEx flow semantics pinned.** TEST-ONLY
+  (`test/mod_flow_pattern_loop_test.dart`, 8 tests) — E6x pattern loop + EEx
+  pattern delay had ZERO coverage despite being the trickiest flow commands.
+  `walkFlow` is ProTracker-correct (E6x plays the span x+1 times, E60 sets the
+  start, EEx repeats a row x+1×, Fxx speed/tempo split at 0x20), so these pin the
+  behaviour against regression and assert the exact played-row sequence + how
+  `songFlowTimeline` groups a looped pattern into per-visit entries. No lib
+  change, CI-able. The bigger X5 (Bxx/Dxx/E6x corpus vs NodMOD) still wants the
+  NodMOD oracle, which is NOT installed here — left open. Now idle.
+  — opus (tracker→editors)
+
 - **opus (tracker→editors)** · ✅ **DONE (idle) — replay-fidelity ladder X2
   (vibrato period-space).** Vibrato now modulates PERIOD, not semitones (peak ≈
   255/128·depth units), gated behind the SAME `PORTA_PERIOD` define as B3's
