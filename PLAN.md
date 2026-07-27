@@ -2159,6 +2159,47 @@ It found three things immediately:
    a decision about the tracker's own model, not a bug fix. The four affected
    fixtures are in `_kKnownOpenDefects` and print every run.
 
+#### IT/XM LINEAR frequency slides (2026-07-27) — and the gate was the wrong shape
+
+The last plain-portamento gap. IT and XM bend pitch **linearly** (a fixed
+interval per unit); MOD and S3M bend the Amiga **period**, which is the same
+step in a different space and therefore a different interval depending where the
+note sits. Both formats carry a header flag for it and libopenmpt honours it. We
+always slid the period.
+
+The diagnosis needed no source reading at all — the same command written into
+both formats and measured under each model is a **perfect mirror image**, which
+is what makes it certain rather than plausible:
+
+| | period model | linear model |
+| --- | --- | --- |
+| `porta_down_Exx.it` / `porta_up_Fxx.it` | 0.683 / 0.544 | **1.000 / 1.000** |
+| `porta_down_Exx.s3m` / `porta_up_Fxx.s3m` | **1.000 / 1.000** | 0.685 / 0.543 |
+
+Both formats read 1.000 now, and IT's fine porta and extra-fine came along with
+it (extra-fine's envelope went 0.19 → 0.93).
+
+⚠️ **This says the `PORTA_PERIOD` gate is the wrong SHAPE, not just off by a
+default.** The slide model is a per-FORMAT property — MOD/S3M period, IT/XM
+linear — and no single global switch can be right for a library holding all
+four. `TrackerChannel.linearSlides` now takes precedence for IT/XM and leaves
+MOD/S3M entirely to the gate, so the maintainer's pending decision about the MOD
+default is untouched. ⬜ **When that decision is made, the gate should probably
+become "MOD/S3M use period slides", full stop, rather than a switch at all.**
+
+**The sweep's reporting had two bugs of its own, in opposite directions.** The
+"now passing? drop the exemption" flag looked only at the spectral gap, so it
+told me to retire exemptions whose ENVELOPE was still failing — the exact
+mistake the flag exists to prevent. And a known-open entry failing *only* on the
+envelope printed no flag at all, silently hiding the thing the list exists to
+keep visible. Both fixed: one status per row, naming which metric failed
+(`spectral`, `envelope`, or `spectral+envelope`).
+
+⬜ **Remaining, all printing every run:** S3M fine porta (0.857/0.828 — a
+constant scale factor, since extra-fine has a quarter the step and a quarter the
+error), and the four volume-column fixtures whose cause is already diagnosed
+above (the volume column does not set the channel volume).
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,

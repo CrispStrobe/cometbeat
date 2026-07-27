@@ -148,9 +148,14 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
   // tick 0. See [TrackerChannel.volumeSlideAllTicks].
   final vsall = doc.sourceFormat == ModuleFormat.s3m ||
       doc.sourceFormat == ModuleFormat.it;
+  // IT/XM bend pitch linearly; MOD/S3M bend the Amiga period. See
+  // [TrackerChannel.linearSlides].
+  final linear = doc.sourceFormat == ModuleFormat.it ||
+      doc.sourceFormat == ModuleFormat.xm;
   for (final ch in song.channels) {
     ch.protrackerMemory = song.protrackerEffectMemory;
     ch.volumeSlideAllTicks = vsall;
+    ch.linearSlides = linear;
   }
   return song;
 }

@@ -2043,6 +2043,25 @@ class TrackerChannel {
   /// PLAN.md §6.
   bool volumeSlideAllTicks = false;
 
+  /// IT and XM slide pitch LINEARLY (a fixed interval per unit); MOD and S3M
+  /// slide the Amiga PERIOD, which is the same step in a different space and so
+  /// bends by a different amount depending where the note sits.
+  ///
+  /// Both formats carry a header flag for it and libopenmpt honours it. We
+  /// always slid the period, which is right for MOD/S3M and wrong for IT/XM.
+  /// Measured on the same command written into both formats — a perfect mirror
+  /// image, which is what makes the diagnosis certain rather than plausible:
+  ///
+  ///                       period model      linear model
+  ///   porta_*.it          0.683 / 0.544     1.000 / 1.000
+  ///   porta_*.s3m         1.000 / 1.000     0.685 / 0.543
+  ///
+  /// So the slide model is a per-FORMAT property, not the single global switch
+  /// `PORTA_PERIOD` treats it as. This flag takes precedence over that gate for
+  /// IT/XM and leaves MOD/S3M entirely to it, so the maintainer's pending
+  /// decision about the MOD default is untouched. PLAN.md §6.
+  bool linearSlides = false;
+
   /// Mutable so a channel can be re-voiced at runtime (e.g. assigning a freshly
   /// recorded [SampleInstrument] to the voice channel). Go through
   /// [TrackerEngine.setChannelInstrument] so caches are invalidated.

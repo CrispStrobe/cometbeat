@@ -144,8 +144,6 @@ const _kKnownOpenDefects = <String>{
   // The extra-fine porta approximation (x ~/ 4) shifts our pitch just enough to
   // change the loop-wrap ripple, which the envelope metric sees.
   'extrafine_porta_down_EEx.s3m',
-  'porta_down_Exx.it',
-  'porta_up_Fxx.it',
   'fine_porta_down_EFx.s3m',
   'fine_porta_up_FFx.s3m',
 };
@@ -286,16 +284,32 @@ void main() {
             (!kPortaPeriodAccurate && _kPeriodModelDependent.contains(stem));
         final over = gap > _kMaxExcessDeviation;
         final envOver = envGated && envGap > _kMaxExcessDeviation;
-        final envFlag = envOver && !knownOpen ? '  <-- ENVELOPE OUTSIDE' : '';
-        final flag = !over
-            ? (knownOpen
-                ? '  <-- KNOWN OPEN now passing? drop the exemption'
-                : '')
-            : knownOpen
-                ? '  <-- KNOWN OPEN defect — see _kKnownOpenDefects'
-                : exempt
-                    ? '  (semitone pitch model — set PORTA_PERIOD=1)'
-                    : '  <-- OUTSIDE';
+
+        // One status per row, covering BOTH metrics. Two earlier versions of
+        // this got it wrong in opposite directions: "now passing" once looked
+        // only at the spectral gap and told me to drop exemptions whose
+        // ENVELOPE was still failing, and a known-open entry failing only on
+        // the envelope printed no flag at all — silently the thing the list
+        // exists to keep visible.
+        final failing = over || envOver;
+        final which = over && envOver
+            ? 'spectral+envelope'
+            : over
+                ? 'spectral'
+                : 'envelope';
+        final String flag;
+        if (knownOpen) {
+          flag = failing
+              ? '  <-- KNOWN OPEN ($which) — see _kKnownOpenDefects'
+              : '  <-- KNOWN OPEN now passing? drop the exemption';
+        } else if (!failing) {
+          flag = '';
+        } else if (exempt) {
+          flag = '  (semitone pitch model — set PORTA_PERIOD=1)';
+        } else {
+          flag = '  <-- OUTSIDE ($which)';
+        }
+        const envFlag = '';
         // The DURATION rides along, because a flow bug shows up there first
         // and most bluntly: a break landing on the wrong row plays a different
         // NUMBER of rows, which the spectral number only sees indirectly.

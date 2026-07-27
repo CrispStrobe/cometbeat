@@ -529,7 +529,19 @@ class ReplayVoice {
   ReplayVoice({
     this.protrackerMemory = false,
     this.volumeSlideAllTicks = false,
+    this.linearSlides = false,
   });
+
+  /// IT/XM slide pitch linearly; MOD/S3M slide the Amiga period. See
+  /// [TrackerChannel.linearSlides] for the measurement that settled it.
+  ///
+  /// When set, the semitone (linear) path is used regardless of the
+  /// `PORTA_PERIOD` gate — that gate governs MOD/S3M only.
+  final bool linearSlides;
+
+  /// Whether THIS voice should bend in period space: the hardware model, gated
+  /// for MOD/S3M and never right for a linear-slide IT/XM.
+  bool get _periodSlides => kPortaPeriodAccurate && !linearSlides;
 
   /// S3M/IT slide volume on EVERY tick, including tick 0; MOD and XM skip the
   /// first. See [TrackerChannel.volumeSlideAllTicks].
@@ -1174,12 +1186,12 @@ class ReplayVoice {
     // Porta up / down: move `pitch` on ticks > 0.
     if (_cmd == kFxPortaUp && k > 0) {
       // Period DOWN raises pitch — see [slidePitchByPeriod].
-      pitch = kPortaPeriodAccurate
+      pitch = _periodSlides
           ? slidePitchByPeriod(pitch, -_memPortaUp.toDouble())
           : pitch + _memPortaUp * kPortaSemitonesPerUnit;
       effPitch = pitch;
     } else if (_cmd == kFxPortaDown && k > 0) {
-      pitch = kPortaPeriodAccurate
+      pitch = _periodSlides
           ? slidePitchByPeriod(pitch, _memPortaDown.toDouble())
           : pitch - _memPortaDown * kPortaSemitonesPerUnit;
       effPitch = pitch;
@@ -1188,7 +1200,7 @@ class ReplayVoice {
     // Tone porta: slide toward the target, never overshoot. With glissando
     // (E3x) on, the OUTPUT snaps to whole semitones while the slide continues.
     if (_isTonePorta && k > 0) {
-      if (kPortaPeriodAccurate) {
+      if (_periodSlides) {
         // Same period-space slide as 1xx/2xx, but stopping AT the target
         // instead of running on. Compared in PERIOD space so the "do not
         // overshoot" test matches the direction the hardware is actually
@@ -1221,7 +1233,7 @@ class ReplayVoice {
     // row.
     if (_isVibrato && k > 0) {
       final lfo = protrackerLfo(_vibWave, _vibPhase);
-      if (kVibratoPeriodAccurate) {
+      if (kVibratoPeriodAccurate && !linearSlides) {
         // Hardware modulates PERIOD, not pitch: a positive table value ADDS to
         // the period (lowering pitch), so a positive LFO bends the note DOWN —
         // the sign is the hardware's, not the semitone model's. Depth scales in
@@ -1671,6 +1683,7 @@ double? readLoopedSampleForTest(
   final voice = ReplayVoice(
     protrackerMemory: channel.protrackerMemory,
     volumeSlideAllTicks: channel.volumeSlideAllTicks,
+    linearSlides: channel.linearSlides,
   );
   var readPos = 0.0;
   var noteStartSample = 0;
@@ -1950,6 +1963,7 @@ void _renderSampleChannelInto(
   final voice = ReplayVoice(
     protrackerMemory: channel.protrackerMemory,
     volumeSlideAllTicks: channel.volumeSlideAllTicks,
+    linearSlides: channel.linearSlides,
   );
   var readPos = 0.0; // fractional index into the current sample
   var noteStartSample = 0;
@@ -2164,6 +2178,7 @@ void _renderSampleChannelIntoVariable(
   final voice = ReplayVoice(
     protrackerMemory: channel.protrackerMemory,
     volumeSlideAllTicks: channel.volumeSlideAllTicks,
+    linearSlides: channel.linearSlides,
   );
   var readPos = 0.0;
   var noteStartSample = 0;
@@ -2432,6 +2447,7 @@ void _renderPulseChannelInto(
   final voice = ReplayVoice(
     protrackerMemory: channel.protrackerMemory,
     volumeSlideAllTicks: channel.volumeSlideAllTicks,
+    linearSlides: channel.linearSlides,
   );
   var phase = 0.0;
   final rows = cells.length;
@@ -2644,6 +2660,7 @@ void _renderChannelInto(
   final voice = ReplayVoice(
     protrackerMemory: channel.protrackerMemory,
     volumeSlideAllTicks: channel.volumeSlideAllTicks,
+    linearSlides: channel.linearSlides,
   );
   final rows = cells.length;
   for (var r = 0; r < rows; r++) {
@@ -5001,6 +5018,7 @@ void _renderChannelIntoVariable(
   final voice = ReplayVoice(
     protrackerMemory: channel.protrackerMemory,
     volumeSlideAllTicks: channel.volumeSlideAllTicks,
+    linearSlides: channel.linearSlides,
   );
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
