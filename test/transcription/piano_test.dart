@@ -2,6 +2,24 @@
 // the package's own RegressionPostProcessor, plus a model-gated end-to-end +
 // runtime-parity check against onnxruntime. The e2e tests skip when the ~99 MB
 // ONNX isn't cached (set COMET_PIANO_DIR).
+//
+// The two e2e tests are ALSO opt-in, because on a machine that HAS the model
+// they dominate the whole suite: measured 2026-07-27, this one file spanned
+// 18m01s of a 32m49s `flutter test` — more than half the run, with the next
+// slowest file at 3m07s. Everything else is drowned out by two tests, and a
+// suite nobody can afford to run is a suite that stops being run: today's
+// licence regression sat on main precisely because the full run was too
+// expensive to be routine.
+//
+// Run them deliberately (any non-empty value turns them on):
+//   flutter test --dart-define=MODEL_E2E=1 test/transcription/piano_test.dart
+//
+// `String.fromEnvironment` + non-empty rather than `bool.fromEnvironment`,
+// which only accepts the literal `true` — see the same trap documented in
+// tracker_audio_regression_test.dart, where `=1` silently left the audit off.
+//
+// CI is unaffected either way: without the model these tests already
+// early-return.
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -12,6 +30,10 @@ import 'package:comet_beat/core/audio/transcription/piano_model_store.dart';
 import 'package:comet_beat/core/audio/transcription/route.dart'
     show NeuralTranscriber;
 import 'package:flutter_test/flutter_test.dart';
+
+/// Opt-in for the two expensive end-to-end tests. See the note above.
+const String _modelE2eRaw = String.fromEnvironment('MODEL_E2E');
+final bool _modelE2e = _modelE2eRaw.isNotEmpty && _modelE2eRaw != '0';
 
 const String _dir = 'test/transcription';
 const int _sr = 16000;
@@ -109,7 +131,14 @@ void main() {
     }
   });
 
-  group('Piano end-to-end (model-gated)', () {
+  group('Piano end-to-end (model-gated + opt-in)', () {
+    if (!_modelE2e) {
+      test('skipped — pass --dart-define=MODEL_E2E=1 to run', () {
+        // A visible, named skip: a silently absent test reads as coverage that
+        // does not exist. The two below take ~8 minutes of CPU between them.
+      });
+      return;
+    }
     test(
       'runtime parity + events match onnxruntime',
       () async {
