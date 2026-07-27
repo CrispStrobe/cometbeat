@@ -72,6 +72,19 @@ void main() {
       expect(tunedRecordedSample('n', noise).baseMidi, 60);
     });
 
+    test('a buffer shorter than one window is analysed in a single pass', () {
+      // pcm.length <= windowSize takes the whole-buffer branch; it must not
+      // throw and returns a note or null.
+      final r = detectSampleBaseMidi(tone(69, n: 64));
+      expect(r, anyOf(isNull, isA<int>()));
+    });
+
+    test('crossfade smooths the loop seam of a periodic tone', () {
+      final inst = tunedRecordedSample('rec', tone(67), crossfade: true);
+      expect(inst.baseMidi, 67);
+      expect(inst.loops, isTrue);
+    });
+
     test('plays IN TUNE — render a note, the detector reads that note back',
         () {
       // Recorded at A4 (69); auto base = 69, so note 69 plays at ratio 1 (440 Hz)

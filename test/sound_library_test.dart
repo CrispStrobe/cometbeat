@@ -3,8 +3,10 @@
 // asset files straight from disk (no rootBundle) so it runs headless.
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/sound_library.dart';
+import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -38,6 +40,21 @@ void main() {
         expect(buf.length, timing.totalSamples);
         expect(buf.any((v) => v != 0), isTrue, reason: '${info.id} silent');
       }
+    });
+
+    test('a WAV at a non-engine rate is resampled to the engine rate', () {
+      // 1000 samples of a tone at 22.05 kHz → resampled up to ~2000 at 44.1 kHz.
+      const srcRate = 22050;
+      const srcLen = 1000;
+      final pcm = Int16List(srcLen);
+      for (var i = 0; i < srcLen; i++) {
+        pcm[i] = (12000 * (i % 20 < 10 ? 1 : -1)).toInt();
+      }
+      final wav = wavBytes(pcm, sampleRate: srcRate);
+      final inst = sampleInstrumentFromWavBytes(wav, id: 'r', baseMidi: 62);
+      expect(inst.baseMidi, 62);
+      // Up-resampling (22.05→44.1 kHz) roughly doubles the sample count.
+      expect(inst.sample.length, greaterThan(srcLen));
     });
 
     test('the LICENSE.txt (CC0 provenance) ships with the samples', () {
