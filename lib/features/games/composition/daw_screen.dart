@@ -29,7 +29,10 @@ import 'package:comet_beat/core/audio/synth.dart'
     show Drum, kSampleRate, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
+import 'package:comet_beat/core/interop/project_bridge.dart'
+    show AppMode, ProjectBridge;
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/automation_curve_editor.dart';
@@ -46,16 +49,24 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
     show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music/score_router.dart'
-    show openDrumPattern, openGroove, openTrackerSong, showScoreDestinations;
+    show
+        openDrumPattern,
+        openGroove,
+        openScoreInTab,
+        openScoreInWorkshop,
+        openTrackerSong,
+        showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show AudioStem, showAudioExportSheet, showAudioStemsExportSheet;
 import 'package:comet_beat/shared/music_io/audio_import.dart'
     show importAudioAsync, kAudioImportExtensions;
+import 'package:comet_beat/shared/widgets/open_in_menu.dart' show OpenInMenu;
 import 'package:crisp_notation/crisp_notation.dart'
     show
         Clef,
         DurationBase,
         Measure,
+        MultiPartScore,
         NoteDuration,
         NoteElement,
         Pitch,
@@ -3821,6 +3832,12 @@ class _DawScreenState extends State<DawScreen>
                             icon: const Icon(Icons.open_in_new),
                             label: Text(l10n.dawOpenInEditor),
                           ),
+                        // The cross-mode door: a COPY, converted, with its
+                        // cost named before it runs. Null for a clip whose
+                        // model no other editor can hold (a recording).
+                        if (_openACopyIn(sheetCtx, track, index)
+                            case final openIn?)
+                          openIn,
                         // Split at the playhead — only when it falls inside the clip.
                         TextButton.icon(
                           onPressed: canSplitClip(track, index, playheadMs)
@@ -3967,6 +3984,90 @@ class _DawScreenState extends State<DawScreen>
         },
       ),
     );
+  }
+
+  /// C3 — "Open a copy in…" for a clip whose model is a document the
+  /// [ProjectBridge] can convert.
+  ///
+  /// Distinct from the exact "Open in editor" door above it, and deliberately
+  /// so. That one hands the clip's OWN model to its OWN editor and takes the
+  /// edit back into the same clip: nothing is converted, so nothing can be
+  /// lost. This one crosses modes — a tracker pattern read as notation, a score
+  /// fretted for tab — which always costs something, so it goes through
+  /// [OpenInMenu]: the menu names the cost of each edge up front and makes a
+  /// lossy conversion confirm before it runs.
+  ///
+  /// A converted document opens as a COPY with no send-back callback. Routing a
+  /// lossy conversion back into the source clip would quietly overwrite the
+  /// user's original with a degraded version of itself; "Send to Audio Editor"
+  /// from the target editor adds it as a new clip instead, which keeps both.
+  ///
+  /// Only the three modes the Audio Editor can actually PUSH are offered. The
+  /// bridge can also reach Loop, but a loop document is the sung user track's
+  /// cells and seeding a groove from them needs the Loop Mixer's own track
+  /// vocabulary — offering it here would convert the user's work and then have
+  /// nowhere to put it, which is exactly what `OpenInMenu.targets` exists to
+  /// prevent.
+  Widget? _openACopyIn(BuildContext sheetCtx, int track, int index) {
+    final source = _daw.clipSourceAt(track, index);
+    final AppMode from;
+    final Object document;
+    if (source is ScoreSource) {
+      from = AppMode.score;
+      document = source.score;
+    } else if (source is TrackerSource) {
+      from = AppMode.tracker;
+      document = source.song;
+    } else {
+      return null;
+    }
+    return OpenInMenu(
+      from: from,
+      documentBuilder: () => document,
+      targets: const [AppMode.score, AppMode.tab, AppMode.tracker],
+      tooltip: 'Open a copy in…',
+      icon: const Icon(Icons.call_split),
+      onConverted: (target, result) {
+        final converted = result.document;
+        if (converted == null) return;
+        Navigator.of(sheetCtx).pop();
+        switch (target) {
+          case AppMode.score:
+            if (converted is MultiPartScore) {
+              openScoreInWorkshop(context, converted);
+            }
+          case AppMode.tab:
+            // The bridge's tab document is a `TabDocument`, but the Tab
+            // Workshop is seeded from a SCORE and does its own fretting — that
+            // fretting IS the score→tab conversion, so handing it the notes is
+            // both simpler and exactly what the menu promised ("picks a
+            // playable fingering for you"). What it needs is therefore the
+            // music as a score, which for a score clip it already is and for a
+            // tracker clip is one more bridge hop.
+            final asScore = _clipAsScore(from, document);
+            if (asScore != null) openScoreInTab(context, asScore);
+          case AppMode.tracker:
+            if (converted is TrackerSong) openTrackerSong(context, converted);
+          case AppMode.loop:
+          case AppMode.audio:
+            break; // not offered — see the doc comment.
+        }
+      },
+    );
+  }
+
+  /// [document] as engraved music: itself when it already is, else via the
+  /// bridge. Null when that conversion cannot be made — the caller then opens
+  /// nothing rather than opening something empty.
+  MultiPartScore? _clipAsScore(AppMode from, Object document) {
+    if (document is MultiPartScore) return document;
+    final result = ProjectBridge.convert(
+      from: from,
+      to: AppMode.score,
+      document: document,
+    );
+    final converted = result.document;
+    return converted is MultiPartScore ? converted : null;
   }
 
   String _clipKind(Clip clip) {

@@ -1350,9 +1350,35 @@ already round-trip **in place**. The gaps:
   offers no way back" used a demo BEAT as its stand-in for plain audio, which
   was true only while drum clips had no door. It now uses an actual waveform —
   which is what the test always said it was about.
-- [ ] **C3** Universal "Open in…" routed through `ProjectBridge` (with its loss
-  report shown *before* committing) instead of the two hardcoded special cases;
-  gives score→Tracker its missing return path.
+- [x] **C3** Cross-mode "Open a copy in…", routed through `ProjectBridge` with
+  its loss report shown BEFORE the conversion runs. Turned out to be **wiring,
+  not building**: `shared/widgets/open_in_menu.dart` (another agent's C4)
+  already asks the bridge, names each edge's cost in the menu, and gates a lossy
+  conversion behind a confirm — but **nothing hosted it**. The Audio Editor now
+  does, for clips whose model IS a bridge document (score, tracker).
+  * it is a SECOND door, deliberately distinct from the exact "Open in editor"
+    above it: that one hands a clip's own model to its own editor and takes the
+    edit back into the same clip; this one crosses modes, which always costs
+    something. A converted document therefore opens as a **copy with no
+    send-back** — routing a lossy conversion into the source clip would quietly
+    replace the user's original with a degraded version of itself. "Send to
+    Audio Editor" from the target adds a new clip, which keeps both.
+  * **Loop is deliberately not offered** — the bridge reaches it, but a loop
+    document is the sung user track's cells and seeding a groove from them needs
+    the Loop Mixer's own track vocabulary. `OpenInMenu.targets` exists for
+    exactly this ("offering one it cannot open would convert the user's work and
+    then drop it"). A test asserts the bridge was never the blocker, so whoever
+    can seed a groove from cells knows where to look.
+  * two bugs the tests caught: score→tab yields a **`TabDocument`**, but the Tab
+    Workshop is seeded from a SCORE and does its own fretting (that fretting IS
+    the conversion) — so tab now routes the music as a score; and an EMPTY
+    tracker song cannot become a score at all (the bridge says so, correctly),
+    which made an empty-song fixture hide the case.
+  Tests: `daw_open_a_copy_test` (11).
+  ⚠ **Known gap, not mine to paper over:** `open_in_menu.dart` is entirely
+  unlocalized (its own strings are hardcoded English), so this door is English
+  in a de/en app. Localizing it is the widget owner's call — half-localizing it
+  from here would leave the dialogs mismatched.
 - [ ] **C4** Tab fidelity inbound — string/fret/fingering currently die at the
   door, so Audio Editor → Tab re-frets from scratch.
 - [ ] **C5** "Transcribe this clip → notes → any editor" — the honest audio→
