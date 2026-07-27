@@ -93,15 +93,44 @@ narration use case instantly. The `crispasrWasm` engine slot + resolver hook
 remain as a latent path if a much smaller/faster model or a non-Pages host ever
 changes the math. Full method/evidence: auto-memory `crispasr-wasm-tts-rtf-nogo`.
 
-## Possible future work (not gaps — optional)
+## Shipped follow-ups
 
-- **Surface the OS voice picker.** Apple/Android expose multiple on-device voices
-  (incl. enhanced/premium neural). `flutter_tts` can enumerate them
-  (`getVoices`); a picker would let users pick a higher-quality on-device voice
-  without any download — arguably higher ROI than shipping our own HD layer on
-  those platforms.
-- **iOS/Android HD wiring** — build + embed `libcrispasr` per platform (see
-  TTS_MACOS.md §"iOS / Android / Web").
-- **Narration packs on web** — have `PrebakedNarrationBackend` fetch WAVs through
-  the model manager (IndexedDB) instead of bundling them, shrinking the web
-  payload. The infra (gap 2) is ready; only the wiring is pending.
+- **✅ OS voice picker.** Settings → *Narration voice* enumerates the on-device
+  voices (`flutter_tts.getVoices`) for the current language and lets the user pick
+  one — no download, often higher quality than our HD layer on Apple/Android.
+  `TtsVoiceOption` + `PlatformVoiceControl` in `tts_service.dart`; the choice is
+  persisted per language (SharedPreferences) and applied via `setVoice` before
+  each utterance. The tile shows only when the OS offers ≥2 voices. (The gap-1
+  engine preference now persists too.)
+- **✅ Narration packs on web (pack mode).** `PrebakedNarrationBackend` can serve
+  narration WAVs from the asset cache (IndexedDB on web, files native) instead of
+  bundling ~40 MB of audio: construct it with a `cache` + `remoteBase`, call
+  `prefetch(...)` to warm the cache from a hosted pack, and clips then play from
+  IndexedDB. Fully opt-in — with no `cache` it is unchanged BUNDLED MODE.
+  *Operational step still pending:* host a narration pack (baked WAVs on a
+  CORS-enabled URL) + a manifest, then wire `remoteBase` + a `prefetch` call.
+
+## iOS / Android HD wiring — handover (build + embed, on-device verify)
+
+Native HD (`crispasrFfi` Kokoro) is macOS-only today; iOS/Android need the
+`libcrispasr` engine embedded. **No Dart change is required** —
+`CrispASR.defaultLibName()` already probes `libcrispasr.so` (Android) and
+`crispasr.framework/crispasr` / `libcrispasr.dylib` (iOS), so once the lib is
+where the loader searches, `neuralSupported()` returns true and the HD tile
+appears automatically. What remains is a native build + embed, kept OUT of the
+shared `ios/`/`android/` projects (parallel agents build them — do it in a
+release worktree), and verified on a device/emulator (not possible headlessly):
+
+- **iOS** — a prebuilt `crispasr.xcframework` already exists at
+  `../CrisperWeaver/ios/Frameworks/crispasr.xcframework` (reference), or rebuild
+  with `../CrispASR/build-xcframework.sh` (`BUILD_SHARED_LIBS=OFF`,
+  `GGML_METAL=ON`, iOS min 16.4). Add it to the Runner target (Embed & Sign);
+  the framework's `crispasr` binary is on the loader path → cascade resolves it.
+- **Android** — cross-compile per ABI with `../CrispASR/build-android.sh` (NDK
+  present: 26.3 / 28.2; use `-DBUILD_SHARED_LIBS=OFF` to avoid a `libggml.so`
+  clash). Drop the result at
+  `android/app/src/main/jniLibs/<abi>/libcrispasr.so` (`arm64-v8a`, `x86_64`);
+  the system loader finds it by name.
+- **Model** — the ~135 MB Kokoro GGUF still downloads via CrispASR's registry
+  (the HD-voice tile opt-in), same as macOS. On the App Store, executable code
+  must ship signed inside the bundle (data downloads are fine).
