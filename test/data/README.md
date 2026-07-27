@@ -46,6 +46,29 @@ own death year). Both are in gold set 1. A normalisation pass would recover rows
 across the whole catalog, not just here; that belongs to whoever owns
 `bin/pdmx_pd_composer.py`.
 
+## `spd_cello01_measured.json` — 45 notes, a measured hand
+
+Not an editor's marks: where a cellist's fingers physically **were**. Derived from
+the **String Performance Dataset (SPD)** demo piece `cello01`, published at
+<https://huggingface.co/datasets/shiyi098/string_performance_dataset-SPD> under
+**Apache-2.0** (Yitong Jin et al., *Audio Matters Too! Enhancing Markerless Motion
+Capture with Audio Signals for String Performance Capture*, ACM TOG 2024). Their
+pipeline recovers a fingerboard contact point per frame from multi-view motion
+capture plus audio-detected hand-string contacts.
+
+**What we did to it (Apache-2.0 §4b, statement of changes):** read their published
+keypoint layout (contact point at index 150, string endpoints 142–149, used-finger
+joints 151–154), projected each contact point onto the four string segments to get
+a string index and a length ratio, converted the ratio to semitones above the open
+string, matched the used-finger tip to one of the four hand tips to recover a finger
+number, and segmented consecutive agreeing frames into 45 note events. No SPD source
+file is redistributed here — only this derived table.
+
+⚠ Their string/position is itself derived from a Pitch-Finger model constrained by
+the measured hand, so it is strong evidence of what the hand DID and weaker evidence
+of what a teacher would WRITE. Used accordingly: to validate the geometry, not to
+score fingering taste.
+
 ## What these are not
 
 Training data. 248 labels total, one editor per score, and the labelled notes are
