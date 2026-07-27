@@ -34,6 +34,36 @@ void main() {
     );
   });
 
+  test('dynamics + lyrics reach the grand-staff view on the right staff', () {
+    final d = ScoreDocument();
+    final v1id = d.insertNote(_p(Step.c), _quarter); // voice 1 → treble
+    d.setLyricFor(v1id, 'do');
+    d.setActiveVoice(1);
+    final v2id = d.insertNote(_p(Step.e, octave: 2), _quarter); // v2 → bass
+    d.setDynamicOfSelected(DynamicLevel.f);
+    d.setLyricFor(v2id, 'la');
+
+    final gs = d.buildGrandStaff();
+    // Voice 2's dynamic + lyric ride on the bass staff (not dropped).
+    expect(
+      gs.lower.dynamics
+          .any((m) => m.elementId == v2id && m.level == DynamicLevel.f),
+      isTrue,
+      reason: 'the voice-2 dynamic reaches the bass staff',
+    );
+    expect(
+      gs.lower.lyrics.any((l) => l.elementId == v2id && l.text == 'la'),
+      isTrue,
+      reason: 'the voice-2 lyric reaches the bass staff',
+    );
+    // Voice 1's lyric rides on the treble staff.
+    expect(
+      gs.upper.lyrics.any((l) => l.elementId == v1id && l.text == 'do'),
+      isTrue,
+      reason: 'the voice-1 lyric reaches the treble staff',
+    );
+  });
+
   test('voice-2 dynamic + lyric survive save → reopen', () {
     final d = ScoreDocument();
     d.insertNote(_p(Step.c), _quarter);

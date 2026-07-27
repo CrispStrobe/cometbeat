@@ -29,6 +29,18 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (grandstaff-markings)** · ✅ **SHIPPED (idle) — dynamics + lyrics on the
+  grand-staff view.** Follow-up to `voice2-gaps`: `buildGrandStaff` engraved notes
+  but carried NO dynamics/lyrics for either voice. Now each note's dynamic + lyric
+  ride on whichever staff holds it — two-voice: v1→treble, v2→bass; single-voice:
+  by the same pitch split — so the grand-staff (piano) view is finally faithful.
+  Slurs are left off (they span two ids and can land cross-staff in the pitch-split
+  path — a separate follow-up). **No hot shared files** — `score_document.dart` only
+  + a test. (Briefly `dart fix`-ed 4 pre-existing lint infos in another agent's
+  `interop_notation_carry_test.dart`, but they fixed the same lint first, so I
+  dropped mine on rebase.) Suites green (voice2/score_document 126, workshop 85),
+  whole-project analyze clean. Worktree `../mus-gs-dyn`.
+
 - **opus (bar-attributes)** · ✅ **SHIPPED (idle) — edit a bar's key/time-sig inline
   in the inspector.** Closes scoped candidate 3 (root PLAN.md). The inspector's
   Structure section now shows inline **Key** and **Time signature** dropdowns for a

@@ -1640,6 +1640,21 @@ class ScoreDocument {
   GrandStaff buildGrandStaff() {
     final cached = _grandCache;
     if (cached != null) return cached;
+    // Markings ride by element id, so each note's dynamic/lyric goes on the
+    // staff that ends up holding that note (crisp_notation matches ids within a
+    // Score). Slurs span two ids and can land cross-staff here, so they're left
+    // off the grand-staff view for now.
+    List<DynamicMarking> dynamicsFor(Iterable<EditorElement> notes) => [
+          for (final e in notes)
+            if (!e.isRest && e.dynamic != null)
+              DynamicMarking(e.id, e.dynamic!),
+        ];
+    List<Lyric> lyricsFor(Iterable<EditorElement> notes) => [
+          for (final e in notes)
+            if (_lyrics[e.id] != null)
+              for (final v in _lyrics[e.id]!.entries)
+                Lyric(e.id, v.value, verse: v.key),
+        ];
     // Two authored voices → a two-hand grand staff: voice 1 on the treble
     // (right hand), voice 2 on the bass (left hand), so voice 2 is preserved
     // instead of dropped. A single voice keeps the pitch auto-split below (high
@@ -1654,6 +1669,8 @@ class ScoreDocument {
               timeSignature: timeSignature,
               pickup: pickup,
             ),
+            dynamics: dynamicsFor(voice),
+            lyrics: lyricsFor(voice),
           );
       return _grandCache = GrandStaff(
         upper: staff(_v1, Clef.treble),
@@ -1662,6 +1679,8 @@ class ScoreDocument {
     }
     final upper = <MusicElement>[];
     final lower = <MusicElement>[];
+    final upperNotes = <EditorElement>[];
+    final lowerNotes = <EditorElement>[];
     for (final e in _v1) {
       if (e.isRest) {
         upper.add(RestElement(e.duration, id: e.id));
@@ -1669,9 +1688,11 @@ class ScoreDocument {
       } else if (e.pitch!.midiNumber >= 60) {
         upper.add(e.toElement());
         lower.add(RestElement(e.duration));
+        upperNotes.add(e);
       } else {
         lower.add(e.toElement());
         upper.add(RestElement(e.duration));
+        lowerNotes.add(e);
       }
     }
     return _grandCache = GrandStaff(
@@ -1680,12 +1701,16 @@ class ScoreDocument {
         keySignature: keySignature,
         timeSignature: timeSignature,
         measures: reflow(upper, timeSignature: timeSignature, pickup: pickup),
+        dynamics: dynamicsFor(upperNotes),
+        lyrics: lyricsFor(upperNotes),
       ),
       lower: Score(
         clef: Clef.bass,
         keySignature: keySignature,
         timeSignature: timeSignature,
         measures: reflow(lower, timeSignature: timeSignature, pickup: pickup),
+        dynamics: dynamicsFor(lowerNotes),
+        lyrics: lyricsFor(lowerNotes),
       ),
     );
   }
