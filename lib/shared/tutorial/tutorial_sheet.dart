@@ -6,6 +6,8 @@
 // points: [showTutorial] (open on demand, e.g. the "?" button) and
 // [maybeShowTutorial] (open once on a game's first visit, then remember).
 
+import 'dart:async';
+
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/tts_service.dart';
@@ -83,14 +85,25 @@ class _TutorialSheetState extends State<_TutorialSheet> {
     } on ProviderNotFoundException {
       _settings = null;
     }
-    // Auto-read (opt-in): narrate the FIRST step once the sheet is up. Deferred
-    // to a post-frame callback so it doesn't fight the open animation, and
-    // guarded so it fires exactly once.
-    if (!_initNarrated && _tts != null && _autoRead) {
+    if (!_initNarrated && _tts != null) {
       _initNarrated = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _readAloud();
-      });
+      // Warm the whole tutorial's narration clips into the cache up front (a
+      // no-op unless a pre-baked pack is configured; #7). Background, non-
+      // blocking — so later steps play instantly on web without a per-clip wait.
+      final lang = TtsService.voiceTag(Localizations.localeOf(context));
+      unawaited(
+        _tts!.prefetchNarration(
+          [for (final s in widget.tutorial.steps) (s.text, lang)],
+        ),
+      );
+      // Auto-read (opt-in): narrate the FIRST step once the sheet is up.
+      // Deferred to a post-frame callback so it doesn't fight the open
+      // animation.
+      if (_autoRead) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _readAloud();
+        });
+      }
     }
   }
 

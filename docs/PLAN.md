@@ -45,8 +45,8 @@ is recorded in [HISTORY.md](HISTORY.md).
 - **opus (tts-followups)** · 🚧 **ACTIVE — TTS follow-up queue (1–3, 5–7).** Working
   the 6-item queue in the *TTS narration* section (auto-narrate-on-example →
   prefetch wiring → settings persistence test → iOS/Android + macOS embed handovers
-  → narration-pack hosting), in order. **#1 auto-read tutorial steps SHIPPED**; now
-  on **#2 wire `prefetch` for narration pack mode**. Additive, rebase-before-push. — opus
+  → narration-pack hosting), in order. **#1–#2 SHIPPED** (auto-read; prefetch wiring); now
+  on **#3 `SettingsService` persistence test**. Additive, rebase-before-push. — opus
 - **opus (unit-tests)** · 🚧 **coverage sweep — 11 pure modules now covered (~107 tests over 3 pushes),
   more to come.** Data-driven: surveyed `lib/core`/`shared`/
   pure-`features` for files with zero test reference, then added exact + property
@@ -3075,9 +3075,11 @@ and hand over the on-device/ops step.
    on page-change), gated by `narrationOn`. The musical example stays a deliberate
    tap (never talk over the melody). 3 widget tests (auto-read on/off, toggle
    flips+persists+reads-now); full analyze clean.
-2. **Wire `prefetch` for narration pack mode.** Add a real call site that warms the
-   current lesson's clips into the asset cache (IndexedDB on web), so pack mode
-   isn't just latent infra. Test with a fake fetch. (Hosting = item 7.)
+2. **✅ Wire `prefetch` for narration pack mode — SHIPPED.** `TtsService.prefetchNarration`
+   delegates to the pre-baked backend; the tutorial sheet warms all its step clips
+   on open (background, non-blocking). No-op in bundled mode, so nothing shipped
+   changes; flips on once a pack is hosted (#7). 2 tests (delegate warms the cache;
+   opening a tutorial prefetches its steps).
 3. **`SettingsService` persistence test.** Round-trip coverage for the sound /
    narration / voice prefs (none today).
 5. **iOS/Android HD embed.** Build the `.so` (NDK present) / reuse the existing

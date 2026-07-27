@@ -273,6 +273,20 @@ class TtsService with ChangeNotifier {
     }
   }
 
+  /// Warm the pre-baked narration cache for [items] (each a `(text, langCode)`).
+  /// In pack mode (the backend has a cache + remote pack) this fetches any
+  /// not-yet-cached clips into the asset cache (IndexedDB on web) so a later
+  /// [speak] plays them instantly, offline. A no-op in bundled mode or when no
+  /// pre-baked backend is wired. Best-effort; never throws. Returns the count
+  /// newly cached.
+  Future<int> prefetchNarration(Iterable<(String, String)> items) async {
+    try {
+      return await _prebaked?.prefetch(items) ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   /// Master sound switch, mirrored from SettingsService (see main.dart). When
   /// off, narration is silent along with the rest of the app.
   bool soundOn = true;
