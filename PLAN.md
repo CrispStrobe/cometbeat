@@ -884,22 +884,24 @@ remain.
    instrument editor — add/remove one macro per target + a drag-to-set bar editor
    with step-count and loop/release pickers. Macros are now user-authorable and
    persist. (Fixed a latent `SampleInstrument.copyWith` macro-drop along the way.)
-7. **Remaining slices — SCHEDULED (maintainer wants the lot, 2026-07-27):** no
-   longer deferred as "niche" — building them all:
-   - **§3.3 block-op tests** — the block interpolate/copy/paste/transpose in
-     `advanced_tracker_screen.dart` is unit-untested; add the test seams
-     (`debugMarkBlock` / read a cell's volume) + coverage.
-   - **Additive-instrument macro editor + Sound Lab interop** — the instrument
-     editor's additive/procedural branch opens the Sound Lab and replaces the
-     voice with a sample; give additive/procedural voices a real macro editor
-     (reuse `_MacroSection`) so their macros are authorable without losing the
-     voice, and carry macros across the Sound-Lab edit.
-   - **Stereo variable-timing + streaming macro paths** — wire macros into the
-     remaining render functions (`_replayVariableStereoFloat` additive loop + the
-     bounded-memory row-chunk streamers) so a macro applies on EVERY path, not
-     just the common ones.
-   - **DUTY target** — needs a pulse/square voice; add a minimal pulse voice (or
-     duty on an existing one) so the duty macro modulates something.
+7. ~~**Long tail — ALL SHIPPED (2026-07-27):**~~
+   - ~~**§3.3 block-op tests**~~ (DONE) — `debugMarkBlock`/`debugCellVolume`/
+     `debugCellMidi` seams + `tracker_block_ops_test.dart` (interpolate ramp,
+     copy-paste, transpose).
+   - ~~**Additive macro editor + Sound Lab interop**~~ (DONE) — an
+     `AdditiveInstrument` gets its own macro editor; a "Sound Lab" button reshapes
+     it into a sample carrying the macros (`macrosOf`).
+   - ~~**Macros on every render/export path**~~ (DONE) — the whole-song
+     stereo-variable + flow paths already applied macros via
+     `_renderChannelIntoVariable`/`_renderChannelIntoStereo`; `songCanStreamFlow­Variable`
+     + `writeSongWavStreaming` now route a macro'd song off the state-restarting
+     per-chunk streamers onto those paths, so a macro sounds on playback AND
+     bounded export, mono AND stereo, uniform/variable/flow.
+   - ~~**DUTY target**~~ (DONE) — new `PulseInstrument` (pickable) + a pulse tick
+     voice sweeps duty/volume/pitch from its macros.
+
+   **§4 is complete:** model → additive+sample+pulse voices → mono+stereo →
+   uniform+variable+flow → playback+export → codec-persisted → authorable UI.
 
 ### 5. Comprehensive Effect Command Set & Flow Control
 **Current State:**

@@ -55,9 +55,17 @@ both the additive and the sample voice.
   Macros are now user-authorable and persist. Also fixed a latent
   `SampleInstrument.copyWith` that dropped macros.
 
-Remaining (see PLAN.md §4, all niche): the STEREO variable-timing path (panned
-AND mid-song-tempo), the duty target, an additive-instrument macro editor, and
-§3.3 block-op tests.
+- **Long tail — all shipped (2026-07-27).** §3.3 block-op test seams + coverage
+  (`tracker_block_ops_test.dart`); an **additive-voice macro editor** + Sound-Lab
+  interop (`b9ac7745`); macros made **airtight across every render/export path**
+  (`310fd820` — a macro'd song routes off the state-restarting per-chunk streamers
+  onto the whole-song replay that applies macros, so playback AND bounded export,
+  mono AND stereo, uniform/variable/flow all modulate); and a **pulse/square
+  voice** (`PulseInstrument`, pickable) driving the **duty** target (`4250f83d`).
+
+**§4 is complete:** model → additive + sample + pulse voices → mono + stereo →
+uniform + variable + flow → playback + bounded export → codec-persisted →
+authorable in the instrument-editor UI. Opt-in and byte-identical throughout.
 
 ## Tracker DSP lifted into the shared editors (2026-07-26)
 

@@ -200,15 +200,13 @@ is recorded in [HISTORY.md](HISTORY.md).
   not all named `daw_*`.
   — opus
 
-- **opus (tracker→editors)** · 🚧 **ACTIVE — finishing §4's long tail (maintainer
-  wants the lot, 2026-07-27).** §4 macros already ship across additive + sample +
-  stereo + mono-variable, reachable + codec-persisted + a Sample-editor UI (see
-  HISTORY → "Tracker instrument macros"). Now building the rest: (1) §3.3 block-op
-  test seams + coverage; (2) additive/procedural macro editor + Sound-Lab interop;
-  (3) macros on the stereo-variable + streaming render paths (every path, no
-  exceptions); (4) a pulse voice for the duty target. Touching
-  `advanced_tracker_screen.dart` (test seams), `instrument_editor.dart`,
-  `tracker_replayer.dart`, `tracker_engine.dart` — all additive, rebase-before-push.
+- **opus (tracker→editors)** · ✅ **IDLE — §4 instrument macros COMPLETE, long
+  tail included (2026-07-27)** (HISTORY → "Tracker instrument macros"). Macros run
+  across additive + sample + **pulse** voices, mono + stereo, uniform + variable +
+  flow, on playback AND bounded export, codec-persisted, and authorable in the
+  instrument editor (sample + additive). Plus §3.3 block-op tests, the new pulse
+  voice for the duty target, and the airtight-every-path routing. Opt-in /
+  byte-identical throughout (goldens green). Now idle.
 - **opus (tracker→editors)** · ✅ **(prior, idle) sweep shipped (5 pieces), condensed to
   [HISTORY.md](HISTORY.md) → "Tracker DSP lifted into the shared editors".**
   Shipped: shared LFO + `FxType.autoWah`; tab-through-replayer + opt-in
