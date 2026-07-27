@@ -44,73 +44,41 @@ Pending, in order:
    exports a fingered copy through the standard export sheet). The `T` glyph this
    bullet once waited on is in the library now, so thumb position engraves too.
    **Everything in this bullet is shipped; what remains in the arc is 2 and 3.**
-2. **More labels — THE ROUTE IS SYMBOLIC, NOT OMR (measured 2026-07-26).** OMR is a
-   dead end at 20% recall (trial below). The live route: **PDMX's `mxl.tar.gz`
-   (1.89 GB, 254,078 scores, every one `publicdomain` or `cc-zero`)** — we cached only
-   its `data.tar.gz` (MusicRender JSON), and **that format drops fingerings**: a census
-   of all 7,547 cached JSONs finds annotation classes Articulation / Notehead / Dynamic
-   / HairPin / Text / Tremolo / Slur / Pedal / Arpeggio / Symbol / Ottava / Bend /
-   Trill / Vibrato — **no Fingering class at all**, and the tarball is JSON-only
-   (199,989 json, 0 MusicXML). MusicXML keeps `<fingering>`, which is exactly how we
-   got our 193 labels from the 3,352 `.mxl` we happen to have. **DONE — mined 2026-07-26** (streaming scan of the
-   1.89 GB `mxl.tar.gz`, nothing extracted to disk): **254,035 scores → 1,538 with any
-   fingering → 236 bowed parts / 9,324 labels**, of which **39 cello parts / 893
-   labels**. ⚠ My own extrapolation from the classical slice said ~3,400 bowed parts —
-   **14× too high**, because the slice I sampled is far more fingered than the pop-heavy
-   corpus average. Take the measured numbers, not the rate.
-   ⚠⚠ **AND THIS IS NOT CLEARED.** PDMX is the one source whose axis-2 is
-   SELF-ATTESTED (see the PDMX OVERHAUL note in docs/CORPUS_LICENSING.md: a title scan
-   found 25 in-copyright holiday songs inside its CC0 slice). Direct corroboration in
-   this very mine: **32 of the 189 hit scores (17%) carry PDMX's own
-   `license_conflict=True`**. After dropping those: **201 bowed parts / 7,890 labels ·
-   34 cello parts / 760 labels**. The documented ship gate also requires
-   `composer_name` → Wikidata death ≤1955 (`bin/pdmx_pd_composer.py` +
-   `bin/wikidata_deaths.py`); that half is still to run over 157 metadata files, and
-   will cut further. **Until it runs, these labels are EVAL/DEV ONLY** — the same tier
-   as IDMT/classclef — and only the gate-passing subset may train shipped weights.
-   Artifacts on the VPS: `pdmx-cc0-midi/{mxl.tar.gz,scan_fingerings.py,bowed_fingerings.jsonl}`.
-   Other licence-clean routes, ranked: **(a) annotate it ourselves** — the only route
-   to DENSE expert labels, and how TNUA (violin, 217k notes) was built; our app already
-   renders scores and the arranger can pre-fill so a cellist corrects rather than types.
-   **(b) in-app opt-in collection** from teachers (the ThumbSet model) — free, noisy,
-   needs a consent flow and is teacher- not child-facing. **(c) ask the TNUA authors
-   for a licence** (Academia Sinica; the paper is CC-BY, the dataset repo has no
-   licence) — outward-facing, so the maintainer's call. **(d) guitar transfer** —
-   GuitarSet is CC-BY 4.0 and already in our pipeline; pretrain on 35k guitar
-   (string,fret) columns, fine-tune on cello. Cheap to try, modest expectation.
-   **(e) synthetic labels from our own rules is CIRCULAR** — that is the DP; useful only
-   as augmentation. Previous OMR assessment follows.
-2. ~~**More labels — MEASURED (OMR spike).** Our OMR
-   cannot carry fingerings *by construction*: it is the SMT model emitting `bekern` →
-   Humdrum `**kern`, and no fingering exists in that vocabulary or in our kern reader,
-   so scans would return notes and nothing else. Measured on self-rendered lines with
-   exact ground truth: tesseract with a `0-4` whitelist reads **0/8 lines exact,
-   9/64 digits**; and naive isolation ("everything above the top staff line") gets the
-   blob count right on **1/8** lines, because high notes put noteheads, stems and
-   ledger lines in that same band. Isolating fingering glyphs therefore needs real
-   layout analysis — which is a purpose-built OMR's job, not ours. **Route: Audiveris
-   (it has a fingering-digits topic) on long-PD method books, one measured trial
-   before any bulk download — and it needs consent for IMSLP's human-attestation
-   gate. Otherwise close this item, and item 3 with it.** Original assessment follows.
-2. ~~**More labels (the real lever).**~~ Dense cello fingering barely exists: the
-   entire 42k-score corpus yields **193 printed fingers** on 4 files, and no public
-   cello fingering dataset exists at all. The one avenue with volume is OMR over
-   long-PD fingered method books (Dotzauer, Duport, Kummer, Lee, Franchomme,
-   Popper, Grützmacher, Klengel) — Audiveris has an optional "fingering digits"
-   recognition topic. Bowed strings are *easier* than the guitar case: a digit over
-   a note is unambiguously the finger, with none of the circled-string ambiguity
-   that stalled guitar OMR. String and position stay hidden variables, which the DP
-   can infer from finger + pitch + continuity (an EM setup, not plain supervision).
-   ⚠ Pre-1930 prints only; a modern edition's fingering is a fresh editorial layer.
-3. **Learned emission.** `BowedPositionModel` is the seam (twin of
-   `TabPositionModel`); the DP keeps reachability and movement, a model only biases
-   which reachable frame wins. This DP already *is* an HMM's decoder, so the first
-   step is fitting transition/emission tables rather than training a network — a
-   small state space needs far fewer labels than the guitar labeler did. The violin
-   TNUA dataset (217k note annotations, 10 violinists) is **unlicensed** → dev/eval
-   only, never shipped weights, and its geometry is violin's, so it validates the
-   architecture rather than supplying cello labels. Score with MRR/nDCG against
-   multiple editions, not single-label agreement.
+2. **More labels — CLOSED (measured 2026-07-26/27).** Both routes were tested to a
+   number rather than argued about.
+   **OMR: dead.** Our own OMR cannot carry fingerings by construction (SMT → `bekern`
+   → Humdrum `**kern`, no fingering in that vocabulary). Audiveris 5.11 CAN — it
+   exported real `<fingering>` from a PD 19th-c. Dotzauer print — but at **~20% recall**
+   (4 of ~15–25 printed on the page) with a diagnosable precision failure (a harmonic
+   circle read as finger `0`, which our own geometry rejects automatically). AGPL-3.0,
+   so an offline tool only, never bundled.
+   **Symbolic: exhausted.** Streaming-scanned the full PDMX release (`mxl.tar.gz`,
+   **254,035 scores**): 1,538 carry a fingering → **236 bowed parts / 9,324 labels** →
+   after the documented ship gate (`composer_name` → Wikidata death ≤1955 AND
+   `license_conflict == False`) **51 parts / 1,282 labels**, of which **6 cello parts /
+   121 labels**, and 2 of those were scores we already had. **Net: +55 cello labels
+   (193 → 248).** The entire 254k corpus adds 28% to our gold set.
+   **The gate is not ceremony:** it rejected Hozier, John Williams, Howard Shore, Toby
+   Fox, Chrono Trigger, Pokémon and four in-copyright Kreisler pieces — all tagged
+   `publicdomain`/`cc-zero` by their uploaders. PDMX's axis-2 is self-attested; a
+   licence field is a claim, not a clearance (`docs/CORPUS_LICENSING.md`, PDMX OVERHAUL).
+   ⚠ The gate under-clears in a fixable way: `"J.S. BACH"` and
+   `"Luigi Boccherini (1743-1805)"` both come back UNKNOWN — string formatting, not
+   copyright. A normalisation pass on `bin/pdmx_pd_composer.py` would recover rows
+   across the whole catalog; flagged to its owner, not changed here.
+   **What is left, and it is not a corpus:** a cellist annotating for a few hours, with
+   the arranger pre-filling so they correct rather than type. That is how TNUA (violin,
+   217k notes) was built, and it is the only route that produces dense expert labels.
+   The 55 new labels ship as a second acceptance slice
+   (`test/data/cello_fingering_gold_pd.json`, 58.2% agreement vs the first set's 50.3%).
+
+3. **Learned emission — CLOSED with item 2.** 248 labels cannot fit transition/emission
+   tables that beat authored weights, let alone train a neural emission model. The seam
+   stays (`BowedPositionModel`, the bowed twin of `TabPositionModel`) so a model can
+   drop in if dense labels ever exist; nothing else is worth building against 248.
+   The literature's own numbers say why this is not a loss: hand position is subjective
+   (ten professionals, F1 ≈ .24–.31), and the capped-skill profiles that the app
+   actually uses are near-deterministic from geometry alone.
 
 ## Automatic play-along — live pitch detection (feature area)
 

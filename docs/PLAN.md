@@ -452,19 +452,22 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (cello-labels)** · 🚧 **ACTIVE — close item 2/3, keep the gate-clean labels as
-  an ACCEPTANCE corpus.** The PDMX mine + the documented ship gate are done and the
-  verdict is negative for training: of 254,035 scores → 236 fingered bowed parts →
-  **51 parts / 1,282 labels survive the gate**, of which **6 cello parts / 121 cello
-  labels** — i.e. the whole 254k corpus yields LESS shippable cello supervision than
-  the four CC0 files mined on day one (193). So item 2 closes as a training route and
-  item 3 (fitting HMM tables) closes with it. What is worth keeping is the corpus as
-  a **second acceptance slice**: different scores, named PD composers (Mahler, Wagner,
-  Ravel, Beethoven, Vivaldi, Paganini, Kreutzer, Grieg, Sarasate), which widens the
-  regression floor from 193 to ~314 cello labels. Committing it as its own fixture
-  (not merged into the existing one, so the old floor stays comparable) with the gate
-  recorded per row. Touches only `test/data/` + `test/bowed_arranger_accept_test.dart`.
-  Worktree `../mus-cello-fingering`.
+- **opus (cello-labels)** · ✅ **SHIPPED (idle) — the cello arc is COMPLETE; items 2
+  and 3 closed with numbers** (`4a5d00b3`). Full PDMX mine + the documented ship gate:
+  254,035 scores → 236 fingered bowed parts → 51 parts / 1,282 labels cleared → **net
+  +55 cello labels** (193 → 248), i.e. the entire 254k corpus adds 28% to our gold set.
+  Shipped as a **separate** acceptance fixture so the original floor stays comparable;
+  it scores **58.2%** against the first set's 50.3% (the arranger does better on Lee's
+  pedagogical Gavotte than on expressive chamber writing). The gate rejected Hozier,
+  John Williams, Howard Shore, Toby Fox, Chrono Trigger, Pokémon and four Kreisler
+  pieces — all uploader-tagged CC0. ⚠ **For the corpus owner:** the gate under-clears
+  on string formatting, not copyright (`"J.S. BACH"`, `"Luigi Boccherini (1743-1805)"`
+  both UNKNOWN); a normalisation pass on `bin/pdmx_pd_composer.py` would recover rows
+  catalog-wide — flagged, not changed, since that gate ships the public catalog.
+  **The arc is done:** arranger · positions 1–4 in the games · fingerings, string
+  numerals and bowing on screen · export to every format · `copyWith` + the thumb glyph
+  contributed to crisp_notation. The only remaining route to dense labels is a cellist
+  annotating for a few hours with the arranger pre-filling — a decision, not a task.
 
 - **opus (cello-omr-trial)** · 🔬 **TRIAL DONE (measured) — Audiveris DOES recover
   printed cello fingerings, at low recall, with detectable errors.** Ran Audiveris
