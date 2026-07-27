@@ -77,9 +77,9 @@ class _CelloFingerQuizScreenState extends State<CelloFingerQuizScreen>
 
     if (_tapped == null || !answeredWrong) {
       context.read<SriService>().recordResponse(
-            'cello.finger.${_target.pitch.step.name}${_target.pitch.octave}',
-            correct,
-          );
+        'cello.finger.${_target.pitch.step.name}${_target.pitch.octave}',
+        correct,
+      );
     }
 
     if (correct) {
@@ -166,17 +166,15 @@ class _CelloFingerQuizScreenState extends State<CelloFingerQuizScreen>
                                   backgroundColor: _tapped == null
                                       ? null
                                       : finger == _target.finger &&
-                                              _tapped == _target.finger
-                                          ? Colors.green
-                                          : finger == _tapped
-                                              ? Colors.redAccent
-                                              : null,
+                                            _tapped == _target.finger
+                                      ? Colors.green
+                                      : finger == _tapped
+                                      ? Colors.redAccent
+                                      : null,
                                   textStyle: Theme.of(context)
                                       .textTheme
                                       .headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 onPressed: () => _onAnswer(finger),
                                 child: Text('$finger'),
@@ -220,7 +218,10 @@ class _PositionPicker extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3),
             child: ChoiceChip(
-              label: Text('$p'),
+              label: Text(celloPositionLabel(p)),
+              tooltip: celloPositionName(p).raised
+                  ? l10n.celloPositionRaised(celloPositionName(p).number)
+                  : null,
               selected: p == position,
               onSelected: (_) => onChanged(p),
             ),

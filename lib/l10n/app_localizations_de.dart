@@ -9,6 +9,11 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String celloPositionRaised(int n) {
+    return '$n. Lage erhöht';
+  }
+
+  @override
   String get appTitle => 'CometBeat';
 
   @override

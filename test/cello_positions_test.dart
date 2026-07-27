@@ -13,6 +13,7 @@ String _show(CelloNote n) =>
     '${n.pitch.step.name}${n.pitch.octave}/${n.string.name}${n.finger}';
 
 void main() {
+  _positionNameTests();
   test('first position reproduces the hand-typed table exactly', () {
     expect(
       celloNotesInPosition(1).map(_show).toList(),
@@ -76,5 +77,61 @@ void main() {
       final shown = celloNotesInPosition(p).map(_show).toList();
       expect(shown.toSet().length, shown.length, reason: 'position $p');
     }
+  });
+}
+
+/// Position NAMES, added 2026-07-27 after Becker's `7. Fingersatz. Positionen`
+/// showed our slot indices are not what a cellist says.
+void _positionNameTests() {
+  group('position names are diatonic, not semitone-counted', () {
+    test('slots 1-4 are 1st, 2nd, raised-2nd and 3rd position', () {
+      expect(celloPositionName(1), (number: 1, raised: false));
+      expect(celloPositionName(2), (number: 2, raised: false));
+      expect(celloPositionName(3), (number: 2, raised: true));
+      // The one that used to mislead: slot 4 is THIRD position, not fourth.
+      expect(celloPositionName(4), (number: 3, raised: false));
+    });
+
+    test(
+      'there is no raised 1st or raised 4th — the letters are a semitone apart',
+      () {
+        // B->C and E->F leave no chromatic step to name, which is exactly Becker's
+        // argument for the scheme being diatonic.
+        final names = [for (var p = 1; p <= 10; p++) celloPositionName(p)];
+        expect(names.any((n) => n.number == 1 && n.raised), isFalse);
+        expect(names.any((n) => n.number == 4 && n.raised), isFalse);
+        // ...but raised 2nd, 3rd, 5th and 6th all exist.
+        for (final n in [2, 3, 5, 6]) {
+          expect(
+            names.any((m) => m.number == n && m.raised),
+            isTrue,
+            reason: 'expected a raised $n',
+          );
+        }
+      },
+    );
+
+    test('the chip label marks raised positions and is never empty', () {
+      expect(celloPositionLabel(1), '1');
+      expect(celloPositionLabel(3), '2♯');
+      expect(celloPositionLabel(4), '3');
+      for (var p = 1; p <= kMaxGamePosition; p++) {
+        expect(celloPositionLabel(p), isNotEmpty);
+      }
+    });
+
+    test(
+      'slot 4 names third position AND holds third position, consistently',
+      () {
+        // The label must describe the notes the slot actually teaches: in third
+        // position D is the FIRST finger, which is what the old numbering got wrong.
+        final notes = celloNotesInPosition(4);
+        final dOnA = notes.firstWhere(
+          (n) => n.string == CelloString.a && n.pitch.step == Step.d,
+        );
+        expect(dOnA.finger, 1);
+        expect(celloPositionName(4).number, 3);
+      },
+    );
   });
 }

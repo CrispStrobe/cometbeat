@@ -58,10 +58,10 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
 
   /// Note the readout snaps to, re-scored against the chosen A4.
   int _adjMidi(PitchReading r) => PitchReading(
-        frequency: r.frequency,
-        clarity: r.clarity,
-        a4: _a4,
-      ).nearestMidi;
+    frequency: r.frequency,
+    clarity: r.clarity,
+    a4: _a4,
+  ).nearestMidi;
 
   /// Cents to display: signed deviation from the target string when guiding,
   /// otherwise from the nearest note — both against the chosen A4. Can exceed
@@ -72,8 +72,11 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
       final targetHz = _a4 * pow(2, (_targetMidi! - 69) / 12.0);
       return 1200.0 * (log(r.frequency / targetHz) / ln2);
     }
-    return PitchReading(frequency: r.frequency, clarity: r.clarity, a4: _a4)
-        .cents;
+    return PitchReading(
+      frequency: r.frequency,
+      clarity: r.clarity,
+      a4: _a4,
+    ).cents;
   }
 
   @override
@@ -102,10 +105,7 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
         onError: (Object e) {
           if (mounted) {
             setState(
-              () => _error = (
-                reason: PitchCaptureError.unknown,
-                detail: '$e',
-              ),
+              () => _error = (reason: PitchCaptureError.unknown, detail: '$e'),
             );
           }
         },
@@ -124,17 +124,17 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
   }
 
   String _instrumentName(AppLocalizations l, TunerInstrument i) => switch (i) {
-        TunerInstrument.chromatic => l.tunerInstrumentChromatic,
-        TunerInstrument.cello => l.tunerInstrumentCello,
-        TunerInstrument.guitar => l.tunerInstrumentGuitar,
-        TunerInstrument.violin => l.tunerInstrumentViolin,
-      };
+    TunerInstrument.chromatic => l.tunerInstrumentChromatic,
+    TunerInstrument.cello => l.tunerInstrumentCello,
+    TunerInstrument.guitar => l.tunerInstrumentGuitar,
+    TunerInstrument.violin => l.tunerInstrumentViolin,
+  };
 
   String _errorText(AppLocalizations l) => switch (_error!.reason) {
-        PitchCaptureError.permissionDenied => l.micPermissionDenied,
-        PitchCaptureError.unsupported => l.micUnsupported,
-        _ => l.micStartFailed(_error!.detail ?? _error!.reason.name),
-      };
+    PitchCaptureError.permissionDenied => l.micPermissionDenied,
+    PitchCaptureError.unsupported => l.micUnsupported,
+    _ => l.micStartFailed(_error!.detail ?? _error!.reason.name),
+  };
 
   void _onReading(PitchReading r) {
     if (!mounted) return;
@@ -142,8 +142,9 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
       _reading = r;
       if (r.hasPitch) {
         final c = _rawCents(r);
-        _smoothedCents =
-            _smoothedCents == null ? c : _smoothedCents! * 0.6 + c * 0.4;
+        _smoothedCents = _smoothedCents == null
+            ? c
+            : _smoothedCents! * 0.6 + c * 0.4;
       } else {
         _smoothedCents = null;
       }
@@ -207,22 +208,22 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
                 labelMidi >= 0 ? spelledMidiName(context, labelMidi) : '—',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: inTune ? Colors.green : scheme.onSurface,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: inTune ? Colors.green : scheme.onSurface,
+                ),
               ),
               Text(
                 r.hasPitch
                     ? '${r.frequency.toStringAsFixed(1)} Hz  ·  clarity ${r.clarity.toStringAsFixed(2)}'
                     : (_targetMidi != null
-                        ? l.tunerTuneString(
-                            spelledMidiName(context, _targetMidi!),
-                          )
-                        : l.tunerPrompt),
+                          ? l.tunerTuneString(
+                              spelledMidiName(context, _targetMidi!),
+                            )
+                          : l.tunerPrompt),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -243,14 +244,14 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
                 inTune
                     ? l.tunerStringInTune
                     : (displayCents != null
-                        ? l.tunerCents(
-                            '${displayCents >= 0 ? '+' : ''}${displayCents.toStringAsFixed(0)}',
-                          )
-                        : ' '),
+                          ? l.tunerCents(
+                              '${displayCents >= 0 ? '+' : ''}${displayCents.toStringAsFixed(0)}',
+                            )
+                          : ' '),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: inTune ? Colors.green : scheme.onSurface,
-                    ),
+                  color: inTune ? Colors.green : scheme.onSurface,
+                ),
               ),
               const SizedBox(height: 24),
               if (_strings.isNotEmpty)
@@ -264,7 +265,8 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
                         selected: _targetMidi == midi,
                         // A played string that isn't the target still lights up
                         // faintly so you can see what the tuner hears.
-                        backgroundColor: _targetMidi == null &&
+                        backgroundColor:
+                            _targetMidi == null &&
                                 r.hasPitch &&
                                 _adjMidi(r) == midi
                             ? scheme.primaryContainer
@@ -283,8 +285,8 @@ class _TunerSpikeScreenState extends State<TunerSpikeScreen> {
                     l.tunerPickString,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               const Spacer(),

@@ -19,10 +19,64 @@ import 'package:comet_beat/core/notation/bowed_arranger.dart';
 import 'package:comet_beat/features/games/cello/cello_first_position.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 
-/// Highest position these games offer. Fourth position is where the neck-position
-/// repertoire a learner meets lives; above it the hand starts moving over the
-/// shoulder of the instrument and the pedagogy changes.
+/// Highest position SLOT these games offer.
+///
+/// ⚠ This is an internal slot index, NOT the number a cellist would say. The slots
+/// step by a semitone (slot `n` anchors at `n + 1` semitones above the open
+/// string); real position names step by a LETTER. Slots 1–4 therefore cover what a
+/// teacher calls 1st, 2nd, raised-2nd and 3rd position — see [celloPositionName],
+/// which is what the UI must display. Raising this to 6 would add raised-3rd and
+/// 4th position; that is a content decision, not a naming one, and is not made here.
 const int kMaxGamePosition = 4;
+
+/// What a cellist CALLS the hand at game slot [position] — the number plus whether
+/// it is the "raised" (Becker: *erhöhte*) variant.
+///
+/// Cello positions are numbered by LETTER NAME, not by semitone: the number is the
+/// scale degree the first finger takes above the open string. On the A string that
+/// is B = 1st, C = 2nd, D = 3rd, E = 4th, F = 5th, G = 6th, A = 7th. A chromatic
+/// step between two of those is the lower one "raised" — and it only exists where
+/// the letters are a whole tone apart. There is no raised 1st (B→C is already a
+/// semitone) and no raised 4th (E→F likewise), which is precisely the argument
+/// Becker makes in *Fingersatz. Positionen*: he prints `1ste · 2te · 2te erhöhte ·
+/// 3te · 3te erhöhte` and never a `1ste erhöhte`.
+///
+/// Keeping the slots in semitones and naming them only here is deliberate: the
+/// arranger's Viterbi reasons in semitone anchors, and nothing about the search
+/// should depend on what humans call the result.
+({int number, bool raised}) celloPositionName(int position) {
+  final anchor = BowedInstrument.cello.anchorOfPosition(position);
+  // Semitones above the open string -> (degree, raised). Index = anchor.
+  const table = <int, (int, bool)>{
+    2: (1, false), // B  — 1st
+    3: (2, false), // C  — 2nd
+    4: (2, true), //  C♯ — 2nd raised
+    5: (3, false), // D  — 3rd
+    6: (3, true), //  D♯ — 3rd raised
+    7: (4, false), // E  — 4th
+    8: (5, false), // F  — 5th
+    9: (5, true), //  F♯ — 5th raised
+    10: (6, false), // G — 6th
+    11: (6, true), //  G♯ — 6th raised
+    12: (7, false), // A — 7th
+  };
+  final e = table[anchor];
+  // Below first position is the "half position"; above the 7th the thumb takes
+  // over and the neck numbering stops meaning anything. Both fall back to the
+  // slot index rather than inventing a name.
+  if (e == null) return (number: position, raised: false);
+  return (number: e.$1, raised: e.$2);
+}
+
+/// The chip/label text for game slot [position]: `1`, `2`, `2♯`, `3`…
+///
+/// The raised variants get a ♯ suffix because a chip has room for two glyphs and
+/// not for a word; screen readers and tooltips should use the spelled-out l10n form
+/// (`celloPositionRaised`) instead, since "♯" is not what anyone says out loud.
+String celloPositionLabel(int position) {
+  final n = celloPositionName(position);
+  return n.raised ? '${n.number}♯' : '${n.number}';
+}
 
 /// The naturals reachable in neck [position] (1 = first position, the default),
 /// low string to high, ascending within each string.
@@ -75,8 +129,8 @@ Pitch? _naturalOf(int midi) {
 }
 
 CelloString _stringOf(int index) => switch (index) {
-      0 => CelloString.a,
-      1 => CelloString.d,
-      2 => CelloString.g,
-      _ => CelloString.c,
-    };
+  0 => CelloString.a,
+  1 => CelloString.d,
+  2 => CelloString.g,
+  _ => CelloString.c,
+};

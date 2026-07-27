@@ -64,8 +64,9 @@ void main() {
     }
   });
 
-  testWidgets('string quiz shows a bass-clef note and four strings',
-      (tester) async {
+  testWidgets('string quiz shows a bass-clef note and four strings', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const CelloStringQuizScreen(), sri));
     await tester.pump();
 
@@ -95,13 +96,16 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('finger quiz drills a chosen position, not only the nut',
-      (tester) async {
+  testWidgets('finger quiz drills a chosen position, not only the nut', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const CelloFingerQuizScreen(), sri));
     await tester.pump();
 
-    // Positions 1-4 offered, first position selected.
-    for (final p in ['1', '2', '3', '4']) {
+    // Four slots offered, first position selected. The chips show what a cellist
+    // CALLS each slot, not the internal slot index: positions are numbered by
+    // letter name, so slot 3 is "raised 2nd" (2♯) and slot 4 is THIRD position.
+    for (final p in ['1', '2', '2♯', '3']) {
       expect(find.widgetWithText(ChoiceChip, p), findsOneWidget);
     }
     expect(
@@ -111,6 +115,10 @@ void main() {
 
     // Third position: no open strings, and every note it can ask about is one
     // the third-position pool actually contains.
+    //
+    // NB this now genuinely selects third position. It used to tap a chip
+    // labelled '3' that was really RAISED SECOND — the numbering bug this test
+    // could not see, because the label and the pool were wrong in the same way.
     await tester.tap(find.widgetWithText(ChoiceChip, '3'));
     await tester.pumpAndSettle();
     expect(
@@ -118,7 +126,8 @@ void main() {
       isTrue,
     );
 
-    final third = celloNotesInPosition(3);
+    // Slot 4 is third position — see `celloPositionName`.
+    final third = celloNotesInPosition(4);
     expect(third.any((n) => n.finger == 0), isFalse);
     // The prompt names one of the four strings, and the drawn note is in pool.
     final staff = tester.widget<StaffView>(find.byType(StaffView));
@@ -133,30 +142,31 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('tenor clef stays locked until the cello basics are starred',
-      (tester) async {
+  testWidgets('tenor clef stays locked until the cello basics are starred', (
+    tester,
+  ) async {
     final progress = ProgressService();
     final cello = kLearningModules.firstWhere((m) => m.id == 'cello');
 
     Widget wrap() => MultiProvider(
-          providers: [
-            ChangeNotifierProvider(create: (_) => SettingsService()),
-            ChangeNotifierProvider<SriService>.value(value: sri),
-            ChangeNotifierProvider(create: (_) => DebugService()),
-            Provider<AudioService>(create: (_) => AudioService()),
-            ChangeNotifierProvider<ProgressService>.value(value: progress),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [Locale('en'), Locale('de')],
-            home: ModuleScreen(module: cello),
-          ),
-        );
+      providers: [
+        ChangeNotifierProvider(create: (_) => SettingsService()),
+        ChangeNotifierProvider<SriService>.value(value: sri),
+        ChangeNotifierProvider(create: (_) => DebugService()),
+        Provider<AudioService>(create: (_) => AudioService()),
+        ChangeNotifierProvider<ProgressService>.value(value: progress),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en'), Locale('de')],
+        home: ModuleScreen(module: cello),
+      ),
+    );
 
     await tester.pumpWidget(wrap());
     await tester.pump();

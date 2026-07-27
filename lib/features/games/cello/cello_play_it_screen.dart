@@ -113,10 +113,7 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
         onError: (Object e) {
           if (mounted) {
             setState(
-              () => _error = (
-                reason: PitchCaptureError.unknown,
-                detail: '$e',
-              ),
+              () => _error = (reason: PitchCaptureError.unknown, detail: '$e'),
             );
           }
         },
@@ -194,10 +191,10 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
     _service.stop();
     final stars = scoreToStars('cello_play_it', _score, true);
     context.read<ProgressService>().recordResult(
-          'cello_play_it',
-          score: _score,
-          stars: stars,
-        );
+      'cello_play_it',
+      score: _score,
+      stars: stars,
+    );
     context.read<AudioService>().playFanfare();
     setState(() => _finished = true);
   }
@@ -219,10 +216,10 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
   void debugSkip() => _skip();
 
   String _errorText(AppLocalizations l) => switch (_error!.reason) {
-        PitchCaptureError.permissionDenied => l.micPermissionDenied,
-        PitchCaptureError.unsupported => l.micUnsupported,
-        _ => l.micStartFailed(_error!.detail ?? _error!.reason.name),
-      };
+    PitchCaptureError.permissionDenied => l.micPermissionDenied,
+    PitchCaptureError.unsupported => l.micUnsupported,
+    _ => l.micStartFailed(_error!.detail ?? _error!.reason.name),
+  };
 
   String _hint(AppLocalizations l) {
     final string = _target.string.label(l);
@@ -280,7 +277,14 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 3),
                             child: ChoiceChip(
-                              label: const Text('\$p'),
+                              // NB was `const Text('\$p')` — the escaped `$` made
+                              // every chip render the literal text "$p".
+                              label: Text(celloPositionLabel(p)),
+                              tooltip: celloPositionName(p).raised
+                                  ? l10n.celloPositionRaised(
+                                      celloPositionName(p).number,
+                                    )
+                                  : null,
                               selected: p == _position,
                               onSelected: (_) {
                                 if (p == _position) return;
@@ -315,7 +319,8 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
                                     // `=N` engraves the finger above the note,
                                     // the way a cello method book prints it —
                                     // the chip below still spells out the string.
-                                    notes: '${_target.pitch.step.name}'
+                                    notes:
+                                        '${_target.pitch.step.name}'
                                         '${_target.pitch.octave}:w'
                                         '=${_target.finger}',
                                   ),
@@ -338,9 +343,7 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
                       _reading.hasPitch
                           ? spelledMidiName(context, _reading.nearestMidi)
                           : '—',
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
+                      style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             color: onTarget ? Colors.green : scheme.onSurface,
                             fontWeight: FontWeight.bold,
