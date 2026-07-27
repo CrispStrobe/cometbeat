@@ -87,6 +87,78 @@ String _resolveOpenMpt() {
 
 const _kSampleRate = 44100;
 
+/// A second and third INDEPENDENT player, used to calibrate the gates.
+///
+/// PLAN.md §6 X0: an absolute threshold is the wrong baseline. Two engines
+/// never agree perfectly — they differ in interpolation, envelopes and
+/// filtering — so the number our render has to beat is not a constant, it is
+/// **how closely the independent engines agree with each other on this
+/// material**. Gating at a fixed 0.80 let a deviation through that a listener
+/// could hear, because the references agreed at 0.93 on the same fixture.
+///
+/// Both are optional: with only one reference present the harness falls back to
+/// the old absolute thresholds and says so.
+///   libxmp:   brew install xmp
+///   micromod: cc -O2 -o mod2wav mod2wav.c micromod.c   (martincameron/micromod)
+String? _resolveOptional(String binary) {
+  final which = Process.runSync('which', [binary]);
+  if (which.exitCode != 0) return null;
+  final path = (which.stdout as String).trim();
+  return path.isNotEmpty && File(path).existsSync() ? path : null;
+}
+
+final String? _kXmpPath = _resolveOptional('xmp');
+final String? _kMicromodPath = _resolveOptional('mod2wav');
+
+/// Renders through libxmp, or null when `xmp` is not installed.
+Future<Uint8List?> _renderWithXmp(String fixturePath) async {
+  final exe = _kXmpPath;
+  if (exe == null) return null;
+  final dir = Directory.systemTemp.createTempSync('xmp_ref_');
+  try {
+    final out = '${dir.path}/out.wav';
+    final r = await Process.run(
+      exe,
+      ['-d', 'wav', '-o', out, '-f', '$_kSampleRate', fixturePath],
+    );
+    if (r.exitCode != 0 || !File(out).existsSync()) return null;
+    return File(out).readAsBytesSync();
+  } finally {
+    dir.deleteSync(recursive: true);
+  }
+}
+
+/// Renders through micromod, or null when `mod2wav` is not on PATH.
+/// MOD only — micromod does not read XM/S3M/IT.
+Future<Uint8List?> _renderWithMicromod(String fixturePath) async {
+  final exe = _kMicromodPath;
+  if (exe == null || !fixturePath.toLowerCase().endsWith('.mod')) return null;
+  final dir = Directory.systemTemp.createTempSync('micromod_ref_');
+  try {
+    final out = '${dir.path}/out.wav';
+    final r =
+        await Process.run(exe, [fixturePath, out, '-rate', '$_kSampleRate']);
+    if (r.exitCode != 0 || !File(out).existsSync()) return null;
+    return File(out).readAsBytesSync();
+  } finally {
+    dir.deleteSync(recursive: true);
+  }
+}
+
+/// The worst pairwise spectral agreement among the reference renders — the bar
+/// our own render is judged against. Null when fewer than two are available.
+double? _interReferenceAgreement(List<Float64List> refs) {
+  if (refs.length < 2) return null;
+  var worst = 1.0;
+  for (var i = 0; i < refs.length; i++) {
+    for (var j = i + 1; j < refs.length; j++) {
+      final s = spectralSimilarity(refs[i], refs[j]);
+      if (s < worst) worst = s;
+    }
+  }
+  return worst;
+}
+
 /// Loads test fixture bytes
 Uint8List _fixture(String name) =>
     File('test/fixtures/$name').readAsBytesSync();
@@ -496,6 +568,37 @@ void main() {
               final cmp = AudioComparison.of(ourPcm, openmptPcm);
               print('    $cmp');
 
+              // X0 — judge our deviation against how well the INDEPENDENT
+              // engines agree with each other, not against a constant.
+              final refPcms = <Float64List>[openmptPcm];
+              for (final wav in [
+                await _renderWithXmp('test/fixtures/$fixtureName'),
+                await _renderWithMicromod('test/fixtures/$fixtureName'),
+              ]) {
+                if (wav != null && wav.length > 44) {
+                  refPcms.add(_wavToMonoPcm(wav));
+                }
+              }
+              final refAgree = _interReferenceAgreement(refPcms);
+              // Worst agreement between OUR render and any single reference.
+              var ourWorst = 1.0;
+              for (final ref in refPcms) {
+                final lag = bestLagSamples(ourPcm, ref);
+                final (a, b) = alignBy(ourPcm, ref, lag);
+                final s = spectralSimilarity(a, b);
+                if (s < ourWorst) ourWorst = s;
+              }
+              if (refAgree != null) {
+                print('    refs agree ${refAgree.toStringAsFixed(3)} · '
+                    'ours ${ourWorst.toStringAsFixed(3)} · '
+                    'gap ${(refAgree - ourWorst).toStringAsFixed(3)} '
+                    '(${refPcms.length} engines)');
+              } else {
+                print('    only one reference available — falling back to '
+                    'absolute thresholds (install xmp / mod2wav for the '
+                    'calibrated gate)');
+              }
+
               // Spectral similarity is the one that sees a tuning error: we
               // map Amiga periods through periodToMidi at A440 rather than
               // from the Paula clock, and a systematic offset there would leave
@@ -504,19 +607,35 @@ void main() {
               // filtering, so this is a "still playing the same notes" gate,
               // not a fidelity score.
               if (strict) {
-                // Thresholds set from MEASURED values on musical.mod (spectral
-                // 0.920, level +3.8 dB, detune -17.1 cents), loose enough that
-                // two independent engines may differ in interpolation,
-                // envelopes and filtering — and still tight enough to have
-                // caught the loop-rescaling bug, which drove spectral to 0.746
-                // and level to -14.2 dB. A gate that would not have caught the
-                // last real bug is decoration.
-                expect(
-                  cmp.spectral,
-                  greaterThan(minSpectral),
-                  reason: 'spectra diverged ($cmp) — a tuning, sample-mapping '
-                      'or envelope regression, not just a level difference',
-                );
+                if (refAgree != null) {
+                  // The calibrated gate (X0). We are allowed to sit a little
+                  // further from each reference than they sit from each other,
+                  // but not much: 0.08 is roughly four times the residual
+                  // vibrato difference and a third of what the portamento bug
+                  // measured, so it catches a real fault without firing on the
+                  // ordinary spread between implementations.
+                  expect(
+                    refAgree - ourWorst,
+                    lessThan(0.08),
+                    reason:
+                        'we deviate further from the reference players than '
+                        'they do from each other — refs agree '
+                        '${refAgree.toStringAsFixed(3)}, we manage '
+                        '${ourWorst.toStringAsFixed(3)} ($cmp)',
+                  );
+                } else {
+                  // Only openmpt123 present: no calibration possible, so fall
+                  // back to the old absolute floor. Weaker on purpose — it let
+                  // an audible effects deviation through once, which is what
+                  // motivated X0.
+                  expect(
+                    cmp.spectral,
+                    greaterThan(minSpectral),
+                    reason:
+                        'spectra diverged ($cmp) — a tuning, sample-mapping '
+                        'or envelope regression, not just a level difference',
+                  );
+                }
                 expect(
                   cmp.levelDb.abs(),
                   lessThan(8.0),
