@@ -713,10 +713,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   at 8×, **recorded as printed and deliberately NOT regularised** — silently fixing it
   would destroy the evidence either way. Any transcriber of these pages must be told
   this, or they will "correct" the extensions away.
-  ⚠ **Not cleared, and not in the acceptance suite:** Tillière d.1790 is long PD, but
-  the EDITION is unidentified (plate 5176, 19th-c French) and the fingerings may be an
-  editorial layer. Per the editor-not-composer rule it stays in the scratchpad marked
-  `licence: UNCONFIRMED` until the edition and its editor's death year are established.
+  ✅ **Tillière is CLEARED on both axes** (was flagged UNCONFIRMED for one turn; the
+  maintainer challenged the hedge and it did not survive contact with the title page).
+  The edition is **Paris: Ikelmer Frères, 23 rue Neuve-des-Mathurins**, undated imprint,
+  dated **c.1877–1881** from [IMSLP's publisher file](https://imslp.org/wiki/Ikelmer)
+  (firm 1857–1900; the "Ikelmer Frères" imprint 1877–ca.1881; that address 1877–ca.1888).
+  ⚠ It is **not** the "Paris 1830" the work page suggests, and the `1830` in the scan's
+  left margin is a **library shelfmark** (ruled box under an `M.`), not an imprint date —
+  worth knowing, because dating this print off that number would be wrong.
+  Axis 2: Tillière d.1790 → underlying method long PD. Axis 1: the title page says
+  **«REVUE ET AUGMENTÉE»**, so an editorial layer really does exist and the fingerings may
+  belong to it — but the reviser is **UNATTRIBUTED**, so the anonymous-work term governs:
+  **70 years from publication** (DE §66 UrhG / EU), expired c.1947–51. So it clears
+  *without* identifying anybody. Lesson for the next source: when an editorial layer is
+  anonymous, date the *publication*, don't hunt the *editor*.
   **Working process** (recommended for whoever continues): read the page yourself first
   to establish the interpretive key, then hand each line to an agent as an *independent
   second reader* — double-keying, as in manuscript transcription. Disagreements localise
@@ -731,6 +741,27 @@ is recorded in [HISTORY.md](HISTORY.md).
   78; PDF↔print offset ≈ +13. Tillière (photocopy-grade, 1071×1640 @150 ppi) p.17 ff.
   ⚠ Extract with `pdfimages -j`, NOT `pdftoppm -r 300`: these PDFs wrap low-res scans
   (122–150 ppi), so rendering at 300 dpi is slow and upscales without adding detail.
+  **⭐ MEASURED — Romberg p.22 «Tonleiter in G dur», 11 notes read by eye
+  (`p22_tonleiter_gdur.ly`): finger 10/11, STRING 11/11**, identical at all three skill
+  levels. Against 50.3% / 58.2% on the PDMX sets. Two firsts here: Romberg's method is
+  **his own** (d.1841, no editorial layer to date → licence-clean without argument), and
+  every printed `0` pins an open string, so this is the **first cello gold with ground-truth
+  STRINGS** — the axis the arranger was previously only self-scored on at 92.7%.
+  ⚠ n=11, one scale line. Not a corpus, and 10/11 is not "91%".
+  **The one disagreement is diagnostic, and points at a missing cost term.** On E2 Romberg
+  prints finger 2, we print 3. Both are physically real (E2 = 3 in plain first position,
+  = 2 in the extended frame). But Romberg's prose says D–E–F♯ is taken as ONE hand shape,
+  1-2-4, «die Hand nicht aus der gehabten Lage bringen» — and we get F♯2 right
+  (`extendedForward`) yet reshape back to `neck` for E2. Cause: `BowedArrangeCost.extension`
+  is a **per-note** tax and there is **no cost for changing hand MODE at a constant anchor**,
+  so each note independently picks its cheapest frame and holding one shape across a group is
+  never rewarded. A cellist pays to *reshape*, not per note spent in a shape. Candidate fix =
+  add a reshape/mode-change term. NOT implemented: one data point plus one printed authority
+  is a hypothesis, and it needs the remaining Romberg pages behind it first (and an LOPO
+  check — open-string weight tuning was already falsified that way once).
+  ⚠ Correction for the record: this corroborates **`extendedForward`**, not
+  `extendedBackward` as first written — the anchor stays at finger 1's place and the upper
+  fingers reach up. Different code path, so the attribution matters.
 
 - **opus (cello-omr-trial)** · 🔬 **TRIAL DONE (measured) — Audiveris DOES recover
   printed cello fingerings, at low recall, with detectable errors.** Ran Audiveris
