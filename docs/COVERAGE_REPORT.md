@@ -155,6 +155,13 @@ enum labels, and one-branch edges the main suites skipped:
 | `core/audio/sample_pitch.dart` | 88 → **100** | short-buffer single-pass branch + the crossfade-loop path | `26536e91` |
 | `core/audio/sound_library.dart` | 89 → **100** | the non-engine-rate resample branch (22.05 → 44.1 kHz) | `26536e91` |
 | `core/curriculum/coverage_gaps.dart` | 88 → **100** | `report()`'s DANGLING + UNTRAINED branches (synthetic `CoverageReport`) | `881d606f` |
+| `features/library/sources/modarchive_source.dart` | 86 → **100** | parse fallbacks (title→filename→id, downloadUrl, licence "unknown") + metadata/fetch | `83b5ecf5` |
+| `features/library/sources/gregobase_source.dart` | 85 → **95**† | metadata getters + fetch delegation | `bc15b7d8` |
+| `features/library/sources/cometbeat_catalog_source.dart` | 83 → **96**† | `.sounds/.scores/.modules/.all` factories, metadata, exception message, `clearSharedCache` | `bc15b7d8` |
+
+† Non-100% by design: gregobase's `rootBundle` asset-load default and
+cometbeat's shared-cache-hit path (only active for the real index URL, so tests
+can't cross-contaminate) are integration paths, not unit gaps.
 
 ### Earlier in the same campaign (pre-harness, additive suites)
 
