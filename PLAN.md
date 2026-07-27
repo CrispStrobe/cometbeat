@@ -352,14 +352,33 @@ musical payoff per unit of work, which is NOT the order they are numbered in.
 - ⬜ **L4 — per-section repeat counts (real song mode).** Chaining advances one
   pass per section, so A×4 B×2 A×4 is unsayable. Extends `renderArrangement`.
 - ⬜ **L6 — per-track swing, then automation.** Swing is global
-  (`LoopTiming.swing`); no parameter movement over the loop. Real, lower
-  priority for this audience.
+  (`LoopTiming.swing`); no parameter movement over the loop. Both shipped since;
+  "lower priority for this audience" was the wrong framing — see the audience
+  correction below.
 
-**Deliberately NOT planned** (decisions, not oversights — reopen only with the
-maintainer): arbitrary add/remove/rename of tracks, because `kLoopMixerTracks`
-is a curated band and that is defensible for 6+ (if it is ever wanted, start
-with *duplicate an existing track*, not an instrument tree); and a full
-automation matrix or MIDI clock, which belong to the Tracker and Audio Editor.
+⚠️ **AUDIENCE CORRECTION (maintainer, 2026-07-27) — this invalidates several
+"deliberately scoped down" calls below and elsewhere.** CometBeat is **not** a
+6+ app that happens to be usable by others. It is a learning app that **scales
+up to students and hobbyists**, and the stated model is **Scratch / TinkerCAD**:
+a nine-year-old uses those to build genuinely useful, interesting things. They
+are *approachable*, not *limited*. Anything justified here on the grounds that
+"a young audience does not need it" was reasoned from the wrong premise and
+should be re-read.
+
+Concretely, three of my own calls flip:
+- ⬜ **Add / duplicate / rename tracks — REOPENED, now a real gap.**
+  `kLoopMixerTracks` being a fixed curated band was justified above as
+  "defensible for 6+". Under the Scratch model that is exactly backwards —
+  Scratch lets a child add unlimited sprites, and the ceiling is the point.
+  Start with *duplicate an existing track* (cheapest, no instrument tree) and
+  then arbitrary add/rename.
+- ⬜ **A pan-lane editor — no longer "does this audience want one".** It
+  renders already (A3); it needs UI.
+- ⬜ **Per-track filter + its automation — no longer out of scope for being
+  "new DSP".** It is ordinary depth for this audience.
+Still genuinely out of scope, for reasons that are NOT about audience: MIDI
+clock and a full automation matrix belong to the Tracker and the Audio Editor,
+which is a mode-boundary decision, not a capability ceiling.
 
 ### Loop Studio — automation lanes (scoped 2026-07-27, NOT started)
 
@@ -399,9 +418,13 @@ that seam.
 - ⬜ **A3 — pan + filter** on the same seam, once level proves the shape.
 - ⬜ **A4 — UI.** Draw the lane over the per-track row in the inspector.
   **Needs a product decision before starting:** per-eighth-step values (16 of
-  them, blocky, matches the tune/beat grids a child already uses, one tap per
-  value) versus a smooth breakpoint curve (expressive, but drawing curves on a
-  phone for a six-year-old is a different product). Default to per-step.
+  them, blocky, matches the tune/beat grids the app already uses everywhere, one
+  tap per value) versus a smooth breakpoint curve. **Per-step was chosen and
+  shipped — but note the REASON, which I first wrote down wrongly:** it is
+  direct manipulation on the grid the whole app is built from, the same argument
+  as Scratch's blocks. It is NOT "curves are too hard for young users". Curves
+  are therefore a legitimate ADDITION later (a mode switch on the same lane),
+  not something ruled out.
 
 ### Integration and retirement map
 
