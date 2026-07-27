@@ -198,18 +198,15 @@ is recorded in [HISTORY.md](HISTORY.md).
   not all named `daw_*`.
   — opus
 
-- **opus (tracker→editors)** · ✅ **IDLE — §4 instrument macros shipped across
-  additive + sample + STEREO voices, reachable in playback** (HISTORY → "Tracker
-  instrument macros"). `MacroSequence` model; per-tick vol/pitch/arp application in
-  the additive, sample-mono, and sample-stereo tick voices (+ the PAN target in
-  stereo); `TrackerSong.usesMacros` routes a macro'd song through the tick
-  replayer so `renderSongWav`/`replaySongStereo` actually sound them; plus the
-  MONO variable-timing path (`_replayVariable`); opt-in/byte-identical everywhere
-  (goldens green); codec-persisted; plus a **macro editor UI** (bar editor +
-  loop/release) in the Sample instrument editor, so macros are user-authorable.
-  §3.3 grid ergonomics was already built (roadmap corrected). Remaining (task #46,
-  all niche): the STEREO variable-timing path (rarest), the duty target, an
-  additive-instrument macro editor, and §3.3 block-op tests. Now idle.
+- **opus (tracker→editors)** · 🚧 **ACTIVE — finishing §4's long tail (maintainer
+  wants the lot, 2026-07-27).** §4 macros already ship across additive + sample +
+  stereo + mono-variable, reachable + codec-persisted + a Sample-editor UI (see
+  HISTORY → "Tracker instrument macros"). Now building the rest: (1) §3.3 block-op
+  test seams + coverage; (2) additive/procedural macro editor + Sound-Lab interop;
+  (3) macros on the stereo-variable + streaming render paths (every path, no
+  exceptions); (4) a pulse voice for the duty target. Touching
+  `advanced_tracker_screen.dart` (test seams), `instrument_editor.dart`,
+  `tracker_replayer.dart`, `tracker_engine.dart` — all additive, rebase-before-push.
 - **opus (tracker→editors)** · ✅ **(prior, idle) sweep shipped (5 pieces), condensed to
   [HISTORY.md](HISTORY.md) → "Tracker DSP lifted into the shared editors".**
   Shipped: shared LFO + `FxType.autoWah`; tab-through-replayer + opt-in
