@@ -87,6 +87,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   exhausted; remaining untested files are FFI/stub/platform wrappers + generated
   data tables (not unit-testable).
   Worktree `../mus-tests`.
+  - ✅ **COVERAGE MEASUREMENT UNBLOCKED (a114a2e4).** The `flutter test --coverage`
+    collection bug (`Cannot add event while adding stream`, tripped by ~9 isolate/
+    process-spawning tests) is now routed around by a committed harness
+    **`tool/coverage/{run.sh,merge.py,README.md}`**: excludes known spawners, runs
+    the rest in batches under coverage, falls back to per-file when an unknown
+    spawner aborts a batch, then merges the lcov parts (DA+BRDA by max hit) and
+    reports worst-covered + never-loaded files. **Baseline: 80.0% lib line coverage**
+    (61,890/77,385; 532/601 files loaded). The map confirmed the worst-covered files
+    are FFI/native-transcription/ONNX-model-store/plugin wrappers (integration
+    territory) + export-shell barrels — NOT genuine pure-logic gaps. The real
+    pure-logic gaps it surfaced were then **closed to 100% file-by-file**:
+    `rhythm_quantize` (78→100), `reading_hint` (55→100), `chord_progression` (83→100),
+    `module_doc` DocCell semantics, `xm/s3m/it` struct semantics, `source_registry`
+    (defaultHttpGet via http.runWithClient+MockClient, 71→100), `module_flow_timeline`
+    (85→100). Each verified by re-running scoped coverage on the file.
 
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
   grand-staff view (the deferred bit).** Follow-up to `grandstaff-markings`, which
