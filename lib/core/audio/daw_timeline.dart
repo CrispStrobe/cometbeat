@@ -142,6 +142,7 @@ class Clip {
     this.trimEndMs = 0,
     this.effects = const [],
     this.gainAutomation = const [],
+    this.groupId,
     this.provenance,
   });
 
@@ -169,6 +170,16 @@ class Clip {
   /// Ordered per-clip effect chain. Effects process the trimmed source audio
   /// before clip gain/fades and before the track insert.
   final List<DawClipEffect> effects;
+
+  /// D2 — clips sharing a group id move together.
+  ///
+  /// Null means ungrouped, which is almost every clip. Grouping exists for the
+  /// case where two clips ARE one musical event recorded twice — a DI and a mic
+  /// on the same take, a kick and its sub — and sliding one without the other
+  /// silently ruins the phase relationship that made them worth keeping
+  /// together. It is a link, not a container: each clip keeps its own lane,
+  /// gain, fades and envelope.
+  final int? groupId;
 
   /// D3 — a gain envelope over THIS clip, in ms from the clip's own start.
   ///
@@ -208,6 +219,7 @@ class Clip {
     double? trimEndMs,
     List<DawClipEffect>? effects,
     List<DawAutomationPoint>? gainAutomation,
+    int? groupId,
     LicensedWork? provenance,
   }) =>
       Clip(
@@ -225,6 +237,7 @@ class Clip {
         trimEndMs: trimEndMs ?? this.trimEndMs,
         effects: effects ?? this.effects,
         gainAutomation: gainAutomation ?? this.gainAutomation,
+        groupId: groupId ?? this.groupId,
         provenance: provenance ?? this.provenance,
       );
 }

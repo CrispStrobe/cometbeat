@@ -459,6 +459,112 @@ class DawService extends ChangeNotifier {
   /// Move a clip along the timeline (drag-in-time). [startMs] is clamped to ≥ 0
   /// and snapped to [snapMs] when snapping is on. Consecutive moves of the same
   /// clip coalesce into a single undo entry.
+  /// D2 — link [targets] so they move together. Returns the new group id.
+  ///
+  /// Any clip already in a group is re-grouped into this one, which is what
+  /// selecting a grouped clip plus a loose one and pressing Group should do.
+  int groupClips(Iterable<DawClipTarget> targets) {
+    final valid = [
+      for (final t in targets)
+        if (_validClipTarget(t.track, t.index)) t,
+    ];
+    if (valid.length < 2) return -1;
+    _record();
+    final id = ++_lastGroupId;
+    for (final t in valid) {
+      final clips = timeline.tracks[t.track].clips;
+      clips[t.index] = clips[t.index].copyWith(groupId: id);
+    }
+    notifyListeners();
+    return id;
+  }
+
+  /// Break the link on [targets] (and on anything grouped WITH them — a group
+  /// with one member left is not a group).
+  void ungroupClips(Iterable<DawClipTarget> targets) {
+    final ids = <int>{};
+    for (final t in targets) {
+      if (!_validClipTarget(t.track, t.index)) continue;
+      final id = timeline.tracks[t.track].clips[t.index].groupId;
+      if (id != null) ids.add(id);
+    }
+    if (ids.isEmpty) return;
+    _record();
+    for (final track in timeline.tracks) {
+      for (var i = 0; i < track.clips.length; i++) {
+        if (ids.contains(track.clips[i].groupId)) {
+          track.clips[i] = _clearGroup(track.clips[i]);
+        }
+      }
+    }
+    notifyListeners();
+  }
+
+  /// `copyWith` cannot set a field back to null, so clearing a group needs the
+  /// long form. (Worth the noise: the alternative is a sentinel group id, which
+  /// every reader would then have to know about.)
+  Clip _clearGroup(Clip clip) => Clip(
+        source: clip.source,
+        startMs: clip.startMs,
+        gain: clip.gain,
+        pan: clip.pan,
+        width: clip.width,
+        muted: clip.muted,
+        fadeInMs: clip.fadeInMs,
+        fadeOutMs: clip.fadeOutMs,
+        fadeInCurve: clip.fadeInCurve,
+        fadeOutCurve: clip.fadeOutCurve,
+        trimStartMs: clip.trimStartMs,
+        trimEndMs: clip.trimEndMs,
+        effects: clip.effects,
+        gainAutomation: clip.gainAutomation,
+        provenance: clip.provenance,
+      );
+
+  int _lastGroupId = 0;
+
+  /// D2 — shift [targets] along the timeline by [deltaMs], group-aware and
+  /// clamped at 0.
+  ///
+  /// The keyboard counterpart to dragging, and the only way to move a clip by a
+  /// known amount: a drag lands where the finger lands. Snapping deliberately
+  /// does NOT apply — a nudge is for the case where the grid is not where you
+  /// want to be, so re-snapping it would defeat the verb.
+  void nudgeClips(Iterable<DawClipTarget> targets, double deltaMs) {
+    if (deltaMs == 0) return;
+    final valid = [
+      for (final t in targets)
+        if (_validClipTarget(t.track, t.index)) t,
+    ];
+    if (valid.isEmpty) return;
+    _record();
+    // Collect first: moving changes the starts the group logic reads.
+    final moved = <(int, int)>{};
+    for (final t in valid) {
+      for (final member in _groupMembersOf(t)) {
+        moved.add((member.track, member.index));
+      }
+    }
+    for (final (track, index) in moved) {
+      final clips = timeline.tracks[track].clips;
+      final start = math.max(0.0, clips[index].startMs + deltaMs);
+      clips[index] = clips[index].copyWith(startMs: start);
+    }
+    notifyListeners();
+  }
+
+  /// [target] plus everything sharing its group.
+  List<DawClipTarget> _groupMembersOf(DawClipTarget target) {
+    if (!_validClipTarget(target.track, target.index)) return const [];
+    final id = timeline.tracks[target.track].clips[target.index].groupId;
+    if (id == null) return [target];
+    return [
+      for (var t = 0; t < timeline.tracks.length; t++)
+        for (var i = 0; i < timeline.tracks[t].clips.length; i++)
+          if (timeline.tracks[t].clips[i].groupId == id) (track: t, index: i),
+    ];
+  }
+
   void moveClip(int track, int index, double startMs) {
     _coalesced(('move', track, index));
     // Snapping goes through the tempo map, so a drag lands on the beat even
@@ -466,7 +572,21 @@ class DawService extends ChangeNotifier {
     // tempo is constant.
     final v = snapPosition(startMs < 0 ? 0.0 : startMs);
     final clips = timeline.tracks[track].clips;
+    // D2 — a grouped clip carries its partners by the SAME delta, so the
+    // relationship that made them a group survives the move. Computed before
+    // the dragged clip is written, since the delta is relative to where it was.
+    final delta = v - clips[index].startMs;
+    final members = _groupMembersOf((track: track, index: index));
     clips[index] = clips[index].copyWith(startMs: v);
+    if (members.length > 1 && delta != 0) {
+      for (final member in members) {
+        if (member.track == track && member.index == index) continue;
+        final others = timeline.tracks[member.track].clips;
+        others[member.index] = others[member.index].copyWith(
+          startMs: math.max(0.0, others[member.index].startMs + delta),
+        );
+      }
+    }
     notifyListeners();
   }
 
@@ -2562,6 +2682,16 @@ class DawService extends ChangeNotifier {
       ..addAll(loaded.tracks);
     if (timeline.tracks.isEmpty) {
       timeline.tracks.addAll([DawTrack(name: 'A'), DawTrack(name: 'B')]);
+    }
+    // Group ids are assigned by an incrementing counter, so a loaded project
+    // whose ids run higher than the counter would let the NEXT group collide
+    // with an existing one — silently linking clips the user never linked.
+    _lastGroupId = 0;
+    for (final track in timeline.tracks) {
+      for (final clip in track.clips) {
+        final id = clip.groupId;
+        if (id != null && id > _lastGroupId) _lastGroupId = id;
+      }
     }
     _cache
       ..clear()

@@ -2555,7 +2555,30 @@ already round-trip **in place**. The gaps:
     — the shared points dialog edits an EXISTING curve and returns null for an
     empty one, so there would otherwise be no way to make a first envelope.
   Tests: `daw_clip_envelope_test` (9).
-- [ ] **D2** clip groups + nudge · **D5** take lanes/comping.
+- [x] **D2 clip groups + nudge** — `Clip.groupId`, `groupClips`/`ungroupClips`,
+  `nudgeClips`.
+  * grouping exists for the case where two clips ARE one musical event recorded
+    twice (a DI and a mic on the same take, a kick and its sub). Sliding one
+    without the other ruins the phase relationship that made them worth keeping
+    together, and it does so SILENTLY — the mix just sounds worse later.
+  * it is a LINK, not a container: each clip keeps its own lane, gain, fades and
+    envelope, and what travels is the **delta**, not the position. Members do
+    not have to start together (a mic further from the source legitimately sits
+    later), and flattening them onto one start would destroy the very
+    relationship grouping protects. Pinned by a test.
+  * ungrouping ONE member frees the whole group — a group with one member left
+    is not a group.
+  * **nudge deliberately ignores snapping**: it is for the case where the grid
+    is not where you want to be, so re-snapping would defeat the verb. It is
+    also the only way to move a clip by a KNOWN amount; a drag lands where the
+    finger lands.
+  * ⚠ two bugs the tests were written to catch: nudging two members of the same
+    group must move it ONCE (collecting members per target and moving each time
+    would double the shift), and a project reloaded with group ids above a fresh
+    counter must not let the NEXT group collide with an existing one — which
+    would silently link clips the user never linked.
+  Tests: `daw_group_nudge_test` (17).
+- [ ] **D5** take lanes/comping.
 
 **Non-goals** (stated so they are not re-litigated): a real-time audio graph (the
 app is offline render-then-play *by design*), third-party plugin hosting, and

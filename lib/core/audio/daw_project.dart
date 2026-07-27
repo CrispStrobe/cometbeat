@@ -106,6 +106,7 @@ String projectToJson(
                 'trimEndMs': clip.trimEndMs,
                 if (clip.effects.isNotEmpty)
                   'effects': [for (final fx in clip.effects) fx.toJson()],
+                if (clip.groupId != null) 'groupId': clip.groupId,
                 if (clip.gainAutomation.isNotEmpty)
                   'gainAutomation': [
                     for (final point in clip.gainAutomation) point.toJson(),
@@ -266,6 +267,7 @@ DawTimeline projectFromJson(
                 for (final fx in effects)
                   if (DawClipEffect.fromJson(fx) case final parsed?) parsed,
             ],
+            groupId: c['groupId'] is num ? (c['groupId'] as num).toInt() : null,
             gainAutomation: [
               if (c['gainAutomation'] case final points? when points is List)
                 for (final point in points)
