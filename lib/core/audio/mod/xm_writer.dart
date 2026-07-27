@@ -293,8 +293,13 @@ Uint8List writeXm(XmModule module) {
       final shb = ByteData.sublistView(sh);
       if (sample.rawHeader.length < 40) {
         shb.setUint32(0, dataBytes.length, Endian.little); // lengthInBytes
-        shb.setUint32(4, sample.loopStart, Endian.little);
-        shb.setUint32(8, sample.loopLength, Endian.little);
+        // Loop points go out in BYTES, like the length above — so a 16-bit
+        // sample's frame counts must be doubled. Writing them as frames made
+        // every other player loop over half the intended range; our own reader
+        // made the matching mistake, so the round trip looked clean.
+        final loopScale = sixteen ? 2 : 1;
+        shb.setUint32(4, sample.loopStart * loopScale, Endian.little);
+        shb.setUint32(8, sample.loopLength * loopScale, Endian.little);
         sh[12] = sample.volume.clamp(0, 64);
         shb.setInt8(13, sample.finetune);
         final loopType =

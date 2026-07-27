@@ -1930,6 +1930,55 @@ The shape of the fix, once someone takes it:
 rather than skipped, and the flag inverts to "now passing? drop the exemption"
 if someone fixes it.
 
+#### X10 (2026-07-27) — the sample layer is sound, except 16-bit loop UNITS
+
+Five fixtures, one property of the playback layer each, all **XM** (MOD samples
+are 8-bit forward-loop only, so a MOD fixture cannot exercise ping-pong or
+16-bit at all). That drops micromod and leaves libopenmpt + libxmp — two
+engines, still enough for the relative baseline.
+
+The waveform is a RAMP, not a sine, on purpose: read forward and wrapped a ramp
+is a sawtooth (every harmonic), bounced it is a triangle (odd harmonics, falling
+much faster). So a wrong loop TYPE cannot quietly resemble the right one.
+
+| fixture | refs | ours |
+| --- | --- | --- |
+| `loop_forward` | 1.000 | 0.999 |
+| `loop_pingpong` | 1.000 | 1.000 |
+| `loop_short` (32-frame loop after a 256-frame lead-in) | 1.000 | 1.000 |
+| `oneshot_held` (no loop, held past the end) | 0.960 | 0.974 |
+| `sample_16bit` | 1.000 | **0.207 → 0.999** |
+
+**The loop arithmetic itself is fine** — forward wrap, ping-pong bounce, a short
+loop inside a longer sample, and a one-shot that must stop all land on the
+references. The one failure was **16-bit loop UNITS**.
+
+XM stores sample length AND loop points in **bytes**, so a 16-bit sample's frame
+counts are half the stored numbers. Our reader already handled the length (the
+delta decoder yields `available ~/ 2` frames) but passed the loop points through
+verbatim, so a 16-bit sample looped over twice its intended range — off the end
+of its own buffer. libxmp states the rule outright (`xm_load.c`, under
+`XM_SAMPLE_16BIT`: `len >>= 1; lps >>= 1; lpe >>= 1`).
+
+⚠️ **The writer had the matching bug**, emitting frame counts where the format
+wants bytes — so `parseXm(writeXm(x)) == x` held perfectly while the FILE meant
+something else to everyone else. Verified by asking the references whether our
+16-bit fixture and our byte-identical 8-bit one were the same music: **they said
+0.21.** After fixing both sides they say **1.000**.
+
+**This is the THIRD bug of exactly this shape in this audit** — a format unit or
+encoding convention wrong in both directions, self-consistent, invisible to
+round-trip testing (IT's hex pattern-break row was the first, XM's loop units the
+third). The lesson has earned its place: **`parse(write(x)) == x` cannot catch a
+misunderstanding the reader and writer SHARE.** Only a foreign reader can, and
+the cheap version of that is asking a reference player whether two files you
+believe are equivalent really are.
+
+⬜ Left open: `oneshot_held` shows the references only agreeing at 0.960 with
+each other — they disagree about what a one-shot does after its end (fade vs
+hard stop). We sit inside that spread at 0.974, so nothing is wrong, but it is
+another case where there is no single right answer to gate on.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,
@@ -2016,7 +2065,9 @@ what these probe is envelopes, NNA, volume/pan models and effect semantics.
 IT is thinnest on oracles (libopenmpt + libxmp only) and richest in features,
 so it carries the most risk.
 
-**X10 — Sample-playback layer.** Interpolation, loop wrap (see the one-sample
+🚧 **X10 — Sample-playback layer.** Loop wrap / ping-pong / short loops /
+one-shot verified against the references, and 16-bit loop UNITS fixed (above).
+⬜ Still open: interpolation quality and stereo samples. Interpolation, loop wrap (see the one-sample
 rescale bug already fixed), 8- vs 16-bit and stereo sample paths, `9xx` offset
 clamping, ping-pong loops. Oracle: single-note fixtures per case.
 

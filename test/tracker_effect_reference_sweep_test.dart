@@ -117,15 +117,17 @@ void main() {
     return;
   }
 
-  // Both fixture sets: `fx/` is one EFFECT per file (all MOD, since the effect
+  // Three fixture sets: `fx/` is one EFFECT per file (all MOD, since the effect
   // set is ProTracker's), `flow/` is one order-list SHAPE per file emitted into
-  // all four formats. The flow set is what catches a per-format encoding
+  // all four formats, and `sample/` is one property of the PLAYBACK layer per
+  // file (all XM — MOD samples are 8-bit forward-loop only, so a MOD fixture
+  // cannot exercise ping-pong or 16-bit at all). The flow set is what catches a per-format encoding
   // difference — the same song written four ways must render to the same thing,
   // and the references agree on that even where the formats encode it
   // differently.
   const extensions = ['.mod', '.xm', '.s3m', '.it'];
   final fixtures = <String>[];
-  for (final name in ['fx', 'flow']) {
+  for (final name in ['fx', 'flow', 'sample']) {
     final dir = Directory('test/fixtures/$name');
     if (!dir.existsSync()) continue;
     fixtures.addAll(

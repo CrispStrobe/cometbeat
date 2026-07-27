@@ -274,8 +274,18 @@ XmModule parseXm(Uint8List bytes) {
           finetune: meta.finetune,
           relativeNote: meta.relativeNote,
           pan: meta.pan,
-          loopStart: meta.loopStart,
-          loopLength: meta.loopLength,
+          // XM stores length AND loop points in BYTES. The length is already
+          // handled (the decoder produces `available ~/ 2` frames for a 16-bit
+          // sample) but the loop points were passed through verbatim, so a
+          // 16-bit sample looped over twice its intended range. libxmp halves
+          // all three together (`xm_load.c`: `len >>= 1; lps >>= 1; lpe >>= 1`
+          // under XM_SAMPLE_16BIT) and libopenmpt agrees.
+          //
+          // It was invisible to round-trip testing because the WRITER made the
+          // matching mistake, so `parseXm(writeXm(x)) == x` held while the file
+          // meant something else to everyone else. See PLAN.md §6 X10.
+          loopStart: meta.sixteenBit ? meta.loopStart ~/ 2 : meta.loopStart,
+          loopLength: meta.sixteenBit ? meta.loopLength ~/ 2 : meta.loopLength,
           sixteenBit: meta.sixteenBit,
           pingPong: meta.pingPong,
           pcm: pcm,
