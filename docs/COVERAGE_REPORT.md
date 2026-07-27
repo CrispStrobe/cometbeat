@@ -24,9 +24,9 @@ This document is the findings + methodology.
 - The map confirmed the worst-covered files are FFI / native-transcription /
   ONNX-model-store / plugin wrappers (integration-tested) and export-shell
   barrels — **not** genuine gaps.
-- The genuine pure-logic gaps it surfaced were then **closed file-by-file: ~20
-  files raised, 18 to 100%**, each re-verified with scoped coverage before
-  commit.
+- The genuine pure-logic gaps it surfaced were then **closed file-by-file: ~25
+  files raised, 23 to 100%** (across the main sweep and an 83–90% follow-up
+  tier), each re-verified with scoped coverage before commit.
 - Every remaining low-coverage file hits a **structural unit-test ceiling**
   (native/ONNX runtime, live plugin, isolate spawn, process-env var, or a big
   DSP core / widget body covered by integration suites).
@@ -142,6 +142,20 @@ on that file, format→analyze-clean→commit.
 
 \* **Ceiling, not a gap** — see §7.
 
+### Follow-up sweep — the 83–90% pure tier
+
+A second, finer sweep (files 83–90% covered, ≥8 lines, non-native) found a tier
+of near-covered pure files with small closeable gaps — mostly value semantics,
+enum labels, and one-branch edges the main suites skipped:
+
+| File | Before → After | What was closed | Commit |
+| --- | --- | --- | --- |
+| `core/audio/streaming_mixer.dart` | 87 → **100** | `BufferedSink` length/clear, `StreamingMixer.loopLength`, empty-loop `ArgumentError` guards | `130c8728` |
+| `features/library/license_policy.dart` | 87 → labels closed | every `LicenseKind.label` arm + `LicenseBlocked.toString` (classifier itself is connector-suite-covered) | `130c8728` |
+| `core/audio/sample_pitch.dart` | 88 → **100** | short-buffer single-pass branch + the crossfade-loop path | `26536e91` |
+| `core/audio/sound_library.dart` | 89 → **100** | the non-engine-rate resample branch (22.05 → 44.1 kHz) | `26536e91` |
+| `core/curriculum/coverage_gaps.dart` | 88 → **100** | `report()`'s DANGLING + UNTRAINED branches (synthetic `CoverageReport`) | `881d606f` |
+
 ### Earlier in the same campaign (pre-harness, additive suites)
 
 | File(s) | What | Commit |
@@ -186,8 +200,16 @@ on that file, format→analyze-clean→commit.
 
 ## 7. The unit-testable ceiling
 
-Every remaining low-coverage file needs something a unit test structurally cannot
-provide. This is a boundary, not a backlog:
+**Scope note (corrected after the follow-up sweep):** the ceiling below applies
+to the **deeply-blocked** files — the <70% native/plugin band and the big DSP
+cores. It is *not* a claim that everything else is done: a first pass declared
+the ceiling too early and missed a whole **83–90% pure tier** (§5's follow-up
+sweep) that was in fact closeable. When re-measuring, always sweep the near-100%
+band too — the cheapest wins (value semantics, enum labels, one-branch edges)
+hide there, not just in the obvious 0–40% band.
+
+With that tier now closed, every *remaining* low-coverage file needs something a
+unit test structurally cannot provide. This is a boundary, not a backlog:
 
 | Blocker | Files (examples) |
 | --- | --- |
