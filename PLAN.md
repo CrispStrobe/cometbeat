@@ -361,6 +361,48 @@ is a curated band and that is defensible for 6+ (if it is ever wanted, start
 with *duplicate an existing track*, not an instrument tree); and a full
 automation matrix or MIDI clock, which belong to the Tracker and Audio Editor.
 
+### Loop Studio — automation lanes (scoped 2026-07-27, NOT started)
+
+L1–L6 all exposed structure that already existed. **Automation is the first item
+that adds a new dimension to the model — values that change over TIME within a
+loop** — so it touches the model, the renderer, the share token, save slots and
+the UI. Scoped here so it is picked up deliberately, not drifted into.
+
+**Why the offline renderer helps.** Loop Studio renders `GrooveSpec → WAV` once
+and loops it gaplessly. There is no real-time parameter smoothing to get right:
+a lane is just a function of step, sampled at render time.
+
+**Shape.** Per track, per parameter, one value per eighth-step of the loop;
+absent = no lane. Same tiling rules as patterns (see `loop_track_length.dart`),
+so a lane on a shortened track repeats with it.
+
+**What to automate, and what NOT to.** Level, pan and the per-track filter —
+all three are already per-track scalars applied in `_renderMix` / `_applySend`,
+so automating them turns a constant into a lookup and adds no new DSP.
+- ❌ **Not tempo.** It would change the loop length and break the
+  sample-integrality invariant the whole engine rests on.
+- ❌ **Not swing.** It is baked into `boundaryMs` before rendering, and per-track
+  swing already documents why the final boundary must not move.
+
+⚠️ **The one real engine problem, solve it first:** `mixStems` unit-peak
+normalises each stem and THEN applies gain. A level lane applied before
+normalisation is normalised away. It has to land AFTER unit-peak, as a per-sample
+multiply — which is exactly where `applyCellVelocities` already operates. Reuse
+that seam.
+
+**Slices, smallest shippable first:**
+- ⬜ **A1 — model + codec.** Lane type, `GrooveSpec` field, share-token and save
+  round-trip. Pure, no audio, no UI.
+- ⬜ **A2 — render ONE lane (level).** Applied post-normalisation. The guard
+  test is the important one: a groove with no lanes must render **byte-for-byte**
+  as before, exactly as polymeter had to.
+- ⬜ **A3 — pan + filter** on the same seam, once level proves the shape.
+- ⬜ **A4 — UI.** Draw the lane over the per-track row in the inspector.
+  **Needs a product decision before starting:** per-eighth-step values (16 of
+  them, blocky, matches the tune/beat grids a child already uses, one tap per
+  value) versus a smooth breakpoint curve (expressive, but drawing curves on a
+  phone for a six-year-old is a different product). Default to per-step.
+
 ### Integration and retirement map
 
 - **Keep and integrate:** `LoopEngine` timing/pattern model, `LoopStack` undo /

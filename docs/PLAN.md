@@ -408,6 +408,9 @@ is recorded in [HISTORY.md](HISTORY.md).
   Worktree `../mus-rest-props`.
 
 - **opus (loop-seq)** · 🚧 **ACTIVE — Loop Studio sequencer-parity slices.**
+  **L1–L6 ALL SHIPPED, engine + GUI.** Now on automation lanes — scoped in
+  [PLAN.md](../PLAN.md) → *"Loop Studio — automation lanes"* (A1–A4). Building
+  **A1 model + codec**.
   ✅ **L1 per-track pattern length (polymeter) SHIPPED** — core
   (`loop_track_length.dart`), engine (vamp path), and a tap-to-cycle badge on
   each track card (∞ = full grid). Shorten the bass to 3 and it comes round 16×
