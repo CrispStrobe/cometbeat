@@ -130,10 +130,18 @@ is recorded in [HISTORY.md](HISTORY.md).
     label arm), `debug_service` (68→100, load/enableMenu/setUnlockAll persistence +
     no-op returns), `mod_module` (MOD struct semantics), `play_along` (84→100, loop
     getters/nextIndex/judged/reset/scaledStarScore), `tracker_native_command` (74→100,
-    XM mnemonics + native volpan provenance). **12 files driven to 100% off the map;**
-    remaining low-coverage is FFI/native-transcription/ONNX/plugin wrappers + big
-    DSP files (midi_render, tracker_replayer, aec_offline) partially covered by
-    integration suites.
+    XM mnemonics + native volpan provenance). Then `music_inspect` (67→100, the
+    Looking-Glass card renderer + showInspect sheet), `soundfont_download` (79→88,
+    cacheDir override + home fallback — the rest needs process-env states a Dart
+    test can't set), `tabcnn_emitter` (vanilla-variant + resample branches via the
+    fake-runner seam). **14 files raised off the map (13 to 100%).** ⛔ **The
+    unit-testable pure-logic ceiling is now reached:** every remaining low-coverage
+    file needs something a unit test structurally cannot provide — native/ggml or
+    ONNX runtimes (transcription/tabcnn `TabCnnEmitter`/`audioToTab`), a live plugin
+    (record/SoLoud), an isolate spawn (`compute`), process-env vars (Windows/cache
+    fallbacks), or is a big DSP core exercised by golden/render suites (`midi_render`
+    pedal paths, `tracker_replayer`, `aec_offline`) or a widget body. The coverage
+    tooling (`tool/coverage/`) is committed so the next tier is a re-run away.
 
 - **opus (grandstaff-slurs)** · ✅ **SHIPPED (idle) — slurs + hairpins on the
   grand-staff view (the deferred bit).** Follow-up to `grandstaff-markings`, which
