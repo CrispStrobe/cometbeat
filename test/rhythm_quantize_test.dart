@@ -216,4 +216,86 @@ void main() {
     expect(q.resolution, RhythmResolution.quarter);
     expect(q.hits.map((h) => h.step).toList(), [0, 1, 2, 3]);
   });
+
+  group('beatMsFromBpm', () {
+    test('converts BPM to ms per quarter-note beat', () {
+      expect(beatMsFromBpm(120), 500.0);
+      expect(beatMsFromBpm(60), 1000.0);
+      expect(beatMsFromBpm(100), 600.0);
+    });
+  });
+
+  group('snapToGrid (public helper)', () {
+    test('returns the nearest step and its grid time', () {
+      // eighth grid at 500 ms/beat → 250 ms steps.
+      expect(snapToGrid(260, _beatMs, RhythmResolution.eighth), (1, 250.0));
+      expect(snapToGrid(120, _beatMs, RhythmResolution.eighth), (0, 0.0));
+      expect(snapToGrid(600, _beatMs, RhythmResolution.eighth), (2, 500.0));
+      // sixteenth grid → 125 ms steps.
+      expect(snapToGrid(130, _beatMs, RhythmResolution.sixteenth), (1, 125.0));
+    });
+  });
+
+  group('chooseResolution edge cases', () {
+    test('a zero/negative beat settles on quarter', () {
+      expect(
+        chooseResolution([0, 250, 500], beatMs: 0),
+        RhythmResolution.quarter,
+      );
+    });
+
+    test('onsets that collide at every allowed grid fall back to the cap', () {
+      // 0 and 50 ms round to the same step even at sixteenths (125 ms) → no
+      // grid ≤ cap separates them, so the picker returns the cap.
+      expect(
+        chooseResolution(
+          [0, 50],
+          beatMs: _beatMs,
+          cap: RhythmResolution.sixteenth,
+        ),
+        RhythmResolution.sixteenth,
+      );
+    });
+  });
+
+  group('quantizeToResolution empty input', () {
+    test('yields an empty result on the requested grid', () {
+      final q = quantizeToResolution(
+        [],
+        beatMs: _beatMs,
+        resolution: RhythmResolution.sixteenth,
+      );
+      expect(q.resolution, RhythmResolution.sixteenth);
+      expect(q.hits, isEmpty);
+      expect(q.stepsPerBeat, 4);
+    });
+  });
+
+  group('QuantizedHit value semantics', () {
+    test('equality, hashCode and toString', () {
+      const a = QuantizedHit(
+        step: 2,
+        snappedMs: 500,
+        originalMs: 495,
+        strength: 0.8,
+      );
+      const b = QuantizedHit(
+        step: 2,
+        snappedMs: 500,
+        originalMs: 495,
+        strength: 0.8,
+      );
+      const c = QuantizedHit(
+        step: 3,
+        snappedMs: 750,
+        originalMs: 760,
+        strength: 0.8,
+      );
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(c));
+      expect(a.toString(), contains('step: 2'));
+      expect(a.toString(), contains('from: 495'));
+    });
+  });
 }
