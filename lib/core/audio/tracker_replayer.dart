@@ -2175,6 +2175,92 @@ SampleInstrument _bakeProceduralToSample(
   return SampleInstrument('baked_${inst.id}', pcm, baseMidi: refMidi);
 }
 
+/// Renders a PULSE channel through a per-tick voice: a square oscillator whose
+/// DUTY (0..1), pitch and amplitude follow the §4 macros tick by tick — the
+/// chiptune PWM voice. Reached only when the pulse carries macros (a macro-free
+/// pulse uses the cheaper whole-channel [PulseInstrument.renderChannel]).
+void _renderPulseChannelInto(
+  Float64List mix,
+  TrackerChannel channel,
+  List<TrackerCell> cells,
+  TrackerTiming timing,
+  int ticksPerRow,
+  int sampleOffset,
+) {
+  final pulse = channel.instrument as PulseInstrument;
+  final gain = channel.gain;
+  final baseDuty = pulse.duty.clamp(0.02, 0.98);
+  MacroSequence? volMacro, pitchMacro, arpMacro, dutyMacro;
+  for (final m in pulse.macros) {
+    if (m.isEmpty) continue;
+    switch (m.target) {
+      case MacroTarget.volume:
+        volMacro = m;
+      case MacroTarget.pitch:
+        pitchMacro = m;
+      case MacroTarget.arpeggio:
+        arpMacro = m;
+      case MacroTarget.duty:
+        dutyMacro = m;
+      case MacroTarget.pan:
+        break; // mono mix — pan is a no-op here
+    }
+  }
+  var macroTick = 0;
+  const declickSec = 0.003;
+  final voice = ReplayVoice();
+  var phase = 0.0;
+  final rows = cells.length;
+  for (var r = 0; r < rows; r++) {
+    voice.armRow(cells[r]);
+    if (voice.retriggeredThisRow) {
+      phase = 0;
+      voice.noteStartSample = sampleOffset + timing.stepStartSample(r);
+      voice.noteSeconds = _runSeconds(cells, r, rows, timing);
+      macroTick = 0;
+    }
+    if (!voice.active && !voice.hasPendingNote) continue;
+    final rowStart = sampleOffset + timing.stepStartSample(r);
+    final rowEnd = sampleOffset +
+        (r + 1 < rows ? timing.stepStartSample(r + 1) : timing.totalSamples);
+    for (var k = 0; k < ticksPerRow; k++) {
+      final ts = rowStart + ((rowEnd - rowStart) * k) ~/ ticksPerRow;
+      final te = rowStart + ((rowEnd - rowStart) * (k + 1)) ~/ ticksPerRow;
+      final state = voice.tick(k, ticksPerRow);
+      if (state.retrigger) {
+        phase = 0;
+        voice.noteStartSample = ts;
+        voice.noteSeconds = _runSeconds(cells, r, rows, timing);
+        macroTick = 0;
+      }
+      if (!voice.active) continue;
+      var pitch = state.pitch;
+      var vol = (state.volume / kMaxVolume) * voice.noteVolume * gain;
+      var duty = baseDuty;
+      if (pitchMacro != null) pitch += pitchMacro.valueAt(macroTick);
+      if (arpMacro != null) pitch += arpMacro.valueAt(macroTick);
+      if (volMacro != null) {
+        vol *= volMacro.valueAt(macroTick, fallback: 64).clamp(0, 64) / 64.0;
+      }
+      if (dutyMacro != null) {
+        duty = (dutyMacro.valueAt(macroTick, fallback: 32).clamp(0, 63) / 63.0)
+            .clamp(0.02, 0.98);
+      }
+      macroTick++;
+      final inc = _freqOfMidi(pitch) / kSampleRate;
+      for (var i = ts; i < te && i < mix.length; i++) {
+        final t = (i - voice.noteStartSample) / kSampleRate;
+        if (t < 0) continue;
+        final attack = t < declickSec ? t / declickSec : 1.0;
+        mix[i] += ((phase - phase.floorToDouble()) < duty ? 0.6 : -0.6) *
+            vol *
+            attack;
+        phase += inc;
+      }
+    }
+  }
+}
+
 /// Renders one channel's [cells] into [mix] starting at [sampleOffset]. Additive
 /// voices synthesize per tick (honouring commands); other instruments fall back
 /// to the offline whole-channel render (unit-peak × gain), so they still sound.
@@ -2207,6 +2293,21 @@ void _renderChannelInto(
 
   final inst = _additiveOf(channel.instrument);
   if (inst == null) {
+    // A PULSE voice with §4 macros renders through its own tick voice so the
+    // duty/volume/pitch macros modulate per tick; a macro-free pulse keeps the
+    // whole-channel render below (byte-identical).
+    if (channel.instrument is PulseInstrument &&
+        (channel.instrument as PulseInstrument).macros.isNotEmpty) {
+      _renderPulseChannelInto(
+        mix,
+        channel,
+        cells,
+        timing,
+        ticksPerRow,
+        sampleOffset,
+      );
+      return;
+    }
     // A SAMPLE channel that carries per-tick pitch/volume effects (porta/
     // vibrato/tremolo/Cxx/Axy/arp/extended), a resonant filter, or §4 instrument
     // MACROS renders through the sample TICK voice so those actually SOUND (the

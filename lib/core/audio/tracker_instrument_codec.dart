@@ -40,6 +40,7 @@ bool isSerializableInstrument(TrackerInstrument instrument) =>
     instrument is FmInstrument ||
     instrument is SubtractiveInstrument ||
     instrument is OplInstrument ||
+    instrument is PulseInstrument ||
     instrument is SampleInstrument ||
     (instrument is MultiSampleInstrument &&
         instrument.zones.values.every(isSerializableInstrument)) ||
@@ -159,6 +160,15 @@ Map<String, dynamic> instrumentToJson(TrackerInstrument instrument) {
       'adlib': List<int>.from(instrument.adlibData),
     };
   }
+  if (instrument is PulseInstrument) {
+    return {
+      'type': 'pulse',
+      'id': instrument.id,
+      'duty': instrument.duty,
+      if (instrument.macros.isNotEmpty)
+        'macros': [for (final m in instrument.macros) m.toJson()],
+    };
+  }
   if (instrument is PercussionInstrument) {
     return {'type': 'percussion', 'id': instrument.id};
   }
@@ -214,6 +224,17 @@ TrackerInstrument instrumentFromJson(Map<String, dynamic> json) {
       return OplInstrument(
         id,
         [for (final b in json['adlib'] as List) (b as num).toInt()],
+      );
+    case 'pulse':
+      return PulseInstrument(
+        id,
+        duty: (json['duty'] as num?)?.toDouble() ?? 0.5,
+        macros: json['macros'] is List
+            ? [
+                for (final e in json['macros'] as List)
+                  if (MacroSequence.fromJson(e) case final parsed?) parsed,
+              ]
+            : const [],
       );
     case 'subtractive':
       final p = json['preset'] as Map<String, dynamic>;

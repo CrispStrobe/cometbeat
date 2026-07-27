@@ -333,7 +333,8 @@ class TrackerSong {
   bool get usesMacros => channels.any((c) {
         final inst = c.instrument;
         return (inst is AdditiveInstrument && inst.macros.isNotEmpty) ||
-            (inst is SampleInstrument && inst.macros.isNotEmpty);
+            (inst is SampleInstrument && inst.macros.isNotEmpty) ||
+            (inst is PulseInstrument && inst.macros.isNotEmpty);
       });
 
   // --- Pattern editing (delegates to the engine on the current pattern) ---

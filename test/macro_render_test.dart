@@ -281,6 +281,66 @@ void main() {
     });
   });
 
+  group('pulse voice + duty macro', () {
+    List<int> renderPulse(List<MacroSequence> macros) {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      song.engine
+          .setChannelInstrument(0, PulseInstrument('pulse', macros: macros));
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      return replaySong(song).pcm;
+    }
+
+    test('the duty macro changes the pulse waveform', () {
+      final narrow = renderPulse(const [
+        MacroSequence(target: MacroTarget.duty, values: [2, 2, 2, 2]),
+      ]);
+      final wide = renderPulse(const [
+        MacroSequence(target: MacroTarget.duty, values: [61, 61, 61, 61]),
+      ]);
+      var maxDiff = 0;
+      final n = min(narrow.length, wide.length);
+      for (var i = 0; i < n; i++) {
+        maxDiff = max(maxDiff, (narrow[i] - wide[i]).abs());
+      }
+      expect(maxDiff, greaterThan(100), reason: 'duty must shape the wave');
+    });
+
+    test('a volume macro ducks the pulse', () {
+      final plain = renderPulse(const [
+        MacroSequence(target: MacroTarget.volume, values: [64, 64, 64, 64]),
+      ]);
+      final faded = renderPulse(const [
+        MacroSequence(
+          target: MacroTarget.volume,
+          values: [64, 16, 4, 0],
+          loopStart: 3,
+          loopEnd: 3,
+        ),
+      ]);
+      expect(_rms(faded), lessThan(_rms(plain) * 0.7));
+    });
+
+    test('pulse is a pickable voice and round-trips through the codec', () {
+      expect(kTrackerInstruments.any((o) => o.id == 'pulse'), isTrue);
+      final opt = kTrackerInstruments.firstWhere((o) => o.id == 'pulse');
+      expect(opt.build(), isA<PulseInstrument>());
+
+      const original = PulseInstrument(
+        'pulse',
+        duty: 0.25,
+        macros: [
+          MacroSequence(target: MacroTarget.duty, values: [4, 60]),
+        ],
+      );
+      final twin = instrumentFromJson(instrumentToJson(original));
+      expect(twin, isA<PulseInstrument>());
+      final p = twin as PulseInstrument;
+      expect(p.duty, 0.25);
+      expect(p.macros.single.target, MacroTarget.duty);
+      expect(p.macros.single.values, [4, 60]);
+    });
+  });
+
   test('macros survive a codec round-trip on an additive instrument', () {
     const original = AdditiveInstrument(
       'piano',

@@ -513,6 +513,50 @@ class KarplusInstrument implements TrackerInstrument {
   }
 }
 
+/// A pulse / square oscillator with a variable [duty] (0..1; 0.5 = square) — the
+/// classic chiptune PWM voice. The §4 DUTY macro sweeps the pulse width per tick
+/// (via the pulse tick voice in `tracker_replayer.dart`), and [macros] also
+/// drives volume/pitch/arpeggio. `renderChannel` is the whole-note fallback
+/// (static duty) for contexts without the tick voice.
+class PulseInstrument implements TrackerInstrument {
+  const PulseInstrument(this.id, {this.duty = 0.5, this.macros = const []});
+
+  @override
+  final String id;
+
+  /// Pulse width in 0..1 (0.5 is a symmetric square).
+  final double duty;
+
+  /// Optional §4 per-tick macros (volume/pitch/arpeggio/duty).
+  final List<MacroSequence> macros;
+
+  @override
+  Float64List renderChannel(
+    List<TrackerCell> cells,
+    TrackerTiming timing, {
+    Float64List? into,
+  }) {
+    final out = into ?? Float64List(timing.totalSamples);
+    final d = duty.clamp(0.02, 0.98);
+    var startStep = 0;
+    for (final (midi, steps) in cellRuns(cells)) {
+      if (midi != null) {
+        final start = timing.stepStartSample(startStep);
+        final end = timing.stepStartSample(startStep + steps);
+        final inc = midiToFrequency(midi) / kSampleRate;
+        var phase = 0.0;
+        final n = min(end - start, out.length - start);
+        for (var i = 0; i < n; i++) {
+          out[start + i] = (phase - phase.floorToDouble()) < d ? 0.6 : -0.6;
+          phase += inc;
+        }
+      }
+      startStep += steps;
+    }
+    return out;
+  }
+}
+
 /// A two-operator FM instrument (electric piano / bell / tine / FM bass) — a
 /// [FmPreset] synthesized fresh at each note's frequency. Struck-and-mellowing
 /// timbres the additive/sfxr voices can't make, with no sample assets. Pure/
@@ -2150,6 +2194,12 @@ final List<InstrumentOption> kTrackerInstruments = [
   // generic 2-op FM above. Built from an 11-byte S3M AdLib register block.
   for (final e in kOplPresets.entries)
     InstrumentOption(e.key, () => OplInstrument(e.key, e.value)),
+  // Pulse / square — the chiptune PWM voice (duty sweepable via a §4 macro).
+  InstrumentOption('pulse', () => const PulseInstrument('pulse')),
+  InstrumentOption(
+    'pulseNarrow',
+    () => const PulseInstrument('pulseNarrow', duty: 0.25),
+  ),
 ];
 
 /// Holds the pattern (channels × rows) + timing, edits cells, and renders the
