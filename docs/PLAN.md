@@ -778,12 +778,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   retracted — under either hypothesis it is systematic, not a defect.
   • **Romberg = FRAME-BASED** — he states it in prose: hand spans a minor third by default,
   a major third is taken 1‑2‑4 by extension with the hand staying in position.
-  ⚠ **Consequence: scoring the arranger against Tillière is a CATEGORY ERROR.** Agreement
-  there measures whether a frame model coincides with a diatonic one, which is not the
-  question. **Romberg is the aligned gold; Tillière is a different school** and its labels
-  should be kept as a labelled contrast set, not folded into the same accuracy number.
-  Open: whether Danbé's c.1905 revision modernised the fingering toward frames — worth
-  checking, it would date the shift.
+  ⚠ **Consequence either way: do not fold different fingering SCHOOLS into one accuracy
+  number.** Romberg is demonstrably frame-based (his prose says so) and is therefore the
+  aligned gold for our frame model. Tillière's school is unresolved, so tag its labels by
+  source and keep them separable until it is decided — if it turns out diatonic, scoring a
+  frame model against it measures whether two different systems coincide, which is not the
+  question we are asking.
+  ⭐ **BEST SOURCE FOUND — Kummer Op.60 ed. HUGO BECKER (C. F. Peters), 600 ppi**
+  (`Downloads/424636.pdf`, 131 pp, 5068×6824 — ~3× the linear resolution of anything else
+  here, so the glyph ambiguities that have cost us most should simply disappear).
+  **Hugo Becker 1863–1941 → PD since 2012.** ⚠ Title page: "für Lernende und Lehrende
+  **erweitert und herausgegeben von** Hugo Becker" — so the fingerings are **Becker's
+  editorial layer, not Kummer's.** That is a feature, not a problem: Becker was a leading
+  virtuoso and this is an explicit *reform* edition ("Als Beitrag zur Reform des
+  Violoncellostudiums"), so his fingerings are early-20th-c modern technique and likely
+  FRAME-based — i.e. a second aligned gold alongside Romberg, and a far bigger one.
+  Contents (by PDF page): scales 12–17 · **7. Fingersatz. Positionen 18–21** ·
+  Stricharten 22 · Arpeggio 24 · Staccato 25 · **14. Von den Doppelgriffen 29–31** ·
+  Akkorde + **17. Der Einsatz des Daumens 32–34** (THUMB) · Daumen-Skalen 36–40 ·
+  **18. Das Flageolet 41–42** · Fingersätze in der ersten/unteren Lage 43 · Pizzicato 44.
+  Six further Kummer editions are in hand (95383/95384 @150 ppi, 98155/98156 @288,
+  236743/260567 @400) — their value is as INDEPENDENT PRINTS for arbitrating a doubtful
+  glyph, and for comparing how different editors fingered the same exercise.
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
