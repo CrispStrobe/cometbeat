@@ -1672,6 +1672,35 @@ against both was 0.09. With the flag removed, XM joins the others at **0.999**.
    to fold consecutive identical triggers into one run, so the notes must
    differ.
 
+#### ⚠️ X2 was done TWICE, in parallel, by two agents (2026-07-27)
+
+Both of us picked X2 off this ladder without claiming it on the board, and both
+of us changed `tracker_replayer.dart`'s vibrato. That is the same failure this
+board already warns about — *"flagging work here without CLAIMING it invites two
+agents to do it"* — and it cost a rebase conflict in the hottest file in the
+subsystem. **Claim a ladder item on the board before starting it.**
+
+The work was complementary rather than wasted, and the merge kept both halves:
+
+- The other agent found the **depth** half — vibrato is a period wobble, gated
+  behind `PORTA_PERIOD` as `kVibratoPeriodAccurate` / `kVibratoPeriodPerDepthUnit`.
+  Their `slidePitchByPeriod` reuse is cleaner than my open-coded clamp and
+  survived the merge.
+- I found the **rate** half, plus tremolo depth, tick 0, the retrigger flag and
+  the ramp shape.
+
+Worth reading their conclusion though: their commit states *"Rate was already
+correct"* and books the leftover **~0.011 as waveform-table precision**. The
+rate was not correct, and that residual WAS the rate — it is 0.000 now. A
+plausible-sounding attribution for a leftover is how a real bug gets closed as
+"expected noise"; the fixture sweep is what settled it, not either analysis.
+
+One genuine inconsistency the merge had to fix: their two branches disagreed
+about direction. The period branch bends DOWN on a positive lobe (correct — a
+longer period is a lower pitch) while the semitone fallback still added to the
+pitch, so flipping the gate reversed which way every vibrato started. Both
+branches now bend down.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,
