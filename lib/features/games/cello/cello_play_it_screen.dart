@@ -265,35 +265,58 @@ class _CelloPlayItScreenState extends State<CelloPlayItScreen>
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          l10n.tabPatternPosition,
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                        const SizedBox(width: 12),
-                        for (var p = 1; p <= kMaxGamePosition; p++)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 3),
-                            child: ChoiceChip(
-                              // NB was `const Text('\$p')` — the escaped `$` made
-                              // every chip render the literal text "$p".
-                              label: Text(celloPositionLabel(p)),
-                              tooltip: celloPositionName(p).raised
-                                  ? l10n.celloPositionRaised(
-                                      celloPositionName(p).number,
-                                    )
-                                  : null,
-                              selected: p == _position,
-                              onSelected: (_) {
-                                if (p == _position) return;
-                                _position = p;
-                                _restart();
-                              },
-                            ),
+                    // Horizontally SCROLLABLE, not a bare Row and not a Wrap.
+                    //
+                    // The chip count grows with kMaxGamePosition, and at four
+                    // positions with German labels this overflowed a 335 px
+                    // phone by 40 px — a red `layout_audit_test`, and content a
+                    // child cannot see. Wrapping was the obvious fix and is
+                    // WRONG here: it traded the horizontal overflow for a
+                    // vertical one (59 px off the bottom of an SE in English),
+                    // because this column is not scrollable and had no spare
+                    // height. Scrolling sideways keeps the row exactly as tall
+                    // as it was, so nothing else on the screen moves.
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.tabPatternPosition,
+                            style: Theme.of(context).textTheme.labelLarge,
                           ),
-                      ],
+                          const SizedBox(width: 12),
+                          for (var p = 1; p <= kMaxGamePosition; p++)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 3),
+                              child: ChoiceChip(
+                                // Compact + shrinkWrap: this column has an Expanded in it, so
+                                // it cannot become scrollable without restructuring, and it was
+                                // already 7 px too tall for an SE in German BEFORE the chip row
+                                // grew. Denser chips reclaim that in both axes rather than
+                                // papering over one axis and spending the other.
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                // NB was `const Text('\$p')` — the escaped `$` made
+                                // every chip render the literal text "$p".
+                                label: Text(celloPositionLabel(p)),
+                                tooltip: celloPositionName(p).raised
+                                    ? l10n.celloPositionRaised(
+                                        celloPositionName(p).number,
+                                      )
+                                    : null,
+                                selected: p == _position,
+                                onSelected: (_) {
+                                  if (p == _position) return;
+                                  _position = p;
+                                  _restart();
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
