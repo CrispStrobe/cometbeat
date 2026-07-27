@@ -278,14 +278,26 @@ class ConversionReport {
   /// slide, a triplet quantized onto the grid).
   final List<String> approximated;
 
+  /// Stable localization keys for the reason MESSAGES above, keyed by the
+  /// English text. Pure Dart, so a report cannot localize itself — a UI layer
+  /// with a [BuildContext] maps the key to the user's language, falling back to
+  /// the English message when a reason carries no key (a dynamic/one-off one).
+  /// Additive: reasons added without a key still render (in English).
+  final Map<String, String> reasonKeys = {};
+
+  /// The l10n key for a reason [message], or null to show it verbatim.
+  String? keyFor(String message) => reasonKeys[message];
+
   bool get lossless => lost.isEmpty && approximated.isEmpty;
 
-  void addLost(String what) {
+  void addLost(String what, [String? key]) {
     if (!lost.contains(what)) lost.add(what);
+    if (key != null) reasonKeys[what] = key;
   }
 
-  void addApproximated(String what) {
+  void addApproximated(String what, [String? key]) {
     if (!approximated.contains(what)) approximated.add(what);
+    if (key != null) reasonKeys[what] = key;
   }
 
   @override

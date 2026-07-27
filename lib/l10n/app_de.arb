@@ -2843,5 +2843,11 @@
   "openInEdgeLoopTracker": "Ein Kanal pro Akkordstimme; behält die Velocity.",
   "openInEdgeTrackerScore": "Verwirft Effektbefehle.",
   "openInEdgeScoreTracker": "Quantisiert auf das Pattern-Raster.",
-  "openInEdgeTrackerLoop": "Nimmt den vollsten Kanal auf das Achtelnoten-Raster."
+  "openInEdgeTrackerLoop": "Nimmt den vollsten Kanal auf das Achtelnoten-Raster.",
+  "reasonEffectColumns": "Effektspalten-Befehle und Instrumente je Zelle",
+  "reasonNoChannels": "dieses Lied hat keine Kanäle",
+  "reasonQuantizedPatternGrid": "Noten auf das Pattern-Raster quantisiert",
+  "reasonPartsBeyondFirst": "Stimmen nach der ersten (eine Tabulatur hat nur eine)",
+  "reasonSnappedLoopGrid": "Noten auf das Achtelnoten-Loop-Raster gerastet",
+  "reasonVelocityScore": "Velocity je Note (eine Partitur trägt Dynamikzeichen, keine Werte)"
 }

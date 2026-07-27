@@ -3193,5 +3193,11 @@
   "openInEdgeLoopTracker": "One channel per chord voice; keeps velocity.",
   "openInEdgeTrackerScore": "Drops effect commands.",
   "openInEdgeScoreTracker": "Quantizes onto the pattern grid.",
-  "openInEdgeTrackerLoop": "Takes the busiest channel onto the eighth-note grid."
+  "openInEdgeTrackerLoop": "Takes the busiest channel onto the eighth-note grid.",
+  "reasonEffectColumns": "effect-column commands and per-cell instruments",
+  "reasonNoChannels": "this song has no channels",
+  "reasonQuantizedPatternGrid": "notes quantized onto the pattern grid",
+  "reasonPartsBeyondFirst": "parts beyond the first (a tab holds one part)",
+  "reasonSnappedLoopGrid": "notes snapped to the eighth-note loop grid",
+  "reasonVelocityScore": "per-note velocity (a score carries dynamics marks, not values)"
 }

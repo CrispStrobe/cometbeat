@@ -105,6 +105,23 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (tracker→editors)** · ✅ **DONE (idle) — loss-dialog REASON l10n: the
+  infrastructure + the static bridge reasons (EN/DE).** The Open-in loss dialog's
+  reason bullets were the last English in the menu. Added an ADDITIVE key channel
+  to `ConversionReport` (`addLost/addApproximated` take an optional stable l10n
+  key; `keyFor(message)`; the `lost`/`approximated` String lists are unchanged, so
+  the honesty test + every consumer are untouched). Tagged project_bridge's 6
+  STATIC reasons, and the widget localizes via `localizedReason` (EN mirrors the
+  bridge, drift-guarded). So the common fully-tagged edges (score→tracker,
+  tracker→score, →loop, score→tab-parts) now show a fully-German loss dialog.
+  ⬜ **Remainder (documented):** the DYNAMIC reasons (interpolated counts —
+  "the other N channels") need parameterized keys, and the sub-converter reasons
+  (`loop_tab`/`tab_tracker`/`loop_tracker`/`drum_tracker`) are still English — a
+  delegating edge (tab→loop) shows a mix. Those want the same additive key channel
+  applied at their sites (now trivial — the infra is there). Isolated:
+  `symbolic_annotation.dart` (model) + `project_bridge.dart` (6 tags) +
+  `open_in_menu.dart` + ARB. 61 interop tests green. — opus (tracker→editors)
+
 - **opus (tracker→editors)** · ✅ **DONE (idle) — IT214/215 compression: already
   closed for the real case; fixed STALE docs + pinned it.** Went to build the IT
   sample compressor (last Phase-3 reader/writer gap) and found it a non-gap for

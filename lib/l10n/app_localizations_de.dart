@@ -8445,4 +8445,27 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get openInEdgeTrackerLoop =>
       'Nimmt den vollsten Kanal auf das Achtelnoten-Raster.';
+
+  @override
+  String get reasonEffectColumns =>
+      'Effektspalten-Befehle und Instrumente je Zelle';
+
+  @override
+  String get reasonNoChannels => 'dieses Lied hat keine Kanäle';
+
+  @override
+  String get reasonQuantizedPatternGrid =>
+      'Noten auf das Pattern-Raster quantisiert';
+
+  @override
+  String get reasonPartsBeyondFirst =>
+      'Stimmen nach der ersten (eine Tabulatur hat nur eine)';
+
+  @override
+  String get reasonSnappedLoopGrid =>
+      'Noten auf das Achtelnoten-Loop-Raster gerastet';
+
+  @override
+  String get reasonVelocityScore =>
+      'Velocity je Note (eine Partitur trägt Dynamikzeichen, keine Werte)';
 }

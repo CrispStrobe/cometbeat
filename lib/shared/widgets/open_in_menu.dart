@@ -34,6 +34,27 @@ String localizedModeLabel(AppLocalizations l10n, AppMode mode) =>
       AppMode.audio => l10n.appModeAudio,
     };
 
+/// The localized text for a [ConversionReport] reason, looked up by the stable
+/// key the bridge tagged it with ([ConversionReport.keyFor]). Only the STATIC
+/// reasons carry a key; a dynamic/one-off reason (an interpolated count) has
+/// none and shows its English [message] verbatim — a documented remainder.
+String localizedReason(
+  AppLocalizations l10n,
+  ConversionReport report,
+  String message,
+) {
+  final key = report.keyFor(message);
+  return switch (key) {
+    'reasonEffectColumns' => l10n.reasonEffectColumns,
+    'reasonNoChannels' => l10n.reasonNoChannels,
+    'reasonQuantizedPatternGrid' => l10n.reasonQuantizedPatternGrid,
+    'reasonPartsBeyondFirst' => l10n.reasonPartsBeyondFirst,
+    'reasonSnappedLoopGrid' => l10n.reasonSnappedLoopGrid,
+    'reasonVelocityScore' => l10n.reasonVelocityScore,
+    _ => message,
+  };
+}
+
 /// The localized one-line cost of the [from]→[to] edge, shown under each menu
 /// item — the localized twin of [ProjectBridge.describeEdge]. The English values
 /// MIRROR that method exactly (a widget test asserts the EN text it produces), so
@@ -254,15 +275,18 @@ class _LossDialog extends StatelessWidget {
           if (report.lost.isNotEmpty) ...[
             Text(l10n.openInLossLost, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 4),
-            // The per-edge reason strings themselves are still English (they are
-            // generated in the Flutter-free bridge) — a documented follow-up.
-            for (final what in report.lost) Text('•  $what'),
+            // Static reasons localize via the key the bridge tagged them with;
+            // a dynamic/one-off reason (an interpolated count) has no key and
+            // shows verbatim — a documented remainder.
+            for (final what in report.lost)
+              Text('•  ${localizedReason(l10n, report, what)}'),
             const SizedBox(height: 12),
           ],
           if (report.approximated.isNotEmpty) ...[
             Text(l10n.openInLossChanged, style: theme.textTheme.bodyMedium),
             const SizedBox(height: 4),
-            for (final what in report.approximated) Text('•  $what'),
+            for (final what in report.approximated)
+              Text('•  ${localizedReason(l10n, report, what)}'),
           ],
         ],
       ),

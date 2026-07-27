@@ -15325,6 +15325,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Takes the busiest channel onto the eighth-note grid.'**
   String get openInEdgeTrackerLoop;
+
+  /// No description provided for @reasonEffectColumns.
+  ///
+  /// In en, this message translates to:
+  /// **'effect-column commands and per-cell instruments'**
+  String get reasonEffectColumns;
+
+  /// No description provided for @reasonNoChannels.
+  ///
+  /// In en, this message translates to:
+  /// **'this song has no channels'**
+  String get reasonNoChannels;
+
+  /// No description provided for @reasonQuantizedPatternGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'notes quantized onto the pattern grid'**
+  String get reasonQuantizedPatternGrid;
+
+  /// No description provided for @reasonPartsBeyondFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'parts beyond the first (a tab holds one part)'**
+  String get reasonPartsBeyondFirst;
+
+  /// No description provided for @reasonSnappedLoopGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'notes snapped to the eighth-note loop grid'**
+  String get reasonSnappedLoopGrid;
+
+  /// No description provided for @reasonVelocityScore.
+  ///
+  /// In en, this message translates to:
+  /// **'per-note velocity (a score carries dynamics marks, not values)'**
+  String get reasonVelocityScore;
 }
 
 class _AppLocalizationsDelegate

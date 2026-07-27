@@ -253,7 +253,10 @@ abstract final class ProjectBridge {
           (song) => ConversionResult(
             document: multiPartScoreFromTrackerSong(song),
             report: ConversionReport()
-              ..addLost('effect-column commands and per-cell instruments'),
+              ..addLost(
+                'effect-column commands and per-cell instruments',
+                'reasonEffectColumns',
+              ),
           ),
         ),
       (AppMode.tracker, AppMode.loop) => _fromTracker(
@@ -272,7 +275,7 @@ abstract final class ProjectBridge {
               return ConversionResult(
                 document: const <PatternCell>[],
                 report: ConversionReport()
-                  ..addLost('this song has no channels'),
+                  ..addLost('this song has no channels', 'reasonNoChannels'),
               );
             }
             final busiest = channels.reduce(
@@ -303,7 +306,10 @@ abstract final class ProjectBridge {
           (mp) => ConversionResult(
             document: trackerSongFromMultiPart(mp),
             report: ConversionReport()
-              ..addApproximated('notes quantized onto the pattern grid'),
+              ..addApproximated(
+                'notes quantized onto the pattern grid',
+                'reasonQuantizedPatternGrid',
+              ),
           ),
         ),
       (AppMode.score, AppMode.tab) => _fromScore(
@@ -327,7 +333,10 @@ abstract final class ProjectBridge {
               );
             }
             if (mp.parts.length > 1) {
-              report.addLost('parts beyond the first (a tab holds one part)');
+              report.addLost(
+                'parts beyond the first (a tab holds one part)',
+                'reasonPartsBeyondFirst',
+              );
             }
             return ConversionResult(
               document: TabDocument.fromScore(part, strings, capo: capo),
@@ -344,7 +353,10 @@ abstract final class ProjectBridge {
             return ConversionResult(
               document: loop.cells,
               report: loop.report
-                ..addApproximated('notes snapped to the eighth-note loop grid'),
+                ..addApproximated(
+                  'notes snapped to the eighth-note loop grid',
+                  'reasonSnappedLoopGrid',
+                ),
             );
           },
         ),
@@ -417,8 +429,11 @@ abstract final class ProjectBridge {
               document: MultiPartScore([tab.doc.toScore(capo: capo)]),
               annotations: tab.annotations,
               report: tab.report
-                ..addLost('per-note velocity (a score carries dynamics marks, '
-                    'not values)'),
+                ..addLost(
+                  'per-note velocity (a score carries dynamics marks, '
+                      'not values)',
+                  'reasonVelocityScore',
+                ),
             );
           },
         ),

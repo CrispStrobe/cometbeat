@@ -17,10 +17,11 @@ import 'package:comet_beat/core/audio/loop_engine.dart' show PatternCell;
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/l10n/app_localizations_de.dart';
 import 'package:comet_beat/l10n/app_localizations_en.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
 import 'package:crisp_notation/crisp_notation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Step;
 import 'package:flutter_test/flutter_test.dart';
 
 TabDocument _tab() => TabDocument(
@@ -165,6 +166,35 @@ void main() {
     expect(converted.single.$1, AppMode.score);
     expect(converted.single.$2.document, isA<MultiPartScore>());
     expect(converted.single.$2.lossless, isTrue);
+  });
+
+  test('a static loss reason localizes; EN mirrors the bridge (drift guard)',
+      () {
+    // score → tracker's only reason is tagged, so this dialog is fully German.
+    // The bridge tags the reason with a stable key; the widget localizes it, and
+    // the EN value MUST equal the bridge's English so the two cannot drift.
+    final score = MultiPartScore([
+      Score(
+        clef: Clef.treble,
+        measures: [
+          Measure(
+              [NoteElement.note(const Pitch(Step.c), NoteDuration.quarter)]),
+        ],
+      ),
+    ]);
+    final r = ProjectBridge.convert(
+      from: AppMode.score,
+      to: AppMode.tracker,
+      document: score,
+    );
+    const msg = 'notes quantized onto the pattern grid';
+    expect(r.report.approximated, contains(msg));
+    expect(r.report.keyFor(msg), 'reasonQuantizedPatternGrid');
+    expect(localizedReason(AppLocalizationsEn(), r.report, msg), msg);
+    expect(
+      localizedReason(AppLocalizationsDe(), r.report, msg),
+      'Noten auf das Pattern-Raster quantisiert',
+    );
   });
 
   test('the localized EN edge subtitles mirror describeEdge (drift guard)', () {

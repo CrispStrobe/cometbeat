@@ -8397,4 +8397,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get openInEdgeTrackerLoop =>
       'Takes the busiest channel onto the eighth-note grid.';
+
+  @override
+  String get reasonEffectColumns =>
+      'effect-column commands and per-cell instruments';
+
+  @override
+  String get reasonNoChannels => 'this song has no channels';
+
+  @override
+  String get reasonQuantizedPatternGrid =>
+      'notes quantized onto the pattern grid';
+
+  @override
+  String get reasonPartsBeyondFirst =>
+      'parts beyond the first (a tab holds one part)';
+
+  @override
+  String get reasonSnappedLoopGrid =>
+      'notes snapped to the eighth-note loop grid';
+
+  @override
+  String get reasonVelocityScore =>
+      'per-note velocity (a score carries dynamics marks, not values)';
 }
