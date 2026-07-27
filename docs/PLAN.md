@@ -1276,8 +1276,26 @@ already round-trip **in place**. The gaps:
   Tests: `daw_project_models_test` (17) — per-type round trips, placement/FX/
   **licence provenance** riding along, the fallback paths, v1 compatibility, and
   the cache priming.
-- [ ] **C2** Drum (`DrumSource`) + groove (`GrooveSource`) accessors and
-  round-trip — a beat sent from the DrumKit currently can never go back.
+- [x] **C2** Drum + groove round-trip. A beat sent from the Drum Kit and a
+  groove sent from the Loop Mixer could never go home — the two source kinds
+  with no accessor and no door, while score and tracker clips already
+  round-tripped in place. Both clips still HOLD their model, so the way back is
+  exact retrieval, not a conversion. `DawService` gains
+  `isDrumClip`/`clipDrumPattern`/`clipDrumTiming`/`isGrooveClip`/`clipGroove`
+  and `replaceDrum|GrooveClipSource` (over one shared `_replaceClipSource`);
+  `DrumkitScreen` and `LoopMixerScreen` gain the `onReturnToDaw` callback the
+  Tracker already had; `score_router.dart` gains `openDrumPattern`/`openGroove`.
+  * the **timing travels with the grid** (`initialTiming` seeds the Kit's
+    tempo/swing) — without it a round trip silently re-times the beat to the
+    Kit's default, which is a real edit nobody asked for;
+  * ghost notes, placement, and **licence provenance** all survive the trip;
+  * an edit whose clip was deleted meanwhile lands as a new clip rather than
+    vanishing.
+  Tests: `daw_drum_groove_roundtrip_test` (10, engine + both UI doors).
+  ⚠ One existing assertion had to move: `daw_screen_test`'s "a plain audio clip
+  offers no way back" used a demo BEAT as its stand-in for plain audio, which
+  was true only while drum clips had no door. It now uses an actual waveform —
+  which is what the test always said it was about.
 - [ ] **C3** Universal "Open in…" routed through `ProjectBridge` (with its loss
   report shown *before* committing) instead of the two hardcoded special cases;
   gives score→Tracker its missing return path.

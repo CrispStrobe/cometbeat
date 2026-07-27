@@ -7,7 +7,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/daw_sources.dart' show TrackerSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart'
-    show DawClipEffectType, DawFadeCurve, kDawSampleRate;
+    show DawClipEffectType, DawFadeCurve, SampleSource, kDawSampleRate;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart'
@@ -769,12 +769,21 @@ void main() {
     // The other half of the rule: a bounced/imported waveform is NOT notes, so
     // offering "Open in editor" there would promise a conversion we would have
     // to invent. Transcription stays an explicit, separate feature.
+    //
+    // ⚠ This used to use a demo BEAT as the stand-in for "plain audio", which
+    // was true when a drum clip had no way home. C2 gave it one (it still holds
+    // its grid, so going back is exact retrieval), so the fixture had to become
+    // what the test actually describes: a real waveform, which has no model to
+    // hand to anything.
     await _pumpDaw(tester);
-    final daw = _daw(tester);
-    daw.addDemoBeat();
+    final service = Provider.of<DawService>(
+      tester.element(find.byType(DawScreen)),
+      listen: false,
+    );
+    service.addClip(SampleSource(_tone(kDawSampleRate * 2)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('🥁'));
+    await tester.tap(find.text('🎵'));
     await tester.pumpAndSettle();
     expect(find.text('Open in editor'), findsNothing);
   });

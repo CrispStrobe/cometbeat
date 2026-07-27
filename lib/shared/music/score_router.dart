@@ -1,18 +1,27 @@
-// Route a symbolic score to the editors. Any [MultiPartScore] — imported from the
-// library/music picker, transcribed, or lifted out of an Audio Editor music clip
-// — can be opened in the Score Workshop or the Tab Workshop from one place.
+// Route an editable document to the editor that owns it. Any [MultiPartScore] —
+// imported from the library/music picker, transcribed, or lifted out of an Audio
+// Editor music clip — can be opened in the Score Workshop or the Tab Workshop
+// from one place; a tracker song, a drum grid and a groove have the same door
+// here (they are not scores, but "which editor opens this?" is one question and
+// deserves one answer).
 //
 // The "and back" half: pass [onReturn]. When set, the editor's "Send to Audio
 // Editor" calls it with the EDITED score (and pops back) instead of adding a new
 // clip — so opening a DAW music clip and sending back updates that SAME clip
 // in place. With no [onReturn] the editors keep their normal add-a-new-clip send.
 
+import 'package:comet_beat/core/audio/loop_engine.dart'
+    show DrumRowsPattern, GrooveSpec, LoopTiming;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
+import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart'
+    show LoopMixerScreen;
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
     show trackerSongFromMultiPart;
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart'
     show TabWorkshopScreen;
+import 'package:comet_beat/features/games/drums/drumkit_screen.dart'
+    show DrumkitScreen;
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart'
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -90,6 +99,51 @@ void openTrackerSong(
     MaterialPageRoute<void>(
       builder: (_) => AdvancedTrackerScreen(
         initialSong: song,
+        onReturnToDaw: onReturn,
+      ),
+    ),
+  );
+}
+
+/// Called with the edited beat when the Drum Kit sends a round-trip edit back.
+typedef DrumReturn = void Function(DrumRowsPattern pattern, LoopTiming timing);
+
+/// Called with the edited groove when the Loop Mixer sends one back.
+typedef GrooveReturn = void Function(GrooveSpec edited);
+
+/// Open a drum grid in the full Drum Kit, seeded with [pattern] at [timing].
+///
+/// The beat that arrived from an Audio Editor clip still IS a grid, so this is
+/// exact retrieval — nothing is transcribed and nothing is approximated. Pass
+/// [onReturn] for the in-place round trip.
+void openDrumPattern(
+  BuildContext context,
+  DrumRowsPattern pattern, {
+  LoopTiming? timing,
+  DrumReturn? onReturn,
+}) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => DrumkitScreen(
+        initialBeat: pattern,
+        initialTiming: timing,
+        onReturnToDaw: onReturn,
+      ),
+    ),
+  );
+}
+
+/// Open a groove in the Loop Mixer, seeded with [spec]. Exact retrieval, like
+/// [openDrumPattern]; pass [onReturn] for the in-place round trip.
+void openGroove(
+  BuildContext context,
+  GrooveSpec spec, {
+  GrooveReturn? onReturn,
+}) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => LoopMixerScreen(
+        initialSpec: spec,
         onReturnToDaw: onReturn,
       ),
     ),

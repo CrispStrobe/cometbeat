@@ -10,8 +10,10 @@ import 'dart:math' as math;
 import 'package:comet_beat/core/audio/daw_edits.dart';
 import 'package:comet_beat/core/audio/daw_project.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart'
-    show ScoreSource, TrackerSource;
+    show DrumSource, GrooveSource, ScoreSource, TrackerSource;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
+import 'package:comet_beat/core/audio/loop_engine.dart'
+    show DrumRowsPattern, GrooveSpec, LoopTiming;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
@@ -1096,9 +1098,38 @@ class DawService extends ChangeNotifier {
     return src is TrackerSource ? src.song : null;
   }
 
+  /// Whether the clip is a DrumKit beat, still holding the grid it was built
+  /// from rather than only its render.
+  bool isDrumClip(int track, int index) =>
+      timeline.tracks[track].clips[index].source is DrumSource;
+
+  /// The drum grid behind a drum clip (null on any other clip).
+  DrumRowsPattern? clipDrumPattern(int track, int index) {
+    final src = timeline.tracks[track].clips[index].source;
+    return src is DrumSource ? src.pattern : null;
+  }
+
+  /// The tempo/swing/bars a drum clip plays at (null on any other clip). Sent
+  /// to the Drum Kit with the grid so a round trip does not reset the feel.
+  LoopTiming? clipDrumTiming(int track, int index) {
+    final src = timeline.tracks[track].clips[index].source;
+    return src is DrumSource ? src.timing : null;
+  }
+
+  /// Whether the clip is a Loop Mixer groove, still holding its spec.
+  bool isGrooveClip(int track, int index) =>
+      timeline.tracks[track].clips[index].source is GrooveSource;
+
+  /// The groove spec behind a groove clip (null on any other clip).
+  GrooveSpec? clipGroove(int track, int index) {
+    final src = timeline.tracks[track].clips[index].source;
+    return src is GrooveSource ? src.spec : null;
+  }
+
   /// The raw source of a clip — captured before opening it in an editor so the
-  /// edit can be routed back to the SAME clip via [replaceScoreClipSource] or
-  /// [replaceTrackerClipSource], robustly against the clip being
+  /// edit can be routed back to the SAME clip via [replaceScoreClipSource],
+  /// [replaceTrackerClipSource], [replaceDrumClipSource] or
+  /// [replaceGrooveClipSource], robustly against the clip being
   /// moved/reordered meanwhile.
   ClipSource clipSourceAt(int track, int index) =>
       timeline.tracks[track].clips[index].source;
@@ -1140,6 +1171,41 @@ class DawService extends ChangeNotifier {
       }
     }
     addClip(TrackerSource(song));
+  }
+
+  /// Put an edited beat back into the clip it came from — the drum twin of
+  /// [replaceScoreClipSource]. If that clip is gone, the edit lands as a new
+  /// clip so nothing is lost.
+  void replaceDrumClipSource(
+    ClipSource oldSource,
+    DrumRowsPattern pattern,
+    LoopTiming timing,
+  ) =>
+      _replaceClipSource(oldSource, DrumSource(pattern, timing));
+
+  /// Put an edited groove back into the clip it came from.
+  void replaceGrooveClipSource(ClipSource oldSource, GrooveSpec spec) =>
+      _replaceClipSource(oldSource, GrooveSource(spec));
+
+  /// Swap the clip whose source is [oldSource] onto [next], keeping everything
+  /// about its placement. Falls back to adding a clip when the original is gone
+  /// — a user who edited something and pressed Done must not lose the edit
+  /// because they deleted the clip meanwhile.
+  ///
+  /// Shared by every in-place round trip; the score and tracker versions predate
+  /// it and keep their own bodies only because they also carry an instrument.
+  void _replaceClipSource(ClipSource oldSource, ClipSource next) {
+    for (final t in timeline.tracks) {
+      for (var i = 0; i < t.clips.length; i++) {
+        if (identical(t.clips[i].source, oldSource)) {
+          _record();
+          t.clips[i] = _reSource(t.clips[i], next);
+          notifyListeners();
+          return;
+        }
+      }
+    }
+    addClip(next);
   }
 
   /// Re-source [clip] onto [source], preserving placement/gain/mute/fades/trim.

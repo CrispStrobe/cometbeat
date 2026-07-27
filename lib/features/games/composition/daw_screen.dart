@@ -46,7 +46,7 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
     show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music/score_router.dart'
-    show openTrackerSong, showScoreDestinations;
+    show openDrumPattern, openGroove, openTrackerSong, showScoreDestinations;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show AudioStem, showAudioExportSheet, showAudioStemsExportSheet;
 import 'package:comet_beat/shared/music_io/audio_import.dart'
@@ -3767,6 +3767,54 @@ class _DawScreenState extends State<DawScreen>
                                   song,
                                   onReturn: (edited) => _daw
                                       .replaceTrackerClipSource(source, edited),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.open_in_new),
+                            label: Text(l10n.dawOpenInEditor),
+                          ),
+                        // C2 — the same door for the two kinds that never had
+                        // one. A beat sent from the Drum Kit and a groove sent
+                        // from the Loop Mixer still hold their grid and their
+                        // spec, so this is exact retrieval like the tracker
+                        // case: nothing is transcribed, nothing approximated.
+                        if (_daw.isDrumClip(track, index))
+                          TextButton.icon(
+                            onPressed: () {
+                              final pattern =
+                                  _daw.clipDrumPattern(track, index);
+                              final timing = _daw.clipDrumTiming(track, index);
+                              final source = _daw.clipSourceAt(track, index);
+                              Navigator.of(sheetCtx).pop();
+                              if (pattern != null) {
+                                openDrumPattern(
+                                  context,
+                                  pattern,
+                                  timing: timing,
+                                  onReturn: (edited, editedTiming) =>
+                                      _daw.replaceDrumClipSource(
+                                    source,
+                                    edited,
+                                    editedTiming,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.open_in_new),
+                            label: Text(l10n.dawOpenInEditor),
+                          ),
+                        if (_daw.isGrooveClip(track, index))
+                          TextButton.icon(
+                            onPressed: () {
+                              final spec = _daw.clipGroove(track, index);
+                              final source = _daw.clipSourceAt(track, index);
+                              Navigator.of(sheetCtx).pop();
+                              if (spec != null) {
+                                openGroove(
+                                  context,
+                                  spec,
+                                  onReturn: (edited) => _daw
+                                      .replaceGrooveClipSource(source, edited),
                                 );
                               }
                             },

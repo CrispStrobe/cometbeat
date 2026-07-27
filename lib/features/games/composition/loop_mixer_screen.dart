@@ -107,7 +107,14 @@ class LoopMixerScreen extends StatefulWidget {
     this.initialSpec,
     this.showAppBar = true,
     this.simpleLayout = false,
+    this.onReturnToDaw,
   });
+
+  /// In-place round trip back to the Audio Editor: when set, "Send to Audio
+  /// Editor" hands the edited groove to THIS callback and pops, instead of
+  /// adding a second copy of the same groove to the timeline. Mirrors
+  /// `AdvancedTrackerScreen.onReturnToDaw`.
+  final void Function(GrooveSpec edited)? onReturnToDaw;
 
   /// An optional groove to open with — lets another Workshop mode hand a
   /// [GrooveSpec] over (e.g. a tracker pattern → a groove). Null = the default
@@ -1794,6 +1801,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void sendToDaw() {
     if (_engine.enabled.isEmpty) return;
     // The spec is a value, so this is a snapshot of the current groove.
+    final onReturn = widget.onReturnToDaw;
+    if (onReturn != null) {
+      onReturn(_engine.spec);
+      Navigator.of(context).pop();
+      return;
+    }
     sendToMultitrack(context, GrooveSource(_engine.spec));
   }
 

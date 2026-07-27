@@ -127,13 +127,31 @@ abstract interface class DrumkitTester {
 }
 
 class DrumkitScreen extends StatefulWidget {
-  const DrumkitScreen({super.key, this.initialBeat});
+  const DrumkitScreen({
+    super.key,
+    this.initialBeat,
+    this.initialTiming,
+    this.onReturnToDaw,
+  });
 
   /// When opened as an editor for another surface's beat (e.g. the Loop
   /// Studio's Drums card), the grid starts from this pattern and a Done action
   /// returns the edited pattern via the Navigator result (round-trip). Null for
   /// the standalone tile.
   final DrumRowsPattern? initialBeat;
+
+  /// The tempo/swing the incoming beat plays at, when it came from a surface
+  /// that has its own (an Audio Editor clip). Without this a round trip would
+  /// silently re-time the beat to the Kit's default, which is a real edit the
+  /// user did not ask for.
+  final LoopTiming? initialTiming;
+
+  /// In-place round trip back to the Audio Editor: when set, "Send to Audio
+  /// Editor" hands the edited grid (and its timing) to THIS callback and pops,
+  /// instead of adding a second copy of the same beat to the timeline. Mirrors
+  /// `AdvancedTrackerScreen.onReturnToDaw`.
+  final void Function(DrumRowsPattern pattern, LoopTiming timing)?
+      onReturnToDaw;
 
   static const tempos = [80, 100, 120, 140];
 
@@ -340,6 +358,15 @@ class _DrumkitScreenState extends State<DrumkitScreen>
   /// bar count to fit the incoming pattern so a 4/8-bar drums card round-trips
   /// without truncation.
   void _seedFromInitialBeat() {
+    // Adopt the incoming tempo/swing FIRST, so a beat that arrived from a
+    // surface with its own feel goes back out with that feel rather than the
+    // Kit's default. `_bars` is decided by the pattern below, not here — the
+    // grid's own length is the authority on how long it is.
+    final timing = widget.initialTiming;
+    if (timing != null) {
+      _tempo = timing.tempoBpm.clamp(40, 240);
+      _swing = timing.swing.clamp(0.0, 1.0);
+    }
     final seed = widget.initialBeat;
     if (seed == null) return;
     var maxLen = 0;
@@ -750,9 +777,14 @@ class _DrumkitScreenState extends State<DrumkitScreen>
     if (hitCount == 0) return;
     // A SNAPSHOT (deep-copied rows) so later DrumKit edits don't change the
     // sent clip; the timing carries the current tempo + swing.
-    context.read<DawService>().addClip(
-          DrumSource(DrumRowsPattern(_snapshot()), _timing),
-        );
+    final pattern = DrumRowsPattern(_snapshot());
+    final onReturn = widget.onReturnToDaw;
+    if (onReturn != null) {
+      onReturn(pattern, _timing);
+      Navigator.of(context).pop();
+      return;
+    }
+    context.read<DawService>().addClip(DrumSource(pattern, _timing));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context)!.dawSent)),
     );
