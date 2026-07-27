@@ -117,10 +117,10 @@ void main() {
               builder: (context) {
                 // Treble landmarks: C4, E4 (bottom line), B4 (middle), F5 (top).
                 String t(Pitch p) => readingHintText(context, Clef.treble, p);
-                texts['same'] = t(const Pitch(Step.c, octave: 4)); // 0
-                texts['stepUp'] = t(const Pitch(Step.d, octave: 4)); // +1
+                texts['same'] = t(const Pitch(Step.c)); // 0
+                texts['stepUp'] = t(const Pitch(Step.d)); // +1
                 texts['stepDown'] = t(const Pitch(Step.b, octave: 3)); // -1
-                texts['skipUp'] = t(const Pitch(Step.g, octave: 4)); // +2
+                texts['skipUp'] = t(const Pitch(Step.g)); // +2
                 texts['skipDown'] = t(const Pitch(Step.a, octave: 3)); // -2
                 texts['farUp'] = t(const Pitch(Step.c, octave: 6)); // +4
                 texts['farDown'] = t(const Pitch(Step.c, octave: 2)); // -14
