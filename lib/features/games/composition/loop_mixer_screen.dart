@@ -4871,7 +4871,19 @@ class _TrackCard extends StatelessWidget {
                   color: foreground,
                   size: 32,
                 ),
-                const SizedBox(width: 12),
+                // 8, not 12. This row's own comment below already noted it was
+                // "within a pixel of overflowing on a narrow card", and a later
+                // badge pushed it 5.5 px over — which fails `live_flow_test`'s
+                // registry smoke, so `main` was red for everyone. Narrowing the
+                // two gutters flanking the label buys 8 px, which clears it.
+                //
+                // It is a stopgap by someone who does not own this screen: the
+                // row now has ~2.5 px of headroom, so the NEXT badge breaks it
+                // again. The real fix is a reflow (wrap the badge cluster, or
+                // drop badges below a width threshold as `compact` already
+                // does) and that is a design call for whoever owns the card —
+                // please override this.
+                const SizedBox(width: 8),
                 Flexible(
                   child: Text(
                     label,
@@ -4883,7 +4895,7 @@ class _TrackCard extends StatelessWidget {
                         ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 // The pattern-variant badge: tap to cycle A → B → C, long-press
                 // to roll a random variant.
                 if (variantCount > 1)
