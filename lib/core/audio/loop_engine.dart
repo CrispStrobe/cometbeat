@@ -28,6 +28,7 @@ import 'package:comet_beat/core/audio/fx/fx_chain.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/loop_instrument_render.dart'
     show renderCellsWithInstrument;
+import 'package:comet_beat/core/audio/loop_track_length.dart';
 import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
@@ -1711,10 +1712,71 @@ class LoopEngine {
     _clearRenderCaches();
   }
 
+  /// Per-track pattern length in eighth-steps (absent = the full 2-bar grid).
+  ///
+  /// A shorter track loops sooner than the rest — the groovebox move where a
+  /// 3-step hat walks around a 4-step bass.
+  final Map<String, int> _trackSteps = {};
+
+  /// [id]'s loop length in steps, or the full grid.
+  int trackSteps(String id) => _trackSteps[id] ?? kPatternSteps;
+
+  /// Sets [id]'s loop length. A value outside [kLoopTrackLengths] is refused
+  /// rather than clamped: the allowed set is what bounds the render buffer, and
+  /// quietly rounding 5 to 4 would be a lie about what is playing.
+  bool setTrackSteps(String id, int steps) {
+    if (!isLoopTrackLength(steps)) return false;
+    if (trackSteps(id) == steps) return true;
+    if (steps == kPatternSteps) {
+      _trackSteps.remove(id);
+    } else {
+      _trackSteps[id] = steps;
+    }
+    _clearRenderCaches();
+    return true;
+  }
+
+  /// Steps the loop must span for every track length to land whole — see
+  /// [loopRenderSteps]. With no shortened track this is the 2-bar grid, so an
+  /// ordinary groove is unchanged.
+  int get _loopSteps => loopRenderSteps(kPatternSteps, _trackSteps.values);
+
+  /// [cells] cut to this track's length and repeated across the loop.
+  /// Returns the input untouched when nothing is shortened.
+  List<PatternCell> _fitCells(String id, List<PatternCell> cells) {
+    final len = trackSteps(id);
+    if (len == kPatternSteps && _loopSteps == kPatternSteps) return cells;
+    return tileCellsTo(takeSteps(cells, len), _loopSteps);
+  }
+
+  /// The drum-row equivalent of [_fitCells].
+  DrumRowsPattern _fitRows(String id, DrumRowsPattern pattern) {
+    final len = trackSteps(id);
+    if (len == kPatternSteps && _loopSteps == kPatternSteps) return pattern;
+    final vels = pattern.velocities;
+    return DrumRowsPattern(
+      {
+        for (final MapEntry(key: drum, value: row) in pattern.rows.entries)
+          drum: tileRowTo(row.take(len).toList(), _loopSteps),
+      },
+      velocities: vels == null
+          ? null
+          : {
+              for (final MapEntry(key: drum, value: row) in vels.entries)
+                drum: tileValuesTo(row.take(len).toList(), _loopSteps),
+            },
+    );
+  }
+
   LoopTiming get timing => LoopTiming(
         tempoBpm: _tempoBpm,
         swing: _swing,
-        bars: _progression == null ? 2 : _progression!.degrees.length,
+        // Polymeter lengthens the rendered loop so a short track is never cut
+        // off at the seam. Under a progression the loop is the progression's,
+        // and per-track lengths do not apply (yet).
+        bars: _progression == null
+            ? _loopSteps ~/ LoopTiming.stepsPerBar
+            : _progression!.degrees.length,
       );
 
   /// The 2-bar grid authored patterns render on (tiled in progression mode).
@@ -2164,7 +2226,8 @@ class LoopEngine {
     // new instance), so a fresh edit never reads a stale cached stem.
     final drumOv = _drumOverrides[track.id];
     final ov = drumOv != null ? '#do${identityHashCode(drumOv)}' : '';
-    final key = '${track.id}#$variant#${_progression?.id ?? 'vamp'}#$voice$ov';
+    final key = '${track.id}#$variant#${_progression?.id ?? 'vamp'}#$voice$ov'
+        '#len${trackSteps(track.id)}#loop$_loopSteps';
     return _stemCache[key] ??= _renderStem(track, variant);
   }
 
@@ -2181,7 +2244,9 @@ class LoopEngine {
     // plain drum path (drums don't re-voice per chord).
     final drumOverride = _drumOverrides[track.id];
     if (drumOverride != null) {
-      if (prog == null) return drumOverride.render(timing, kit: _kit);
+      if (prog == null) {
+        return _fitRows(track.id, drumOverride).render(timing, kit: _kit);
+      }
       final twoBars = drumOverride.render(_vampTiming, kit: _kit);
       final reps = prog.degrees.length ~/ 2;
       final out = Float64List(twoBars.length * reps);
@@ -2200,11 +2265,13 @@ class LoopEngine {
           (track.variants[variant] is MelodicPattern
               ? (track.variants[variant] as MelodicPattern).instrument
               : Instrument.flute);
-      Float64List one(LoopTiming tm) => voice != null
-          ? renderCellsWithInstrument(cellsOverride, voice, tm, transpose: t)
-          : renderCells(cellsOverride, inst, tm, transpose: t);
-      if (prog == null) return one(timing);
-      final twoBars = one(_vampTiming);
+      Float64List one(LoopTiming tm, List<PatternCell> cs) => voice != null
+          ? renderCellsWithInstrument(cs, voice, tm, transpose: t)
+          : renderCells(cs, inst, tm, transpose: t);
+      if (prog == null) {
+        return one(timing, _fitCells(track.id, cellsOverride));
+      }
+      final twoBars = one(_vampTiming, cellsOverride);
       final reps = prog.degrees.length ~/ 2;
       final out = Float64List(twoBars.length * reps);
       for (var r = 0; r < reps; r++) {
@@ -2217,11 +2284,30 @@ class LoopEngine {
       final pat = track.variants[variant];
       if (voice != null && pat is MelodicPattern) {
         return renderCellsWithInstrument(
-          pat.cells,
+          _fitCells(track.id, pat.cells),
           voice,
           timing,
           transpose: t,
         );
+      }
+      // A shortened (or lengthened-loop) track cannot go through
+      // LoopPattern.render: MelodicPattern asserts its cells fill the 2-bar
+      // grid exactly, which is the very thing polymeter breaks. Render the
+      // fitted cells directly instead; an untouched track still takes the
+      // original path and is byte-identical.
+      if (trackSteps(track.id) != kPatternSteps ||
+          _loopSteps != kPatternSteps) {
+        if (pat is MelodicPattern) {
+          return renderCells(
+            _fitCells(track.id, pat.cells),
+            pat.instrument,
+            timing,
+            transpose: t,
+          );
+        }
+        if (pat is DrumRowsPattern) {
+          return _fitRows(track.id, pat).render(timing, kit: _kit);
+        }
       }
       return pat.render(timing, transpose: t, kit: _kit);
     }
