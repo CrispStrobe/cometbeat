@@ -921,6 +921,46 @@ is recorded in [HISTORY.md](HISTORY.md).
   Six further Kummer editions are in hand (95383/95384 @150 ppi, 98155/98156 @288,
   236743/260567 @400) — their value is as INDEPENDENT PRINTS for arbitrating a doubtful
   glyph, and for comparing how different editors fingered the same exercise.
+  **🐞 REAL BUG FOUND, user-visible: our POSITION NUMBERS are semitone-counted, but every
+  cello method (and standard practice) numbers positions DIATONICALLY.** Found by reading
+  Becker p.18 `7. Fingersatz. Positionen`, which prints the whole position table and states
+  the rule in prose.
+  • **The geometry is RIGHT and is confirmed by the source.** Becker: *"…wenn die Hand derart
+  am Halse des Instruments liegt, daß durch das Aufsetzen des 1sten Fingers auf der A-Saite
+  der Ton **h** getroffen wird"* — the position IS the note finger 1 takes on the A string.
+  B3 = 59, A3 = 57, so first position = **+2 semitones = our `firstPositionOffset: 2`.** ✓
+  • **The NAMES diverge from 3rd position up.** `positionOfAnchor() = anchor - offset + 1`
+  counts semitones. Becker's captions are `halbe · 1ste · 2te · 2te erhöhte · 3te ·
+  3te erhöhte`: the ordinal advances only at a new LETTER, and chromatic steps in between get
+  **erhöhte**, not a number. His proof is neat — there is no `1ste erhöhte` between h and c,
+  because no letter lies between them; a semitone scheme would have been forced to name one.
+
+  | 1st finger on A string | ours | Becker / standard |
+  |---|---|---|
+  | B3 | 1 | `1ste` ✓ |
+  | C4 | 2 | `2te` ✓ |
+  | C♯4 | 3 | `2te erhöhte` ✗ |
+  | D4 | **4** | **`3te`** ✗ |
+  | E4 | 6 | 4th ✗ |
+
+  • ⚠ **It reaches learners.** `cello_play_it_screen.dart` and `cello_finger_quiz_screen.dart`
+  render chips `1..kMaxGamePosition` (=4) straight from this numbering, so the app teaches that
+  a THIRD-position hand is "position 4", and that a chromatic intermediate is "3". Wrong
+  vocabulary is worse than no vocabulary in a teaching app — the learner takes it to a teacher.
+  • **NOT changed — it is a naming decision, not a mechanical fix**, and it touches user-visible
+  labels + l10n (a word for "raised"/"erhöhte" in de/en) + `celloNotesInPosition` +
+  `kMaxGamePosition` + the position tests. Options: (a) adopt diatonic numbering with a
+  raised/low qualifier (matches Becker and modern practice; means `kMaxGamePosition` 4 now
+  reaches further up the neck than before), (b) keep semitone anchors internally and map to
+  diatonic names only at the UI edge (smallest diff, keeps the Viterbi untouched) — **(b) is my
+  recommendation.** Either way `positionOfAnchor` should stop being presented as a position NAME.
+  • ⭐ Bonus from the same page, and it corroborates the extension model: **the wavy line `⁓⁓⁓`
+  is Becker's EXTENSION marker**, stated in prose (*"die schwereren derselben (bei welchen man
+  die Finger sehr ausspannen muß) mit ⁓⁓⁓ bezeichnet"*) and then demonstrated 24 times — every
+  marked bar spans a MAJOR third (1‑2‑4 = 0,+2,+4), every unmarked bar a MINOR third
+  (0,+1,+3 or 1‑3‑4 = 0,+2,+3). That is exactly our `extendedForward` vs `neck` split, with the
+  source labelling which is which. 24 labelled extension frames.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
