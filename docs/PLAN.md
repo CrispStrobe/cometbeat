@@ -348,7 +348,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   continuously) — a widget test using it ran 8+ minutes and failed. Use bounded
   `pump(Duration(...))`. Also: the grid lives in the inspector, which is CLOSED
   by default, so a widget test must call `toggleInspector()` first.
-  Next: L5 queued-launch feedback, L4 per-section repeats, L6 per-track swing.
+  ✅ **L5 SHIPPED — and my scoping of it was WRONG, worth knowing.** I had it as
+  "the behaviour is right, only the feedback is missing". Reading the code:
+  quantized launch with an armed amber border has existed for TRACK CARDS since
+  quantize shipped (`_pendingLaunches`, applied in `_onLoopWrap`) — but SECTIONS
+  fired instantly. One screen, one quantize switch, two behaviours, and the
+  inconsistent one was the destructive direction since a section replaces the
+  whole mix mid-bar. Sections now arm too (`_pendingScene`), show the same amber
+  border, disarm on a second tap, and are dropped when quantize goes off — all
+  matching the card behaviour. An armed SECTION lands before armed card toggles,
+  because a section defines the whole mix and would otherwise erase them.
+  ⚠️ **Re-entrancy trap for the next person:** applying the armed section at the
+  seam by calling `_launchScene` re-reads `_quantize` (still on, still running)
+  and simply RE-ARMS it, so it never lands. Hence `_applySceneNow`, which
+  bypasses the check; two tests caught this.
+  6 tests. Next: L4 per-section repeats, L6 per-track swing.
   Scoped in [PLAN.md](../PLAN.md) → *"Loop Studio — sequencer-parity slices"*
   (L1–L6, with what is already at parity so nobody rebuilds it). Building **L1
   per-track pattern length (polymeter)** first. Touching

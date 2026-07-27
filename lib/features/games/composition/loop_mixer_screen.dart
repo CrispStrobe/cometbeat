@@ -321,6 +321,9 @@ abstract interface class LoopMixerTester {
 
   /// Whether [id] plays in section [i], and a way to change that — the session
   /// grid's cell state.
+  /// The section armed to launch at the next seam, if any.
+  int? get pendingScene;
+
   bool sceneHasTrack(int i, String id);
   void toggleSceneTrack(int i, String id);
   bool get isChaining;
@@ -1012,6 +1015,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   // the next loop seam (it "arms") so layers always drop in on the beat.
   bool _quantize = false;
   final Set<String> _pendingLaunches = {};
+
+  /// A section armed to launch at the next seam, when quantize is on.
+  ///
+  /// Track toggles have been quantized since quantize shipped; sections fired
+  /// instantly, so the same screen behaved two different ways — arm a track and
+  /// it waits for the beat, tap a section and it jumps. Now both wait.
+  int? _pendingScene;
   String? _soloTrack;
   Set<String>? _enabledBeforeSolo;
 
@@ -1035,6 +1045,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void toggleQuantize() => _toggleQuantize();
   @override
   Set<String> get pendingLaunches => _pendingLaunches;
+  @override
+  int? get pendingScene => _pendingScene;
   @override
   String get currentChallengeId => _challenge.id;
   @override
@@ -2540,6 +2552,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _iteration++;
     // A running scene chain advances to its next section on the beat.
     _advanceChain();
+    // An armed SECTION lands first: it defines the whole mix, so applying it
+    // after the armed card toggles would throw those away.
+    final armedScene = _pendingScene;
+    if (armedScene != null) {
+      _pendingScene = null;
+      _applySceneNow(armedScene);
+    }
     // Armed (quantized) card changes land here, on the beat.
     if (_applyPendingLaunches() && _engine.enabled.isEmpty) {
       _clock
@@ -2791,6 +2810,23 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       });
 
   void _launchScene(int i) {
+    if (_scenes[i] == null) return;
+    // Quantized: arm it for the next seam, exactly as a card toggle is armed.
+    // Tapping the armed section again disarms it.
+    if (_quantize && _clock.isRunning && _engine.enabled.isNotEmpty) {
+      setState(() => _pendingScene = _pendingScene == i ? null : i);
+      return;
+    }
+    _applySceneNow(i);
+  }
+
+  /// Puts section [i] on the mix immediately.
+  ///
+  /// Separate from [_launchScene] because the seam has to bypass the quantize
+  /// check: routing the armed section back through [_launchScene] re-read
+  /// `_quantize` — still on, still running — and simply re-armed it, so the
+  /// section never landed and the pending flag never cleared.
+  void _applySceneNow(int i) {
     final scene = _scenes[i];
     if (scene == null) return;
     setState(() {
@@ -2868,7 +2904,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void _toggleQuantize() {
     setState(() {
       _quantize = !_quantize;
-      if (!_quantize) _pendingLaunches.clear(); // drop armed changes
+      if (!_quantize) {
+        _pendingLaunches.clear(); // drop armed changes
+        _pendingScene = null;
+      }
     });
   }
 
@@ -4098,6 +4137,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                             ? scheme.primary
                             : scheme.primaryContainer),
                     borderRadius: BorderRadius.circular(8),
+                    // Armed for the next seam — the same amber the track cards
+                    // use, so "waiting for the beat" reads the same everywhere.
+                    border: _pendingScene == i
+                        ? Border.all(color: Colors.amber, width: 3)
+                        : null,
                   ),
                   child: Text(
                     String.fromCharCode(65 + i),
