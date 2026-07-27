@@ -10,7 +10,7 @@ changelog it graduated from.
 ## Tracker instrument macros (roadmap §4 core, 2026-07-26)
 
 Per-tick instrument MACROS — the classic tracker/Furnace instrument envelope — for
-the additive voice.
+both the additive and the sample voice.
 
 - **Model** (`c2b2647d`). `MacroSequence` (`lib/core/audio/macro_sequence.dart`):
   a raw per-tick step table for a target (volume / pitch / arpeggio / pan / duty)
@@ -25,8 +25,15 @@ the additive voice.
   original (86 replayer/replay goldens green). The instrument codec serializes
   additive macros so they persist.
 
-Remaining (see PLAN.md §4): sample-voice macros, the pan/duty targets, and a
-macro editor UI.
+- **Sample-voice rendering** (`72991462`). `SampleInstrument` gains the same
+  optional `macros`; the sample tick voice (`_renderSampleChannelInto`) applies
+  the volume macro to per-tick amplitude and the pitch+arpeggio macros to the
+  resample read-rate, and a macro'd sample is now routed through the tick path.
+  Opt-in — macro-free samples keep the whole-channel dispatch and are
+  byte-identical. Codec serializes sample macros.
+
+Remaining (see PLAN.md §4): the variable-timing sample path, the pan/duty
+targets, and a macro editor UI.
 
 ## Tracker DSP lifted into the shared editors (2026-07-26)
 
