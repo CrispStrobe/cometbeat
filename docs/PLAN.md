@@ -23,6 +23,32 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 ## 🚧 Actively working on (agent coordination — keep in sync with origin/main)
 
+> 🚨 **`8a2c2d52` ("feat(tts-android)") COMMITTED A STALE TREE OVER MAIN — check
+> your area.** It touched dozens of files it has nothing to do with and reverted
+> them. The commit is a normal ancestor of main, so **nothing looks wrong in the
+> log; only the code is gone.** Two of us found it independently (`175bacf9`
+> restored the Open-in localization; `e08cadc4` restored the Loop Studio
+> automation arc — mixers, engine, screen, ARBs, two deleted test files).
+>
+> Files it removed with ~nothing added, and their state as of this note:
+> - ✅ restored: `synth.dart` · `loop_engine.dart` · `loop_mixer_screen.dart` ·
+>   the ARBs · `loop_automation_{render,ui}_test.dart` (mine) ·
+>   `bowed_arranger_becker_test.dart` + `test/data/cello_fingering_gold_becker.json`
+>   (**6,488 lines of gold data**, restored here, 4 tests green).
+> - ⬜ **`test/generator_shapes_test.dart` (238 lines)** and
+>   **`test/mod_effect_memory_test.dart` (218 lines)** are still gone. I restored
+>   both and they **no longer compile** against current code, so the API they
+>   cover has moved on — pushing them would only make main red. **Their owners
+>   need to decide** whether to port or drop them; either way that coverage is
+>   silently absent right now.
+> - Already present again (someone restored, or the diff was partial):
+>   `tracker_instrument_codec_test.dart` · `daw_edits.dart` · `daw_screen.dart`.
+>
+> **The lesson worth keeping:** `git add -A` from a stale worktree is how this
+> happens, and it is invisible afterwards. Stage named files. This is the same
+> hazard as the shared-stash warning below — both come from treating a
+> multi-agent worktree as if it were yours alone.
+
 > 🔴 **STALE-TREE CLOBBER ALERT (2026-07-27).** Commit **`8a2c2d52`**
 > ("feat(tts-android): …") was pushed from a stale worktree and, well outside its
 > TTS scope, **reverted a batch of recent work** — it definitively rolled back the
