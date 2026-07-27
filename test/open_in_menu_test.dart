@@ -190,7 +190,7 @@ void main() {
       AppMode.score: score,
       AppMode.tracker: trackerSongFromMultiPart(score),
       AppMode.loop: const [
-        PatternCell(midis: [60], steps: 2)
+        PatternCell(midis: [60], steps: 2),
       ],
       AppMode.tab: _tab(),
     };
