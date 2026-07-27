@@ -38,7 +38,7 @@ double _rmsBetween(Float64List pcm, double fromMs, double toMs) {
 
 /// A ramp from full to silent across [ms].
 List<DawAutomationPoint> _fadeOut(double ms) => [
-      DawAutomationPoint(ms: 0, value: 1),
+      const DawAutomationPoint(ms: 0, value: 1),
       DawAutomationPoint(ms: ms, value: 0),
     ];
 
@@ -81,7 +81,7 @@ void main() {
             ],
           );
       final plain = renderTimeline(build(), limit: false);
-      final empty = renderTimeline(build(envelope: const []), limit: false);
+      final empty = renderTimeline(build(), limit: false);
       expect(plain, orderedEquals(empty));
     });
 
@@ -93,7 +93,7 @@ void main() {
             clips: [
               Clip(
                 source: SampleSource(_flat(1000)),
-                gainAutomation: [
+                gainAutomation: const [
                   DawAutomationPoint(ms: 0, value: 1),
                   DawAutomationPoint(ms: 200, value: 0.25),
                 ],
@@ -165,8 +165,11 @@ void main() {
       limit: false,
     );
     for (var i = 0; i < to - from; i++) {
-      expect(windowed.left[i], closeTo(full.left[from + i], 1e-12),
-          reason: 'sample ${from + i}');
+      expect(
+        windowed.left[i],
+        closeTo(full.left[from + i], 1e-12),
+        reason: 'sample ${from + i}',
+      );
     }
   });
 
@@ -185,7 +188,7 @@ void main() {
       final daw = DawService();
       daw.addClip(SampleSource(_flat(500)));
       final track = daw.timeline.tracks.indexWhere((t) => t.clips.isNotEmpty);
-      daw.setClipGainAutomation(track, 0, [
+      daw.setClipGainAutomation(track, 0, const [
         DawAutomationPoint(ms: 400, value: 0),
         DawAutomationPoint(ms: 0, value: 1),
       ]);
