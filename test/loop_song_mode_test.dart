@@ -21,7 +21,7 @@ LoopMixerTester _game(WidgetTester tester) =>
 /// Sections A (drums) and B (drums+bass), chaining on, A playing.
 Future<LoopMixerTester> _chained(WidgetTester tester) async {
   await pumpGame(tester, const LoopMixerScreen());
-  final game = _game(tester);
+  final game = _game(tester)..debugFreezeSeams();
 
   game.toggleTrack('drums');
   await tester.pump();

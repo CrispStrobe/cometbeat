@@ -1721,6 +1721,11 @@ class LoopEngine {
   /// [id]'s swing, or the global one.
   double trackSwing(String id) => _trackSwing[id] ?? _swing;
 
+  /// Whether [id] carries its own swing rather than following the groove's.
+  /// Distinct from `trackSwing(id) == swing`, which is also true when a track
+  /// has deliberately been set to the same value.
+  bool hasOwnSwing(String id) => _trackSwing.containsKey(id);
+
   /// Sets [id]'s swing, or clears it back to the global value with null.
   void setTrackSwing(String id, double? value) {
     if (value == null) {

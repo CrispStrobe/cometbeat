@@ -20,7 +20,7 @@ LoopMixerTester _game(WidgetTester tester) =>
 /// Two captured sections, A playing, quantize on, clock running.
 Future<LoopMixerTester> _twoSections(WidgetTester tester) async {
   await pumpGame(tester, const LoopMixerScreen());
-  final game = _game(tester);
+  final game = _game(tester)..debugFreezeSeams();
 
   game.toggleTrack('drums');
   await tester.pump();

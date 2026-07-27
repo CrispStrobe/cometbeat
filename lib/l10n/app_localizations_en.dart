@@ -1740,6 +1740,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerRepeats => 'Repeats';
 
   @override
+  String get loopMixerSwingPerTrack => 'Swing per track';
+
+  @override
+  String get loopMixerSwingPerTrackHint =>
+      'tap to give this track its own swing (– follows the groove)';
+
+  @override
   String get loopMixerMasterFx => 'Master effects';
 
   @override

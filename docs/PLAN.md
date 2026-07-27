@@ -479,9 +479,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   the beat has no odd steps to delay. The bass is such a part, which briefly
   fooled me into reading "no change" as a broken feature. Pinned as its own test
   so the next person suspects the pattern before the code.
-  ⬜ **No UI yet** — the track card row is at its width limit (see the L1c
-  warning) and card long-press is taken by voice-picking, so this needs a home:
-  the sound inspector is the obvious one, next to the global swing control.
+  ✅ **UI SHIPPED** — one badge per track in the sound inspector, directly under
+  the global swing slider: `–` follows the groove, a digit is that track's own.
+  Tap-to-cycle (follow → straight → 2 → 4 → 6 → follow), same idiom as the
+  loop-length badge. 4 widget tests.
+  ⚠️⚠️ **FLAKY-TEST ROOT CAUSE, worth knowing before you write any Loop Studio
+  test: `_clock` is a real `Stopwatch`.** On a loaded machine enough WALL-CLOCK
+  time passes between two `tester.pump()`s to cross a loop seam, so
+  `_onLoopWrap` fires spontaneously and advances the chain out from under a test
+  that meant to drive seams itself. My L4/L5 tests passed alone and failed
+  inside bigger runs because of this; a first "fix" that pumped until the
+  transport was running made it WORSE, because pumping burns more real time.
+  The fix is `debugFreezeSeams()` — call it right after `pumpGame` and then own
+  the seams with `debugLoopWrap()`. Verified: 7-file run, 89 green.
   9 tests. **L1–L6 engine work complete; automation deliberately NOT started —
   it is the first item that adds a new dimension to the model rather than
   exposing something already there, so it wants a maintainer decision.**

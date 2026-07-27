@@ -3266,6 +3266,18 @@ abstract class AppLocalizations {
   /// **'Repeats'**
   String get loopMixerRepeats;
 
+  /// No description provided for @loopMixerSwingPerTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Swing per track'**
+  String get loopMixerSwingPerTrack;
+
+  /// No description provided for @loopMixerSwingPerTrackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tap to give this track its own swing (– follows the groove)'**
+  String get loopMixerSwingPerTrackHint;
+
   /// No description provided for @loopMixerMasterFx.
   ///
   /// In en, this message translates to:

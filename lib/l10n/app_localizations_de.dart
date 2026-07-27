@@ -1746,6 +1746,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerRepeats => 'Wiederh.';
 
   @override
+  String get loopMixerSwingPerTrack => 'Swing pro Spur';
+
+  @override
+  String get loopMixerSwingPerTrackHint =>
+      'tippen für eigenen Swing dieser Spur (– folgt dem Groove)';
+
+  @override
   String get loopMixerMasterFx => 'Master-Effekte';
 
   @override

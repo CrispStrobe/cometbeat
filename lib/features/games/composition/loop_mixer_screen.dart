@@ -235,6 +235,11 @@ abstract interface class LoopMixerTester {
   /// Test seam: give a pitched track explicit cells, so a test can set up a
   /// specific RANGE (e.g. one that straddles middle C) and assert how the score
   /// panel engraves it. Mirrors `LoopEngine.setTrackCells`.
+  /// Stops the transport from wrapping on its own, so a test can drive seams
+  /// with [debugLoopWrap] and nothing else. `_clock` is a real Stopwatch, so
+  /// without this a slow machine can cross a seam between two pumps.
+  void debugFreezeSeams();
+
   void debugSetTrackCells(String id, List<PatternCell> cells);
 
   /// This track's loop length in steps, and the whole loop's — so a test can
@@ -323,6 +328,11 @@ abstract interface class LoopMixerTester {
   /// grid's cell state.
   /// The section armed to launch at the next seam, if any.
   int? get pendingScene;
+
+  /// A track's swing, whether it has its OWN, and a way to step it.
+  double trackSwingOf(String id);
+  bool hasOwnSwing(String id);
+  void cycleTrackSwing(String id);
 
   /// How many loops section [i] plays before the chain advances, and a way to
   /// step it.
@@ -437,6 +447,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// from the player, so swaps can re-enter the loop in phase.
   final _clock = Stopwatch();
 
+  /// Test-only: suppress AUTOMATIC loop wraps so a test owns the seams.
+  bool _debugFreezeSeams = false;
+
   late final Ticker _ticker;
   // LM-UX7: the kid's own saved harmonies, shown alongside the built-in ones.
   final _progStore = CustomProgressionStore();
@@ -494,7 +507,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       }
       final t = _engine.timing;
       final phase = _clock.elapsedMilliseconds % t.totalMs;
-      if (phase < _lastPhaseMs) _onLoopWrap();
+      // `_clock` is a real Stopwatch, so on a loaded machine enough wall-clock
+      // time can pass between two test pumps to cross a seam — and a
+      // spontaneous wrap advances the chain out from under a test that meant to
+      // drive seams itself with debugLoopWrap(). Tests freeze this; nothing
+      // else touches it.
+      if (phase < _lastPhaseMs && !_debugFreezeSeams) _onLoopWrap();
       _lastPhaseMs = phase;
       _step.value = phase ~/ t.beatMs;
       _progress.value = phase / t.totalMs;
@@ -625,6 +643,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void stopAll() => _stopAll();
   @override
   void pauseOrResume() => _pauseOrResume();
+  @override
+  @override
+  void debugFreezeSeams() => _debugFreezeSeams = true;
+
   @override
   void debugLoopWrap() => _onLoopWrap();
 
@@ -1075,6 +1097,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void launchScene(int i) => _launchScene(i);
   @override
   bool sceneIsEmpty(int i) => _scenes[i] == null;
+  @override
+  double trackSwingOf(String id) => _engine.trackSwing(id);
+  @override
+  bool hasOwnSwing(String id) => _engine.hasOwnSwing(id);
+  @override
+  void cycleTrackSwing(String id) => _cycleTrackSwing(id);
   @override
   int sceneRepeats(int i) => _sceneRepeats[i];
   @override
@@ -4001,6 +4029,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           ),
         ),
         _inspectorSection(
+          l10n.loopMixerSwingPerTrack,
+          _trackSwingRow(l10n),
+        ),
+        _inspectorSection(
           l10n.loopMixerFilter,
           _captionedSlider(
             low: l10n.loopMixerFilterDark,
@@ -4159,6 +4191,55 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       ),
     );
   }
+
+  /// Swing ladder for one track: follow the groove, then straight, light,
+  /// medium, heavy, then back to following.
+  ///
+  /// The same tap-to-cycle badge as the loop-length control, for the same
+  /// reason: you hear the change and the next tap is the undo. `–` means "no
+  /// opinion, use the groove's swing", which is where every track starts.
+  static const List<double?> _swingLadder = [null, 0.0, 0.2, 0.4, 0.6];
+
+  void _cycleTrackSwing(String id) {
+    final own = _engine.hasOwnSwing(id) ? _engine.trackSwing(id) : null;
+    var i = _swingLadder.indexWhere((v) => v == own);
+    if (i < 0) i = 0;
+    setState(() {
+      _engine.setTrackSwing(id, _swingLadder[(i + 1) % _swingLadder.length]);
+    });
+    _syncPlayback();
+  }
+
+  /// One badge per track: its own swing, or `–` when it follows the groove.
+  Widget _trackSwingRow(AppLocalizations l10n) => Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final track in _engine.tracks)
+            Tooltip(
+              message: '${_trackLabel(l10n, track.id)} · '
+                  '${l10n.loopMixerSwingPerTrackHint}',
+              child: GestureDetector(
+                key: Key('loop-swing-${track.id}'),
+                onTap: () => _cycleTrackSwing(track.id),
+                child: Chip(
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  avatar: CircleAvatar(
+                    backgroundColor: _trackColors[track.id],
+                    radius: 8,
+                  ),
+                  label: Text(
+                    _engine.hasOwnSwing(track.id)
+                        ? (_engine.trackSwing(track.id) * 10).round().toString()
+                        : '–',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
 
   bool _sceneHasTrack(int i, String id) =>
       _scenes[i]?.enabled.contains(id) ?? false;

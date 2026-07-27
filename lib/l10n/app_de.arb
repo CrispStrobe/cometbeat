@@ -578,6 +578,8 @@
   "loopMixerDuplicateSection": "Diesen Abschnitt in einen neuen kopieren",
   "loopMixerSectionsFull": "Alle vier Abschnitte sind belegt — erst einen frei machen",
   "loopMixerRepeats": "Wiederh.",
+  "loopMixerSwingPerTrack": "Swing pro Spur",
+  "loopMixerSwingPerTrackHint": "tippen für eigenen Swing dieser Spur (– folgt dem Groove)",
   "loopMixerMasterFx": "Master-Effekte",
   "loopMixerMasterFxHint": "Effekte auf den ganzen Mix. Sie laufen \u00fcber die Loop-Naht hinweg, Hallfahnen brechen also nicht auf der Eins ab.",
   "loopMixerSend": "Raum-Effekt (Hall / Echo)",
