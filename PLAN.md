@@ -993,20 +993,35 @@ with a per-sample on/off schedule — flagging it here is what routed it to them
 since `E0x` IS that command. ⬜ **Still absent: the Paula clock.** No PAL
 (3,546,894.6 Hz) / NTSC switching, and no pitch derived from clock ÷ output rate;
 ours stays a pure c5speed/finetune model, which is why MOD playback is tuned to
-A440 rather than to the hardware. **MEASURED 2026-07-26: we render 17.1 CENTS FLAT of OpenMPT** on
+A440 rather than to the hardware. **MEASURED: we render 17.1 CENTS SHARP of OpenMPT** ⚠️ (I first wrote FLAT — the sign was mine, not the metric's: `AudioComparison.of(ours, openmpt)` reports how far the SECOND is sharp of the first, so −17.1 means OpenMPT is flat of us) on
 `musical.mod` (`detuneCents` in `audio_compare.dart`, verified to ±3 cents
 against synthesised offsets). So the Paula-clock hypothesis is confirmed, with a
 size attached: not a rounding wobble, but not gross either — about a sixth of a
 semitone, consistent across the piece. The degenerate `golden.*` fixtures report
 `n/a` rather than a number, which is the metric refusing to guess.
 
-⬜ **The decision is now informed, and is not mine to take alone.** Deriving
-pitch from the Paula clock instead of A440 would change EVERY module render, in
- (tracker-complete)'s area, and I had already changed rendering once today
-(the loop fix). 17 cents is audible to a trained ear on a sustained note and
-matters more in an app where a child may play along with a tuner; it is also
-small enough that nobody has noticed. The number is here so the call can be made
-on evidence rather than on principle.
+🔶 **BUILT BEHIND A GATE — `--dart-define=PAULA_CLOCK=1`** (`kPaulaClockPitch`
+in `module_convert.dart`), because a change to every module render should be
+checkable before it is committed to. The arithmetic: the Amiga plays the
+reference period 428 at `3546895 / 428 = 8287.1 Hz` while the conventional
+reference is 8363 Hz — **−15.8 cents** — so pitching from the reference sits
+~16 cents SHARP of the hardware, accounting for the measured 17.1 to within
+~1.3 cents (ProTracker's period table is not exactly geometric).
+
+**A/B, same fixtures, gate off → on:**
+
+| fixture | detune | spectral | envelope |
+| --- | --- | --- | --- |
+| musical.mod | −17.0 → **−1.3** | 0.922 → **0.962** | 0.233 → **0.619** |
+| effects.mod | −25.4 → **−5.3** | 0.862 → **0.882** | 0.188 → **0.363** |
+
+Every metric improves and the tuning error essentially disappears. The envelope
+jump is a side effect worth noting: once the pitches agree the two renders stop
+beating against each other, so their loudness contours line up too.
+
+⬜ **Flipping the default is the remaining call** — it changes how every module
+sounds, in @opus (tracker-complete)'s area. The evidence is now one command
+away: run the A/B with and without the flag.
 
 ✅ **G4 — NON-GOALS, DECIDED.** What we refuse to chase, so the replayer can be
 finished rather than approached forever. Written from what the code already
@@ -1064,7 +1079,7 @@ remaining numbers are the follow-up list:
 | what | measured | reading |
 | --- | --- | --- |
 | spectral similarity | 0.920 | we play the right notes |
-| detune | −17.1 cents | G3, Paula clock — decision above |
+| detune | −17.1 cents (**we are SHARP**) | G3, Paula clock — now BUILT behind a gate |
 | **level** | **+3.76 dB** | **we are consistently LOUDER** |
 | **envelope correlation** | **0.222** | **loudness CONTOUR disagrees** |
 
@@ -1109,12 +1124,12 @@ threshold is per-fixture because pitch-bending material honestly diverges more
 than plain notes, and one shared number would be too loose for `musical.mod` or
 too tight for this).
 
-⬜ **First finding from it, unexplained: effect material is ~8 cents FLATTER.**
-`effects.mod` measures **−25.4 cents** against `musical.mod`'s −17.0. Portamento
-and vibrato compute pitch, so they plausibly amplify whatever the base offset
-is — which would tie it to G3 — but that is a guess. **Detune is deliberately
-NOT gated on this fixture**: gating a number we cannot account for would bless a
-possible bug as the baseline.
+✅ **First finding from it, since EXPLAINED: effect material is ~8 cents further out.**
+`effects.mod` measured **−25.4 cents** against `musical.mod`'s −17.0. The guess
+was that portamento and vibrato, which compute pitch, amplify the base offset —
+and the Paula-clock A/B confirmed it: with the gate on, effects.mod moves
+−25.4 → **−5.3** alongside musical.mod's −17.0 → **−1.3**. Same root cause.
+**Detune stays ungated on this fixture** until the gate's fate is decided.
 
 ## Consolidated backlog (2026-07-25 doc sweep)
 

@@ -1571,8 +1571,48 @@ Uint8List convertModule(Uint8List bytes, ModuleFormat target) =>
 
 double _log2(num x) => math.log(x) / math.ln2;
 
+/// The Amiga Paula clock, PAL (Hz). A voice fed period *p* plays at
+/// `kPaulaClockPal / p`, which is where a MOD's real pitch comes from.
+const double kPaulaClockPal = 3546895;
+
+/// The reference rate MOD tuning is conventionally quoted against — the rate a
+/// finetune-0 sample plays at for its "C" period.
+const double kModC5Speed = 8363;
+
+/// ProTracker's finetune-0 period for the note the tuning is referenced to
+/// (`modPeriods` index 12).
+const int kModReferencePeriod = 428;
+
+/// Derive MOD pitch from the PAULA CLOCK instead of the conventional 8363 Hz
+/// reference — opt-in, so it can be A/B'd before anyone commits to it.
+///
+///   flutter test --dart-define=PAULA_CLOCK=1 …
+///
+/// WHY IT MIGHT MATTER. The Amiga plays period 428 at
+/// `3546895 / 428 = 8287.1 Hz`, but the conventional reference is 8363 Hz.
+/// That is `1200·log2(8287.1/8363) = −15.8 cents`, so pitching from the
+/// reference sits ~16 cents SHARP of the hardware. Measured against
+/// openmpt123 we render **+17.1 cents sharp**, which this accounts for to
+/// within ~1.3 cents (the remainder is ProTracker's period table not being
+/// exactly geometric).
+///
+/// Deliberately `String.fromEnvironment` + non-empty rather than
+/// `bool.fromEnvironment`, which only accepts the literal `true` — the same
+/// trap that once left `OPENMPT_AB=1` silently switched OFF.
+const String _paulaClockRaw = String.fromEnvironment('PAULA_CLOCK');
+final bool kPaulaClockPitch =
+    _paulaClockRaw.isNotEmpty && _paulaClockRaw != '0';
+
 /// MOD finetune (−8..7) → C-5 playback rate (Hz).
-int finetuneToC5speed(int ft) => (8363 * math.pow(2, ft / (12 * 8))).round();
+///
+/// Under [kPaulaClockPitch] the base becomes the rate the hardware actually
+/// produces for the reference period; finetune still scales it the same way,
+/// because finetune is a ratio and not an absolute.
+int finetuneToC5speed(int ft) {
+  final base =
+      kPaulaClockPitch ? kPaulaClockPal / kModReferencePeriod : kModC5Speed;
+  return (base * math.pow(2, ft / (12 * 8))).round();
+}
 
 /// C-5 playback rate (Hz) → nearest MOD finetune, clamped to [-8, 7].
 int c5speedToFinetune(int hz) => (96 * _log2(hz / 8363)).round().clamp(-8, 7);
