@@ -44,8 +44,11 @@ void main() {
 
     await tester.tap(find.byKey(const Key('loop-swing-drums')));
     await tester.pump(const Duration(milliseconds: 50));
-    expect(game.hasOwnSwing('drums'), isTrue,
-        reason: 'the tap should have given it its own swing');
+    expect(
+      game.hasOwnSwing('drums'),
+      isTrue,
+      reason: 'the tap should have given it its own swing',
+    );
   });
 
   testWidgets('the ladder walks the range and returns to following',
@@ -62,8 +65,11 @@ void main() {
 
     game.cycleTrackSwing('drums');
     await tester.pump(const Duration(milliseconds: 50));
-    expect(game.hasOwnSwing('drums'), isFalse,
-        reason: 'it should come back round to following the groove');
+    expect(
+      game.hasOwnSwing('drums'),
+      isFalse,
+      reason: 'it should come back round to following the groove',
+    );
   });
 
   testWidgets('one track keeps its own while the others follow',
