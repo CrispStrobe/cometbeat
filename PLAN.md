@@ -366,7 +366,16 @@ are *approachable*, not *limited*. Anything justified here on the grounds that
 should be re-read.
 
 Concretely, three of my own calls flip:
-- ⬜ **Add / duplicate / rename tracks — REOPENED, now a real gap.**
+- 🔶 **Add / duplicate / rename tracks — REOPENED; DUPLICATE shipped (engine).**
+  `duplicateTrack(id)` adds a copy carrying level, pan, variant, pattern length,
+  swing, automation, an edited pattern and a saved voice — a copy arriving at
+  defaults would have to be rebuilt before it could be varied, which defeats the
+  point. It starts enabled. `removeExtraTrack` refuses base-band tracks rather
+  than hiding them, and drops the copy's settings so a reused id cannot inherit
+  them. Automation lanes are deep-copied (same aliasing trap as section copy).
+  10 tests. ⬜ **No UI yet** — the track-card row is at its width limit and its
+  long-press is taken by voice-picking, so this needs its own home. ⬜ Arbitrary
+  add + rename still open.
   `kLoopMixerTracks` being a fixed curated band was justified above as
   "defensible for 6+". Under the Scratch model that is exactly backwards —
   Scratch lets a child add unlimited sprites, and the ceiling is the point.

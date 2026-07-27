@@ -1559,11 +1559,95 @@ class LoopEngine {
   }
 
   /// The built-in band plus the captured user tracks (voice / beatbox).
+  /// Copies made with [duplicateTrack].
+  ///
+  /// The band used to be a fixed roster, which I had recorded as right for a
+  /// young audience. Wrong premise: CometBeat scales up to students and
+  /// hobbyists on the Scratch model, where adding another of something is the
+  /// ordinary way to go further — not an advanced feature to be withheld.
+  final List<LoopTrack> _extraTracks = [];
+
   List<LoopTrack> get tracks => [
         ..._baseTracks,
         if (_userTrack != null) _userTrack!,
         if (_userBeatTrack != null) _userBeatTrack!,
+        ..._extraTracks,
       ];
+
+  /// Whether [id] is a copy, and so may be removed again.
+  bool isExtraTrack(String id) => _extraTracks.any((t) => t.id == id);
+
+  /// An id like `bass-2` that nothing is using yet.
+  String _freeTrackId(String from) {
+    final taken = {for (final t in tracks) t.id};
+    for (var n = 2;; n++) {
+      if (!taken.contains('$from-$n')) return '$from-$n';
+    }
+  }
+
+  /// Adds a copy of track [id], returning the new id, or null if [id] is not a
+  /// track.
+  ///
+  /// The copy carries everything that makes the original sound as it does —
+  /// level, pan, variant, pattern length, swing, automation, an edited pattern,
+  /// a saved instrument voice. A copy that arrived at default settings would
+  /// not be a copy: you would have to rebuild it before you could vary it,
+  /// which is the entire reason for duplicating.
+  ///
+  /// It starts enabled, because you duplicated it in order to hear it.
+  String? duplicateTrack(String id) {
+    final source = tracks.where((t) => t.id == id).firstOrNull;
+    if (source == null) return null;
+    final copy = _freeTrackId(id);
+
+    _extraTracks.add(
+      LoopTrack(
+        id: copy,
+        gain: source.gain,
+        variants: source.variants,
+        chordFollower: source.chordFollower,
+      ),
+    );
+
+    levels[copy] = levels[id] ?? 1.0;
+    pans[copy] = pans[id] ?? 0.0;
+    variants[copy] = variants[id] ?? 0;
+    if (_trackSteps.containsKey(id)) _trackSteps[copy] = _trackSteps[id]!;
+    if (_trackSwing.containsKey(id)) _trackSwing[copy] = _trackSwing[id]!;
+    final lanes = _automation[id];
+    if (lanes != null) {
+      _automation[copy] = <AutomationParam, AutomationLane>{...lanes};
+    }
+    final cells = _cellOverrides[id];
+    if (cells != null) _cellOverrides[copy] = List<PatternCell>.of(cells);
+    final drums = _drumOverrides[id];
+    if (drums != null) _drumOverrides[copy] = drums;
+    final voice = _trackVoices[id];
+    if (voice != null) _trackVoices[copy] = voice;
+
+    enabled.add(copy);
+    _clearRenderCaches();
+    return copy;
+  }
+
+  /// Removes a copy. A base-band track is refused rather than hidden — losing
+  /// the drums to a stray tap would be worse than refusing the tap.
+  bool removeExtraTrack(String id) {
+    if (!isExtraTrack(id)) return false;
+    _extraTracks.removeWhere((t) => t.id == id);
+    enabled.remove(id);
+    levels.remove(id);
+    pans.remove(id);
+    variants.remove(id);
+    _trackSteps.remove(id);
+    _trackSwing.remove(id);
+    _automation.remove(id);
+    _cellOverrides.remove(id);
+    _drumOverrides.remove(id);
+    _trackVoices.remove(id);
+    _clearRenderCaches();
+    return true;
+  }
 
   /// Installs (or replaces) the beatboxed layer from a captured pattern
   /// (beat_capture.dart) — a normal drum track from here on.
