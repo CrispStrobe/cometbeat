@@ -37,6 +37,7 @@ double _peakIn(List<int> pcm, double from, double to) {
 }
 
 void main() {
+  _a3();
   test('a groove with NO automation renders byte-for-byte as before', () {
     final a = _engine().renderLoop();
     final e = _engine();
@@ -126,5 +127,97 @@ void main() {
       lengthOnly.length,
       reason: 'a lane cannot resize a loop',
     );
+  });
+}
+
+/// Per-channel peak of an interleaved stereo render.
+(double, double) _stereoPeaks(List<int> pcm) {
+  var l = 0.0, r = 0.0;
+  for (var i = 0; i + 1 < pcm.length; i += 2) {
+    final a = pcm[i].abs().toDouble();
+    final b = pcm[i + 1].abs().toDouble();
+    if (a > l) l = a;
+    if (b > r) r = b;
+  }
+  return (l, r);
+}
+
+/// A3 — the panned path.
+///
+/// A2 rendered level on the MONO mixer only, so a panned track silently ignored
+/// its lane. These cover the stereo mixer, plus pan automation itself, which
+/// cannot be a pre-multiply: the constant-power law is a cos/sin pair, so
+/// sliding a track across the field is not the same as scaling it.
+void _a3() {
+  group('the panned path honours automation too', () {
+    LoopEngine pannedEngine() {
+      final e = LoopEngine(tempoBpm: 120);
+      e.enabled
+        ..clear()
+        ..add('drums');
+      e.setPan('drums', 0.9); // forces the stereo mixer
+      return e;
+    }
+
+    test('a panned groove with no lanes is unchanged', () {
+      expect(pannedEngine().renderLoop(), pannedEngine().renderLoop());
+    });
+
+    test('a level lane now reaches a PANNED track', () {
+      // This is the gap A2 left open and named.
+      final before = pannedEngine().renderLoop();
+      final e = pannedEngine();
+      e.setAutomation(
+        'drums',
+        AutomationParam.level,
+        AutomationLane([for (var i = 0; i < 16; i++) 1 - i / 15]),
+      );
+      expect(e.renderLoop(), isNot(before));
+    });
+
+    test('a pan lane sweeps the track across the field', () {
+      // Hard left for the first half, hard right for the second.
+      //
+      // Deliberately NOT asserting the two channels come out roughly equal:
+      // that depends on where this pattern's hits happen to fall, not on the
+      // pan law, and asserting it made the test fail for a reason that had
+      // nothing to do with the feature. What IS true is that a swept track puts
+      // real energy on the side a hard-right fixed pan starves.
+      final fixed = pannedEngine().renderLoop();
+      final e = pannedEngine();
+      e.setAutomation(
+        'drums',
+        AutomationParam.pan,
+        AutomationLane([for (var i = 0; i < 16; i++) i < 8 ? 0.0 : 1.0]),
+      );
+      final swept = e.renderLoop();
+      expect(swept, isNot(fixed), reason: 'the lane must change the render');
+
+      final (l, r) = _stereoPeaks(readWavPcm16(swept).samples);
+      final (fl, _) = _stereoPeaks(readWavPcm16(fixed).samples);
+      expect(l, greaterThan(0), reason: 'the left half should be audible');
+      expect(r, greaterThan(0), reason: 'the right half should be audible');
+      expect(
+        l,
+        greaterThan(fl),
+        reason: 'sweeping left must beat a hard-right fixed pan on the left',
+      );
+    });
+
+    test('a pan lane overrides the fixed pan rather than adding to it', () {
+      // Centre for the whole loop: the 0.9 hard-right pan must be gone.
+      final e = pannedEngine();
+      e.setAutomation(
+        'drums',
+        AutomationParam.pan,
+        AutomationLane(List<double>.filled(16, 0.5)),
+      );
+      final (l, r) = _stereoPeaks(readWavPcm16(e.renderLoop()).samples);
+      expect(
+        (l - r).abs(),
+        lessThan(l * 0.05),
+        reason: 'a centred lane should balance the channels',
+      );
+    });
   });
 }

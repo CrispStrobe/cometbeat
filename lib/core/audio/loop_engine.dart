@@ -1741,12 +1741,12 @@ class LoopEngine {
   /// cost when a groove does not use it.
   bool get hasAutomation => _automation.isNotEmpty;
 
-  /// [id]'s level lane sampled to one multiplier per SAMPLE, or null.
+  /// [id]'s lane for [param] sampled to one value per SAMPLE, or null.
   ///
   /// Null rather than a flat array when there is no lane, so the mixer can skip
-  /// the multiply entirely and the render stays byte-identical.
-  Float64List? _levelEnvelope(String id) {
-    final lane = automationFor(id, AutomationParam.level);
+  /// the work entirely and the render stays byte-identical.
+  Float64List? _envelope(String id, AutomationParam param) {
+    final lane = automationFor(id, param);
     if (lane == null || lane.isEmpty) return null;
     final samples = timing.totalSamples;
     final steps = timing.totalSteps;
@@ -1754,11 +1754,17 @@ class LoopEngine {
     for (var i = 0; i < samples; i++) {
       // Which eighth-step this sample falls in; the lane wraps, so a lane
       // shorter than the loop repeats across it.
-      final step = (i * steps) ~/ samples;
-      out[i] = AutomationParam.level.valueAt(lane.at(step));
+      out[i] = param.valueAt(lane.at((i * steps) ~/ samples));
     }
     return out;
   }
+
+  /// [id]'s level lane sampled to one multiplier per SAMPLE, or null.
+  ///
+  /// Null rather than a flat array when there is no lane, so the mixer can skip
+  /// the multiply entirely and the render stays byte-identical.
+  Float64List? _levelEnvelope(String id) =>
+      _envelope(id, AutomationParam.level);
 
   /// Per-track swing (absent = the groove's global swing).
   ///
@@ -2467,6 +2473,10 @@ class LoopEngine {
   Uint8List _renderMix({required Float64List Function(LoopTrack) stem}) {
     final total = timing.totalSamples;
     if (_anyPanned) {
+      final panned = [
+        for (final track in tracks)
+          if (enabled.contains(track.id)) track,
+      ];
       return wavBytesStereo(
         _applySendStereo(
           mixStemsStereo(
@@ -2481,6 +2491,17 @@ class LoopEngine {
                   ),
             ],
             totalSamples: total,
+            // Same rule as the mono path: null unless something is automated,
+            // so the stereo mixer's inner loop is untouched otherwise.
+            envelopes: hasAutomation
+                ? [for (final t in panned) _levelEnvelope(t.id)]
+                : null,
+            pans: hasAutomation
+                ? [
+                    for (final t in panned)
+                      _envelope(t.id, AutomationParam.pan),
+                  ]
+                : null,
           ),
         ),
       );

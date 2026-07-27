@@ -264,13 +264,25 @@ typedef MixStemPan = ({Float64List samples, double gain, double pan});
 /// Mixes [stems] into one INTERLEAVED stereo PCM16 buffer (L,R,L,R…) of length
 /// `totalSamples * 2`. Per stem: unit-peak × gain (as [mixStems]), constant-power
 /// pan, summed, tanh soft-knee (same 0.95). An empty [stems] list is silence.
+/// [envelopes] and [pans] are parallel to [stems] and both optional: a
+/// per-sample level multiplier applied after unit-peak × gain, and a per-sample
+/// pan position (−1…1) replacing the stem's fixed [MixStemPan.pan]. A null
+/// entry leaves that stem exactly as it was, so a mix with neither is
+/// byte-identical to one from before they existed.
+///
+/// Pan has to be recomputed per sample rather than pre-multiplied: the
+/// constant-power law is a cos/sin pair, so sliding a track across the field is
+/// not the same as scaling it.
 Int16List mixStemsStereo(
   List<MixStemPan> stems, {
   required int totalSamples,
+  List<Float64List?>? envelopes,
+  List<Float64List?>? pans,
 }) {
   final left = Float64List(totalSamples);
   final right = Float64List(totalSamples);
-  for (final stem in stems) {
+  for (var st = 0; st < stems.length; st++) {
+    final stem = stems[st];
     var peak = 0.0;
     for (final v in stem.samples) {
       if (v.abs() > peak) peak = v.abs();
@@ -280,11 +292,22 @@ Int16List mixStemsStereo(
     final theta = (stem.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
     final lGain = cos(theta);
     final rGain = sin(theta);
+    final env =
+        (envelopes != null && st < envelopes.length) ? envelopes[st] : null;
+    final panLane = (pans != null && st < pans.length) ? pans[st] : null;
     final n = min(stem.samples.length, totalSamples);
     for (var i = 0; i < n; i++) {
-      final s = stem.samples[i] * scale;
-      left[i] += s * lGain;
-      right[i] += s * rGain;
+      final e = env == null ? 1.0 : (i < env.length ? env[i] : env.last);
+      final s = stem.samples[i] * scale * e;
+      if (panLane == null) {
+        left[i] += s * lGain;
+        right[i] += s * rGain;
+      } else {
+        final pv = i < panLane.length ? panLane[i] : panLane.last;
+        final th = (pv.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
+        left[i] += s * cos(th);
+        right[i] += s * sin(th);
+      }
     }
   }
   final out = Int16List(totalSamples * 2);

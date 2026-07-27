@@ -376,9 +376,15 @@ a lane is just a function of step, sampled at render time.
 absent = no lane. Same tiling rules as patterns (see `loop_track_length.dart`),
 so a lane on a shortened track repeats with it.
 
-**What to automate, and what NOT to.** Level, pan and the per-track filter —
-all three are already per-track scalars applied in `_renderMix` / `_applySend`,
-so automating them turns a constant into a lookup and adds no new DSP.
+**What to automate, and what NOT to.** Level and pan — both already per-track
+scalars in `_renderMix`, so automating them turns a constant into a lookup and
+adds no new DSP.
+⚠️ **CORRECTION (2026-07-27, found while building A3):** this originally said
+"level, pan and the per-track filter". **There is no per-track filter.**
+`_masterFilter` is a single global applied in `_applySend`. `AutomationParam`
+still declares `filter`, and the codec round-trips it, but nothing renders it —
+automating it properly needs a per-track filter to exist FIRST, which is new
+DSP and a separate item, not part of this arc.
 - ❌ **Not tempo.** It would change the loop length and break the
   sample-integrality invariant the whole engine rests on.
 - ❌ **Not swing.** It is baked into `boundaryMs` before rendering, and per-track
@@ -403,7 +409,13 @@ that seam.
   which has no envelope parameter yet — a panned track currently ignores its
   level lane. Do A3 there rather than bolting pan automation onto a mixer that
   cannot express level automation.
-- ⬜ **A3 — pan + filter** on the same seam, once level proves the shape.
+- ✅ **A3 — the panned path + pan automation.** SHIPPED. `mixStemsStereo` gained
+  the same optional `envelopes` (closing the mono-only gap A2 named) plus
+  `pans`, a per-sample position that REPLACES the fixed pan. Pan is recomputed
+  per sample rather than pre-multiplied: the constant-power law is a cos/sin
+  pair, so sliding a track across the field is not the same as scaling it.
+  Both default to null, so a groove without automation is byte-identical.
+  ⬜ **Filter automation is NOT in this arc** — see the correction above.
 - ⬜ **A4 — UI.** Draw the lane over the per-track row in the inspector.
   **Needs a product decision before starting:** per-eighth-step values (16 of
   them, blocky, matches the tune/beat grids a child already uses, one tap per
