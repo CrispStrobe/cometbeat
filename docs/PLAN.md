@@ -310,7 +310,16 @@ is recorded in [HISTORY.md](HISTORY.md).
   card** — adding a 34px badge broke 14 tests in `loop_mixer_test.dart`. Mine is
   now radius 10 with a 4px gutter. If you add anything to that row, run
   `loop_mixer_test.dart` before assuming it fits.
-  Next: **L3 copy/duplicate**, then L2 session grid.
+  ✅ **L3 copy/duplicate SHIPPED** — "Copy this section to a new one" in the
+  Perform menu: takes the section now playing, puts it in the next free slot and
+  **launches the copy** (staying on the original would mean the next edit
+  silently changed the wrong section). Deep-copies the enabled set and the
+  variant map — sharing them would make B an alias of A, so editing the copy
+  would edit the original and you would only find out after building the whole
+  arrangement. Refuses when all four slots are taken rather than clobbering one.
+  5 tests incl. both traps. Localised de/en.
+  Next: **L2 session grid** (the tracks × sections matrix already exists in the
+  data), then L5 queued-launch feedback, L4 per-section repeats.
   Scoped in [PLAN.md](../PLAN.md) → *"Loop Studio — sequencer-parity slices"*
   (L1–L6, with what is already at parity so nobody rebuilds it). Building **L1
   per-track pattern length (polymeter)** first. Touching

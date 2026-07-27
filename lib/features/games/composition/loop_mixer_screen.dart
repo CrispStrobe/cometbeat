@@ -314,6 +314,10 @@ abstract interface class LoopMixerTester {
   void captureScene(int i);
   void launchScene(int i);
   bool sceneIsEmpty(int i);
+
+  /// Copies the section now playing into the next free slot and launches it.
+  /// False when every slot is taken.
+  bool duplicateSection();
   bool get isChaining;
   void toggleChain();
 
@@ -1038,6 +1042,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void launchScene(int i) => _launchScene(i);
   @override
   bool sceneIsEmpty(int i) => _scenes[i] == null;
+  @override
+  bool duplicateSection() => _duplicateSection(AppLocalizations.of(context)!);
   @override
   bool get isChaining => _chaining;
   @override
@@ -2790,6 +2796,32 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _checkCombo();
   }
 
+  /// Copies the section now playing into the next free slot and launches the
+  /// copy — the sequencer workflow of "take A, make B from it, change one
+  /// thing". Without this every variation has to be rebuilt from nothing.
+  ///
+  /// It launches the COPY rather than staying on the original, because the
+  /// point of duplicating is to edit the new one; leaving the user on A would
+  /// mean their next change silently edited the wrong section.
+  bool _duplicateSection(AppLocalizations l10n) {
+    final source = _scenes[_chainIndex];
+    if (source == null) return false;
+    final free = _scenes.indexWhere((s) => s == null);
+    if (free < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.loopMixerSectionsFull)),
+      );
+      return false;
+    }
+    setState(() {
+      // A fresh Set/Map: sharing them would make editing the copy silently
+      // edit the original too.
+      _scenes[free] = GrooveScene({...source.enabled}, {...source.variants});
+    });
+    _launchScene(free);
+    return true;
+  }
+
   void _toggleChain() {
     setState(() => _chaining = !_chaining);
   }
@@ -3467,6 +3499,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             setSend(
               LoopSend.values[(send.index + 1) % LoopSend.values.length],
             );
+          case 'duplicateSection':
+            _duplicateSection(l10n);
           case 'masterFx':
             _showMasterFxSheet();
           case 'jam':
@@ -3509,6 +3543,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           value: 'send',
           child: Text('${l10n.loopMixerSend}: ${_sendLabel(l10n, send)}'),
         ),
+        if (!sceneIsEmpty(_chainIndex))
+          PopupMenuItem<String>(
+            value: 'duplicateSection',
+            child: Text(l10n.loopMixerDuplicateSection),
+          ),
         PopupMenuItem<String>(
           value: 'masterFx',
           child: Text(l10n.loopMixerMasterFx),

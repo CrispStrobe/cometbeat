@@ -1730,6 +1730,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Infinite mode — every loop a little different';
 
   @override
+  String get loopMixerDuplicateSection => 'Copy this section to a new one';
+
+  @override
+  String get loopMixerSectionsFull =>
+      'All four sections are used — free one first';
+
+  @override
   String get loopMixerMasterFx => 'Master effects';
 
   @override

@@ -1735,6 +1735,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Endlos-Modus — jeder Loop ein bisschen anders';
 
   @override
+  String get loopMixerDuplicateSection =>
+      'Diesen Abschnitt in einen neuen kopieren';
+
+  @override
+  String get loopMixerSectionsFull =>
+      'Alle vier Abschnitte sind belegt — erst einen frei machen';
+
+  @override
   String get loopMixerMasterFx => 'Master-Effekte';
 
   @override

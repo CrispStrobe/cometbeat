@@ -3248,6 +3248,18 @@ abstract class AppLocalizations {
   /// **'Infinite mode — every loop a little different'**
   String get loopMixerInfinite;
 
+  /// No description provided for @loopMixerDuplicateSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy this section to a new one'**
+  String get loopMixerDuplicateSection;
+
+  /// No description provided for @loopMixerSectionsFull.
+  ///
+  /// In en, this message translates to:
+  /// **'All four sections are used — free one first'**
+  String get loopMixerSectionsFull;
+
   /// No description provided for @loopMixerMasterFx.
   ///
   /// In en, this message translates to:
