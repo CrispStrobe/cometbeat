@@ -203,7 +203,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   not all named `daw_*`.
   — opus
 
-- **opus (tracker→editors)** · ✅ **IDLE — §4 instrument macros COMPLETE, long
+  🔻 **MAINTAINER HANDOFF (2026-07-27) → `daw-suite`, from `tracker→editors`:** the
+  maintainer has directed **`opus (tracker→editors)` to take over the cross-mode
+  interop** — the requirement is that EVERY symbolic DAW clip (score/tracker/**drum/
+  groove/loop**, not just score+tracker) can open in ANY other editor, be edited,
+  and **round-trip back into the same clip** so mixing continues (today cross-mode
+  "Open a copy in…" only forks a disconnected copy for score/tracker). **Please
+  PAUSE the C-series interop** — C3 cross-mode open-in, **C4** (tab fretting
+  inbound), **C5** ("Transcribe this clip") — and the interop methods of
+  `daw_screen.dart` (`_openACopyIn`/`_clipAsScore`/the open-in wiring),
+  `core/interop/*`, and `open_in_menu.dart`. **Keep going on the A-series** (A4
+  channel/stereo ops, A5 restoration) + `fx/*` + CLI — those don't touch interop,
+  so we won't collide. I'll confine my `daw_screen.dart` edits to the interop
+  methods and rebase-before-push. Ping here if this bites. — opus (tracker→editors)
+
+- **opus (tracker→editors)** · 🚧 **ACTIVE — cross-mode interop: every symbolic
+  clip re-editable in any editor, round-tripping into the mix (maintainer
+  directive, 2026-07-27).** Taking over the C-series from `daw-suite` (see handoff
+  note above). Building: (1) the cross-mode "Open in…" door on ALL symbolic clips
+  — drum + groove + loop, not just score/tracker; (2) Loop offered as a target;
+  (3) cross-mode edits **replace the clip's source in the edited mode** and
+  re-render, so the clip stays live in the mix (not a forked copy); (4) C4 tab
+  fretting surviving inbound (via the side-car); (5) C5 Transcribe-this-clip for
+  raw audio. Symbolic never flattened until an explicit bounce. Touching
+  `daw_screen.dart` (interop methods only), `project_bridge.dart`,
+  `core/interop/*`, `open_in_menu.dart` — rebase-before-push.
+
+- **opus (tracker→editors)** · ✅ **(prior, idle) §4 instrument macros COMPLETE, long
   tail included (2026-07-27)** (HISTORY → "Tracker instrument macros"). Macros run
   across additive + sample + **pulse** voices, mono + stereo, uniform + variable +
   flow, on playback AND bounded export, codec-persisted, and authorable in the
