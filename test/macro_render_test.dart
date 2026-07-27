@@ -147,6 +147,42 @@ void main() {
     });
   });
 
+  group('reachability through renderSongWav (real playback entry)', () {
+    TrackerSong build(List<MacroSequence> macros) {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      song.engine.setChannelInstrument(
+        0,
+        AdditiveInstrument('piano', Instrument.piano, macros: macros),
+      );
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      return song;
+    }
+
+    const volMacro = MacroSequence(
+      target: MacroTarget.volume,
+      values: [64, 16, 4, 0],
+      loopStart: 3,
+      loopEnd: 3,
+    );
+
+    test('usesMacros flags a macro-carrying song', () {
+      expect(build(const []).usesMacros, isFalse);
+      expect(build(const [volMacro]).usesMacros, isTrue);
+    });
+
+    test('a macro changes the WAV that renderSongWav produces', () {
+      // Without the usesMacros routing, a command-free song takes the fast
+      // offline path and the macro would be silently ignored.
+      final plain = build(const []).renderSongWav();
+      final macroed = build(const [volMacro]).renderSongWav();
+      expect(
+        macroed,
+        isNot(plain),
+        reason: 'the macro must reach the tick replayer via renderSongWav',
+      );
+    });
+  });
+
   test('macros survive a codec round-trip on an additive instrument', () {
     const original = AdditiveInstrument(
       'piano',

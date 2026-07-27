@@ -326,6 +326,16 @@ class TrackerSong {
         (c) => c.volumeEnvelope != null && !c.volumeEnvelope!.isEmpty,
       );
 
+  /// True when any channel's instrument carries §4 per-tick instrument MACROS, so
+  /// the render must use the per-tick replayer — the fast offline path renders a
+  /// note at a fixed timbre and cannot modulate it. Read the base channel
+  /// instrument (the tick voice reads macros from there too).
+  bool get usesMacros => channels.any((c) {
+        final inst = c.instrument;
+        return (inst is AdditiveInstrument && inst.macros.isNotEmpty) ||
+            (inst is SampleInstrument && inst.macros.isNotEmpty);
+      });
+
   // --- Pattern editing (delegates to the engine on the current pattern) ---
 
   /// Persist the engine's live cells back into the current pattern snapshot.
@@ -824,6 +834,7 @@ class TrackerSong {
         usesCommands ||
         usesInstruments ||
         usesEnvelopes ||
+        usesMacros ||
         songNeedsWalkRender(this)) {
       return wavBytes(replaySong(this, dither: d).pcm);
     }
