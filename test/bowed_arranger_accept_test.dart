@@ -3,7 +3,19 @@
 // Acceptance harness for the bowed arranger, against REAL printed cello
 // fingerings — the bowed twin of `tab_labeler_accept_test.dart`.
 //
-// Gold set: `test/data/cello_fingering_gold.json`, extracted from the four
+// TWO gold sets, kept separate on purpose so the original floor stays comparable:
+//
+//  1. `cello_fingering_gold.json` — the four CC0 PDMX scores below (193 labels).
+//  2. `cello_fingering_gold_pd.json` — 4 parts / 55 labels from the full 254k-score
+//     PDMX mine, and every one passed the documented ship gate (`composer_name`
+//     resolves via Wikidata to a music person dead ≤1955 AND `license_conflict ==
+//     False`): Sébastian Lee d.1887, Vivaldi d.1741, Ravel d.1937. That gate is not
+//     ceremony — the licence field alone let through Hozier, John Williams, Howard
+//     Shore and four in-copyright Kreisler pieces, all tagged CC0 by their uploaders.
+//     The whole 254k corpus yielded only these 55 new cello labels, which is the
+//     measured answer to "can we get more data": barely.
+//
+// Gold set 1: `test/data/cello_fingering_gold.json`, extracted from the four
 // **CC0-1.0** PDMX scores in our own music DB that carry `<fingering>` marks on a
 // cello part (Boccherini Quintet in C, Vivaldi Cello Sonata RV 44, *Komm süsser
 // Tod*, Bach Cello Suite No. 3 Bourrée I; source
@@ -87,15 +99,46 @@ class _Piece {
 }
 
 void main() {
-  final file = File('test/data/cello_fingering_gold.json');
   final pieces = [
-    for (final p in jsonDecode(file.readAsStringSync()) as List)
+    for (final p in jsonDecode(
+      File('test/data/cello_fingering_gold.json').readAsStringSync(),
+    ) as List)
+      _Piece(p as Map<String, dynamic>),
+  ];
+  // The gate-cleared slice, scored separately: different scores, named PD
+  // composers, and pedagogical cello writing (Lee's Gavotte) rather than the
+  // chamber/arrangement material of the first set.
+  final pdPieces = [
+    for (final p in jsonDecode(
+      File('test/data/cello_fingering_gold_pd.json').readAsStringSync(),
+    ) as List)
       _Piece(p as Map<String, dynamic>),
   ];
 
-  test('gold set is the one we think it is', () {
+  test('gold sets are the ones we think they are', () {
     expect(pieces.length, 4);
     expect(pieces.fold<int>(0, (a, p) => a + p.labelled), 193);
+    expect(pdPieces.length, 4);
+    expect(pdPieces.fold<int>(0, (a, p) => a + p.labelled), 55);
+    // Deduped against the first set: the mine re-found the Vivaldi sonata and the
+    // Bach Bourrée, and those are excluded here so a combined number cannot
+    // double-count them.
+    expect(
+      pdPieces.map((p) => p.title).any((t) => t.contains('Bourrée')),
+      isFalse,
+    );
+  });
+
+  test('agreement on the gate-cleared slice (independent scores)', () {
+    final s = _score(pdPieces, BowedSkill.advanced);
+    // ignore: avoid_print
+    print('\ngate-cleared slice: '
+        '${(100.0 * s.hit / s.total).toStringAsFixed(1)}% (${s.hit}/${s.total})');
+    expect(s.total, 55);
+    // A floor, like the other one: it exists to catch a regression in the frame
+    // model, not to be optimised into. 55 labels from four parts is a thin
+    // sample and two of those parts carry a single label each.
+    expect(100.0 * s.hit / s.total, greaterThan(25.0));
   });
 
   test('agreement with printed cello fingerings (CC0 gold set)', () {
