@@ -845,13 +845,15 @@ remain.
    variable-timing render (`_renderChannelIntoVariable` additive loop +
    `_renderSampleChannelIntoVariable`), so a non-default-speed / mid-song-
    tempo-change song modulates.
-6. **Remaining slices (open):** the STEREO variable-timing path
-   (`_replayVariableStereoFloat` — a song that is BOTH panned AND mid-song-tempo,
-   the rarest intersection); the DUTY target (needs a pulse/square voice); and a
-   **macro editor UI** in `instrument_editor.dart` — the piece that makes macros
-   user-authorable. ⚠️ `instrument_editor.dart` is the tracker-instrument agent's
-   hot file (velocity ranges just landed), so the editor UI should be coordinated
-   with / handed to them rather than built in parallel.
+6. ~~**Macro editor UI:**~~ (DONE) an "Instrument Macros" section in the Sample
+   instrument editor — add/remove one macro per target + a drag-to-set bar editor
+   with step-count and loop/release pickers. Macros are now user-authorable and
+   persist. (Fixed a latent `SampleInstrument.copyWith` macro-drop along the way.)
+7. **Remaining slices (open, all niche):** the STEREO variable-timing path
+   (`_replayVariableStereoFloat` — a song BOTH panned AND mid-song-tempo, the
+   rarest intersection); the DUTY target (needs a pulse/square voice); a macro
+   editor for the ADDITIVE-instrument path (today the editor's additive branch
+   opens the Sound Lab); and §3.3 block-op unit tests.
 
 ### 5. Comprehensive Effect Command Set & Flow Control
 **Current State:**

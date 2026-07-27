@@ -48,9 +48,16 @@ both the additive and the sample voice.
   so a non-default-speed / mid-song-tempo-change song modulates. Opt-in/byte-
   identical (109 golden + variable tests green).
 
-Remaining (see PLAN.md §4): the STEREO variable-timing path (panned AND
-mid-song-tempo — rarest), the duty target, and a macro editor UI (to be
-coordinated with the tracker-instrument agent, whose hot file it lives in).
+- **Macro editor UI** (`38cb9702`). An "Instrument Macros" section in the Sample
+  instrument editor: add/remove one macro per target and shape it in a
+  drag-to-set bar editor with step-count and loop/release pickers, backed by pure
+  `MacroSequence` helpers (`rangeOf`/`defaultFor`/`withValueAt`/`withLength`).
+  Macros are now user-authorable and persist. Also fixed a latent
+  `SampleInstrument.copyWith` that dropped macros.
+
+Remaining (see PLAN.md §4, all niche): the STEREO variable-timing path (panned
+AND mid-song-tempo), the duty target, an additive-instrument macro editor, and
+§3.3 block-op tests.
 
 ## Tracker DSP lifted into the shared editors (2026-07-26)
 
