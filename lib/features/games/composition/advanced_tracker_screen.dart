@@ -634,6 +634,15 @@ abstract interface class AdvancedTrackerTester {
   void clearBlock();
   void transposeBlock(int semitones);
   void unmark();
+
+  /// Test seams for the block ops: anchor a selection corner at [channel]/[row]
+  /// (the cursor is the other corner, via [moveCursor]); read/write a cell's
+  /// note volume; read a cell's raw midi. Editor-only, for [interpolateBlock] /
+  /// copy / paste coverage.
+  void debugMarkBlock(int channel, int row);
+  double? debugCellVolume(int channel, int row);
+  void debugSetCellVolume(int channel, int row, double volume);
+  int? debugCellMidi(int channel, int row);
 }
 
 class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
@@ -6081,6 +6090,20 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void clearBlock() => _clearBlock();
   @override
   void transposeBlock(int semitones) => _transposeBlock(semitones);
+  @override
+  void debugMarkBlock(int channel, int row) => setState(() {
+        _anchorChannel = channel;
+        _anchorRow = row;
+      });
+  @override
+  double? debugCellVolume(int channel, int row) =>
+      _song.engine.cellAt(channel, row).volume;
+  @override
+  void debugSetCellVolume(int channel, int row, double volume) =>
+      setState(() => _song.engine.setCellVolume(channel, row, volume));
+  @override
+  int? debugCellMidi(int channel, int row) =>
+      _song.engine.cellAt(channel, row).midi;
   @override
   void unmark() => _unmark();
 
