@@ -10,7 +10,8 @@ import 'package:comet_beat/core/audio/macro_sequence.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
-import 'package:comet_beat/core/audio/tracker_replayer.dart' show replaySong;
+import 'package:comet_beat/core/audio/tracker_replayer.dart'
+    show replaySong, replaySongStereo;
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -142,6 +143,73 @@ void main() {
       final n = min(plain.length, up.length);
       expect(
         _crossings(up, 0, n),
+        greaterThan(_crossings(plain, 0, n) * 1.5),
+      );
+    });
+  });
+
+  group('stereo (panned) render', () {
+    List<int> renderStereo(List<MacroSequence> macros, {bool sample = true}) {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8));
+      if (sample) {
+        final pcm = List<double>.generate(
+          4410,
+          (i) => sin(2 * pi * 220 * i / 44100),
+        );
+        song.engine.setChannelInstrument(
+          0,
+          SampleInstrument(
+            'tone',
+            Float64List.fromList(pcm),
+            loopLength: 4410,
+            macros: macros,
+          ),
+        );
+      } else {
+        song.engine.setChannelInstrument(
+          0,
+          AdditiveInstrument('piano', Instrument.piano, macros: macros),
+        );
+      }
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      return replaySongStereo(song).pcm;
+    }
+
+    test('a volume macro ducks a sample note in the stereo render', () {
+      final plain = renderStereo(const []);
+      final faded = renderStereo(const [
+        MacroSequence(
+          target: MacroTarget.volume,
+          values: [64, 16, 4, 0],
+          loopStart: 3,
+          loopEnd: 3,
+        ),
+      ]);
+      expect(plain.any((v) => v != 0), isTrue);
+      expect(_rms(faded), lessThan(_rms(plain) * 0.6));
+    });
+
+    test('a hard-left pan macro pushes energy to the left channel', () {
+      final panned = renderStereo(const [
+        MacroSequence(target: MacroTarget.pan, values: [-32]),
+      ]);
+      var l = 0.0, r = 0.0;
+      for (var i = 0; i + 1 < panned.length; i += 2) {
+        l += panned[i].abs();
+        r += panned[i + 1].abs();
+      }
+      expect(l, greaterThan(r * 2), reason: 'pan -32 ≈ hard left');
+    });
+
+    test('additive macros also apply in the stereo render', () {
+      const up = [
+        MacroSequence(target: MacroTarget.pitch, values: [12]),
+      ];
+      final plain = renderStereo(const [], sample: false);
+      final raised = renderStereo(up, sample: false);
+      final n = min(plain.length, raised.length);
+      expect(
+        _crossings(raised, 0, n),
         greaterThan(_crossings(plain, 0, n) * 1.5),
       );
     });

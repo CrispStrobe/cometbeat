@@ -1462,6 +1462,32 @@ double? readLoopedSampleForTest(
   var releaseStartSample = 0;
   var rowPan = channel.pan.clamp(-1.0, 1.0);
 
+  // §4 sample-voice macros (OPT-IN) — volume/pitch/arpeggio like the mono path,
+  // plus PAN (meaningful only in stereo). Empty (the default) → byte-identical.
+  MacroSequence? volMacro, pitchMacro, arpMacro, panMacro;
+  if (channel.instrument is SampleInstrument) {
+    for (final m in (channel.instrument as SampleInstrument).macros) {
+      if (m.isEmpty) continue;
+      switch (m.target) {
+        case MacroTarget.volume:
+          volMacro = m;
+        case MacroTarget.pitch:
+          pitchMacro = m;
+        case MacroTarget.arpeggio:
+          arpMacro = m;
+        case MacroTarget.pan:
+          panMacro = m;
+        case MacroTarget.duty:
+          break;
+      }
+    }
+  }
+  final hasMacros = volMacro != null ||
+      pitchMacro != null ||
+      arpMacro != null ||
+      panMacro != null;
+  var macroTick = 0;
+
   for (var r = 0; r < rows; r++) {
     final cell = cells[r];
     final cellInst = cell.instrument;
@@ -1495,6 +1521,7 @@ double? readLoopedSampleForTest(
         cur is SampleInstrument ? cur.sample.length : 0,
       );
       noteStartSample = rowStart[r];
+      macroTick = 0;
     }
     if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
         cur is! SampleInstrument ||
@@ -1528,9 +1555,21 @@ double? readLoopedSampleForTest(
       if (state.retrigger) {
         readPos = voice.playBackward ? (sample.length - 1).toDouble() : 0.0;
         noteStartSample = ts;
+        macroTick = 0;
       }
       if (!voice.active && !voice.released) continue;
-      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      var vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      var macroSemis = 0.0;
+      var macroPan = 0.0;
+      if (hasMacros) {
+        if (volMacro != null) {
+          vol *= volMacro.valueAt(macroTick, fallback: 64).clamp(0, 64) / 64.0;
+        }
+        if (pitchMacro != null) macroSemis += pitchMacro.valueAt(macroTick);
+        if (arpMacro != null) macroSemis += arpMacro.valueAt(macroTick);
+        if (panMacro != null) macroPan += panMacro.valueAt(macroTick) / 32.0;
+        macroTick++;
+      }
       for (var i = ts; i < te && i < total; i++) {
         final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
         final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
@@ -1589,6 +1628,7 @@ double? readLoopedSampleForTest(
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
         final pan = (rowPan +
                 state.pan +
+                macroPan +
                 (channel.panEnvelope?.panAt(t * 1000) ?? 0.0) +
                 (voice.panEnvEnabled
                     ? (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0)
@@ -1644,7 +1684,8 @@ double? readLoopedSampleForTest(
                 ) ??
                 0.0)
             : 0.0;
-        final incr = pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+        final incr =
+            pow(2.0, (state.pitch - baseMidi + pitch + macroSemis) / 12.0);
         readPos += voice.playBackward ? -incr : incr;
       }
     }
@@ -3434,7 +3475,9 @@ void _renderChannelIntoStereo(
     return;
   }
 
-  if (channel.instrument is SampleInstrument && _hasPerTickEffect(cells)) {
+  if (channel.instrument is SampleInstrument &&
+      (_hasPerTickEffect(cells) ||
+          (channel.instrument as SampleInstrument).macros.isNotEmpty)) {
     final rowStart = [
       for (var row = 0; row < cells.length; row++) timing.stepStartSample(row),
       timing.totalSamples,
