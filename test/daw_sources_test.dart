@@ -171,4 +171,23 @@ void main() {
       expect(TrackerSource(TrackerSong(), key: 'v1').cacheKey, 'v1');
     });
   });
+
+  group('drumCacheKey wire format', () {
+    DrumRowsPattern pat(List<bool> kick) => DrumRowsPattern({Drum.kick: kick});
+
+    test('hits encode as 1/0 with a tempo·swing·bars suffix', () {
+      final key = drumCacheKey(
+        pat([true, false, true]),
+        const LoopTiming(tempoBpm: 90),
+      );
+      expect(key, startsWith('drum:101|')); // kick row, then the other lanes
+      expect(key, endsWith('@90s0.0b2')); // tempo · swing(double) · bars
+    });
+
+    test('the exact format is stable — a change would bust every cached render',
+        () {
+      final key = drumCacheKey(pat([true]), const LoopTiming(tempoBpm: 120));
+      expect(key, matches(RegExp(r'^drum:[01|]*@120s0\.0b2$')));
+    });
+  });
 }
