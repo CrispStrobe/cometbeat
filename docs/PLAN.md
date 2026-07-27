@@ -119,11 +119,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   `loop_tab`/`tab_tracker`/… — their call sites are untouched), 6 more static
   reasons EN/DE, plus a COMPREHENSIVE drift guard that enumerates every edge's
   reasons and asserts each is translated except a documented dynamic allowlist. So
-  the common loss dialogs are now fully German and cannot silently regress. ⬜
-  **Only remainder:** the truly DYNAMIC reasons (interpolated counts — "the other
-  N channels") need parameterized ARB keys + the report carrying the param; the
-  additive key channel is in place for that. Isolated: `symbolic_annotation.dart` +
-  `project_bridge.dart` + `open_in_menu.dart` + ARB. 13 interop tests green.
+  the common loss dialogs are now fully German and cannot silently regress.
+  **Follow-up (done, 3rd pass): the DYNAMIC reasons are localized too — the menu
+  is now 100% German.** Extended the key channel to carry ordered ARGS (`argsFor`),
+  tagged the 6 dynamic sites (other-channels, chords-spread, channel-mismatch,
+  pitched-channels, fingering-chosen-N, clamped-to-nut) with key+args,
+  parameterized ARB keys EN/DE (ICU plural for the drum count), and `localizedReason`
+  feeds the args to the parameterized getters. The drift guard's allowlist is now
+  JUST the bounce reason (never a loss bullet), so EVERY reachable loss-dialog
+  reason is asserted German. **✅ The whole Open-in menu is now localized: button,
+  mode names, tooltips, edge subtitles, dialog chrome AND every loss reason.** The
+  `lost`/`approximated` String lists are unchanged (honesty test green). 68 interop
+  tests green. Isolated: `symbolic_annotation.dart` + `project_bridge.dart` +
+  `tab_tracker.dart` + `drum_tracker.dart` + `open_in_menu.dart` + ARB.
   — opus (tracker→editors)
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — IT214/215 compression: already
