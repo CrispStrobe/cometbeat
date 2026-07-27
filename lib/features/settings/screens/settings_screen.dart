@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:comet_beat/core/audio/transcription/engine_config.dart';
+import 'package:comet_beat/core/audio/tts/tts_engine.dart';
 import 'package:comet_beat/core/build_info.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -152,6 +153,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const _HdVoiceTile(),
+          const _VoiceEngineTile(),
           const _TranscriptionEngineSection(),
           const SizedBox(height: 20),
           Card(
@@ -354,6 +356,58 @@ String _scoreFontName(AppLocalizations l10n, ScoreFont font) => switch (font) {
       ScoreFont.leland => l10n.scoreFontLeland,
       ScoreFont.leipzig => l10n.scoreFontLeipzig,
     };
+
+/// Which engine synthesizes narration — the user-facing slice of the TtsEngine
+/// framework. Auto (default) lets TtsService pick the best usable path per
+/// platform; the override lets a user force the Natural (HD) or the device
+/// voice. Shown only where a neural voice EXISTS on this build — with only the
+/// device voice there's no choice to make, so we don't add a noise tile.
+class _VoiceEngineTile extends StatelessWidget {
+  const _VoiceEngineTile();
+
+  // Only the user-meaningful engines; the internal ones (onnx-FFI, pure-Dart,
+  // wasm, pre-baked) stay behind Auto.
+  static const _choices = [
+    TtsEngine.auto,
+    TtsEngine.crispasrFfi,
+    TtsEngine.platform,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    TtsService tts;
+    try {
+      tts = context.watch<TtsService>();
+    } on ProviderNotFoundException {
+      return const SizedBox.shrink();
+    }
+    if (!tts.hasNeural) return const SizedBox.shrink(); // no real choice
+    final l10n = AppLocalizations.of(context)!;
+    String label(TtsEngine e) => switch (e) {
+          TtsEngine.crispasrFfi => l10n.ttsEngineNatural,
+          TtsEngine.platform => l10n.ttsEnginePlatform,
+          _ => l10n.ttsEngineAuto,
+        };
+    final current = _choices.contains(tts.preferredEngine)
+        ? tts.preferredEngine
+        : TtsEngine.auto;
+    return ListTile(
+      leading: const Icon(Icons.record_voice_over_outlined),
+      title: Text(l10n.ttsEngineTitle),
+      trailing: DropdownButton<TtsEngine>(
+        value: current,
+        underline: const SizedBox.shrink(),
+        onChanged: (e) {
+          if (e != null) tts.preferredEngine = e;
+        },
+        items: [
+          for (final e in _choices)
+            DropdownMenuItem(value: e, child: Text(label(e))),
+        ],
+      ),
+    );
+  }
+}
 
 /// The optional HD (neural, CrispASR/Kokoro) narration voice. Shown only where
 /// the native lib is present (so it's invisible until libcrispasr is bundled for

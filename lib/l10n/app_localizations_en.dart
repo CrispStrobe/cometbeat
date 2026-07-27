@@ -8123,6 +8123,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'A warmer, more natural reading voice for the lessons';
 
   @override
+  String get ttsEngineTitle => 'Voice engine';
+
+  @override
+  String get ttsEngineAuto => 'Automatic';
+
+  @override
+  String get ttsEngineNatural => 'Natural (HD)';
+
+  @override
+  String get ttsEnginePlatform => 'Device voice';
+
+  @override
   String get ttsHdVoiceReady => 'On — narration uses the natural voice';
 
   @override

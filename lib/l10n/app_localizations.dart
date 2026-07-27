@@ -14810,6 +14810,30 @@ abstract class AppLocalizations {
   /// **'A warmer, more natural reading voice for the lessons'**
   String get ttsHdVoiceSubtitle;
 
+  /// No description provided for @ttsEngineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice engine'**
+  String get ttsEngineTitle;
+
+  /// No description provided for @ttsEngineAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get ttsEngineAuto;
+
+  /// No description provided for @ttsEngineNatural.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural (HD)'**
+  String get ttsEngineNatural;
+
+  /// No description provided for @ttsEnginePlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'Device voice'**
+  String get ttsEnginePlatform;
+
   /// No description provided for @ttsHdVoiceReady.
   ///
   /// In en, this message translates to:

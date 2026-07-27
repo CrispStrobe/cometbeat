@@ -8164,6 +8164,18 @@ class AppLocalizationsDe extends AppLocalizations {
       'Eine wärmere, natürlichere Vorlesestimme für die Lektionen';
 
   @override
+  String get ttsEngineTitle => 'Sprachmodul';
+
+  @override
+  String get ttsEngineAuto => 'Automatisch';
+
+  @override
+  String get ttsEngineNatural => 'Natürlich (HD)';
+
+  @override
+  String get ttsEnginePlatform => 'Gerätestimme';
+
+  @override
   String get ttsHdVoiceReady => 'An — Vorlesen nutzt die natürliche Stimme';
 
   @override
