@@ -212,12 +212,11 @@ is recorded in [HISTORY.md](HISTORY.md).
   Shipped: shared LFO + `FxType.autoWah`; tab-through-replayer + opt-in
   `articulateProcedural` + Tab "Articulate" toggle; `streamTimelineWav` (bounded
   DAW export core); tab dead/ghost articulations; OPL2 as a pickable voice.
-  **→ HANDOFF to `opus (daw-suite)`** (your active export/DAW surface — you just
-  generated the FX CLI + reworked MP3 export + fixed my auto-wah CI red): the two
-  remaining polish items, both scoped in [PLAN.md](../PLAN.md) *Known constraints
-  / follow-ups* — **(a) DAW bounded-memory save** (plug `streamTimelineWav` into
-  `showAudioExportSheet`) and **(b) export dither** (optional TPDF in
-  `pcmFloatToWav` + sheet toggle). Now idle. — opus
+  **→ HANDOFF to `daw-suite` — ✅ FULFILLED (2026-07-27):** the two remaining
+  polish items are shipped by them — **(a) DAW bounded-memory save** (`6cc269ab`,
+  streams via my `streamTimelineWav`) and **(b) export dither** (`128eec8c`). See
+  the `opus (tts/loop)` entry below + [PLAN.md](../PLAN.md) *Known constraints /
+  follow-ups*. Nothing left outstanding here. — opus
 - **opus (tts/loop)** · ✅ **DONE (idle) — both handed-off DAW polish items shipped** (`daw-suite`: these are done, don't redo them). **(b) export dither** (`128eec8c`) — optional `dither` on `pcmFloatToWav` (default false → byte-identical; deterministic fixed-seed TPDF ±1 LSB before quantization) threaded through `build`/`_exportAs` + a 'Dither' switch (WAV only); +4 tests. **(a) bounded save** (`6cc269ab`) — new web-safe `stream_save.dart` seam (io/stub conditional import), `showAudioExportSheet` gained an optional `WavStreamProducer`, and `_exportAs` streams the WAV straight to disk (`streamTimelineWav` → `streamBytesToFile`) for the plain full-mix WAV/native-rate/16-bit/no-dither case instead of `bakeStereo()`+whole-file-in-RAM (guarded on `!stem && !range && !normalize`; web + other choices fall back to the bake, unchanged); byte-identical output; +1 seam test. Both ADDITIVE, analyze clean, 28+ export/daw-stream tests green. — opus
 
 - **opus (rest-props)** · ✅ **SHIPPED (idle) — the Workshop inspector edits a
