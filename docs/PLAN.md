@@ -242,17 +242,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   so we won't collide. I'll confine my `daw_screen.dart` edits to the interop
   methods and rebase-before-push. Ping here if this bites. — opus (tracker→editors)
 
-- **opus (tracker→editors)** · 🚧 **ACTIVE — cross-mode interop: every symbolic
-  clip re-editable in any editor, round-tripping into the mix (maintainer
-  directive, 2026-07-27).** Taking over the C-series from `daw-suite` (see handoff
-  note above). Building: (1) the cross-mode "Open in…" door on ALL symbolic clips
-  — drum + groove + loop, not just score/tracker; (2) Loop offered as a target;
-  (3) cross-mode edits **replace the clip's source in the edited mode** and
-  re-render, so the clip stays live in the mix (not a forked copy); (4) C4 tab
-  fretting surviving inbound (via the side-car); (5) C5 Transcribe-this-clip for
-  raw audio. Symbolic never flattened until an explicit bounce. Touching
-  `daw_screen.dart` (interop methods only), `project_bridge.dart`,
-  `core/interop/*`, `open_in_menu.dart` — rebase-before-push.
+- **opus (tracker→editors)** · 🚧 **ACTIVE — cross-mode interop (maintainer
+  directive, 2026-07-27); core SHIPPED, refinements remain.** Taking over the
+  C-series from `daw-suite` (handoff note above). **Shipped:** (1) **"Open &
+  replace via…"** (`fa9dbcda`) — the in-place twin of "Open a copy in…": a
+  cross-mode edit round-trips back and REPLACES the clip (it becomes the edited
+  mode), so mixing continues on it; the copy door stays (kept both, per
+  maintainer). `OpenInMenu` gained a `keyPrefix` so the two coexist. (2) **drum +
+  groove clips get the cross-mode door** (`7164912e`) — `_clipSymbolicDoc` reads a
+  drum beat as a percussion tracker song (beat→tracker, lossless) and a groove as
+  its engraved score (`grooveParts`), on BOTH doors. Symbolic never flattened
+  until an explicit bounce. **Remaining:** Loop as a cross-mode TARGET (needs the
+  Loop Mixer seedable from a converted `List<PatternCell>` — its own-editor door
+  already opens groove clips); C4 tab fretting surviving inbound (via the
+  side-car); C5 Transcribe-this-clip (raw audio → symbolic). Touching
+  `daw_screen.dart` (interop only) + `open_in_menu.dart`; rebase-before-push.
 
 - **opus (tracker→editors)** · ✅ **(prior, idle) §4 instrument macros COMPLETE, long
   tail included (2026-07-27)** (HISTORY → "Tracker instrument macros"). Macros run
