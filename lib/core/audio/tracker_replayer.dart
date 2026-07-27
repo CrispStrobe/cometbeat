@@ -1948,6 +1948,28 @@ void _renderSampleChannelIntoVariable(
   var noteStartSample = 0;
   var releaseStartSample = 0;
 
+  // §4 sample-voice macros (OPT-IN) — variable-timing twin of the uniform sample
+  // path. Empty (the default) → the vol/read-rate below are the originals.
+  MacroSequence? volMacro, pitchMacro, arpMacro;
+  if (channel.instrument is SampleInstrument) {
+    for (final m in (channel.instrument as SampleInstrument).macros) {
+      if (m.isEmpty) continue;
+      switch (m.target) {
+        case MacroTarget.volume:
+          volMacro = m;
+        case MacroTarget.pitch:
+          pitchMacro = m;
+        case MacroTarget.arpeggio:
+          arpMacro = m;
+        case MacroTarget.pan:
+        case MacroTarget.duty:
+          break;
+      }
+    }
+  }
+  final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
+  var macroTick = 0;
+
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
     if (cellInst > 0 &&
@@ -1970,6 +1992,7 @@ void _renderSampleChannelIntoVariable(
       }
       readPos = voice.sampleReadStart(c, os);
       noteStartSample = rowStart[r];
+      macroTick = 0;
     }
     if ((!voice.active && !voice.released && !voice.hasPendingNote) ||
         cur is! SampleInstrument ||
@@ -1998,9 +2021,19 @@ void _renderSampleChannelIntoVariable(
       if (state.retrigger) {
         readPos = 0.0;
         noteStartSample = ts;
+        macroTick = 0;
       }
       if (!voice.active && !voice.released) continue;
-      final vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      var vol = (state.volume / kMaxVolume) * voice.noteVolume * cur.volume;
+      var macroSemis = 0.0;
+      if (hasMacros) {
+        if (volMacro != null) {
+          vol *= volMacro.valueAt(macroTick, fallback: 64).clamp(0, 64) / 64.0;
+        }
+        if (pitchMacro != null) macroSemis += pitchMacro.valueAt(macroTick);
+        if (arpMacro != null) macroSemis += arpMacro.valueAt(macroTick);
+        macroTick++;
+      }
       for (var i = ts; i < te && i < stemLen; i++) {
         final activeLoopStart = voice.released ? loopStart : playbackLoopStart;
         final activeLoopLength = voice.released ? loopLen : playbackLoopLength;
@@ -2062,7 +2095,8 @@ void _renderSampleChannelIntoVariable(
                 ) ??
                 0.0)
             : 0.0;
-        readPos += pow(2.0, (state.pitch - baseMidi + pitch) / 12.0);
+        readPos +=
+            pow(2.0, (state.pitch - baseMidi + pitch + macroSemis) / 12.0);
       }
     }
   }
@@ -4571,7 +4605,9 @@ void _renderChannelIntoVariable(
     // A sample channel with per-tick effects gets the variable-timing tick voice
     // (porta/vibrato/tremolo/Cxx/Axy over the variable spans); otherwise the
     // cheaper one-shot-per-note path (byte-identical when effect-free).
-    if (channel.instrument is SampleInstrument && _hasPerTickEffect(cells)) {
+    if (channel.instrument is SampleInstrument &&
+        (_hasPerTickEffect(cells) ||
+            (channel.instrument as SampleInstrument).macros.isNotEmpty)) {
       _renderSampleChannelIntoVariable(
         mix,
         channel,
@@ -4588,6 +4624,29 @@ void _renderChannelIntoVariable(
 
   var tp = _timbreParamsOf(inst);
   final gain = channel.gain;
+
+  // §4 instrument macros (OPT-IN) — the variable-timing twin of the uniform
+  // additive path. Empty (the default) → the vol/freq below are the originals.
+  MacroSequence? volMacro, pitchMacro, arpMacro;
+  if (channel.instrument is AdditiveInstrument) {
+    for (final m in (channel.instrument as AdditiveInstrument).macros) {
+      if (m.isEmpty) continue;
+      switch (m.target) {
+        case MacroTarget.volume:
+          volMacro = m;
+        case MacroTarget.pitch:
+          pitchMacro = m;
+        case MacroTarget.arpeggio:
+          arpMacro = m;
+        case MacroTarget.pan:
+        case MacroTarget.duty:
+          break;
+      }
+    }
+  }
+  final hasMacros = volMacro != null || pitchMacro != null || arpMacro != null;
+  var macroTick = 0;
+
   final voice = ReplayVoice();
   for (var r = 0; r < rows; r++) {
     final cellInst = cells[r].instrument;
@@ -4600,6 +4659,7 @@ void _renderChannelIntoVariable(
       voice.oscPhase = 0;
       voice.noteStartSample = rowStart[r];
       voice.noteSeconds = _runSecondsVariable(cells, r, rows, rowStart);
+      macroTick = 0;
     }
     if (!voice.active && !voice.hasPendingNote) continue;
 
@@ -4614,10 +4674,21 @@ void _renderChannelIntoVariable(
         voice.oscPhase = 0;
         voice.noteStartSample = ts;
         voice.noteSeconds = _runSecondsVariable(cells, r, rows, rowStart);
+        macroTick = 0;
       }
       if (!voice.active) continue;
-      final freq = _freqOfMidi(state.pitch);
-      final volScale = (state.volume / kMaxVolume) * voice.noteVolume * gain;
+      var pitch = state.pitch;
+      var volScale = (state.volume / kMaxVolume) * voice.noteVolume * gain;
+      if (hasMacros) {
+        if (pitchMacro != null) pitch += pitchMacro.valueAt(macroTick);
+        if (arpMacro != null) pitch += arpMacro.valueAt(macroTick);
+        if (volMacro != null) {
+          volScale *=
+              volMacro.valueAt(macroTick, fallback: 64).clamp(0, 64) / 64.0;
+        }
+        macroTick++;
+      }
+      final freq = _freqOfMidi(pitch);
       final phaseInc = 2 * pi * freq / kSampleRate;
       for (var i = ts; i < te && i < mix.length; i++) {
         final t = (i - voice.noteStartSample) / kSampleRate;

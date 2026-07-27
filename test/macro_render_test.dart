@@ -11,7 +11,7 @@ import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart';
 import 'package:comet_beat/core/audio/tracker_replayer.dart'
-    show replaySong, replaySongStereo;
+    show replaySong, replaySongStereo, songUsesVariableTiming;
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -212,6 +212,36 @@ void main() {
         _crossings(raised, 0, n),
         greaterThan(_crossings(plain, 0, n) * 1.5),
       );
+    });
+  });
+
+  group('variable-timing render (non-default speed)', () {
+    List<int> renderVar(List<MacroSequence> macros) {
+      final song = TrackerSong(timing: const TrackerTiming(rows: 8))
+        // A non-default header speed arms the variable-timing render path
+        // (replaySong routes it through _replayVariable).
+        ..setInitialSpeed(3);
+      song.engine.setChannelInstrument(
+        0,
+        AdditiveInstrument('piano', Instrument.piano, macros: macros),
+      );
+      song.engine.setCell(0, 0, const TrackerCell(midi: 60));
+      expect(songUsesVariableTiming(song), isTrue, reason: 'variable path');
+      return replaySong(song).pcm;
+    }
+
+    test('a volume macro ducks the note on the variable-timing path', () {
+      final plain = renderVar(const []);
+      final faded = renderVar(const [
+        MacroSequence(
+          target: MacroTarget.volume,
+          values: [64, 16, 4, 0],
+          loopStart: 3,
+          loopEnd: 3,
+        ),
+      ]);
+      expect(plain.any((v) => v != 0), isTrue);
+      expect(_rms(faded), lessThan(_rms(plain) * 0.7));
     });
   });
 
