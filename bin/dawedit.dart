@@ -49,6 +49,12 @@ Ops (applied in the order given):
   --trim-silence [THR]   cut quiet edges (threshold as a fraction, default 0.01)
   --crop A:B             keep only milliseconds A..B
   --silence A:B          cut milliseconds A..B out (surroundings keep their time)
+  --pad LEAD[:TAIL]      insert silence before (and after) the audio, in ms
+  --repeat N             repeat the whole take N times
+  --splice FILE[:MS]     append FILE with an equal-power crossfade (default 20 ms)
+  --find-silence [THR]   list the silent gaps (threshold fraction, default 0.01)
+  --split-silence [THR]  list the PHRASES between them, as A:B ranges
+  --full-stats           peak/RMS plus DC, crest factor, bit depth, crossings
 
 Generator: shape = sine | square | saw | triangle | whiteNoise | pinkNoise | silence
   --amp N                generator peak, 0..1 (default 0.5)
@@ -113,10 +119,17 @@ void main(List<String> args) {
         ops.add((a, null));
       case '--normalize':
       case '--trim-silence':
+      case '--find-silence':
+      case '--split-silence':
         ops.add((a, maybeValue()));
+      case '--full-stats':
+        ops.add((a, null));
       case '--amplify':
       case '--crop':
       case '--silence':
+      case '--pad':
+      case '--repeat':
+      case '--splice':
         ops.add((a, requireValue(a)));
       default:
         if (a.startsWith('-')) _fail('Unknown option: $a');
@@ -208,7 +221,95 @@ void _apply(_Audio a, String op, String? value) {
       stdout.writeln(
         '${op == '--silence' ? 'silence' : 'crop'} → $start..$end ms',
       );
+    case '--pad':
+      final parts = value!.split(':');
+      final lead = double.tryParse(parts.first) ?? 0;
+      final tail = parts.length > 1 ? double.tryParse(parts[1]) ?? 0 : 0.0;
+      _take(
+        a,
+        padTake(
+          a.left,
+          a.right,
+          leadMs: lead,
+          tailMs: tail,
+          sampleRate: a.sampleRate,
+        ),
+      );
+      stdout.writeln('pad → $lead ms before, $tail ms after');
+    case '--repeat':
+      final times = int.tryParse(value!);
+      if (times == null || times < 0) {
+        _fail('--repeat needs a count, got "$value"');
+      }
+      _take(a, repeatTake(a.left, a.right, times));
+      stdout.writeln('repeat → ×$times, ${_msOf(a)} ms');
+    case '--splice':
+      final parts = value!.split(':');
+      final other = _read(parts.first);
+      final fade = parts.length > 1 ? double.tryParse(parts[1]) ?? 20 : 20.0;
+      if (other.sampleRate != a.sampleRate) {
+        _fail(
+          'splice needs matching sample rates: ${a.sampleRate} vs '
+          '${other.sampleRate} Hz',
+        );
+      }
+      _take(
+        a,
+        spliceTakes(
+          a.left,
+          a.right,
+          other.left,
+          other.right,
+          crossfadeMs: fade,
+          sampleRate: a.sampleRate,
+        ),
+      );
+      stdout.writeln(
+        'splice → +${parts.first} with a $fade ms crossfade, ${_msOf(a)} ms',
+      );
+    case '--find-silence':
+    case '--split-silence':
+      final threshold = value == null ? 0.01 : double.parse(value);
+      final phrases = op == '--split-silence';
+      final ranges = phrases
+          ? findPhrases(
+              a.left,
+              a.right,
+              threshold: threshold,
+              sampleRate: a.sampleRate,
+            )
+          : findSilences(
+              a.left,
+              a.right,
+              threshold: threshold,
+              sampleRate: a.sampleRate,
+            );
+      stdout.writeln(
+        '${phrases ? 'phrases' : 'silences'} (threshold $threshold): '
+        '${ranges.length}',
+      );
+      for (final r in ranges) {
+        stdout.writeln(
+          '  ${r.startMs.toStringAsFixed(1)}:${r.endMs.toStringAsFixed(1)}',
+        );
+      }
+    case '--full-stats':
+      _printFullStats(a);
   }
+}
+
+String _msOf(_Audio a) =>
+    (a.left.length * 1000 / a.sampleRate).toStringAsFixed(1);
+
+void _printFullStats(_Audio a) {
+  final s = fullStatsOf(a.left, a.right, sampleRate: a.sampleRate);
+  _printStats(a);
+  stdout.writeln(
+    '  health: DC ${s.dcOffset.toStringAsFixed(5)} · '
+    'crest ${s.crestFactorDb.toStringAsFixed(1)} dB · '
+    '${s.effectiveBits}-bit effective · '
+    '${s.zeroCrossings} zero crossings',
+  );
 }
 
 /// Adopt a baked take. The CLI has no timeline to slide, so a front-trim's

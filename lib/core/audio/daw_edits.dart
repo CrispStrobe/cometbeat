@@ -307,3 +307,287 @@ int editClipsAroundRange(
   }
   return removed;
 }
+
+// ---------------------------------------------------------------------------
+// B1/B3 — the editor operations that are not same-length transforms.
+//
+// An FX chain maps N samples to N samples, which is why the rack can be a list
+// of modules. These change the LENGTH or the structure — insert silence, repeat
+// a take, find where the gaps are, join two takes — so they cannot be effects
+// and live here beside the other destructive edits, as pure functions the
+// service, the CLI and the tests all call.
+// ---------------------------------------------------------------------------
+
+/// Insert [leadMs] of silence before the audio and [tailMs] after it.
+///
+/// The "give it room" op: a take that starts on its first sample has nowhere for
+/// a fade-in to live, and one that ends on its last has nowhere for a reverb
+/// tail to ring out. Negative values are treated as zero — trimming is
+/// [trimSilenceTake]'s job, and quietly reinterpreting a pad as a cut would be a
+/// surprising way to lose audio.
+BakedTake padTake(
+  Float64List left,
+  Float64List? right, {
+  double leadMs = 0,
+  double tailMs = 0,
+  required int sampleRate,
+}) {
+  final lead = (math.max(0, leadMs) * sampleRate / 1000).round();
+  final tail = (math.max(0, tailMs) * sampleRate / 1000).round();
+  if (lead == 0 && tail == 0) return bakedTake(left, right);
+
+  Float64List pad(Float64List source) {
+    final out = Float64List(lead + source.length + tail);
+    out.setRange(lead, lead + source.length, source);
+    return out;
+  }
+
+  // The audio itself moves later by exactly the lead, so a caller placing this
+  // on a timeline can slide the clip back and keep it where it sounded.
+  return (
+    left: pad(left),
+    right: right == null ? null : pad(right),
+    startShiftMs: -lead * 1000 / sampleRate,
+  );
+}
+
+/// Repeat the take [times] in total (1 = unchanged, 0 = empty).
+BakedTake repeatTake(Float64List left, Float64List? right, int times) {
+  final n = times < 0 ? 0 : times;
+  if (n == 1) return bakedTake(left, right);
+
+  Float64List repeat(Float64List source) {
+    final out = Float64List(source.length * n);
+    for (var i = 0; i < n; i++) {
+      out.setRange(i * source.length, (i + 1) * source.length, source);
+    }
+    return out;
+  }
+
+  return bakedTake(repeat(left), right == null ? null : repeat(right));
+}
+
+/// A silent stretch found by [findSilences].
+typedef SilentRange = ({double startMs, double endMs});
+
+/// Every stretch quieter than [threshold] for at least [minLengthMs].
+///
+/// Unlike [trimSilenceTake], which only looks at the two ENDS, this finds gaps
+/// anywhere — which is what makes "split this take into its phrases" possible,
+/// and what makes a long recording navigable at all.
+///
+/// [minLengthMs] is what keeps it useful: without it every zero crossing of a
+/// quiet passage is a "silence", and the answer is thousands of ranges that mean
+/// nothing. A gap has to last before it counts as one.
+List<SilentRange> findSilences(
+  Float64List left,
+  Float64List? right, {
+  double threshold = 0.01,
+  double minLengthMs = 200,
+  required int sampleRate,
+}) {
+  final out = <SilentRange>[];
+  if (left.isEmpty) return out;
+  final minSamples = (minLengthMs * sampleRate / 1000).round();
+  bool quiet(int i) =>
+      left[i].abs() < threshold &&
+      (right == null || i >= right.length || right[i].abs() < threshold);
+
+  var start = -1;
+  for (var i = 0; i <= left.length; i++) {
+    final isQuiet = i < left.length && quiet(i);
+    if (isQuiet) {
+      if (start < 0) start = i;
+    } else if (start >= 0) {
+      if (i - start >= minSamples) {
+        out.add(
+          (
+            startMs: start * 1000 / sampleRate,
+            endMs: i * 1000 / sampleRate,
+          ),
+        );
+      }
+      start = -1;
+    }
+  }
+  return out;
+}
+
+/// The audible stretches BETWEEN the silences — one entry per phrase.
+///
+/// The complement of [findSilences], returned separately because it is what a
+/// caller actually places on a timeline: a long take becomes one clip per
+/// phrase, each keeping the position it was recorded at.
+List<SilentRange> findPhrases(
+  Float64List left,
+  Float64List? right, {
+  double threshold = 0.01,
+  double minLengthMs = 200,
+  required int sampleRate,
+}) {
+  final total = left.length * 1000 / sampleRate;
+  final silences = findSilences(
+    left,
+    right,
+    threshold: threshold,
+    minLengthMs: minLengthMs,
+    sampleRate: sampleRate,
+  );
+  final out = <SilentRange>[];
+  var cursor = 0.0;
+  for (final gap in silences) {
+    if (gap.startMs > cursor) {
+      out.add((startMs: cursor, endMs: gap.startMs));
+    }
+    cursor = gap.endMs;
+  }
+  if (cursor < total) out.add((startMs: cursor, endMs: total));
+  return out;
+}
+
+/// Which crossfade shape [spliceTakes] uses at the join.
+///
+/// There is no universally right answer, which is why both exist — the choice
+/// depends on whether the two takes are CORRELATED:
+///
+/// * [equalPower] (sin/cos) keeps the total POWER constant, which is what holds
+///   the level when the takes are unrelated — two different performances, a
+///   join between different material. This is the usual case for a splice and
+///   the default. On perfectly correlated takes (two copies of the same audio)
+///   it reads about +3 dB at the join, because the amplitudes add rather than
+///   the powers.
+/// * [linear] keeps the total AMPLITUDE constant, which is right for exactly
+///   that correlated case — joining the same performance to itself, or two
+///   takes that track each other closely.
+enum SpliceCurve { equalPower, linear }
+
+/// Join two takes with a crossfade of [crossfadeMs], shaped by [curve].
+///
+/// See [SpliceCurve] for which shape to want; the default suits joining two
+/// different takes, which is what a splice usually is.
+BakedTake spliceTakes(
+  Float64List firstLeft,
+  Float64List? firstRight,
+  Float64List secondLeft,
+  Float64List? secondRight, {
+  double crossfadeMs = 20,
+  SpliceCurve curve = SpliceCurve.equalPower,
+  required int sampleRate,
+}) {
+  final fade = math.min(
+    (math.max(0, crossfadeMs) * sampleRate / 1000).round(),
+    math.min(firstLeft.length, secondLeft.length),
+  );
+  final length = firstLeft.length + secondLeft.length - fade;
+
+  Float64List join(Float64List a, Float64List b) {
+    final out = Float64List(length);
+    for (var i = 0; i < a.length; i++) {
+      out[i] = a[i];
+    }
+    final start = a.length - fade;
+    for (var i = 0; i < b.length; i++) {
+      final at = start + i;
+      if (at >= out.length) break;
+      if (i < fade) {
+        final t = (i + 0.5) / fade;
+        final (outGoing, inComing) = switch (curve) {
+          SpliceCurve.equalPower => (
+              math.cos(t * math.pi / 2),
+              math.sin(t * math.pi / 2),
+            ),
+          SpliceCurve.linear => (1 - t, t),
+        };
+        out[at] = out[at] * outGoing + b[i] * inComing;
+      } else {
+        out[at] = b[i];
+      }
+    }
+    return out;
+  }
+
+  final stereo = firstRight != null || secondRight != null;
+  return bakedTake(
+    join(firstLeft, secondLeft),
+    stereo ? join(firstRight ?? firstLeft, secondRight ?? secondLeft) : null,
+  );
+}
+
+/// The full measurement set — what a mastering engineer asks of a file.
+typedef FullStats = ({
+  ClipStats basic,
+  double dcOffset, // mean sample value; anything but ~0 is a defect
+  double crestFactorDb, // peak-to-RMS: how much transient is left
+  int effectiveBits, // the resolution actually in use
+  int zeroCrossings, // a rough brightness/noisiness proxy
+});
+
+/// Peak/RMS/duration (via [clipStatsOf]) plus the measurements that say whether
+/// a file is HEALTHY rather than how loud it is.
+///
+/// * **DC offset** — a non-zero mean is always a defect: it eats headroom and
+///   makes edits click, and it is invisible on a level meter.
+/// * **Crest factor** — peak over RMS. High means the transients survive; a
+///   crest factor collapsing toward 0 dB is the signature of over-compression,
+///   which no loudness number will tell you.
+/// * **Effective bit depth** — the resolution actually in use. A 24-bit file
+///   whose samples all land on 16-bit boundaries was converted, not recorded,
+///   and knowing that changes what you do with it.
+FullStats fullStatsOf(
+  Float64List left,
+  Float64List? right, {
+  required int sampleRate,
+}) {
+  final basic = clipStatsOf(left, right, sampleRate: sampleRate);
+
+  var sum = 0.0;
+  var count = 0;
+  var crossings = 0;
+  var previous = 0.0;
+  void scan(Float64List pcm, {required bool countCrossings}) {
+    for (var i = 0; i < pcm.length; i++) {
+      sum += pcm[i];
+      count++;
+      if (countCrossings && i > 0 && (pcm[i] >= 0) != (previous >= 0)) {
+        crossings++;
+      }
+      previous = pcm[i];
+    }
+  }
+
+  scan(left, countCrossings: true);
+  if (right != null) scan(right, countCrossings: false);
+
+  // The smallest quantisation step every sample is a multiple of. Tested
+  // against the common depths rather than solved for, because that is the
+  // question being asked: WHICH depth is this, not what is the GCD.
+  var effectiveBits = 32;
+  for (final bits in [8, 12, 16, 20, 24]) {
+    final step = 2.0 / (1 << bits);
+    var fits = true;
+    for (final pcm in [left, if (right != null) right]) {
+      for (final v in pcm) {
+        final steps = v / step;
+        if ((steps - steps.roundToDouble()).abs() > 1e-6) {
+          fits = false;
+          break;
+        }
+      }
+      if (!fits) break;
+    }
+    if (fits) {
+      effectiveBits = bits;
+      break;
+    }
+  }
+
+  return (
+    basic: basic,
+    dcOffset: count == 0 ? 0.0 : sum / count,
+    crestFactorDb: basic.rms <= 0
+        ? 0.0
+        : amplitudeToDb(basic.peak) - amplitudeToDb(basic.rms),
+    effectiveBits: effectiveBits,
+    zeroCrossings: crossings,
+  );
+}
