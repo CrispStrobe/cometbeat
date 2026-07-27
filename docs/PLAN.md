@@ -1112,6 +1112,41 @@ is recorded in [HISTORY.md](HISTORY.md).
   incremental-write rule had already put 123 notes / 111 digits and every finding on disk.
   That rule is now load-bearing, not hygiene.
 
+  **🧪 TRIED AND REVERTED — lowering `extension` fixes the frame axis but costs real
+  repertoire. The per-note knob is the wrong lever.** Measured, not guessed:
+  `extension` 0.8 → 0.45 (the largest value at which the stretch still beats the slide —
+  the behaviour flips discretely between 0.60 and 0.45, so the exact number is not delicate):
+
+  | fixture | 0.8 | 0.45 |
+  |---|---|---|
+  | p18 frame agreement | 48/72 (0 extensions) | **65/72 (17)** ✅ |
+  | Becker scales, all | 54.9% | 55.6% ✅ |
+  | `neckPositions` on CC0 | 44.0% | 47.2% ✅ |
+  | **CC0 `advanced`** | **50.3%** | **46.1%** ❌ |
+  | exact-finger (axes) | 52.0% | 48.8% ❌ |
+
+  **Why it was reverted even though every test still passed.** It buys the frame axis by
+  losing 4.2 points on the expressive repertoire — the very fixture that justified the
+  `professional` weights — and it left the acceptance floor at 47.7% against a 47.0
+  threshold, far too thin to ship. The tests passing is not the bar; they pass because the
+  floors are floors.
+  **What it tells us about the model, which is the actual value here:** a per-note
+  `extension` cost is a single lever for two different situations. Becker's TABLES want a
+  stretch that is HELD across a group; expressive editions evidently shift readily and want
+  a single stretched note to stay expensive. Lowering the per-note cost makes extensions
+  cheap everywhere and cannot distinguish them.
+  → **The reshape cost is still the right shape** (a cellist pays to CHANGE hand shape, not
+  per note spent in one): it would let a held extension win in the tables while leaving a
+  one-note stretch as costly as it is today. That is the experiment to run next, and it must
+  clear BOTH the Becker frames and the CC0 repertoire, not one at the other's expense.
+  ⚠ **Two probe confounds worth knowing before anyone re-runs this** — both nearly produced a
+  wrong conclusion: (1) `BowedSkill.advanced` resolves to the `professional` profile
+  (`shift: 0.5, height: 0.0`), so passing a bare `BowedArrangeCost(extension: e)` silently
+  restores `shift: 1.0` and confounds the sweep; (2) p.18's bars must be grouped by
+  (system, bar, **string**) — grouping without the string merges four separate staves into
+  one sequence and invents shifts the page never implies. The first sweep I ran had both
+  bugs and showed a flat, meaningless curve.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
