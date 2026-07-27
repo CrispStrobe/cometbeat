@@ -1162,6 +1162,38 @@ is recorded in [HISTORY.md](HISTORY.md).
   one sequence and invents shifts the page never implies. The first sweep I ran had both
   bugs and showed a flat, meaningless curve.
 
+  **🛑 STOP TUNING — the frame axis and the finger axis are not simultaneously reachable
+  by any weight setting. This rules out a whole class of fix and is worth more than the
+  fix would have been.** Measured across all three profiles on p.18 (24 of 72 bars printed
+  extended):
+
+  | profile | frame | ours extended | finger |
+  |---|---|---|---|
+  | `firstPosition` | 38/72 | 36/24 | 39.8% |
+  | `neckPositions` (learner, shift 1.0) | 54/72 | 28/24 | 60.6% |
+  | `advanced` (professional, shift 0.5) | 48/72 | **0/24** | **90.3%** |
+
+  The learner profile ALREADY extends — 28 times, slightly MORE than Becker's 24 — because
+  an expensive shift makes sliding unattractive. Its frame agreement is the better one. But
+  its **finger agreement collapses to 60.6%** against `advanced`'s 90.3%: it extends in the
+  wrong places. So the setting that extends gets the fingers wrong, and the setting that gets
+  the fingers right never extends. There is no value of `extension`, and no existing profile,
+  that reaches both — as the earlier 0.8→0.45 sweep independently showed by trading 4.2pp of
+  repertoire for the frames.
+  **Also kills the reshape cost as stated.** A mode-change penalty cannot fix p.18: we never
+  change mode there. `advanced` stays in `neck` for all three notes and moves the ANCHOR
+  (1→2→2). What is wrong is a mid-group SHIFT, not a mid-group reshape.
+  **What the evidence actually points at**, for whoever picks this up: the missing term is a
+  preference for ONE HAND SHAPE PER GROUP — penalise an anchor change *inside* a slur/beam/
+  bar rather than globally, so expressive writing can still shift freely at phrase boundaries
+  while a three-note figure resolves to a single held frame. Note `slurShiftScale` (2.0)
+  is already the shape of this idea and is not enough on its own: at professional weights a
+  slurred 1-semitone shift still costs 1.0 against 2.4 to hold the stretch.
+  **This is a DESIGN change, not a tuning**, and it needs a grouping signal the arranger does
+  not currently receive (p.18's bars are only "groups" because the plate draws them so).
+  Anyone attempting it should clear BOTH the Becker frames and the CC0 repertoire; every
+  attempt so far has traded one for the other.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
