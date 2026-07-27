@@ -8147,6 +8147,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsHdVoiceFailed => 'Download failed — tap to retry';
 
   @override
+  String get voiceModelsTitle => 'Voice models';
+
+  @override
+  String get voiceModelsSubtitle => 'Download & manage the HD neural voices';
+
+  @override
+  String get voiceModelsCachedLabel => 'Cached';
+
+  @override
+  String get voiceModelsDownloaded => 'Downloaded';
+
+  @override
+  String get voiceModelsNotDownloaded => 'Not downloaded';
+
+  @override
+  String get voiceModelsDownload => 'Download';
+
+  @override
+  String get voiceModelsRemove => 'Remove';
+
+  @override
   String get transcriptionEngineTitle => 'Transcription engine';
 
   @override

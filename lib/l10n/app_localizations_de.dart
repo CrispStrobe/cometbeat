@@ -8189,6 +8189,27 @@ class AppLocalizationsDe extends AppLocalizations {
       'Download fehlgeschlagen – zum Wiederholen tippen';
 
   @override
+  String get voiceModelsTitle => 'Sprachmodelle';
+
+  @override
+  String get voiceModelsSubtitle => 'HD-Stimmen laden und verwalten';
+
+  @override
+  String get voiceModelsCachedLabel => 'Gespeichert';
+
+  @override
+  String get voiceModelsDownloaded => 'Heruntergeladen';
+
+  @override
+  String get voiceModelsNotDownloaded => 'Nicht heruntergeladen';
+
+  @override
+  String get voiceModelsDownload => 'Herunterladen';
+
+  @override
+  String get voiceModelsRemove => 'Entfernen';
+
+  @override
   String get transcriptionEngineTitle => 'Notierungs-Engine';
 
   @override

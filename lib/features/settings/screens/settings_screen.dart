@@ -21,6 +21,7 @@ import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:comet_beat/features/library/attribution_screen.dart';
 import 'package:comet_beat/features/settings/screens/about_screen.dart';
 import 'package:comet_beat/features/settings/screens/downloads_screen.dart';
+import 'package:comet_beat/features/settings/screens/voice_models_screen.dart';
 import 'package:comet_beat/features/settings/screens/voice_picker_sheet.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/score_theme.dart' show ScoreFont;
@@ -154,6 +155,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const _HdVoiceTile(),
           const _VoiceEngineTile(),
+          const _VoiceModelsTile(),
           const _TranscriptionEngineSection(),
           const SizedBox(height: 20),
           Card(
@@ -414,6 +416,31 @@ class _VoiceEngineTile extends StatelessWidget {
 /// the platform). Offers a one-tap opt-in download of the ~135 MB model; once
 /// cached, narration automatically upgrades to the natural voice.
 enum _HdState { checking, hidden, notDownloaded, downloading, ready, failed }
+
+/// Opens the [VoiceModelsScreen] — the download/remove manager for the vetted
+/// CC0 HD voices (the unified TtsModelManager cache; native files + web IDB).
+class _VoiceModelsTile extends StatelessWidget {
+  const _VoiceModelsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Card(
+        child: ListTile(
+          leading: const Icon(Icons.download_for_offline_outlined),
+          title: Text(l10n.voiceModelsTitle),
+          subtitle: Text(l10n.voiceModelsSubtitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const VoiceModelsScreen()),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _HdVoiceTile extends StatefulWidget {
   const _HdVoiceTile();

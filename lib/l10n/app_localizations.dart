@@ -14858,6 +14858,48 @@ abstract class AppLocalizations {
   /// **'Download failed — tap to retry'**
   String get ttsHdVoiceFailed;
 
+  /// No description provided for @voiceModelsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice models'**
+  String get voiceModelsTitle;
+
+  /// No description provided for @voiceModelsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download & manage the HD neural voices'**
+  String get voiceModelsSubtitle;
+
+  /// No description provided for @voiceModelsCachedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cached'**
+  String get voiceModelsCachedLabel;
+
+  /// No description provided for @voiceModelsDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded'**
+  String get voiceModelsDownloaded;
+
+  /// No description provided for @voiceModelsNotDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Not downloaded'**
+  String get voiceModelsNotDownloaded;
+
+  /// No description provided for @voiceModelsDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get voiceModelsDownload;
+
+  /// No description provided for @voiceModelsRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get voiceModelsRemove;
+
   /// No description provided for @transcriptionEngineTitle.
   ///
   /// In en, this message translates to:
