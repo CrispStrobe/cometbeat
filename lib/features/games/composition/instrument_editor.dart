@@ -117,8 +117,20 @@ class _InstrumentEditorSheet extends StatefulWidget {
   State<_InstrumentEditorSheet> createState() => _InstrumentEditorSheetState();
 }
 
+/// The §4 macros carried by an instrument (additive or sample), else empty —
+/// so an edit that swaps the instrument type can preserve them.
+List<MacroSequence> macrosOf(TrackerInstrument inst) => switch (inst) {
+      AdditiveInstrument(:final macros) => macros,
+      SampleInstrument(:final macros) => macros,
+      _ => const [],
+    };
+
 class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
   late TrackerInstrument _inst;
+
+  /// Opt into the Sound Lab even for an additive voice (to reshape the sound into
+  /// a sample); the voice's macros are carried onto the produced sample.
+  bool _showSoundLab = false;
 
   @override
   void initState() {
@@ -186,31 +198,60 @@ class _InstrumentEditorSheetState extends State<_InstrumentEditorSheet> {
   }
 
   Widget _buildEditorBody() {
+    if (_showSoundLab ||
+        _inst is! SampleInstrument &&
+            _inst is! MultiSampleInstrument &&
+            _inst is! AdditiveInstrument) {
+      return SoundLabScreen(
+        embedded: true,
+        onChanged: (pcm) {
+          setState(() {
+            // Replace the instrument with a sample of the new sound, carrying
+            // any §4 macros the previous voice held.
+            _inst = SampleInstrument(_inst.id, pcm, macros: macrosOf(_inst));
+          });
+        },
+      );
+    }
     if (_inst is SampleInstrument) {
       return _SampleEditor(
         inst: _inst as SampleInstrument,
         onChanged: (newInst) => setState(() => _inst = newInst),
       );
-    } else if (_inst is MultiSampleInstrument) {
+    }
+    if (_inst is MultiSampleInstrument) {
       return _MultiSampleEditor(
         inst: _inst as MultiSampleInstrument,
         candidates: zonePickerCandidates(widget.candidates),
         onChanged: (newInst) => setState(() => _inst = newInst),
       );
-    } else {
-      return SoundLabScreen(
-        embedded: true,
-        onChanged: (pcm) {
-          setState(() {
-            // Replace the instrument with a sample instrument of the new sound
-            _inst = SampleInstrument(
-              _inst.id,
-              pcm,
-            );
-          });
-        },
-      );
     }
+    // AdditiveInstrument: a macro editor for the voice, plus a Sound Lab hop to
+    // reshape it into a sample (keeping the macros).
+    final add = _inst as AdditiveInstrument;
+    return ListView(
+      children: [
+        ListTile(
+          title: const Text('Additive voice'),
+          subtitle: Text(add.instrument.name),
+          trailing: TextButton.icon(
+            icon: const Icon(Icons.graphic_eq),
+            label: const Text('Sound Lab'),
+            onPressed: () => setState(() => _showSoundLab = true),
+          ),
+        ),
+        _MacroSection(
+          macros: add.macros,
+          onChanged: (macros) => setState(
+            () => _inst = AdditiveInstrument(
+              add.id,
+              add.instrument,
+              macros: macros,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

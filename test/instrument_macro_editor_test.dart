@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/envelope.dart';
 import 'package:comet_beat/core/audio/macro_sequence.dart';
+import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
 import 'package:comet_beat/features/games/composition/instrument_editor.dart';
 import 'package:flutter/material.dart';
@@ -65,6 +66,42 @@ void main() {
     expect(sample.macros, hasLength(1));
     expect(sample.macros.single.target, MacroTarget.volume);
     expect(sample.macros.single.values, [64, 64, 64, 64]); // the default
+  });
+
+  testWidgets('an additive voice gets a macro editor; the macro returns',
+      (tester) async {
+    const inst = AdditiveInstrument('piano', Instrument.piano);
+    TrackerInstrument? result;
+    await pumpGame(
+      tester,
+      Scaffold(
+        body: Builder(
+          builder: (ctx) => ElevatedButton(
+            onPressed: () async {
+              result = await showInstrumentEditor(ctx, inst);
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Additive voice'), findsOneWidget);
+    expect(find.text('Instrument Macros'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pitch').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    final add = result! as AdditiveInstrument;
+    expect(add.macros, hasLength(1));
+    expect(add.macros.single.target, MacroTarget.pitch);
   });
 
   testWidgets('the macro edit dialog opens and Done keeps the macro',
