@@ -1752,6 +1752,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'tap to give this track its own swing (– follows the groove)';
 
   @override
+  String get loopMixerAutomation => 'Volume shape';
+
+  @override
   String get loopMixerMasterFx => 'Master effects';
 
   @override

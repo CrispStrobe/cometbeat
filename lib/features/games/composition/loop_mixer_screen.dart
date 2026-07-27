@@ -31,6 +31,7 @@ import 'package:comet_beat/core/audio/beat_capture.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/groove_capture.dart';
+import 'package:comet_beat/core/audio/loop_automation.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/loop_reference.dart';
 import 'package:comet_beat/core/audio/loop_stack_render.dart'
@@ -328,6 +329,13 @@ abstract interface class LoopMixerTester {
   /// grid's cell state.
   /// The section armed to launch at the next seam, if any.
   int? get pendingScene;
+
+  /// A track's level-automation lane: the value at a step, a way to step it,
+  /// and whether the track has a lane at all.
+  double automationAt(String id, int step);
+  bool hasAutomationFor(String id);
+  void cycleAutomationStep(String id, int step);
+  void clearAutomation(String id);
 
   /// A track's swing, whether it has its OWN, and a way to step it.
   double trackSwingOf(String id);
@@ -1097,6 +1105,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void launchScene(int i) => _launchScene(i);
   @override
   bool sceneIsEmpty(int i) => _scenes[i] == null;
+  @override
+  double automationAt(String id, int step) =>
+      _engine.automationFor(id, AutomationParam.level)?.at(step) ?? 1.0;
+  @override
+  bool hasAutomationFor(String id) =>
+      _engine.automationFor(id, AutomationParam.level) != null;
+  @override
+  void cycleAutomationStep(String id, int step) =>
+      _cycleAutomationStep(id, step);
+  @override
+  void clearAutomation(String id) => _clearAutomation(id);
   @override
   double trackSwingOf(String id) => _engine.trackSwing(id);
   @override
@@ -4033,6 +4052,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           _trackSwingRow(l10n),
         ),
         _inspectorSection(
+          l10n.loopMixerAutomation,
+          _automationRows(l10n),
+        ),
+        _inspectorSection(
           l10n.loopMixerFilter,
           _captionedSlider(
             low: l10n.loopMixerFilterDark,
@@ -4190,6 +4213,107 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         ],
       ),
     );
+  }
+
+  /// The values a tapped automation step cycles through.
+  ///
+  /// Four, not a continuous drag: this is the same tap-to-cycle the tune grid,
+  /// the beat grid, the loop-length badge and the swing badge all use, and a
+  /// child who can already build a beat can build a fade with no new gesture.
+  /// A continuous curve would be more expressive and a different product.
+  static const List<double> _levelLadder = [1.0, 0.66, 0.33, 0.0];
+
+  /// Steps one cell of [id]'s level lane. Creates the lane on first touch.
+  void _cycleAutomationStep(String id, int step) {
+    final existing = _engine.automationFor(id, AutomationParam.level) ??
+        AutomationLane.neutral(AutomationParam.level, kPatternSteps);
+    final current = existing.at(step);
+    var i = _levelLadder.indexWhere((v) => (v - current).abs() < 1e-6);
+    if (i < 0) i = 0;
+    final next = existing.withStep(
+      step,
+      _levelLadder[(i + 1) % _levelLadder.length],
+    );
+    setState(() {
+      // A lane that is neutral everywhere is dropped rather than stored: "no
+      // lane" has to stay distinguishable from "a flat lane", because that is
+      // what lets a groove without automation render byte-for-byte as before.
+      _engine.setAutomation(
+        id,
+        AutomationParam.level,
+        next.isNeutralFor(AutomationParam.level) ? null : next,
+      );
+    });
+    _syncPlayback();
+  }
+
+  /// Clears [id]'s level lane.
+  void _clearAutomation(String id) {
+    if (_engine.automationFor(id, AutomationParam.level) == null) return;
+    setState(() => _engine.setAutomation(id, AutomationParam.level, null));
+    _syncPlayback();
+  }
+
+  /// One 16-step level lane per track: tap a step to cycle it, hold the track
+  /// name to clear the lane.
+  Widget _automationRows(AppLocalizations l10n) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final track in _engine.tracks)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 1),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onLongPress: () => _clearAutomation(track.id),
+                    child: SizedBox(
+                      width: 56,
+                      child: Text(
+                        _trackLabel(l10n, track.id),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                  ),
+                  for (var s = 0; s < kPatternSteps; s++)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 1),
+                        child: GestureDetector(
+                          key: Key('loop-auto-${track.id}-$s'),
+                          onTap: () => _cycleAutomationStep(track.id, s),
+                          child: SizedBox(
+                            height: 18,
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: FractionallySizedBox(
+                                heightFactor: _autoHeight(track.id, s),
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: _trackColors[track.id],
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  child: const SizedBox.expand(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      );
+
+  /// A step's bar height: the lane value, or full when there is no lane.
+  double _autoHeight(String id, int step) {
+    final lane = _engine.automationFor(id, AutomationParam.level);
+    final v = lane == null ? 1.0 : lane.at(step);
+    // Never zero, or a silenced step would vanish and look untappable.
+    return v < 0.08 ? 0.08 : v;
   }
 
   /// Swing ladder for one track: follow the groove, then straight, light,
