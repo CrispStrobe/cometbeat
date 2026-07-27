@@ -1087,6 +1087,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   cost** already proposed from the Romberg E2 disagreement — a cellist pays to CHANGE hand
   shape, not per note spent in one — which would address both findings at once.
 
+  **🐞 CAPABILITY GAP FOUND — our thumb frame has no 4th finger, and Becker devotes a
+  titled section to exactly that.** p.33: «**Übungen für den vierten Finger im Einsatz.**»
+  Our `thumbFrame: const [0, 2, 4, 5]` pairs with `[kThumb, 1, 2, 3]` — there is no 4th
+  finger in the state space at all, so a passage requiring one cannot be fingered correctly,
+  it can only be approximated. p.32 confirmed the no-4 frame and that reading stands; it is
+  the BASIC thumb position, not the whole technique.
+  **The geometry is pinned by the digits:** thumb on `g'`, 4th finger on `d''` = **+7
+  semitones above the thumb** (a fifth on one string — `quinten: T 4`), corroborated by
+  `terzengaenge: 2 4 3` where the 2 sits at +4, matching our existing `thumbFrame[2]`. So the
+  extended frame is **`[0, 2, 4, 5, 7]`** with `[kThumb, 1, 2, 3, 4]`.
+  ⚠ **Not implemented.** This ADDS states to the search rather than re-weighting it, so it
+  can only move numbers by making new frames reachable — measure the Becker floors and the
+  CC0/PD fixtures before and after, and keep it behind the existing `thumbFrame` data knob so
+  it stays instrument data, not code. Note the two pages are not in conflict: a model wanting
+  both needs the 4th finger to be OPTIONAL in the thumb frame (p.32 uses thumb-1-2-3
+  throughout), which argues for a separate `thumbFrameExtended` rather than widening the
+  default.
+  ✅ Also from p.33, all confirming earlier findings independently: thumb glyph is the
+  **stemmed zero** (no `+`, no `T`); the thumb stops **two strings at a pure fifth**; and
+  thumb placements sit at **10 and 12 semitones** above the open string — a SECOND independent
+  confirmation of the `thumbEntry: 10` shipped in `5c11cf90`.
+  ⚙️ Process note: this agent **died mid-report** (connection closed) and lost nothing — the
+  incremental-write rule had already put 123 notes / 111 digits and every finding on disk.
+  That rule is now load-bearing, not hygiene.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
