@@ -381,5 +381,16 @@ void main() {
       plain,
       reason: 'a short insert list must not disturb the stems it omits',
     );
+
+    // An insert returning fewer samples than it was given falls back to the dry
+    // stem rather than throwing. Internally impossible — the engine's filter
+    // always returns the length it received — but a mixer that can be crashed
+    // by a careless insert is a worse mixer.
+    final clipped = mixStems(
+      stems,
+      totalSamples: 64,
+      inserts: [(x) => Float64List.sublistView(x, 0, 8), null],
+    );
+    expect(clipped.length, 64);
   });
 }

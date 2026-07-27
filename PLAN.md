@@ -409,13 +409,60 @@ Still genuinely out of scope, for reasons that are NOT about audience: MIDI
 clock and a full automation matrix belong to the Tracker and the Audio Editor,
 which is a mode-boundary decision, not a capability ceiling.
 
-### Loop Studio — DECIDED by the maintainer 2026-07-27 (build these)
+### Loop Studio — DECIDED by the maintainer 2026-07-27 (✅ ALL FOUR BUILT)
 
 Four open questions, answered. These are decisions, not suggestions — the
 reasoning behind each is in the audience correction above (CometBeat scales up
 to students and hobbyists; Scratch/TinkerCAD model).
 
-- ⬜ **D1 — "Add a track" = roles AND empty (option C).** The ＋ offers the five
+**Shipped 2026-07-27** (`feature/mixer-d1d4`): D1 + D3 in the engine, all three
+on screen, D4 restored. 85 new tests; both CI gates verified from the worktree
+(`dart format --set-exit-if-changed .` exit 0, whole-project analyze "No issues
+found"). What each turned out to need, beyond the scoping below:
+
+- **D1** — `addRoleTrack` / `addEmptyTrack` / per-track names next to
+  `duplicateTrack`. A role add deliberately does NOT inherit the playing
+  instance's settings (that is what duplicate is for) but DOES take a variant no
+  enabled track of that role is using — two tracks on the identical pattern are
+  indistinguishable from one louder track, so "add a bass" would have read as a
+  volume bump. `'track'` is now a real entry in `_trackColors` / `_trackLabel`,
+  so an empty track is slate and reads "Track 2" instead of a grey "Sparkle".
+  ⚠️ **The gap this exposed: added tracks did not SURVIVE A SAVE, and neither did
+  copies.** Everything about a track is keyed by id and `applySpec` drops ids it
+  does not know, so a saved groove came back with them gone and their settings
+  silently discarded. `GrooveSpec` now carries the roster (id → role, or empty),
+  the names and the filters, all omitted at their defaults so an unchanged groove
+  tokenises byte-for-byte as before. `applySpec` rebuilds the roster BEFORE it
+  takes its `known` set, and prunes length/swing/automation for tracks the loaded
+  groove does not have so a reused id cannot inherit them.
+- **D2** — one strip, a Volume / Left-right / Tone switch above it. The three
+  cells are drawn differently on purpose: volume is one-sided (a bar off the
+  floor), pan is a POSITION (a marker sliding left/right), tone is an AMOUNT (a
+  bar out of the middle). One shared bar would have made a hard-left pan look
+  like a fade-out.
+- **D3** — `mixStems`/`mixStemsStereo` take an optional per-stem `inserts` list,
+  run AFTER unit-peak normalisation and BEFORE gain: the same lesson the level
+  lane taught, plus the console order (insert, then fader). Two non-obvious
+  things inside: the stem is filtered TWICE and the second copy kept (a biquad
+  starts with zero memory, but a loop's first sample follows its last — the same
+  trick `_applySend` uses), and both a low-pass and a high-pass run on every
+  sample when there is a lane, selected by position, because a lane can cross the
+  middle and switching filters mid-loop would restart the memory. Measured with
+  Goertzel band ratios, not "the bytes changed" — a filter wired backwards passes
+  that.
+- **D4** — **no port was needed.** Both files restore from `git show
+  8a2c2d52^:<path>` and pass VERBATIM (22 tests). The "no longer compiles" note
+  predates `9adc7b9b`, which restored the A7 generator code; `generateWave` /
+  `GeneratorShape` and `traceChannel` / `protrackerMemory` are all present at the
+  signatures the tests were written against. Editing those tests would have meant
+  changing them to match code that had not moved.
+
+⬜ **Still open after this** (out of D1–D4's scope, worth knowing): per-track
+LENGTH and SWING still do not travel in `GrooveSpec` — a polymetric or shuffled
+track loses that on save, for every track, not only added ones. The roster work
+makes them a two-field addition now that the pruning is in place.
+
+- ✅ **D1 — "Add a track" = roles AND empty (option C).** The ＋ offers the five
   authored roles (drums / bass / chords / melody / sparkle) *and* an "empty"
   entry, with the role list first so nothing is ever a blank page but the
   ceiling is uncapped. A role-add arrives with that role's authored patterns and
@@ -428,25 +475,27 @@ to students and hobbyists; Scratch/TinkerCAD model).
   `_sourceIdOf` fallback; an empty track needs its own colour + name, not a
   suffix fallback. ⚠️ The track-card row is FULL (23px overflow); put any new
   control in the inspector.
-- ⬜ **D2 — pan automation gets a parameter SWITCH (option A).** One 16-cell
+- ✅ **D2 — pan automation gets a parameter SWITCH (option A).** One 16-cell
   strip per track with a Volume / Pan toggle above it, not two strips. The
   render path already exists (A3); this is the editor. Reuse
   `_cycleAutomationStep` with the param as an argument, and keep the
   "cycling back to neutral DROPS the lane" rule — it is what preserves the
   byte-identical guarantee.
-- ⬜ **D3 — build a PER-TRACK FILTER, then automate it.** Approved as real work.
+- ✅ **D3 — build a PER-TRACK FILTER, then automate it.** Approved as real work.
   Today `_masterFilter` is global and `AutomationParam.filter` renders nothing.
   A biquad per track in the mix path; the payoff is the filter sweep (dull the
   bass while the hats stay bright, then open it across the loop). Do the filter
   FIRST, then wire `AutomationParam.filter` through the same envelope seam
   `mixStems` already takes.
-- ⬜ **D4 — PORT the two orphaned tests, do not drop them.**
+- ✅ **D4 — the two orphaned tests are BACK (they needed no port).**
   `test/generator_shapes_test.dart` (238 lines) and
-  `test/mod_effect_memory_test.dart` (218) were deleted by `8a2c2d52` and no
-  longer compile against current code. Recover them with
-  `git show 8a2c2d52^:<path>` and port to the current API. **@tracker-* /
-  whoever owns the generator:** this is yours — the APIs moved for reasons only
-  you know, and that coverage is silently absent until it is back.
+  `test/mod_effect_memory_test.dart` (218) were deleted by `8a2c2d52`. Recovered
+  with `git show 8a2c2d52^:<path>` — and they compile and pass **unchanged**, so
+  no owner call was needed after all. The note that said otherwise was written
+  while A7's generator code was still reverted; `9adc7b9b` put it back. **The
+  lesson worth keeping: "the test no longer compiles" can mean the CODE is
+  missing, not that the API moved on** — check what the clobber took before
+  concluding a test is stale, or you will edit a good test to match bad code.
 
 ### Loop Studio — automation lanes (scoped 2026-07-27, NOT started)
 

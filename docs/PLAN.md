@@ -134,19 +134,34 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **ACTIVE — the maintainer's four Loop Studio decisions
-  (D1–D4, root `PLAN.md`).** Worktree `../mus-mixer-d1d4`, branch
-  `feature/mixer-d1d4`, branched off `ec9d4d12`. **D4 is already answered: both
-  orphaned tests (`test/generator_shapes_test.dart`, `test/mod_effect_memory_test.dart`)
-  restore from `git show 8a2c2d52^:<path>` and pass VERBATIM — no port needed.**
-  The "no longer compiles" note predates `9adc7b9b` (A7 generator restore); the
-  APIs they cover (`generateWave`/`GeneratorShape`, `traceChannel`/
-  `protrackerMemory`) are all present again. Both files are back, 22 tests green.
-  ⚠️ **Hot shared files I am editing:** `lib/core/audio/loop_engine.dart`,
-  `lib/features/games/composition/loop_mixer_screen.dart`,
-  `lib/core/audio/synth.dart` (additive optional param on `mixStems`),
-  `lib/core/audio/loop_automation.dart`, the ARBs + generated `app_localizations*`.
-  All additive; the byte-identical-render guarantee is asserted, not assumed. — opus
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — all four maintainer decisions
+  D1–D4 (root `PLAN.md`), +85 tests.** Branch `feature/mixer-d1d4` (worktree
+  `../mus-mixer-d1d4`), off `ec9d4d12`. Both CI gates verified exactly as CI runs
+  them: `dart format --output=none --set-exit-if-changed .` exit 0 ·
+  whole-project `flutter analyze` "No issues found".
+  **D1** add-a-track: `addRoleTrack`/`addEmptyTrack`/per-track names beside
+  `duplicateTrack`; roles-then-Empty chip row + a rename row (hidden until an
+  added track exists) in the INSPECTOR — the card row is full, as recorded.
+  A role add takes a variant no enabled instance of that role is using, so it
+  reads as a second PART rather than a volume bump. `'track'` added to
+  `_trackColors`/`_trackLabel` so an empty track is slate + "Track 2", not a
+  grey "Sparkle". **D2** one lane strip + a Volume/Left-right/Tone switch;
+  per-parameter ladders that each wrap back to their OWN neutral (that is the
+  drop-the-lane rule the byte-identical guarantee rests on); the three cells are
+  drawn differently because a position and an amount are not a fader. **D3** a
+  real biquad per track: `mixStems`/`mixStemsStereo` take an optional per-stem
+  `inserts` list applied after unit-peak and before gain; two-copy warm-up for
+  the seam; LP and HP both run when a lane can cross the middle. `AutomationParam
+  .filter` renders for the first time. **D4** both orphaned tests restored
+  VERBATIM — they never needed a port (see the root PLAN for why).
+  ⚠️ **Shared files touched (all additive):** `loop_engine.dart`,
+  `loop_mixer_screen.dart`, `synth.dart`, the ARBs + generated `app_localizations*`,
+  plus a one-character pre-existing trailing-comma lint fix in
+  `test/open_in_menu_test.dart` that analyze was already flagging on main.
+  ⚠️ **Found while building, NOT fixed (out of D1–D4 scope, flagged in root
+  PLAN):** per-track LENGTH and SWING still do not travel in `GrooveSpec`, so a
+  polymetric or shuffled track loses that on save — for every track, not only
+  added ones. The roster work makes it a two-field addition now. — opus
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — loss-dialog REASON l10n: the
   infrastructure + the static bridge reasons (EN/DE).** The Open-in loss dialog's

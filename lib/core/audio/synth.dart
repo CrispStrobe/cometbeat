@@ -237,7 +237,9 @@ Int16List mixStems(
       final wet = insert(norm);
       for (var i = 0; i < n; i++) {
         final e = env == null ? 1.0 : (i < env.length ? env[i] : env.last);
-        mix[i] += wet[i] * stem.gain * e;
+        // A short return falls back to the dry sample rather than throwing —
+        // the same tolerance the envelope lookup above already has.
+        mix[i] += (i < wet.length ? wet[i] : norm[i]) * stem.gain * e;
       }
       continue;
     }
@@ -327,9 +329,9 @@ Int16List mixStemsStereo(
         (inserts != null && st < inserts.length) ? inserts[st] : null;
     // Same ordering as the mono path: normalise, filter, then gain — which for
     // a scalar gain is arithmetically the pre-multiplied `scale` it replaces.
-    Float64List? wet;
+    Float64List? norm, wet;
     if (insert != null) {
-      final norm = Float64List(n);
+      norm = Float64List(n);
       for (var i = 0; i < n; i++) {
         norm[i] = stem.samples[i] / peak;
       }
@@ -337,8 +339,9 @@ Int16List mixStemsStereo(
     }
     for (var i = 0; i < n; i++) {
       final e = env == null ? 1.0 : (i < env.length ? env[i] : env.last);
-      final s =
-          wet == null ? stem.samples[i] * scale * e : wet[i] * stem.gain * e;
+      final s = wet == null
+          ? stem.samples[i] * scale * e
+          : (i < wet.length ? wet[i] : norm![i]) * stem.gain * e;
       if (panLane == null) {
         left[i] += s * lGain;
         right[i] += s * rGain;
