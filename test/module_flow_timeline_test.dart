@@ -202,5 +202,156 @@ void main() {
       expect(tl.single.orderIndex, 0);
       expect(tl.single.rowCount, 4);
     });
+
+    test('(e) an Fxx speed change (param < 0x20) → a speedChange command', () {
+      final s = flowSong(
+        patternCount: 2,
+        order: [0, 1],
+        author: (s) {
+          s.selectPattern(0);
+          s.engine.setCell(0, 0, const TrackerCell(midi: 60));
+          s.selectPattern(1);
+          s.engine.setCell(0, 0, fx(kFxSetSpeed, 0x04)); // F04 → 4 ticks/row
+        },
+      );
+      final tl = songFlowTimeline(s);
+      expect(tl[1].ticksPerRow, 4);
+      expect(tl[1].commands.single.kind, FlowCommandKind.speedChange);
+      expect(tl[1].commands.single.target, 4);
+    });
+
+    test('(f) an Axx full-range speed (kFxSetSpeedFull) → a speedChange', () {
+      // IT/S3M Axx is a speed even when its value is >= 0x20 (it must not be
+      // misread as a tempo).
+      final s = flowSong(
+        patternCount: 2,
+        order: [0, 1],
+        author: (s) {
+          s.selectPattern(0);
+          s.engine.setCell(0, 0, const TrackerCell(midi: 60));
+          s.selectPattern(1);
+          s.engine.setCell(0, 0, fx(kFxSetSpeedFull, 0x30)); // A30
+        },
+      );
+      final tl = songFlowTimeline(s);
+      expect(
+        tl[1].commands.any((c) => c.kind == FlowCommandKind.speedChange),
+        isTrue,
+      );
+    });
+  });
+
+  group('flow mutators + clearFlowCommand recognise every kind', () {
+    test('setSpeed / setTempo / setPatternLoop then clear each', () {
+      final s = flowSong(
+        patternCount: 2,
+        order: [0, 1],
+        author: (s) => s.engine.setCell(0, 0, const TrackerCell(midi: 60)),
+      );
+
+      setSpeed(s, 1, 4);
+      expect(
+        songFlowTimeline(s)[1].commands.any(
+              (c) => c.kind == FlowCommandKind.speedChange,
+            ),
+        isTrue,
+      );
+      clearFlowCommand(s, 1, FlowCommandKind.speedChange);
+      expect(
+        songFlowTimeline(s)[1].commands.any(
+              (c) => c.kind == FlowCommandKind.speedChange,
+            ),
+        isFalse,
+      );
+
+      setTempo(s, 1, 80);
+      clearFlowCommand(s, 1, FlowCommandKind.tempoChange);
+      expect(
+        songFlowTimeline(s)[1].commands.any(
+              (c) => c.kind == FlowCommandKind.tempoChange,
+            ),
+        isFalse,
+      );
+
+      setPatternLoop(s, 1, 2, row: 0);
+      expect(
+        songFlowTimeline(s)[1].commands.any(
+              (c) => c.kind == FlowCommandKind.patternLoop,
+            ),
+        isTrue,
+      );
+      clearFlowCommand(s, 1, FlowCommandKind.patternLoop);
+      expect(
+        songFlowTimeline(s)[1].commands.any(
+              (c) => c.kind == FlowCommandKind.patternLoop,
+            ),
+        isFalse,
+      );
+    });
+
+    test('setPositionJump / setPatternBreak on the current pattern, cleared',
+        () {
+      final s = flowSong(
+        patternCount: 2,
+        order: [0, 1],
+        author: (s) => s.engine.setCell(0, 0, const TrackerCell(midi: 60)),
+      );
+      s.selectPattern(0); // clearing the current pattern re-imports its cells
+
+      setPositionJump(s, 0, 1);
+      expect(
+        songFlowTimeline(s).any(
+          (e) => e.commands.any((c) => c.kind == FlowCommandKind.positionJump),
+        ),
+        isTrue,
+      );
+      clearFlowCommand(s, 0, FlowCommandKind.positionJump);
+      expect(
+        songFlowTimeline(s).any(
+          (e) => e.commands.any((c) => c.kind == FlowCommandKind.positionJump),
+        ),
+        isFalse,
+      );
+
+      setPatternBreak(s, 0, 2);
+      expect(
+        songFlowTimeline(s).any(
+          (e) => e.commands.any((c) => c.kind == FlowCommandKind.patternBreak),
+        ),
+        isTrue,
+      );
+      clearFlowCommand(s, 0, FlowCommandKind.patternBreak);
+      expect(
+        songFlowTimeline(s).any(
+          (e) => e.commands.any((c) => c.kind == FlowCommandKind.patternBreak),
+        ),
+        isFalse,
+      );
+    });
+  });
+
+  group('value semantics', () {
+    test('FlowCommand equality, hashCode and toString', () {
+      const a = FlowCommand(FlowCommandKind.tempoChange, 80, 2);
+      const b = FlowCommand(FlowCommandKind.tempoChange, 80, 2);
+      const c = FlowCommand(FlowCommandKind.tempoChange, 90, 2);
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(c));
+      expect(a.toString(), contains('tempoChange'));
+      expect(a.toString(), contains('@row 2'));
+    });
+
+    test('FlowTimelineEntry.toString names the order/pattern/rows', () {
+      final s = flowSong(
+        patternCount: 1,
+        rows: 4,
+        order: [0],
+        author: (s) => s.engine.setCell(0, 0, const TrackerCell(midi: 60)),
+      );
+      final entry = songFlowTimeline(s).single;
+      expect(entry.toString(), contains('FlowTimelineEntry'));
+      expect(entry.toString(), contains('order 0'));
+    });
   });
 }
