@@ -15373,6 +15373,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'per-note velocity (a score carries dynamics marks, not values)'**
   String get reasonVelocityScore;
+
+  /// No description provided for @reasonClampedToNut.
+  ///
+  /// In en, this message translates to:
+  /// **'a note below string 1 open was clamped to the nut'**
+  String get reasonClampedToNut;
+
+  /// No description provided for @reasonFingeringChosen.
+  ///
+  /// In en, this message translates to:
+  /// **'fingering chosen for you — a score does not say which string'**
+  String get reasonFingeringChosen;
+
+  /// No description provided for @reasonLengthsRounded.
+  ///
+  /// In en, this message translates to:
+  /// **'note lengths rounded to the nearest note value'**
+  String get reasonLengthsRounded;
+
+  /// No description provided for @reasonStringFretLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'string and fret choice (a loop track carries pitches)'**
+  String get reasonStringFretLoop;
+
+  /// No description provided for @reasonTabNotWholeBars.
+  ///
+  /// In en, this message translates to:
+  /// **'the tab does not fill whole bars — the loop will not be a clean length'**
+  String get reasonTabNotWholeBars;
+
+  /// No description provided for @reasonTuningAssumed.
+  ///
+  /// In en, this message translates to:
+  /// **'tuning assumed — the song did not carry one'**
+  String get reasonTuningAssumed;
 }
 
 class _AppLocalizationsDelegate

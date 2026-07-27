@@ -15,6 +15,8 @@
 
 import 'package:comet_beat/core/audio/loop_engine.dart' show PatternCell;
 import 'package:comet_beat/core/interop/project_bridge.dart';
+import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
+    show trackerSongFromMultiPart;
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/l10n/app_localizations_de.dart';
@@ -168,6 +170,59 @@ void main() {
     expect(converted.single.$2.lossless, isTrue);
   });
 
+  test('every reachable static reason localizes; dynamic ones allowlisted', () {
+    // Enumerate every edge's reasons over minimal fixtures and assert each is
+    // translated (German) — a reason that comes back unchanged must be a KNOWN
+    // dynamic (interpolated count) or a non-loss-dialog one, so the l10n cannot
+    // silently regress to English as reasons are added or reworded.
+    final score = MultiPartScore([
+      Score(
+        clef: Clef.treble,
+        measures: [
+          Measure([
+            NoteElement.note(const Pitch(Step.c), NoteDuration.quarter),
+            NoteElement.note(const Pitch(Step.e), NoteDuration.quarter),
+          ]),
+        ],
+      ),
+    ]);
+    final docs = <AppMode, Object>{
+      AppMode.score: score,
+      AppMode.tracker: trackerSongFromMultiPart(score),
+      AppMode.loop: const [PatternCell(midis: [60], steps: 2)],
+      AppMode.tab: _tab(),
+    };
+    // Reasons that legitimately stay English: dynamic (interpolated counts) and
+    // the bounce reason (shown in the "cannot open" dialog, never as a bullet).
+    const allowEnglish = [
+      'channel count', // "channel count (N) does not match…"
+      'the other', // "the other N channels…"
+      'chords spread', // "chords spread across N channels…"
+      'notes without a stored voicing', // "fingering chosen for the N notes…"
+      'everything symbolic', // the bounce, not a loss bullet
+    ];
+    final de = AppLocalizationsDe();
+    for (final entry in docs.entries) {
+      for (final to in AppMode.values) {
+        final r = ProjectBridge.convert(
+          from: entry.key,
+          to: to,
+          document: entry.value,
+        );
+        for (final msg in [...r.report.lost, ...r.report.approximated]) {
+          final localized = localizedReason(de, r.report, msg);
+          if (localized == msg) {
+            expect(
+              allowEnglish.any(msg.contains),
+              isTrue,
+              reason: '${entry.key}→$to reason not localized: "$msg"',
+            );
+          }
+        }
+      }
+    }
+  });
+
   test('a static loss reason localizes; EN mirrors the bridge (drift guard)',
       () {
     // score → tracker's only reason is tagged, so this dialog is fully German.
@@ -177,8 +232,9 @@ void main() {
       Score(
         clef: Clef.treble,
         measures: [
-          Measure(
-              [NoteElement.note(const Pitch(Step.c), NoteDuration.quarter)]),
+          Measure([
+            NoteElement.note(const Pitch(Step.c), NoteDuration.quarter),
+          ]),
         ],
       ),
     ]);

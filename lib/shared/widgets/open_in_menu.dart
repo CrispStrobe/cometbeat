@@ -34,16 +34,38 @@ String localizedModeLabel(AppLocalizations l10n, AppMode mode) =>
       AppMode.audio => l10n.appModeAudio,
     };
 
-/// The localized text for a [ConversionReport] reason, looked up by the stable
-/// key the bridge tagged it with ([ConversionReport.keyFor]). Only the STATIC
-/// reasons carry a key; a dynamic/one-off reason (an interpolated count) has
-/// none and shows its English [message] verbatim — a documented remainder.
+/// A stable l10n key for a STATIC reason [message] produced by a sub-converter
+/// that does not tag its own reasons at the call site (unlike the bridge, which
+/// passes a key to `addLost`). Keyed by the exact English so the two cannot
+/// drift — a test enumerates every edge's reasons and asserts each is either
+/// keyed here / at its site, or a known dynamic one. Returns null for the
+/// dynamic reasons (interpolated counts), which show English verbatim.
+String? _staticReasonKey(String message) => switch (message) {
+      'a note below string 1 open was clamped to the nut' =>
+        'reasonClampedToNut',
+      'fingering chosen for you — a score does not say which string' =>
+        'reasonFingeringChosen',
+      'note lengths rounded to the nearest note value' =>
+        'reasonLengthsRounded',
+      'string and fret choice (a loop track carries pitches)' =>
+        'reasonStringFretLoop',
+      'the tab does not fill whole bars — the loop will not be a clean length' =>
+        'reasonTabNotWholeBars',
+      'tuning assumed — the song did not carry one' => 'reasonTuningAssumed',
+      _ => null,
+    };
+
+/// The localized text for a [ConversionReport] reason. It resolves the reason's
+/// l10n key in order — first a key the bridge tagged at the call site
+/// ([ConversionReport.keyFor]), then the central static map ([_staticReasonKey])
+/// for sub-converter reasons — and falls back to the English [message] for a
+/// dynamic/one-off reason (an interpolated count), a documented remainder.
 String localizedReason(
   AppLocalizations l10n,
   ConversionReport report,
   String message,
 ) {
-  final key = report.keyFor(message);
+  final key = report.keyFor(message) ?? _staticReasonKey(message);
   return switch (key) {
     'reasonEffectColumns' => l10n.reasonEffectColumns,
     'reasonNoChannels' => l10n.reasonNoChannels,
@@ -51,6 +73,12 @@ String localizedReason(
     'reasonPartsBeyondFirst' => l10n.reasonPartsBeyondFirst,
     'reasonSnappedLoopGrid' => l10n.reasonSnappedLoopGrid,
     'reasonVelocityScore' => l10n.reasonVelocityScore,
+    'reasonClampedToNut' => l10n.reasonClampedToNut,
+    'reasonFingeringChosen' => l10n.reasonFingeringChosen,
+    'reasonLengthsRounded' => l10n.reasonLengthsRounded,
+    'reasonStringFretLoop' => l10n.reasonStringFretLoop,
+    'reasonTabNotWholeBars' => l10n.reasonTabNotWholeBars,
+    'reasonTuningAssumed' => l10n.reasonTuningAssumed,
     _ => message,
   };
 }

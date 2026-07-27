@@ -2851,5 +2851,11 @@
   "reasonQuantizedPatternGrid": "Noten auf das Pattern-Raster quantisiert",
   "reasonPartsBeyondFirst": "Stimmen nach der ersten (eine Tabulatur hat nur eine)",
   "reasonSnappedLoopGrid": "Noten auf das Achtelnoten-Loop-Raster gerastet",
-  "reasonVelocityScore": "Velocity je Note (eine Partitur trägt Dynamikzeichen, keine Werte)"
+  "reasonVelocityScore": "Velocity je Note (eine Partitur trägt Dynamikzeichen, keine Werte)",
+  "reasonClampedToNut": "eine Note unter der leeren Saite 1 wurde zum Sattel geklemmt",
+  "reasonFingeringChosen": "Fingersatz für dich gewählt — eine Partitur sagt nicht, welche Saite",
+  "reasonLengthsRounded": "Notenlängen auf den nächsten Notenwert gerundet",
+  "reasonStringFretLoop": "Saite und Bund (ein Loop-Track trägt Tonhöhen)",
+  "reasonTabNotWholeBars": "die Tabulatur füllt keine ganzen Takte — der Loop wird keine saubere Länge haben",
+  "reasonTuningAssumed": "Stimmung angenommen — das Lied trug keine"
 }

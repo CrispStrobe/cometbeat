@@ -8475,4 +8475,27 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get reasonVelocityScore =>
       'Velocity je Note (eine Partitur trägt Dynamikzeichen, keine Werte)';
+
+  @override
+  String get reasonClampedToNut =>
+      'eine Note unter der leeren Saite 1 wurde zum Sattel geklemmt';
+
+  @override
+  String get reasonFingeringChosen =>
+      'Fingersatz für dich gewählt — eine Partitur sagt nicht, welche Saite';
+
+  @override
+  String get reasonLengthsRounded =>
+      'Notenlängen auf den nächsten Notenwert gerundet';
+
+  @override
+  String get reasonStringFretLoop =>
+      'Saite und Bund (ein Loop-Track trägt Tonhöhen)';
+
+  @override
+  String get reasonTabNotWholeBars =>
+      'die Tabulatur füllt keine ganzen Takte — der Loop wird keine saubere Länge haben';
+
+  @override
+  String get reasonTuningAssumed => 'Stimmung angenommen — das Lied trug keine';
 }

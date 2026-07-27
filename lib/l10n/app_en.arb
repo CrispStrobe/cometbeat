@@ -3201,5 +3201,11 @@
   "reasonQuantizedPatternGrid": "notes quantized onto the pattern grid",
   "reasonPartsBeyondFirst": "parts beyond the first (a tab holds one part)",
   "reasonSnappedLoopGrid": "notes snapped to the eighth-note loop grid",
-  "reasonVelocityScore": "per-note velocity (a score carries dynamics marks, not values)"
+  "reasonVelocityScore": "per-note velocity (a score carries dynamics marks, not values)",
+  "reasonClampedToNut": "a note below string 1 open was clamped to the nut",
+  "reasonFingeringChosen": "fingering chosen for you — a score does not say which string",
+  "reasonLengthsRounded": "note lengths rounded to the nearest note value",
+  "reasonStringFretLoop": "string and fret choice (a loop track carries pitches)",
+  "reasonTabNotWholeBars": "the tab does not fill whole bars — the loop will not be a clean length",
+  "reasonTuningAssumed": "tuning assumed — the song did not carry one"
 }

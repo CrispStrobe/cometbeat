@@ -8427,4 +8427,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get reasonVelocityScore =>
       'per-note velocity (a score carries dynamics marks, not values)';
+
+  @override
+  String get reasonClampedToNut =>
+      'a note below string 1 open was clamped to the nut';
+
+  @override
+  String get reasonFingeringChosen =>
+      'fingering chosen for you — a score does not say which string';
+
+  @override
+  String get reasonLengthsRounded =>
+      'note lengths rounded to the nearest note value';
+
+  @override
+  String get reasonStringFretLoop =>
+      'string and fret choice (a loop track carries pitches)';
+
+  @override
+  String get reasonTabNotWholeBars =>
+      'the tab does not fill whole bars — the loop will not be a clean length';
+
+  @override
+  String get reasonTuningAssumed =>
+      'tuning assumed — the song did not carry one';
 }
