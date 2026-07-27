@@ -1053,6 +1053,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   (0,+1,+3 or 1‑3‑4 = 0,+2,+3). That is exactly our `extendedForward` vs `neck` split, with the
   source labelling which is which. 24 labelled extension frames.
 
+  **p.34 «Übungen im Fortrücken des Daumens» + «Skalen mit vorbereitetem Einsatz»** —
+  176 noteheads, 66 digits, 27 thumb signs, open-string check passed.
+  • ⭐ **A new, checkable invariant, and it validates `thumbFrame[1] = 2`.** Where C major
+  would place finger 1 only a SEMITONE above the thumb (thumb on E → E‑F‑G), Becker prints
+  **F♯** — in all seven bars. So thumb‑to‑1 is always a whole tone, and the frame follows
+  *the scale the Einsatz represents*, not the printed key. He alters the pitch to preserve
+  the hand shape, which is about as direct a confirmation of a fixed frame as a source can give.
+  • **Thumb placements +10 … +19, nothing below 10** — a THIRD independent confirmation of
+  `thumbEntry: 10` (after p.32 and p.33). ⚠ The +19 (A‑dur's E5) also lifts the observed
+  ceiling above p.32's 17; we have no upper bound modelled, which now looks right.
+  • **First data on SHIFTING in thumb position**, an axis never checked: C‑dur and D‑dur use
+  ONE placement each way and never shift — the ascent's A‑string thumb and the descent's
+  D‑string thumb are the same fingerboard point, so the hand crosses strings without moving.
+  G‑dur shifts up a fourth, A‑dur up a fifth. Exercise 1 is a pure shift drill: the thumb
+  arches C4‑D4‑E4‑F4‑E4‑D4‑C4, one scale step per bar.
+  • Honest gaps recorded rather than guessed: exercises 4–6 not transcribed (their sixteenths
+  sit under steep double beams that merge with the staff lines in a bitonal scan), one
+  unidentified `z`-like glyph, one possible engraving flaw. Their clefs, keys, meters and
+  DIGIT ROWS are saved even where the pitches are not.
+  🔧 **Tooling flaw found by that reader and FIXED:** the pre-cut strips are DOWNSCALES, so
+  enlarging one recovers nothing — a reader needing to settle a single glyph must go back to
+  the native page. `CONVENTIONS.md` now gives the exact command and `precut.py` documents the
+  trade (strips remove the tiling busywork that cost earlier agents 30 min each, at the price
+  of one extraction when a glyph is genuinely contested).
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
