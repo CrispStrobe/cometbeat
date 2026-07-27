@@ -107,6 +107,51 @@ Pending, in order:
    a `**fing` spine. The Mutopia sample says expect little, but it is a real gap and
    cheap to close.
 
+2c. **PD cello PEDAGOGY as a transcription source — scoped 2026-07-27.** The
+   corpora are exhausted (2b), but the *teaching literature* is not: ~100 cello
+   schools/methods exist, nearly all long-PD, and unlike repertoire editions they are
+   **densely fingered** because fingering IS the content. Index:
+   `de.instr.scorser.com/SS/Violoncello/Alle/Method.html` (a catalogue that links out —
+   the entries are not direct downloads; it also has a `Für Anfänger` filter).
+   **Best young-learner targets** (all long-PD composers): Kummer Op.60
+   *Violoncell-Schule für den ersten Unterricht* (1839) · Dotzauer Op.126, same title ·
+   Werner Op.12 (vol. 1 = first position only) · Schroeder *Practischer Lehrgang*,
+   *Führer durch den Violoncell-Unterricht*, Op.31 *Die ersten Violoncello-Übungen* ·
+   Lee Op.30 *Méthode pratique* · Kastner *Méthode élémentaire* · Cuccoli *Metodo
+   elementare* · Benito Op.133 · Depas *Méthode Élémentaire* · Rachelle *Breve metodo*;
+   behind them Romberg, Davydov, Piatti, Quarenghi, Stiastny, Tillière, Corrette Op.24.
+   **⚠ The editor decides the status, not the composer** — and for us the editor's layer
+   IS the data, so this is the crux (same lesson as PDMX/ModArchive/Ebersberger). On
+   that index: Duport *Essai* **(Cassadó, d.1966)** → EU-copyright until 2037, and it is
+   the fingered one; Ševčík Op.2 **(Feuillard, d.1953)** → EU-PD only since 2024;
+   Bréval Op.42 and Baudiot Op.25 **(Grützmacher, d.1903)** ✓; Simpson **(Piatti,
+   d.1901)** ✓; **Bazelaire** (d.1958) ✗ until 2029; **Alexanian** (d.1956) ✗ until
+   2027; **Gardner** modern ✗. This matches the **dead-editor strategy** already in
+   `docs/CORPUS_LICENSING.md` — take original prints, or editions whose EDITOR died
+   >70y ago.
+   **Access, measured:** IMSLP has everything but gates automated fetching (human
+   attestation); **Internet Archive mirrors are ungated** and worked (Dotzauer Op.175,
+   Kummer Op.60 = `imslp-fr-den-ersten-unterricht-op60-kummer-friedrich-august`, 103pp,
+   1839). German library digitisations (ULB Münster and peers) are library-grade scans —
+   better VLM input than user uploads — but sit behind a JS browser-check, including on
+   the direct PDF path, so they need a human. Musopen: non-profit PD mission, 403s
+   automation, catalogue overlaps IMSLP, its differentiator is recordings not scores.
+   `violinsheetmusic.org`: footer states **ALL Rights Reserved** and the category is
+   *arrangements* → rejected.
+   **The find that matters:** Kummer Op.60 p.14 "Die Dur-Scalen" carries a fingering
+   digit on **essentially every note**, above AND below the staff (two alternative
+   fingerings per passage), plus octave/position labels and `+` for THUMB — hundreds of
+   labels per page against ~20 on an étude page. Scales are also **self-validating**
+   (a C major scale's pitches are known), so a transcriber only has to read digits and
+   we can check the pitch axis ourselves. This is the right input for the vision route
+   that `CORPUS_LICENSING.md` scored 9/9 on clean engraving; pilot in progress.
+   **And the licence upside:** a transcription WE make of a PD print is our own work
+   product — no NC clause, no attribution chain, no uploader's tag to distrust. It is
+   the only route in this whole arc that ends with data we own outright.
+   ⚠ Also unexplored: `nathanaelmeister` on GitHub is typesetting Lee Op.30/Op.70/Op.101
+   in LilyPond (digital-native, fingerings would extract exactly) but **declares no
+   licence** → unusable until asked. Asking is cheap and outward-facing.
+
 3. **Learned emission — CLOSED with item 2.** 248 labels cannot fit transition/emission
    tables that beat authored weights, let alone train a neural emission model. The seam
    stays (`BowedPositionModel`, the bowed twin of `TabPositionModel`) so a model can
