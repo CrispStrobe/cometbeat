@@ -1385,6 +1385,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   🔧 Method note confirming CONVENTIONS: native extraction gave 1400×1726 — LOWER resolution
   than the upscaled strips — so going to the native page was useless here, as predicted.
 
+  **⚠ SECOND MISLABEL BY ME — Becker printed p.29 is the TRILL chapter, not
+  «Übung in Doppelgriffen».** The folio is right (29); my CONTENT guess, taken from an early
+  40 dpi thumbnail sweep, was wrong. It holds the Kettentriller rules, four
+  `Schreibart/Ausführung` examples and a five-system `Trillerübung`. **Not one double stop on
+  the page** — so the fifths and octaves questions p.30 raised are STILL unanswered, and the
+  Romberg-vs-Becker fifth convention remains open for a second time. Lesson: a thumbnail
+  sweep is enough to find a page, never enough to label it.
+  • ⭐ **New frame evidence of a different kind, and rigorously proved.** On this page
+  **`2 4` is always a WHOLE-TONE trill and `2 3` / `3 4` a SEMITONE one** — that is the
+  exercise's whole point, and it is independent confirmation of the neck frame's one-semitone
+  finger spacing from a source that is not a scale or a position table.
+  The digit-to-note mapping was proved by physical impossibility rather than assumed: bars
+  printing `2 4` over G3→A3 and `3 4` over G♯3→A3 share an upper note, and left→lower yields
+  the frame `1=F♯3 2=G3 3=G♯3 4=A3` with the printed Nachschlag's lower neighbour falling on
+  the free finger 1; reversed it would put finger 4 on G3 and finger 2 on the higher A3 — a
+  lower finger sounding a higher pitch on one string. Reconfirmed twice more.
+  • The bar model (`2 small 16ths = main + upper auxiliary | main note with tr | 2 = Nachschlag`)
+  was taken from the page's own footnote, not inferred.
+  • **No printed `0` anywhere**, so the open-string alignment check is vacuous here and was
+  declared so rather than claimed as a pass. Note the page's final fermata **G2 IS the open G
+  string and Becker still prints no digit on it** — recorded, not filled in.
+  🔧 The native-page escape hatch earned its keep: the strips are ~0.58× downscales and the
+  small 16ths did not survive them, so the reader spent its one permitted native extraction
+  and found a digit that reads `4` on the strip but is a `1` in the native blow-up.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
