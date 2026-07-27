@@ -507,44 +507,34 @@ is recorded in [HISTORY.md](HISTORY.md).
   ran) + left a `TODO(tracker)`. RESOLVED by tracker (`bd5ac785`/`99651aae` — 0x14
   freed, set-speed export restored); CI green. — opus
 
-- **opus (spd-probe)** · ✅ **SHIPPED (idle) — YES, SPD gives exactly the data we
-  need, and it validates the frame model** (`18d6eccc`). Pulled only the 6.5 MB
-  contact-point JSON of the Apache-2.0 demo piece (not the 80 MB-per-view videos),
-  read SPD's own published keypoint layout (contact point 150, string endpoints
-  142–149, used-finger joints 151–154), projected each contact onto the four string
-  segments → **(string, length ratio → semitones above open, finger)** per frame, and
-  segmented 659 frames into **45 note events**. Their string order is ours
-  (A3/D3/G2/C2).
-  **Result 1 — the frame model is right, measured rather than transcribed:** reading
-  each measured stop as `anchor = semitones − (finger − 1)` lands on INTEGER positions
-  (1, 2, 3, 4, 6, 7, 8, 9, 10, 11), not arbitrary fractions. A real hand sits on our
-  grid.
-  **Result 2 — agreement splits exactly where it should:** in positions 1–4 (ordinary
-  playing) we choose the player's own string **95% (19/20)**, independently confirming
-  the 92.7% measured against printed editions from a completely different kind of
-  evidence. Above that the excerpt is a **shifting exercise** climbing one string on
-  purpose and we agree 36% — the arranger optimising for ease while the player
-  optimised for practice. The test states that rather than treating 36% as failure.
-  Committed as `test/data/spd_cello01_measured.json` + `bowed_measured_hand_test.dart`
-  with the Apache-2.0 statement of changes in `test/data/README.md`; no SPD source
-  file is redistributed. ⚠ Their labels come from a Pitch-Finger model constrained by
-  mocap — strong evidence of what the hand DID, weak evidence of what a teacher would
-  WRITE.
-  **Correction to my own "validation, not training" line:** at 30 fps (the repo's own
-  rate) the 659-frame demo is ~22 s and yielded 45 notes ≈ 2 notes/s, so SPD's 3.0 h
-  implies **~21,600 notes total, perhaps ~10k of them cello**, each with (string,
-  position, finger) — about 40× our 248 labels, and the right order of magnitude for
-  fitting HMM tables. So it plausibly IS training data, gated on three things:
-  **(a) LICENCE** — unstated publicly for the full set (the Apache-2.0 declaration is
-  on the partial HF mirror); Apache-2.0 would mean shippable weights, research-only
-  would mean eval-tier. **(b) CIRCULARITY** — their note-level labels come from their
-  own Pitch-Finger model, mitigated by re-deriving from the raw keypoints as this
-  probe does. **(c) SKEW** — a corpus of scales/études teaches exercise fingering
-  rather than repertoire fingering, which is exactly the 36%-vs-95% split measured
-  here. Also the individual-style limit the violin literature flags: TNUA used TEN
-  violinists because fingering is personal, and SPD's player count is small.
-  Full set: **https://docs.google.com/forms/d/e/1FAIpQLSerl0IYztq7QkGqXc2X2jWFS7-rz3hvvYIUNce2NOfVGFPKAw/viewform**
-  — a request identifies the requester, so it is the maintainer's to send, not mine.
+- **opus (spd-probe)** · ⛔ **DROPPED ON LICENCE — SPD is NON-COMMERCIAL and
+  non-redistributable; artifacts removed** (`1872584e`). The probe worked
+  technically: from the 6.5 MB contact-point JSON we recovered **(string, semitones
+  above open, finger)** per frame → 45 note events, their string order matches ours,
+  the measured stops land on INTEGER positions of our frame model (1,2,3,4,6,7,8,9,
+  10,11 — a real hand sits on our grid), and we chose the player's own string **95%
+  (19/20)** in positions 1–4, independently confirming the 92.7% from printed
+  editions; 36% (9/25) above that, where the excerpt is a shifting exercise.
+  **Then the access terms:** *"available for non commercial research purposes only…
+  any use for commercial purposes is prohibited"*, *"not to reproduce… any portion of
+  the images and ANY PORTION OF DERIVED DATA… to any third party"*, *"not to further
+  copy, publish or distribute any portion of the Dataset"* (internal single-site
+  copies ARE allowed). CometBeat is commercial and this repo is public, so SPD is out
+  on both counts — the derived fixture and its test are removed.
+  ⚠ **The lesson is the one this whole arc kept teaching, and I still walked into it:**
+  the partial HF mirror declares **apache-2.0**, contradicting the owners' terms, and
+  I trusted the tag. A licence field is a claim, not a clearance — ModArchive's
+  uploader tags, PDMX's self-attested CC0, now a mirror's metadata. **When a tag and
+  the owner's terms disagree, the terms win.**
+  **If we ever want SPD:** the terms name a route — *"without Tsinghua University's
+  and Central Conservatory of Music's prior written permission"* — so a permission
+  request for a named commercial-educational use is possible, and outward-facing, so
+  the maintainer's to send. Form:
+  https://docs.google.com/forms/d/e/1FAIpQLSerl0IYztq7QkGqXc2X2jWFS7-rz3hvvYIUNce2NOfVGFPKAw/viewform
+  ⚠ **TODO (VPS unreachable at the time of writing, both tailnet and public IP):**
+  delete `/mnt/volume1/spd-probe/` (cp.json + derived JSON). Keeping it is *permitted*
+  — internal single-site copies are explicitly allowed — but we will not use it, so it
+  should go.
 
 - **opus (pdmx-normalise)** · ✅ **SHIPPED (idle) — composer-name normalisation for
   the PD gate + the agreement metric decomposed** (`a1de6857`; VPS
