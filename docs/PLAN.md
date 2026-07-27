@@ -1335,6 +1335,39 @@ is recorded in [HISTORY.md](HISTORY.md).
   Anyone attempting it should clear BOTH the Becker frames and the CC0 repertoire; every
   attempt so far has traded one for the other.
 
+  **⚠ TERMINOLOGY CORRECTION (mine): «Einsatz» = THUMB POSITION, not shifting.** Romberg
+  p.47 opens *"Wir gehen jetzt zum **Einsatz mit dem Daumen** über…"*. I glossed «Vom Einsatz»
+  as "shifting" on this board and in the manifest and briefed a reader on that premise — while
+  correctly reading Becker's «17. Der Einsatz des Daumens» as thumb position. Same word, two
+  glosses from me. Anything filed under "Einsatz = shifting" is mis-labelled. **We still have
+  NO ground-truth source for shifting.**
+  **⭐ ROMBERG DEFINES THE THUMB GLYPH — and it is Becker's, 60 years earlier, with the
+  reason:** *"Das Zeichen für den Daumen im Einsatz ist ϙ. Um es von der blossen Saite zu
+  unterscheiden, ist unter der Null ein Strichchen gemacht."* — a zero with a little stroke
+  beneath, precisely so it cannot be confused with an open string. That is exactly the
+  "stemmed zero" the Becker/Peters edition uses, independently, and Romberg supplies the
+  rationale. Neither source uses `+`. ⚠ Our `CONVENTIONS.md` and `.ly` output still emit `+`
+  for comparability; the glyph these sources actually print is the stemmed zero.
+  **⭐⭐ AND HE FORBIDS, IN WORDS, EXACTLY WHAT OUR ARRANGER DOES.** On reaching the apex with
+  the 4th finger: *"…muss die Stellung der Hand **nicht verrückt**, sondern der kleine Finger
+  ganz gerade nach vorne gestreckt … werden."* — do NOT displace the hand; stretch the little
+  finger. That is the 0/24 defect stated as a prohibition by the composer: we slide where he
+  says the hand must not move. Two independent sources (Becker's `⁓⁓⁓` marks, Romberg's prose)
+  now say the same thing about the same failure.
+  • Also confirmed a third time: the thumb stops **two strings, a fifth** — *"Die Saiten werden
+  mit dem vordern Theil des Daumens heruntergedrückt, und zwar immer nur zwei, eine sogenannte
+  Quinte"* — and lies *"wie ein fester Sattel auf den Saiten"*, a fixed saddle: our "movable
+  nut" model in the composer's own words.
+  • The page's thumb frame is **DIATONIC** (thumb‑1‑2‑3 = 2+2+1), matching Becker and unlike
+  Romberg's own minor-third NECK frame. Recorded as printed, not reconciled.
+  • Content: one system, tenor clef, D major, **barlines divide STRINGS not bars** (`D Saite |
+  A Saite | D Saite` over 4|9|4 notes). 19 notes, 19 digits, 6 thumb signs, 0 open strings.
+  **Zero shifts** — the hand is set once and never leaves; what looks like movement is 2 string
+  crossings *within* one thumb position, possible precisely because the thumb already lies
+  across both strings.
+  🔧 Method note confirming CONVENTIONS: native extraction gave 1400×1726 — LOWER resolution
+  than the upscaled strips — so going to the native page was useless here, as predicted.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
