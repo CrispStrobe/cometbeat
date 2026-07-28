@@ -1006,7 +1006,8 @@ prefix.
   `tracker_keymap_characterization_test` (13).
   **This unblocks WS-A3 and WS-L1**, which are now about which intents those
   surfaces choose to handle, not about plumbing.
-- ⬜ **WS-L1 — keyboard support in Loop Studio.** `S` · Depends WS-T3.
+- 🚧 **WS-L1 — keyboard support in Loop Studio.** `S` · **CLAIMED 2026-07-28 by
+  opus (loop-d1d4).** Depends WS-T3.
   Space = play/stop, arrows = move the cell cursor, digits = velocity,
   Cmd/Ctrl+D = duplicate, Cmd/Ctrl+Z = undo. Acceptance: a widget test drives
   the grid entirely from the keyboard.
