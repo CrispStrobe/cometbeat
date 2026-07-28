@@ -531,8 +531,29 @@ DocEnvelope _docEnvFromXm(XmEnvelope e) => DocEnvelope(
       enabled: e.enabled,
     );
 
-DocEnvelope _docEnvFromIt(ItEnvelope e) => DocEnvelope(
-      points: List<(int, int)>.from(e.points),
+/// IT envelope → neutral. [centred] shifts a SIGNED envelope onto the neutral
+/// model's unsigned scale.
+///
+/// IT stores its pan envelope signed, −32…+32 with **0 as centre**; the neutral
+/// model — and XM, which it was modelled on — uses 0…64 with **32 as centre**.
+/// These points used to be copied through verbatim for both, so an IT pan
+/// envelope arrived meaning something different from an XM one that had been
+/// written from the same authored shape: IT's centre read as hard LEFT.
+///
+/// It round-tripped perfectly, because `_writeItEnvelope` reads the same values
+/// back out signed — the two formats were simply inconsistent with each other
+/// inside a model whose whole job is to be neither. Measured on
+/// `env/env_pan_sweep.{xm,it}`: the sweep SHAPE correlated 1.00 with both
+/// references while the mean position was a full 1.00 off in IT alone, which is
+/// exactly a half-range offset.
+///
+/// The pitch envelope is signed too and is left alone: nothing consumes it yet,
+/// so shifting it would be a change with no measurement behind it.
+DocEnvelope _docEnvFromIt(ItEnvelope e, {bool centred = false}) => DocEnvelope(
+      points: [
+        for (final (tick, value) in e.points)
+          (tick, centred ? value + 32 : value),
+      ],
       enabled: e.enabled,
       loopStart: e.loopEnabled ? e.loopStart : null,
       loopEnd: e.loopEnabled ? e.loopEnd : null,
@@ -821,7 +842,7 @@ ModuleDoc docFromIt(ItModule m) {
             : _docEnvFromIt(owner.volumeEnvelope),
         panEnvelope: owner == null
             ? const DocEnvelope()
-            : _docEnvFromIt(owner.panEnvelope),
+            : _docEnvFromIt(owner.panEnvelope, centred: true),
       );
       samples.add(ds);
     }
@@ -945,7 +966,7 @@ ModuleDoc docFromIt(ItModule m) {
           keymap: List<int>.from(instrument.keymap),
           noteMap: List<int>.from(instrument.noteMap),
           volumeEnvelope: _docEnvFromIt(instrument.volumeEnvelope),
-          panEnvelope: _docEnvFromIt(instrument.panEnvelope),
+          panEnvelope: _docEnvFromIt(instrument.panEnvelope, centred: true),
           pitchEnvelope: _docEnvFromIt(instrument.pitchEnvelope),
           rawHeader: List<int>.from(instrument.rawHeader),
         ),
@@ -1501,6 +1522,11 @@ void _writeItEnvelope(
   int offset,
   DocEnvelope envelope, {
   required bool signedValue,
+  // The inverse of `_docEnvFromIt`'s `centred`: the neutral model holds a pan
+  // envelope 0..64 centred at 32, IT wants it signed around 0. Only the PAN
+  // envelope is biased — the pitch envelope is signed in IT too but nothing
+  // reads it yet, so it stays a verbatim copy.
+  bool centred = false,
 }) {
   var flags = envelope.enabled ? 1 : 0;
   if (envelope.loopStart != null && envelope.loopEnd != null) flags |= 2;
@@ -1513,7 +1539,8 @@ void _writeItEnvelope(
   raw[offset + 5] = (envelope.sustain ?? 0).clamp(0, 24);
   for (var i = 0; i < envelope.points.length && i < 25; i++) {
     final p = offset + 6 + i * 3;
-    final (tick, pointValue) = envelope.points[i];
+    final (tick, raw0) = envelope.points[i];
+    final pointValue = centred ? raw0 - 32 : raw0;
     final value =
         signedValue ? pointValue.clamp(-32, 32) : pointValue.clamp(0, 64);
     raw[p] = value & 0xFF;
@@ -1564,8 +1591,19 @@ ItInstrument _itInstrumentFromDoc(DocInstrument d, List<int> rawHeader) {
     raw[0x1A] = d.randomVolume.clamp(0, 255);
     raw[0x1B] = d.randomPan.clamp(0, 255);
     _writeItEnvelope(raw, 0x130, d.volumeEnvelope, signedValue: false);
-    _writeItEnvelope(raw, 0x182, d.panEnvelope, signedValue: true);
-    _writeItEnvelope(raw, 0x1D4, d.pitchEnvelope, signedValue: true);
+    _writeItEnvelope(
+      raw,
+      0x182,
+      d.panEnvelope,
+      signedValue: true,
+      centred: true,
+    );
+    _writeItEnvelope(
+      raw,
+      0x1D4,
+      d.pitchEnvelope,
+      signedValue: true,
+    );
     for (var i = 0; i < 120; i++) {
       raw[0x40 + i * 2] = noteMap[i.clamp(0, noteMap.length - 1)] & 0xFF;
       raw[0x41 + i * 2] = keymap[i.clamp(0, keymap.length - 1)] & 0xFF;

@@ -2887,6 +2887,58 @@ each other — they disagree about what a one-shot does after its end (fade vs
 hard stop). We sit inside that spread at 0.974, so nothing is wrong, but it is
 another case where there is no single right answer to gate on.
 
+#### X9 continued (2026-07-28) — envelopes, and two ways to lose a pan sweep
+
+The shaping layer: XM/IT volume and pan envelopes plus fadeout. Both directions
+already supported them, so this was a fidelity question rather than a feature
+gap — and **volume envelopes turned out to be sound.** Shape, rate and per-note
+RESTART all land on the references (spectral 1.000, envelope 0.94–0.99), which
+matters because the structural worry going in was that the importer folds each
+instrument's envelope onto the CHANNEL, and a channel has nowhere to put
+"restart". It restarts correctly; that worry was unfounded.
+
+**Panning was lost twice over, in two different layers.**
+
+*1. An early return made correct code unreachable.* `_renderChannelIntoStereo`
+has a proper pan-envelope path — base pan plus the envelope offset, per sample,
+per note. Above it sits a fast path for channels with no per-tick effect, and an
+envelope is not a command, so **every** channel carrying a pan envelope and no
+effects returned from the fast path with the sweep silently dropped. We rendered
+dead centre in both formats while both references swept hard left to hard right.
+⚠️ **Same shape as the `8xx` set-pan bug** — shaping implemented, correct, and
+never reached. Two for two now: when a pan feature measures as *exactly*
+centred, suspect the dispatch before the arithmetic.
+
+*2. The neutral model was not neutral.* IT stores a pan envelope **signed**,
+−32…+32 with 0 as centre; XM (and our neutral model) use 0…64 with 32 as centre.
+`_docEnvFromIt` copied the points through verbatim for both, so an IT pan
+envelope arrived meaning 32 less than it said — IT's centre read as hard LEFT.
+It round-tripped perfectly, because the writer made the matching assumption. The
+sweep caught it as correlation 1.00 with a mean position a full 1.00 out: the
+shape was right and sitting half a range too far left. ⚠️ **Only a CROSS-FORMAT
+comparison can see this class:** the same authored `DocEnvelope` written to XM
+and to IT must come back meaning the same thing, and neither format's own round
+trip can tell you it doesn't. That is now a CI-able test needing no reference
+players at all (`envelope_shape_test.dart`), and it fails on the old code.
+
+That fix reaches further than the replayer: `_xmEnvFromDoc` copies the neutral
+points straight into an XM envelope, so **converting an IT module to XM used to
+write the signed values into a field XM reads as 0…64** — every pan envelope
+arriving half a range left in the converted file, quite apart from how we play
+it. One conversion, two consumers, and only the neutral model in the middle was
+wrong.
+
+⚠️ **The fixtures here are the least independent in the audit, and it paid for
+itself immediately.** An effect is a byte — write the wrong one and the
+references do something visibly different. An envelope is a SHAPE: encode it
+wrongly and both references read the same wrong shape, agree with each other,
+and our replayer reads the same file back, so the error cancels and the sweep
+goes green. So before comparing anything to us I checked the reference render
+against ARITHMETIC — a ramp whose length in ticks is known in advance. That
+check immediately caught **every IT fixture rendering silent** (an IT keymap is
+1-based; I had filled it with 0, meaning "no sample"). A silent file we also
+rendered silent would have "agreed" perfectly.
+
 #### X9 continued (2026-07-28) — tremor, and the byte that said KEY OFF
 
 Tremor was the last effect with no audio fixture. It is a pure VOLUME effect, so
@@ -3424,7 +3476,10 @@ the IT hex break row, XM channel polyphony, XM 16-bit loop units, S3M/IT fine
 porta and fine volume slides, IT/XM linear slides, **tremor's free-running
 counter**, and **XM's tremor/key-off effect numbering**. Flow fixtures ship in
 all four formats and `fmt/` covers the S3M/IT letter commands MOD has no
-encoding for. ⬜ Still open: **envelopes and NNA**, which no fixture reaches yet.
+encoding for. **Envelopes are measured now too** — volume/fadeout were already
+sound, and panning was lost twice (an unreachable render path, and IT's SIGNED
+pan envelope read as unsigned). ⬜ Still open: **NNA/DCT** (new-note actions),
+which no fixture reaches yet.
 Original scope: `convertToXm`/`convertToS3m`/`convertToIt`
 already exist, so the same musical content can be emitted in all four formats.
 ⚠️ Expect DIFFERENT failure modes, not the same one four times: XM/S3M/IT store

@@ -221,7 +221,14 @@ void main() {
   // differently.
   const extensions = ['.mod', '.xm', '.s3m', '.it'];
   final fixtures = <String>[];
-  for (final name in ['fx', 'flow', 'sample', 'fmt']) {
+  // `env/` is XM+IT volume/pan envelopes and fadeout — the shaping layer, which
+  // MOD and S3M do not have at all. ⚠️ Those fixtures are the least independent
+  // in the suite: an envelope is a SHAPE, so a writer that encodes it wrongly
+  // produces a file both references read the same wrong way, agree on, and that
+  // our replayer reads back — the error cancels and this sweep goes green.
+  // `envelope_shape_test.dart` guards that separately by checking the reference
+  // render against ARITHMETIC (a ramp of a known tick length).
+  for (final name in ['fx', 'flow', 'sample', 'fmt', 'env']) {
     final dir = Directory('test/fixtures/$name');
     if (!dir.existsSync()) continue;
     fixtures.addAll(

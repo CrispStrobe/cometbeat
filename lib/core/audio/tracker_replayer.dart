@@ -3853,7 +3853,18 @@ void _renderChannelIntoStereo(
     return;
   }
 
-  if (!_hasPerTickEffect(cells)) {
+  // ⚠️ The pan-envelope path further down is only REACHABLE if this fast path
+  // declines the channel. `_renderSampleNotesStereo` pans a whole note at a
+  // fixed position, so a channel carrying a pan envelope and no effects — the
+  // ordinary case, since an envelope is not a command — returned from here with
+  // the sweep silently dropped. Measured dead centre in both XM and IT while
+  // both references swept hard left to hard right (`env/env_pan_sweep.*`).
+  //
+  // Same shape as the `8xx` set-pan bug: the shaping was implemented and
+  // correct, and a dispatch above it meant nothing ever arrived.
+  final panEnv = channel.panEnvelope;
+  final hasPanEnv = panEnv != null && !panEnv.isEmpty;
+  if (!_hasPerTickEffect(cells) && !hasPanEnv) {
     final rendered = channel.instrument is SampleInstrument
         ? _renderSampleNotesStereo(channel, cells, timing, pool)
         : channel.instrument is MultiSampleInstrument
@@ -3879,8 +3890,8 @@ void _renderChannelIntoStereo(
   // A pan ENVELOPE auto-pans each note over time (base pan + the envelope offset,
   // clamped) — a per-note, per-sample sweep. It takes precedence over 8xx (which
   // it would otherwise fight); 8xx-only channels use the region path below.
-  final penv = channel.panEnvelope;
-  if (penv != null && !penv.isEmpty) {
+  if (hasPanEnv) {
+    final penv = panEnv;
     final rows = cells.length;
     var startStep = 0;
     for (final (midi, steps) in cellRuns(cells)) {
