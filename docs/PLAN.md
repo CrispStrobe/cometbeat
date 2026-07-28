@@ -130,24 +130,42 @@ is recorded in [HISTORY.md](HISTORY.md).
     (EU-protected to 2031). On per-song metadata dozens cleared; with the
     parent, none do. **Cleared 76 → 24.** `music_db_jukebox_parents.py` does the
     parent resolution generically — reuse it, don't rediscover this.
+  - ✅ **CHECKED — the Ebersberger worry below did NOT cost that corpus
+    anything.** Current state is **236 cleared / 2 held** (127 P1 · 107 P2 · 2
+    P3), not the 153/85 the notes described — a later pass already grew it. The
+    2 still held are correctly BLOCKED on *known* death years (Fritz Jöde d.1970,
+    Walther Hensel d.1956), not on UNKNOWN, so a better resolver unlocks nothing
+    there. The 2 Wikidata-promoted rows re-verify clean (Schubert 1828, Müller
+    1827, Kletke 1886). The flaw below is real — I reproduced it on this
+    corpus — it just had no Ebersberger impact.
   - ⚠️ **`eu_pd_check.death_year` launders transport failures into `UNKNOWN`.**
     It catches every exception and returns UNKNOWN, so a rate-limited or
     TLS-broken run reports "unresolvable authors" that are really just
     throttling — Wikidata 429s at a modest rate. Once properly throttled, names
     that had come back UNKNOWN resolved fine (Vaughan Williams → BLOCKED d.1958,
     Von Tilzer → CLEAR d.1946). **This affects the earlier Ebersberger P3 run**,
-    which slept only 0.25 s and reported a very low Wikidata yield — that number
-    may be partly a throttling artifact, and re-running it through
-    `music_db_wikidata_resolve.py` (throttle + canary + retry) is a cheap way to
-    find out. I did NOT modify the shared `eu_pd_check.py`; my wrapper sits on
+    which slept only 0.25 s — but see the CHECKED note above: it turned out to
+    cost that corpus nothing, because P1/P2 had already cleared 234 of 236. I did NOT modify the shared `eu_pd_check.py`; my wrapper sits on
     top of it. Second guard added there: a CLEAR must match the name asked
     about, because `death_year` picks the *earliest* death among hits, which
     biases toward CLEAR — the dangerous direction.
-  - **Open, needs a legal read rather than code (biggest unlock, 133 items):**
-    if Davison's contribution is only selection/ordering (§4 UrhG *Sammelwerk*),
-    lifting one song does not touch it and ~30 clear immediately; if "compiled
-    **and edited**" also means per-setting editorial work (§3 *Bearbeitung*),
-    the hold is right. Metadata cannot distinguish them.
+  - ✅ **RESOLVED by reading the scanned book (not by a lawyer): the 133-item
+    hold stands, but NOT for the reason I first gave.** The front matter reads
+    "**Compiled and Edited** … by Dr. Archibald T. Davison & Thomas Whitney
+    Surette" → they are §4 *Sammelwerk* compilers, and lifting ONE song does not
+    touch a collection right. The real blockers are per-song and stronger:
+    (a) the named people are **translators, not arrangers** — the book says
+    "English words by Homer H. Harbour", "English version by William B. Snow",
+    so IA's "(Arranger)" label is wrong — and **all 133 MusicXML embed those
+    lyrics**; (b) the piano accompaniments are **newly composed** (the preface
+    says the tunes "were doubtless originally sung without accompaniments") and
+    **all 133 carry them as a second part**; four files even keep a
+    `<rights>1921 E. C. Schirmer Music Co.</rights>` line inside the XML.
+  - **Unlock is technical, not legal, and is a MAINTAINER CALL:** 130 of the 133
+    are traditional folk-songs/carols, so dropping part 2 + all `<lyric>` leaves
+    the PD melody — exactly the publisher's own companion "melodies without
+    accompaniments" volume. Not done: it means publishing a modified derivation
+    and asserting our own PD determination on the melody line.
   - Bonus deliverable: **194 (page scan → MusicXML) OMR eval pairs** under CC
     PDM 1.0 — a licence-clean image→symbolic corpus that may be NAMED in tracked
     docs, unlike our other OMR controls. Silver not gold (see the doc).

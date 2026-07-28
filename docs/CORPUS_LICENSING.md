@@ -324,28 +324,48 @@ Every line here is a *licence/coverage* statement; detail per source follows.
     VOLUME appears only on the parent item. **133 of the 204 items come from a
     single book** — *140 Folk-Songs For Grades I, II, And III* (E. C. Schirmer,
     1922), compiled and edited by **Archibald T. Davison (d. 1961**, Wikidata
-    Q633492) and Thomas Whitney Surette (d. 1941). Davison is EU-protected until
-    the end of **2031**. Judged on their per-song arranger alone, dozens of those
-    songs cleared; judged with the book's editor, none do. **Any per-item ingest
-    from an archive that explodes books into items MUST resolve the parent** —
-    the child metadata is not the whole rights picture. Cleared count before the
-    parent check: 76. After: 24.
+    Q633492) and Thomas Whitney Surette (d. 1941). **Any per-item ingest from an
+    archive that explodes books into items MUST resolve the parent** — not
+    because the compiler's own term necessarily binds (see the resolution below:
+    it does not), but because **the parent is the only place the volume is
+    identifiable at all**, and identifying it is what exposed the real blockers.
+    Cleared count before the parent check: 76. After: 24.
   - **Result: 24 cleared items → 31 db rows (Tier A, no attribution owed) · 180
     held.** All 24 cleared via Wikidata-confirmed life+70 (the traditional/
-    anonymous rule no longer fires anywhere, because the parent book's editors
-    are named on every song that would otherwise have qualified). Held: 133 on
-    the Davison editorial layer, 23 with no licence statement, the rest on
-    authors who died after 1955 or names that do not resolve. Held items live
+    anonymous rule no longer fires anywhere, because the parent book's compilers
+    are named on every song that would otherwise have qualified). Held: 133 from
+    the songbook (embedded English translations + newly-composed accompaniments,
+    see below), 23 with no licence statement, the rest on authors who died after
+    1955 or names that do not resolve. Held items live
     only in `jukebox-probation.json`, never in `db.json`, so a later pass can
     widen the set without a rebuild.
-  - **Biggest single unlock (133 items), needs a legal read, not more code:**
-    a collection copyright (§4 UrhG, *Sammelwerk*) protects the selection and
-    arrangement OF THE COLLECTION — lifting one song does not necessarily touch
-    it. If Davison's contribution is only selection/ordering, each song reverts
-    to its own arranger's term and ~30 clear immediately on the traditional/
-    anonymous rule. We hold because "compiled **and edited**" may also mean
-    per-setting editorial work (§3 *Bearbeitung*, life+70), and metadata cannot
-    distinguish the two.
+  - ✅ **RESOLVED by reading the book itself (2026-07-28) — the hold stands, but
+    the mechanism is NOT Davison.** The IA scan's own front matter says
+    "**Compiled and Edited** for use in school and home by Dr. Archibald T.
+    Davison & Thomas Whitney Surette", and every song carries its own separate
+    credit. So Davison/Surette are §4 UrhG *Sammelwerk* compilers — their right
+    covers the selection and ordering OF THE COLLECTION, and **lifting a single
+    song does not touch it.** Judging these songs on Davison's death year was
+    directionally right (hold) but mechanically wrong.
+    The songs are blocked for two better-evidenced reasons, both per-song:
+    1. **The named people are TRANSLATORS, not arrangers.** The book credits
+       "English words by Homer H. Harbour", "English version by William B. Snow"
+       — the IA metadata's "(Arranger)" label is simply wrong. Their English
+       translations are protected in their own right (life+70), and **all 133
+       MusicXML files embed those lyrics** (88 syllables in the sample).
+    2. **The piano accompaniments are newly composed.** The preface states the
+       folk-songs "were doubtless originally sung without accompaniments", so the
+       accompaniment is 1920s work, not folk material — and **all 133 files carry
+       it as a second part**. Four files even retain a `<rights>1921 E. C.
+       Schirmer Music Co.</rights>` line inside the XML.
+  - **The real unlock is technical, not legal — a MELODY-ONLY extraction.**
+    130 of the 133 are traditional folk-songs/carols by title and creator, and
+    the traditional melody itself is PD. Dropping part 2 (accompaniment) and all
+    `<lyric>` elements leaves only the PD tune — which is exactly what the
+    publisher's own companion volume was ("Book No. 3 in the Concord Series,
+    containing the melodies of the songs without accompaniments"). That is a
+    maintainer policy call, not an automatic win: it means publishing a modified
+    derivation and asserting our own PD determination on the melody line.
   - **The residue is 27 names, not a wall of them** — and one name,
     **Homer H. Harbour**, gated 43 items on its own. A human-supplied alias
     ledger (`jukebox-aliases.json`) fixed source typos and abbreviations
