@@ -105,6 +105,20 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W2` — `TransportService`:
+  one clock.** Worktree `../mus-daw-parity`, branch `feature/daw-parity`.
+  Unblocked by @loop-d1d4's `WS-W1` (`7c39c4c7`) an hour ago; `WS-W3` (the shared
+  transport bar) is blocked on this, so it is the next foundation rather than a
+  free pick. **Files I will ADD:** `lib/core/services/transport_service.dart` +
+  its test. **Shared files I will NOT touch in this slice:** the three screens
+  keep their own clocks — the card is explicit that migrating them is one commit
+  per surface, and this slice ships the service and its proof only. Anyone
+  holding `advanced_tracker_screen.dart` / `daw_screen.dart` /
+  `loop_mixer_screen.dart` is unaffected today; I will re-claim before the first
+  migration and coordinate then. Pure Dart, `ChangeNotifier` + `TempoMap`; it
+  **schedules, it does not render** — the offline render-then-play architecture
+  is untouched (D-RT is undecided and nothing here presumes it). — opus
+
 - **opus (workstation-parity)** · ✅ **DONE (idle) — LADDER RE-AUDITED against
   the code, 2026-07-28 (`origin/main` @ `3a018344`).** The 39-task ladder in the
   root `PLAN.md` had gone stale in 15 places within a day, so I re-verified every
