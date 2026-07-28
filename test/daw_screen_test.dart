@@ -10,6 +10,7 @@ import 'package:comet_beat/core/audio/daw_timeline.dart'
     show DawClipEffectType, DawFadeCurve, SampleSource, kDawSampleRate;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart'
     show AdvancedTrackerScreen;
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
@@ -28,10 +29,15 @@ import 'support/game_test_support.dart';
 DawTester _daw(WidgetTester tester) =>
     tester.state<State<DawScreen>>(find.byType(DawScreen)) as DawTester;
 
-Future<void> _pumpDaw(WidgetTester tester) => pumpGame(
+Future<void> _pumpDaw(WidgetTester tester, {TransportService? transport}) =>
+    pumpGame(
       tester,
       const DawScreen(),
-      extraProviders: [ChangeNotifierProvider(create: (_) => DawService())],
+      extraProviders: [
+        ChangeNotifierProvider(create: (_) => DawService()),
+        if (transport != null)
+          ChangeNotifierProvider<TransportService>.value(value: transport),
+      ],
     );
 
 class _FakeFileSelector extends FileSelectorPlatform
@@ -56,6 +62,69 @@ Float64List _tone(int n) => Float64List.fromList([
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  group('WS-W2 — the Audio Editor publishes its clock', () {
+    testWidgets('play, seek and stop all reach the shared transport',
+        (tester) async {
+      final transport = TransportService();
+      await _pumpDaw(tester, transport: transport);
+      final daw = _daw(tester);
+      daw.addDemoBeat();
+      await tester.pump();
+
+      expect(transport.isPlaying, isFalse);
+      daw.play();
+      await tester.pump();
+      expect(daw.isPlaying, isTrue);
+      expect(
+        transport.isPlaying,
+        isTrue,
+        reason: 'the shared transport followed the Audio Editor',
+      );
+
+      daw.seekTo(1000);
+      await tester.pump();
+      expect(transport.positionMs, closeTo(1000, 1));
+
+      daw.stop();
+      await tester.pump();
+      expect(transport.isPlaying, isFalse);
+      expect(
+        transport.positionMs,
+        closeTo(1000, 1),
+        reason: 'this transport rests at the seek marker, so the shared one is '
+            'PAUSED there rather than stopped back to zero',
+      );
+    });
+
+    testWidgets('the playhead is published as it moves', (tester) async {
+      final transport = TransportService();
+      await _pumpDaw(tester, transport: transport);
+      final daw = _daw(tester);
+      daw.addDemoBeat();
+      await tester.pump();
+
+      daw.play();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(transport.positionMs, greaterThan(0));
+      expect(transport.positionMs, closeTo(daw.playheadMs, 1));
+      daw.stop();
+      await tester.pump();
+    });
+
+    testWidgets('mounts and plays with NO transport provided', (tester) async {
+      await _pumpDaw(tester);
+      final daw = _daw(tester);
+      daw.addDemoBeat();
+      await tester.pump();
+      daw.play();
+      await tester.pump();
+      expect(daw.isPlaying, isTrue);
+      daw.stop();
+      await tester.pump();
+    });
+  });
 
   testWidgets('starts empty with two tracks', (tester) async {
     await _pumpDaw(tester);

@@ -789,10 +789,25 @@ prefix.
     Stopwatch stays the authority, so tracker playback is unchanged and all 78
     of its tests pass. ⬜ **Step 2 — invert ownership** so the transport drives
     the tracker — is open, and only worth doing once a second surface is on it.
-  - ⬜ **Still to do, one commit each:** the **Audio Editor** and **Loop
-    Studio** clocks. ⚠️ The Audio Editor is the one that needs `advance`, not
-    `syncTo` — its playhead is deliberately Ticker-elapsed so a slow frame
-    cannot skip past audio nobody heard.
+  - ✅ **Audio Editor migrated (step 1 of 2) 2026-07-28.** `daw_screen`
+    publishes its playhead and play/seek/stop into the shared transport. It
+    `pause()`s rather than `stop()`s, because this surface rests at the seek
+    marker by design and the shared `stop()` rewinds to 0 / the loop start.
+  - ❌ **CORRECTION — the rule written here on 2026-07-28 was WRONG.** It said
+    "the Audio Editor is the one that needs `advance`, not `syncTo`". It does
+    not. That was inferred from the comment "driven by the Ticker's own elapsed
+    (NOT wall-clock)" without reading the tick body, which is
+    `_seekMs + elapsed.inMilliseconds` — the Ticker restarts at 0 on play, so it
+    is an **absolute read of an authority**, the same shape as the Tracker's
+    Stopwatch. **The distinction is not Stopwatch-vs-Ticker; it is
+    read-an-absolute vs accumulate-a-delta, and all three surfaces read an
+    absolute.** So `syncTo` is the primary primitive and **`advance` has no
+    consumer in the app today.** It stays because a caller holding only a delta
+    is a real shape (a future real-time path), but nobody should reach for it
+    now — and if the third migration also uses `syncTo`, `advance` is a
+    candidate for deletion rather than a second-class citizen.
+  - ⬜ **Still to do:** the **Loop Studio** clock — ⚠️ `loop_mixer_screen.dart`
+    is claimed by `loop-d1d4` for `WS-L10`, so coordinate rather than take it.
 
   **WS-W2 — the original card, for reference (NOT a task):**
   - **Goal.** Position, tempo, loop range, play/stop/record, count-in and

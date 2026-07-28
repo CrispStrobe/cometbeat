@@ -54,6 +54,7 @@ import 'package:comet_beat/core/interop/project_bridge.dart'
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart' show SharedBeat;
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/automation_curve_editor.dart';
 import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart'
@@ -381,6 +382,11 @@ class _DawScreenState extends State<DawScreen>
 
   // Playhead: driven by the Ticker's own elapsed (NOT wall-clock), so it stays
   // in step with the baked audio AND is deterministic under `tester.pump`.
+  //
+  // WS-W2: the tick computes `_seekMs + elapsed`, i.e. an ABSOLUTE position
+  // read from an authority — not an accumulated delta. That is why the shared
+  // transport is fed with `syncTo` rather than `advance`; accumulating would
+  // drift away from the baked audio one dropped frame at a time.
   late final Ticker _ticker;
   final ValueNotifier<double> _positionMs = ValueNotifier<double>(0);
   double _totalMs = 0;
@@ -391,6 +397,11 @@ class _DawScreenState extends State<DawScreen>
 
   /// The last baked mix, kept so the meters (O12) can measure what's playing.
   Float64List? _bakedPcm;
+
+  /// The app-wide transport, when one is provided. Null when the screen is
+  /// mounted without a provider tree, so every use is null-safe rather than
+  /// forcing existing tests to grow one.
+  TransportService? _transport;
 
   /// O14 — the app's one mic-facing capture path, shared with the Tracker.
   final VoiceClipRecorder _recorder = VoiceClipRecorder();
@@ -407,6 +418,16 @@ class _DawScreenState extends State<DawScreen>
     _ticker.dispose();
     _positionMs.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    try {
+      _transport = Provider.of<TransportService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _transport = null;
+    }
   }
 
   void _onTick(Duration elapsed) {
@@ -429,6 +450,9 @@ class _DawScreenState extends State<DawScreen>
       return;
     }
     _positionMs.value = ms;
+    // WS-W2 — publish into the SHARED transport so another surface can follow
+    // this playhead. `syncTo`, because `ms` is an absolute read of the Ticker.
+    _transport?.syncTo(ms);
   }
 
   AudioService get _audio => context.read<AudioService>();
@@ -3448,6 +3472,9 @@ class _DawScreenState extends State<DawScreen>
     _ticker
       ..stop()
       ..start(); // elapsed restarts at 0; _onTick adds _seekMs
+    _transport
+      ?..syncTo(_seekMs)
+      ..play();
     setState(() => _playing = true);
   }
 
@@ -3456,6 +3483,11 @@ class _DawScreenState extends State<DawScreen>
     _ticker.stop();
     _positionMs.value = _seekMs; // rest at the seek marker
     _audio.stop();
+    // pause, not stop: the shared transport's stop() would rewind to 0 or the
+    // loop start, and this transport rests at the seek marker by design.
+    _transport
+      ?..pause()
+      ..syncTo(_seekMs);
     setState(() => _playing = false);
   }
 
@@ -3464,6 +3496,7 @@ class _DawScreenState extends State<DawScreen>
   void seekTo(double ms) {
     _seekMs = ms < 0 ? 0 : ms;
     _positionMs.value = _seekMs;
+    _transport?.syncTo(_seekMs);
     if (_playing) play(); // restart from the new point
   }
 
