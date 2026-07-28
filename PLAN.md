@@ -1524,8 +1524,14 @@ prefix.
   under "copy", where nothing suggested it was a way of getting the music out;
   it is now an export in its own right. A drums-only groove refuses notation
   with a reason, exactly as the Audio Editor does.
-  ⬜ **Left: the Workshop**, which uses `music_export` directly and would be one
-  more list of `ExportOption`s.
+  ⛔ **The Workshop deliberately keeps its own sheet — WS-X6 is CLOSED.** I went
+  to wrap it and stopped: it is *already* one door, all 13 of its formats are
+  symbolic (no audio, no share token; project-save is correctly a separate menu
+  row, since saving is not exporting), so the grouping this door adds would buy
+  nothing there. Worse, its dialog already tells you **which formats can carry
+  only the ACTIVE part** — per-format, in red — which is more useful than a
+  category heading and which my generic `ExportOption` has no way to express.
+  Wrapping it would have been a downgrade dressed as consistency.
 - ⬜ **WS-W7 — session ⇄ arrangement.** `L` · Depends WS-W1, WS-W5, WS-L3.
   Loop Studio's
   scenes are already a session grid and the Audio Editor is already a linear

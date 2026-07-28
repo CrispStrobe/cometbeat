@@ -1211,7 +1211,12 @@ is recorded in [HISTORY.md](HISTORY.md).
   test runs timed out at 10 minutes before I recognised my own note. Use
   explicit pumps. Both screens gained a `debugOpenExportDoor` seam, since a
   PopupMenu cannot be driven from a widget test without the route.
-  ⬜ **Left for anyone:** the Workshop, which uses `music_export` directly.
+  ⛔ **Workshop: deliberately NOT wrapped — WS-X6 closed.** I went to do it and
+  stopped. It is already one door; all 13 formats are symbolic, so the grouping
+  buys nothing — and its dialog already warns, per format and in red, which ones
+  can carry only the ACTIVE part. That is more useful than a category heading and
+  my `ExportOption` cannot express it. Wrapping it would have been a downgrade
+  dressed as consistency.
   Previously: ✅ **WS-A3 SHIPPED · WS-L1 stood down to @loop-d1d4.
   ✅ **WS-A3** — split (Ctrl+S) · trim to range (Ctrl+T) · nudge (`,`/`.`) ·
   marker jump (`[`/`]`) · mute/solo (M/S), through the shared keymap. Every verb
