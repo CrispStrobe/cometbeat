@@ -105,6 +105,16 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · 🚧 **CLAIMING — the Note Highway** (falling-note
+  play-along, scoped in [NOTE_HIGHWAY.md](NOTE_HIGHWAY.md)). Branch
+  `feature/note-highway`, worktree `../mus-highway`. New code lives in
+  `lib/core/games/highway/` (pure Dart) + `lib/features/games/highway/`; I also
+  touch these HOT SHARED FILES: **`game_registry.dart`** (new tiles),
+  **`app_en.arb`/`app_de.arb`** + generated `app_localizations*` (append-only),
+  **`core/tuning.dart`** (`kStarThresholds` brackets), and later
+  **`playalong/play_along_screen.dart`** (S0 makes it a caller of the extracted
+  highway — behaviour identical). Shout if you are in any of those.
+
 - **opus (jukebox-ingest)** · 🚧 **CLAIMING — ingest the Internet Archive /
   Public Resource "Internet Jukebox" (`collection:PublicJukebox`) into
   `music-db`.** Corpus-side only: I touch **no app code**, no hot shared files.

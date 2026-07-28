@@ -289,6 +289,18 @@ Live pitch/chord detection from the mic, turned into real practice modes:
 tuner, sing-along, play-along with a moving score, and games. Everything sits
 on one pure-Dart detection core so it stays testable headlessly and from a CLI.
 
+## Note Highway — falling-note play-along (scoped 2026-07-28, IN PROGRESS)
+
+Generalise our existing falling-note view (today a private painter inside
+`play_along_screen.dart`, monophonic, pitch-axis only) into a reusable highway
+layer with pluggable **lane maps**: notes landing on a real piano keyboard,
+notes running down one lane per string onto a fretboard (with fret numbers from
+the tab arranger), drum-pad lanes, and a perspective/arcade projection of the
+same data. Touch grading on the instrument rail is the default input; mic
+grading (mono today, polyphonic later) and watch-only mode reuse the same view.
+Full scope, architecture, slices S0–S5, and the copyright/trade-dress/patent/
+music-rights policy we build to: **[docs/NOTE_HIGHWAY.md](docs/NOTE_HIGHWAY.md)**.
+
 ## Sound Library / Instrument / FX unification (ONE ITEM LEFT — see below)
 
 Unify the places that currently drift apart: the Tracker instrument selector,

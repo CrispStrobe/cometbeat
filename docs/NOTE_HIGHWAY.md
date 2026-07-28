@@ -1,0 +1,294 @@
+# Note Highway — falling-note play-along, one engine, many instruments
+
+**Status:** scoped, unstarted (2026-07-28). Owner: unclaimed.
+**Short version:** we already ship a falling-note view; it is a private
+`CustomPainter` inside one screen, monophonic, and pitch-axis only. This scopes
+extracting it into a reusable **Note Highway** layer, then adding the two views
+that matter most — *notes falling onto a real piano keyboard* and *notes running
+down string lanes onto a fretboard* — plus an arcade (perspective) skin, and
+wiring them to every score source we already have.
+
+---
+
+## 1. What the concept is
+
+A **note highway**: the notes of a piece are drawn as blocks positioned on a
+spatial axis that maps to the instrument, scrolling with the music toward a
+fixed **hit line**. When a block reaches the line, that note sounds now. A
+rendering of the instrument sits at the hit line (a keyboard, a fretboard, a set
+of pads) so a block visibly lands *on the key/string/pad you must play*. Colour
+separates voices (e.g. left/right hand); grid lines mark octaves and beats; keys
+light up as their block arrives.
+
+It is one visualisation with several jobs:
+
+* **Read-free notation.** A beginner can play a piece before they can read a
+  staff — the position of the block *is* the instruction.
+* **A clock.** Distance to the hit line is time; the player sees what is coming.
+* **A grader.** Hit / early / late / missed per note is a scoring signal.
+* **A bridge.** It is the same data as our engraved staff, so a learner can flip
+  between "the game view" and "the real notation" of the same bar — which is the
+  pedagogical point of having both.
+
+This is deliberately *not* a new music model. It is a **view + input mapping**
+over data we already have.
+
+## 2. What we already have (and why this is mostly plumbing)
+
+| Piece | Where | Use here |
+|---|---|---|
+| Scrolling-score + falling-notes painters | `features/games/playalong/play_along_screen.dart` (`_HighwayPainter`, `_FallingPainter`) | the seed — extract, don't rewrite |
+| Grading engine (target chart vs live pitch, cents window, coverage, hit/miss) | `core/audio/play_along.dart` (`PlayAlongEngine`) | scoring; needs a polyphonic sibling |
+| Score → target chart | `features/games/songs/song_play_along.dart` (`chartFromScore`) | today: top note only → needs a polyphonic + hand-tagged variant |
+| Playback timeline (repeats/navigation expanded) | `crisp_notation` `playbackTimeline` | the authoritative note timing |
+| Tappable piano | `shared/widgets/piano_keyboard.dart`, `shared/widgets/scrollable_piano.dart` | the bottom rail + touch input |
+| Tappable fretboard | `shared/widgets/guitar_fretboard.dart` | the bottom rail for fretted lanes |
+| String/fret solver | `features/games/composition/tab_arranger.dart` (`arrangeTab`) | which string a note lives on = which lane |
+| Left-hand digits | `core/notation/guitar_score_fingering.dart`, `core/notation/bowed_score_fingering.dart` | the digit printed on a block |
+| Bowed position/finger solver | `core/notation/bowed_arranger.dart` | cello lanes |
+| Mic pitch + chord detection | `core/audio/pitch_analysis.dart`, `chroma_analysis.dart` | monophonic grading (shipped) |
+| Piano/multi-pitch transcription backends | `core/audio/transcription/piano.dart` + FFI stores | polyphonic mic grading (later tier) |
+| Licensed score corpus + Song Book + import | Song Book, music-db catalog | the content, already rights-gated |
+| Playback render | `core/audio/gm_song_render.dart`, `score_instrument_render.dart` | the backing track under the highway |
+
+So the work is: **generalise the view, generalise the chart, add lane maps, add
+touch input, add a second projection.** Every hard musical problem (timing,
+repeats, fretting, fingering, rights) is already solved elsewhere in the tree.
+
+## 3. Architecture — one highway, pluggable lanes
+
+Proposed home: `lib/features/games/highway/` (pure-Dart model under
+`lib/core/` where it is Flutter-free, so it stays headless-testable).
+
+### 3.1 `HighwayChart` (pure Dart, `core/`)
+
+Polyphonic, lane-agnostic:
+
+```
+HighwayEvent {
+  double startBeat, beats;      // musical time
+  int midi;                     // pitch (nullable for pure-rhythm lanes)
+  int voice;                    // 0/1 = left/right hand, or part index
+  String? caption;              // fret number, finger digit, lyric syllable, kit piece
+  bool sustained;               // tie/pedal continuation
+}
+HighwayChart { bpm, timeSignature, events, sections }
+```
+
+Built from a `Score` via a polyphonic sibling of `chartFromScore` — **all**
+pitches of a chord, `voice` from the staff/part index, `caption` filled by the
+instrument-specific builder. `playbackTimeline` stays the timing source, so
+repeats and navigation behave exactly as playback does.
+
+### 3.2 `LaneMap` — the one interface that makes this "as many ways as possible"
+
+A `LaneMap` answers: *where on the X axis does this event live, and how wide is
+it?* Everything else in the renderer is shared.
+
+| LaneMap | X axis | Bottom rail | Caption on block | Feeds |
+|---|---|---|---|---|
+| `KeyboardLaneMap` | the actual key rectangle for that MIDI (black keys narrower, offset — blocks land exactly on their key) | `ScrollablePiano`, keys light on arrival | note name (optional) | piano, keys, mallets |
+| `StringLaneMap` | one lane per string, from `arrangeTab` / `bowed_arranger` | `GuitarFretboard` / string strip | **fret number** + optional finger digit | guitar, bass, uke, cello |
+| `ButtonLaneMap` | N abstract lanes (3–6), pitch collapsed to lane by contour | row of pads | — | arcade/beginner mode, one-finger play |
+| `DrumLaneMap` | one lane per kit piece | pad grid (reuse `drumkit_screen`) | — | drums, beatbox |
+| `PitchLaneMap` | continuous pitch (today's behaviour) | pitch ruler + live mic trace | note name | voice, bowed, wind — anything glissando-capable |
+
+Adding an instrument later = one `LaneMap`, not a new screen.
+
+### 3.3 `HighwayProjection` — flat vs perspective
+
+The renderer takes lane coordinates in a unit space and projects them:
+
+* `flat` — top-down rectangle. The default; readable, matches the piano rail.
+* `perspective` — the same lanes as a receding trapezoid, blocks scaled and
+  motion eased toward a vanishing point, hit line near the bottom edge. This is
+  the whole of the "arcade look": **same data, one matrix**. Optional
+  glow/particle layer on hit, behind a `reduceMotion` setting.
+
+Both projections must be exercised by the same golden tests.
+
+### 3.4 Input mapping — `HighwayInput`
+
+Four sources, all reduced to "note N was played at time T (with velocity/confidence)":
+
+1. **Touch** on the bottom rail (keyboard/fretboard/pads) — works on every
+   platform today, no permissions, and is the default.
+2. **Microphone, monophonic** — shipped (`PlayAlongEngine`); right for voice,
+   cello, single-line guitar.
+3. **Microphone, polyphonic** — piano/multi-pitch transcription backend, gated
+   on model download; a later tier, and honest about its accuracy.
+4. **None (watch mode)** — no grading, just the visualisation + backing track.
+
+Grading is a polyphonic generalisation of the existing engine: per event a hit
+window (early/on/late), chord tolerance (all notes of a chord within a window),
+and the existing star mapping (`scaledStarScore`) so it fits the curriculum.
+
+### 3.5 Practice controls (the part that makes it a *learning* tool)
+
+Tempo scaling · loop a section/bar range · **wait-for-me** (playback pauses at
+the hit line until the correct note arrives) · hands/parts separate ·
+count-in · transpose · note-name and finger-digit labels on/off · left-handed
+mirror for fretted lanes · metronome click.
+
+## 4. Modes to ship (the "as many ways" list)
+
+1. **Falling Keys — watch.** Any Song Book / Workshop / imported score → blocks
+   onto the piano rail, both hands coloured, keys light up. No input needed.
+2. **Falling Keys — touch play.** Same view, the rail is the instrument;
+   wait-for-me on by default for beginners.
+3. **Falling Keys — mic play.** Polyphonic tier when the model is present,
+   monophonic (melody line) otherwise.
+4. **String Runway — guitar/bass/uke.** Six lanes, fret number on each block,
+   finger digit optional, chord grips shown as a stacked block group; strum
+   arrows for down/up. Touch rail = fretboard. Ties directly into the tab
+   arranger and the Tab Workshop.
+5. **String Runway — bowed.** Cello lanes with position/finger from the bowed
+   arranger; bow-direction arrows; mic grading (already accurate for cello).
+6. **Arcade skin.** Perspective projection + `ButtonLaneMap`, 3–5 pads, contour
+   mapping — the "just play along to the feel of it" mode for the youngest
+   players and for pieces too hard to really play.
+7. **Drum highway.** `DrumLaneMap` over the existing kit/tracker patterns.
+8. **Sing-along.** Existing octave-agnostic chart on `PitchLaneMap`, with the
+   live pitch trace drawn over the lanes.
+9. **Two-way with the editors.** Any score opens in the highway from the Song
+   Book/Workshop; a recorded highway performance can be pushed back as a
+   Workshop take (we already record and quantise elsewhere).
+10. **Curriculum wiring.** Each mode is a `GameInfo` with star thresholds, so it
+    lands in the existing progress/curriculum ladder rather than sitting apart.
+
+## 5. Legal footing — how we build this cleanly
+
+Not legal advice; this is the engineering policy we hold ourselves to. Three
+separate bodies of law, three different answers.
+
+### 5.1 Copyright — the easy one
+
+Copyright protects **expression**, not the idea of "blocks fall toward a line".
+Our rules:
+
+* Every line of code is ours, written from this document and from our own
+  shipped painters. **No decompiling, no asset extraction, no pixel-tracing,
+  no copying a colour set, icon, sprite, sound, or wording from any product.**
+* Reference material for design decisions is limited to things that are ours or
+  are open/public-domain prior art (see §5.3). Where we look at another product
+  at all, it is to *avoid* resembling it, and that fact belongs in a review
+  note, not in a commit message that reads like a copy instruction.
+* Screenshots of other products never enter the repo, the tests, or the docs.
+
+### 5.2 Trademark and trade dress — the highest *practical* risk
+
+This is where a small app actually gets a letter, and it is entirely avoidable.
+
+* **No product, band, or franchise names anywhere** — not in code, identifiers,
+  comments, docs, ARB strings, screenshots, store listing, keywords, or ASO
+  metadata. No "like <product>" claims, no compatibility claims. This repo's
+  standing rule (never name contenders) already covers it; it now also covers
+  store metadata.
+* **No trade dress.** Trade dress is the distinctive overall look a consumer
+  associates with one product. So we deliberately do *not* reproduce a
+  recognisable arcade-game signature look: not a fixed row of coloured circular
+  gems in a well-known colour order on a receding neck, not a branded
+  power-meter, not their fonts, HUD arrangement, or announcer language.
+  Our arcade mode is distinct by construction: **lanes are real strings with
+  real fret numbers** (educational, and visually nothing like a five-gem
+  arcade neck), with our own palette from the app's theme tokens and our own
+  block geometry. A simplified pad mode uses our count and our colour ramp.
+* **Mechanic names are ours and descriptive**: "wait for me", "streak",
+  "hands separate", "count-in". Never adopt a branded name for a mechanic — a
+  coined name is a signal that someone considers it protectable.
+* **Our own names get a clearance check** before shipping (EUIPO + DPMA +
+  USPTO free search, plus app-store name search) — cheap, and it protects *our*
+  mark too. Prefer plainly descriptive in-app names (e.g. "Falling Keys",
+  "String Runway") which are hard to confuse with anyone.
+
+### 5.3 Patents — the question that actually needs care
+
+* **The generic mechanic rests on deep prior art.** Notes as blocks on a
+  time axis over a pitch/instrument axis is the *piano roll*, in commercial use
+  since the 1880s and standard in MIDI sequencer editors since the 1980s.
+  Light-up teaching keyboards, scrolling-notation practice aids, and hit-window
+  timing scoring all have decades of published prior art. Broad claims over
+  "falling notes + hit line + timing score" are not something anyone can newly
+  obtain, and the well-known foundational rhythm-game patents from the late
+  1990s / around 2000 have run their 20-year term and lapsed.
+* **What can still be live is narrow and later-filed**: specific systems (a
+  particular instrument-controller coupling, a particular network/streaming or
+  monetisation flow, a particular adaptive-difficulty or camera/gesture method)
+  from 2005-onward filings, plus **design patents / registered designs on a
+  specific GUI appearance** (US design patents: 15 years from grant; EU
+  registered Community designs: up to 25 years). This is a second reason §5.2's
+  "no trade dress" rule matters — a distinctive screen appearance can be
+  *registered*, not just claimed as trade dress.
+* **Our design posture, therefore:**
+  1. Build only from mechanics with obvious long prior art — scroll, hit
+     window, lane-per-string, key highlight, tempo scaling, loop, wait-for-me.
+  2. Do not implement any *named, branded, distinctive* feature bundle from a
+     specific product; if a feature is only known to us via one product and has
+     a coined name, treat it as a red flag and either drop it or re-derive a
+     different solution to the underlying teaching need.
+  3. No proprietary hardware coupling. Touch and microphone only; any MIDI
+     input goes through open standards (Web MIDI / CoreMIDI / class-compliant
+     USB-MIDI), never a vendor-specific instrument protocol.
+  4. Jurisdiction reality-check: in Europe, Art. 52 EPC excludes programs and
+     rules for games "as such", so a pure UI-and-scoring mechanic is very hard
+     to hold as a patent here; the concentration of risk is US filings. We ship
+     worldwide, so we design to the stricter (US) assumption anyway.
+  5. **Independent-derivation record.** This document, the commit history, and
+     the fact that our falling-note view *predates* this effort as a shipped
+     feature over our own engine are the evidence that we built our own thing.
+     Keep it that way: scope in the doc, then implement from the doc.
+  6. If CometBeat ever takes real commercial revenue at scale, a proper
+     freedom-to-operate search by a patent attorney before a marketing push is
+     the correct next step. Cheap now, expensive later.
+
+### 5.4 Music rights — the one people forget
+
+A play-along app lives or dies on repertoire, and repertoire is the most likely
+place to get into genuine trouble. Nothing changes here: the highway plays
+**only** what already passes the corpus ship gate (`docs/CORPUS_LICENSING.md`) —
+public-domain and properly-licensed symbolic scores from our registry, plus the
+user's own imports (local to their device). No bundled arrangements of
+in-copyright songs, no "popular hits" pack, no lyrics we do not have rights to.
+
+## 6. Slices
+
+Each slice is independently shippable and ends green (`dart format` →
+`flutter analyze` → tests), per the repo's pre-commit rule.
+
+* **S0 — extract.** `HighwayChart` + `HighwayRenderer` + `PitchLaneMap` +
+  `flat` projection, lifted out of the play-along screen's private painters.
+  The play-along screen becomes a caller. Behaviour identical; existing tests
+  stay green; add golden/paint tests for the extracted widget.
+* **S1 — Falling Keys (watch).** Polyphonic `chartFromScoreMulti` (all chord
+  pitches, hand/part in `voice`), `KeyboardLaneMap`, piano rail with arrival
+  lighting, octave grid + C labels, backing-track playback. Entry from the Song
+  Book and the Workshop. *This is the picture that started the effort.*
+* **S2 — Falling Keys (play).** Touch grading on the rail, polyphonic hit
+  windows, wait-for-me, hands-separate, tempo/loop, star scoring, `GameInfo` +
+  thresholds + de/en strings.
+* **S3 — String Runway.** `StringLaneMap` from `arrangeTab` (+ bowed arranger),
+  fret/finger captions, fretboard rail, chord-grip block groups, strum/bow
+  arrows. Guitar first, cello and bass reuse it.
+* **S4 — Arcade skin.** `perspective` projection, `ButtonLaneMap`, pad rail,
+  hit feedback layer behind `reduceMotion`; `DrumLaneMap` on the same rails.
+* **S5 — Depth.** Polyphonic mic grading (transcription tier, model-gated),
+  accessibility pass (colour-blind-safe lanes, note names, high contrast,
+  reduced motion), skins, performance → Workshop take, curriculum placement.
+
+## 7. Risks / open questions
+
+* **Performance.** A dense piano piece is hundreds of visible blocks at 60 fps
+  on a phone, plus the audio engine. Cull to the visible beat window, avoid
+  per-frame allocation in `paint`, and profile on a low-end Android before S2
+  locks the design. Consider a static-layer + moving-transform split if needed.
+* **Keyboard range on a phone.** 88 keys will not fit legibly. Auto-range to the
+  piece (with a stable, non-jittery window) and let the rail scroll; decide the
+  auto-follow behaviour in S1, it is the main UX unknown.
+* **Polyphonic mic grading honesty.** It will be imperfect; the UI must not
+  punish a correct player for a transcription error. Bias the windows toward
+  forgiving, and keep touch as the default graded input.
+* **Chart quality on imported scores.** Hand assignment depends on the source
+  having sane staves/parts; needs a fallback (split at a pitch boundary) and a
+  manual override.
+* **Naming.** In-app names above are placeholders pending the §5.2 clearance
+  check.
