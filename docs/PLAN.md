@@ -105,26 +105,34 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W4` — one undo history**
-  (the last Phase 1 card). Worktree `../mus-daw-parity`.
-  **Files I will ADD:** `lib/core/services/undo_service.dart` + its test.
-  ⚠️ **I will NOT fold the three existing stacks in yet** — `daw_service.dart`
-  (`_undo`/`_redo`/`_Snapshot`), `loop_record.dart` (`LoopStack`) and the
-  tracker screen's block history stay exactly as they are. Two reasons, and the
-  second is the real one: the card says to keep the existing snapshot
-  *mechanism* and change only who owns the stack, so the fold-in is per-surface
-  work that belongs with each surface's migration; and `daw_screen.dart` was
-  edited **7 minutes** before I picked this up, so folding its stack in today
-  would collide with live work for no gain.
-  **What that costs, stated honestly:** the card's acceptance is worded at the
-  screen level ("an edit in Loop Studio is undoable from the Audio Editor's
-  history list"). I will prove the same guarantee headlessly — two adapters
-  standing for two surfaces, one shared history, either able to undo the other's
-  labelled entry. The screen-level assertion lands with the migrations, and I
-  will say so in the ladder rather than implying the card is fully discharged.
-  Also fixing a defect I left in the ladder: my `WS-W2`/`WS-W3` "original card"
-  blocks were marked `⬜`, so they read as two open tasks. Now marked as
-  reference, not work. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W4` undo SERVICE.
+  PHASE 1 OF THE WORKSTATION LADDER IS COMPLETE AS SERVICES** (W1 Project ·
+  W2 TransportService · W3 transport bar · W4 undo history).
+  `lib/core/services/undo_service.dart` + 17 tests (63 across my three slices);
+  `dart format` clean, `flutter analyze` (whole project) clean. No screen
+  touched — three services and a widget, all additive, none wired.
+  It does NOT replace the snapshot mechanisms: a surface keeps capturing as it
+  does today and hands over `(label, scope, undo, redo)` closures. Scope and
+  order both exist because both are real — one ordered list so the Audio Editor
+  can SEE a Loop Studio edit, `undo()` for Cmd-Z, `undoScope(id)` so an undo
+  cannot rewind another surface. Coalescing is first-class (a drag keeps the
+  FIRST undo and the LAST redo, so it reverses in one step); `clearScope` exists
+  for closing a surface, whose closures capture state that is going away.
+  ⚠️ **I am NOT ticking this card, and the ladder says so.** Its acceptance is
+  worded at the screen level ("an edit in Loop Studio is undoable from the Audio
+  Editor's history list"); with no screen migrated I proved that headlessly with
+  two adapters on one history. **It stays 🔶 until a migration proves it on a
+  real screen.** Calling it done would be the kind of tick that makes a board
+  stop being worth reading.
+  ⬜ **NOW THE BOTTLENECK — the three per-surface migrations, unclaimed.**
+  Everything in Phase 1 is infrastructure nobody consumes yet, and that is three
+  slices' worth of unvalidated bet. Each migration adopts `TransportService` +
+  `TransportBar` + `UndoService` in ONE commit with that surface's tests green
+  first. `maxEntries` is 50 to match `DawService._maxUndo`, and its
+  `_coalesceToken` maps straight onto `coalesceKey`, so the DAW fold-in should
+  change nothing observable. ⚠️ `daw_screen.dart` is being actively edited
+  (WS-A7 landed minutes before I picked this up) — coordinate before taking it.
+  — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W3` one transport
   bar widget.** `lib/shared/widgets/transport_bar.dart` + 18 widget tests (46

@@ -836,7 +836,37 @@ prefix.
   - ⚠️ The Loop Studio track-card row is **full** (a known 23 px overflow —
     see the audience-correction note above). Do not add controls to it.
 
-- ⬜ **WS-W4 — one undo history.** `M`
+- 🔶 **WS-W4 — one undo history.** `M` · **SERVICE SHIPPED 2026-07-28**
+  (opus, workstation-parity), **fold-in still open.** `lib/core/services/
+  undo_service.dart`, 17 tests. **PHASE 1 IS NOW COMPLETE as services** — W1
+  Project · W2 TransportService · W3 transport bar · W4 undo history all exist.
+  What shipped, and what it deliberately does not do:
+  - **It does not replace the snapshot mechanisms.** A surface keeps capturing
+    exactly as it does today and hands over `(label, scope, undo, redo)`
+    closures. Re-implementing capture/restore for four document types would be
+    a rewrite wearing a refactor's clothes, and the card says to change only
+    who owns the stack.
+  - **Scope and order are both real, and not in conflict** — the card reads as
+    if they were. The history is ONE ordered list so the Audio Editor can show
+    what you just did in Loop Studio; `undo()` takes the most recent entry from
+    any surface (what Cmd-Z means); `undoScope(id)` takes the most recent of one
+    surface, so an undo cannot silently rewind another's unrelated work.
+  - **Coalescing is first-class.** A 200-frame drag is one edit to a user and
+    200 entries to a naive stack. The run keeps the FIRST entry's undo and the
+    LAST entry's redo, which is what makes it reversible in one step. Different
+    scopes never merge even on the same key.
+  - `clearScope` exists for closing a surface: its closures capture state that
+    is going away, and running them afterwards would restore into nothing.
+  - ⚠️ **The card's acceptance is NOT fully discharged.** It is worded at the
+    screen level ("an edit made in Loop Studio is undoable from the Audio
+    Editor's history list"). No screen is migrated, so that is proven headlessly
+    with two adapters sharing one history. **The screen-level assertion lands
+    with the migrations** — do not tick this card until then.
+  - ⬜ **Fold-in, per surface, unclaimed:** `daw_service.dart`
+    (`_undo`/`_redo`/`_Snapshot`, and its `_coalesceToken` maps onto
+    `coalesceKey`), `loop_record.dart` (`LoopStack`), the tracker screen's block
+    history. `maxEntries` defaults to 50 to match `DawService._maxUndo`, so that
+    fold-in changes nothing a user can observe.
   - **Goal.** One labelled, cross-surface history instead of three private
     stacks.
   - **Depends.** WS-W1.
