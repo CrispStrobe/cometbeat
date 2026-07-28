@@ -105,6 +105,28 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W1b` — make `Project`
+  REACHABLE.** Worktree `../mus-daw-parity`. **New card**, because the audit that
+  found the count-in gap found the same shape again and it blocks three others.
+  🔴 **`Project` is constructed NOWHERE in the app.** `git grep` for a
+  `Project(` outside `lib/core/project/` returns only the DAW's unrelated
+  `.cbdaw` save/load. And `registerTabProjectCodec()` — whose own doc comment
+  says *"Call once at start-up"* — **is never called**, so even the working tab
+  codec is dead and a tab track would be carried as `unreadable`. W1 is
+  excellent and inert, exactly like the shared count-in.
+  **Why it is the right next pick rather than a tidy-up:** `WS-X1` (live links —
+  "the change that turns five editors into one workstation"), `WS-W5` (mixer
+  console: one strip per project track) and `WS-W6` (browser) all assume a
+  Project instance exists. None of them can start until something owns one.
+  **Scope — deliberately small.** ADD `lib/core/services/project_service.dart`
+  (holds the app's one `Project`, `ChangeNotifier`, provided app-wide) + its
+  test. EDIT `lib/main.dart` only: one provider and one
+  `registerTabProjectCodec()` call. **No screen touched, no document model
+  changed.**
+  ⚠️ Lane check: `WS-T3` was claimed by `daw-suite` ~10 min ago and `WS-L5` by
+  `loop-d1d4`, so I took neither. `main.dart` is the only shared file here and
+  the edit is two lines plus imports. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — LOOP STUDIO clock
   migration. ALL THREE SURFACES NOW FOLLOW ONE CLOCK.** Tracker · Audio Editor ·
   Loop Studio all publish phase + play state into the app-wide
