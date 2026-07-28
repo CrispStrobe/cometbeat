@@ -1229,7 +1229,8 @@ prefix.
     project mix is its own card with its own byte-identical guard, and the
     screen's header says so. **Do not tick this card as "mixing works".**
   - ⬜ **FX inserts and sends** are not here — they belong with `WS-X3`.
-- ⬜ **WS-W6 — the browser.** `M` · Depends WS-W1.
+- 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) CLAIMED 2026-07-28 by
+  opus (loop-d1d4).** Depends WS-W1.
   One panel: projects · templates · instruments (shared Sound Library) ·
   samples · FX presets (chain strings) · the licensed asset catalog. Drag from
   it onto any surface (WS-X2). This is where the asset catalog finally meets the

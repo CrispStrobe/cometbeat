@@ -587,6 +587,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-W6` slice 1 — projects PERSIST, and a
+  browser to reopen them.** Branch `feature/mixer-d1d4`. Claim pushed BEFORE any
+  code.
+  **The finding that picked this.** `ProjectService` (WS-W1b) holds the app's one
+  `Project` in memory and exposes `toJsonString`/`loadJsonString` — and **nothing
+  calls them**. Nothing writes a project anywhere, so closing the app loses it.
+  That is the same inert-container pattern WS-W1b itself called out one level
+  down ("W1 built an excellent container and nothing ever made one"), repeated at
+  the next level: W1b made one, and nothing keeps it. Every remaining W/X item
+  assumes projects that survive a restart.
+  **Scope — the FIRST slice of W6, not the whole panel.** The card lists six
+  content types (projects · templates · instruments · samples · FX presets · the
+  asset catalog) and says "drag from it onto any surface (WS-X2)". WS-X2 is not
+  built, so the drag half cannot land; instruments/samples/catalog are the
+  soundlib domain. **I am doing projects: a store, and a sheet to save / open /
+  delete / rename.** The other tabs are recorded as follow-ups rather than
+  half-built.
+  **Files:** new `lib/core/services/project_store.dart` + new
+  `lib/shared/widgets/project_browser_sheet.dart`, following the
+  `GrooveSlotsService` precedent (SharedPreferences, `list`/`save`/`delete`).
+  ⚠️ **One host edit needed**, and I picked the coldest: `home_screen.dart` (1
+  commit in 3 days). All four authoring surfaces took 3 commits each in the last
+  5 hours — `loop_mixer_screen`, `daw_screen`, `advanced_tracker_screen`,
+  `composition_workshop_screen` — so I am staying out of them. — opus
+
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L1` keyboard support in Loop
   Studio.** `S`, depends WS-T3 — **which landed an hour ago**, so this is newly
   unblocked. Branch `feature/mixer-d1d4`. Claim pushed BEFORE any code.
