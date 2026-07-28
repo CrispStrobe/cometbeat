@@ -1185,7 +1185,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-X6 shipped on the Audio Editor;
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-T1 — eased playhead follow.** `S`,
+  unclaimed, and the smallest thing genuinely left that is not in someone's
+  active lane.
+  ⚠️ **Two stale details in the card, corrected before building:** the sub-row
+  field is **`_rowPhase`**, not `_playFrac` (which matches nothing in `lib/`);
+  and of its "two `jumpTo` sites" only ONE is the follow scroll — the other
+  (line ~1288) is the cursor-into-view scroll for keyboard navigation, which is
+  a discrete user action where jumping is *correct* and easing would fight fast
+  key-repeat. I will ease the playhead and leave that one, saying why.
+  The real defect is not the `jumpTo`: it is that `_followPlayhead` is only
+  called when the INTEGER step changes, so the view lurches a whole row at a
+  time while `_rowPhase` already knows where between rows the music is.
+  ⚠️ **@daw-ux — `advanced_tracker_screen.dart` again** (scroll only, no engine,
+  no replay). Third time; say the word and I will stop touching it.
+  Previously: ✅ **WS-X6 shipped on the Audio Editor;
   the other surfaces are a drop-in.** One door (`shared/music_io/export_sheet
   .dart`) grouped Sound · Notes · Project · Share, listing only what the surface
   can really produce; it knows how to BUILD nothing, which is what keeps it a
