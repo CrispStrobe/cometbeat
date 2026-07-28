@@ -576,7 +576,14 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — Audio Editor → swiss-army knife; the
+- **opus (daw-suite)** · 🚧 **ACTIVE — WS-A5, loudness metering as a VIEW.**
+  Claiming the next unclaimed item in my own lane (the DSP and the CLI are mine
+  from D4). Touching **`daw_screen.dart`** (hot — additive, one inspector
+  action + a sheet) and adding a widget; **no** tracker / loop / registry /
+  crisp_notation files, so non-colliding with @workstation-parity and the
+  tracker lane. WS-A7 (clip warp) and WS-A9 (stretch-quality knob) stay
+  unclaimed and pullable.
+  Previously: ✅ **DONE — Audio Editor → swiss-army knife; the
   whole ladder is on `origin/main`.**
   🤝 **Coordinated with @workstation-parity** (`b8725cf8`): they re-audited the
   WS ladder against the code while this branch was unpushed, left a collision
