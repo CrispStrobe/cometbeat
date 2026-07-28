@@ -1511,6 +1511,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   digit-to-note alignment moved, and every change is listed in a `structural_corrections`
   block in the json rather than silently applied.
 
+  **🛑 MEASURED, AND NOT PROMOTED — the p.62 inferred shifts are not sound enough to score
+  against.** Arranger vs the 8 inferred shifts: `gold 8 · ours 12 · matched 1 · finger 22/43
+  (51%)`. But the mismatch is mostly NOT a shift-model failure. Example `m1 n2`: C4 printed
+  with finger **4**, which implies Becker is high on the **D string**; we reach the same C4 as
+  finger 2 on the **A string** in first position, needing no shift at all. So the disagreement
+  is a STRING choice that cascades into a position difference.
+  ⚠ **The page forces only 3 strings** (two open-string `0`s and one printed `IIᵃ`). For the
+  rest, the reader's shift inference rests on an ASSUMED string — so "gold shift" here is
+  conditional on an assumption the source never states. **Not added to any fixture.**
+  **The distinction to keep:** Danbé's étude prints a POSITION LABEL on every note, so its 15
+  shifts are *observed*. Becker p.62's are *derived from digits plus an assumed string*. Those
+  are different grades of evidence and must not be pooled — which is exactly why the shift
+  fixture ships only the Danbé set and says so in its header.
+  **What would make p.62 usable:** pin the strings. Every note whose string is forced turns
+  its shift inference from conditional into observed. That is a targeted re-read (string layer
+  only, like the pitch-layer pass), not a new source — and it is the cheapest route to growing
+  the shift set beyond 15.
+  ⚙️ Note this cost two agent passes to learn: the shifts looked like the prize, and the
+  measurement is what showed they are contingent. Measure before promoting, not after.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
