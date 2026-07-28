@@ -50,12 +50,25 @@ void main() {
       expect(kTremoloRadPerSpeedUnit, kVibratoRadPerSpeedUnit);
     });
 
-    test('panbrello deliberately does NOT follow the ProTracker rate', () {
-      // ProTracker has no panbrello, so the 64/x finding is not evidence about
-      // it, and IT's own rule is different again. Letting the constant be
-      // shared would have silently halved an untested effect's rate.
+    test('panbrello runs at IT\'s 256/x, not ProTracker\'s 64/x', () {
+      // This used to assert 32/x and called it deliberate: ProTracker has no
+      // panbrello, so the 64/x finding was no evidence about it, and rather
+      // than let a ProTracker result silently change an untested effect the
+      // constant was left alone with a comment admitting it was unverified.
+      //
+      // That was the right call to make without evidence, and the wrong number.
+      // Counting pan sweeps off the reference renders of
+      // `test/fixtures/fmt/panbrello_*.it` put us EIGHT times too fast — 18
+      // cycles where libopenmpt counted 3 — because IT steps a 256-entry table
+      // by the speed nibble. See PLAN.md §6.
       expect(kPanbrelloRadPerSpeedUnit, isNot(kVibratoRadPerSpeedUnit));
-      expect(2 * math.pi / kPanbrelloRadPerSpeedUnit, closeTo(32, 1e-9));
+      expect(2 * math.pi / kPanbrelloRadPerSpeedUnit, closeTo(256, 1e-9));
+      // A quarter of vibrato's rate — the two are genuinely different rules,
+      // which is why they keep separate constants.
+      expect(
+        kPanbrelloRadPerSpeedUnit * 4,
+        closeTo(kVibratoRadPerSpeedUnit, 1e-12),
+      );
     });
   });
 
