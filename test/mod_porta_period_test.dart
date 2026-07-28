@@ -103,21 +103,35 @@ void main() {
     });
   });
 
-  test('the gate reports its own state, and OFF is the default', () {
-    // Changing every module's slides is opt-in; the semitone model is a
-    // documented deliberate choice, so it stays until someone decides.
-    //
-    // Asserted in BOTH directions so a PORTA_PERIOD=1 run is clean — a suite
-    // that goes red when you turn the flag on teaches people to ignore it.
-    if (kPortaPeriodAccurate) {
-      // Under the gate the period path must actually be the one in force.
-      var pitch = 60.0;
-      for (var i = 0; i < 48; i++) {
-        pitch = slidePitchByPeriod(pitch, -4);
-      }
-      expect(pitch - 60, closeTo(10.31, 0.02));
-    } else {
-      expect(kPortaSemitonesPerUnit, 1 / 16);
+  test('the gate is GONE — the model is per-format and per-preference', () {
+    // This used to assert the state of a `PORTA_PERIOD` compile-time switch.
+    // There is no switch: MOD/S3M bend the period, XM/IT bend linearly, and the
+    // remaining MOD/S3M preference is a user setting resolved into the profile
+    // at import. What is worth pinning is that the two models still both exist
+    // and still disagree — the arithmetic below is what the setting chooses
+    // between.
+    var period = 60.0;
+    for (var i = 0; i < 48; i++) {
+      period = slidePitchByPeriod(period, -4);
     }
+    expect(period - 60, closeTo(10.31, 0.02), reason: 'hardware bends 10.3 st');
+    expect(48 * 4 * kPortaSemitonesPerUnit, 12.0, reason: 'musical bends 12.0');
+  });
+
+  test('each profile names the domain the setting picks between', () {
+    expect(ReplayProfile.protracker.pitch, PitchDomain.amigaPeriod);
+    expect(ReplayProfile.screamTracker.pitch, PitchDomain.amigaPeriod);
+    // …and `musical()` is the same profile in the other domain — the whole of
+    // what "authentic slides OFF" does.
+    final musical = ReplayProfile.protracker.musical();
+    expect(musical.pitch, PitchDomain.linearFrequency);
+    expect(
+      musical.latchPortaParam,
+      ReplayProfile.protracker.latchPortaParam,
+      reason: 'the preference changes the pitch domain and NOTHING else',
+    );
+    // XM/IT have no choice to make: they are linear by definition.
+    expect(ReplayProfile.fastTracker.pitch, PitchDomain.linearFrequency);
+    expect(ReplayProfile.impulse.pitch, PitchDomain.linearFrequency);
   });
 }

@@ -275,6 +275,16 @@ class SettingsScreen extends StatelessWidget {
                     if (!v) TabArranger.shared = null;
                   },
                 ),
+                const Divider(height: 0),
+                SwitchListTile(
+                  title: Text(l10n.authenticSlidesLabel),
+                  subtitle: Text(l10n.authenticSlidesSubtitle),
+                  value: settings.authenticSlides,
+                  // Takes effect on the NEXT import: the choice is baked into
+                  // each song's ReplayProfile when the module is read, so a
+                  // song already loaded keeps the rules it was opened with.
+                  onChanged: settings.setAuthenticSlides,
+                ),
               ],
             ),
           ),

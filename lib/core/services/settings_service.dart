@@ -6,6 +6,7 @@
 import 'package:comet_beat/core/audio/synth.dart' show Instrument;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
+import 'package:comet_beat/core/audio/tracker_profile.dart';
 import 'package:comet_beat/core/audio/voice_options.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/shared/score_theme.dart';
@@ -27,6 +28,7 @@ class SettingsService with ChangeNotifier {
   static const _autoReadTutorialsKey = 'auto_read_tutorials';
   static const _showNoteNamesKey = 'show_note_names';
   static const _smartTabFingeringKey = 'smart_tab_fingering';
+  static const _authenticSlidesKey = 'tracker_authentic_slides';
 
   Locale? _locale;
   NoteNaming _noteNaming = NoteNaming.auto;
@@ -38,6 +40,7 @@ class SettingsService with ChangeNotifier {
   bool _autoReadTutorials = false;
   bool _showNoteNames = false;
   bool _smartTabFingering = true;
+  bool _authenticSlides = true;
   Instrument _instrument = Instrument.piano;
   String _voiceId = Instrument.piano.name;
   TrackerInstrument? _voice;
@@ -109,6 +112,19 @@ class SettingsService with ChangeNotifier {
   /// heuristic arranger — no model download, no ONNX inference.
   bool get smartTabFingering => _smartTabFingering;
 
+  /// Whether imported MOD/S3M modules bend pitch the way the Amiga hardware
+  /// did — a fixed step in PERIOD, so a slide accelerates as it rises — rather
+  /// than by a fixed musical interval.
+  ///
+  /// On by default because it is the measurably correct reading: libopenmpt,
+  /// libxmp and micromod all do it, and it took our portamento fixtures from
+  /// 0.55 to 1.000 against them. Off is the gentler reading, which some prefer
+  /// on material never written for an Amiga.
+  ///
+  /// XM and IT are unaffected — they bend linearly by definition — and so are
+  /// songs made in the app, which have their own profile.
+  bool get authenticSlides => _authenticSlides;
+
   void _applyScoreFont() => appScoreFont = musicFontFor(_scoreFont);
 
   Future<void> load() async {
@@ -131,6 +147,8 @@ class SettingsService with ChangeNotifier {
     _autoReadTutorials = prefs.getBool(_autoReadTutorialsKey) ?? false;
     _showNoteNames = prefs.getBool(_showNoteNamesKey) ?? false;
     _smartTabFingering = prefs.getBool(_smartTabFingeringKey) ?? true;
+    _authenticSlides = prefs.getBool(_authenticSlidesKey) ?? true;
+    trackerAuthenticSlidesDefault = _authenticSlides;
     _applyScoreFont();
     // Voice: prefer the new full-palette key; migrate from the legacy 4-way
     // enum key when absent (old installs keep their chosen additive voice).
@@ -162,6 +180,16 @@ class SettingsService with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_showTimerKey, value);
+  }
+
+  Future<void> setAuthenticSlides(bool value) async {
+    _authenticSlides = value;
+    // Mirrored into the audio layer so module import stays a pure function
+    // rather than reaching for a service. See [trackerAuthenticSlidesDefault].
+    trackerAuthenticSlidesDefault = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_authenticSlidesKey, value);
   }
 
   Future<void> setSmartTabFingering(bool value) async {

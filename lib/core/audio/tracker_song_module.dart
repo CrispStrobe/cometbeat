@@ -31,11 +31,11 @@ import 'package:comet_beat/core/audio/tracker_song.dart';
 
 /// Parses raw module [bytes] and imports them (throws the reader's
 /// FormatException on malformed input, so callers can show a friendly error).
-TrackerSong songFromModuleBytes(Uint8List bytes) =>
-    songFromModuleDoc(parseAnyModule(bytes));
+TrackerSong songFromModuleBytes(Uint8List bytes, {bool? authenticSlides}) =>
+    songFromModuleDoc(parseAnyModule(bytes), authenticSlides: authenticSlides);
 
 /// Imports an already-parsed [ModuleDoc].
-TrackerSong songFromModuleDoc(ModuleDoc doc) {
+TrackerSong songFromModuleDoc(ModuleDoc doc, {bool? authenticSlides}) {
   final channelCount = doc.channelCount < 1 ? 1 : doc.channelCount;
   final nativeInstrumentMode = _hasNativeInstrumentMode(doc);
   // The engine needs a timing row count for the currently selected pattern;
@@ -147,12 +147,19 @@ TrackerSong songFromModuleDoc(ModuleDoc doc) {
   // A song we AUTHORED keeps [ReplayProfile.native], which is the default on
   // TrackerChannel; only an import gets a tracker's rules.
   song.protrackerEffectMemory = doc.sourceFormat == ModuleFormat.mod;
-  final profile = switch (doc.sourceFormat) {
+  final base = switch (doc.sourceFormat) {
     ModuleFormat.mod => ReplayProfile.protracker,
     ModuleFormat.xm => ReplayProfile.fastTracker,
     ModuleFormat.s3m => ReplayProfile.screamTracker,
     ModuleFormat.it => ReplayProfile.impulse,
   };
+  // [authenticSlides] is the user's preference for MOD/S3M, the only two
+  // formats where there is a choice: XM and IT bend linearly by definition and
+  // are unaffected. Null means "use the app-wide default", which is what
+  // `trackerAuthenticSlidesDefault` carries — a plain variable rather than a
+  // service lookup so this stays a pure function that tools and tests can call.
+  final authentic = authenticSlides ?? trackerAuthenticSlidesDefault;
+  final profile = authentic ? base : base.musical();
   for (final ch in song.channels) {
     ch.profile = profile;
   }

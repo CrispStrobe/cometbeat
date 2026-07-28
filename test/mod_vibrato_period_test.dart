@@ -72,16 +72,27 @@ void main() {
     });
   });
 
-  test('the gate reports its own state, and OFF is the default', () {
-    // Period-accurate vibrato shares the PORTA_PERIOD switch, so the whole
-    // pitch-effect family flips together. Asserted in BOTH directions so a
-    // PORTA_PERIOD=1 run is also green.
-    if (kVibratoPeriodAccurate) {
-      expect(kPortaPeriodAccurate, isTrue, reason: 'one gate for the family');
-      expect(_vib(60, 8, 1), lessThan(60)); // period path in force
-    } else {
-      expect(kVibratoDepthSemitonesPerUnit, 1 / 8);
-      expect(kVibratoPeriodAccurate, isFalse);
+  test('vibrato follows the same per-format domain as portamento', () {
+    // This used to assert the state of the shared `PORTA_PERIOD` switch. The
+    // switch is gone; what matters now is that vibrato and portamento agree
+    // about the domain, because they did NOT once — the two branches bent
+    // opposite ways depending on the gate, which is why the sign lives inside
+    // PitchDomain now.
+    for (final profile in [
+      ReplayProfile.protracker,
+      ReplayProfile.screamTracker,
+      ReplayProfile.fastTracker,
+      ReplayProfile.impulse,
+      ReplayProfile.native,
+    ]) {
+      final bent = profile.pitch.vibrato(60, 8, 1);
+      expect(
+        bent,
+        lessThan(60),
+        reason: '${profile.name}: a positive lobe must bend DOWN in every '
+            'domain — that is what adding to the period does',
+      );
     }
+    expect(kVibratoDepthSemitonesPerUnit, 1 / 8);
   });
 }

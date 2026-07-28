@@ -6897,6 +6897,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ein kleines KI-Modell auf dem Gerät setzt Fingersätze menschlicher (einmaliger Download). Aus = nur die eingebaute Heuristik, kein Modell';
 
   @override
+  String get authenticSlidesLabel => 'Originalgetreue Amiga-Tonhöhengleiter';
+
+  @override
+  String get authenticSlidesSubtitle =>
+      'Importierte MOD- und S3M-Module klingen wie auf der Hardware — ein Gleiter wird nach oben hin schneller. Aus klingt sanfter und gleichmäßiger. Betrifft nur diese beiden Formate; XM, IT und selbst erstellte Songs bleiben unverändert';
+
+  @override
   String get debugModeEnabled => 'Debug-Einstellungen freigeschaltet!';
 
   @override

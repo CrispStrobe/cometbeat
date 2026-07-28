@@ -147,6 +147,27 @@ class ReplayProfile {
   /// first. libxmp calls it `QUIRK_VSALL`.
   final bool volumeSlideOnTick0;
 
+  /// The same rules but bending pitch in [PitchDomain.linearFrequency].
+  ///
+  /// This is what the "authentic pitch slides" setting turns OFF. The hardware
+  /// model is measurably correct — it is what every reference player does, and
+  /// what took the portamento fixtures from 0.55 to 1.000 — but it is also
+  /// harsher: a fixed period step bends further the higher the note, so a long
+  /// slide accelerates. The linear model is the gentler, more "musical" reading
+  /// and some listeners prefer it on material that was never written for an
+  /// Amiga. Neither is a bug; it is a preference, which is why it is a setting
+  /// rather than a constant.
+  ///
+  /// Only MOD and S3M have a choice to make here. XM and IT are linear by
+  /// definition, and our own authored songs use [native].
+  ReplayProfile musical() => ReplayProfile(
+        name: '$name (musical slides)',
+        pitch: PitchDomain.linearFrequency,
+        latchPortaParam: latchPortaParam,
+        latchVolSlideParam: latchVolSlideParam,
+        volumeSlideOnTick0: volumeSlideOnTick0,
+      );
+
   /// ProTracker. Period slides, no portamento or volume-slide memory.
   static const protracker = ReplayProfile(
     name: 'ProTracker',
@@ -218,3 +239,18 @@ const double kVibratoDepthSemitonesPerUnit = 1 / 8;
 /// deep AND wrong in shape, because a period wobble is not a constant-semitone
 /// wobble. In force only under [kVibratoPeriodAccurate].
 const double kVibratoPeriodPerDepthUnit = 255.0 / 128.0;
+
+/// The app-wide default for the "authentic pitch slides" preference, consulted
+/// by `songFromModuleDoc` when a caller does not pass one explicitly.
+///
+/// A plain top-level variable, set once from `SettingsService` at startup,
+/// rather than a service lookup inside the importer — that keeps module import a
+/// pure function the CLI tools and tests can call without wiring up settings,
+/// which is how the audit harnesses use it.
+///
+/// TRUE (the hardware model) is the default because it is the measurably
+/// correct one: it is what libopenmpt, libxmp and micromod all do, and it took
+/// the portamento fixtures from 0.55 to 1.000 against them. The setting exists
+/// because the other reading is gentler on material never written for an Amiga,
+/// not because the question is open.
+bool trackerAuthenticSlidesDefault = true;

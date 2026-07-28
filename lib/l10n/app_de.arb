@@ -2344,6 +2344,8 @@
   "showNoteNamesSubtitle": "Den Buchstaben jeder Note als Lesehilfe anzeigen — versteckt in Spielen, in denen das Benennen die Aufgabe ist",
   "smartTabFingeringLabel": "Smarte Tab-Fingersätze",
   "smartTabFingeringSubtitle": "Ein kleines KI-Modell auf dem Gerät setzt Fingersätze menschlicher (einmaliger Download). Aus = nur die eingebaute Heuristik, kein Modell",
+  "authenticSlidesLabel": "Originalgetreue Amiga-Tonhöhengleiter",
+  "authenticSlidesSubtitle": "Importierte MOD- und S3M-Module klingen wie auf der Hardware — ein Gleiter wird nach oben hin schneller. Aus klingt sanfter und gleichmäßiger. Betrifft nur diese beiden Formate; XM, IT und selbst erstellte Songs bleiben unverändert",
   "debugModeEnabled": "Debug-Einstellungen freigeschaltet!",
   "debugSectionTitle": "Debug",
   "debugUnlockLabel": "Alle Spiele freischalten",

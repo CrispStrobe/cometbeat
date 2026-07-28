@@ -38,8 +38,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:comet_beat/core/audio/tracker_replayer.dart'
-    show kPortaPeriodAccurate;
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -88,72 +86,42 @@ double _envelopeDynamicRange(Float64List pcm) {
   return hi / lo;
 }
 
-/// Fixtures whose deviation is a KNOWN, deliberate consequence of the default
-/// pitch model, and which are therefore reported but not gated unless
-/// `PORTA_PERIOD=1` selects the hardware model.
-///
-/// ProTracker slides the PERIOD by a fixed step; we slide the PITCH by a fixed
-/// number of semitones, which can only match at one starting note. That is a
-/// documented design choice awaiting the maintainer's call (PLAN.md §6 X1), not
-/// a bug someone forgot — so the sweep must not go red just for running in the
-/// shipped configuration. Under the gate these drop to ~1.000 and are held to
-/// the same bar as everything else.
-///
-/// Note what is NOT in this list: vibrato and `6xy`. They also bend pitch, and
-/// they pass in BOTH configurations, because their residual turned out to be a
-/// doubled LFO rate rather than the pitch model (§6 X2).
 /// Fixtures pinned to a KNOWN, DIAGNOSED, unfixed defect — reported every run
 /// and flagged in the output, but not failing the suite.
 ///
-/// **Currently empty, and that is the point.** It held `mem_porta_up` and
-/// `mem_porta_down` while ProTracker's per-command effect memory was diagnosed
-/// but unfixed (0.270 and 0.531 against three engines agreeing at 1.000). When
-/// the fix landed the sweep printed "KNOWN OPEN now passing? drop the
-/// exemption" on both, which is what this list is for: an exemption that
-/// announces its own obsolescence instead of quietly outliving the bug.
+/// The flag inverts to "now passing? drop the exemption" the moment one is
+/// fixed, so an exemption announces its own obsolescence rather than quietly
+/// outliving the bug. It has already retired four entries that way.
 const _kKnownOpenDefects = <String>{
-  // PLAN.md §6 X9. Two measured, format-SPECIFIC portamento gaps that the
-  // fine-slide routing did not close. They are listed rather than skipped so
-  // the numbers print every run, and the flag inverts to "now passing? drop the
-  // exemption" the moment someone fixes one.
-  //
-  // IT plain porta (0.683 / 0.544 where S3M is 1.000 for the same command):
-  // most likely IT's LINEAR frequency slides — IT files carry a linear-slides
-  // flag and libopenmpt honours it, while we slide the period. That would also
-  // explain why IT's FINE porta is perfect: once-per-row steps are small enough
-  // for the two curves to agree.
-  //
-  // S3M fine porta (0.857 / 0.828 where IT is 1.000): S3M-specific scaling. The
-  // extra-fine variant sits at 0.987 — a quarter of the step and roughly a
-  // quarter of the error — which points at a constant factor rather than a
-  // wrong mechanism.
-  // The VOLUME COLUMN does not set the channel volume. Our replayer maps a
-  // cell's volume onto `noteVolume`, a 0..1 per-note multiplier, while `Axy`
-  // slides `volume`, the 0..64 CHANNEL volume — which is still at its default
-  // 64. So a slide UP from a quiet volume-column note starts already clamped
-  // and does nothing, where the references ramp 8 -> 64. Diagnosed by the
-  // asymmetry: the DOWN fixtures start at 64, which is the default, and pass.
+  // The VOLUME COLUMN does not set the channel volume. A cell's volume becomes
+  // `noteVolume`, a 0..1 per-note multiplier, while `Axy` slides `volume`, the
+  // 0..64 CHANNEL volume still sitting at its default 64 — so a slide UP from a
+  // quiet note starts already clamped and does nothing. Diagnosed by the
+  // asymmetry: the DOWN fixtures start at 64, the default, and pass.
   //
   // Not fixed here because `TrackerCell.volume` is shared with the app's own
-  // authoring (the Loop Mixer's ghost notes use it as a multiplier), so making
-  // it set the channel volume changes song semantics, not just import.
+  // authoring (Loop Mixer ghost notes use it as a multiplier), so making it set
+  // the channel volume changes song semantics, not just import. PLAN.md §6.
   'volslide_up_Dx0.s3m',
   'volslide_up_Dx0.it',
   'fine_volslide_up_DxF.s3m',
   'fine_volslide_up_DxF.it',
-  // The extra-fine porta approximation (x ~/ 4) shifts our pitch just enough to
-  // change the loop-wrap ripple, which the envelope metric sees.
-  'extrafine_porta_down_EEx.s3m',
+  // S3M fine porta: a constant scale factor, since the extra-fine variant has a
+  // quarter of the step and roughly a quarter of the error.
   'fine_porta_down_EFx.s3m',
   'fine_porta_up_FFx.s3m',
+  // The extra-fine approximation (x ~/ 4) shifts our pitch just enough to
+  // change the loop-wrap ripple, which the envelope metric sees.
+  'extrafine_porta_down_EEx.s3m',
 };
 
-const _kPeriodModelDependent = {
-  'porta_up',
-  'porta_down',
-  'tone_porta',
-  'tonevol_5xy',
-};
+// `_kPeriodModelDependent` used to live here: the four portamento fixtures were
+// exempt whenever the `PORTA_PERIOD` gate was off, because the shipped default
+// was the musical model and they could not match a hardware reference under it.
+// Both the gate and the exemption are gone — MOD/S3M now bend the period by
+// default, so those fixtures are held to the same bar as everything else and
+// pass at 1.000. The remaining preference is a user setting, and a setting is
+// not a reason to stop measuring the default.
 
 /// The worst pairwise ENVELOPE agreement among the references.
 ///
@@ -248,7 +216,6 @@ void main() {
         // `break_row16.mod` are the SAME song and must be told apart, since
         // the whole point of the flow set is comparing them.
         final name = path.split('/').last;
-        final stem = name.substring(0, name.lastIndexOf('.'));
         final refs = await renderAllReferences(path);
         if (refs.length < 2) {
           print('  ${name.padRight(24)} skipped — '
@@ -280,8 +247,7 @@ void main() {
             refEnv >= _kEnvelopeFloor && envRange >= _kEnvelopeDynamicRange;
         final gap = refAgree - ourWorst;
         final knownOpen = _kKnownOpenDefects.contains(name);
-        final exempt = knownOpen ||
-            (!kPortaPeriodAccurate && _kPeriodModelDependent.contains(stem));
+        final exempt = knownOpen;
         final over = gap > _kMaxExcessDeviation;
         final envOver = envGated && envGap > _kMaxExcessDeviation;
 

@@ -2575,6 +2575,42 @@ constant scale factor, since extra-fine has a quarter the step and a quarter the
 error), and the four volume-column fixtures whose cause is already diagnosed
 above (the volume column does not set the channel volume).
 
+#### The slide model is a SETTING now, and `PORTA_PERIOD` is gone (2026-07-28)
+
+Maintainer's call, and it resolves the decision that had been open since X1.
+
+**The gate is deleted.** It was wrong in shape as well as default: one global
+switch cannot be right for a library holding MOD, XM, S3M and IT at once. XM and
+IT bend linearly by definition; MOD and S3M bend the period, which is what
+libopenmpt, libxmp and micromod all do. **Every portamento fixture now reads
+1.000 with no compile-time flag at all** — the shipped default is the measurably
+correct one.
+
+**Where a real preference remains it is a user setting.** MOD/S3M
+hardware-accurate versus the gentler evenly-spaced reading is a taste question —
+a fixed period step bends further the higher the note, so a long slide
+accelerates, which is authentic and not always wanted on material never written
+for an Amiga. `SettingsService.authenticSlides`, on by default, de/en localised.
+
+The shape of the setting is what makes it safe, and
+`tracker_authentic_slides_setting_test.dart` pins each part:
+
+- it changes the **pitch domain and nothing else** — the profile is otherwise
+  identical, so it cannot quietly alter memory or tick behaviour;
+- it reaches **MOD and S3M only**. Letting it touch XM/IT would be breaking
+  those formats rather than offering a choice, which is exactly what the old
+  global gate did;
+- it is resolved at **import**, into the song's `ReplayProfile`, so the replayer
+  consults nothing global and a song already open keeps the rules it was opened
+  with. `songFromModuleDoc` takes an explicit argument and only falls back to
+  `trackerAuthenticSlidesDefault` when a caller says nothing — which keeps module
+  import a pure function the CLI tools and audit harnesses call without wiring up
+  settings.
+
+⬜ The sweep's `_kPeriodModelDependent` exemption is deleted with the gate: those
+four fixtures are held to the same bar as everything else now and pass. **A
+setting is not a reason to stop measuring the default.**
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,

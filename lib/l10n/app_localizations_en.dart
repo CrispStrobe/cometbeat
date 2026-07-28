@@ -6868,6 +6868,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Use a small on-device AI model to finger a score as tab more like a human (a one-time download). Off = the built-in heuristic only, no model';
 
   @override
+  String get authenticSlidesLabel => 'Authentic Amiga pitch slides';
+
+  @override
+  String get authenticSlidesSubtitle =>
+      'Play imported MOD and S3M modules the way the hardware did — a slide speeds up as it rises. Off is gentler and evenly spaced. Only affects those two formats; XM, IT and songs you make here are unchanged';
+
+  @override
   String get debugModeEnabled => 'Debug settings unlocked!';
 
   @override

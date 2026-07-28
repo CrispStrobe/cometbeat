@@ -2681,6 +2681,8 @@
   "showNoteNamesSubtitle": "Print each note's letter as a reading aid — hidden in games where naming the note is the challenge",
   "smartTabFingeringLabel": "Smart tab fingering",
   "smartTabFingeringSubtitle": "Use a small on-device AI model to finger a score as tab more like a human (a one-time download). Off = the built-in heuristic only, no model",
+  "authenticSlidesLabel": "Authentic Amiga pitch slides",
+  "authenticSlidesSubtitle": "Play imported MOD and S3M modules the way the hardware did — a slide speeds up as it rises. Off is gentler and evenly spaced. Only affects those two formats; XM, IT and songs you make here are unchanged",
   "debugModeEnabled": "Debug settings unlocked!",
   "debugSectionTitle": "Debug",
   "debugUnlockLabel": "Unlock all games",

@@ -339,36 +339,20 @@ double itFilterCutoffHzMod(
 // Chosen for a pleasant musical feel; documented so the trajectory tests pin
 // them.
 
-/// Slide portamento in PERIOD space, the way the hardware does — opt-in:
-///
-///   flutter test --dart-define=PORTA_PERIOD=1 …
-///
-/// ProTracker does `period -= param` per tick, clamped to [113, 856]
-/// (`pt2_replayer.c` `portaUp`/`portaDown`). Period and pitch are related
-/// logarithmically (`f = clock / period`), so a linear PERIOD step is not a
-/// constant SEMITONE step — the slide accelerates as the period shrinks, and
-/// its size depends on where the note started. Our semitone model above cannot
-/// reproduce that at more than one point, which is why PLAN.md §6 X1 measured
-/// `1xx` at 0.549 and `2xx` at 0.689 spectral against three references that
-/// agree with each other at 1.000.
-///
-/// Concretely, over the X1 fixture (param 4, 48 ticks from period 428):
-/// ProTracker bends 10.3 semitones, we bend a flat 12.0.
-///
-/// Gated rather than simply switched, because the semitone model is a
-/// DELIBERATE choice ("chosen for a pleasant musical feel", above) — changing
-/// it changes every module's slides, so it wants the same A/B treatment the
-/// Paula clock got.
-const String _portaPeriodRaw = String.fromEnvironment('PORTA_PERIOD');
-final bool kPortaPeriodAccurate =
-    _portaPeriodRaw.isNotEmpty && _portaPeriodRaw != '0';
-
-/// Vibrato (and 6xy) run period-accurate when the PORTA_PERIOD gate is on — the
-/// whole pitch-effect family shares one switch, so an A/B flips porta + vibrato
-/// together (which is how PLAN.md §6's audio comparison was run). Default OFF,
-/// so default output is byte-identical. `final`, not `const`, because it mirrors
-/// [kPortaPeriodAccurate], which is read from the environment.
-final bool kVibratoPeriodAccurate = kPortaPeriodAccurate;
+// The `PORTA_PERIOD` compile-time gate that used to live here is GONE.
+//
+// It existed while we did not know which slide model was right, and it was
+// wrong in shape as well as default: the model is a per-FORMAT property, so one
+// global switch could never be right for a library holding MOD, XM, S3M and IT
+// at once. XM and IT are linear by definition; MOD and S3M are period, which is
+// what libopenmpt, libxmp and micromod all do and what took the portamento
+// fixtures from 0.55 to 1.000 against them.
+//
+// Where a real PREFERENCE remains — MOD/S3M hardware-accurate versus the
+// gentler evenly-spaced reading — it is now a user setting
+// (`SettingsService.authenticSlides`), resolved into each song's
+// [ReplayProfile] at import. A voice consults nothing global; see
+// [trackerAuthenticSlidesDefault].
 
 /// Vibrato phase advance (radians) per speed-unit (x), per tick.
 ///
@@ -497,18 +481,14 @@ class ReplayVoice {
   /// The source format's replay rules. See [ReplayProfile].
   final ReplayProfile profile;
 
-  /// The pitch space this voice actually bends in.
+  /// The pitch space this voice bends in — just the profile's, now.
   ///
-  /// ⚠️ The `PORTA_PERIOD` gate is applied HERE and nowhere else. It is the
-  /// last remnant of treating the slide model as a global switch rather than a
-  /// per-format property, and it survives only so this refactor stays
-  /// behaviour-neutral; the next commit deletes it and `profile.pitch` becomes
-  /// the whole answer. Authored songs are unaffected either way — they are
-  /// [ReplayProfile.native], which is linear regardless.
-  PitchDomain get _domain =>
-      profile.pitch == PitchDomain.amigaPeriod && !kPortaPeriodAccurate
-          ? PitchDomain.linearFrequency
-          : profile.pitch;
+  /// There used to be a `PORTA_PERIOD` compile-time gate applied here, the last
+  /// remnant of treating the slide model as one global switch. It is gone: the
+  /// choice is a per-format property, and where a genuine PREFERENCE exists
+  /// (MOD/S3M, hardware vs musical) the importer resolves it into the profile
+  /// from a user setting. A voice no longer consults anything global.
+  PitchDomain get _domain => profile.pitch;
 
   /// Current base pitch as a FRACTIONAL MIDI note (porta/tone-porta move this).
   double pitch = 0;
