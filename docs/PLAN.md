@@ -105,24 +105,30 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` step 2 — put live
-  links IN FRONT OF THE USER.** Worktree `../mus-daw-parity`.
-  **Why this and not another engine slice.** Everything I have shipped on this
-  ladder so far — one transport, one undo, one Project, live links — is real and
-  tested and **invisible**. `ProjectLink.live` is exactly the signal a screen
-  needs to say *"you are editing the project track"* versus *"you are editing a
-  copy"*, and nothing says it. This is the first slice a user could feel.
-  **Scope.** EDIT `lib/shared/widgets/open_in_menu.dart` — the menu learns about
-  project tracks and distinguishes a LIVE open from a copy, additively (its
-  current `documentBuilder`/`onConverted` API keeps working untouched, so its
-  three existing hosts are unaffected unless they opt in). Plus l10n keys for
-  the two states, **append-only** as before.
-  ⚠️ `daw_screen.dart` / `loop_mixer_screen.dart` / `advanced_tracker_screen.dart`
-  were all touched 16 min ago by `WS-T3`; that work is landed and its claim is
-  closed, but I will keep my screen edits to the minimum and re-check before
-  pushing.
-  ⚠️ **Not** taking the Score/Tab surfaces in this slice — four surfaces plus a
-  menu in one commit is how a shared widget breaks three screens at once. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 2a: the UI
+  finally SAYS live-versus-copy.** `OpenInMenu` gained `liveKind`; the entry for
+  the project track's kind shows a link icon and "edits go back to the project
+  track", every other entry says "opens a copy". The Tracker passes it when it
+  holds a live link. **Additive** — `liveKind: null` renders the previous
+  wording exactly, so the menu's three hosts are unaffected unless they opt in.
+  l10n **append-only**, both locales at 2596, generated files additive. 213
+  tests green across the menu, tracker, tab and daw suites; format + analyze
+  clean.
+  ⚠️ **A semantic trap the test caught, and the next person will hit it too:**
+  `liveKind` is the **TRACK's** kind, not the current screen's.
+  `ProjectBridge.targetsFrom` never offers `from`, so `liveKind == from` marks
+  nothing — it only turns the other subtitles into "opens a copy". My first
+  attempt asserted a same-kind entry would appear; it cannot, and the doc + the
+  Tracker wiring now say so.
+  ❌ **I REPEATED MY OWN LOGGED MISTAKE.** The entry above warns that a bulk ARB
+  edit needs a rendered-string assertion because an off-by-one put German text
+  in `app_en.arb`. I wrote the same off-by-one again, in the same shape, one
+  slice later. It was caught in seconds this time only because I printed both
+  locales before regenerating. **The durable fix is not vigilance — it is to
+  stop writing zip/unpack ARB scripts and use one explicit map per locale.**
+  ⬜ **Step 2b, unclaimed:** Loop Studio, the Audio Editor, Score and Tab still
+  need `addSongToProject` / `openProjectTrack` / `writeBackToProject`. Only the
+  Tracker has them, so only the Tracker can hold a live link today. — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 1: LIVE
   LINKS.** `lib/core/project/project_link.dart` + the Tracker actually using it;

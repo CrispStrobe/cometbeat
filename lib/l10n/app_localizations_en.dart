@@ -8606,4 +8606,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transportPosition => 'Bar and beat';
+
+  @override
+  String get openInLiveTrack => 'Edits go back to the project track';
+
+  @override
+  String get openInMakesCopy => 'Opens a copy — edits stay there';
 }

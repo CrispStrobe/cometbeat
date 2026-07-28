@@ -134,6 +134,7 @@ class OpenInMenu extends StatelessWidget {
     this.tooltip,
     this.targets,
     this.keyPrefix = '',
+    this.liveKind,
   });
 
   /// The mode this menu is shown in.
@@ -174,6 +175,19 @@ class OpenInMenu extends StatelessWidget {
   /// on one screen (e.g. a "copy" door and an in-place "replace" door) without
   /// colliding on `ValueKey('open-in')`. Empty keeps the original keys.
   final String keyPrefix;
+
+  /// WS-X1 — the KIND OF THE PROJECT TRACK this document came from.
+  ///
+  /// The entry for that mode opens **live** (no conversion, edits travel back,
+  /// see `ProjectLinker.open`); every other entry opens a copy. Null (the
+  /// default) keeps the pre-project behaviour exactly: every entry is a
+  /// conversion and the menu says what it costs.
+  ///
+  /// ⚠️ It is the TRACK's kind, not the current screen's: [from] is never
+  /// offered as a target (a mode does not convert to itself), so a `liveKind`
+  /// equal to [from] marks nothing — it only turns every other entry's
+  /// subtitle into "opens a copy", which is still true and still worth saying.
+  final AppMode? liveKind;
 
   /// Whether [from] can reach anywhere at all.
   ///
@@ -270,12 +284,34 @@ class OpenInMenu extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(localizedModeLabel(l10n, target)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (target == liveKind) ...[
+                      Icon(
+                        Icons.link,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(localizedModeLabel(l10n, target)),
+                  ],
+                ),
                 // The static cost of the edge, so the user can choose before
-                // committing rather than being warned after.
+                // committing rather than being warned after — or, for a live
+                // target, that there is no cost because nothing converts.
                 Text(
-                  localizedEdgeSubtitle(l10n, from, target),
-                  style: Theme.of(context).textTheme.bodySmall,
+                  liveKind == null
+                      ? localizedEdgeSubtitle(l10n, from, target)
+                      : target == liveKind
+                          ? l10n.openInLiveTrack
+                          : l10n.openInMakesCopy,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: target == liveKind
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
                 ),
               ],
             ),

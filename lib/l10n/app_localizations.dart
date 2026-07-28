@@ -15661,6 +15661,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bar and beat'**
   String get transportPosition;
+
+  /// No description provided for @openInLiveTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Edits go back to the project track'**
+  String get openInLiveTrack;
+
+  /// No description provided for @openInMakesCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens a copy — edits stay there'**
+  String get openInMakesCopy;
 }
 
 class _AppLocalizationsDelegate

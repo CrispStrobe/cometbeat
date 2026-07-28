@@ -2914,5 +2914,7 @@
   "transportCountIn": "Einz\u00e4hler",
   "transportCountingIn": "Z\u00e4hlt ein \u2026",
   "transportTempo": "Tempo (BPM)",
-  "transportPosition": "Takt und Z\u00e4hlzeit"
+  "transportPosition": "Takt und Z\u00e4hlzeit",
+  "openInLiveTrack": "\u00c4nderungen gehen zur\u00fcck in die Projektspur",
+  "openInMakesCopy": "\u00d6ffnet eine Kopie \u2014 \u00c4nderungen bleiben dort"
 }

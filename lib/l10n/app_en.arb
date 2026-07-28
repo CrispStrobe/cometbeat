@@ -3270,5 +3270,7 @@
   "transportCountIn": "Count-in",
   "transportCountingIn": "Counting in\u2026",
   "transportTempo": "Tempo (BPM)",
-  "transportPosition": "Bar and beat"
+  "transportPosition": "Bar and beat",
+  "openInLiveTrack": "Edits go back to the project track",
+  "openInMakesCopy": "Opens a copy \u2014 edits stay there"
 }

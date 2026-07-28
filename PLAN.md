@@ -1061,10 +1061,21 @@ prefix.
     `addSongToProject` / `openProjectTrack` / `writeBackToProject` on the
     Tracker. Shipping the seam alone would have made this the THIRD card
     complete-and-unreachable (see the count-in and `Project` findings).
-  - ⬜ **Step 2 — the other surfaces + the UI.** Loop Studio, the Audio Editor,
-    Score and Tab need the same three calls, and `OpenInMenu` should offer
-    project tracks and say "editing the project track" versus "editing a copy"
-    from `ProjectLink.live`. Nothing in the UI surfaces this yet.
+  - ✅ **Step 2a — the UI SAYS IT, 2026-07-28.** `OpenInMenu` gained `liveKind`:
+    the entry for the project track's kind opens **live** (link icon, "edits go
+    back to the project track"), every other entry says "opens a copy". Additive
+    — `liveKind: null` renders exactly the previous wording, so its three hosts
+    are unaffected unless they opt in. The Tracker passes it when it holds a
+    live link. l10n append-only, both locales.
+  - ⚠️ **A semantic trap found by writing the test, worth reading before
+    extending this:** `liveKind` is the **TRACK's** kind, not the current
+    screen's. `ProjectBridge.targetsFrom` never offers `from` (a mode does not
+    convert to itself), so `liveKind == from` marks nothing — it only turns the
+    other subtitles into "opens a copy", which is still true and still worth
+    saying. My first attempt asserted a same-kind entry would appear; it cannot.
+  - ⬜ **Step 2b — the other surfaces.** Loop Studio, the Audio Editor, Score
+    and Tab still need `addSongToProject` / `openProjectTrack` /
+    `writeBackToProject`. Only the Tracker has them.
 - ⬜ **WS-X2 — drag between surfaces.** `M` · Depends WS-W1, WS-X1.
   One `DragTarget` protocol carrying `(kind, document)`: drag a tracker pattern
   onto the timeline, a loop track into the Tab editor, an instrument from the

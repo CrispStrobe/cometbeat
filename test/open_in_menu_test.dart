@@ -39,6 +39,8 @@ Future<List<(AppMode, ConversionResult)>> _pump(
   required AppMode from,
   required Object Function() document,
   Locale? locale,
+  AppMode? liveKind,
+  List<AppMode>? targets,
 }) async {
   final converted = <(AppMode, ConversionResult)>[];
   await tester.pumpWidget(
@@ -51,6 +53,8 @@ Future<List<(AppMode, ConversionResult)>> _pump(
           actions: [
             OpenInMenu(
               from: from,
+              liveKind: liveKind,
+              targets: targets,
               documentBuilder: document,
               onConverted: (mode, result) => converted.add((mode, result)),
             ),
@@ -65,6 +69,62 @@ Future<List<(AppMode, ConversionResult)>> _pump(
 }
 
 void main() {
+  group('WS-X1 — the menu says LIVE versus COPY', () {
+    testWidgets('without a project link the wording is unchanged', (t) async {
+      // The pre-project behaviour has to survive untouched: three screens host
+      // this menu and none of them knows about projects yet.
+      await _pump(t, from: AppMode.tab, document: _tab);
+      await t.tap(find.byKey(const ValueKey('open-in')));
+      await t.pumpAndSettle();
+      expect(find.text('Edits go back to the project track'), findsNothing);
+      expect(find.text('Opens a copy — edits stay there'), findsNothing);
+    });
+
+    testWidgets('a live target says edits travel back; the rest say copy',
+        (t) async {
+      await _pump(
+        t,
+        // The real case: this document came from a TRACKER project track and
+        // is being viewed from the Tab editor. Opening it in the Tracker is
+        // live; anything else is a copy. `from` is never offered as a target,
+        // so a live kind is always a mode other than the current screen's.
+        from: AppMode.tab,
+        document: _tab,
+        liveKind: AppMode.tracker,
+        targets: const [AppMode.tracker, AppMode.score],
+      );
+      await t.tap(find.byKey(const ValueKey('open-in')));
+      await t.pumpAndSettle();
+
+      expect(find.text('Edits go back to the project track'), findsOneWidget);
+      expect(find.text('Opens a copy — edits stay there'), findsOneWidget);
+      // The live entry is also marked visually, because a user scanning the
+      // menu should not have to read two lines to see which one is different.
+      expect(find.byIcon(Icons.link), findsOneWidget);
+    });
+
+    testWidgets('German gets both states', (t) async {
+      await _pump(
+        t,
+        from: AppMode.tab,
+        document: _tab,
+        liveKind: AppMode.tracker,
+        targets: const [AppMode.tracker, AppMode.score],
+        locale: const Locale('de'),
+      );
+      await t.tap(find.byKey(const ValueKey('open-in')));
+      await t.pumpAndSettle();
+      expect(
+        find.text('Änderungen gehen zurück in die Projektspur'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Öffnet eine Kopie — Änderungen bleiben dort'),
+        findsOneWidget,
+      );
+    });
+  });
+
   testWidgets('it offers exactly the routes the bridge has', (t) async {
     await _pump(t, from: AppMode.tab, document: _tab);
     await t.tap(find.byKey(const ValueKey('open-in')));

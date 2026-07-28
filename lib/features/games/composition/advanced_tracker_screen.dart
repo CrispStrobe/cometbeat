@@ -4999,6 +4999,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
             // would convert the user's song and then drop it.
             OpenInMenu(
               from: AppMode.tracker,
+              // WS-X1 — when this screen is editing a project track, say so:
+              // a tracker target is LIVE (edits travel back), everything else
+              // is a copy. Null when there is no project link, which keeps the
+              // pre-project wording exactly as it was.
+              liveKind: hasLiveProjectLink ? AppMode.tracker : null,
               targets: const [AppMode.tab, AppMode.score],
               documentBuilder: () => _song,
               onConverted: _openConvertedElsewhere,

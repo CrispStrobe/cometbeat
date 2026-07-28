@@ -8656,4 +8656,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get transportPosition => 'Takt und Zählzeit';
+
+  @override
+  String get openInLiveTrack => 'Änderungen gehen zurück in die Projektspur';
+
+  @override
+  String get openInMakesCopy => 'Öffnet eine Kopie — Änderungen bleiben dort';
 }
