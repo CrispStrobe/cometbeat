@@ -602,10 +602,28 @@ ModuleDoc docFromXm(XmModule m) {
       final cells = <DocCell>[];
       for (var channel = 0; channel < row.length; channel++) {
         final c = row[channel];
-        // XM's Txy tremor uses effect byte 14h, while the neutral replayer
-        // reserves 1Dh for tremor so it cannot collide with MOD effects. Keep
-        // the original byte in nativeEffect for same-format export.
-        var effect = c.effect == 0x14 ? 0x1D : c.effect;
+        // XM's effect numbering IS the neutral one from 10h up — that is why
+        // everything above MOD's range passes straight through: 10h G global
+        // volume, 11h H global volume slide, 19h P pan slide, 1Bh R multi
+        // retrigger, 1Dh T tremor all line up by construction.
+        //
+        // 14h was the single exception, and it was mapped the wrong way round.
+        // XM 14h is **K, key off** (libxmp `FX_KEYOFF 0x14`); tremor is 1Dh
+        // (`FX_TREMOR 0x1d`), the same number we use. Reading 14h AS tremor and
+        // writing tremor BACK as 14h is self-consistent, so the XM round trip
+        // was perfect while the file said key-off to every other player — the
+        // fourth bug of this exact shape in the audit (see also IT's hex break
+        // row and XM's 16-bit loop units). openmpt123 rendered our tremor
+        // fixture as one unbroken tone, because a key-off on an instrument with
+        // no envelope does nothing at all.
+        //
+        // Key off already has a home: the note column carries it as note 97
+        // (`noteOff` below), which both directions have always handled. The
+        // effect spelling now lands in the same place instead of a wrong
+        // command. `nativeEffect` keeps the original byte for same-format
+        // export either way.
+        var effect = c.effect == 0x14 ? 0 : c.effect;
+        final keyOffEffect = c.effect == 0x14;
         var effectParam = c.effectParam;
         final hasVolpan =
             c.presentMask < 0 ? c.volume != 0 : (c.presentMask & 0x04) != 0;
@@ -634,7 +652,7 @@ ModuleDoc docFromXm(XmModule m) {
         cells.add(
           DocCell(
             note: xmNoteToMidi(c.note),
-            noteOff: c.note == XmCell.noteOff,
+            noteOff: c.note == XmCell.noteOff || keyOffEffect,
             instrument: instrument,
             volume: vol,
             // Keep the full XM command byte in the neutral model. Cross-format
@@ -954,6 +972,27 @@ ModuleDoc docFromIt(ItModule m) {
 }
 
 /// Doc MOD-numbered `(fxCmd, fxParam)` → an S3M/IT letter-command number
+/// The XM (effect, param) byte pair for a neutral cell.
+///
+/// XM's numbering and ours agree from 10h up, so this is almost the identity —
+/// see the long note in the XM reader for why the two exceptions exist.
+///
+///   * **1Dh tremor** passes straight through. It used to be rewritten to 14h,
+///     which is XM's *key off*, in both directions at once.
+///   * **14h [kFxSetSpeedFull]** cannot pass through, because in XM that byte
+///     IS key off. XM has no full-range speed command — its `F` splits the
+///     range, `<20h` speed and `>=20h` BPM — so an S3M/IT `Axx` above 1Fh has
+///     no XM encoding and is clamped, the same squeeze MOD's `Fxx` needs.
+///     Passing it through unchanged silently turned every imported full-range
+///     speed into a key-off on export.
+(int, int) _xmEffectOf(DocCell c) {
+  final param = c.effectParam & 0xFF;
+  return switch (c.effect) {
+    kFxSetSpeedFull => (0x0F, param.clamp(1, 0x1F)),
+    _ => (c.effect & 0xFF, param),
+  };
+}
+
 /// (A=1, B=2, …) and its info/value byte — the inverse of [_s3mEffectToFx] /
 /// [_itEffectToFx]. [isIt] selects between the two formats wherever they
 /// disagree: IT's `X` pan is 0x00–0xFF direct where S3M's is 0x00–0x80 (so
@@ -1271,11 +1310,11 @@ List<XmPattern> _docPatternsToXm(
                       : (0x10 + c.volume).clamp(0x10, 0x50),
               effect: doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
                   ? c.nativeEffect & 0xFF
-                  : (c.effect == 0x1D ? 0x14 : c.effect) & 0xFF,
+                  : _xmEffectOf(c).$1,
               effectParam:
                   doc.sourceFormat == ModuleFormat.xm && c.nativeEffect >= 0
                       ? c.nativeEffectParam & 0xFF
-                      : c.effectParam & 0xFF,
+                      : _xmEffectOf(c).$2,
             ),
           );
         } else {

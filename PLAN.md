@@ -2796,6 +2796,81 @@ each other — they disagree about what a one-shot does after its end (fade vs
 hard stop). We sit inside that spread at 0.974, so nothing is wrong, but it is
 another case where there is no single right answer to gate on.
 
+#### X9 continued (2026-07-28) — tremor, and the byte that said KEY OFF
+
+Tremor was the last effect with no audio fixture. It is a pure VOLUME effect, so
+the spectral gate is blind to it by construction and it could not be measured at
+all until the envelope metric existed.
+
+**The gate restarted every row.** Our implementation was `k % (x + y)` on the
+tick index WITHIN the row; the real counter is per-channel and free-runs for as
+long as the command is held. The fixture is `I32` at speed 6 on purpose — five
+does not divide six, so a row-locked reading cannot coincidentally agree.
+Envelope correlation 0.33 against two references agreeing at 1.00; now 0.97.
+
+**Then the XM fixture failed for a different reason: the file was wrong.** XM's
+effect numbering IS ours from `10h` up — that is why `G`/`H`/`P`/`R` pass
+straight through — with one exception, and the exception was mapped backwards.
+XM `14h` is **key off**; tremor is `1Dh` (libxmp `src/effects.h`: `FX_KEYOFF
+0x14`, `FX_TREMOR 0x1d`). We rewrote tremor↔`14h` in BOTH directions, so
+`parseXm(writeXm(x)) == x` held perfectly while openmpt123 rendered our tremor
+fixture as one unbroken tone — a key-off on an instrument with no envelope does
+nothing at all. Key off already had a home in the neutral model (the note column
+carries it as note 97), so the effect spelling now lands there. The same
+expression also wrote `kFxSetSpeedFull` — which is `14h` in OUR numbering — out
+as a key-off; it maps to XM `F` with a clamp now, since XM's `F` splits its
+range at `20h` and has no full-range speed. ⚠️ **Fourth both-directions format
+bug in this audit** (IT hex break row, XM 16-bit loop units, the fine-porta
+reverse map). A reader and writer that share a misunderstanding agree with each
+other perfectly; only a foreign reader can see it. `test/xm_effect_numbering_
+test.dart` therefore asserts the BYTES ON DISK, not the round trip.
+
+**Reading the source was not enough — dumping the per-tick gate was.** libxmp
+has two tremor functions and a suppress bit, and my first cut collapsed the
+difference into one boolean, which measured no better than no fix at all. What
+made the rules legible was printing each reference's on/off pattern tick by
+tick:
+
+    IT   ###..###..###..            x on, y off
+    S3M  ####...####...             x+1 on, y+1 off  (ST3's off-by-one)
+    XM   #####....#####...          FT2: no advance on tick 0, gate suppressed
+                                    after a note — its beat against the 6-tick
+                                    row is what makes the period irregular
+
+All three are reproduced EXACTLY, tick for tick, by `TremorModel` on the profile.
+The XM pattern in particular is not a rounding artefact, which is what it looks
+like until you have the state machine.
+
+**A second fixture, `I00`, settled a rule the unit tests had only assumed.** Our
+trajectory test asserted that a tremor with both nibbles zero "leaves the note
+fully on" — a cycle of nothing to gate. It is wrong: outside FT2 a zero nibble
+is incremented to ONE, so `I00` alternates every single tick (`#.#.#.` in both
+references, which our render now matches exactly). I nearly fixed that from the
+source alone; the fixture cost one line and turned a source reading into a
+measurement, which is the same order that caught the counter bug.
+
+⬜ **`tremor_I00.xm` is a KNOWN OPEN defect, and it is not the tremor rule.**
+Our gate matches openmpt character for character for 136 ticks and the per-tick
+levels agree within 2% — then both references go silent and stay silent while
+our note plays on to the end of the pattern. Isolated by measuring the last
+audible tick of every fixture in both engines: this is the ONLY one where they
+part (them 136, us 176; everything else runs to ~180), so it is specific to FT2
+with a zero parameter. libxmp's own note points at the mechanism — *"Tremor
+likely just overwrites the channel volume in FT2"* — i.e. FT2's tremor writes
+the channel volume rather than gating a copy, so a degenerate parameter can
+latch the channel at zero. ⚠️ I first explained this as a metric resolution
+limit (a 40 ms gate against a 10.7 ms envelope block) and was about to exempt it
+on that basis; **varying only the block size disproved it** — the correlation
+stays ~0.64 at every block size while the references hold 0.98. Control before
+exempting, not just before fixing.
+
+⚠️ **The one place in this audit where the references genuinely disagree.**
+libxmp plays S3M tremor with the plain IT counter; openmpt applies ST3's
+x+1/y+1. There is no inter-reference consensus to gate on, so the choice is
+documented as a judgement call — openmpt carries a per-quirk regression module
+for the behaviour, and libxmp's S3M loader comment is the generic description of
+the effect rather than a claim about ST3 — and NOT presented as measured.
+
 #### X9 continued (2026-07-27) — the S3M/IT command set, and a stale comment
 
 Every fixture in `fx/` is a MOD, so nothing reached the S3M/IT letter commands.
@@ -3253,11 +3328,12 @@ writer, so a writer bug is baked into every A/B that uses them. Author the same
 content with NodMOD and confirm both files render identically; any difference
 is our writer, not our replay.
 
-🔶 **X9 — Extend the A/B to XM/S3M/IT. MOSTLY DONE.** It paid five times over:
+🔶 **X9 — Extend the A/B to XM/S3M/IT. MOSTLY DONE.** It paid seven times over:
 the IT hex break row, XM channel polyphony, XM 16-bit loop units, S3M/IT fine
-porta and fine volume slides, and IT/XM linear slides. Flow fixtures ship in all
-four formats and `fmt/` covers the S3M/IT letter commands MOD has no encoding
-for. ⬜ Still open: **envelopes and NNA**, which no fixture reaches yet.
+porta and fine volume slides, IT/XM linear slides, **tremor's free-running
+counter**, and **XM's tremor/key-off effect numbering**. Flow fixtures ship in
+all four formats and `fmt/` covers the S3M/IT letter commands MOD has no
+encoding for. ⬜ Still open: **envelopes and NNA**, which no fixture reaches yet.
 Original scope: `convertToXm`/`convertToS3m`/`convertToIt`
 already exist, so the same musical content can be emitted in all four formats.
 ⚠️ Expect DIFFERENT failure modes, not the same one four times: XM/S3M/IT store

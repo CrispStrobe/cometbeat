@@ -67,6 +67,12 @@ void main() {
   });
 
   test('XM Txy imports as the neutral tremor command', () {
+    // ⚠️ This test used to say `effect: 0x14`, and 14h is XM's KEY OFF — tremor
+    // is 1Dh (libxmp `FX_TREMOR 0x1d` / `FX_KEYOFF 0x14`). Reader and writer
+    // shared the swap, so the round-trip assertion at the bottom passed while
+    // the file said key-off to every other player; openmpt123 rendered our
+    // tremor fixture as one unbroken tone. See `xm_effect_numbering_test.dart`,
+    // which asserts the byte ON DISK because a round trip provably cannot.
     final module = XmModule(
       channelCount: 1,
       order: const [0],
@@ -77,7 +83,7 @@ void main() {
               note: 49,
               instrument: 1,
               volume: 0x63,
-              effect: 0x14,
+              effect: 0x1D,
               effectParam: 0x31,
             ),
           ],
@@ -91,12 +97,13 @@ void main() {
     final cell = doc.patterns.first.rows.first.first;
     expect(cell.effect, kFxTremor);
     expect(cell.effectParam, 0x31);
-    expect(cell.nativeEffect, 0x14);
+    expect(cell.nativeEffect, 0x1D);
     expect(cell.nativeEffectParam, 0x31);
     expect(cell.nativeVolpan, 0x63);
+    expect(cell.noteOff, isFalse, reason: 'tremor is not a key off');
     final roundTrip = parseXm(convertToXm(doc));
     final written = roundTrip.patterns.first.rows.first.first;
-    expect(written.effect, 0x14);
+    expect(written.effect, 0x1D);
     expect(written.effectParam, 0x31);
     expect(written.volume, 0x63);
   });

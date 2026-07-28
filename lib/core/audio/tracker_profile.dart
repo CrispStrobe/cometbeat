@@ -140,6 +140,50 @@ enum PanLaw {
   }
 }
 
+/// How `Ixy`/`Txy` tremor gates the note. Three genuinely different machines.
+///
+/// What they share — and what was wrong — is that the on/off counter is
+/// PERSISTENT and free-runs for as long as the command is held. It is not a
+/// position within the row. `I32` at speed 6 makes that visible on purpose: the
+/// five-tick cycle straddles the row boundary, so a per-row `k % 5` drifts out
+/// of step immediately (envelope correlation 0.33 against references that agree
+/// with each other at 1.00).
+///
+/// Each model below reproduces its reference EXACTLY, tick for tick, on
+/// `fmt/tremor_Ixy.{it,s3m,xm}` — the patterns are quoted at each variant.
+enum TremorModel {
+  /// Impulse Tracker: x ticks on, y off, and a zero nibble means ONE tick.
+  ///
+  ///     I32 →  ###..###..###..  (openmpt and libxmp agree)
+  impulse,
+
+  /// ScreamTracker 3: **x+1 on, y+1 off** — ST3's documented off-by-one.
+  ///
+  ///     I32 →  ####...####...   (openmpt)
+  ///
+  /// ⚠️ This is the one place in the whole audit where the two references
+  /// genuinely DISAGREE: libxmp plays S3M with the plain [impulse] counter,
+  /// openmpt applies the ST3 quirk. There is no consensus to measure against,
+  /// so this is a judgement call rather than a measurement — openmpt is picked
+  /// because it carries a per-quirk regression module for this behaviour and
+  /// libxmp's S3M loader comment ("Ixy Tremor with ontime x and offtime y") is
+  /// the generic description rather than a claim about ST3. The fixture's
+  /// tolerance is set by how far the references sit from EACH OTHER, which is
+  /// wide here for exactly this reason.
+  screamTracker,
+
+  /// FastTracker II: the counter does not advance on tick 0, and a fresh note
+  /// or volume event SUPPRESSES the gate until the next advance.
+  ///
+  ///     I32 →  #####....#####...#####....  (openmpt and libxmp agree)
+  ///
+  /// The irregular period is real, not a rounding artefact: with the counter
+  /// advancing on five of every six ticks, a five-tick cycle and a six-tick row
+  /// beat against each other. FT2 also reads a zero nibble literally, where the
+  /// others treat it as one.
+  fastTracker;
+}
+
 /// Everything about a source format that changes how its commands REPLAY.
 ///
 /// This replaces three separate booleans that accreted onto `TrackerChannel`
@@ -162,6 +206,7 @@ class ReplayProfile {
     required this.latchPortaParam,
     required this.latchVolSlideParam,
     required this.volumeSlideOnTick0,
+    required this.tremor,
     required this.panLaw,
   });
 
@@ -185,6 +230,11 @@ class ReplayProfile {
   /// S3M/IT slide volume on EVERY tick including tick 0; MOD and XM skip the
   /// first. libxmp calls it `QUIRK_VSALL`.
   final bool volumeSlideOnTick0;
+
+  /// Which tremor machine `Ixy`/`Txy` runs. See [TremorModel] — the three
+  /// formats disagree about the counter, the tick-0 rule AND the meaning of a
+  /// zero nibble, so this is a model rather than a flag.
+  final TremorModel tremor;
 
   /// How a pan position becomes channel gains. Every tracker is [PanLaw.linear];
   /// our own songs keep [PanLaw.constantPower], which sounds better and is not
@@ -210,6 +260,7 @@ class ReplayProfile {
         latchPortaParam: latchPortaParam,
         latchVolSlideParam: latchVolSlideParam,
         volumeSlideOnTick0: volumeSlideOnTick0,
+        tremor: tremor,
         panLaw: panLaw,
       );
 
@@ -220,6 +271,7 @@ class ReplayProfile {
     latchPortaParam: false,
     latchVolSlideParam: false,
     volumeSlideOnTick0: false,
+    tremor: TremorModel.impulse,
     panLaw: PanLaw.linear,
   );
 
@@ -230,6 +282,7 @@ class ReplayProfile {
     latchPortaParam: true,
     latchVolSlideParam: true,
     volumeSlideOnTick0: false,
+    tremor: TremorModel.fastTracker,
     panLaw: PanLaw.linear,
   );
 
@@ -241,6 +294,7 @@ class ReplayProfile {
     latchPortaParam: true,
     latchVolSlideParam: true,
     volumeSlideOnTick0: true,
+    tremor: TremorModel.screamTracker,
     panLaw: PanLaw.linear,
   );
 
@@ -251,6 +305,7 @@ class ReplayProfile {
     latchPortaParam: true,
     latchVolSlideParam: true,
     volumeSlideOnTick0: true,
+    tremor: TremorModel.impulse,
     panLaw: PanLaw.linear,
   );
 
@@ -272,6 +327,7 @@ class ReplayProfile {
     // constant power keeps a sound's apparent loudness as it crosses the
     // field, which is what we want for our own material. Modules get the
     // linear law the trackers actually used.
+    tremor: TremorModel.impulse,
     panLaw: PanLaw.constantPower,
   );
 }

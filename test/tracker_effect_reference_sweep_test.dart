@@ -116,6 +116,29 @@ const _kKnownOpenDefects = <String>{
   'volslide_up_Dx0.it',
   'fine_volslide_up_DxF.s3m',
   'fine_volslide_up_DxF.it',
+  // FT2 `T00` — a tremor with BOTH nibbles zero — eventually kills the channel
+  // in FastTracker II, and we keep playing.
+  //
+  // The tremor RULE is not the problem here, and that is worth stating because
+  // the number looks like it is. Rendered tick by tick, our gate matches
+  // openmpt CHARACTER FOR CHARACTER for the first 136 ticks, and the per-tick
+  // levels agree to within 2%. Then both references go silent and stay silent
+  // while our note plays on to the end of the pattern — 40 ticks of sound
+  // against 40 ticks of nothing, which is the whole of the envelope gap.
+  //
+  // ⚠️ Isolated by measuring the last audible tick of every fixture, ours and
+  // theirs: this is the ONLY one where they part (them 136, us 176; every other
+  // fixture in both engines runs to ~180). So it is specific to FT2 with a zero
+  // parameter, not a general tail or fadeout difference.
+  //
+  // libxmp's own note points at the mechanism — "Tremor likely just overwrites
+  // the channel volume in FT2" — i.e. FT2's tremor writes the channel volume
+  // rather than gating a copy of it, so a degenerate parameter can leave the
+  // channel latched at zero. Confirming that needs its own fixture and a look
+  // at what FT2 does to `volume` proper; it is NOT what the tremor counter fix
+  // was about, and the S3M/IT rows of this same fixture pass at 0.96 envelope,
+  // which is what it was added to settle. PLAN.md §6.
+  'tremor_I00.xm',
   // (S3M fine and extra-fine porta were listed here at 0.857 / 0.828 / 0.19-env,
   // attributed to "a constant scale factor". That guess was wrong. Fine porta
   // bypassed PitchDomain entirely and always bent LINEARLY — right for XM/IT,

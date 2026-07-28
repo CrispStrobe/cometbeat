@@ -63,8 +63,12 @@ pure via `traceChannel(cells, {ticksPerRow}) → ChannelTrace`
 - **Fine F-nibble slides** in Axy / 1xx / 2xx (backlog-named "FF nibble")
 - **Gxx** global volume, **Hxy** global-vol slide
 - **Mxx** set channel volume, **Nxy** channel-vol slide (backlog group B, bullet 2)
-- **Txy** tremor ✅ *(added — `kFxTremor` 0x1D; importer wiring TODO)*
-- **Pxy** panning slide, **Kxx** key-off, **Lxx** env position, **Xxx**
+- **Txy** tremor ✅ *(`kFxTremor` 0x1D, importer wired, three per-format models
+  measured against libopenmpt/libxmp — see `TremorModel`)*
+- **Kxx** key-off ✅ *(as an EFFECT — XM `14h` now routes to the neutral model's
+  `noteOff`, which the note column has always carried as note 97; it used to be
+  read as tremor)*
+- **Pxy** panning slide, **Lxx** env position, **Xxx**
   extra-fine porta
 - **Volume-column mini-commands** — the volume column exists as a static level
   (`applyVolumeColumn`, Cxx-equivalent) but not the XM vol-column
@@ -82,9 +86,13 @@ pure via `traceChannel(cells, {ticksPerRow}) → ChannelTrace`
   flow through real `.mod`/`.xm` E-commands); **Rxy** retrigger+volslide
   (`fxCmd 0x1B`, exact XM volume table) and **Txy** tremor (`fxCmd 0x1D`,
   on-x/off-y gate) on new non-colliding commands. Tests:
-  `tracker_effect_coverage_test.dart`. **Importer wiring TODO (one line each):**
-  map XM effect R→`kFxRetrigVolSlide` and T→`kFxTremor` in the `.xm` reader so
-  real files reach them (replayer side done + gated into `_hasPerTickEffect`).
+  `tracker_effect_coverage_test.dart`. ✅ **Importer wiring DONE.** It needed no
+  new mapping in the end — XM's effect numbering IS ours from `10h` up, so `R`
+  (`1Bh`) already passed straight through. `T` was the exception, and it was
+  mapped the wrong way round: `14h` is XM's **key off**, not tremor, so tremor
+  was written into the key-off slot in both directions at once. Removing that
+  swap wired the importer and fixed the file format together
+  (`test/xm_effect_numbering_test.dart`).
 
 ## Remaining, by value ÷ effort (needs core/model work — @tracker-replayer)
 
@@ -94,9 +102,11 @@ the active tracker worker:
 
 1. ✅ **EEx pattern delay** — **SHIPPED by @tracker-replayer** (walkFlow, row-level
    flow). Was the highest-impact gap; done.
-2. **Rxy / Txy importer wiring** — replayer sides DONE (`kFxRetrigVolSlide` 0x1B,
-   `kFxTremor` 0x1D, both gated into `_hasPerTickEffect`); only the `.xm` reader
-   mapping (XM effect R→Rxy, T→Txy) remains so real files reach them. One line each.
+2. ✅ **Rxy / Txy importer wiring** — DONE. XM numbers its effects the way we do
+   from `10h` up, so `R` needed nothing; `T` needed the tremor↔key-off swap
+   removed (see above). Tremor's REPLAY then turned out to be three different
+   machines per format (`TremorModel`), all now matching their references tick
+   for tick.
 3. **Fine F-nibble slides (Axy/1xx/2xx)** — **format-ambiguous**: in MOD, `1F0`
    is a fast slide; in S3M/XM, `1Fx` is fine. The replayer doesn't track source
    format, so this needs a format flag (or a decision to assume S3M/XM) before

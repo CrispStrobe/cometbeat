@@ -546,6 +546,32 @@ class ReplayVoice {
   int _memVolSlide = 0;
   int _memRetrig = 0; // Rxy param (x = vol code, y = tick interval)
   int _memTremor = 0; // Txy param (x = on ticks, y = off ticks)
+
+  /// Tremor's free-running gate. Ticks left in the current phase, and which
+  /// phase that is. Deliberately NOT reset by a new row or a new note — the
+  /// reference players keep counting for as long as the command is held, and
+  /// resetting it is the bug this pair replaced.
+  int _tremorTicks = 0;
+  bool _tremorOn = false;
+
+  /// FastTracker II only: a fresh note or volume event opens the gate until the
+  /// counter next advances (libxmp's `TREMOR_SUPPRESS`, from FT2's own
+  /// `ft2_tremor_reset.xm`). The other models never read it.
+  bool _tremorSuppressed = true;
+
+  /// A fresh note restarts tremor — **under FT2 rules only**.
+  ///
+  /// libxmp does this in `read_event_ft2` and nowhere else; ScreamTracker and
+  /// Impulse let the counter free-run straight through a new note. Voices are
+  /// reused from note to note, so without this the suppress bit would only ever
+  /// apply to the first note a channel plays.
+  void _retriggerTremor() {
+    if (profile.tremor != TremorModel.fastTracker) return;
+    _tremorTicks = 0;
+    _tremorOn = false;
+    _tremorSuppressed = true;
+  }
+
   int _memPanbrelloSpeed = 0;
   int _memPanbrelloDepth = 0;
 
@@ -933,6 +959,7 @@ class ReplayVoice {
           _retriggered = true;
           noteVolume = cell.volume ?? 1.0;
           _retriggerLfos();
+          _retriggerTremor();
         }
       } else {
         pitch = m;
@@ -949,6 +976,7 @@ class ReplayVoice {
         // of that fix did, halving the level of everything after it.
         if (cell.instrument > 0) volume = kMaxVolume;
         _retriggerLfos();
+        _retriggerTremor();
       }
     } else if (cell.volume != null) {
       // A volume-column-only cell (no note) sets the RINGING note's volume — a
@@ -1248,11 +1276,52 @@ class ReplayVoice {
       }
     }
 
-    // Txy tremor: the note pulses ON for x ticks then OFF for y, repeating.
+    // Ixy/Txy tremor: the note pulses ON for x ticks then OFF for y, repeating.
+    //
+    // The counter is PERSISTENT and free-runs across rows — it is not a position
+    // within the row. This used to be `k % (x + y)`, which restarts the cycle
+    // every row and is only right when the cycle happens to divide the speed.
+    // `I32` at speed 6 does not: the reference players hold a steady 3-on/2-off
+    // (envelope correlation 1.00 with each other) and we read 0.33 against them.
+    //
+    // See [ReplayProfile.ft2Tremor] for the two FastTracker II differences.
     if (_cmd == kFxTremor) {
-      final x = (_memTremor >> 4) & 0xF, y = _memTremor & 0xF;
-      final cycle = x + y;
-      if (cycle > 0 && k % cycle >= x) effVol = 0; // in the OFF phase
+      var x = (_memTremor >> 4) & 0xF, y = _memTremor & 0xF;
+      switch (profile.tremor) {
+        case TremorModel.screamTracker:
+          // ST3 counts one MORE tick in each phase than the parameter says.
+          x += 1;
+          y += 1;
+        case TremorModel.impulse:
+          // A zero nibble is one tick, so `I30` pulses rather than staying open.
+          if (x == 0) x = 1;
+          if (y == 0) y = 1;
+        case TremorModel.fastTracker:
+          break; // FT2 takes a zero nibble literally.
+      }
+      if (profile.tremor == TremorModel.fastTracker) {
+        // FT2 advances on ticks 1.. only, and the note plays regardless while
+        // the gate is suppressed by a fresh note or volume event. Those two
+        // together are what make the period irregular — see [TremorModel].
+        if (k > 0) {
+          _tremorSuppressed = false;
+          if (_tremorTicks == 0) {
+            _tremorOn = !_tremorOn;
+            _tremorTicks = _tremorOn ? x : y;
+          } else {
+            _tremorTicks--;
+          }
+        }
+        if (!_tremorOn && !_tremorSuppressed) effVol = 0;
+      } else {
+        // ST3/IT: advance every tick, and read the gate AFTER the step.
+        if (_tremorTicks <= 0) {
+          _tremorOn = !_tremorOn;
+          _tremorTicks = _tremorOn ? x : y;
+        }
+        _tremorTicks--;
+        if (!_tremorOn) effVol = 0; // in the OFF phase
+      }
     }
 
     // A per-tick retrigger (EDx delayed note, E9x / Rxy) is a real trigger too —

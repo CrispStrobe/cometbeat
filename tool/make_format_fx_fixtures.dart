@@ -65,6 +65,7 @@ void _emit(
   int param, {
   int volume = 64,
   int holdRows = 8,
+  Map<String, Uint8List Function(ModuleDoc)> formats = const {},
 }) {
   final wave = _wave();
   final doc = ModuleDoc(
@@ -93,7 +94,9 @@ void _emit(
       ),
     ],
   );
-  for (final entry in {'s3m': convertToS3m, 'it': convertToIt}.entries) {
+  final targets =
+      formats.isEmpty ? {'s3m': convertToS3m, 'it': convertToIt} : formats;
+  for (final entry in targets.entries) {
     final bytes = entry.value(doc);
     File('test/fixtures/fmt/$name.${entry.key}').writeAsBytesSync(bytes);
     stdout.writeln('  $name.${entry.key}  ${bytes.length} bytes');
@@ -151,6 +154,49 @@ void main() {
   // constant power measures +0.414. The two are far enough apart to read off.
   _emit('setpan_right_Xxx', 0x8, 0xC0, holdRows: 24);
   _emit('setpan_left_Xxx', 0x8, 0x40, holdRows: 24);
+
+  // Ixy tremor — the last effect in the set with no audio fixture at all.
+  //
+  // On for x ticks, off for y, repeating. A pure VOLUME effect, so the spectral
+  // gate is blind to it by construction and only the envelope metric can say
+  // anything — which is precisely why it went unmeasured until that metric
+  // existed. There IS a trajectory test (`tracker_effect_coverage_test`), so
+  // the arithmetic has been pinned; what has never been checked is whether the
+  // arithmetic matches what a tracker actually does.
+  //
+  // 3 on / 2 off at speed 6 gives a pattern that does not divide evenly into
+  // the row, so a per-row rather than per-tick implementation drifts visibly
+  // instead of coincidentally agreeing.
+  //
+  // Also written as XM, which the other fixtures here are not. FastTracker II
+  // is the one tracker that runs tremor differently (it skips tick 0 and reads
+  // a zero nibble literally), and that difference is now a profile field — so
+  // it needs a fixture of its own rather than being taken on the reference
+  // players' word. `I32` has no zero nibble, so what this one measures is the
+  // tick-0 half of the rule.
+  _emit(
+    'tremor_Ixy',
+    0x1D,
+    0x32,
+    holdRows: 24,
+    formats: {'s3m': convertToS3m, 'it': convertToIt, 'xm': convertToXm},
+  );
+
+  // `I00` — both nibbles zero, and no earlier parameter to fall back on.
+  //
+  // Our trajectory test asserted this "leaves the note fully on" (cycle 0 → no
+  // gate), which was an assumption nobody had checked. libxmp says otherwise:
+  // outside FT2 a zero nibble is incremented to ONE, so `I00` alternates every
+  // tick. That is a source reading rather than a measurement, and a source
+  // reading is exactly what was not enough for the tremor counter itself — so
+  // it gets a fixture instead of a footnote.
+  _emit(
+    'tremor_I00',
+    0x1D,
+    0x00,
+    holdRows: 24,
+    formats: {'s3m': convertToS3m, 'it': convertToIt, 'xm': convertToXm},
+  );
 
   stdout.writeln('done — S3M + IT, one command each, 32 rows, speed 6/125');
 }

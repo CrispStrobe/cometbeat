@@ -190,12 +190,28 @@ void main() {
       expect(t.volumeAt(0, 4), closeTo(kMaxVolume, 1e-9)); // cycle repeats
     });
 
-    test('T00 (no cycle) leaves the note fully on', () {
+    test('T00 alternates every tick — a zero nibble is ONE tick, not none', () {
+      // ⚠️ This test used to assert that `T00` "leaves the note fully on", on
+      // the reasonable-looking grounds that a cycle of x+y = 0 has nothing to
+      // gate. That was an assumption, and it was wrong. Outside FastTracker a
+      // zero nibble is incremented to one (libxmp `effects.c`, `FX_TREMOR`), so
+      // `T00` is one tick on, one tick off.
+      //
+      // MEASURED, not taken from the source: `fmt/tremor_I00.{s3m,it}` renders
+      // as `#.#.#.#.` in libopenmpt — alternating every single tick — and our
+      // render now matches it. The source reading is what suggested the
+      // fixture; the fixture is what settled it, which is the same order that
+      // caught the counter bug this file's sibling documents.
       final t = traceChannel([
         const TrackerCell(midi: 60, fxCmd: kFxTremor), // param 0 = T00
+        const TrackerCell(fxCmd: kFxTremor),
       ]);
       for (var k = 0; k < kDefaultTicksPerRow; k++) {
-        expect(t.volumeAt(0, k), closeTo(kMaxVolume, 1e-9));
+        expect(
+          t.volumeAt(0, k),
+          closeTo(k.isEven ? kMaxVolume : 0, 1e-9),
+          reason: 'tick $k of a T00 row',
+        );
       }
     });
   });
