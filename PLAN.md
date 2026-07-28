@@ -221,6 +221,68 @@ Pending, in order:
    (ten professionals, F1 ≈ .24–.31), and the capped-skill profiles that the app
    actually uses are near-deterministic from geometry alone.
 
+## Bowed-string notation in the Score Editor — capability audit + gaps (scoped 2026-07-28)
+
+Audited against what a cellist actually needs to WRITE, not what a note editor
+generally offers. Most of it is already there; the gaps are specific and small.
+
+**Already in the Score Editor** (verified by grep, not memory): mid-score clef
+changes incl. inline/mid-bar · slurs · hairpins + dynamic letters · stacked
+pitches (double stops, `addPitchToSelected`) · tremolo · ornaments · lyrics ·
+articulations · per-part clef and transposition · PDF / MusicXML / MIDI / ABC
+export · **and now cello fingerings + string numerals + bow directions
+(`07646a65`)**.
+
+### SE-C1 — Pizzicato / arco as a playable, notated state · `S`
+The one plainly missing item from the audit. `pizz.`/`arco` are text today at
+best; nothing switches the rendered timbre. Two halves: (a) a part- or
+range-scoped playing-state mark that survives export as MusicXML
+`<play><other-play>`/technical text, and (b) `score_instrument_render.dart`
+honouring it — it already maps `DynamicLevel` → velocity, so the seam exists.
+⚠ Needs a plucked cello sample or a credible synthesis of one; without that,
+ship the NOTATION half and leave playback unchanged rather than faking it with a
+generic pluck.
+
+### SE-C2 — Instrument-aware new-score defaults · `S`
+"Add instrument" exists, but choosing a bowed instrument should also set the
+clef, the sounding range, and the fingering skill default for that part. Cheap,
+and it removes the first three manual steps of writing a cello part.
+Range should WARN, never clamp — composers write out of range deliberately.
+
+### SE-C3 — Range + playability warnings for the chosen instrument · `M`
+Once a part knows its instrument: mark notes outside the instrument's range, and
+notes the arranger cannot finger at the part's skill level (`fingerBowedScore`
+already returns exactly which notes it could not place — today that information
+is only printed by the CLI). A gentle inspector hint, not a block.
+
+### SE-C4 — Bowing as a first-class layer, not just slurs · `M`
+`bowing.dart` already computes down/up-bow from slurs, rests and the rule of the
+down-bow; the Score Editor writes it but cannot EDIT it. Wanted: flip a stroke,
+lock a passage, and have the rest re-flow — the same "compute, then let a human
+correct" shape as fingering. This is what a teacher actually marks up.
+
+### SE-C5 — Playback fidelity for what is already notated · `M`
+Tremolo, ornaments and slurs are notatable but the renderer largely ignores them;
+dynamics are honoured. Making preview follow the page is what makes the editor
+trustworthy for a player, and it is mostly renderer work, not model work.
+
+### SE-C6 — Share a score by link / collaborate · `L` · ⚠ NOT RECOMMENDED YET
+Real-time multi-user editing implies accounts, a server, presence and conflict
+resolution — a product direction, not a feature, and it would dwarf everything
+above. A cheap 90% alternative already fits our architecture: **export/import a
+score as a single shareable token or file** (the Loop Mixer's `KU1.` share token
+is precedent), plus the existing PDF/MusicXML export for handing a part to a
+player. Scope the token; defer the server.
+
+### SE-C7 — A browsable library of practice/teaching pieces · `M`
+We have the corpus side of this already: ~42k scores in the music DB, 2,650 with
+a cello part. What is missing is an in-app browse/clone-into-my-scores path.
+⚠ Gate on the licensing rules in `docs/CORPUS_LICENSING.md` — only Tier A/B rows
+with attribution may ship, and per-row provenance already exists for that.
+
+**Ordering note:** SE-C2 → SE-C3 → SE-C4 is the ladder that makes the editor feel
+instrument-aware; SE-C1 and SE-C5 are playback; SE-C6/C7 are product decisions.
+
 ## Automatic play-along — live pitch detection (feature area)
 
 Live pitch/chord detection from the mic, turned into real practice modes:
