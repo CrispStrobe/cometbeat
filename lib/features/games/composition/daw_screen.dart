@@ -54,6 +54,7 @@ import 'package:comet_beat/core/interop/project_bridge.dart'
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart' show SharedBeat;
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/automation_curve_editor.dart';
 import 'package:comet_beat/features/games/composition/daw_help_sheet.dart';
@@ -151,6 +152,11 @@ abstract interface class DawTester {
   void clear();
   void play();
   void stop();
+
+  /// WS-W1c — put this timeline in the project as an audio track, so it can be
+  /// mixed alongside the other kinds. Returns the new track's id, or null when
+  /// no project is provided.
+  String? addToProject({String? name});
 
   /// Merge/convert: flatten every clip into one baked audio take; freeze a
   /// single live clip to audio; whether a clip is already baked; remove a clip.
@@ -460,6 +466,25 @@ class _DawScreenState extends State<DawScreen>
     } on ProviderNotFoundException {
       _transport = null;
     }
+  }
+
+  /// WS-W1c — the Audio Editor's timeline joins the project as an `audio`
+  /// track. There is no LIVE link here and deliberately so: this screen holds a
+  /// timeline of clips rather than one document, so what goes in is a snapshot,
+  /// and calling it live would promise a write-back that does not exist.
+  @override
+  String? addToProject({String? name}) {
+    final ProjectService projects;
+    try {
+      projects = Provider.of<ProjectService>(context, listen: false);
+    } on ProviderNotFoundException {
+      return null;
+    }
+    return projects.addTrack(
+      kind: AppMode.audio,
+      document: _daw.timeline,
+      name: name ?? 'Audio',
+    );
   }
 
   void _onTick(Duration elapsed) {

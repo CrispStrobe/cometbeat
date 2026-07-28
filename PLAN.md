@@ -1244,14 +1244,27 @@ prefix.
     `DawTimeline` of clips rather than one document. **There is no audio project
     track for a link to point at.** Anyone who picked this up expecting the Tab
     or Score shape would have found that out after writing the code.
-  - ⬜ **The card that actually unblocks it — `WS-W1c`, an AUDIO project
-    codec.** The registry exists precisely so a kind needing Flutter or a
-    callback can register from its own side, which is how `tab` works. Most of
-    the machinery is already there: `daw_clip_source_codec.dart` has
-    `clipSourceToJson`/`clipSourceFromJson`, and `.cbdaw v2` already stores a
-    clip's model beside its audio. **Unclaimed**, and it is the prerequisite for
-    an Audio Editor live link, for `renderProject` sounding audio tracks, and for
-    a mixer strip that can carry a recording.
+  - ✅ **`WS-W1c` — AUDIO IS A REAL PROJECT KIND, 2026-07-28.**
+    `core/audio/daw_project_codec.dart` registers `AppMode.audio` from the Audio
+    Editor's side (exactly the `tab` pattern, and exactly why `WS-W1` could
+    defer it: the encoder needs a PCM render callback a pure container must not
+    hold). `main.dart` calls it; `daw_screen.addToProject` creates such a track;
+    `renderProject` now **sounds** audio tracks instead of reporting them
+    unrenderable. 4 tests.
+    - **No new codec and no new DSP** — `daw_project.dart` already serialises a
+      `DawTimeline` (it is what `.cbdaw` is) and `renderTimeline` already
+      renders one. Same reuse shape as `WS-W5b`.
+    - ⚠️ **A contract mismatch this had to bridge:** `projectFromJson`
+      **throws**, but `ProjectDocumentCodec.decode` must **return null** — the
+      registry's rule is that a codec which has moved on costs editability,
+      never the file. Pinned by a test.
+    - ⚠️ **`daw_project.dart` is imported with a PREFIX**: it and
+      `project_codec.dart` both export `projectFromJson`, one for a `.cbdaw`
+      timeline and one for a `Project`. Same name, different documents.
+    - ⚠️ **The Audio Editor still has NO live link, deliberately.** It holds a
+      timeline of clips rather than one document, so `addToProject` takes a
+      **snapshot**; calling it live would promise a write-back that does not
+      exist.
 - ⬜ **WS-X2 — drag between surfaces.** `M` · Depends WS-W1, WS-X1.
   One `DragTarget` protocol carrying `(kind, document)`: drag a tracker pattern
   onto the timeline, a loop track into the Tab editor, an instrument from the

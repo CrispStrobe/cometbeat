@@ -8,15 +8,23 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/daw_project_codec.dart';
+import 'package:comet_beat/core/audio/daw_timeline.dart'
+    show Clip, DawTimeline, DawTrack, SampleSource;
 import 'package:comet_beat/core/audio/loop_engine.dart' show GrooveSpec;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/project/project.dart';
+import 'package:comet_beat/core/project/project_codec.dart';
 import 'package:comet_beat/core/project/project_render.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A groove that actually makes noise, so the assertions measure sound rather
 /// than the absence of a bug.
 GrooveSpec _groove() => const GrooveSpec(enabled: {'drums'});
+
+Float64List _tone(int n) => Float64List.fromList([
+      for (var i = 0; i < n; i++) 0.4 * math.sin(2 * math.pi * 220 * i / 44100),
+    ]);
 
 double _rms(Float64List x) {
   if (x.isEmpty) return 0;
@@ -43,6 +51,68 @@ ProjectTrack _loopTrack(
     );
 
 void main() {
+  group('WS-W1c — audio is a real project kind', () {
+    setUp(resetProjectDocumentCodecs);
+
+    test('audio has NO codec until it is registered', () {
+      // WS-W1 deferred it because the encoder needs a PCM render callback a
+      // pure container must not hold; the registry is how it gets one.
+      expect(projectDocumentCodecFor(AppMode.audio), isNull);
+      registerAudioProjectCodec();
+      expect(projectDocumentCodecFor(AppMode.audio), isNotNull);
+    });
+
+    test('a decode that cannot be read returns null, it does NOT throw', () {
+      // The contract difference this card exists to bridge: projectFromJson
+      // throws, but the registry requires null — an unreadable track must cost
+      // editability, never the file.
+      registerAudioProjectCodec();
+      final codec = projectDocumentCodecFor(AppMode.audio)!;
+      expect(codec.decode({'daw': 'not json'}), isNull);
+      expect(codec.decode(const {}), isNull);
+    });
+
+    test('an audio track SOUNDS in the mix, and is not reported as skipped',
+        () {
+      final timeline = DawTimeline(
+        tracks: [
+          DawTrack(clips: [Clip(source: SampleSource(_tone(4410)))]),
+        ],
+      );
+      final mix = renderProject(
+        _projectWith([
+          ProjectTrack(id: 'rec', kind: AppMode.audio, document: timeline),
+        ]),
+      );
+      expect(mix.skipped, isEmpty, reason: 'audio is carried as of WS-W1c');
+      expect(mix.isSilent, isFalse);
+      expect(_rms(mix.left), greaterThan(0));
+    });
+
+    test('an audio track obeys the mixer like any other kind', () {
+      final timeline = DawTimeline(
+        tracks: [
+          DawTrack(clips: [Clip(source: SampleSource(_tone(4410)))]),
+        ],
+      );
+      Project one(ProjectTrackMix mix) => _projectWith([
+            ProjectTrack(
+              id: 'rec',
+              kind: AppMode.audio,
+              document: timeline,
+              mix: mix,
+            ),
+          ]);
+      final full = renderProject(one(const ProjectTrackMix()));
+      final half = renderProject(one(const ProjectTrackMix(level: 0.5)));
+      expect(_rms(half.left), closeTo(_rms(full.left) * 0.5, 1e-9));
+      expect(
+        renderProject(one(const ProjectTrackMix(muted: true))).isSilent,
+        isTrue,
+      );
+    });
+  });
+
   test('a groove track renders to actual audio', () {
     // Guard for every test below: if this is silent the rest prove nothing.
     final mix = renderProject(_projectWith([_loopTrack('a')]));

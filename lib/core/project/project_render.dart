@@ -16,12 +16,13 @@
 // path modified, which is what makes the byte-identical guard hold by
 // construction rather than by testing.
 //
-// IT REPORTS WHAT IT COULD NOT RENDER. A tab has no direct PCM source (it is
+// IT REPORTS WHAT IT COULD NOT RENDER. A tab has no direct PCM source: it is
 // notation plus fingering, and turning it into sound means choosing an
-// instrument — a decision that belongs to a caller, not to a mixdown), and an
-// audio track needs a clip that the project does not carry yet. Those tracks
-// are named in [ProjectMixdown.skipped] rather than quietly omitted: a mix that
-// silently drops a part is worse than one that says which part it dropped.
+// instrument — a decision that belongs to a caller, not to a mixdown. Such
+// tracks are named in [ProjectMixdown.skipped] rather than quietly omitted, on
+// the principle that a mix which silently drops a part is worse than one that
+// says which part it dropped. (Audio tracks DO sound as of WS-W1c — a timeline
+// already knows how to render itself.)
 //
 // THE PAN LAW MATCHES THE REST OF THE APP — constant power, pan −1..1 mapped to
 // an angle 0..π/2 with cos/sin gains, the same shaping `panPartsToStereo` uses
@@ -33,7 +34,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart'
-    show ClipSource, kDawSampleRate;
+    show ClipSource, DawTimeline, kDawSampleRate, renderTimeline;
 import 'package:comet_beat/core/audio/loop_engine.dart' show GrooveSpec;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/interop/app_mode.dart';
@@ -160,9 +161,26 @@ ClipSource? _sourceFor(ProjectTrack track) {
     AppMode.tracker => doc is TrackerSong ? TrackerSource(doc) : null,
     AppMode.loop => doc is GrooveSpec ? GrooveSource(doc) : null,
     AppMode.score => doc is MultiPartScore ? ScoreSource(doc) : null,
-    // Tab and audio have no direct PCM source — see the header.
-    AppMode.tab || AppMode.audio => null,
+    // WS-W1c: an audio track is a whole timeline, which already knows how to
+    // render itself; wrapping it as a source keeps this switch uniform.
+    AppMode.audio => doc is DawTimeline ? _TimelineSource(doc) : null,
+    // Tab still has no direct PCM source — see the header.
+    AppMode.tab => null,
   };
+}
+
+/// Renders an Audio Editor timeline, so a project mix can carry a recording.
+class _TimelineSource implements ClipSource {
+  const _TimelineSource(this.timeline);
+
+  final DawTimeline timeline;
+
+  @override
+  Float64List render(int sampleRate) =>
+      renderTimeline(timeline, sampleRate: sampleRate);
+
+  @override
+  Object get cacheKey => timeline;
 }
 
 String _whyNoSound(ProjectTrack track) {
@@ -174,7 +192,6 @@ String _whyNoSound(ProjectTrack track) {
   }
   return switch (track.kind) {
     AppMode.tab => 'a tab needs an instrument chosen before it can sound',
-    AppMode.audio => 'audio tracks are not carried in the project yet',
     _ => 'the document is not the type this kind renders',
   };
 }

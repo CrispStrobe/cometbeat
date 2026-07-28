@@ -1,3 +1,4 @@
+import 'package:comet_beat/core/audio/daw_project_codec.dart';
 import 'package:comet_beat/core/audio/tts/onnx_ort_tts_factory.dart';
 import 'package:comet_beat/core/audio/tts/prebaked_narration.dart';
 import 'package:comet_beat/core/audio/tts/tts_asset_cache.dart';
@@ -42,6 +43,10 @@ Future<void> main() async {
   // kinds are built in to `project_codec.dart`; tab registers from its own side
   // because `TabDocument` reaches Flutter through `crisp_notation`.
   registerTabProjectCodec();
+  // WS-W1c — and audio, for the same reason: `projectToJson` needs a PCM
+  // render callback that the pure container must not hold, so it registers
+  // from this side.
+  registerAudioProjectCodec();
   runApp(const CometBeatApp());
 }
 
