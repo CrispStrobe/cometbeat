@@ -260,6 +260,46 @@ void main() {
     });
   });
 
+  group('plain letters still enter notes', () {
+    testWidgets('a bare letter types a note, even one bound elsewhere',
+        (tester) async {
+      // WS-A3/WS-L1 bound plain M and S (the conventional mute/solo keys) in
+      // the SHARED table. The tracker uses plain letters for note entry, so
+      // this is the test that says the shared table cannot shadow them: the
+      // tracker simply does not dispatch those intents, and an unhandled
+      // intent falls through to note entry.
+      final game = await _pump(tester);
+      game.moveCursor(0, 0);
+      await tester.pump();
+      expect(game.noteCount, 0);
+
+      // 'c' is a note name in the tracker's note-name entry mode.
+      await _press(tester, LogicalKeyboardKey.keyC);
+      await _press(tester, LogicalKeyboardKey.digit4);
+      expect(game.noteCount, 1, reason: 'C4 should have been entered');
+    });
+
+    testWidgets('M and S still ENTER NOTES — they are note keys here',
+        (tester) async {
+      // Found by writing this test: the tracker uses the classic QWERTY piano
+      // layout, so S and M are not spare keys at all — they are notes. The
+      // shared table binds plain M/S to mute/solo for the Audio Editor and
+      // Loop Studio, and the ONLY reason that is safe is that the tracker does
+      // not dispatch those intents, so an unhandled intent falls straight
+      // through to note entry. If the tracker ever handles mute/solo, these
+      // bindings have to move first.
+      final game = await _pump(tester);
+      game.moveCursor(0, 0);
+      await tester.pump();
+      expect(game.noteCount, 0);
+
+      await _press(tester, LogicalKeyboardKey.keyM);
+      expect(game.noteCount, 1, reason: 'M is a note key in this layout');
+      await _press(tester, LogicalKeyboardKey.keyS);
+      expect(game.noteCount, 2, reason: 'and so is S');
+    });
+  });
+
   group('what a modifier must NOT do', () {
     testWidgets('Ctrl+C does not enter a note', (tester) async {
       // The ordering that makes the whole handler work: block ops are checked

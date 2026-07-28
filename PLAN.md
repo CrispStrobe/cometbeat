@@ -1011,10 +1011,42 @@ prefix.
   Space = play/stop, arrows = move the cell cursor, digits = velocity,
   Cmd/Ctrl+D = duplicate, Cmd/Ctrl+Z = undo. Acceptance: a widget test drives
   the grid entirely from the keyboard.
+  ⚠️ **Sizing note from @daw-suite (I claimed this an hour before you and am
+  standing down — it is yours).** Two things worth knowing before you start:
+  * **The transport half is already done.** Space/Stop/undo/redo landed with
+    WS-T3; this screen had NO keyboard at all before that, and got one purely
+    by hosting the shared table. Covered by `keymap_hosting_test`. What is
+    left is only the grid half.
+  * **The grid half is not `S`.** `cursor` matches ZERO times in
+    `loop_mixer_screen.dart` — the step grids are tap-only, so "arrows move
+    the cell cursor" means introducing a cursor concept (selection state,
+    painting it, threading it through the shared `StepGridView`) plus
+    per-cell velocity, which is its own model question. Re-size before you
+    commit to it; the acceptance is right, the `S` is not.
+  * New intents go on the END of `AppIntent` — the names are persisted in
+    user rebindings. `duplicate` is already there and bound to Ctrl+D.
 
-- ⬜ **WS-A3 — keyboard support in the Audio Editor.** `S` · Depends WS-T3.
-  Four shortcuts today, on a surface that lives on shortcuts. Split · trim to
-  selection · nudge · zoom · marker jump · solo/mute.
+- ✅ **WS-A3 — keyboard support in the Audio Editor — SHIPPED.** Split at the
+  playhead (Ctrl+S) · trim to the marked range (Ctrl+T) · nudge (`,` / `.`) ·
+  marker jump (`[` / `]`) · mute and solo (M / S), all resolved through the
+  shared keymap, so a rebinding made in the Tracker applies here.
+  * **every one acts on the SELECTION and does nothing without one.** A
+    timeline shortcut that guesses which clip you meant is worse than one that
+    refuses: the guess is silent, and the arrangement is already wrong by the
+    time you notice. Pinned per verb.
+  * mute/solo are per-LANE, so a selection spanning two lanes is ambiguous and
+    does nothing rather than picking one.
+  * split walks the selection highest-index-first — splitting inserts a clip
+    and would otherwise shift the indices of everything after it on that lane.
+  * ⚠️ **plain M and S are NOTE KEYS in the Tracker** (classic QWERTY piano
+    layout) — found by writing the test, not by reading. Binding them is safe
+    only because the Tracker does not dispatch those intents, so an unhandled
+    intent falls through to note entry. Recorded at the binding site and pinned
+    by `tracker_keymap_characterization_test`; if the Tracker ever handles
+    mute/solo, these two must move first.
+  * new `DawTester.selectClip` — every keyboard verb here acts on the
+    selection, so a test could not drive one without it.
+  Tests: `daw_keyboard_test` (11).
 
 - ✅ **WS-A1 — clip edge handles: trim and fade — SHIPPED.** Narrow strips at
   both clip edges drag to trim; the two top corners drag the fades. Honours

@@ -62,6 +62,29 @@ enum AppIntent {
   transposeOctaveDown,
   octaveUp,
   octaveDown,
+
+  // ── WS-A3 / WS-L1 — appended, never inserted. See the warning above: these
+  //    names are persisted in a user's rebindings.
+  /// Audio Editor: split the clip at the playhead.
+  clipSplit,
+
+  /// Audio Editor: trim the clip to the marked range.
+  trimToSelection,
+
+  /// Move by a small, known amount rather than by where a finger landed.
+  nudgeLeft,
+  nudgeRight,
+
+  /// Jump between markers.
+  markerPrevious,
+  markerNext,
+
+  /// Track state.
+  toggleMute,
+  toggleSolo,
+
+  /// Duplicate whatever is selected.
+  duplicate,
 }
 
 /// A short label for the keymap sheet — an unlisted shortcut does not exist.
@@ -97,6 +120,15 @@ String appIntentLabel(AppIntent intent) => switch (intent) {
       AppIntent.transposeOctaveDown => 'Transpose down an octave',
       AppIntent.octaveUp => 'Octave up',
       AppIntent.octaveDown => 'Octave down',
+      AppIntent.clipSplit => 'Split at the playhead',
+      AppIntent.trimToSelection => 'Trim to the marked range',
+      AppIntent.nudgeLeft => 'Nudge left',
+      AppIntent.nudgeRight => 'Nudge right',
+      AppIntent.markerPrevious => 'Previous marker',
+      AppIntent.markerNext => 'Next marker',
+      AppIntent.toggleMute => 'Mute / unmute',
+      AppIntent.toggleSolo => 'Solo / unsolo',
+      AppIntent.duplicate => 'Duplicate',
     };
 
 /// Which part of the sheet an intent belongs under.
@@ -131,6 +163,17 @@ AppIntentGroup appIntentGroup(AppIntent intent) => switch (intent) {
       AppIntent.editInterpolate =>
         AppIntentGroup.editing,
       AppIntent.rowInsert || AppIntent.rowDelete => AppIntentGroup.pattern,
+      AppIntent.clipSplit ||
+      AppIntent.trimToSelection ||
+      AppIntent.duplicate ||
+      AppIntent.toggleMute ||
+      AppIntent.toggleSolo =>
+        AppIntentGroup.editing,
+      AppIntent.nudgeLeft ||
+      AppIntent.nudgeRight ||
+      AppIntent.markerPrevious ||
+      AppIntent.markerNext =>
+        AppIntentGroup.cursor,
       AppIntent.transposeUp ||
       AppIntent.transposeDown ||
       AppIntent.transposeOctaveUp ||

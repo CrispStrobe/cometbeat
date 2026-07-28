@@ -118,6 +118,11 @@ abstract interface class DawTester {
   /// Move the play-start / resting playhead (as clicking the ruler does).
   void seekTo(double ms);
 
+  /// WS-A3 — select a clip, as tapping its checkbox does. Every keyboard verb
+  /// on this surface acts on the selection, so a test cannot drive one without
+  /// making a selection first.
+  void selectClip(int track, int index);
+
   /// Whether playback loops back to the start at the end of the arrangement.
   bool get loopOn;
   void toggleLoop();
@@ -375,6 +380,15 @@ const Set<AppIntent> kDawIntents = {
   AppIntent.editDelete,
   AppIntent.editUndo,
   AppIntent.editRedo,
+  // WS-A3 — "four shortcuts today, on a surface that lives on shortcuts".
+  AppIntent.clipSplit,
+  AppIntent.trimToSelection,
+  AppIntent.nudgeLeft,
+  AppIntent.nudgeRight,
+  AppIntent.markerPrevious,
+  AppIntent.markerNext,
+  AppIntent.toggleMute,
+  AppIntent.toggleSolo,
 };
 
 class DawScreen extends StatefulWidget {
@@ -3519,6 +3533,10 @@ class _DawScreenState extends State<DawScreen>
   double get playheadMs => _positionMs.value;
 
   @override
+  void selectClip(int track, int index) =>
+      setState(() => _selectedClips.add((track: track, index: index)));
+
+  @override
   bool get loopOn => _loop;
 
   @override
@@ -4978,10 +4996,87 @@ class _DawScreenState extends State<DawScreen>
           redo();
           return KeyEventResult.handled;
         }
+      // WS-A3 — the verbs a timeline lives on. Each acts on the SELECTION and
+      // does nothing without one, rather than guessing which clip was meant.
+      case AppIntent.clipSplit:
+        if (_splitSelectedAtPlayhead()) return KeyEventResult.handled;
+      case AppIntent.trimToSelection:
+        if (_hasFxRange) {
+          _cropToMarkedRange();
+          return KeyEventResult.handled;
+        }
+      case AppIntent.nudgeLeft:
+        if (_nudgeSelected(-kNudgeMs)) return KeyEventResult.handled;
+      case AppIntent.nudgeRight:
+        if (_nudgeSelected(kNudgeMs)) return KeyEventResult.handled;
+      case AppIntent.markerPrevious:
+        if (_daw.markerBefore(playheadMs) case final marker?) {
+          seekTo(marker.ms);
+          return KeyEventResult.handled;
+        }
+      case AppIntent.markerNext:
+        if (_daw.markerAfter(playheadMs) case final marker?) {
+          seekTo(marker.ms);
+          return KeyEventResult.handled;
+        }
+      case AppIntent.toggleMute:
+        if (_selectedTrack case final track?) {
+          toggleTrackMute(track);
+          return KeyEventResult.handled;
+        }
+      case AppIntent.toggleSolo:
+        if (_selectedTrack case final track?) {
+          toggleTrackSolo(track);
+          return KeyEventResult.handled;
+        }
       default:
         break;
     }
     return KeyEventResult.ignored;
+  }
+
+  /// How far a keyboard nudge moves a clip. Small enough to be a correction,
+  /// large enough to be worth pressing — and deliberately NOT grid-snapped, for
+  /// the same reason `nudgeClips` is not: nudging is what you reach for when
+  /// the grid is not where you want to be.
+  static const double kNudgeMs = 10;
+
+  /// The lane of the selection, when the whole selection is on one lane. Mute
+  /// and solo are per-LANE, so a selection spanning two of them is ambiguous
+  /// and does nothing rather than picking one.
+  int? get _selectedTrack {
+    final lanes = {
+      for (final target in _selectedClips)
+        if (_validClipSelection(target)) target.track,
+    };
+    return lanes.length == 1 ? lanes.first : null;
+  }
+
+  bool _splitSelectedAtPlayhead() {
+    final targets = [
+      for (final target in _selectedClips)
+        if (_validClipSelection(target) &&
+            canSplitClip(target.track, target.index, playheadMs))
+          target,
+    ];
+    if (targets.isEmpty) return false;
+    // Highest index first: splitting inserts a clip and would shift the
+    // indices of everything after it on the same lane.
+    targets.sort((a, b) => b.index.compareTo(a.index));
+    for (final target in targets) {
+      splitClip(target.track, target.index, playheadMs);
+    }
+    return true;
+  }
+
+  bool _nudgeSelected(double ms) {
+    final targets = [
+      for (final target in _selectedClips)
+        if (_validClipSelection(target)) target,
+    ];
+    if (targets.isEmpty) return false;
+    _daw.nudgeClips(targets, ms);
+    return true;
   }
 
   /// The app-bar transport/edit actions, made width-aware so the row never

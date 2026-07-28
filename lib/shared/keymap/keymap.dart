@@ -150,6 +150,27 @@ const List<(KeyChord, AppIntent)> kDefaultBindings = [
   // Octave.
   (KeyChord(LogicalKeyboardKey.pageUp), AppIntent.octaveUp),
   (KeyChord(LogicalKeyboardKey.pageDown), AppIntent.octaveDown),
+
+  // ── WS-A3 / WS-L1 ────────────────────────────────────────────────────────
+  // Chosen to not collide with anything above. Every one of these was checked
+  // against the existing table, because a duplicate chord is the one thing the
+  // dispatch cannot resolve.
+  (KeyChord(LogicalKeyboardKey.keyS, ctrl: true), AppIntent.clipSplit),
+  (KeyChord(LogicalKeyboardKey.keyT, ctrl: true), AppIntent.trimToSelection),
+  (KeyChord(LogicalKeyboardKey.keyD, ctrl: true), AppIntent.duplicate),
+  // Comma/period: the standard "step by one frame" pair, and they are free.
+  (KeyChord(LogicalKeyboardKey.comma), AppIntent.nudgeLeft),
+  (KeyChord(LogicalKeyboardKey.period), AppIntent.nudgeRight),
+  (KeyChord(LogicalKeyboardKey.bracketLeft), AppIntent.markerPrevious),
+  (KeyChord(LogicalKeyboardKey.bracketRight), AppIntent.markerNext),
+  // ⚠️ Plain M and S are the conventional mute/solo keys, and they are safe
+  // here for one specific reason: the Tracker uses the classic QWERTY piano
+  // layout, where **M and S are NOTE keys**, and it is only unharmed because it
+  // does not dispatch these intents — an unhandled intent falls through to note
+  // entry. If the Tracker ever handles mute/solo, these two must move first.
+  // Pinned by `tracker_keymap_characterization_test`.
+  (KeyChord(LogicalKeyboardKey.keyM), AppIntent.toggleMute),
+  (KeyChord(LogicalKeyboardKey.keyS), AppIntent.toggleSolo),
 ];
 
 /// A resolved set of bindings: the defaults, plus whatever the user changed.
