@@ -9,9 +9,11 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/loop_engine.dart' show PatternCell;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
+import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
@@ -22,6 +24,7 @@ import 'package:crisp_notation/crisp_notation.dart'
     show
         InteractiveGrandStaffView,
         InteractiveMultiPartView,
+        MultiPartScore,
         MultiSystemView,
         NoteElement,
         NoteNameStyle,
@@ -103,6 +106,60 @@ Future<void> _enterStudio(WidgetTester tester) async {
 }
 
 void main() {
+  group('WS-X1 — Score holds a live project link', () {
+    Future<CompositionWorkshopTester> pumpWith(
+      WidgetTester tester,
+      ProjectService projects,
+    ) async {
+      await tester.pumpWidget(
+        ChangeNotifierProvider<ProjectService>.value(
+          value: projects,
+          child: _app(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return _editor(tester);
+    }
+
+    testWidgets('add, re-open live, write back', (tester) async {
+      final projects = ProjectService();
+      final ws = await pumpWith(tester, projects);
+
+      final id = ws.addToProject(name: 'Melody');
+      expect(id, isNotNull);
+      expect(projects.tracks.single.kind, AppMode.score);
+      expect(projects.tracks.single.name, 'Melody');
+      expect(ws.hasLiveProjectLink, isTrue);
+
+      // Re-opening the same track is LIVE — this is the case that needed `_mpd`
+      // to stop being `late final`, since the whole document is replaced.
+      expect(ws.openProjectTrack(id!), isTrue);
+      await tester.pumpAndSettle();
+      expect(ws.hasLiveProjectLink, isTrue);
+
+      expect(ws.writeBackToProject(), isTrue);
+      expect(projects.track(id)!.document, isA<MultiPartScore>());
+    });
+
+    testWidgets('a TRACKER track is refused, not silently converted',
+        (tester) async {
+      final projects = ProjectService();
+      final ws = await pumpWith(tester, projects);
+      final id = projects.addTrack(kind: AppMode.tracker, document: null);
+      expect(ws.openProjectTrack(id), isFalse);
+    });
+
+    testWidgets('with no project provided the screen still works',
+        (tester) async {
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      final ws = _editor(tester);
+      expect(ws.addToProject(), isNull);
+      expect(ws.hasLiveProjectLink, isFalse);
+      expect(ws.writeBackToProject(), isFalse);
+    });
+  });
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     MelodyBridge.instance.clear();

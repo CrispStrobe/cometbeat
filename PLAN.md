@@ -1171,11 +1171,20 @@ prefix.
     passes `liveKind`. A **tracker** track offered to it is REFUSED rather than
     silently converted: a conversion belongs behind the "Open in…" menu where
     its cost is shown before the user commits, not inside a project-track open.
-  - ⬜ **Step 2b remainder — Loop Studio, the Audio Editor, Score.** Loop Studio
-    and the Audio Editor were **claimed** when I looked (`WS-L1`, `WS-A3`) and
-    are the natural next two; Score is free. The pattern is now identical three
-    times over, so each is small: three methods + `liveKind` on the existing
-    menu + a null-safe provider read.
+  - ✅ **Step 2b (Score) — 2026-07-28.** Three of five surfaces now hold live
+    links: Tracker · Tab · Score.
+    ⚠️ **Score needed one thing the others did not:** `_mpd` was
+    `late final MultiPartDocument`, so the document could not be replaced and an
+    in-place open was impossible. It is now `late` — a one-keyword change, made
+    deliberately and flagged in its commit rather than slipped in; the lazy
+    initializer still runs when nothing assigns first, so the
+    seeded-from-`initialScore` path is unchanged and all 88 of that screen's
+    tests pass.
+  - ⬜ **Step 2b remainder — Loop Studio and the Audio Editor.** Both were
+    claimed every time I looked (`WS-L1`, then `WS-X6` in `daw_screen.dart`).
+    Each is now ~20 lines: three methods, `liveKind` on the existing menu, a
+    null-safe provider read. **Whoever is next in those files should fold it in
+    rather than treat it as a separate card.**
 - ⬜ **WS-X2 — drag between surfaces.** `M` · Depends WS-W1, WS-X1.
   One `DragTarget` protocol carrying `(kind, document)`: drag a tracker pattern
   onto the timeline, a loop track into the Tab editor, an instrument from the

@@ -117,23 +117,27 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` step 2b for SCORE.**
-  Worktree `../mus-daw-parity`.
-  **Lane:** `daw_screen.dart` was touched 10 min ago by `WS-X6` and
-  `loop_mixer_screen.dart` is still `loop-d1d4`'s for `WS-L1`, so Score is the
-  one step-2b surface that is free. (`WS-X3`'s Score claim is marked
-  *superseded* and is about the FX rack, not this.)
-  ⚠️ **A constraint the other two surfaces did not have, found before writing
-  code:** `_mpd` is `late final MultiPartDocument`, so the Score screen's
-  document **cannot be replaced in place**. The Tracker and Tab both reassign
-  theirs. So either Score gets only `addToProject` + `writeBackToProject` (put
-  work in, push edits back — no in-place re-open), or `late final` becomes
-  `late`, which is a one-keyword change in a ~4,000-line screen I do not own.
-  **I will take the one-keyword change** — it makes Score consistent with the
-  other two and the screen's own tests are the regression net — and I will say
-  so explicitly in the commit rather than slipping it in. If a reviewer would
-  rather Score stayed append-only, reverting to the narrower option is one
-  line. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 2b for
+  SCORE. Three of five surfaces now hold live project links** (Tracker · Tab ·
+  Score). 88 Score tests + 158 across score/workshop/tab/mixer; format +
+  whole-project analyze clean.
+  ⚠️ **I changed `late final` to `late` on `_mpd` in a ~4,000-line screen I do
+  not own**, exactly as I said I would in the claim rather than slipping it in.
+  Without it the Score document cannot be replaced and an in-place open is
+  impossible — the Tracker and Tab both reassign theirs. The lazy initializer
+  still runs when nothing assigns first, so the seeded-from-`initialScore` path
+  is unchanged, and that screen's own 88 tests are the regression net. **If a
+  reviewer would rather Score stayed append-only, reverting to
+  add + write-back only is one line.**
+  Same refusal rule as Tab: `openProjectTrack` refuses a track of another kind
+  rather than silently converting it, because a conversion belongs behind the
+  "Open in…" menu where its cost is shown.
+  ⬜ **Loop Studio and the Audio Editor are the last two, and were claimed every
+  time I looked** (`WS-L1`, then `WS-X6` in `daw_screen.dart`). Each is now
+  **~20 lines** — three methods, `liveKind` on the existing menu, a null-safe
+  provider read. **@loop-d1d4 / @daw-suite: fold it into whatever you are doing
+  in those files rather than treating it as its own card;** the Tab and Score
+  commits are copy-ready templates. — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W5` the mixer
   console.** `mixer_console_screen.dart` + 7 tests, wired into the authoring
