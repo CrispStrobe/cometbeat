@@ -22,12 +22,14 @@ effort than the scores are to the DB.
 Gentle by construction: sequential, sleeps between requests, resumes by
 file-existence, backs off on 429/503.
 """
+import io
 import json
 import os
 import random
 import sys
 import time
 import urllib.parse
+import zipfile
 from pathlib import Path
 
 import requests
@@ -130,32 +132,55 @@ def main():
             continue
 
         got, failed = {}, []
-        # Scans are large; record their URL for the eval corpus but do not pull
-        # them in this pass (the DB never ships them).
-        for kind in ("musicxml", "midi"):
-            for f in picked[kind]:
-                name = f["name"]
-                dest = OUT / ident / name
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                url = (f"https://archive.org/download/{ident}/"
-                       + urllib.parse.quote(name))
-                if not dest.exists() or dest.stat().st_size == 0:
-                    try:
-                        r = get(url)
-                    except Exception as e:
-                        # One unavailable file must not abort the harvest. It is
-                        # recorded and simply stays absent; a re-run retries it.
-                        print(f"   !! FAILED {name}: {e}", flush=True)
-                        failed.append({"name": name, "error": str(e)[:200]})
-                        continue
-                    dest.write_bytes(r.content)
-                    time.sleep(random.uniform(0.4, 1.2))
-                got.setdefault(kind, []).append({
-                    "name": name,
-                    "path": dest.relative_to(OUT).as_posix(),
-                    "bytes": dest.stat().st_size,
-                    "url": url,
-                })
+        wanted = [(k, f["name"]) for k in ("musicxml", "midi") for f in picked[k]]
+        need = [name for _, name in wanted
+                if not (OUT / ident / name).exists()
+                or (OUT / ident / name).stat().st_size == 0]
+
+        # BULK PATH. There is no collection-wide zip on archive.org, but each
+        # ITEM can be served as a server-side zip filtered to chosen formats:
+        #   /compress/<id>/formats=MusicXML,MIDI
+        # One request instead of one per file, and it avoids the per-file
+        # dnNNNNNN storage-node URLs, which returned transient 500s constantly
+        # (9 of them in the first 57 items). Falls back to per-file on failure.
+        if need:
+            (OUT / ident).mkdir(parents=True, exist_ok=True)
+            try:
+                r = get(f"https://archive.org/compress/{ident}/"
+                        "formats=MusicXML,MIDI")
+                with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+                    for zi in z.infolist():
+                        base = os.path.basename(zi.filename)
+                        if base in need:
+                            (OUT / ident / base).write_bytes(z.read(zi))
+                            need.remove(base)
+                time.sleep(random.uniform(0.6, 1.4))
+            except Exception as e:
+                print(f"   .. zip path failed ({str(e)[:70]}), per-file fallback",
+                      flush=True)
+
+        # Per-file fallback for anything the zip did not deliver.
+        for kind, name in wanted:
+            dest = OUT / ident / name
+            url = (f"https://archive.org/download/{ident}/"
+                   + urllib.parse.quote(name))
+            if not dest.exists() or dest.stat().st_size == 0:
+                try:
+                    r = get(url)
+                except Exception as e:
+                    # One unavailable file must not abort the harvest. It is
+                    # recorded and simply stays absent; a re-run retries it.
+                    print(f"   !! FAILED {name}: {e}", flush=True)
+                    failed.append({"name": name, "error": str(e)[:200]})
+                    continue
+                dest.write_bytes(r.content)
+                time.sleep(random.uniform(0.4, 1.2))
+            got.setdefault(kind, []).append({
+                "name": name,
+                "path": dest.relative_to(OUT).as_posix(),
+                "bytes": dest.stat().st_size,
+                "url": url,
+            })
         if not got:
             print(f"[{n}/{len(docs)}] {ident}: all files failed, skipping")
             continue

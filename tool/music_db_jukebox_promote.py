@@ -68,6 +68,16 @@ ANON_PUB_CUTOFF = 1930  # anonymous works: 70y from publication
 HARVEST = Path(sys.argv[1] if len(sys.argv) > 1 else "jukebox")
 INDEX = HARVEST / "jukebox-index.json"
 
+# The repo mirror under tool/ carries the music_db_ prefix and an underscored
+# name; the working copy does not. Accept either.
+_ALIASES_RAW = {}
+for _cand in ("jukebox-aliases.json", "music_db_jukebox_aliases.json"):
+    _p = Path(__file__).parent / _cand
+    if _p.exists():
+        _ALIASES_RAW = json.loads(_p.read_text())
+        break
+ALIASES = {k: v for k, v in _ALIASES_RAW.items() if not k.startswith("_")}
+
 # Roles that are contribution credits on the DERIVATION, not authorship of the
 # music. These people made the scan/OMR/post-processing and PD-dedicated it.
 NOT_AUTHORS = {
@@ -87,7 +97,12 @@ TRAD_SIGNAL = re.compile(
 ROLE_PREFIX = re.compile(
     r"^\s*(?:words?\s+and\s+music\s+by|music\s+by|words?\s+by|lyrics?\s+by|"
     r"composed\s+by|arranged\s+by|arr\.?\s+by|arr\.|edited\s+by|ed\.\s*by|"
-    r"ed\.|english\s+version\s+by|translated\s+by|by)\s+", re.I)
+    r"ed\.|english\s+version\s+by|translated\s+by|annotated\s+by|fingered\s+by|"
+    r"collected\s+by|harmonized\s+by|revised\s+by|selected\s+by|by)\s+", re.I)
+# Bare role words that survive as a whole "name" when no person follows them.
+ROLE_ONLY = re.compile(
+    r"^(?:arranged|edited|collected|annotated|fingered|harmonized|revised|"
+    r"selected|compiled|transcribed|words|music|lyrics)$", re.I)
 PARENS = re.compile(r"\([^)]*\)")
 LIFESPAN = re.compile(
     r"\((?:c\.?\s*)?(1[0-9]{3})\s*[-–—]\s*(?:c\.?\s*)?(1[0-9]{3}|20[0-2][0-9])\)")
@@ -107,10 +122,32 @@ def as_list(v):
 
 
 def extract_names(item):
-    """Named people plausibly holding rights in the MUSIC (not the scan)."""
+    """Named people plausibly holding rights in the MUSIC (not the scan).
+
+    Includes the PARENT BOOK's compiler/editor. Public Resource split multi-song
+    books into one item per song, and the child credits only that song's
+    arranger — so judging a child on its own metadata silently ignores whoever
+    compiled and edited the volume. 133 of our 204 items come from one 1922
+    E. C. Schirmer songbook edited by Archibald T. Davison (d. 1961), who is EU-
+    protected until the end of 2031; several of those songs cleared on the
+    arranger alone before the parent was consulted.
+    """
     raw = []
-    for c in as_list(item.get("creator")):
-        raw.extend(SPLIT.split(str(c)))
+    creators = list(as_list(item.get("creator")))
+    parent = item.get("parent") or {}
+    creators += list(as_list(parent.get("creator")))
+    for c in creators:
+        for chunk in SPLIT.split(str(c)):
+            # A comma is ambiguous: it joins two people ("Nathan Haskell Dole,
+            # Friedrich Silcher") but also inverts one ("Dole, Nathan") and
+            # separates role words ("Collected, Edited"). Only split when BOTH
+            # sides are plausible full names, so the ambiguous cases fall
+            # through as one unresolvable chunk and the row stays held.
+            parts = [p.strip() for p in chunk.split(",")]
+            if len(parts) == 2 and all(len(p.split()) >= 2 for p in parts):
+                raw.extend(parts)
+            else:
+                raw.append(chunk)
     names, lifespans = [], []
     for chunk in raw:
         span = LIFESPAN.search(chunk)
@@ -125,9 +162,18 @@ def extract_names(item):
             continue
         if not chunk or YEAR.fullmatch(chunk):
             continue
+        # "Arranged", "Edited", "Collected, Edited" reached the resolver as if
+        # they were people and came back UNKNOWN, inflating the unresolvable
+        # count with pipeline noise rather than data. A bare role word carries
+        # no authorship claim of its own — the person, if any, was already
+        # captured by ROLE_PREFIX — so drop it.
+        if all(ROLE_ONLY.match(w) for w in re.split(r"[,\s]+", chunk) if w):
+            continue
         # A resolvable personal name needs at least a forename and a surname.
-        # One-word chunks ("Sousa", "Schirmer") are ambiguous -> keep them, but
-        # they will almost certainly fail the match guard and stay held.
+        # One-word chunks ("Herbert", "Young" — from "Young & Herbert") are real
+        # people but unidentifiable without context, so they are kept and WILL
+        # fail the match guard. They are a human-resolvable residue, not a
+        # ceiling; classify() reports them separately so they can be worked.
         names.append(chunk)
     return names, lifespans
 
@@ -167,7 +213,24 @@ def match_ok(query, label):
     return not (qi and li) or qi == li
 
 
+PDM = "creativecommons.org/publicdomain/mark"
+
+
 def classify(item, cache):
+    # AXIS 1 FIRST. Not every item in the collection is marked: 23 of 204 (the
+    # ORCH-* silent-film orchestral set) carry NO licenceurl at all. A faithful
+    # transcription of a PD print probably attracts no new copyright anyway, but
+    # that is a legal argument, not a grant — and our standard is a positive
+    # rights basis per row. No statement, no ship, whatever axis 2 says.
+    lic = " ".join(str(x) for x in as_list(item.get("licenseurl")))
+    if PDM not in lic:
+        return ("held", None,
+                f"axis1 unresolved: no licence statement on the item "
+                f"(licenseurl={item.get('licenseurl')!r}) — the rest of the "
+                f"collection is CC PDM 1.0, so this is likely an untagged item "
+                f"rather than a reserved one, but we do not infer a dedication",
+                [], {})
+
     names, lifespans = extract_names(item)
     year = pub_year(item)
     title = " ".join(str(x) for x in as_list(item.get("title")))
@@ -199,12 +262,20 @@ def classify(item, cache):
     # P3 — every named person must resolve CLEAR on Wikidata.
     verdicts = {}
     for n in names:
-        status, yr, label, qid = resolve(n, cache)
-        if status == "CLEAR" and not match_ok(n, label):
+        # A human may have identified who a source spelling actually refers to
+        # (typos, initials, nicknames, bare surnames). The alias supplies only
+        # the IDENTIFICATION; the death year still comes from Wikidata below.
+        alias = ALIASES.get(f"{item['identifier']}::{n}") or ALIASES.get(n)
+        query = alias["canonical"] if alias else n
+        status, yr, label, qid = resolve(query, cache)
+        if status == "CLEAR" and not match_ok(query, label):
             status = "UNKNOWN"
             label = f"{label} (rejected: name mismatch)"
             yr = None
         verdicts[n] = {"status": status, "death": yr, "label": label, "qid": qid}
+        if alias:
+            verdicts[n]["alias_of"] = query
+            verdicts[n]["alias_why"] = alias["why"]
 
     if all(v["status"] == "CLEAR" for v in verdicts.values()):
         deaths = {n: v["death"] for n, v in verdicts.items()}

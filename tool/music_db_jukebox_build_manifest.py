@@ -62,48 +62,70 @@ def main():
     for it in cleared:
         xmls = it["files"].get("musicxml") or []
         mids = it["files"].get("midi") or []
+        # ONE ROW PER PIECE, NOT PER ITEM. Five items are multi-piece BOOKS whose
+        # pieces were each transcribed separately (a Concone with 21 files, a
+        # Bach album with 12, Chopin with 7...). Taking only the first file would
+        # silently drop 45 pieces, so every .musicxml becomes its own row and the
+        # `.mid` sharing its filename stem rides along.
+        # 10 items carry a MIDI but no MusicXML; MIDI is symbolic and equally
+        # policy-clean, so those ship as format=midi rather than being dropped.
+        mid_by_stem = {Path(m["name"]).stem: m for m in mids}
+        payloads = [(x, "musicxml") for x in xmls]
         if not xmls:
+            payloads = [(m, "midi") for m in mids]
+        if not payloads:
             skipped += 1
-            print(f"!! no musicxml, skipping {it['identifier']}")
-            continue
-        primary = xmls[0]
-        src = HARVEST / primary["path"]
-        if not src.exists():
-            skipped += 1
-            print(f"!! missing file, skipping {it['identifier']}")
+            print(f"!! no symbolic file, skipping {it['identifier']}")
             continue
 
-        rel = f"{DEST_PREFIX}/{primary['path']}"
-        files = {"musicxml": rel}
-        if mids:
-            files["midi"] = f"{DEST_PREFIX}/{mids[0]['path']}"
+        for primary, fmt in payloads:
+            src = HARVEST / primary["path"]
+            if not src.exists():
+                skipped += 1
+                print(f"!! missing file, skipping {primary['path']}")
+                continue
 
-        names = it.get("names") or []
-        row = {
-            "id": f"jukebox-{slug(it['identifier'])}",
-            "title": first(it.get("title")),
-            "author": "; ".join(names) if names else None,
-            "poet": None,
-            "year": year_of(it),
-            "instrument": None,
-            "instruments": None,
-            "editor": "Public Resource (OMR: Soundslice; post-processing: "
-                      "Martin R. Lucas)",
-            "ensemble": None,
-            "licence": "Public Domain Mark 1.0",
-            "source": SOURCE,
-            "source_url": it["source_url"],
-            "attribution": None,          # PDM requires none
-            "format": "musicxml",
-            "rights_status": "PD",
-            "rights_method": f"{AXIS1}; axis2={it['rule']}: {it['axis2_reason']}",
-            "path": rel,
-            "kind": "score",
-            "sha256": hashlib.sha256(src.read_bytes()).hexdigest(),
-            "bytes": src.stat().st_size,
-            "files_extra": files,
-        }
-        rows.append(row)
+            rel = f"{DEST_PREFIX}/{primary['path']}"
+            files = {fmt: rel}
+            stem = Path(primary["name"]).stem
+            if fmt != "midi" and stem in mid_by_stem:
+                files["midi"] = f"{DEST_PREFIX}/{mid_by_stem[stem]['path']}"
+
+            names = it.get("names") or []
+            # Multi-piece books need a per-file id, else all 21 Concone studies
+            # collide on one id and append_manifest would keep just one.
+            rid = f"jukebox-{slug(it['identifier'])}"
+            if len(payloads) > 1:
+                rid = f"{rid}-{slug(stem.split('.')[-1] or str(len(rows)))}"
+            title = first(it.get("title"))
+            if len(payloads) > 1:
+                title = f"{title} [{stem.split('.')[-1]}]"
+            row = {
+                "id": rid,
+                "title": title,
+                "author": "; ".join(names) if names else None,
+                "poet": None,
+                "year": year_of(it),
+                "instrument": None,
+                "instruments": None,
+                "editor": "Public Resource (OMR: Soundslice; post-processing: "
+                          "Martin R. Lucas)",
+                "ensemble": None,
+                "licence": "Public Domain Mark 1.0",
+                "source": SOURCE,
+                "source_url": it["source_url"],
+                "attribution": None,          # PDM requires none
+                "format": fmt,
+                "rights_status": "PD",
+                "rights_method": (f"{AXIS1}; axis2={it['rule']}: "
+                                  f"{it['axis2_reason']}"),
+                "path": rel,
+                "kind": "score",
+                "sha256": hashlib.sha256(src.read_bytes()).hexdigest(),
+                "bytes": src.stat().st_size,
+                "files_extra": files,
+            }
+            rows.append(row)
 
     out = HARVEST / "jukebox-manifest.json"
     out.write_text(json.dumps(rows, indent=1, ensure_ascii=False))

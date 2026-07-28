@@ -72,14 +72,13 @@ void main(List<String> a) {
     }
   }
 
-  File(a[1]).writeAsStringSync(
-      const JsonEncoder.withIndent(' ').convert({
-        'total': files.length,
-        'ok': ok,
-        'no_notes': empty,
-        'fail': fail,
-        'rows': rows,
-      }));
+  File(a[1]).writeAsStringSync(const JsonEncoder.withIndent(' ').convert({
+    'total': files.length,
+    'ok': ok,
+    'no_notes': empty,
+    'fail': fail,
+    'rows': rows,
+  }));
 
   stdout.writeln('musicxml files=${files.length} '
       'parseable=$ok no_notes=$empty fail=$fail');

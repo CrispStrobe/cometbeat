@@ -296,6 +296,79 @@ Every line here is a *licence/coverage* statement; detail per source follows.
   A per-work composer death-check stays prudent (as for any PD claim), but this is
   the cleanest guitar-tab-of-PD-works source found.
 
+- **Internet Jukebox (Internet Archive / Public Resource) — 31 rows INGESTED
+  from 24 cleared items, 180 held (2026-07-28).** `collection:PublicJukebox`:
+  period sheet-music prints
+  (Sousa marches, silent-film pit-orchestra pieces, vintage popular song, folk
+  songbooks) run through OMR by Public Resource, who publish **`.musicxml` +
+  `.mid` beside the audio** — so the symbolic-only content rule is satisfied by
+  taking the first two and ignoring the rest. Of 204 items carrying a symbolic
+  derivation, 193 have MusicXML (238 files — five are multi-piece books whose
+  pieces are transcribed separately) and 211 have MIDI.
+  - **Axis 1 — mostly settled: 181 of 204 items carry CC Public Domain Mark 1.0**
+    and Public Resource dedicate the derivation itself (their metadata credits
+    the OMR + their own post-processing). A faithful transcription of a PD print
+    carries no new authorship anyway. ⚠️ **23 items (the silent-film `ORCH-*`
+    block) carry NO licence statement at all** — those are held, because we do
+    not infer a dedication from a neighbour's tag.
+  - **Axis 2 — the real gate, and it does NOT come with the tag.** The Internet
+    Archive determines public domain on the **US pre-1930 publication rule**;
+    our ship gate is **EU life+70**. Those disagree loudly here: the collection
+    contains Irving Berlin (*Always* 1925, *All Alone* 1924 — US-PD, EU-protected
+    until **2059**), Vaughan Williams (d. 1958), and editors/arrangers who lived
+    well past 1955. So every item is **held by default** and promoted only on
+    100% ground, exactly as for the other per-item-cleared sources.
+  - ⚠️ **THE PARENT-BOOK TRAP — the finding that dominates this source.** Public
+    Resource split multi-song books into **one IA item per song**, and the child
+    item credits only *that song's* arranger. Whoever compiled and edited the
+    VOLUME appears only on the parent item. **133 of the 204 items come from a
+    single book** — *140 Folk-Songs For Grades I, II, And III* (E. C. Schirmer,
+    1922), compiled and edited by **Archibald T. Davison (d. 1961**, Wikidata
+    Q633492) and Thomas Whitney Surette (d. 1941). Davison is EU-protected until
+    the end of **2031**. Judged on their per-song arranger alone, dozens of those
+    songs cleared; judged with the book's editor, none do. **Any per-item ingest
+    from an archive that explodes books into items MUST resolve the parent** —
+    the child metadata is not the whole rights picture. Cleared count before the
+    parent check: 76. After: 24.
+  - **Result: 24 cleared items → 31 db rows (Tier A, no attribution owed) · 180
+    held.** All 24 cleared via Wikidata-confirmed life+70 (the traditional/
+    anonymous rule no longer fires anywhere, because the parent book's editors
+    are named on every song that would otherwise have qualified). Held: 133 on
+    the Davison editorial layer, 23 with no licence statement, the rest on
+    authors who died after 1955 or names that do not resolve. Held items live
+    only in `jukebox-probation.json`, never in `db.json`, so a later pass can
+    widen the set without a rebuild.
+  - **Biggest single unlock (133 items), needs a legal read, not more code:**
+    a collection copyright (§4 UrhG, *Sammelwerk*) protects the selection and
+    arrangement OF THE COLLECTION — lifting one song does not necessarily touch
+    it. If Davison's contribution is only selection/ordering, each song reverts
+    to its own arranger's term and ~30 clear immediately on the traditional/
+    anonymous rule. We hold because "compiled **and edited**" may also mean
+    per-setting editorial work (§3 *Bearbeitung*, life+70), and metadata cannot
+    distinguish the two.
+  - **The residue is 27 names, not a wall of them** — and one name,
+    **Homer H. Harbour**, gated 43 items on its own. A human-supplied alias
+    ledger (`jukebox-aliases.json`) fixed source typos and abbreviations
+    (*Constatin* von Sternberg, John Howard *Paine*→Payne, "Joseph" Concone =
+    Giuseppe, bare "Young & Herbert" = Rida Johnson Young + Victor Herbert) and
+    verified 7 of 11 against Wikidata — **the ledger supplies only the
+    identification; the death year still comes from the source**, so nothing is
+    promoted on recall. It also turned one vague UNKNOWN into a documented
+    BLOCKED (Jos. E. Howard, d. 1961).
+  - **Arrangers and editors gate a row as hard as composers.** An arrangement is
+    separately protected for the arranger's life+70, which is why a traditional
+    folk tune arranged in 1922 by a named arranger is not automatically clear.
+  - **All 238 MusicXML files parse through `crisp_notation`** (`scoreFromMusicXml`):
+    238/238, zero failures, zero note-less files.
+- **Internet Jukebox OMR eval pairs — 194 (page scan → MusicXML) pairs.** The
+  same items pair the original page image with the symbolic transcription of that
+  page under CC PDM 1.0 — a licence-clean image→symbolic corpus, unlike the
+  unnamed robustness controls. ⚠️ **SILVER, not gold:** it is OMR output with
+  human post-processing of unknown depth, so it is valid for regression tracking
+  and relative comparison and **not** for publishing an absolute accuracy figure
+  — least of all for the engine that produced it, which would measure
+  self-consistency rather than accuracy. Registry: `jukebox-omr-eval.json`.
+
 ### Safely reachable next — clean, identified, not yet ingested
 
 - **OpenScore Lieder — the rest of the CC0 set** beyond the 1,350 shipped, as the

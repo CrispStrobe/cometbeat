@@ -1,0 +1,58 @@
+{
+  "_README": [
+    "Human identification -> canonical name. THIS FILE SUPPLIES ONLY THE",
+    "IDENTIFICATION. The death year still comes from Wikidata via the normal",
+    "occupation-gated check, so nothing is promoted on recall alone. If a",
+    "canonical name does not resolve, the row stays held exactly as before.",
+    "Keys are either a bare name (applies everywhere) or 'identifier::name'",
+    "(applies to one item only, for fragments that are ambiguous in general).",
+    "Every entry records WHY, because a wrong identification here would ship a",
+    "protected work — this is the one place in the pipeline where a human error",
+    "is not caught by a later gate."
+  ],
+
+  "Joseph Concone": {
+    "canonical": "Giuseppe Concone",
+    "why": "Schirmer editions anglicise Giuseppe Concone (Italian vocal-method composer) as 'Joseph'; the item is his Op. 24 melodic studies."
+  },
+  "Constatin Von Sternberg": {
+    "canonical": "Constantin von Sternberg",
+    "why": "Source metadata typo ('Constatin'); German-American pianist/composer."
+  },
+  "John Howard Paine": {
+    "canonical": "John Howard Payne",
+    "why": "Source metadata typo ('Paine'); author of 'Home! Sweet Home!', which is the work in question."
+  },
+  "Anna L. Waring": {
+    "canonical": "Anna Laetitia Waring",
+    "why": "Welsh hymnwriter, author of 'In Heavenly Love Abiding' — the item's text."
+  },
+  "F. Oakeley": {
+    "canonical": "Frederick Oakeley",
+    "why": "Translator of 'Adeste Fideles' into 'O Come All Ye Faithful'; initial-only in the source."
+  },
+  "Bishop H.U. Onderdonk": {
+    "canonical": "Henry Ustick Onderdonk",
+    "why": "Episcopal bishop and hymnwriter; the source prefixes the title 'Bishop'."
+  },
+  "Bud De Sylva": {
+    "canonical": "B. G. DeSylva",
+    "why": "Buddy 'Bud' DeSylva, lyricist of 'Look for the Silver Lining'; source uses the nickname and splits the surname."
+  },
+  "Jos. E. Howard": {
+    "canonical": "Joseph E. Howard",
+    "why": "Abbreviated forename in the source; American songwriter."
+  },
+  "Hart A. Wand": {
+    "canonical": "Hart Wand",
+    "why": "Composer of 'Dallas Blues'; source adds a middle initial."
+  },
+  "ahsweetmysteryof00youn::Young": {
+    "canonical": "Rida Johnson Young",
+    "why": "Item creator is the bare pair 'Young & Herbert' for 'Ah! Sweet Mystery of Life' — lyricist Rida Johnson Young. Item-scoped because 'Young' alone is meaningless generally."
+  },
+  "ahsweetmysteryof00youn::Herbert": {
+    "canonical": "Victor Herbert",
+    "why": "Same item; composer Victor Herbert. Item-scoped for the same reason."
+  }
+}
