@@ -105,27 +105,27 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W1b` — make `Project`
-  REACHABLE.** Worktree `../mus-daw-parity`. **New card**, because the audit that
-  found the count-in gap found the same shape again and it blocks three others.
-  🔴 **`Project` is constructed NOWHERE in the app.** `git grep` for a
-  `Project(` outside `lib/core/project/` returns only the DAW's unrelated
-  `.cbdaw` save/load. And `registerTabProjectCodec()` — whose own doc comment
-  says *"Call once at start-up"* — **is never called**, so even the working tab
-  codec is dead and a tab track would be carried as `unreadable`. W1 is
-  excellent and inert, exactly like the shared count-in.
-  **Why it is the right next pick rather than a tidy-up:** `WS-X1` (live links —
-  "the change that turns five editors into one workstation"), `WS-W5` (mixer
-  console: one strip per project track) and `WS-W6` (browser) all assume a
-  Project instance exists. None of them can start until something owns one.
-  **Scope — deliberately small.** ADD `lib/core/services/project_service.dart`
-  (holds the app's one `Project`, `ChangeNotifier`, provided app-wide) + its
-  test. EDIT `lib/main.dart` only: one provider and one
-  `registerTabProjectCodec()` call. **No screen touched, no document model
-  changed.**
-  ⚠️ Lane check: `WS-T3` was claimed by `daw-suite` ~10 min ago and `WS-L5` by
-  `loop-d1d4`, so I took neither. `main.dart` is the only shared file here and
-  the edit is two lines plus imports. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W1b` `Project` is
+  REACHABLE.** `lib/core/services/project_service.dart` + 13 tests; `main.dart`
+  gains one provider and one `registerTabProjectCodec()` call. 106 tests green
+  across the project/codec/transport/undo suites; format + whole-project analyze
+  clean. **No screen touched.**
+  🔴 **What it fixed:** nothing in the app had ever constructed a `Project`, and
+  `registerTabProjectCodec()` — doc comment *"call once at start-up"* — was never
+  called, so a tab track would have been carried as `unreadable` despite a
+  working codec. `WS-X1` (live links), `WS-W5` (mixer console) and `WS-W6`
+  (browser) all assume a Project exists; none could have started.
+  ⚠️ **The seam `WS-X1` should use:** `updateDocument(id, doc)` keeps the track's
+  id, name and **mix** — a live link that reset level/pan on return would be
+  worse than the copy it replaces. And `ProjectTrack.copyWith` resolves
+  `document ?? this.document`, so it **cannot clear** a document; the service
+  builds the track directly and a test pins that.
+  🔴 **A PATTERN FOR EVERYONE ON THIS LADDER, not just me.** That is now
+  **twice** a card shipped complete, tested and unreachable: the shared count-in
+  lives only on `advance`, which no surface calls, and `Project` had no owner.
+  Both had green tests. **Before ticking a card, grep for a caller** — passing
+  tests are not reachability, and I would rather this be a habit than a
+  recurring discovery. — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — LOOP STUDIO clock
   migration. ALL THREE SURFACES NOW FOLLOW ONE CLOCK.** Tracker · Audio Editor ·

@@ -7,12 +7,14 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/debug_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/tts_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
+import 'package:comet_beat/features/games/composition/tab_document_codec.dart';
 import 'package:comet_beat/features/games/game_registry.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/tutorial_gate.dart';
@@ -34,6 +36,12 @@ Future<void> main() async {
   // Real app only: auto-pop a game's first-run tutorial (off by default so it
   // never interrupts widget tests, which don't run main()).
   autoShowTutorials = true;
+  // WS-W1b — teach `Project` to carry a tab. Its own doc comment says "call
+  // once at start-up"; until now nothing did, so a tab track would have been
+  // carried as `unreadable` despite a working codec existing. The other three
+  // kinds are built in to `project_codec.dart`; tab registers from its own side
+  // because `TabDocument` reaches Flutter through `crisp_notation`.
+  registerTabProjectCodec();
   runApp(const CometBeatApp());
 }
 
@@ -75,6 +83,11 @@ class CometBeatApp extends StatelessWidget {
         // surfaces can follow each other instead of each running a private
         // clock and a private stack. App-wide on purpose: two instances would
         // be the very problem these replace.
+        // WS-W1b — the app's ONE Project. Nothing constructed a Project before
+        // this, so WS-W1's container was inert and WS-X1/W5/W6 could not start.
+        ChangeNotifierProvider(
+          create: (_) => ProjectService(),
+        ),
         ChangeNotifierProvider(
           create: (_) => TransportService(),
         ),

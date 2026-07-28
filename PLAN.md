@@ -746,6 +746,27 @@ prefix.
     enum to `core/interop/app_mode.dart` and re-exporting it — additive, no call
     site changes.
 
+- ✅ **WS-W1b — make `Project` REACHABLE.** `S` · **SHIPPED 2026-07-28**
+  (opus, workstation-parity). `lib/core/services/project_service.dart`, 13 tests.
+  **A card the ladder did not have, added because the audit found the same shape
+  twice.** `WS-W1` built the container and **nothing in the app ever constructed
+  one** — a grep for `Project(` outside `lib/core/project/` returned only the
+  Audio Editor's unrelated `.cbdaw` save/load. Worse, `registerTabProjectCodec()`,
+  whose own comment says *"call once at start-up"*, **was never called**, so a
+  tab track would have been carried as `unreadable` despite a working codec
+  existing. Both are fixed in `main.dart`: one provider, one registration call.
+  - The seam `WS-X1` needs is `updateDocument(id, doc)` — swap a track's document
+    while keeping its id, name and **mix**. A live link that reset the level and
+    pan on return would be worse than the copy it replaces, so that is the
+    assertion the test leads with.
+  - ⚠️ `ProjectTrack.copyWith` resolves `document ?? this.document` and therefore
+    **cannot clear a document**. The service builds the track directly for that
+    reason; a test pins it so nobody "simplifies" it back into `copyWith`.
+  - **The pattern worth generalising:** twice now a card has shipped complete,
+    tested and unreachable (the shared count-in on the unused `advance` path;
+    `Project` with no owner). **Before ticking any remaining card, grep for a
+    caller.** Passing tests are not reachability.
+
 - ✅ **WS-W2 — `TransportService`: one clock.** `M` · **SHIPPED 2026-07-28**
   (opus, workstation-parity). `lib/core/services/transport_service.dart`, 28
   tests. **The card below is the ORIGINAL, kept because its warnings still bind
