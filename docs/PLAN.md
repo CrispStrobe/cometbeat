@@ -165,6 +165,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` step 2b for LOOP STUDIO
+  — the last surface, and the last ~20 lines.** Worktree `../mus-daw-parity`.
+  **Lane is clear:** `loop-d1d4` marked `WS-W6` slice 1 and `WS-L1` shipped-idle,
+  and `loop_mixer_screen.dart` has been cold for 2 h. I held off on this one
+  through three earlier slices precisely because they held the lane.
+  **This is the half of my mis-sized card that SURVIVED the correction** —
+  `GrooveSpec` has a built-in project codec, so a same-kind open really is live,
+  unlike the Audio Editor (which needed `WS-W1c` first and still has no live
+  link by design).
+  **Scope:** `addToProject` / `openProjectTrack` / `writeBackToProject` +
+  `liveKind` on the existing "Open in…" menu, exactly as Tracker, Tab and Score
+  have them. With this, **4 of 5 surfaces hold live links** and the fifth
+  (Audio) is documented as deliberately snapshot-only. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W1c` audio is a real
   project kind.** `core/audio/daw_project_codec.dart` + 4 tests; `main.dart`
   registers it, `daw_screen.addToProject` creates one, and `renderProject` now
