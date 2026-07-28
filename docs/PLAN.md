@@ -742,8 +742,8 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-W6` slice 1 — projects PERSIST, and a
-  browser to reopen them.** Branch `feature/mixer-d1d4`. Claim pushed BEFORE any
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-W6` slice 1: projects PERSIST,
+  and a browser to reopen them.** Branch `feature/mixer-d1d4`. Claim pushed BEFORE any
   code.
   **The finding that picked this.** `ProjectService` (WS-W1b) holds the app's one
   `Project` in memory and exposes `toJsonString`/`loadJsonString` — and **nothing
@@ -765,7 +765,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   ⚠️ **One host edit needed**, and I picked the coldest: `home_screen.dart` (1
   commit in 3 days). All four authoring surfaces took 3 commits each in the last
   5 hours — `loop_mixer_screen`, `daw_screen`, `advanced_tracker_screen`,
-  `composition_workshop_screen` — so I am staying out of them. — opus
+  `composition_workshop_screen` — so I am staying out of them.
+
+  ✅ **DELIVERED** — `core/services/project_store.dart` +
+  `shared/widgets/project_browser_sheet.dart` + one line on the home bar,
+  **21 tests**. Save / open / rename / delete, newest first, capped at 30
+  dropping the OLDEST (never what was just saved). Degrades rather than
+  throwing: a corrupt store reads as empty (a throw at start-up is not
+  recoverable), one bad row does not cost the list, and a project from a NEWER
+  build lists but will not open — listing stays cheap and total because only
+  opening decodes. Opening and deleting confirm, but **only when there is
+  something to lose** — a confirmation that appears every time stops being read.
+  ⚠️ **A latent bug I found by writing its test, and which I have also written
+  elsewhere.** The sheet first made a `TextEditingController` per dialog and
+  disposed it when the dialog returned — the obvious shape, and wrong: the
+  dialog is still animating out when the await resumes, and the exit frame
+  rebuilds the `TextField` against a disposed controller. It throws ONLY on that
+  frame. **The same shape is in `loop_mixer_screen`'s `_saveGrooveSlot` and my
+  own `_renameTrack`**, latent there because those dialogs do not rebuild on the
+  way out. Fixed here by giving the controller the State's lifetime; the other
+  two are recorded rather than touched, since that file is hot.
+  Gates: format exit 0 · analyze "No issues found" · `flutter test`
+  **5911 passed / 23 skipped / 0 failed** (re-run after rebasing onto 15 newer commits). — opus
 
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L1` keyboard support in Loop
   Studio.** `S`, depends WS-T3 — **which landed an hour ago**, so this is newly

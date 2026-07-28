@@ -602,6 +602,25 @@
   "loopMixerAddTrack": "Neue Spur hinzufügen",
   "loopMixerAddTrackHint": "auf eine Stimme tippen, um eine frische davon zu bekommen",
   "loopMixerAddEmpty": "Leer",
+  "projectBrowser": "Projekte",
+  "projectSave": "Speichern",
+  "projectOpen": "Öffnen",
+  "projectDelete": "Löschen",
+  "projectRename": "Umbenennen",
+  "projectNone": "Noch keine gespeicherten Projekte — speichere dieses, um es zu behalten.",
+  "projectRenameFailed": "Dieser Name ist schon vergeben",
+  "projectOpenConfirm": "„{name}“ öffnen? Was gerade geladen ist, wird ersetzt.",
+  "@projectOpenConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "projectDeleteConfirm": "„{name}“ löschen? Das lässt sich nicht rückgängig machen.",
+  "@projectDeleteConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "projectOpenFailed": "„{name}“ konnten wir nicht öffnen",
+  "@projectOpenFailed": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "loopMixerCopyPattern": "Muster kopieren",
   "loopMixerCopyPatternHint": "tippen, um das Muster dieser Spur auf eine andere zu legen",
   "loopMixerCopyPatternTo": "{name} kopieren auf…",

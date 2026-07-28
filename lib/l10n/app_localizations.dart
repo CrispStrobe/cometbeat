@@ -3410,6 +3410,66 @@ abstract class AppLocalizations {
   /// **'Empty'**
   String get loopMixerAddEmpty;
 
+  /// No description provided for @projectBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get projectBrowser;
+
+  /// No description provided for @projectSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get projectSave;
+
+  /// No description provided for @projectOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get projectOpen;
+
+  /// No description provided for @projectDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get projectDelete;
+
+  /// No description provided for @projectRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get projectRename;
+
+  /// No description provided for @projectNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved projects yet — save this one to keep it.'**
+  String get projectNone;
+
+  /// No description provided for @projectRenameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That name is already taken'**
+  String get projectRenameFailed;
+
+  /// No description provided for @projectOpenConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Open “{name}”? What is loaded now will be replaced.'**
+  String projectOpenConfirm(String name);
+
+  /// No description provided for @projectDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”? This cannot be undone.'**
+  String projectDeleteConfirm(String name);
+
+  /// No description provided for @projectOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t open “{name}”'**
+  String projectOpenFailed(String name);
+
   /// No description provided for @loopMixerCopyPattern.
   ///
   /// In en, this message translates to:

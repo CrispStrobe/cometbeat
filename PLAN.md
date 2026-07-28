@@ -1312,12 +1312,35 @@ prefix.
       honours. A silent mix does **not** enter the playing state, because a stop
       button on silence is a lie.
   - ⬜ **FX inserts and sends** are not here — they belong with `WS-X3`.
-- 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) CLAIMED 2026-07-28 by
-  opus (loop-d1d4).** Depends WS-W1.
+- 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) SHIPPED 2026-07-28**
+  (opus, loop-d1d4) — `ProjectStore` + a browser sheet, 21 tests.
+  Depends WS-W1.
   One panel: projects · templates · instruments (shared Sound Library) ·
   samples · FX presets (chain strings) · the licensed asset catalog. Drag from
   it onto any surface (WS-X2). This is where the asset catalog finally meets the
   authoring modes.
+  - ✅ **Slice 1 — PROJECTS — shipped.** The finding that made it slice 1:
+    `ProjectService` (WS-W1b) could serialise the app's project since the day it
+    landed and **nothing ever called it**, so closing the app lost the project.
+    That is the inert-container pattern W1b itself named one level down,
+    repeated one level up. New `core/services/project_store.dart` (the
+    `GrooveSlotsService` shape: SharedPreferences, newest-first, capped at 30
+    dropping the OLDEST) + `shared/widgets/project_browser_sheet.dart`, raised
+    from the home bar.
+  - ⬜ **Slices 2+ — the other five tabs.** Templates · instruments · samples ·
+    FX presets · the asset catalog. Deliberately not started: the
+    instrument/sample/catalog tabs are the Sound Library owner's domain, and the
+    card's "drag onto any surface" needs **WS-X2**, which does not exist. The
+    sheet is a list widget — when the browser becomes a docked panel, this is
+    what goes in the projects tab of it.
+  - ⚠️ **A bug worth not repeating, found by its own test.** The sheet first
+    created a `TextEditingController` per dialog and disposed it when the dialog
+    returned. That is the obvious shape and it is WRONG: the dialog is still
+    animating out when the await resumes, and the exit frame rebuilds the
+    `TextField` against a controller that has just been disposed. It throws only
+    on that frame, which is why the pattern survives casual use — **the same
+    shape is in `loop_mixer_screen`'s `_saveGrooveSlot` and `_renameTrack`**
+    (mine), latent there because those dialogs do not rebuild on the way out.
 
 - 🔶 **WS-X3 — the shared FX rack in the LAST mode.** `S` · **Narrowed by the
   audit: this is four-fifths done.** `shared/widgets/fx_rack.dart` is already

@@ -704,6 +704,25 @@
   "loopMixerAddTrack": "Add a new track",
   "loopMixerAddTrackHint": "tap a part to add a fresh one of it",
   "loopMixerAddEmpty": "Empty",
+  "projectBrowser": "Projects",
+  "projectSave": "Save",
+  "projectOpen": "Open",
+  "projectDelete": "Delete",
+  "projectRename": "Rename",
+  "projectNone": "No saved projects yet — save this one to keep it.",
+  "projectRenameFailed": "That name is already taken",
+  "projectOpenConfirm": "Open “{name}”? What is loaded now will be replaced.",
+  "@projectOpenConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "projectDeleteConfirm": "Delete “{name}”? This cannot be undone.",
+  "@projectDeleteConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "projectOpenFailed": "We couldn't open “{name}”",
+  "@projectOpenFailed": {
+    "placeholders": { "name": { "type": "String" } }
+  },
   "loopMixerCopyPattern": "Copy a pattern",
   "loopMixerCopyPatternHint": "tap to put this track's pattern onto another track",
   "loopMixerCopyPatternTo": "Copy {name} onto…",

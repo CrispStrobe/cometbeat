@@ -1824,6 +1824,43 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerAddEmpty => 'Leer';
 
   @override
+  String get projectBrowser => 'Projekte';
+
+  @override
+  String get projectSave => 'Speichern';
+
+  @override
+  String get projectOpen => 'Öffnen';
+
+  @override
+  String get projectDelete => 'Löschen';
+
+  @override
+  String get projectRename => 'Umbenennen';
+
+  @override
+  String get projectNone =>
+      'Noch keine gespeicherten Projekte — speichere dieses, um es zu behalten.';
+
+  @override
+  String get projectRenameFailed => 'Dieser Name ist schon vergeben';
+
+  @override
+  String projectOpenConfirm(String name) {
+    return '„$name“ öffnen? Was gerade geladen ist, wird ersetzt.';
+  }
+
+  @override
+  String projectDeleteConfirm(String name) {
+    return '„$name“ löschen? Das lässt sich nicht rückgängig machen.';
+  }
+
+  @override
+  String projectOpenFailed(String name) {
+    return '„$name“ konnten wir nicht öffnen';
+  }
+
+  @override
   String get loopMixerCopyPattern => 'Muster kopieren';
 
   @override

@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:comet_beat/core/models/learning_module.dart';
 import 'package:comet_beat/core/services/debug_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/tuning.dart';
 import 'package:comet_beat/features/games/chords/chord_quiz_screen.dart';
@@ -28,6 +29,7 @@ import 'package:comet_beat/features/settings/screens/settings_screen.dart';
 import 'package:comet_beat/features/textbook/textbook_screen.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/project_browser_sheet.dart';
 import 'package:comet_beat/shared/widgets/sound_toggle.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Clef;
 import 'package:flutter/material.dart';
@@ -157,6 +159,19 @@ class HomeScreen extends StatelessWidget {
         centerTitle: true,
         actions: [
           const SoundToggle(),
+          // WS-W6 slice 1 — the projects browser. On the home bar rather than
+          // inside an authoring surface: a project spans all of them, so it
+          // does not belong to any one, and the alternative was editing four
+          // screens that other agents are live in.
+          IconButton(
+            key: const Key('home-projects'),
+            icon: const Icon(Icons.folder_open),
+            tooltip: l10n.projectBrowser,
+            onPressed: () => showProjectBrowserSheet(
+              context,
+              service: context.read<ProjectService>(),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.menu_book),
             tooltip: l10n.textbookTitle,
