@@ -171,14 +171,18 @@ void main() {
       expect(_durationMsOf(out), closeTo(500, 2));
     });
 
-    test('a bad rate or tier fails loudly', () async {
-      for (final args in [
-        [tone, '--rate', 'nonsense'],
-        [tone, '--rate', '22050:turbo'],
-      ]) {
-        final r = await _dawedit(args);
-        expect(r.exitCode, isNot(0), reason: args.join(' '));
-      }
+    // One process per test, deliberately. Every case in this file spawns a
+    // `dart run`, and the file's 3-minute budget is sized for ONE of them —
+    // looping two through a single test doubles the exposure and it duly timed
+    // out in a loaded full-suite run while passing in isolation.
+    test('a bad rate fails loudly', () async {
+      final r = await _dawedit([tone, '--rate', 'nonsense']);
+      expect(r.exitCode, isNot(0));
+    });
+
+    test('an unknown quality tier fails loudly', () async {
+      final r = await _dawedit([tone, '--rate', '22050:turbo']);
+      expect(r.exitCode, isNot(0));
     });
   });
 
