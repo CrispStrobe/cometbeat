@@ -776,7 +776,7 @@ prefix.
     Audio Editor and Loop Studio onto it, that surface's tests green before the
     next. Nothing consumes the service yet — it ships proven, not wired.
 
-- ⬜ **WS-W2 — the original card.**
+  **WS-W2 — the original card, for reference (NOT a task):**
   - **Goal.** Position, tempo, loop range, play/stop/record, count-in and
     metronome in one place every surface listens to. Today there are three
     clocks and none can follow another.
@@ -822,7 +822,7 @@ prefix.
   - ⬜ **Not hosted in any screen yet** — same discipline as `WS-W2`. Hosting
     belongs with each surface's clock migration, one commit per surface.
 
-- ⬜ **WS-W3 — the original card.**
+  **WS-W3 — the original card, for reference (NOT a task):**
   - **Goal.** Kill three divergent transport implementations.
   - **Depends.** WS-W2.
   - **Files.** New `lib/shared/widgets/transport_bar.dart`; hosts are

@@ -105,6 +105,27 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W4` — one undo history**
+  (the last Phase 1 card). Worktree `../mus-daw-parity`.
+  **Files I will ADD:** `lib/core/services/undo_service.dart` + its test.
+  ⚠️ **I will NOT fold the three existing stacks in yet** — `daw_service.dart`
+  (`_undo`/`_redo`/`_Snapshot`), `loop_record.dart` (`LoopStack`) and the
+  tracker screen's block history stay exactly as they are. Two reasons, and the
+  second is the real one: the card says to keep the existing snapshot
+  *mechanism* and change only who owns the stack, so the fold-in is per-surface
+  work that belongs with each surface's migration; and `daw_screen.dart` was
+  edited **7 minutes** before I picked this up, so folding its stack in today
+  would collide with live work for no gain.
+  **What that costs, stated honestly:** the card's acceptance is worded at the
+  screen level ("an edit in Loop Studio is undoable from the Audio Editor's
+  history list"). I will prove the same guarantee headlessly — two adapters
+  standing for two surfaces, one shared history, either able to undo the other's
+  labelled entry. The screen-level assertion lands with the migrations, and I
+  will say so in the ladder rather than implying the card is fully discharged.
+  Also fixing a defect I left in the ladder: my `WS-W2`/`WS-W3` "original card"
+  blocks were marked `⬜`, so they read as two open tasks. Now marked as
+  reference, not work. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W3` one transport
   bar widget.** `lib/shared/widgets/transport_bar.dart` + 18 widget tests (46
   with `WS-W2`'s); `dart format` clean, `flutter analyze` (whole project) clean.
