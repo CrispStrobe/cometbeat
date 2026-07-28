@@ -105,6 +105,25 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` step 2 — put live
+  links IN FRONT OF THE USER.** Worktree `../mus-daw-parity`.
+  **Why this and not another engine slice.** Everything I have shipped on this
+  ladder so far — one transport, one undo, one Project, live links — is real and
+  tested and **invisible**. `ProjectLink.live` is exactly the signal a screen
+  needs to say *"you are editing the project track"* versus *"you are editing a
+  copy"*, and nothing says it. This is the first slice a user could feel.
+  **Scope.** EDIT `lib/shared/widgets/open_in_menu.dart` — the menu learns about
+  project tracks and distinguishes a LIVE open from a copy, additively (its
+  current `documentBuilder`/`onConverted` API keeps working untouched, so its
+  three existing hosts are unaffected unless they opt in). Plus l10n keys for
+  the two states, **append-only** as before.
+  ⚠️ `daw_screen.dart` / `loop_mixer_screen.dart` / `advanced_tracker_screen.dart`
+  were all touched 16 min ago by `WS-T3`; that work is landed and its claim is
+  closed, but I will keep my screen edits to the minimum and re-check before
+  pushing.
+  ⚠️ **Not** taking the Score/Tab surfaces in this slice — four surfaces plus a
+  menu in one commit is how a shared widget breaks three screens at once. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 1: LIVE
   LINKS.** `lib/core/project/project_link.dart` + the Tracker actually using it;
   5 new tests (83 in the tracker suite, 133 with the project/bridge/menu
