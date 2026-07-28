@@ -120,7 +120,7 @@ must be learned three times.
 > **STATUS, audited against the code 2026-07-28** (`origin/main` @ `3a018344`).
 > The Loop D1–D4 arc and the Audio swiss-army arc closed **12 of the 39** tasks
 > since this was written and narrowed three more; **27 remain open.** ✅ = shipped
-> and verified by symbol · 🔶 = narrowed or built-but-unpushed · ⬜ = open. The
+> and verified by symbol · 🔶 = narrowed, still open · ⬜ = open. The
 > canonical, per-task detail is the ladder in [PLAN.md](../PLAN.md); this file is
 > kept in step with it but is the *reasoning*, not the board.
 
@@ -224,7 +224,9 @@ model (auto-memory `cometbeat-audience-scratch-model`) the ceiling is the point.
   while audio swaps at the loop seam, so correct musical timing reads as lag.
   Show the pending state. Small; it is what makes a performance surface feel
   professional.
-- 🔶 **WS-L5 — copy / duplicate a section, scene or pattern.** Zero matches today.
+- 🔶 **WS-L5 — duplicate a PATTERN** (narrowed twice; see PLAN.md). A section
+  *is* a `GrooveScene`, so `_duplicateSection` already covers both; only the
+  pattern half is open, and it needs a product decision first.
   "Copy A to B, change one thing" is how sequencer users work.
 
 ### L-parity
@@ -263,7 +265,7 @@ Engine-complete; the gaps are direct-manipulation and workflow.
   short-term / momentary, true-peak, or a correlation meter.
 
 ### A-parity
-- 🔶 **WS-A6 — take lanes and comping.** Record several passes, choose per phrase.
+- ✅ **WS-A6 — take lanes and comping.** Record several passes, choose per phrase.
   `findPhrases` already finds the phrase boundaries. Zero matches for `takeLane`
   today.
 - ⬜ **WS-A7 — clip warp / tempo-match.** Time-stretch exists as an effect; a clip
@@ -340,7 +342,7 @@ work there.
 6  reach            X5 controllers · X6 one export sheet · W7 session⇄arrange
 D-RT                decide before phase 3; build after phase 4 if B
 
-closed 2026-07-28   L3 L4 L6 L7 L8 L9 · A2 A4 A8 · T5 · X4   (+A6 unpushed)
+closed 2026-07-28   L3 L4 L6 L7 L8 L9 · A2 A4 A6 A8 · T5 · X4
 ```
 
 **Cheap wins that need no phase and can be pulled any time:** WS-L3 (session grid —

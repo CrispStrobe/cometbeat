@@ -615,9 +615,10 @@ the gap they close.
 
 **Audited against the code 2026-07-28** (`origin/main` @ `3a018344`). The D1–D4
 Loop arc and the Audio swiss-army arc closed **12 of the original 39** between
-the ladder being written and that audit (11 on main + WS-A6 built on an unpushed
-branch), and narrowed three more — **27 remain open.** Each closed item is
-marked where it sat, with the symbol that proves it. **Re-audit before pulling anything
+the ladder being written and that audit, and narrowed three more — **27 remain
+open.** Each closed item is marked where it sat, with the symbol that proves it.
+(The audit first recorded WS-A6 as built-but-unpushed; `feature/daw-suite` has
+since landed, so all 12 are on main.) **Re-audit before pulling anything
 here** — this board moves under you, and half of what looks open may not be.
 
 **How to read a task.** Every one is written so a fresh agent can pull it
@@ -889,8 +890,9 @@ prefix.
   render-time stretch factor — the last structural gap in the Audio Editor.
 - ⬜ **WS-A9 — the last DSP tier: a stretch-quality knob.** `M` — **narrowed to
   one item.** Band-limited SRC tiers and raw up/down-sample are built as
-  `resampleHq` (`ResampleQuality{fast,good,best}`) and `resampleRaw` on the
-  unpushed branch above. What remains is time-stretch quality, and it is
+  `resampleHq` (`ResampleQuality{fast,good,best}`) and `resampleRaw` (`b2e2551d`,
+  now on main), which also fixed a real bug: every downsampled export had been
+  aliasing. What remains is time-stretch quality, and it is
   deliberately **not** a resampler setting: `time_stretch.dart` is WSOLA with a
   hardcoded `_frameSize`/`_hs`, and stretching time independently of pitch is a
   different algorithm.
