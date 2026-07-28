@@ -93,6 +93,7 @@ import 'package:comet_beat/features/games/composition/sample_waveform_widget.dar
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
+import 'package:comet_beat/features/games/composition/tracker_piano_roll.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
@@ -603,6 +604,9 @@ abstract interface class AdvancedTrackerTester {
 
   /// Open the song-overview sheet (the toolbar button's target).
   Future<void> openOrderOverview();
+
+  /// WS-T4 — open the piano roll for the cursor's channel.
+  Future<void> openPianoRoll();
 
   /// Which order slot is selected.
   int get orderCursor;
@@ -1232,6 +1236,67 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   void _addEmptyPattern() => addPattern();
   void _clonePattern() => addPattern(clone: true);
+
+  /// WS-T4 — the cursor's channel as a piano roll.
+  ///
+  /// A view beside the grid, not a replacement for it: the grid is exact and
+  /// this is legible, and they are answering different questions. Read-only —
+  /// a roll you could edit that silently disagreed with the grid would be worse
+  /// than no roll, and making them agree is its own piece of work.
+  Future<void> _showPianoRoll() async {
+    final channel = _cursorChannel;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetCtx) => SafeArea(
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.7,
+          maxChildSize: 0.95,
+          builder: (_, controller) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Channel ${channel + 1} — ${_song.current.name}',
+                        style: Theme.of(sheetCtx).textTheme.titleMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text('Higher notes to the right; time runs downward.'),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: controller,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  // Repaints as the song plays, so the playhead line tracks it.
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: _row,
+                    builder: (context, row, _) => TrackerPianoRoll(
+                      cells: [
+                        for (var r = 0; r < _song.rows; r++)
+                          _song.engine.cellAt(channel, r),
+                      ],
+                      playingRow: _clock.isRunning ? row : null,
+                      rowHeight: 10,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   /// WS-T2 — the song at a glance: every order slot as a block, in a grid.
   ///
@@ -3228,6 +3293,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   Future<void> openOrderOverview() => _showOrderOverview();
+
+  @override
+  Future<void> openPianoRoll() => _showPianoRoll();
   @override
   void selectOrderSlot(int i) => setState(() => _orderCursor = i);
   @override
@@ -6177,6 +6245,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                           icon: const Icon(Icons.grid_view, size: 18),
                           tooltip: 'Song overview',
                           onPressed: _showOrderOverview,
+                        ),
+                        // WS-T4 — the same channel, made legible.
+                        IconButton(
+                          icon: const Icon(Icons.piano, size: 18),
+                          tooltip: 'Piano roll',
+                          onPressed: _showPianoRoll,
                         ),
                         IconButton(
                           icon: const Icon(Icons.expand_more, size: 18),

@@ -1433,19 +1433,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-T4 — a piano-roll view of one
-  channel.** Premise verified: `pianoRoll` really is **0 hits** across `lib/` —
-  the app has no continuous roll anywhere. The card calls it the biggest
-  legibility win for a newcomer opening a module, and that matches the audience
-  note (this scales to students and hobbyists; the tracker grid is exact and
-  unapproachable, and *not* something to scope down).
-  Scope I am holding to: **one channel, one roll, the SAME document** — a view,
-  not a second model. Read-only first; if editing lands it will be a separate
-  commit, because a roll that silently disagrees with the grid is worse than no
-  roll.
-  ⚠️ **@daw-ux — `advanced_tracker_screen.dart`, fifth time.** I checked before
-  claiming: both recent touches to that file are mine and you are engine-side.
-  Still yours to veto.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T4 piano roll SHIPPED
+  (read-only).** `tracker_piano_roll.dart` = `rollNotesFor` (pure) + a painted
+  roll for the cursor's channel. The app had no continuous roll anywhere
+  (verified: `pianoRoll` 0 hits) and the tracker grid is exact-but-unreadable,
+  so this is a legibility view BESIDE the grid, not a replacement.
+  The whole logic is where a note ENDS — a cell says a note starts and never
+  says it stops — so a run ends at the next note (monophonic channel), a
+  key-off, or the pattern edge; that last is a stated simplification, since a
+  held note really does sound into the next pattern.
+  ⛔ **Read-only on purpose. An editable roll that silently disagreed with the
+  grid would be worse than no roll** — making the two agree is its own card, and
+  I have left it rather than half-doing it.
+  `tracker_piano_roll_test` (14); 115 green across the tracker suites + layout
+  audit; analyze clean.
   Previously: ✅ **WS-T2 pattern overview +
   drag-to-reorder SHIPPED.** A "Song overview" sheet over the order list, and a
   real drag: the strip's move buttons SWAP with a neighbour, which is sixty

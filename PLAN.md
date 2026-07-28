@@ -1626,11 +1626,29 @@ prefix.
     classic `to > from ? to - 1 : to` correction is not merely unnecessary
     there, it is an off-by-one. I wrote the old form first.
   Tests: `tracker_order_overview_test` (8).
-- ⬜ **WS-T4 — a piano-roll view of one channel.** `M` — the app still has **no**
-  continuous piano roll anywhere (`pianoRoll`: 0 hits). The tracker grid is
-  exact and unapproachable; `StepGridView` is approachable and quantized.
-  One channel, one roll, same document. The biggest legibility win for a
-  newcomer opening a module.
+- ✅ **WS-T4 — a piano-roll view of one channel — SHIPPED (read-only).**
+  `tracker_piano_roll.dart`: `rollNotesFor` (pure) + a painted roll, opened from
+  the tracker toolbar for the cursor's channel. Premise verified before
+  building: `pianoRoll` really was 0 hits across `lib/`.
+  * **a view beside the grid, not instead of it.** The grid is exact and
+    unapproachable; the roll is legible and imprecise. They answer different
+    questions, which is why both exist and why the roll is one CHANNEL — the
+    grid is already the multi-channel view.
+  * **where a note ENDS is the whole logic.** A tracker cell says a note starts
+    and says nothing about when it stops, so a run ends at the next note (the
+    channel is monophonic — a new note takes the voice), at a key-off, or at the
+    pattern edge. That last is a stated simplification: a note held across a
+    pattern boundary really does sound on, but this view shows one pattern and
+    a note running off the edge with no end is less honest than stopping there.
+  * the same pitch re-struck is **two** notes, not one long one — merging them
+    would erase the rhythm, which is the thing the view exists to show.
+  * an empty channel **says so** rather than drawing a blank grid, which reads
+    as broken software.
+  * ⛔ **read-only, deliberately.** A roll you could edit that silently
+    disagreed with the grid would be worse than no roll; making them agree is
+    its own piece of work and should be its own card.
+  Tests: `tracker_piano_roll_test` (14) — arithmetic over the pure function,
+  plus the two doors.
 - ⬜ **WS-T6 — pattern-level time signature / groove templates.** `M`.
 - ⬜ **WS-T7 — record into a pattern from the transport.** `M` ·
   Depends WS-W2, WS-X5.
