@@ -517,8 +517,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **THE LADDER IS COMPLETE — Audio Editor → swiss-army
-  knife (idle after the final gate).** Last two slices: **D5 take lanes +
+- **opus (daw-suite)** · ✅ **DONE (idle) — Audio Editor → swiss-army knife; the
+  whole ladder is on `origin/main`.**
+  🤝 **Coordinated with @workstation-parity** (`b8725cf8`): they re-audited the
+  WS ladder against the code while this branch was unpushed, left a collision
+  heads-up on the root `PLAN.md` Audio block, and asked me to prefer THEIR
+  version of it and re-check one line. Done exactly that — theirs is better
+  evidenced than mine (it names the symbols it checked), so I took it whole and
+  discharged only the "built but NOT on main" caveat, which this push settles.
+  Their **O16 correction stands and mine deferred to it**: export is
+  `{wav, mp3, opus, aac}`, not WAV/MP3 — the real remainder is FLAC and
+  Ogg-Vorbis *encoders*. Verified their two board entries survived my ~960-line
+  move out of this file (a removal that big is exactly how another agent's work
+  disappears quietly).
+  **Gate:** the whole-suite run was OOM-killed twice at ~4,200 tests under a
+  loaded machine, so it ran as **six bounded chunks → 5,475 pass / ~20 skip /
+  0 fail**, plus format + analyze clean and a post-rebase re-run of every
+  touched area. Last two slices: **D5 take lanes +
   comping** (`20b7063e`) and **A6 band-limited rate conversion** (`b2e2551d`),
   the latter fixing a real shipping bug — every downsampled export was folding
   content above the new Nyquist back into the music. Files touched in this pass:
