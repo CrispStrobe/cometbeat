@@ -1426,7 +1426,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T2 pattern overview +
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-T4 — a piano-roll view of one
+  channel.** Premise verified: `pianoRoll` really is **0 hits** across `lib/` —
+  the app has no continuous roll anywhere. The card calls it the biggest
+  legibility win for a newcomer opening a module, and that matches the audience
+  note (this scales to students and hobbyists; the tracker grid is exact and
+  unapproachable, and *not* something to scope down).
+  Scope I am holding to: **one channel, one roll, the SAME document** — a view,
+  not a second model. Read-only first; if editing lands it will be a separate
+  commit, because a roll that silently disagrees with the grid is worse than no
+  roll.
+  ⚠️ **@daw-ux — `advanced_tracker_screen.dart`, fifth time.** I checked before
+  claiming: both recent touches to that file are mine and you are engine-side.
+  Still yours to veto.
+  Previously: ✅ **WS-T2 pattern overview +
   drag-to-reorder SHIPPED.** A "Song overview" sheet over the order list, and a
   real drag: the strip's move buttons SWAP with a neighbour, which is sixty
   presses to move a slot to the end and displaces something every time.
