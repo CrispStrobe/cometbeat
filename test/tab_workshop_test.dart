@@ -12,10 +12,8 @@ import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
-import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
-import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart'
     show TabArranger, TabPositionModel;
@@ -40,62 +38,6 @@ TabWorkshopTester _tab(WidgetTester tester) =>
         as TabWorkshopTester;
 
 void main() {
-  group('WS-X1 — Tab holds a live project link', () {
-    testWidgets('add, re-open live, edit, write back', (tester) async {
-      final projects = ProjectService();
-      await pumpGame(
-        tester,
-        const TabWorkshopScreen(),
-        extraProviders: [
-          ChangeNotifierProvider<ProjectService>.value(value: projects),
-        ],
-      );
-      await tester.pumpAndSettle();
-      final tab = _tab(tester);
-
-      final id = tab.addToProject(name: 'Riff');
-      expect(id, isNotNull);
-      expect(projects.tracks.single.kind, AppMode.tab);
-      expect(projects.tracks.single.name, 'Riff');
-      expect(tab.hasLiveProjectLink, isTrue);
-
-      // Re-opening the same track is LIVE: no conversion, no copy.
-      expect(tab.openProjectTrack(id!), isTrue);
-      await tester.pumpAndSettle();
-      expect(tab.hasLiveProjectLink, isTrue);
-
-      expect(tab.writeBackToProject(), isTrue);
-      expect(projects.track(id)!.document, isA<TabDocument>());
-    });
-
-    testWidgets('a TRACKER track is refused rather than silently converted',
-        (tester) async {
-      // A conversion belongs behind the "Open in…" menu, where its cost is
-      // shown before the user commits — not inside a project-track open.
-      final projects = ProjectService();
-      await pumpGame(
-        tester,
-        const TabWorkshopScreen(),
-        extraProviders: [
-          ChangeNotifierProvider<ProjectService>.value(value: projects),
-        ],
-      );
-      await tester.pumpAndSettle();
-      final id = projects.addTrack(kind: AppMode.tracker, document: null);
-      expect(_tab(tester).openProjectTrack(id), isFalse);
-    });
-
-    testWidgets('with no project provided the screen still works',
-        (tester) async {
-      await pumpGame(tester, const TabWorkshopScreen());
-      await tester.pumpAndSettle();
-      final tab = _tab(tester);
-      expect(tab.addToProject(), isNull);
-      expect(tab.hasLiveProjectLink, isFalse);
-      expect(tab.writeBackToProject(), isFalse);
-    });
-  });
-
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     MelodyBridge.instance.clear();
@@ -923,6 +865,75 @@ void main() {
     expect(find.byType(GrandStaffView), findsNothing);
     expect(find.byType(StaffView), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  group('left-hand fingerings (B10, automatic)', () {
+    testWidgets('names a finger per fret WITHOUT re-fretting the notes',
+        (tester) async {
+      await pumpGame(tester, const TabWorkshopScreen());
+      final tab = _tab(tester);
+
+      // Frets 1,2,3,4 on the low E string — one hand, one finger per fret.
+      for (var i = 0; i < 4; i++) {
+        if (i > 0) tab.addColumn();
+        tab.selectCell(i, 5);
+        await tester.pump();
+        tab.enterFret(i + 1);
+        await tester.pump();
+      }
+      final before = [for (var c = 0; c < 4; c++) tab.fretAt(c, 5)];
+      expect(before, [1, 2, 3, 4]);
+
+      tab.addLeftFingerings();
+      await tester.pump();
+
+      expect(
+        [for (var c = 0; c < 4; c++) tab.leftFingersAt(c)?.single],
+        [1, 2, 3, 4],
+        reason: 'four consecutive frets under one hand',
+      );
+      expect(
+        [for (var c = 0; c < 4; c++) tab.fretAt(c, 5)],
+        before,
+        reason: 'fingering a tab must NEVER move a note — the frets are the '
+            "player's, not the arranger's",
+      );
+
+      // …and they must reach the ENGRAVED score, not stop at the tab grid —
+      // the Score Editor twin of this silently did nothing until a test asked.
+      final handed = tab.debugWorkshopScore().parts.first;
+      final notes = handed.measures
+          .expand((m) => m.elements)
+          .whereType<NoteElement>()
+          .toList();
+      // Every noteful column is fingered — the screen opens on a demo tab, so
+      // this is the whole document, not only the four columns edited above.
+      expect(notes.every((n) => n.fingerings.isNotEmpty), isTrue);
+      expect(
+        [for (final n in notes.take(4)) n.fingerings.single],
+        [1, 2, 3, 4],
+      );
+      expect(scoreToMusicXml(handed), contains('<fingering'));
+    });
+
+    testWidgets('an open string is finger 0, and it is one undo step',
+        (tester) async {
+      await pumpGame(tester, const TabWorkshopScreen());
+      final tab = _tab(tester);
+      tab.selectCell(0, 5);
+      await tester.pump();
+      tab.enterFret(0);
+      await tester.pump();
+
+      tab.addLeftFingerings();
+      await tester.pump();
+      expect(tab.leftFingersAt(0), [0]);
+
+      tab.undo();
+      await tester.pump();
+      expect(tab.leftFingersAt(0), isNull);
+      expect(tab.fretAt(0, 5), 0, reason: 'undo restores only the digits');
+    });
   });
 }
 

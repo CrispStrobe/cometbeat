@@ -39,6 +39,55 @@ import 'package:crisp_notation_core/crisp_notation_core.dart';
 /// then the hand simply re-anchors.
 const int kGuitarHandSpan = 4;
 
+/// Left-hand fingers for fret shapes that are ALREADY DECIDED — one list per
+/// shape, one digit per stopped string, low → high, `0` for an open string.
+///
+/// This is the whole model; [fingerGuitarScore] is this function with
+/// `arrangeTab` in front of it. It is separate because the Tab Editor's frets
+/// are the ones the PLAYER TYPED: re-arranging them there would silently rewrite
+/// the user's own fretting, so that path must be able to name fingers for the
+/// shapes as given and change nothing else.
+List<List<int>> fingerFrettings(
+  List<Map<int, int>> shapes, {
+  int handSpan = kGuitarHandSpan,
+}) {
+  final out = <List<int>>[];
+  int? position; // lowest fret currently under the index finger
+
+  for (final shape in shapes) {
+    if (shape.isEmpty) {
+      out.add(const []);
+      continue;
+    }
+    // Frets that actually need a finger. Open strings are position-independent,
+    // so they neither move the hand nor constrain where it sits.
+    final fretted = shape.values.where((f) => f > 0).toList()..sort();
+    if (fretted.isNotEmpty) {
+      final lo = fretted.first;
+      final hi = fretted.last;
+      // Keep the hand still while everything still falls under it; otherwise
+      // re-anchor on the lowest note of this shape. A shape wider than the span
+      // re-anchors too — the digits then describe a stretch, which is honest.
+      final fits =
+          position != null && lo >= position && hi <= position + handSpan - 1;
+      if (!fits) position = lo;
+    }
+    // Digits follow PITCH order (low → high), not string index, so digit i
+    // belongs to pitch i. String 0 is the highest-sounding string, so that is
+    // descending string index.
+    final byString = shape.entries.toList()
+      ..sort((a, b) => b.key.compareTo(a.key));
+    out.add([
+      for (final e in byString)
+        if (e.value == 0)
+          0
+        else
+          (e.value - (position ?? e.value) + 1).clamp(1, handSpan),
+    ]);
+  }
+  return out;
+}
+
 /// Left-hand fingers per note id, one entry per pitch of that note, low → high.
 ///
 /// `0` is an open string. A note the arranger could not fret at all is absent
@@ -65,45 +114,16 @@ Map<String, List<int>> fingerGuitarScore(
   ];
   final frettings = arrangeTab(columns, tuning, capo: capo, maxFret: maxFret);
 
+  // ⚠ The hand is threaded through the WHOLE piece, so the digits must be
+  // computed in one pass over every shape — not per note. A note is skipped for
+  // OUTPUT when it has no id, but it still moves the hand.
+  final fingers = fingerFrettings(frettings, handSpan: handSpan);
+
   final out = <String, List<int>>{};
-  int? position; // lowest fret currently under the index finger
-
-  for (var i = 0; i < notes.length && i < frettings.length; i++) {
+  for (var i = 0; i < notes.length && i < fingers.length; i++) {
     final id = notes[i].id;
-    final shape = frettings[i];
-    if (shape.isEmpty) continue;
-
-    // Frets that actually need a finger. Open strings are position-independent,
-    // so they neither move the hand nor constrain where it sits.
-    final fretted = shape.values.where((f) => f > 0).toList()..sort();
-
-    if (fretted.isNotEmpty) {
-      final lo = fretted.first;
-      final hi = fretted.last;
-      // Keep the hand still while everything still falls under it; otherwise
-      // re-anchor on the lowest note of this shape. A shape wider than the span
-      // re-anchors too — the digits then describe a stretch, which is honest.
-      final fits =
-          position != null && lo >= position && hi <= position + handSpan - 1;
-      if (!fits) position = lo;
-    }
-
-    if (id == null) continue;
-    // Fingers follow the PITCH order the note stores (low → high), not the
-    // string order, so digit i belongs to pitch i.
-    final byString = shape.entries.toList()
-      ..sort((a, b) => b.key.compareTo(a.key)); // string 0 = highest
-    final fingers = <int>[];
-    for (final e in byString) {
-      final fret = e.value;
-      if (fret == 0) {
-        fingers.add(0);
-        continue;
-      }
-      final f = fret - (position ?? fret) + 1;
-      fingers.add(f.clamp(1, handSpan));
-    }
-    if (fingers.isNotEmpty) out[id] = fingers;
+    if (id == null || fingers[i].isEmpty) continue;
+    out[id] = fingers[i];
   }
   return out;
 }

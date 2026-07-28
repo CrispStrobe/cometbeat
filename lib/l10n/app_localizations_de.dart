@@ -9,6 +9,9 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get tabAddFingerings => 'Fingersatz einfügen';
+
+  @override
   String get workshopFingeringsGuitar => 'Einfügen — Gitarre';
 
   @override

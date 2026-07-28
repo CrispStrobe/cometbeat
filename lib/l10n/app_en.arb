@@ -1,4 +1,8 @@
 {
+  "tabAddFingerings": "Add left-hand fingerings",
+  "@tabAddFingerings": {
+    "description": "Tab Editor menu: name the left-hand finger for every fretted note"
+  },
   "workshopFingeringsGuitar": "Add — guitar",
   "@workshopFingeringsGuitar": {
     "description": "Score Editor part menu: write guitar left-hand fingerings"

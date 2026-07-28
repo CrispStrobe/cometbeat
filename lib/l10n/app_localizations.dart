@@ -98,6 +98,12 @@ abstract class AppLocalizations {
     Locale('en'),
   ];
 
+  /// Tab Editor menu: name the left-hand finger for every fretted note
+  ///
+  /// In en, this message translates to:
+  /// **'Add left-hand fingerings'**
+  String get tabAddFingerings;
+
   /// Score Editor part menu: write guitar left-hand fingerings
   ///
   /// In en, this message translates to:
