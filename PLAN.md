@@ -2039,8 +2039,9 @@ Re-swept all 14 fixtures with the three fixes in force
 On several fixtures we now sit CLOSER to each reference than they sit to each
 other, which is the most that can be asked of a fourth implementation.
 
-✅ **X2 (vibrato) — MOSTLY FIXED (gated `--dart-define=PORTA_PERIOD=1`, shares the
-porta gate). Gap to the references roughly halved.** The depth-scale/space
+✅ **X2 (vibrato) — FIXED. (This paragraph said "MOSTLY FIXED, gated
+`--dart-define=PORTA_PERIOD=1`" until 2026-07-28; that gate no longer exists and
+the remaining gap was the LFO RATE, closed separately below.)** The depth-scale/space
 hypothesis held: vibrato was applied in SEMITONES with a flat depth, exactly like
 portamento before B3. ProTracker modulates PERIOD — `(vibratoTable[pos]·y) >> 7`,
 table peaking at 255, so peak wobble ≈ `255/128·y` period units — which is
@@ -2362,64 +2363,78 @@ IT has no NodMOD walker at all, which is exactly why the ladder calls it the
 highest-risk reader: fewest oracles, most features. Its flow is covered here only
 indirectly, through the audio sweep.
 
-#### X3/X4 DIAGNOSED, NOT FIXED (2026-07-27) — effect memory is per-command
+#### X3/X4 CLOSED (2026-07-27) — effect memory is per-COMMAND
 
-The 14 existing effect fixtures all restate their parameter on every row, so
-none of them could see a memory bug. Four new ones state it ONCE and then send
-the bare zero-parameter form, which is where ProTracker and FastTracker diverge.
+The 14 original effect fixtures all restate their parameter on every row, so
+none could see a memory bug. Four new ones state it ONCE and then send the bare
+zero-parameter form, which is where ProTracker and FastTracker part company.
 
-From `pt2_replayer.c`, the rule is **per-command, not per-format-and-blanket**:
+From `pt2_replayer.c`, the rule is **per-command**, not a blanket per-format one:
 
 | command | ProTracker | XM / S3M / IT |
 | --- | --- | --- |
-| `1xx` / `2xx` porta up/down | reads `ch->n_cmd` — **no memory**, `100` slides by 0 | latch |
+| `1xx` / `2xx` porta up/down | reads `ch->n_cmd` — **no memory**, `100` slides 0 | latch |
 | `Axy` volume slide | reads the row's parameter — **no memory** | latch |
-| `3xx` tone porta | **latches** (`if (param > 0) n_toneportspeed = …`) | latch |
-| `4xy` vibrato | **latches**, each nibble separately | latch |
+| `3xx` tone porta | **latches** | latch |
+| `4xy` vibrato | **latches**, per nibble | latch |
 
-We latch everything, which is the tracker-general rule applied to MOD as well.
-Measured against three engines that agree with each other at 1.000:
+We latched everything. Measured against three engines agreeing at 1.000:
 
-| fixture | refs | ours |
+| fixture | before | after |
 | --- | --- | --- |
-| `mem_porta_up` | 1.000 | **0.270** |
-| `mem_porta_down` | 1.000 | **0.531** |
-| `mem_volslide` | 1.000 | 0.994 ⚠️ see below |
-| `mem_tone_porta` (control) | 1.000 | **1.000** ✅ |
+| `mem_porta_up` | **0.270** | **1.000** |
+| `mem_porta_down` | **0.531** | **1.000** |
+| `mem_volslide` | 0.994 | 1.000 |
+| `mem_tone_porta` (control) | 1.000 | 1.000 |
 
-The control is what makes the diagnosis solid: `3xx` — the command that
-genuinely does latch — is already perfect, so the fault is the blanket RULE, not
-a broken memory mechanism. ⚠️ `mem_volslide`'s 0.994 means little: spectral
-similarity is amplitude-invariant, so it is nearly blind to a volume effect
-(the same trap that hid tremolo's 4× depth in X2). It needs an envelope
-measurement before anyone concludes `Axy` is fine.
+The control carried the diagnosis: `3xx` — the command that genuinely does
+latch — was ALREADY perfect, which is what identified the fault as the blanket
+RULE rather than a broken mechanism, and why the fix leaves `3xx`/`4xy` alone.
 
-**Why it is not fixed here, and exactly what the fix is.** The correct rule
-depends on the SOURCE FORMAT, and the format is not available at replay time.
-`ReplayVoice` has no song reference; the flag has to come from the importer
-(`doc.sourceFormat == ModuleFormat.mod`) and thread through roughly thirty call
-sites across seven private render helpers, plus the public `traceChannel` that
-many test files use. I started it — making the `ReplayVoice` parameter
-*required* so the compiler enumerates all ten construction sites rather than
-letting a default hide one, which is the lesson from X5's missed fifth site —
-and then reverted, rather than leave a wide half-converted diff in the file
-another agent is actively editing.
+**Implementation, after the first design failed.** The rule needs the source
+format at replay time, and `ReplayVoice` has no song reference. The obvious
+route — thread a flag through the render helpers — cascades: what looked like
+seven functions and ten call sites turned into thirty-five and still growing,
+because the private helpers call each other several layers deep. I tried to
+automate the conversion, the script mis-parsed, and the site count doubled every
+round (35 → 874) until I reverted the file. **A cascade that grows under you is
+the design telling you it is wrong.**
 
-The shape of the fix, once someone takes it:
+The flag rides `TrackerChannel` instead. Every render path already receives a
+channel, so it reaches all ten `ReplayVoice` sites with **no signature changes
+at all** — the three chunk-state classes needed a constructor parameter and
+nothing else did. It is an odd home for a song-level format rule and the field
+comment says so, but reach beat purity here.
 
-1. `bool protrackerEffectMemory` on `TrackerSong`, default false, set by the
-   module importer for `ModuleFormat.mod` only.
-2. `ReplayVoice({required this.protrackerMemory})` — required, not defaulted.
-3. In the latch switch, `if (_param != 0 || protrackerMemory) _mem… = _param;`
-   for `1xx`, `2xx`, `Axy`, `5xy` and `6xy`. Storing the parameter
-   unconditionally reproduces ProTracker without the apply sites needing to know
-   which rule is in force — no other change is needed.
-4. Leave `3xx`, `4xy` and `7xy` latching as they are.
+The latch itself is a one-token change per command and needs no change at the
+apply sites: `if (_param != 0 || protrackerMemory) _mem… = _param;`. Storing the
+parameter unconditionally reproduces ProTracker exactly, so nothing downstream
+has to know which rule is in force.
 
-`mem_porta_up` and `mem_porta_down` are listed in the sweep's
-`_kKnownOpenDefects`, so the numbers are **printed and flagged on every run**
-rather than skipped, and the flag inverts to "now passing? drop the exemption"
-if someone fixes it.
+`traceChannel` gains an optional `protrackerMemory` (default false, so every
+existing caller is untouched), which is what lets
+`test/mod_effect_memory_test.dart` assert BOTH rules on CI without audio.
+
+**The exemption announced its own obsolescence.** `mem_porta_up`/`mem_porta_down`
+sat in the sweep's `_kKnownOpenDefects` while this was diagnosed-but-unfixed, and
+the flag inverts to *"KNOWN OPEN now passing? drop the exemption"* — which is
+exactly what it printed when the fix landed. The list is empty now and the
+mechanism stays.
+
+⚠️ **A threshold I invented failed on correct code.** The first regression test
+asserted the bent pitch was `< 61.0` and it measured 61.25 — which is right, since
+one row of `104` over five effect ticks bends 1.25 semitones. The test now
+compares a bare command against NO command (they must be equal under ProTracker)
+rather than against a number someone guessed.
+
+⚠️ **This write-up was itself a casualty of the stale-tree clobber, and I did
+not notice for a day.** `8a2c2d52` reverted the X3/X4 fix along with its PLAN
+section; when I restored it I verified the four `lib/` files and the test file
+against the reference players and never checked the DOCS. So this section read
+"DIAGNOSED, NOT FIXED" while the fix was live on main — a doc that would have
+sent the next reader to redo finished work, which is exactly how X2 came to be
+built twice. **Restoring code is not restoring a commit.** Diff the whole
+clobber, not just the parts you remember writing.
 
 #### X10 (2026-07-27) — the sample layer is sound, except 16-bit loop UNITS
 
@@ -2755,14 +2770,22 @@ retrigger flag ignored, the ramp inverted. ⬜ Left open: tremolo depth
 re-measured with an envelope metric, and panbrello's rate against an IT
 reference.
 
-🚧 **X3 — Portamento family.** Effect MEMORY diagnosed (above) and not yet
-fixed; the rest stands. `1xx`/`2xx` step per tick, `3xx` target snapping,
+✅ **X3 — Portamento family. CLOSED.** Effect memory fixed (`ReplayProfile.
+latchPortaParam`), fine/extra-fine routing fixed, and fine porta stopped
+bypassing the pitch domain. Every portamento fixture reads 1.000 in all four
+formats. *(This line read "diagnosed and not yet fixed" for a day after the
+`8a2c2d52` clobber reverted the update — see the X3/X4 section above.)* The
+original scope, for the record: `1xx`/`2xx` step per tick, `3xx` target snapping,
 period clamping at the table edges, and effect MEMORY (a bare `300` continuing
 the previous rate) — memory bugs are invisible on a single-row fixture and
 obvious on a sustained one.
 
-🚧 **X4 — Volume slide + tremor semantics.** `Axy`'s memory rule diagnosed
-above (and needs an ENVELOPE measurement, not a spectral one). `Axy` per-tick vs per-row, the
+🔶 **X4 — Volume slide + tremor semantics. MOSTLY CLOSED.** `Axy`'s memory
+rule is fixed, S3M/IT fine volume slides are routed, and `QUIRK_VSALL` (volume
+sliding on tick 0) is honoured. The ENVELOPE metric it wanted now exists and
+gates them. ⬜ Genuinely open: **tremor (`Txy`) is untouched**, and the four
+volume-COLUMN fixtures are blocked on a semantics decision, not a bug. Original
+scope: `Axy` per-tick vs per-row, the
 "both nibbles set" ambiguity ProTracker and later trackers resolve differently,
 and interaction with `5xy`/`6xy` (porta/vibrato + volume slide combinations).
 🟡 **PARTIAL (2026-07-27, opus tracker→editors).** The both-nibbles ambiguity is
@@ -2812,9 +2835,12 @@ writer, so a writer bug is baked into every A/B that uses them. Author the same
 content with NodMOD and confirm both files render identically; any difference
 is our writer, not our replay.
 
-🚧 **X9 — Extend the A/B to XM/S3M/IT.** Started, and it paid immediately (two
-bugs, above) — the FLOW fixtures now ship in all four formats. Still to do: the
-effect fixtures in all four, plus envelopes/NNA. `convertToXm`/`convertToS3m`/`convertToIt`
+🔶 **X9 — Extend the A/B to XM/S3M/IT. MOSTLY DONE.** It paid five times over:
+the IT hex break row, XM channel polyphony, XM 16-bit loop units, S3M/IT fine
+porta and fine volume slides, and IT/XM linear slides. Flow fixtures ship in all
+four formats and `fmt/` covers the S3M/IT letter commands MOD has no encoding
+for. ⬜ Still open: **envelopes and NNA**, which no fixture reaches yet.
+Original scope: `convertToXm`/`convertToS3m`/`convertToIt`
 already exist, so the same musical content can be emitted in all four formats.
 ⚠️ Expect DIFFERENT failure modes, not the same one four times: XM/S3M/IT store
 an explicit sample rate per sample, so the MOD tuning question does not recur —
@@ -2822,9 +2848,12 @@ what these probe is envelopes, NNA, volume/pan models and effect semantics.
 IT is thinnest on oracles (libopenmpt + libxmp only) and richest in features,
 so it carries the most risk.
 
-🚧 **X10 — Sample-playback layer.** Loop wrap / ping-pong / short loops /
-one-shot verified against the references, and 16-bit loop UNITS fixed (above).
-⬜ Still open: interpolation quality and stereo samples. Interpolation, loop wrap (see the one-sample
+🔶 **X10 — Sample-playback layer. MOSTLY DONE.** Forward wrap, ping-pong, a
+short loop inside a longer sample, one-shot-past-the-end and 16-bit loop UNITS
+are all verified against the references at 0.999+. ⬜ Still open: interpolation
+quality and stereo samples — though every sample fixture already reads 0.999,
+which is weak evidence that interpolation is not a problem at these levels.
+Original scope: Interpolation, loop wrap (see the one-sample
 rescale bug already fixed), 8- vs 16-bit and stereo sample paths, `9xx` offset
 clamping, ping-pong loops. Oracle: single-note fixtures per case.
 

@@ -138,5 +138,19 @@ void main() {
   // sweeps fit in the run, which is far easier to see than a single cycle.
   _emit('panbrello_slow_Yxy', 0x1E, 0x28, holdRows: 24);
 
+  // Xxx set-pan, held STATIC — the control that separates a depth error from a
+  // pan-LAW difference.
+  //
+  // Panbrello's travel came out 0.89 against the references' 0.98, and travel
+  // alone cannot say why: our pan value is +/-0.533 and constant-power panning
+  // maps that to a measured balance of +/-0.445, so the numbers are
+  // self-consistent whether the DEPTH is 9% shallow or the LAW differs. A fixed
+  // pan position has no depth in it, so whatever it shows is the law.
+  //
+  // 0xC0 is three-quarters right. Linear panning would measure +0.50 there;
+  // constant power measures +0.414. The two are far enough apart to read off.
+  _emit('setpan_right_Xxx', 0x8, 0xC0, holdRows: 24);
+  _emit('setpan_left_Xxx', 0x8, 0x40, holdRows: 24);
+
   stdout.writeln('done — S3M + IT, one command each, 32 rows, speed 6/125');
 }
