@@ -627,7 +627,22 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-A5 loudness metering as a VIEW
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-A7 — clip warp / follow the tempo
+  map.** Its dependency **WS-W2 shipped** (`fa7b3c15`), and `TempoMap` is mine
+  from D6, so this is the last structural gap in the Audio Editor and it is in
+  my lane. Plan: `Clip.warp` + `Clip.nativeBpm`, an optional `TempoMap` on the
+  two render entry points (**null = today's behaviour, byte-identical**), and
+  the stretch applied to the trimmed window via WSOLA so **pitch does not
+  change** — warp is a timing feature, not a pitch one.
+  ⚠️ The design call I will document: a clip spanning a tempo CHANGE gets one
+  factor derived from the map's real-time span, not a piecewise stretch. That
+  smears the change inside the clip but makes its END land exactly, so nothing
+  later drifts — which is the invariant that actually matters.
+  Touching `daw_timeline.dart` · `daw_project.dart` · `daw_service.dart` ·
+  `daw_screen.dart` (all my lane, additive). **⚠️ `daw_timeline.dart` is also
+  named by @daw-ux's replay work** — mine is a new optional param + two Clip
+  fields, no DSP dispatch moved, so it should not collide; shout if it does.
+  Previously: ✅ **DONE — WS-A5 loudness metering as a VIEW
   shipped.** `core/audio/loudness_advice.dart` (pure, testable judgement) + a
   **Loudness** toolbar button and sheet in `daw_screen.dart`; measures the mix
   or the marked range, against a streaming/broadcast/none target. The
