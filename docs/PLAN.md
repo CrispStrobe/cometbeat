@@ -1995,6 +1995,42 @@ is recorded in [HISTORY.md](HISTORY.md).
   so step 1 becomes an EDIT rather than a creation. Six agent deaths today (2 stalls, 3
   network/API, 1 overload); incremental writes saved five of them.
 
+  **⭐⭐⭐ DOUBLE-KEYED, AND THE CONFIDENCE LABELS TURN OUT TO BE CALIBRATED.** Becker p.50
+  no.9 read twice, the second reading BLIND (different output paths, forbidden from opening
+  the first). Compared note-by-note by the coordinator, not by either reader:
+
+  ```
+  47 of 47 bars: note counts match exactly (zero structural disagreement)
+  PITCH  95/101  94.1%
+  DIGIT  65/66   98.5%
+  where BOTH readers claimed HIGH pitch confidence:  81/81 = 100.0%
+  all 7 disagreements pre-flagged medium/low by at least one reader: 7 of 7
+  ```
+
+  **This is the most useful result of the arc.** A `high/high` pair never disagreed, and a
+  disagreement never happened without a warning. Confidence is therefore an INSTRUMENT, not
+  decoration, and it changes the economics: not "read twice and reconcile everything" but
+  **read twice, trust the high/high agreement, arbitrate only the flagged handful** — 7 notes
+  out of 101 here. That is the difference between double-keying being unaffordable and routine.
+  • **All 7 disagreements are in the UNFINGERED staff**, confirming the earlier finding that a
+  printed digit is a second witness to a note's height. The fingered part was never in dispute.
+  • Zero note-count mismatches across 47 bars is worth noting against p.62, where a second
+  reader found the BAR COUNT itself wrong (16, not 15). Structure agreed here; only heights on
+  ledger-line and seam notes did not.
+  • ⚠ **A contamination the second reader VOLUNTEERED**: its first command was
+  `tail -2 PROGRESS.md`, which printed the first reading's final checkpoint including its
+  m23–m24. Those two bars are therefore not independent; m1–m22 are clean. It disclosed this
+  unprompted and the coordinator could not otherwise have detected it. **Process fix: readers
+  must not `tail` the shared `PROGRESS.md` — it leaks other readers' conclusions.** Give a
+  blind reader its own checkpoint file.
+  • Both readings reached PASS on the open-string alignment check independently, and R2's was
+  non-vacuous in a useful way: it FAILED continuously from its draft (a `0` placed on E3) and
+  cleared only at the last slice.
+  **Consequence for the DB question:** p.50 no.9 is now the first piece in this arc at a
+  publishable standard — both staves, 24 bars, rhythm summing 48/48, an audit trail, and
+  independent confirmation on every high-confidence note. It needs a third look at exactly
+  **7 notes**, all in the lower staff (m5 digit · m12 ×2 · m16 · m21 ×2 · m22).
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
