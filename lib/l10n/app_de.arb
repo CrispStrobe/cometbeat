@@ -2920,5 +2920,11 @@
   "transportTempo": "Tempo (BPM)",
   "transportPosition": "Takt und Z\u00e4hlzeit",
   "openInLiveTrack": "\u00c4nderungen gehen zur\u00fcck in die Projektspur",
-  "openInMakesCopy": "\u00d6ffnet eine Kopie \u2014 \u00c4nderungen bleiben dort"
+  "openInMakesCopy": "\u00d6ffnet eine Kopie \u2014 \u00c4nderungen bleiben dort",
+  "mixerConsoleTitle": "Mischpult",
+  "mixerConsoleEmpty": "Noch keine Spuren. F\u00fcge im Tracker oder im Tab-Editor eine mit \u201eZum Projekt hinzuf\u00fcgen\u201c hinzu \u2014 dann erscheint sie hier.",
+  "mixerLevel": "Pegel",
+  "mixerPan": "Panorama",
+  "mixerMute": "Stumm",
+  "mixerSolo": "Solo"
 }

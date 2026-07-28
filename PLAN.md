@@ -1185,13 +1185,25 @@ prefix.
 
 ### Phase 4 — the console
 
-- ⬜ **WS-W5 — the mixer console.** `M` · Depends WS-W1, WS-W2.
-  One strip per project track of **any** kind: level · pan · mute · solo ·
-  inserts (the shared `FxRack`) · sends · meter. This is a generalization of
-  shipped code, not new DSP — `daw_screen.dart` already has `_busMixerMatrix`,
-  `_levelMeter` and the bus editor. Acceptance: a project with one track of
-  each kind shows four working strips, and a solo is audible in the render.
-
+- 🔶 **WS-W5 — the mixer console.** `M` · **SHIPPED 2026-07-28** (opus,
+  workstation-parity), **renderer wiring still open.**
+  `lib/features/games/composition/mixer_console_screen.dart` + 7 tests, reached
+  from the authoring menu.
+  - **It fixed a THIRD reachability hole.** `ProjectTrackMix` — level · pan ·
+    mute · solo — had existed since `WS-W1` and was constructed only inside
+    `project.dart` and its codec: **nothing in the app read or wrote it.** Same
+    shape as the shared count-in and `Project` itself.
+  - One strip per project track of **any** kind, side by side, with the kind on
+    the strip — the mix belongs to the PROJECT, not to whichever editor made the
+    track. An empty project explains how to fill it instead of showing a blank.
+  - **Solo is per-track and NOT exclusive**, deliberately: "solo these three" is
+    a real request, and exclusivity would be a data-model decision made for the
+    wrong reason.
+  - ⚠️ **NO RENDER PATH HONOURS THESE VALUES YET.** They are editable and they
+    persist with the project; that is all. Teaching the renderers to apply
+    project mix is its own card with its own byte-identical guard, and the
+    screen's header says so. **Do not tick this card as "mixing works".**
+  - ⬜ **FX inserts and sends** are not here — they belong with `WS-X3`.
 - ⬜ **WS-W6 — the browser.** `M` · Depends WS-W1.
   One panel: projects · templates · instruments (shared Sound Library) ·
   samples · FX presets (chain strings) · the licensed asset catalog. Drag from

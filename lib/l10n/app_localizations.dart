@@ -95,7 +95,7 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en'),
+    Locale('en')
   ];
 
   /// Score Editor part menu: write cello fingerings into this part
@@ -15697,6 +15697,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Opens a copy — edits stay there'**
   String get openInMakesCopy;
+
+  /// No description provided for @mixerConsoleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixer'**
+  String get mixerConsoleTitle;
+
+  /// No description provided for @mixerConsoleEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No tracks yet. Add one from the Tracker or the Tab editor with “Add to project”, and it appears here.'**
+  String get mixerConsoleEmpty;
+
+  /// No description provided for @mixerLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get mixerLevel;
+
+  /// No description provided for @mixerPan.
+  ///
+  /// In en, this message translates to:
+  /// **'Pan'**
+  String get mixerPan;
+
+  /// No description provided for @mixerMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get mixerMute;
+
+  /// No description provided for @mixerSolo.
+  ///
+  /// In en, this message translates to:
+  /// **'Solo'**
+  String get mixerSolo;
 }
 
 class _AppLocalizationsDelegate
@@ -15726,9 +15762,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

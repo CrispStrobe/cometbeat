@@ -3288,5 +3288,11 @@
   "transportTempo": "Tempo (BPM)",
   "transportPosition": "Bar and beat",
   "openInLiveTrack": "Edits go back to the project track",
-  "openInMakesCopy": "Opens a copy \u2014 edits stay there"
+  "openInMakesCopy": "Opens a copy \u2014 edits stay there",
+  "mixerConsoleTitle": "Mixer",
+  "mixerConsoleEmpty": "No tracks yet. Add one from the Tracker or the Tab editor with \u201cAdd to project\u201d, and it appears here.",
+  "mixerLevel": "Level",
+  "mixerPan": "Pan",
+  "mixerMute": "Mute",
+  "mixerSolo": "Solo"
 }

@@ -8674,4 +8674,23 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get openInMakesCopy => 'Öffnet eine Kopie — Änderungen bleiben dort';
+
+  @override
+  String get mixerConsoleTitle => 'Mischpult';
+
+  @override
+  String get mixerConsoleEmpty =>
+      'Noch keine Spuren. Füge im Tracker oder im Tab-Editor eine mit „Zum Projekt hinzufügen“ hinzu — dann erscheint sie hier.';
+
+  @override
+  String get mixerLevel => 'Pegel';
+
+  @override
+  String get mixerPan => 'Panorama';
+
+  @override
+  String get mixerMute => 'Stumm';
+
+  @override
+  String get mixerSolo => 'Solo';
 }
