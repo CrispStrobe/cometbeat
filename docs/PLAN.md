@@ -1671,7 +1671,39 @@ is recorded in [HISTORY.md](HISTORY.md).
   contributed to crisp_notation. The only remaining route to dense labels is a cellist
   annotating for a few hours with the arranger pre-filling — a decision, not a task.
 
-- **opus (score-fx-rack)** · 🚧 **CLAIMING `WS-X3` — the shared FX rack in Score, the last
+- **opus (score-fx-rack)** · 🚧 **`WS-X3` SCOPED, NOT BUILT — it is blocked on a decision the
+  task line hides, and that decision crosses into the sibling repo.**
+  **What is genuinely ready.** `shared/widgets/fx_rack.dart` takes `chain` + `onChanged` and
+  nothing else — dropping it in is a few lines. Score already has the host: `_inspectorPanel`
+  (`composition_workshop_screen.dart:2611`) on the Studio shelf. The chain-string codec
+  (`core/audio/fx/fx_chain_codec.dart`: `parseFxChain` / `formatFxChain` /
+  `fxChainStringIsLossless`) is written and tested — used today by `bin/fxproc.dart` and its
+  unit test, so **WS-X3 would be its first IN-APP consumer**, which is a point in its favour.
+  🚧 **The blocker: "so a chain travels with the part" has nowhere to live.** `ScoreMetadata`
+  is a closed set — title · composer · lyricist · copyright · instrument · midiProgram ·
+  isPercussion. There is no free-form slot, so a chain cannot travel with the part today.
+  Three routes, and they are not equivalent:
+  1. **Add an `extras`/`fx` field to `ScoreMetadata`** in crisp_notation. Truest to the task —
+     the chain then survives save/load and export. ⚠ But it changes the LIBRARY's public
+     model, and per CLAUDE.md that needs its own `../crisp_notation-<topic>` worktree; the
+     shared clone must stay on `main`. Also needs the MusicXML/LilyPond writers to decide
+     whether to emit it.
+  2. **App-side storage keyed by document** (settings/prefs). Cheap and self-contained, but
+     the chain does NOT travel with the file — which is the one thing the task asked for.
+  3. **Reuse an existing field** (e.g. `copyright`). Rejected — that is data smuggling and
+     would corrupt exports.
+  **Recommendation: (1), in a crisp_notation worktree, as a separate small change FIRST**,
+  then WS-X3 becomes the few-line host it looks like. Doing (2) to "finish" WS-X3 would ship
+  something that fails its own acceptance sentence.
+  🚫 Still explicitly out of scope, per the plan's warning: unifying the Audio Editor's
+  `DawClipEffectType` with `FxSpec`.
+  ⚠ Also for whoever pulls from "cheap wins": **the list is stale** — WS-L5 shipped earlier
+  today while still listed there, and WS-X3 is an `S` only if the persistence question is
+  answered first.
+  **Not claiming further** — releasing WS-X3 rather than sitting on it, since the next step is
+  a cross-repo model change that should be a deliberate call, not a side effect.
+
+- **opus (score-fx-rack, superseded claim)** · 🚧 **CLAIMING `WS-X3` — the shared FX rack in Score, the last
   mode without an effect surface.** Picked off the "cheap wins" list after checking the board:
   workstation-parity holds WS-X1, daw-suite holds WS-A3 + WS-L1, daw-ux is on replay fidelity,
   unit-tests on the coverage sweep — WS-X3 is unclaimed and its file
