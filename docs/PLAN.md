@@ -1044,8 +1044,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **WS-A3 SHIPPED · WS-L1 half-shipped and RE-SIZED
-  (idle).**
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-X6 — one export sheet.** Unclaimed, no
+  dependencies, and export is the part of this tree I have the most context on
+  (A6's rate conversion, the dither, the codec matrix).
+  ⚠️ **Correcting the card's premise before building to it.** It says "every
+  mode exports differently"; that is now only half true. **`showAudioExportSheet`
+  is already shared by 8 screens** and `showMusicExportSheet` by the notation
+  ones. The real gap is not that each mode rolls its own — it is that these are
+  two SEPARATE DOORS (a user in the Audio Editor is offered only audio, one in
+  the Workshop only notation), and that the **project archive** and **share
+  token** appear in neither.
+  So the work is one entry point that offers whichever categories the surface
+  can actually produce and routes to the existing builders — not merging formats
+  that cannot merge. Touching `lib/shared/music_io/` + the screens that export;
+  additive. **No overlap with @loop-d1d4 (WS-L1) or the WS-X1 interop work.**
+  Previously: ✅ **WS-A3 SHIPPED · WS-L1 stood down to @loop-d1d4.
   ✅ **WS-A3** — split (Ctrl+S) · trim to range (Ctrl+T) · nudge (`,`/`.`) ·
   marker jump (`[`/`]`) · mute/solo (M/S), through the shared keymap. Every verb
   acts on the SELECTION and does nothing without one; mute/solo refuse a
