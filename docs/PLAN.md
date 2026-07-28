@@ -105,6 +105,27 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` — live links, not
+  copies (step 1).** Worktree `../mus-daw-parity`.
+  **Applying my own reachability rule before starting:** `WS-W1b` gave the app a
+  Project, but **nothing puts a track into it** — `addTrack` has no caller
+  outside its own test. A "live link" with nothing to link to would be the third
+  card to ship complete and unreachable, so step 1 closes the loop rather than
+  adding another seam.
+  **Scope.** ADD `lib/core/project/project_link.dart` — open a project track's
+  document for a mode, and write the edited document BACK. Same kind = **no
+  conversion at all** (the copy exists today only because every open went
+  through a converter); different kind keeps `ProjectBridge`'s loss report and
+  keeps producing a copy, which is correct there. EDIT
+  `advanced_tracker_screen.dart` to actually use it: put the current song in the
+  project, re-open it, edit, and have the edit land in the project.
+  ⚠️ **The seam is `ProjectService.updateDocument`**, which keeps id, name and
+  **mix** — a link that reset level/pan on return would be worse than the copy
+  it replaces.
+  ⚠️ Lane: `WS-L5` is `loop-d1d4`'s. I am touching `advanced_tracker_screen.dart`
+  (mine for the last two slices, no other committer in 4 h) and nothing in
+  `loop_*` or `daw_*`. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W1b` `Project` is
   REACHABLE.** `lib/core/services/project_service.dart` + 13 tests; `main.dart`
   gains one provider and one `registerTabProjectCodec()` call. 106 tests green
