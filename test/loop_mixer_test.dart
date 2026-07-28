@@ -16,6 +16,7 @@ import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/groove_play_along.dart';
 import 'package:comet_beat/features/games/composition/loop_creatures.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
@@ -105,6 +106,50 @@ Uint8List _tonePcm16(
 }
 
 void main() {
+  group('WS-W2 — Loop Studio publishes its clock', () {
+    testWidgets('play state and phase reach the shared transport',
+        (tester) async {
+      // The third and last surface. With this, all three follow one clock —
+      // which is the card's whole point: "pressing play in the Tracker moves
+      // the Loop Studio playhead."
+      final transport = TransportService();
+      await pumpGame(
+        tester,
+        const LoopMixerScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<TransportService>.value(value: transport),
+        ],
+      );
+      final game = _game(tester);
+
+      game.toggleTrack('drums');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+
+      expect(game.isPlaying, isTrue);
+      expect(
+        transport.isPlaying,
+        isTrue,
+        reason: 'the shared transport followed Loop Studio',
+      );
+      expect(transport.positionMs, greaterThanOrEqualTo(0));
+
+      game.toggleTrack('drums');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(transport.isPlaying, isFalse);
+      expect(transport.positionMs, 0);
+    });
+
+    testWidgets('mounts and plays with NO transport provided', (tester) async {
+      await pumpGame(tester, const LoopMixerScreen());
+      final game = _game(tester);
+      game.toggleTrack('drums');
+      await tester.pump();
+      expect(game.isPlaying, isTrue);
+    });
+  });
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     BeatBridge.instance.clear();

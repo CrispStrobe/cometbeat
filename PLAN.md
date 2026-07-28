@@ -806,8 +806,26 @@ prefix.
     is a real shape (a future real-time path), but nobody should reach for it
     now — and if the third migration also uses `syncTo`, `advance` is a
     candidate for deletion rather than a second-class citizen.
-  - ⬜ **Still to do:** the **Loop Studio** clock — ⚠️ `loop_mixer_screen.dart`
-    is claimed by `loop-d1d4` for `WS-L10`, so coordinate rather than take it.
+  - ✅ **Loop Studio migrated (step 1 of 2) 2026-07-28 — ALL THREE SURFACES NOW
+    FOLLOW ONE CLOCK.** `loop_mixer_screen` publishes phase + play state via
+    `syncTo`. Published **from the ticker, not from the play/stop sites**:
+    `_clock` is started and stopped from five separate cascades in that file,
+    and the ticker sees every state it can be in, so there is no site left to
+    forget. The card's acceptance — "pressing play in the Tracker moves the
+    Loop Studio playhead" — is now real rather than headless.
+  - ❌ **I said I would DELETE `advance` if the third surface also used `syncTo`.
+    It does, and I am NOT deleting it — the reason overrides the tidiness.**
+    `advance` is the ONLY path that implements **count-in** (`_countInRemainingMs`
+    is consumed there and nowhere else), and count-in is a named requirement of
+    this card. Deleting it would have removed a required capability to remove an
+    unused one. **The real finding is worse than an unused method and should not
+    be lost:** the shared count-in is therefore **unreachable from any surface**,
+    because all three publish through `syncTo`. ⬜ Either `syncTo` learns to hold
+    for a count-in, or a migrating surface drives count-in explicitly — an open
+    question for whoever does step 2.
+  - ⬜ **Step 2 for all three — invert ownership** so the transport DRIVES the
+    surfaces instead of mirroring them. Only now worth doing: with three
+    publishers proven, the shape is known.
 
   **WS-W2 — the original card, for reference (NOT a task):**
   - **Goal.** Position, tempo, loop range, play/stop/record, count-in and

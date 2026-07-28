@@ -61,6 +61,7 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/custom_progressions.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart';
@@ -491,7 +492,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   /// The groove's musical clock: playback phase is derived from it, never
   /// from the player, so swaps can re-enter the loop in phase.
+  ///
+  /// It stays the AUTHORITY under WS-W2 — the shared [TransportService] is fed
+  /// FROM it, never the other way round. `syncTo`, not `advance`: this is an
+  /// absolute read of a monotonic Stopwatch, and accumulating per-frame deltas
+  /// would drift away from a free-running pre-rendered WAV.
   final _clock = Stopwatch();
+
+  /// The app-wide transport, when one is provided. Null when this screen is
+  /// mounted without a provider tree, so every use is null-safe and no existing
+  /// test has to grow one.
+  TransportService? _transport;
 
   /// Test-only: suppress AUTOMATIC loop wraps so a test owns the seams.
   bool _debugFreezeSeams = false;
@@ -549,6 +560,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         _step.value = -1;
         _progress.value = -1;
         _hlStep.value = -1;
+        _publishTransport(playing: false, phaseMs: 0);
         return;
       }
       final t = _engine.timing;
@@ -563,8 +575,38 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       _step.value = phase ~/ t.beatMs;
       _progress.value = phase / t.totalMs;
       _hlStep.value = (phase / (t.beatMs / 2)).floor(); // eighth-step index
+      _publishTransport(
+        playing: _clock.isRunning,
+        phaseMs: phase.toDouble(),
+      );
     })
       ..start();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    try {
+      _transport = Provider.of<TransportService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _transport = null;
+    }
+  }
+
+  /// Publishes this surface's phase and play state into the SHARED transport.
+  ///
+  /// Driven from the ticker rather than from the play/stop call sites: `_clock`
+  /// is started and stopped from five separate cascades in this file, and the
+  /// ticker sees every state it can be in, so there is no site left to forget.
+  void _publishTransport({required bool playing, required double phaseMs}) {
+    final transport = _transport;
+    if (transport == null) return;
+    if (playing && !transport.isPlaying) {
+      transport.play();
+    } else if (!playing && transport.isPlaying) {
+      transport.pause();
+    }
+    transport.syncTo(phaseMs);
   }
 
   @override
