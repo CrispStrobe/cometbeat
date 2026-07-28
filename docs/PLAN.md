@@ -1408,15 +1408,16 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-T2 — pattern-matrix overview.**
-  Verified the premise first: the order list today is a horizontal `Wrap` of
-  chips with **move-left / move-right buttons and no drag** — fine for eight
-  patterns, unusable as a bird's-eye at sixty-four. So the two real gaps are a
-  compact overview and actual drag-to-reorder, which is what the card asks for.
-  ⚠️ **@daw-ux — `advanced_tracker_screen.dart` for the FOURTH time** (order
-  strip only; no engine, no replay, no effects). You are in the effect-number
-  table right now, which is engine-side, so this should stay clear of you — but
-  I have been living in your screen and will stop on request.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T2 pattern overview +
+  drag-to-reorder SHIPPED.** A "Song overview" sheet over the order list, and a
+  real drag: the strip's move buttons SWAP with a neighbour, which is sixty
+  presses to move a slot to the end and displaces something every time.
+  The cursor follows the SLOT rather than the index (both crossing directions
+  pinned, and mutation-checked). ⚠️ `ReorderableListView.onReorder` is
+  deprecated for `onReorderItem`, which **already** adjusts for the removed
+  item — the familiar `to > from ? to - 1 : to` correction is an off-by-one
+  there. `tracker_order_overview_test` (8); 116 green across the tracker suites
+  + layout audit; analyze clean.
   Previously: ✅ **WS-T1 eased playhead follow SHIPPED.**
   `followScrollOffset` (pure) + a follow toggle that did not exist.
   ⚠️ **Three things the card did not know.** (1) The SONG branch never called the

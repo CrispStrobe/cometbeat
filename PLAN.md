@@ -1598,8 +1598,23 @@ prefix.
   alone and flaked under `--concurrency` — it was measuring how much time the
   harness delivers per pump. The arithmetic is the interesting part and it is
   exact.
-- ⬜ **WS-T2 — pattern-matrix overview.** `M` — a block-per-pattern bird's-eye of
-  the order list with drag-to-reorder, so a 64-pattern song is navigable.
+- ✅ **WS-T2 — pattern overview + drag-to-reorder — SHIPPED.** A "Song overview"
+  sheet listing every order slot, and `reorderOrderSlot` behind a real drag.
+  * the card's premise held, with a sharper edge than it stated: the strip is a
+    `Wrap` of chips whose move buttons **SWAP with a neighbour**. That is the
+    right verb for a nudge and the wrong one for "this chorus belongs at the
+    end" — sixty presses at sixty slots, and each one displaces something. A
+    drag is a remove-and-insert, so the slots between shift instead.
+  * **the cursor follows the SLOT, not the index.** Keeping it on the same
+    number would leave it pointing at whatever slid into that position, so the
+    next edit lands somewhere the user did not look. Both crossing directions
+    are pinned, and mutation-checked: collapsing the bookkeeping to
+    `if (cursor == from) cursor = to` fails them.
+  * ⚠️ `ReorderableListView.onReorder` is **deprecated** in favour of
+    `onReorderItem`, which already accounts for the removed item — so the
+    classic `to > from ? to - 1 : to` correction is not merely unnecessary
+    there, it is an off-by-one. I wrote the old form first.
+  Tests: `tracker_order_overview_test` (8).
 - ⬜ **WS-T4 — a piano-roll view of one channel.** `M` — the app still has **no**
   continuous piano roll anywhere (`pianoRoll`: 0 hits). The tracker grid is
   exact and unapproachable; `StepGridView` is approachable and quantized.

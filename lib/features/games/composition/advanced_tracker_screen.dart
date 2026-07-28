@@ -597,6 +597,16 @@ abstract interface class AdvancedTrackerTester {
 
   /// Order-list editing.
   List<int> get orderList;
+
+  /// WS-T2 — drag a slot from one position to another.
+  void reorderOrderSlot(int from, int to);
+
+  /// Open the song-overview sheet (the toolbar button's target).
+  Future<void> openOrderOverview();
+
+  /// Which order slot is selected.
+  int get orderCursor;
+  void setOrderCursor(int index);
   void selectOrderSlot(int i);
   void orderMove(int delta);
   void orderInsert();
@@ -1223,6 +1233,126 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void _addEmptyPattern() => addPattern();
   void _clonePattern() => addPattern(clone: true);
 
+  /// WS-T2 — the song at a glance: every order slot as a block, in a grid.
+  ///
+  /// The strip in the toolbar is a horizontal `Wrap` of chips. At eight
+  /// patterns that is perfectly good; at sixty-four it is a wall of chips you
+  /// scroll sideways through, and there is no way to see the SHAPE of the song
+  /// — that the chorus pattern recurs four times, say. A grid of small blocks
+  /// shows that in one look.
+  ///
+  /// It also carries the drag: the strip's move buttons swap with a neighbour,
+  /// which is sixty presses to move something to the end.
+  Future<void> _showOrderOverview() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) {
+          final scheme = Theme.of(sheetCtx).colorScheme;
+          final playing = _playingOrder.value;
+          return SafeArea(
+            child: DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.6,
+              maxChildSize: 0.9,
+              builder: (_, controller) => Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Song order — ${_song.order.length} slots',
+                            style: Theme.of(sheetCtx).textTheme.titleMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Text(
+                      'Tap to jump there. Press and drag a block to move it.',
+                    ),
+                  ),
+                  Expanded(
+                    // ReorderableListView gives the drag for free, and a wrap
+                    // of it does not exist — so the grid is rows of a fixed
+                    // width, which also makes the song's shape readable
+                    // (a recurring chorus lines up in a column).
+                    child: ReorderableListView.builder(
+                      scrollController: controller,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: _song.order.length,
+                      // `onReorderItem`, not the deprecated `onReorder`: it
+                      // already accounts for the removed item, so the classic
+                      // `to > from ? to - 1 : to` correction is not only
+                      // unnecessary here, it would be an off-by-one.
+                      onReorderItem: (from, to) {
+                        reorderOrderSlot(from, to);
+                        setSheet(() {});
+                      },
+                      itemBuilder: (context, i) {
+                        final pattern = _song.order[i];
+                        final isPlaying = playing == i;
+                        final isCursor = _orderCursor == i;
+                        return ListTile(
+                          key: ValueKey('order-slot-$i'),
+                          dense: true,
+                          leading: Container(
+                            width: 44,
+                            height: 32,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isPlaying
+                                  ? scheme.primary
+                                  : isCursor
+                                      ? scheme.primaryContainer
+                                      : scheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '$pattern',
+                              style: TextStyle(
+                                color: isPlaying
+                                    ? scheme.onPrimary
+                                    : scheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          title: Text(_patternNameAt(pattern)),
+                          subtitle: Text('Slot ${i + 1}'),
+                          onTap: () {
+                            setState(() => _orderCursor = i);
+                            selectPattern(pattern);
+                            setSheet(() {});
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// The name of pattern [index], or a stable fallback — a song imported from a
+  /// module often has unnamed patterns, and "Pattern 12" reads better than an
+  /// empty row.
+  String _patternNameAt(int index) {
+    if (index < 0 || index >= _song.patterns.length) return 'Pattern $index';
+    final name = _song.patterns[index].name;
+    return name.isEmpty ? 'Pattern $index' : name;
+  }
+
   // --- Order-list editing (reorder / insert / retarget) ------------------
   // Mutates `_song.order` directly (a public list) — screen-side, no model file.
 
@@ -1234,6 +1364,32 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       _song.order[_orderCursor] = _song.order[j];
       _song.order[j] = tmp;
       _orderCursor = j;
+    });
+    _syncPlayback();
+  }
+
+  /// WS-T2 — move the slot at [from] to [to], as a drag does.
+  ///
+  /// The existing move buttons swap with a NEIGHBOUR, which is the right verb
+  /// for a nudge and a poor one for "this chorus belongs at the end": at sixty
+  /// slots that is sixty presses. A drag is a remove-and-insert, so the slots
+  /// in between shift rather than one of them being displaced.
+  @override
+  void reorderOrderSlot(int from, int to) {
+    if (from == to) return;
+    if (from < 0 || from >= _song.order.length) return;
+    if (to < 0 || to >= _song.order.length) return;
+    setState(() {
+      final moved = _song.order.removeAt(from);
+      _song.order.insert(to, moved);
+      // Keep the cursor on the slot the user was holding, wherever it landed.
+      if (_orderCursor == from) {
+        _orderCursor = to;
+      } else if (from < _orderCursor && to >= _orderCursor) {
+        _orderCursor -= 1;
+      } else if (from > _orderCursor && to <= _orderCursor) {
+        _orderCursor += 1;
+      }
     });
     _syncPlayback();
   }
@@ -3061,6 +3217,17 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   List<int> get orderList => List.unmodifiable(_song.order);
+
+  @override
+  int get orderCursor => _orderCursor;
+
+  @override
+  void setOrderCursor(int index) => setState(
+        () => _orderCursor = index.clamp(0, _song.order.length - 1),
+      );
+
+  @override
+  Future<void> openOrderOverview() => _showOrderOverview();
   @override
   void selectOrderSlot(int i) => setState(() => _orderCursor = i);
   @override
@@ -6004,6 +6171,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     Wrap(
                       spacing: 4,
                       children: [
+                        // WS-T2 — the bird's-eye. At sixty-four patterns the
+                        // chip strip beside this is a wall to scroll through.
+                        IconButton(
+                          icon: const Icon(Icons.grid_view, size: 18),
+                          tooltip: 'Song overview',
+                          onPressed: _showOrderOverview,
+                        ),
                         IconButton(
                           icon: const Icon(Icons.expand_more, size: 18),
                           tooltip: l10n.trackerOrderPrevPat,
