@@ -944,22 +944,31 @@ prefix.
   Four shortcuts today, on a surface that lives on shortcuts. Split · trim to
   selection · nudge · zoom · marker jump · solo/mute.
 
-- ⬜ **WS-A1 — clip edge handles: trim and fade.** `M`
-  - **Goal.** The two most-used gestures on any timeline. Move already works
-    (`_clipBox` in `daw_screen.dart`: long-press-drag, cross-lane, grid-snapped
-    via `snapOn`); trim and fade are inspector round trips.
-  - **Depends.** Nothing.
-  - **Files.** `daw_screen.dart` (`_clipBox`); the verbs already exist in
-    `daw_service.dart`.
-  - **Build.** Hit zones at both clip edges → drag to trim; a corner handle →
-    drag to set the fade. Honour `snapOn`. Both must be **undoable as one
-    entry**, not one per drag frame.
-  - **Acceptance.** A gesture test drags an edge and asserts the resulting
-    clip bounds and a single undo entry.
-  - ⚠️ The existing move gesture is `onLongPress*` precisely so a plain drag
-    still scrolls the lane. Do not break that — edge handles must not swallow
-    the scroll.
-
+- ✅ **WS-A1 — clip edge handles: trim and fade — SHIPPED.** Narrow strips at
+  both clip edges drag to trim; the two top corners drag the fades. Honours
+  `snapOn`; handles appear only on a clip wide enough to hold them (below that
+  they would cover the clip they edit, and the inspector is still the way in).
+  * **It needed a new verb, not a composition of the two existing ones.**
+    `setClipTrim` + `moveClip` per frame alternates their coalescing tokens and
+    pushes an undo snapshot on EVERY drag frame — the user then presses undo
+    and watches the edge crawl back a pixel at a time. `trimClipEdge` does both
+    under one token, and trimming the leading edge moves the start with it so
+    the remaining audio stays anchored in the arrangement.
+  * ⚠️ **a no-op must not cost an undo entry either.** The first cut coalesced
+    before working out whether anything would change, so every frame a drag
+    spends against a clamp — and a drag spends many — bought a snapshot. The
+    delta is now computed first; the verb returns what actually landed so the
+    caller can tell the edge has stopped.
+  * `endCoalescedEdit()` ends the run so a SECOND drag is its own entry; without
+    it two drags merge and one undo jumps further back than expected.
+  * ⚠️ **the scroll warning in this card is real and I broke a different thing
+    first:** wrapping the clip in a `Stack` to host the handles let the body
+    collapse to zero height, and the waveform painter's clamp went min > max.
+    `StackFit.expand` fixes it; a widget test now drags across the clip BODY and
+    asserts the clip is neither moved nor trimmed, so the long-press-to-move /
+    plain-drag-to-scroll split stays intact.
+  Tests: `daw_edge_handles_test` (16, incl. a gesture test that drags the real
+  handle and asserts bounds + a single undo entry — the card's acceptance).
 ### Phase 3 — liveness (fixes the copy-not-link half of S1)
 
 - ⬜ **WS-X1 — live links, not copies.** `L` — *the change that turns five editors

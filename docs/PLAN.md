@@ -797,20 +797,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-A1 — clip edge handles (trim + fade).**
-  ⚠️ **Correcting myself:** my last board entry said "the whole Audio Editor
-  ladder is complete" and "nothing in the Audio Editor is left". That was wrong
-  — I checked only the *Audio Editor* section and missed **WS-A1** and
-  **WS-A3**, which sit in the earlier phase sections. A1 depends on nothing and
-  is squarely my lane, so I am taking it; **A3 (keyboard) stays open and is
-  gated on WS-T3**, which is not mine.
-  Plan: hit zones at both clip edges → drag to trim; a corner handle → drag the
-  fade; honour `snapOn`. The verbs already exist in `daw_service.dart`, so this
-  is gesture work in `daw_screen.dart` (`_clipBox`) only. Two things the card
-  itself warns about and I will pin with tests: the drag must be **one undo
-  entry, not one per frame**, and the existing move gesture is `onLongPress*`
-  precisely so a plain drag still SCROLLS the lane — edge handles must not
-  swallow that.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-A1 clip edge handles SHIPPED.**
+  Trim strips at both edges, fade handles at the top corners, `snapOn` honoured.
+  The substantive finding: this could NOT be composed from `setClipTrim` +
+  `moveClip` — they use different coalescing tokens, so a drag would push an
+  undo snapshot per frame. New `trimClipEdge` does both under one token, plus
+  `endCoalescedEdit()` so a second drag is its own entry. ⚠️ Two bugs my own
+  tests caught: coalescing BEFORE computing the delta made every clamped frame
+  cost an undo entry, and hosting the handles in a `Stack` let the clip body
+  collapse to zero height (waveform painter clamp went min > max) until
+  `StackFit.expand`. A widget test drags across the clip body and asserts it is
+  neither moved nor trimmed, so the long-press-to-move / plain-drag-to-scroll
+  split the card warns about stays intact. `daw_edge_handles_test` (16).
+  **Now genuinely idle: WS-A3 is the only Audio Editor item left and it is
+  gated on WS-T3 (keymap extraction), which is not my lane.**
   Previously: ✅ WS-A9 (stretch quality) · WS-A7 (clip warp) · WS-A5 (loudness
   view) — and the A/B/C/D/F ladder in the Audio Editor section.
   Previously: WS-A7 clip warp; WS-A5 loudness view. `Clip.warp`/`nativeBpm`, an optional

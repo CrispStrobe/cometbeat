@@ -850,6 +850,77 @@ class DawService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The shortest a clip may be trimmed to. Below this it is not an edit any
+  /// more — it is a clip you can no longer grab to undo the trim.
+  static const double kMinTrimmedMs = 40;
+
+  /// WS-A1 — drag ONE edge of a clip.
+  ///
+  /// Trimming the LEADING edge moves the clip's start too, so the remaining
+  /// audio stays anchored where it sits in the arrangement instead of sliding
+  /// backwards under everything else as material comes off the front. That
+  /// makes this one operation rather than a trim plus a move — which is also
+  /// why it needs its own verb: composing the two existing ones alternates
+  /// their coalescing tokens and pushes an undo entry on EVERY drag frame.
+  ///
+  /// [deltaMs] is measured from where the edge is now, positive rightwards.
+  /// Returns the delta actually applied, which is less than asked for at the
+  /// clamps — the caller needs that to keep a drag from running away from the
+  /// finger once an edge stops moving.
+  double trimClipEdge(
+    int track,
+    int index, {
+    required bool leading,
+    required double deltaMs,
+  }) {
+    if (!_validClipTarget(track, index)) return 0;
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    final sourceMs = clipSourceMs(track, index);
+    final start = clip.trimStartMs;
+    final end = clip.trimEndMs <= 0 ? sourceMs : clip.trimEndMs;
+
+    // Work out what would actually land BEFORE coalescing. `_coalesced` pushes
+    // an undo snapshot whenever the token changes, so calling it first makes a
+    // no-op cost an undo entry — and at a clamp, a drag emits a great many
+    // no-ops while the finger keeps travelling.
+    final double applied;
+    if (leading) {
+      // Snap on the TIMELINE position of the edge, not on the offset into the
+      // source: the grid the user sees belongs to the arrangement.
+      final wanted = snapPosition(clip.startMs + deltaMs);
+      applied =
+          (start + (wanted - clip.startMs)).clamp(0.0, end - kMinTrimmedMs) -
+              start;
+    } else {
+      final edgeMs = clip.startMs + (end - start);
+      final wanted = snapPosition(edgeMs + deltaMs);
+      applied =
+          (end + (wanted - edgeMs)).clamp(start + kMinTrimmedMs, sourceMs) -
+              end;
+    }
+    if (applied == 0) return 0;
+
+    _coalesced(('trimEdge', track, index, leading));
+    clips[index] = leading
+        ? clip.copyWith(
+            trimStartMs: start + applied,
+            startMs: math.max(0, clip.startMs + applied),
+          )
+        : clip.copyWith(trimEndMs: end + applied);
+    notifyListeners();
+    return applied;
+  }
+
+  /// End a coalesced run (a drag, a slider sweep) so the NEXT one is its own
+  /// undo entry.
+  ///
+  /// Without this, two separate drags on the same edge of the same clip merge
+  /// into one entry, because the token only changes when something else is
+  /// edited — which makes the first undo after two drags jump further back
+  /// than the user expects.
+  void endCoalescedEdit() => _coalesceToken = null;
+
   double clipTrimStartMs(int track, int index) =>
       timeline.tracks[track].clips[index].trimStartMs;
   double clipTrimEndMs(int track, int index) =>

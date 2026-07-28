@@ -5935,101 +5935,260 @@ class _DawScreenState extends State<DawScreen>
           if (_dragLaneDelta != 0) setState(() => _dragLaneDelta = 0);
         },
         onTap: () => _openClipInspector(i, j),
-        child: Container(
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(6),
-            // While a drag is heading for another lane, say so on the clip —
-            // otherwise the move only becomes visible after the drop.
-            border: Border.all(
-              color: _dragLaneDelta != 0
-                  ? scheme.tertiary
-                  : (selected ? scheme.primary : scheme.outline),
-              width: _dragLaneDelta != 0 || selected ? 2 : 1,
+        child: Stack(
+          // The body must FILL, not size itself: as a bare non-positioned child
+          // it collapsed to zero height and the waveform painter's clamp went
+          // min > max. The Stack's own size comes from the lane's Positioned.
+          fit: StackFit.expand,
+          children: [
+            _clipBody(
+              daw,
+              i,
+              j,
+              scheme,
+              clip,
+              frozen,
+              bg,
+              fg,
+              selected,
+              stereoPeaks,
+              isStereo,
+              widthPx,
+              target,
+            ),
+            // WS-A1 — the edge handles, drawn OVER the body so they take the
+            // gesture first. Only offered on a clip wide enough to hold them:
+            // below that they would cover the clip itself, and the inspector
+            // is still the way in.
+            if (widthPx >= _kHandleMinClipPx) ...[
+              _trimHandle(daw, i, j, scheme, leading: true),
+              _trimHandle(daw, i, j, scheme, leading: false),
+              _fadeHandle(daw, i, j, scheme, leading: true),
+              _fadeHandle(daw, i, j, scheme, leading: false),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// WS-A1 — how wide a clip must be before edge handles are worth offering.
+  /// Narrower than this they would cover the clip they are meant to edit.
+  static const double _kHandleMinClipPx = 64;
+
+  /// Handle hit width. Generous enough for a finger without eating the clip.
+  static const double _kHandleWidth = 18;
+
+  /// Drag an edge to trim. Sits on the LOWER part of the clip so the fade
+  /// handles have the corners — two gestures on one edge need two places.
+  Widget _trimHandle(
+    DawService daw,
+    int i,
+    int j,
+    ColorScheme scheme, {
+    required bool leading,
+  }) {
+    return Positioned(
+      // Keyed so a gesture test can aim at the affordance itself rather than
+      // guess its coordinates from the clip's label.
+      key: ValueKey('trim-$i-$j-${leading ? 'in' : 'out'}'),
+      left: leading ? 0 : null,
+      right: leading ? null : 0,
+      top: _kHandleWidth,
+      bottom: 0,
+      width: _kHandleWidth,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeLeftRight,
+        child: GestureDetector(
+          // A PLAIN horizontal drag, deliberately: the clip's move gesture is
+          // long-press precisely so a plain drag scrolls the lane, and that
+          // still holds everywhere except these narrow strips. Handing the
+          // whole clip a plain-drag handler is what would break scrolling.
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragUpdate: (d) => daw.trimClipEdge(
+            i,
+            j,
+            leading: leading,
+            deltaMs: d.delta.dx / _pxPerSecond * 1000,
+          ),
+          // End the coalesced run so the NEXT drag is its own undo entry.
+          onHorizontalDragEnd: (_) => daw.endCoalescedEdit(),
+          onHorizontalDragCancel: daw.endCoalescedEdit,
+          child: Align(
+            alignment: leading ? Alignment.centerLeft : Alignment.centerRight,
+            child: Container(
+              width: 3,
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                color: scheme.onPrimaryContainer.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Stack(
-              children: [
-                // The clip's audio shape, filling the box behind the label.
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _ClipWaveformPainter(
-                      stereoPeaks.left,
-                      fg.withValues(alpha: 0.35),
-                      rightPeaks: isStereo ? stereoPeaks.right : null,
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 28, right: 2),
-                  child: Row(
-                    children: [
-                      if (frozen && widthPx >= 48)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 2),
-                          child: Icon(Icons.lock, size: 14, color: fg),
-                        ),
-                      // A music clip stays linked to the notation editors: open
-                      // it in Score/Tab and "Send to Audio Editor" updates it in
-                      // place. The badge makes that round-trip discoverable.
-                      if (!frozen && daw.isScoreClip(i, j) && widthPx >= 48)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 2),
-                          child: Icon(Icons.link, size: 14, color: fg),
-                        ),
-                      if (widthPx >= 36)
-                        Expanded(
-                          child: Text(
-                            _clipKind(clip),
-                            overflow: TextOverflow.clip,
-                            softWrap: false,
-                            style: TextStyle(color: fg),
-                          ),
-                        ),
-                      if (widthPx >= 48)
-                        InkWell(
-                          onTap: () => removeClip(i, j),
-                          child: Icon(Icons.close, size: 16, color: fg),
-                        ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  child: IconButton(
-                    tooltip: selected
-                        ? 'Deselect clip for FX'
-                        : 'Select clip for FX',
-                    icon: Icon(
-                      selected
-                          ? Icons.check_box
-                          : Icons.check_box_outline_blank,
-                      size: 18,
-                      color: fg,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 26,
-                      height: 26,
-                    ),
-                    padding: EdgeInsets.zero,
-                    onPressed: () {
-                      setState(() {
-                        if (selected) {
-                          _selectedClips.remove(target);
-                        } else {
-                          _selectedClips.add(target);
-                        }
-                      });
-                    },
-                  ),
-                ),
-              ],
+        ),
+      ),
+    );
+  }
+
+  /// Drag a top corner to set that side's fade. Shown filled once there IS a
+  /// fade, so the clip says what it is doing without opening the inspector.
+  Widget _fadeHandle(
+    DawService daw,
+    int i,
+    int j,
+    ColorScheme scheme, {
+    required bool leading,
+  }) {
+    final clip = daw.timeline.tracks[i].clips[j];
+    final fadeMs = leading ? clip.fadeInMs : clip.fadeOutMs;
+    return Positioned(
+      key: ValueKey('fade-$i-$j-${leading ? 'in' : 'out'}'),
+      left: leading ? 0 : null,
+      right: leading ? null : 0,
+      top: 0,
+      height: _kHandleWidth,
+      width: _kHandleWidth,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeLeftRight,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragUpdate: (d) {
+            // Dragging INWARD lengthens the fade on both sides, so the gesture
+            // means the same thing at each end rather than being mirrored.
+            final deltaMs =
+                (leading ? d.delta.dx : -d.delta.dx) / _pxPerSecond * 1000;
+            final next = math.max(0.0, fadeMs + deltaMs);
+            daw.setClipFades(
+              i,
+              j,
+              fadeInMs: leading ? next : null,
+              fadeOutMs: leading ? null : next,
+            );
+          },
+          onHorizontalDragEnd: (_) => daw.endCoalescedEdit(),
+          onHorizontalDragCancel: daw.endCoalescedEdit,
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Container(
+              decoration: BoxDecoration(
+                color: fadeMs > 0
+                    ? scheme.tertiary.withValues(alpha: 0.85)
+                    : scheme.onPrimaryContainer.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// The clip's own visuals, split out so the handles can sit above them.
+  Widget _clipBody(
+    DawService daw,
+    int i,
+    int j,
+    ColorScheme scheme,
+    Clip clip,
+    bool frozen,
+    Color bg,
+    Color fg,
+    bool selected,
+    ({List<double> left, List<double> right}) stereoPeaks,
+    bool isStereo,
+    double widthPx,
+    ({int track, int index}) target,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        // While a drag is heading for another lane, say so on the clip —
+        // otherwise the move only becomes visible after the drop.
+        border: Border.all(
+          color: _dragLaneDelta != 0
+              ? scheme.tertiary
+              : (selected ? scheme.primary : scheme.outline),
+          width: _dragLaneDelta != 0 || selected ? 2 : 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: Stack(
+          children: [
+            // The clip's audio shape, filling the box behind the label.
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _ClipWaveformPainter(
+                  stereoPeaks.left,
+                  fg.withValues(alpha: 0.35),
+                  rightPeaks: isStereo ? stereoPeaks.right : null,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 28, right: 2),
+              child: Row(
+                children: [
+                  if (frozen && widthPx >= 48)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Icon(Icons.lock, size: 14, color: fg),
+                    ),
+                  // A music clip stays linked to the notation editors: open
+                  // it in Score/Tab and "Send to Audio Editor" updates it in
+                  // place. The badge makes that round-trip discoverable.
+                  if (!frozen && daw.isScoreClip(i, j) && widthPx >= 48)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Icon(Icons.link, size: 14, color: fg),
+                    ),
+                  if (widthPx >= 36)
+                    Expanded(
+                      child: Text(
+                        _clipKind(clip),
+                        overflow: TextOverflow.clip,
+                        softWrap: false,
+                        style: TextStyle(color: fg),
+                      ),
+                    ),
+                  if (widthPx >= 48)
+                    InkWell(
+                      onTap: () => removeClip(i, j),
+                      child: Icon(Icons.close, size: 16, color: fg),
+                    ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 0,
+              top: 0,
+              child: IconButton(
+                tooltip:
+                    selected ? 'Deselect clip for FX' : 'Select clip for FX',
+                icon: Icon(
+                  selected ? Icons.check_box : Icons.check_box_outline_blank,
+                  size: 18,
+                  color: fg,
+                ),
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints.tightFor(
+                  width: 26,
+                  height: 26,
+                ),
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  setState(() {
+                    if (selected) {
+                      _selectedClips.remove(target);
+                    } else {
+                      _selectedClips.add(target);
+                    }
+                  });
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
