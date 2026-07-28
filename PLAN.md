@@ -645,8 +645,24 @@ prefix.
 
 ### Phase 1 — the shell (fixes S1; everything after is cheaper)
 
-- 🚧 **WS-W1 — `Project`: one document, many track kinds.** `M` · **CLAIMED
-  2026-07-28 by opus (loop-d1d4), branch `feature/mixer-d1d4` — see the board.**
+- ✅ **WS-W1 — `Project`: one document, many track kinds.** `M` · **SHIPPED
+  2026-07-28** (opus, loop-d1d4). `lib/core/project/project.dart` +
+  `project_codec.dart`, 26 tests. **Everything below is the ORIGINAL card, kept
+  because its warnings still apply to WS-W2/W5.** What shipped differs in three
+  ways, each forced by the code rather than chosen:
+  - The codec is a **REGISTRY**, not a switch over five types. Two kinds have no
+    codec to name (`tab` has none at all — WS-L11; `audio` needs a PCM render
+    callback a pure container should not hold), and a switch would have dragged
+    every mode's types, two of them Flutter-bound, into the container.
+    `registerProjectDocumentCodec` lets those register from their own side.
+  - **"No codec registered" and "kind I have never heard of" are ONE path**,
+    both preserved verbatim. `ProjectTrack.unreadable` holds the raw document
+    and `unknownKind` the stored kind string, so an older build opening a newer
+    file writes the track back byte-identical instead of deleting it on the
+    second save. `Project.hasUnreadableTracks` lets a caller warn BEFORE saving.
+  - `AppMode` moved to `core/interop/app_mode.dart` (re-exported, no call site
+    changed) because its old home is Flutter-bound. **Purity is now asserted**,
+    not assumed: a test fails if any of the three files gains a Flutter import.
   - **Goal.** One container the three surfaces can share, so "the tracker
     pattern in bar 9" and "the clip on the timeline" can be the same object.
   - **Depends.** Nothing. *Do this first.*

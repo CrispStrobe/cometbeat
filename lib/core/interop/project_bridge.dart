@@ -24,6 +24,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show AdditiveInstrument, TrackerChannel, TrackerTiming;
 import 'package:comet_beat/core/audio/tracker_song.dart';
 import 'package:comet_beat/core/interop/annotation_codecs.dart';
+import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/interop/loop_tab.dart';
 import 'package:comet_beat/core/interop/loop_tracker.dart';
 import 'package:comet_beat/core/interop/symbolic_annotation.dart';
@@ -33,33 +34,11 @@ import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart'
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:crisp_notation/crisp_notation.dart';
 
-/// The five top-level authoring modes (see PLAN.md, "Five-mode product
-/// architecture").
-enum AppMode {
-  /// Pattern matrix, channels, effect commands. Document: [TrackerSong].
-  tracker,
-
-  /// Loops of symbolic events. Document: `List<PatternCell>` (one track).
-  loop,
-
-  /// Conventional notation. Document: [MultiPartScore].
-  score,
-
-  /// Strings, frets, fingering. Document: [TabDocument].
-  tab,
-
-  /// The DAW. Reached by BOUNCING — see [ProjectBridge.canConvert].
-  audio,
-}
-
-/// A short user-facing name for a mode.
-String appModeLabel(AppMode mode) => switch (mode) {
-      AppMode.tracker => 'Tracker',
-      AppMode.loop => 'Loop Studio',
-      AppMode.score => 'Score',
-      AppMode.tab => 'Tab',
-      AppMode.audio => 'Audio',
-    };
+// [AppMode] and [appModeLabel] live in their own file so that pure-Dart code
+// (`core/project/`) can name a mode without inheriting this file's Flutter
+// dependency. Re-exported so every existing `import 'project_bridge.dart'`
+// still sees them — a move, not an API change.
+export 'package:comet_beat/core/interop/app_mode.dart';
 
 /// The outcome of a conversion.
 class ConversionResult {

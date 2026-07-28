@@ -246,8 +246,8 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-W1` — `Project`: one document, many
-  track kinds.** `M`, no dependencies, and the ladder says *do this first*.
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-W1` `Project`: one document,
+  many track kinds.** `M`, no dependencies, and the ladder says *do this first*.
   Worktree `../mus-mixer-d1d4`, branch `feature/mixer-d1d4`, off `1c5bff44`.
   Claim pushed BEFORE any code, per the ladder's rule.
   **Scope, exactly as scoped:** new `lib/core/project/project.dart` (pure Dart,
@@ -292,7 +292,29 @@ is recorded in [HISTORY.md](HISTORY.md).
      the same mechanism the card already asks for for unknown kinds. Tab (and
      Audio, whose `DawTimeline` codec needs a PCM render callback) register
      adapters later, from files that may be Flutter-bound, without dragging
-     Flutter into the core. — opus
+     Flutter into the core.
+
+  ✅ **DELIVERED.** `lib/core/project/project.dart` + `project_codec.dart`
+  (both pure Dart) + `core/interop/app_mode.dart`, **26 tests**. `Project
+  {name, tracks, tempo}` · `ProjectTrack {id, kind, name, document, mix}` with
+  the mode's EXISTING type in `document` — nothing in `daw_timeline.dart`,
+  `tracker_song.dart`, `loop_engine.dart` or `tab_document.dart` was modified,
+  so a mode opened without a project behaves exactly as before (ladder rule 2).
+  Mix state is on `ProjectTrack`, never in a document (the card's warning).
+  Tracker · Loop · Score round-trip with their documents INTACT — asserted on
+  the documents, not the JSON, because a codec that writes a well-shaped file
+  and returns the wrong music would pass the JSON version.
+  **Purity is asserted, not assumed:** a test fails if `project.dart`,
+  `project_codec.dart` or `app_mode.dart` ever gains a `package:flutter/` or
+  `package:crisp_notation/` import, and I ran the codec under plain `dart run`
+  to prove it works with no Flutter engine present.
+  ⚠️ **Two follow-ons for whoever takes WS-W2/W5:** the `audio` kind still has
+  no registered codec (it needs the PCM render callback that lives in
+  `daw_project.dart` — register it from the DAW side), and `tab` needs WS-L11
+  first. Both degrade safely today: the track survives with its name, kind and
+  mix, and `hasUnreadableTracks` says so before a save.
+  Gates: format exit 0 · analyze "No issues found" · `flutter test`
+  **5527 passed / 20 skipped / 0 failed**. — opus
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — loss-dialog REASON l10n: the
   infrastructure + the static bridge reasons (EN/DE).** The Open-in loss dialog's
