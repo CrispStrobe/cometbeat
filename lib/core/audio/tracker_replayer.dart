@@ -379,15 +379,28 @@ const double kTremoloDepthPerUnit = 255 / 64;
 /// cycle as vibrato, and it had the same doubled rate.
 const double kTremoloRadPerSpeedUnit = 2 * pi / 64;
 
-/// Panbrello phase advance, deliberately left at the old 32/x.
+/// Panbrello phase advance (radians) per speed-unit (x), per tick: a full cycle
+/// takes **256/x ticks**, IT's own rule — a 256-entry table stepped by the
+/// speed nibble.
 ///
-/// Panbrello is an IT/S3M effect; ProTracker has no such command, so the 64/x
-/// rule above is not evidence about it. IT's own rule is different again (a
-/// 256-entry table stepped by the speed nibble → 256/x). Rather than let a
-/// ProTracker finding silently change an untested effect, panbrello keeps the
-/// behaviour it has always had. ⬜ Unverified against a reference — see the
-/// PLAN.md §6 ladder.
-const double kPanbrelloRadPerSpeedUnit = 2 * pi / 32;
+/// This sat at 32/x for a long time with a comment admitting it was unverified,
+/// because ProTracker has no panbrello and the 64/x finding that fixed vibrato
+/// therefore said nothing about it. Declining to guess was right; the evidence
+/// simply had to be gone and got. Counting pan sweeps off the reference renders
+/// of `test/fixtures/fmt/panbrello_*.it`:
+///
+///                     ours(32/x)   openmpt   xmp   256/x predicts
+///   speed 4           18           3         2     2.25
+///   speed 2            9           2         1     1.125
+///
+/// So it ran EIGHT times too fast. The two references differ by one count from
+/// each other, which is phase and rounding around a partial cycle rather than a
+/// disagreement — they bracket the prediction, we were nowhere near it.
+///
+/// ⚠️ Panning is invisible to the sweep's spectral and envelope metrics, which
+/// both downmix to mono; these fixtures read 1.000 and 0.93 while this was
+/// eight times out. It took a pan-trajectory metric to see it at all.
+const double kPanbrelloRadPerSpeedUnit = 2 * pi / 256;
 
 /// The full channel volume (classic tracker 0..64).
 const int kMaxVolume = 64;

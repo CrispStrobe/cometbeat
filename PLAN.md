@@ -2692,6 +2692,50 @@ so a short run sits inside the references' own spread and proves nothing.
 Three exemptions retired; the only ones left are the four volume-column
 fixtures, whose cause is a semantics decision rather than a bug.
 
+#### The THIRD metric blind spot: panning (2026-07-28)
+
+Every comparison the audit made downmixed both channels to mono first, so no
+panning effect could register at all — `Yxy` panbrello, `S8x` set-pan, `Pxy` pan
+slide, `S9x` surround. That is the third gap of this exact shape, and each was
+only found after the previous one was closed:
+
+| metric | blind to | what it hid |
+| --- | --- | --- |
+| spectral similarity | amplitude | tremolo's depth, 4× too shallow |
+| (no envelope metric) | fade shape | the whole volume-slide family |
+| mono downmix | stereo position | panbrello, **8× too fast** |
+
+**Panbrello ran eight times too fast.** The constant sat at 32/x with a comment
+saying it was unverified — ProTracker has no panbrello, so the 64/x finding that
+fixed vibrato was no evidence about it. Declining to guess was right; the
+evidence just had to be gone and got. Counting pan sweeps off the renders:
+
+| | ours (32/x) | openmpt | xmp | 256/x predicts |
+| --- | --- | --- | --- | --- |
+| speed 4 | **18** | 3 | 2 | 2.25 |
+| speed 2 | **9** | 2 | 1 | 1.125 |
+
+Now 3 and 2, matching openmpt exactly. Its fixtures had been reading **1.000
+spectral and 0.93 envelope** throughout.
+
+**The metric needed fixing before it could be trusted.** Silent blocks were
+being read as pan 0, but silence is not "centred": a note-cut fixture panned
+hard left produced a trajectory jumping between −0.5 and 0, i.e. travel the
+render never made, which then let statically-panned fixtures through the gate to
+be compared on noise. Quiet blocks now HOLD the last position. `notecut_ECx.mod`
+correctly reads `pan --` after that, where it had been gating on an artifact.
+
+⚠️ **Honest limit of the pan gate.** The references correlate at only ~0.0–0.36
+with EACH OTHER on these fixtures: with two or three cycles over the run, a
+phase offset dominates Pearson. So the gate confirms we sit inside their spread
+and little more — it was the CYCLE COUNT that settled the rate, not the
+correlation. A gate that cannot distinguish 18 cycles from 3 is not the tool
+that found this, and the write-up should not imply otherwise.
+
+⬜ **Left open: panbrello DEPTH is ~10% shallow** — travel 0.89 against the
+references' 0.98–0.99. Small next to an 8× rate error and now measurable, which
+is the point of having the metric at all.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,

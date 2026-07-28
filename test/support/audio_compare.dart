@@ -436,3 +436,91 @@ class AudioComparison {
       'spectral ${spectral.toStringAsFixed(3)} · '
       'detune ${detune.isNaN ? "n/a" : "${detune.toStringAsFixed(1)} cents"}';
 }
+
+/// The per-block stereo BALANCE of a render, in [-1, 1]: −1 hard left, 0
+/// centred, +1 hard right.
+///
+/// The audit had no way to see panning at all. Its comparisons downmix both
+/// channels to mono first, which is exactly as blind to a pan effect as
+/// spectral similarity is to a volume one — and that blindness let panbrello
+/// run SIX TIMES too fast while its fixtures read 1.000 spectral and 0.93
+/// envelope. `Yxy` panbrello, `S8x` set-pan, `Pxy` pan slide and `S9x` surround
+/// were all unmeasured.
+///
+/// Blocks quieter than [floor] (relative to the loudest block) contribute 0
+/// rather than a ratio of two near-zero numbers, which would be noise.
+Float64List panEnvelope(
+  Float64List left,
+  Float64List right, {
+  int block = 512,
+  double floor = 0.05,
+}) {
+  final n = math.min(left.length, right.length);
+  if (n < block) return Float64List(0);
+  final blocks = n ~/ block;
+  final out = Float64List(blocks);
+  final energy = Float64List(blocks);
+  for (var b = 0; b < blocks; b++) {
+    var sl = 0.0, sr = 0.0;
+    for (var i = b * block; i < (b + 1) * block; i++) {
+      sl += left[i] * left[i];
+      sr += right[i] * right[i];
+    }
+    final l = math.sqrt(sl / block), r = math.sqrt(sr / block);
+    energy[b] = l + r;
+    out[b] = (l + r) <= 1e-12 ? 0 : (r - l) / (l + r);
+  }
+  // Quiet blocks HOLD the last known position rather than reading 0.
+  //
+  // Zeroing them looked harmless and was not: silence is not "centred", so a
+  // note-cut fixture whose channel sits hard left produced a trajectory
+  // jumping between −0.5 and 0, which is travel the render never made. That
+  // fake travel then let statically-panned fixtures through the gate below and
+  // compared them on noise. Holding keeps the trajectory flat where nothing is
+  // sounding, which is what a listener would say is happening.
+  var peak = 0.0;
+  for (final e in energy) {
+    if (e > peak) peak = e;
+  }
+  var held = 0.0;
+  for (var b = 0; b < blocks; b++) {
+    if (energy[b] < peak * floor) {
+      out[b] = held;
+    } else {
+      held = out[b];
+    }
+  }
+  return out;
+}
+
+/// How closely two renders agree about WHERE the sound sits across the stereo
+/// field over time — Pearson over [panEnvelope], so it compares the trajectory
+/// rather than a single average position.
+double panCorrelation(
+  Float64List leftA,
+  Float64List rightA,
+  Float64List leftB,
+  Float64List rightB, {
+  int block = 512,
+}) =>
+    _pearson(
+      panEnvelope(leftA, rightA, block: block),
+      panEnvelope(leftB, rightB, block: block),
+    );
+
+/// How far the pan trajectory actually MOVES — the span between its extremes.
+///
+/// A song that never pans has a flat trajectory, and Pearson between two flat
+/// signals is noise; gating on it produced false reds on the envelope metric
+/// until the same guard was added there. Only a render that genuinely travels
+/// across the field is worth holding to a pan comparison.
+double panTravel(Float64List left, Float64List right, {int block = 512}) {
+  final env = panEnvelope(left, right, block: block);
+  if (env.length < 8) return 0;
+  var lo = double.infinity, hi = -double.infinity;
+  for (final v in env) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  return hi - lo;
+}

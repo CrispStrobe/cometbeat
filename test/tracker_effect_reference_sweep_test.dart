@@ -74,6 +74,15 @@ const double _kEnvelopeFloor = 0.5;
 /// not, and is reported without being gated.
 const double _kEnvelopeDynamicRange = 1.6;
 
+/// How far the reference PAN trajectory must travel before we gate on it.
+///
+/// Same guard as the envelope's dynamic-range floor and for the same reason: a
+/// render that never moves across the stereo field has a flat trajectory, and
+/// Pearson between two flat signals is noise. 0.2 of the full −1..+1 span is
+/// well below what any real pan effect does (panbrello alone travels ~1.0) and
+/// well above the wobble a centred render shows.
+const double _kPanTravelFloor = 0.2;
+
 /// The 90th/10th percentile ratio of [pcm]'s loudness envelope — "does this
 /// render actually get louder and quieter".
 double _envelopeDynamicRange(Float64List pcm) {
@@ -154,6 +163,12 @@ double _worstPairwise(List<Float64List> pcms) {
   }
   return worst;
 }
+
+/// Our own render of [path], keeping both channels.
+({Float64List left, Float64List right}) _ourStereo(String path) =>
+    wavToStereoPcm(
+      songFromModuleBytes(File(path).readAsBytesSync()).renderSongWav(),
+    );
 
 /// Our own render of [path], as mono PCM.
 Float64List _ourPcm(String path) => wavToMonoPcm(
@@ -240,6 +255,37 @@ void main() {
           if (e < ourEnvWorst) ourEnvWorst = e;
         }
         final envGap = refEnv - ourEnvWorst;
+        // The PAN trajectory, on the same relative baseline. Everything above
+        // downmixes to mono and is therefore blind to stereo placement — which
+        // is how panbrello ran six times too fast while reading 1.000 spectral
+        // and 0.93 envelope.
+        final refStereo = await renderAllReferencesStereo(path);
+        final ourStereo = _ourStereo(path);
+        var refPan = 1.0;
+        for (var i = 0; i < refStereo.length; i++) {
+          for (var j = i + 1; j < refStereo.length; j++) {
+            final c = panCorrelation(
+              refStereo[i].left,
+              refStereo[i].right,
+              refStereo[j].left,
+              refStereo[j].right,
+            );
+            if (c < refPan) refPan = c;
+          }
+        }
+        var ourPan = 1.0;
+        for (final r in refStereo) {
+          final c =
+              panCorrelation(ourStereo.left, ourStereo.right, r.left, r.right);
+          if (c < ourPan) ourPan = c;
+        }
+        final panTravelled = refStereo.isEmpty
+            ? 0.0
+            : panTravel(refStereo.first.left, refStereo.first.right);
+        final panGated =
+            refStereo.length >= 2 && panTravelled >= _kPanTravelFloor;
+        final panGap = refPan - ourPan;
+
         final envRange = _envelopeDynamicRange(refs.first);
         final envGated =
             refEnv >= _kEnvelopeFloor && envRange >= _kEnvelopeDynamicRange;
@@ -255,12 +301,13 @@ void main() {
         // ENVELOPE was still failing, and a known-open entry failing only on
         // the envelope printed no flag at all — silently the thing the list
         // exists to keep visible.
-        final failing = over || envOver;
-        final which = over && envOver
-            ? 'spectral+envelope'
-            : over
-                ? 'spectral'
-                : 'envelope';
+        final panOver = panGated && panGap > _kMaxExcessDeviation;
+        final failing = over || envOver || panOver;
+        final which = [
+          if (over) 'spectral',
+          if (envOver) 'envelope',
+          if (panOver) 'pan',
+        ].join('+');
         final String flag;
         if (knownOpen) {
           flag = failing
@@ -282,10 +329,13 @@ void main() {
         final envCol = envGated
             ? 'env ${refEnv.toStringAsFixed(2)}/${ourEnvWorst.toStringAsFixed(2)}'
             : 'env  --  ';
+        final panCol = panGated
+            ? 'pan ${refPan.toStringAsFixed(2)}/${ourPan.toStringAsFixed(2)}'
+            : 'pan  --  ';
         print('  ${name.padRight(24)} refs ${refAgree.toStringAsFixed(3)} · '
             'ours ${ourWorst.toStringAsFixed(3)} · '
             'gap ${gap.toStringAsFixed(3)} · '
-            '$envCol · '
+            '$envCol · $panCol · '
             '${ourSec.toStringAsFixed(2)}s vs ${refSec.toStringAsFixed(2)}s '
             '(${refs.length} engines)$flag$envFlag');
         if (over && !exempt) {

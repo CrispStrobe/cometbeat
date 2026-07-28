@@ -200,3 +200,69 @@ Future<List<Float64List>> renderAllReferences(String fixturePath) async {
   }
   return out;
 }
+
+/// Left and right channels of a 16-bit PCM WAV, kept SEPARATE.
+///
+/// [wavToMonoPcm] downmixes, which is right for spectral and envelope work and
+/// useless for anything about stereo placement. A mono render yields the same
+/// signal twice, so callers do not have to special-case it.
+({Float64List left, Float64List right}) wavToStereoPcm(Uint8List wavBytes) {
+  final data = ByteData.sublistView(wavBytes);
+  if (wavBytes.length < 44) {
+    return (left: Float64List(0), right: Float64List(0));
+  }
+  var channels = 1;
+  var bitsPerSample = 16;
+  var dataOffset = -1;
+  var dataBytes = 0;
+  var pos = 12;
+  while (pos + 8 <= wavBytes.length) {
+    final id = String.fromCharCodes(wavBytes.sublist(pos, pos + 4));
+    final size = data.getUint32(pos + 4, Endian.little);
+    final body = pos + 8;
+    if (id == 'fmt ' && body + 16 <= wavBytes.length) {
+      channels = data.getUint16(body + 2, Endian.little);
+      bitsPerSample = data.getUint16(body + 14, Endian.little);
+    } else if (id == 'data') {
+      dataOffset = body;
+      dataBytes = size;
+      break;
+    }
+    pos = body + size + (size.isOdd ? 1 : 0);
+  }
+  if (dataOffset < 0 || channels < 1 || bitsPerSample != 16) {
+    return (left: Float64List(0), right: Float64List(0));
+  }
+  final available = wavBytes.length - dataOffset;
+  final usable =
+      dataBytes > 0 && dataBytes <= available ? dataBytes : available;
+  final bytesPerFrame = 2 * channels;
+  final frames = usable ~/ bytesPerFrame;
+  final l = Float64List(frames);
+  final r = Float64List(frames);
+  for (var i = 0; i < frames; i++) {
+    final base = dataOffset + i * bytesPerFrame;
+    l[i] = data.getInt16(base, Endian.little) / 32768.0;
+    r[i] =
+        channels > 1 ? data.getInt16(base + 2, Endian.little) / 32768.0 : l[i];
+  }
+  return (left: l, right: r);
+}
+
+/// Every reference render of [fixturePath] this machine can produce, keeping
+/// both channels — the stereo counterpart of [renderAllReferences].
+Future<List<({Float64List left, Float64List right})>> renderAllReferencesStereo(
+  String fixturePath,
+) async {
+  final out = <({Float64List left, Float64List right})>[];
+  for (final bytes in [
+    await renderWithOpenMpt(fixturePath),
+    await renderWithXmp(fixturePath),
+    await renderWithMicromod(fixturePath),
+  ]) {
+    if (bytes == null) continue;
+    final s = wavToStereoPcm(bytes);
+    if (s.left.isNotEmpty) out.add(s);
+  }
+  return out;
+}
