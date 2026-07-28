@@ -669,6 +669,19 @@ prefix.
     than dropped, so a newer project opened by an older build loses nothing.
   - ⚠️ **Do not** put mix state inside the mode documents — it belongs to
     `ProjectTrack`, or WS-W5 will have to unpick it from four places.
+  - 🔴 **Found while building (2026-07-28): `TabDocument` has NO codec, and
+    Tab's only persistence is LOSSY** — `saveToSongBook` goes through MusicXML,
+    which drops tuning, strings, frets and every technique, i.e. everything that
+    makes a tab a tab. `TabColumn` has ~22 fields plus nested
+    `crisp_notation_core` types, so a lossless codec is **its own task** (see
+    WS-L11 below), not a sub-task of this one. WS-W1 therefore ships a codec
+    REGISTRY: a kind with no registered codec is preserved verbatim, the same
+    mechanism the unknown-kind rule already needs.
+  - ⚠️ **The card contradicts itself on `AppMode`**: "reuse it from
+    `project_bridge.dart`" + "pure Dart, no Flutter" cannot both hold, because
+    that file imports the Flutter `crisp_notation`. Resolved by extracting the
+    enum to `core/interop/app_mode.dart` and re-exporting it — additive, no call
+    site changes.
 
 - ⬜ **WS-W2 — `TransportService`: one clock.** `M`
   - **Goal.** Position, tempo, loop range, play/stop/record, count-in and
@@ -852,6 +865,23 @@ prefix.
   no B to copy *into* — either editable variant slots have to exist first, or
   the feature is really "copy this track's pattern onto that track".
   ⚠️ Deep-copy automation lanes; the aliasing trap already bit the track-copy.
+- ⬜ **WS-L11 — a lossless `TabDocument` codec.** `M` — **NEW, found while
+  building WS-W1 (2026-07-28).** Tab is the only mode with no way to save what
+  it actually is: `saveToSongBook` converts to MusicXML, which drops the tuning,
+  the strings, the frets and every technique. There is no `toJson`/`fromJson`
+  for `TabDocument` anywhere. Until this exists, a tab cannot live in a
+  `Project`, cannot be a DAW clip model (`daw_clip_source_codec` has no `tab`
+  kind either), and cannot survive its own app restart.
+  - **Files.** New codec file; READS `tab_document.dart`, does not modify it.
+  - **Build.** ~22 `TabColumn` fields + `Tuning`/`TimeSignature`/`KeySignature`/
+    `ChordDiagram`/`BendPoint` and the enums, all from `crisp_notation_core`.
+  - **Acceptance.** A document using every field round-trips equal, asserted on
+    the DOCUMENT not the JSON; an unknown enum name degrades that one field
+    rather than failing the parse.
+  - ⚠️ `tab_document.dart` is Flutter-bound (it imports `crisp_notation`), so
+    this codec cannot live in a pure-Dart core file — register it into
+    `project_codec`'s registry rather than hardcoding it there.
+
 - ⬜ **WS-L2 — zoom + a real timeline ruler.** `M` — still no zoom at all
   (`InteractiveViewer|zoom`: 0 hits). A 4-bar loop and a 32-bar arrangement
   cannot both be legible at one scale.

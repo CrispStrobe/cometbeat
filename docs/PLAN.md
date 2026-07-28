@@ -264,7 +264,35 @@ is recorded in [HISTORY.md](HISTORY.md).
   touched, so ladder rule 1's byte-identical guard has nothing to bite on here;
   I will say so explicitly rather than leave it looking skipped.
   ⚠️ **Files I expect to touch: only the two new ones + their test.** If that
-  changes I will update this entry before it does. — opus
+  changes I will update this entry before it does.
+
+  🔄 **SCOPE UPDATE, before touching anything (as promised above).** Reading the
+  code first turned up three things the task card could not have known:
+  1. ⚠️ **`AppMode`'s current home is NOT pure Dart.** The card says "reuse
+     `AppMode` from `project_bridge.dart`" AND "pure Dart, no Flutter" — those
+     conflict: `project_bridge.dart` imports `package:crisp_notation/…`, which
+     depends on Flutter. **Fix: extract the enum to a new pure-Dart
+     `lib/core/interop/app_mode.dart` and `export` it from `project_bridge.dart`.**
+     Additive — every existing import keeps compiling, no call site changes.
+     ⚠️ **This edits the shared `project_bridge.dart`** (delete the enum, add one
+     export line), which is why this note is here and pushed before the edit.
+     `AppMode` has only 5 use sites, all via that import.
+  2. ✅ MusicXML lives in **`crisp_notation_core`** (pure, zero-dep), not the
+     Flutter `crisp_notation` — so tracker · loop · score can all round-trip
+     with the codec staying Flutter-free. `daw_tempo_map` is `dart:math` only.
+  3. 🔴 **`TabDocument` HAS NO CODEC — and Tab's only persistence is LOSSY.**
+     `saveToSongBook` converts to MusicXML, which throws away tuning, strings,
+     frets and every technique — the entire point of a tab. There is no
+     `toJson`/`fromJson` anywhere, and `TabColumn` has ~22 fields plus nested
+     `crisp_notation_core` types. So WS-W1's acceptance ("one track of EVERY
+     kind round-trips with each document intact") **cannot be met for `tab`
+     without a TabDocument codec, which is its own task, not a sub-task of this
+     one.** Design answer: `project_codec` is a **registry**, not a hardcoded
+     switch — a kind with no registered codec is preserved VERBATIM, which is
+     the same mechanism the card already asks for for unknown kinds. Tab (and
+     Audio, whose `DawTimeline` codec needs a PCM render callback) register
+     adapters later, from files that may be Flutter-bound, without dragging
+     Flutter into the core. — opus
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — loss-dialog REASON l10n: the
   infrastructure + the static bridge reasons (EN/DE).** The Open-in loss dialog's
