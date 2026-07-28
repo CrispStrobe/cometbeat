@@ -984,8 +984,8 @@ prefix.
   no B to copy *into* — either editable variant slots have to exist first, or
   the feature is really "copy this track's pattern onto that track".
   ⚠️ Deep-copy automation lanes; the aliasing trap already bit the track-copy.
-- 🚧 **WS-L11 — a lossless `TabDocument` codec.** `M` · **CLAIMED 2026-07-28 by
-  opus (loop-d1d4)** — **NEW, found while
+- ✅ **WS-L11 — a lossless `TabDocument` codec.** `M` · **SHIPPED 2026-07-28**
+  (opus, loop-d1d4) — `tab_document_codec.dart`, 16 tests. **NEW, found while
   building WS-W1 (2026-07-28).** Tab is the only mode with no way to save what
   it actually is: `saveToSongBook` converts to MusicXML, which drops the tuning,
   the strings, the frets and every technique. There is no `toJson`/`fromJson`
@@ -1001,6 +1001,20 @@ prefix.
   - ⚠️ `tab_document.dart` is Flutter-bound (it imports `crisp_notation`), so
     this codec cannot live in a pure-Dart core file — register it into
     `project_codec`'s registry rather than hardcoding it there.
+  - ✅ **Shipped as scoped**, plus one thing the card did not ask for and should
+    have: the real failure mode for a save format is not "the codec is wrong",
+    it is "`TabColumn` grew four fields and nobody told the codec". So the codec
+    exports `tabColumnFieldKeys` and a test PARSES `TabColumn`'s constructor out
+    of the source and diffs the two — **add a field without teaching the codec
+    and the suite fails**, instead of saves quietly shrinking. Thirty fields
+    round-trip today, asserted on one fully-populated column rather than thirty
+    separate tests that would all pass while a thirty-first was dropped.
+  - ⬜ **Still open, deliberately:** nothing CALLS `registerTabProjectCodec()`
+    yet, because nothing loads a `Project` yet — that call belongs to whoever
+    first wires Project into the app (WS-W6 / WS-X1). And
+    `daw_clip_source_codec` still has no `tab` kind, so a tab still cannot be a
+    DAW clip model; that is a ~10-line addition **in a hot file** (`daw_*` took
+    19 commits in 30 hours), so it is left to that file's owner.
 
 - ⬜ **WS-L2 — zoom + a real timeline ruler.** `M` — still no zoom at all
   (`InteractiveViewer|zoom`: 0 hits). A 4-bar loop and a 32-bar arrangement

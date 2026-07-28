@@ -299,7 +299,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-L11` — a lossless `TabDocument`
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L11` a lossless `TabDocument`
   codec.** `M`, no dependencies. Worktree `../mus-mixer-d1d4`, branch
   `feature/mixer-d1d4`. Claim pushed BEFORE any code.
   **Why this and NOT WS-W2, which the ladder puts next.** WS-W2 migrates three
@@ -321,7 +321,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   strings, the frets and every technique; there is no `toJson`/`fromJson`
   anywhere; and `daw_clip_source_codec` has no `tab` kind either. So a tab
   cannot live in a `Project` (WS-W1), cannot be a DAW clip model, and cannot
-  survive its own app restart as a tab. — opus
+  survive its own app restart as a tab.
+
+  ✅ **DELIVERED** — `lib/features/games/composition/tab_document_codec.dart`,
+  **16 tests**. All 30 `TabColumn` fields plus tuning, meter, key and voice 2
+  round-trip; defaults are omitted so a 200-column tab is under 6 kB and stays
+  human-readable. Degrades rather than throwing: an unreadable column becomes an
+  EMPTY one (dropping it would shift every column after it and wreck the rhythm
+  from there on), an unknown enum name loses that one field and keeps the note,
+  and an impossible time signature is refused instead of tripping
+  `TimeSignature`'s assert — a hand-edited file must not be able to crash the
+  app in debug.
+  ⚠️ **The guard worth knowing about:** a save format's real failure mode is not
+  a wrong codec, it is `TabColumn` growing four fields a year later while the
+  codec stays still — silent, and only visible when a player reopens their work.
+  So a test parses `TabColumn`'s constructor out of the source and diffs it
+  against the codec's own key list: **add a field without teaching the codec and
+  the suite fails.**
+  ⬜ **Left deliberately, both in someone else's hot files:** nothing calls
+  `registerTabProjectCodec()` yet because nothing loads a `Project` yet (that
+  call belongs to WS-W6/WS-X1), and `daw_clip_source_codec` still has no `tab`
+  kind — a ~10-line addition in a file that took 19 commits in 30 hours, so it
+  is that owner's to make.
+  Gates: format exit 0 · analyze "No issues found" · `flutter test`
+  **5588 passed / 20 skipped / 0 failed** (re-run after rebasing onto the
+  WS-W2 / WS-A5 landings). — opus
 
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-W1` `Project`: one document,
   many track kinds.** `M`, no dependencies, and the ladder says *do this first*.
