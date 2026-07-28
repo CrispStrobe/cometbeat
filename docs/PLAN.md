@@ -538,9 +538,11 @@ is recorded in [HISTORY.md](HISTORY.md).
   one deliberate 🔶, below) · B1–B6 · C1–C5 (C4/C5 by `opus (tracker→editors)`)
   · D1 ripple · D2 groups+nudge · D3 clip envelope · D4 loudness · D5 take
   lanes+comping · D6 tempo map.
-  🔶 **A6 remains open on purpose:** stretch-quality tiers and high-quality rate
-  conversion change the sample RATE, which a same-buffer `FxSpec` cannot express
-  — they belong to the export/`resample.dart` path, not the rack.
+  ✅ **A6 closed too** — band-limited rate conversion (`resampleHq`) now backs
+  the export path, which had been folding everything above the new Nyquist back
+  into the music on every downsampled export. **The whole ladder is shipped**;
+  the one remaining 🔶 is time-stretch quality tiers, which are a different
+  algorithm (phase vocoder / WSOLA), not a resampler setting.
   **Rack is now 50 effects**, every one reachable from the GUI *and* the CLI with
   no per-effect UI or CLI code — the F1/F2 lever has held across five DSP slices.
   A "learn the noise from the marked range" service op is the natural next step
@@ -2573,11 +2575,65 @@ DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
   Tests: `restoration_fx_test` (20). Nearly every one is a PAIR — the damage
   went away, and the signal that should have survived did; the second half is
   where repair tools go wrong.
-- [ ] **A6 time/pitch** — pitch **bend envelope** · stretch quality tiers ·
-  high-quality rate conversion with explicit anti-aliasing · raw up/downsample.
-- [ ] **A7 generators** — brown/blue/violet noise · sweep/chirp (lin+log) ·
-  plucked string (`crisp_dsp/karplus.dart` exists but is unreachable here) ·
-  multi-shape with ramps + envelope · impulse/DTMF.
+- [x] **A6 time/pitch** — pitch **bend envelope** (in the rack) + **band-limited
+  rate conversion** (`resampleHq`/`resampleRaw` in `crisp_dsp/resample.dart`,
+  the export sheet's *Conversion* choice, `dawedit --rate HZ[:QUALITY]` and
+  `--raw-rate HZ`).
+  * ⚠ **this fixed a real, shipping bug.** Export downsampling called
+    `resampleCubic` — an INTERPOLATOR, which says nothing about the frequencies
+    the destination rate cannot represent. Exporting at 22.05 kHz folded
+    everything above 11 kHz back into the music as a whistle that no later
+    processing could remove, because by then the alias and the music occupy the
+    same frequencies. `resample_hq_test` runs one fixture through both and
+    asserts the fold on the old path and its absence on the new one, so the
+    regression cannot come back quietly.
+  * the fix is one line of intent: the kernel's cutoff is the LOWER of the two
+    Nyquist limits, so content that cannot survive is removed BEFORE it can
+    fold. Windowed-sinc, Blackman, written from the published theory of
+    band-limited interpolation — no implementation was read.
+  * taps are **normalised per output sample**, which is what keeps the first and
+    last samples at level where the kernel is truncated by the buffer ends; the
+    un-normalised version fades both edges, audible as a click at every clip
+    boundary.
+  * quality is `fast`/`good`/`best` (8/16/32 lobes a side) — a cost/depth trade,
+    not a correctness one, so a test asserts the WORST tier is still alias-free.
+    The GUI shows the picker only when the rate is actually changing: a control
+    that does nothing in the default case teaches people to ignore it.
+  * `resampleRaw` is offered as a **deliberately aliasing lo-fi effect** (it is
+    how early samplers sounded) and named so nobody reaches for it expecting
+    quality — its test asserts that it DOES alias, which is the only way to
+    notice if it is ever silently replaced by the good one.
+  * ⚠ two wiring bugs the tests caught: the quality picker's value was dropped
+    at the `build()` call, leaving a control that did nothing; and `--rate` has
+    to update the buffer's OWN sample rate, or the WAV header and every later op
+    still believe the old one (the file then plays at the wrong pitch).
+  * verified end-to-end on written files: a 1→20 kHz sweep converted to 22.05 k
+    paints as one rising line that ends at Nyquist, while `--raw-rate` paints
+    the classic fold-back tent.
+  Tests: `resample_hq_test` (16) + `dawedit_cli_test` (+5).
+  🔶 Still not modelled, and still on purpose: **stretch quality tiers** (time
+  stretching independent of pitch is a different algorithm — phase vocoder or
+  WSOLA — not a resampler setting).
+- [x] **A7 generators** — brown · blue · violet noise · linear and log sweep ·
+  plucked string · impulse, on `GeneratorShape` + `generateWave`, in the GUI's
+  generate sheet and `dawedit`.
+  * the three noise colours are the two useful integrators/differentiators
+    either side of white: brown for rumble and room tone, blue/violet for hiss
+    and air. A test asserts each one's spectral TILT rather than that it made
+    samples — a "noise" generator that returns white for all four would pass any
+    plumbing test.
+  * **log sweep is the one that matters** for measurement: a linear sweep spends
+    most of its time in the top octave, so it barely excites the bass, while a
+    log sweep spends equal time per octave. Both ship because a linear sweep is
+    still the right siren.
+  * **impulse** is the smallest useful generator and the most useful one for
+    this app: send it through any effect and what comes out IS that effect's
+    impulse response, which is how several of the FX tests now check themselves.
+  * `pluck` finally reaches a user — `crisp_dsp/karplus.dart` existed and was
+    unreachable from every screen.
+  ⚠ this slice was reverted wholesale by another agent's stale-checkout commit
+  (`8a2c2d52`) and restored from `e4f0a10e`; the ladder checkbox stayed stale
+  until now. Tests: `generator_shapes_test` (12).
 
 **Pillar B — non-FX editor ops** (`daw_edits.dart` → service → `bin/dawedit.dart`
 → inspector, the same three-way testability as O1–O6)

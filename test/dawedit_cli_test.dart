@@ -126,6 +126,62 @@ void main() {
     expect(_peakOf(trimmed), closeTo(0.25, 0.01));
   });
 
+  group('--rate / --raw-rate (A6)', () {
+    int rateOf(String path) =>
+        readWavPcm16(File(path).readAsBytesSync()).sampleRate;
+
+    test('the WAV HEADER follows the conversion', () async {
+      // The failure this catches is the loud one: convert the samples and
+      // forget the header, and the file plays at the wrong speed and pitch.
+      final out = '${dir.path}/at22k.wav';
+      final r = await _dawedit([tone, out, '--rate', '22050']);
+      expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+      expect(rateOf(out), 22050);
+      // Same music, same duration, same level — only the rate changed.
+      expect(_durationMsOf(out), closeTo(2000, 2));
+      expect(_peakOf(out), closeTo(0.25, 0.02));
+    });
+
+    test('upsampling works too, and says which tier ran', () async {
+      final out = '${dir.path}/at48k.wav';
+      final r = await _dawedit([tone, out, '--rate', '48000:best']);
+      expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+      expect(rateOf(out), 48000);
+      expect(r.stdout, contains('44100 → 48000 Hz, best'));
+    });
+
+    test('--raw-rate names itself as the lo-fi effect it is', () async {
+      // So nobody reads the log later and believes they got a clean
+      // conversion.
+      final out = '${dir.path}/raw22k.wav';
+      final r = await _dawedit([tone, out, '--raw-rate', '22050']);
+      expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+      expect(rateOf(out), 22050);
+      expect(r.stdout, contains('aliased on purpose'));
+    });
+
+    test('a later op runs at the NEW rate', () async {
+      // The rate is part of the buffer's identity; an op chained after the
+      // conversion that still assumed 44.1 k would cut the wrong amount.
+      final out = '${dir.path}/rate_then_crop.wav';
+      final r =
+          await _dawedit([tone, out, '--rate', '22050', '--crop', '0:500']);
+      expect(r.exitCode, 0, reason: '${r.stdout}${r.stderr}');
+      expect(rateOf(out), 22050);
+      expect(_durationMsOf(out), closeTo(500, 2));
+    });
+
+    test('a bad rate or tier fails loudly', () async {
+      for (final args in [
+        [tone, '--rate', 'nonsense'],
+        [tone, '--rate', '22050:turbo'],
+      ]) {
+        final r = await _dawedit(args);
+        expect(r.exitCode, isNot(0), reason: args.join(' '));
+      }
+    });
+  });
+
   test('an unknown option fails loudly instead of being ignored', () async {
     final r = await _dawedit([tone, '--bogus']);
     expect(r.exitCode, 2);

@@ -160,9 +160,9 @@ Status key: ✅ have it · 🔶 partial · ⬜ to build.
 | tempo change (pitch kept) | | ✅ |
 | speed change (both together) | | ✅ `resampleClip` |
 | pitch **bend envelope** | `pitchBend`, length-preserving (a tape stop, not a re-length) | ✅ |
-| stretch quality tiers | window/overlap exposed; a quality knob | 🔶 A6 |
-| high-quality rate conversion | band-limited SRC with quality tiers + explicit anti-alias filter | 🔶 A6 |
-| up/down-sample (raw) | with and without filtering, for the deliberate aliasing sound | ⬜ A6 |
+| stretch quality tiers | window/overlap exposed; a quality knob | 🔶 A6 — a different algorithm (phase vocoder / WSOLA), not a resampler setting |
+| high-quality rate conversion | band-limited SRC with quality tiers + explicit anti-alias filter | ✅ `resampleHq` (fast/good/best) — backs the export path, which had been aliasing |
+| up/down-sample (raw) | with and without filtering, for the deliberate aliasing sound | ✅ `resampleRaw` · `dawedit --raw-rate` |
 
 ### A7 — Generation (`daw_edits.dart: generateWave`, 7 shapes)
 | Op | Meaning | Status |
@@ -274,7 +274,7 @@ F2b the GUI's label + param tables deleted, derived    ✅ SHIPPED (unplanned)
 F3  chain string as copy/paste preset in the GUI
 
 A1  filter zoo ✅     A3  dynamics zoo ✅     A4  channel/stereo zoo ✅
-A5  restoration ✅    A6  time/pitch 🔶       A2  tone curves ✅   A7  generators ✅
+A5  restoration ✅    A6  time/pitch ✅       A2  tone curves ✅   A7  generators ✅
 
 B1  pad/repeat/split-on-silence/splice ✅     B3  full stats ✅
 B2  dither+noise shaping ✅                   B4  VAD ✅   B5  spectrogram CLI ✅

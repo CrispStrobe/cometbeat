@@ -27,7 +27,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart'
-    show resampleCubic;
+    show ResampleQuality, resampleHq;
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart'
     show mp3EncodeMono, mp3EncodeJointStereo;
 import 'package:comet_beat/core/audio/sf2/encode_capability.dart'
@@ -58,6 +58,7 @@ Uint8List pcmFloatToWav(
   Float64List pcm, {
   int sampleRate = kSampleRate,
   int? sourceSampleRate,
+  ResampleQuality resampleQuality = ResampleQuality.good,
   Float64List? right,
   int bitDepth = 16,
   bool dither = false,
@@ -69,6 +70,7 @@ Uint8List pcmFloatToWav(
     pcm,
     sourceSampleRate: sourceSampleRate,
     exportSampleRate: sampleRate,
+    quality: resampleQuality,
   );
   final rightAtRate = right == null
       ? null
@@ -76,6 +78,7 @@ Uint8List pcmFloatToWav(
           right,
           sourceSampleRate: sourceSampleRate,
           exportSampleRate: sampleRate,
+          quality: resampleQuality,
         );
   final channels = right == null ? 1 : 2;
   final frames = rightAtRate == null
@@ -155,6 +158,7 @@ Float64List _resampleForExport(
   Float64List pcm, {
   required int? sourceSampleRate,
   required int exportSampleRate,
+  ResampleQuality quality = ResampleQuality.good,
 }) {
   if (exportSampleRate <= 0) {
     throw ArgumentError.value(
@@ -172,7 +176,18 @@ Float64List _resampleForExport(
     );
   }
   if (sourceRate == exportSampleRate || pcm.isEmpty) return pcm;
-  return resampleCubic(pcm, sourceRate / exportSampleRate);
+  // A6 — band-limited, NOT the plain interpolator this used to call. Cubic
+  // interpolation says nothing about the frequencies the destination rate
+  // cannot represent, so exporting a bright mix at half rate folded everything
+  // above the new Nyquist back into the music as a whistle that no later
+  // processing could remove. `resampleHq` filters first; see `resample_hq_test`,
+  // which runs the same fixture through both and shows the fold.
+  return resampleHq(
+    pcm,
+    fromRate: sourceRate.toDouble(),
+    toRate: exportSampleRate.toDouble(),
+    quality: quality,
+  );
 }
 
 /// Encodes float PCM to an MP3 bitstream (constant bitrate, kbps). When [right]
@@ -182,6 +197,7 @@ Uint8List pcmFloatToMp3(
   Float64List pcm, {
   int sampleRate = kSampleRate,
   int? sourceSampleRate,
+  ResampleQuality resampleQuality = ResampleQuality.good,
   int bitrate = 128,
   Float64List? right,
   bool shortBlocks = true,
@@ -190,6 +206,7 @@ Uint8List pcmFloatToMp3(
     pcm,
     sourceSampleRate: sourceSampleRate,
     exportSampleRate: sampleRate,
+    quality: resampleQuality,
   );
   final rightAtRate = right == null
       ? null
@@ -197,6 +214,7 @@ Uint8List pcmFloatToMp3(
           right,
           sourceSampleRate: sourceSampleRate,
           exportSampleRate: sampleRate,
+          quality: resampleQuality,
         );
   return rightAtRate == null
       ? mp3EncodeMono(
@@ -232,6 +250,7 @@ Uint8List pcmFloatToNative(
   required EncodedAudioFormat format,
   int sampleRate = kSampleRate,
   int? sourceSampleRate,
+  ResampleQuality resampleQuality = ResampleQuality.good,
   int bitrate = 128,
   Float64List? right,
 }) {
@@ -239,6 +258,7 @@ Uint8List pcmFloatToNative(
     pcm,
     sourceSampleRate: sourceSampleRate,
     exportSampleRate: sampleRate,
+    quality: resampleQuality,
   );
   final rightAtRate = right == null
       ? null
@@ -246,6 +266,7 @@ Uint8List pcmFloatToNative(
           right,
           sourceSampleRate: sourceSampleRate,
           exportSampleRate: sampleRate,
+          quality: resampleQuality,
         );
 
   final channels = rightAtRate == null ? 1 : 2;
@@ -346,6 +367,7 @@ extension AudioExportFormatX on AudioExportFormat {
     bool dither = false,
     EncodeAudio? nativeEncoder,
     Mp3Encoder mp3Encoder = Mp3Encoder.dart,
+    ResampleQuality resampleQuality = ResampleQuality.good,
   }) {
     final outRate = exportSampleRate ?? sampleRate;
     // MP3 can go through EITHER encoder. Asking for the native one where it
@@ -370,6 +392,7 @@ extension AudioExportFormatX on AudioExportFormat {
         sourceSampleRate: sampleRate,
         bitrate: bitrate,
         right: right,
+        resampleQuality: resampleQuality,
       );
     }
     return switch (this) {
@@ -380,6 +403,7 @@ extension AudioExportFormatX on AudioExportFormat {
           right: right,
           bitDepth: wavBitDepth,
           dither: dither,
+          resampleQuality: resampleQuality,
         ),
       AudioExportFormat.mp3 => pcmFloatToMp3(
           pcm,
@@ -388,6 +412,7 @@ extension AudioExportFormatX on AudioExportFormat {
           bitrate: bitrate,
           right: right,
           shortBlocks: shortBlocks,
+          resampleQuality: resampleQuality,
         ),
       // Unreachable: nativeFormat != null was handled above.
       _ => throw StateError('unhandled format $this'),
@@ -466,6 +491,7 @@ Future<void> showAudioExportSheet(
   }
   var selectedFormat = AudioExportFormat.wav;
   var selectedRate = sampleRate;
+  var selectedResampleQuality = ResampleQuality.good;
   var selectedWavBitDepth = 16;
   var selectedBitrate = 128;
   var selectedDither = false;
@@ -507,6 +533,25 @@ Future<void> showAudioExportSheet(
                 labelFor: _sampleRateLabel,
                 onSelected: (rate) => setSheetState(() => selectedRate = rate),
               ),
+              // A6 — how much filter to spend on the conversion. Shown ONLY
+              // when the rate is actually changing: a picker that does nothing
+              // in the default case teaches people to ignore it.
+              if (selectedRate != sampleRate)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: _ExportChoiceRow<ResampleQuality>(
+                    label: 'Conversion',
+                    values: ResampleQuality.values,
+                    selected: selectedResampleQuality,
+                    labelFor: (q) => switch (q) {
+                      ResampleQuality.fast => 'Fast',
+                      ResampleQuality.good => 'Good',
+                      ResampleQuality.best => 'Best',
+                    },
+                    onSelected: (q) =>
+                        setSheetState(() => selectedResampleQuality = q),
+                  ),
+                ),
               // Opus is always 48 kHz on the wire; say so rather than let the
               // chip above quietly lie about what lands on disk.
               if (selectedFormat == AudioExportFormat.opus &&
@@ -584,6 +629,7 @@ Future<void> showAudioExportSheet(
                       selectedMp3Encoder,
                       selectedDither,
                       wavStreamProducer,
+                      selectedResampleQuality,
                     );
                   },
                 ),
@@ -835,6 +881,7 @@ Future<void> _exportAs(
   Mp3Encoder mp3Encoder,
   bool dither,
   WavStreamProducer? wavStreamProducer,
+  ResampleQuality resampleQuality,
 ) async {
   final l10n = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
@@ -874,6 +921,7 @@ Future<void> _exportAs(
       shortBlocks: shortBlocks,
       dither: dither,
       mp3Encoder: mp3Encoder,
+      resampleQuality: resampleQuality,
     );
     await XFile.fromData(bytes, name: suggested).saveTo(location.path);
     messenger.showSnackBar(

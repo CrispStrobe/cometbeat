@@ -25,6 +25,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/crisp_dsp/loudness.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/daw_edits.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart'
     show Clip, SampleSource;
@@ -60,6 +61,10 @@ Ops (applied in the order given):
   --loudness             LUFS (integrated/short/momentary), true peak, phase
   --vad [MARGIN_DB]      trim to where the VOICE is (frame-based, default 8 dB)
   --dither BITS[:shape]  reduce to BITS with TPDF dither; ":shape" noise-shapes
+  --rate HZ[:QUALITY]    convert the sample rate, band-limited (no aliasing).
+                         QUALITY = fast | good | best (default good)
+  --raw-rate HZ          convert WITHOUT anti-aliasing — a lo-fi EFFECT, not a
+                         cheaper --rate; the aliasing is the point
   --spectrogram OUT.png  paint the spectrum over time (see --max-hz, --grey)
   --max-hz HZ            crop the spectrogram's top (music lives low; try 5000)
   --grey                 greyscale spectrogram instead of the heat ramp
@@ -80,7 +85,9 @@ class _Audio {
   _Audio(this.left, this.right, this.sampleRate);
   Float64List left;
   Float64List? right;
-  final int sampleRate;
+  // Not final: --rate/--raw-rate change it, and every later op plus the WAV
+  // header reads it.
+  int sampleRate;
 
   bool get isStereo => right != null;
 }
@@ -141,6 +148,8 @@ void main(List<String> args) {
       case '--vad':
         ops.add((a, maybeValue()));
       case '--dither':
+      case '--rate':
+      case '--raw-rate':
         ops.add((a, requireValue(a)));
       case '--full-stats':
       case '--loudness':
@@ -354,6 +363,34 @@ void _apply(
       _take(a, ditherTake(a.left, a.right, bits: bits, noiseShaping: shape));
       stdout.writeln(
         'dither → $bits-bit${shape ? ', noise-shaped' : ''}',
+      );
+    case '--rate':
+    case '--raw-rate':
+      final parts = value!.split(':');
+      final target = double.tryParse(parts.first);
+      if (target == null || target <= 0) {
+        _fail('$op needs a sample rate in Hz, got "$value"');
+      }
+      final quality = switch (parts.length > 1 ? parts[1] : 'good') {
+        'fast' => ResampleQuality.fast,
+        'best' => ResampleQuality.best,
+        'good' => ResampleQuality.good,
+        final other => _fail('unknown quality "$other" — fast | good | best'),
+      };
+      final from = a.sampleRate.toDouble();
+      Float64List convert(Float64List ch) => op == '--raw-rate'
+          ? resampleRaw(ch, fromRate: from, toRate: target)
+          : resampleHq(ch, fromRate: from, toRate: target, quality: quality);
+      a.left = convert(a.left);
+      if (a.right != null) a.right = convert(a.right!);
+      // The rate is part of the buffer's identity — every later op (and the
+      // WAV header) reads it, so failing to update it here would write a file
+      // that plays at the wrong speed.
+      a.sampleRate = target.round();
+      stdout.writeln(
+        '${op == '--raw-rate' ? 'raw-rate' : 'rate'} → '
+        '${from.round()} → ${a.sampleRate} Hz'
+        '${op == '--raw-rate' ? ' (aliased on purpose)' : ', ${quality.name}'}',
       );
     case '--loudness':
       final l = measureLoudness(a.left, a.right, sampleRate: a.sampleRate);
