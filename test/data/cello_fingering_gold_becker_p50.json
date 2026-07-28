@@ -1,0 +1,919 @@
+{
+ "note": "A real PEDAGOGICAL PIECE, not a scale table \u2014 and the only fixture here that was DOUBLE-KEYED and arbitrated. Use it to measure the arranger on the kind of music the app actually teaches.",
+ "source": "F. A. Kummer, Violoncellschule Op.60, ed. Hugo Becker (C. F. Peters), printed p.50, Nachtrag '101 Uebungsstuecke' no.9 \u2014 A major, 3/4, a duet of two braced bass-clef staves, 24 bars. Both staves are fingered.",
+ "licence": "PD. Kummer d.1879; Becker d.1941 -> PD since 2012.",
+ "provenance": "Read TWICE independently (the second reader blind, writing to separate paths). The readings agreed on 47/47 bar note-counts, 95/101 pitches and 65/66 digits; where BOTH claimed high confidence they agreed 81/81. The 7 disagreements were settled by an arbiter working from the native plate with non-metric arguments (a printed 0 can only be an open string; a ledger line through a head is categorical; a finger no string can place refutes the reading). Outcome: reader A 3, reader B 2, NEITHER 2 \u2014 no single reading was correct alone.",
+ "limits": "Reading 2's m23-24 were contaminated (it accidentally saw reading 1's checkpoint), so those bars are single-witness. The SPELLING E#3 in m21 follows from the printed sharp plus the C#7->F#m context; the sounding pitch is certain.",
+ "why_it_scores_higher": "~79% here vs ~54% on the CC0 chamber set and ~56% on the Becker scale tables. That is not a better arranger, it is easier music: a beginner duet sits in first position with open strings, which is precisely the regime the model is built for and the regime the app teaches. Quote the three numbers together or none.",
+ "notes": [
+  {
+   "staff": "upper",
+   "bar": 1,
+   "midi": 45,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 1,
+   "midi": 47,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 2,
+   "midi": 49,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 2,
+   "midi": 50,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 3,
+   "midi": 52,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 3,
+   "midi": 54,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 3,
+   "midi": 56,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 4,
+   "midi": 57,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 5,
+   "midi": 59,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 5,
+   "midi": 57,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 6,
+   "midi": 56,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 6,
+   "midi": 54,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 7,
+   "midi": 52,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 7,
+   "midi": 50,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 7,
+   "midi": 49,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 8,
+   "midi": 47,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 9,
+   "midi": 49,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 9,
+   "midi": 50,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 10,
+   "midi": 52,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 10,
+   "midi": 54,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 11,
+   "midi": 56,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 11,
+   "midi": 57,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 11,
+   "midi": 59,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 12,
+   "midi": 61,
+   "finger": 3,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 13,
+   "midi": 50,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 13,
+   "midi": 52,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 14,
+   "midi": 54,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 14,
+   "midi": 56,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 15,
+   "midi": 57,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 15,
+   "midi": 59,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 15,
+   "midi": 61,
+   "finger": 3,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 16,
+   "midi": 62,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 17,
+   "midi": 61,
+   "finger": 3,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 17,
+   "midi": 59,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 17,
+   "midi": 57,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 18,
+   "midi": 62,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 19,
+   "midi": 61,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 19,
+   "midi": 59,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 19,
+   "midi": 57,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 20,
+   "midi": 62,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 21,
+   "midi": 61,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 21,
+   "midi": 59,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 21,
+   "midi": 57,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 22,
+   "midi": 54,
+   "finger": 3,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 22,
+   "midi": 53,
+   "finger": 2,
+   "conf_pitch": "medium",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 23,
+   "midi": 52,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 23,
+   "midi": 54,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 23,
+   "midi": 56,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "upper",
+   "bar": 24,
+   "midi": 57,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 2,
+   "midi": 45,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 2,
+   "midi": 47,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 3,
+   "midi": 49,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 3,
+   "midi": 50,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 3,
+   "midi": 47,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 4,
+   "midi": 49,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 4,
+   "midi": 47,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 4,
+   "midi": 45,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 5,
+   "midi": 40,
+   "finger": 3,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": true
+  },
+  {
+   "staff": "lower",
+   "bar": 6,
+   "midi": 47,
+   "finger": 3,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 6,
+   "midi": 45,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 7,
+   "midi": 45,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 7,
+   "midi": 49,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 7,
+   "midi": 47,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 8,
+   "midi": 45,
+   "finger": 1,
+   "conf_pitch": "medium",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 8,
+   "midi": 42,
+   "finger": 4,
+   "conf_pitch": "medium",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 8,
+   "midi": 40,
+   "finger": 2,
+   "conf_pitch": "medium",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 9,
+   "midi": 45,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 9,
+   "midi": 47,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 10,
+   "midi": 49,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 10,
+   "midi": 50,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 11,
+   "midi": 52,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 11,
+   "midi": 54,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 11,
+   "midi": 56,
+   "finger": 4,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 12,
+   "midi": 57,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 12,
+   "midi": 52,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": true
+  },
+  {
+   "staff": "lower",
+   "bar": 12,
+   "midi": 45,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": true
+  },
+  {
+   "staff": "lower",
+   "bar": 13,
+   "midi": 47,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 13,
+   "midi": 49,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 14,
+   "midi": 50,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 14,
+   "midi": 52,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 15,
+   "midi": 54,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 15,
+   "midi": 56,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 15,
+   "midi": 57,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 16,
+   "midi": 59,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 16,
+   "midi": 56,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 16,
+   "midi": 52,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": true
+  },
+  {
+   "staff": "lower",
+   "bar": 17,
+   "midi": 57,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 18,
+   "midi": 56,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 18,
+   "midi": 54,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 18,
+   "midi": 52,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 19,
+   "midi": 57,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 20,
+   "midi": 56,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 20,
+   "midi": 54,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 20,
+   "midi": 52,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 21,
+   "midi": 53,
+   "finger": 2,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": true
+  },
+  {
+   "staff": "lower",
+   "bar": 21,
+   "midi": 54,
+   "finger": 3,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": true
+  },
+  {
+   "staff": "lower",
+   "bar": 22,
+   "midi": 50,
+   "finger": null,
+   "conf_pitch": "high",
+   "conf_digit": null,
+   "arbitrated": true
+  },
+  {
+   "staff": "lower",
+   "bar": 23,
+   "midi": 52,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 23,
+   "midi": 51,
+   "finger": 1,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 23,
+   "midi": 50,
+   "finger": 0,
+   "conf_pitch": "high",
+   "conf_digit": "high",
+   "arbitrated": false
+  },
+  {
+   "staff": "lower",
+   "bar": 24,
+   "midi": 49,
+   "finger": null,
+   "conf_pitch": "medium",
+   "conf_digit": null,
+   "arbitrated": false
+  }
+ ]
+}
