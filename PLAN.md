@@ -644,7 +644,8 @@ prefix.
 
 ### Phase 1 — the shell (fixes S1; everything after is cheaper)
 
-- ⬜ **WS-W1 — `Project`: one document, many track kinds.** `M`
+- 🚧 **WS-W1 — `Project`: one document, many track kinds.** `M` · **CLAIMED
+  2026-07-28 by opus (loop-d1d4), branch `feature/mixer-d1d4` — see the board.**
   - **Goal.** One container the three surfaces can share, so "the tracker
     pattern in bar 9" and "the clip on the timeline" can be the same object.
   - **Depends.** Nothing. *Do this first.*

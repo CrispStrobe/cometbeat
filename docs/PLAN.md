@@ -237,6 +237,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-W1` — `Project`: one document, many
+  track kinds.** `M`, no dependencies, and the ladder says *do this first*.
+  Worktree `../mus-mixer-d1d4`, branch `feature/mixer-d1d4`, off `1c5bff44`.
+  Claim pushed BEFORE any code, per the ladder's rule.
+  **Scope, exactly as scoped:** new `lib/core/project/project.dart` (pure Dart,
+  **no Flutter**) + `project_codec.dart`. `Project {tracks, tempo, name}` ·
+  `ProjectTrack {id, name, AppMode kind, Object document, mix}` where `document`
+  is each mode's **existing** type, unchanged. `AppMode` is reused from
+  `core/interop/project_bridge.dart`, not re-declared.
+  **What I will NOT do, so nobody has to guard against it:** I am not modifying
+  `daw_timeline.dart`, `tracker_song.dart`, `loop_engine.dart` or
+  `tab_document.dart` — WS-W1 *wraps*, it never absorbs, and a mode opened
+  without a project must behave exactly as it does today (ladder rule 2). Mix
+  state goes on `ProjectTrack`, never into a mode document (the ladder's warning
+  — otherwise WS-W5 has to unpick it from four places). No render path is
+  touched, so ladder rule 1's byte-identical guard has nothing to bite on here;
+  I will say so explicitly rather than leave it looking skipped.
+  ⚠️ **Files I expect to touch: only the two new ones + their test.** If that
+  changes I will update this entry before it does. — opus
+
 - **opus (tracker→editors)** · ✅ **DONE (idle) — loss-dialog REASON l10n: the
   infrastructure + the static bridge reasons (EN/DE).** The Open-in loss dialog's
   reason bullets were the last English in the menu. Added an ADDITIVE key channel
