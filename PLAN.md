@@ -47,6 +47,16 @@
 > Romberg stating this file's founding premise in 1840 — *"die Violinspieler haben zwei
 > Terzen in den Fingern und der Violoncellist nur eine."*
 >
+>  **Reading method (2026-07-28):** the maintainer's *piece-at-a-time* protocol — give a
+> reader ONE PIECE, have it write a complete rough draft from a downscaled view, then correct
+> that draft against successive native-resolution crops (`methods/piece_cut.py`). Tested on
+> Becker p.50 no.9: 24 bars, 110 events, 66 digits, 23 logged corrections, both self-checks
+> passing. The transferable part is `methods/CONVENTIONS.md` → **the non-metric arguments**:
+> every failure came from judging vertical position and every recovery from a musical or
+> physical argument (a printed `0` can only be an open string; a ledger line through a head is
+> categorical; a finger a hand cannot place refutes the reading). That is why "read it, don't
+> OMR it" is a method and not merely a restriction.
+>
 > Detail, method and every negative result: `docs/PLAN.md` → *opus (cello-vision-read)*.
 
 

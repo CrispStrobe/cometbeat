@@ -1816,10 +1816,41 @@ is recorded in [HISTORY.md](HISTORY.md).
   vision path shows ~1500, so full = 0.30x (digits ~13 px, guessing), half = 0.59x (digits
   fine, PITCHES marginal — verified by hand), **quarter = 1267 px = 1.00x NATIVE**. That last
   step is what makes the pitch layer readable at all.
-  **Result: 110 notes / 101 pitched / 65 digits, and 9 corrections — ALL in system 1**
-  (s1q1–q4), then **zero in s2q1 and s2q2**. So the coarse draft plus ONE system at native is
-  enough to calibrate; later quarters only verify. That is an efficiency finding: budget
-  full quarters for the first system and spot-check the rest.
+  **Result: 24 bars / 110 events / 66 digits / 23 logged corrections**, both self-checks
+  passing.
+  ⚠ **MY "CONVERGENCE AFTER ONE SYSTEM" CLAIM IS WITHDRAWN — the reader refuted it with its
+  own data.** I saw 9 corrections in system 1 then zero in s2q1/s2q2 and concluded the draft
+  had converged. It had not: the final tally is 2,2,2,3 | 0,0,**4**,2 | 1,2,2,3, and s2q3 alone
+  produced the largest correction count of any quarter, *after* the two clean ones. The two
+  zeros were an artefact of system 1 being the fingered upper part, read first.
+  **The honest, narrower claim:** one system calibrates the **ERROR TAXONOMY**, not the piece —
+  and the taxonomy is what makes fast reading safe afterwards. Only four kinds of error
+  occurred: octave/step slips in the accompaniment (11), "repeated digits ⇒ repeated bar" (4),
+  misreading a marking (3), order-and-one-digit (2).
+  • ⭐ **19 of 23 corrections were in the UNFINGERED staff.** The fingered pupil part needed
+  just 2 pitch corrections in 24 bars. **A printed digit is a second, independent witness to a
+  note's height**, so fingered staves are genuinely easier to read than unfingered ones —
+  expect accompaniment to be the hard part and budget for it.
+  • ⭐⭐ **The deepest finding, now in `CONVENTIONS.md`: every failure came from judging
+  VERTICAL POSITION, and every recovery came from a NON-METRIC argument** — a printed `0` can
+  only be an open string; a ledger line through a notehead is categorical, not a measurement;
+  an augmentation dot sits beside a head, not above it; a finger a hand cannot place refutes
+  the reading. Those work at any crop size, and they are why "read it, don't OMR it" is a
+  method rather than a restriction.
+  • **Granularity revised to HALVES** on the reader's recommendation: quarters were right for
+  system 1 and over-fine after it, and the seams cost more than the resolution bought — one
+  note fell in a seam and was read twice differently, and the piece's single unreadable spot
+  exists precisely BECAUSE its tile held no anchor (no `0`, no ledger, no clef). Halves keep
+  the landmarks in frame; re-cut a single half into quarters when it genuinely will not resolve.
+  • **Step 0 earned its place for a reason I had not thought of.** I added it as crash
+  insurance; the reader reports the real value is that committing to the CONTAINER before any
+  note makes every later step an edit into a known slot, so structure and detail never have to
+  be held together. It now also emits empty `corrections`/`confirmed`/`unreadable` lists,
+  because having those fields on disk is what makes a reader log confirmations rather than only
+  failures.
+  • The open-string check did its best work here: it FAILED continuously from the draft onward
+  (a `0` mistakenly on E3) and only cleared at the last quarter, where the bar proved to be
+  `E3–D♯3–D3♮` — one finger sliding a semitone, then releasing to the open D.
   ⚠ **The corrections log caught an error of MINE that had propagated through three briefs.**
   I told readers `G.B.` labels the lower (accompaniment) part. It does not: **`G.B.` =
   *ganzer Bogen* (whole bow) and `Fr.` = *Frosch* (heel) — BOW indications**, consistent with
