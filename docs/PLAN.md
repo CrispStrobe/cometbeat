@@ -1568,6 +1568,39 @@ is recorded in [HISTORY.md](HISTORY.md).
   ⚙️ Note this cost two agent passes to learn: the shifts looked like the prize, and the
   measurement is what showed they are contingent. Measure before promoting, not after.
 
+  **⭐⭐ THE SHIFT PROBLEM IS DOWNSTREAM OF A STRING PROBLEM.** A string-layer pass over
+  p.62 no.36 (pure arithmetic over the existing reading, nothing re-read) took forced strings
+  from 3 to **23 of 110** and re-graded the shifts. Measured:
+  `shifts gold 12 · ours 12 · matched 2` · **FORCED-STRING agreement 11/22 = 50%** ·
+  finger 22/43. Our string agreement on the PDMX gold is **92.7%**; here, on strings the
+  source's own digits ARITHMETICALLY FORCE, we agree half the time. Put the hand on the wrong
+  string and every position after it is wrong too — so this page's "shift defect" is a
+  consequence, not a cause.
+  • The decisive case: `m1 n2` is C4 printed with finger **4**. We take C4 as finger 2, first
+  position, A string. That is not a rival preference — with the printed 4 it is
+  **arithmetically impossible** (`a = (60-57) - 3 = 0`). The digit and the A string cannot
+  both be true. Becker is high on the D string; we are not.
+  • **12 usable shifts now** (8 re-graded `observed` + 4 the string pass discovered, kept
+  separate as `shift_here_pass3` so the reader's original eight stay auditable). One candidate
+  was **refuted** — the open A frees the hand, so no move is necessary. A refuted shift is the
+  method working.
+  • ⭐ **The pass corrected MY forcing rule and sourced the fix from the page.** `a >= 1` alone
+  forces nothing: it only kills the A string, because any pitch is reachable far up a lower
+  string (C4 with finger 4 is a=14 on G, a=21 on C). An upper bound was unavoidable, so it took
+  one from Becker rather than from taste — he prints no thumb on p.62, and the one bar whose
+  string he DOES print reaches a=12. Ceiling `a <= 12`, with the 11 affected rows tagged
+  `no_thumb_ceiling` vs 12 `absolute`. Then it checked whether the assumption mattered:
+  **re-running with the ceiling off changes no shift verdict.**
+  • ⚠ **"Keep the hand nearest the nut" is REFUTED by this source.** In m14 the notes C4/F4/D4
+  are all available low on the A string and Becker prints `IIᵃ` — he plays them high on the D
+  string. So the 63 `string_likely` rows must NOT be promoted to ground truth; the obvious
+  preference rule is one this edition has already contradicted in print.
+  **Where this points:** the next thing to examine is the STRING cost model, not the shift
+  model. Note the shape of the disagreement — Becker stays on one string and goes up; we cross
+  to a higher string and stay low. `stringCross` is 0.3 while `professional` sets `height` to
+  0.0, so nothing pulls us to stay on a string for tone. That is a hypothesis, and it must be
+  measured on all four legs before anything moves.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
