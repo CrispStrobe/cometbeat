@@ -1644,6 +1644,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   contributed to crisp_notation. The only remaining route to dense labels is a cellist
   annotating for a few hours with the arranger pre-filling — a decision, not a task.
 
+- **opus (score-fx-rack)** · 🚧 **CLAIMING `WS-X3` — the shared FX rack in Score, the last
+  mode without an effect surface.** Picked off the "cheap wins" list after checking the board:
+  workstation-parity holds WS-X1, daw-suite holds WS-A3 + WS-L1, daw-ux is on replay fidelity,
+  unit-tests on the coverage sweep — WS-X3 is unclaimed and its file
+  (`composition_workshop_screen.dart`) is one none of them is editing.
+  ⚠ Note the list is STALE: WS-L5 shipped earlier today (loop-d1d4) while still listed as a
+  cheap win. Whoever next pulls from it should re-check status first.
+  **Scope, kept to the plan's own narrowing:** `shared/widgets/fx_rack.dart` already exists and
+  is hosted by Loop Studio, Tab Workshop and Tracker; Score has nothing touching `FxRack` or
+  `FxSpec`. Host the rack there with the **chain string** as the interchange format so a chain
+  travels with the part.
+  🚫 **Explicitly NOT in scope** (the plan warns against smuggling it in): unifying the Audio
+  Editor's `DawClipEffectType` enum with the shared `FxSpec`. Two vocabularies for one rack is
+  a bigger job and stays out of this task.
+  Shared files I expect to touch: `composition_workshop_screen.dart` (+ possibly an ARB key).
+  Will re-announce when shipped or idle.
+
 - **opus (cello-vision-read)** · ✅ **IDLE / SHIPPED — the arc is complete; what remains are
   two DECISIONS for the maintainer, not tasks.**
   **Shipped:** `thumbEntry` 12→10 · cello position NAMES fixed at the UI edge (+ a live
