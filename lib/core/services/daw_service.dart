@@ -459,6 +459,93 @@ class DawService extends ChangeNotifier {
   /// Move a clip along the timeline (drag-in-time). [startMs] is clamped to ≥ 0
   /// and snapped to [snapMs] when snapping is on. Consecutive moves of the same
   /// clip coalesce into a single undo entry.
+  /// D5 — how many takes a clip holds (1 when it has never been given an
+  /// alternative).
+  int takeCount(int track, int index) {
+    if (!_validClipTarget(track, index)) return 0;
+    final takes = timeline.tracks[track].clips[index].takes;
+    return takes.isEmpty ? 1 : takes.length;
+  }
+
+  /// Which take is playing.
+  int activeTake(int track, int index) => _validClipTarget(track, index)
+      ? timeline.tracks[track].clips[index].takeIndex
+      : 0;
+
+  /// Add [source] as another take of this clip, and play it.
+  ///
+  /// The first call seeds the list with the clip's EXISTING source, so the take
+  /// the user already had is never lost by adding a second — the commonest way
+  /// a takes feature betrays someone.
+  void addTake(int track, int index, ClipSource source) {
+    if (!_validClipTarget(track, index)) return;
+    _record();
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    final takes = clip.takes.isEmpty ? [clip.source] : [...clip.takes];
+    takes.add(source);
+    clips[index] = clip.copyWith(
+      takes: takes,
+      takeIndex: takes.length - 1,
+    );
+    // The new take becomes the audible one; `source` stays the thing that
+    // plays, which is why the renderer needed no changes for any of this.
+    clips[index] = clips[index].copyWith(takes: takes);
+    clips[index] = _reSource(clips[index], source)
+        .copyWith(takes: takes, takeIndex: takes.length - 1);
+    notifyListeners();
+  }
+
+  /// Play take [takeIndex] of this clip. Out-of-range indices are ignored
+  /// rather than clamped: silently playing a different take than the one asked
+  /// for is worse than doing nothing.
+  void selectTake(int track, int index, int takeIndex) {
+    if (!_validClipTarget(track, index)) return;
+    final clip = timeline.tracks[track].clips[index];
+    if (clip.takes.isEmpty) return;
+    if (takeIndex < 0 || takeIndex >= clip.takes.length) return;
+    if (takeIndex == clip.takeIndex) return;
+    _record();
+    timeline.tracks[track].clips[index] = _reSource(clip, clip.takes[takeIndex])
+        .copyWith(takes: clip.takes, takeIndex: takeIndex);
+    notifyListeners();
+  }
+
+  /// Fold another clip into this one as an alternative take, and remove it
+  /// from the timeline.
+  ///
+  /// This is the workflow the take list exists for: passes get recorded onto
+  /// separate lanes, and stacking them turns a row of parallel clips into one
+  /// clip you can audition. The source clip's OWN takes come along, so stacking
+  /// a clip that already holds three does not throw two of them away.
+  ///
+  /// Returns false when either target is not a clip, or when they are the same
+  /// clip (stacking something onto itself would delete it).
+  bool stackAsTake(int track, int index, int fromTrack, int fromIndex) {
+    if (!_validClipTarget(track, index)) return false;
+    if (!_validClipTarget(fromTrack, fromIndex)) return false;
+    if (track == fromTrack && index == fromIndex) return false;
+    _record();
+    final target = timeline.tracks[track].clips[index];
+    final other = timeline.tracks[fromTrack].clips[fromIndex];
+    final takes = target.takes.isEmpty ? [target.source] : [...target.takes];
+    takes.addAll(other.takes.isEmpty ? [other.source] : other.takes);
+    // Remove the donor FIRST, then write through the target by identity: on
+    // the same lane a removal below the target would otherwise shift its index
+    // out from under us and we would edit the wrong clip.
+    timeline.tracks[fromTrack].clips.removeAt(fromIndex);
+    final clips = timeline.tracks[track].clips;
+    final at = clips.indexOf(target);
+    if (at >= 0) {
+      clips[at] = _reSource(target, takes.last).copyWith(
+        takes: takes,
+        takeIndex: takes.length - 1,
+      );
+    }
+    notifyListeners();
+    return true;
+  }
+
   /// D2 — link [targets] so they move together. Returns the new group id.
   ///
   /// Any clip already in a group is re-grouped into this one, which is what
@@ -518,6 +605,11 @@ class DawService extends ChangeNotifier {
         trimEndMs: clip.trimEndMs,
         effects: clip.effects,
         gainAutomation: clip.gainAutomation,
+        // groupId is deliberately NOT passed — clearing it is the whole point.
+        // Everything else must be, so ungrouping never costs the clip anything
+        // else it had; a field added to Clip has to be added here too.
+        takes: clip.takes,
+        takeIndex: clip.takeIndex,
         provenance: clip.provenance,
       );
 
@@ -1402,6 +1494,9 @@ class DawService extends ChangeNotifier {
         trimEndMs: clip.trimEndMs,
         effects: clip.effects,
         gainAutomation: clip.gainAutomation,
+        groupId: clip.groupId,
+        takes: clip.takes,
+        takeIndex: clip.takeIndex,
         provenance: clip.provenance,
       );
 

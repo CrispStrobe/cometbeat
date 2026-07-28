@@ -143,6 +143,8 @@ class Clip {
     this.effects = const [],
     this.gainAutomation = const [],
     this.groupId,
+    this.takes = const [],
+    this.takeIndex = 0,
     this.provenance,
   });
 
@@ -170,6 +172,23 @@ class Clip {
   /// Ordered per-clip effect chain. Effects process the trimmed source audio
   /// before clip gain/fades and before the track insert.
   final List<DawClipEffect> effects;
+
+  /// D5 — the alternative takes this clip can play, INCLUDING the active one.
+  ///
+  /// Empty means what it always meant: the clip has exactly one take, which is
+  /// [source]. That is why nothing in the renderer changed for this feature —
+  /// [source] is still the audio that plays, and these are the alternatives it
+  /// can be swapped for.
+  ///
+  /// Comping falls out of this rather than needing its own machinery: split the
+  /// clip at the phrase boundaries (which the timeline already does) and choose
+  /// a take per segment. Each segment keeps the whole take list, so a choice
+  /// made for one phrase can be revisited without re-recording anything.
+  final List<ClipSource> takes;
+
+  /// Which entry of [takes] is currently [source]. Meaningless when [takes] is
+  /// empty.
+  final int takeIndex;
 
   /// D2 — clips sharing a group id move together.
   ///
@@ -220,6 +239,8 @@ class Clip {
     List<DawClipEffect>? effects,
     List<DawAutomationPoint>? gainAutomation,
     int? groupId,
+    List<ClipSource>? takes,
+    int? takeIndex,
     LicensedWork? provenance,
   }) =>
       Clip(
@@ -238,6 +259,8 @@ class Clip {
         effects: effects ?? this.effects,
         gainAutomation: gainAutomation ?? this.gainAutomation,
         groupId: groupId ?? this.groupId,
+        takes: takes ?? this.takes,
+        takeIndex: takeIndex ?? this.takeIndex,
         provenance: provenance ?? this.provenance,
       );
 }

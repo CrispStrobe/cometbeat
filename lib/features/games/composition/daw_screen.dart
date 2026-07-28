@@ -2100,6 +2100,112 @@ class _DawScreenState extends State<DawScreen>
     );
   }
 
+  /// D5 — audition the alternative takes of a clip, and fold parallel clips in
+  /// as more of them.
+  ///
+  /// Switching plays immediately rather than on a confirm: the whole reason to
+  /// keep alternatives is comparing them by ear, and a dialog that only commits
+  /// on OK makes that a chore. The sheet stays open for the same reason.
+  Future<void> _pickTake(int track, int index) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) {
+          final count = _daw.takeCount(track, index);
+          final active = _daw.activeTake(track, index);
+          // Clips that overlap this one in time are the ones plausibly being
+          // ANOTHER PASS at the same passage — the only ones worth offering to
+          // stack, and the workflow lanes of takes come from.
+          final candidates = _overlappingClips(track, index);
+          return SafeArea(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                Text('Takes', style: Theme.of(sheetCtx).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                if (count <= 1)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'One take. Record the part again on another lane, then '
+                      'stack it here to compare them.',
+                    ),
+                  )
+                else
+                  RadioGroup<int>(
+                    groupValue: active,
+                    onChanged: (chosen) {
+                      if (chosen == null) return;
+                      _daw.selectTake(track, index, chosen);
+                      setSheet(() {});
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < count; i++)
+                          RadioListTile<int>(
+                            value: i,
+                            title: Text('Take ${i + 1}'),
+                          ),
+                      ],
+                    ),
+                  ),
+                if (candidates.isNotEmpty) ...[
+                  const Divider(),
+                  Text(
+                    'Stack in as another take',
+                    style: Theme.of(sheetCtx).textTheme.labelLarge,
+                  ),
+                  for (final candidate in candidates)
+                    ListTile(
+                      leading: const Icon(Icons.layers),
+                      title: Text(
+                        'Lane ${candidate.track + 1} · '
+                        '${_clipKind(_daw.timeline.tracks[candidate.track].clips[candidate.index])} '
+                        'at ${_daw.timeline.tracks[candidate.track].clips[candidate.index].startMs.round()} ms',
+                      ),
+                      subtitle: const Text('Moves it in — undoable'),
+                      onTap: () {
+                        _daw.stackAsTake(
+                          track,
+                          index,
+                          candidate.track,
+                          candidate.index,
+                        );
+                        Navigator.of(sheetCtx).pop();
+                      },
+                    ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Clips elsewhere on the timeline whose played window overlaps this one's.
+  List<({int track, int index})> _overlappingClips(int track, int index) {
+    if (index >= _daw.timeline.tracks[track].clips.length) return const [];
+    final start = _daw.timeline.tracks[track].clips[index].startMs;
+    final end = start + _daw.clipDurationMs(track, index);
+    final out = <({int track, int index})>[];
+    for (var t = 0; t < _daw.timeline.tracks.length; t++) {
+      final clips = _daw.timeline.tracks[t].clips;
+      for (var i = 0; i < clips.length; i++) {
+        if (t == track && i == index) continue;
+        final otherStart = clips[i].startMs;
+        final otherEnd = otherStart + _daw.clipDurationMs(t, i);
+        if (otherStart < end && otherEnd > start) {
+          out.add((track: t, index: i));
+        }
+      }
+    }
+    return out;
+  }
+
   /// D3 — draw a gain envelope over one clip.
   ///
   /// Seeded with a flat line across the clip when it has none, because the
@@ -4075,6 +4181,23 @@ class _DawScreenState extends State<DawScreen>
                           },
                           icon: const Icon(Icons.show_chart),
                           label: const Text('Clip envelope'),
+                        ),
+                        // D5 — the alternative takes. The count is on the
+                        // label because which take is playing is otherwise
+                        // invisible on the timeline.
+                        TextButton.icon(
+                          onPressed: () async {
+                            Navigator.of(sheetCtx).pop();
+                            await _pickTake(track, index);
+                          },
+                          icon: const Icon(Icons.layers),
+                          label: Text(
+                            _daw.takeCount(track, index) > 1
+                                ? 'Takes '
+                                    '(${_daw.activeTake(track, index) + 1}'
+                                    '/${_daw.takeCount(track, index)})'
+                                : 'Takes',
+                          ),
                         ),
                         // Split at the playhead — only when it falls inside the clip.
                         TextButton.icon(

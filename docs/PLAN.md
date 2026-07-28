@@ -533,10 +533,14 @@ is recorded in [HISTORY.md](HISTORY.md).
   had no host) · A3 dynamics (look-ahead limiter · de-esser · multiband) · A4 the
   channel/stereo ops.
   · A5 restoration (noise reduction · hum · de-click · de-clip · DC).
-  **Next:** A2 tone curves · A6 time/pitch · A7 generators. **Pillar B is now
-  complete** (B1 structural ops · B2 dither+shaping · B3 full stats · B4 VAD ·
-  B5 spectrogram PNG · B6 batch), and C4/C5 were shipped by
-  `opus (tracker→editors)`, so **Pillar C is complete** too.
+  **Pillars A, B, C and D are complete** — A1 filters · A2 tone curves ·
+  A3 dynamics · A4 channel/stereo · A5 restoration · A7 generators (A6 is the
+  one deliberate 🔶, below) · B1–B6 · C1–C5 (C4/C5 by `opus (tracker→editors)`)
+  · D1 ripple · D2 groups+nudge · D3 clip envelope · D4 loudness · D5 take
+  lanes+comping · D6 tempo map.
+  🔶 **A6 remains open on purpose:** stretch-quality tiers and high-quality rate
+  conversion change the sample RATE, which a same-buffer `FxSpec` cannot express
+  — they belong to the export/`resample.dart` path, not the rack.
   **Rack is now 50 effects**, every one reachable from the GUI *and* the CLI with
   no per-effect UI or CLI code — the F1/F2 lever has held across five DSP slices.
   A "learn the noise from the marked range" service op is the natural next step
@@ -2815,7 +2819,40 @@ already round-trip **in place**. The gaps:
     counter must not let the NEXT group collide with an existing one — which
     would silently link clips the user never linked.
   Tests: `daw_group_nudge_test` (17).
-- [ ] **D5** take lanes/comping.
+- [x] **D5 take lanes + comping** — `Clip.takes` / `takeIndex`,
+  `addTake`/`selectTake`/`stackAsTake` on `DawService`, a Takes sheet in the
+  clip inspector.
+  * `source` stays the ACTIVE take, so the renderer needed **no change at all**
+    — takes are a list of alternatives the clip can be swapped between, not a
+    new thing to mix. An empty list means one take, which is what every clip
+    written before this meant, so behaviour is unchanged everywhere.
+  * **comping is deliberately not a fourth concept.** Splitting at a phrase
+    boundary and choosing a take per segment IS a comp, and the timeline already
+    splits; a dedicated comp API would only duplicate two verbs that exist. The
+    load-bearing property is that split is TRIM-based, so a take chosen on the
+    second segment plays the second phrase *of that take* rather than restarting
+    it — a test pins it with a rising ramp, which flat-level fixtures cannot see.
+  * `addTake` seeds the list with the clip's EXISTING source before appending.
+    Seeding it empty is the commonest way this feature betrays someone: the
+    first "record another" quietly discards the original.
+  * an out-of-range `selectTake` does **nothing** rather than clamping — playing
+    a take other than the one asked for is worse than refusing, because the user
+    hears something and believes it is the take they picked.
+  * `stackAsTake` folds a parallel clip in and removes it from the timeline,
+    which is how take lanes actually get made: record passes onto lanes, then
+    stack them into one clip you can audition. The donor's OWN takes come along,
+    and the target is written back **by identity** — a donor earlier on the same
+    lane shifts every later index, so writing by the old index would edit the
+    wrong clip.
+  * persistence stores the alternatives, or they would die at Save (the same
+    failure C1 fixed for clip sources), and a take that HAS a model comes back
+    as that model rather than a bounce. The **active** take is written as a
+    marker instead of a second copy of itself — it is already on disk as the
+    clip's own source, and duplicating a take's audio in every project file is
+    real cost for no information. A damaged list falls back to a single-take
+    clip rather than one whose audible take is missing.
+  Tests: `daw_takes_test` (22, incl. the widget half — the sheet must switch
+  the take, not merely list them).
 
 **Non-goals** (stated so they are not re-litigated): a real-time audio graph (the
 app is offline render-then-play *by design*), third-party plugin hosting, and

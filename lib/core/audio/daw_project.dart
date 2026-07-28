@@ -119,6 +119,21 @@ String projectToJson(
                 // editable again rather than merely audible.
                 if (clipSourceToJson(clip.source) case final source?)
                   'source': source,
+                // D5 — the alternative takes. The ACTIVE one is written as a
+                // marker rather than a second copy of itself: it is already on
+                // disk as this clip's own `source`/`pcm`, and duplicating a
+                // take's audio in every project file is a real cost for no
+                // information. The marker keeps the list's length and order, so
+                // `takeIndex` still means what it says.
+                if (clip.takes.length > 1)
+                  'takes': [
+                    for (var i = 0; i < clip.takes.length; i++)
+                      if (i == clip.takeIndex)
+                        {'active': true}
+                      else
+                        _takeToJson(clip.takes[i], r),
+                  ],
+                if (clip.takes.length > 1) 'takeIndex': clip.takeIndex,
                 'pcm': base64Encode(_floatToInt16(r(clip.source))),
                 if (clip.source is StereoSampleSource)
                   'rightPcm': base64Encode(
@@ -129,6 +144,44 @@ String projectToJson(
         },
     ],
   });
+}
+
+/// One alternative take: its model when it has one, plus the baked audio, on
+/// exactly the same terms as a clip's own source. A take recorded from the mic
+/// has no model, so without the PCM it would come back silent — the same
+/// failure that losing a clip's audio would be.
+Map<String, dynamic> _takeToJson(
+  ClipSource take,
+  Float64List Function(ClipSource) render,
+) {
+  final pcm = render(take);
+  return {
+    if (clipSourceToJson(take) case final source?) 'source': source,
+    'pcm': base64Encode(_floatToInt16(pcm)),
+    if (take is StereoSampleSource)
+      'rightPcm': base64Encode(_floatToInt16(take.right)),
+  };
+}
+
+ClipSource? _takeFromJson(Object? raw, Map<Object, Float64List>? warmCache) {
+  if (raw is! Map) return null;
+  final pcmB64 = raw['pcm'];
+  if (pcmB64 is! String) return null;
+  final Float64List pcm;
+  Float64List? right;
+  try {
+    pcm = _int16ToFloat(base64Decode(pcmB64));
+    final rightB64 = raw['rightPcm'];
+    if (rightB64 is String) right = _int16ToFloat(base64Decode(rightB64));
+  } catch (_) {
+    return null;
+  }
+  final restored = clipSourceFromJson(raw['source']);
+  if (restored != null) {
+    warmCache?[restored.cacheKey] = pcm;
+    return restored;
+  }
+  return right == null ? SampleSource(pcm) : StereoSampleSource(pcm, right);
 }
 
 /// Rebuilds a [DawTimeline] from [json].
@@ -244,6 +297,33 @@ DawTimeline projectFromJson(
           // invalidates it exactly as an edit made in this session would.
           warmCache?[restored.cacheKey] = pcm;
         }
+        // D5 — restore the takes around the active one, which is stored as a
+        // marker (see the writer). A clip with no `takes` key keeps the empty
+        // list, which is what every project written before this meant anyway.
+        final activeSource = restored ??
+            (right == null
+                ? SampleSource(pcm)
+                : StereoSampleSource(pcm, right));
+        var takes = <ClipSource>[];
+        var takeIndex = 0;
+        if (c['takes'] case final raw? when raw is List && raw.length > 1) {
+          for (var i = 0; i < raw.length; i++) {
+            final entry = raw[i];
+            if (entry is Map && entry['active'] == true) {
+              takeIndex = i;
+              takes.add(activeSource);
+            } else if (_takeFromJson(entry, warmCache) case final take?) {
+              takes.add(take);
+            }
+          }
+          // If the marker was lost or the list arrived damaged, a takes list
+          // that no longer contains the audible take would silently drop it on
+          // the next selection. Better to fall back to a single-take clip.
+          if (!takes.contains(activeSource)) {
+            takes = const [];
+            takeIndex = 0;
+          }
+        }
         clips.add(
           Clip(
             source: restored ??
@@ -268,6 +348,8 @@ DawTimeline projectFromJson(
                   if (DawClipEffect.fromJson(fx) case final parsed?) parsed,
             ],
             groupId: c['groupId'] is num ? (c['groupId'] as num).toInt() : null,
+            takes: takes,
+            takeIndex: takeIndex,
             gainAutomation: [
               if (c['gainAutomation'] case final points? when points is List)
                 for (final point in points)

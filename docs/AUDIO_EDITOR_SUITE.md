@@ -258,7 +258,7 @@ coexist with it. So "all FX for all track kinds" is mostly a surfacing job:
 | D2 | Clip groups / linked clips; nudge by grid or ms |
 | D3 | Per-clip gain envelope (clip-level automation, distinct from lane automation) |
 | D4 | Loudness metering: integrated / short-term / momentary LUFS + true-peak; correlation meter; spectrum analyser |
-| D5 | Take lanes + comping (record several passes, choose per phrase) |
+| D5 | Take lanes + comping (record several passes, choose per phrase) — ✅ shipped; comping = split + per-segment take choice, not a separate concept |
 | D6 | Tempo map (the timeline's bpm is a single number today) |
 
 ---
