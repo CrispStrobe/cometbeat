@@ -2142,4 +2142,53 @@ void main() {
       reason: 'guitar fingerings must be written into the score too',
     );
   });
+
+  group('SE-C3 playability warnings', () {
+    testWidgets('a blank part says nothing — silence is the default',
+        (tester) async {
+      await pump(tester);
+      await tester.tap(_pianoKey());
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('workshop-play-below')),
+        findsNothing,
+        reason: 'an unnamed part is not an instrument to have opinions about',
+      );
+    });
+
+    testWidgets(
+        'a note under the instrument warns, VISIBLY, and does not block',
+        (tester) async {
+      await pump(tester);
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+      // A violin part — its lowest string is G3, so the low piano keys are
+      // under it. (Cello and bass reach far lower; violin is what makes a note
+      // in this register genuinely out of range.)
+      await tester.tap(find.byKey(const Key('workshop-add-instrument-preset')));
+      await tester.pumpAndSettle();
+      // ⚠ The menu label is "<clef glyph>  Violin", not "Violin".
+      await tester.tap(find.textContaining(l10n.workshopInstrumentViolin).last);
+      await tester.pumpAndSettle();
+
+      final editor = _editor(tester);
+      final before = editor.noteCount;
+      // ⚠ The leftmost keys are off-screen (see _pianoKey); key 16 is the
+      // standard visible one and lands around E3 — a step under a violin's
+      // open G string, which is exactly the case being tested.
+      await tester.tap(_pianoKey());
+      await tester.pumpAndSettle();
+
+      expect(
+        editor.noteCount,
+        greaterThan(before),
+        reason: 'a warning must NEVER block the edit',
+      );
+      expect(
+        find.byKey(const ValueKey<String>('workshop-play-below')),
+        findsOneWidget,
+        reason: 'and it must be on screen, not merely in the model',
+      );
+    });
+  });
 }

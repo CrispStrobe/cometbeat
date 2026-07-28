@@ -98,6 +98,24 @@ abstract class AppLocalizations {
     Locale('en')
   ];
 
+  /// Notes lower than the instrument's lowest string
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 note below the range}other{{count} notes below the range}}'**
+  String workshopPlayBelowRange(int count);
+
+  /// Notes above the instrument's practical top
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 note above the range}other{{count} notes above the range}}'**
+  String workshopPlayAboveRange(int count);
+
+  /// Notes needing a position/technique above the chosen skill
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 note beyond this level}other{{count} notes beyond this level}}'**
+  String workshopPlayOutOfReach(int count);
+
   /// Tab Editor menu: name the left-hand finger for every fretted note
   ///
   /// In en, this message translates to:

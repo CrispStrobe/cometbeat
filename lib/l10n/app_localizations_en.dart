@@ -9,6 +9,39 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String workshopPlayBelowRange(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notes below the range',
+      one: '1 note below the range',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String workshopPlayAboveRange(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notes above the range',
+      one: '1 note above the range',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String workshopPlayOutOfReach(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notes beyond this level',
+      one: '1 note beyond this level',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get tabAddFingerings => 'Add left-hand fingerings';
 
   @override

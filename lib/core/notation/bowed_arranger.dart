@@ -597,7 +597,15 @@ double _skillCost(
 
 /// True when [f] reaches past what [skill] covers — drives
 /// [BowedArrangement.relaxed].
-bool _beyondSkill(BowedInstrument inst, BowedSkill skill, BowedFingering f) =>
+///
+/// ⚠ PUBLIC because the playability check needs exactly this question, and the
+/// skill limits are SOFT COSTS: the arranger will happily hand a first-position
+/// student a fingering in 7th position, paying `beyondSkill` for it, rather than
+/// refuse the note. So "is it playable at this level?" cannot be answered by
+/// asking whether a fingering EXISTS — it always does — only by asking whether
+/// the one chosen stayed inside the level. Two copies of that predicate would
+/// drift, so there is one.
+bool beyondSkill(BowedInstrument inst, BowedSkill skill, BowedFingering f) =>
     f.position > skill.maxPosition ||
     (f.mode.isExtended && !skill.allowExtensions) ||
     (f.mode == BowedHandMode.thumb && !skill.allowThumb);
@@ -760,7 +768,7 @@ BowedArrangement arrangeBowed(
     return BowedArrangement(
       columns: result.$1,
       skill: skill,
-      relaxed: result.$1.any((c) => c.any((f) => _beyondSkill(inst, skill, f))),
+      relaxed: result.$1.any((c) => c.any((f) => beyondSkill(inst, skill, f))),
       cost: result.$2,
     );
   }

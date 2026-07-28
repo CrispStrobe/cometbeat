@@ -35,6 +35,7 @@ import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
     show scoreWithGuitarFingerings;
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
+import 'package:comet_beat/core/notation/playability.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -670,6 +671,15 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   String debugMusicXmlExport() => _musicXmlExport();
 
   bool _showAnalysis = false; // live harmonic analysis: tint notes by function
+
+  /// The player each part was last fingered FOR, by part index.
+  ///
+  /// SE-C3's reach warning is meaningless without it: "this note needs 5th
+  /// position" is only a problem relative to a level someone chose. Until the
+  /// user applies fingerings to a part we make no reach claim about it and
+  /// check the range alone — a partial answer rather than one built on a
+  /// default the user never picked.
+  final Map<int, BowedSkill> _partSkill = {};
   bool _inspect = false; // 🔍 Looking Glass: tap a note to see what it is
   // Studio: an opt-in selection-driven inspector panel (Cause 3). Off by default,
   // so the kid Sandbox surface is unchanged; when on it docks to the right and
@@ -1458,12 +1468,36 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         final fingered = scoreWithBowedFingerings(
           part.buildScore(),
           skill: skill,
-          instrument: BowedInstrument.cello,
+          // ⚠ Was hard-coded to cello, which silently fingered a double-bass
+          // part with a cello's hand and string tuning. The part knows what it
+          // is; ask it.
+          instrument: _bowedInstrumentOf(i) ?? BowedInstrument.cello,
           markStrings: true,
           markBowing: true,
         );
         part.loadScore(fingered, clefOverride: _mpd.clefOf(i));
+        _partSkill[i] = skill;
       });
+
+  /// The arranger profile for part [i], resolved from its instrument NAME, or
+  /// null when the part is not a bowed instrument the arranger models.
+  BowedInstrument? _bowedInstrumentOf(int i) =>
+      kBowedArrangerInstruments[canonicalBowedName(_mpd.nameOf(i))];
+
+  /// SE-C3: what is unplayable about part [i], for the instrument it says it is.
+  ///
+  /// Empty for a part whose name is not a bowed instrument — silence is the
+  /// right answer for a piano part, not a guess.
+  List<PlayabilityWarning> _playabilityOf(int i) {
+    final canonical = canonicalBowedName(_mpd.nameOf(i));
+    if (canonical == null) return const [];
+    return checkPlayability(
+      _mpd.parts[i].buildScore(),
+      range: kBowedRanges[canonical],
+      instrument: kBowedArrangerInstruments[canonical],
+      skill: _partSkill[i],
+    );
+  }
 
   /// Write GUITAR left-hand fingerings into part [i].
   ///
@@ -2734,6 +2768,67 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final alter = a.key.tonic.alter;
     final acc = alter > 0 ? '♯' * alter : (alter < 0 ? '♭' * -alter : '');
     return '$letter$acc ${a.key.isMajor ? l10n.modeMajor : l10n.modeMinor}';
+  }
+
+  /// SE-C3: a gentle strip naming what the active part cannot play.
+  ///
+  /// ⚠ It is shown ONLY when there is something to say, which is what keeps it
+  /// gentle — an always-present "0 problems" row is noise, and noise is what
+  /// makes people stop reading warnings. It never blocks and never edits:
+  /// composers write out of range on purpose, and the editor is not the
+  /// authority on that.
+  Widget _playabilityBanner(
+    AppLocalizations l10n,
+    List<PlayabilityWarning> warnings,
+  ) {
+    final theme = Theme.of(context);
+    int count(PlayabilityIssue i) => warnings.where((w) => w.issue == i).length;
+    final below = count(PlayabilityIssue.belowRange);
+    final above = count(PlayabilityIssue.aboveRange);
+    final reach = count(PlayabilityIssue.outOfReach);
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.tertiaryContainer,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 16,
+            color: theme.colorScheme.onTertiaryContainer,
+          ),
+          Text(
+            _mpd.nameOf(_mpd.active),
+            style: theme.textTheme.labelLarge
+                ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
+          ),
+          if (below > 0)
+            Text(
+              l10n.workshopPlayBelowRange(below),
+              key: const ValueKey<String>('workshop-play-below'),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
+            ),
+          if (above > 0)
+            Text(
+              l10n.workshopPlayAboveRange(above),
+              key: const ValueKey<String>('workshop-play-above'),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
+            ),
+          if (reach > 0)
+            Text(
+              l10n.workshopPlayOutOfReach(reach),
+              key: const ValueKey<String>('workshop-play-reach'),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onTertiaryContainer),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _analysisBanner(AppLocalizations l10n, ScoreAnalysis a) {
@@ -4459,6 +4554,8 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               // Live harmonic analysis banner (Analysis toggle): key + roman
               // progression + cadences, computed from the active part.
               if (analysis != null) _analysisBanner(l10n, analysis),
+              if (_playabilityOf(_mpd.active) case final w when w.isNotEmpty)
+                _playabilityBanner(l10n, w),
               // Row A — compact settings + status.
               // Score canvas — multi-line, vertical scroll. In Studio the
               // inspector docks to its right (Cause 3); off by default.

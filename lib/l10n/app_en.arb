@@ -1,4 +1,19 @@
 {
+  "workshopPlayBelowRange": "{count,plural, =1{1 note below the range}other{{count} notes below the range}}",
+  "@workshopPlayBelowRange": {
+    "description": "Notes lower than the instrument's lowest string",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "workshopPlayAboveRange": "{count,plural, =1{1 note above the range}other{{count} notes above the range}}",
+  "@workshopPlayAboveRange": {
+    "description": "Notes above the instrument's practical top",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "workshopPlayOutOfReach": "{count,plural, =1{1 note beyond this level}other{{count} notes beyond this level}}",
+  "@workshopPlayOutOfReach": {
+    "description": "Notes needing a position/technique above the chosen skill",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "tabAddFingerings": "Add left-hand fingerings",
   "@tabAddFingerings": {
     "description": "Tab Editor menu: name the left-hand finger for every fretted note"
