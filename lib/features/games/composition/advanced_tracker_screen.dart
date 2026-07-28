@@ -255,6 +255,43 @@ const _kKeyToSemitone = <String, int>{
   '5': 18, 't': 19, '6': 20, 'y': 21, '7': 22, 'u': 23, 'i': 24,
 };
 
+/// How far down the viewport the playing row sits.
+const double kFollowMarginPx = 120;
+
+/// Past this, easing is the wrong answer — the song has JUMPED (a wrap, or a
+/// Bxx/Dxx order jump), and gliding across the whole pattern would arrive after
+/// the music has already moved on.
+const double kFollowSnapPx = 400;
+
+/// Fraction of the remaining distance covered per frame.
+const double kFollowEase = 0.25;
+
+/// WS-T1 — where the grid should scroll to for a playhead at [exactRow].
+///
+/// Pure, and deliberately so. Whether the VIEW moves in a widget test depends
+/// on how much time each pump delivers, which made my first version of this
+/// test flaky under `--concurrency`: it was measuring the harness. The
+/// interesting part is this arithmetic, and it is exact.
+///
+/// Returns null when the view is already close enough, so a stationary playhead
+/// never fights someone scrolling by hand.
+double? followScrollOffset({
+  required double exactRow,
+  required double rowHeight,
+  required double current,
+  required double maxExtent,
+}) {
+  final target =
+      ((exactRow * rowHeight) - kFollowMarginPx).clamp(0.0, maxExtent);
+  final delta = target - current;
+  if (delta.abs() < 0.5) return null;
+  // A jump means the song wrapped or leapt, not that it advanced; gliding
+  // there would arrive late.
+  if (delta.abs() > kFollowSnapPx) return target;
+  // Otherwise ease: a fraction of what remains, per frame.
+  return current + delta * kFollowEase;
+}
+
 class AdvancedTrackerScreen extends StatefulWidget {
   const AdvancedTrackerScreen({
     super.key,
@@ -394,6 +431,17 @@ abstract interface class AdvancedTrackerTester {
   void setNote(int channel, int row, int midi);
   void clearNote(int channel, int row);
   void setRows(int rows);
+
+  /// WS-T1 — whether the view follows the playing row.
+  bool get followPlay;
+  void setFollowPlay(bool on);
+
+  /// The grid's scroll offset, and how far it CAN scroll. Exposed because a
+  /// test cannot reliably pick the right `Scrollable` out of this screen —
+  /// picking the wrong one reads `maxScrollExtent == 0` and every follow
+  /// assertion then passes without running.
+  double get gridScrollOffset;
+  double get gridScrollExtent;
   void addTrack();
   void removeTrack(int channel);
   void togglePlay();
@@ -841,7 +889,6 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   final _pianoScroll =
       ScrollController(initialScrollOffset: 14 * _pianoKeyWidth);
-  int _lastFollowedRow = -1;
 
   /// Grid zoom (0.75–1.6) — scales the row height, cell width and fonts.
   double _zoom = 1.0;
@@ -901,6 +948,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
           posInPattern = e.row * t.stepMs + (pos - e.startMs);
           // Sub-row phase for live-record quantize (uniform step assumption).
           _rowPhase = t.stepMs > 0 ? (pos - e.startMs) / t.stepMs : 0.0;
+          // ⚠️ WS-T1 — this branch (playing the ORDER, i.e. the whole song)
+          // never followed the playhead at all: the old call sat only in the
+          // single-pattern branch below. So "follow" silently did nothing in
+          // the mode people actually listen in.
+          _followPlayhead(e.row + _rowPhase);
         }
       } else {
         if (_playingOrder.value != -1) _playingOrder.value = -1;
@@ -909,9 +961,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         _rowPhase = t.stepMs > 0 ? (posInPattern % t.stepMs) / t.stepMs : 0.0;
         if (step != _row.value) {
           _row.value = step;
-          _followPlayhead(step);
           _maybeTick(step);
         }
+        // WS-T1 — every tick, at the SUB-ROW position, so the view moves with
+        // the music instead of once per row.
+        _followPlayhead(step + _rowPhase);
       }
       _progress.value = posInPattern / t.totalMs;
       _updateLevels(posInPattern);
@@ -1040,6 +1094,21 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   void clearNote(int channel, int row) =>
       _setCell(channel, row, TrackerCell.empty);
+  @override
+  @override
+  bool get followPlay => _followPlay;
+
+  @override
+  double get gridScrollOffset =>
+      _vScroll.hasClients ? _vScroll.position.pixels : -1;
+
+  @override
+  double get gridScrollExtent =>
+      _vScroll.hasClients ? _vScroll.position.maxScrollExtent : -1;
+
+  @override
+  void setFollowPlay(bool on) => setState(() => _followPlay = on);
+
   @override
   void setRows(int rows) {
     _clearUndo();
@@ -2300,14 +2369,30 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _levels.value = out;
   }
 
-  void _followPlayhead(int step) {
-    if (!_followPlay || !_vScroll.hasClients || step == _lastFollowedRow) {
-      return;
-    }
-    _lastFollowedRow = step;
-    final target = (step * _rowHeight) - 120;
-    final max = _vScroll.position.maxScrollExtent;
-    _vScroll.jumpTo(target.clamp(0.0, max));
+  /// WS-T1 — keep the playing row in view, moving with the music rather than a
+  /// row at a time.
+  ///
+  /// The old version was called only when the INTEGER row changed, so the view
+  /// sat still for a whole row and then lurched a row's height — most visible
+  /// at slow tempos, which is exactly when someone is reading along. `_rowPhase`
+  /// already knew where between rows the music was; nothing used it here.
+  ///
+  /// Two things this deliberately is NOT:
+  ///   * not `animateTo` — an animation per frame fights the next frame's, and
+  ///     the position is already continuous. What makes it smooth is that the
+  ///     TARGET moves continuously; the easing below only softens the catch-up.
+  ///   * not applied to the cursor-into-view scroll (the other `jumpTo` in this
+  ///     file). That is a discrete response to a key press, where landing
+  ///     immediately is correct and easing would lag behind key-repeat.
+  void _followPlayhead(double exactRow) {
+    if (!_followPlay || !_vScroll.hasClients) return;
+    final next = followScrollOffset(
+      exactRow: exactRow,
+      rowHeight: _rowHeight,
+      current: _vScroll.position.pixels,
+      maxExtent: _vScroll.position.maxScrollExtent,
+    );
+    if (next != null) _vScroll.jumpTo(next);
   }
 
   // --- Mixer / instrument panel (per-track instrument + gain + mute/solo) ---
@@ -5009,6 +5094,20 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                 supported: kTrackerIntents,
                 service: _keymapService,
               ),
+            ),
+            // WS-T1 — following was hardcoded ON with no way to turn it off.
+            // That mattered less when the view moved once per row; now that it
+            // glides continuously, anyone editing while the song plays needs
+            // the switch.
+            IconButton(
+              icon: Icon(
+                _followPlay
+                    ? Icons.center_focus_strong
+                    : Icons.center_focus_weak,
+              ),
+              isSelected: _followPlay,
+              tooltip: 'Follow the playhead',
+              onPressed: () => setState(() => _followPlay = !_followPlay),
             ),
             IconButton(
               icon: Icon(_inspect ? Icons.search_off : Icons.search),

@@ -1536,8 +1536,32 @@ prefix.
 > ✅ **WS-T5 SHIPPED** — `TrackerEngine.setChannelFxChain` + the screen's
 > `channelFxChain`; a tracker channel carries a real `List<FxSpec>` chain.
 
-- ⬜ **WS-T1 — eased playhead follow.** `S` — still open: `_playFrac` tracks the
-  sub-row position but the follow scroll is `_vScroll.jumpTo` (two sites).
+- ✅ **WS-T1 — eased playhead follow — SHIPPED.** `followScrollOffset` (pure) +
+  a follow toggle in the toolbar.
+  * ⚠️ **two stale details in the card:** the sub-row field is `_rowPhase`, not
+    `_playFrac` (which matches nothing in `lib/`); and only ONE of its "two
+    jumpTo sites" is the follow — the other is cursor-into-view for keyboard
+    nav, where jumping is *correct* and easing would lag behind key-repeat.
+  * **the defect was not `jumpTo`.** `jumpTo` against a continuously-moving
+    target is exactly right; `animateTo` per frame fights itself. The defect was
+    that `_followPlayhead` only ran when the INTEGER row changed, so the view
+    sat still for a row then lurched a row's height, while `_rowPhase` already
+    knew where between rows the music was and nothing used it.
+  * ⚠️ **a bigger bug found on the way: the SONG branch never called it at
+    all.** Following worked when auditioning one pattern and silently did
+    nothing when playing the actual song — the mode people listen in.
+  * ⚠️ **`_followPlay` was hardcoded `true` and toggled NOWHERE** — there was no
+    way to turn following off. That mattered less when the view moved once per
+    row; now that it glides continuously, anyone editing while the song plays
+    needs the switch, so the toolbar has one.
+  Tests: `tracker_follow_test` (9) — **unit tests over the pure function, and
+  the reason is worth inheriting.** My first version drove the widget and
+  guarded on `maxScrollExtent <= 0`; on the shared 1400x2400 surface the grid
+  never overflowed, so all three tests returned early and **passed while
+  asserting nothing**. The version after that measured a per-frame delta, passed
+  alone and flaked under `--concurrency` — it was measuring how much time the
+  harness delivers per pump. The arithmetic is the interesting part and it is
+  exact.
 - ⬜ **WS-T2 — pattern-matrix overview.** `M` — a block-per-pattern bird's-eye of
   the order list with drag-to-reorder, so a 64-pattern song is navigable.
 - ⬜ **WS-T4 — a piano-roll view of one channel.** `M` — the app still has **no**

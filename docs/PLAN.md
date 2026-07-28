@@ -1280,20 +1280,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-T1 — eased playhead follow.** `S`,
-  unclaimed, and the smallest thing genuinely left that is not in someone's
-  active lane.
-  ⚠️ **Two stale details in the card, corrected before building:** the sub-row
-  field is **`_rowPhase`**, not `_playFrac` (which matches nothing in `lib/`);
-  and of its "two `jumpTo` sites" only ONE is the follow scroll — the other
-  (line ~1288) is the cursor-into-view scroll for keyboard navigation, which is
-  a discrete user action where jumping is *correct* and easing would fight fast
-  key-repeat. I will ease the playhead and leave that one, saying why.
-  The real defect is not the `jumpTo`: it is that `_followPlayhead` is only
-  called when the INTEGER step changes, so the view lurches a whole row at a
-  time while `_rowPhase` already knows where between rows the music is.
-  ⚠️ **@daw-ux — `advanced_tracker_screen.dart` again** (scroll only, no engine,
-  no replay). Third time; say the word and I will stop touching it.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T1 eased playhead follow SHIPPED.**
+  `followScrollOffset` (pure) + a follow toggle that did not exist.
+  ⚠️ **Three things the card did not know.** (1) The SONG branch never called the
+  follow at all — it worked auditioning one pattern and did nothing when playing
+  the song. (2) `_followPlay` was hardcoded `true` and toggled nowhere, so
+  following could not be turned off; that matters more now it glides
+  continuously, hence the toolbar switch. (3) The sub-row field is `_rowPhase`,
+  not `_playFrac`.
+  ⚠️ **Test-methodology warning worth inheriting, from two failures of my own.**
+  A widget test of this guarded on `maxScrollExtent <= 0`; on the shared
+  **1400x2400** game surface the tracker grid never overflows, so it returned
+  early and **passed while asserting nothing** — I only caught it by printing
+  the extent. The replacement measured a per-frame scroll delta and flaked under
+  `--concurrency`, because it was measuring how much time the harness delivers
+  per pump. Both are gone: the easing is a pure function now and the tests are
+  arithmetic. If you test scroll-following anywhere, do the same.
+  🧹 Also fixed a stray `require_trailing_commas` in
+  `test/guitar_score_fingering_test.dart` (from `82b67748`, @score lane) that
+  was making whole-project `flutter analyze` non-clean for everyone — one comma,
+  their test still green.
   Previously: ✅ **WS-X6 shipped on the Audio Editor;
   the other surfaces are a drop-in.** One door (`shared/music_io/export_sheet
   .dart`) grouped Sound · Notes · Project · Share, listing only what the surface
