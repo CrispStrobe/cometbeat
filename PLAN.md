@@ -1230,11 +1230,28 @@ prefix.
     initializer still runs when nothing assigns first, so the
     seeded-from-`initialScore` path is unchanged and all 88 of that screen's
     tests pass.
-  - ⬜ **Step 2b remainder — Loop Studio and the Audio Editor.** Both were
-    claimed every time I looked (`WS-L1`, then `WS-X6` in `daw_screen.dart`).
-    Each is now ~20 lines: three methods, `liveKind` on the existing menu, a
-    null-safe provider read. **Whoever is next in those files should fold it in
-    rather than treat it as a separate card.**
+  - ⬜ **Step 2b remainder — LOOP STUDIO only, and it really is ~20 lines**:
+    three methods, `liveKind` on the existing menu, a null-safe provider read.
+    `GrooveSpec` has a built-in codec, so a same-kind open is live. Whoever is
+    next in `loop_mixer_screen.dart` should fold it in rather than treat it as
+    its own card.
+  - ❌ **CORRECTION — I wrote that the Audio Editor was "~20 lines, same as the
+    others". It is NOT, and cannot be, today.** A live link requires a same-kind
+    open, and **`AppMode.audio` has no project codec at all**: `WS-W1` deferred
+    it on purpose ("audio needs a PCM render callback a pure container should not
+    hold"), `project_render.dart` says in as many words that "audio tracks are
+    not carried in the project yet", and the Audio Editor's document is a
+    `DawTimeline` of clips rather than one document. **There is no audio project
+    track for a link to point at.** Anyone who picked this up expecting the Tab
+    or Score shape would have found that out after writing the code.
+  - ⬜ **The card that actually unblocks it — `WS-W1c`, an AUDIO project
+    codec.** The registry exists precisely so a kind needing Flutter or a
+    callback can register from its own side, which is how `tab` works. Most of
+    the machinery is already there: `daw_clip_source_codec.dart` has
+    `clipSourceToJson`/`clipSourceFromJson`, and `.cbdaw v2` already stores a
+    clip's model beside its audio. **Unclaimed**, and it is the prerequisite for
+    an Audio Editor live link, for `renderProject` sounding audio tracks, and for
+    a mixer strip that can carry a recording.
 - ⬜ **WS-X2 — drag between surfaces.** `M` · Depends WS-W1, WS-X1.
   One `DragTarget` protocol carrying `(kind, document)`: drag a tracker pattern
   onto the timeline, a loop track into the Tab editor, an instrument from the
