@@ -483,11 +483,26 @@ Float64List panEnvelope(
     if (e > peak) peak = e;
   }
   var held = 0.0;
+  var firstLoud = -1;
   for (var b = 0; b < blocks; b++) {
     if (energy[b] < peak * floor) {
       out[b] = held;
     } else {
       held = out[b];
+      if (firstLoud < 0) firstLoud = b;
+    }
+  }
+  // Back-fill the LEADING silence with the first real position.
+  //
+  // Holding forward fixes silence in the middle and does nothing for silence
+  // at the head, which has nothing to hold and sat at 0 — reading as "centred"
+  // when it is "not yet playing". That put a fake step at the first note (fake
+  // travel, so the gate engaged) and skewed the mean by however long the lead-in
+  // was, which differs between renders. `notedelay_EDx.mod` failed on exactly
+  // that: 0.16 off references that agreed with each other perfectly.
+  if (firstLoud > 0) {
+    for (var b = 0; b < firstLoud; b++) {
+      out[b] = out[firstLoud];
     }
   }
   return out;
@@ -523,4 +538,32 @@ double panTravel(Float64List left, Float64List right, {int block = 512}) {
     if (v > hi) hi = v;
   }
   return hi - lo;
+}
+
+/// The MEAN stereo position of a render, in [-1, 1].
+///
+/// The statistic to compare pan by, and the reason is that Pearson is not.
+/// Correlation over a pan trajectory degenerates on anything near-constant: a
+/// fixture that steps to one side and stays there is dominated by whatever
+/// ripple follows the step, and two references measuring the SAME static pan
+/// came out correlating at −1.00 with each other. Mean position has none of
+/// that trouble — it is in pan units, it is directly interpretable, and it
+/// would have called the "set-pan renders dead centre" bug at a glance (0.00
+/// against 0.485).
+///
+/// Correlation still earns its place for genuinely moving trajectories, where
+/// it catches a wrong RATE that a mean cannot see. The two answer different
+/// questions and the sweep reports both.
+double meanPanPosition(
+  Float64List left,
+  Float64List right, {
+  int block = 512,
+}) {
+  final env = panEnvelope(left, right, block: block);
+  if (env.isEmpty) return 0;
+  var sum = 0.0;
+  for (final v in env) {
+    sum += v;
+  }
+  return sum / env.length;
 }

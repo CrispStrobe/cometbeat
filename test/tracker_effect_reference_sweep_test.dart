@@ -36,6 +36,7 @@
 // ignore_for_file: avoid_print
 
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/tracker_song_module.dart';
@@ -284,7 +285,26 @@ void main() {
             : panTravel(refStereo.first.left, refStereo.first.right);
         final panGated =
             refStereo.length >= 2 && panTravelled >= _kPanTravelFloor;
-        final panGap = refPan - ourPan;
+
+        // MEAN POSITION is what the gate actually rides on. Correlation
+        // degenerates on anything near-constant — two references measuring the
+        // same STATIC pan correlated at −1.00 with each other — whereas a mean
+        // is in pan units and directly interpretable. It is also what made the
+        // set-pan bug obvious: 0.00 against 0.485.
+        final ourMean = meanPanPosition(ourStereo.left, ourStereo.right);
+        var refMeanSpread = 0.0;
+        var worstMeanGap = 0.0;
+        for (var i = 0; i < refStereo.length; i++) {
+          final mi = meanPanPosition(refStereo[i].left, refStereo[i].right);
+          for (var j = i + 1; j < refStereo.length; j++) {
+            final mj = meanPanPosition(refStereo[j].left, refStereo[j].right);
+            refMeanSpread = math.max(refMeanSpread, (mi - mj).abs());
+          }
+          worstMeanGap = math.max(worstMeanGap, (ourMean - mi).abs());
+        }
+        // Same relative baseline as everywhere else: beat the references'
+        // own disagreement, plus the standard slack.
+        final panGap = worstMeanGap - refMeanSpread;
 
         final envRange = _envelopeDynamicRange(refs.first);
         final envGated =
@@ -330,7 +350,8 @@ void main() {
             ? 'env ${refEnv.toStringAsFixed(2)}/${ourEnvWorst.toStringAsFixed(2)}'
             : 'env  --  ';
         final panCol = panGated
-            ? 'pan ${refPan.toStringAsFixed(2)}/${ourPan.toStringAsFixed(2)}'
+            ? 'pan ±${refMeanSpread.toStringAsFixed(2)}/${worstMeanGap.toStringAsFixed(2)} '
+                'r${refPan.toStringAsFixed(2)}/${ourPan.toStringAsFixed(2)}'
             : 'pan  --  ';
         print('  ${name.padRight(24)} refs ${refAgree.toStringAsFixed(3)} · '
             'ours ${ourWorst.toStringAsFixed(3)} · '

@@ -3019,6 +3019,49 @@ REACH — every render path already receives one — and this is what that costs
 a derived channel has to remember. A `TrackerChannel.derivedFrom()` helper would
 make it structural rather than remembered.
 
+#### `8xx` set-pan rendered dead centre (2026-07-28)
+
+Our travel on `setpan_*_Xxx` was **0.00** where libopenmpt gives 0.50. The cell
+survived import intact (`fxCmd=8`, `param=0xC0`, `stereoOutput=true`) and
+`kFxSetPan` is handled in four render functions — so the path this fixture took
+was not one of them.
+
+The cause is one omission in `_hasPerTickEffect`, the predicate that decides
+whether a channel needs the effect-aware renderer. It lists nineteen commands
+and not `8xx` or `Pxy`. A channel whose ONLY effect is a set-pan therefore fell
+through to the simple note path, which has no pan at all. Its own doc comment
+already argued the case for the same class of exception — `SAx` "DOES count"
+because a later `9xx` reads the memory it seeds — so the shape was established
+and pan was simply missed. Now **0.479 / 0.483 against openmpt's 0.485**.
+
+⚠️ **This was invisible for as long as the audit downmixed to mono**, which is
+every comparison before the pan metric. Worth stating plainly: `8xx` is not an
+obscure command.
+
+**The pan metric took three passes to measure what it claims to.** Each pass was
+found by disbelieving a number that looked fine:
+
+1. Silent blocks read as pan 0. Silence is not "centred", so a note-cut fixture
+   panned hard left produced a trajectory swinging between −0.5 and 0 — travel
+   the render never made — which let statically-panned fixtures through the gate
+   to be compared on noise. Quiet blocks now HOLD the last position.
+2. Holding fixes the middle and not the HEAD, which has nothing to hold. A
+   delayed note's lead-in sat at 0, putting a fake step at the first note and
+   skewing the mean by however long the lead-in was — and lead-in length differs
+   between renders. `notedelay_EDx.mod` failed on exactly that, 0.16 off
+   references that agreed with each other perfectly. Leading silence is now
+   back-filled with the first real position.
+3. **Correlation is the wrong statistic for pan.** Pearson degenerates on
+   anything near-constant: two references measuring the same STATIC pan came out
+   correlating at **−1.00 with each other**. The gate now rides on MEAN POSITION,
+   which is in pan units, directly interpretable, and would have called this bug
+   at a glance (0.00 against 0.485). Correlation is still reported — it catches a
+   wrong RATE that a mean cannot see — but it does not gate.
+
+The general lesson, which cost three iterations here: **a metric that passes is
+not thereby working.** Each of these passed everything while measuring the wrong
+thing, and each was caught by asking why a specific number looked the way it did.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,

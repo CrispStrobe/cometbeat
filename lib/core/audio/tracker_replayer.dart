@@ -1466,6 +1466,18 @@ bool _hasPerTickEffect(List<TrackerCell> cells) {
         cmd == kFxTremor ||
         cmd == kFxPanbrello ||
         cmd == kFxSetPanbrelloWaveform ||
+        // 8xx set-pan and Pxy pan-slide are not per-TICK effects — 8xx lands
+        // once on tick 0 — but they need the same effect-aware render path,
+        // because the simpler note path this predicate falls through to has no
+        // pan at all. Omitting them meant a channel whose ONLY effect was `8xx`
+        // rendered dead centre: measured travel 0.00 where libopenmpt gives
+        // 0.50. Nothing caught it because every comparison downmixed to mono
+        // until the pan metric existed (PLAN.md §6).
+        //
+        // Same reasoning the doc comment above already gives for SAx, which is
+        // likewise not per-tick and likewise has to count.
+        cmd == kFxSetPan ||
+        cmd == kFxPanSlide ||
         cmd == kFxSetFilter ||
         cmd == kFxSetHighOffset ||
         cmd == kFxSetSoundControl ||
