@@ -105,6 +105,30 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING the AUDIO EDITOR clock
+  migration** (2nd of 3). Worktree `../mus-daw-parity`.
+  **Lane check before claiming:** `loop-d1d4` has explicitly claimed
+  `loop_engine.dart` + `loop_mixer_screen.dart` for `WS-L10`, so Loop Studio is
+  theirs and I am not taking it. `daw-suite` moved off `daw_screen.dart` onto
+  `WS-A9` (a `crisp_dsp` knob) after WS-A7 landed, so the Audio Editor screen is
+  the free lane.
+  ❌ **CORRECTING MYSELF before anyone acts on it.** I wrote in this board and in
+  the ladder that "the Audio Editor is the one that needs `advance`, not
+  `syncTo`". **That is wrong.** I inferred it from the comment "driven by the
+  Ticker's own elapsed (NOT wall-clock)" without reading the tick body, which is
+  `_seekMs + elapsed.inMilliseconds` — the Ticker restarts at 0 on play, so that
+  is an **absolute position from an authority**, exactly the same shape as the
+  Tracker's Stopwatch. The real distinction is **not** Stopwatch-vs-Ticker; it is
+  **read-an-absolute vs accumulate-a-delta**, and *all three* surfaces read an
+  absolute. So `syncTo` is the primary primitive and **`advance` currently has
+  no consumer in the app at all** — it stays because a caller holding only a
+  delta is a real shape (a future real-time path), but nobody should reach for
+  it today. I will fix the ladder text as part of this slice.
+  **Scope:** `daw_screen.dart` publishes position + play state into the shared
+  transport, same step-1-of-2 shape as the Tracker — the Ticker stays the
+  authority, so Audio Editor playback is unchanged. Not touching `loop_*` or
+  `daw_service.dart`. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — TRACKER clock migration
   (step 1 of 2), and `syncTo` on `WS-W2`.** The Phase 1 services are no longer
   unwired: `main.dart` provides ONE app-wide `TransportService` + `UndoService`,
