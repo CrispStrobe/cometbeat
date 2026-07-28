@@ -1,4 +1,8 @@
 {
+  "workshopFingeringsGuitar": "Add — guitar",
+  "@workshopFingeringsGuitar": {
+    "description": "Score Editor part menu: write guitar left-hand fingerings"
+  },
   "workshopInstrumentViolin": "Violin",
   "@workshopInstrumentViolin": {
     "description": "Score Editor: instrument preset when adding a part"

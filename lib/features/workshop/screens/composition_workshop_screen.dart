@@ -30,6 +30,8 @@ import 'package:comet_beat/core/notation/bowed_arranger.dart'
     show BowedInstrument, BowedSkill;
 import 'package:comet_beat/core/notation/bowed_score_fingering.dart'
     show scoreWithBowedFingerings;
+import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
+    show scoreWithGuitarFingerings;
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/note_naming.dart';
@@ -1387,6 +1389,25 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         part.loadScore(fingered, clefOverride: _mpd.clefOf(i));
       });
 
+  /// Write GUITAR left-hand fingerings into part [i].
+  ///
+  /// Same contract as the bowed action — an EDIT, undoable in one step — but a
+  /// different problem underneath: `tab_arranger` already decides string and
+  /// fret, and `scoreWithGuitarFingerings` only names which finger presses each
+  /// one (one finger per fret, index at the bottom of the hand).
+  ///
+  /// ⚠ Barre chords are not modelled: where one finger would stop several
+  /// strings, this names four separate fingers. Correct as far as it goes, and
+  /// it does not pretend to know a technique it cannot express.
+  void _addGuitarFingerings(int i) => setState(() {
+        final part = _mpd.parts[i];
+        final fingered = scoreWithGuitarFingerings(
+          part.buildScore(),
+          Tuning.standardGuitar,
+        );
+        part.loadScore(fingered, clefOverride: _mpd.clefOf(i));
+      });
+
   /// Toggle a piano-style brace over this part and the one below it (used to
   /// group e.g. a piano's two staves). No-op on the last part.
   void _toggleBraceBelow(int i) => setState(() {
@@ -1584,6 +1605,10 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               value: () => _addBowedFingerings(i, skill),
               child: Text(label),
             ),
+          PopupMenuItem<void Function()>(
+            value: () => _addGuitarFingerings(i),
+            child: Text(l10n.workshopFingeringsGuitar),
+          ),
           const PopupMenuDivider(),
           if (i + 1 < _mpd.partCount)
             CheckedPopupMenuItem<void Function()>(

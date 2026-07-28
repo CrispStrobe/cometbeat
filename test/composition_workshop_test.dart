@@ -2063,4 +2063,26 @@ void main() {
       reason: 'fingerings must be written into the score, not just displayed',
     );
   });
+  testWidgets('guitar fingerings also reach the exported score',
+      (tester) async {
+    await pump(tester);
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(_pianoKey());
+      await tester.pump();
+    }
+    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+    await tester.tap(find.byIcon(Icons.tune).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.workshopFingeringsGuitar));
+    await tester.pumpAndSettle();
+
+    final (_, xml) = await _editor(tester).debugGenerateExport('musicxml');
+    expect(xml, isNotNull);
+    expect(
+      xml!.contains('<fingering'),
+      isTrue,
+      reason: 'guitar fingerings must be written into the score too',
+    );
+  });
 }
