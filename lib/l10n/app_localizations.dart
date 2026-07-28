@@ -15535,6 +15535,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'channel count ({count}) does not match the {strings}-string tuning'**
   String reasonChannelMismatch(int count, int strings);
+
+  /// No description provided for @transportPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get transportPlay;
+
+  /// No description provided for @transportPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get transportPause;
+
+  /// No description provided for @transportStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get transportStop;
+
+  /// No description provided for @transportRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get transportRecord;
+
+  /// No description provided for @transportLoop.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop'**
+  String get transportLoop;
+
+  /// No description provided for @transportUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get transportUndo;
+
+  /// No description provided for @transportRedo.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get transportRedo;
+
+  /// No description provided for @transportMetronome.
+  ///
+  /// In en, this message translates to:
+  /// **'Metronome'**
+  String get transportMetronome;
+
+  /// No description provided for @transportCountIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Count-in'**
+  String get transportCountIn;
+
+  /// No description provided for @transportCountingIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Counting in…'**
+  String get transportCountingIn;
+
+  /// No description provided for @transportTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo (BPM)'**
+  String get transportTempo;
+
+  /// No description provided for @transportPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Bar and beat'**
+  String get transportPosition;
 }
 
 class _AppLocalizationsDelegate

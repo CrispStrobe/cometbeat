@@ -2878,5 +2878,17 @@
   "reasonChordsSpread": "Akkorde auf {count} Kanäle verteilt — ein Kanal spielt eine Note zur Zeit",
   "reasonFingeringChosenN": "Fingersatz für die {count} Noten ohne gespeicherte Griffweise gewählt",
   "reasonPitchedChannels": "{count, plural, one{ein melodischer Kanal (ein Beat trägt nur Schlagzeug)} other{{count} melodische Kanäle (ein Beat trägt nur Schlagzeug)}}",
-  "reasonChannelMismatch": "Kanalzahl ({count}) passt nicht zur {strings}-saitigen Stimmung"
+  "reasonChannelMismatch": "Kanalzahl ({count}) passt nicht zur {strings}-saitigen Stimmung",
+  "transportPlay": "Abspielen",
+  "transportPause": "Pause",
+  "transportStop": "Stopp",
+  "transportRecord": "Aufnehmen",
+  "transportLoop": "Schleife",
+  "transportUndo": "R\u00fcckg\u00e4ngig",
+  "transportRedo": "Wiederholen",
+  "transportMetronome": "Metronom",
+  "transportCountIn": "Einz\u00e4hler",
+  "transportCountingIn": "Z\u00e4hlt ein \u2026",
+  "transportTempo": "Tempo (BPM)",
+  "transportPosition": "Takt und Z\u00e4hlzeit"
 }

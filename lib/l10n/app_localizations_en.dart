@@ -8535,4 +8535,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String reasonChannelMismatch(int count, int strings) {
     return 'channel count ($count) does not match the $strings-string tuning';
   }
+
+  @override
+  String get transportPlay => 'Play';
+
+  @override
+  String get transportPause => 'Pause';
+
+  @override
+  String get transportStop => 'Stop';
+
+  @override
+  String get transportRecord => 'Record';
+
+  @override
+  String get transportLoop => 'Loop';
+
+  @override
+  String get transportUndo => 'Undo';
+
+  @override
+  String get transportRedo => 'Redo';
+
+  @override
+  String get transportMetronome => 'Metronome';
+
+  @override
+  String get transportCountIn => 'Count-in';
+
+  @override
+  String get transportCountingIn => 'Counting in…';
+
+  @override
+  String get transportTempo => 'Tempo (BPM)';
+
+  @override
+  String get transportPosition => 'Bar and beat';
 }

@@ -105,24 +105,31 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W3` — one transport bar
-  widget.** Worktree `../mus-daw-parity`. Unblocked by my `WS-W2` (`fa7b3c15`).
-  **Files I will ADD:** `lib/shared/widgets/transport_bar.dart` + its test.
-  ⚠️ **HOT SHARED FILES I WILL TOUCH — `lib/l10n/app_en.arb` + `app_de.arb` and
-  the generated `app_localizations*.dart`.** A shared widget cannot label itself
-  `dawRedo`, so it needs its own neutral `transport*` keys. **Strictly
-  APPEND-ONLY: I add keys, I rename nothing, I delete nothing**, then re-run
-  `gen-l10n`. If you hold the ARBs, this will not move your keys — but pull
-  before you regenerate. (Aside worth recording: the ARBs already carry **six**
-  redo keys — `daw`/`loopMixer`/`perform`/`tab`/`workshop`/`voiceLab` — which is
-  the duplication this task exists to stop growing.)
-  ⚠️ **I will NOT host the bar in the three screens in this slice.** Same
-  discipline as `WS-W2`: the widget ships proven, not wired. Hosting belongs
-  with each surface's clock migration — one commit per surface, that surface's
-  tests green first — so `advanced_tracker_screen.dart` / `daw_screen.dart` /
-  `loop_mixer_screen.dart` are untouched today and their owners are unaffected.
-  Undo/redo arrive as optional callbacks so the bar works before `WS-W4` exists
-  and gains nothing to change when it does. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W3` one transport
+  bar widget.** `lib/shared/widgets/transport_bar.dart` + 18 widget tests (46
+  with `WS-W2`'s); `dart format` clean, `flutter analyze` (whole project) clean.
+  **ARB change was strictly APPEND-ONLY as promised:** 12 new `transport*` keys
+  in `app_en.arb` + `app_de.arb` (both now 2585 keys, full parity), and the
+  regenerated `app_localizations*.dart` diff is **+144 / −0** — nobody's keys
+  moved. A shared widget cannot label itself `dawRedo`; hosting this bar is what
+  eventually retires the **six** redo keys the ARBs carry for one button.
+  Design notes that will matter to whoever hosts it: the bar owns **no state**
+  (so two bars on one service provably agree); **undo/redo are optional
+  callbacks**, not a `WS-W4` dependency, and a null callback hides the pair
+  rather than showing two dead buttons; a tempo **map** makes the field
+  read-only instead of silently flattening every tempo change; and a count-in
+  says "counting in" rather than freezing at `1.1`.
+  ⚠️ **Caught by my own test, worth repeating:** my first ARB append wrote the
+  GERMAN strings into `app_en.arb` (an off-by-one unpacking two parallel value
+  lists). `flutter analyze` and `gen-l10n` were both perfectly happy — only a
+  test that asserted an actual English tooltip found it. **If you bulk-edit the
+  ARBs, assert a rendered string, not just that the key exists.**
+  ⚠️ **NOT HOSTED IN ANY SCREEN**, deliberately — the three screens are
+  untouched, so this cannot regress any surface. **Open and unclaimed: the three
+  per-surface migrations** (Tracker · Audio Editor · Loop Studio), each adopting
+  `TransportService` + this bar in one commit with that surface's tests green
+  first. `WS-W4` (one undo history) is also open and would slot into the bar
+  with no change to it. — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W2`
   `TransportService`: one clock.** `lib/core/services/transport_service.dart`

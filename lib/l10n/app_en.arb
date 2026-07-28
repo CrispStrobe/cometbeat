@@ -3234,5 +3234,17 @@
   "reasonPitchedChannels": "{count, plural, one{one pitched channel (a beat holds drums only)} other{{count} pitched channels (a beat holds drums only)}}",
   "@reasonPitchedChannels": { "placeholders": { "count": { "type": "int" } } },
   "reasonChannelMismatch": "channel count ({count}) does not match the {strings}-string tuning",
-  "@reasonChannelMismatch": { "placeholders": { "count": { "type": "int" }, "strings": { "type": "int" } } }
+  "@reasonChannelMismatch": { "placeholders": { "count": { "type": "int" }, "strings": { "type": "int" } } },
+  "transportPlay": "Play",
+  "transportPause": "Pause",
+  "transportStop": "Stop",
+  "transportRecord": "Record",
+  "transportLoop": "Loop",
+  "transportUndo": "Undo",
+  "transportRedo": "Redo",
+  "transportMetronome": "Metronome",
+  "transportCountIn": "Count-in",
+  "transportCountingIn": "Counting in\u2026",
+  "transportTempo": "Tempo (BPM)",
+  "transportPosition": "Bar and beat"
 }

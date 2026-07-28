@@ -796,7 +796,33 @@ prefix.
     commit, with that surface's tests green before the next. A big-bang clock
     swap is how playback regressions arrive invisibly.
 
-- ⬜ **WS-W3 — one transport bar widget.** `S`
+- ✅ **WS-W3 — one transport bar widget.** `S` · **SHIPPED 2026-07-28**
+  (opus, workstation-parity). `lib/shared/widgets/transport_bar.dart`, 18 widget
+  tests. Play/pause · stop · record-arm · loop · bar.beat readout · tempo field ·
+  undo/redo · metronome, all driven by `TransportService`; per-surface extras go
+  in `trailing`. **The card below is the ORIGINAL.** Four things it did not say:
+  - **The bar owns NO state**, so there is no `TransportBarState` — everything
+    shown comes from the service and everything done is a call on it. That is
+    what makes "two bars on one service agree" a test rather than a hope.
+  - **Undo/redo are OPTIONAL CALLBACKS, not a `WS-W4` dependency.** The card
+    says "driven entirely by WS-W2 + WS-W4", but blocking on an unbuilt W4 would
+    have left three divergent bars standing for no gain. A surface passes its own
+    undo today and passes W4's tomorrow; the widget does not change. A null
+    callback HIDES the pair — a surface with no undo should not appear to have
+    one.
+  - **A tempo MAP makes the field read-only** rather than editable. An editable
+    field over a multi-change map would throw away every tempo change the moment
+    it was touched; instead it reports the tempo in force at the playhead.
+  - **During a count-in the readout says so** instead of showing a frozen `1.1`,
+    which reads as a hang.
+  - ⚠️ **New l10n keys are `transport*`, deliberately neutral.** A shared widget
+    cannot label itself `dawRedo`. Worth knowing what this replaces: the ARBs
+    carry **six** redo keys (`daw`/`loopMixer`/`perform`/`tab`/`workshop`/
+    `voiceLab`) for one button. Hosting the bar is what lets those be retired.
+  - ⬜ **Not hosted in any screen yet** — same discipline as `WS-W2`. Hosting
+    belongs with each surface's clock migration, one commit per surface.
+
+- ⬜ **WS-W3 — the original card.**
   - **Goal.** Kill three divergent transport implementations.
   - **Depends.** WS-W2.
   - **Files.** New `lib/shared/widgets/transport_bar.dart`; hosts are

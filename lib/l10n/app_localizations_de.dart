@@ -8584,4 +8584,40 @@ class AppLocalizationsDe extends AppLocalizations {
   String reasonChannelMismatch(int count, int strings) {
     return 'Kanalzahl ($count) passt nicht zur $strings-saitigen Stimmung';
   }
+
+  @override
+  String get transportPlay => 'Abspielen';
+
+  @override
+  String get transportPause => 'Pause';
+
+  @override
+  String get transportStop => 'Stopp';
+
+  @override
+  String get transportRecord => 'Aufnehmen';
+
+  @override
+  String get transportLoop => 'Schleife';
+
+  @override
+  String get transportUndo => 'Rückgängig';
+
+  @override
+  String get transportRedo => 'Wiederholen';
+
+  @override
+  String get transportMetronome => 'Metronom';
+
+  @override
+  String get transportCountIn => 'Einzähler';
+
+  @override
+  String get transportCountingIn => 'Zählt ein …';
+
+  @override
+  String get transportTempo => 'Tempo (BPM)';
+
+  @override
+  String get transportPosition => 'Takt und Zählzeit';
 }
