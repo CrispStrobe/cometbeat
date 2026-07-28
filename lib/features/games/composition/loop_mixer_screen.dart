@@ -57,10 +57,13 @@ import 'package:comet_beat/core/audio/synth.dart'
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/wav_io.dart';
+import 'package:comet_beat/core/interop/app_mode.dart';
+import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/custom_progressions.dart';
@@ -190,6 +193,13 @@ class LoopMixerScreen extends StatefulWidget {
 /// Test handle onto the running game (the state class is private).
 @visibleForTesting
 abstract interface class LoopMixerTester {
+  /// WS-X1 — put this groove in the project, re-open that track LIVE, and have
+  /// edits land back in it.
+  String? addToProject({String? name});
+  bool openProjectTrack(String trackId);
+  bool get hasLiveProjectLink;
+  bool writeBackToProject();
+
   Set<String> get enabledTracks;
   String? get soloTrack;
   bool get isPlaying;
@@ -627,6 +637,66 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     } on ProviderNotFoundException {
       _transport = null;
     }
+    try {
+      _projects = Provider.of<ProjectService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _projects = null;
+    }
+  }
+
+  // --- WS-X1 live project links ---------------------------------------------
+
+  ProjectLink? _projectLink;
+  ProjectService? _projects;
+
+  ProjectLinker? get _linker {
+    final projects = _projects;
+    return projects == null ? null : ProjectLinker(projects);
+  }
+
+  @override
+  String? addToProject({String? name}) {
+    final linker = _linker;
+    if (linker == null) return null;
+    final spec = _engine.spec;
+    final id = linker.add(
+      kind: AppMode.loop,
+      document: spec,
+      name: name ?? 'Loop',
+    );
+    _projectLink = ProjectLink(document: spec, trackId: id, live: true);
+    return id;
+  }
+
+  /// Opens a project track here. A LOOP track opens live — no conversion, no
+  /// copy; anything else is refused rather than silently converted, because a
+  /// conversion belongs behind the "Open in…" menu where its cost is shown.
+  @override
+  bool openProjectTrack(String trackId) {
+    final linker = _linker;
+    if (linker == null) return false;
+    final link = linker.open(trackId, AppMode.loop);
+    final doc = link.document;
+    if (doc is! GrooveSpec) return false;
+    setState(() {
+      _engine.applySpec(doc);
+      _projectLink = link;
+    });
+    // The rendered buffer belongs to the old groove; re-enter in phase rather
+    // than letting the seam scheduler keep playing what was replaced.
+    _syncPlayback();
+    return true;
+  }
+
+  @override
+  bool get hasLiveProjectLink => _projectLink?.live ?? false;
+
+  @override
+  bool writeBackToProject() {
+    final linker = _linker;
+    final link = _projectLink;
+    if (linker == null || link == null) return false;
+    return linker.writeBack(link, _engine.spec);
   }
 
   /// Publishes this surface's phase and play state into the SHARED transport.

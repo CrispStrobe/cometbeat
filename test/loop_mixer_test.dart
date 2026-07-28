@@ -13,9 +13,11 @@ import 'package:comet_beat/core/audio/synth.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
 import 'package:comet_beat/core/audio/wav_io.dart';
+import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/groove_play_along.dart';
 import 'package:comet_beat/features/games/composition/loop_creatures.dart';
@@ -106,6 +108,73 @@ Uint8List _tonePcm16(
 }
 
 void main() {
+  group('WS-X1 — Loop Studio holds a live project link', () {
+    Future<(LoopMixerTester, ProjectService)> pump(WidgetTester tester) async {
+      final projects = ProjectService();
+      await pumpGame(
+        tester,
+        const LoopMixerScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<ProjectService>.value(value: projects),
+        ],
+      );
+      return (_game(tester), projects);
+    }
+
+    testWidgets('add, re-open live, write back', (tester) async {
+      // The last of the five surfaces. GrooveSpec has a built-in project
+      // codec, which is why a same-kind open here is genuinely live — unlike
+      // the Audio Editor, whose document is a timeline of clips.
+      final (game, projects) = await pump(tester);
+
+      final id = game.addToProject(name: 'Groove');
+      expect(id, isNotNull);
+      expect(projects.tracks.single.kind, AppMode.loop);
+      expect(projects.tracks.single.name, 'Groove');
+      expect(game.hasLiveProjectLink, isTrue);
+
+      expect(game.openProjectTrack(id!), isTrue);
+      await tester.pump();
+      expect(game.hasLiveProjectLink, isTrue);
+
+      expect(game.writeBackToProject(), isTrue);
+      expect(projects.track(id)!.document, isA<GrooveSpec>());
+    });
+
+    testWidgets('an edit made after opening lands in the project',
+        (tester) async {
+      final (game, projects) = await pump(tester);
+      final id = game.addToProject()!;
+
+      game.toggleTrack('drums');
+      await tester.pump();
+      expect(game.writeBackToProject(), isTrue);
+
+      final stored = projects.track(id)!.document! as GrooveSpec;
+      expect(
+        stored.enabled.contains('drums'),
+        game.enabledTracks.contains('drums'),
+        reason: 'the project holds the EDITED groove',
+      );
+    });
+
+    testWidgets('a TRACKER track is refused, not silently converted',
+        (tester) async {
+      final (game, projects) = await pump(tester);
+      final id = projects.addTrack(kind: AppMode.tracker, document: null);
+      expect(game.openProjectTrack(id), isFalse);
+    });
+
+    testWidgets('with no project provided the screen still works',
+        (tester) async {
+      await pumpGame(tester, const LoopMixerScreen());
+      final game = _game(tester);
+      expect(game.addToProject(), isNull);
+      expect(game.hasLiveProjectLink, isFalse);
+      expect(game.writeBackToProject(), isFalse);
+    });
+  });
+
   group('WS-W2 — Loop Studio publishes its clock', () {
     testWidgets('play state and phase reach the shared transport',
         (tester) async {

@@ -1230,11 +1230,12 @@ prefix.
     initializer still runs when nothing assigns first, so the
     seeded-from-`initialScore` path is unchanged and all 88 of that screen's
     tests pass.
-  - ⬜ **Step 2b remainder — LOOP STUDIO only, and it really is ~20 lines**:
-    three methods, `liveKind` on the existing menu, a null-safe provider read.
-    `GrooveSpec` has a built-in codec, so a same-kind open is live. Whoever is
-    next in `loop_mixer_screen.dart` should fold it in rather than treat it as
-    its own card.
+  - ✅ **Step 2b (Loop Studio) — 2026-07-28. FOUR OF FIVE SURFACES HOLD LIVE
+    LINKS** (Tracker · Tab · Score · Loop Studio). `GrooveSpec` has a built-in
+    codec, so a same-kind open really is live. ⚠️ `openProjectTrack` also calls
+    `_syncPlayback()`: the rendered buffer belongs to the groove being replaced,
+    and without it the seam scheduler keeps playing what is no longer there.
+    The fifth (Audio) is snapshot-only **by design** — see `WS-W1c`.
   - ❌ **CORRECTION — I wrote that the Audio Editor was "~20 lines, same as the
     others". It is NOT, and cannot be, today.** A live link requires a same-kind
     open, and **`AppMode.audio` has no project codec at all**: `WS-W1` deferred
