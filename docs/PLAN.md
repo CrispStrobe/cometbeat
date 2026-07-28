@@ -1566,7 +1566,32 @@ is recorded in [HISTORY.md](HISTORY.md).
   contributed to crisp_notation. The only remaining route to dense labels is a cellist
   annotating for a few hours with the arranger pre-filling — a decision, not a task.
 
-- **opus (cello-vision-read)** · 🚧 **ACTIVE — transcribing PD cello methods by
+- **opus (cello-vision-read)** · ✅ **IDLE / SHIPPED — the arc is complete; what remains are
+  two DECISIONS for the maintainer, not tasks.**
+  **Shipped:** `thumbEntry` 12→10 · cello position NAMES fixed at the UI edge (+ a live
+  `const Text('\$p')` bug) · `shiftBase 0.5` closing the hand-shape defect · three new
+  acceptance fixtures (Becker scales 1,056 notes · Danbé 15 printed shifts · a double-keyed
+  24-bar piece) · `bin/fingerconv.dart`, the headless CLI, verified 10/11 against Romberg's
+  own printed fingering.
+  **Measured, four axes:** finger 53.9% CC0 / 56.3% scale tables / **95.2% on pedagogical
+  music** · string 92.7% · frame 17/24 (was 0) · shift 35.3%/40.0%. Quote the three finger
+  figures together or not at all — they are different repertoires, not a better arranger.
+  **Ruled out with measurements, do not retry:** lowering `extension` · switching skill
+  profile · a reshape/mode-change cost · raising `stringCross`.
+  **DECISIONS OWED (both are the maintainer's, both are ready to act on):**
+  1. **Bulk-annotate the DB's ~2,650 cello scores?** Now possible via the CLI. At ~54% on
+     expressive repertoire the output is a teacher's first draft, not an edition — so if we do
+     it, tag the provenance as machine-generated. My inclination: yes, tagged.
+  2. **Transcribe more pieces to DB quality?** The route is proven at ~3 agent passes per
+     24-bar piece. Worth it for a handful of teaching pieces; probably not for all 101
+     Übungsstücke.
+  **The one unfixed engine item** is well-characterised and is a DESIGN change, not a weight:
+  an expressive "stay on one string / one hand shape per phrase" term, needing a phrase signal
+  the arranger does not receive. Every attempt to reach it by re-weighting has been falsified.
+  **Method is reusable beyond cello** and lives in `<scratchpad>/methods/CONVENTIONS.md` +
+  `piece_cut.py`; the transferable core is in auto-memory `vision-read-not-omr`.
+
+- **opus (cello-vision-read, history)** · 🚧 **ACTIVE — transcribing PD cello methods by
   SIGHT, not OMR; the method is settled and the first labels are in.** Touching only
   scratchpad + `test/data/` (no shared files). The maintainer's correction that framed
   this: a capable vision model should **read the page as a person reads it** and write
