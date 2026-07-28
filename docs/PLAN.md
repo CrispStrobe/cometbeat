@@ -117,6 +117,22 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W5c` — a Play button on the
+  mixer, so `renderProject` is heard and not merely tested.** Worktree
+  `../mus-daw-parity`. Small by design and the last step of the `WS-W5` arc: I
+  shipped `renderProject` correct-and-tested with **nothing calling it**, said
+  so on the card, and this closes that rather than leaving it for someone to
+  rediscover.
+  **Scope.** EDIT only `mixer_console_screen.dart` (mine, created two slices
+  ago) + its test: a Play/Stop action that renders the project, interleaves to
+  stereo and hands it to `AudioService.playWavBytes`. `wavBytesStereo` already
+  exists in `synth.dart`; I am adding no encoder.
+  ⚠️ **It must surface `ProjectMixdown.skipped`** — the renderer reports tracks
+  it could not sound, and a Play button that swallowed that report would undo
+  the honesty the renderer was built with.
+  ⚠️ Lane: `loop-d1d4` has just claimed `WS-W6` slice 1 (project persistence +
+  browser). Different files; no overlap with the mixer screen. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W5b` the project mix
   is AUDIBLE.** `lib/core/project/project_render.dart` + 15 tests; format +
   whole-project analyze clean. This closes the fourth inert-feature hole on this
