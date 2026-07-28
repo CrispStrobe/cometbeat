@@ -987,7 +987,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T3 COMPLETE: the keymap is
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-A3 + WS-L1 — the keyboard payoff of
+  WS-T3.** I boarded both as pullable and left them a while; nobody has taken
+  them, and an unblocked card nobody claims is just a card that does not
+  happen. Both are `S`, both ride the mechanism I just shipped, so they are one
+  coherent unit rather than two.
+  **WS-A3** (Audio Editor): split · trim to selection · nudge · marker jump ·
+  solo/mute — "four shortcuts today, on a surface that lives on shortcuts".
+  **WS-L1** (Loop Studio): arrows move the cell cursor, digits set velocity,
+  Ctrl+D duplicates; acceptance is *a widget test drives the grid entirely from
+  the keyboard*.
+  New intents go on the END of `AppIntent` — the enum's names are persisted in
+  a user's rebindings, so appending is the only safe direction. Touching
+  `shared/keymap/intents.dart` + `keymap.dart` (additive) and the two screens;
+  **not** the Tracker, whose behaviour is pinned by the characterization suite.
+  Previously: ✅ **WS-T3 COMPLETE: the keymap is
   shared, hosted by three surfaces, rebindable and discoverable.**
   `lib/shared/keymap/` (intents · table · service · sheet); hosted by the
   Tracker, the Audio Editor and Loop Studio, each declaring the subset it
