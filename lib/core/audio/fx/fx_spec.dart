@@ -568,7 +568,9 @@ FxSpec defaultFx(FxType type) => switch (type) {
         ),
       FxType.timeStretch => const FxSpec(
           type: FxType.timeStretch,
-          params: {'speed': 0.75, 'mix': 1},
+          // WS-A9 — 1 = balanced, the previous hardcoded behaviour, so an
+          // existing saved chain reads identically.
+          params: {'speed': 0.75, 'quality': 1, 'mix': 1},
         ),
       FxType.tremolo => const FxSpec(
           type: FxType.tremolo,

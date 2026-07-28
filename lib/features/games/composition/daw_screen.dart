@@ -20,6 +20,8 @@ import 'package:comet_beat/core/audio/beat_to_tracker.dart'
     show drumSongFromBeat;
 import 'package:comet_beat/core/audio/crisp_dsp/loudness.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
+    show StretchQuality;
 import 'package:comet_beat/core/audio/daw_edits.dart'
     show ClipStats, GeneratorShape, clipStatsOf;
 import 'package:comet_beat/core/audio/daw_sources.dart';
@@ -803,6 +805,61 @@ class _DawScreenState extends State<DawScreen>
           ),
         ],
       );
+
+  /// WS-A9 — choose how low the warp has to hold.
+  ///
+  /// Presented as "the lowest note it keeps" rather than a quality level,
+  /// because that is the axis the measurements support: a longer WSOLA frame
+  /// holds lower pitches and costs time, and the transient trade this was
+  /// scoped around did not reproduce. See `StretchQuality`.
+  Future<void> _pickWarpQuality(int track, int index) async {
+    final chosen = await showModalBottomSheet<StretchQuality>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            Text(
+              'Stretch quality',
+              style: Theme.of(sheetCtx).textTheme.titleMedium,
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'A longer window keeps low notes in tune when the clip is '
+                'stretched, and takes longer to work out. Below its lowest '
+                'note, a stretch drops the pitch rather than just sounding '
+                'rougher.',
+              ),
+            ),
+            for (final q in StretchQuality.values)
+              ListTile(
+                leading: Icon(
+                  _daw.clipWarpQuality(track, index) == q
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(
+                  switch (q) {
+                    StretchQuality.light => 'Light',
+                    StretchQuality.balanced => 'Balanced',
+                    StretchQuality.deep => 'Deep — for bass',
+                  },
+                ),
+                subtitle: Text(
+                  'Keeps notes down to '
+                  '${q.lowestReliableHz(kDawSampleRate.toDouble()).round()} Hz',
+                ),
+                onTap: () => Navigator.of(sheetCtx).pop(q),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null) _daw.setClipWarpQuality(track, index, chosen);
+  }
 
   /// WS-A7 — turn "follow the project tempo" on or off for one clip.
   ///
@@ -4387,6 +4444,22 @@ class _DawScreenState extends State<DawScreen>
                                 : 'Follow project tempo',
                           ),
                         ),
+                        // WS-A9 — which stretch a warp uses. Only shown when
+                        // the clip actually warps: it is meaningless otherwise,
+                        // and an inert control teaches people to ignore the
+                        // panel.
+                        if (_daw.clipWarps(track, index))
+                          TextButton.icon(
+                            onPressed: () async {
+                              Navigator.of(sheetCtx).pop();
+                              await _pickWarpQuality(track, index);
+                            },
+                            icon: const Icon(Icons.graphic_eq),
+                            label: Text(
+                              'Stretch: '
+                              '${_daw.clipWarpQuality(track, index).name}',
+                            ),
+                          ),
                         // D5 — the alternative takes. The count is on the
                         // label because which take is playing is otherwise
                         // invisible on the timeline.

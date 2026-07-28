@@ -113,6 +113,21 @@ const _byName = <String, FxParamSpec>{
   'stages': FxParamSpec(key: 'stages', min: 1, max: 12, integer: true),
   'semitones': FxParamSpec(key: 'semitones', min: -24, max: 24, unit: 'st'),
   'speed': FxParamSpec(key: 'speed', min: 0.25, max: 4, unit: 'x'),
+  // WS-A9 — named for how LOW the material goes, which is the axis measurement
+  // supports (see StretchQuality). Index order matches the enum.
+  //
+  // ⚠️ Choice labels are ALSO the CLI token in a chain string (`quality=Deep`),
+  // which is the whole point of sharing one text form between the GUI and the
+  // CLI — so they must stay single words. A first cut read
+  // "Deep — bass (≥43 Hz)" and was simply unusable from the command line. The
+  // pitch guidance belongs in the caption instead.
+  'quality': FxParamSpec(
+    key: 'quality',
+    min: 0,
+    max: 2,
+    integer: true,
+    choices: ['Light', 'Balanced', 'Deep'],
+  ),
   'formant': FxParamSpec(key: 'formant', min: -0.8, max: 0.8),
   'carrierMix': FxParamSpec(key: 'carrierMix', min: 0, max: 1),
   'radioMix': FxParamSpec(key: 'radioMix', min: 0, max: 1),
@@ -353,6 +368,7 @@ String fxParamLabel(String key) => switch (key) {
       'stages' => 'Stages',
       'semitones' => 'Semitones',
       'speed' => 'Speed',
+      'quality' => 'Lowest note it holds',
       'formant' => 'Formant',
       'carrierMix' => 'Ring mod',
       'radioMix' => 'Band-limit',

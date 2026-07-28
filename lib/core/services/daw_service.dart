@@ -7,6 +7,8 @@
 
 import 'dart:math' as math;
 
+import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
+    show StretchQuality;
 import 'package:comet_beat/core/audio/daw_edits.dart';
 import 'package:comet_beat/core/audio/daw_project.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart'
@@ -476,6 +478,25 @@ class DawService extends ChangeNotifier {
     clips[index] = clip.copyWith(warp: warp, nativeBpm: nativeBpm);
     notifyListeners();
   }
+
+  /// WS-A9 — which stretch setting this clip's warp uses.
+  ///
+  /// Per-clip because it is a property of the MATERIAL: a bass line needs
+  /// [StretchQuality.deep] to keep its pitch through a warp, and the drum loop
+  /// on the next lane does not.
+  void setClipWarpQuality(int track, int index, StretchQuality quality) {
+    if (!_validClipTarget(track, index)) return;
+    final clips = timeline.tracks[track].clips;
+    if (clips[index].warpQuality == quality) return;
+    _record();
+    clips[index] = clips[index].copyWith(warpQuality: quality);
+    notifyListeners();
+  }
+
+  StretchQuality clipWarpQuality(int track, int index) =>
+      _validClipTarget(track, index)
+          ? timeline.tracks[track].clips[index].warpQuality
+          : StretchQuality.balanced;
 
   /// The tempo a clip's material is in, if it has said.
   ///

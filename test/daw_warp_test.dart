@@ -15,6 +15,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart';
 import 'package:comet_beat/core/audio/daw_project.dart';
 import 'package:comet_beat/core/audio/daw_sources.dart';
 import 'package:comet_beat/core/audio/daw_tempo_map.dart';
@@ -332,6 +333,76 @@ void main() {
       final json = projectToJson(timeline);
       expect(json.contains('warp'), isFalse);
       expect(json.contains('nativeBpm'), isFalse);
+    });
+  });
+
+  group('WS-A9 — warp honours the per-clip stretch setting', () {
+    // Per-CLIP, not per-project, and this is the test that justifies it: a bass
+    // line and a drum loop on adjacent lanes need different windows, and a
+    // project-wide setting would force the wrong one on somebody.
+    Float64List warpedAt(StretchQuality q) => renderTimelineStereo(
+          _one(
+            Clip(
+              // 55 Hz — below what the default window can hold, which is the
+              // whole reason `deep` exists.
+              source: SampleSource(_tone(55, 800)),
+              warp: true,
+              nativeBpm: 120,
+              warpQuality: q,
+            ),
+          ),
+          tempoMap: TempoMap.constant(90),
+          limit: false,
+        ).left;
+
+    double pitchOf(Float64List pcm) {
+      var crossings = 0;
+      for (var i = 1; i < pcm.length; i++) {
+        if ((pcm[i - 1] < 0) != (pcm[i] < 0)) crossings++;
+      }
+      return crossings * kDawSampleRate / (2 * pcm.length);
+    }
+
+    test('DEEP keeps a bass note in tune through a warp; light does not', () {
+      expect(pitchOf(warpedAt(StretchQuality.deep)), closeTo(55, 5));
+      expect(pitchOf(warpedAt(StretchQuality.light)), lessThan(48));
+    });
+
+    test('the setting is undoable and survives save', () {
+      final daw = DawService()..addClip(SampleSource(_tone(110, 500)));
+      final track = daw.timeline.tracks.indexWhere((t) => t.clips.isNotEmpty);
+      daw.setClipWarpQuality(track, 0, StretchQuality.deep);
+      expect(daw.clipWarpQuality(track, 0), StretchQuality.deep);
+      daw.undo();
+      expect(daw.clipWarpQuality(track, 0), StretchQuality.balanced);
+
+      final back = projectFromJson(
+        projectToJson(
+          _one(
+            Clip(
+              source: SampleSource(_tone(110, 200)),
+              warpQuality: StretchQuality.deep,
+            ),
+          ),
+        ),
+      );
+      expect(back.tracks.single.clips.single.warpQuality, StretchQuality.deep);
+    });
+
+    test('the default writes no key, and an unknown one reads as balanced', () {
+      // Forward compatibility: a project written by a build with more settings
+      // than this one must open, not crash.
+      final json = projectToJson(
+        _one(Clip(source: SampleSource(_tone(110, 100)))),
+      );
+      expect(json.contains('warpQuality'), isFalse);
+
+      final odd =
+          json.replaceFirst('"warp":', '"warpQuality":"granular","warp":');
+      expect(
+        projectFromJson(odd).tracks.single.clips.single.warpQuality,
+        StretchQuality.balanced,
+      );
     });
   });
 

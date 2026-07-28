@@ -61,7 +61,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/stereo_ops.dart'
         stereoWidthFx,
         swapChannelsFx;
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
-    show timeStretch, timeStretchStereo;
+    show StretchQuality, timeStretch, timeStretchStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/tone_curves.dart'
     show contrastFx, deEmphasisFx, loudnessFx, tiltEqFx;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
@@ -203,6 +203,7 @@ Float64List applyFxChain(
           speed: p('speed', 0.75),
           mix: p('mix', 1),
           sampleRate: sampleRate,
+          quality: _stretchQuality(p('quality', 1)),
         ),
       // A4 — the ops that need both channels. These MUST be listed here: the
       // fallback below runs an effect on each channel independently, which for
@@ -645,6 +646,7 @@ Float64List _applyFx(Float64List input, FxSpec fx, int sampleRate) {
             input,
             1 / p('speed', 0.75).clamp(0.1, 4.0),
             sampleRate: sampleRate,
+            quality: _stretchQuality(p('quality', 1)),
           ),
           input.length,
         ),
@@ -732,18 +734,29 @@ Float64List _gainFx(
   );
 }
 
+/// WS-A9 — the stored index → the setting. Out-of-range falls back to
+/// `balanced`, which is what a chain written before the param existed means.
+StretchQuality _stretchQuality(double index) {
+  final i = index.round();
+  return i >= 0 && i < StretchQuality.values.length
+      ? StretchQuality.values[i]
+      : StretchQuality.balanced;
+}
+
 ({Float64List left, Float64List right}) _timeStretchFxStereo(
   Float64List left,
   Float64List right, {
   required double speed,
   required double mix,
   required int sampleRate,
+  StretchQuality quality = StretchQuality.balanced,
 }) {
   final stretched = timeStretchStereo(
     left,
     right,
     1 / speed.clamp(0.1, 4.0),
     sampleRate: sampleRate,
+    quality: quality,
   );
   return (
     left: _blendWetDry(left, _fitLength(stretched.left, left.length), mix),

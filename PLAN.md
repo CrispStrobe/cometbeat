@@ -1133,15 +1133,39 @@ prefix.
     a clip that warped longer would simply be truncated.
   Tests: `daw_warp_test` (20, incl. windowed-vs-full byte-identity for a warped
   clip and a widget half for all three toggle paths).
-- ⬜ **WS-A9 — the last DSP tier: a stretch-quality knob.** `M` — **narrowed to
-  one item.** Band-limited SRC tiers and raw up/down-sample are built as
-  `resampleHq` (`ResampleQuality{fast,good,best}`) and `resampleRaw` (`b2e2551d`,
-  now on main), which also fixed a real bug: every downsampled export had been
-  aliasing. What remains is time-stretch quality, and it is
-  deliberately **not** a resampler setting: `time_stretch.dart` is WSOLA with a
-  hardcoded `_frameSize`/`_hs`, and stretching time independently of pitch is a
-  different algorithm.
-
+- ✅ **WS-A9 — the last DSP tier — SHIPPED. The Audio Editor ladder is
+  COMPLETE.** `StretchQuality{light, balanced, deep}` on `timeStretch`, a
+  `quality` param on the `timeStretch` effect (so the GUI panel, `fxproc
+  --list` and the chain string all got it with no per-effect code), and a
+  per-clip `Clip.warpQuality` the WS-A7 warp honours.
+  * ⚠️ **I scoped this wrong and the measurements corrected it.** The plan
+    (and my own claim on the board) said this was a MATERIAL trade-off —
+    "short frames keep drum hits sharp, long frames are smooth on held
+    notes". **Only half of that is real.** The transient half did not
+    reproduce: across 768/1024/2048 the crest factor of a stretched drum
+    pattern is flat to within noise, and at a factor of 2 every setting
+    doubles the hits identically (8 in, 15 out) — that is WSOLA repeating
+    material, which frame length does not fix. The names and the tests follow
+    what measurement supports, not what the plan predicted.
+  * **What IS real, and is now the feature:** the correlation window sets a
+    PITCH FLOOR. A window shorter than one period cannot find the right
+    alignment, so the stretch locks onto a sub-harmonic — the note comes out
+    at the wrong pitch, not merely rougher. Measured floors ≈ 85 / 67 / 39 Hz,
+    each within ~25% of the analytic `sampleRate / overlap`.
+  * ⚠️ **This exposed a pre-existing bug nobody had measured:** the hardcoded
+    1024-sample window that every stretch used cannot hold a bass low E — a
+    41.2 Hz note comes out at 26.7 Hz. Not a regression from this work; it has
+    been there since WSOLA shipped, invisible because nothing measured pitch
+    after stretching. Now pinned by a test, and `deep` is the fix.
+  * `lowestReliableHz` is advertised to the user, so it is deliberately
+    CONSERVATIVE — a first cut put `deep`'s claim exactly on its measured floor
+    and it failed there.
+  * ⚠️ **A choice label is also the CLI token** in a chain string, which is the
+    whole point of sharing one text form. A first cut labelled these
+    "Deep — bass (≥43 Hz)" and was unusable from the command line; the pitch
+    guidance moved to the caption and the labels are single words.
+  Tests: `stretch_quality_test` (12) + `daw_warp_test` (+3, incl. deep keeping
+  a 55 Hz bass in tune through a warp where light does not).
 **Tracker**
 
 > ✅ **WS-T5 SHIPPED** — `TrackerEngine.setChannelFxChain` + the screen's

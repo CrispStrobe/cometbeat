@@ -770,23 +770,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-A9 — the time-stretch quality knob,
-  the last Audio Editor item.** It got more valuable the moment WS-A7 landed:
-  every warped clip now runs through WSOLA with a hardcoded 1024-sample frame.
-  ⚠️ **The framing I will NOT copy:** this is *not* a fast/good/best ladder like
-  `ResampleQuality`, where more taps is strictly better. WSOLA's frame size is a
-  **material** trade-off — a long frame is smooth on sustained pitched material
-  and SMEARS transients; a short frame keeps a drum hit sharp and WARBLES on a
-  held note. Mirroring the resample knob would have been the lazy wrong answer,
-  so the choice will be named for the material, and the tests will assert the
-  trade in both directions (a knob whose settings are indistinguishable is not
-  a feature). Today's setting stays the default and byte-identical.
-  Touching `crisp_dsp/time_stretch.dart` · `fx/fx_params.dart` ·
-  `fx/fx_chain.dart` · `daw_timeline.dart` · `daw_project.dart` ·
-  `daw_service.dart` · `daw_screen.dart`. The FX registry means the GUI and the
-  CLI come for free (the F1/F2 lever).
-  Previously: ✅ **DONE — WS-A7 clip warp SHIPPED; the Audio
-  Editor's last structural gap is closed.** `Clip.warp`/`nativeBpm`, an optional
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-A9 SHIPPED. The whole Audio
+  Editor ladder is complete (A1–A9 · B · C · D · F).**
+  ⚠️ **I claimed on this board that WS-A9 was NOT a quality ladder but a
+  material trade-off, and the measurements only supported half of it — I am
+  withdrawing the other half.** The transient story (short frames keep hits
+  sharp) did not reproduce: flat crest factor across 768/1024/2048, and every
+  setting doubles hits identically at a factor of 2. What IS real is a PITCH
+  FLOOR set by the correlation window — below it the stretch drops to a
+  sub-harmonic, floors ≈ 85/67/39 Hz. Named and tested for that.
+  ⚠️ **Found a pre-existing bug for whoever owns stretch:** the hardcoded
+  1024-sample window every stretch has always used cannot hold a bass low E
+  (41.2 Hz → 26.7 Hz). Not from this work; invisible because nothing measured
+  pitch after stretching. Pinned by a test; `deep` is the fix.
+  The FX registry gave the GUI panel, `fxproc --list` and the chain string for
+  free — one param entry, no per-effect code (the F1/F2 lever, seventh slice
+  running). Tests: `stretch_quality_test` (12) + `daw_warp_test` (23 total).
+  **Nothing in the Audio Editor is left; I am not claiming anything further —
+  the open ladder items are all in other lanes.**
+  Previously: WS-A7 clip warp; WS-A5 loudness view. `Clip.warp`/`nativeBpm`, an optional
   `TempoMap` on both render paths (null = byte-identical to before), WSOLA so
   pitch does not move, and a "Follow project tempo" toggle that ASKS a recording
   for its tempo (the case warp exists for) and reads a symbolic clip's own grid.

@@ -20,7 +20,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
     show delayFx;
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
 import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
-    show timeStretch, timeStretchStereo;
+    show StretchQuality, timeStretch, timeStretchStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
     show VoiceEffect, applyVoiceEffect;
 import 'package:comet_beat/core/audio/daw_tempo_map.dart' show TempoMap;
@@ -148,6 +148,7 @@ class Clip {
     this.groupId,
     this.warp = false,
     this.nativeBpm,
+    this.warpQuality = StretchQuality.balanced,
     this.takes = const [],
     this.takeIndex = 0,
     this.provenance,
@@ -194,6 +195,14 @@ class Clip {
   /// silently detune the arrangement's timing, and there is no way for the
   /// listener to tell that from a mistake they made.
   final double? nativeBpm;
+
+  /// WS-A9 — which stretch setting [warp] uses.
+  ///
+  /// Per-CLIP rather than per-project because it is a property of the material:
+  /// a bass line needs [StretchQuality.deep] to keep its pitch, and the drum
+  /// loop on the next lane does not. Defaults to balanced, which is what warp
+  /// did before this existed.
+  final StretchQuality warpQuality;
 
   /// D5 — the alternative takes this clip can play, INCLUDING the active one.
   ///
@@ -263,6 +272,7 @@ class Clip {
     int? groupId,
     bool? warp,
     double? nativeBpm,
+    StretchQuality? warpQuality,
     List<ClipSource>? takes,
     int? takeIndex,
     LicensedWork? provenance,
@@ -285,6 +295,7 @@ class Clip {
         groupId: groupId ?? this.groupId,
         warp: warp ?? this.warp,
         nativeBpm: nativeBpm ?? this.nativeBpm,
+        warpQuality: warpQuality ?? this.warpQuality,
         takes: takes ?? this.takes,
         takeIndex: takeIndex ?? this.takeIndex,
         provenance: provenance ?? this.provenance,
@@ -579,11 +590,21 @@ bool warpFactorIsUsable(double factor) =>
   );
   if (!warpFactorIsUsable(factor)) return (left: pcm, right: rightPcm);
   if (isStereo) {
-    final out =
-        timeStretchStereo(pcm, rightPcm, factor, sampleRate: sampleRate);
+    final out = timeStretchStereo(
+      pcm,
+      rightPcm,
+      factor,
+      sampleRate: sampleRate,
+      quality: clip.warpQuality,
+    );
     return (left: out.left, right: out.right);
   }
-  final out = timeStretch(pcm, factor, sampleRate: sampleRate);
+  final out = timeStretch(
+    pcm,
+    factor,
+    sampleRate: sampleRate,
+    quality: clip.warpQuality,
+  );
   return (left: out, right: out);
 }
 

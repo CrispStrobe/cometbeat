@@ -25,6 +25,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
+    show StretchQuality;
 import 'package:comet_beat/core/audio/daw_clip_source_codec.dart';
 import 'package:comet_beat/core/audio/daw_tempo_map.dart';
 import 'package:comet_beat/core/audio/daw_timeline.dart';
@@ -111,6 +113,8 @@ String projectToJson(
                 // reads identically on a build that predates warping.
                 if (clip.warp) 'warp': true,
                 if (clip.nativeBpm != null) 'nativeBpm': clip.nativeBpm,
+                if (clip.warpQuality != StretchQuality.balanced)
+                  'warpQuality': clip.warpQuality.name,
                 if (clip.gainAutomation.isNotEmpty)
                   'gainAutomation': [
                     for (final point in clip.gainAutomation) point.toJson(),
@@ -353,6 +357,12 @@ DawTimeline projectFromJson(
             ],
             groupId: c['groupId'] is num ? (c['groupId'] as num).toInt() : null,
             warp: c['warp'] == true,
+            warpQuality: StretchQuality.values.firstWhere(
+              (q) => q.name == c['warpQuality'],
+              // An unknown name means a build that wrote a setting this one
+              // does not have; balanced is the safe read, not a crash.
+              orElse: () => StretchQuality.balanced,
+            ),
             nativeBpm: c['nativeBpm'] is num
                 ? (c['nativeBpm'] as num).toDouble()
                 : null,
