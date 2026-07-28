@@ -991,13 +991,21 @@ prefix.
 > green (5,475 pass / 0 fail across six chunks). The "built but not on main"
 > caveat that stood here is discharged.
 
-- ⬜ **WS-A5 — loudness metering as a VIEW.** `S` — narrower than it looks and
-  genuinely open. `crisp_dsp/loudness.dart` computes gated integrated /
-  short-term / momentary LUFS, `truePeakDb` and `stereoCorrelation`, and
-  `dawedit --loudness` prints all of it — but the file is **imported nowhere in
-  `lib/`**, and `daw_screen.dart`'s only "loudness" hit is
-  `DawClipEffectType.loudness`, which is the tone-curve *effect*, not a meter.
-  The DSP and the CLI are done; the meter is not.
+- ✅ **WS-A5 — loudness metering as a VIEW — SHIPPED.** A **Loudness** button in
+  the Audio Editor toolbar measures the mix (or the **marked range**, since "is
+  the chorus louder than the verse" is the question people actually have) and
+  reads it back. The judgement lives in a pure `core/audio/loudness_advice.dart`
+  rather than in the widget, so it is testable: a meter that renders five
+  numbers beautifully and reasons about them wrongly is worse than no meter,
+  because it is trusted. It reports against a **target** (streaming −14 LUFS ·
+  broadcast −23 · none), because a LUFS number means nothing without one —
+  and *quieter than target is GOOD*, not a fault, which is the judgement most
+  meters get backwards and the one that pushes people into squashing a mix for
+  no gain. True peak over −1 dBTP and negative correlation are WARNINGS at any
+  target: they are the two failures that break on the listener's device while
+  looking clean on yours. Tests: `loudness_advice_test` (17, incl. a widget half
+  — the door opens on real audio and reads it, and is disabled rather than
+  opening onto "Silence").
 - ⬜ **WS-A7 — clip warp / follow the tempo map.** `M` · Depends WS-W2. Verified
   absent (the only `warp` hits in `lib/` are `formant_shift.dart`'s spectral
   envelope, unrelated). `TempoMap` now exists, so this is the clip flag plus a

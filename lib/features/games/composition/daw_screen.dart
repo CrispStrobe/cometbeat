@@ -18,6 +18,7 @@ import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/beat_to_tracker.dart'
     show drumSongFromBeat;
+import 'package:comet_beat/core/audio/crisp_dsp/loudness.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/daw_edits.dart'
     show ClipStats, GeneratorShape, clipStatsOf;
@@ -36,6 +37,7 @@ import 'package:comet_beat/core/audio/loop_engine.dart'
         LoopTiming,
         PatternCell,
         kPatternSteps;
+import 'package:comet_beat/core/audio/loudness_advice.dart';
 import 'package:comet_beat/core/audio/synth.dart'
     show Drum, kSampleRate, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
@@ -800,6 +802,119 @@ class _DawScreenState extends State<DawScreen>
           ),
         ],
       );
+
+  /// WS-A5 — measure the mix and say what the numbers MEAN.
+  ///
+  /// Measures the marked range when there is one, because "is the chorus
+  /// louder than the verse" is the question people actually have; otherwise the
+  /// whole mix. The judgement lives in `loudness_advice.dart` rather than here,
+  /// so it can be tested — a meter that renders beautifully and reasons wrongly
+  /// is worse than none, because it is trusted.
+  Future<void> _showLoudness() async {
+    var target = LoudnessTarget.streaming;
+    final mix = _daw.bakeStereo();
+    if (mix.left.isEmpty) return;
+
+    Float64List slice(Float64List channel) {
+      if (!_hasFxRange) return channel;
+      final from = (_rangeStartMs * kDawSampleRate / 1000)
+          .round()
+          .clamp(0, channel.length);
+      final to = (_rangeEndMs * kDawSampleRate / 1000)
+          .round()
+          .clamp(from, channel.length);
+      return Float64List.sublistView(channel, from, to);
+    }
+
+    final reading = measureLoudness(
+      slice(mix.left),
+      slice(mix.right),
+      sampleRate: kDawSampleRate,
+    );
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) {
+          final notes = loudnessAdvice(reading, target: target);
+          final scheme = Theme.of(sheetCtx).colorScheme;
+          Color colourFor(LoudnessStatus s) => switch (s) {
+                LoudnessStatus.good => scheme.primary,
+                LoudnessStatus.note => scheme.onSurfaceVariant,
+                LoudnessStatus.warn => scheme.error,
+              };
+          IconData iconFor(LoudnessStatus s) => switch (s) {
+                LoudnessStatus.good => Icons.check_circle_outline,
+                LoudnessStatus.note => Icons.info_outline,
+                LoudnessStatus.warn => Icons.warning_amber_outlined,
+              };
+          return SafeArea(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                Text(
+                  _hasFxRange ? 'Loudness — marked range' : 'Loudness — mix',
+                  style: Theme.of(sheetCtx).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                // The target first: every level judgement below depends on it,
+                // so choosing it afterwards would read as the meter changing
+                // its mind.
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final t in LoudnessTarget.values)
+                      ChoiceChip(
+                        label: Text(t.label),
+                        selected: target == t,
+                        onSelected: (_) => setSheet(() => target = t),
+                      ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 8),
+                  child: Text(
+                    target.blurb,
+                    style: Theme.of(sheetCtx).textTheme.bodySmall,
+                  ),
+                ),
+                const Divider(),
+                for (final note in notes)
+                  ListTile(
+                    leading: Icon(
+                      iconFor(note.status),
+                      color: colourFor(note.status),
+                    ),
+                    title: Text(note.headline),
+                    subtitle: Text(note.detail),
+                    isThreeLine: true,
+                  ),
+                const Divider(),
+                // The raw numbers stay available underneath the reading of
+                // them — the advice is the point, but someone checking a
+                // delivery spec needs the figures themselves.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Integrated ${reading.integratedLufs.toStringAsFixed(1)} · '
+                    'short ${reading.shortTermLufs.toStringAsFixed(1)} · '
+                    'momentary ${reading.momentaryLufs.toStringAsFixed(1)} LUFS'
+                    '   ·   ${reading.truePeakDb.toStringAsFixed(2)} dBTP'
+                    '   ·   phase ${reading.correlation.toStringAsFixed(2)}',
+                    style: Theme.of(sheetCtx).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Future<void> _masterFxMenu() async {
     await showDialog<void>(
@@ -4900,6 +5015,13 @@ class _DawScreenState extends State<DawScreen>
                           onPressed: _busMenu,
                           icon: const Icon(Icons.call_merge),
                           label: const Text('Buses'),
+                        ),
+                        // WS-A5 — the meter. Disabled with nothing to measure,
+                        // rather than opening onto "Silence".
+                        OutlinedButton.icon(
+                          onPressed: daw.clipCount == 0 ? null : _showLoudness,
+                          icon: const Icon(Icons.speed),
+                          label: const Text('Loudness'),
                         ),
                         // O13 — drop a labelled marker at the playhead, and
                         // hop between them.
