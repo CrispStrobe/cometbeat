@@ -105,6 +105,30 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING the TRACKER clock migration**
+  (first of the three; the bottleneck I flagged). Worktree `../mus-daw-parity`.
+  ⚠️ **HOT SHARED FILE: `advanced_tracker_screen.dart`** — chosen because it is
+  the coldest of the three (27 h vs `daw_screen.dart`'s 21 min, which is under
+  active WS-A7 work and which I am deliberately NOT taking).
+  🔴 **A REAL FINDING, before any code.** The three surfaces do not merely have
+  three clocks, they have two *kinds*: the Tracker and Loop Studio own a
+  **`Stopwatch`** (monotonic wall time), the Audio Editor uses the **Ticker's own
+  elapsed**, explicitly "NOT wall-clock". My `TransportService.advance(delta)`
+  accumulates deltas — which **drifts under dropped frames**, exactly what a
+  Stopwatch cannot do. A surface whose audio is a free-running pre-rendered WAV
+  (Tracker, Loop Studio) needs to *sync* to an authoritative clock, not
+  accumulate. So `WS-W2` gets a second primitive, `syncTo(absoluteMs)`, that
+  sets position from an external authority and still reports beats crossed and
+  loop wrap. Without it this migration would have silently traded a
+  drift-proof clock for a drifting one.
+  **Scope, deliberately step 1 of 2:** the Stopwatch stays the authority and the
+  Tracker **publishes** into `TransportService` each tick. That is additive —
+  the tracker's playback semantics do not change at all — and it already
+  delivers the card's acceptance ("pressing play in the Tracker moves the Loop
+  Studio playhead"), because any other surface can now follow it. Inverting
+  ownership so the transport drives the tracker is step 2 and its own commit.
+  Not touching `daw_screen.dart` or `loop_mixer_screen.dart`. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W4` undo SERVICE.
   PHASE 1 OF THE WORKSTATION LADDER IS COMPLETE AS SERVICES** (W1 Project ·
   W2 TransportService · W3 transport bar · W4 undo history).
