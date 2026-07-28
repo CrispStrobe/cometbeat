@@ -120,5 +120,23 @@ void main() {
   _emit('porta_up_Fxx', 0x1, 0x04);
   _emit('fine_porta_up_FFx', 0x1, 0xF4, holdRows: 20);
 
+  // --- PANNING: invisible to every metric the sweep had ----------------------
+  //
+  // The sweep downmixes both sides to mono before comparing, so a pan effect
+  // cannot register at all — the same shape of blind spot as spectral being
+  // amplitude-invariant (which hid tremolo's 4x depth) and the reason the
+  // envelope metric had to be added. These fixtures exist so the pan metric has
+  // something to prove itself against.
+  //
+  // Yxy panbrello is also the one LFO whose rate I deliberately left
+  // unverified: ProTracker has no panbrello, so the 64/x finding that fixed
+  // vibrato said nothing about it, and IT's own rule is different again
+  // (a 256-entry table stepped by the speed nibble). It has been sitting on
+  // 32/x with a comment admitting as much.
+  _emit('panbrello_Yxy', 0x1E, 0x48, holdRows: 24);
+  // A slower, deeper one: if the RATE is wrong the two disagree about how many
+  // sweeps fit in the run, which is far easier to see than a single cycle.
+  _emit('panbrello_slow_Yxy', 0x1E, 0x28, holdRows: 24);
+
   stdout.writeln('done — S3M + IT, one command each, 32 rows, speed 6/125');
 }
