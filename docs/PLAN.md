@@ -260,6 +260,30 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-L11` — a lossless `TabDocument`
+  codec.** `M`, no dependencies. Worktree `../mus-mixer-d1d4`, branch
+  `feature/mixer-d1d4`. Claim pushed BEFORE any code.
+  **Why this and NOT WS-W2, which the ladder puts next.** WS-W2 migrates three
+  clocks in `advanced_tracker_screen.dart`, `daw_screen.dart` and
+  `loop_mixer_screen.dart`. I checked which files are actually moving rather
+  than trusting the claims (the board's "only three workers are active" note is
+  from 2026-07-19 and is stale in both directions): in the last 30 hours
+  `daw_screen.dart` took **19** commits, `tracker_replayer.dart` **19**,
+  `loop_mixer_screen.dart` **13**, `daw_service.dart` **10**. Migrating three
+  clocks through those three files right now would collide with three live
+  workers at once. WS-W4 has the same problem for the same reason.
+  **Tab, by contrast, is COLD** — `tab_document.dart` last moved 35 hours ago
+  and `tab_workshop_screen.dart` two days ago, with zero `tab*` commits in the
+  last 30 hours. So the stale "tab workshop is active" note overstates it.
+  **Scope:** ONE new file. It READS `tab_document.dart` and does not modify it,
+  so even if that worker wakes up mid-task we do not collide.
+  **Why it is worth doing at all:** Tab is the only mode that cannot save what
+  it IS. `saveToSongBook` goes through MusicXML and drops the tuning, the
+  strings, the frets and every technique; there is no `toJson`/`fromJson`
+  anywhere; and `daw_clip_source_codec` has no `tab` kind either. So a tab
+  cannot live in a `Project` (WS-W1), cannot be a DAW clip model, and cannot
+  survive its own app restart as a tab. — opus
+
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-W1` `Project`: one document,
   many track kinds.** `M`, no dependencies, and the ladder says *do this first*.
   Worktree `../mus-mixer-d1d4`, branch `feature/mixer-d1d4`, off `1c5bff44`.

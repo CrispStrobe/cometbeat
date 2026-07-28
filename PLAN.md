@@ -881,7 +881,8 @@ prefix.
   no B to copy *into* — either editable variant slots have to exist first, or
   the feature is really "copy this track's pattern onto that track".
   ⚠️ Deep-copy automation lanes; the aliasing trap already bit the track-copy.
-- ⬜ **WS-L11 — a lossless `TabDocument` codec.** `M` — **NEW, found while
+- 🚧 **WS-L11 — a lossless `TabDocument` codec.** `M` · **CLAIMED 2026-07-28 by
+  opus (loop-d1d4)** — **NEW, found while
   building WS-W1 (2026-07-28).** Tab is the only mode with no way to save what
   it actually is: `saveToSongBook` converts to MusicXML, which drops the tuning,
   the strings, the frets and every technique. There is no `toJson`/`fromJson`
