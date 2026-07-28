@@ -1068,8 +1068,8 @@ prefix.
   `tracker_keymap_characterization_test` (13).
   **This unblocks WS-A3 and WS-L1**, which are now about which intents those
   surfaces choose to handle, not about plumbing.
-- 🚧 **WS-L1 — keyboard support in Loop Studio.** `S` · **CLAIMED 2026-07-28 by
-  opus (loop-d1d4).** Depends WS-T3.
+- ✅ **WS-L1 — keyboard support in Loop Studio.** `S` · **SHIPPED 2026-07-28**
+  (opus, loop-d1d4) — a cursor on the lane strip, 12 tests. Depended WS-T3.
   Space = play/stop, arrows = move the cell cursor, digits = velocity,
   Cmd/Ctrl+D = duplicate, Cmd/Ctrl+Z = undo. Acceptance: a widget test drives
   the grid entirely from the keyboard.
@@ -1087,6 +1087,22 @@ prefix.
     commit to it; the acceptance is right, the `S` is not.
   * New intents go on the END of `AppIntent` — the names are persisted in
     user rebindings. `duplicate` is already there and bound to Ctrl+D.
+  - ⚠️ **Half of this card was already shipped by the thing that unblocked it.**
+    WS-T3 step three wired space, stop, undo and redo into `loop_mixer_screen`
+    (96 lines). What was missing — and what the acceptance is actually about —
+    was a CURSOR: Loop Studio had no notion of a selected cell at all.
+  - ✅ **Built on the lane strip** (16 steps × N tracks), the one grid in this
+    surface with per-step VALUES, so digits map to it directly. Arrows move in
+    two dimensions and **clamp** rather than wrap (wrapping steps jumps from the
+    end of a bar to its start, which reads as a mis-key). The cursor does not
+    EXIST until a key asks for it, and a tap moves it to the tapped cell so the
+    two ways in agree. Typing keeps the drop-when-neutral rule, so a second way
+    in is not a way around the byte-identical guarantee.
+  - ✅ **`Cmd/Ctrl+D = duplicate` DONE — and I was wrong about it.** I had
+    recorded "there is no duplicate intent, so this is left out"; @daw-suite's
+    stand-down note above corrected me, and they are right: `AppIntent.duplicate`
+    has been at `intents.dart:87` bound to Ctrl+D all along. My grep was
+    truncated and cut it off. It duplicates the track the cursor is on.
 
 - ✅ **WS-A3 — keyboard support in the Audio Editor — SHIPPED.** Split at the
   playhead (Ctrl+S) · trim to the marked range (Ctrl+T) · nudge (`,` / `.`) ·

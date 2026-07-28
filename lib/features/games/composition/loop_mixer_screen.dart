@@ -109,7 +109,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart'
-    show Clipboard, ClipboardData, HardwareKeyboard, KeyDownEvent;
+    show
+        Clipboard,
+        ClipboardData,
+        HardwareKeyboard,
+        KeyDownEvent,
+        LogicalKeyboardKey;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -120,6 +125,14 @@ const Set<AppIntent> kLoopIntents = {
   AppIntent.transportStop,
   AppIntent.editUndo,
   AppIntent.editRedo,
+  // WS-L1 — the lane cursor. Listed here so the keymap sheet shows only what
+  // this surface can actually do with a key.
+  AppIntent.cursorUp,
+  AppIntent.cursorDown,
+  AppIntent.cursorLeft,
+  AppIntent.cursorRight,
+  AppIntent.editDelete,
+  AppIntent.duplicate,
 };
 
 class LoopMixerScreen extends StatefulWidget {
@@ -393,6 +406,10 @@ abstract interface class LoopMixerTester {
   /// WS-L5 — where a track's pattern could go, and putting it there.
   List<String> copyTargetsFor(String from);
   bool copyPattern(String from, String to);
+
+  /// WS-L1 — where the keyboard cursor is on the lane strip, as
+  /// `(trackId, step)`, or null before a key has moved it.
+  (String, int)? get laneCursor;
 
   /// A track's swing, whether it has its OWN, and a way to step it.
   double trackSwingOf(String id);
@@ -1261,6 +1278,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   double audioStretchOf(String id) => _engine.audioStretchOf(id);
   @override
   int get debugLoopSamples => _engine.timing.totalSamples;
+  @override
+  (String, int)? get laneCursor {
+    final id = _cursorTrackId;
+    final step = _cursorStep;
+    return id == null || step == null ? null : (id, step);
+  }
+
   @override
   List<String> copyTargetsFor(String from) => _engine.copyTargetsFor(from);
   @override
@@ -4483,6 +4507,110 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _syncPlayback();
   }
 
+  // --- WS-L1: a keyboard cursor over the lane strip -------------------------
+  //
+  // The strip was tap-only, which is right for the surface it is on but leaves
+  // it unreachable to anyone not using a touchscreen or a mouse — and drawing a
+  // sixteen-step fade by tapping each cell four times is slow even with one.
+  //
+  // The cursor is ADDITIVE: tap-to-cycle is untouched, and the cursor only
+  // exists once a key has moved it. That is why [_cursorStep] starts null
+  // rather than at 0 — an outline drawn around a cell nobody asked for would
+  // read as a selection the player did not make.
+
+  /// Which lane cell the keyboard is on: track index and step. Null = the
+  /// keyboard has not been used yet, and nothing is outlined.
+  int? _cursorTrack;
+  int? _cursorStep;
+
+  /// Moves the cursor by [dTrack] rows and [dStep] cells, creating it at the
+  /// first cell if it does not exist yet.
+  ///
+  /// Both axes CLAMP rather than wrap. Wrapping steps would jump the player
+  /// from the end of a bar to its start, which reads as a mis-key; wrapping
+  /// tracks would jump the drums to the sparkle. A cursor at the edge that
+  /// stays put is the honest answer to "there is nothing further this way".
+  bool _moveCursor(int dTrack, int dStep) {
+    final tracks = _engine.tracks;
+    if (tracks.isEmpty) return false;
+    final track = (_cursorTrack ?? 0) + (_cursorStep == null ? 0 : dTrack);
+    final step = (_cursorStep ?? 0) + (_cursorStep == null ? 0 : dStep);
+    setState(() {
+      _cursorTrack = track.clamp(0, tracks.length - 1);
+      _cursorStep = step.clamp(0, kPatternSteps - 1);
+    });
+    return true;
+  }
+
+  /// The track the cursor is on, or null when there is no cursor.
+  String? get _cursorTrackId {
+    final i = _cursorTrack;
+    final tracks = _engine.tracks;
+    if (i == null || _cursorStep == null || i >= tracks.length) return null;
+    return tracks[i].id;
+  }
+
+  /// Sets the cell under the cursor from a digit: 0 = the bottom of the
+  /// parameter's range, 9 = the top.
+  ///
+  /// Digits rather than the tap ladder because a keyboard has ten of them and
+  /// the ladder has four: typing a shape in is the thing the keyboard is better
+  /// at, and it is how every tracker has done velocities for thirty years.
+  bool _typeAutomationDigit(int digit) {
+    final id = _cursorTrackId;
+    final step = _cursorStep;
+    if (id == null || step == null) return false;
+    final value = (digit / 9).clamp(0.0, 1.0);
+    final existing = _engine.automationFor(id, _autoParam) ??
+        AutomationLane.neutral(_autoParam, kPatternSteps);
+    final next = existing.withStep(step, value);
+    setState(() {
+      // The same drop-when-neutral rule the tap path uses — "no lane" has to
+      // stay distinguishable from "a flat lane", or an un-automated groove
+      // stops being byte-identical.
+      _engine.setAutomation(
+        id,
+        _autoParam,
+        next.isNeutralFor(_autoParam) ? null : next,
+      );
+    });
+    _syncPlayback();
+    return true;
+  }
+
+  /// Duplicates the track the cursor is on.
+  ///
+  /// The card asked for Cmd/Ctrl+D here and I first recorded it as undoable,
+  /// because I had convinced myself there was no duplicate intent to bind. There
+  /// is — `AppIntent.duplicate` has been in the shared vocabulary all along,
+  /// already bound to Ctrl+D; @daw-suite pointed it out. Worth the comment
+  /// because the wrong conclusion came from a truncated grep, not from the code.
+  bool _duplicateCursorTrack() {
+    final id = _cursorTrackId;
+    if (id == null) return false;
+    _duplicateTrack(id);
+    return true;
+  }
+
+  /// Returns the cell under the cursor to neutral.
+  bool _clearCursorCell() {
+    final id = _cursorTrackId;
+    final step = _cursorStep;
+    if (id == null || step == null) return false;
+    final lane = _engine.automationFor(id, _autoParam);
+    if (lane == null) return true;
+    final next = lane.withStep(step, _autoParam.neutral);
+    setState(() {
+      _engine.setAutomation(
+        id,
+        _autoParam,
+        next.isNeutralFor(_autoParam) ? null : next,
+      );
+    });
+    _syncPlayback();
+    return true;
+  }
+
   /// Clears [id]'s lane for the parameter on show.
   void _clearAutomation(String id, [AutomationParam? param]) {
     final p = param ?? _autoParam;
@@ -4539,10 +4667,36 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 1),
                         child: GestureDetector(
                           key: Key('loop-auto-${track.id}-$s'),
-                          onTap: () => _cycleAutomationStep(track.id, s),
+                          onTap: () {
+                            // A tap moves the cursor too, so the keyboard
+                            // carries on from wherever the finger left off
+                            // rather than from some remembered other cell.
+                            _cursorTrack = _engine.tracks.indexOf(track);
+                            _cursorStep = s;
+                            _cycleAutomationStep(track.id, s);
+                          },
                           child: SizedBox(
                             height: 18,
-                            child: _autoCell(track.id, s),
+                            child: _cursorTrack ==
+                                        _engine.tracks.indexOf(track) &&
+                                    _cursorStep == s
+                                ? DecoratedBox(
+                                    // An outline rather than a fill: the cell
+                                    // already uses colour to say what its VALUE
+                                    // is, and a second colour on top would be
+                                    // two meanings in one square.
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        width: 2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                    child: _autoCell(track.id, s),
+                                  )
+                                : _autoCell(track.id, s),
                           ),
                         ),
                       ),
@@ -5317,10 +5471,65 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           _redoEdit();
           return KeyEventResult.handled;
         }
+      // WS-L1 — the lane cursor.
+      case AppIntent.cursorUp:
+        return _handled(_moveCursor(-1, 0));
+      case AppIntent.cursorDown:
+        return _handled(_moveCursor(1, 0));
+      case AppIntent.cursorLeft:
+        return _handled(_moveCursor(0, -1));
+      case AppIntent.cursorRight:
+        return _handled(_moveCursor(0, 1));
+      case AppIntent.editDelete:
+        return _handled(_clearCursorCell());
+      case AppIntent.duplicate:
+        return _handled(_duplicateCursorTrack());
       default:
         break;
     }
+    // Digits type a value straight into the cell under the cursor. Not routed
+    // through an intent: ten digits would be ten bindings for one idea, and
+    // every tracker has spelled velocities this way for thirty years.
+    final digit = _digitOf(event.logicalKey);
+    if (digit != null && _cursorStep != null) {
+      return _handled(_typeAutomationDigit(digit));
+    }
     return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handled(bool ok) =>
+      ok ? KeyEventResult.handled : KeyEventResult.ignored;
+
+  /// 0–9 from either the number row or the numeric keypad, else null.
+  static int? _digitOf(LogicalKeyboardKey key) {
+    const row = [
+      LogicalKeyboardKey.digit0,
+      LogicalKeyboardKey.digit1,
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit3,
+      LogicalKeyboardKey.digit4,
+      LogicalKeyboardKey.digit5,
+      LogicalKeyboardKey.digit6,
+      LogicalKeyboardKey.digit7,
+      LogicalKeyboardKey.digit8,
+      LogicalKeyboardKey.digit9,
+    ];
+    const pad = [
+      LogicalKeyboardKey.numpad0,
+      LogicalKeyboardKey.numpad1,
+      LogicalKeyboardKey.numpad2,
+      LogicalKeyboardKey.numpad3,
+      LogicalKeyboardKey.numpad4,
+      LogicalKeyboardKey.numpad5,
+      LogicalKeyboardKey.numpad6,
+      LogicalKeyboardKey.numpad7,
+      LogicalKeyboardKey.numpad8,
+      LogicalKeyboardKey.numpad9,
+    ];
+    final i = row.indexOf(key);
+    if (i >= 0) return i;
+    final p = pad.indexOf(key);
+    return p >= 0 ? p : null;
   }
 
   /// WS-T3 — the shared bindings, loaded once so a rebinding persists.
