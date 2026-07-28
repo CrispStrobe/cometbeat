@@ -794,24 +794,22 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-A9 SHIPPED. The whole Audio
-  Editor ladder is complete (A1–A9 · B · C · D · F).**
-  ⚠️ **I claimed on this board that WS-A9 was NOT a quality ladder but a
-  material trade-off, and the measurements only supported half of it — I am
-  withdrawing the other half.** The transient story (short frames keep hits
-  sharp) did not reproduce: flat crest factor across 768/1024/2048, and every
-  setting doubles hits identically at a factor of 2. What IS real is a PITCH
-  FLOOR set by the correlation window — below it the stretch drops to a
-  sub-harmonic, floors ≈ 85/67/39 Hz. Named and tested for that.
-  ⚠️ **Found a pre-existing bug for whoever owns stretch:** the hardcoded
-  1024-sample window every stretch has always used cannot hold a bass low E
-  (41.2 Hz → 26.7 Hz). Not from this work; invisible because nothing measured
-  pitch after stretching. Pinned by a test; `deep` is the fix.
-  The FX registry gave the GUI panel, `fxproc --list` and the chain string for
-  free — one param entry, no per-effect code (the F1/F2 lever, seventh slice
-  running). Tests: `stretch_quality_test` (12) + `daw_warp_test` (23 total).
-  **Nothing in the Audio Editor is left; I am not claiming anything further —
-  the open ladder items are all in other lanes.**
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-A1 — clip edge handles (trim + fade).**
+  ⚠️ **Correcting myself:** my last board entry said "the whole Audio Editor
+  ladder is complete" and "nothing in the Audio Editor is left". That was wrong
+  — I checked only the *Audio Editor* section and missed **WS-A1** and
+  **WS-A3**, which sit in the earlier phase sections. A1 depends on nothing and
+  is squarely my lane, so I am taking it; **A3 (keyboard) stays open and is
+  gated on WS-T3**, which is not mine.
+  Plan: hit zones at both clip edges → drag to trim; a corner handle → drag the
+  fade; honour `snapOn`. The verbs already exist in `daw_service.dart`, so this
+  is gesture work in `daw_screen.dart` (`_clipBox`) only. Two things the card
+  itself warns about and I will pin with tests: the drag must be **one undo
+  entry, not one per frame**, and the existing move gesture is `onLongPress*`
+  precisely so a plain drag still SCROLLS the lane — edge handles must not
+  swallow that.
+  Previously: ✅ WS-A9 (stretch quality) · WS-A7 (clip warp) · WS-A5 (loudness
+  view) — and the A/B/C/D/F ladder in the Audio Editor section.
   Previously: WS-A7 clip warp; WS-A5 loudness view. `Clip.warp`/`nativeBpm`, an optional
   `TempoMap` on both render paths (null = byte-identical to before), WSOLA so
   pitch does not move, and a "Follow project tempo" toggle that ASKS a recording
