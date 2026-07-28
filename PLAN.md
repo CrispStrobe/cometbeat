@@ -1167,9 +1167,15 @@ prefix.
     convert to itself), so `liveKind == from` marks nothing — it only turns the
     other subtitles into "opens a copy", which is still true and still worth
     saying. My first attempt asserted a same-kind entry would appear; it cannot.
-  - ⬜ **Step 2b — the other surfaces.** Loop Studio, the Audio Editor, Score
-    and Tab still need `addSongToProject` / `openProjectTrack` /
-    `writeBackToProject`. Only the Tracker has them.
+  - ✅ **Step 2b (Tab) — 2026-07-28.** The Tab Workshop has the three calls and
+    passes `liveKind`. A **tracker** track offered to it is REFUSED rather than
+    silently converted: a conversion belongs behind the "Open in…" menu where
+    its cost is shown before the user commits, not inside a project-track open.
+  - ⬜ **Step 2b remainder — Loop Studio, the Audio Editor, Score.** Loop Studio
+    and the Audio Editor were **claimed** when I looked (`WS-L1`, `WS-A3`) and
+    are the natural next two; Score is free. The pattern is now identical three
+    times over, so each is small: three methods + `liveKind` on the existing
+    menu + a null-safe provider read.
 - ⬜ **WS-X2 — drag between surfaces.** `M` · Depends WS-W1, WS-X1.
   One `DragTarget` protocol carrying `(kind, document)`: drag a tracker pattern
   onto the timeline, a loop track into the Tab editor, an instrument from the

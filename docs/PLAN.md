@@ -117,17 +117,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` step 2b — Score and Tab
-  get live project links.** Worktree `../mus-daw-parity`.
-  **Lane check drove the choice.** Loop Studio and the Audio Editor are the
-  obvious next surfaces and **both are claimed** (`WS-L1`, `WS-A3`), with
-  `loop-d1d4` actively executing. Score (`composition_workshop_screen.dart`) and
-  Tab (`tab_workshop_screen.dart`) are the other two surfaces step 2b names,
-  both **2 days cold and unclaimed**, and both already have a working project
-  codec — Score's is built in, Tab's is the one `WS-W1b` finally registered.
-  **Scope:** the same three calls the Tracker got — `addToProject` /
-  `openProjectTrack` / `writeBackToProject` — plus `liveKind` on each screen's
-  existing `OpenInMenu`. No new model, no new l10n. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 2b for
+  TAB.** The Tab Workshop now adds itself to the project, re-opens that track
+  live, writes edits back, and passes `liveKind` to its "Open in…" menu. 45 tab
+  tests + 61 with the menu suite; 157 across tab/menu/project/tracker; format +
+  whole-project analyze clean.
+  **One design call worth copying to the remaining surfaces:** `openProjectTrack`
+  **refuses** a track of another kind rather than silently converting it. A
+  conversion belongs behind the "Open in…" menu, where its cost is shown before
+  the user commits — doing it inside a project-track open would be a lossy
+  conversion with no warning, which is exactly what the loss-report machinery
+  exists to prevent.
+  ⬜ **Remaining, and now nearly mechanical:** Score is free; Loop Studio and the
+  Audio Editor were claimed when I looked. The pattern is identical three times
+  over — three methods, `liveKind` on the existing menu, a null-safe provider
+  read. Whoever holds `WS-L1`/`WS-A3` can fold it into that work in minutes.
+  ⚠️ **Cost worth recording, since it bit me four times in this one slice:**
+  `directives_ordering` is not something `dart format` fixes, and these screens
+  have multi-line `show` imports that a naive line-sort shreds (I broke
+  `advanced_tracker_screen.dart` that way two slices ago). Insert at the correct
+  slot by hand; never re-sort the block. — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 2a: the UI
   finally SAYS live-versus-copy.** `OpenInMenu` gained `liveKind`; the entry for
