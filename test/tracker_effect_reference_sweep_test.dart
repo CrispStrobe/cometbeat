@@ -139,6 +139,14 @@ const _kKnownOpenDefects = <String>{
   // was about, and the S3M/IT rows of this same fixture pass at 0.96 envelope,
   // which is what it was added to settle. PLAN.md §6.
   'tremor_I00.xm',
+  // (NNA note-fade and note-off were listed here at 0.874 / 0.952. The dispatch
+  // fix made them reachable and the once-only fix below made them right; all
+  // five NNA fixtures pass, so the entries are gone. What they recorded is kept
+  // in PLAN.md §6 because the DIAGNOSIS is the reusable part: the fadeout
+  // arithmetic measured exactly right at the call site while the render still
+  // piled voices up, because a released or faded voice stayed in the voice list
+  // and every later note pushed its release moment forward again. The rate was
+  // never wrong; the moment kept moving.)
   // (S3M fine and extra-fine porta were listed here at 0.857 / 0.828 / 0.19-env,
   // attributed to "a constant scale factor". That guess was wrong. Fine porta
   // bypassed PitchDomain entirely and always bent LINEARLY — right for XM/IT,
@@ -228,7 +236,10 @@ void main() {
   // our replayer reads back — the error cancels and this sweep goes green.
   // `envelope_shape_test.dart` guards that separately by checking the reference
   // render against ARITHMETIC (a ramp of a known tick length).
-  for (final name in ['fx', 'flow', 'sample', 'fmt', 'env']) {
+  // `nna/` is IT new-note actions — cut/continue/off/fade, the part of the IT
+  // model that makes a channel polyphonic. IT only: XM has no NNA and MOD/S3M
+  // have no instruments, so this is the one set with only two references.
+  for (final name in ['fx', 'flow', 'sample', 'fmt', 'env', 'nna']) {
     final dir = Directory('test/fixtures/$name');
     if (!dir.existsSync()) continue;
     fixtures.addAll(

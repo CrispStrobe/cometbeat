@@ -3088,6 +3088,70 @@ each other — they disagree about what a one-shot does after its end (fade vs
 hard stop). We sit inside that spread at 0.974, so nothing is wrong, but it is
 another case where there is no single right answer to gate on.
 
+#### X9 continued (2026-07-28) — NNA was never running
+
+New-Note Actions are what make an IT channel polyphonic: when a note arrives on
+a channel that is already sounding, the old voice is cut, kept, released or
+faded. Our replayer implements all four, plus `S7[3-6]` overrides and DCT/DCA
+duplicate checks. **None of it had ever executed.**
+
+`_renderChannelIntoStereo` reached the polyphonic voice renderer only when the
+pattern carried a per-tick EFFECT — but NNA is a property of the INSTRUMENT, so
+a plain column of notes on an NNA instrument went to the one-note-at-a-time fast
+path and the entire model was dead code. ⚠️ **Same shape as the two pan bugs in
+the previous entry:** correct code, never reached. That is three in a row now,
+all in the same dispatch.
+
+⚠️ **Three fixes moved the measurement by exactly nothing before I worked that
+out.** I fixed a genuine action-code mis-mapping, a genuine non-linear fadeout,
+and a genuine release-model error — and the numbers came back byte-identical
+each time, because none of that code ran. **A metric that does not budge after a
+fix is telling you the code you changed never ran.** What settled it was
+instrumenting the dispatch — marking each candidate render path and printing
+which fired — rather than reasoning about the call graph, which I had wrong for
+three rounds.
+
+The bugs found underneath, all real and all now fixed:
+
+  * **The NNA action codes were mis-mapped.** IT numbers them `0` cut, `1`
+    CONTINUE, `2` note off, `3` note fade; the engine's switch uses `0` cut, `1`
+    release, `2` fade, `3` leave alone. The raw IT value went straight in, so
+    "continue" released the voice, "note off" faded it by a fadeout of zero
+    (i.e. did nothing), and "note fade" fell off the end of the switch. Only
+    `cut` was right, and only because both spell it `0` — which is exactly why
+    the `cut` control passed at 0.999 while nothing else did.
+  * **Fadeout is LINEAR, not exponential.** IT counts `0x10000` down by
+    `fadeout << 6` per tick, so a fadeout of 512 empties in two ticks. We
+    decayed exponentially over hundreds of ms.
+  * **Voice isolation cut every voice at its own row-run boundary**, so a
+    `continue` had nothing left to continue — five ascending notes summed to
+    barely more than one. Truncation is the mixer's job and it already does it.
+
+  * **A voice was released or faded MORE THAN ONCE.** `releaseAt`/`fadeAt` were
+    plain assignments, and a faded voice stays in the voice list — its end is
+    still open — so every LATER note revisited it and pushed the moment forward
+    again. A fade meant to finish 40 ms after note 2 was restarted by note 3,
+    then note 4, and never completed.
+
+That last one is the one worth remembering, because the evidence pointed
+straight at it and I still nearly filed it as unexplained. Instrumented at the
+live call site the fadeout read `fadeout=512, tickSamples=882, fadeSamples=1764`
+— exactly the two ticks libxmp predicts — while the render piled voices up to
+nearly three times a cut's peak. **The rate was never wrong; the moment kept
+moving.** A correct-looking rate beside a wrong-looking result means checking
+WHEN it is applied, not re-deriving the arithmetic.
+
+**Result: all five NNA fixtures pass** — `cut` 0.999 · `continue` 0.970 against
+references agreeing at 0.970 · `fade` 0.684 → **0.999** (envelope 0.21 → 0.98) ·
+`off` 0.791 → **0.985** (0.34 → 0.88).
+
+⚠️ **The fixture set needed fixing before it could measure anything.** `nna_off`
+rendered *identically* to `nna_continue` in both references, because a released
+voice with no volume envelope has nothing to release — the fixture would have
+"passed" while testing nothing. It needs a sustain point, and `nna_continue_env`
+was added as the matched control so the only difference between the two is the
+action itself.
+
 #### X9 continued (2026-07-28) — envelopes, and two ways to lose a pan sweep
 
 The shaping layer: XM/IT volume and pan envelopes plus fadeout. Both directions
@@ -3679,8 +3743,11 @@ counter**, and **XM's tremor/key-off effect numbering**. Flow fixtures ship in
 all four formats and `fmt/` covers the S3M/IT letter commands MOD has no
 encoding for. **Envelopes are measured now too** — volume/fadeout were already
 sound, and panning was lost twice (an unreachable render path, and IT's SIGNED
-pan envelope read as unsigned). ⬜ Still open: **NNA/DCT** (new-note actions),
-which no fixture reaches yet.
+pan envelope read as unsigned). **NNA is measured and fixed too** — and it had
+never RUN, because the dispatch reached the polyphonic renderer only when a
+pattern carried a per-tick effect. ⬜ Still open: interpolation quality and
+stereo samples (X10), FT2's degenerate `T00`, and the `TrackerCell.volume`
+split, which is a decision about the model rather than a bug.
 Original scope: `convertToXm`/`convertToS3m`/`convertToIt`
 already exist, so the same musical content can be emitted in all four formats.
 ⚠️ Expect DIFFERENT failure modes, not the same one four times: XM/S3M/IT store

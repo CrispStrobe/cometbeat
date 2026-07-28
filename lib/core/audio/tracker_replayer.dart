@@ -1519,6 +1519,86 @@ Float64List renderChannelPerNote(
 /// don't count here. SAx (kFxSetHighOffset) DOES count: it seeds the per-channel
 /// high-offset memory a later 9xx reads, so its channel must run the tick voice
 /// (armRow) even if it carries no other per-tick effect.
+/// Whether an instrument's zones carry a New-Note Action or duplicate check —
+/// i.e. whether the channel is POLYPHONIC and needs the NNA voice renderer.
+///
+/// NNA is a property of the INSTRUMENT, not of the pattern, so a channel can
+/// need polyphony while carrying no effect command at all. The dispatch used to
+/// ask only `_hasPerTickEffect`, which meant a plain column of notes on an
+/// NNA instrument went to the one-note-at-a-time fast path and the whole NNA
+/// model never ran. Three fixes aimed at the NNA code changed the measurement
+/// by exactly nothing before this turned out to be why.
+bool _needsNnaVoices(TrackerInstrument instrument) {
+  if (instrument is! MultiSampleInstrument) return false;
+  for (final zone in instrument.zones.values) {
+    if (nativeNnaOf(zone) != 0 || nativeDctOf(zone) != 0) return true;
+  }
+  return false;
+}
+
+/// Impulse Tracker's New-Note-Action encoding → the engine's action code.
+///
+/// IT numbers them `0` cut, `1` continue, `2` note off, `3` note fade. The
+/// engine's switch uses `0` cut, `1` release, `2` fade, `3` leave alone. The two
+/// agree only on `cut`, so passing IT's number through unmapped meant three of
+/// the four actions did something else entirely — see the call site.
+int _engineActionForItNna(int itNna) => switch (itNna) {
+      1 => 3, // continue → leave the ringing voice alone
+      2 => 1, // note off → release it
+      3 => 2, // note fade → fade it out
+      _ => 0, // cut
+    };
+
+/// Samples per TICK, from a row-start table and that row's tick count.
+///
+/// The release model needs a tick duration and most of the render helpers never
+/// see a `TrackerTiming` — but every one of them receives `rowStart`, and a row
+/// is exactly `ticksPerRow` ticks long, so the tick falls out of what is already
+/// in scope. Threading tempo through seven signatures instead would be the
+/// cascade this file has been bitten by before.
+double _tickSamplesFrom(List<int> rowStart, List<int> ticksPerRow) =>
+    rowStart.length > 1 && ticksPerRow.isNotEmpty && ticksPerRow.first > 0
+        ? (rowStart[1] - rowStart[0]) / ticksPerRow.first
+        : 0.0;
+
+/// The gain still applied to a RELEASED voice, [relSamples] after its release.
+///
+/// Trackers and our own authored songs release differently, and conflating them
+/// is why NNA note-off and note-fade both measured wrong (`nna_off.it` envelope
+/// 0.34, `nna_fade.it` 0.21, against references agreeing at 0.94 and 0.99):
+///
+///   * With [ReplayProfile.trackerRelease], a FADEOUT is a LINEAR ramp — IT
+///     counts `0x10000` down by `fadeout << 6` per tick, so it empties in
+///     `1024 / fadeout` ticks, two ticks at the fixture's 512. And if the
+///     instrument has a volume ENVELOPE, that envelope's release segment is the
+///     whole release; the caller already applies it, so anything further here
+///     would be a second decay on top of it.
+///   * Without it — our own authored songs, and MOD/S3M which have neither
+///     envelopes nor fadeout — the exponential below is the intended behaviour
+///     rather than an approximation of a tracker, so it is left exactly as it
+///     was and those renders stay byte-identical.
+double _releaseGain({
+  required bool released,
+  required int relSamples,
+  required int nativeFadeout,
+  required bool hasVolumeEnvelope,
+  required ReplayProfile profile,
+  required double tickSamples,
+}) {
+  if (!released) return 1.0;
+  if (profile.trackerRelease) {
+    if (nativeFadeout > 0 && tickSamples > 0) {
+      final fadeSamples = (1024.0 / nativeFadeout) * tickSamples;
+      return (1.0 - relSamples / fadeSamples).clamp(0.0, 1.0);
+    }
+    if (hasVolumeEnvelope) return 1.0;
+  }
+  final fadeRate = nativeFadeout / 1024.0;
+  return fadeRate > 0
+      ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
+      : exp(-relSamples / (0.03 * kSampleRate));
+}
+
 bool _hasPerTickEffect(List<TrackerCell> cells) {
   for (final c in cells) {
     final cmd = c.fxCmd;
@@ -1683,6 +1763,7 @@ double? readLoopedSampleForTest(
   List<TrackerInstrument>? pool, {
   (Float64List, Float64List)? into,
 }) {
+  final tickSamplesLocal = _tickSamplesFrom(rowStart, ticksPerRow);
   final total = rowStart.last;
   // Optional caller-provided scratch (whole-song export): zero-fill and reuse
   // instead of allocating a fresh per-run buffer. Peak/scale run over [0,total)
@@ -1874,13 +1955,15 @@ double? readLoopedSampleForTest(
                     ? (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0)
                     : 0.0))
             .clamp(-1.0, 1.0);
-        final fadeRate = cur.nativeFadeout / 1024.0;
         final relSamples = max(0, i - releaseStartSample);
-        final release = voice.released
-            ? (fadeRate > 0
-                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
-                : exp(-relSamples / (0.03 * kSampleRate)))
-            : 1.0;
+        final release = _releaseGain(
+          released: voice.released,
+          relSamples: relSamples,
+          nativeFadeout: cur.nativeFadeout,
+          hasVolumeEnvelope: cur.nativeVolumeEnvelope != null,
+          profile: channel.profile,
+          tickSamples: tickSamplesLocal,
+        );
         final amount = vol * attack * level * release;
         // Anti-click: hard-cut residue tail (panned as the note was) vs. a
         // soft-start fade-in applied equally to both channels of one output
@@ -1966,6 +2049,11 @@ void _renderSampleChannelInto(
   int sampleOffset, {
   List<TrackerInstrument>? pool,
 }) {
+  // Tick length for the release model; `timing` is available here, unlike
+  // in the row-table helpers.
+  final tickSamplesLocal = ticksPerRow > 0
+      ? (timing.stepStartSample(1) - timing.stepStartSample(0)) / ticksPerRow
+      : 0.0;
   final env = channel.volumeEnvelope;
   final hasEnv = env != null && !env.isEmpty;
   const declickSec = 0.003;
@@ -2104,13 +2192,15 @@ void _renderSampleChannelInto(
         final nativeEnv = voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
         final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
-        final fadeRate = cur.nativeFadeout / 1024.0;
         final relSamples = max(0, i - releaseStartSample);
-        final release = voice.released
-            ? (fadeRate > 0
-                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
-                : exp(-relSamples / (0.03 * kSampleRate)))
-            : 1.0;
+        final release = _releaseGain(
+          released: voice.released,
+          relSamples: relSamples,
+          nativeFadeout: cur.nativeFadeout,
+          hasVolumeEnvelope: cur.nativeVolumeEnvelope != null,
+          profile: channel.profile,
+          tickSamples: tickSamplesLocal,
+        );
         // Anti-click: a hard cut (ECx) emits a decaying residue tail instead of
         // an instant zero; a real trigger fades in over the soft-start ramp.
         voice.updateFilterEnv(t * 1000);
@@ -2170,6 +2260,7 @@ void _renderSampleChannelIntoVariable(
   List<TrackerInstrument>? pool, {
   void Function(int i, double v)? nativeSink,
 }) {
+  final tickSamplesLocal = _tickSamplesFrom(rowStart, ticksPerRow);
   // Bounded-memory direct path: when a NATIVE (normalize==false) run is rendered
   // for the stereo export, [nativeSink] receives each produced sample already
   // scaled by the channel gain (== the `mix[i] += stem[i] * gain` the buffered
@@ -2301,13 +2392,15 @@ void _renderSampleChannelIntoVariable(
         final nativeEnv = voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
         final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
-        final fadeRate = cur.nativeFadeout / 1024.0;
         final relSamples = max(0, i - releaseStartSample);
-        final release = voice.released
-            ? (fadeRate > 0
-                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
-                : exp(-relSamples / (0.03 * kSampleRate)))
-            : 1.0;
+        final release = _releaseGain(
+          released: voice.released,
+          relSamples: relSamples,
+          nativeFadeout: cur.nativeFadeout,
+          hasVolumeEnvelope: cur.nativeVolumeEnvelope != null,
+          profile: channel.profile,
+          tickSamples: tickSamplesLocal,
+        );
         // Anti-click: hard-cut residue tail vs. soft-start fade-in (see the
         // buffered [_renderSampleChannelInto] emit). [sv] is the finished value
         // BEFORE channel gain, so the residue tracks the pre-gain scalar.
@@ -2519,7 +2612,8 @@ void _renderChannelInto(
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
 
-  if (channel.instrument is MultiSampleInstrument && _hasPerTickEffect(cells)) {
+  if (channel.instrument is MultiSampleInstrument &&
+      (_hasPerTickEffect(cells) || _needsNnaVoices(channel.instrument))) {
     _renderMultiSampleChannelInto(
       mix,
       channel,
@@ -3241,7 +3335,16 @@ List<TrackerCell> _isolatedTickZoneCells(
   final isolated = List<TrackerCell>.filled(cells.length, TrackerCell.empty);
   final end = min(startStep + runSteps, cells.length);
   isolated.setRange(startStep, end, cells, startStep);
-  if (end < isolated.length) isolated[end] = TrackerCell.noteCut;
+  // ⚠️ No note-cut at the run boundary. There used to be one, which meant every
+  // isolated voice fell silent where the NEXT note began — so a `continue`
+  // action had nothing left to continue, and five ascending notes summed to
+  // barely more than one (peak 4135 against a cut's 3415, where the references
+  // build to four times the cut).
+  //
+  // Truncation is the MIXER's job and it already does it: NNA `cut` sets
+  // `endSample` to the new note's start, which silences the voice at exactly
+  // the sample this cell used to. The two were doing the same work, and only
+  // one of them could tell the four actions apart.
   return isolated;
 }
 
@@ -3249,8 +3352,13 @@ List<TrackerCell> _isolatedTickZoneCells(
   MultiSampleInstrument multi,
   List<TrackerCell> cells,
   List<int> rowStart,
-  _NativeTickZoneRenderer render,
-) {
+  _NativeTickZoneRenderer render, {
+  // The NNA mixer needs these for the tracker RELEASE model; see [_releaseGain].
+  // They ride as named parameters so the four call sites read explicitly rather
+  // than by position.
+  required ReplayProfile profile,
+  required double tickSamples,
+}) {
   final total = rowStart.last;
   final left = Float64List(total);
   final voices = <_NativeTickZoneVoice>[];
@@ -3294,19 +3402,45 @@ List<TrackerCell> _isolatedTickZoneCells(
           );
           // A set-NNA override (S73–S76) replaces the New-Note Action, but NOT
           // the duplicate-check action (DCA), matching IT semantics.
+          // ⚠️ IT and the engine number these DIFFERENTLY, and the raw IT value
+          // was being fed straight into the switch below:
+          //
+          //   IT      0 cut · 1 CONTINUE · 2 note off · 3 note fade
+          //   engine  0 cut · 1 release  · 2 fade     · 3 leave alone
+          //
+          // So "continue" released the voice, "note off" faded it by a fadeout
+          // of zero (i.e. did nothing), and "note fade" fell off the end of the
+          // switch and did nothing at all. Only `cut` was right, and only
+          // because both encodings spell it 0 — which is exactly why the `cut`
+          // control passed at 0.999 while the other three did not.
+          //
+          // DCA needs no conversion: IT numbers it 0 cut · 1 note off · 2 note
+          // fade, which already matches the engine. The `S7[3-6]` override is
+          // stored as an engine code too, so both bypass the map.
           final action = duplicate
               ? nativeDcaOf(zone)
-              : (nnaOverride ?? nativeNnaOf(old.zone));
+              : (nnaOverride ?? _engineActionForItNna(nativeNnaOf(old.zone)));
+          // ⚠️ A voice is released or faded ONCE, by the note that displaced it.
+          //
+          // These were plain assignments, and a released or faded voice stays
+          // in `voices` (its `endSample` is still open), so every LATER note
+          // re-visited it and pushed the moment forward again. A fade meant to
+          // finish 40 ms after note 2 was restarted by note 3, then note 4, and
+          // never completed — which is why the fadeout arithmetic measured
+          // exactly right at the call site (`fadeSamples=1764`, the two ticks
+          // libxmp predicts) while the render still piled voices up to nearly
+          // three times a cut's peak. The rate was never the problem; the
+          // moment kept moving.
           switch (action) {
             case 0:
               old.endSample = newStart;
             case 1:
-              old.releaseAt = newStart;
+              old.releaseAt ??= newStart;
               // Record the release trigger step once (matches the original
               // guard that only rendered the release variant the first time).
               old.releaseStep ??= startStep;
             case 2:
-              old.fadeAt = newStart;
+              old.fadeAt ??= newStart;
           }
         }
         voices.add(voice);
@@ -3347,7 +3481,21 @@ List<TrackerCell> _isolatedTickZoneCells(
     }
     final start = rowStart[voice.startStep];
     final end = voice.endSample.clamp(start, total);
-    final fadeRate = nativeFadeoutOf(voice.zone) / 1024.0;
+    // NNA note-FADE. IT counts a fadeout down LINEARLY — `0x10000` less
+    // `fadeout << 6` per tick, so `1024 / fadeout` ticks in all, two of them at
+    // the fixture's 512 — where this decayed exponentially over hundreds of ms
+    // and left faded voices ringing under the notes that replaced them
+    // (`nna_fade.it`: envelope 0.21 against references agreeing at 0.99).
+    //
+    // ⚠️ This is a SECOND release path. Seven render sites share one release
+    // expression and I fixed those first; the numbers did not move a hair,
+    // because NNA voices are mixed here instead. A metric that does not budge
+    // after a fix is telling you the code you changed never ran.
+    final fadeout = nativeFadeoutOf(voice.zone);
+    final fadeRate = fadeout / 1024.0;
+    final fadeSamples = profile.trackerRelease && fadeout > 0 && tickSamples > 0
+        ? (1024.0 / fadeout) * tickSamples
+        : 0.0;
     if (rightStem != null) {
       for (var i = start; i < end; i++) {
         final released = voice.releaseAt != null && i >= voice.releaseAt!;
@@ -3357,7 +3505,9 @@ List<TrackerCell> _isolatedTickZoneCells(
         if (selected == null || i >= selected.length) continue;
         var gain = 1.0;
         if (voice.fadeAt != null && i >= voice.fadeAt!) {
-          gain = exp(-fadeRate * (i - voice.fadeAt!) / kSampleRate * 8.0);
+          gain = fadeSamples > 0
+              ? (1.0 - (i - voice.fadeAt!) / fadeSamples).clamp(0.0, 1.0)
+              : exp(-fadeRate * (i - voice.fadeAt!) / kSampleRate * 8.0);
         }
         rightStem[i] += selected[i] * gain;
       }
@@ -3368,7 +3518,9 @@ List<TrackerCell> _isolatedTickZoneCells(
       if (selected == null || i >= selected.length) continue;
       var gain = 1.0;
       if (voice.fadeAt != null && i >= voice.fadeAt!) {
-        gain = exp(-fadeRate * (i - voice.fadeAt!) / kSampleRate * 8.0);
+        gain = fadeSamples > 0
+            ? (1.0 - (i - voice.fadeAt!) / fadeSamples).clamp(0.0, 1.0)
+            : exp(-fadeRate * (i - voice.fadeAt!) / kSampleRate * 8.0);
       }
       left[i] += selected[i] * gain;
     }
@@ -3500,6 +3652,10 @@ void _renderMultiSampleChannelInto(
         );
         return (left: out, right: null);
       },
+      profile: channel.profile,
+      tickSamples: (rowStart.length > 1 && ticksPerRow > 0
+          ? (rowStart[1] - rowStart[0]) / ticksPerRow
+          : 0.0),
     );
     final n = min(rendered.left.length, mix.length - sampleOffset);
     for (var i = 0; i < n; i++) {
@@ -3608,6 +3764,10 @@ void _renderMultiSampleChannelInto(
         );
         return (left: stereo.left, right: stereo.right);
       },
+      profile: channel.profile,
+      tickSamples: (rowStart.length > 1 && ticksPerRow > 0
+          ? (rowStart[1] - rowStart[0]) / ticksPerRow
+          : 0.0),
     );
     return (
       left: rendered.left,
@@ -3714,6 +3874,8 @@ void _renderMultiSampleChannelIntoVariable(
         );
         return (left: out, right: null);
       },
+      profile: channel.profile,
+      tickSamples: _tickSamplesFrom(rowStart, ticksPerRow),
     );
     for (var i = 0; i < rendered.left.length && i < mix.length; i++) {
       mix[i] += rendered.left[i];
@@ -3815,7 +3977,8 @@ void _renderChannelIntoStereo(
 }) {
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
 
-  if (channel.instrument is MultiSampleInstrument && _hasPerTickEffect(cells)) {
+  if (channel.instrument is MultiSampleInstrument &&
+      (_hasPerTickEffect(cells) || _needsNnaVoices(channel.instrument))) {
     final rendered = _renderMultiSampleChannelStereoTicks(
       channel,
       cells,
@@ -3864,7 +4027,9 @@ void _renderChannelIntoStereo(
   // correct, and a dispatch above it meant nothing ever arrived.
   final panEnv = channel.panEnvelope;
   final hasPanEnv = panEnv != null && !panEnv.isEmpty;
-  if (!_hasPerTickEffect(cells) && !hasPanEnv) {
+  if (!_hasPerTickEffect(cells) &&
+      !hasPanEnv &&
+      !_needsNnaVoices(channel.instrument)) {
     final rendered = channel.instrument is SampleInstrument
         ? _renderSampleNotesStereo(channel, cells, timing, pool)
         : channel.instrument is MultiSampleInstrument
@@ -4945,7 +5110,8 @@ void _renderChannelIntoVariable(
   if (channel.muted || !cells.any((c) => !c.isEmpty)) return;
   final rows = cells.length;
 
-  if (channel.instrument is MultiSampleInstrument && _hasPerTickEffect(cells)) {
+  if (channel.instrument is MultiSampleInstrument &&
+      (_hasPerTickEffect(cells) || _needsNnaVoices(channel.instrument))) {
     _renderMultiSampleChannelIntoVariable(
       mix,
       channel,
@@ -5393,6 +5559,8 @@ const _nativeTickFullBufferLimit = kSampleRate * 120;
           );
           return (left: stereo.left, right: stereo.right);
         },
+        profile: channels[c].profile,
+        tickSamples: _tickSamplesFrom(rowStart, ticks),
       );
       final renderedRight = rendered.right ?? rendered.left;
       for (var i = 0; i < acc; i++) {
@@ -5996,6 +6164,7 @@ void _sampleRenderRowsMono(
   int rowFrom,
   int rowTo,
 ) {
+  final tickSamplesLocal = _tickSamplesFrom(rowStart, ticks);
   final env = channel.volumeEnvelope;
   final hasEnv = env != null && !env.isEmpty;
   const declickSec = 0.003;
@@ -6082,13 +6251,15 @@ void _sampleRenderRowsMono(
         final nativeEnv = voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
         final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
             (hasEnv ? env.levelAt(t * 1000) : 1.0);
-        final fadeRate = cur.nativeFadeout / 1024.0;
         final relSamples = max(0, i - st.releaseStartSample);
-        final release = voice.released
-            ? (fadeRate > 0
-                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
-                : exp(-relSamples / (0.03 * kSampleRate)))
-            : 1.0;
+        final release = _releaseGain(
+          released: voice.released,
+          relSamples: relSamples,
+          nativeFadeout: cur.nativeFadeout,
+          hasVolumeEnvelope: cur.nativeVolumeEnvelope != null,
+          profile: channel.profile,
+          tickSamples: tickSamplesLocal,
+        );
         // Accumulate the un-gained stem; the caller applies gain once. Anti-click
         // (mirror of the buffered [_renderSampleChannelInto]): residue tail on a
         // hard cut, soft-start fade-in on a trigger — voice state carries the
@@ -6133,6 +6304,7 @@ void _sampleRenderRowsStereo(
   int rowFrom,
   int rowTo,
 ) {
+  final tickSamplesLocal = _tickSamplesFrom(rowStart, ticks);
   final env = channel.volumeEnvelope;
   final hasEnv = env != null && !env.isEmpty;
   const declickSec = 0.003;
@@ -6253,13 +6425,15 @@ void _sampleRenderRowsStereo(
                     ? (cur.nativePanEnvelope?.panAt(t * 1000) ?? 0.0)
                     : 0.0))
             .clamp(-1.0, 1.0);
-        final fadeRate = cur.nativeFadeout / 1024.0;
         final relSamples = max(0, i - st.releaseStartSample);
-        final release = voice.released
-            ? (fadeRate > 0
-                ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
-                : exp(-relSamples / (0.03 * kSampleRate)))
-            : 1.0;
+        final release = _releaseGain(
+          released: voice.released,
+          relSamples: relSamples,
+          nativeFadeout: cur.nativeFadeout,
+          hasVolumeEnvelope: cur.nativeVolumeEnvelope != null,
+          profile: channel.profile,
+          tickSamples: tickSamplesLocal,
+        );
         final amount = vol * attack * level * release;
         final di = i - sampleBase;
         // Anti-click — byte-for-byte mirror of the buffered
@@ -6786,6 +6960,7 @@ void _zoneRunRenderChunkStereo(
   int rowFrom,
   int rowTo,
 ) {
+  final tickSamplesLocal = _tickSamplesFrom(rowStart, ticks);
   final gain = channel.gain;
   final env = channel.volumeEnvelope;
   final hasEnv = env != null && !env.isEmpty;
@@ -6867,13 +7042,15 @@ void _zoneRunRenderChunkStereo(
               voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
           final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
               (hasEnv ? env.levelAt(t * 1000) : 1.0);
-          final fadeRate = cur.nativeFadeout / 1024.0;
           final relSamples = max(0, i - run.releaseStartSample);
-          final release = voice.released
-              ? (fadeRate > 0
-                  ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
-                  : exp(-relSamples / (0.03 * kSampleRate)))
-              : 1.0;
+          final release = _releaseGain(
+            released: voice.released,
+            relSamples: relSamples,
+            nativeFadeout: cur.nativeFadeout,
+            hasVolumeEnvelope: cur.nativeVolumeEnvelope != null,
+            profile: channel.profile,
+            tickSamples: tickSamplesLocal,
+          );
           // Anti-click — mirror of the buffered [_renderSampleChannelIntoVariable]
           // native-sink emit that [_renderLongNativeVariableStereo] drives: a
           // hard-cut residue tail vs. a soft-start fade-in, on the pre-gain
@@ -6936,6 +7113,7 @@ void _zoneRunRenderChunkMono(
   int rowFrom,
   int rowTo,
 ) {
+  final tickSamplesLocal = _tickSamplesFrom(rowStart, ticks);
   final gain = channel.gain;
   final env = channel.volumeEnvelope;
   final hasEnv = env != null && !env.isEmpty;
@@ -7015,13 +7193,15 @@ void _zoneRunRenderChunkMono(
               voice.volEnvEnabled ? cur.nativeVolumeEnvelope : null;
           final el = nativeEnv?.levelAt(t * 1000, released: voice.released) ??
               (hasEnv ? env.levelAt(t * 1000) : 1.0);
-          final fadeRate = cur.nativeFadeout / 1024.0;
           final relSamples = max(0, i - run.releaseStartSample);
-          final release = voice.released
-              ? (fadeRate > 0
-                  ? exp(-fadeRate * relSamples / kSampleRate * 8.0)
-                  : exp(-relSamples / (0.03 * kSampleRate)))
-              : 1.0;
+          final release = _releaseGain(
+            released: voice.released,
+            relSamples: relSamples,
+            nativeFadeout: cur.nativeFadeout,
+            hasVolumeEnvelope: cur.nativeVolumeEnvelope != null,
+            profile: channel.profile,
+            tickSamples: tickSamplesLocal,
+          );
           // Anti-click — mirror of the buffered [_renderSampleChannelIntoVariable]
           // emit that [_renderLongNativeVariable] drives: a hard-cut residue tail
           // vs. a soft-start fade-in, on the pre-gain filtered scalar. (filterOut

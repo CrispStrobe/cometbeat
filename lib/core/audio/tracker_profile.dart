@@ -207,6 +207,7 @@ class ReplayProfile {
     required this.latchVolSlideParam,
     required this.volumeSlideOnTick0,
     required this.tremor,
+    required this.trackerRelease,
     required this.panLaw,
   });
 
@@ -236,6 +237,33 @@ class ReplayProfile {
   /// zero nibble, so this is a model rather than a flag.
   final TremorModel tremor;
 
+  /// Whether a RELEASED voice follows the tracker's release model rather than
+  /// our authored exponential decay.
+  ///
+  /// Two rules, both from libxmp's `player.c`, and we had neither:
+  ///
+  ///   * **A fadeout is LINEAR, per tick.** `xc->fadeout` counts down from
+  ///     `0x10000` by `ins_fade` every tick, and IT scales its instrument field
+  ///     by `<< 6` — so a fadeout of 512 empties in `65536 / (512 * 64)` = **two
+  ///     ticks**, 40 ms at the usual tempo. We decayed exponentially over
+  ///     hundreds of ms, so NNA-faded voices kept ringing under the new ones
+  ///     (`nna_fade.it`: envelope correlation 0.21 against references agreeing
+  ///     at 0.99).
+  ///   * **An envelope's release segment IS the release.** When the instrument
+  ///     has a volume envelope, IT walks it past the sustain point and applies
+  ///     no decay of its own. We applied our exponential ON TOP of the envelope
+  ///     — a double decay, which is why `nna_off.it` came out far too quiet
+  ///     (0.34 against 0.94).
+  ///
+  /// ⬜ **True for [impulse] only, because that is what has been measured.** XM
+  /// scales its fadeout differently (libxmp: `v_fade << 1`, so a different
+  /// number of ticks for the same stored value) and there is no XM fadeout
+  /// fixture yet; enabling it there would be a guess wearing a measurement's
+  /// clothes. MOD and S3M have no envelopes or fadeout at all, and [native] is
+  /// our own authored model, where the exponential release is the intended
+  /// behaviour rather than an approximation of anything.
+  final bool trackerRelease;
+
   /// How a pan position becomes channel gains. Every tracker is [PanLaw.linear];
   /// our own songs keep [PanLaw.constantPower], which sounds better and is not
   /// what a module playback is trying to be.
@@ -261,6 +289,7 @@ class ReplayProfile {
         latchVolSlideParam: latchVolSlideParam,
         volumeSlideOnTick0: volumeSlideOnTick0,
         tremor: tremor,
+        trackerRelease: trackerRelease,
         panLaw: panLaw,
       );
 
@@ -272,6 +301,7 @@ class ReplayProfile {
     latchVolSlideParam: false,
     volumeSlideOnTick0: false,
     tremor: TremorModel.impulse,
+    trackerRelease: false,
     panLaw: PanLaw.linear,
   );
 
@@ -283,6 +313,7 @@ class ReplayProfile {
     latchVolSlideParam: true,
     volumeSlideOnTick0: false,
     tremor: TremorModel.fastTracker,
+    trackerRelease: false,
     panLaw: PanLaw.linear,
   );
 
@@ -295,6 +326,7 @@ class ReplayProfile {
     latchVolSlideParam: true,
     volumeSlideOnTick0: true,
     tremor: TremorModel.screamTracker,
+    trackerRelease: false,
     panLaw: PanLaw.linear,
   );
 
@@ -306,6 +338,7 @@ class ReplayProfile {
     latchVolSlideParam: true,
     volumeSlideOnTick0: true,
     tremor: TremorModel.impulse,
+    trackerRelease: true,
     panLaw: PanLaw.linear,
   );
 
@@ -328,6 +361,7 @@ class ReplayProfile {
     // field, which is what we want for our own material. Modules get the
     // linear law the trackers actually used.
     tremor: TremorModel.impulse,
+    trackerRelease: false,
     panLaw: PanLaw.constantPower,
   );
 }
