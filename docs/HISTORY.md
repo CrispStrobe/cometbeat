@@ -2,10 +2,979 @@
 
 The record of what's been built and lives in production
 ([mus-theta.vercel.app](https://mus-theta.vercel.app)). Forward-looking work —
-what's pending and planned — lives in [PLAN.md](PLAN.md); this file is the
-changelog it graduated from.
+what's pending and planned — lives in the canonical [PLAN.md](../PLAN.md) at
+the repo root (detailed roadmap planning and the agent board are in
+[docs/PLAN.md](PLAN.md)); this file is the changelog they graduate from.
 
 ## Progression
+
+## Audio Editor ("Multitrack") — single-file-editor parity ladder (2026-07-25)
+
+**Complete — all 16 items shipped.** This is the arc that closed the gap to a
+single-file audio editor; the swiss-army-knife arc that follows built on it.
+
+The DAW is already a strong **non-destructive multitrack** engine: stereo
+throughout; per-clip/track/bus/master FX chains + breakpoint automation (reverb,
+delay, chorus, flanger, ring-mod, distortion, bit-crush, low/high-pass,
+compressor, gate, pitch-shift, time-stretch, tremolo, vocoder, voice-shape, gain,
+pan); split/trim/fade(linear·exp·s-curve)/gain/pan/width/reverse/respeed/freeze/
+merge/crossfade; per-clip + per-track + marked-range selection with range
+FX/gain/fade/mute/track-automation; WAV/MP3/FLAC import (mono/stereo, magic-byte);
+WAV(8/16/24/32-bit)+MP3(128/192/320) export with sample-rate choice, whole-mix +
+marked-range, optional normalize-on-export; undo/redo depth-50; stereo waveform +
+ruler + beat grid; snap; whole-arrangement loop; `.cbdaw` save/load; Space/Delete
+keys.
+
+Gaps vs a capable **single-file audio editor**, to close in order. Most DSP already
+exists in `crisp_dsp/` (`sample_edit.dart`: `normalizePcm`/`removeDcOffset`/
+`trimSilence`/`trimPcm`/`peakMagnitude`; `biquad.dart` full filter set;
+`sfxr.dart` tone/noise) — the work is wiring it as DAW clip ops (bake pattern like
+`reverseClip`) + inspector UI + tests.
+
+**Tier 1 — destructive clip processing (bake to SampleSource; DSP exists):**
+- [x] **O1** Normalize clip — one gain from the loudest sample across BOTH channels (stereo image preserved), target 0.98 FS; no-op on silence.
+- [x] **O2** Invert phase (×−1) — a bake op + inspector item.
+- [x] **O3** Remove DC offset (`removeDcOffset`), per channel.
+  > O1–O3 share a new private `_bakeClip(track, index, transform)` in
+  > `daw_service.dart` — renders the clip's trimmed window (both channels),
+  > hands it to `transform`, and rebuilds the `Clip` preserving placement/gain/
+  > pan/width/mute/fades/effects (the `reverseClip` pattern, trim folded in).
+  > O4–O6 reuse it. Undoable (`_record`); +5 tests.
+- [x] **O4** Trim silence from clip edges + crop to the marked range.
+  `trimSilenceFromClip` judges a stereo clip on BOTH channels at once (so they
+  stay sample-aligned) and slides the clip later by exactly the leading
+  silence, so the surviving audio keeps its place — this is why `_bakeClip`'s
+  transform now returns a `_BakedTake` with a `startShiftMs`.
+  `cropToRange(tracks, start, end)` keeps only what's inside.
+- [x] **O5** `silenceRange(tracks, start, end)` cuts the covered segments out
+  (no ripple — surrounding clips keep their timing). Distinct from the existing
+  `setClipMutedInRange`, which is reversible and leaves the clips in place.
+  Both share `_removeClipsAroundRange` (split at both bounds, then drop one
+  side; a sliver too short to split is decided by its midpoint).
+- [x] **O6** `amplifyClip(track, index, db)` (bake) + a conventional dB
+  dialog. Complements the non-destructive Gain FX: this rewrites the samples,
+  so a later normalize/statistic sees the new level.
+
+**Headless core + CLI (done alongside Tier 1 → 2).** The edit maths lives in
+`lib/core/audio/daw_edits.dart` — Flutter-free pure functions (`normalizeTake` ·
+`amplifyTake` · `invertTake` · `removeDcTake` · `trimSilenceTake` ·
+`clipStatsOf` · `generateWave` · `editClipsAroundRange`). `DawService` is now a
+thin wrapper over them (undo · render cache · notify), and **`bin/dawedit.dart`**
+drives the same functions on a real WAV, so an op can be unit-tested headlessly
+AND heard: `dart run bin/dawedit.dart in.wav out.wav --normalize --amplify -6`,
+`--trim-silence`, `--crop A:B`, `--silence A:B`, `--stats`,
+`--generate sine:440:2 out.wav --play`. Ops chain in the order given; stereo is
+preserved. Verified end-to-end (2 s sine @ 0.25): normalize → 0.98 peak / RMS
+0.693, −6 dB → 0.491, crop 500:1500 → 1000 ms, silence 500:1500 → still 2000 ms
+with RMS × √0.5 exactly (proof the hole doesn't ripple), head-silence →
+trim-silence → exactly 500.0 ms cut. `bin/listen.dart` reads the generated tone
+as A4 440.0 Hz, clarity 1.00. Tests: `daw_edits_test.dart` (19, headless) +
+`dawedit_cli_test.dart` (8, real subprocess).
+
+> ⚠️ **HEADS-UP for the loop-suite agent (not mine to fix): `main` is red in
+> `layout_audit_test`.** `e4a6dfee` re-registered the orphaned DrumKit screen —
+> which means the layout audit renders it for the FIRST time, and it fails:
+> `drumkit @ SE 375x667 [de]: A RenderFlex overflowed by 97 pixels on the
+> bottom.` (German only, phone only — the longer German labels plus the 4 new
+> kits push it over.) Verified it's the re-registration: `drumkit` had 0
+> registry entries before that commit and 2 after, so the screen was simply
+> never audited before. Repro: `flutter test test/layout_audit_test.dart`.
+> Likely a scroll/`Expanded` fix in `drumkit_screen.dart` — left alone since
+> that's your file and you're actively in it.
+
+> ⚠️ **HEADS-UP for the tracker agent (not mine to fix):** `b3858e85` committed
+> `test/native_tick_zone_reuse_test.dart`, which asserts
+> `test/fixtures/wonderfulpain.it` "must be present" — but that fixture is
+> **untracked**; it exists only in the `mus/` worktree. So a full
+> `flutter test` is RED on `main` for everyone else and in CI (3460 pass, 8
+> skip, this 1 fails). I did NOT commit the fixture: it's an unclear-provenance
+> module, which the licensing rules keep out of tracked files. Either gate the
+> test on the file existing (skip when absent, like the other corpus-backed
+> tests) or point it at a fixture that can be committed.
+
+**Tier 2 — generation + precise editing:**
+- [x] **O7** Generate clip: engine + CLI + **in-app dialog** (shape dropdown ·
+  frequency, shown only for the pitched shapes · length · level → a clip on its
+  own new lane). `generateWave`, 7 shapes;
+  `DawService.addGeneratedClip` puts it on its own lane with a 5 ms fade so the
+  hard edges don't click). Deliberately NOT built on `sfxr` — that's an
+  envelope-shaped SFX generator, wrong for a steady signal. Noise is scaled by
+  its realised peak (the pink filter's sum overshoots ~19% otherwise, which
+  would clip a loud generated clip).
+- [x] **O8** Zoom in/out/fit. The fixed `_pxPerSecond = 80` became
+  `_basePxPerSecond * _zoom` behind a getter, so all twelve time↔pixel sites
+  (ruler, clips, beat grid, range overlay, drag maths, tap-to-seek) rescale
+  together with no other edits. 0.1x–20x in 1.5x steps; Fit solves the zoom
+  that puts the whole arrangement in the viewport.
+- [x] **O9** Loop the marked selection. Marking a range while Loop is on makes
+  playback wrap at the range end instead of the arrangement end — the standard
+  loop-region behaviour, no extra toggle to discover. `loopsMarkedRange` is the
+  one condition (`_loop && _hasFxRange`), checked in `_onTick`.
+- [x] **O10** Clip statistics in the inspector: duration · mono/stereo · peak
+  dBFS · RMS dBFS, plus a red "clipping!" flag when any sample is at or past
+  full scale. `clipStatsOf` / `DawService.clipStats`; dBFS floors at
+  `silenceDb` = −160 rather than −infinity. Peak/RMS/dBFS are left untranslated
+  as technical units.
+
+**Tier 3 — filters/EQ + analysis + markers:**
+- [x] **O11** Full biquad set as FX: band-pass · notch · peaking EQ · low/high
+  shelf, **plus a new phaser** (`crisp_dsp/phaser.dart` — a cascade of
+  first-order all-passes swept by an LFO; there was no phaser in the DSP set,
+  and it isn't a delay effect so chorus/flanger couldn't stand in). ⚠ This
+  touches `DawClipEffectType`; the new values are **appended**, and `.cbdaw`
+  stores effects by NAME, so nothing shifts for saved projects or for the FX
+  work happening in parallel. Tests assert **spectrally** (two tones in, check
+  which survived), which is the only thing that proves the right `BiquadKind`
+  reached the DSP with the right params.
+- [x] **O12** Level meters: peak + RMS of the baked mix at the playhead, on a
+  −60…0 dBFS scale, turning red at full scale. Repaints off the playhead
+  notifier so it costs nothing when stopped.
+- [x] **O13** Markers with labels: `DawMarker` on `DawTimeline`, kept sorted,
+  **undoable** (in the snapshot) and **saved in `.cbdaw`**. Flags render on the
+  ruler and are tappable to rename/delete; the Markers menu adds one at the
+  playhead and jumps to previous/next. Navigation only — a test asserts a
+  marker can't change the render. Also fixed the ruler at low zoom: tick
+  spacing now grows (1/2/5/10/15/30/60…s) so zooming out doesn't produce a wall
+  of overlapping labels.
+
+### Beyond the ladder — real DAW gaps the ladder missed (2026-07-25)
+
+The O1–O16 list was written against a single-file editor, so it
+never asked for the things a MULTITRACK editor must do. Three were genuinely
+missing and are now shipped:
+
+- [x] **Move a clip between lanes.** `moveClipToTrack` (the old `moveClip` only
+  slid a clip along the lane it was already on). Long-press-drag now moves
+  vertically too — committed on release, because re-parenting mid-drag tears
+  down the gesture driving it — plus a "Move to lane" picker in the inspector,
+  which is the reliable path on a phone. The clip keeps source/trim/gain/pan/
+  fades/FX; only the lane changes.
+- [x] **Per-track (stem) export — single, selected, or all.** `bakeTrack` /
+  `bakeTrackStereo` + a source dropdown in the export sheet (full mix · or one
+  lane), **plus batch stems**: `showAudioStemsExportSheet` writes one file per
+  lane into a chosen folder, and the export dialog offers "All as stems" or
+  "Selected as stems" depending on the gutter selection. Silent lanes are
+  skipped rather than written as empty files, and one bad lane doesn't abandon
+  the rest. Picking a folder needs a directory picker, which desktop has and
+  mobile doesn't — where it's unavailable this degrades to a save prompt per
+  stem (more taps, still works) instead of hiding the feature. The path join is
+  deliberately NOT `dart:io`'s separator: `audio_export.dart` is web-safe and
+  must stay importable there. **Stems deliberately
+  skip the master limiter** — limiting each stem is mastering a part, and it
+  would stop stems summing back to the mix, which is the point of stems. Other
+  lanes' solo is ignored (asking for lane 3 means lane 3); the lane's own mute
+  is honoured. Filenames carry the lane (`…-stem-<lane>.wav`).
+- [x] **Drawable automation curves.** `automation_curve_editor.dart`: drag a
+  breakpoint to shape it, tap empty canvas to add, hold a handle to remove
+  (never below two). Automation and fade curves already existed and already
+  played back — what was missing was any way to SEE or draw them; the numeric
+  list stays alongside for precision and accessibility.
+
+⚠️ **Correction on that comparison:** split · copy/cut/paste/duplicate ·
+per-clip/track/bus/master/range FX · fade curves (linear/exp/S) already existed
+before this pass — the gap was narrower than "tiny steps", but these three were
+real and are the difference between a clip arranger and a DAW.
+
+## Audio Editor → swiss-army knife (2026-07-26 … 07-28)
+
+**One-line status:** the Audio Editor carries the full DSP bag of tricks a
+serious workstation carries — **50+ effects, every one reachable from the GUI
+*and* the CLI with no per-effect UI or CLI code** — plus five-mode interop, so
+any lane opens in any other editor with the same rack. All of A1–A7, B1–B6,
+C1–C5, D1–D6 and the F foundations shipped; the scoping doc
+**[AUDIO_EDITOR_SUITE.md](AUDIO_EDITOR_SUITE.md)** stays current for the gap
+tables and the interop matrix.
+
+**What made it cheap.** One registry (`fx_spec.dart` + `fx_params.dart`)
+describes the whole rack machine-readably, so the CLI, the GUI panel, `--list`
+documentation, range validation and the chain-string codec are all *generated*
+from it. Adding an `FxType` reached every surface with one line for menu order,
+guarded by a test — the lever held across seven DSP slices.
+
+**Two bugs worth remembering**, both found by tests that measured the CLAIM
+rather than the plumbing: export downsampling had been running through a plain
+interpolator, folding everything above the new Nyquist back into the music on
+every downsampled export (A6); and the GUI conversion-quality picker's value was
+dropped at the encode call, leaving a control that did nothing.
+
+The checklist below is the original ladder, as shipped.
+
+### The build log (from the agent board)
+
+  Worktree `../mus-daw-suite` (`feature/daw-suite`). Maintainer ask: the full
+  DSP bag of tricks, **every op in the GUI *and* the CLI**, plus five-mode
+  interop so any lane opens in any editor with the same FX. Full scoping in
+  **[AUDIO_EDITOR_SUITE.md](AUDIO_EDITOR_SUITE.md)**; condensed ladder in the
+  *"Audio Editor — swiss-army ladder"* section below.
+  **Shipped so far (all on `main`):** F1 the chain-string codec · F2 `fxproc`
+  regenerated from the FX registry (whole rack, stereo, `--list`) · F2b the
+  GUI's hand-written label + param tables deleted and derived from the same
+  registry · A1 the rest of the filter set (6 effects) · C1 `.cbdaw` v2, so a
+  saved project keeps its clips **editable**, not just audible · C2 drum +
+  groove round-trip, so every source kind the DAW holds can now go home · C3
+  cross-mode "Open a copy in…" (hosting the already-built `OpenInMenu`, which
+  had no host) · A3 dynamics (look-ahead limiter · de-esser · multiband) · A4 the
+  channel/stereo ops.
+  · A5 restoration (noise reduction · hum · de-click · de-clip · DC).
+  **Pillars A, B, C and D are complete** — A1 filters · A2 tone curves ·
+  A3 dynamics · A4 channel/stereo · A5 restoration · A7 generators (A6 is the
+  one deliberate 🔶, below) · B1–B6 · C1–C5 (C4/C5 by `opus (tracker→editors)`)
+  · D1 ripple · D2 groups+nudge · D3 clip envelope · D4 loudness · D5 take
+  lanes+comping · D6 tempo map.
+  ✅ **A6 closed too** — band-limited rate conversion (`resampleHq`) now backs
+  the export path, which had been folding everything above the new Nyquist back
+  into the music on every downsampled export. **The whole ladder is shipped**;
+  the one remaining 🔶 is time-stretch quality tiers, which are a different
+  algorithm (phase vocoder / WSOLA), not a resampler setting.
+  **Rack is now 50 effects**, every one reachable from the GUI *and* the CLI with
+  no per-effect UI or CLI code — the F1/F2 lever has held across five DSP slices.
+  A "learn the noise from the marked range" service op is the natural next step
+  for `noiseReduce` (the DSP already accepts a profile; only the UI is missing).
+  ⚠ **Interop status, precisely (updated 2026-07-27 — now COMPLETE):** every
+  clip kind opens its OWN editor exactly (score/tab/tracker/drum/groove — no
+  conversion, nothing approximated) and that survives a save; every symbolic clip
+  kind (score/tracker/drum/groove) can additionally open a CONVERTED copy OR
+  round-trip-and-replace in any of the four other modes (Loop included), with the
+  cost named first. Tab fretting now survives INBOUND (C4 — a tab enters as a
+  score with its string/fret in `Score.tabVoicings`, so the Tab Workshop
+  reproduces it rather than re-fretting), and a raw-audio clip has a
+  **Transcribe → notation** action (C5 — pure-Dart monophonic, adds a new score
+  clip). Nothing on the interop matrix is outstanding.
+  ⚠️ **@loop-agent — `main` is RED in the registry smoke, and I bisected it for
+  you.** `test/live_flow_test.dart` → *"registry smoke: every game screen renders
+  with real notation"* fails with *"A RenderFlex overflowed by 5.5 pixels on the
+  right"*, from the `LoopCreature` Row at `loop_mixer_screen.dart:4784`. First
+  bad commit is **`bed50475` feat(loop): reach per-track length from the track
+  card** — green at `90650bb5` and every commit before it, red at `bed50475` and
+  every one since. The Row itself is original Loop Mixer code; the new control on
+  the track card is what took the width away from it. Left to you rather than
+  guessed at from outside: 5.5 px is an `Expanded`/`Flexible` or a size choice on
+  the new control, and which one is a design call about what should give.
+  ⚠️ **For the owner of `shared/widgets/open_in_menu.dart`:** it is entirely
+  unlocalized — its menu, its loss dialog and its "cannot open" dialog are
+  hardcoded English. It had no host until now, so this never showed; the Audio
+  Editor's new door makes it user-visible in a de/en app. Left to you rather
+  than half-localized from my side, which would leave the dialogs mismatched.
+  **Files I touch:** `core/audio/fx/*` (additive — new `FxType`s are APPENDED,
+  never reordered, since `.cbdaw` stores effects by name), `core/audio/crisp_dsp/*`
+  (new files), `daw_edits.dart`, `daw_project.dart`, `daw_clip_source_codec.dart`,
+  `bin/fxproc.dart` + `bin/dawedit.dart`, `daw_service.dart`, `daw_screen.dart`,
+  later `core/interop/*`.
+  ⚠️ **For anyone adding an `FxType`: you no longer need to touch
+  `daw_screen.dart`.** Its label switch and its ~300-line param table are gone —
+  both now come from `fx_params.dart`. Add the type, its `defaultFx`, its param
+  descriptors and a dispatch case, plus one line in `kDawClipEffectTypes` for
+  menu ORDER (a test names it if you forget). That was the recurring CI red on
+  this file; it should not happen again.
+  ⚠️ **Overlap heads-up for `opus (tracker→editors)`**: you are also in `fx/*`.
+  I only append to `FxType` + add dispatch cases; if we collide, mine rebases
+  onto yours. Ping via this board.
+  ⚠️ **My C1 push (`c9ce38ab`) left `main` red for one test and I did not catch
+  it before pushing** — `license_obligations_test` pinned the old "a saved clip
+  comes back as audio" trade-off, which C1 deliberately reversed. I ran the DAW
+  and FX suites plus `analyze` before pushing, but the licensing suite was
+  outside that set and my full-suite run finished after the push. Fixed
+  independently by another agent (`6c5b56d1`) before I got back to it, and their
+  version stands. Lesson for this arc: a change to the PROJECT FORMAT needs a
+  full-suite run before the push, not after — the files that care about it are
+  not all named `daw_*`.
+  — opus
+
+  🔻 **MAINTAINER HANDOFF (2026-07-27) → `daw-suite`, from `tracker→editors`:** the
+  maintainer has directed **`opus (tracker→editors)` to take over the cross-mode
+  interop** — the requirement is that EVERY symbolic DAW clip (score/tracker/**drum/
+  groove/loop**, not just score+tracker) can open in ANY other editor, be edited,
+  and **round-trip back into the same clip** so mixing continues (today cross-mode
+  "Open a copy in…" only forks a disconnected copy for score/tracker). **Please
+  PAUSE the C-series interop** — C3 cross-mode open-in, **C4** (tab fretting
+  inbound), **C5** ("Transcribe this clip") — and the interop methods of
+  `daw_screen.dart` (`_openACopyIn`/`_clipAsScore`/the open-in wiring),
+  `core/interop/*`, and `open_in_menu.dart`. **Keep going on the A-series** (A4
+  channel/stereo ops, A5 restoration) + `fx/*` + CLI — those don't touch interop,
+  so we won't collide. I'll confine my `daw_screen.dart` edits to the interop
+  methods and rebase-before-push. Ping here if this bites. — opus (tracker→editors)
+
+
+Maintainer ask: the Audio Editor becomes a **swiss-army knife** — the whole DSP
+bag of tricks a serious workstation carries, **every op available in the GUI
+*and* in a CLI** (the CLI is what makes each one unit- and live-testable), and
+five-mode interop so **any lane opens in any other editor** with the **same FX
+rack for every kind of track**. Everything clean-room from published DSP theory
+(see auto-memory `cleanroom-gpl-port-process`); no encumbered source is read or
+ported.
+
+**Full scoping — the gap tables, the target interop matrix, acceptance criteria
+and non-goals — lives in [AUDIO_EDITOR_SUITE.md](AUDIO_EDITOR_SUITE.md).** This
+is the checklist; keep the detail there, not here.
+
+**The lever.** `fx_spec.dart` (what an effect is) + `fx_params.dart` (each
+param's range/unit/type) already describe the whole rack machine-readably, and
+the GUI is already generated from it. So **generate the CLI from it too**: then
+one new `FxType` yields a GUI control, a CLI verb, `--list` documentation, range
+validation and a preset entry with no further work. The shared surface is a
+**chain string** — `highpass freq=120 | compressor ratio=4 | reverb mix=0.2` —
+that is simultaneously the CLI argument and the app's copy/paste preset, so a
+chain tuned by ear pastes into a test and vice versa.
+
+**Foundations**
+- [x] **F1** `fx/fx_chain_codec.dart` — chain string ↔ `List<FxSpec>`, registry
+  introspection, range validation. Never throws (both faces must *report* a bad
+  chain); names match case/punctuation-insensitively; choices take their label;
+  0..1 params take a percentage; out-of-range clamps + warns; typo hints use
+  **transposition-aware** edit distance (`chorsu`→`chorus` is one finger slip and
+  the commonest miss). Printing is minimal and **round-trips exactly** — the
+  first cut formatted to 4 decimals, which silently moved a slider's 3.53025.
+- [x] **F2** `bin/fxproc.dart` regenerated from the registry: whole rack,
+  `--chain`, `--list [type]`, `--stats`, `--dry-run`, `--mono`, `--play`; old
+  `--effect` flags kept byte-identical. Now **stereo per channel** (it used to
+  downmix every input, discarding half of a stereo recording before processing);
+  a mono input keeps two channels out exactly when the chain moved them apart,
+  because folding a `pan` back to mono discards the effect that was asked for.
+  Tests: `fx_chain_codec_test` (23) + `fxproc_cli_test` (18, real subprocesses).
+- [x] **F2b — the GUI now comes from the registry too** (unplanned, but it is the
+  same lever and it removes a recurring CI red). `daw_screen.dart` hand-wrote
+  BOTH an effect-label switch and a ~300-line param table duplicating
+  `fxTypeLabel`/`fxParamLabel`/`fxParamSpecs`, so every effect added to the rack
+  turned this file red until someone remembered. Both are now derived. Where the
+  two tables disagreed the **wider** range won and was merged back into the
+  registry (a level fader reaching −60 dB, a notch's Q reaching 20), so the CLI
+  now offers exactly what the sliders do. New `fxParamCaption` (label + unit) and
+  `fxSliderStep` (derived from unit + range) keep the panel looking as it did.
+  ⚠ Effect labels moved to the shared sentence-case vocabulary (`Low Pass` →
+  `Low-pass`, `Voice: Robot` → `Robot`); `gate` gained the better name
+  `Noise gate` in the registry rather than losing it.
+- [x] **F3** Chain string as a copy/paste preset — Copy/Paste on the master and
+  track FX racks, over new `setMasterEffects`/`setTrackEffects` (undoable, and
+  cloned on the way in so a caller's list cannot mutate the timeline behind the
+  service's back).
+  * this closes the loop the whole arc rests on: the codec could always print a
+    chain and read one back, but nothing could get the text OUT of the app or
+    INTO it, so the two faces shared a format they could never exchange. Copy
+    yields exactly what `--chain` takes.
+  * copying an AUTOMATED chain warns that automation is dropped — the one thing
+    the string form cannot carry, and losing it silently would be found much
+    later, after the pasted copy had been edited;
+  * pasting nonsense reports it rather than doing nothing.
+  Tests: `fx_chain_clipboard_test` (7), incl. the round trip through a mocked
+  clipboard.
+
+**Pillar A — DSP vocabulary** (each: `FxType` + defaults + ranges + dispatch +
+DSP + a *behavioural* test; then it appears in GUI **and** CLI for free)
+- [x] **A1 filters** — all-pass · one-pole LP/HP · raw biquad (user
+  coefficients) · windowed-sinc (4 shapes + steepness) · Hilbert. Six new
+  `FxType`s that reached the CLI, `--list` and the GUI menu **with no CLI or
+  panel code written** — the lever working as designed. New DSP:
+  `crisp_dsp/one_pole.dart`, `crisp_dsp/fir.dart`, plus `BiquadKind.allpass` and
+  `biquadRawFx` in `biquad.dart`. Tests are spectral/phase, not plumbing
+  (`filter_zoo_fx_test`, 24). Decisions worth keeping:
+  * the one-pole pair is **exactly complementary** (LP + HP sums back to the
+    input sample-for-sample) at the cost of ~0.6 dB at the corner — perfect
+    reconstruction is what a band-splitter needs, and A3's multiband compander
+    will want it;
+  * **unstable** hand-typed biquad coefficients pass through unchanged rather
+    than rendering: the failure mode is not "wrong sound" but full-scale noise
+    then NaN spreading through the master mix;
+  * the windowed sinc is exactly **linear-phase** (a pulse stays put — pinned by
+    a test), and taps set the narrowest achievable band (~6·fs/taps ≈ 520 Hz even
+    at the 511-tap ceiling), so a *narrow* band is still the resonant biquad's
+    job. Documented where the design lives.
+  * ⛔ **Arbitrary-FIR-from-a-tap-list was dropped, not forgotten**: `FxSpec.params`
+    is a fixed map of NAMED doubles by design, and an unbounded coefficient list
+    does not belong in it (it would break the params table, the GUI panel and the
+    chain string at once). `biquadRaw` covers the escape-hatch need with five
+    named params. A real FIR-from-a-file needs a different carrier — a separate
+    design, not a slice of this one.
+- [x] **A2 tone curves** — `tilt` · `loudness` · `deEmphasis` · `contrast`
+  (presence), in new `crisp_dsp/tone_curves.dart`. The biquads answer "remove
+  this frequency"; these answer "make it darker / make it sound right quietly /
+  make it cut through", so each is one or two knobs over a fixed shape.
+  * **tilt is a complementary shelf PAIR**, not a single shelf: one shelf moves
+    the overall level as well as the balance, which is why one-knob tone
+    controls built that way always need the fader afterwards. A test pins that
+    the pivot holds still, and another that it is NOT a low-pass (the top
+    survives a −12 dB tilt).
+  * loudness lifts the bass more than the treble, because the contours steepen
+    faster at the bottom — equal shelves would be a different effect. It is
+    explicitly a broad approximation: nothing here knows the playback level, so
+    a "calibrated" version would be a lie.
+  * presence is odd-symmetric waveshaping that leaves the PEAKS untouched — the
+    "louder without louder" property, pinned by a test, plus one asserting it
+    introduces no DC (an asymmetric shaper would, and the repair tools would
+    then have to remove it).
+- [x] **A6 (part)** — `pitchBend`, a pitch envelope across the clip (tape stop,
+  vinyl brake, a scoop), over the existing `resampleGlide`. **Length-preserving
+  on purpose:** reading faster runs out of source and the tail fades, which is
+  what a tape stop sounds like, rather than the clip silently changing length
+  under the arrangement.
+  ⛔ A6's remaining items are NOT effects and are deliberately left: stretch
+  quality tiers and high-quality rate conversion belong to the export/resample
+  path, not to `FxSpec` (they change the sample RATE, which a same-buffer effect
+  cannot), and "raw up/downsample" is that same path with the anti-aliasing
+  turned off. Scoping them properly means touching `resample.dart` and the
+  export sheet, which is a separate slice.
+  ⚠ One real inconsistency caught by the registry tests while wiring this: I
+  named the de-emphasis choice `microseconds` and defaulted it to `50`, so the
+  value was simultaneously out of its own 0..1 choice range and read as an index
+  by the dispatch. Renamed to `curve`, like the other choice params.
+- [x] **A3 dynamics** — a **look-ahead limiter**, a **de-esser** and a
+  **multiband compressor**. Re-scoped against the code first, which changed the
+  list:
+  * `gateFx` is already documented and built as a downward EXPANDER (threshold ·
+    ratio · range), so a separate `expander` would have been a second name for
+    the same thing — dropped rather than duplicated;
+  * `limiterFx` already existed but was **dead code** (defined, never called,
+    never exposed) *and* is a fast compressor, which is not a limiter: its gain
+    comes from a peak it has already passed, so the transient that triggered it
+    goes out over the ceiling. New `lookaheadLimiterFx` delays the signal while
+    the detector reads ahead, so the gain is already down when the peak arrives.
+    A test pins exactly this, comparing the two — the old one overshoots to 0.6+
+    where the new one holds the ceiling;
+  * ⛔ **arbitrary multi-segment companding is NOT built**, for the same reason
+    arbitrary FIR was dropped in A1: an N-point transfer curve cannot live in
+    `FxSpec.params` (a fixed map of NAMED doubles). Compressor + gate already
+    span the two-slope shape, which is the useful case.
+  * the multiband splitter is **A1's payoff**: it splits with the complementary
+    one-poles, so the three bands sum back to the input EXACTLY and an untouched
+    multiband compressor is a true no-op (asserted). A splitter that did not
+    reconstruct would put a notch at every crossover.
+  Tests: `dynamics_zoo_fx_test` (13), each asserting the PROPERTY that makes the
+  effect what it claims to be — dynamics are the easiest DSP to test wrongly,
+  because "it got quieter" passes for almost any bug.
+- [x] **A4 channels/stereo** — `remix` (the general 2×2 matrix) · `swapChannels`
+  · `stereoWidth` (mid/side) · `centreCancel` · `crossfeed` · `autoPan`, in a new
+  `FxCategory.stereo` group. New DSP `crisp_dsp/stereo_ops.dart`.
+  * **These are the first effects that cannot be run per-channel.** Every other
+    effect in the rack is a per-channel transform, so the stereo path can run it
+    on left and right independently; a channel op is defined by the RELATIONSHIP
+    between the two, so it needs an explicit case in the STEREO dispatch. Get
+    that wrong and the op does *nothing at all*, which reads as "subtle" rather
+    than "broken" — so there is a test whose whole job is to run every channel op
+    on a stereo input it must change, and require a change.
+  * on a MONO buffer they pass through, deliberately: there is no second channel
+    to relate to, and inventing one would be worse than doing nothing.
+  * `remix` is the escape hatch (like `biquadRaw`) and genuinely subsumes swap, a
+    mono fold, a balance and a polarity flip — asserted. The named effects exist
+    because "swap the channels" is easier to find than four numbers.
+  * `centreCancel`'s doc says what it actually does rather than promising "vocal
+    removal": it takes the bass and kick with it, and the centred part's reverb
+    is stereo and stays behind.
+  Tests: `stereo_ops_fx_test` (20).
+- [x] **A5 restoration** — `dcShift` · `humRemove` (harmonic notch comb) ·
+  `noiseReduce` (spectral subtraction) · `declick` · `declip`, in a new
+  `FxCategory.restoration` group. New DSP `crisp_dsp/restoration.dart`, reusing
+  the app's own radix-2 FFT (inverse via the conjugate identity, so there is one
+  transform to be right about).
+  * ⚠ **The self-adaptive noise estimator cannot tell a SUSTAINED tone from
+    noise, and nothing of that shape can.** Its premise is "noise is what is
+    always there"; a drone or a held chord is always there too, so it lands in
+    the profile and gets subtracted as hiss. Found by a test that failed
+    honestly (a steady 440 Hz fixture came out at 0.022 of its level), and kept:
+    the limitation is now DOCUMENTED on `noiseProfile` and **pinned by a test
+    that asserts it happens**, next to one showing the escape hatch — a profile
+    learned from a silent range fixes exactly that case, and `noiseReduceFx`
+    accepts one.
+  * the residual floor is deliberate and tested: subtracting a bin all the way
+    to zero makes isolated survivors shimmer between frames ("musical noise"),
+    which is more distracting than the hiss was.
+  * `declip` reconstructs a plausible arc over a flat top and its doc says
+    *plausible* — the height is inferred from the run length, which is the only
+    evidence there is. That distinction matters to someone deciding whether to
+    re-record.
+  Tests: `restoration_fx_test` (20). Nearly every one is a PAIR — the damage
+  went away, and the signal that should have survived did; the second half is
+  where repair tools go wrong.
+- [x] **A6 time/pitch** — pitch **bend envelope** (in the rack) + **band-limited
+  rate conversion** (`resampleHq`/`resampleRaw` in `crisp_dsp/resample.dart`,
+  the export sheet's *Conversion* choice, `dawedit --rate HZ[:QUALITY]` and
+  `--raw-rate HZ`).
+  * ⚠ **this fixed a real, shipping bug.** Export downsampling called
+    `resampleCubic` — an INTERPOLATOR, which says nothing about the frequencies
+    the destination rate cannot represent. Exporting at 22.05 kHz folded
+    everything above 11 kHz back into the music as a whistle that no later
+    processing could remove, because by then the alias and the music occupy the
+    same frequencies. `resample_hq_test` runs one fixture through both and
+    asserts the fold on the old path and its absence on the new one, so the
+    regression cannot come back quietly.
+  * the fix is one line of intent: the kernel's cutoff is the LOWER of the two
+    Nyquist limits, so content that cannot survive is removed BEFORE it can
+    fold. Windowed-sinc, Blackman, written from the published theory of
+    band-limited interpolation — no implementation was read.
+  * taps are **normalised per output sample**, which is what keeps the first and
+    last samples at level where the kernel is truncated by the buffer ends; the
+    un-normalised version fades both edges, audible as a click at every clip
+    boundary.
+  * quality is `fast`/`good`/`best` (8/16/32 lobes a side) — a cost/depth trade,
+    not a correctness one, so a test asserts the WORST tier is still alias-free.
+    The GUI shows the picker only when the rate is actually changing: a control
+    that does nothing in the default case teaches people to ignore it.
+  * `resampleRaw` is offered as a **deliberately aliasing lo-fi effect** (it is
+    how early samplers sounded) and named so nobody reaches for it expecting
+    quality — its test asserts that it DOES alias, which is the only way to
+    notice if it is ever silently replaced by the good one.
+  * ⚠ two wiring bugs the tests caught: the quality picker's value was dropped
+    at the `build()` call, leaving a control that did nothing; and `--rate` has
+    to update the buffer's OWN sample rate, or the WAV header and every later op
+    still believe the old one (the file then plays at the wrong pitch).
+  * verified end-to-end on written files: a 1→20 kHz sweep converted to 22.05 k
+    paints as one rising line that ends at Nyquist, while `--raw-rate` paints
+    the classic fold-back tent.
+  Tests: `resample_hq_test` (16) + `dawedit_cli_test` (+5).
+  🔶 Still not modelled, and still on purpose: **stretch quality tiers** (time
+  stretching independent of pitch is a different algorithm — phase vocoder or
+  WSOLA — not a resampler setting).
+- [x] **A7 generators** — brown · blue · violet noise · linear and log sweep ·
+  plucked string · impulse, on `GeneratorShape` + `generateWave`, in the GUI's
+  generate sheet and `dawedit`.
+  * the three noise colours are the two useful integrators/differentiators
+    either side of white: brown for rumble and room tone, blue/violet for hiss
+    and air. A test asserts each one's spectral TILT rather than that it made
+    samples — a "noise" generator that returns white for all four would pass any
+    plumbing test.
+  * **log sweep is the one that matters** for measurement: a linear sweep spends
+    most of its time in the top octave, so it barely excites the bass, while a
+    log sweep spends equal time per octave. Both ship because a linear sweep is
+    still the right siren.
+  * **impulse** is the smallest useful generator and the most useful one for
+    this app: send it through any effect and what comes out IS that effect's
+    impulse response, which is how several of the FX tests now check themselves.
+  * `pluck` finally reaches a user — `crisp_dsp/karplus.dart` existed and was
+    unreachable from every screen.
+  ⚠ this slice was reverted wholesale by another agent's stale-checkout commit
+  (`8a2c2d52`) and restored from `e4f0a10e`; the ladder checkbox stayed stale
+  until now. Tests: `generator_shapes_test` (12).
+
+**Pillar B — non-FX editor ops** (`daw_edits.dart` → service → `bin/dawedit.dart`
+→ inspector, the same three-way testability as O1–O6)
+- [x] **B1** `padTake` · `repeatTake` · `findSilences` (anywhere, not just the
+  edges) · `findPhrases` (the complement — one range per phrase, which is what
+  "split this take" needs) · `spliceTakes`. CLI: `--pad`, `--repeat`,
+  `--splice FILE[:MS]`, `--find-silence`, `--split-silence`.
+  * pad reports a NEGATIVE `startShiftMs`, so a caller placing the take on a
+    timeline slides the clip back by the lead and nothing moves;
+  * a negative pad is zero, not a trim — reinterpreting it would be a surprising
+    way to lose audio;
+  * `minLengthMs` is what makes silence detection useful: without it every zero
+    crossing of a quiet passage is a "silence".
+  * ⚠ **splice offers BOTH curves because my first justification was backwards.**
+    Equal-power adds POWERS, so two copies of the same audio read **+3 dB** at
+    the join and *linear* is what holds the level there; equal-power is right for
+    UNRELATED takes (the usual splice) and stays the default. Both pinned.
+- [x] **B2** `ditherTake` — bit-depth reduction with TPDF dither and optional
+  **noise shaping** (plain TPDF already shipped in export). CLI:
+  `--dither BITS[:shape]`.
+  * ⚠ **the shaper's signs were backwards and only a test that measured the
+    claim caught it.** With `e[n] = quantised − shaped` the output noise is
+    `e[n] + h1·e[n−1] + h2·e[n−2]`, so a `(1 − z⁻¹)²` high-pass needs h1 = −2,
+    h2 = +1; I had +1.8/−0.9, which BOOSTED the 2–4 kHz band it exists to clear.
+    The test asserts both halves (less where the ear is sharp AND more where it
+    is not) — checking only the first would pass for a shaper that merely
+    removed noise.
+- [x] **B3** `fullStatsOf` — the measurements that say whether a file is HEALTHY
+  rather than how loud it is: DC offset (invisible on a level meter), crest
+  factor (says "over-compressed" when no loudness figure will), effective bit
+  depth (a 24-bit file landing on 16-bit boundaries was converted, not
+  recorded), zero crossings. CLI: `--full-stats`.
+- [x] **B4** `voiceActivityTrim` — frame energies, a floor MEASURED as a low
+  percentile rather than supplied, hysteresis, and an onset pad. CLI: `--vad`.
+  * ⚠ **no dynamic contrast defeats the method**: the percentile lands on the
+    signal, and a take that is voice throughout looks identical to one that is
+    all room. My first cut returned EMPTY for both — backwards for the first.
+    Absolute level breaks the tie (`kVoiceFloorDb` −45 dBFS), confined to where
+    the better test already failed; both sides pinned.
+- [x] **B5** spectrogram → PNG (`core/audio/spectrogram_png.dart`). CLI:
+  `--spectrogram out.png [--max-hz N] [--grey]`. Kept OUT of `spectrogram.dart`
+  so a caller wanting only the numbers does not pay for an image encoder; each
+  row takes the LOUDEST bin it covers, since averaging hides a narrow tone.
+  Tests assert the picture is READABLE (right row bright, axes the right way).
+- [x] **B6** batch — `--batch DIR --out DIR` over a folder.
+  * ⚠ **one bad file must not abandon the run**, and mine did: `_read` reported
+    errors with `exit()`, which no `try` can catch. Split into `_readOrThrow`
+    (batch, skips and names the file) and `_read` (single file, prints + exits).
+
+**Pillar C — five modes, one document.** The converters already exist
+(`ProjectBridge`, with honest per-route loss reports) and score/tracker clips
+already round-trip **in place**. The gaps:
+- [x] **C1** ⭐ **`.cbdaw` v2 — models survive Save.** `projectToJson` baked
+  every clip to PCM, so the "vector, not bitmap" engine survived only until the
+  user pressed Save: a reopened tracker song was a waveform and every editor
+  door had closed behind it. A clip now stores its MODEL too
+  (`daw_clip_source_codec.dart`), so tracker · groove · drum · score clips come
+  back as themselves. Deliberately **not** a new format — it dispatches over the
+  codecs that already exist (the Tracker's song JSON, `GrooveSpec.toJson` which
+  is also its share token, MusicXML for engraved music), plus a `kind` tag.
+  * the baked PCM STAYS: it is what a source without a model has always been, it
+    is the fallback when a model cannot be decoded, and it **primes the render
+    cache** on load — so a reopened arrangement is editable *and* plays without
+    re-rendering every model first;
+  * neither direction can fail the project: an un-encodable source just gets no
+    entry, an un-decodable one falls back to its audio. Losing editability is
+    bad; losing the audio would be much worse;
+  * **v1 projects still open** (as audio, exactly as before); v2 is what is
+    written. `ClipSourceKind`'s strings are an on-disk representation — add,
+    never rename — pinned by a test.
+  Tests: `daw_project_models_test` (17) — per-type round trips, placement/FX/
+  **licence provenance** riding along, the fallback paths, v1 compatibility, and
+  the cache priming.
+- [x] **C2** Drum + groove round-trip. A beat sent from the Drum Kit and a
+  groove sent from the Loop Mixer could never go home — the two source kinds
+  with no accessor and no door, while score and tracker clips already
+  round-tripped in place. Both clips still HOLD their model, so the way back is
+  exact retrieval, not a conversion. `DawService` gains
+  `isDrumClip`/`clipDrumPattern`/`clipDrumTiming`/`isGrooveClip`/`clipGroove`
+  and `replaceDrum|GrooveClipSource` (over one shared `_replaceClipSource`);
+  `DrumkitScreen` and `LoopMixerScreen` gain the `onReturnToDaw` callback the
+  Tracker already had; `score_router.dart` gains `openDrumPattern`/`openGroove`.
+  * the **timing travels with the grid** (`initialTiming` seeds the Kit's
+    tempo/swing) — without it a round trip silently re-times the beat to the
+    Kit's default, which is a real edit nobody asked for;
+  * ghost notes, placement, and **licence provenance** all survive the trip;
+  * an edit whose clip was deleted meanwhile lands as a new clip rather than
+    vanishing.
+  Tests: `daw_drum_groove_roundtrip_test` (10, engine + both UI doors).
+  ⚠ One existing assertion had to move: `daw_screen_test`'s "a plain audio clip
+  offers no way back" used a demo BEAT as its stand-in for plain audio, which
+  was true only while drum clips had no door. It now uses an actual waveform —
+  which is what the test always said it was about.
+- [x] **C3** Cross-mode "Open a copy in…", routed through `ProjectBridge` with
+  its loss report shown BEFORE the conversion runs. Turned out to be **wiring,
+  not building**: `shared/widgets/open_in_menu.dart` (another agent's C4)
+  already asks the bridge, names each edge's cost in the menu, and gates a lossy
+  conversion behind a confirm — but **nothing hosted it**. The Audio Editor now
+  does, for clips whose model IS a bridge document (score, tracker).
+  * it is a SECOND door, deliberately distinct from the exact "Open in editor"
+    above it: that one hands a clip's own model to its own editor and takes the
+    edit back into the same clip; this one crosses modes, which always costs
+    something. A converted document therefore opens as a **copy with no
+    send-back** — routing a lossy conversion into the source clip would quietly
+    replace the user's original with a degraded version of itself. "Send to
+    Audio Editor" from the target adds a new clip, which keeps both.
+  * **Loop is deliberately not offered** — the bridge reaches it, but a loop
+    document is the sung user track's cells and seeding a groove from them needs
+    the Loop Mixer's own track vocabulary. `OpenInMenu.targets` exists for
+    exactly this ("offering one it cannot open would convert the user's work and
+    then drop it"). A test asserts the bridge was never the blocker, so whoever
+    can seed a groove from cells knows where to look.
+  * two bugs the tests caught: score→tab yields a **`TabDocument`**, but the Tab
+    Workshop is seeded from a SCORE and does its own fretting (that fretting IS
+    the conversion) — so tab now routes the music as a score; and an EMPTY
+    tracker song cannot become a score at all (the bridge says so, correctly),
+    which made an empty-song fixture hide the case.
+  Tests: `daw_open_a_copy_test` (11).
+  ⚠ **Known gap, not mine to paper over:** `open_in_menu.dart` is entirely
+  unlocalized (its own strings are hardcoded English), so this door is English
+  in a de/en app. Localizing it is the widget owner's call — half-localizing it
+  from here would leave the dialogs mismatched.
+- [ ] **C4** Tab fidelity inbound — string/fret/fingering currently die at the
+  door, so Audio Editor → Tab re-frets from scratch.
+- [ ] **C5** "Transcribe this clip → notes → any editor" — the honest audio→
+  symbolic bridge, explicitly labelled as estimation.
+- [ ] **C6** Lane-level send (clip-level exists). **C7** surface the shared rack
+  in Tracker/Loop/Tab/Score too, with the chain string as interchange.
+
+**Pillar D — DAW-grade extras** (as pulled)
+- [x] **D4 loudness metering** — `crisp_dsp/loudness.dart` + `--loudness`.
+  Integrated / short-term / momentary **LUFS**, **true peak** in dBTP, and stereo
+  **correlation**. Peak and RMS answer "how big are the numbers"; none of them
+  answer "how loud does this SOUND", which is what every delivery target is
+  written in.
+  * clean-room from the published broadcast standard — K-weighting, the −0.691
+    calibration constant, the −70 LUFS absolute gate and the −10 LU relative
+    gate are all part of the definition, which is a description of a measurement
+    rather than anyone's code;
+  * the tests are mostly CALIBRATION, not self-consistency: a full-scale 1 kHz
+    sine in both channels reads ~0 LUFS, halving the amplitude costs 6 LU, and
+    mono reads ~3 LU below the same thing in stereo. Getting the absolute
+    constant wrong is the easiest mistake here and the hardest to notice,
+    because every relative comparison still looks right.
+  * **gating is the point**: a test pins that padding a master with silence does
+    NOT change its loudness, which a naive average would get wrong;
+  * **true peak** oversamples before taking the peak, because a signal can sit
+    under 0 dBFS at every sample and still overshoot between them — what a
+    converter or a lossy encoder then clips. Linear interpolation understates it
+    slightly, so it is a floor on the overshoot; that is the safe direction for
+    a warning.
+  * **correlation** predicts what a stereo meter cannot show you: strongly
+    negative material largely disappears when folded to mono, which is what a
+    phone speaker does. The CLI flags both risks inline (`⚠ over −1 dBTP`,
+    `⚠ mono-fold risk`).
+  Tests: `loudness_test` (16).
+- [x] **D1 ripple delete / insert** — `rippleDelete` / `rippleInsert` on
+  `DawService`, in the marked-range menu beside Silence and Crop.
+  * the distinction from the verbs already there is the whole point:
+    `silenceRange` cuts audio out and leaves a HOLE, so everything later keeps
+    the time it was recorded at; a ripple removes the TIME, so the arrangement
+    closes up behind it. Both are wanted, and a test asserts them side by side
+    so neither can drift into the other.
+  * ripple applies to **every lane**, deliberately unlike its menu neighbours:
+    rippling some lanes and not others slides the arrangement out of sync with
+    itself, which is never what anyone means. "Just here" is what Silence is for.
+  * a clip straddling an insertion point is **split**, not relocated — moving it
+    whole would silently move audio the user did not select, and the edit would
+    look like it worked.
+  * **markers ripple too**, and a marker inside a removed range is DROPPED
+    rather than slid to the seam: it pointed at something that no longer exists,
+    and relocating it would invent a cue nobody placed.
+  Tests: `daw_ripple_test` (16).
+- [x] **D6 a real tempo map** — `core/audio/daw_tempo_map.dart`. A single `bpm`
+  is enough to draw a grid for a loop and nothing else: the moment a piece slows
+  into a section, "one beat = 60000/bpm ms" stops being true, and the grid,
+  snapping and any future bar/beat readout inherit the error.
+  * the two questions are INVERSES — `beatAtMs` and `msAtBeat` — and the
+    load-bearing test is that they round-trip **across a change**. A map that
+    gets one direction right and the other wrong looks perfect at a constant
+    tempo and desynchronises exactly where it is needed.
+  * `bpm` still means the OPENING tempo and still get/sets, so the toolbar and
+    every existing caller are untouched; `setBpm` re-tempos the opening segment
+    and leaves later changes where the user put them.
+  * a mid-arrangement change is **undoable**, unlike the opening tempo: one is a
+    setting, the other is an edit to the piece.
+  * snapping routes through `snapPosition`, which keeps the plain millisecond
+    grid while the tempo is constant (the overwhelming majority) and asks the
+    map where the beat actually is when it varies — so the two can never
+    disagree. The **grid painter** takes the map for the same reason: "a line
+    every N pixels" is not the grid any more.
+  * persisted only when the tempo actually VARIES — a constant-tempo project has
+    nothing to say that the default does not cover, and an absent key reads
+    identically on a build predating D6.
+  * ⛔ **gradual tempo curves are deliberately not modelled** (an accelerando as
+    a ramp rather than a staircase): different integral, a curve shape per
+    segment, and every consumer here asks "which beat is this" — which a
+    fine-grained staircase answers to any precision anyone can hear.
+  Tests: `daw_tempo_map_test` (21).
+- [x] **D3 per-clip gain envelope** — `Clip.gainAutomation`, drawn with the
+  existing curve editor from the clip inspector.
+  * the lane already had automation, so the question is why a second kind
+    exists, and the answer is the anchor: lane automation is anchored to the
+    **timeline** and stays put when a clip moves under it (right for a fade
+    across a section); a clip envelope belongs to the **take** and travels with
+    it (right for riding one phrase). Without it, shaping a single take means
+    splitting the clip just to set a gain. A test moves the same clip and
+    asserts the shape moved too.
+  * indexed from the clip's own start in BOTH render paths, so the windowed
+    renderer still agrees byte-for-byte with the full one — an envelope indexed
+    from the wrong origin would break that only for clips that do not start at
+    zero, which is what the test uses.
+  * outside the authored points the multiplier is 1, so a partial envelope
+    leaves the rest of the take alone; persisted only when non-empty.
+  * seeded flat across the clip when opening the editor on a clip that has none
+    — the shared points dialog edits an EXISTING curve and returns null for an
+    empty one, so there would otherwise be no way to make a first envelope.
+  Tests: `daw_clip_envelope_test` (9).
+- [x] **D2 clip groups + nudge** — `Clip.groupId`, `groupClips`/`ungroupClips`,
+  `nudgeClips`.
+  * grouping exists for the case where two clips ARE one musical event recorded
+    twice (a DI and a mic on the same take, a kick and its sub). Sliding one
+    without the other ruins the phase relationship that made them worth keeping
+    together, and it does so SILENTLY — the mix just sounds worse later.
+  * it is a LINK, not a container: each clip keeps its own lane, gain, fades and
+    envelope, and what travels is the **delta**, not the position. Members do
+    not have to start together (a mic further from the source legitimately sits
+    later), and flattening them onto one start would destroy the very
+    relationship grouping protects. Pinned by a test.
+  * ungrouping ONE member frees the whole group — a group with one member left
+    is not a group.
+  * **nudge deliberately ignores snapping**: it is for the case where the grid
+    is not where you want to be, so re-snapping would defeat the verb. It is
+    also the only way to move a clip by a KNOWN amount; a drag lands where the
+    finger lands.
+  * ⚠ two bugs the tests were written to catch: nudging two members of the same
+    group must move it ONCE (collecting members per target and moving each time
+    would double the shift), and a project reloaded with group ids above a fresh
+    counter must not let the NEXT group collide with an existing one — which
+    would silently link clips the user never linked.
+  Tests: `daw_group_nudge_test` (17).
+- [x] **D5 take lanes + comping** — `Clip.takes` / `takeIndex`,
+  `addTake`/`selectTake`/`stackAsTake` on `DawService`, a Takes sheet in the
+  clip inspector.
+  * `source` stays the ACTIVE take, so the renderer needed **no change at all**
+    — takes are a list of alternatives the clip can be swapped between, not a
+    new thing to mix. An empty list means one take, which is what every clip
+    written before this meant, so behaviour is unchanged everywhere.
+  * **comping is deliberately not a fourth concept.** Splitting at a phrase
+    boundary and choosing a take per segment IS a comp, and the timeline already
+    splits; a dedicated comp API would only duplicate two verbs that exist. The
+    load-bearing property is that split is TRIM-based, so a take chosen on the
+    second segment plays the second phrase *of that take* rather than restarting
+    it — a test pins it with a rising ramp, which flat-level fixtures cannot see.
+  * `addTake` seeds the list with the clip's EXISTING source before appending.
+    Seeding it empty is the commonest way this feature betrays someone: the
+    first "record another" quietly discards the original.
+  * an out-of-range `selectTake` does **nothing** rather than clamping — playing
+    a take other than the one asked for is worse than refusing, because the user
+    hears something and believes it is the take they picked.
+  * `stackAsTake` folds a parallel clip in and removes it from the timeline,
+    which is how take lanes actually get made: record passes onto lanes, then
+    stack them into one clip you can audition. The donor's OWN takes come along,
+    and the target is written back **by identity** — a donor earlier on the same
+    lane shifts every later index, so writing by the old index would edit the
+    wrong clip.
+  * persistence stores the alternatives, or they would die at Save (the same
+    failure C1 fixed for clip sources), and a take that HAS a model comes back
+    as that model rather than a bounce. The **active** take is written as a
+    marker instead of a second copy of itself — it is already on disk as the
+    clip's own source, and duplicating a take's audio in every project file is
+    real cost for no information. A damaged list falls back to a single-take
+    clip rather than one whose audible take is missing.
+  Tests: `daw_takes_test` (22, incl. the widget half — the sheet must switch
+  the take, not merely list them).
+
+**Non-goals** (stated so they are not re-litigated): a real-time audio graph (the
+app is offline render-then-play *by design*), third-party plugin hosting, and
+editing symbolic models *from* the waveform (that stays behind the explicit
+Transcribe door).
+
+### ✅ Audio codecs — native + web at parity — SHIPPED (2026-07-26)
+
+**One-line status:** both platforms read WAV, AIFF, MP3, AAC, FLAC, Ogg-Vorbis
+and Ogg-Opus, and write WAV, MP3 (two selectable encoders), AAC and Opus.
+Canonical table: **[AUDIO_CODEC_MATRIX.md](AUDIO_CODEC_MATRIX.md)** — keep that
+file current, not this section, which is the historical record of how it got
+there.
+
+`glint.h` declares `glint_encode_audio(...)` → **MP3 / AAC-LC / Ogg-Opus** in
+one call, and `~/code/glint` implements it (`src/encode_audio_c_api.cpp` + a
+full CELT Opus encoder). The Dart binding shipped earlier; what was missing was
+the native half — `sync_glint.sh` vendored the Ogg-Vorbis DECODE set only, so
+the header *advertised* encoders the compiled plugin didn't contain and
+`loadGlintEncoder()` returned null on every platform.
+
+Now vendored and wired on all five platforms. The export sheet offers **Opus**
+and **AAC** wherever the encoder resolves, and web / any plugin-less platform
+sees exactly the pre-existing list (WAV + pure-Dart MP3). The batch stems sheet
+inherits it. Was `docs/GLINT_ENCODER_HANDOVER.md` (now deleted — done).
+
+What the pass actually decided, with the measurements behind it:
+
+- **All three codecs, not Opus-only** (the handover's option b). MP3+AAC cost
+  only **+268 KB** of dylib over Opus alone; stubbing them would have left
+  `GlintEncoder.encode(format: mp3)` silently returning null.
+- **`opus_c_api.cpp` taken VERBATIM** even though it names `OpusDecoder` and so
+  drags the Opus+SILK decoder in (**+97 KB**, measured). A hand-copied
+  `glint_opus_encode_file` would be a fork of glint's muxing logic (pre-skip,
+  frame size, packet TOC) that drifts silently into subtly wrong `.opus` files.
+  **This plugin forks no glint codec logic**, which is what makes re-running
+  `sync_glint.sh` always safe. Bonus: native Opus decode symbols come free.
+  Final library 607 KB (was 113 KB decode-only).
+- **`glint_free` — verified, not assumed** (the handover flagged it as a
+  heap-corruption risk). glint's real definition is exactly `{ std::free(p); }`
+  and every buffer reachable through it on the compiled paths is
+  `std::malloc`'d. Audit + re-check recipe recorded in `glint_free_shim.cpp`;
+  the 2-line shim is correct, not merely tolerable.
+- **`sync_glint.sh` now GENERATES** `src/glint_sources.cmake` and the
+  `macos/ios Classes/` forwarders from whatever `.cpp` landed in `src/` — a
+  vendored-but-unlisted source can no longer become a link error that only one
+  platform discovers days later.
+- **New local glue** `opus_file_c_api.cpp` (`cometbeat_opus_file_decode`), so
+  the round trip is verifiable end to end without pulling in glint's whole
+  decode closure. Deliberately NOT `glint_`-prefixed: `flac_c_api.cpp` took the
+  `glint_flac_decode` name and glint later defined that symbol itself.
+
+Verification (render → decode → assert, not "it compiled"):
+
+- `native/glint/test/encode_roundtrip_test.cpp` — 34 assertions against the real
+  plugin dylib. 440 Hz survives Opus encode+decode by **PITCH** (never sample
+  rate: Opus decodes at 48 kHz); hard-panned stereo neither collapses nor swaps;
+  MP3/AAC carry valid MPEG/ADTS sync; malformed input is rejected not crashed
+  on; 250 encode/free cycles grow RSS by 16 KB. Run it with
+  `cmake -B build -DGLINT_BUILD_TESTS=ON native/glint/src`.
+- `integration_test/glint_encoder_test.dart` — 7 live tests, **green on a real
+  macOS build**. `setUpAll` asserts BOTH loaders resolve; `loadOpusFileDecoder()`
+  is the stronger check, since that symbol exists only in our plugin.
+- `test/audio_export_format_test.dart` — 17 headless tests for the gating.
+
+**Gotcha this pass found:** a machine with glint `make install`ed has
+`/usr/local/lib/libglint.dylib`, and `loadGlintEncoder()`'s last-resort
+`DynamicLibrary.open('libglint.dylib')` **resolves it even under
+`flutter test`** — so "no encoder in headless tests" is false here. The unit
+tests therefore pin the encoder rather than trusting the ambient probe.
+
+**Per-platform status (2026-07-26):** macOS full app build + live integration
+test green; **iOS** full `flutter build ios` green (the bundled
+`glint_vorbis.framework`, arm64, exports the encoder); **Android** compiles for
+all three ABIs via the NDK with 16 KB-aligned LOAD segments; **Linux** builds
+under GCC 13 / libstdc++ with the whole round-trip suite green. **Windows**
+had a real defect — see below — fixed and proven, with a genuine MSVC build now
+running in CI. New workflow `.github/workflows/glint-native.yml` builds the lib
++ tests on all three desktops and an example app on all five platforms, so this
+stops being a manual chore.
+
+**Codec matrix (2026-07-26): native and web now agree** — both read WAV, AIFF,
+MP3, AAC, FLAC, Ogg-Vorbis and Ogg-Opus, and both write WAV, MP3, AAC and Opus.
+Full table + the history of the three asymmetries that were closed:
+[AUDIO_CODEC_MATRIX.md](AUDIO_CODEC_MATRIX.md). The root cause of all three: the
+shipped wasm exported glint's FULL codec surface from the start, but only
+`_glint_vorbis_decode` was wired through to Dart — we shipped the capability and
+hid it. Closing them cost +55 KB of native lib (glint's whole-file decoder) and
+zero extra web download (same wasm module, more of it reachable).
+
+**Windows bug found and fixed:** MSVC's `<cmath>` does not define `M_PI` without
+`_USE_MATH_DEFINES`, and five vendored files use it — the Windows build *would
+have failed*. Reproduced exactly (`'M_PI' was not declared in this scope`) by
+cross-compiling under strict `-std=c++17`, then fixed in `src/CMakeLists.txt`
+rather than in the sources, since `sync_glint.sh` would overwrite any edit to a
+verbatim-vendored file on the next re-vendor.
+
+**MP3 has TWO encoders now, user-selectable** (`Mp3Encoder.dart|native`): our
+pure-Dart port and glint's C one. Both export sheets show the choice, but only
+where both exist. Default stays `.dart` — it is the better-exercised path here
+(golden + ffmpeg round-trip tests pin its output) and keeps exports
+byte-comparable across platforms; glint's is the more mature encoder and faster,
+so flipping the default is reasonable once it has mileage, and it is a one-line
+change. Asking for `.native` where glint is absent falls back rather than
+failing, because unlike Opus/AAC, MP3 always has a working path.
+
+**The readiness rule (the subtlest bug of the pass).** On web the wasm loads
+lazily, so until it resolves every glint-backed decoder returns null — a
+FLAC/Opus/AAC import then fails looking exactly like a corrupt file. Nothing
+awaited it. Worse, `ensureGlintVorbisReady()` had existed since the `.sf3` work
+and was called from **nowhere**, so compressed SoundFonts were quietly broken on
+web too. Fixed by making the await impossible to forget rather than by adding
+await lines: `importAudioAsync` / `importAudioMonoAsync` / `loadSoundFontAsync`
+do it, and every call site uses them. `sample_extractor.dart` deliberately keeps
+the sync form (it admits only `.wav`/`.mp3`, both pure Dart) with a comment
+saying what must change if that filter widens.
+
+**FLAC and Vorbis stay decode-only, deliberately.** glint ships no encoder for
+either, so this is not a wiring gap. For export both are redundant — Opus beats
+Vorbis at every bitrate and two `.ogg` producers is a UX trap. The one thing
+Opus cannot substitute for is **writing `.sf3`**, which is Vorbis by definition.
+Scoped, unclaimed, with the cost honestly split between "minimal correct" and
+"competitive with libvorbis": `docs/VORBIS_ENCODER_HANDOVER.md` **in the glint
+repo**. Key insight recorded there so nobody re-derives it — Vorbis transmits
+its codebooks in the setup header, so a clean-room encoder ships its own and
+never needs libvorbis's tuned ones.
+
+**Test ladder** (each layer catches what the others cannot):
+`native/glint/test/encode_roundtrip_test.cpp` (ctest, 3 desktops incl. MSVC) ·
+`web/glint/codec_roundtrip_test.mjs` (node — the web path shares no code with
+FFI above Dart) · `test/audio_import_opus_test.dart` + `audio_export_format_test.dart`
+(headless routing/gating) · `test/web/audio_codec_web_test.dart` (Chrome — the
+degradation path) · `integration_test/glint_encoder_test.dart` (live build).
+
+**Two unrelated blockers in the separate CrispEmbed repo were fixed to get the
+mobile builds through** (neither caused by this work): its Android
+`build.gradle` called `exec {}` inside `doLast`, which Gradle 9 removed
+(migrated to the injected `ExecOperations` service); and its podspec requires
+iOS 15 while the app targeted 13, so the app's deployment target moved to
+**15.0** — that drops no hardware, since iOS 15 runs on the same devices as
+iOS 13 (iPhone 6s+). **FLAC export stays out: glint decodes FLAC and has no FLAC
+encoder.** Native MP3 is reachable through the binding but the export sheet
+still offers the pure-Dart MP3 writer, so web and native behave identically —
+switching that is a separate, deliberate quality call.
+
+**Tier 4 — the bigger items**
+- [x] **O14** Record mic → new lane, via the app's single mic-facing capture
+  path (`VoiceClipRecorder`, shared with the Tracker). Guarded like the
+  Tracker's: the mic can't run under the headless binding, so the screen
+  exposes `debugAddRecordedClip` and the test injects the take. Placement,
+  anti-click fade and undo are all covered; the actual capture needs a device.
+- [x] **O15** Spectrogram: `core/audio/spectrogram.dart` (STFT over the FFT
+  already in `chroma_analysis.dart`; Hann-windowed, calibrated so a full-scale
+  sine reads ≈0 dBFS in its own bin) + a painted view opened from the clip
+  inspector. Tests assert the physics — tone lands in the right bin, halving
+  the amplitude drops it 6 dB, energy stays concentrated, silence floors
+  instead of returning −infinity.
+
 
 ## Cross-mode interop — the full matrix, both directions (C-series, 2026-07-27)
 

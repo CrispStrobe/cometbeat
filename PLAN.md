@@ -871,11 +871,10 @@ prefix.
 > (`clipGainAutomation`/`clipEnvelopeAt`). Record:
 > **[docs/HISTORY.md](docs/HISTORY.md) → "Audio Editor → swiss-army knife"**.
 >
-> 🔶 **WS-A6 (take lanes + comping) and the SRC half of WS-A9 are built but NOT
-> ON MAIN** — they sit on the unpushed `feature/daw-suite` (`20b7063e` D5,
-> `b2e2551d` A6), gated on that agent's chunked full-suite run. Treat them as
-> shipped-pending-push: **do not rebuild them**, and re-audit this block once
-> that branch lands.
+> ✅ **WS-A6 (take lanes + comping) and the SRC half of WS-A9 have now LANDED**
+> — `feature/daw-suite` merged after its chunked full-suite gate came back
+> green (5,475 pass / 0 fail across six chunks). The "built but not on main"
+> caveat that stood here is discharged.
 
 - ⬜ **WS-A5 — loudness metering as a VIEW.** `S` — narrower than it looks and
   genuinely open. `crisp_dsp/loudness.dart` computes gated integrated /

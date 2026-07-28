@@ -1,5 +1,14 @@
 # Audio Editor — the swiss-army ladder (scoped 2026-07-26, opus)
 
+> ✅ **SHIPPED 2026-07-26 … 07-28.** The whole ladder is built — A1–A7 · B1–B6 ·
+> C1–C5 · D1–D6 · F1–F2b. **This file stays the scoping reference** (gap tables,
+> the interop matrix, acceptance criteria, non-goals); the build record and the
+> per-slice reasoning live in
+> **[HISTORY.md](HISTORY.md) → "Audio Editor → swiss-army knife"**, and what is
+> still open is in the root **[PLAN.md](../PLAN.md)** under *Audio Editor*
+> (loudness as a view · clip warp · a time-stretch quality knob — the last of
+> which is a different algorithm, not a resampler setting).
+
 **The ask (maintainer).** The Audio Editor should become a swiss-army knife with
 the full bag of tricks a serious digital audio workstation carries. Work through
 the vocabulary of the classic command-line audio toolchains and consider *every*
