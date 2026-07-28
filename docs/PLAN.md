@@ -117,27 +117,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W5b` — make the project mix
-  AUDIBLE.** Worktree `../mus-daw-parity`. **New card**, and the one I ranked
-  highest: `WS-W5` shipped a mixer whose level/pan/mute/solo **no render path
-  honours**, so it is a settings screen you cannot hear. That is the same
-  inert-feature shape as the count-in, `Project` and the mix itself — the fourth
-  time on this ladder.
-  **The key decision, made by reading rather than assuming:** I will **not**
-  write a second renderer. `core/audio/daw_sources.dart` already turns every
-  kind into PCM — `TrackerSource`, `GrooveSource`, `ScoreSource`, `DrumSource`
-  each implement `ClipSource.render(sampleRate)`. A project mixdown is
-  therefore *map each track's document to the source that already renders it,
-  apply the track's mix, sum* — no new DSP and no new per-kind knowledge.
-  **Scope.** ADD `lib/core/project/project_render.dart` + its test: pure,
-  Flutter-free, `Project → Float64List`. **It modifies NO existing render
-  path**, so the byte-identical guard is satisfied by construction — nothing
-  that renders today changes at all.
-  ⚠️ **It will report which kinds it could not render rather than silently
-  dropping them** (tab has no direct PCM source; audio needs a clip). A mixdown
-  that quietly omits a track is worse than one that says so.
-  ⚠️ Not touching any screen, and not wiring a Play button in this slice —
-  first make it correct and testable, then give it a button. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W5b` the project mix
+  is AUDIBLE.** `lib/core/project/project_render.dart` + 15 tests; format +
+  whole-project analyze clean. This closes the fourth inert-feature hole on this
+  ladder: `WS-W5`'s mixer had level/pan/mute/solo that no render path honoured.
+  **The decision that made it small: no second renderer.** `daw_sources.dart`
+  already turns every kind into PCM via `ClipSource.render`, so the mixdown is
+  document → existing source → apply mix → sum. **It modifies no existing render
+  path**, so the byte-identical guard holds by construction rather than by
+  testing — worth copying whenever a card sounds like "make X honour Y".
+  Tests assert **measured energy**, not that a function was called: level scales
+  RMS, pan is constant-power (hard pan = √2 × the centre's per-channel level,
+  matching `panPartsToStereo`), solo silences the un-soloed, several solos
+  coexist, soloed-AND-muted stays silent, and **no normalisation** is applied —
+  a mixdown that renormalised would make every fader meaningless while still
+  passing a "does it make sound" test.
+  ⚠️ **Honest limits, both on the card:** it **reports** what it cannot render
+  rather than dropping it silently (a tab needs an instrument chosen; audio
+  tracks are not in the project yet), and **nothing calls it yet** — no Play
+  button. It is audible in tests only. That last step is small and unclaimed.
+  ⬜ **Open on my ladder:** wire `renderProject` to a Play/Export control,
+  `WS-W6` (browser), `WS-T1`/`T2`/`T4`. Loop Studio + Audio Editor still need
+  their ~20-line `WS-X1` step 2b, which their owners can fold in. — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 2b for
   SCORE. Three of five surfaces now hold live project links** (Tracker · Tab ·

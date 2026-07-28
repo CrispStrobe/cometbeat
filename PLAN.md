@@ -1224,10 +1224,28 @@ prefix.
   - **Solo is per-track and NOT exclusive**, deliberately: "solo these three" is
     a real request, and exclusivity would be a data-model decision made for the
     wrong reason.
-  - ⚠️ **NO RENDER PATH HONOURS THESE VALUES YET.** They are editable and they
-    persist with the project; that is all. Teaching the renderers to apply
-    project mix is its own card with its own byte-identical guard, and the
-    screen's header says so. **Do not tick this card as "mixing works".**
+  - ✅ **`WS-W5b` — the mix is AUDIBLE, 2026-07-28.** `core/project/
+    project_render.dart` (`renderProject(Project) → ProjectMixdown`), 15 tests
+    asserting **measured energy**, not plumbing: level scales RMS, mute and a
+    zero fader silence, pan moves energy with a **constant-power** law (hard
+    pan is √2 the centre's per-channel level, matching `panPartsToStereo`),
+    solo silences the un-soloed, several solos coexist, and a soloed-AND-muted
+    track stays silent.
+    - **It writes no second renderer.** `daw_sources.dart` already turns every
+      kind into PCM (`TrackerSource` / `GrooveSource` / `ScoreSource` implement
+      `ClipSource.render`), so the mixdown maps document → existing source,
+      applies the mix, sums. **No existing render path is modified**, so the
+      byte-identical guard holds by construction.
+    - **No normalisation**, pinned by a test: a mixdown that quietly renormalised
+      would make every fader setting meaningless while still passing a "does it
+      make sound" test.
+    - ⚠️ It **reports** what it cannot render (`ProjectMixdown.skipped`) rather
+      than dropping it silently — a tab needs an instrument chosen, and audio
+      tracks are not carried in the project yet. A muted unrenderable track is
+      NOT reported, because nothing was lost.
+  - ⬜ **Still not wired to a Play button** — `renderProject` is correct and
+    tested, and no screen calls it. That is the next small step, and until it is
+    taken this is audible in tests only.
   - ⬜ **FX inserts and sends** are not here — they belong with `WS-X3`.
 - 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) CLAIMED 2026-07-28 by
   opus (loop-d1d4).** Depends WS-W1.
