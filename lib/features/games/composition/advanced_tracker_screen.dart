@@ -78,10 +78,12 @@ import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
+import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/instrument_editor.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
@@ -367,6 +369,13 @@ class _FlowNumberDialogState extends State<_FlowNumberDialog> {
 abstract interface class AdvancedTrackerTester {
   int get channelCount;
   int get rows;
+
+  /// WS-X1 — put this song in the project, then re-open that track LIVE and
+  /// have edits land back in it.
+  String? addSongToProject({String? name});
+  bool openProjectTrack(String trackId);
+  bool get hasLiveProjectLink;
+  bool writeBackToProject();
   int get noteCount;
   bool get isPlaying;
   bool get isSongPlaying;
@@ -667,6 +676,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// free-running pre-rendered WAV that would not drift with it.
   final _clock = Stopwatch();
 
+  /// WS-X1 — the project track this screen is editing LIVE, if any. Null means
+  /// the song belongs to no track, which is the pre-project behaviour and stays
+  /// perfectly valid.
+  ProjectLink? _projectLink;
+
+  /// The app-wide project, when one is provided.
+  ProjectService? _projects;
+
   /// The app-wide transport, when one is provided. Null in the widget tests
   /// that mount this screen bare, so every use is null-safe rather than
   /// requiring every existing test to grow a provider tree.
@@ -916,6 +933,65 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     } on ProviderNotFoundException {
       _transport = null;
     }
+    try {
+      _projects = Provider.of<ProjectService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _projects = null;
+    }
+  }
+
+  // --- WS-X1 live links -----------------------------------------------------
+
+  ProjectLinker? get _linker {
+    final projects = _projects;
+    return projects == null ? null : ProjectLinker(projects);
+  }
+
+  /// Adds the current song to the project and links this screen to that track,
+  /// so subsequent edits can be written back.
+  @override
+  String? addSongToProject({String? name}) {
+    final linker = _linker;
+    if (linker == null) return null;
+    _song.syncCurrent();
+    final id = linker.add(
+      kind: AppMode.tracker,
+      document: _song,
+      name: name ?? 'Tracker',
+    );
+    _projectLink = ProjectLink(document: _song, trackId: id, live: true);
+    return id;
+  }
+
+  /// Opens a project track here. A tracker track opens LIVE — no conversion,
+  /// no copy — and anything else arrives converted, with its loss report
+  /// intact, exactly as before.
+  @override
+  bool openProjectTrack(String trackId) {
+    final linker = _linker;
+    if (linker == null) return false;
+    final link = linker.open(trackId, AppMode.tracker);
+    final doc = link.document;
+    if (doc is! TrackerSong) return false;
+    setState(() {
+      _song = doc;
+      _timingMap = null;
+      _projectLink = link;
+    });
+    return true;
+  }
+
+  @override
+  bool get hasLiveProjectLink => _projectLink?.live ?? false;
+
+  /// Pushes the current song back into its project track.
+  @override
+  bool writeBackToProject() {
+    final linker = _linker;
+    final link = _projectLink;
+    if (linker == null || link == null) return false;
+    _song.syncCurrent();
+    return linker.writeBack(link, _song);
   }
 
   @override

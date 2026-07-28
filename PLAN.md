@@ -1024,25 +1024,28 @@ prefix.
   handle and asserts bounds + a single undo entry — the card's acceptance).
 ### Phase 3 — liveness (fixes the copy-not-link half of S1)
 
-- ⬜ **WS-X1 — live links, not copies.** `L` — *the change that turns five editors
-  into one workstation.*
-  - **Goal.** "Open in Tracker" on a project track opens **that track**; edits
-    land in the project.
-  - **Depends.** WS-W1, WS-W4.
-  - **Files.** `core/interop/project_bridge.dart` (unchanged logic — new entry
-    point), `shared/widgets/open_in_menu.dart`, `shared/music/score_router.dart`,
-    and the three screens' `initialSong`/`initial*` constructor paths.
-  - **Build.** A same-kind open needs **no conversion at all** — pass the
-    project track and write back. Keep `ProjectBridge`'s loss report as the
-    gate for a *kind change* only, and keep the existing copy behaviour for
-    conversions, where it is correct.
-  - **Acceptance.** Open a tracker track from the Audio Editor, edit a cell,
-    return — the project holds the edit and the loss dialog never appeared.
-    A kind change still shows the report and still produces a copy.
-  - ⚠️ Today's contract is *"a converted document opens as a copy, never back
-    into the source clip."* This task narrows that to **conversions only**. Say
-    so in the code comment, or the next reader will think it is a bug.
-
+- 🔶 **WS-X1 — live links, not copies.** `L` · **STEP 1 SHIPPED 2026-07-28**
+  (opus, workstation-parity). `lib/core/project/project_link.dart` + the Tracker
+  using it; 5 tests in the tracker suite.
+  - **The rule, and it is one line:** a **same-kind open needs no conversion at
+    all.** The copy existed only because every "Open in…" went through
+    `ProjectBridge.convert`, which is right for a KIND CHANGE and wrong for
+    opening a tracker song in the Tracker. `ProjectLinker.open` returns the
+    track's own document with `live: true`; `writeBack` puts the edit in the
+    same track via `ProjectService.updateDocument`, keeping id, name and **mix**.
+  - **A different-kind open is UNCHANGED** — still converts, still copies, still
+    carries `ProjectBridge`'s loss report, and reports `trackId: null` so a
+    caller cannot write a lossily-converted document back over the original.
+  - An **unreadable** track (carried verbatim from a newer build) is refused
+    with a readable reason rather than handed to an editor as raw JSON.
+  - ⚠️ **Step 1 deliberately included WIRING, not just the seam** —
+    `addSongToProject` / `openProjectTrack` / `writeBackToProject` on the
+    Tracker. Shipping the seam alone would have made this the THIRD card
+    complete-and-unreachable (see the count-in and `Project` findings).
+  - ⬜ **Step 2 — the other surfaces + the UI.** Loop Studio, the Audio Editor,
+    Score and Tab need the same three calls, and `OpenInMenu` should offer
+    project tracks and say "editing the project track" versus "editing a copy"
+    from `ProjectLink.live`. Nothing in the UI surfaces this yet.
 - ⬜ **WS-X2 — drag between surfaces.** `M` · Depends WS-W1, WS-X1.
   One `DragTarget` protocol carrying `(kind, document)`: drag a tracker pattern
   onto the timeline, a loop track into the Tab editor, an instrument from the

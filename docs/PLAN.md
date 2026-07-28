@@ -105,26 +105,31 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` — live links, not
-  copies (step 1).** Worktree `../mus-daw-parity`.
-  **Applying my own reachability rule before starting:** `WS-W1b` gave the app a
-  Project, but **nothing puts a track into it** — `addTrack` has no caller
-  outside its own test. A "live link" with nothing to link to would be the third
-  card to ship complete and unreachable, so step 1 closes the loop rather than
-  adding another seam.
-  **Scope.** ADD `lib/core/project/project_link.dart` — open a project track's
-  document for a mode, and write the edited document BACK. Same kind = **no
-  conversion at all** (the copy exists today only because every open went
-  through a converter); different kind keeps `ProjectBridge`'s loss report and
-  keeps producing a copy, which is correct there. EDIT
-  `advanced_tracker_screen.dart` to actually use it: put the current song in the
-  project, re-open it, edit, and have the edit land in the project.
-  ⚠️ **The seam is `ProjectService.updateDocument`**, which keeps id, name and
-  **mix** — a link that reset level/pan on return would be worse than the copy
-  it replaces.
-  ⚠️ Lane: `WS-L5` is `loop-d1d4`'s. I am touching `advanced_tracker_screen.dart`
-  (mine for the last two slices, no other committer in 4 h) and nothing in
-  `loop_*` or `daw_*`. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 1: LIVE
+  LINKS.** `lib/core/project/project_link.dart` + the Tracker actually using it;
+  5 new tests (83 in the tracker suite, 133 with the project/bridge/menu
+  suites); format + whole-project analyze clean.
+  **The rule is one line: a same-kind open needs NO conversion at all.** The
+  copy existed only because every "Open in…" went through
+  `ProjectBridge.convert` — right for a kind change, wrong for opening a tracker
+  song in the Tracker. `open()` now returns the track's own document with
+  `live: true`, and `writeBack()` puts the edit in the same track keeping id,
+  name and **mix**. A different-kind open is untouched: still converts, still
+  copies, still carries the loss report, and reports `trackId: null` so nobody
+  can write a lossily-converted document back over the original. An
+  **unreadable** track is refused with a readable reason rather than handed to
+  an editor as raw JSON.
+  ⚠️ **I included the WIRING deliberately, not just the seam.** `addSongToProject`
+  / `openProjectTrack` / `writeBackToProject` on the Tracker — because before
+  this, nothing put a track into the project at all, and a live link with
+  nothing to link to would have been the **third** card to ship complete and
+  unreachable. That is the reachability rule from the entry above applied to my
+  own work rather than only recommended to others.
+  ⬜ **Step 2, unclaimed and now cheap:** the same three calls on Loop Studio,
+  the Audio Editor, Score and Tab, plus `OpenInMenu` offering project tracks and
+  saying "editing the project track" versus "editing a copy" from
+  `ProjectLink.live`. **Nothing in the UI surfaces any of this yet** — that is
+  the honest state, and it is the next thing a user would actually feel. — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W1b` `Project` is
   REACHABLE.** `lib/core/services/project_service.dart` + 13 tests; `main.dart`

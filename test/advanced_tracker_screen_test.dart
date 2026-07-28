@@ -13,9 +13,13 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show AdditiveInstrument, SampleInstrument;
 import 'package:comet_beat/core/audio/tracker_instrument_codec.dart'
     show instrumentToJsonString;
+import 'package:comet_beat/core/audio/tracker_song.dart';
+import 'package:comet_beat/core/interop/app_mode.dart';
+import 'package:comet_beat/core/project/project.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart' show kSongs;
@@ -40,6 +44,99 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     BeatBridge.instance.clear();
     MelodyBridge.instance.clear();
+  });
+
+  group('WS-X1 — live links, not copies', () {
+    Future<(AdvancedTrackerTester, ProjectService)> pump(
+      WidgetTester tester,
+    ) async {
+      final projects = ProjectService();
+      await pumpGame(
+        tester,
+        const AdvancedTrackerScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<ProjectService>.value(value: projects),
+        ],
+      );
+      return (_game(tester), projects);
+    }
+
+    testWidgets('a song can be put IN the project — nothing could before',
+        (tester) async {
+      final (game, projects) = await pump(tester);
+      expect(projects.tracks, isEmpty);
+
+      final id = game.addSongToProject(name: 'Lead');
+      expect(id, isNotNull);
+      expect(projects.tracks.single.kind, AppMode.tracker);
+      expect(projects.tracks.single.name, 'Lead');
+      expect(game.hasLiveProjectLink, isTrue);
+    });
+
+    testWidgets(
+        're-opening a tracker track is LIVE — edits land in the project',
+        (tester) async {
+      // The whole point of the card: before this, "open in Tracker" produced a
+      // converted copy and the edit had nowhere to go back to.
+      final (game, projects) = await pump(tester);
+      final id = game.addSongToProject()!;
+
+      expect(game.openProjectTrack(id), isTrue);
+      await tester.pump();
+      expect(game.hasLiveProjectLink, isTrue);
+
+      final before = game.noteCount;
+      game.debugImportMusic(MultiPartScore([kSongs.first.score]));
+      await tester.pump();
+      expect(game.noteCount, greaterThan(before));
+
+      expect(game.writeBackToProject(), isTrue);
+      final stored = projects.track(id)!.document;
+      expect(stored, isA<TrackerSong>());
+      final storedNotes = (stored! as TrackerSong).engine.channels.fold<int>(
+            0,
+            (n, c) => n + c.cells.where((cell) => !cell.isEmpty).length,
+          );
+      expect(
+        storedNotes,
+        game.noteCount,
+        reason: 'the project holds the EDITED song, not the one added earlier',
+      );
+    });
+
+    testWidgets('the write-back keeps the track name and MIX', (tester) async {
+      // A live link that reset level and pan on return would be worse than the
+      // copy it replaces.
+      final (game, projects) = await pump(tester);
+      final id = game.addSongToProject(name: 'Drums')!;
+      projects.updateTrack(
+        id,
+        projects.track(id)!.copyWith(
+              mix: const ProjectTrackMix(level: 0.25, pan: 0.5),
+            ),
+      );
+
+      expect(game.writeBackToProject(), isTrue);
+      final track = projects.track(id)!;
+      expect(track.name, 'Drums');
+      expect(track.mix.level, 0.25);
+      expect(track.mix.pan, 0.5);
+    });
+
+    testWidgets('opening an unknown track fails without throwing',
+        (tester) async {
+      final (game, _) = await pump(tester);
+      expect(game.openProjectTrack('nope'), isFalse);
+    });
+
+    testWidgets('with NO project provided the screen still works',
+        (tester) async {
+      await pumpGame(tester, const AdvancedTrackerScreen());
+      final game = _game(tester);
+      expect(game.addSongToProject(), isNull);
+      expect(game.hasLiveProjectLink, isFalse);
+      expect(game.writeBackToProject(), isFalse);
+    });
   });
 
   group('WS-W2 — the Tracker publishes its clock to the shared transport', () {
