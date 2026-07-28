@@ -57,6 +57,20 @@
 > categorical; a finger a hand cannot place refutes the reading). That is why "read it, don't
 > OMR it" is a method and not merely a restriction.
 >
+> **Usable where? (2026-07-28)** — **GUI:** Song Book shows the full teacher's markup behind
+> a toggle (`song_screen.dart` → `scoreWithBowedFingerings`, written into a COPY so a saved
+> song never gains marks); Play-along has a "show fingerings" toggle; the two cello games
+> drill positions 1–4 from the hand model; PDF export carries `extraFingerings`.
+> **CLI:** `bin/fingerconv.dart` (new) — `dart run bin/fingerconv.dart <in> [<out>]`, reads
+> everything `tabconv` reads, writes MusicXML/LilyPond/kern/ABC, `--skill first|neck|advanced`,
+> `--instrument cello|bass`, `--part <n|name>`, `--list-parts`, `--stats`. Flutter-free.
+> Verified against the composer: over our transcription of Romberg's own *Tonleiter in G dur*
+> it emits `4 3 1 0 4 3 1 0 4 3 1` against his printed `4 3 1 0 4 3 1 0 4 2 1` — 10/11, the
+> one difference being the E2 where he takes D–E–F♯ as a single 1‑2‑4 hand shape.
+> **This unlocks the DB's ~2,650 cello scores, none of which carries a fingering** — a real
+> decision rather than an obvious yes, since at ~54% agreement on expressive repertoire the
+> output is a first draft for a teacher, not an edition.
+>
 > Detail, method and every negative result: `docs/PLAN.md` → *opus (cello-vision-read)*.
 
 

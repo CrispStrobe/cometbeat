@@ -2233,6 +2233,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   enough to publish — piece-at-a-time drafting, blind second reading, calibrated confidence to
   target the disputes, and arbitration from the plate. Cost: ~3 agent passes for 24 bars.
 
+  **🔧 `bin/fingerconv.dart` SHIPPED, and its corpus trial caught a flaw a clean result was
+  hiding.** The engine was Flutter-only until now, so it could not touch the DB's ~2,650
+  cello scores. First trial over 25 real cello-bearing NIFC scores: **25/25 parsed, all 4,181
+  notes fingered, zero failures** — which reads as success and was not one.
+  ⚠ **`--part 0` was fingering the wrong music.** Those files hold soprano, two violins, viola
+  AND cello; index 0 is none of them. We were fingering violin and vocal lines as though they
+  were cello — confident nonsense that a bulk run would have produced thousands of times.
+  Fixed: `--part` takes an instrument NAME or an index, `--list-parts` shows what is in a file,
+  and with no preference the CLI prefers a plausibly bowed part **and says which it chose**, or
+  says plainly that none looks bowed.
+  ⭐ **Then one character mattered more than the rest of the change.** A NIFC score names its
+  cello part **"Baſso."** with a LONG S (U+017F); `contains('basso')` never matches it, so 11 of
+  25 files reported "no bowed part". Normalising historical orthography (ſ, ß, œ, æ) took the
+  trial from **14 → 23 of 25** correctly selected. `viol` is deliberately NOT a match term — it
+  would catch "Violino", and a violin is not what this fingers.
+  Final: **25/25 parse · 23/25 auto-select a bowed part · 2 unrecognised, reported not guessed.**
+  **⚠⚠ THE PATTERN OF THE DAY, three times over: a metric passed while the thing it measured
+  was wrong.**
+  1. A reader's own **bar-duration check passed** on a reading that had invented three
+     noteheads per bar (p.62).
+  2. **"50% forced-string agreement"** measured whether we made the same CHOICE as Becker, not
+     whether we were right — both fingerings of that C4 are legitimate.
+  3. **"100% of notes fingered"** measured that the engine RAN, not that it ran on the right
+     music.
+  Each was caught only by looking at the content rather than the number. Any future acceptance
+  figure here should be paired with a spot-check of what it was computed over.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
