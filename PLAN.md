@@ -736,7 +736,37 @@ prefix.
     enum to `core/interop/app_mode.dart` and re-exporting it — additive, no call
     site changes.
 
-- ⬜ **WS-W2 — `TransportService`: one clock.** `M`
+- ✅ **WS-W2 — `TransportService`: one clock.** `M` · **SHIPPED 2026-07-28**
+  (opus, workstation-parity). `lib/core/services/transport_service.dart`, 28
+  tests. **The card below is the ORIGINAL, kept because its warnings still bind
+  WS-W3 and the three migrations.** One decision it did not anticipate:
+  - **The service does NOT own a clock — it is *advanced*.** `advance(deltaMs)`
+    takes the elapsed ms from whoever is ticking. Forced by the code, not
+    chosen: `loop_mixer_screen.dart` already documents the opposite as a
+    problem ("the live grade reads a real Stopwatch, which widget tests can't
+    advance"), and this card's own acceptance is a *headless* drive through
+    play → loop wrap → stop. It also keeps each migration additive — a screen
+    calls `advance` from the Ticker it already has, so no surface ever grows a
+    second clock, which is the failure the ⚠️ below warns about. And the Audio
+    Editor's playhead is deliberately driven by "the Ticker's own elapsed (NOT
+    wall-clock)", which a wall-clock service would have silently contradicted.
+  - **Meter lives here, not on `TempoMap`.** A TempoMap carries tempo only, and
+    `bar` needs beats-per-bar. Adding meter to a model other surfaces persist
+    would have been a change to shipped state for a derived readout, so
+    `beatsPerBar` is on the transport. A real meter MAP is its own task.
+  - `advance` returns a `TransportAdvance` (beats crossed, `looped`,
+    `countInEnded`) rather than pushing a stream — the caller is already inside
+    its tick and a metronome must click on *that* frame.
+  - ⚠️ **Two traps found by writing the tests, both worth keeping:** a wrap must
+    be **modulo**, not one subtraction (a dropped frame longer than the loop
+    would otherwise leave the playhead past the end — visible only on a slow
+    device); and beats either side of a wrap must be collected as **two runs**,
+    or the metronome clicks on beats the playhead never visited.
+  - ⬜ **Still to do, and each is its own commit:** migrate the Tracker, the
+    Audio Editor and Loop Studio onto it, that surface's tests green before the
+    next. Nothing consumes the service yet — it ships proven, not wired.
+
+- ⬜ **WS-W2 — the original card.**
   - **Goal.** Position, tempo, loop range, play/stop/record, count-in and
     metronome in one place every surface listens to. Today there are three
     clocks and none can follow another.

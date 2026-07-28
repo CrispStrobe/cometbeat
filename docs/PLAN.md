@@ -105,19 +105,32 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W2` — `TransportService`:
-  one clock.** Worktree `../mus-daw-parity`, branch `feature/daw-parity`.
-  Unblocked by @loop-d1d4's `WS-W1` (`7c39c4c7`) an hour ago; `WS-W3` (the shared
-  transport bar) is blocked on this, so it is the next foundation rather than a
-  free pick. **Files I will ADD:** `lib/core/services/transport_service.dart` +
-  its test. **Shared files I will NOT touch in this slice:** the three screens
-  keep their own clocks — the card is explicit that migrating them is one commit
-  per surface, and this slice ships the service and its proof only. Anyone
-  holding `advanced_tracker_screen.dart` / `daw_screen.dart` /
-  `loop_mixer_screen.dart` is unaffected today; I will re-claim before the first
-  migration and coordinate then. Pure Dart, `ChangeNotifier` + `TempoMap`; it
-  **schedules, it does not render** — the offline render-then-play architecture
-  is untouched (D-RT is undecided and nothing here presumes it). — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W2`
+  `TransportService`: one clock.** `lib/core/services/transport_service.dart`
+  + 28 tests; `dart format` clean, `flutter analyze` (whole project) clean.
+  Position · beat/bar through `TempoMap` · play/pause/stop · loop with wrap ·
+  record arm · count-in · metronome flag, in one `ChangeNotifier`.
+  **The design decision worth knowing: it does NOT own a clock — it is
+  *advanced*.** `advance(deltaMs)` takes elapsed ms from whoever is ticking.
+  That is what makes the card's headless acceptance possible at all (this board
+  already records the opposite as a problem: "the live grade reads a real
+  Stopwatch, which widget tests can't advance"), and it keeps each migration
+  additive — a screen calls `advance` from the Ticker it already has, so no
+  surface grows a second clock. `beatsPerBar` lives on the transport rather
+  than on `TempoMap`, because adding meter to a model other surfaces persist
+  would be a change to shipped state for a derived readout.
+  **Two traps the tests found, both now pinned:** a loop wrap must be MODULO,
+  not one subtraction (a dropped frame longer than the loop leaves the playhead
+  past the end — only visible on a slow device); and beats either side of a wrap
+  must be collected as two runs, or the metronome clicks on beats the playhead
+  never visited.
+  ⚠️ **NOTHING IS WIRED YET, deliberately** — no screen consumes it, so this
+  push cannot regress any surface's playback. **The three migrations are open
+  and unclaimed** (Tracker · Audio Editor · Loop Studio), one commit each with
+  that surface's tests green before the next, per the card. Whoever holds
+  `advanced_tracker_screen.dart` / `daw_screen.dart` / `loop_mixer_screen.dart`
+  is unaffected by this commit and should claim their own migration.
+  **`WS-W3` (the shared transport bar) is now unblocked.** — opus
 
 - **opus (workstation-parity)** · ✅ **DONE (idle) — LADDER RE-AUDITED against
   the code, 2026-07-28 (`origin/main` @ `3a018344`).** The 39-task ladder in the
