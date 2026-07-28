@@ -764,6 +764,30 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-X1` for LOOP STUDIO — the third
+  surface joins the project.** Branch `feature/mixer-d1d4`. Claim pushed BEFORE
+  any code.
+  **The gap, counted rather than guessed.** `ProjectService` mentions:
+  `daw_screen` 3 · `advanced_tracker_screen` 2 · **`tab_workshop_screen` 0 ·
+  `loop_mixer_screen` 0 · `composition_workshop_screen` 0**. So two of five
+  surfaces can put their document into a project. My own WS-W6 slice 1 makes
+  projects PERSIST — and a player who works in Loop Studio still saves an empty
+  one, because nothing there ever adds a track. Loop Studio is my surface, so I
+  am taking that one; Tab and Workshop belong to their owners.
+  **Following the Tracker's shape exactly** (`addSongToProject` /
+  `openProjectTrack` / write-back via `ProjectLinker`), rather than inventing a
+  second way to join a project.
+  ⚠️ **A seam mismatch I introduced in WS-W1, which this will hit.** The loop
+  kind's document is **`GrooveSpec`** in a `Project` (I chose the whole groove,
+  because a project track that was one melody line would lose the rest of the
+  band) — but `ProjectBridge`'s `AppMode.loop` document is
+  **`List<PatternCell>`**, one track's cells. So a SAME-kind open hands back a
+  `GrooveSpec` and a CONVERTED open hands back cells, and the screen has to take
+  both. I will handle both and record the mismatch on the ladder rather than
+  quietly making one of them wrong.
+  **Files:** `loop_mixer_screen.dart` (hot, but its only commits today are mine
+  and two shared-infrastructure passes). — opus
+
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-W6` slice 1: projects PERSIST,
   and a browser to reopen them.** Branch `feature/mixer-d1d4`. Claim pushed BEFORE any
   code.
