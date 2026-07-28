@@ -9,6 +9,21 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get workshopInstrumentViolin => 'Violine';
+
+  @override
+  String get workshopInstrumentViola => 'Bratsche';
+
+  @override
+  String get workshopInstrumentCello => 'Violoncello';
+
+  @override
+  String get workshopInstrumentDoubleBass => 'Kontrabass';
+
+  @override
+  String get workshopInstrumentBlank => 'Leere Stimme';
+
+  @override
   String get workshopPartFingerings => 'Violoncello-Fingersatz';
 
   @override

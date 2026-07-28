@@ -1,4 +1,24 @@
 {
+  "workshopInstrumentViolin": "Violin",
+  "@workshopInstrumentViolin": {
+    "description": "Score Editor: instrument preset when adding a part"
+  },
+  "workshopInstrumentViola": "Viola",
+  "@workshopInstrumentViola": {
+    "description": "Score Editor: instrument preset when adding a part"
+  },
+  "workshopInstrumentCello": "Cello",
+  "@workshopInstrumentCello": {
+    "description": "Score Editor: instrument preset when adding a part"
+  },
+  "workshopInstrumentDoubleBass": "Double bass",
+  "@workshopInstrumentDoubleBass": {
+    "description": "Score Editor: instrument preset when adding a part"
+  },
+  "workshopInstrumentBlank": "Blank part",
+  "@workshopInstrumentBlank": {
+    "description": "Score Editor: instrument preset when adding a part"
+  },
   "workshopPartFingerings": "Cello fingerings",
   "@workshopPartFingerings": {
     "description": "Score Editor part menu: write cello fingerings into this part"

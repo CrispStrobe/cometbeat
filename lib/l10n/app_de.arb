@@ -1,4 +1,9 @@
 {
+  "workshopInstrumentViolin": "Violine",
+  "workshopInstrumentViola": "Bratsche",
+  "workshopInstrumentCello": "Violoncello",
+  "workshopInstrumentDoubleBass": "Kontrabass",
+  "workshopInstrumentBlank": "Leere Stimme",
   "workshopPartFingerings": "Violoncello-Fingersatz",
   "workshopFingeringsFirst": "Einfügen — 1. Lage",
   "workshopFingeringsNeck": "Einfügen — Lagen 1–4",

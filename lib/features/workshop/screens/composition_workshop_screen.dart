@@ -1301,9 +1301,48 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   // Add/remove shift part indices, so any mute selection (keyed by index) would
   // point at the wrong part — clear it. Mute is a transient playback preference.
-  void _addInstrument() => setState(() {
+  /// The bowed family, with the clef each part is actually written in and the
+  /// sounding range of the instrument.
+  ///
+  /// SE-C2. Adding a part used to mean "treble clef, called Part N" regardless of
+  /// what you were writing — so the first three actions on every cello part were
+  /// rename, change clef, and remember the range yourself. The range is carried
+  /// here so SE-C3 can WARN on out-of-range notes; it must never clamp, because
+  /// composers write out of range deliberately and an editor that silently
+  /// "fixes" that is worse than one that says nothing.
+  static const _bowedPresets = <({
+    String Function(AppLocalizations) label,
+    Clef clef,
+    int lowMidi,
+    int highMidi,
+  })>[
+    (
+      label: _violinLabel,
+      clef: Clef.treble,
+      lowMidi: 55, // G3
+      highMidi: 100, // E7, a realistic ceiling rather than the theoretical one
+    ),
+    (label: _violaLabel, clef: Clef.alto, lowMidi: 48, highMidi: 88),
+    (label: _celloLabel, clef: Clef.bass, lowMidi: 36, highMidi: 81),
+    (label: _bassLabel, clef: Clef.bass, lowMidi: 28, highMidi: 67),
+  ];
+
+  static String _violinLabel(AppLocalizations l) => l.workshopInstrumentViolin;
+  static String _violaLabel(AppLocalizations l) => l.workshopInstrumentViola;
+  static String _celloLabel(AppLocalizations l) => l.workshopInstrumentCello;
+  static String _bassLabel(AppLocalizations l) =>
+      l.workshopInstrumentDoubleBass;
+
+  /// Add a part. With no preset this is the old behaviour — a blank treble part —
+  /// so nothing is taken away from someone writing for an instrument we do not
+  /// list.
+  void _addInstrument({
+    String? name,
+    Clef clef = Clef.treble,
+  }) =>
+      setState(() {
         _mutedParts.clear();
-        _mpd.addPart();
+        _mpd.addPart(name: name, clef: clef);
       });
 
   void _selectPart(int i) => setState(() {
@@ -1392,6 +1431,35 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               icon: const Icon(Icons.add),
               tooltip: l10n.workshopAddInstrument,
               onPressed: _addInstrument,
+            ),
+            // SE-C2: the `+` still adds a blank part (unchanged); this chooser
+            // adds one that already knows its clef, name and range. Kept as a
+            // separate hit target so the old one-tap path is not taken away.
+            PopupMenuButton<void Function()>(
+              key: const ValueKey('workshop-add-instrument-preset'),
+              icon: const Icon(Icons.arrow_drop_down, size: 20),
+              tooltip: l10n.workshopAddInstrument,
+              onSelected: (action) => action(),
+              itemBuilder: (context) => [
+                PopupMenuItem<void Function()>(
+                  enabled: false,
+                  child: Text(
+                    l10n.workshopAddInstrument,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+                for (final p in _bowedPresets)
+                  PopupMenuItem<void Function()>(
+                    value: () =>
+                        _addInstrument(name: p.label(l10n), clef: p.clef),
+                    child: Text('${_clefGlyph(p.clef)}  ${p.label(l10n)}'),
+                  ),
+                const PopupMenuDivider(),
+                PopupMenuItem<void Function()>(
+                  value: _addInstrument,
+                  child: Text(l10n.workshopInstrumentBlank),
+                ),
+              ],
             ),
             const VerticalDivider(width: 1),
             Expanded(

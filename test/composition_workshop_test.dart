@@ -2001,4 +2001,34 @@ void main() {
     expect(editor.noteCount, 0);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('SE-C2: the instrument chooser adds a part with the right clef',
+      (tester) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+
+    // The plain `+` must still add a blank part — the old one-tap path is not
+    // taken away by the chooser sitting next to it.
+    expect(
+      find.byKey(const ValueKey('workshop-add-instrument')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('workshop-add-instrument-preset')),
+    );
+    await tester.pumpAndSettle();
+
+    // Cello is offered, and picking it names the part and puts it in bass clef —
+    // the three manual steps SE-C2 exists to remove.
+    final cello = find.textContaining('Cello');
+    expect(cello, findsWidgets);
+    await tester.tap(cello.first);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Cello'),
+      findsWidgets,
+      reason: 'the new part should carry the instrument name',
+    );
+  });
 }
