@@ -18,7 +18,10 @@
 //                       neck     = positions 1–4 with extensions — the app default
 //                       advanced = the whole neck + thumb, shifts freely
 //     --instrument <n>  cello | bass                  (default: cello)
-//     --part <n>        which part of a multi-part score (default 0)
+//     --part <n|name>   which part: an INDEX, or an instrument name to match
+//                       (e.g. `--part cello`). Default: the first part whose
+//                       instrument looks bowed, else part 0.
+//     --list-parts      print the parts with their instrument names and exit
 //     --no-strings      omit the Roman string numerals
 //     --no-bowing       omit the bow directions
 //     --to <fmt>        musicxml | lilypond | kern | abc  (default: from <out>,
@@ -46,7 +49,8 @@ void main(List<String> args) {
   final positional = <String>[];
   var skillName = 'neck';
   var instrumentName = 'cello';
-  var part = 0;
+  String? partSpec;
+  var listParts = false;
   var strings = true;
   var bowing = true;
   var stats = false;
@@ -67,7 +71,9 @@ void main(List<String> args) {
       case '--instrument':
         instrumentName = args[++i];
       case '--part':
-        part = int.parse(args[++i]);
+        partSpec = args[++i];
+      case '--list-parts':
+        listParts = true;
       case '--from':
         from = args[++i];
       case '--to':
@@ -99,12 +105,13 @@ void main(List<String> args) {
   };
 
   final parts = _loadParts(positional.first, from);
-  if (part >= parts.length) {
-    stderr.writeln(
-      'score has ${parts.length} part(s); --part $part is out of range',
-    );
-    exit(1);
+  if (listParts) {
+    for (var i = 0; i < parts.length; i++) {
+      stdout.writeln('$i\t${parts[i].metadata.instrument ?? "(unnamed)"}');
+    }
+    return;
   }
+  final part = _choosePart(parts, partSpec);
   final score = parts[part];
 
   final fingered = scoreWithBowedFingerings(
@@ -151,6 +158,72 @@ void main(List<String> args) {
     File(outPath).writeAsStringSync(text);
     stderr.writeln('  wrote $outPath ($fmt)');
   }
+}
+
+/// Which part to finger.
+///
+/// ⚠ This exists because the naive `--part 0` is actively WRONG on real corpus
+/// files: a NIFC choral score has soprano, two violins, viola and cello, and
+/// index 0 is none of them. Fingering a soprano line as though it were a cello
+/// produces confident nonsense, and a bulk run would produce it 2,650 times.
+/// So: match by instrument name, and when nothing is specified prefer a part
+/// that LOOKS bowed rather than blindly taking the first.
+int _choosePart(List<Score> parts, String? spec) {
+  // ⚠ Normalise historical orthography before matching. A NIFC score names its
+  // cello part "Baſso." with a LONG S (U+017F), which `contains('basso')` never
+  // matches — 11 of 25 corpus files silently found "no bowed part" until this was
+  // added. Old prints also use ligatures and accents freely.
+  String nameOf(int i) => (parts[i].metadata.instrument ?? '')
+      .toLowerCase()
+      .replaceAll('\u017f', 's') // ſ long s
+      .replaceAll('\u00df', 'ss') // ß
+      .replaceAll('\u0153', 'oe') // œ
+      .replaceAll('\u00e6', 'ae'); // æ
+
+  if (spec != null) {
+    final asIndex = int.tryParse(spec);
+    if (asIndex != null) {
+      if (asIndex < 0 || asIndex >= parts.length) {
+        stderr.writeln('score has ${parts.length} part(s); '
+            '--part $asIndex is out of range');
+        exit(1);
+      }
+      return asIndex;
+    }
+    final want = spec.toLowerCase();
+    for (var i = 0; i < parts.length; i++) {
+      if (nameOf(i).contains(want)) return i;
+    }
+    stderr.writeln('no part matching "$spec". Parts:');
+    for (var i = 0; i < parts.length; i++) {
+      stderr.writeln('  $i  ${parts[i].metadata.instrument ?? "(unnamed)"}');
+    }
+    exit(1);
+  }
+
+  // No preference given: prefer something plausibly bowed, and SAY which was
+  // chosen, because silently fingering the wrong part is the failure mode here.
+  const bowed = [
+    'cello',
+    'violoncell',
+    'vlc',
+    'basso',
+    'contrabass',
+    'double bass',
+  ];
+  for (var i = 0; i < parts.length; i++) {
+    if (bowed.any(nameOf(i).contains)) {
+      stderr.writeln('  (auto-selected part $i '
+          '"${parts[i].metadata.instrument}" — pass --part to override)');
+      return i;
+    }
+  }
+  if (parts.length > 1) {
+    stderr.writeln('  ⚠ no part looks bowed; using part 0 '
+        '"${parts[0].metadata.instrument ?? "(unnamed)"}" of ${parts.length}. '
+        'Use --list-parts to see them, --part <name|n> to choose.');
+  }
+  return 0;
 }
 
 Never _bail(String message) {
