@@ -5,8 +5,10 @@
 // and solo existed since WS-W1 and nothing outside `project.dart` and its codec
 // ever touched them. This is the screen that makes them real.
 
+import 'package:comet_beat/core/audio/loop_engine.dart' show GrooveSpec;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/project/project.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/features/games/composition/mixer_console_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -14,10 +16,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+MixerConsoleTester _mixer(WidgetTester tester) =>
+    tester.state<State<MixerConsoleScreen>>(find.byType(MixerConsoleScreen))
+        as MixerConsoleTester;
+
 Future<void> _pump(WidgetTester tester, ProjectService projects) async {
   await tester.pumpWidget(
-    ChangeNotifierProvider<ProjectService>.value(
-      value: projects,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ProjectService>.value(value: projects),
+        Provider<AudioService>(create: (_) => AudioService()),
+      ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -29,6 +38,111 @@ Future<void> _pump(WidgetTester tester, ProjectService projects) async {
 }
 
 void main() {
+  group('WS-W5c — Play renders the project, and says what it could not', () {
+    testWidgets('playing a loop track produces actual samples', (tester) async {
+      // The point of the whole WS-W5 arc: the faders are audible, not
+      // decorative. Asserting on the mixdown rather than on the tap is what
+      // makes that claim mean something.
+      final projects = ProjectService()
+        ..addTrack(
+          kind: AppMode.loop,
+          document: const GrooveSpec(enabled: {'drums'}),
+          name: 'Beat',
+        );
+      await _pump(tester, projects);
+
+      final mix = await _mixer(tester).playMix();
+      expect(mix.isSilent, isFalse);
+      expect(mix.left.length, mix.right.length);
+      expect(mix.skipped, isEmpty);
+    });
+
+    testWidgets('the mixer values reach the played mix', (tester) async {
+      final projects = ProjectService();
+      final id = projects.addTrack(
+        kind: AppMode.loop,
+        document: const GrooveSpec(enabled: {'drums'}),
+      );
+      await _pump(tester, projects);
+      final loud = await _mixer(tester).playMix();
+
+      // Mute it through the SCREEN, then play again.
+      await tester.tap(find.byKey(ValueKey('mixer-mute-$id')));
+      await tester.pump();
+      final muted = await _mixer(tester).playMix();
+
+      expect(loud.isSilent, isFalse);
+      expect(
+        muted.isSilent,
+        isTrue,
+        reason: 'the mute button silenced the mix',
+      );
+    });
+
+    testWidgets('a track it cannot sound is NAMED, not swallowed', (
+      tester,
+    ) async {
+      // The renderer reports skipped tracks on purpose; a Play button that hid
+      // that would leave the user hearing a mix quietly missing a part.
+      final projects = ProjectService()
+        ..addTrack(
+          kind: AppMode.loop,
+          document: const GrooveSpec(enabled: {'drums'}),
+        )
+        ..addTrack(kind: AppMode.tab, document: 'a tab', name: 'Gtr');
+      await _pump(tester, projects);
+
+      await _mixer(tester).playMix();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('mixer-skipped')), findsOneWidget);
+      expect(find.textContaining('has no sound yet'), findsOneWidget);
+      expect(
+        find.textContaining('instrument'),
+        findsOneWidget,
+        reason: 'the REASON is shown, not just a count',
+      );
+    });
+
+    testWidgets('nothing is reported before Play is pressed', (tester) async {
+      final projects = ProjectService()
+        ..addTrack(kind: AppMode.tab, document: 'a tab');
+      await _pump(tester, projects);
+      expect(find.byKey(const ValueKey('mixer-skipped')), findsNothing);
+    });
+
+    testWidgets('Play is disabled with no tracks', (tester) async {
+      await _pump(tester, ProjectService());
+      final button = tester.widget<IconButton>(
+        find.byKey(const ValueKey('mixer-play')),
+      );
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('an all-muted project does not enter the playing state', (
+      tester,
+    ) async {
+      final projects = ProjectService()
+        ..addTrack(
+          kind: AppMode.loop,
+          document: const GrooveSpec(enabled: {'drums'}),
+          name: 'Beat',
+        );
+      await _pump(tester, projects);
+      final id = projects.tracks.single.id;
+      await tester.tap(find.byKey(ValueKey('mixer-mute-$id')));
+      await tester.pump();
+
+      final mix = await _mixer(tester).playMix();
+      expect(mix.isSilent, isTrue);
+      expect(
+        _mixer(tester).isPlaying,
+        isFalse,
+        reason: 'a stop button on a silent mix would be a lie',
+      );
+    });
+  });
+
   testWidgets('an empty project explains itself instead of showing nothing', (
     tester,
   ) async {

@@ -2933,5 +2933,11 @@
   "mixerLevel": "Pegel",
   "mixerPan": "Panorama",
   "mixerMute": "Stumm",
-  "mixerSolo": "Solo"
+  "mixerSolo": "Solo",
+  "mixerPlay": "Mix abspielen",
+  "mixerStop": "Stopp",
+  "mixerSkippedOne": "1 Spur klingt noch nicht",
+  "mixerSkippedMany": "{count} Spuren klingen noch nicht",
+  "@mixerSkippedMany": {"placeholders": {"count": {"type": "int"}}},
+  "mixerNothingToPlay": "Nichts abzuspielen \u2014 alle Spuren sind stumm oder leer."
 }

@@ -1243,9 +1243,23 @@ prefix.
       than dropping it silently — a tab needs an instrument chosen, and audio
       tracks are not carried in the project yet. A muted unrenderable track is
       NOT reported, because nothing was lost.
-  - ⬜ **Still not wired to a Play button** — `renderProject` is correct and
-    tested, and no screen calls it. That is the next small step, and until it is
-    taken this is audible in tests only.
+  - ✅ **`WS-W5c` — Play, 2026-07-28.** The mixer renders the project, interleaves
+    to stereo (`wavBytesStereo`, no new encoder) and plays it. **The faders are
+    now audible from the app, not only from tests.**
+    - It **surfaces `ProjectMixdown.skipped`** in a banner naming each track AND
+      its reason. A Play button that swallowed that report would undo the
+      honesty the renderer was built with — the user would hear a mix quietly
+      missing a part with no way to know. Shown only after a Play; a standing
+      warning would be noise.
+    - Interleaving **clamps rather than scales**, consistent with the
+      no-normalisation rule: a mix pushed into clipping should clip, not be
+      silently turned down.
+    - ⚠️ **Two things copied from the Audio Editor deliberately, and both
+      matter:** the player call is **not awaited** (awaiting it never completes
+      under the headless test binding — it hung a 10-minute run), and it is
+      **gated on `AudioService.soundOn`**, the app-wide mute every other surface
+      honours. A silent mix does **not** enter the playing state, because a stop
+      button on silence is a lie.
   - ⬜ **FX inserts and sends** are not here — they belong with `WS-X3`.
 - 🔶 **WS-W6 — the browser.** `M` · **SLICE 1 (projects) CLAIMED 2026-07-28 by
   opus (loop-d1d4).** Depends WS-W1.

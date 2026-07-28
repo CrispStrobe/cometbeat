@@ -21,21 +21,99 @@
 // AUDIBLE mix is a renderer question, and the renderer does not read these
 // values yet.
 //
-// ⚠️ WHAT THIS SCREEN DOES NOT DO, stated so nobody reads more into it: the
-// values are editable and persist with the project, but **no render path
-// honours them yet**. Teaching the renderers to apply project mix is its own
-// card, with its own byte-identical guard, and pretending otherwise here would
-// be the kind of half-truth that costs someone an afternoon.
+// PLAY RENDERS THE PROJECT (WS-W5c). `renderProject` sums every track through
+// the sources that already render each kind and applies level, pan, mute and
+// solo, so the faders here are audible rather than decorative.
+//
+// ⚠️ It surfaces `ProjectMixdown.skipped` rather than swallowing it. The
+// renderer deliberately REPORTS tracks it cannot sound (a tab needs an
+// instrument chosen; audio tracks are not carried in the project yet), and a
+// Play button that hid that would undo the honesty the renderer was built with —
+// the user would hear a mix quietly missing a part and have no way to know.
 
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:comet_beat/core/audio/synth.dart' show wavBytesStereo;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/project/project.dart';
+import 'package:comet_beat/core/project/project_render.dart';
+import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class MixerConsoleScreen extends StatelessWidget {
+class MixerConsoleScreen extends StatefulWidget {
   const MixerConsoleScreen({super.key});
+
+  @override
+  State<MixerConsoleScreen> createState() => _MixerConsoleScreenState();
+}
+
+@visibleForTesting
+abstract interface class MixerConsoleTester {
+  /// Renders the project and plays it. Returns the mixdown so a test can
+  /// assert on the SAMPLES rather than on the button having been tapped.
+  Future<ProjectMixdown> playMix();
+  bool get isPlaying;
+}
+
+class _MixerConsoleScreenState extends State<MixerConsoleScreen>
+    implements MixerConsoleTester {
+  bool _playing = false;
+  List<SkippedTrack> _skipped = const [];
+
+  @override
+  bool get isPlaying => _playing;
+
+  @override
+  Future<ProjectMixdown> playMix() async {
+    final projects = context.read<ProjectService>();
+    final audio = context.read<AudioService>();
+    final mix = renderProject(projects.project);
+    if (mounted) setState(() => _skipped = mix.skipped);
+    if (mix.isSilent) {
+      if (mounted) setState(() => _playing = false);
+      return mix;
+    }
+    // Not awaited, and gated on the master sound switch — both copied from the
+    // Audio Editor deliberately. Awaiting the player never completes under the
+    // headless test binding (it hung a 10-minute run), and `soundOn` is the
+    // app-wide mute that every other surface honours.
+    if (audio.soundOn) {
+      unawaited(
+        audio.playWavBytes(
+          wavBytesStereo(_interleave(mix), sampleRate: mix.sampleRate),
+        ),
+      );
+    }
+    if (mounted) setState(() => _playing = true);
+    return mix;
+  }
+
+  Future<void> _stop() async {
+    await context.read<AudioService>().stop();
+    if (mounted) setState(() => _playing = false);
+  }
+
+  Widget _skippedBanner() => _SkippedBanner(
+        key: const ValueKey('mixer-skipped'),
+        skipped: _skipped,
+      );
+
+  /// Float pairs → the interleaved 16-bit frames `wavBytesStereo` wants.
+  /// Clamped rather than scaled: a mix the user pushed into clipping should
+  /// clip, not be silently turned down (see the no-normalisation rule in
+  /// `project_render.dart`).
+  static Int16List _interleave(ProjectMixdown mix) {
+    final out = Int16List(mix.left.length * 2);
+    for (var i = 0; i < mix.left.length; i++) {
+      out[i * 2] = (mix.left[i].clamp(-1.0, 1.0) * 32767).round();
+      out[i * 2 + 1] = (mix.right[i].clamp(-1.0, 1.0) * 32767).round();
+    }
+    return out;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +122,18 @@ class MixerConsoleScreen extends StatelessWidget {
     final tracks = projects.tracks;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.mixerConsoleTitle)),
+      appBar: AppBar(
+        title: Text(l10n.mixerConsoleTitle),
+        actions: [
+          IconButton(
+            key: const ValueKey('mixer-play'),
+            tooltip: _playing ? l10n.mixerStop : l10n.mixerPlay,
+            icon: Icon(_playing ? Icons.stop : Icons.play_arrow),
+            onPressed:
+                tracks.isEmpty ? null : () => _playing ? _stop() : playMix(),
+          ),
+        ],
+      ),
       body: tracks.isEmpty
           // An empty mixer is the normal state until a surface adds a track,
           // and a blank screen reads as broken. Say which action fills it.
@@ -58,14 +147,21 @@ class MixerConsoleScreen extends StatelessWidget {
                 ),
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: tracks.length,
-              itemBuilder: (context, i) => _Strip(
-                key: ValueKey('mixer-strip-${tracks[i].id}'),
-                track: tracks[i],
-                projects: projects,
-              ),
+          : Column(
+              children: [
+                if (_skipped.isNotEmpty) _skippedBanner(),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: tracks.length,
+                    itemBuilder: (context, i) => _Strip(
+                      key: ValueKey('mixer-strip-${tracks[i].id}'),
+                      track: tracks[i],
+                      projects: projects,
+                    ),
+                  ),
+                ),
+              ],
             ),
     );
   }
@@ -157,6 +253,49 @@ class _Strip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Names the tracks the mix could not sound. Shown after a play rather than
+/// permanently: before you press Play there is nothing to report, and a
+/// standing warning about tracks that might not sound would be noise.
+class _SkippedBanner extends StatelessWidget {
+  const _SkippedBanner({super.key, required this.skipped});
+
+  final List<SkippedTrack> skipped;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      color: scheme.errorContainer,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            skipped.length == 1
+                ? l10n.mixerSkippedOne
+                : l10n.mixerSkippedMany(skipped.length),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onErrorContainer,
+                ),
+          ),
+          // The REASON, per track — "no sound yet" alone leaves the user with
+          // nothing to act on.
+          for (final s in skipped)
+            Text(
+              '${s.trackId}: ${s.reason}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onErrorContainer,
+                  ),
+            ),
+        ],
       ),
     );
   }

@@ -3322,5 +3322,11 @@
   "mixerLevel": "Level",
   "mixerPan": "Pan",
   "mixerMute": "Mute",
-  "mixerSolo": "Solo"
+  "mixerSolo": "Solo",
+  "mixerPlay": "Play the mix",
+  "mixerStop": "Stop",
+  "mixerSkippedOne": "1 track has no sound yet",
+  "mixerSkippedMany": "{count} tracks have no sound yet",
+  "@mixerSkippedMany": {"placeholders": {"count": {"type": "int"}}},
+  "mixerNothingToPlay": "Nothing to play \u2014 every track is muted or silent."
 }

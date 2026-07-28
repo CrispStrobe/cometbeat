@@ -8664,4 +8664,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mixerSolo => 'Solo';
+
+  @override
+  String get mixerPlay => 'Play the mix';
+
+  @override
+  String get mixerStop => 'Stop';
+
+  @override
+  String get mixerSkippedOne => '1 track has no sound yet';
+
+  @override
+  String mixerSkippedMany(int count) {
+    return '$count tracks have no sound yet';
+  }
+
+  @override
+  String get mixerNothingToPlay =>
+      'Nothing to play — every track is muted or silent.';
 }

@@ -63,7 +63,7 @@ import 'app_localizations_en.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en'),
+    Locale('en')
   ];
 
   /// Tab Editor menu: name the left-hand finger for every fretted note
@@ -15775,6 +15775,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Solo'**
   String get mixerSolo;
+
+  /// No description provided for @mixerPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the mix'**
+  String get mixerPlay;
+
+  /// No description provided for @mixerStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get mixerStop;
+
+  /// No description provided for @mixerSkippedOne.
+  ///
+  /// In en, this message translates to:
+  /// **'1 track has no sound yet'**
+  String get mixerSkippedOne;
+
+  /// No description provided for @mixerSkippedMany.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tracks have no sound yet'**
+  String mixerSkippedMany(int count);
+
+  /// No description provided for @mixerNothingToPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to play — every track is muted or silent.'**
+  String get mixerNothingToPlay;
 }
 
 class _AppLocalizationsDelegate
@@ -15804,9 +15834,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

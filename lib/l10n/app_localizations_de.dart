@@ -8714,4 +8714,22 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get mixerSolo => 'Solo';
+
+  @override
+  String get mixerPlay => 'Mix abspielen';
+
+  @override
+  String get mixerStop => 'Stopp';
+
+  @override
+  String get mixerSkippedOne => '1 Spur klingt noch nicht';
+
+  @override
+  String mixerSkippedMany(int count) {
+    return '$count Spuren klingen noch nicht';
+  }
+
+  @override
+  String get mixerNothingToPlay =>
+      'Nichts abzuspielen — alle Spuren sind stumm oder leer.';
 }
