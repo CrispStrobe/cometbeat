@@ -29,6 +29,7 @@ class EditorElement {
     this.ornament,
     this.graceNotes = const [],
     this.graceStyle = GraceStyle.acciaccatura,
+    this.fingerings = const [],
   }) : pitches = [pitch];
 
   /// A chord: two or more simultaneous pitches (kept low → high).
@@ -42,10 +43,12 @@ class EditorElement {
     this.ornament,
     this.graceNotes = const [],
     this.graceStyle = GraceStyle.acciaccatura,
+    this.fingerings = const [],
   });
 
   const EditorElement.rest(this.duration, {required this.id})
       : pitches = const [],
+        fingerings = const [],
         articulations = const {},
         tieToNext = false,
         dynamic = null,
@@ -57,6 +60,15 @@ class EditorElement {
   final List<Pitch> pitches;
   final NoteDuration duration;
   final String id;
+
+  /// Left-hand fingering digits, one per pitch, low → high (empty = unmarked).
+  ///
+  /// Held on the element rather than in a side table because a fingering belongs
+  /// to its note the way an articulation does — it must survive a
+  /// buildScore/loadScore round trip, or a pass that writes fingerings appears to
+  /// do nothing. That is exactly what happened when the Score Editor's "Cello
+  /// fingerings" action shipped before this field existed.
+  final List<int> fingerings;
 
   /// Note-only ornaments (rests ignore these).
   final Set<Articulation> articulations;
@@ -93,6 +105,7 @@ class EditorElement {
           duration: duration,
           id: id,
           articulations: articulations,
+          fingerings: fingerings,
           tieToNext: tieToNext,
           ornament: ornament,
           graceNotes: graceNotes,
@@ -110,6 +123,7 @@ class EditorElement {
     bool clearOrnament = false,
     List<Pitch>? graceNotes,
     GraceStyle? graceStyle,
+    List<int>? fingerings,
   }) =>
       EditorElement.chord(
         pitches ?? this.pitches,
@@ -121,6 +135,7 @@ class EditorElement {
         ornament: clearOrnament ? null : (orn ?? ornament),
         graceNotes: graceNotes ?? this.graceNotes,
         graceStyle: graceStyle ?? this.graceStyle,
+        fingerings: fingerings ?? this.fingerings,
       );
 
   EditorElement withOrnament(Ornament? o) =>
@@ -1218,6 +1233,7 @@ class ScoreDocument {
               ornament: el.ornament,
               graceNotes: List.of(el.graceNotes),
               graceStyle: el.graceStyle,
+              fingerings: List.of(el.fingerings),
             ),
           );
         } else if (el is RestElement) {
@@ -1243,6 +1259,7 @@ class ScoreDocument {
               ornament: el.ornament,
               graceNotes: List.of(el.graceNotes),
               graceStyle: el.graceStyle,
+              fingerings: List.of(el.fingerings),
             ),
           );
         } else if (el is RestElement) {
