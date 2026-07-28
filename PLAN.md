@@ -3145,6 +3145,30 @@ The general lesson, which cost three iterations here: **a metric that passes is
 not thereby working.** Each of these passed everything while measuring the wrong
 thing, and each was caught by asking why a specific number looked the way it did.
 
+#### `TrackerChannel.derivedFrom` (2026-07-28) — inheritance made structural
+
+The render paths synthesize channels in nine places (`zoneChannel`, `baked`) to
+isolate one zone or one baked instrument. When `ReplayProfile` became a field,
+none of them carried it, so **zone-based renders silently fell back to `native`
+rules** — a MOD bending pitch linearly and panning constant-power inside an
+otherwise correct song. Nothing failed: `native` is a valid profile, merely the
+wrong one. That is what makes this class of bug worth a guard rather than a
+convention.
+
+Patching it with `..profile = source.profile` at nine call sites — which is what
+the pan-law commit did — works until the tenth is written. `derivedFrom` copies
+everything by default and takes overrides only for what differs, so a field
+added to the class later is carried without anyone remembering to.
+`tracker_channel_derived_test.dart` pins it, including a **source-driven** check
+that no `..profile =` reappears in the replayer — a hand-maintained list of
+call sites would go stale exactly when it matters, the same reasoning as the
+command-collision guard.
+
+⚠️ Note what stays: the plain constructor still defaults to `native`, because a
+channel nobody told otherwise IS one of ours. That default is what made
+forgetting silent, and it is still the right default — the fix is to make
+inheritance easy, not to make the default hostile.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,

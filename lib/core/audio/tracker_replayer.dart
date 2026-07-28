@@ -2510,13 +2510,12 @@ void _renderChannelInto(
         channel.instrument is! SampleInstrument &&
         channel.instrument is! MultiSampleInstrument &&
         _hasPerTickEffect(cells)) {
-      final baked = TrackerChannel(
+      final baked = TrackerChannel.derivedFrom(
+        channel,
         id: channel.id,
         instrument: _bakeProceduralToSample(channel.instrument, cells, timing),
         rows: cells.length,
-        gain: channel.gain,
-        volumeEnvelope: channel.volumeEnvelope,
-      )..profile = channel.profile;
+      );
       _renderSampleChannelInto(
         mix,
         baked,
@@ -3416,15 +3415,12 @@ void _renderMultiSampleChannelInto(
       rowStart,
       (zone, isolated) {
         final out = Float64List(timing.totalSamples);
-        final zoneChannel = TrackerChannel(
+        final zoneChannel = TrackerChannel.derivedFrom(
+          channel,
           id: '${channel.id}:zone',
           instrument: zone,
           rows: cells.length,
-          gain: channel.gain,
-          pan: channel.pan,
-          volumeEnvelope: channel.volumeEnvelope,
-          panEnvelope: channel.panEnvelope,
-        )..profile = channel.profile;
+        );
         _renderSampleChannelInto(
           out,
           zoneChannel,
@@ -3468,15 +3464,12 @@ void _renderMultiSampleChannelInto(
         if (boundary < isolated.length && isolated[boundary].isEmpty) {
           isolated[boundary] = TrackerCell.noteCut;
         }
-        final zoneChannel = TrackerChannel(
+        final zoneChannel = TrackerChannel.derivedFrom(
+          channel,
           id: '${channel.id}:zone',
           instrument: zone,
           rows: cells.length,
-          gain: channel.gain,
-          pan: channel.pan,
-          volumeEnvelope: channel.volumeEnvelope,
-          panEnvelope: channel.panEnvelope,
-        )..profile = channel.profile;
+        );
         if (zone is SampleInstrument) {
           _renderSampleChannelInto(
             mix,
@@ -3531,15 +3524,12 @@ void _renderMultiSampleChannelInto(
       cells,
       rowStart,
       (zone, isolated) {
-        final zoneChannel = TrackerChannel(
+        final zoneChannel = TrackerChannel.derivedFrom(
+          channel,
           id: '${channel.id}:zone',
           instrument: zone,
           rows: cells.length,
-          gain: channel.gain,
-          pan: channel.pan,
-          volumeEnvelope: channel.volumeEnvelope,
-          panEnvelope: channel.panEnvelope,
-        )..profile = channel.profile;
+        );
         final stereo = _renderSampleChannelStereoTicks(
           zoneChannel,
           isolated,
@@ -3581,15 +3571,12 @@ void _renderMultiSampleChannelInto(
         if (boundary < isolated.length && isolated[boundary].isEmpty) {
           isolated[boundary] = TrackerCell.noteCut;
         }
-        final zoneChannel = TrackerChannel(
+        final zoneChannel = TrackerChannel.derivedFrom(
+          channel,
           id: '${channel.id}:zone',
           instrument: zone,
           rows: cells.length,
-          gain: channel.gain,
-          pan: channel.pan,
-          volumeEnvelope: channel.volumeEnvelope,
-          panEnvelope: channel.panEnvelope,
-        )..profile = channel.profile;
+        );
         late final ({Float64List left, Float64List right}) rendered;
         if (_additiveOf(zone) != null) {
           final zoneLeft = Float64List(timing.totalSamples);
@@ -3642,15 +3629,12 @@ void _renderMultiSampleChannelIntoVariable(
       rowStart,
       (zone, isolated) {
         final out = Float64List(rowStart.last);
-        final zoneChannel = TrackerChannel(
+        final zoneChannel = TrackerChannel.derivedFrom(
+          channel,
           id: '${channel.id}:zone',
           instrument: zone,
           rows: cells.length,
-          gain: channel.gain,
-          pan: channel.pan,
-          volumeEnvelope: channel.volumeEnvelope,
-          panEnvelope: channel.panEnvelope,
-        )..profile = channel.profile;
+        );
         _renderSampleChannelIntoVariable(
           out,
           zoneChannel,
@@ -3693,15 +3677,12 @@ void _renderMultiSampleChannelIntoVariable(
         if (boundary < isolated.length && isolated[boundary].isEmpty) {
           isolated[boundary] = TrackerCell.noteCut;
         }
-        final zoneChannel = TrackerChannel(
+        final zoneChannel = TrackerChannel.derivedFrom(
+          channel,
           id: '${channel.id}:zone',
           instrument: zone,
           rows: cells.length,
-          gain: channel.gain,
-          pan: channel.pan,
-          volumeEnvelope: channel.volumeEnvelope,
-          panEnvelope: channel.panEnvelope,
-        )..profile = channel.profile;
+        );
         if (zone is SampleInstrument) {
           _renderSampleChannelIntoVariable(
             mix,
@@ -5219,13 +5200,12 @@ void _renderLongNativeVariableStereo(
           for (var row = 0; row < steps; row++) {
             runStarts.add(rowStart[startStep + row + 1] - start);
           }
-          final zoneChannel = TrackerChannel(
+          final zoneChannel = TrackerChannel.derivedFrom(
+            channel,
             id: '${channel.id}:native-zone',
             instrument: zone,
             rows: steps,
-            gain: channel.gain,
-            volumeEnvelope: channel.volumeEnvelope,
-          )..profile = channel.profile;
+          );
           if (!zone.normalize) {
             // Native run: stream each sample straight into L/R, no run buffer.
             runStart = start;
@@ -5318,15 +5298,12 @@ const _nativeTickFullBufferLimit = kSampleRate * 120;
         flatCells,
         rowStart,
         (zone, isolated) {
-          final zoneChannel = TrackerChannel(
+          final zoneChannel = TrackerChannel.derivedFrom(
+            channels[c],
             id: '${channels[c].id}:zone',
             instrument: zone,
             rows: flatCells.length,
-            gain: channels[c].gain,
-            pan: channels[c].pan,
-            volumeEnvelope: channels[c].volumeEnvelope,
-            panEnvelope: channels[c].panEnvelope,
-          )..profile = channels[c].profile;
+          );
           final stereo = _renderSampleChannelStereoTicks(
             zoneChannel,
             isolated,

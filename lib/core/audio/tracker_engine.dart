@@ -2012,6 +2012,51 @@ class TrackerChannel {
     assert(this.cells.length == rows, 'cells must be exactly $rows long');
   }
 
+  /// A channel derived from [source] — same replay rules, usually a different
+  /// instrument and/or cells.
+  ///
+  /// The render paths synthesize channels in nine places (`zoneChannel`,
+  /// `baked`) to isolate one zone or one baked instrument, and every one of them
+  /// has to carry the source's [profile]. They did NOT: the profile was added as
+  /// a field and the derived channels quietly kept the default, so zone-based
+  /// renders fell back to `native` rules — MOD/S3M bending pitch linearly and
+  /// panning constant-power inside an otherwise correct song.
+  ///
+  /// Fixing that with `..profile = source.profile` at nine call sites works
+  /// until the tenth is written. This factory makes inheritance STRUCTURAL: it
+  /// copies everything by default and takes overrides for the parts that
+  /// actually differ, so a field added to this class later is carried without
+  /// anyone remembering to. Named `derivedFrom` rather than `copyWith` because
+  /// it is not a copy — `id` and `instrument` are normally replaced, and the
+  /// point is the lineage.
+  factory TrackerChannel.derivedFrom(
+    TrackerChannel source, {
+    String? id,
+    TrackerInstrument? instrument,
+    int? rows,
+    double? gain,
+    double? pan,
+    VolumeEnvelope? volumeEnvelope,
+    PanEnvelope? panEnvelope,
+    List<TrackerChannelEffect>? effects,
+    List<FxSpec>? fxChain,
+    List<TrackerCell>? cells,
+  }) {
+    final n = rows ?? cells?.length ?? source.cells.length;
+    return TrackerChannel(
+      id: id ?? source.id,
+      instrument: instrument ?? source.instrument,
+      rows: n,
+      gain: gain ?? source.gain,
+      pan: pan ?? source.pan,
+      volumeEnvelope: volumeEnvelope ?? source.volumeEnvelope,
+      panEnvelope: panEnvelope ?? source.panEnvelope,
+      effects: effects ?? source.effects,
+      fxChain: fxChain ?? source.fxChain,
+      cells: cells,
+    )..profile = source.profile;
+  }
+
   final String id;
 
   /// The replay rules this channel plays under — see [ReplayProfile].
