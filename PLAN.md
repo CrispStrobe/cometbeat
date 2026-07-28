@@ -1097,8 +1097,9 @@ prefix.
   out of grids, then zoom it", with a product decision in front of it (does the
   session matrix become a timeline, or sit beside one?). Do not pull it as an
   `M` of plumbing.
-- 🚧 **WS-L10 — audio tracks in the loop.** `M` · **CLAIMED 2026-07-28 by opus
-  (loop-d1d4).** Depends WS-W1. A Loop Studio
+- ✅ **WS-L10 — audio tracks in the loop.** `M` · **SHIPPED 2026-07-28** (opus,
+  loop-d1d4) — `AudioPattern` + `loop_audio_fit.dart` + an import chip, 33
+  tests. Depended on WS-W1. A Loop Studio
   track is symbolic only today, so a recorded audio loop has nowhere to live
   except a bounce. After WS-W1 it is the **same** clip type the Audio Editor
   holds, so this is a track-kind admission plus tempo-matching, not a new
@@ -1106,6 +1107,22 @@ prefix.
   (tempos 75/100/120 keep eighth-steps integral in ms **and** samples) — an
   audio track whose length does not land on that grid must be resampled to it,
   not tiled past it, or the gapless seam clicks.
+  - ✅ **How it landed.** `AudioPattern extends LoopPattern` — a pattern that IS
+    the render rather than a description of one. That is the whole admission:
+    `_renderMix` only ever asked a track for a `Float64List`, so level, pan, the
+    D3 filter and every automation lane apply to audio with **no audio-specific
+    mixing code**, and the tests assert exactly that.
+  - ⚠️ **A trap worth passing on.** Audio is excluded from `GrooveSpec` (PCM
+    cannot travel in a paste-able token) — and the render cache was keyed on
+    `spec.cacheKey`, so the moment audio left the spec, changing an audio
+    track's level served the STALE cached WAV back. Fixed by splitting
+    `renderIdentity` (everything that decides the sound) from `spec` (everything
+    that can be shared). **If you make anything else unserialisable, that
+    getter is where it has to be accounted for.**
+  - ⬜ **Left open:** the take is fitted to exactly ONE loop. A four-bar
+    recording over a two-bar groove is therefore played at double speed rather
+    than lengthening the loop — `audioStretchOf` reports it and the UI says so,
+    but offering "make the loop longer instead" is the obvious next step.
 
 **Audio Editor**
 

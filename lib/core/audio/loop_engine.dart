@@ -26,6 +26,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart';
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart';
 import 'package:comet_beat/core/audio/fx/fx_chain.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
+import 'package:comet_beat/core/audio/loop_audio_fit.dart';
 import 'package:comet_beat/core/audio/loop_automation.dart';
 import 'package:comet_beat/core/audio/loop_instrument_render.dart'
     show renderCellsWithInstrument;
@@ -236,6 +237,34 @@ void applyCellVelocities(
     }
     off += n;
   }
+}
+
+/// A pattern that IS audio: recorded PCM rather than notes to synthesise.
+///
+/// WS-L10. Every other [LoopPattern] describes music the engine then renders;
+/// this one already IS the render. That is the whole of the change — an audio
+/// track needs no new mix path, no second renderer and no parallel model,
+/// because [_renderMix] only ever asked a track for a `Float64List`. It goes
+/// through `mixStems` exactly like a synthesised stem, which means the per-track
+/// level, the pan law, the D3 filter and every automation lane apply to it for
+/// free rather than being reimplemented for audio.
+///
+/// [transpose] and [kit] are ignored: there are no notes to move and no drum
+/// voices to re-timbre. Repitching a recording is a different feature (and a
+/// destructive one), not a side effect of the groove's key.
+class AudioPattern extends LoopPattern {
+  AudioPattern(this.pcm);
+
+  /// Mono float samples at [kSampleRate].
+  final Float64List pcm;
+
+  @override
+  Float64List render(
+    LoopTiming timing, {
+    int transpose = 0,
+    DrumKit kit = kDrumKitClean,
+  }) =>
+      fitAudioToLoop(pcm, timing.totalSamples);
 }
 
 /// An unpitched pattern: one boolean hit row per drum voice.
@@ -1882,6 +1911,65 @@ class LoopEngine {
   /// added one.
   String _roleOf(String id) => _extraRoles[id] ?? id;
 
+  /// The role marker for an audio track: not a role at all.
+  ///
+  /// Distinct from [emptyTrackRole] because the two behave oppositely on load —
+  /// an empty track is rebuilt exactly (there is nothing to rebuild), while an
+  /// audio track CANNOT be, since its PCM does not travel. See [addAudioTrack].
+  static const audioTrackRole = '@audio';
+
+  /// Adds a track that plays [pcm] instead of synthesising notes, returning its
+  /// id. WS-L10.
+  ///
+  /// The audio is fitted to the loop's exact sample count — resampled, never
+  /// tiled (see `loop_audio_fit.dart` for why that distinction is the whole
+  /// problem). From there it is an ordinary track: [levels], [pans], the
+  /// per-track filter and every automation lane apply to it through the same
+  /// `mixStems` call as a synthesised stem.
+  ///
+  /// ⚠️ It does NOT survive a save. A `GrooveSpec` is a paste-able share token
+  /// and cannot carry megabytes of PCM; the home for that is a `Project` file
+  /// (WS-W1), which bakes audio rather than tokenising it. So an audio track is
+  /// deliberately left out of the spec's roster — a token that promised the
+  /// track and silently restored it empty would be worse than one that never
+  /// claimed to have it.
+  String addAudioTrack(Float64List pcm, {double gain = 0.5}) {
+    final id = _freeTrackId('audio');
+    _extraTracks.add(
+      LoopTrack(id: id, gain: gain, variants: [AudioPattern(pcm)]),
+    );
+    _extraRoles[id] = audioTrackRole;
+    enabled.add(id);
+    _clearRenderCaches();
+    return id;
+  }
+
+  /// Whether [id] plays recorded audio rather than synthesised notes.
+  bool isAudioTrack(String id) => _extraRoles[id] == audioTrackRole;
+
+  /// The PCM [id] plays, or null when it is not an audio track.
+  Float64List? audioPcm(String id) {
+    for (final track in tracks) {
+      if (track.id != id) continue;
+      final pattern = track.variants.first;
+      return pattern is AudioPattern ? pattern.pcm : null;
+    }
+    return null;
+  }
+
+  /// How far [id]'s audio is being stretched to fill the loop (1 = exact).
+  ///
+  /// Exposed rather than hidden because it is the number that decides whether
+  /// this feature sounds like a looper or like a chipmunk: a couple of percent
+  /// is the "stopped recording a moment late" case and is inaudible, while 2×
+  /// means the take and the loop disagree about how long a bar is. A UI should
+  /// offer to change the LOOP at that point, not the audio.
+  double audioStretchOf(String id) {
+    final pcm = audioPcm(id);
+    if (pcm == null) return 1;
+    return audioFitRatio(pcm.length, timing.totalSamples);
+  }
+
   /// Adds a silent pitched track, returning its id.
   ///
   /// The uncapped end of the ladder: a track with nothing in it, for a part the
@@ -2373,27 +2461,94 @@ class LoopEngine {
   /// The 2-bar grid authored patterns render on (tiled in progression mode).
   LoopTiming get _vampTiming => LoopTiming(tempoBpm: _tempoBpm, swing: _swing);
 
+  /// The ids of tracks that cannot be serialised at all.
+  ///
+  /// Only audio tracks, and only because their PCM does not fit in a token. They
+  /// are filtered out of EVERY field of the spec rather than just the roster —
+  /// an id left behind in `enabled` or `levels` would still change the token,
+  /// so a groove that merely gained a recording would look different to the
+  /// share dialog while restoring identically.
+  Set<String> get _unserialisableIds => {
+        for (final e in _extraRoles.entries)
+          if (e.value == audioTrackRole) e.key,
+      };
+
   /// Snapshot of the whole groove (serializable — share token, save slots).
-  GrooveSpec get spec => GrooveSpec(
-        enabled: {...enabled},
-        variants: {...variants},
-        levels: {...levels},
+  ///
+  /// Excludes anything that cannot be serialised. Use [renderIdentity] rather
+  /// than this to key a cache: the two are deliberately different.
+  GrooveSpec get spec => _specWithout(_unserialisableIds);
+
+  /// Everything that decides what the loop SOUNDS like, as one string.
+  ///
+  /// Not the same as `spec.cacheKey`, and the difference matters: the spec
+  /// leaves audio tracks out because their PCM cannot travel in a share token,
+  /// so keying the render cache on it would mean an audio track's level, pan,
+  /// filter or lane could be changed and the cached WAV served back unchanged.
+  /// That is exactly the bug this getter exists to prevent — it was a real one
+  /// for the ten minutes between excluding audio from the spec and writing
+  /// this.
+  ///
+  /// The PCM itself is keyed by identity: replacing a recording gives a new
+  /// [AudioPattern], and a new identity is precisely the signal that the fit
+  /// has to be redone.
+  String get renderIdentity {
+    final audio = _unserialisableIds;
+    final base = _specWithout(const {}).cacheKey;
+    if (audio.isEmpty) return base;
+    final ids = audio.toList()..sort();
+    final stamps = [
+      for (final id in ids)
+        '$id:${identityHashCode(audioPcm(id) ?? const Object())}',
+    ];
+    return '$base#au:${stamps.join(',')}';
+  }
+
+  GrooveSpec _specWithout(Set<String> skip) => GrooveSpec(
+        enabled: {
+          for (final id in enabled)
+            if (!skip.contains(id)) id,
+        },
+        variants: {
+          for (final e in variants.entries)
+            if (!skip.contains(e.key)) e.key: e.value,
+        },
+        levels: {
+          for (final e in levels.entries)
+            if (!skip.contains(e.key)) e.key: e.value,
+        },
         pans: {
           for (final e in pans.entries)
-            if (e.value != 0.0) e.key: e.value,
+            if (e.value != 0.0 && !skip.contains(e.key)) e.key: e.value,
         },
-        filters: {..._trackFilters},
-        trackSteps: {..._trackSteps},
-        trackSwings: {..._trackSwing},
+        filters: {
+          for (final e in _trackFilters.entries)
+            if (!skip.contains(e.key)) e.key: e.value,
+        },
+        trackSteps: {
+          for (final e in _trackSteps.entries)
+            if (!skip.contains(e.key)) e.key: e.value,
+        },
+        trackSwings: {
+          for (final e in _trackSwing.entries)
+            if (!skip.contains(e.key)) e.key: e.value,
+        },
         // Copied a level deeper than the maps above: the inner map is mutable
         // and lives on in the engine, so a snapshot sharing it would change
         // under whoever is holding it.
         automation: {
           for (final e in _automation.entries)
-            e.key: <AutomationParam, AutomationLane>{...e.value},
+            if (!skip.contains(e.key))
+              e.key: <AutomationParam, AutomationLane>{...e.value},
         },
-        extraTracks: {..._extraRoles},
-        trackNames: {..._trackNames},
+        extraTracks: {
+          for (final e in _extraRoles.entries)
+            if (!skip.contains(e.key)) e.key: e.value,
+        },
+        trackNames: {
+          for (final e in _trackNames.entries)
+            if (!skip.contains(e.key)) e.key: e.value,
+        },
         tempoBpm: _tempoBpm,
         swing: _swing,
         progressionId: _progression?.id,
@@ -2410,7 +2565,8 @@ class LoopEngine {
             (_userBeatTrack?.variants.first as DrumRowsPattern?)?.velocities,
         trackOverrides: {
           for (final entry in _cellOverrides.entries)
-            entry.key: List<PatternCell>.of(entry.value),
+            if (!skip.contains(entry.key))
+              entry.key: List<PatternCell>.of(entry.value),
         },
         drumOverrides: {
           for (final entry in _drumOverrides.entries)
@@ -2906,6 +3062,16 @@ class LoopEngine {
     // new instance), so a fresh edit never reads a stale cached stem.
     final drumOv = _drumOverrides[track.id];
     final ov = drumOv != null ? '#do${identityHashCode(drumOv)}' : '';
+    // An audio stem depends on the PCM and on the loop's sample count and
+    // nothing else — keying it on the variant/progression/swing terms below
+    // would be harmless but misleading, and keying it on identity is what makes
+    // replacing the recording drop the cached fit.
+    final pattern = track.variants[variant];
+    if (pattern is AudioPattern) {
+      final audioKey = '${track.id}#audio${identityHashCode(pattern)}'
+          '#n${timing.totalSamples}';
+      return _stemCache[audioKey] ??= _renderStem(track, variant);
+    }
     final key = '${track.id}#$variant#${_progression?.id ?? 'vamp'}#$voice$ov'
         '#len${trackSteps(track.id)}#loop$_loopSteps'
         '#sw${trackSwing(track.id).toStringAsFixed(3)}';
@@ -2913,6 +3079,13 @@ class LoopEngine {
   }
 
   Float64List _renderStem(LoopTrack track, int variant) {
+    // Audio short-circuits everything below. A recording has no variant to
+    // pick, no progression to re-voice against, no instrument to render
+    // through and no pattern to shorten — it is already the stem, and the only
+    // question is its LENGTH.
+    final pattern = track.variants[variant];
+    if (pattern is AudioPattern) return pattern.render(timing);
+
     // A saved-instrument voice override renders this track's cells through the
     // instrument instead of its built-in timbre (drums have no midi cells, so
     // they fall through to the default render).
@@ -3032,7 +3205,7 @@ class LoopEngine {
   /// scheduler uses this every 4th loop.
   Uint8List renderLoop({bool fill = false}) {
     final filling = fill && enabled.contains('drums');
-    final key = '${spec.cacheKey}${filling ? '#fill' : ''}$_masterBusKey';
+    final key = '$renderIdentity${filling ? '#fill' : ''}$_masterBusKey';
     return _wavCache[key] ??= _renderMix(
       stem: (track) => filling && track.id == 'drums'
           ? _fillStemFor(track)

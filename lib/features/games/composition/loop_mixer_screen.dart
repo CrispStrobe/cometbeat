@@ -28,9 +28,12 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/aec_capability.dart';
 import 'package:comet_beat/core/audio/aec_engine.dart';
 import 'package:comet_beat/core/audio/beat_capture.dart';
+import 'package:comet_beat/core/audio/crisp_dsp/resample.dart' show resampleHq;
 import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/groove_capture.dart';
+import 'package:comet_beat/core/audio/loop_audio_fit.dart'
+    show audioFitIsSubtle;
 import 'package:comet_beat/core/audio/loop_automation.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/loop_reference.dart';
@@ -44,6 +47,7 @@ import 'package:comet_beat/core/audio/synth.dart'
     show
         Drum,
         Instrument,
+        kSampleRate,
         kDrumKits,
         midiToFrequency,
         renderSegments,
@@ -79,6 +83,7 @@ import 'package:comet_beat/features/workshop/screens/composition_workshop_screen
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
+import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
@@ -360,6 +365,15 @@ abstract interface class LoopMixerTester {
   /// D3 — a track's own tone control, and a way to step it.
   double trackFilterOf(String id);
   void cycleTrackFilter(String id);
+
+  /// WS-L10 — a recorded loop as a track: add one, ask whether a track is one,
+  /// and how far its audio had to stretch to fit the groove.
+  String addAudioTrack(Float64List pcm);
+  bool isAudioTrack(String id);
+  double audioStretchOf(String id);
+
+  /// How many samples one loop is — what an imported take is fitted to.
+  int get debugLoopSamples;
 
   /// A track's swing, whether it has its OWN, and a way to step it.
   double trackSwingOf(String id);
@@ -1172,6 +1186,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   double trackFilterOf(String id) => _engine.trackFilter(id);
   @override
   void cycleTrackFilter(String id) => _cycleTrackFilter(id);
+  @override
+  String addAudioTrack(Float64List pcm) {
+    final id = _engine.addAudioTrack(pcm);
+    setState(() {});
+    _syncPlayback();
+    return id;
+  }
+
+  @override
+  bool isAudioTrack(String id) => _engine.isAudioTrack(id);
+  @override
+  double audioStretchOf(String id) => _engine.audioStretchOf(id);
+  @override
+  int get debugLoopSamples => _engine.timing.totalSamples;
   @override
   double trackSwingOf(String id) => _engine.trackSwing(id);
   @override
@@ -3610,6 +3638,9 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     // Slate: deliberately not one of the pitch-class colours, because it is not
     // yet any particular part.
     'track': Color(0xFF546E7A),
+    // An imported loop: warm amber-brown, deliberately unlike the pitch-class
+    // colours — it is audio, not a part the groove's key can move.
+    'audio': Color(0xFF6D4C41),
   };
 
   /// A track's name: the player's own if they gave it one, else the app's.
@@ -3637,6 +3668,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         'voice' => l10n.loopMixerTrackVoice,
         'beat' => l10n.loopMixerTrackBeat,
         'track' => l10n.loopMixerTrackEmpty,
+        'audio' => l10n.loopMixerTrackAudio,
         _ => l10n.loopMixerTrackSparkle,
       };
 
@@ -4627,6 +4659,69 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _syncPlayback();
   }
 
+  /// WS-L10 — brings a recorded loop in from a file as an audio track.
+  ///
+  /// The audio is fitted to the groove's exact length, which for a take that is
+  /// nearly right is inaudible and for one that is not is a speed change. So a
+  /// large stretch is REPORTED rather than applied silently: the player can hear
+  /// that something happened, and the message tells them it was deliberate and
+  /// by how much. Their next move — change the tempo, or the loop's bars — is
+  /// then an informed one.
+  Future<void> _importAudioTrack() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final file = await openFile(
+        acceptedTypeGroups: const [
+          XTypeGroup(label: 'Audio', extensions: kAudioImportExtensions),
+        ],
+      );
+      if (file == null) return;
+      final imported = await importAudioMonoAsync(await file.readAsBytes());
+      if (!mounted) return;
+      if (imported == null || imported.pcm.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.loopMixerAudioImportFailed)),
+        );
+        return;
+      }
+      // Resample to the app's rate FIRST if the file disagrees, so the fit to
+      // the loop is a length change only and not a length change tangled up
+      // with a rate conversion.
+      final atAppRate = imported.sampleRate == kSampleRate
+          ? imported.pcm
+          : resampleHq(
+              imported.pcm,
+              fromRate: imported.sampleRate.toDouble(),
+              toRate: kSampleRate.toDouble(),
+            );
+      final id = _engine.addAudioTrack(atAppRate);
+      setState(() {});
+      _syncPlayback();
+
+      final stretch = _engine.audioStretchOf(id);
+      if (!audioFitIsSubtle(stretch)) {
+        final percent = ((stretch - 1) * 100).round();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.loopMixerAudioStretched(
+                file.name,
+                percent > 0 ? '+$percent' : '$percent',
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[LOOP] audio import failed: $e');
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.loopMixerAudioImportFailed)),
+      );
+    }
+  }
+
   /// The five authored roles, then Empty.
   ///
   /// Roles first because the ＋ has to land on something that PLAYS: a blank
@@ -4661,6 +4756,20 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 onPressed: () => _addRoleTrack(role.id),
               ),
             ),
+          Tooltip(
+            message: l10n.loopMixerAddAudioHint,
+            child: ActionChip(
+              key: const Key('loop-add-audio'),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              avatar: const Icon(Icons.graphic_eq, size: 16),
+              label: Text(
+                l10n.loopMixerAddAudio,
+                style: const TextStyle(fontSize: 12),
+              ),
+              onPressed: _importAudioTrack,
+            ),
+          ),
           Tooltip(
             message: l10n.loopMixerAddEmptyHint,
             child: ActionChip(

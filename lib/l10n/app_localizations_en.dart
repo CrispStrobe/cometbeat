@@ -1784,6 +1784,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerAddEmpty => 'Empty';
 
   @override
+  String get loopMixerAddAudio => 'Import a loop';
+
+  @override
+  String get loopMixerAddAudioHint =>
+      'add a recorded loop from a file — it stretches to fit the groove';
+
+  @override
+  String get loopMixerTrackAudio => 'Loop';
+
+  @override
+  String get loopMixerAudioImportFailed => 'We couldn\'t read that audio file';
+
+  @override
+  String loopMixerAudioStretched(String name, String percent) {
+    return '$name was stretched $percent% to fit the groove';
+  }
+
+  @override
   String get loopMixerAddEmptyHint =>
       'add a silent track and draw your own tune into it';
 

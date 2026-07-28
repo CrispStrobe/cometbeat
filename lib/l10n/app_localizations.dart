@@ -3344,6 +3344,36 @@ abstract class AppLocalizations {
   /// **'Empty'**
   String get loopMixerAddEmpty;
 
+  /// No description provided for @loopMixerAddAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a loop'**
+  String get loopMixerAddAudio;
+
+  /// No description provided for @loopMixerAddAudioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'add a recorded loop from a file — it stretches to fit the groove'**
+  String get loopMixerAddAudioHint;
+
+  /// No description provided for @loopMixerTrackAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop'**
+  String get loopMixerTrackAudio;
+
+  /// No description provided for @loopMixerAudioImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t read that audio file'**
+  String get loopMixerAudioImportFailed;
+
+  /// No description provided for @loopMixerAudioStretched.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} was stretched {percent}% to fit the groove'**
+  String loopMixerAudioStretched(String name, String percent);
+
   /// No description provided for @loopMixerAddEmptyHint.
   ///
   /// In en, this message translates to:

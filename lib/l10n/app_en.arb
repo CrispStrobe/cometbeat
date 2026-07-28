@@ -660,6 +660,17 @@
   "loopMixerAddTrack": "Add a new track",
   "loopMixerAddTrackHint": "tap a part to add a fresh one of it",
   "loopMixerAddEmpty": "Empty",
+  "loopMixerAddAudio": "Import a loop",
+  "loopMixerAddAudioHint": "add a recorded loop from a file — it stretches to fit the groove",
+  "loopMixerTrackAudio": "Loop",
+  "loopMixerAudioImportFailed": "We couldn't read that audio file",
+  "loopMixerAudioStretched": "{name} was stretched {percent}% to fit the groove",
+  "@loopMixerAudioStretched": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
   "loopMixerAddEmptyHint": "add a silent track and draw your own tune into it",
   "loopMixerTrackEmpty": "Track",
   "loopMixerRenameTrack": "Rename a track",

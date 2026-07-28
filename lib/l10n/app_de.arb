@@ -591,6 +591,17 @@
   "loopMixerAddTrack": "Neue Spur hinzufügen",
   "loopMixerAddTrackHint": "auf eine Stimme tippen, um eine frische davon zu bekommen",
   "loopMixerAddEmpty": "Leer",
+  "loopMixerAddAudio": "Loop importieren",
+  "loopMixerAddAudioHint": "einen aufgenommenen Loop aus einer Datei holen — er wird auf den Groove gedehnt",
+  "loopMixerTrackAudio": "Loop",
+  "loopMixerAudioImportFailed": "Diese Audiodatei konnten wir nicht lesen",
+  "loopMixerAudioStretched": "{name} wurde um {percent}% gedehnt, um in den Groove zu passen",
+  "@loopMixerAudioStretched": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
   "loopMixerAddEmptyHint": "eine stille Spur hinzufügen und selbst eine Melodie hineinmalen",
   "loopMixerTrackEmpty": "Spur",
   "loopMixerRenameTrack": "Spur umbenennen",

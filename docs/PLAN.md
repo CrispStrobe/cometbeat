@@ -388,7 +388,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-L10` — audio tracks in the Loop
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L10` audio tracks in the Loop
   Studio.** `M`, depends WS-W1 (shipped by me). Branch `feature/mixer-d1d4`.
   Claim pushed BEFORE any code.
   **Why this one.** Re-audited by commit recency again: in the last 12 hours
@@ -417,7 +417,41 @@ is recorded in [HISTORY.md](HISTORY.md).
   the code rather than leave a silent hole.
   **Files:** `loop_engine.dart` + `loop_mixer_screen.dart` (both cold, mine),
   READING `crisp_dsp/resample.dart` and `daw_sources.dart` without editing them.
-  — opus
+
+  ✅ **DELIVERED** — new `lib/core/audio/loop_audio_fit.dart` (pure) +
+  `AudioPattern` in `loop_engine.dart` + an **Import a loop** chip in the
+  inspector, **33 tests**. It reuses `shared/music_io/audio_import.dart`
+  (`importAudioMonoAsync`, cold — 3 days untouched), so wav/mp3/flac/ogg/opus/
+  m4a all come in on every platform without a new decoder.
+  **The admission is one line of design:** `_renderMix` only ever asked a track
+  for a `Float64List`, so an audio track needs no second mix path — level, pan,
+  the D3 filter and every automation lane apply to it with **zero**
+  audio-specific mixing code, which the tests assert one by one.
+  ⚠️ **The trap I hit, for whoever touches this next.** Audio is excluded from
+  `GrooveSpec` (PCM cannot travel in a share token) and the render cache was
+  keyed on `spec.cacheKey` — so the moment audio left the spec, changing an
+  audio track's level served back the STALE cached WAV. Caught by a test that
+  was asserting something else. Fixed by splitting **`renderIdentity`**
+  (everything that decides the SOUND) from **`spec`** (everything that can be
+  SHARED); they are no longer the same string, and anything else made
+  unserialisable has to be accounted for in that getter.
+  ⬜ **Left open + recorded on the ladder:** a take is fitted to exactly ONE
+  loop, so a four-bar recording over a two-bar groove plays at double speed.
+  `audioStretchOf` reports it and the UI says so in a snackbar, but "lengthen
+  the loop instead" is the obvious follow-up.
+  Gates: format exit 0 · analyze "No issues found" · `flutter test`
+  **5675 passed / 20 skipped / 0 failed** (re-run after rebasing onto the WS-W4
+  landing).
+  🐛 **Also fixed, found by that run and NOT mine:**
+  `test/note_value_quiz_test.dart` "a wrong answer shows the note-length
+  explanation" is inherently flaky at **~1 in 256**. It taps
+  `FilledButton.at(i)` four times hoping to land on a wrong answer — but a
+  CORRECT tap advances the round and reshuffles the options, so each attempt is
+  an independent 1-in-4 chance of guessing right again, and four correct
+  guesses in a row leaves `sawWrong` false. Often enough to redden a full-suite
+  run every few hundred and look like whoever is pushing. Bound raised to 12
+  (~6e-8) with the arithmetic written down. It passed standalone 5/5 before and
+  after; the fix is to the TEST's randomness, not to the game. — opus
 
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L11` a lossless `TabDocument`
   codec.** `M`, no dependencies. Worktree `../mus-mixer-d1d4`, branch

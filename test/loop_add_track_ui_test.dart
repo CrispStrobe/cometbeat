@@ -16,6 +16,8 @@
 //   through `_sourceIdOf`, but an EMPTY track is a copy of nothing, so it needs
 //   its own colour and its own name, which is also why renaming exists.
 
+import 'dart:typed_data';
+
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,6 +50,10 @@ Future<void> _tap(WidgetTester tester, Key key) async {
   await tester.tap(target);
   await tester.pump(const Duration(milliseconds: 50));
 }
+
+/// Silent PCM — this suite is about the TRACK, not the sound; the audio itself
+/// is measured in loop_audio_track_test.
+Float64List _silence(int samples) => Float64List(samples);
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -171,6 +177,42 @@ void main() {
       game.renameTrack(added, '  ');
       await tester.pump(const Duration(milliseconds: 50));
       expect(game.trackLabelOf(added), was);
+    });
+  });
+
+  group('WS-L10 — an imported loop is a track like any other', () {
+    testWidgets('the import chip is offered beside the roles', (tester) async {
+      await _open(tester);
+      expect(find.byKey(const Key('loop-add-audio')), findsOneWidget);
+    });
+
+    testWidgets('an audio track appears with its OWN name and colour',
+        (tester) async {
+      // The same trap the empty track had: an id absent from the colour and
+      // label tables reads as a grey "Sparkle".
+      final game = await _open(tester);
+      final id = game.addAudioTrack(_silence(4410));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.isAudioTrack(id), isTrue);
+      expect(game.trackLabelOf(id), isNot(game.trackLabelOf('sparkle')));
+      expect(game.trackIds, contains(id));
+    });
+
+    testWidgets('it gets a lane strip and a tone badge like the rest',
+        (tester) async {
+      final game = await _open(tester);
+      final id = game.addAudioTrack(_silence(4410));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byKey(Key('loop-auto-$id-0')), findsOneWidget);
+      expect(find.byKey(Key('loop-filter-$id')), findsOneWidget);
+    });
+
+    testWidgets('the stretch it needed is reported', (tester) async {
+      final game = await _open(tester);
+      // Half a loop of audio has to play at half speed to fill it.
+      final id = game.addAudioTrack(_silence(game.debugLoopSamples ~/ 2));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.audioStretchOf(id), closeTo(2, 0.01));
     });
   });
 

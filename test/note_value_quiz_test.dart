@@ -68,9 +68,16 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap options until a wrong one lands (keeps the round put).
+    //
+    // The bound is deliberately well above 4. A correct tap ADVANCES the round
+    // and reshuffles the options, so each attempt is an independent 1-in-4
+    // chance of guessing right again — four attempts therefore left a 1/256
+    // chance of never seeing a wrong answer, which is exactly often enough to
+    // redden a full-suite run every few hundred and look like someone's bug.
+    // Twelve puts it at ~6e-8.
     var sawWrong = false;
-    for (var i = 0; i < 4; i++) {
-      await tester.tap(find.byType(FilledButton).at(i));
+    for (var i = 0; i < 12; i++) {
+      await tester.tap(find.byType(FilledButton).at(i % 4));
       await tester.pump();
       if (find.text('Oops — try again!').evaluate().isNotEmpty) {
         sawWrong = true;
