@@ -10,8 +10,11 @@ import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/project/project.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/project_service.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
+import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/features/games/composition/mixer_console_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/transport_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -20,12 +23,23 @@ MixerConsoleTester _mixer(WidgetTester tester) =>
     tester.state<State<MixerConsoleScreen>>(find.byType(MixerConsoleScreen))
         as MixerConsoleTester;
 
-Future<void> _pump(WidgetTester tester, ProjectService projects) async {
+Future<void> _pump(
+  WidgetTester tester,
+  ProjectService projects, {
+  UndoService? undo,
+  TransportService? transport,
+}) async {
   await tester.pumpWidget(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<ProjectService>.value(value: projects),
         Provider<AudioService>(create: (_) => AudioService()),
+        ChangeNotifierProvider<UndoService>.value(
+          value: undo ?? UndoService(),
+        ),
+        ChangeNotifierProvider<TransportService>.value(
+          value: transport ?? TransportService(),
+        ),
       ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -38,6 +52,145 @@ Future<void> _pump(WidgetTester tester, ProjectService projects) async {
 }
 
 void main() {
+  group('WS-W5d — the mixer uses the SHARED transport and undo', () {
+    testWidgets('the shared transport bar is hosted here', (tester) async {
+      // WS-W3 shipped this widget and no screen showed it. This is the test
+      // that stops it drifting back to unreachable.
+      final projects = ProjectService()
+        ..addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects);
+      expect(find.byType(TransportBar), findsOneWidget);
+    });
+
+    testWidgets('the bar drives the SHARED transport, not a local clock', (
+      tester,
+    ) async {
+      final transport = TransportService();
+      final projects = ProjectService()
+        ..addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects, transport: transport);
+
+      await tester.tap(find.byTooltip('Play'));
+      await tester.pump();
+      expect(transport.isPlaying, isTrue);
+    });
+
+    testWidgets('mute is undoable, and the label says what it was', (
+      tester,
+    ) async {
+      // UndoService shipped provided-but-unconsumed. This is its first caller.
+      final undo = UndoService();
+      final projects = ProjectService();
+      final id = projects.addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects, undo: undo);
+
+      await tester.tap(find.byKey(ValueKey('mixer-mute-$id')));
+      await tester.pump();
+      expect(projects.track(id)!.mix.muted, isTrue);
+      expect(undo.nextUndoLabel, 'Mute');
+
+      undo.undo();
+      await tester.pump();
+      expect(projects.track(id)!.mix.muted, isFalse);
+    });
+
+    testWidgets('a fader DRAG is one undo, not one per frame', (tester) async {
+      // The first real exercise of UndoEntry.coalesceKey. Without it a drag
+      // fills the history and Cmd-Z nudges instead of undoing.
+      final undo = UndoService();
+      final projects = ProjectService();
+      final id = projects.addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects, undo: undo);
+
+      await tester.drag(
+        find.byKey(ValueKey('mixer-level-$id')),
+        const Offset(-120, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(projects.track(id)!.mix.level, lessThan(1.0));
+      expect(
+        undo.history.length,
+        1,
+        reason: 'the whole drag is one entry',
+      );
+
+      undo.undo();
+      await tester.pump();
+      expect(
+        projects.track(id)!.mix.level,
+        1.0,
+        reason: 'one undo returns to before the drag, not one frame back',
+      );
+    });
+
+    testWidgets('two separate drags are two undos', (tester) async {
+      final undo = UndoService();
+      final projects = ProjectService();
+      final id = projects.addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects, undo: undo);
+
+      await tester.drag(
+        find.byKey(ValueKey('mixer-level-$id')),
+        const Offset(-60, 0),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(ValueKey('mixer-level-$id')),
+        const Offset(-60, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        undo.history.length,
+        2,
+        reason: 'onChangeEnd broke the coalescing run',
+      );
+    });
+
+    testWidgets('level and pan do not coalesce into each other', (
+      tester,
+    ) async {
+      final undo = UndoService();
+      final projects = ProjectService();
+      final id = projects.addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects, undo: undo);
+
+      await tester.drag(
+        find.byKey(ValueKey('mixer-level-$id')),
+        const Offset(-60, 0),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(ValueKey('mixer-pan-$id')),
+        const Offset(60, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(undo.history.length, 2);
+    });
+
+    testWidgets('the bar enables undo only when there is something to undo', (
+      tester,
+    ) async {
+      final undo = UndoService();
+      final projects = ProjectService();
+      final id = projects.addTrack(kind: AppMode.loop, document: null);
+      await _pump(tester, projects, undo: undo);
+
+      IconButton undoButton() => tester.widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('Undo'),
+              matching: find.byType(IconButton),
+            ),
+          );
+      expect(undoButton().onPressed, isNull);
+
+      await tester.tap(find.byKey(ValueKey('mixer-mute-$id')));
+      await tester.pump();
+      expect(undoButton().onPressed, isNotNull);
+    });
+  });
+
   group('WS-W5c — Play renders the project, and says what it could not', () {
     testWidgets('playing a loop track produces actual samples', (tester) async {
       // The point of the whole WS-W5 arc: the faders are audible, not

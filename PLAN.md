@@ -750,8 +750,15 @@ the gap they close.
 
 **Audited against the code 2026-07-28** (`origin/main` @ `3a018344`). The D1–D4
 Loop arc and the Audio swiss-army arc closed **12 of the original 39** between
-the ladder being written and that audit, and narrowed three more — **27 remain
-open.** Each closed item is marked where it sat, with the symbol that proves it.
+the ladder being written and that audit, and narrowed three more. Each closed
+item is marked where it sat, with the symbol that proves it.
+
+**Standing state, refreshed 2026-07-28 (evening): 16 ✅ · 5 🔶 · 9 ⬜.** The
+ladder has GROWN — `WS-W1b`, `WS-W5b`, `WS-W5c`, `WS-W5d` are cards the original
+39 did not have, each added because a shipped card turned out to be unreachable
+(see the reachability rule below). **Count the symbols rather than trusting a
+number in this paragraph**; several agents ship here daily and any total written
+in prose is stale within hours.
 (The audit first recorded WS-A6 as built-but-unpushed; `feature/daw-suite` has
 since landed, so all 12 are on main.) **Re-audit before pulling anything
 here** — this board moves under you, and half of what looks open may not be.
@@ -995,6 +1002,21 @@ prefix.
     tests green after the swap.
   - ⚠️ The Loop Studio track-card row is **full** (a known 23 px overflow —
     see the audience-correction note above). Do not add controls to it.
+
+- ✅ **WS-W5d — the shared bar and the shared undo get their first host.**
+  `S` · **2026-07-28** (opus, workstation-parity). The mixer console hosts
+  `TransportBar` and pushes a labelled `UndoEntry` for every mix change.
+  - **Found by applying this ladder's own reachability rule to my own work.**
+    `TransportBar` (`WS-W3`) had **no host** and `UndoService` (`WS-W4`) was
+    provided in `main.dart` and **consumed by nothing** — `UndoEntry(` appeared
+    only inside its own file. Two more complete-tested-and-inert artefacts, both
+    mine, after I had flagged the pattern four times.
+  - **Drags coalesce.** Level and pan push with a `coalesceKey` and end the run
+    on `onChangeEnd`, so a fader drag is ONE undo rather than one per frame —
+    the first real exercise of `UndoEntry.coalesceKey`, and without it Cmd-Z
+    would nudge instead of undo.
+  - The mixer passes `showRecord: false`: arming a record here would imply a
+    capture path this screen does not have.
 
 - 🔶 **WS-W4 — one undo history.** `M` · **SERVICE SHIPPED 2026-07-28**
   (opus, workstation-parity), **fold-in still open.** `lib/core/services/

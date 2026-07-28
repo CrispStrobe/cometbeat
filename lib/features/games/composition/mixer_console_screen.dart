@@ -40,7 +40,10 @@ import 'package:comet_beat/core/project/project.dart';
 import 'package:comet_beat/core/project/project_render.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/project_service.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
+import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/widgets/transport_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -57,6 +60,44 @@ abstract interface class MixerConsoleTester {
   /// assert on the SAMPLES rather than on the button having been tapped.
   Future<ProjectMixdown> playMix();
   bool get isPlaying;
+}
+
+/// Records a mix change as one undoable step (WS-W5d).
+///
+/// [coalesceKey] is what makes a DRAG one undo rather than one per frame: a
+/// fader dragged across sixty frames is a single edit to the person doing it,
+/// and a history with sixty entries in it is a history nobody will use.
+void _pushMixUndo(
+  BuildContext context,
+  ProjectService projects,
+  ProjectTrack track,
+  ProjectTrackMix next,
+  String label, {
+  Object? coalesceKey,
+}) {
+  final before = track.mix;
+  final id = track.id;
+  void apply(ProjectTrackMix mix) {
+    final current = projects.track(id);
+    if (current != null) projects.updateTrack(id, current.copyWith(mix: mix));
+  }
+
+  apply(next);
+  UndoService? undo;
+  try {
+    undo = Provider.of<UndoService>(context, listen: false);
+  } on ProviderNotFoundException {
+    undo = null;
+  }
+  undo?.push(
+    UndoEntry(
+      label: label,
+      scope: 'mixer:$id',
+      coalesceKey: coalesceKey,
+      undo: () => apply(before),
+      redo: () => apply(next),
+    ),
+  );
 }
 
 class _MixerConsoleScreenState extends State<MixerConsoleScreen>
@@ -95,6 +136,36 @@ class _MixerConsoleScreenState extends State<MixerConsoleScreen>
   Future<void> _stop() async {
     await context.read<AudioService>().stop();
     if (mounted) setState(() => _playing = false);
+  }
+
+  Widget _transportBar(BuildContext context) {
+    TransportService? transport;
+    UndoService? undo;
+    try {
+      transport = Provider.of<TransportService>(context, listen: false);
+    } on ProviderNotFoundException {
+      transport = null;
+    }
+    try {
+      undo = Provider.of<UndoService>(context, listen: false);
+    } on ProviderNotFoundException {
+      undo = null;
+    }
+    if (transport == null) return const SizedBox.shrink();
+    return AnimatedBuilder(
+      // Rebuild on undo too, so the bar's undo/redo enable state is honest.
+      animation: undo ?? transport,
+      builder: (context, _) => TransportBar(
+        transport: transport!,
+        // The mixer has no record arm of its own — arming here would imply a
+        // capture path this screen does not have.
+        showRecord: false,
+        onUndo: undo?.undo,
+        onRedo: undo?.redo,
+        canUndo: undo?.canUndo ?? false,
+        canRedo: undo?.canRedo ?? false,
+      ),
+    );
   }
 
   Widget _skippedBanner() => _SkippedBanner(
@@ -149,6 +220,10 @@ class _MixerConsoleScreenState extends State<MixerConsoleScreen>
             )
           : Column(
               children: [
+                // WS-W3's shared bar, finally hosted. The project mixer is a
+                // natural home for the shared transport: it is the one screen
+                // that is about the project rather than about one editor.
+                _transportBar(context),
                 if (_skipped.isNotEmpty) _skippedBanner(),
                 Expanded(
                   child: ListView.builder(
@@ -173,8 +248,29 @@ class _Strip extends StatelessWidget {
   final ProjectTrack track;
   final ProjectService projects;
 
-  void _setMix(ProjectTrackMix mix) {
-    projects.updateTrack(track.id, track.copyWith(mix: mix));
+  void _setMix(
+    BuildContext context,
+    ProjectTrackMix mix,
+    String label, {
+    Object? coalesceKey,
+  }) {
+    _pushMixUndo(
+      context,
+      projects,
+      track,
+      mix,
+      label,
+      coalesceKey: coalesceKey,
+    );
+  }
+
+  /// Ends the coalescing run so the NEXT drag is its own undo entry.
+  void _endDrag(BuildContext context) {
+    try {
+      Provider.of<UndoService>(context, listen: false).breakCoalescing();
+    } on ProviderNotFoundException {
+      // No undo provided; nothing to end.
+    }
   }
 
   @override
@@ -215,14 +311,22 @@ class _Strip extends StatelessWidget {
                   tooltip: l10n.mixerMute,
                   icon: Icon(mix.muted ? Icons.volume_off : Icons.volume_up),
                   color: mix.muted ? scheme.error : null,
-                  onPressed: () => _setMix(mix.copyWith(muted: !mix.muted)),
+                  onPressed: () => _setMix(
+                    context,
+                    mix.copyWith(muted: !mix.muted),
+                    l10n.mixerMute,
+                  ),
                 ),
                 IconButton(
                   key: ValueKey('mixer-solo-${track.id}'),
                   tooltip: l10n.mixerSolo,
                   icon: const Icon(Icons.headphones),
                   color: mix.soloed ? scheme.primary : null,
-                  onPressed: () => _setMix(mix.copyWith(soloed: !mix.soloed)),
+                  onPressed: () => _setMix(
+                    context,
+                    mix.copyWith(soloed: !mix.soloed),
+                    l10n.mixerSolo,
+                  ),
                 ),
               ],
             ),
@@ -233,7 +337,14 @@ class _Strip extends StatelessWidget {
                   child: Slider(
                     key: ValueKey('mixer-level-${track.id}'),
                     value: mix.level.clamp(0, 1),
-                    onChanged: (v) => _setMix(mix.copyWith(level: v)),
+                    onChanged: (v) => _setMix(
+                      context,
+                      mix.copyWith(level: v),
+                      l10n.mixerLevel,
+                      // One undo for the whole drag, not one per frame.
+                      coalesceKey: 'level:${track.id}',
+                    ),
+                    onChangeEnd: (_) => _endDrag(context),
                   ),
                 ),
               ],
@@ -246,7 +357,13 @@ class _Strip extends StatelessWidget {
                     key: ValueKey('mixer-pan-${track.id}'),
                     value: mix.pan.clamp(-1, 1),
                     min: -1,
-                    onChanged: (v) => _setMix(mix.copyWith(pan: v)),
+                    onChanged: (v) => _setMix(
+                      context,
+                      mix.copyWith(pan: v),
+                      l10n.mixerPan,
+                      coalesceKey: 'pan:${track.id}',
+                    ),
+                    onChangeEnd: (_) => _endDrag(context),
                   ),
                 ),
               ],
