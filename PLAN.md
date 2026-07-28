@@ -1016,10 +1016,17 @@ prefix.
     DAW clip model; that is a ~10-line addition **in a hot file** (`daw_*` took
     19 commits in 30 hours), so it is left to that file's owner.
 
-- ⬜ **WS-L2 — zoom + a real timeline ruler.** `M` — still no zoom at all
-  (`InteractiveViewer|zoom`: 0 hits). A 4-bar loop and a 32-bar arrangement
-  cannot both be legible at one scale.
-- ⬜ **WS-L10 — audio tracks in the loop.** `M` · Depends WS-W1. A Loop Studio
+- ⬜ **WS-L2 — a timeline VIEW for Loop Studio, then zoom it.** `M`→`L` —
+  **re-audited 2026-07-28 (loop-d1d4): the card assumed a ruler that does not
+  exist.** Zoom is still 0 hits, but so is the thing it would zoom: Loop Studio
+  has **no timeline** — one incidental `timeline` match in the whole
+  5,600-line screen, which is cards, step grids and a session matrix. So this is
+  not "add zoom to the ruler", it is "design a timeline view for a surface built
+  out of grids, then zoom it", with a product decision in front of it (does the
+  session matrix become a timeline, or sit beside one?). Do not pull it as an
+  `M` of plumbing.
+- 🚧 **WS-L10 — audio tracks in the loop.** `M` · **CLAIMED 2026-07-28 by opus
+  (loop-d1d4).** Depends WS-W1. A Loop Studio
   track is symbolic only today, so a recorded audio loop has nowhere to live
   except a bounce. After WS-W1 it is the **same** clip type the Audio Editor
   holds, so this is a track-kind admission plus tempo-matching, not a new

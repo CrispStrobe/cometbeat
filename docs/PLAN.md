@@ -320,6 +320,37 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-L10` — audio tracks in the Loop
+  Studio.** `M`, depends WS-W1 (shipped by me). Branch `feature/mixer-d1d4`.
+  Claim pushed BEFORE any code.
+  **Why this one.** Re-audited by commit recency again: in the last 12 hours
+  `tracker_replayer.dart` took 5 commits and the four `daw_*` files 3 each, so
+  WS-W4 (folds in `daw_service` + the tracker stacks), WS-T3/T1/T2/T4, WS-A1 and
+  WS-X3 all sit in live workers' files. `loop_engine.dart` and
+  `loop_mixer_screen.dart` have had **no commits but my own**, so this is the
+  cold lane.
+  ⚠️ **And a re-audit correction: WS-L2 is mis-specified.** It asks for "zoom +
+  a real timeline ruler" in Loop Studio — but Loop Studio has **no timeline at
+  all** (one incidental match for `timeline` in the whole 5,600-line screen; it
+  is cards, step grids and a session matrix). So WS-L2 is not "add zoom to the
+  ruler", it is "design and build a timeline view, then zoom it" — an `L` with a
+  product decision in front of it, not the `M` it is filed as. Left open,
+  re-labelled below.
+  **Scope of WS-L10:** a Loop Studio track whose stem is PCM rather than a
+  rendered pattern. It goes through the SAME `mixStems` path, so level, pan, the
+  D3 per-track filter and every automation lane apply to it for free.
+  ⚠️ **The invariant this must honour** is the one the whole engine rests on:
+  tempos 75/100/120 keep eighth-steps integral in ms AND samples, which is what
+  keeps stems aligned and the gapless seam click-free. An audio loop whose
+  length does not land on that grid is **resampled** to it, never tiled past it.
+  **Out of scope, deliberately:** persisting the PCM. A `GrooveSpec` share token
+  is paste-able text and cannot carry megabytes of audio; the right home is a
+  `Project` file (WS-W1), which bakes rather than tokenises. I will say so in
+  the code rather than leave a silent hole.
+  **Files:** `loop_engine.dart` + `loop_mixer_screen.dart` (both cold, mine),
+  READING `crisp_dsp/resample.dart` and `daw_sources.dart` without editing them.
+  — opus
+
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L11` a lossless `TabDocument`
   codec.** `M`, no dependencies. Worktree `../mus-mixer-d1d4`, branch
   `feature/mixer-d1d4`. Claim pushed BEFORE any code.
