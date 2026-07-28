@@ -9,6 +9,18 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get workshopPartFingerings => 'Violoncello-Fingersatz';
+
+  @override
+  String get workshopFingeringsFirst => 'Einfügen — 1. Lage';
+
+  @override
+  String get workshopFingeringsNeck => 'Einfügen — Lagen 1–4';
+
+  @override
+  String get workshopFingeringsAdvanced => 'Einfügen — ganzer Hals + Daumen';
+
+  @override
   String celloPositionRaised(int n) {
     return '$n. Lage erhöht';
   }

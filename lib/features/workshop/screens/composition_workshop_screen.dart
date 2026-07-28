@@ -26,6 +26,10 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart'
     show transcribeRecording;
 import 'package:comet_beat/core/licensing/license_obligations.dart';
+import 'package:comet_beat/core/notation/bowed_arranger.dart'
+    show BowedInstrument, BowedSkill;
+import 'package:comet_beat/core/notation/bowed_score_fingering.dart'
+    show scoreWithBowedFingerings;
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/note_naming.dart';
@@ -1318,6 +1322,32 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   void _setPartTransposition(int i, Transposition? t) =>
       setState(() => _mpd.setTransposition(i, t));
 
+  /// Write a cellist's markup into part [i]: a fingering digit on every note, a
+  /// Roman string numeral where the string is not inferable from the digit, and a
+  /// bow direction on each stroke.
+  ///
+  /// Unlike the Song Book and play-along screens — which show the same marks as a
+  /// VIEW over an untouched score — this is an EDIT: the marks land in the
+  /// document, so they are saved, exported and further editable. `loadScore`
+  /// snapshots first, so a single undo removes the whole pass, which is why no
+  /// separate "remove fingerings" action is needed.
+  ///
+  /// [skill] is the player the fingering is FOR, not a quality setting: a
+  /// beginner's part should stay in first position even where a professional
+  /// would shift, so choosing wrongly here produces a technically valid part that
+  /// the intended player cannot play.
+  void _addBowedFingerings(int i, BowedSkill skill) => setState(() {
+        final part = _mpd.parts[i];
+        final fingered = scoreWithBowedFingerings(
+          part.buildScore(),
+          skill: skill,
+          instrument: BowedInstrument.cello,
+          markStrings: true,
+          markBowing: true,
+        );
+        part.loadScore(fingered, clefOverride: _mpd.clefOf(i));
+      });
+
   /// Toggle a piano-style brace over this part and the one below it (used to
   /// group e.g. a piano's two staves). No-op on the last part.
   void _toggleBraceBelow(int i) => setState(() {
@@ -1468,6 +1498,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               value: () => _setPartTransposition(i, value),
               checked: _mpd.transpositionOf(i) == value,
               child: Text(value == null ? l10n.workshopConcertPitch : label),
+            ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            enabled: false,
+            child: Text(
+              l10n.workshopPartFingerings,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+          for (final (label, skill) in <(String, BowedSkill)>[
+            (l10n.workshopFingeringsFirst, BowedSkill.firstPosition),
+            (l10n.workshopFingeringsNeck, BowedSkill.neckPositions),
+            (l10n.workshopFingeringsAdvanced, BowedSkill.advanced),
+          ])
+            PopupMenuItem<void Function()>(
+              value: () => _addBowedFingerings(i, skill),
+              child: Text(label),
             ),
           const PopupMenuDivider(),
           if (i + 1 < _mpd.partCount)

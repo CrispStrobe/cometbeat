@@ -63,7 +63,7 @@ import 'app_localizations_en.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,17 +86,41 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en')
+    Locale('en'),
   ];
+
+  /// Score Editor part menu: write cello fingerings into this part
+  ///
+  /// In en, this message translates to:
+  /// **'Cello fingerings'**
+  String get workshopPartFingerings;
+
+  /// Score Editor part menu: fingering skill level — the player the part is FOR, not a quality setting
+  ///
+  /// In en, this message translates to:
+  /// **'Add — first position'**
+  String get workshopFingeringsFirst;
+
+  /// Score Editor part menu: fingering skill level — the player the part is FOR, not a quality setting
+  ///
+  /// In en, this message translates to:
+  /// **'Add — positions 1–4'**
+  String get workshopFingeringsNeck;
+
+  /// Score Editor part menu: fingering skill level — the player the part is FOR, not a quality setting
+  ///
+  /// In en, this message translates to:
+  /// **'Add — whole neck + thumb'**
+  String get workshopFingeringsAdvanced;
 
   /// Spoken form of a raised cello position, e.g. raised 2nd. Cello positions are numbered by letter name; a chromatic step between two of them is the lower one raised.
   ///
@@ -15702,8 +15726,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

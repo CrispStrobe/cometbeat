@@ -9,6 +9,18 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get workshopPartFingerings => 'Cello fingerings';
+
+  @override
+  String get workshopFingeringsFirst => 'Add — first position';
+
+  @override
+  String get workshopFingeringsNeck => 'Add — positions 1–4';
+
+  @override
+  String get workshopFingeringsAdvanced => 'Add — whole neck + thumb';
+
+  @override
   String celloPositionRaised(int n) {
     return 'Position $n raised';
   }

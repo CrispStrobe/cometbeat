@@ -1,4 +1,8 @@
 {
+  "workshopPartFingerings": "Violoncello-Fingersatz",
+  "workshopFingeringsFirst": "Einfügen — 1. Lage",
+  "workshopFingeringsNeck": "Einfügen — Lagen 1–4",
+  "workshopFingeringsAdvanced": "Einfügen — ganzer Hals + Daumen",
   "celloPositionRaised": "{n}. Lage erhöht",
   "@@locale": "de",
   "appTitle": "CometBeat",

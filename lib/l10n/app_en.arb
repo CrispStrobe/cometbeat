@@ -1,4 +1,20 @@
 {
+  "workshopPartFingerings": "Cello fingerings",
+  "@workshopPartFingerings": {
+    "description": "Score Editor part menu: write cello fingerings into this part"
+  },
+  "workshopFingeringsFirst": "Add — first position",
+  "@workshopFingeringsFirst": {
+    "description": "Score Editor part menu: fingering skill level — the player the part is FOR, not a quality setting"
+  },
+  "workshopFingeringsNeck": "Add — positions 1–4",
+  "@workshopFingeringsNeck": {
+    "description": "Score Editor part menu: fingering skill level — the player the part is FOR, not a quality setting"
+  },
+  "workshopFingeringsAdvanced": "Add — whole neck + thumb",
+  "@workshopFingeringsAdvanced": {
+    "description": "Score Editor part menu: fingering skill level — the player the part is FOR, not a quality setting"
+  },
   "celloPositionRaised": "Position {n} raised",
   "@celloPositionRaised": {
     "description": "Spoken form of a raised cello position, e.g. raised 2nd. Cello positions are numbered by letter name; a chromatic step between two of them is the lower one raised.",
