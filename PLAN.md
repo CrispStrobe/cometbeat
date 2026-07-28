@@ -3263,6 +3263,43 @@ each other — they disagree about what a one-shot does after its end (fade vs
 hard stop). We sit inside that spread at 0.974, so nothing is wrong, but it is
 another case where there is no single right answer to gate on.
 
+#### X9 continued (2026-07-28) — the numbering table, and a FIFTH both-directions bug
+
+Four bugs of one shape turned up in this audit — IT's hex pattern-break row,
+XM's 16-bit loop units, the fine-porta reverse map, and XM tremor written as
+KEY OFF. Every one was found by ACCIDENT, because some fixture happened to
+exercise it, and every one had the same anatomy: **our reader and writer agree
+with each other, so the round trip is perfect while the file means something
+else to every other player.**
+
+`effect_numbering_table_test.dart` asks the general question instead: for every
+neutral command above MOD's range, does XM agree on that number, or does the
+converter translate it? A command that is neither is a bug waiting for a fixture
+to find it. The authority is libxmp's `src/effects.h` — its `FX_*` constants ARE
+the XM effect numbers, which is why the XM loader passes them through untouched.
+
+**It found one on its first run.** `kFxSetPanbrelloWaveform` is `15h` in our
+numbering; **XM's `15h` is `Lxx`, set envelope position.** Since the neutral
+model deliberately reuses XM's numbering from `10h` up, the converter passed it
+straight through — so exporting a panbrello-waveform command wrote an
+ENVELOPE-POSITION command into the file, and reading any real XM's `Lxx` came
+back as a panbrello waveform. Fixed by dropping it in both directions: XM has no
+panbrello at all (it is an S3M/IT `Yxy`), so there is nothing to translate into,
+and writing some *other* command would not be an improvement. A same-format XM
+round trip is unaffected — the writer takes `nativeEffect` verbatim for XM
+sources, so a genuine `Lxx` survives.
+
+The difference from the previous four is the point: this one was caught **before
+it could reach a file**, by stating the rule once rather than waiting for a
+fixture to trip over it. The test also guards itself — adding a neutral command
+above `0Fh` without adding it to the table fails a test rather than quietly not
+being checked.
+
+⚠️ The S3M/IT side does not need the same guard: `_fxToLetterEffect` is an
+explicit switch, not a passthrough, so a missing case DROPS a command (visible,
+and already covered by `module_export_report`) rather than silently writing a
+different one. Passthrough is what makes this class possible.
+
 #### X9 continued (2026-07-28) — NNA was never running
 
 New-Note Actions are what make an IT channel polyphonic: when a note arrives on

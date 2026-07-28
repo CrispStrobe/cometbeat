@@ -643,7 +643,12 @@ ModuleDoc docFromXm(XmModule m) {
         // effect spelling now lands in the same place instead of a wrong
         // command. `nativeEffect` keeps the original byte for same-format
         // export either way.
-        var effect = c.effect == 0x14 ? 0 : c.effect;
+        // 15h is XM's `Lxx` set-envelope-position. The neutral model has no
+        // command for it and spends 15h on set-panbrello-waveform, so reading
+        // it through verbatim would turn an envelope jump into a waveform
+        // change. Dropped, like 14h above; `nativeEffect` still carries the
+        // original byte so a same-format XM round trip keeps it.
+        var effect = (c.effect == 0x14 || c.effect == 0x15) ? 0 : c.effect;
         final keyOffEffect = c.effect == 0x14;
         var effectParam = c.effectParam;
         final hasVolpan =
@@ -1010,6 +1015,14 @@ ModuleDoc docFromIt(ItModule m) {
   final param = c.effectParam & 0xFF;
   return switch (c.effect) {
     kFxSetSpeedFull => (0x0F, param.clamp(1, 0x1F)),
+    // **15h is XM's `Lxx` SET ENVELOPE POSITION**, not a panbrello waveform —
+    // XM has no panbrello at all (it is an S3M/IT `Yxy` command), so there is
+    // nothing to translate this into and it is dropped rather than written as
+    // a command that means something else. Found by the numbering table, which
+    // is the fifth instance of this shape and the first caught before it could
+    // reach a file. A same-format XM round trip is unaffected: the writer takes
+    // `nativeEffect` verbatim for XM sources, so a real `Lxx` survives.
+    kFxSetPanbrelloWaveform => (0, 0),
     _ => (c.effect & 0xFF, param),
   };
 }
