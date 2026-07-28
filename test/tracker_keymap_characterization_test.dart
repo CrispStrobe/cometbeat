@@ -132,8 +132,11 @@ void main() {
 
       await _press(tester, LogicalKeyboardKey.f5);
       expect(game.isPlaying, isTrue);
-      expect(game.isSongPlaying, isTrue,
-          reason: 'F5 is the SONG, not a pattern');
+      expect(
+        game.isSongPlaying,
+        isTrue,
+        reason: 'F5 is the SONG, not a pattern',
+      );
 
       await _press(tester, LogicalKeyboardKey.f8);
       expect(game.isPlaying, isFalse);
@@ -236,8 +239,11 @@ void main() {
       await tester.pump();
       await _press(tester, LogicalKeyboardKey.keyV, ctrl: true);
 
-      expect(game.noteCount, greaterThan(2),
-          reason: 'the paste should have added notes on the second channel');
+      expect(
+        game.noteCount,
+        greaterThan(2),
+        reason: 'the paste should have added notes on the second channel',
+      );
     });
 
     testWidgets('Ctrl+X cuts — the notes leave the source', (tester) async {
