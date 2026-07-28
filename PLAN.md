@@ -654,6 +654,10 @@ prefix.
   - **Build.** `Project { List<ProjectTrack> tracks, TempoMap tempo, String name }`;
     `ProjectTrack { id, name, AppMode kind, Object document, mix }` where
     `document` is the mode's **existing** type, unchanged. Codec to/from JSON.
+    ➕ The **Loop** document is now a trustworthy one to assert on: `GrooveSpec`
+    carries per-track length, swing and automation lanes as of `3a018344`.
+    Before that it silently dropped every lane, so "each document intact" would
+    have passed while losing state.
     The precedent to follow is `.cbdaw v2`, which already stores a clip's model
     beside its audio — the same trick, one level up. Reuse `AppMode` from
     `core/interop/project_bridge.dart` rather than declaring a second enum.
@@ -832,9 +836,19 @@ prefix.
 > `addEmptyTrack`/`renameTrack` + the role-add row · per-track swing =
 > `trackSwings`. Six of the ten Loop items closed in one arc.
 
-- ⬜ **WS-L5 — duplicate a SCENE or a PATTERN.** `S` — **narrowed:**
-  `duplicateSection` shipped, so the section half is done; duplicating a scene
-  or a single pattern still has no route. Same job, one level down.
+- ⬜ **WS-L5 — duplicate a PATTERN.** `S`→`M` — **narrowed twice.** The first
+  pass said "`duplicateSection` shipped, so the section half is done;
+  duplicating a scene or a single pattern still has no route." Re-audited
+  2026-07-28 (loop-d1d4): **a section IS a `GrooveScene`** — `_scenes` is
+  `List<GrooveScene?>` and the UI merely calls them sections — so
+  `_duplicateSection` already IS scene duplication, deep-copying both the
+  enabled set and the variant map. **Only the PATTERN half is open.**
+  ⚠️ **It needs a product decision before it is pullable**, which is why it is
+  no longer an `S`: a "pattern" here is either an authored **variant** (data,
+  not editable per slot) or a `_cellOverrides`/`_drumOverrides` entry that
+  REPLACES whichever variant is active. So "copy A to B, change one thing" has
+  no B to copy *into* — either editable variant slots have to exist first, or
+  the feature is really "copy this track's pattern onto that track".
   ⚠️ Deep-copy automation lanes; the aliasing trap already bit the track-copy.
 - ⬜ **WS-L2 — zoom + a real timeline ruler.** `M` — still no zoom at all
   (`InteractiveViewer|zoom`: 0 hits). A 4-bar loop and a 32-bar arrangement

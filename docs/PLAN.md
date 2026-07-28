@@ -211,6 +211,32 @@ is recorded in [HISTORY.md](HISTORY.md).
   · analyze "No issues found" · `flutter test` **5449 passed / 20 skipped / 0
   failed**. — opus
 
+  📋 **Reconciled with the WS ladder (2026-07-28), as its rules ask.** The
+  maintainer's re-audit credits this arc with **WS-L3 · WS-L4 · WS-L6 · WS-L7 ·
+  WS-L8 · WS-L9**. I re-verified all six by symbol rather than accepting the
+  credit — `_sceneGrid` · `_pendingScene` · `_trackFilters`/`setTrackFilter` ·
+  `renderArrangement(repeats:)` · `addEmptyTrack`/`renameTrack` · `trackSwings`
+  are all present on main. Two corrections and one addition for whoever pulls
+  next:
+  - ⚠️ **WS-L5 is narrower than the audit says.** It reads "duplicating a scene
+    or a single pattern still has no route" — but in this codebase a **section
+    IS a `GrooveScene`** (`_scenes` is `List<GrooveScene?>`, the UI calls them
+    sections), so `_duplicateSection` already IS scene duplication, deep-copying
+    the enabled set and the variant map. **Only the PATTERN half is open**, and
+    it needs a product decision first: a "pattern" here is either an authored
+    variant (not editable per slot) or a `_cellOverrides`/`_drumOverrides` entry
+    that REPLACES whichever variant is active, so "copy A to B" has no B to copy
+    into yet. Do not pull WS-L5 expecting an `S` of pure plumbing.
+  - ✅ **WS-L2 re-verified genuinely open** — `InteractiveViewer|zoom` is still
+    0 hits in `loop_mixer_screen.dart`.
+  - ➕ **Useful to WS-W1:** the Loop document now round-trips COMPLETELY
+    (`GrooveSpec` carries length, swing and automation lanes as of `3a018344`).
+    WS-W1's acceptance is "each document intact" — the Loop one no longer
+    quietly drops state, so that assertion can be written honestly. Before this
+    it would have passed while losing every automation lane.
+  **Nothing further claimed by me** — the Loop items I have not taken are open
+  and pullable. — opus
+
 - **opus (tracker→editors)** · ✅ **DONE (idle) — loss-dialog REASON l10n: the
   infrastructure + the static bridge reasons (EN/DE).** The Open-in loss dialog's
   reason bullets were the last English in the menu. Added an ADDITIVE key channel
