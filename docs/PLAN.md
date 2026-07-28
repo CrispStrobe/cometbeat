@@ -1601,6 +1601,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   0.0, so nothing pulls us to stay on a string for tone. That is a hypothesis, and it must be
   measured on all four legs before anything moves.
 
+  **🧪 stringCross hypothesis FALSIFIED — and it changes how the 50% should be read.**
+  Four-leg sweep (p.62 forced strings · Danbé shifts · p.18 frames · finger on Becker+CC0):
+
+  | `stringCross` | p62 string | Danbé | p18 frame | Becker | CC0 |
+  |---|---|---|---|---|---|
+  | **0.3 (current)** | 11/22 (50%) | 6/17 | 65/72 | 56.3% | **53.9%** |
+  | 0.8 | 11/22 (50%) | 6/17 | 65/72 | **58.0%** | 52.8% |
+  | 2.0 | **15/22 (68%)** | 6/17 | 62/72 | 57.7% | 49.2% |
+
+  String agreement does not move at ALL until `stringCross` reaches 2.0 — nearly 7x current —
+  and that then costs 3 frames and 4.7pp of CC0 repertoire. **No change made.**
+  ⚠ **And the 50% is not a defect.** Becker plays C4 with finger 4 high on the D string; we
+  play it with finger 2 in first position on the A string. **Both are legitimate cello
+  fingerings for C4**, and ours is arguably the easier. That metric measures whether we make
+  the SAME CHOICE as Becker, not whether we are wrong — the same caveat that governs the
+  finger metric, which the CC0 fixture header already states: one editor's answer is one valid
+  answer among several. The earlier framing ("we agree with only half the strings the source
+  FORCES") overstated it: the source forces the string GIVEN HIS DIGIT, and we did not choose
+  his digit.
+  **What survives:** the arithmetic is still sound and the 12 shifts are still observed. What
+  changes is the conclusion drawn from them — this is a difference of school, not an error to
+  fix, and it belongs with the other "do not average across schools" findings.
+  **Still genuinely open:** whether an expressive-tone term (stay on one string for colour)
+  belongs in the model at all. It cannot be reached by re-weighting `stringCross`, which is a
+  per-crossing tax rather than a per-phrase preference — the same shape of mistake as trying
+  to fix hand-shape with a per-note `extension` cost.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
