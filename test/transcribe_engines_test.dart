@@ -80,11 +80,29 @@ void main() {
   });
 
   test('a user "on-device" F0 choice ignores the installed CREPE', () async {
+    // ⚠️ Every loader is stubbed, including the ones this case does not care
+    // about. `resolveEngines` PROBES EVERY RUNTIME for every step regardless of
+    // the config, so an unstubbed loader is a live call into the real model
+    // manager. This test stubbed only two, and the rest reached the filesystem
+    // (and the download path) — fast enough to pass on a developer machine at
+    // ~6 s, and slow enough on a shared CI runner to blow the 30 s budget. It
+    // was the only red in an otherwise green CI run, and it failed on a
+    // TIMEOUT rather than an assertion, which is the tell.
+    //
+    // Its siblings above already stub `loadRmvpe`/`loadCrepeGgml` for the same
+    // reason; this one had simply been missed.
     final e = await resolveEngines(
       cfg.copyWith(backends: {TranscriptionStep.f0: Backend.pureDart}),
       isWeb: false,
       loadNeural: ({bool download = false}) async => _fakeNeural,
       loadCrepeOnnx: ({bool download = false}) async => _fakeF0,
+      loadRmvpe: ({bool download = false}) async => _fakeF0,
+      loadCrepeGgml: ({bool download = false}) async => _fakeF0,
+      loadHarmony: ({bool download = false}) async => _fakeChords,
+      loadF0OnnxFfi: ({bool download = false}) async => null,
+      loadNeuralOnnxFfi: ({bool download = false}) async => null,
+      loadChordsOnnxFfi: ({bool download = false}) async => null,
+      loadPianoGgml: ({bool download = false}) async => null,
     );
     expect(e.f0, isNotNull); // forced pure-Dart → WORLD DIO, not CREPE
     await e.f0!(Float64List(0), 44100); // DIO runs (no model, no download)
@@ -92,12 +110,18 @@ void main() {
   });
 
   test('web can use ONNX CREPE but never the ggml (FFI) one', () async {
+    // Same reason as the stubs above: unstubbed loaders are live calls into the
+    // real model manager. This one was not failing, but it was the second
+    // slowest test in the file at ~3 s, which is the same defect with more
+    // headroom rather than a different one.
     final e = await resolveEngines(
       cfg,
       isWeb: true,
       loadNeural: ({bool download = false}) async => _fakeNeural,
       loadCrepeGgml: ({bool download = false}) async => _fakeF0,
       loadCrepeOnnx: ({bool download = false}) async => _fakeF0,
+      loadRmvpe: ({bool download = false}) async => _fakeF0,
+      loadHarmony: ({bool download = false}) async => _fakeChords,
     );
     expect(e.f0, isNotNull); // ONNX CREPE is fine on web
     expect(e.neural, isNotNull);
