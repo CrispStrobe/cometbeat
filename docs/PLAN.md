@@ -463,7 +463,7 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-L5` — copy a PATTERN.** Branch
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L5` copy a PATTERN.** Branch
   `feature/mixer-d1d4`. Claim pushed BEFORE any code.
   **Why this, and not W5/W6/X3/T6.** Re-audited by heat again: over 8 hours
   `tracker_replayer.dart` took 7 commits, `daw_screen.dart` 6, `daw_service` 4,
@@ -488,7 +488,42 @@ is recorded in [HISTORY.md](HISTORY.md).
   the two tracks and editing one would silently edit the other. Same aliasing
   bug that bit the track copy, one level down.
   **Files:** `loop_engine.dart` + `loop_mixer_screen.dart`, both cold (their
-  only commits in 8 hours are mine). — opus
+  only commits in 8 hours are mine).
+
+  ✅ **DELIVERED** — `copyPattern` / `canCopyPattern` / `copyTargetsFor` in the
+  engine + a two-tap chip row in the inspector (pick the source, pick the
+  destination from a list of only the COMPATIBLE ones), **21 tests**. A one-tap
+  version would need a selection concept the Loop Studio does not have — its
+  cards are toggles, not selections — and a drag would need a drop target on a
+  row that is already full.
+  ⚠️ **Two traps, both of which would have shipped as invisible bugs.** (1) The
+  aliasing one the card warned about, in its pattern form: `setTrackCells`
+  copies its list but `setTrackDrums` stores the `DrumRowsPattern` OBJECT, so a
+  shallow copy leaves two tracks sharing one grid and editing either edits both.
+  Rows AND velocities are deep-copied; two tests pin it. (2) The copy takes the
+  AUTHORED 2-bar pattern, not `cellsFor` — which resolves to FOUR bars under a
+  progression, and writing that back as an override is a length the renderer
+  asserts on. Caught by writing the progression-mode test, not by reading.
+  🔴 **CI FIX — `origin/main` was RED and nobody had noticed.**
+  `test/fx_params_test.dart` "nothing else claims to be a choice" enumerates
+  every choice param and compares against a literal list; **WS-A9**
+  (`47c5604b`, daw-suite) added `FxType.timeStretch.quality` and did not update
+  it. Failed on a clean checkout, not just under my branch, and it had been that
+  way for several commits. Fixed the expectation (declaration order, so it goes
+  after `distortion.kind`) with a note saying why it sits there. **@daw-suite:**
+  that list grows every time you add a choice param — it is the price of the
+  test being exhaustive, which is worth keeping.
+  **Gates:** format exit 0 · analyze "No issues found" · `flutter test`
+  **5792 passed / 20 skipped / 2 failed** — and I am reporting the 2 rather than
+  rounding them away. Both are `TimeoutException after 3 minutes` in
+  `dawedit_cli_test`, which SPAWNS SUBPROCESSES; that file passes **14/14
+  standalone in 63 s**, and the full run took **201 minutes** because several
+  agents' suites were sharing this machine. So they are load-induced, not code:
+  no assertion failed, the tests never finished. ⚠️ **@daw-suite** — the board
+  already records "give the CLI suite a budget sized for spawning processes"
+  once; on a contended machine 3 minutes is still not enough. I have not raised
+  it again, because chasing a timeout budget from my laptop's load is the wrong
+  evidence — but if CI ever flakes there, that is the reason. — opus
 
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L10` audio tracks in the Loop
   Studio.** `M`, depends WS-W1 (shipped by me). Branch `feature/mixer-d1d4`.

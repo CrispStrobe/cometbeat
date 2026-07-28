@@ -660,6 +660,19 @@
   "loopMixerAddTrack": "Add a new track",
   "loopMixerAddTrackHint": "tap a part to add a fresh one of it",
   "loopMixerAddEmpty": "Empty",
+  "loopMixerCopyPattern": "Copy a pattern",
+  "loopMixerCopyPatternHint": "tap to put this track's pattern onto another track",
+  "loopMixerCopyPatternTo": "Copy {name} onto…",
+  "@loopMixerCopyPatternTo": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "loopMixerCopiedPattern": "{from} copied onto {to}",
+  "@loopMixerCopiedPattern": {
+    "placeholders": {
+      "from": { "type": "String" },
+      "to": { "type": "String" }
+    }
+  },
   "loopMixerAddAudio": "Import a loop",
   "loopMixerAddAudioHint": "add a recorded loop from a file — it stretches to fit the groove",
   "loopMixerTrackAudio": "Loop",

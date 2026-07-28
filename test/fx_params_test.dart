@@ -194,6 +194,11 @@ void main() {
       }
       expect(choices, [
         'FxType.distortion.kind',
+        // WS-A9 — the stretch-quality setting is one of a fixed set of
+        // algorithms, not a number, so it is a choice like the rest. It sits
+        // here rather than at the end because this list follows `FxType`'s
+        // declaration order, and `timeStretch` is declared before `autoWah`.
+        'FxType.timeStretch.quality',
         'FxType.autoWah.waveform',
         'FxType.sincFilter.shape',
         // A4 — auto-pan reuses the shared tracker LFO shapes, so it inherits

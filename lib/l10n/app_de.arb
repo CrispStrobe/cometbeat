@@ -591,6 +591,19 @@
   "loopMixerAddTrack": "Neue Spur hinzufügen",
   "loopMixerAddTrackHint": "auf eine Stimme tippen, um eine frische davon zu bekommen",
   "loopMixerAddEmpty": "Leer",
+  "loopMixerCopyPattern": "Muster kopieren",
+  "loopMixerCopyPatternHint": "tippen, um das Muster dieser Spur auf eine andere zu legen",
+  "loopMixerCopyPatternTo": "{name} kopieren auf…",
+  "@loopMixerCopyPatternTo": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "loopMixerCopiedPattern": "{from} auf {to} kopiert",
+  "@loopMixerCopiedPattern": {
+    "placeholders": {
+      "from": { "type": "String" },
+      "to": { "type": "String" }
+    }
+  },
   "loopMixerAddAudio": "Loop importieren",
   "loopMixerAddAudioHint": "einen aufgenommenen Loop aus einer Datei holen — er wird auf den Groove gedehnt",
   "loopMixerTrackAudio": "Loop",

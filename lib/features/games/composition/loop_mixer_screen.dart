@@ -376,6 +376,10 @@ abstract interface class LoopMixerTester {
   /// How many samples one loop is — what an imported take is fitted to.
   int get debugLoopSamples;
 
+  /// WS-L5 — where a track's pattern could go, and putting it there.
+  List<String> copyTargetsFor(String from);
+  bool copyPattern(String from, String to);
+
   /// A track's swing, whether it has its OWN, and a way to step it.
   double trackSwingOf(String id);
   bool hasOwnSwing(String id);
@@ -1242,6 +1246,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   double audioStretchOf(String id) => _engine.audioStretchOf(id);
   @override
   int get debugLoopSamples => _engine.timing.totalSamples;
+  @override
+  List<String> copyTargetsFor(String from) => _engine.copyTargetsFor(from);
+  @override
+  bool copyPattern(String from, String to) {
+    final ok = _engine.copyPattern(from, to);
+    if (ok) {
+      setState(() {});
+      _syncPlayback();
+    }
+    return ok;
+  }
+
   @override
   double trackSwingOf(String id) => _engine.trackSwing(id);
   @override
@@ -4213,6 +4229,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           _duplicateRow(l10n),
         ),
         _renameRow(l10n),
+        _copyPatternRow(l10n),
         _inspectorSection(
           l10n.loopMixerTrackFilter,
           _trackFilterRow(l10n),
@@ -4961,6 +4978,96 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             ),
         ],
       );
+
+  /// WS-L5 — puts one track's pattern onto another.
+  ///
+  /// Two taps: the track you want to copy FROM, then the track to put it on.
+  /// A one-tap version would need a selection concept the Loop Studio does not
+  /// have (its cards are toggles, not selections), and a drag would need a drop
+  /// target on a row that is already full.
+  ///
+  /// Only compatible destinations are offered, so the meaningless pairings —
+  /// a drum grid onto a melody, a pattern onto a recording — cannot be reached
+  /// rather than being reachable and then refused.
+  Future<void> _copyPatternFrom(String from) async {
+    final l10n = AppLocalizations.of(context)!;
+    final targets = _engine.copyTargetsFor(from);
+    if (targets.isEmpty) return;
+    final to = await showDialog<String>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: Text(l10n.loopMixerCopyPatternTo(_trackLabel(l10n, from))),
+        children: [
+          for (final id in targets)
+            SimpleDialogOption(
+              key: Key('loop-copy-to-$id'),
+              onPressed: () => Navigator.pop(dialog, id),
+              child: Row(
+                children: [
+                  CircleAvatar(backgroundColor: _colorFor(id), radius: 8),
+                  const SizedBox(width: 8),
+                  Text(_trackLabel(l10n, id)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || to == null) return;
+    if (!_engine.copyPattern(from, to)) return;
+    setState(() {});
+    _syncPlayback();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          l10n.loopMixerCopiedPattern(
+            _trackLabel(l10n, from),
+            _trackLabel(l10n, to),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// One chip per track that HAS a pattern to give away.
+  ///
+  /// Hidden entirely when nothing can be copied anywhere, like the rename row:
+  /// a band of one track has no destinations, and a row of dead chips teaches
+  /// the wrong thing.
+  Widget _copyPatternRow(AppLocalizations l10n) {
+    final sources = [
+      for (final t in _engine.tracks)
+        if (_engine.copyTargetsFor(t.id).isNotEmpty) t,
+    ];
+    if (sources.isEmpty) return const SizedBox.shrink();
+    return _inspectorSection(
+      l10n.loopMixerCopyPattern,
+      Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final track in sources)
+            Tooltip(
+              message: l10n.loopMixerCopyPatternHint,
+              child: ActionChip(
+                key: Key('loop-copy-${track.id}'),
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                avatar: CircleAvatar(
+                  backgroundColor: _colorFor(track.id),
+                  radius: 8,
+                ),
+                label: Text(
+                  _trackLabel(l10n, track.id),
+                  style: const TextStyle(fontSize: 12),
+                ),
+                onPressed: () => _copyPatternFrom(track.id),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 
   /// One badge per track: its own swing, or `–` when it follows the groove.
   Widget _trackSwingRow(AppLocalizations l10n) => Wrap(

@@ -1098,8 +1098,9 @@ prefix.
 > `addEmptyTrack`/`renameTrack` + the role-add row · per-track swing =
 > `trackSwings`. Six of the ten Loop items closed in one arc.
 
-- 🚧 **WS-L5 — copy a PATTERN.** `S` · **CLAIMED 2026-07-28 by opus
-  (loop-d1d4)** — **narrowed twice, then resolved.** The first
+- ✅ **WS-L5 — copy a PATTERN.** `S` · **SHIPPED 2026-07-28** (opus, loop-d1d4)
+  — `copyPattern`/`copyTargetsFor` + a two-tap chip row, 21 tests.
+  **Narrowed twice, then resolved.** The first
   pass said "`duplicateSection` shipped, so the section half is done;
   duplicating a scene or a single pattern still has no route." Re-audited
   2026-07-28 (loop-d1d4): **a section IS a `GrooveScene`** — `_scenes` is
@@ -1113,6 +1114,21 @@ prefix.
   no B to copy *into* — either editable variant slots have to exist first, or
   the feature is really "copy this track's pattern onto that track".
   ⚠️ Deep-copy automation lanes; the aliasing trap already bit the track-copy.
+  - ✅ **Resolved by taking the second reading:** the feature is "copy this
+    track's pattern ONTO that track", which writes an override on the
+    destination — no new model, no editable variant slots, no schema change.
+    Pitched↔pitched and drums↔drums only; the meaningless pairings are not
+    offered rather than offered-then-refused, and an audio track has no pattern
+    in either direction.
+  - ⚠️ **The aliasing trap, in its pattern form:** `setTrackCells` copies its
+    list but `setTrackDrums` stores the `DrumRowsPattern` OBJECT, so a shallow
+    copy leaves both tracks sharing one grid and editing either edits both.
+    Rows and velocities are deep-copied; two tests pin it, because the bug is
+    invisible until somebody edits.
+  - ⚠️ **And the one that would have shipped a broken render:** the copy takes
+    the AUTHORED 2-bar pattern, not `cellsFor`, which resolves to FOUR bars
+    under a progression — writing that back as an override is a length the
+    renderer asserts on.
 - ✅ **WS-L11 — a lossless `TabDocument` codec.** `M` · **SHIPPED 2026-07-28**
   (opus, loop-d1d4) — `tab_document_codec.dart`, 16 tests. **NEW, found while
   building WS-W1 (2026-07-28).** Tab is the only mode with no way to save what

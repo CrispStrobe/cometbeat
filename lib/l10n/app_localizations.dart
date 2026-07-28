@@ -3344,6 +3344,30 @@ abstract class AppLocalizations {
   /// **'Empty'**
   String get loopMixerAddEmpty;
 
+  /// No description provided for @loopMixerCopyPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy a pattern'**
+  String get loopMixerCopyPattern;
+
+  /// No description provided for @loopMixerCopyPatternHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tap to put this track\'s pattern onto another track'**
+  String get loopMixerCopyPatternHint;
+
+  /// No description provided for @loopMixerCopyPatternTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy {name} onto…'**
+  String loopMixerCopyPatternTo(String name);
+
+  /// No description provided for @loopMixerCopiedPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'{from} copied onto {to}'**
+  String loopMixerCopiedPattern(String from, String to);
+
   /// No description provided for @loopMixerAddAudio.
   ///
   /// In en, this message translates to:

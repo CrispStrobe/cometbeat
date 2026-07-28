@@ -1784,6 +1784,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerAddEmpty => 'Empty';
 
   @override
+  String get loopMixerCopyPattern => 'Copy a pattern';
+
+  @override
+  String get loopMixerCopyPatternHint =>
+      'tap to put this track\'s pattern onto another track';
+
+  @override
+  String loopMixerCopyPatternTo(String name) {
+    return 'Copy $name onto…';
+  }
+
+  @override
+  String loopMixerCopiedPattern(String from, String to) {
+    return '$from copied onto $to';
+  }
+
+  @override
   String get loopMixerAddAudio => 'Import a loop';
 
   @override

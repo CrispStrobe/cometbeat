@@ -3041,6 +3041,90 @@ class LoopEngine {
     ];
   }
 
+  // --- WS-L5: copying a pattern from one track to another ------------------
+  //
+  // "Copy A to B, change one thing" is how sequencer users actually work, and
+  // until now the only copy in the Loop Studio was of a whole SECTION. The
+  // level below it — this track's notes, onto that track — had no route at all.
+  //
+  // Note what this deliberately is NOT: it is not a copy into a variant slot.
+  // A variant here is authored DATA, not an editable slot, so there is no "B"
+  // to copy into; what a track plays instead of its variant is an override, and
+  // that is what this writes. See the WS-L5 note in PLAN.md.
+
+  /// The AUTHORED 2-bar cells [id] plays, or null when it is not pitched.
+  ///
+  /// Deliberately not [cellsFor], which in progression mode returns the
+  /// four-bar RESOLVED shape — writing that back as an override would be a
+  /// pattern of the wrong length, and the render asserts on exactly that.
+  List<PatternCell>? _authoredCells(String id) {
+    final override = _cellOverrides[id];
+    if (override != null) return override;
+    final track = tracks.where((t) => t.id == id).firstOrNull;
+    if (track == null) return null;
+    final pattern = track.variants[_variantOf(track)];
+    return pattern is MelodicPattern ? pattern.cells : null;
+  }
+
+  /// Whether [from]'s pattern can be copied onto [to].
+  ///
+  /// Pitched to pitched and drums to drums only. A drum grid on a melody track
+  /// is not a transposition problem, it is meaningless — the rows are kick,
+  /// snare and hat, not pitches — so the pairing is refused rather than
+  /// silently producing noise.
+  bool canCopyPattern(String from, String to) {
+    if (from == to) return false;
+    if (!tracks.any((t) => t.id == from) || !tracks.any((t) => t.id == to)) {
+      return false;
+    }
+    // An audio track has no pattern in either direction: its stem IS a
+    // recording, and there is nothing symbolic to copy or to overwrite.
+    if (isAudioTrack(from) || isAudioTrack(to)) return false;
+    if (drumRowsFor(from) != null) return drumRowsFor(to) != null;
+    if (_authoredCells(from) != null) return _authoredCells(to) != null;
+    return false;
+  }
+
+  /// Copies [from]'s pattern onto [to], returning false when they do not pair.
+  ///
+  /// The copy is DEEP. `setTrackCells` already copies its list, but
+  /// `setTrackDrums` stores the [DrumRowsPattern] object it is given — so
+  /// handing it the source's pattern would leave both tracks sharing one grid,
+  /// and editing either would silently edit the other. That is the same
+  /// aliasing bug that bit the track copy, one level down.
+  bool copyPattern(String from, String to) {
+    if (!canCopyPattern(from, to)) return false;
+    final drums = drumRowsFor(from);
+    if (drums != null) {
+      setTrackDrums(
+        to,
+        DrumRowsPattern(
+          {
+            for (final row in drums.rows.entries)
+              row.key: List<bool>.of(row.value),
+          },
+          velocities: drums.velocities == null
+              ? null
+              : {
+                  for (final v in drums.velocities!.entries)
+                    v.key: List<double>.of(v.value),
+                },
+        ),
+      );
+      return true;
+    }
+    final cells = _authoredCells(from);
+    if (cells == null) return false;
+    setTrackCells(to, List<PatternCell>.of(cells));
+    return true;
+  }
+
+  /// The tracks [from]'s pattern could be copied onto, in display order.
+  List<String> copyTargetsFor(String from) => [
+        for (final t in tracks)
+          if (canCopyPattern(from, t.id)) t.id,
+      ];
+
   /// [cellsFor] transposed into the current [key]/[scale] — what actually
   /// sounds. The live engraving, the follow-along target and the Song-Book
   /// export use this so the written notes match the heard ones. ([cellsFor]

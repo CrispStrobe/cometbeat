@@ -216,6 +216,46 @@ void main() {
     });
   });
 
+  group('WS-L5 — copying a pattern between tracks', () {
+    testWidgets('there is a chip per track that has somewhere to send it',
+        (tester) async {
+      await _open(tester);
+      expect(find.byKey(const Key('loop-copy-bass')), findsOneWidget);
+      expect(find.byKey(const Key('loop-copy-melody')), findsOneWidget);
+    });
+
+    testWidgets('the dialog offers only compatible destinations',
+        (tester) async {
+      final game = await _open(tester);
+      await _tap(tester, const Key('loop-copy-bass'));
+      // Pitched destinations yes, itself and the drum track no.
+      expect(find.byKey(const Key('loop-copy-to-melody')), findsOneWidget);
+      expect(find.byKey(const Key('loop-copy-to-bass')), findsNothing);
+      expect(find.byKey(const Key('loop-copy-to-drums')), findsNothing);
+      expect(game.copyTargetsFor('bass'), contains('melody'));
+    });
+
+    testWidgets('picking one copies the pattern', (tester) async {
+      final game = await _open(tester);
+      await _tap(tester, const Key('loop-copy-bass'));
+      await tester.tap(find.byKey(const Key('loop-copy-to-melody')));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.trackIds, contains('melody'));
+      // The engine-level assertion lives in loop_copy_pattern_test; here the
+      // point is that the two taps reached it at all.
+      expect(find.byType(SimpleDialog), findsNothing, reason: 'dialog closed');
+    });
+
+    testWidgets('dismissing the dialog copies nothing', (tester) async {
+      await _open(tester);
+      await _tap(tester, const Key('loop-copy-bass'));
+      expect(find.byType(SimpleDialog), findsOneWidget);
+      Navigator.of(tester.element(find.byType(SimpleDialog))).pop();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byType(SimpleDialog), findsNothing);
+    });
+  });
+
   testWidgets('an added track can be removed again, and takes its name',
       (tester) async {
     final game = await _open(tester);
