@@ -105,6 +105,33 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · ✅ **DONE (idle) — LADDER RE-AUDITED against
+  the code, 2026-07-28 (`origin/main` @ `3a018344`).** The 39-task ladder in the
+  root `PLAN.md` had gone stale in 15 places within a day, so I re-verified every
+  task by symbol rather than by memory. **12 closed** (11 on main + 1 unpushed),
+  **3 narrowed**, **27 genuinely open**. Closed: **WS-L3** `_sceneGrid` ·
+  **WS-L4** `_pendingScene` · **WS-L6** `_trackFilters`+`setTrackFilter` with
+  `AutomationParam.filter` now rendering · **WS-L7** `renderArrangement(repeats:)`
+  · **WS-L8** `addEmptyTrack`/`renameTrack` · **WS-L9** `trackSwings` (all six
+  from the D1–D4 arc) · **WS-A2** ripple+range · **WS-A4** `groupId`+nudge ·
+  **WS-A8** `clipGainAutomation` · **WS-T5** `setChannelFxChain` · **WS-X4**
+  `trackSend` (written from a C6 line that was already stale). Narrowed:
+  **WS-L5** → only scene/pattern left, `duplicateSection` shipped · **WS-X3** →
+  four-fifths done, **Score** is the one mode with no effect surface at all ·
+  **WS-A9** → the stretch-quality knob only. Verified still open (not assumed):
+  keyboard counts unchanged at tracker **33** / Audio **4** / Loop **0**; no
+  zoom in Loop Studio; no piano roll anywhere; no MIDI input; `warp` matches only
+  `formant_shift.dart`; the tracker follow scroll is still `jumpTo`.
+  Also **corrected `O16`**, which claimed "export stays WAV/MP3, we have decoders
+  not encoders" — stale: `AudioExportFormat` is `{wav, mp3, opus, aac}` and
+  Opus/AAC encode natively. FLAC + Ogg-Vorbis encoding is the real remainder.
+  ⚠️ **COLLISION HEADS-UP for @daw-suite:** your unpushed `08a0f56c` edits the
+  same Audio block. Your four corrections (WS-A5/A7/A9 + A2/A4/A6/A8 shipped) are
+  **verified correct** and I kept them; my version differs only in being explicit
+  that **WS-A6 and the SRC half of WS-A9 are NOT on main yet** — they are on your
+  branch. On rebase, prefer this block and re-check that one line. Nothing else
+  of yours is touched. — opus
+
 - **opus (workstation-parity)** · 🚧 **ACTIVE (scoping only, no code) — worktree
   `../mus-daw-parity`, branch `feature/daw-parity`.** Maintainer ask: make the
   app as powerful and as intuitive as a full professional workstation, across
@@ -2908,11 +2935,16 @@ switching that is a separate, deliberate quality call.
   the sniffer checks for the Vorbis identity packet, not just `OggS`; the rate
   is also parsed from that header in pure Dart, which is how the web wasm shim
   (which doesn't report one) gets it right.
-  **Export NOT done, and it isn't a small gap:** we have DECODERS for FLAC and
-  Vorbis, not encoders. `rendersong`'s `.flac` output shells out to an external
-  `flac`/`ffmpeg` binary, which doesn't exist on mobile. Shipping FLAC/OGG
-  export means writing (or binding) a real encoder — its own project. Export
-  stays WAV/MP3.
+  **Export — CORRECTED 2026-07-28 (this paragraph was stale).** Export is no
+  longer WAV/MP3: `AudioExportFormat` is **`{wav, mp3, opus, aac}`**, and Opus
+  (Ogg-Opus) and AAC-LC both encode through the vendored native glint encoder
+  (`sf2/encode_capability*.dart`, `shared/music_io/audio_export.dart`). What is
+  still genuinely missing is **FLAC and Ogg-VORBIS encoding** — we have decoders
+  for both, not encoders, and `rendersong`'s `.flac` output shells out to an
+  external `flac`/`ffmpeg` binary that doesn't exist on mobile. So the open item
+  is narrower than it read: *lossless (FLAC) export*, plus Vorbis if anything
+  still wants it over Opus. Writing or binding a FLAC encoder is its own
+  project; nothing else blocks the export sheet.
 
 ## MIDI renderer — SOTA roadmap"). **S1** master **reverb** send (`reverbFx`, `--reverb 0..1`, default 0.16; `00f4308e`). **S2** **ADSR release tail** in the render bridge — a ~140 ms quadratic fade per note (velocity gain folded in); universal, helps every format + the app's Workshop/Tab preview; unmarked scores unchanged (`1fb41b3b`). **S3** NEW `lib/core/audio/midi_render.dart` `renderMidiFile(smf, font)` → the **event-accurate MIDI synth**: parse all tracks to absolute ticks, schedule on a SAMPLE clock — **exact timing** (no 16th-grid quantization), **tempo map**, per-channel **program+bank** (mid-song changes), **CC7/10/11** volume/expression/pan, **sustain pedal (CC64)**, ch10→drums; each note voiced by its SF2 preset + release, panned constant-power → stereo. Default for MIDI+`--sf2` (`--notation` forces the old quantized route). Verified: 3-track MIDI (piano L / bass R / drums) @ 100-BPM meta → correct pitches, stereo, tempo (`a2e0b359`). **S4** velocity→cutoff **low-pass filter** per voice (~900 Hz pp … 16 kHz ff; drums exempt) — the timbral half of dynamics (`27015c05`). +tests each slice; full analyze clean. **S5** (`79555cbb`) replaced the synth voice with a **resampling SF2 voice** — reads `font.sampleAt(zone.sampleIndex)` at a per-sample fractional rate (linear-interp), loops the zone for sustain, applies rootKey/tune/attenuation — unlocking **continuous pitch-bend** (per-channel bend curve, ±2 st) + **CC1 mod-wheel LFO vibrato**; verified a C-major scale resamples to the exact pitches through FluidR3. **S6** real-time playback (`--play` → afplay/ffplay/…; temp output optional; `df04594b`). **S7** the last of the list (`2b02bb61`): **RPN pitch-bend range** (CC101/100 + CC6/38, per channel), **`--chorus`** master send, **`--bits 24`** WAV (pure 24-bit LE writer), **`.flac`** output (via external flac/ffmpeg). **⇒ the entire SOTA MIDI-renderer roadmap (S1–S7) is SHIPPED**; a genuine FluidSynth/BASSMIDI-class renderer — resampling SF2 synthesis, event-accurate scheduling, full CC/pedal/bend/RPN, tempo map, per-part GM, stereo+reverb+chorus, 16/24-bit WAV·MP3·FLAC, and play-it-now. Now idle.
 - **opus (rendersong-velocity)** · ✅ **SHIPPED — honor MIDI note velocity end-to-end** (`crisp_notation@4792748` + mus `4d1fe394`). Was: the core `scoreFromMidi` DROPPED per-note velocity, so a MIDI's performed dynamics were lost before rendering. Now `NoteElement.velocity` (int? 0..127, additive/backward-compat) is threaded through the MIDI reader (pending→_Note→group→_Ev→NoteElement; a chord takes its loudest) and written back by `scoreToMidi` (explicit velocity > dynamics-derived), so a MIDI's dynamics round-trip (+2 core tests; 300-score sustain-grid + dynamics→velocity suites stay green). mus `renderScoreWithInstrument` voices a note by velocity/127 when present (precedence: velocity > notated DynamicMarkings > full level; no-velocity byte-identical), so rendersong's GM MIDI mixes AND the app's Workshop/Tab "play with instrument" now hear per-note dynamics (114 render/gm/workshop/tab tests green). +mus test. Now idle. **⇒ render quality: correct tempo · notated dynamics · MIDI velocity · stereo · soft-master · per-part GM voicing — all shipped.**

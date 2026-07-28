@@ -613,6 +613,13 @@ three structural gaps, the non-goals); this holds the *work*. Read the doc once
 before pulling a task from here — several tasks below only make sense against
 the gap they close.
 
+**Audited against the code 2026-07-28** (`origin/main` @ `3a018344`). The D1–D4
+Loop arc and the Audio swiss-army arc closed **12 of the original 39** between
+the ladder being written and that audit (11 on main + WS-A6 built on an unpushed
+branch), and narrowed three more — **27 remain open.** Each closed item is
+marked where it sat, with the symbol that proves it. **Re-audit before pulling anything
+here** — this board moves under you, and half of what looks open may not be.
+
 **How to read a task.** Every one is written so a fresh agent can pull it
 without asking a question first: **Goal · Depends · Files · Build · Acceptance ·
 Size**. Size is `S` (a session) · `M` (a day) · `L` (several days, split it).
@@ -795,41 +802,41 @@ prefix.
   it onto any surface (WS-X2). This is where the asset catalog finally meets the
   authoring modes.
 
-- ⬜ **WS-X3 — the shared FX rack in every mode.** `M` · Depends nothing.
-  `FxSpec` is already mode-neutral and the GUI/CLI are both generated from the
-  registry; Tracker/Loop/Tab/Score simply never expose it. Surface the rack on
-  each surface's output, with the **chain string** as the interchange format so
-  a chain travels with the track. (`AUDIO_EDITOR_SUITE.md` C7.)
+- 🔶 **WS-X3 — the shared FX rack in the LAST mode.** `S` · **Narrowed by the
+  audit: this is four-fifths done.** `shared/widgets/fx_rack.dart` is already
+  hosted by Loop Studio, the Tab Workshop and the Tracker, and the Audio Editor
+  has the equivalent through its own `DawClipEffectType` editor (68 sites). The
+  one mode with **no** effect surface at all is **Score** — nothing in
+  `composition_workshop_screen.dart` touches `FxRack` or `FxSpec`. Host the
+  rack there, with the **chain string** as the interchange format so a chain
+  travels with the part. (`AUDIO_EDITOR_SUITE.md` C7.)
+  ⚠️ Worth a deliberate call while you are in there: the Audio Editor's own
+  enum and the shared `FxSpec` are two vocabularies for one rack. Unifying them
+  is a bigger job than this task and should not be smuggled into it.
 
-- ⬜ **WS-X4 — lane-level send.** `S` · Depends WS-X3.
-  You can send a clip somewhere; you cannot send a lane.
-  (`AUDIO_EDITOR_SUITE.md` C6.)
+> ✅ **WS-X4 SHIPPED** — `DawService.trackSend`/`setTrackSend` (plus
+> `setTrackSendForTracks` for a multi-selection) send a whole lane to a bus, and
+> `busSends` carries bus→bus. The item was written from
+> `AUDIO_EDITOR_SUITE.md` C6, which was already stale when the ladder was
+> drafted.
 
 ### Phase 5 — per-surface depth (pull in any order; all independent)
 
 **Loop Studio** — see also the L/D backlogs above, which these do not duplicate.
-- ⬜ **WS-L3 — show the session grid.** `S` — **the cheapest large win in this
-  ladder.** The tracks × scenes matrix **already exists in the data**
-  (`GrooveScene(enabled, variants)`) and is rendered as a row of buttons.
-  Drawing the matrix exposes shipped power with **no model risk**. Pure UI.
-- ⬜ **WS-L4 — visible queued launch.** `S` — `_launchScene` applies state
-  immediately while the audio swaps at the loop seam, so musically-correct
-  timing reads as lag. Show the pending state. Small, and it is what makes a
-  performance surface feel professional.
-- ⬜ **WS-L5 — copy / duplicate a section, scene or pattern.** `S` — zero matches
-  today. "Copy A to B, change one thing" is how sequencer users work.
+
+> ✅ **WS-L3 · WS-L4 · WS-L6 · WS-L7 · WS-L8 · WS-L9 SHIPPED** (audited against
+> `origin/main` 2026-07-28, after the D1–D4 arc landed). Session grid =
+> `_sceneGrid` · queued launch = `_pendingScene` · per-track filter =
+> `_trackFilters`/`setTrackFilter` **with `AutomationParam.filter` now
+> rendering** · section repeats = `renderArrangement(repeats:)` · add/rename =
+> `addEmptyTrack`/`renameTrack` + the role-add row · per-track swing =
+> `trackSwings`. Six of the ten Loop items closed in one arc.
+
+- ⬜ **WS-L5 — duplicate a SCENE or a PATTERN.** `S` — **narrowed:**
+  `duplicateSection` shipped, so the section half is done; duplicating a scene
+  or a single pattern still has no route. Same job, one level down.
   ⚠️ Deep-copy automation lanes; the aliasing trap already bit the track-copy.
-- ⬜ **WS-L6 — per-track filter, then automate it.** `M` — decision **D3** above.
-  `_masterFilter` is global and `AutomationParam.filter` renders nothing. A
-  biquad per track in the mix path **first**, then wire the filter param through
-  the same envelope seam. ⚠️ `mixStems` unit-peak normalises each stem *then*
-  applies gain, so anything level-shaped must land **after** normalisation —
-  reuse the `applyCellVelocities` seam.
-- ⬜ **WS-L7 — per-section repeat counts.** `S` — chaining advances one pass per
-  section, so A×4 B×2 A×4 is unsayable. Extends `renderArrangement`.
-- ⬜ **WS-L8 — add / rename tracks.** `M` — decision **D1** above.
-- ⬜ **WS-L9 — per-track swing.** `S`.
-- ⬜ **WS-L2 — zoom + a real timeline ruler.** `M` — no zoom exists at all
+- ⬜ **WS-L2 — zoom + a real timeline ruler.** `M` — still no zoom at all
   (`InteractiveViewer|zoom`: 0 hits). A 4-bar loop and a 32-bar arrangement
   cannot both be legible at one scale.
 - ⬜ **WS-L10 — audio tracks in the loop.** `M` · Depends WS-W1. A Loop Studio
@@ -842,33 +849,52 @@ prefix.
   not tiled past it, or the gapless seam clicks.
 
 **Audio Editor**
-- ⬜ **WS-A2 — time selection + ripple edit.** `M` — the ripple primitives exist in
-  `daw_service.dart`; there is no time-range selection to apply them to. Select
-  a span across tracks → delete/insert/silence, everything after moves.
-- ⬜ **WS-A6 — take lanes and comping.** `L` — record several passes, choose per
-  phrase. `findPhrases` (`daw_edits.dart`) already finds the boundaries.
-- ⬜ **WS-A7 — clip warp / follow the tempo map.** `M` · Depends WS-W2. Time-stretch
-  exists as an effect; a clip cannot follow the project tempo. With `TempoMap`
-  this is a clip flag plus a render-time stretch factor.
-- ⬜ **WS-A8 — per-clip gain envelope**, distinct from lane automation. `S`.
-- ⬜ **WS-A5 — loudness metering as a view.** `S` — `crisp_dsp/loudness.dart`
-  computes it and the CLI prints it; the GUI shows none of it. Integrated /
-  short-term / momentary, true-peak, correlation.
-- ⬜ **WS-A4 — clip groups / linked clips + nudge by grid or ms.** `M`.
-- ⬜ **WS-A9 — the remaining A6/A7 DSP tiers** from `AUDIO_EDITOR_SUITE.md`:
-  stretch-quality knob, band-limited SRC tiers, raw up/down-sample. `M`.
+
+> ✅ **WS-A2 · WS-A4 · WS-A8 SHIPPED and on `origin/main`** — time selection +
+> ripple (`rippleDelete`/`rippleInsert` + a marked range in the screen), clip
+> groups + nudge (`groupId`, `76a7411e`), per-clip gain envelope
+> (`clipGainAutomation`/`clipEnvelopeAt`). Record:
+> **[docs/HISTORY.md](docs/HISTORY.md) → "Audio Editor → swiss-army knife"**.
+>
+> 🔶 **WS-A6 (take lanes + comping) and the SRC half of WS-A9 are built but NOT
+> ON MAIN** — they sit on the unpushed `feature/daw-suite` (`20b7063e` D5,
+> `b2e2551d` A6), gated on that agent's chunked full-suite run. Treat them as
+> shipped-pending-push: **do not rebuild them**, and re-audit this block once
+> that branch lands.
+
+- ⬜ **WS-A5 — loudness metering as a VIEW.** `S` — narrower than it looks and
+  genuinely open. `crisp_dsp/loudness.dart` computes gated integrated /
+  short-term / momentary LUFS, `truePeakDb` and `stereoCorrelation`, and
+  `dawedit --loudness` prints all of it — but the file is **imported nowhere in
+  `lib/`**, and `daw_screen.dart`'s only "loudness" hit is
+  `DawClipEffectType.loudness`, which is the tone-curve *effect*, not a meter.
+  The DSP and the CLI are done; the meter is not.
+- ⬜ **WS-A7 — clip warp / follow the tempo map.** `M` · Depends WS-W2. Verified
+  absent (the only `warp` hits in `lib/` are `formant_shift.dart`'s spectral
+  envelope, unrelated). `TempoMap` now exists, so this is the clip flag plus a
+  render-time stretch factor — the last structural gap in the Audio Editor.
+- ⬜ **WS-A9 — the last DSP tier: a stretch-quality knob.** `M` — **narrowed to
+  one item.** Band-limited SRC tiers and raw up/down-sample are built as
+  `resampleHq` (`ResampleQuality{fast,good,best}`) and `resampleRaw` on the
+  unpushed branch above. What remains is time-stretch quality, and it is
+  deliberately **not** a resampler setting: `time_stretch.dart` is WSOLA with a
+  hardcoded `_frameSize`/`_hs`, and stretching time independently of pitch is a
+  different algorithm.
 
 **Tracker**
-- ⬜ **WS-T1 — eased playhead follow.** `S` — `_playFrac` already tracks sub-row
-  position; the follow scroll still `jumpTo`s per row.
+
+> ✅ **WS-T5 SHIPPED** — `TrackerEngine.setChannelFxChain` + the screen's
+> `channelFxChain`; a tracker channel carries a real `List<FxSpec>` chain.
+
+- ⬜ **WS-T1 — eased playhead follow.** `S` — still open: `_playFrac` tracks the
+  sub-row position but the follow scroll is `_vScroll.jumpTo` (two sites).
 - ⬜ **WS-T2 — pattern-matrix overview.** `M` — a block-per-pattern bird's-eye of
   the order list with drag-to-reorder, so a 64-pattern song is navigable.
-- ⬜ **WS-T4 — a piano-roll view of one channel.** `M` — the app has **no**
+- ⬜ **WS-T4 — a piano-roll view of one channel.** `M` — the app still has **no**
   continuous piano roll anywhere (`pianoRoll`: 0 hits). The tracker grid is
   exact and unapproachable; `StepGridView` is approachable and quantized.
   One channel, one roll, same document. The biggest legibility win for a
   newcomer opening a module.
-- ⬜ **WS-T5 — per-channel FX rack.** `S` · Depends WS-X3.
 - ⬜ **WS-T6 — pattern-level time signature / groove templates.** `M`.
 - ⬜ **WS-T7 — record into a pattern from the transport.** `M` ·
   Depends WS-W2, WS-X5.
@@ -902,9 +928,12 @@ prefix.
 
 ### Cheap wins — no phase, no dependency, pull any time
 
-**WS-L3** (session grid — pure UI over data that already ships) · **WS-L4**
-(queued-launch feedback) · **WS-A1** (clip trim/fade handles) · **WS-T1** (eased
-playhead follow) · **WS-A5** (loudness view) · **WS-L7** (section repeats).
+**WS-A1** (clip trim/fade handles) · **WS-T1** (eased playhead follow) ·
+**WS-A5** (loudness view) · **WS-L5** (duplicate a scene or a pattern) ·
+**WS-X3** (the rack in Score, the last mode without one).
+
+*(WS-L3, WS-L4 and WS-L7 were on this list and all three shipped in the D1–D4
+arc — which is the argument for the list.)*
 
 ## Cross-mode FX + interop consolidation (SHIPPED — all 12 items, `feature/fx-interop`)
 
