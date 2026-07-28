@@ -927,7 +927,9 @@ void main() {
 
       // Nothing is drawn before the action…
       expect(
-          find.byKey(const ValueKey<String>('tab-finger-0-5')), findsNothing);
+        find.byKey(const ValueKey<String>('tab-finger-0-5')),
+        findsNothing,
+      );
 
       tab.addLeftFingerings();
       await tester.pumpAndSettle();
