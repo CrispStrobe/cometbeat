@@ -161,11 +161,14 @@ is recorded in [HISTORY.md](HISTORY.md).
     says the tunes "were doubtless originally sung without accompaniments") and
     **all 133 carry them as a second part**; four files even keep a
     `<rights>1921 E. C. Schirmer Music Co.</rights>` line inside the XML.
-  - **Unlock is technical, not legal, and is a MAINTAINER CALL:** 130 of the 133
-    are traditional folk-songs/carols, so dropping part 2 + all `<lyric>` leaves
-    the PD melody — exactly the publisher's own companion "melodies without
-    accompaniments" volume. Not done: it means publishing a modified derivation
-    and asserting our own PD determination on the melody line.
+  - 🛑 **DECIDED by the maintainer (2026-07-28): the 133 STAY ON HOLD. Do not
+    re-open without them.** The one technical route that could clear them was a
+    melody-only extraction (130 of the 133 are traditional folk-songs/carols, so
+    dropping part 2 + all `<lyric>` leaves the PD tune — exactly the publisher's
+    own companion "melodies without accompaniments" volume). **Rejected for
+    now:** it would publish a modified derivation and assert our own PD call on
+    the melody line instead of resting on a rights statement. Costs nothing to
+    defer — the files stay staged on the VPS and in `jukebox-probation.json`.
   - Bonus deliverable: **194 (page scan → MusicXML) OMR eval pairs** under CC
     PDM 1.0 — a licence-clean image→symbolic corpus that may be NAMED in tracked
     docs, unlike our other OMR controls. Silver not gold (see the doc).

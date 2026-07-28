@@ -358,14 +358,18 @@ Every line here is a *licence/coverage* statement; detail per source follows.
        accompaniment is 1920s work, not folk material — and **all 133 files carry
        it as a second part**. Four files even retain a `<rights>1921 E. C.
        Schirmer Music Co.</rights>` line inside the XML.
-  - **The real unlock is technical, not legal — a MELODY-ONLY extraction.**
-    130 of the 133 are traditional folk-songs/carols by title and creator, and
-    the traditional melody itself is PD. Dropping part 2 (accompaniment) and all
-    `<lyric>` elements leaves only the PD tune — which is exactly what the
-    publisher's own companion volume was ("Book No. 3 in the Concord Series,
-    containing the melodies of the songs without accompaniments"). That is a
-    maintainer policy call, not an automatic win: it means publishing a modified
-    derivation and asserting our own PD determination on the melody line.
+  - 🛑 **DECIDED — the 133 STAY ON HOLD (maintainer, 2026-07-28). Do not
+    re-open this without the maintainer.** A melody-only extraction was
+    identified as the one technical route that could clear them: 130 of the 133
+    are traditional folk-songs/carols, so dropping part 2 (accompaniment) and
+    every `<lyric>` element would leave only the PD tune — which is exactly what
+    the publisher's own companion volume was ("Book No. 3 in the Concord Series,
+    containing the melodies of the songs without accompaniments"). It was **not
+    taken**, because it would mean publishing a modified derivation and
+    asserting our own PD determination on the melody line rather than resting on
+    a rights statement. The files stay on the VPS and in
+    `jukebox-probation.json`, out of `db.json`, so the option remains open at
+    zero cost if that judgement ever changes.
   - **The residue is 27 names, not a wall of them** — and one name,
     **Homer H. Harbour**, gated 43 items on its own. A human-supplied alias
     ledger (`jukebox-aliases.json`) fixed source typos and abbreviations
