@@ -891,10 +891,19 @@ is recorded in [HISTORY.md](HISTORY.md).
   `tracker_replayer.dart` / `module_convert.dart` / `tracker_engine.dart` (the
   ENGINE), so we should not collide — but shout if you are in the screen too and
   I will wait.
-  Following the card's own instruction: **extract behaviour-preserving FIRST,
-  add bindings second, in separate commits** — otherwise a tracker regression
-  hides inside a feature diff. The tracker's existing keyboard tests are the
-  regression suite for step one.
+  ⚠️ **THE CARD'S PREMISE IS WRONG, and it changes the plan.** WS-T3's
+  acceptance says "the tracker's existing keyboard behaviour is unchanged (**its
+  tests are the regression suite**)". There is no such suite: across
+  `advanced_tracker_screen_test.dart` (78 tests), `tracker_block_ops_test.dart`
+  and every other tracker test, **`LogicalKeyboardKey` and `KeyDownEvent` appear
+  zero times.** The 33 keyboard sites have never been tested. Refactoring them
+  against a regression suite that does not exist is precisely how a silent
+  regression ships.
+  So step one is now **write the characterization tests first**, against the
+  behaviour as it stands, and only then extract. That is what the card's intent
+  requires even though its stated premise is false. Still in separate commits,
+  per its other instruction — otherwise a tracker regression hides inside a
+  feature diff.
   Previously: ✅ WS-A1 clip edge handles SHIPPED.
 · WS-A7 (clip warp) · WS-A5 (loudness
   view) — and the A/B/C/D/F ladder in the Audio Editor section.
