@@ -2583,10 +2583,31 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
     );
   }
 
+  /// The left-hand finger printed for [string] in [col], or null.
+  ///
+  /// `leftFingers` is stored in PITCH order (low → high) to match
+  /// `NoteElement.fingerings`, while the grid is indexed by string, where 0 is
+  /// the highest-sounding string. So the mapping is by descending string index —
+  /// not by position in the map, which would silently mis-attribute every digit
+  /// in a chord.
+  int? _fingerAt(int col, int string) {
+    final column = _doc.columns[col];
+    final fingers = column.leftFingers;
+    if (fingers == null || !column.frets.containsKey(string)) return null;
+    final strings = column.frets.keys.toList()..sort((a, b) => b.compareTo(a));
+    final i = strings.indexOf(string);
+    return i >= 0 && i < fingers.length ? fingers[i] : null;
+  }
+
   Widget _cell(int col, int string) {
     final fret = _doc.columns[col].frets[string];
     final selected = col == _selCol && string == _selString;
     final scheme = Theme.of(context).colorScheme;
+    // The finger digit, small and in the corner: the FRET is what the grid is
+    // for, and a fingering must not compete with it for the eye. An open string
+    // (finger 0) is left blank — a "0" beside a "0" fret says nothing a player
+    // does not already know, and reads as a second fret number.
+    final finger = _fingerAt(col, string);
     return MouseRegion(
       onEnter: _inspect ? (_) => _onCellHover(col, string) : null, // 🔍 desktop
       child: GestureDetector(
@@ -2606,13 +2627,34 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
             ),
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Text(
-            fret?.toString() ?? '·',
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.bold,
-              color: fret == null ? scheme.onSurfaceVariant : scheme.onSurface,
-            ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                fret?.toString() ?? '·',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                  color:
+                      fret == null ? scheme.onSurfaceVariant : scheme.onSurface,
+                ),
+              ),
+              if (finger != null && finger > 0)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Text(
+                    '$finger',
+                    key: ValueKey<String>('tab-finger-$col-$string'),
+                    style: TextStyle(
+                      fontSize: 9,
+                      height: 1,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),

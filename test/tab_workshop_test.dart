@@ -916,6 +916,49 @@ void main() {
       expect(scoreToMusicXml(handed), contains('<fingering'));
     });
 
+    testWidgets('the digits are VISIBLE on the tab grid, not just in the data',
+        (tester) async {
+      await pumpGame(tester, const TabWorkshopScreen());
+      final tab = _tab(tester);
+      tab.selectCell(0, 5);
+      await tester.pump();
+      tab.enterFret(3);
+      await tester.pump();
+
+      // Nothing is drawn before the action…
+      expect(
+          find.byKey(const ValueKey<String>('tab-finger-0-5')), findsNothing);
+
+      tab.addLeftFingerings();
+      await tester.pumpAndSettle();
+
+      // …and after it the cell carries its finger. This is the assertion that
+      // matters: the action WROTE the digits correctly all along, but the grid
+      // drew only the fret, so from the player's seat nothing had happened.
+      final digit = find.byKey(const ValueKey<String>('tab-finger-0-5'));
+      expect(digit, findsOneWidget);
+      expect(tester.widget<Text>(digit).data, '1');
+    });
+
+    testWidgets('an open string shows no digit — a 0 beside a 0 fret is noise',
+        (tester) async {
+      await pumpGame(tester, const TabWorkshopScreen());
+      final tab = _tab(tester);
+      tab.selectCell(0, 5);
+      await tester.pump();
+      tab.enterFret(0);
+      await tester.pump();
+      tab.addLeftFingerings();
+      await tester.pumpAndSettle();
+
+      expect(tab.leftFingersAt(0), [0], reason: 'the data still records it');
+      expect(
+        find.byKey(const ValueKey<String>('tab-finger-0-5')),
+        findsNothing,
+        reason: 'but the grid does not print it',
+      );
+    });
+
     testWidgets('an open string is finger 0, and it is one undo step',
         (tester) async {
       await pumpGame(tester, const TabWorkshopScreen());
