@@ -104,6 +104,8 @@ import 'package:comet_beat/features/workshop/screens/composition_workshop_screen
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
+import 'package:comet_beat/shared/keymap/intents.dart';
+import 'package:comet_beat/shared/keymap/keymap.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
     show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
@@ -1807,78 +1809,84 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     return null;
   }
 
+  /// WS-T3 — the shared binding table. A field rather than a constant so a
+  /// user's rebindings can replace it without touching the dispatch below.
+  final Keymap _keymap = Keymap();
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     final hw = HardwareKeyboard.instance;
     final ctrl = hw.isControlPressed || hw.isMetaPressed;
     final shift = hw.isShiftPressed;
-    final alt = hw.isAltPressed;
+    // NB: `alt` is no longer read here — the Alt-modified chords resolve
+    // through the keymap now, which is the point of the extraction.
+
+    // WS-T3 — the BINDING now lives in `lib/shared/keymap/`; what stays here is
+    // the dispatch, and the ORDER of the checks below, which is behaviour: the
+    // block ops are resolved before note entry, or Ctrl+C would type a C.
+    final intent = _keymap.intentFor(chordOf(key, hw));
 
     // FT2 function-key transport: F5 song · F6 pattern · F7 pattern-from-cursor ·
     // F8 stop.
-    if (key == LogicalKeyboardKey.f5) {
-      _playSong();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.f6) {
-      _playPattern();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.f7) {
-      _playPattern(fromRow: _cursorRow);
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.f8) {
-      _stop();
-      return KeyEventResult.handled;
+    switch (intent) {
+      case AppIntent.transportPlaySong:
+        _playSong();
+        return KeyEventResult.handled;
+      case AppIntent.transportPlayPattern:
+        _playPattern();
+        return KeyEventResult.handled;
+      case AppIntent.transportPlayFromCursor:
+        _playPattern(fromRow: _cursorRow);
+        return KeyEventResult.handled;
+      case AppIntent.transportStop:
+        _stop();
+        return KeyEventResult.handled;
+      default:
+        break;
     }
 
     // Block ops (Ctrl/⌘ + …). Checked before note entry so Ctrl+C isn't a note.
     if (ctrl) {
-      if (key == LogicalKeyboardKey.keyC) {
-        _copyBlock();
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.keyX) {
-        _cutBlock();
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.keyV) {
-        _pasteBlock();
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.keyM) {
-        _pasteBlock(mix: true);
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.keyA) {
-        // First Ctrl+A = the track column; a second widens to the whole pattern.
-        if (_hasSelection &&
-            _selRect.rLo == 0 &&
-            _selRect.rHi == _song.rows - 1 &&
-            _selRect.cLo == _cursorChannel &&
-            _selRect.cHi == _cursorChannel) {
-          _selectPattern();
-        } else {
-          _selectTrack();
-        }
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.keyI) {
-        _interpolateBlock();
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.keyZ) {
-        _undo();
-        return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.keyY) {
-        _redo();
-        return KeyEventResult.handled;
+      switch (intent) {
+        case AppIntent.clipCopy:
+          _copyBlock();
+          return KeyEventResult.handled;
+        case AppIntent.clipCut:
+          _cutBlock();
+          return KeyEventResult.handled;
+        case AppIntent.clipPaste:
+          _pasteBlock();
+          return KeyEventResult.handled;
+        case AppIntent.clipPasteMix:
+          _pasteBlock(mix: true);
+          return KeyEventResult.handled;
+        case AppIntent.selectAll:
+          // First Ctrl+A = the track column; a second widens to the pattern.
+          if (_hasSelection &&
+              _selRect.rLo == 0 &&
+              _selRect.rHi == _song.rows - 1 &&
+              _selRect.cLo == _cursorChannel &&
+              _selRect.cHi == _cursorChannel) {
+            _selectPattern();
+          } else {
+            _selectTrack();
+          }
+          return KeyEventResult.handled;
+        case AppIntent.editInterpolate:
+          _interpolateBlock();
+          return KeyEventResult.handled;
+        case AppIntent.editUndo:
+          _undo();
+          return KeyEventResult.handled;
+        case AppIntent.editRedo:
+          _redo();
+          return KeyEventResult.handled;
+        default:
+          break;
       }
     }
-    if (key == LogicalKeyboardKey.escape) {
+    if (intent == AppIntent.selectNone) {
       _unmark();
       return KeyEventResult.handled;
     }
@@ -1888,72 +1896,69 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     if (fieldResult != null) return fieldResult;
 
     // Alt+Arrows / Alt+PageUp/Down: transpose the block (semitone / octave).
-    if (alt) {
-      if (key == LogicalKeyboardKey.arrowUp) {
+    switch (intent) {
+      case AppIntent.transposeUp:
         _transposeBlock(1);
         return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.arrowDown) {
+      case AppIntent.transposeDown:
         _transposeBlock(-1);
         return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.pageUp) {
+      case AppIntent.transposeOctaveUp:
         _transposeBlock(12);
         return KeyEventResult.handled;
-      }
-      if (key == LogicalKeyboardKey.pageDown) {
+      case AppIntent.transposeOctaveDown:
         _transposeBlock(-12);
         return KeyEventResult.handled;
-      }
+      default:
+        break;
     }
 
-    // Navigation. Shift+arrow extends the block; a plain arrow drops it.
+    // Navigation. The SELECT variants are the same keys with Shift, so both
+    // land here; `shift` still decides whether the block extends or drops.
     void go(int channel, int row) =>
         shift ? _extendTo(channel, row) : _moveCursorClearing(channel, row);
-    if (key == LogicalKeyboardKey.arrowDown) {
-      go(_cursorChannel, (_cursorRow + 1) % _song.rows);
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowUp) {
-      go(_cursorChannel, (_cursorRow - 1 + _song.rows) % _song.rows);
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowRight) {
-      go((_cursorChannel + 1) % _song.channelCount, _cursorRow);
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      go(
-        (_cursorChannel - 1 + _song.channelCount) % _song.channelCount,
-        _cursorRow,
-      );
-      return KeyEventResult.handled;
-    }
-    // Insert / Shift+Delete: insert / delete a whole row at the cursor.
-    if (key == LogicalKeyboardKey.insert) {
-      _insertRow();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.delete && shift) {
-      _deleteRow();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.delete ||
-        key == LogicalKeyboardKey.backspace) {
-      if (_hasSelection) {
-        _clearBlock();
-      } else {
-        _clearAtCursorAndAdvance();
-      }
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.pageUp) {
-      _setOctave(_octave + 1);
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.pageDown) {
-      _setOctave(_octave - 1);
-      return KeyEventResult.handled;
+    switch (intent) {
+      case AppIntent.cursorDown:
+      case AppIntent.selectDown:
+        go(_cursorChannel, (_cursorRow + 1) % _song.rows);
+        return KeyEventResult.handled;
+      case AppIntent.cursorUp:
+      case AppIntent.selectUp:
+        go(_cursorChannel, (_cursorRow - 1 + _song.rows) % _song.rows);
+        return KeyEventResult.handled;
+      case AppIntent.cursorRight:
+      case AppIntent.selectRight:
+        go((_cursorChannel + 1) % _song.channelCount, _cursorRow);
+        return KeyEventResult.handled;
+      case AppIntent.cursorLeft:
+      case AppIntent.selectLeft:
+        go(
+          (_cursorChannel - 1 + _song.channelCount) % _song.channelCount,
+          _cursorRow,
+        );
+        return KeyEventResult.handled;
+      // Insert / Shift+Delete: insert / delete a whole row at the cursor.
+      case AppIntent.rowInsert:
+        _insertRow();
+        return KeyEventResult.handled;
+      case AppIntent.rowDelete:
+        _deleteRow();
+        return KeyEventResult.handled;
+      case AppIntent.editDelete:
+        if (_hasSelection) {
+          _clearBlock();
+        } else {
+          _clearAtCursorAndAdvance();
+        }
+        return KeyEventResult.handled;
+      case AppIntent.octaveUp:
+        _setOctave(_octave + 1);
+        return KeyEventResult.handled;
+      case AppIntent.octaveDown:
+        _setOctave(_octave - 1);
+        return KeyEventResult.handled;
+      default:
+        break;
     }
 
     // Note-name mode: a letter (C..B), optional #, then an octave digit.
