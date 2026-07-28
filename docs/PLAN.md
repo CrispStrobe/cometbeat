@@ -2067,6 +2067,36 @@ is recorded in [HISTORY.md](HISTORY.md).
   independent confirmation on every high-confidence note. It needs a third look at exactly
   **7 notes**, all in the lower staff (m5 digit · m12 ×2 · m16 · m21 ×2 · m22).
 
+  **✅ FIRST PUBLISHABLE PIECE — Becker p.50 no.9, arbitrated and merged**
+  (`out/becker_p50_no9_FINAL.json`): 24 bars, both staves, 110 events, 101 pitched, 66 digits,
+  88 high-confidence pitches, rhythm summing 48/48, full audit trail.
+  ⭐ **The arbitration is the argument for double-keying, in one line: reader A won 3,
+  reader B won 2, and on 2 the arbiter found a THIRD answer neither had.** No single reading
+  was correct on its own — and the two readings had already agreed on 94.1% of pitches, so
+  the errors were exactly where agreement could not reach.
+  • The two "neither" verdicts are instructive. Both readers had m21 right in INTERVAL (+1
+  semitone) and wrong in absolute height, a fifth apart: reader A's A♯2→B2 is the same hand
+  shape a fifth lower on the G string — **the repeated-shape trap again** — and reader B's
+  D♯3→E3 needs G-string 4th position. The plate's own digits settled it: finger 2 on E♯3 and
+  3 on F♯3 both give `a = 2` on the D string, and m23 then prints finger **1** on that same
+  E3. Three bars of digits agreeing on one frame beat both eyes.
+  • ⚠ **An anchor can lie OUTSIDE the tile.** Reader A reported its m21–22 slice contained no
+  `0`, no ledger, no clef — and it was right about the slice. The arbiter found a printed `0`
+  **one bar away** in m23, landing on D3, which fixed the whole m21–23 region. A slice-based
+  protocol can hide a decisive landmark just past its edge, so a reader that finds no anchor
+  should be told to LOOK AT THE NEIGHBOURING BAR before recording a gap.
+  • The arbiter re-anchored every staff from the bass-clef dots and key sharps before judging
+  any note (lines A3/F♯3/D3/B2/G2), and settled the digit dispute by glyph shape PLUS
+  placeability: E2 with finger 3 is C-string first position (`a = 2`), while finger 2 would
+  need `a = 3`, which no frame gives.
+  • Pitch vs SPELLING kept distinct: m21's sounding pitch 53 is certain; the spelling E♯
+  (not F♮) follows from the printed sharp and the C♯7→F♯m context. Recorded as such.
+  **Known limits, recorded in the file:** reading 2's m23–24 were contaminated (it saw
+  reading 1's checkpoint), so those bars are single-witness.
+  **What this piece now demonstrates:** a repeatable route from a PD scan to a score good
+  enough to publish — piece-at-a-time drafting, blind second reading, calibrated confidence to
+  target the disputes, and arbitration from the plate. Cost: ~3 agent passes for 24 bars.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
