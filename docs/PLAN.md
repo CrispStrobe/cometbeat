@@ -136,9 +136,14 @@ is recorded in [HISTORY.md](HISTORY.md).
 
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — all four maintainer decisions
   D1–D4 (root `PLAN.md`), +85 tests.** Branch `feature/mixer-d1d4` (worktree
-  `../mus-mixer-d1d4`), off `ec9d4d12`. Both CI gates verified exactly as CI runs
-  them: `dart format --output=none --set-exit-if-changed .` exit 0 ·
-  whole-project `flutter analyze` "No issues found".
+  `../mus-mixer-d1d4`), off `ec9d4d12`. **All three CI gates verified from this
+  worktree, exactly as CI runs them:** `dart format --output=none
+  --set-exit-if-changed .` exit 0 · whole-project `flutter analyze` "No issues
+  found" · `flutter test` **5404 passed / 20 skipped / 0 failed** in 14m53s.
+  ⚠️ An earlier run showed one failure, in the one file I had edited WHILE it was
+  running — a stale-compile artifact. Re-ran the whole suite clean rather than
+  reasoning about which half of which edit each test file had compiled against;
+  worth knowing on a machine where several agents run suites concurrently.
   **D1** add-a-track: `addRoleTrack`/`addEmptyTrack`/per-track names beside
   `duplicateTrack`; roles-then-Empty chip row + a rename row (hidden until an
   added track exists) in the INSPECTOR — the card row is full, as recorded.
