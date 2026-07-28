@@ -117,6 +117,24 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` step 2b for SCORE.**
+  Worktree `../mus-daw-parity`.
+  **Lane:** `daw_screen.dart` was touched 10 min ago by `WS-X6` and
+  `loop_mixer_screen.dart` is still `loop-d1d4`'s for `WS-L1`, so Score is the
+  one step-2b surface that is free. (`WS-X3`'s Score claim is marked
+  *superseded* and is about the FX rack, not this.)
+  ⚠️ **A constraint the other two surfaces did not have, found before writing
+  code:** `_mpd` is `late final MultiPartDocument`, so the Score screen's
+  document **cannot be replaced in place**. The Tracker and Tab both reassign
+  theirs. So either Score gets only `addToProject` + `writeBackToProject` (put
+  work in, push edits back — no in-place re-open), or `late final` becomes
+  `late`, which is a one-keyword change in a ~4,000-line screen I do not own.
+  **I will take the one-keyword change** — it makes Score consistent with the
+  other two and the screen's own tests are the regression net — and I will say
+  so explicitly in the commit rather than slipping it in. If a reviewer would
+  rather Score stayed append-only, reverting to the narrower option is one
+  line. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W5` the mixer
   console.** `mixer_console_screen.dart` + 7 tests, wired into the authoring
   menu so it is reachable rather than an orphan screen. Format + whole-project
