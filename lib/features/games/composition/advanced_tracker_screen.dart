@@ -82,6 +82,7 @@ import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/instrument_editor.dart';
 import 'package:comet_beat/features/games/composition/multipart_to_tracker.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
@@ -657,7 +658,17 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// The musical clock — playback phase derives from it, never the player, so an
   /// edit re-enters the loop in phase.
+  ///
+  /// It stays the AUTHORITY after WS-W2: the shared [TransportService] is fed
+  /// FROM it (`_transport?.syncTo`), never the other way round. A Stopwatch
+  /// cannot drift; an accumulated per-frame delta can, and the audio here is a
+  /// free-running pre-rendered WAV that would not drift with it.
   final _clock = Stopwatch();
+
+  /// The app-wide transport, when one is provided. Null in the widget tests
+  /// that mount this screen bare, so every use is null-safe rather than
+  /// requiring every existing test to grow a provider tree.
+  TransportService? _transport;
   late final Ticker _ticker;
 
   /// The sounding row (0-based), or -1 when stopped. Drives the playhead without
@@ -826,12 +837,19 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _ticker = createTicker((_) {
       if (_paused) return; // freeze the playhead where it is
       if (!_clock.isRunning) {
+        if (_transport != null && _transport!.isPlaying) _transport!.pause();
         if (_row.value != -1) _row.value = -1;
         if (_progress.value != -1.0) _progress.value = -1.0;
         if (_playingOrder.value != -1) _playingOrder.value = -1;
         if (_levels.value.isNotEmpty) _levels.value = const [];
         return;
       }
+      // WS-W2 — publish this surface's phase into the SHARED transport so any
+      // other surface can follow the Tracker's playhead. `syncTo`, not
+      // `advance`: the Stopwatch above is the authority and is monotonic, while
+      // accumulating per-frame deltas drifts on every dropped frame.
+      _transport?.syncTo(_elapsedMs.toDouble());
+
       final t = _song.timing;
       int posInPattern;
       if (_songMode && _song.songTotalMs > 0) {
@@ -883,6 +901,19 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         maybeShowTutorial(context, 'tracker_advanced', advancedTrackerPrimer);
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Optional on purpose: the existing widget tests mount this screen without
+    // a provider tree, and making the transport required would mean editing
+    // every one of them to prove something they are not about.
+    try {
+      _transport = Provider.of<TransportService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _transport = null;
+    }
   }
 
   @override
@@ -2005,12 +2036,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void _pause() {
     _clock.stop();
     _loop.pause();
+    _transport?.pause();
     setState(() => _paused = true);
   }
 
   void _resume() {
     _clock.start();
     _loop.resume();
+    _transport?.play();
     setState(() => _paused = false);
   }
 
@@ -2019,6 +2052,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       ..stop()
       ..reset();
     _loop.stop();
+    _transport?.stop();
     _baseMs = 0;
     _paused = false;
     _timingMap = null;
@@ -2036,6 +2070,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _clock
       ..reset()
       ..start();
+    _transport?.play();
     _syncPlayback();
     setState(() {});
   }
@@ -2049,6 +2084,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _clock
       ..reset()
       ..start();
+    _transport?.play();
     _syncPlayback();
     setState(() {});
   }

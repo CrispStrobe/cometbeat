@@ -196,6 +196,73 @@ void main() {
     });
   });
 
+  group('syncTo — tracking an authority instead of accumulating', () {
+    test('sets the position and reports the beats crossed', () {
+      final t = TransportService();
+      final report = t.syncTo(beatMs * 3);
+      expect(t.positionMs, closeTo(beatMs * 3, 1e-9));
+      expect(report.beatsCrossed, [1, 2, 3]);
+    });
+
+    test('does NOT drift, where accumulating deltas would', () {
+      // The whole reason it exists. The Tracker and Loop Studio keep musical
+      // phase in a monotonic Stopwatch and play a pre-rendered looping WAV;
+      // accumulating per-frame deltas there trades a drift-proof clock for a
+      // drifting one, one dropped frame at a time.
+      final synced = TransportService();
+      final accumulated = TransportService()..play();
+
+      // An authority at a steady 10 ms, but the UI only manages to report 9.9.
+      var authority = 0.0;
+      for (var frame = 0; frame < 500; frame++) {
+        authority += 10;
+        synced.syncTo(authority);
+        accumulated.advance(9.9);
+      }
+
+      expect(synced.positionMs, closeTo(5000, 1e-9));
+      expect(
+        accumulated.positionMs,
+        closeTo(4950, 1e-9),
+        reason: 'accumulation is 50 ms behind after five seconds',
+      );
+    });
+
+    test('going backwards is a wrap, not negative beats', () {
+      // The authority looped, or the user scrubbed. Clicking every beat between
+      // the two would be a burst of metronome on beats nobody played through.
+      final t = TransportService()..syncTo(barMs * 2);
+      final report = t.syncTo(beatMs);
+      expect(report.looped, isTrue);
+      expect(report.beatsCrossed, isEmpty);
+      expect(t.positionMs, closeTo(beatMs, 1e-9));
+    });
+
+    test('works while stopped — the authority may run without our play state',
+        () {
+      final t = TransportService();
+      expect(t.isPlaying, isFalse);
+      t.syncTo(barMs);
+      expect(t.positionMs, closeTo(barMs, 1e-9));
+    });
+
+    test('the same position twice is a no-op and does not notify', () {
+      final t = TransportService()..syncTo(barMs);
+      var notifications = 0;
+      t.addListener(() => notifications++);
+      expect(t.syncTo(barMs).beatsCrossed, isEmpty);
+      expect(notifications, 0);
+    });
+
+    test('a negative or non-finite authority is clamped, not propagated', () {
+      final t = TransportService()..syncTo(barMs);
+      t.syncTo(-100);
+      expect(t.positionMs, 0);
+      t.syncTo(double.nan);
+      expect(t.positionMs, 0);
+    });
+  });
+
   group('count-in', () {
     test('holds the position, then releases it', () {
       final t = TransportService()

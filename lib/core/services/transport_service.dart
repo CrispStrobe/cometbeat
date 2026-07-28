@@ -333,6 +333,43 @@ class TransportService extends ChangeNotifier {
     );
   }
 
+  /// Sets the position from an AUTHORITATIVE external clock, reporting what
+  /// that crossed exactly as [advance] does.
+  ///
+  /// The two are not interchangeable, and picking the wrong one is a real bug:
+  ///
+  ///   • [advance] ACCUMULATES a per-frame delta. Correct when the caller's own
+  ///     tick is the reference — the Audio Editor drives its playhead from "the
+  ///     Ticker's own elapsed (NOT wall-clock)" precisely so a slow frame does
+  ///     not skip the playhead past audio that has not been heard yet.
+  ///   • [syncTo] TRACKS an authority. Correct when something else already owns
+  ///     the musical phase — the Tracker and Loop Studio play a pre-rendered
+  ///     looping WAV and keep phase in a monotonic `Stopwatch`, which by
+  ///     construction cannot drift. Accumulating deltas there would trade a
+  ///     drift-proof clock for a drifting one, one dropped frame at a time.
+  ///
+  /// [absoluteMs] is a position, not a delta. Going BACKWARDS is legal (the
+  /// authority looped, or the user scrubbed) and simply reports no beats rather
+  /// than inventing negative ones.
+  TransportAdvance syncTo(double absoluteMs) {
+    final next = math.max(0.0, _finite(absoluteMs));
+    final previous = _positionMs;
+    if (next == previous) return TransportAdvance.none;
+
+    final crossed = <double>[];
+    // Only forward motion crosses beats. A wrap or a scrub back is a jump, and
+    // clicking every beat between the two would be a burst of metronome on
+    // beats nobody played through.
+    final looped = next < previous;
+    if (!looped) {
+      _collectBeats(crossed, _tempo.beatAtMs(previous), _tempo.beatAtMs(next));
+    }
+
+    _positionMs = next;
+    notifyListeners();
+    return TransportAdvance(beatsCrossed: crossed, looped: looped);
+  }
+
   // ----------------------------------------------------------------- detail
 
   /// Whole beats strictly after [from] and at or before [to].

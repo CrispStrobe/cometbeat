@@ -16,6 +16,7 @@ import 'package:comet_beat/core/audio/tracker_instrument_codec.dart'
 import 'package:comet_beat/core/services/beat_bridge.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart' show kSongs;
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
@@ -39,6 +40,81 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     BeatBridge.instance.clear();
     MelodyBridge.instance.clear();
+  });
+
+  group('WS-W2 — the Tracker publishes its clock to the shared transport', () {
+    testWidgets('play/stop reach the transport, so another surface can follow',
+        (tester) async {
+      // The card's acceptance: "pressing play in the Tracker moves the Loop
+      // Studio playhead." Loop Studio is not migrated yet, so this asserts the
+      // half that makes it possible — the Tracker no longer keeps its play
+      // state to itself.
+      final transport = TransportService();
+      await pumpGame(
+        tester,
+        const AdvancedTrackerScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<TransportService>.value(value: transport),
+        ],
+      );
+      final game = _game(tester);
+
+      expect(transport.isPlaying, isFalse);
+      game.togglePlay();
+      await tester.pump();
+      expect(game.isPlaying, isTrue);
+      expect(
+        transport.isPlaying,
+        isTrue,
+        reason: 'the shared transport followed the Tracker',
+      );
+
+      game.stop();
+      await tester.pump();
+      expect(transport.isPlaying, isFalse);
+      expect(transport.positionMs, 0);
+    });
+
+    testWidgets('the Stopwatch stays the authority — position is SYNCED',
+        (tester) async {
+      // Deliberately step 1 of 2: the transport mirrors the Tracker rather than
+      // driving it. A Stopwatch cannot drift and the audio is a free-running
+      // pre-rendered WAV, so publishing is the safe direction to migrate first.
+      final transport = TransportService();
+      await pumpGame(
+        tester,
+        const AdvancedTrackerScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<TransportService>.value(value: transport),
+        ],
+      );
+      final game = _game(tester);
+
+      game.togglePlay();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(
+        transport.positionMs,
+        greaterThan(0),
+        reason: 'the ticker published the Stopwatch phase',
+      );
+      game.stop();
+      await tester.pump();
+    });
+
+    testWidgets('mounts fine with NO transport provided', (tester) async {
+      // Every pre-existing test mounts this screen bare. Making the transport
+      // required would have meant editing all of them to prove something they
+      // are not about, so the wiring is null-safe by design.
+      await pumpGame(tester, const AdvancedTrackerScreen());
+      final game = _game(tester);
+      game.togglePlay();
+      await tester.pump();
+      expect(game.isPlaying, isTrue);
+      game.stop();
+      await tester.pump();
+    });
   });
 
   testWidgets('imports a built-in song through the shared music bridge',

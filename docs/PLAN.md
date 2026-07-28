@@ -105,29 +105,38 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING the TRACKER clock migration**
-  (first of the three; the bottleneck I flagged). Worktree `../mus-daw-parity`.
-  ⚠️ **HOT SHARED FILE: `advanced_tracker_screen.dart`** — chosen because it is
-  the coldest of the three (27 h vs `daw_screen.dart`'s 21 min, which is under
-  active WS-A7 work and which I am deliberately NOT taking).
-  🔴 **A REAL FINDING, before any code.** The three surfaces do not merely have
-  three clocks, they have two *kinds*: the Tracker and Loop Studio own a
-  **`Stopwatch`** (monotonic wall time), the Audio Editor uses the **Ticker's own
-  elapsed**, explicitly "NOT wall-clock". My `TransportService.advance(delta)`
-  accumulates deltas — which **drifts under dropped frames**, exactly what a
-  Stopwatch cannot do. A surface whose audio is a free-running pre-rendered WAV
-  (Tracker, Loop Studio) needs to *sync* to an authoritative clock, not
-  accumulate. So `WS-W2` gets a second primitive, `syncTo(absoluteMs)`, that
-  sets position from an external authority and still reports beats crossed and
-  loop wrap. Without it this migration would have silently traded a
-  drift-proof clock for a drifting one.
-  **Scope, deliberately step 1 of 2:** the Stopwatch stays the authority and the
-  Tracker **publishes** into `TransportService` each tick. That is additive —
-  the tracker's playback semantics do not change at all — and it already
-  delivers the card's acceptance ("pressing play in the Tracker moves the Loop
-  Studio playhead"), because any other surface can now follow it. Inverting
-  ownership so the transport drives the tracker is step 2 and its own commit.
-  Not touching `daw_screen.dart` or `loop_mixer_screen.dart`. — opus
+- **opus (workstation-parity)** · ✅ **SHIPPED (idle) — TRACKER clock migration
+  (step 1 of 2), and `syncTo` on `WS-W2`.** The Phase 1 services are no longer
+  unwired: `main.dart` provides ONE app-wide `TransportService` + `UndoService`,
+  and `advanced_tracker_screen.dart` publishes its phase and play state into the
+  transport. All **78** tracker tests pass, plus `daw_screen`/`loop_mixer`/
+  `tracker_screen` (231 across the surfaces); format + whole-project analyze
+  clean.
+  🔴 **The finding that made this worth doing, and it changed the service.**
+  The surfaces do not have three clocks — they have **two KINDS**. Tracker and
+  Loop Studio own a monotonic **`Stopwatch`**; the Audio Editor uses the
+  **Ticker's own elapsed**, explicitly "NOT wall-clock". `advance` accumulates
+  deltas and so **drifts on every dropped frame**: a test now pins 500 frames of
+  a 9.9 ms report against a 10 ms authority ending **50 ms behind**. Migrating
+  the Tracker naively would have traded a drift-proof clock for a drifting one
+  and nobody would have noticed until a slow device. So `WS-W2` gained
+  `syncTo(absoluteMs)`. **Rule for the next two migrations: `advance` when your
+  own tick is the reference (Audio Editor), `syncTo` when something else owns
+  the phase (Loop Studio).**
+  **Deliberately step 1 of 2:** the Stopwatch stays the AUTHORITY and the
+  transport mirrors it, so tracker playback is byte-identical in behaviour.
+  Inverting ownership is step 2 and is only worth doing once a second surface is
+  on the transport.
+  ⚠️ **The wiring is null-safe on purpose** — every pre-existing tracker test
+  mounts the screen bare, and making the transport required would have meant
+  editing all of them to prove something they are not about.
+  ⚠️ **A mistake worth copying the fix from:** I re-sorted the import block with
+  a line-based script and shredded the multi-line `import '…' show X;`
+  directives. `git checkout` on that one file, then re-applied the edits with
+  the import inserted at its correct slot instead of re-sorting. **Do not
+  line-sort imports in these screens.**
+  ⬜ **Open and unclaimed: the Audio Editor and Loop Studio clocks**, one commit
+  each. `daw_screen.dart` is under active WS-A7 work — coordinate first. — opus
 
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-W4` undo SERVICE.
   PHASE 1 OF THE WORKSTATION LADDER IS COMPLETE AS SERVICES** (W1 Project ·

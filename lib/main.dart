@@ -10,7 +10,9 @@ import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
+import 'package:comet_beat/core/services/transport_service.dart';
 import 'package:comet_beat/core/services/tts_service.dart';
+import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/features/games/game_registry.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/games/tutorial_gate.dart';
@@ -68,6 +70,16 @@ class CometBeatApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => DawService(),
+        ),
+        // WS-W2/W4 — ONE transport and ONE undo history for the whole app, so
+        // surfaces can follow each other instead of each running a private
+        // clock and a private stack. App-wide on purpose: two instances would
+        // be the very problem these replace.
+        ChangeNotifierProvider(
+          create: (_) => TransportService(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => UndoService(),
         ),
         ChangeNotifierProvider(
           create: (context) {

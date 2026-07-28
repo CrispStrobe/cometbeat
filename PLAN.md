@@ -772,9 +772,27 @@ prefix.
     would otherwise leave the playhead past the end — visible only on a slow
     device); and beats either side of a wrap must be collected as **two runs**,
     or the metronome clicks on beats the playhead never visited.
-  - ⬜ **Still to do, and each is its own commit:** migrate the Tracker, the
-    Audio Editor and Loop Studio onto it, that surface's tests green before the
-    next. Nothing consumes the service yet — it ships proven, not wired.
+  - ➕ **`syncTo(absoluteMs)` added 2026-07-28, and it is not a convenience.**
+    The first migration found that the surfaces have not three clocks but two
+    KINDS: the Tracker and Loop Studio own a monotonic **`Stopwatch`**, the
+    Audio Editor uses the **Ticker's own elapsed**, explicitly "NOT wall-clock".
+    `advance` ACCUMULATES deltas and therefore **drifts on every dropped frame**
+    — pinned by a test where 500 frames of a 9.9 ms report against a 10 ms
+    authority end 50 ms behind. A surface whose audio is a free-running
+    pre-rendered WAV must TRACK its authority, not accumulate. Use `advance`
+    when your own tick is the reference, `syncTo` when something else owns the
+    phase.
+  - ✅ **Tracker migrated (step 1 of 2) 2026-07-28.** `advanced_tracker_screen`
+    publishes its Stopwatch phase and play/pause/stop into the shared transport
+    (`_transport?.syncTo` / `play` / `pause` / `stop`), and `main.dart` now
+    provides ONE app-wide `TransportService` + `UndoService`. Additive: the
+    Stopwatch stays the authority, so tracker playback is unchanged and all 78
+    of its tests pass. ⬜ **Step 2 — invert ownership** so the transport drives
+    the tracker — is open, and only worth doing once a second surface is on it.
+  - ⬜ **Still to do, one commit each:** the **Audio Editor** and **Loop
+    Studio** clocks. ⚠️ The Audio Editor is the one that needs `advance`, not
+    `syncTo` — its playhead is deliberately Ticker-elapsed so a slow frame
+    cannot skip past audio nobody heard.
 
   **WS-W2 — the original card, for reference (NOT a task):**
   - **Goal.** Position, tempo, loop range, play/stop/record, count-in and
