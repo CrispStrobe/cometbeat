@@ -166,10 +166,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   `loop_mixer_screen.dart`, `synth.dart`, the ARBs + generated `app_localizations*`,
   plus a one-character pre-existing trailing-comma lint fix in
   `test/open_in_menu_test.dart` that analyze was already flagging on main.
-  ⚠️ **Found while building, NOT fixed (out of D1–D4 scope, flagged in root
-  PLAN):** per-track LENGTH and SWING still do not travel in `GrooveSpec`, so a
-  polymetric or shuffled track loses that on save — for every track, not only
-  added ones. The roster work makes it a two-field addition now. — opus
+  ✅ **FOLLOW-UP DONE (maintainer: "fix it all") — `GrooveSpec` is now a COMPLETE
+  snapshot.** Chasing the per-track length/swing gap turned up a third and worse
+  one: **automation lanes never travelled either.** A1's slice was scoped as
+  "lane type, `GrooveSpec` field, share-token and save round-trip"; the type and
+  codec were written and tested and **nothing ever called
+  `automationToJson`/`automationFromJson`** (grep found them only in
+  `loop_automation.dart` and its own unit test) — so a player could draw a fade,
+  save, and get back a groove with no fade and NO error, and every A2–A4 slice
+  was built on a lane that could not be saved. All three (`ts`/`tw`/`au`) now
+  round-trip, each omitted at its default so an unchanged groove tokenises
+  byte-for-byte as before; `applySpec` REPLACES rather than merges; a refused
+  length is dropped rather than clamped. No UI change needed (the screen saves
+  through `encodeGrooveToken(_engine.spec)`) but there is a GUI test for the path
+  a player actually takes. +19 tests. **Lesson: a codec with a passing unit test
+  is not a wired feature.** Gates re-verified after the follow-up: format exit 0
+  · analyze "No issues found" · `flutter test` **5449 passed / 20 skipped / 0
+  failed**. — opus
 
 - **opus (tracker→editors)** · ✅ **DONE (idle) — loss-dialog REASON l10n: the
   infrastructure + the static bridge reasons (EN/DE).** The Open-in loss dialog's

@@ -196,6 +196,31 @@ void main() {
     });
   });
 
+  testWidgets('a drawn lane survives a share token — through the GUI',
+      (tester) async {
+    // The engine round-trip is covered in loop_spec_completeness_test; this is
+    // the path a player actually takes, and it is the one that was broken:
+    // draw a fade, copy the token, paste it back, and the fade was gone with no
+    // error anywhere.
+    final game = await _open(tester);
+    await _tap(tester, const Key('loop-auto-param-pan'));
+    await _tap(tester, const Key('loop-auto-bass-0'));
+    await _tap(tester, const Key('loop-filter-bass'));
+    final drawn = game.automationAtParam('bass', AutomationParam.pan, 0);
+    final tone = game.trackFilterOf('bass');
+    final token = game.grooveToken;
+
+    // Wipe it, then load the token back.
+    game.clearAutomation('bass');
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(game.hasAutomationForParam('bass', AutomationParam.pan), isFalse);
+
+    expect(game.loadGrooveToken(token), isTrue);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(game.automationAtParam('bass', AutomationParam.pan, 0), drawn);
+    expect(game.trackFilterOf('bass'), tone);
+  });
+
   testWidgets('an added track gets a strip and a badge of its own',
       (tester) async {
     final game = await _open(tester);

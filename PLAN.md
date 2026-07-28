@@ -457,10 +457,34 @@ found"). What each turned out to need, beyond the scoping below:
   signatures the tests were written against. Editing those tests would have meant
   changing them to match code that had not moved.
 
-⬜ **Still open after this** (out of D1–D4's scope, worth knowing): per-track
-LENGTH and SWING still do not travel in `GrooveSpec` — a polymetric or shuffled
-track loses that on save, for every track, not only added ones. The roster work
-makes them a two-field addition now that the pruning is in place.
+✅ **Followed up (maintainer: "fix it all") — `GrooveSpec` is now a COMPLETE
+snapshot.** Chasing the length/swing gap turned up a third and worse one:
+
+- **Automation lanes never travelled either.** A1's slice was scoped as "lane
+  type, `GrooveSpec` field, share-token and save round-trip"; the type and the
+  codec were written and tested, and **nothing ever called
+  `automationToJson`/`automationFromJson`** — grep found them only in
+  `loop_automation.dart` and its own unit test. So a player could draw a fade
+  across sixteen steps, save, and get back a groove with no fade **and no
+  error**. Every A2–A4 slice built on top of a lane that could not be saved.
+- Per-track **length** (polymeter) and per-track **swing** were the two already
+  known.
+
+All three now round-trip (`ts` / `tw` / `au`), each omitted at its default so a
+groove using none of them tokenises byte-for-byte as before. `applySpec` REPLACES
+them rather than merging — a loaded groove says what every track's length, swing
+and lanes are, including "none", and merging would leave a shortened hat or a
+drawn fade behind from whatever was on screen. A refused length (5, 7…) is
+dropped rather than clamped, matching `setTrackSteps`: the allowed set is what
+bounds the render buffer, and rounding a pasted 5 to a 4 would be a lie about
+what plays. No UI change was needed — the screen saves and shares through
+`encodeGrooveToken(_engine.spec)` — but there is a GUI test for the path a player
+actually takes, because that is the one that was broken.
+
+**The lesson worth keeping: a codec with a passing unit test is not a wired
+feature.** `automationToJson` was correct, covered, and dead. When a slice says
+"model + codec, round-trip", the round-trip that counts is the one through the
+object the app actually saves.
 
 - ✅ **D1 — "Add a track" = roles AND empty (option C).** The ＋ offers the five
   authored roles (drums / bass / chords / melody / sparkle) *and* an "empty"

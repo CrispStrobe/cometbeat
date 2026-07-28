@@ -506,6 +506,9 @@ class GrooveSpec {
     this.levels = const {},
     this.pans = const {},
     this.filters = const {},
+    this.trackSteps = const {},
+    this.trackSwings = const {},
+    this.automation = const {},
     this.extraTracks = const {},
     this.trackNames = const {},
     this.tempoBpm = 100,
@@ -537,6 +540,28 @@ class GrooveSpec {
   /// like [levels] and [pans]: it is part of how a track sounds, not a live
   /// performance control like the MASTER filter, which stays out of the spec.
   final Map<String, double> filters;
+
+  /// Per-track pattern length in eighth-steps (missing = the full 2-bar grid).
+  ///
+  /// Polymeter is not a performance control — it is the shape of the part, and
+  /// a groove saved with a 3-step hat that comes back as a 16-step one is a
+  /// different groove.
+  final Map<String, int> trackSteps;
+
+  /// Per-track swing (missing = follow the groove's global [swing]).
+  ///
+  /// Distinct from "the same value as the global one": a track can deliberately
+  /// be set to the swing it would have followed anyway, and changing the
+  /// groove's swing afterwards must not move it.
+  final Map<String, double> trackSwings;
+
+  /// Automation lanes: track id → parameter → one value per eighth-step.
+  ///
+  /// A1 specified this field, wrote the codec and tested it — and nothing ever
+  /// carried it, so every lane a player drew was lost the moment they saved or
+  /// shared. Absent for a groove with no lanes, which is why a lane is null
+  /// rather than a flat lane everywhere else too.
+  final AutomationLanes automation;
 
   /// Tracks the player added, id → the role they were made from (`'bass'` for a
   /// bass copy or a bass add), or the empty string for an empty track.
@@ -624,6 +649,13 @@ class GrooveSpec {
               .cast<String, num>()
               .map((k, v) => MapEntry(k, v.toDouble().clamp(-1.0, 1.0))),
         },
+        trackSteps: _trackStepsFromJson(json['ts']),
+        trackSwings: {
+          ...(json['tw'] as Map? ?? const {})
+              .cast<String, num>()
+              .map((k, v) => MapEntry(k, v.toDouble().clamp(0.0, 0.6))),
+        },
+        automation: automationFromJson(json['au']),
         extraTracks: _extraTracksFromJson(json['xt']),
         trackNames: _trackNamesFromJson(json['xn']),
         // Untrusted: a hand-edited token must not divide the timing math by 0
@@ -680,6 +712,22 @@ class GrooveSpec {
               if (e.value != 0.0)
                 e.key: double.parse(e.value.toStringAsFixed(2)),
           },
+        if (trackSteps.values.any((s) => s != kPatternSteps))
+          'ts': {
+            for (final id in trackSteps.keys.toList()..sort())
+              if (trackSteps[id] != kPatternSteps) id: trackSteps[id],
+          },
+        if (trackSwings.isNotEmpty)
+          'tw': {
+            for (final id in trackSwings.keys.toList()..sort())
+              id: double.parse(trackSwings[id]!.toStringAsFixed(2)),
+          },
+        // Lane values are NOT rounded on the way out, unlike the scalars above:
+        // a lane is compared for equality when a spec is cached, and rounding a
+        // value here would make a groove that had just been loaded differ from
+        // the one that was saved.
+        if (automation.values.any((p) => p.isNotEmpty))
+          'au': automationToJson(automation),
         if (extraTracks.isNotEmpty)
           'xt': {
             for (final id in extraTracks.keys.toList()..sort())
@@ -792,6 +840,25 @@ Map<String, List<PatternCell>>? _trackOverridesFromJson(dynamic json) {
     if (cells != null) overrides[key] = cells;
   }
   return overrides.isEmpty ? null : overrides;
+}
+
+/// Parses per-track pattern lengths.
+///
+/// A length outside [kLoopTrackLengths] is DROPPED rather than clamped: the
+/// allowed set is what bounds the render buffer (every entry divides 48, so the
+/// loop never has to span more than 6 bars), and quietly rounding a pasted 5 to
+/// 4 would be a lie about what is playing. [LoopEngine.setTrackSteps] refuses
+/// the same values for the same reason.
+Map<String, int> _trackStepsFromJson(dynamic json) {
+  if (json is! Map) return const {};
+  final out = <String, int>{};
+  for (final MapEntry(:key, :value) in json.entries) {
+    if (key is! String || key.isEmpty) continue;
+    if (value is! num) continue;
+    final steps = value.toInt();
+    if (steps != kPatternSteps && isLoopTrackLength(steps)) out[key] = steps;
+  }
+  return out;
 }
 
 /// Parses the added-track roster (id → role id, `''` = an empty track).
@@ -2316,6 +2383,15 @@ class LoopEngine {
             if (e.value != 0.0) e.key: e.value,
         },
         filters: {..._trackFilters},
+        trackSteps: {..._trackSteps},
+        trackSwings: {..._trackSwing},
+        // Copied a level deeper than the maps above: the inner map is mutable
+        // and lives on in the engine, so a snapshot sharing it would change
+        // under whoever is holding it.
+        automation: {
+          for (final e in _automation.entries)
+            e.key: <AutomationParam, AutomationLane>{...e.value},
+        },
         extraTracks: {..._extraRoles},
         trackNames: {..._trackNames},
         tempoBpm: _tempoBpm,
@@ -2485,13 +2561,32 @@ class LoopEngine {
           if (known.contains(e.key) && e.value != 0.0)
             e.key: e.value.clamp(-1.0, 1.0),
       });
-    // Length, swing and automation do not travel in the spec, so they are left
-    // alone for tracks that survive — but a track the loaded groove does NOT
-    // have must not leave its settings behind for a future track to inherit by
-    // reusing the id. That is the same trap [removeExtraTrack] avoids.
-    _trackSteps.removeWhere((id, _) => !known.contains(id));
-    _trackSwing.removeWhere((id, _) => !known.contains(id));
-    _automation.removeWhere((id, _) => !known.contains(id));
+    // Replaced wholesale, like levels and pans — NOT merged. A loaded groove
+    // says what every track's length, swing and lanes are, including "none",
+    // and merging would leave a shortened hat or a drawn fade behind from
+    // whatever was on screen before.
+    _trackSteps
+      ..clear()
+      ..addAll({
+        for (final e in next.trackSteps.entries)
+          if (known.contains(e.key) &&
+              e.value != kPatternSteps &&
+              isLoopTrackLength(e.value))
+            e.key: e.value,
+      });
+    _trackSwing
+      ..clear()
+      ..addAll({
+        for (final e in next.trackSwings.entries)
+          if (known.contains(e.key)) e.key: e.value.clamp(0.0, 0.6),
+      });
+    _automation
+      ..clear()
+      ..addAll({
+        for (final e in next.automation.entries)
+          if (known.contains(e.key) && e.value.isNotEmpty)
+            e.key: <AutomationParam, AutomationLane>{...e.value},
+      });
     tempoBpm = next.tempoBpm;
     swing = next.swing;
     key = next.key;
