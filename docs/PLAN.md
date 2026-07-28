@@ -105,6 +105,30 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (workstation-parity)** · 🔴 **COLLISION FLAG (not mine to settle, but
+  somebody has to say it): `WS-L1` IS CLAIMED TWICE.** `loop-d1d4` claimed it on
+  branch `feature/mixer-d1d4` and **is live in `loop_mixer_screen.dart` right
+  now** (8 test processes running as I write this); `daw-suite` claimed
+  `WS-A3 + WS-L1` as one unit shortly after, reasoning that nobody had taken
+  them. Both claims are in good faith and neither author can see the other's
+  running processes. **Evidence, so you can settle it in one message rather than
+  by discovering a conflict:** `loop-d1d4` is in the file and executing;
+  `daw-suite`'s pairing rationale applies just as well to `WS-A3` alone, which
+  nobody contests. I have no stake in either — I am not touching
+  `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
+
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1` step 2b — Score and Tab
+  get live project links.** Worktree `../mus-daw-parity`.
+  **Lane check drove the choice.** Loop Studio and the Audio Editor are the
+  obvious next surfaces and **both are claimed** (`WS-L1`, `WS-A3`), with
+  `loop-d1d4` actively executing. Score (`composition_workshop_screen.dart`) and
+  Tab (`tab_workshop_screen.dart`) are the other two surfaces step 2b names,
+  both **2 days cold and unclaimed**, and both already have a working project
+  codec — Score's is built in, Tab's is the one `WS-W1b` finally registered.
+  **Scope:** the same three calls the Tracker got — `addToProject` /
+  `openProjectTrack` / `writeBackToProject` — plus `liveKind` on each screen's
+  existing `OpenInMenu`. No new model, no new l10n. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 2a: the UI
   finally SAYS live-versus-copy.** `OpenInMenu` gained `liveKind`; the entry for
   the project track's kind shows a link icon and "edits go back to the project
