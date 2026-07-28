@@ -117,6 +117,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-W5b` — make the project mix
+  AUDIBLE.** Worktree `../mus-daw-parity`. **New card**, and the one I ranked
+  highest: `WS-W5` shipped a mixer whose level/pan/mute/solo **no render path
+  honours**, so it is a settings screen you cannot hear. That is the same
+  inert-feature shape as the count-in, `Project` and the mix itself — the fourth
+  time on this ladder.
+  **The key decision, made by reading rather than assuming:** I will **not**
+  write a second renderer. `core/audio/daw_sources.dart` already turns every
+  kind into PCM — `TrackerSource`, `GrooveSource`, `ScoreSource`, `DrumSource`
+  each implement `ClipSource.render(sampleRate)`. A project mixdown is
+  therefore *map each track's document to the source that already renders it,
+  apply the track's mix, sum* — no new DSP and no new per-kind knowledge.
+  **Scope.** ADD `lib/core/project/project_render.dart` + its test: pure,
+  Flutter-free, `Project → Float64List`. **It modifies NO existing render
+  path**, so the byte-identical guard is satisfied by construction — nothing
+  that renders today changes at all.
+  ⚠️ **It will report which kinds it could not render rather than silently
+  dropping them** (tab has no direct PCM source; audio needs a clip). A mixdown
+  that quietly omits a track is worse than one that says so.
+  ⚠️ Not touching any screen, and not wiring a Play button in this slice —
+  first make it correct and testable, then give it a button. — opus
+
 - **opus (workstation-parity)** · ✅ **SHIPPED (idle) — `WS-X1` step 2b for
   SCORE. Three of five surfaces now hold live project links** (Tracker · Tab ·
   Score). 88 Score tests + 158 across score/workshop/tab/mixer; format +
