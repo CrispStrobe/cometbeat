@@ -10,7 +10,8 @@
 // that import `periodForPitch`/`slidePitchByPeriod`/`kPortaSemitonesPerUnit`
 // from there keep working unchanged.
 
-import 'dart:math';
+import 'dart:math' as math;
+import 'dart:math' show ln2, log, max, min, pow;
 
 /// Semitones per porta param-unit, per tick (1xx/2xx/3xx). 16 units ≈ 1 st/tick.
 const double kPortaSemitonesPerUnit = 1 / 16;
@@ -102,6 +103,43 @@ enum PitchDomain {
       };
 }
 
+/// How a pan position becomes a pair of channel gains.
+///
+/// Measured, not assumed. `test/fixtures/fmt/setpan_*_Xxx.it` holds a note at a
+/// FIXED pan — no depth in it, so whatever it shows is the law — and both
+/// references agree:
+///
+///   position 0xC0 (three-quarters right)   openmpt +0.485   libxmp +0.484
+///   linear predicts +0.500 · constant power predicts +0.414
+///
+/// So trackers pan LINEARLY and we panned constant-power, which is the whole of
+/// why panbrello's measured travel came out 0.89 against their 0.98 — the depth
+/// constant was right all along. A magnitude discrepancy rarely identifies its
+/// own cause; it took a fixture with the suspected variable removed.
+enum PanLaw {
+  /// `L = 1 − p`, `R = 1 + p` (halved) — what every tracker does. Louder in the
+  /// middle than at the edges, which is a real artefact of the format and not
+  /// something to improve away when the point is fidelity.
+  linear,
+
+  /// `L = cos θ`, `R = sin θ` — equal POWER at every position, so a sound keeps
+  /// its apparent loudness as it crosses the field. The better choice for
+  /// material of our own, and wrong for reproducing a module.
+  constantPower;
+
+  /// The (left, right) gains for [pan] in −1 (hard left) … +1 (hard right).
+  ({double left, double right}) gains(double pan) {
+    final p = pan.clamp(-1.0, 1.0);
+    switch (this) {
+      case linear:
+        return (left: (1 - p) / 2, right: (1 + p) / 2);
+      case constantPower:
+        final theta = (p + 1) / 2 * (math.pi / 2);
+        return (left: math.cos(theta), right: math.sin(theta));
+    }
+  }
+}
+
 /// Everything about a source format that changes how its commands REPLAY.
 ///
 /// This replaces three separate booleans that accreted onto `TrackerChannel`
@@ -124,6 +162,7 @@ class ReplayProfile {
     required this.latchPortaParam,
     required this.latchVolSlideParam,
     required this.volumeSlideOnTick0,
+    required this.panLaw,
   });
 
   /// For diagnostics and test failure messages — "which rules was this playing
@@ -147,6 +186,11 @@ class ReplayProfile {
   /// first. libxmp calls it `QUIRK_VSALL`.
   final bool volumeSlideOnTick0;
 
+  /// How a pan position becomes channel gains. Every tracker is [PanLaw.linear];
+  /// our own songs keep [PanLaw.constantPower], which sounds better and is not
+  /// what a module playback is trying to be.
+  final PanLaw panLaw;
+
   /// The same rules but bending pitch in [PitchDomain.linearFrequency].
   ///
   /// This is what the "authentic pitch slides" setting turns OFF. The hardware
@@ -166,6 +210,7 @@ class ReplayProfile {
         latchPortaParam: latchPortaParam,
         latchVolSlideParam: latchVolSlideParam,
         volumeSlideOnTick0: volumeSlideOnTick0,
+        panLaw: panLaw,
       );
 
   /// ProTracker. Period slides, no portamento or volume-slide memory.
@@ -175,6 +220,7 @@ class ReplayProfile {
     latchPortaParam: false,
     latchVolSlideParam: false,
     volumeSlideOnTick0: false,
+    panLaw: PanLaw.linear,
   );
 
   /// FastTracker II. Linear slides, latches, skips tick 0.
@@ -184,6 +230,7 @@ class ReplayProfile {
     latchPortaParam: true,
     latchVolSlideParam: true,
     volumeSlideOnTick0: false,
+    panLaw: PanLaw.linear,
   );
 
   /// ScreamTracker 3. Period slides like ProTracker, but latches and slides
@@ -194,6 +241,7 @@ class ReplayProfile {
     latchPortaParam: true,
     latchVolSlideParam: true,
     volumeSlideOnTick0: true,
+    panLaw: PanLaw.linear,
   );
 
   /// Impulse Tracker. Linear slides plus ScreamTracker's volume behaviour.
@@ -203,6 +251,7 @@ class ReplayProfile {
     latchPortaParam: true,
     latchVolSlideParam: true,
     volumeSlideOnTick0: true,
+    panLaw: PanLaw.linear,
   );
 
   /// Our OWN authored songs — the Loop Mixer, the Tracker screens, anything
@@ -219,6 +268,11 @@ class ReplayProfile {
     latchPortaParam: true,
     latchVolSlideParam: true,
     volumeSlideOnTick0: false,
+    // The one field where `native` differs on TASTE rather than on format:
+    // constant power keeps a sound's apparent loudness as it crosses the
+    // field, which is what we want for our own material. Modules get the
+    // linear law the trackers actually used.
+    panLaw: PanLaw.constantPower,
   );
 }
 

@@ -2874,6 +2874,46 @@ that found this, and the write-up should not imply otherwise.
 references' 0.98–0.99. Small next to an 8× rate error and now measurable, which
 is the point of having the metric at all.
 
+#### Trackers pan LINEARLY (2026-07-28) — and `8xx` set-pan is ignored
+
+`test/fixtures/fmt/setpan_*_Xxx.it` holds a note at a FIXED pan. There is no
+depth in it, so whatever it measures is the LAW:
+
+| position | linear | constant power | openmpt | libxmp |
+| --- | --- | --- | --- | --- |
+| 0xC0 (¾ right) | +0.500 | +0.414 | **+0.485** | **+0.484** |
+
+Both references pan linearly; we panned constant-power. `PanLaw` is now a
+`ReplayProfile` field — linear for the four tracker profiles, **constant power
+for `native`**, so our own material keeps the law that holds a sound's apparent
+loudness as it crosses the field. That is a taste call for our songs and the
+wrong answer for reproducing a module.
+
+⚠️ **The law was hiding the SIGN of the depth error, not just its size.** With
+constant power, panbrello's travel measured 0.89 against 0.99 and read as ~10%
+SHALLOW; with the law corrected the same depth measured 1.07 — too DEEP. The
+constant was 1/15, the natural guess if the nibble reads as 0–15 of a sweep; it
+is 1/16. Travel is now **0.999 against openmpt's 0.993**. Three times now a
+magnitude discrepancy has failed to identify its own cause (vibrato's "depth"
+was rate, S3M fine porta's "scale" was domain, panbrello's "depth" was the law):
+**a control fixture with the suspected variable removed is what settles it.**
+
+⬜ **NEW, and bigger than the law: `8xx` set-pan is IGNORED on at least one
+stereo render path.** Our travel on the setpan fixtures is **0.00** where
+openmpt gives 0.50. The cell survives import intact (`fxCmd=8`, `param=0xC0`,
+`stereoOutput=true`) and `kFxSetPan` is handled in four places, so a render path
+this fixture takes is not one of them. Entirely invisible before the pan metric
+existed. Not fixed here — it wants an audit of every stereo path rather than a
+patch at the first site that looks likely.
+
+⚠️ **Design cost of putting the profile on `TrackerChannel`, now visible.** Nine
+places synthesize a derived channel (`zoneChannel`, `baked`) and none inherited
+the profile, so zone-based renders silently fell back to `native` rules. Fixed
+with `..profile = <source>.profile` at each. The field lives on the channel for
+REACH — every render path already receives one — and this is what that costs:
+a derived channel has to remember. A `TrackerChannel.derivedFrom()` helper would
+make it structural rather than remembered.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,

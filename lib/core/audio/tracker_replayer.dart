@@ -190,7 +190,17 @@ const int kFxTremor = 0x1D;
 
 /// Yxy — panbrello: a stereo pan LFO (IT/S3M).
 const int kFxPanbrello = 0x1E;
-const double kPanbrelloDepthPerUnit = 1 / 15;
+
+/// Panbrello depth: pan units (−1…+1) per depth-nibble, so `Y_8` swings half
+/// the field either way.
+///
+/// Was 1/15, which is the natural guess if you think of the nibble as 0–15 of a
+/// full sweep. Measured against libopenmpt with the pan metric it is 1/16: our
+/// travel came out 1.07 against their 0.99, once the pan LAW was fixed and the
+/// comparison meant anything. Under the old constant-power law the same depth
+/// measured 0.89 and looked SHALLOW — the law was hiding the sign of the error
+/// as well as its size.
+const double kPanbrelloDepthPerUnit = 1 / 16;
 
 /// Set the panbrello LFO WAVEFORM (S3M/IT `S5x`): 0 sine · 1 saw(ramp) · 2
 /// square. Persistent per-channel control state — the panbrello counterpart of
@@ -1816,9 +1826,9 @@ double? readLoopedSampleForTest(
             cl = fValue * amount * leftGain * sg;
             cr = fRight * amount * rightGain * sg;
           } else {
-            final theta = (pan + 1) / 2 * (pi / 2);
-            cl = fValue * amount * cos(theta) * sg;
-            cr = fValue * amount * sin(theta) * sg;
+            final panG = channel.profile.panLaw.gains(pan.toDouble());
+            cl = fValue * amount * panG.left * sg;
+            cr = fValue * amount * panG.right * sg;
           }
           voice.keepResidueStereo(cl, cr);
           outL = cl;
@@ -2494,7 +2504,7 @@ void _renderChannelInto(
         rows: cells.length,
         gain: channel.gain,
         volumeEnvelope: channel.volumeEnvelope,
-      );
+      )..profile = channel.profile;
       _renderSampleChannelInto(
         mix,
         baked,
@@ -3013,14 +3023,14 @@ List<({int start, int end, double pan})> _panRegions(
     final leftGain = pan > 0 ? 1.0 - pan : 1.0;
     final rightGain = pan < 0 ? 1.0 + pan : 1.0;
     final stereo = base.sampleRight != null;
-    final theta = (pan + 1) / 2 * (pi / 2);
+    final panG = channel.profile.panLaw.gains(pan.toDouble());
     for (var i = 0; i < left.length; i++) {
       if (stereo) {
         left[i] *= leftGain;
         right[i] *= rightGain;
       } else {
-        right[i] = left[i] * sin(theta);
-        left[i] *= cos(theta);
+        right[i] = left[i] * panG.right;
+        left[i] *= panG.left;
       }
       left[i] *= channel.gain;
       right[i] *= channel.gain;
@@ -3084,9 +3094,9 @@ List<({int start, int end, double pan})> _panRegions(
           left[i] += rendered.left[i] * vol * leftGain;
           right[i] += rendered.right[i] * vol * rightGain;
         } else {
-          final theta = (pan + 1) / 2 * (pi / 2);
-          left[i] += rendered.left[i] * vol * cos(theta);
-          right[i] += rendered.left[i] * vol * sin(theta);
+          final panG = channel.profile.panLaw.gains(pan.toDouble());
+          left[i] += rendered.left[i] * vol * panG.left;
+          right[i] += rendered.left[i] * vol * panG.right;
         }
       }
     }
@@ -3402,7 +3412,7 @@ void _renderMultiSampleChannelInto(
           pan: channel.pan,
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
-        );
+        )..profile = channel.profile;
         _renderSampleChannelInto(
           out,
           zoneChannel,
@@ -3454,7 +3464,7 @@ void _renderMultiSampleChannelInto(
           pan: channel.pan,
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
-        );
+        )..profile = channel.profile;
         if (zone is SampleInstrument) {
           _renderSampleChannelInto(
             mix,
@@ -3517,7 +3527,7 @@ void _renderMultiSampleChannelInto(
           pan: channel.pan,
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
-        );
+        )..profile = channel.profile;
         final stereo = _renderSampleChannelStereoTicks(
           zoneChannel,
           isolated,
@@ -3567,7 +3577,7 @@ void _renderMultiSampleChannelInto(
           pan: channel.pan,
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
-        );
+        )..profile = channel.profile;
         late final ({Float64List left, Float64List right}) rendered;
         if (_additiveOf(zone) != null) {
           final zoneLeft = Float64List(timing.totalSamples);
@@ -3628,7 +3638,7 @@ void _renderMultiSampleChannelIntoVariable(
           pan: channel.pan,
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
-        );
+        )..profile = channel.profile;
         _renderSampleChannelIntoVariable(
           out,
           zoneChannel,
@@ -3679,7 +3689,7 @@ void _renderMultiSampleChannelIntoVariable(
           pan: channel.pan,
           volumeEnvelope: channel.volumeEnvelope,
           panEnvelope: channel.panEnvelope,
-        );
+        )..profile = channel.profile;
         if (zone is SampleInstrument) {
           _renderSampleChannelIntoVariable(
             mix,
@@ -3823,9 +3833,9 @@ void _renderChannelIntoStereo(
           if (o >= left.length) break;
           final pan = (channel.pan + penv.panAt((i - s) / kSampleRate * 1000))
               .clamp(-1.0, 1.0);
-          final theta = (pan + 1) / 2 * (pi / 2);
-          left[o] += mono[i] * cos(theta);
-          right[o] += mono[i] * sin(theta);
+          final panG = channel.profile.panLaw.gains(pan.toDouble());
+          left[o] += mono[i] * panG.left;
+          right[o] += mono[i] * panG.right;
         }
       }
       startStep += steps;
@@ -3840,9 +3850,9 @@ void _renderChannelIntoStereo(
     total,
     ticksPerRow: ticksPerRow,
   )) {
-    final theta = (reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
-    final lGain = cos(theta);
-    final rGain = sin(theta);
+    final panG = channel.profile.panLaw.gains(reg.pan.clamp(-1.0, 1.0));
+    final lGain = panG.left;
+    final rGain = panG.right;
     final end = min(reg.end, total);
     for (var i = reg.start; i < end; i++) {
       final o = sampleOffset + i;
@@ -3878,7 +3888,7 @@ void _renderChannelIntoStereo(
   final hasNativeStereo = instrument.zones.values.any(
     (zone) => zone is SampleInstrument && zone.sampleRight != null,
   );
-  final theta = (pan + 1) / 2 * (pi / 2);
+  final panG = channel.profile.panLaw.gains(pan.toDouble());
   final leftGain = pan > 0 ? 1.0 - pan : 1.0;
   final rightGain = pan < 0 ? 1.0 + pan : 1.0;
   for (var i = 0; i < left.length; i++) {
@@ -3886,8 +3896,8 @@ void _renderChannelIntoStereo(
       left[i] *= leftGain;
       right[i] *= rightGain;
     } else {
-      right[i] = left[i] * sin(theta);
-      left[i] *= cos(theta);
+      right[i] = left[i] * panG.right;
+      left[i] *= panG.left;
     }
     left[i] *= channel.gain;
     right[i] *= channel.gain;
@@ -5138,7 +5148,7 @@ void _renderLongNativeVariableStereo(
 ) {
   final multi = channel.instrument;
   if (multi is! MultiSampleInstrument) return;
-  // Constant-power gains per region — the SAME cos/sin(theta) the mono pan loop
+  // Constant-power gains per region — the SAME cos/panG.right the mono pan loop
   // computes, precomputed once so the run walk is a plain region lookup.
   final regGain = [
     for (final reg in regions)
@@ -5203,7 +5213,7 @@ void _renderLongNativeVariableStereo(
             rows: steps,
             gain: channel.gain,
             volumeEnvelope: channel.volumeEnvelope,
-          );
+          )..profile = channel.profile;
           if (!zone.normalize) {
             // Native run: stream each sample straight into L/R, no run buffer.
             runStart = start;
@@ -5304,7 +5314,7 @@ const _nativeTickFullBufferLimit = kSampleRate * 120;
             pan: channels[c].pan,
             volumeEnvelope: channels[c].volumeEnvelope,
             panEnvelope: channels[c].panEnvelope,
-          );
+          )..profile = channels[c].profile;
           final stereo = _renderSampleChannelStereoTicks(
             zoneChannel,
             isolated,
@@ -5407,9 +5417,9 @@ const _nativeTickFullBufferLimit = kSampleRate * 120;
           for (var i = s; i < e; i++) {
             final pan = (basePan + penv.panAt((i - s) / kSampleRate * 1000))
                 .clamp(-1.0, 1.0);
-            final theta = (pan + 1) / 2 * (pi / 2);
-            left[i] += mono[i] * cos(theta);
-            right[i] += mono[i] * sin(theta);
+            final panG = channels[c].profile.panLaw.gains(pan.toDouble());
+            left[i] += mono[i] * panG.left;
+            right[i] += mono[i] * panG.right;
           }
         }
         startStep += steps;
@@ -5421,9 +5431,10 @@ const _nativeTickFullBufferLimit = kSampleRate * 120;
         rowStart,
         ticksPerRow: song.initialSpeed,
       )) {
-        final theta = (reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
-        final lGain = cos(theta);
-        final rGain = sin(theta);
+        final panG =
+            song.channels.first.profile.panLaw.gains(reg.pan.clamp(-1.0, 1.0));
+        final lGain = panG.left;
+        final rGain = panG.right;
         final end = min(reg.end, acc);
         for (var i = reg.start; i < end; i++) {
           left[i] += mono[i] * lGain;
@@ -6199,9 +6210,9 @@ void _sampleRenderRowsStereo(
             cl = fValue * amount * leftGain * sg;
             cr = fRight * amount * rightGain * sg;
           } else {
-            final theta = (pan + 1) / 2 * (pi / 2);
-            cl = fValue * amount * cos(theta) * sg;
-            cr = fValue * amount * sin(theta) * sg;
+            final panG = channel.profile.panLaw.gains(pan.toDouble());
+            cl = fValue * amount * panG.left * sg;
+            cr = fValue * amount * panG.right * sg;
           }
           voice.keepResidueStereo(cl, cr);
           outL = cl;
@@ -6247,7 +6258,7 @@ class _ZoneRun {
 
 /// A native multi-sample channel's chunk-render plan: its note runs (resolved
 /// once) and the constant-power pan gains per region (precomputed once, the same
-/// `cos/sin(theta)` [_renderLongNativeVariableStereo] uses).
+/// `cos/panG.right` [_renderLongNativeVariableStereo] uses).
 class _ZoneChannelState {
   _ZoneChannelState(this.runs, this.regGain);
   final List<_ZoneRun> runs;
@@ -7291,9 +7302,10 @@ void streamFlowVariableStereoPcm(
           final s = max(reg.start, sampleFrom);
           final e = min(reg.end, sampleTo);
           if (s >= e) continue;
-          final theta = (reg.pan.clamp(-1.0, 1.0) + 1) / 2 * (pi / 2);
-          final lGain = cos(theta);
-          final rGain = sin(theta);
+          final panG = song.channels.first.profile.panLaw
+              .gains(reg.pan.clamp(-1.0, 1.0));
+          final lGain = panG.left;
+          final rGain = panG.right;
           for (var i = s; i < e; i++) {
             final j = i - sampleFrom;
             mixL[j] += mono[j] * lGain;
