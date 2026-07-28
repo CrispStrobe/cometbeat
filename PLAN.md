@@ -11,7 +11,44 @@
 - Shipped: Synth & FX Editor (embeds Sound Lab directly into Tracker via `instrument_editor.dart`).
 - Shipped: Multi-Sample Groundwork (`MultiSampleInstrument` added to `tracker_engine.dart` with correct monophonic choking semantics).
 
-## Cello fingering (string · position · finger) — step 1 SHIPPED, steps 2–3 pending
+## Cello fingering (string · position · finger) — arranger VALIDATED against printed method literature
+
+> **2026-07-28 update — the numbers below this block are superseded.** A reading arc over
+> four PD cello methods (Romberg 1840 · Tillière/Ikelmer c.1877 · Tillière/Danbé c.1905 ·
+> Kummer ed. Hugo Becker) produced **~2,900 transcribed notes / 3,078 fingering digits**
+> across sixteen pages and turned the arranger from "authored weights, one gold set" into
+> something measured on **four axes**. All PD, four different routes (composer d.>70y ·
+> anonymous-reviser 70y-from-publication · named reviser d.1905 · d.1941).
+>
+> | axis | before | now |
+> |---|---|---|
+> | finger (CC0 gold) | 50.3% | **53.9%** |
+> | finger (Becker scales, new) | — | 56.3% |
+> | string | 92.7% | 92.7% |
+> | frame (neck vs extended) | unmeasured | **17/24** (was 0) |
+> | shift (where the hand moves) | unmeasured | 35.3% / 40.0% |
+>
+> **Shipped fixes:** `thumbEntry` 12→10 (confirmed by three independent sources);
+> `shiftBase 0.5` closing the "right fingers, wrong hand" defect with all three legs
+> improving; cello position NAMES corrected at the UI edge (the games were teaching a
+> third-position hand as "position 4", and a `const Text('\$p')` bug rendered every chip as
+> the literal `$p`). **New fixtures:** `cello_fingering_gold_becker.json` (1,056 notes,
+> per-page floors) and `cello_shift_gold_danbe.json` (15 printed position changes).
+>
+> **Ruled out with measurements** (do not retry): lowering `extension`; switching skill
+> profile; a reshape/mode-change cost; raising `stringCross`. Each cost 4–5pp on one axis to
+> buy another. **Still open:** an expressive "stay on one string / one hand shape per phrase"
+> term — it needs a phrase signal the arranger does not receive, and is a design change, not
+> a weight.
+>
+> **Corroborated from primary sources, not inferred:** `firstPositionOffset: 2` (three
+> sources); `thumbFrame [0,2,4,5]` (Becker alters the printed PITCH to preserve the frame);
+> the neck frame demonstrated 28 times in Romberg's Applicatur table; barred fifths; and
+> Romberg stating this file's founding premise in 1840 — *"die Violinspieler haben zwei
+> Terzen in den Fingern und der Violoncellist nur eine."*
+>
+> Detail, method and every negative result: `docs/PLAN.md` → *opus (cello-vision-read)*.
+
 
 `lib/core/notation/bowed_arranger.dart` fingers a bowed line the way the guitar
 tab arranger fingers a fretted one: same Sayegh/Viterbi optimum path, but the state

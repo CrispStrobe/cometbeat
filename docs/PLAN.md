@@ -1755,6 +1755,35 @@ is recorded in [HISTORY.md](HISTORY.md).
   per-crossing tax rather than a per-phrase preference — the same shape of mistake as trying
   to fix hand-shape with a per-note `extension` cost.
 
+  **⭐ THE PIECE-AT-A-TIME PROTOCOL WORKS — and the draft converges after ONE system.**
+  Maintainer's design, tested on Becker p.50 no.9: give a reader ONE PIECE, have it write a
+  complete rough draft from a downscaled view, then correct that draft against successive
+  NATIVE-resolution quarter-line crops. `piece_cut.py` cuts it (1 view + 4 quarters/system).
+  **The quarter is forced by arithmetic**, not chosen: a 600 ppi system is 5068 px and the
+  vision path shows ~1500, so full = 0.30x (digits ~13 px, guessing), half = 0.59x (digits
+  fine, PITCHES marginal — verified by hand), **quarter = 1267 px = 1.00x NATIVE**. That last
+  step is what makes the pitch layer readable at all.
+  **Result: 110 notes / 101 pitched / 65 digits, and 9 corrections — ALL in system 1**
+  (s1q1–q4), then **zero in s2q1 and s2q2**. So the coarse draft plus ONE system at native is
+  enough to calibrate; later quarters only verify. That is an efficiency finding: budget
+  full quarters for the first system and spot-check the rest.
+  ⚠ **The corrections log caught an error of MINE that had propagated through three briefs.**
+  I told readers `G.B.` labels the lower (accompaniment) part. It does not: **`G.B.` =
+  *ganzer Bogen* (whole bow) and `Fr.` = *Frosch* (heel) — BOW indications**, consistent with
+  p.48's `Fr.-M.` = Frosch-Mitte, which that reader had correctly identified and I then
+  mis-carried. Anything filed as "the G.B. staff" is mislabelled.
+  ⚠ **A trap worth knowing: a repeated DIGIT ROW does not imply repeated PITCHES.** The draft
+  copied m7's pitches into m8 because the digit row `1-4-2` recurs; at native resolution m8
+  sits below the staff (n3 on a ledger = E2). Same hand SHAPE, different strings. Combined
+  with the p.48 finding that an undigited bar often repeats the previous bar's fingering,
+  repetition in this engraving is a live source of silent error in both directions.
+  🔧 **Protocol amendment earned by a death:** the original step 1 (write a complete draft)
+  was the biggest single write and therefore the only window with nothing on disk — and an
+  agent died exactly there, losing everything. There is now a **Step 0**: write a ten-second
+  SKELETON (piece, key, metre, clef, systems, empty notes) before looking at anything again,
+  so step 1 becomes an EDIT rather than a creation. Six agent deaths today (2 stalls, 3
+  network/API, 1 overload); incremental writes saved five of them.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
