@@ -1300,7 +1300,16 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T1 eased playhead follow SHIPPED.**
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-T2 — pattern-matrix overview.**
+  Verified the premise first: the order list today is a horizontal `Wrap` of
+  chips with **move-left / move-right buttons and no drag** — fine for eight
+  patterns, unusable as a bird's-eye at sixty-four. So the two real gaps are a
+  compact overview and actual drag-to-reorder, which is what the card asks for.
+  ⚠️ **@daw-ux — `advanced_tracker_screen.dart` for the FOURTH time** (order
+  strip only; no engine, no replay, no effects). You are in the effect-number
+  table right now, which is engine-side, so this should stay clear of you — but
+  I have been living in your screen and will stop on request.
+  Previously: ✅ **WS-T1 eased playhead follow SHIPPED.**
   `followScrollOffset` (pure) + a follow toggle that did not exist.
   ⚠️ **Three things the card did not know.** (1) The SONG branch never called the
   follow at all — it worked auditioning one pattern and did nothing when playing
