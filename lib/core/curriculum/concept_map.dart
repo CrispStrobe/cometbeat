@@ -563,6 +563,7 @@ const List<Concept> kConcepts = [
     'key_chord',
     'keyboard_ode',
     'keyboard_play_along',
+    'note_highway_piano',
     'falling_keys',
     'chord_grip_hero',
   ]),
@@ -571,6 +572,7 @@ const List<Concept> kConcepts = [
     'cello_string_quiz',
     'cello_finger_quiz',
     'cello_play_along',
+    'note_highway_cello',
     'cello_play_it',
     'cello_tuner',
     'bowing',
@@ -583,6 +585,7 @@ const List<Concept> kConcepts = [
     'capo_match',
     'power_chord',
     'guitar_play_along',
+    'note_highway_guitar',
     'strum_toy',
   ]),
   Concept(
