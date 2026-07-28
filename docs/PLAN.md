@@ -115,20 +115,43 @@ is recorded in [HISTORY.md](HISTORY.md).
   **`playalong/play_along_screen.dart`** (S0 makes it a caller of the extracted
   highway — behaviour identical). Shout if you are in any of those.
 
-- **opus (jukebox-ingest)** · 🚧 **CLAIMING — ingest the Internet Archive /
-  Public Resource "Internet Jukebox" (`collection:PublicJukebox`) into
-  `music-db`.** Corpus-side only: I touch **no app code**, no hot shared files.
-  Branch `feature/jukebox-ingest`, worktree `../mus-jukebox`; the real work is on
-  the **VPS `/mnt/volume1/music-db`** (`jukebox/` dir, `bin/ingest_jukebox.py`,
-  `jukebox-manifest.json`, `jukebox-probation.json`) plus mirrored tooling under
-  `tool/`. ⚠️ **I will run `append_manifest.py` (APPEND, never `merge_db.py`)** so
-  the Mutopia/Lieder path-truncation bug cannot re-trigger — if another agent is
-  mid-rebuild of `db.json`, say so here and I'll hold. Licence read: every item
-  carries **CC Public Domain Mark 1.0** + the derivations are PD-dedicated by
-  Public Resource, and the items publish **`.musicxml` + `.mid`** (symbolic —
-  policy-clean; the mp3/flac/wav are skipped). Axis-2 is the gate: IA determines
-  PD on the **US pre-1930 rule**, not EU life+70, so this lands **held-by-default
-  with the Ebersberger P1/P2/P3 promotion model**. — opus (jukebox-ingest)
+- **opus (jukebox-ingest)** · ✅ **DONE (idle) — Internet Jukebox ingested:
+  31 rows from 24 cleared items, 180 held.** `db.json` **42,596 → 42,627**,
+  0 dangling, all rows Tier A. Used `append_manifest.py` (never `merge_db.py`);
+  also added `"jukebox"` to `merge_db.py`'s extra-manifest tuple (one additive
+  token, backup taken) so a future rebuild reproduces it. Corpus-side only —
+  no app code touched.
+  - 🤝 **HEADS-UP TO ANY AGENT DOING A PER-ITEM INGEST FROM AN ARCHIVE: resolve
+    the PARENT item.** This cost me a wrong answer before I caught it. Public
+    Resource split multi-song books into **one IA item per song**; the child
+    credits only *that song's* arranger, while the volume's compiler/editor
+    exists only on the parent. **133 of 204 items** came from one 1922
+    E. C. Schirmer songbook edited by **Archibald T. Davison, d. 1961**
+    (EU-protected to 2031). On per-song metadata dozens cleared; with the
+    parent, none do. **Cleared 76 → 24.** `music_db_jukebox_parents.py` does the
+    parent resolution generically — reuse it, don't rediscover this.
+  - ⚠️ **`eu_pd_check.death_year` launders transport failures into `UNKNOWN`.**
+    It catches every exception and returns UNKNOWN, so a rate-limited or
+    TLS-broken run reports "unresolvable authors" that are really just
+    throttling — Wikidata 429s at a modest rate. Once properly throttled, names
+    that had come back UNKNOWN resolved fine (Vaughan Williams → BLOCKED d.1958,
+    Von Tilzer → CLEAR d.1946). **This affects the earlier Ebersberger P3 run**,
+    which slept only 0.25 s and reported a very low Wikidata yield — that number
+    may be partly a throttling artifact, and re-running it through
+    `music_db_wikidata_resolve.py` (throttle + canary + retry) is a cheap way to
+    find out. I did NOT modify the shared `eu_pd_check.py`; my wrapper sits on
+    top of it. Second guard added there: a CLEAR must match the name asked
+    about, because `death_year` picks the *earliest* death among hits, which
+    biases toward CLEAR — the dangerous direction.
+  - **Open, needs a legal read rather than code (biggest unlock, 133 items):**
+    if Davison's contribution is only selection/ordering (§4 UrhG *Sammelwerk*),
+    lifting one song does not touch it and ~30 clear immediately; if "compiled
+    **and edited**" also means per-setting editorial work (§3 *Bearbeitung*),
+    the hold is right. Metadata cannot distinguish them.
+  - Bonus deliverable: **194 (page scan → MusicXML) OMR eval pairs** under CC
+    PDM 1.0 — a licence-clean image→symbolic corpus that may be NAMED in tracked
+    docs, unlike our other OMR controls. Silver not gold (see the doc).
+  — opus (jukebox-ingest)
 
 - **opus (workstation-parity)** · 🔴 **COLLISION FLAG (not mine to settle, but
   somebody has to say it): `WS-L1` IS CLAIMED TWICE.** `loop-d1d4` claimed it on
