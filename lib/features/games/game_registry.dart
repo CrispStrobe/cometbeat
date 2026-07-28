@@ -6,6 +6,7 @@
 
 import 'package:comet_beat/core/audio/chord_progression.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/games/highway/highway_instrument.dart';
 import 'package:comet_beat/core/notation/bowed_arranger.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/features/games/cello/bowing_screen.dart';
@@ -53,6 +54,7 @@ import 'package:comet_beat/features/games/harmony/function_ear_screen.dart';
 import 'package:comet_beat/features/games/harmony/harmony_quiz_screen.dart';
 import 'package:comet_beat/features/games/harmony/roman_numeral_screen.dart';
 import 'package:comet_beat/features/games/harmony/spot_parallels_screen.dart';
+import 'package:comet_beat/features/games/highway/note_highway_screen.dart';
 import 'package:comet_beat/features/games/keyboard/chord_grip_hero_screen.dart';
 import 'package:comet_beat/features/games/keyboard/grand_staff_read_screen.dart';
 import 'package:comet_beat/features/games/keyboard/key_chord_screen.dart';
@@ -1277,6 +1279,18 @@ final Map<String, List<GameInfo>> kGamesByModule = {
     // "simplify" path; it just no longer has its own hub tile.
   ],
   'cello': [
+    // Falling notes onto the instrument itself — watch a piece, or play it.
+    GameInfo(
+      id: 'note_highway_cello',
+      icon: Icons.waves,
+      title: (l) => l.gameNoteHighwayCello,
+      subtitle: (l) => l.gameNoteHighwayCelloSubtitle,
+      builder: (ctx) => NoteHighwayScreen(
+        instrument: HighwayInstrument.cello,
+        gameId: 'note_highway_cello',
+        title: AppLocalizations.of(ctx)!.gameNoteHighwayCello,
+      ),
+    ),
     // Live-mic tuner.
     GameInfo(
       id: 'cello_tuner',
@@ -1346,6 +1360,18 @@ final Map<String, List<GameInfo>> kGamesByModule = {
     ),
   ],
   'guitar': [
+    // Falling notes onto the instrument itself — watch a piece, or play it.
+    GameInfo(
+      id: 'note_highway_guitar',
+      icon: Icons.linear_scale,
+      title: (l) => l.gameNoteHighwayGuitar,
+      subtitle: (l) => l.gameNoteHighwayGuitarSubtitle,
+      builder: (ctx) => NoteHighwayScreen(
+        instrument: HighwayInstrument.guitar,
+        gameId: 'note_highway_guitar',
+        title: AppLocalizations.of(ctx)!.gameNoteHighwayGuitar,
+      ),
+    ),
     // Play-along riff with a moving score.
     GameInfo(
       id: 'guitar_play_along',
@@ -1498,6 +1524,17 @@ final Map<String, List<GameInfo>> kGamesByModule = {
     ),
   ],
   'keyboard': [
+    // Falling notes onto the instrument itself — watch a piece, or play it.
+    GameInfo(
+      id: 'note_highway_piano',
+      icon: Icons.piano,
+      title: (l) => l.gameNoteHighway,
+      subtitle: (l) => l.gameNoteHighwaySubtitle,
+      builder: (ctx) => NoteHighwayScreen(
+        gameId: 'note_highway_piano',
+        title: AppLocalizations.of(ctx)!.gameNoteHighway,
+      ),
+    ),
     // Play-along scale with a moving score.
     GameInfo(
       id: 'keyboard_play_along',

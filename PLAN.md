@@ -301,6 +301,16 @@ grading (mono today, polyphonic later) and watch-only mode reuse the same view.
 Full scope, architecture, slices S0–S5, and the copyright/trade-dress/patent/
 music-rights policy we build to: **[docs/NOTE_HIGHWAY.md](docs/NOTE_HIGHWAY.md)**.
 
+**Shipped:** the core layer (`lib/core/games/highway/`), the view
+(`lib/features/games/highway/`, 4 skins × flat/arcade), and three tiles — Note
+Highway (keyboard), String Runway (guitar), Bow Runway (cello) — with five
+difficulties, watch/play, hands-separate, tempo 50–125%, an optional tab /
+note-name reading strip, and per-instrument voices. **Still open** (doc §7):
+S0 (point `play_along_screen` at the shared view — it still owns its private
+painters), the Song Book/Workshop entry that feeds a real score in
+(`highwayChartFromScore` is written and tested but nothing calls it yet), mic
+grading, drum lanes, loop-a-section, and a low-end-device performance profile.
+
 ## Sound Library / Instrument / FX unification (ONE ITEM LEFT — see below)
 
 Unify the places that currently drift apart: the Tracker instrument selector,

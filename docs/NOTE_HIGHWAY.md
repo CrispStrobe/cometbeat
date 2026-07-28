@@ -1,6 +1,7 @@
 # Note Highway — falling-note play-along, one engine, many instruments
 
-**Status:** scoped, unstarted (2026-07-28). Owner: unclaimed.
+**Status:** first cut SHIPPED 2026-07-28 (`feature/note-highway`) — see §8 for
+exactly what is in and what is not. Owner: idle.
 **Short version:** we already ship a falling-note view; it is a private
 `CustomPainter` inside one screen, monophonic, and pitch-axis only. This scopes
 extracting it into a reusable **Note Highway** layer, then adding the two views
@@ -275,7 +276,73 @@ Each slice is independently shippable and ends green (`dart format` →
   accessibility pass (colour-blind-safe lanes, note names, high contrast,
   reduced motion), skins, performance → Workshop take, curriculum placement.
 
-## 7. Risks / open questions
+## 7. What shipped (2026-07-28)
+
+Three tiles — **Note Highway** (keyboard), **String Runway** (guitar),
+**Bow Runway** (cello) — all one screen, plus the layer underneath it.
+
+**Core, pure Dart** (`lib/core/games/highway/`, headless-testable):
+
+* `highway_chart.dart` — `HighwayEvent`/`HighwayChart`, polyphonic, voice-tagged.
+  `highwayChartFromScore` keeps **every pitch of a chord** (the play-along
+  builder keeps only the top note) and reads voices, tempo and meter off the
+  score; `highwayChartFromParts` merges a grand staff into one chart with a
+  colour per hand. `timedChords` renders a gap-accurate backing, optionally of
+  one hand only.
+* `highway_lanes.dart` — `KeyboardLaneMap` (real key rectangles, black keys
+  narrower/raised/on the boundary), `StringLaneMap` (one lane per string, low
+  string left so pitch still rises rightward), `PadLaneMap` (contour → N lanes),
+  `PitchLaneMap` (continuous, for a live mic trace). All unit-space, so the
+  falling blocks, the rail and the touch hit-test share ONE geometry.
+* `highway_grading.dart` — five difficulties (windows in *beats*, so slowing a
+  piece down does not secretly loosen the timing), polyphonic grading, a note
+  judged once, streak multiplier, wait-for-me, and `gradedVoices` for
+  hands-separate (the other hand keeps falling and plays itself).
+* `highway_instrument.dart` — per-instrument profile: lane map, caption style,
+  timbre, and the **preparation** step that runs `arrangeTab` (guitar/bass/uke →
+  string + fret) or `arrangeBowed` (cello → string + finger) over the chart.
+* `highway_library.dart` — built-in pieces per instrument (public-domain
+  melodies + exercises written for the app), two-handed where it matters.
+
+**View** (`lib/features/games/highway/`):
+
+* `highway_view.dart` — one painter for everything: musical grid (lane rules +
+  bar/beat rules), raised-lane tints, trapezoid blocks with captions, far-end
+  haze, hit line, hit ripples, and the instrument rail. `HighwayProjection`
+  switches flat ↔ perspective through a perspective divide — same data, one
+  matrix, so the arcade look is not a second renderer.
+* `highway_theme.dart` — four skins (midnight / neon / sunrise / ink; `ink`
+  separates voices by lightness for colour-blind and high-contrast use).
+* `highway_strip.dart` — the optional reading strip: scrolling **tab** (string
+  lines + fret digits) for fretted/bowed, **note names** for keys/pads.
+* `note_highway_screen.dart` — setup (instrument · piece · watch/play ·
+  difficulty · skin · flat/arcade · hands · tempo 50–125% · strip · backing),
+  count-in, run, star-scored result via the existing progress/threshold path.
+
+**Tests:** `highway_chart` · `highway_lanes` · `highway_grading` ·
+`highway_instrument` · `note_highway_screen` — including a sweep that paints
+every instrument × skin × projection, and a library check that every built-in
+piece is actually reachable on every instrument it claims (it caught guitar
+shapes claiming the ukulele, whose lowest string is C4).
+
+**Deliberately NOT in this cut** — the honest list:
+
+* **S0 was not done.** `play_along_screen.dart` still owns its private
+  `_HighwayPainter`/`_FallingPainter`. The new layer was built alongside it
+  rather than under it, so nothing shipped regressed; pointing the play-along
+  screen at `HighwayView` is now a follow-up, not a prerequisite.
+* **No Song Book entry yet.** `highwayChartFromScore` exists and is tested, but
+  no screen passes a real score in — the tiles play the built-in library. Wiring
+  a "play this on the highway" action into the Song Book/Workshop is the next
+  obvious slice, and the screen already takes a `chart` for it.
+* **No microphone grading.** Touch only. The mic path is the play-along
+  engine's, and joining them is S5.
+* **No drum-kit map, no loop-a-section, no chord-grip blocks or strum arrows,
+  no engraved-notation strip** (the strip is chart-driven; an engraved staff
+  needs the Song Book path above).
+* **Not profiled on a low-end device** — the risk below stands unmeasured.
+
+## 8. Risks / open questions
 
 * **Performance.** A dense piano piece is hundreds of visible blocks at 60 fps
   on a phone, plus the audio engine. Cull to the visible beat window, avoid

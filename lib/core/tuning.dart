@@ -48,6 +48,11 @@ const int kSm2MaxFailuresForMastery = 1;
 // Per-game expected-score brackets, format: gameType: [1-star, 2-star, 3-star
 // minimum score]. Populated as minigames are implemented.
 const Map<String, List<int>> kStarThresholds = {
+  // Note Highway: star-scored on the FRACTION of the piece hit
+  // (`scaledStarScore`), so a 15-note exercise and a whole song grade the same.
+  'note_highway_piano': [1, 2, 3],
+  'note_highway_guitar': [1, 2, 3],
+  'note_highway_cello': [1, 2, 3],
   // 10 rounds x 100 points, first-try answers only.
   'note_value_quiz': [100, 600, 900],
   'duration_duel': [100, 600, 900],

@@ -15865,6 +15865,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing to play — every track is muted or silent.'**
   String get mixerNothingToPlay;
+
+  /// No description provided for @gameNoteHighway.
+  ///
+  /// In en, this message translates to:
+  /// **'Note Highway'**
+  String get gameNoteHighway;
+
+  /// No description provided for @gameNoteHighwaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes fall onto the keys — play along'**
+  String get gameNoteHighwaySubtitle;
+
+  /// No description provided for @gameNoteHighwayGuitar.
+  ///
+  /// In en, this message translates to:
+  /// **'String Runway'**
+  String get gameNoteHighwayGuitar;
+
+  /// No description provided for @gameNoteHighwayGuitarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One lane per string, fret numbers on the blocks'**
+  String get gameNoteHighwayGuitarSubtitle;
+
+  /// No description provided for @gameNoteHighwayCello.
+  ///
+  /// In en, this message translates to:
+  /// **'Bow Runway'**
+  String get gameNoteHighwayCello;
+
+  /// No description provided for @gameNoteHighwayCelloSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cello strings as lanes, with finger numbers'**
+  String get gameNoteHighwayCelloSubtitle;
+
+  /// No description provided for @highwayStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get highwayStart;
+
+  /// No description provided for @highwayStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get highwayStop;
+
+  /// No description provided for @highwayOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Options'**
+  String get highwayOptions;
+
+  /// No description provided for @highwayInstrument.
+  ///
+  /// In en, this message translates to:
+  /// **'Instrument'**
+  String get highwayInstrument;
+
+  /// No description provided for @highwayInstrumentPiano.
+  ///
+  /// In en, this message translates to:
+  /// **'Piano'**
+  String get highwayInstrumentPiano;
+
+  /// No description provided for @highwayInstrumentGuitar.
+  ///
+  /// In en, this message translates to:
+  /// **'Guitar'**
+  String get highwayInstrumentGuitar;
+
+  /// No description provided for @highwayInstrumentBass.
+  ///
+  /// In en, this message translates to:
+  /// **'Bass'**
+  String get highwayInstrumentBass;
+
+  /// No description provided for @highwayInstrumentUkulele.
+  ///
+  /// In en, this message translates to:
+  /// **'Ukulele'**
+  String get highwayInstrumentUkulele;
+
+  /// No description provided for @highwayInstrumentCello.
+  ///
+  /// In en, this message translates to:
+  /// **'Cello'**
+  String get highwayInstrumentCello;
+
+  /// No description provided for @highwayInstrumentPads.
+  ///
+  /// In en, this message translates to:
+  /// **'Pads'**
+  String get highwayInstrumentPads;
+
+  /// No description provided for @highwayPiece.
+  ///
+  /// In en, this message translates to:
+  /// **'Piece'**
+  String get highwayPiece;
+
+  /// No description provided for @highwayNoPieces.
+  ///
+  /// In en, this message translates to:
+  /// **'No built-in piece for this instrument yet — open one from the Song Book.'**
+  String get highwayNoPieces;
+
+  /// No description provided for @highwayMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get highwayMode;
+
+  /// No description provided for @highwayModeWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch'**
+  String get highwayModeWatch;
+
+  /// No description provided for @highwayModePlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get highwayModePlay;
+
+  /// No description provided for @highwayDifficulty.
+  ///
+  /// In en, this message translates to:
+  /// **'Difficulty'**
+  String get highwayDifficulty;
+
+  /// No description provided for @highwayDifficultyRelaxed.
+  ///
+  /// In en, this message translates to:
+  /// **'Relaxed'**
+  String get highwayDifficultyRelaxed;
+
+  /// No description provided for @highwayDifficultyEasy.
+  ///
+  /// In en, this message translates to:
+  /// **'Easy'**
+  String get highwayDifficultyEasy;
+
+  /// No description provided for @highwayDifficultyMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get highwayDifficultyMedium;
+
+  /// No description provided for @highwayDifficultyHard.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard'**
+  String get highwayDifficultyHard;
+
+  /// No description provided for @highwayDifficultyExpert.
+  ///
+  /// In en, this message translates to:
+  /// **'Expert'**
+  String get highwayDifficultyExpert;
+
+  /// No description provided for @highwaySkin.
+  ///
+  /// In en, this message translates to:
+  /// **'Colours'**
+  String get highwaySkin;
+
+  /// No description provided for @highwaySkinMidnight.
+  ///
+  /// In en, this message translates to:
+  /// **'Midnight'**
+  String get highwaySkinMidnight;
+
+  /// No description provided for @highwaySkinNeon.
+  ///
+  /// In en, this message translates to:
+  /// **'Neon'**
+  String get highwaySkinNeon;
+
+  /// No description provided for @highwaySkinSunrise.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunrise'**
+  String get highwaySkinSunrise;
+
+  /// No description provided for @highwaySkinInk.
+  ///
+  /// In en, this message translates to:
+  /// **'Ink'**
+  String get highwaySkinInk;
+
+  /// No description provided for @highwayLook.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get highwayLook;
+
+  /// No description provided for @highwayLookFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'Flat'**
+  String get highwayLookFlat;
+
+  /// No description provided for @highwayLookArcade.
+  ///
+  /// In en, this message translates to:
+  /// **'Arcade'**
+  String get highwayLookArcade;
+
+  /// No description provided for @highwayHands.
+  ///
+  /// In en, this message translates to:
+  /// **'Who plays what'**
+  String get highwayHands;
+
+  /// No description provided for @highwayHandsBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything'**
+  String get highwayHandsBoth;
+
+  /// No description provided for @highwayHandsFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'First part only'**
+  String get highwayHandsFirst;
+
+  /// No description provided for @highwayHandsSecond.
+  ///
+  /// In en, this message translates to:
+  /// **'Second part only'**
+  String get highwayHandsSecond;
+
+  /// No description provided for @highwayTempo.
+  ///
+  /// In en, this message translates to:
+  /// **'Tempo'**
+  String get highwayTempo;
+
+  /// No description provided for @highwayShowStrip.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading strip'**
+  String get highwayShowStrip;
+
+  /// No description provided for @highwayShowStripTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Tab above the highway — strings and fret numbers'**
+  String get highwayShowStripTab;
+
+  /// No description provided for @highwayShowStripNames.
+  ///
+  /// In en, this message translates to:
+  /// **'Note names above the highway'**
+  String get highwayShowStripNames;
+
+  /// No description provided for @highwayBacking.
+  ///
+  /// In en, this message translates to:
+  /// **'Backing track'**
+  String get highwayBacking;
+
+  /// No description provided for @highwayBackingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The piece plays along. Your taps are graded silently.'**
+  String get highwayBackingHint;
+
+  /// No description provided for @highwayBackingWaits.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available while the highway waits for you.'**
+  String get highwayBackingWaits;
+
+  /// No description provided for @highwayCountIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Get ready…'**
+  String get highwayCountIn;
+
+  /// No description provided for @highwayWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for you…'**
+  String get highwayWaiting;
+
+  /// No description provided for @highwayHits.
+  ///
+  /// In en, this message translates to:
+  /// **'Hit'**
+  String get highwayHits;
+
+  /// No description provided for @highwayStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get highwayStreak;
 }
 
 class _AppLocalizationsDelegate

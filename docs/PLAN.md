@@ -105,15 +105,19 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (note-highway)** · 🚧 **CLAIMING — the Note Highway** (falling-note
-  play-along, scoped in [NOTE_HIGHWAY.md](NOTE_HIGHWAY.md)). Branch
-  `feature/note-highway`, worktree `../mus-highway`. New code lives in
-  `lib/core/games/highway/` (pure Dart) + `lib/features/games/highway/`; I also
-  touch these HOT SHARED FILES: **`game_registry.dart`** (new tiles),
-  **`app_en.arb`/`app_de.arb`** + generated `app_localizations*` (append-only),
-  **`core/tuning.dart`** (`kStarThresholds` brackets), and later
-  **`playalong/play_along_screen.dart`** (S0 makes it a caller of the extracted
-  highway — behaviour identical). Shout if you are in any of those.
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — the Note Highway first cut**
+  (falling-note play-along; scope + what is NOT in it in
+  [NOTE_HIGHWAY.md](NOTE_HIGHWAY.md) §7). Branch `feature/note-highway`,
+  worktree `../mus-highway`, merged to main. New code: `lib/core/games/highway/`
+  (pure Dart: chart · lane maps · grading · instrument profiles · library) +
+  `lib/features/games/highway/` (view · skins · reading strip · screen). Shared
+  files touched, all additive: **`game_registry.dart`** (3 new tiles, no
+  existing entry changed), **`app_en.arb`/`app_de.arb`** + generated
+  `app_localizations*` (appended 50 keys), **`core/tuning.dart`** (3 new
+  `kStarThresholds` brackets). ⚠️ **I did NOT touch
+  `playalong/play_along_screen.dart`** — it still owns its own private
+  painters; folding it onto the shared view is an open follow-up, so whoever
+  works there is not colliding with me.
 
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Internet Jukebox ingested:
   31 rows from 24 cleared items, 180 held.** `db.json` **42,596 → 42,627**,

@@ -8718,4 +8718,160 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mixerNothingToPlay =>
       'Nothing to play — every track is muted or silent.';
+
+  @override
+  String get gameNoteHighway => 'Note Highway';
+
+  @override
+  String get gameNoteHighwaySubtitle => 'Notes fall onto the keys — play along';
+
+  @override
+  String get gameNoteHighwayGuitar => 'String Runway';
+
+  @override
+  String get gameNoteHighwayGuitarSubtitle =>
+      'One lane per string, fret numbers on the blocks';
+
+  @override
+  String get gameNoteHighwayCello => 'Bow Runway';
+
+  @override
+  String get gameNoteHighwayCelloSubtitle =>
+      'Cello strings as lanes, with finger numbers';
+
+  @override
+  String get highwayStart => 'Start';
+
+  @override
+  String get highwayStop => 'Stop';
+
+  @override
+  String get highwayOptions => 'Options';
+
+  @override
+  String get highwayInstrument => 'Instrument';
+
+  @override
+  String get highwayInstrumentPiano => 'Piano';
+
+  @override
+  String get highwayInstrumentGuitar => 'Guitar';
+
+  @override
+  String get highwayInstrumentBass => 'Bass';
+
+  @override
+  String get highwayInstrumentUkulele => 'Ukulele';
+
+  @override
+  String get highwayInstrumentCello => 'Cello';
+
+  @override
+  String get highwayInstrumentPads => 'Pads';
+
+  @override
+  String get highwayPiece => 'Piece';
+
+  @override
+  String get highwayNoPieces =>
+      'No built-in piece for this instrument yet — open one from the Song Book.';
+
+  @override
+  String get highwayMode => 'Mode';
+
+  @override
+  String get highwayModeWatch => 'Watch';
+
+  @override
+  String get highwayModePlay => 'Play';
+
+  @override
+  String get highwayDifficulty => 'Difficulty';
+
+  @override
+  String get highwayDifficultyRelaxed => 'Relaxed';
+
+  @override
+  String get highwayDifficultyEasy => 'Easy';
+
+  @override
+  String get highwayDifficultyMedium => 'Medium';
+
+  @override
+  String get highwayDifficultyHard => 'Hard';
+
+  @override
+  String get highwayDifficultyExpert => 'Expert';
+
+  @override
+  String get highwaySkin => 'Colours';
+
+  @override
+  String get highwaySkinMidnight => 'Midnight';
+
+  @override
+  String get highwaySkinNeon => 'Neon';
+
+  @override
+  String get highwaySkinSunrise => 'Sunrise';
+
+  @override
+  String get highwaySkinInk => 'Ink';
+
+  @override
+  String get highwayLook => 'View';
+
+  @override
+  String get highwayLookFlat => 'Flat';
+
+  @override
+  String get highwayLookArcade => 'Arcade';
+
+  @override
+  String get highwayHands => 'Who plays what';
+
+  @override
+  String get highwayHandsBoth => 'Everything';
+
+  @override
+  String get highwayHandsFirst => 'First part only';
+
+  @override
+  String get highwayHandsSecond => 'Second part only';
+
+  @override
+  String get highwayTempo => 'Tempo';
+
+  @override
+  String get highwayShowStrip => 'Reading strip';
+
+  @override
+  String get highwayShowStripTab =>
+      'Tab above the highway — strings and fret numbers';
+
+  @override
+  String get highwayShowStripNames => 'Note names above the highway';
+
+  @override
+  String get highwayBacking => 'Backing track';
+
+  @override
+  String get highwayBackingHint =>
+      'The piece plays along. Your taps are graded silently.';
+
+  @override
+  String get highwayBackingWaits =>
+      'Not available while the highway waits for you.';
+
+  @override
+  String get highwayCountIn => 'Get ready…';
+
+  @override
+  String get highwayWaiting => 'Waiting for you…';
+
+  @override
+  String get highwayHits => 'Hit';
+
+  @override
+  String get highwayStreak => 'Streak';
 }
