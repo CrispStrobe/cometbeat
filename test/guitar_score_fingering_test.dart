@@ -49,8 +49,11 @@ void main() {
       // A chromatic run up the low E string from the 1st fret: F2 F#2 G2 G#2.
       final marks = fingerGuitarScore(_score([41, 42, 43, 44]), guitar);
       final fingers = _firstFingers(marks, 4);
-      expect(fingers, [1, 2, 3, 4],
-          reason: 'four consecutive frets under one hand = fingers 1,2,3,4');
+      expect(
+        fingers,
+        [1, 2, 3, 4],
+        reason: 'four consecutive frets under one hand = fingers 1,2,3,4',
+      );
     });
 
     test('every finger is a real one — 0..4, never out of range', () {
