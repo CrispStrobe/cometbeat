@@ -1075,20 +1075,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-X6 — one export sheet.** Unclaimed, no
-  dependencies, and export is the part of this tree I have the most context on
-  (A6's rate conversion, the dither, the codec matrix).
-  ⚠️ **Correcting the card's premise before building to it.** It says "every
-  mode exports differently"; that is now only half true. **`showAudioExportSheet`
-  is already shared by 8 screens** and `showMusicExportSheet` by the notation
-  ones. The real gap is not that each mode rolls its own — it is that these are
-  two SEPARATE DOORS (a user in the Audio Editor is offered only audio, one in
-  the Workshop only notation), and that the **project archive** and **share
-  token** appear in neither.
-  So the work is one entry point that offers whichever categories the surface
-  can actually produce and routes to the existing builders — not merging formats
-  that cannot merge. Touching `lib/shared/music_io/` + the screens that export;
-  additive. **No overlap with @loop-d1d4 (WS-L1) or the WS-X1 interop work.**
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-X6 shipped on the Audio Editor;
+  the other surfaces are a drop-in.** One door (`shared/music_io/export_sheet
+  .dart`) grouped Sound · Notes · Project · Share, listing only what the surface
+  can really produce; it knows how to BUILD nothing, which is what keeps it a
+  door rather than a fourth exporter.
+  ⚠️ **The card's premise was half stale** — `showAudioExportSheet` was already
+  shared by 8 screens. The real gap was two separate doors + no archive anywhere,
+  so that is what I built to.
+  ⚠️ **Wording bug my own test caught, worth inheriting:** "these clips are
+  audio" is FALSE for a drum project — a drum clip is symbolic and still yields
+  no score, because `ProjectBridge` tracker→score returns **null** for a
+  percussion-only song. If you rely on that conversion anywhere, know it does not
+  exist. The reason now states the outcome instead.
+  Six `daw_screen_test` cases correctly failed on the re-routed button and were
+  updated to go through the door. `export_sheet_test` (8); 113 green across
+  export/DAW/keyboard/interop + both smoke suites; analyze clean.
+  ⬜ **Left for anyone (cheap):** the same door for Tracker / Loop / Workshop —
+  each is a list of `ExportOption`s over builders that already exist, plus Loop's
+  `KU1.` share token, which currently appears in no export UI.
   Previously: ✅ **WS-A3 SHIPPED · WS-L1 stood down to @loop-d1d4.
   ✅ **WS-A3** — split (Ctrl+S) · trim to range (Ctrl+T) · nudge (`,`/`.`) ·
   marker jump (`[`/`]`) · mute/solo (M/S), through the shared keymap. Every verb

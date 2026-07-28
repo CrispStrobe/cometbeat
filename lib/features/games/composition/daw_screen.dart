@@ -86,6 +86,9 @@ import 'package:comet_beat/shared/music_io/audio_export.dart'
     show AudioStem, showAudioExportSheet, showAudioStemsExportSheet;
 import 'package:comet_beat/shared/music_io/audio_import.dart'
     show importAudioAsync, kAudioImportExtensions;
+import 'package:comet_beat/shared/music_io/export_sheet.dart';
+import 'package:comet_beat/shared/music_io/music_export.dart'
+    show showMusicExportSheet;
 import 'package:comet_beat/shared/widgets/open_in_menu.dart' show OpenInMenu;
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -3548,6 +3551,89 @@ class _DawScreenState extends State<DawScreen>
   // WAV/MP3 sheet.
   /// Batch stems: one file per lane, into a folder. Which lanes depends on
   /// [onlySelected] — the gutter selection, or everything with audio on it.
+  /// WS-X6 — the one export door.
+  ///
+  /// The Audio Editor could already produce four different things and offered
+  /// exactly one of them from this button. Notation in particular was reachable
+  /// only by converting a clip and leaving for another editor, which is not
+  /// something anyone would guess.
+  Future<void> _exportDoor() async {
+    final score = _timelineAsScore();
+    await showExportSheet(
+      context,
+      options: [
+        ExportOption(
+          kind: ExportKind.audio,
+          label: 'Mix',
+          detail: 'Everything, as one file',
+          run: _export,
+        ),
+        ExportOption(
+          kind: ExportKind.audio,
+          label: 'Stems',
+          detail: 'One file per lane',
+          run: () => _exportStems(onlySelected: false),
+          enabled: _daw.timeline.tracks.any((t) => t.clips.isNotEmpty),
+          disabledReason: 'No lanes with anything on them',
+        ),
+        ExportOption(
+          kind: ExportKind.symbolic,
+          label: 'Notes (MusicXML, MIDI, PDF…)',
+          detail: score == null
+              ? null
+              : 'From the clips that carry notes, not the audio',
+          run: () async {
+            if (score == null) return;
+            await showMusicExportSheet(
+              context,
+              multiPart: score,
+              partNames: [
+                for (var i = 0; i < score.parts.length; i++) 'Part ${i + 1}',
+              ],
+              baseName: _exportBaseName(),
+            );
+          },
+          enabled: score != null,
+          // ⚠️ Worded carefully, because the first cut said "these clips are
+          // audio" and that is NOT always why: a DRUM clip is symbolic and
+          // still yields nothing, since the tracker→score bridge returns null
+          // for a percussion-only song. Asserting the clips are recordings
+          // would be a plain falsehood in that case. So the reason states the
+          // outcome, which is true either way.
+          disabledReason: 'Nothing here can be written as notes yet',
+        ),
+        ExportOption(
+          kind: ExportKind.project,
+          label: 'Project file',
+          detail: 'Reopen and keep editing',
+          run: _saveProject,
+          enabled: _daw.clipCount > 0,
+          disabledReason: 'Nothing to save yet',
+        ),
+      ],
+    );
+  }
+
+  /// Every clip that carries notes, as one score — null when the project is
+  /// all recordings, which is the honest answer rather than an empty file.
+  MultiPartScore? _timelineAsScore() {
+    final parts = <Score>[];
+    for (final track in _daw.timeline.tracks) {
+      for (final clip in track.clips) {
+        // Reuse the interop path the "Open a copy in…" door already uses:
+        // a clip's symbolic document, converted to notation. A recording has
+        // none, and is skipped rather than transcribed — transcription is a
+        // separate, explicit door.
+        if (_clipSymbolicDoc(clip.source) case (final mode, final document)) {
+          if (_clipAsScore(mode, document) case final score?) {
+            parts.addAll(score.parts);
+          }
+        }
+      }
+    }
+    return parts.isEmpty ? null : MultiPartScore(parts);
+  }
+
   Future<void> _exportStems({required bool onlySelected}) async {
     final lanes = [
       for (var t = 0; t < _daw.timeline.tracks.length; t++)
@@ -5159,7 +5245,7 @@ class _DawScreenState extends State<DawScreen>
       (
         icon: Icons.download,
         label: l10n.audioExportTitle,
-        onPressed: daw.clipCount == 0 ? null : _export,
+        onPressed: daw.clipCount == 0 ? null : _exportDoor,
         active: false,
       ),
       (

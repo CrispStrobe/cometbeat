@@ -242,6 +242,10 @@ void main() {
 
     await tester.tap(find.byTooltip('Export sound'));
     await tester.pumpAndSettle();
+    // WS-X6 — the download button now opens the one export door; the audio
+    // dialog these tests are about is behind its "Mix" option.
+    await tester.tap(find.text('Mix'));
+    await tester.pumpAndSettle();
     expect(find.text('Export mix'), findsOneWidget);
     expect(find.text('Full mix'), findsOneWidget);
     expect(find.text('Marked range'), findsOneWidget);
@@ -295,6 +299,10 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byTooltip('Export sound'));
+    await tester.pumpAndSettle();
+    // WS-X6 — the download button now opens the one export door; the audio
+    // dialog these tests are about is behind its "Mix" option.
+    await tester.tap(find.text('Mix'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Marked range'));
     await tester.pumpAndSettle();
@@ -1438,6 +1446,10 @@ void main() {
 
     await tester.tap(find.byTooltip('Export sound'));
     await tester.pumpAndSettle();
+    // WS-X6 — the download button now opens the one export door; the audio
+    // dialog these tests are about is behind its "Mix" option.
+    await tester.tap(find.text('Mix'));
+    await tester.pumpAndSettle();
     // The source dropdown ("Full mix") is separate from the time-window
     // segments ("Whole length" / "Marked range").
     expect(find.text('Full mix'), findsOneWidget);
@@ -1459,6 +1471,10 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byTooltip('Export sound'));
+    await tester.pumpAndSettle();
+    // WS-X6 — the download button now opens the one export door; the audio
+    // dialog these tests are about is behind its "Mix" option.
+    await tester.tap(find.text('Mix'));
     await tester.pumpAndSettle();
     // Nothing selected in the gutter → the action offers every lane.
     expect(find.text('All as stems'), findsOneWidget);
@@ -1694,6 +1710,10 @@ void main() {
 
     await tester.tap(find.byTooltip('Export sound'));
     await tester.pumpAndSettle();
+    // WS-X6 — the download button now opens the one export door; the audio
+    // dialog these tests are about is behind its "Mix" option.
+    await tester.tap(find.text('Mix'));
+    await tester.pumpAndSettle();
     expect(
       find.textContaining('the whole of it is licensed CC BY-SA 4.0'),
       findsOneWidget,
@@ -1743,6 +1763,10 @@ void main() {
     expect(service.licenseObligations().hasProblem, isTrue);
 
     await tester.tap(find.byTooltip('Export sound'));
+    await tester.pumpAndSettle();
+    // WS-X6 — the download button now opens the one export door; the audio
+    // dialog these tests are about is behind its "Mix" option.
+    await tester.tap(find.text('Mix'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Cannot export'), findsOneWidget);
     // The gate must actually refuse, not merely warn.

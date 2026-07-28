@@ -1434,9 +1434,36 @@ prefix.
   (`MidiDevice`: 0 hits). One MIDI-in seam feeding **any** surface's record
   path, plus a shared on-screen keyboard/pad widget for platforms without
   hardware. Prerequisite for WS-T7 and for D-RT option B.
-- ⬜ **WS-X6 — one export sheet.** `M` — every mode exports differently. One sheet:
-  stems · master · symbolic (MusicXML/MIDI/module) · project archive · share
-  token. The codec matrix is already in `docs/AUDIO_CODEC_MATRIX.md`.
+- ✅ **WS-X6 — one export sheet — SHIPPED (Audio Editor; other surfaces are a
+  drop-in).** `shared/music_io/export_sheet.dart` — one door, grouped by what
+  you are trying to do (Sound · Notes · Project · Share), listing only what THIS
+  surface can really produce.
+  * ⚠️ **the card's premise was half stale.** "Every mode exports differently"
+    was true when written; by now `showAudioExportSheet` was already shared by
+    **eight** screens and `showMusicExportSheet` by the notation ones. Redoing
+    format unification would have been churn. The gap that was really left is
+    **discoverability**: they were two separate doors, so someone in the Audio
+    Editor was offered a WAV and never learned their arrangement could leave as
+    MusicXML — and the project ARCHIVE appeared in no export UI at all.
+  * this file knows how to build nothing. A surface passes the options it has;
+    that is what keeps it a door rather than a fourth exporter.
+  * an unavailable option **states its reason** in place of its detail — greyed
+    out with no explanation reads as broken software rather than as a fact
+    about the project.
+  * ⚠️ **a wording bug the test caught:** my first disabled reason said "these
+    clips are audio", which is FALSE for a drum project — a drum clip is
+    symbolic and still yields nothing, because the tracker→score bridge returns
+    null for a percussion-only song. The reason now states the outcome
+    ("nothing here can be written as notes yet"), which is true either way, and
+    the drum case is pinned by its own test.
+  * six existing `daw_screen_test` cases correctly failed on the re-routed
+    button and now go through the door — a real behaviour change, acknowledged
+    rather than papered over.
+  Tests: `export_sheet_test` (8).
+  ⬜ **Remaining, and cheap:** the same door for the Tracker, Loop Studio and
+  the Workshop — each is a list of `ExportOption`s over builders they already
+  have. Share tokens (Loop's `KU1.`) belong there too; the Audio Editor has none
+  to offer, so it declares none.
 - ⬜ **WS-W7 — session ⇄ arrangement.** `L` · Depends WS-W1, WS-W5, WS-L3.
   Loop Studio's
   scenes are already a session grid and the Audio Editor is already a linear
