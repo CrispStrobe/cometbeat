@@ -246,6 +246,30 @@ void main() {
     return r <= 20 ? const DocCell(effect: 0x3) : DocCell.empty;
   });
 
+  // E1x / E2x — MOD's OWN fine portamento: one step on tick 0, not per tick.
+  //
+  // There was no fixture for these, which is how they stayed wrong. They bent
+  // linearly regardless of format because the extended-command switch applied
+  // `pitch += x * kPortaSemitonesPerUnit` directly instead of going through the
+  // pitch domain — right for XM/IT, wrong for MOD and S3M. The S3M version was
+  // visible (0.857 where IT read 1.000 for the identical command); MOD's was
+  // not visible at all until this fixture existed.
+  //
+  // Held for 20 rows because a fine slide moves once per ROW: eight rows of it
+  // is a fifth of a semitone and would sit inside the references' own spread.
+  _emit('fine_porta_up_E1x', wave, (r) {
+    if (r == 0) return const DocCell(note: _note, instrument: 1);
+    return r <= 20
+        ? const DocCell(effect: 0xE, effectParam: 0x14)
+        : DocCell.empty;
+  });
+  _emit('fine_porta_down_E2x', wave, (r) {
+    if (r == 0) return const DocCell(note: _note, instrument: 1);
+    return r <= 20
+        ? const DocCell(effect: 0xE, effectParam: 0x24)
+        : DocCell.empty;
+  });
+
   stdout.writeln('done — one sounding channel each, 32 rows, speed 6/125');
 }
 

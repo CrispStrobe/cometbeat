@@ -1027,10 +1027,20 @@ class ReplayVoice {
       case kFxExtended:
         // One-time (tick-0) extended commands: fine porta and fine volume.
         switch (_exSub) {
+          // Through the DOMAIN, like every other slide. These two bent
+          // linearly no matter what the format wanted, which is right for
+          // XM/IT and wrong for MOD/S3M — so `EFx`/`FFx` measured 1.000 in IT
+          // and 0.857/0.828 in S3M for the identical command, and MOD's own
+          // `E1x`/`E2x` were wrong with no fixture to say so.
+          //
+          // A fifth slide site the PitchDomain refactor missed, because it
+          // lives in the extended-command switch rather than the portamento
+          // block. Worth remembering when adding the next pitch effect: if it
+          // moves `pitch`, it goes through `_domain`.
           case kExFinePortaUp:
-            pitch += _exVal * kPortaSemitonesPerUnit;
+            pitch = _domain.slideUp(pitch, _exVal.toDouble());
           case kExFinePortaDown:
-            pitch -= _exVal * kPortaSemitonesPerUnit;
+            pitch = _domain.slideUp(pitch, -_exVal.toDouble());
           case kExFineVolUp:
             volume = (volume + _exVal).clamp(0, kMaxVolume);
           case kExFineVolDown:

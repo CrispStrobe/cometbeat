@@ -106,13 +106,11 @@ const _kKnownOpenDefects = <String>{
   'volslide_up_Dx0.it',
   'fine_volslide_up_DxF.s3m',
   'fine_volslide_up_DxF.it',
-  // S3M fine porta: a constant scale factor, since the extra-fine variant has a
-  // quarter of the step and roughly a quarter of the error.
-  'fine_porta_down_EFx.s3m',
-  'fine_porta_up_FFx.s3m',
-  // The extra-fine approximation (x ~/ 4) shifts our pitch just enough to
-  // change the loop-wrap ripple, which the envelope metric sees.
-  'extrafine_porta_down_EEx.s3m',
+  // (S3M fine and extra-fine porta were listed here at 0.857 / 0.828 / 0.19-env,
+  // attributed to "a constant scale factor". That guess was wrong. Fine porta
+  // bypassed PitchDomain entirely and always bent LINEARLY — right for XM/IT,
+  // wrong for MOD/S3M — so the split was by DOMAIN, not by scale. All three
+  // read 1.000 now and the entries are gone.)
 };
 
 // `_kPeriodModelDependent` used to live here: the four portamento fixtures were

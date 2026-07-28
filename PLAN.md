@@ -2611,6 +2611,43 @@ The shape of the setting is what makes it safe, and
 four fixtures are held to the same bar as everything else now and pass. **A
 setting is not a reason to stop measuring the default.**
 
+#### Fine porta bypassed the pitch domain (2026-07-28) — the fifth slide site
+
+The `PitchDomain` refactor collapsed four scattered slide sites into domain
+calls. There was a fifth, in the extended-command switch rather than the
+portamento block, and it was still hardcoded:
+
+```dart
+case kExFinePortaUp:   pitch += _exVal * kPortaSemitonesPerUnit;
+case kExFinePortaDown: pitch -= _exVal * kPortaSemitonesPerUnit;
+```
+
+Always linear, whatever the format wanted — right for XM/IT, wrong for MOD/S3M.
+
+⚠️ **My recorded hypothesis for this gap was wrong, and the shape of the
+evidence said so.** PLAN had it down as "an S3M constant scale factor, since
+extra-fine has a quarter the step and a quarter the error". The real split was
+by DOMAIN: identical command, 1.000 in IT and 0.857 in S3M. Extra-fine merely
+looked closer because a quarter-sized step makes two curves diverge a quarter as
+much — which is equally consistent with a scale error and with a wrong domain,
+so it never distinguished them. The thing that did was noticing which FORMATS
+disagreed, not by how much.
+
+| fixture | before | after |
+| --- | --- | --- |
+| `fine_porta_down_EFx.s3m` | 0.857 | **1.000** |
+| `fine_porta_up_FFx.s3m` | 0.828 | **1.000** |
+| `extrafine_porta_down_EEx.s3m` | 0.987 / env 0.19 | **1.000 / env 0.94** |
+
+**MOD's own `E1x`/`E2x` were wrong too, and nothing said so** — there was no
+fixture for them. `fine_porta_up_E1x.mod` / `fine_porta_down_E2x.mod` exist now
+and both read 1.000. Held for 20 rows, not 8: a fine slide moves once per ROW,
+so a short run sits inside the references' own spread and proves nothing.
+
+**The rule this leaves behind:** if it moves `pitch`, it goes through `_domain`.
+Three exemptions retired; the only ones left are the four volume-column
+fixtures, whose cause is a semantics decision rather than a bug.
+
 #### The ladder — check each stage before trusting the next
 
 ✅ **X0 — Re-baseline every A/B gate against inter-reference agreement.** DONE,
