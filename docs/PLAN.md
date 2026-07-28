@@ -1478,6 +1478,39 @@ is recorded in [HISTORY.md](HISTORY.md).
   (a stall and a network error) with 202 notes already on disk, and both RESUMED from their
   transcripts rather than restarting.
 
+  **⭐ FIRST HARD SHIFT EVIDENCE — Becker p.62 no.36 (Es dur), 8 shifts with pitches.**
+  Found by a SCOUT-then-transcribe pass over three later pages (p.62 rich, p.74 middling,
+  p.86 poor) after pp.48–49 gave **229 digits and ZERO shifts** — the early Übungsstücke stay
+  in first position and cross strings instead of moving. Scouting was worth it: p.86 was the
+  densest and highest page and the *least* useful, because its figure repeats a four-note
+  group with one digit per group — one sustained position, not movement.
+  **The inference is airtight and independent of our model:** no.36 fingers its descending
+  stepwise runs `4 2 1 | 4 2 1`, and descending from finger 1 to finger 4 cannot be done
+  without moving the hand down the string. A string crossing is ruled out because the run
+  moves BY STEP (a crossing drops a fifth). And m13/m14 close the loophole — the same 1→4
+  descent happens inside the bar Becker labels **`IIᵃ`**, so he has told us the hand stays on
+  the D string. Plus `4` followed by `4` on a different notehead in four more bars.
+  • A second, single-purpose pass supplied the **pitch layer** the first reader had honestly
+  left blank (109 of 112 `null`, because half a space at the top of the staff is C4 vs D4).
+  **86 of 110 filled**; the contested `m7 n6` settled as **D4** by three heads against one
+  ledger line (two bisected = C4, one clearly above = D4). Without pitches the shifts were
+  unscoreable; with them they can be fed to the arranger.
+  • ⭐ **The two layers CONFIRM each other**: every printed `4 2 1` group is a real hand
+  frame — m1/m13 = A♭–B♭–C and E♭–F–G (the 1‑2‑4 **extension**), m5/m14 = D–E♭–F (the
+  ordinary frame). Independently-read digits and pitches agreeing is the strongest validation
+  this material can give.
+  ⚠⚠ **A SELF-CHECK GAVE A FALSE PASS, and that changes how much they are worth.** The first
+  reader reported "all 15 bars = 2/4, bar-sum PASS". The second found no.36 has **16** bars,
+  and that m4/m8/m16 end with a QUARTER note rather than sixteenths — so the first reading had
+  invented three noteheads per bar, and its own sum still passed, because it summed the notes
+  it believed in. **A self-check run by the reader who made the reading catches arithmetic
+  slips, never a consistent misreading.** Only a second reader does that. `CONVENTIONS.md` now
+  says so explicitly; the earlier framing of bar-summing as "the check that catches a missing
+  note" was too strong.
+  • Digit VALUES survived all three corrections untouched; only bar count, note durations and
+  digit-to-note alignment moved, and every change is listed in a `structural_corrections`
+  block in the json rather than silently applied.
+
   **Sources in hand:** Romberg *Violoncell-Schule* (the cleaner scan, 1400×1726
   engraving) — contents page maps the dense sections by PRINTED page: Finger-Uebungen
   17, Tonleitern 22, **Applicatur 31**, Stricharten 32, Vom Einsatz 47, Doppelgriffen
