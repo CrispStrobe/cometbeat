@@ -68,6 +68,10 @@ import 'package:comet_beat/features/sound_lab/my_samples_sheet.dart';
 import 'package:comet_beat/features/sound_lab/sample_clip_store.dart';
 import 'package:comet_beat/features/sound_lab/sample_extractor_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/keymap/intents.dart';
+import 'package:comet_beat/shared/keymap/keymap.dart';
+import 'package:comet_beat/shared/keymap/keymap_service.dart';
+import 'package:comet_beat/shared/keymap/keymap_sheet.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
     show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music/score_router.dart'
@@ -98,7 +102,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart'
-    show Clipboard, ClipboardData, KeyDownEvent, LogicalKeyboardKey;
+    show Clipboard, ClipboardData, HardwareKeyboard, KeyDownEvent;
 import 'package:provider/provider.dart';
 
 /// Test handle onto the running arranger.
@@ -363,6 +367,16 @@ const kDawClipEffectTypes = <DawClipEffectType>[
   DawClipEffectType.voiceRadio,
 ];
 
+/// WS-T3 — what the Audio Editor actually does, so its keymap sheet lists only
+/// shortcuts that work HERE. Listing ones that do nothing on this screen would
+/// be worse than listing none.
+const Set<AppIntent> kDawIntents = {
+  AppIntent.transportToggle,
+  AppIntent.editDelete,
+  AppIntent.editUndo,
+  AppIntent.editRedo,
+};
+
 class DawScreen extends StatefulWidget {
   const DawScreen({super.key});
 
@@ -415,6 +429,7 @@ class _DawScreenState extends State<DawScreen>
 
   @override
   void dispose() {
+    _keyFocus.dispose();
     _ticker.dispose();
     _positionMs.dispose();
     super.dispose();
@@ -4926,21 +4941,45 @@ class _DawScreenState extends State<DawScreen>
                     : '🎵';
   }
 
+  /// WS-T3 — the shared bindings, loaded once so a rebinding persists.
+  final KeymapService _keymap = KeymapService()..load();
+  final FocusNode _keyFocus = FocusNode(debugLabel: 'dawKeys');
+
   /// Desktop/web keyboard shortcuts for the transport: Space toggles play/stop,
   /// Delete/Backspace removes the selected clips. The DAW has no persistent text
   /// field on this surface, so intercepting these globally is safe.
   KeyEventResult _handleDawKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.space) {
-      _playing ? stop() : play();
-      return KeyEventResult.handled;
-    }
-    if ((key == LogicalKeyboardKey.delete ||
-            key == LogicalKeyboardKey.backspace) &&
-        _hasSelectedClips) {
-      _deleteSelectedClips();
-      return KeyEventResult.handled;
+    // WS-T3 — the same shared table the Tracker resolves through, so a
+    // rebinding made once applies on both surfaces. This screen handles the
+    // subset in `kDawIntents`; everything else falls through untouched, which
+    // is what lets one table serve three unlike surfaces.
+    final intent = _keymap.keymap.intentFor(
+      chordOf(event.logicalKey, HardwareKeyboard.instance),
+    );
+    switch (intent) {
+      case AppIntent.transportToggle:
+        _playing ? stop() : play();
+        return KeyEventResult.handled;
+      case AppIntent.editDelete:
+        // Unlike the Tracker's, this one is conditional: with nothing
+        // selected the key should stay available to whatever else wants it.
+        if (_hasSelectedClips) {
+          _deleteSelectedClips();
+          return KeyEventResult.handled;
+        }
+      case AppIntent.editUndo:
+        if (_daw.canUndo) {
+          undo();
+          return KeyEventResult.handled;
+        }
+      case AppIntent.editRedo:
+        if (_daw.canRedo) {
+          redo();
+          return KeyEventResult.handled;
+        }
+      default:
+        break;
     }
     return KeyEventResult.ignored;
   }
@@ -5085,6 +5124,10 @@ class _DawScreenState extends State<DawScreen>
     final daw = context.watch<DawService>(); // rebuild as clips are sent
 
     return Focus(
+      // An explicit node so it can be disposed with the screen — and so a test
+      // can claim it, since autofocus does not win against the route's focus
+      // scope in the test binding.
+      focusNode: _keyFocus,
       autofocus: true,
       onKeyEvent: _handleDawKey,
       child: Scaffold(
@@ -5211,6 +5254,19 @@ class _DawScreenState extends State<DawScreen>
                           onPressed: _busMenu,
                           icon: const Icon(Icons.call_merge),
                           label: const Text('Buses'),
+                        ),
+                        // WS-T3 — the keyboard reference. An unlisted shortcut
+                        // does not exist, and this screen's shortcuts have
+                        // never been written down anywhere.
+                        OutlinedButton.icon(
+                          onPressed: () => showKeymapSheet(
+                            context,
+                            keymap: _keymap.keymap,
+                            supported: kDawIntents,
+                            service: _keymap,
+                          ),
+                          icon: const Icon(Icons.keyboard),
+                          label: const Text('Keyboard'),
                         ),
                         // WS-A5 — the meter. Disabled with nothing to measure,
                         // rather than opening onto "Silence".

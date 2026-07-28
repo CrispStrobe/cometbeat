@@ -83,6 +83,10 @@ import 'package:comet_beat/features/workshop/model/score_document.dart'
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
+import 'package:comet_beat/shared/keymap/intents.dart';
+import 'package:comet_beat/shared/keymap/keymap.dart';
+import 'package:comet_beat/shared/keymap/keymap_service.dart';
+import 'package:comet_beat/shared/keymap/keymap_sheet.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
@@ -104,9 +108,19 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, HardwareKeyboard, KeyDownEvent;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// WS-T3 — what Loop Studio actually does, so its keymap sheet lists only
+/// shortcuts that work here.
+const Set<AppIntent> kLoopIntents = {
+  AppIntent.transportToggle,
+  AppIntent.transportStop,
+  AppIntent.editUndo,
+  AppIntent.editRedo,
+};
 
 class LoopMixerScreen extends StatefulWidget {
   const LoopMixerScreen({
@@ -615,6 +629,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   @override
   void dispose() {
+    _keyFocus.dispose();
     _ticker.dispose();
     _step.dispose();
     _progress.dispose();
@@ -3967,6 +3982,19 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           onPressed: hasBand ? _stopAll : null,
           visualDensity: VisualDensity.compact,
         ),
+        // WS-T3 — this screen has keyboard shortcuts for the first time, so it
+        // needs somewhere to say so.
+        IconButton(
+          icon: const Icon(Icons.keyboard),
+          tooltip: 'Keyboard',
+          onPressed: () => showKeymapSheet(
+            context,
+            keymap: _keymap.keymap,
+            supported: kLoopIntents,
+            service: _keymap,
+          ),
+          visualDensity: VisualDensity.compact,
+        ),
         vsep(),
         IconButton(
           icon: const Icon(Icons.undo),
@@ -5238,20 +5266,66 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       appBar: widget.showAppBar
           ? GameAppBar(title: l10n.gameLoopMixer, tutorial: loopMixerPrimer)
           : null,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 4, 0),
-              child: _actionBar(l10n),
-            ),
-            const Divider(height: 1),
-            Expanded(child: _mixerLayout(l10n)),
-          ],
+      // WS-T3 — Loop Studio had NO keyboard support at all, not even
+      // space-to-play. Hosting the shared table is what gives it one, and a
+      // rebinding made in the Tracker applies here without this screen knowing
+      // anything about bindings.
+      body: Focus(
+        // Explicit node: disposable with the screen, and claimable by a test
+        // (autofocus loses to the route's focus scope in the test binding).
+        focusNode: _keyFocus,
+        autofocus: true,
+        onKeyEvent: _onKey,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 4, 0),
+                child: _actionBar(l10n),
+              ),
+              const Divider(height: 1),
+              Expanded(child: _mixerLayout(l10n)),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  /// WS-T3 — Loop Studio's first keyboard support, resolved through the shared
+  /// table rather than its own `if` ladder. It handles the subset in
+  /// [kLoopIntents]; everything else falls through.
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final intent = _keymap.keymap.intentFor(
+      chordOf(event.logicalKey, HardwareKeyboard.instance),
+    );
+    switch (intent) {
+      case AppIntent.transportToggle:
+        _pauseOrResume();
+        return KeyEventResult.handled;
+      case AppIntent.transportStop:
+        _stopAll();
+        return KeyEventResult.handled;
+      case AppIntent.editUndo:
+        if (_canUndo) {
+          _undoEdit();
+          return KeyEventResult.handled;
+        }
+      case AppIntent.editRedo:
+        if (_canRedo) {
+          _redoEdit();
+          return KeyEventResult.handled;
+        }
+      default:
+        break;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// WS-T3 — the shared bindings, loaded once so a rebinding persists.
+  final KeymapService _keymap = KeymapService()..load();
+  final FocusNode _keyFocus = FocusNode(debugLabel: 'loopKeys');
 
   /// The area below the action bar: the track-lane content, with the "Sound &
   /// Feel" inspector docked on the right on wide screens (inline on narrow).

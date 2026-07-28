@@ -108,6 +108,8 @@ import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
 import 'package:comet_beat/shared/keymap/intents.dart';
 import 'package:comet_beat/shared/keymap/keymap.dart';
+import 'package:comet_beat/shared/keymap/keymap_service.dart';
+import 'package:comet_beat/shared/keymap/keymap_sheet.dart';
 import 'package:comet_beat/shared/music/music_picker.dart'
     show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
@@ -1887,7 +1889,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// WS-T3 — the shared binding table. A field rather than a constant so a
   /// user's rebindings can replace it without touching the dispatch below.
-  final Keymap _keymap = Keymap();
+  /// WS-T3 — the shared bindings, loaded once so a rebinding persists.
+  final KeymapService _keymapService = KeymapService()..load();
+  Keymap get _keymap => _keymapService.keymap;
+
+  /// Everything the Tracker handles — the full table, which is where these
+  /// bindings came from.
+  static final Set<AppIntent> kTrackerIntents = AppIntent.values.toSet()
+    ..remove(AppIntent.transportToggle);
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -4939,6 +4948,19 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
               icon: const Icon(Icons.redo),
               tooltip: l10n.workshopRedo,
               onPressed: _canRedo ? _redo : null,
+            ),
+            // WS-T3 — 33 bindings and, until now, no way to discover any of
+            // them: you either knew the FT2 conventions already or the whole
+            // feature was invisible.
+            IconButton(
+              icon: const Icon(Icons.keyboard),
+              tooltip: 'Keyboard',
+              onPressed: () => showKeymapSheet(
+                context,
+                keymap: _keymap,
+                supported: kTrackerIntents,
+                service: _keymapService,
+              ),
             ),
             IconButton(
               icon: Icon(_inspect ? Icons.search_off : Icons.search),

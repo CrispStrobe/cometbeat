@@ -968,24 +968,29 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **WS-T3 — steps 1 and 2 SHIPPED; step 3 (hosting +
-  the sheet) in progress.**
-  ✅ **Step 1 — the regression suite that did not exist** (`fe82aab3`):
-  `tracker_keymap_characterization_test` (13). Two harness traps recorded there
-  and worth inheriting: `pumpAndSettle` never completes on the tracker (it runs
-  a continuous ticker), and the grid's `autofocus: true` does NOT win against
-  the route's focus scope in a test — the tester seam's `moveCursor` is not the
-  tap handler that calls `requestFocus` in the app. Without claiming the node
-  directly **every key press is silently swallowed and the suite passes
-  vacuously**.
-  ✅ **Step 2 — the extraction** (`216e50fd`): `lib/shared/keymap/`
-  (`intents.dart` + `keymap.dart`); the tracker resolves a chord → intent and
-  dispatches on that. Behaviour-preserving — the characterization 13 and the
-  tracker's own 112 pass unchanged. `Space` is bound to `transportToggle` in the
-  defaults, which is what Loop Studio (0 keyboard sites) will gain by hosting.
-  ⬜ **Step 3, remaining:** host the table in the Audio Editor and Loop Studio,
-  persist rebindings, and ship the printable keymap sheet — *an unlisted
-  shortcut does not exist*. That is what unblocks **WS-A3** and **WS-L1**.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T3 COMPLETE: the keymap is
+  shared, hosted by three surfaces, rebindable and discoverable.**
+  `lib/shared/keymap/` (intents · table · service · sheet); hosted by the
+  Tracker, the Audio Editor and Loop Studio, each declaring the subset it
+  handles. **Loop Studio had no keyboard at all** — not even space-to-play — and
+  has one now purely by hosting the table.
+  ⚠️ **For anyone writing a keyboard test here — two traps that make one LIE:**
+  `pumpAndSettle` never completes on the tracker (continuous ticker), and a
+  screen's `autofocus: true` does NOT win against the route's focus scope in the
+  test binding, so every key press is silently swallowed and the suite passes
+  vacuously. Claim the FocusNode directly; the DAW and Loop `Focus` widgets now
+  carry explicit disposed nodes so a test can.
+  ⚠️ **The card's acceptance leaned on a regression suite that did not exist**
+  (zero `LogicalKeyboardKey` across every tracker test) — I wrote it first
+  (13 tests), then extracted; it and the tracker's own 112 pass unchanged.
+  Persistence stores only the DIFFERENCE from the defaults, so a later release
+  that improves a binding still reaches anyone who rebound something else.
+  Tests: `keymap_test` (18) · `keymap_hosting_test` (12) ·
+  `tracker_keymap_characterization_test` (13). Analyze clean; 260 tests green
+  across tracker/DAW/loop plus both broad smoke suites.
+  **➡️ This unblocks WS-A3 (Audio Editor keyboard) and WS-L1 (Loop Studio
+  keyboard) — both now about WHICH intents to handle, not plumbing. I am not
+  claiming either; they are pullable.**
   Previously: ✅ WS-A1 clip edge handles SHIPPED.
 · WS-A7 (clip warp) · WS-A5 (loudness
   view) — and the A/B/C/D/F ladder in the Audio Editor section.

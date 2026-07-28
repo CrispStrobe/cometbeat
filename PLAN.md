@@ -970,24 +970,42 @@ prefix.
 
 ### Phase 2 — the grammar (fixes S3; cheap, and every surface feels it)
 
-- ⬜ **WS-T3 — extract the keymap and make it shared + rebindable.** `M`
-  - **Goal.** The tracker's 33 `LogicalKeyboardKey` sites are the best
-    interaction work in the app and they are trapped in one file. The Audio
-    Editor has 4; Loop Studio has 0 — not even space-to-play.
-  - **Depends.** Nothing (WS-W3 makes it land better).
-  - **Files.** New `lib/shared/keymap/` (`intents.dart`, `keymap.dart`,
-    `keymap_sheet.dart`); source `advanced_tracker_screen.dart`.
-  - **Build.** Named intents (`transportToggle`, `blockCopy`, `transposeUp`,
-    `toggleFollow`, `nudgeLeft`, …) → a default binding table → a `Shortcuts`/
-    `Actions` wrapper any screen can host. Persist user rebindings. Ship a
-    **printable, discoverable keymap sheet** — an unlisted shortcut does not
-    exist.
-  - **Acceptance.** The tracker's existing keyboard behaviour is unchanged
-    (its tests are the regression suite); the same intent fires in the Audio
-    Editor and Loop Studio; a rebinding survives a restart.
-  - ⚠️ Extract **behaviour-preserving first**, add bindings second, in separate
-    commits — otherwise a tracker regression hides inside a feature diff.
-
+- ✅ **WS-T3 — the keymap is shared, hosted and rebindable — SHIPPED.**
+  `lib/shared/keymap/` = `intents.dart` (the verb) · `keymap.dart` (which chord
+  means it) · `keymap_service.dart` (the live one, persisted) ·
+  `keymap_sheet.dart` (the reference). Hosted by the **Tracker**, the **Audio
+  Editor** and **Loop Studio**, each declaring the subset it handles.
+  * ⚠️ **this card's acceptance was written against a regression suite that did
+    not exist.** "The tracker's existing keyboard behaviour is unchanged (its
+    tests are the regression suite)" — `LogicalKeyboardKey` and `KeyDownEvent`
+    appeared ZERO times across every tracker test, including the screen's own
+    78. So step one was to WRITE it
+    (`tracker_keymap_characterization_test`, 13), and only then extract. It
+    passes unchanged across the extraction, as do the tracker's own 112.
+  * ⚠️ **two harness traps, both of which make a keyboard test lie.**
+    `pumpAndSettle` never completes on the tracker (continuous ticker); and a
+    screen's `autofocus: true` does NOT win against the route's focus scope in
+    the test binding, so **every key press is silently swallowed and the suite
+    passes vacuously**. Claim the node directly. The DAW and Loop `Focus`
+    widgets now carry explicit, disposed `FocusNode`s for the same reason.
+  * **Loop Studio had no keyboard at all** — not even space-to-play. It has one
+    now purely by hosting the table, which is the clearest evidence the
+    extraction bought something rather than moving code.
+  * what stayed in each screen is the DISPATCH and the ORDER of the checks,
+    which is itself behaviour: block ops resolve before note entry, or Ctrl+C
+    types a C.
+  * **only the DIFFERENCE from the defaults is stored**, including defaults the
+    user removed. Storing the whole table would freeze today's bindings on their
+    device, so a later release that improves one would never reach anyone who
+    had opened the sheet. `fromJson` never throws — a keymap that will not load
+    would lock someone out of their own keyboard.
+  * the sheet lists only intents the CURRENT surface handles, and every chord
+    bound to each (Delete and Backspace both delete; showing one teaches half
+    the truth).
+  Tests: `keymap_test` (18) · `keymap_hosting_test` (12) ·
+  `tracker_keymap_characterization_test` (13).
+  **This unblocks WS-A3 and WS-L1**, which are now about which intents those
+  surfaces choose to handle, not about plumbing.
 - ⬜ **WS-L1 — keyboard support in Loop Studio.** `S` · Depends WS-T3.
   Space = play/stop, arrows = move the cell cursor, digits = velocity,
   Cmd/Ctrl+D = duplicate, Cmd/Ctrl+Z = undo. Acceptance: a widget test drives
