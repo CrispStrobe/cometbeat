@@ -1042,10 +1042,28 @@ prefix.
   looking clean on yours. Tests: `loudness_advice_test` (17, incl. a widget half
   — the door opens on real audio and reads it, and is disabled rather than
   opening onto "Silence").
-- ⬜ **WS-A7 — clip warp / follow the tempo map.** `M` · Depends WS-W2. Verified
-  absent (the only `warp` hits in `lib/` are `formant_shift.dart`'s spectral
-  envelope, unrelated). `TempoMap` now exists, so this is the clip flag plus a
-  render-time stretch factor — the last structural gap in the Audio Editor.
+- ✅ **WS-A7 — clip warp / follow the tempo map — SHIPPED.** `Clip.warp` +
+  `Clip.nativeBpm`, an optional `TempoMap` on both render entry points (**null =
+  the old behaviour, byte-identical**), a "Follow project tempo" toggle in the
+  clip inspector.
+  * **WSOLA, not a resampler.** Warp is a TIMING feature; resampling would have
+    been half the code and would transpose the loop, which is a different (and
+    wrong) feature. A test measures the pitch after warping.
+  * **it refuses rather than guesses.** Warp with no stated native tempo leaves
+    the audio alone, and so does an absurd factor (a 60 BPM loop declared at
+    240 is a mis-stated tempo, not a request for a 4× stretch). An invented
+    factor shifts the arrangement's timing invisibly, and the listener cannot
+    tell that from a mistake they made themselves.
+  * a clip spanning a tempo CHANGE gets one factor derived from the map's
+    real-time span, so the change is smeared inside the clip but its **end lands
+    exactly** — nothing after it drifts, which is the invariant that matters.
+  * a RECORDING is the case warp exists for and cannot know its own tempo, so
+    the toggle **asks**; a symbolic clip (drum/groove) already carries its grid
+    and just toggles. Cancelling does nothing at all.
+  * the **length calculation** warps too (computed, not stretched) — without it
+    a clip that warped longer would simply be truncated.
+  Tests: `daw_warp_test` (20, incl. windowed-vs-full byte-identity for a warped
+  clip and a widget half for all three toggle paths).
 - ⬜ **WS-A9 — the last DSP tier: a stretch-quality knob.** `M` — **narrowed to
   one item.** Band-limited SRC tiers and raw up/down-sample are built as
   `resampleHq` (`ResampleQuality{fast,good,best}`) and `resampleRaw` (`b2e2551d`,

@@ -653,23 +653,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-A7 — clip warp / follow the tempo
-  map.** Its dependency **WS-W2 shipped** (`fa7b3c15`), and `TempoMap` is mine
-  from D6, so this is the last structural gap in the Audio Editor and it is in
-  my lane. Plan: `Clip.warp` + `Clip.nativeBpm`, an optional `TempoMap` on the
-  two render entry points (**null = today's behaviour, byte-identical**), and
-  the stretch applied to the trimmed window via WSOLA so **pitch does not
-  change** — warp is a timing feature, not a pitch one.
-  ⚠️ The design call I will document: a clip spanning a tempo CHANGE gets one
-  factor derived from the map's real-time span, not a piecewise stretch. That
-  smears the change inside the clip but makes its END land exactly, so nothing
-  later drifts — which is the invariant that actually matters.
-  Touching `daw_timeline.dart` · `daw_project.dart` · `daw_service.dart` ·
-  `daw_screen.dart` (all my lane, additive). **⚠️ `daw_timeline.dart` is also
-  named by @daw-ux's replay work** — mine is a new optional param + two Clip
-  fields, no DSP dispatch moved, so it should not collide; shout if it does.
-  Previously: ✅ **DONE — WS-A5 loudness metering as a VIEW
-  shipped.** `core/audio/loudness_advice.dart` (pure, testable judgement) + a
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-A7 clip warp SHIPPED; the Audio
+  Editor's last structural gap is closed.** `Clip.warp`/`nativeBpm`, an optional
+  `TempoMap` on both render paths (null = byte-identical to before), WSOLA so
+  pitch does not move, and a "Follow project tempo" toggle that ASKS a recording
+  for its tempo (the case warp exists for) and reads a symbolic clip's own grid.
+  Refuses rather than guesses: no stated tempo, or an absurd factor, leaves the
+  audio alone. A clip crossing a tempo change ends exactly where the map says,
+  so nothing after it drifts. `daw_warp_test` (20). Touched
+  `daw_timeline.dart`/`daw_project.dart`/`daw_service.dart`/`daw_screen.dart`
+  additively — **@daw-ux: the `daw_timeline.dart` change is two `Clip` fields +
+  one optional render param + one private helper; no DSP dispatch moved.**
+  **Remaining in the Audio Editor: WS-A9 (time-stretch quality knob) only, and
+  it is unclaimed.**
+  Previously: WS-A5 loudness metering as a view. `core/audio/loudness_advice.dart` (pure, testable judgement) + a
   **Loudness** toolbar button and sheet in `daw_screen.dart`; measures the mix
   or the marked range, against a streaming/broadcast/none target. The
   substantive design call: the *judgement* is out of the widget, because the

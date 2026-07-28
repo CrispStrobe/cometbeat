@@ -459,6 +459,45 @@ class DawService extends ChangeNotifier {
   /// Move a clip along the timeline (drag-in-time). [startMs] is clamped to ≥ 0
   /// and snapped to [snapMs] when snapping is on. Consecutive moves of the same
   /// clip coalesce into a single undo entry.
+  /// WS-A7 — make this clip follow the project tempo (or stop).
+  ///
+  /// Setting [nativeBpm] is what makes warping mean anything: it is the tempo
+  /// the audio is IN. Turning warp on without one leaves the clip alone rather
+  /// than guessing — see [clipWarpFactor].
+  void setClipWarp(int track, int index, bool warp, {double? nativeBpm}) {
+    if (!_validClipTarget(track, index)) return;
+    final clips = timeline.tracks[track].clips;
+    final clip = clips[index];
+    if (clip.warp == warp &&
+        (nativeBpm == null || clip.nativeBpm == nativeBpm)) {
+      return;
+    }
+    _record();
+    clips[index] = clip.copyWith(warp: warp, nativeBpm: nativeBpm);
+    notifyListeners();
+  }
+
+  /// The tempo a clip's material is in, if it has said.
+  ///
+  /// Falls back to what the SOURCE knows: a drum pattern and a groove both
+  /// carry their own tempo, so a symbolic clip can answer this without anyone
+  /// typing a number.
+  double? clipNativeBpm(int track, int index) {
+    if (!_validClipTarget(track, index)) return null;
+    final clip = timeline.tracks[track].clips[index];
+    if (clip.nativeBpm != null) return clip.nativeBpm;
+    return switch (clip.source) {
+      DrumSource(:final timing) => timing.tempoBpm.toDouble(),
+      GrooveSource(:final spec) => spec.tempoBpm.toDouble(),
+      _ => null,
+    };
+  }
+
+  /// Whether this clip follows the project tempo.
+  bool clipWarps(int track, int index) =>
+      _validClipTarget(track, index) &&
+      timeline.tracks[track].clips[index].warp;
+
   /// D5 — how many takes a clip holds (1 when it has never been given an
   /// alternative).
   int takeCount(int track, int index) {
@@ -1286,6 +1325,9 @@ class DawService extends ChangeNotifier {
       DawTimeline(tracks: [DawTrack(clips: shifted)]),
       cache: _cache,
       limit: false,
+      // Merge BAKES, so a warped member is flattened at its warped length —
+      // consistent with what merge already does to fades and effects.
+      tempoMap: tempoMap,
     );
     if (stereo.left.isEmpty) return null;
     return Clip(
@@ -2681,9 +2723,12 @@ class DawService extends ChangeNotifier {
   /// Bake the whole arrangement to one mono PCM buffer (only changed clips
   /// re-render, thanks to the per-source cache).
   Float64List bake() => renderTimeline(timeline, cache: _cache);
+  // NB: the mono `renderTimeline` has no warp param — it folds the stereo
+  // render, so warping reaches it through `bakeStereo`'s path.
 
   /// Bake the arrangement as separate left/right channels for stereo export.
-  DawStereoMix bakeStereo() => renderTimelineStereo(timeline, cache: _cache);
+  DawStereoMix bakeStereo() =>
+      renderTimelineStereo(timeline, cache: _cache, tempoMap: tempoMap);
 
   /// Bake ONE lane on its own — a stem. Everything that lane carries applies
   /// (its clips' FX, its own track insert, its gain/pan); what's dropped is the
@@ -2712,6 +2757,9 @@ class DawService extends ChangeNotifier {
       _soloTimeline(track),
       cache: _cache,
       limit: false,
+      // A stem must warp exactly as the mix does, or an exported stem no longer
+      // lines up with the arrangement it came from.
+      tempoMap: tempoMap,
     );
   }
 

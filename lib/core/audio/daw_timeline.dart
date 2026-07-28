@@ -19,8 +19,11 @@ import 'dart:typed_data';
 import 'package:comet_beat/core/audio/crisp_dsp/modulated_delay.dart'
     show delayFx;
 import 'package:comet_beat/core/audio/crisp_dsp/reverb.dart' show reverbFx;
+import 'package:comet_beat/core/audio/crisp_dsp/time_stretch.dart'
+    show timeStretch, timeStretchStereo;
 import 'package:comet_beat/core/audio/crisp_dsp/voice_fx.dart'
     show VoiceEffect, applyVoiceEffect;
+import 'package:comet_beat/core/audio/daw_tempo_map.dart' show TempoMap;
 import 'package:comet_beat/core/audio/fx/fx_chain.dart';
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/tracker_engine.dart'
@@ -143,6 +146,8 @@ class Clip {
     this.effects = const [],
     this.gainAutomation = const [],
     this.groupId,
+    this.warp = false,
+    this.nativeBpm,
     this.takes = const [],
     this.takeIndex = 0,
     this.provenance,
@@ -172,6 +177,23 @@ class Clip {
   /// Ordered per-clip effect chain. Effects process the trimmed source audio
   /// before clip gain/fades and before the track insert.
   final List<DawClipEffect> effects;
+
+  /// WS-A7 — follow the project tempo instead of playing at the rate it was
+  /// recorded at.
+  ///
+  /// Off by default, and a clip with it off renders byte-for-byte as before:
+  /// warping is a claim about what a clip MEANS musically (it is N beats of
+  /// material, not N seconds of audio), and that claim is only true for
+  /// material that was played in time.
+  final bool warp;
+
+  /// The tempo this clip's audio is in, in BPM — what [warp] stretches FROM.
+  ///
+  /// Null means "not stated", and a warped clip with no native tempo is left
+  /// alone rather than guessed at: stretching by an invented factor would
+  /// silently detune the arrangement's timing, and there is no way for the
+  /// listener to tell that from a mistake they made.
+  final double? nativeBpm;
 
   /// D5 — the alternative takes this clip can play, INCLUDING the active one.
   ///
@@ -239,6 +261,8 @@ class Clip {
     List<DawClipEffect>? effects,
     List<DawAutomationPoint>? gainAutomation,
     int? groupId,
+    bool? warp,
+    double? nativeBpm,
     List<ClipSource>? takes,
     int? takeIndex,
     LicensedWork? provenance,
@@ -259,6 +283,8 @@ class Clip {
         effects: effects ?? this.effects,
         gainAutomation: gainAutomation ?? this.gainAutomation,
         groupId: groupId ?? this.groupId,
+        warp: warp ?? this.warp,
+        nativeBpm: nativeBpm ?? this.nativeBpm,
         takes: takes ?? this.takes,
         takeIndex: takeIndex ?? this.takeIndex,
         provenance: provenance ?? this.provenance,
@@ -484,11 +510,91 @@ class DawTimeline {
 /// true the summed mix is soft-limited (tanh) so overlapping clips can't hard-
 /// clip. Pass a persistent [cache] across renders so an edit re-bakes only the
 /// changed clips. Returns an empty buffer for a silent timeline.
+/// WS-A7 — how much to stretch a warped clip so it follows the project tempo.
+///
+/// Returns 1.0 (do nothing) whenever warping cannot be justified: the clip is
+/// not warped, there is no tempo map, or the clip never said what tempo it is
+/// in. Guessing a factor would silently shift the arrangement's timing, and a
+/// listener cannot tell that from a mistake they made themselves.
+///
+/// **A clip that spans a tempo CHANGE gets one factor, not a piecewise
+/// stretch.** The factor is derived from the real-time span the tempo map gives
+/// the clip's musical length, so the tempo change is smeared across the clip's
+/// interior but its END lands exactly where the map says it should — which
+/// means nothing after it drifts. That is the invariant worth protecting; a
+/// piecewise stretch would place the change exactly and cost a WSOLA seam at
+/// every tempo edit.
+double clipWarpFactor(
+  Clip clip,
+  TempoMap? tempoMap, {
+  required double sourceDurationMs,
+}) {
+  if (!clip.warp || tempoMap == null) return 1;
+  final native = clip.nativeBpm;
+  if (native == null || native <= 0) return 1;
+  if (sourceDurationMs <= 0) return 1;
+
+  // How long the material is in MUSICAL time, at the tempo it was played.
+  final beats = sourceDurationMs / (60000 / native);
+  if (beats <= 0) return 1;
+
+  // What the project says that many beats occupy, starting where the clip sits.
+  final startBeat = tempoMap.beatAtMs(clip.startMs);
+  final targetMs = tempoMap.msAtBeat(startBeat + beats) - clip.startMs;
+  if (targetMs <= 0) return 1;
+
+  return targetMs / sourceDurationMs;
+}
+
+/// Warp factors outside this range are refused. WSOLA degrades into obvious
+/// artefacts well before 4× either way, and a factor that extreme almost always
+/// means the stated native tempo is wrong (a 60 BPM loop declared at 240)
+/// rather than that someone wants a 4× stretch — so the honest response is to
+/// leave the audio alone rather than produce a mess and call it a feature.
+const double kMaxWarpFactor = 4.0;
+
+/// Whether [factor] is worth acting on: real, sane, and not a no-op.
+bool warpFactorIsUsable(double factor) =>
+    factor.isFinite &&
+    factor > 1 / kMaxWarpFactor &&
+    factor < kMaxWarpFactor &&
+    (factor - 1).abs() > 1e-6;
+
+/// Apply [clipWarpFactor] to a clip's trimmed window, if it is worth applying.
+///
+/// Shared by both render paths so they cannot disagree — they are pinned
+/// byte-identical, and a warp implemented twice is exactly how that pin breaks.
+({Float64List left, Float64List right}) _warpClip(
+  Clip clip,
+  Float64List pcm,
+  Float64List rightPcm, {
+  required bool isStereo,
+  required int sampleRate,
+  required TempoMap? tempoMap,
+}) {
+  final factor = clipWarpFactor(
+    clip,
+    tempoMap,
+    sourceDurationMs: pcm.length * 1000 / sampleRate,
+  );
+  if (!warpFactorIsUsable(factor)) return (left: pcm, right: rightPcm);
+  if (isStereo) {
+    final out =
+        timeStretchStereo(pcm, rightPcm, factor, sampleRate: sampleRate);
+    return (left: out.left, right: out.right);
+  }
+  final out = timeStretch(pcm, factor, sampleRate: sampleRate);
+  return (left: out, right: out);
+}
+
 DawStereoMix renderTimelineStereo(
   DawTimeline timeline, {
   int sampleRate = kDawSampleRate,
   Map<Object, Float64List>? cache,
   bool limit = true,
+  // WS-A7 — needed only to warp clips that ask to follow it. Null means no
+  // clip warps, which is what every caller predating this got.
+  TempoMap? tempoMap,
 }) {
   final store = cache ?? <Object, Float64List>{};
 
@@ -545,10 +651,22 @@ DawStereoMix renderTimelineStereo(
       final sourceRight = clip.source is StereoSampleSource
           ? (clip.source as StereoSampleSource).right
           : rendered;
-      final pcm = _trimView(rendered, clip, sampleRate);
-      final rightPcm = _trimView(sourceRight, clip, sampleRate);
+      var pcm = _trimView(rendered, clip, sampleRate);
+      var rightPcm = _trimView(sourceRight, clip, sampleRate);
       if (pcm.isEmpty) continue;
       final isStereo = clip.source is StereoSampleSource;
+      // WS-A7 — warp the TRIMMED window (that is the audio actually used), and
+      // before the effects, so an effect's delay time stays in real time.
+      final warped = _warpClip(
+        clip,
+        pcm,
+        rightPcm,
+        isStereo: isStereo,
+        sampleRate: sampleRate,
+        tempoMap: tempoMap,
+      );
+      pcm = warped.left;
+      rightPcm = warped.right;
       final effected = clip.effects.isEmpty
           ? (left: pcm, right: rightPcm)
           : isStereo
@@ -808,6 +926,9 @@ DawStereoMix renderTimelineWindowStereo(
   DawTimeline timeline, {
   required int fromSample,
   required int toSample,
+  // WS-A7 — must match the full render's, or the two stop being byte-identical
+  // for any warped clip.
+  TempoMap? tempoMap,
   int sampleRate = kDawSampleRate,
   Map<Object, Float64List>? cache,
   bool limit = true,
@@ -851,9 +972,22 @@ DawStereoMix renderTimelineWindowStereo(
       final isStereo = clip.source is StereoSampleSource;
       final sourceRight =
           isStereo ? (clip.source as StereoSampleSource).right : rendered;
-      final pcm = _trimView(rendered, clip, sampleRate);
-      final rightPcm = _trimView(sourceRight, clip, sampleRate);
-      if (pcm.isEmpty) continue;
+      final trimmedLeft = _trimView(rendered, clip, sampleRate);
+      final trimmedRight = _trimView(sourceRight, clip, sampleRate);
+      if (trimmedLeft.isEmpty) continue;
+      // WS-A7 — warp BEFORE the window test: a warped clip's length is not its
+      // trimmed length, so testing first would drop a clip that does reach the
+      // window (or keep one that no longer does).
+      final warped = _warpClip(
+        clip,
+        trimmedLeft,
+        trimmedRight,
+        isStereo: isStereo,
+        sampleRate: sampleRate,
+        tempoMap: tempoMap,
+      );
+      final pcm = warped.left;
+      final rightPcm = warped.right;
       // Skip clips that don't reach the window at all — the whole point.
       if (start + pcm.length <= from || start >= to) continue;
 
@@ -931,6 +1065,9 @@ int dawTimelineLengthSamples(
   DawTimeline timeline, {
   int sampleRate = kDawSampleRate,
   Map<Object, Float64List>? cache,
+  // WS-A7 — a warped clip's contribution is its WARPED length. Without this the
+  // render would be truncated for any clip that warps longer.
+  TempoMap? tempoMap,
 }) {
   final store = cache ?? <Object, Float64List>{};
   var total = 0;
@@ -948,7 +1085,17 @@ int dawTimelineLengthSamples(
       final pcm = _trimView(rendered, clip, sampleRate);
       if (pcm.isEmpty) continue;
       final start = (clip.startMs * sampleRate / 1000).round();
-      final end = start + pcm.length;
+      // Computed rather than stretched — the length is all that is wanted here,
+      // and WSOLA on every clip just to measure it would be absurd.
+      final factor = clipWarpFactor(
+        clip,
+        tempoMap,
+        sourceDurationMs: pcm.length * 1000 / sampleRate,
+      );
+      final length = warpFactorIsUsable(factor)
+          ? (pcm.length * factor).round()
+          : pcm.length;
+      final end = start + length;
       if (end > total) total = end;
     }
   }

@@ -107,6 +107,10 @@ String projectToJson(
                 if (clip.effects.isNotEmpty)
                   'effects': [for (final fx in clip.effects) fx.toJson()],
                 if (clip.groupId != null) 'groupId': clip.groupId,
+                // WS-A7 — written only when set, so an unwarped clip's file
+                // reads identically on a build that predates warping.
+                if (clip.warp) 'warp': true,
+                if (clip.nativeBpm != null) 'nativeBpm': clip.nativeBpm,
                 if (clip.gainAutomation.isNotEmpty)
                   'gainAutomation': [
                     for (final point in clip.gainAutomation) point.toJson(),
@@ -348,6 +352,10 @@ DawTimeline projectFromJson(
                   if (DawClipEffect.fromJson(fx) case final parsed?) parsed,
             ],
             groupId: c['groupId'] is num ? (c['groupId'] as num).toInt() : null,
+            warp: c['warp'] == true,
+            nativeBpm: c['nativeBpm'] is num
+                ? (c['nativeBpm'] as num).toDouble()
+                : null,
             takes: takes,
             takeIndex: takeIndex,
             gainAutomation: [

@@ -23,7 +23,8 @@ import 'package:comet_beat/core/audio/crisp_dsp/resample.dart';
 import 'package:comet_beat/core/audio/daw_edits.dart'
     show ClipStats, GeneratorShape, clipStatsOf;
 import 'package:comet_beat/core/audio/daw_sources.dart';
-import 'package:comet_beat/core/audio/daw_tempo_map.dart' show TempoMap;
+import 'package:comet_beat/core/audio/daw_tempo_map.dart'
+    show TempoMap, kMaxBpm, kMinBpm;
 import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/fx/fx_chain_codec.dart'
     show formatFxChain, fxChainStringIsLossless, parseFxChain;
@@ -802,6 +803,73 @@ class _DawScreenState extends State<DawScreen>
           ),
         ],
       );
+
+  /// WS-A7 — turn "follow the project tempo" on or off for one clip.
+  ///
+  /// A symbolic clip already knows the tempo it is in (a drum pattern carries
+  /// its grid), so it just toggles. A RECORDING cannot know, and that is the
+  /// case warping most exists for — so it asks, rather than hiding the feature
+  /// exactly where it is most wanted or guessing a number that would shift the
+  /// arrangement's timing invisibly.
+  Future<void> _toggleClipWarp(int track, int index) async {
+    if (_daw.clipWarps(track, index)) {
+      _daw.setClipWarp(track, index, false);
+      return;
+    }
+    var bpm = _daw.clipNativeBpm(track, index);
+    if (bpm == null) {
+      bpm = await _askNativeBpm();
+      if (bpm == null) return; // cancelled — do nothing at all
+    }
+    _daw.setClipWarp(track, index, true, nativeBpm: bpm);
+  }
+
+  /// Ask what tempo a recording was played at.
+  Future<double?> _askNativeBpm() async {
+    final controller = TextEditingController(text: _daw.bpm.round().toString());
+    return showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('What tempo is this clip in?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'The tempo it was played at. Following the project tempo '
+              'stretches it from there, without changing its pitch.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'BPM'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = double.tryParse(controller.text.trim());
+              // An unparseable or out-of-range tempo returns nothing rather
+              // than a clamped guess: the number IS the feature here.
+              Navigator.of(ctx).pop(
+                value != null && value >= kMinBpm && value <= kMaxBpm
+                    ? value
+                    : null,
+              );
+            },
+            child: Text(MaterialLocalizations.of(ctx).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// WS-A5 — measure the mix and say what the numbers MEAN.
   ///
@@ -4296,6 +4364,28 @@ class _DawScreenState extends State<DawScreen>
                           },
                           icon: const Icon(Icons.show_chart),
                           label: const Text('Clip envelope'),
+                        ),
+                        // WS-A7 — follow the project tempo. Offered only when
+                        // the clip can actually say what tempo it is IN:
+                        // without that there is nothing to warp FROM, and a
+                        // switch that silently does nothing is worse than an
+                        // absent one.
+                        TextButton.icon(
+                          onPressed: () async {
+                            Navigator.of(sheetCtx).pop();
+                            await _toggleClipWarp(track, index);
+                          },
+                          icon: Icon(
+                            _daw.clipWarps(track, index)
+                                ? Icons.link
+                                : Icons.link_off,
+                          ),
+                          label: Text(
+                            _daw.clipWarps(track, index)
+                                ? 'Following tempo '
+                                    '(${_daw.clipNativeBpm(track, index)?.round()} BPM)'
+                                : 'Follow project tempo',
+                          ),
                         ),
                         // D5 — the alternative takes. The count is on the
                         // label because which take is playing is otherwise
