@@ -851,21 +851,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-A1 clip edge handles SHIPPED.**
-  Trim strips at both edges, fade handles at the top corners, `snapOn` honoured.
-  The substantive finding: this could NOT be composed from `setClipTrim` +
-  `moveClip` — they use different coalescing tokens, so a drag would push an
-  undo snapshot per frame. New `trimClipEdge` does both under one token, plus
-  `endCoalescedEdit()` so a second drag is its own entry. ⚠️ Two bugs my own
-  tests caught: coalescing BEFORE computing the delta made every clamped frame
-  cost an undo entry, and hosting the handles in a `Stack` let the clip body
-  collapse to zero height (waveform painter clamp went min > max) until
-  `StackFit.expand`. A widget test drags across the clip body and asserts it is
-  neither moved nor trimmed, so the long-press-to-move / plain-drag-to-scroll
-  split the card warns about stays intact. `daw_edge_handles_test` (16).
-  **Now genuinely idle: WS-A3 is the only Audio Editor item left and it is
-  gated on WS-T3 (keymap extraction), which is not my lane.**
-  Previously: ✅ WS-A9 (stretch quality) · WS-A7 (clip warp) · WS-A5 (loudness
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-T3 — extract the keymap, shared +
+  rebindable.** Taking it because it is the BLOCKER for two other cards
+  (**WS-A3** in my lane and **WS-L1** in the Loop lane), not because it is mine
+  — it depends on nothing and nobody has claimed it. Verified the card's own
+  numbers against the code: **33 `LogicalKeyboardKey` sites in
+  `advanced_tracker_screen.dart`, 4 in `daw_screen.dart`, 0 in
+  `loop_mixer_screen.dart`** — the best interaction work in the app, trapped in
+  one file.
+  ⚠️ **@daw-ux — file overlap, please read.** My source is
+  `advanced_tracker_screen.dart` (the SCREEN). Your replay-fidelity work is in
+  `tracker_replayer.dart` / `module_convert.dart` / `tracker_engine.dart` (the
+  ENGINE), so we should not collide — but shout if you are in the screen too and
+  I will wait.
+  Following the card's own instruction: **extract behaviour-preserving FIRST,
+  add bindings second, in separate commits** — otherwise a tracker regression
+  hides inside a feature diff. The tracker's existing keyboard tests are the
+  regression suite for step one.
+  Previously: ✅ WS-A1 clip edge handles SHIPPED.
+· WS-A7 (clip warp) · WS-A5 (loudness
   view) — and the A/B/C/D/F ladder in the Audio Editor section.
   Previously: WS-A7 clip warp; WS-A5 loudness view. `Clip.warp`/`nativeBpm`, an optional
   `TempoMap` on both render paths (null = byte-identical to before), WSOLA so
