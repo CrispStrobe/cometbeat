@@ -25,6 +25,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart'
     show transcribeRecording;
+import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/bowed_arranger.dart'
     show BowedInstrument, BowedSkill;
@@ -35,8 +36,10 @@ import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/note_naming.dart';
+import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_gp_plan.dart'
@@ -497,6 +500,13 @@ class CompositionWorkshopScreen extends StatefulWidget {
 /// Typed window into the editor for widget tests.
 @visibleForTesting
 abstract interface class CompositionWorkshopTester {
+  /// WS-X1 — put this score in the project, re-open that track LIVE, and have
+  /// edits land back in it.
+  String? addToProject({String? name});
+  bool openProjectTrack(String trackId);
+  bool get hasLiveProjectLink;
+  bool writeBackToProject();
+
   int get noteCount;
   int get barCount;
   bool get hasSelection;
@@ -562,7 +572,11 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   // canvas/parts-strip below know there can be more than one part.
   // Seeded from an [initialScore] when one is passed (e.g. the Tracker → Workshop
   // handoff), else a blank document.
-  late final MultiPartDocument _mpd = widget.initialScore == null
+  // WS-X1: NOT `late final` — `openProjectTrack` replaces the whole document
+  // when a score track is opened live, the same way the Tracker and Tab
+  // reassign theirs. The lazy initializer still runs when nothing assigns
+  // first, so the seeded-from-`initialScore` path is unchanged.
+  late MultiPartDocument _mpd = widget.initialScore == null
       ? MultiPartDocument()
       : MultiPartDocument.fromMultiPartScore(
           widget.initialScore!,
@@ -848,6 +862,68 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final took = _dragId != null;
     _dragId = null; // don't leave a phantom drag in flight
     return took;
+  }
+
+  // --- WS-X1 live project links ---------------------------------------------
+
+  ProjectLink? _projectLink;
+  ProjectService? _projects;
+
+  ProjectLinker? get _linker {
+    final projects = _projects;
+    return projects == null ? null : ProjectLinker(projects);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    try {
+      _projects = Provider.of<ProjectService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _projects = null;
+    }
+  }
+
+  @override
+  String? addToProject({String? name}) {
+    final linker = _linker;
+    if (linker == null) return null;
+    final mp = _mpd.buildMultiPart();
+    final id = linker.add(
+      kind: AppMode.score,
+      document: mp,
+      name: name ?? 'Score',
+    );
+    _projectLink = ProjectLink(document: mp, trackId: id, live: true);
+    return id;
+  }
+
+  /// Opens a project track here. A SCORE track opens live — no conversion, no
+  /// copy; anything else is refused rather than silently converted, because a
+  /// conversion belongs behind the "Open in…" menu where its cost is shown.
+  @override
+  bool openProjectTrack(String trackId) {
+    final linker = _linker;
+    if (linker == null) return false;
+    final link = linker.open(trackId, AppMode.score);
+    final doc = link.document;
+    if (doc is! MultiPartScore) return false;
+    setState(() {
+      _mpd = MultiPartDocument.fromMultiPartScore(doc, autoClef: true);
+      _projectLink = link;
+    });
+    return true;
+  }
+
+  @override
+  bool get hasLiveProjectLink => _projectLink?.live ?? false;
+
+  @override
+  bool writeBackToProject() {
+    final linker = _linker;
+    final link = _projectLink;
+    if (linker == null || link == null) return false;
+    return linker.writeBack(link, _mpd.buildMultiPart());
   }
 
   @override

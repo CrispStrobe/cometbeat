@@ -12,8 +12,10 @@ import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show SampleInstrument;
+import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/composition/tab_arranger.dart'
     show TabArranger, TabPositionModel;
@@ -38,6 +40,62 @@ TabWorkshopTester _tab(WidgetTester tester) =>
         as TabWorkshopTester;
 
 void main() {
+  group('WS-X1 — Tab holds a live project link', () {
+    testWidgets('add, re-open live, edit, write back', (tester) async {
+      final projects = ProjectService();
+      await pumpGame(
+        tester,
+        const TabWorkshopScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<ProjectService>.value(value: projects),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final tab = _tab(tester);
+
+      final id = tab.addToProject(name: 'Riff');
+      expect(id, isNotNull);
+      expect(projects.tracks.single.kind, AppMode.tab);
+      expect(projects.tracks.single.name, 'Riff');
+      expect(tab.hasLiveProjectLink, isTrue);
+
+      // Re-opening the same track is LIVE: no conversion, no copy.
+      expect(tab.openProjectTrack(id!), isTrue);
+      await tester.pumpAndSettle();
+      expect(tab.hasLiveProjectLink, isTrue);
+
+      expect(tab.writeBackToProject(), isTrue);
+      expect(projects.track(id)!.document, isA<TabDocument>());
+    });
+
+    testWidgets('a TRACKER track is refused rather than silently converted',
+        (tester) async {
+      // A conversion belongs behind the "Open in…" menu, where its cost is
+      // shown before the user commits — not inside a project-track open.
+      final projects = ProjectService();
+      await pumpGame(
+        tester,
+        const TabWorkshopScreen(),
+        extraProviders: [
+          ChangeNotifierProvider<ProjectService>.value(value: projects),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final id = projects.addTrack(kind: AppMode.tracker, document: null);
+      expect(_tab(tester).openProjectTrack(id), isFalse);
+    });
+
+    testWidgets('with no project provided the screen still works',
+        (tester) async {
+      await pumpGame(tester, const TabWorkshopScreen());
+      await tester.pumpAndSettle();
+      final tab = _tab(tester);
+      expect(tab.addToProject(), isNull);
+      expect(tab.hasLiveProjectLink, isFalse);
+      expect(tab.writeBackToProject(), isFalse);
+    });
+  });
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     MelodyBridge.instance.clear();

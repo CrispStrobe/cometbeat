@@ -19,8 +19,10 @@ import 'package:comet_beat/core/audio/wav_io.dart'
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
     show fingerFrettings;
+import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
+import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/transcription_config_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
@@ -120,6 +122,13 @@ Score parseTabFile(String fileName, Uint8List bytes) {
 /// Test seam onto [TabWorkshopScreen]'s state — drives editing + file-open with
 /// injected bytes, and reads back what's shown, without the platform picker.
 abstract class TabWorkshopTester {
+  /// WS-X1 — put this tab in the project, re-open that track LIVE, and have
+  /// edits land back in it.
+  String? addToProject({String? name});
+  bool openProjectTrack(String trackId);
+  bool get hasLiveProjectLink;
+  bool writeBackToProject();
+
   Future<void> openScoreFile({String? pickedName, Uint8List? pickedBytes});
 
   /// Transcribe a mono WAV recording into editable tab on the active track (via
@@ -388,6 +397,66 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
 
   /// The document being edited — the active track's.
   TabDocument get _doc => _tracks[_active].doc;
+
+  // --- WS-X1 live project links ---------------------------------------------
+
+  /// The project track this screen is editing live, if any.
+  ProjectLink? _projectLink;
+  ProjectService? _projects;
+
+  ProjectLinker? get _linker {
+    final projects = _projects;
+    return projects == null ? null : ProjectLinker(projects);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    try {
+      _projects = Provider.of<ProjectService>(context, listen: false);
+    } on ProviderNotFoundException {
+      _projects = null;
+    }
+  }
+
+  @override
+  String? addToProject({String? name}) {
+    final linker = _linker;
+    if (linker == null) return null;
+    final doc = _doc;
+    final id =
+        linker.add(kind: AppMode.tab, document: doc, name: name ?? 'Tab');
+    _projectLink = ProjectLink(document: doc, trackId: id, live: true);
+    return id;
+  }
+
+  /// Opens a project track here. A TAB track opens live — no conversion, no
+  /// copy; anything else is refused rather than silently converted, because a
+  /// conversion belongs behind the "Open in…" menu where its cost is shown.
+  @override
+  bool openProjectTrack(String trackId) {
+    final linker = _linker;
+    if (linker == null) return false;
+    final link = linker.open(trackId, AppMode.tab);
+    final doc = link.document;
+    if (doc is! TabDocument) return false;
+    setState(() {
+      _tracks[_active].doc = doc;
+      _projectLink = link;
+    });
+    return true;
+  }
+
+  @override
+  bool get hasLiveProjectLink => _projectLink?.live ?? false;
+
+  @override
+  bool writeBackToProject() {
+    final linker = _linker;
+    final link = _projectLink;
+    if (linker == null || link == null) return false;
+    return linker.writeBack(link, _doc);
+  }
 
   int _capo = 0;
   bool _showTab = true;
@@ -1620,6 +1689,9 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
           // open would convert the user's work and then drop it.
           OpenInMenu(
             from: AppMode.tab,
+            // WS-X1 — when this screen holds a live project track, every other
+            // target is honestly a copy, and the menu now says so.
+            liveKind: hasLiveProjectLink ? AppMode.tab : null,
             targets: const [AppMode.tracker, AppMode.score],
             tuning: _doc.tuning,
             capo: _capo,
