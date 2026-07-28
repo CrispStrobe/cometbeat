@@ -89,6 +89,7 @@ import 'package:comet_beat/shared/keymap/keymap_service.dart';
 import 'package:comet_beat/shared/keymap/keymap_sheet.dart';
 import 'package:comet_beat/shared/music_io/audio_export.dart';
 import 'package:comet_beat/shared/music_io/audio_import.dart';
+import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart';
 import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
@@ -2056,7 +2057,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
       case 'musicxml':
         await _exportMusicXml();
       case 'export':
-        _exportGroove();
+        await _exportDoor();
       case 'tracker':
         unawaited(_openInTracker());
       case 'workshop':
@@ -2104,6 +2105,53 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final parts = grooveParts(_engine, nameOf: (id) => _trackLabel(l10n, id));
     if (parts == null) return null;
     return multiPartToMusicXml(parts.score, partNames: parts.partNames);
+  }
+
+  /// WS-X6 — one export door for Loop Studio.
+  ///
+  /// Everything this screen can hand out was scattered across a flat menu:
+  /// notation under "export", audio under "wav", and the **share code** — the
+  /// thing people here actually pass to each other — under "copy", where
+  /// nothing suggested it was a way of getting the music out at all.
+  /// Test seam: open the WS-X6 export door. The menu that hosts it is a
+  /// PopupMenu, which a widget test cannot drive without the route.
+  @visibleForTesting
+  Future<void> debugOpenExportDoor() => _exportDoor();
+
+  Future<void> _exportDoor() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    await showExportSheet(
+      context,
+      options: [
+        ExportOption(
+          kind: ExportKind.audio,
+          label: 'Sound file',
+          detail: 'The loop, rendered',
+          run: _saveWav,
+        ),
+        ExportOption(
+          kind: ExportKind.symbolic,
+          label: 'Notes (MusicXML, MIDI, PDF…)',
+          run: () async => _exportGroove(),
+          // Drums are unpitched, so a beat-only groove has no score — the same
+          // honest refusal the Audio Editor makes.
+          enabled: hasPitchedTrack,
+          disabledReason: 'Only drums so far — there are no pitched notes yet',
+        ),
+        ExportOption(
+          kind: ExportKind.share,
+          label: 'Copy the share code',
+          detail: 'A short code someone else can paste in',
+          run: () async {
+            await Clipboard.setData(ClipboardData(text: grooveToken));
+            messenger.showSnackBar(
+              SnackBar(content: Text(l10n.loopMixerCodeCopied)),
+            );
+          },
+        ),
+      ],
+    );
   }
 
   /// Export the groove's notation to any format (the shared music-export sheet).

@@ -12,6 +12,7 @@
 // that is unavailable has to explain itself, because a greyed-out row with no
 // reason reads as a bug rather than as a fact about the project.
 
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -20,7 +21,9 @@ import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum;
 import 'package:comet_beat/core/services/daw_service.dart';
+import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/daw_screen.dart';
+import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -220,6 +223,69 @@ void main() {
       await tester.tap(find.byIcon(Icons.download));
       await tester.pumpAndSettle();
       expect(find.textContaining('written as notes'), findsOneWidget);
+    });
+  });
+
+  group('the door reaches the other surfaces too', () {
+    // The point of finishing this rather than leaving it on one screen: a
+    // shared door wired into a single place is exactly the "two separate
+    // doors" problem it was built to fix.
+
+    testWidgets('the Tracker groups its five exports by kind', (tester) async {
+      // They were five sibling rows in a flat menu, so the difference between
+      // "a sound file", "the notes" and "a tracker module" was something you
+      // had to already know.
+      await pumpGame(tester, const AdvancedTrackerScreen());
+      await tester.pump();
+      final state = tester.state<State<AdvancedTrackerScreen>>(
+        find.byType(AdvancedTrackerScreen),
+      );
+      unawaited((state as dynamic).debugOpenExportDoor() as Future<void>);
+      // Explicit pumps, never pumpAndSettle: these screens run continuous
+      // tickers so settling never completes.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Sound'), findsOneWidget);
+      expect(find.text('Notes'), findsOneWidget);
+      // The module export is the format this editor is native to and it sat
+      // unremarked between MusicXML and audio.
+      expect(find.textContaining('Tracker module'), findsOneWidget);
+    });
+
+    testWidgets('Loop Studio offers its SHARE CODE as an export',
+        (tester) async {
+      // The thing people here actually pass to each other lived under "copy",
+      // where nothing suggested it was a way of getting the music out.
+      await pumpGame(tester, const LoopMixerScreen());
+      await tester.pump();
+      final state = tester.state<State<LoopMixerScreen>>(
+        find.byType(LoopMixerScreen),
+      );
+      unawaited((state as dynamic).debugOpenExportDoor() as Future<void>);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Share'), findsOneWidget);
+      expect(find.textContaining('share code'), findsOneWidget);
+    });
+
+    testWidgets('a drums-only groove says why notation is unavailable',
+        (tester) async {
+      // Drums are unpitched, so there is no score — the same honest refusal
+      // the Audio Editor makes, rather than an empty file.
+      await pumpGame(tester, const LoopMixerScreen());
+      await tester.pump();
+      final game = tester.state<State<LoopMixerScreen>>(
+        find.byType(LoopMixerScreen),
+      ) as LoopMixerTester;
+      game.toggleTrack('drums');
+      await tester.pump();
+
+      unawaited((game as dynamic).debugOpenExportDoor() as Future<void>);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.textContaining('no pitched notes'), findsOneWidget);
     });
   });
 }

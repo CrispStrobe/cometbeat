@@ -1184,9 +1184,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   Six `daw_screen_test` cases correctly failed on the re-routed button and were
   updated to go through the door. `export_sheet_test` (8); 113 green across
   export/DAW/keyboard/interop + both smoke suites; analyze clean.
-  ⬜ **Left for anyone (cheap):** the same door for Tracker / Loop / Workshop —
-  each is a list of `ExportOption`s over builders that already exist, plus Loop's
-  `KU1.` share token, which currently appears in no export UI.
+  ✅ **Finished across the Tracker and Loop Studio too** — leaving a shared door
+  wired into ONE screen would have been the exact problem it was built to fix.
+  The Tracker's five sibling rows are one door (its **module** export, the format
+  it is native to, sat unremarked between MusicXML and audio); Loop's **share
+  code** was under "copy" and is now an export in its own right.
+  ⚠️ **I walked into the trap I had just documented:** `pumpAndSettle` after
+  opening a sheet on the Tracker/Loop hangs forever — continuous tickers. Two
+  test runs timed out at 10 minutes before I recognised my own note. Use
+  explicit pumps. Both screens gained a `debugOpenExportDoor` seam, since a
+  PopupMenu cannot be driven from a widget test without the route.
+  ⬜ **Left for anyone:** the Workshop, which uses `music_export` directly.
   Previously: ✅ **WS-A3 SHIPPED · WS-L1 stood down to @loop-d1d4.
   ✅ **WS-A3** — split (Ctrl+S) · trim to range (Ctrl+T) · nudge (`,`/`.`) ·
   marker jump (`[`/`]`) · mute/solo (M/S), through the shared keymap. Every verb

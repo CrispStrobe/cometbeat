@@ -1498,10 +1498,16 @@ prefix.
     button and now go through the door — a real behaviour change, acknowledged
     rather than papered over.
   Tests: `export_sheet_test` (8).
-  ⬜ **Remaining, and cheap:** the same door for the Tracker, Loop Studio and
-  the Workshop — each is a list of `ExportOption`s over builders they already
-  have. Share tokens (Loop's `KU1.`) belong there too; the Audio Editor has none
-  to offer, so it declares none.
+  ✅ **Now on three surfaces.** The **Tracker**'s five sibling menu rows (audio ·
+  module · MusicXML · MIDI · ABC) became one door — the **module** export in
+  particular is the format that editor is native to and it sat unremarked
+  between MusicXML and audio. **Loop Studio**'s went the same way, and its
+  **share code** — the thing people there actually pass to each other — was
+  under "copy", where nothing suggested it was a way of getting the music out;
+  it is now an export in its own right. A drums-only groove refuses notation
+  with a reason, exactly as the Audio Editor does.
+  ⬜ **Left: the Workshop**, which uses `music_export` directly and would be one
+  more list of `ExportOption`s.
 - ⬜ **WS-W7 — session ⇄ arrangement.** `L` · Depends WS-W1, WS-W5, WS-L3.
   Loop Studio's
   scenes are already a session grid and the Audio Editor is already a linear

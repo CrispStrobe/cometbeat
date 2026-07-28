@@ -114,6 +114,7 @@ import 'package:comet_beat/shared/music/music_picker.dart'
     show showMusicPickerWithLicense;
 import 'package:comet_beat/shared/music_io/audio_export.dart'
     show showAudioExportSheet;
+import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
@@ -4360,6 +4361,53 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     );
   }
 
+  /// WS-X6 — one export door for the Tracker.
+  ///
+  /// A tracker song can leave as five quite different things, and they were
+  /// five sibling rows in one flat menu. The MODULE export in particular is the
+  /// format this editor is native to, and it sat between "MusicXML" and "audio"
+  /// with nothing to say it was different in kind.
+  /// Test seam: open the WS-X6 export door. The menu that hosts it is a
+  /// PopupMenu, which a widget test cannot drive without the route.
+  @visibleForTesting
+  Future<void> debugOpenExportDoor() => _exportDoor();
+
+  Future<void> _exportDoor() async {
+    await showExportSheet(
+      context,
+      options: [
+        ExportOption(
+          kind: ExportKind.audio,
+          label: 'Sound file',
+          detail: 'The whole song, rendered',
+          run: _exportAudio,
+        ),
+        ExportOption(
+          kind: ExportKind.symbolic,
+          label: 'Tracker module',
+          detail: '.mod · .xm · .it · .s3m — what other trackers read',
+          run: () async => _pickModuleFormat(),
+        ),
+        ExportOption(
+          kind: ExportKind.symbolic,
+          label: 'MusicXML',
+          detail: 'For notation programs',
+          run: _exportMusicXml,
+        ),
+        ExportOption(
+          kind: ExportKind.symbolic,
+          label: 'MIDI',
+          run: _exportMidi,
+        ),
+        ExportOption(
+          kind: ExportKind.symbolic,
+          label: 'ABC',
+          run: _exportAbc,
+        ),
+      ],
+    );
+  }
+
   /// Render the whole song and offer it as WAV or MP3 (pure-Dart, web-safe).
   Future<void> _exportAudio() async {
     if (!await _licenseGate() || !mounted) return;
@@ -5030,16 +5078,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     _loadSong();
                   case 'saveSong':
                     _saveToSongBook();
-                  case 'exportMidi':
-                    _exportMidi();
-                  case 'exportXml':
-                    _exportMusicXml();
-                  case 'exportAbc':
-                    _exportAbc();
-                  case 'exportModule':
-                    _pickModuleFormat();
-                  case 'exportAudio':
-                    _exportAudio();
+                  case 'exportDoor':
+                    _exportDoor();
                   case 'daw':
                     sendToDaw();
                   case 'shareBeat':
@@ -5093,19 +5133,12 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   Icons.download_outlined,
                   l10n.trackerLoadSong,
                 ),
-                _menuRow('exportMidi', Icons.piano, l10n.trackerExportMidi),
-                _menuRow('exportXml', Icons.description, l10n.trackerExportXml),
-                _menuRow(
-                  'exportAbc',
-                  Icons.text_snippet_outlined,
-                  l10n.trackerExportAbc,
-                ),
-                _menuRow(
-                  'exportModule',
-                  Icons.grid_on,
-                  l10n.trackerExportModule,
-                ),
-                _menuRow('exportAudio', Icons.download, l10n.audioExportTitle),
+                // WS-X6 — one export door. These were five sibling rows in a
+                // flat menu, so the difference between "a sound file", "the
+                // notes" and "a tracker module" was something you had to
+                // already know. The door groups them by what you are trying to
+                // do; nothing was removed.
+                _menuRow('exportDoor', Icons.download, l10n.audioExportTitle),
                 _menuRow('daw', Icons.library_add, l10n.dawSend),
                 _menuSection(l10n.trackerMenuShareSend),
                 _menuRow('shareBeat', Icons.upload, l10n.beatShare),
