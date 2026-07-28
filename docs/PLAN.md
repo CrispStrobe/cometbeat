@@ -408,6 +408,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-L5` — copy a PATTERN.** Branch
+  `feature/mixer-d1d4`. Claim pushed BEFORE any code.
+  **Why this, and not W5/W6/X3/T6.** Re-audited by heat again: over 8 hours
+  `tracker_replayer.dart` took 7 commits, `daw_screen.dart` 6, `daw_service` 4,
+  `daw_timeline`/`daw_project` 3 each. **WS-W5** is explicitly "a
+  generalization of `daw_screen.dart`'s `_busMixerMatrix`/`_levelMeter`", i.e.
+  the hottest file in the repo; **WS-X3**'s remaining fifth is the Audio Editor;
+  **WS-T6** is the tracker. All three are live workers' files. WS-W6 (browser)
+  is cold-ish but is a large new panel whose payoff (drag onto a surface) waits
+  on WS-X1/X2, which do not exist.
+  **Resolving the ambiguity I flagged last round.** I narrowed WS-L5 to "only
+  the PATTERN half is open" and said it needed a product decision, because a
+  "pattern" here is either an authored variant (data, not editable per slot) or
+  a `_cellOverrides`/`_drumOverrides` entry that REPLACES whichever variant is
+  active — so "copy A to B" has no B to copy *into*. Taking the second reading
+  of my own note: **the feature is "copy this track's pattern onto that
+  track"**, which needs no new model, no editable variant slots and no schema
+  change. That is also the workflow the original card wanted — "copy A to B,
+  change one thing" — one level up from the section copy that already ships.
+  ⚠️ **The trap the card warns about, in its pattern form:** `setTrackCells`
+  copies its list (`List.of`) but `setTrackDrums` stores the
+  `DrumRowsPattern` **object**, so handing it the source's pattern would ALIAS
+  the two tracks and editing one would silently edit the other. Same aliasing
+  bug that bit the track copy, one level down.
+  **Files:** `loop_engine.dart` + `loop_mixer_screen.dart`, both cold (their
+  only commits in 8 hours are mine). — opus
+
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L10` audio tracks in the Loop
   Studio.** `M`, depends WS-W1 (shipped by me). Branch `feature/mixer-d1d4`.
   Claim pushed BEFORE any code.

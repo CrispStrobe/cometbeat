@@ -1042,7 +1042,8 @@ prefix.
 > `addEmptyTrack`/`renameTrack` + the role-add row · per-track swing =
 > `trackSwings`. Six of the ten Loop items closed in one arc.
 
-- ⬜ **WS-L5 — duplicate a PATTERN.** `S`→`M` — **narrowed twice.** The first
+- 🚧 **WS-L5 — copy a PATTERN.** `S` · **CLAIMED 2026-07-28 by opus
+  (loop-d1d4)** — **narrowed twice, then resolved.** The first
   pass said "`duplicateSection` shipped, so the section half is done;
   duplicating a scene or a single pattern still has no route." Re-audited
   2026-07-28 (loop-d1d4): **a section IS a `GrooveScene`** — `_scenes` is
