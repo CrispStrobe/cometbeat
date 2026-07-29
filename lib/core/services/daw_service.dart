@@ -21,6 +21,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/licensing/license_obligations.dart';
+import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:crisp_notation_core/crisp_notation_core.dart'
     show MultiPartScore;
 import 'package:flutter/foundation.dart';
@@ -29,6 +30,11 @@ typedef DawClipTarget = ({int track, int index});
 typedef DawClipCopy = ({int track, Clip clip});
 
 class DawService extends ChangeNotifier {
+  /// WS-W4 — pass a shared [UndoService] to put this surface's edits into one
+  /// cross-surface history. Omit it and the Audio Editor keeps a private one,
+  /// which is exactly the behaviour every existing caller and test had.
+  DawService({UndoService? history}) : history = history ?? UndoService();
+
   /// The arrangement — starts with two empty named lanes.
   final DawTimeline timeline = DawTimeline(
     tracks: [DawTrack(name: 'A'), DawTrack(name: 'B')],
@@ -50,20 +56,59 @@ class DawService extends ChangeNotifier {
   // Each discrete edit snapshots the arrangement first. Clips are immutable
   // (replaced, never mutated in place) so a snapshot shares Clip instances — a
   // deep copy of the *structure* (tracks + clip lists) is enough.
-  final List<_Snapshot> _undo = [];
-  final List<_Snapshot> _redo = [];
-  static const int _maxUndo = 50;
+  /// WS-W4 — the history this surface pushes into.
+  ///
+  /// Injected so the Audio Editor's edits can join ONE cross-surface history;
+  /// its own private one by default, so every existing caller and test behaves
+  /// exactly as before. Per the card, this changes **who owns the stack**, not
+  /// how state is captured: `_capture`/`_restore` are untouched, because
+  /// re-implementing them would be a rewrite wearing a refactor's clothes.
+  final UndoService history;
+
+  /// This surface's slice of the shared history, so `undoScope` can rewind the
+  /// Audio Editor without touching another surface's unrelated work.
+  static const String kUndoScope = 'audio';
+
+  /// Kept as the documented cap for this surface; `UndoService` defaults to
+  /// the same 50, so the fold-in changes nothing a user can observe.
+  static const int maxUndo = 50;
 
   // Consecutive edits sharing a token (a clip drag, a gain-slider sweep)
   // coalesce into one undo entry. Any discrete edit or undo/redo resets it.
   Object? _coalesceToken;
 
   // Snapshot only when a coalescing run starts (the token changes).
-  void _coalesced(Object token) {
+  //
+  // NB: still pushed once per RUN rather than once per frame, even though
+  // `UndoService` would coalesce a per-frame push itself. Pushing every frame
+  // and merging would be equivalent in the end state and would churn the
+  // history's listeners sixty times a second for nothing.
+  void _coalesced(Object token, [String? label]) {
     if (_coalesceToken != token) {
-      _pushUndo();
+      _pushUndo(label ?? _labelForToken(token));
       _coalesceToken = token;
     }
+  }
+
+  /// A user-facing name for a coalescing run, derived from its token.
+  ///
+  /// The tokens already say what the gesture is — `('trimEdge', …)`,
+  /// `('move', …)` — so the label comes free rather than from editing ninety-odd
+  /// call sites, which is exactly the churn this card warns against.
+  static String _labelForToken(Object token) {
+    final name = token is Record
+        ? '$token'.split(',').first.replaceAll(RegExp(r"[('\s]"), '')
+        : '$token';
+    return switch (name) {
+      'move' => 'Move clip',
+      'trim' => 'Trim clip',
+      'trimEdge' => 'Trim clip',
+      'fade' => 'Fade',
+      'gain' => 'Gain',
+      'pan' => 'Pan',
+      'width' => 'Width',
+      _ => 'Edit',
+    };
   }
 
   _Snapshot _capture() => _Snapshot(
@@ -109,38 +154,50 @@ class DawService extends ChangeNotifier {
     _nextStartMs = s.nextStartMs;
   }
 
-  void _pushUndo() {
-    _undo.add(_capture());
-    if (_undo.length > _maxUndo) _undo.removeAt(0);
-    _redo.clear();
+  void _pushUndo([String label = 'Edit']) {
+    final before = _capture();
+    // The state AFTER the edit is not knowable here — `_pushUndo` runs before
+    // the edit does — so redo captures it at undo time, which is precisely what
+    // the old `_redo.add(_capture())` did.
+    _Snapshot? after;
+    history.push(
+      UndoEntry(
+        label: label,
+        scope: kUndoScope,
+        coalesceKey: _coalesceToken,
+        undo: () {
+          after = _capture();
+          _restore(before);
+          _coalesceToken = null;
+          notifyListeners();
+        },
+        redo: () {
+          if (after == null) return;
+          _restore(after!);
+          _coalesceToken = null;
+          notifyListeners();
+        },
+      ),
+    );
   }
 
   // A discrete edit: snapshot + break any move-coalescing run.
-  void _record() {
-    _pushUndo();
+  void _record([String label = 'Edit']) {
+    _pushUndo(label);
     _coalesceToken = null;
   }
 
-  /// Whether there is anything to undo / redo.
-  bool get canUndo => _undo.isNotEmpty;
-  bool get canRedo => _redo.isNotEmpty;
+  /// Whether there is anything to undo / redo IN THIS SURFACE.
+  ///
+  /// Scoped deliberately: a shared history may hold another surface's edits,
+  /// and the Audio Editor's own undo button must not offer to rewind them.
+  bool get canUndo => history.canUndoScope(kUndoScope);
+  bool get canRedo => history.canRedoScope(kUndoScope);
 
-  /// Step back / forward through edits.
-  void undo() {
-    if (_undo.isEmpty) return;
-    _redo.add(_capture());
-    _restore(_undo.removeLast());
-    _coalesceToken = null;
-    notifyListeners();
-  }
+  /// Step back / forward through THIS surface's edits.
+  void undo() => history.undoScope(kUndoScope);
 
-  void redo() {
-    if (_redo.isEmpty) return;
-    _undo.add(_capture());
-    _restore(_redo.removeLast());
-    _coalesceToken = null;
-    notifyListeners();
-  }
+  void redo() => history.redoScope(kUndoScope);
 
   /// Total clips across all tracks.
   int get clipCount => timeline.tracks.fold(0, (n, t) => n + t.clips.length);
@@ -2932,8 +2989,10 @@ class DawService extends ChangeNotifier {
       ..clear()
       ..addAll(warm);
     _peaks.clear();
-    _undo.clear();
-    _redo.clear();
+    // Scoped: opening a project here must not wipe another surface's history.
+    // Its closures captured state that is going away, which is exactly what
+    // `clearScope` is for.
+    history.clearScope(kUndoScope);
     _coalesceToken = null;
     _nextStartMs = 0;
     notifyListeners();

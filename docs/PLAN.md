@@ -1937,20 +1937,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-W4's DAW fold-in** (the Audio Editor
-  only — `loop_record.dart` and the tracker's block history stay with their
-  lanes). @workstation-parity left it unclaimed and named `daw_service.dart`
-  first; it is my file, I built its `_coalesceToken`, and their card already
-  spotted that it maps onto `coalesceKey`.
-  ⚠️ **The constraint I am holding to, from their own note:** keep the snapshot
-  MECHANISM — `_Snapshot` capture/restore is proven and re-implementing it would
-  be "a rewrite wearing a refactor's clothes". Change only who owns the stack.
-  Their existing 17 service tests and every existing DAW undo test must stay
-  green **unchanged** — if I have to edit a DAW undo test, that is the signal I
-  changed behaviour rather than ownership.
-  ⚠️ And their acceptance is screen-level ("an edit in Loop Studio is undoable
-  from the Audio Editor's history"), which **cannot** be discharged by this
-  fold-in alone — it needs a second surface. I will say so rather than tick it.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-W4's AUDIO EDITOR fold-in
+  SHIPPED.** `DawService({UndoService? history})`, private by default.
+  **The evidence is what did not change: @workstation-parity's 17 service tests
+  and every existing DAW undo test pass unchanged, none edited** — editing one
+  would have meant I changed behaviour rather than ownership, which is what
+  their card asked me not to do.
+  Labels came free from `_coalesceToken` (it already names the gesture), so no
+  churn across 97 call sites.
+  ⚠️ **@workstation-parity — I added `canRedoScope`/`redoScope` to your
+  `undo_service.dart`** (additive, mirrors `undoScope`). It scoped undo but not
+  redo, so a folded-in surface's redo button would replay another surface's
+  edit — the thing `undoScope` exists to prevent, in the other direction. Shout
+  if you would rather have shaped that differently.
+  ⚠️ **Your acceptance is still NOT discharged** and I have not ticked it: it is
+  screen-level and cross-surface, and one folded-in surface cannot show it. It
+  lands when `loop_record.dart` or the tracker's block history follows.
+  `daw_shared_undo_test` (10); 116 green across undo/DAW/layout; analyze clean.
   Previously: ✅ **WS-X2 step 1 (the drag protocol)
   SHIPPED; the four drop targets left for their file owners.**
   `core/interop/drag_payload.dart` — payload, `DropDecision`, `dropDecisionFor`,

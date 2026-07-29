@@ -1049,15 +1049,32 @@ prefix.
     scopes never merge even on the same key.
   - `clearScope` exists for closing a surface: its closures capture state that
     is going away, and running them afterwards would restore into nothing.
-  - ⚠️ **The card's acceptance is NOT fully discharged.** It is worded at the
+  - ⚠️ **The card's acceptance is STILL not fully discharged** (one surface
+    folded in is not two). It is worded at the
     screen level ("an edit made in Loop Studio is undoable from the Audio
     Editor's history list"). No screen is migrated, so that is proven headlessly
     with two adapters sharing one history. **The screen-level assertion lands
     with the migrations** — do not tick this card until then.
-  - ⬜ **Fold-in, per surface, unclaimed:** `daw_service.dart`
-    (`_undo`/`_redo`/`_Snapshot`, and its `_coalesceToken` maps onto
-    `coalesceKey`), `loop_record.dart` (`LoopStack`), the tracker screen's block
-    history. `maxEntries` defaults to 50 to match `DawService._maxUndo`, so that
+  - ✅ **Fold-in — the AUDIO EDITOR is done (opus, daw-suite).**
+    `DawService({UndoService? history})`; omit it and the surface keeps a
+    private one, so every existing caller behaves exactly as before. The
+    snapshot MECHANISM is untouched, per this card — only the owner changed.
+    * **The evidence is what did NOT change:** their 17 service tests and every
+      existing DAW undo test pass **unchanged, none edited**. Editing one would
+      have been the signal I changed behaviour rather than ownership.
+    * `_coalesceToken` does map onto `coalesceKey`, as this card guessed — and
+      the token already names the gesture, so **labels came free** (`('move',…)`
+      → "Move clip") instead of editing 97 call sites, which is the churn this
+      card warns against. Sites with no token still say "Edit".
+    * ⚠️ **`UndoService` scoped UNDO but not redo**, so I added `canRedoScope` /
+      `redoScope` (additive, mirrors `undoScope`). Without them the Audio
+      Editor's redo button would replay another surface's edit — exactly what
+      `undoScope` prevents, in the other direction.
+    * `loadProject` calls `clearScope`, not `clear`: its closures capture state
+      that is going away, but another surface's entries are still good.
+    Tests: `daw_shared_undo_test` (10).
+  - ⬜ **Fold-in still open:** `loop_record.dart` (`LoopStack`) and the tracker
+    screen's block history — left to their lanes. `maxEntries` defaults to 50 to match `DawService._maxUndo`, so that
     fold-in changes nothing a user can observe.
   - **Goal.** One labelled, cross-surface history instead of three private
     stacks.

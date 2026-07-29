@@ -165,6 +165,27 @@ class UndoService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether one scope has anything to redo.
+  ///
+  /// ⚠️ Added by @daw-suite during the Audio Editor fold-in: the service scoped
+  /// UNDO but not redo, and a surface needs both or its redo button offers to
+  /// replay another surface's edit — the exact thing `undoScope` exists to
+  /// prevent, in the other direction.
+  bool canRedoScope(String scope) => _future.any((e) => e.scope == scope);
+
+  /// Redoes the most recent undone edit **of one scope**.
+  ///
+  /// Returns whether anything was redone, mirroring [undoScope].
+  bool redoScope(String scope) {
+    final index = _future.lastIndexWhere((e) => e.scope == scope);
+    if (index < 0) return false;
+    final entry = _future.removeAt(index);
+    entry.redo();
+    _past.add(entry);
+    notifyListeners();
+    return true;
+  }
+
   /// Forgets everything — opening a different project, not an edit.
   void clear() {
     if (_past.isEmpty && _future.isEmpty) return;
