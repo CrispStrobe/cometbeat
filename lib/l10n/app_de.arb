@@ -3050,4 +3050,9 @@
   "primerBeatHighwayKeys": "Du kannst die Pads antippen oder die Zahlentasten 1 bis 5 benutzen \u2014 die Zahl steht auf jedem Pad.",
   "primerBeatHighwayLadder": "Fang oben in der Liste an: nur Bass und Snare, langsam. Hi-Hats kommen erst, wenn die beiden sitzen, und jeden Groove kannst du noch langsamer stellen.",
   "trackerPads": "Pads",
-  "trackerPadsHint": "Spiele Noten mit den Fingern. Bei eingeschalteter Live-Aufnahme landen sie am Abspielkopf — ein Akkord verteilt sich auf die nächsten Kanäle."}
+  "trackerPadsHint": "Spiele Noten mit den Fingern. Bei eingeschalteter Live-Aufnahme landen sie am Abspielkopf — ein Akkord verteilt sich auf die nächsten Kanäle.",
+  "highwayPractiseThese": "Zum \u00dcben",
+  "highwayMissedTimes": "{name} ({count}\u00d7)",
+  "@highwayMissedTimes": {"placeholders": {"name": {"type": "String"}, "count": {"type": "int"}}},
+  "highwayNothingMissed": "Du hast keinen einzigen verpasst."
+}

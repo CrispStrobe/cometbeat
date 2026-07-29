@@ -647,15 +647,79 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
         _mode == HighwayMode.play &&
         _loopBars == null &&
         (_grader?.total ?? 0) > 0) {
-      return GameResultView(
-        gameType: widget.gameId,
-        score: _grader!.hits,
-        starScore: _starScore,
-        onRestart: _start,
+      return Column(
+        children: [
+          Expanded(
+            child: GameResultView(
+              gameType: widget.gameId,
+              score: _grader!.hits,
+              starScore: _starScore,
+              onRestart: _start,
+            ),
+          ),
+          _practiceSummary(context, l, _grader!),
+        ],
       );
     }
     if (!_running) return _setup(context, l);
     return _playing(context, l);
+  }
+
+  /// What to work on next. Stars say how it went; this says what to DO about
+  /// it, which is the only part a learner can act on. The same misses already
+  /// went to spaced repetition — this is that fact made visible at the moment
+  /// it is relevant, instead of surfacing days later in Review.
+  Widget _practiceSummary(
+    BuildContext context,
+    AppLocalizations l,
+    HighwayGrader grader,
+  ) {
+    final naming = context.read<SettingsService>().noteNaming;
+    final counts = <String, int>{};
+    for (final note in grader.notes) {
+      if (note.state != HighwayNoteState.missed) continue;
+      if (!grader.isGraded(note.event)) continue;
+      final String name;
+      if (_instrument == HighwayInstrument.drums) {
+        final lane = note.event.lane;
+        if (lane == null || lane >= kHighwayDrumLanes.length) continue;
+        name = kHighwayDrumLanes[lane].name;
+      } else {
+        final midi = note.event.midi;
+        if (midi == null) continue;
+        name = spelledMidiNameWith(l, naming, midi);
+      }
+      counts[name] = (counts[name] ?? 0) + 1;
+    }
+
+    final worst = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            worst.isEmpty ? l.highwayNothingMissed : l.highwayPractiseThese,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          if (worst.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                // Three is enough to act on; a list of everything missed is a
+                // report, not advice.
+                for (final e in worst.take(3))
+                  Chip(label: Text(l.highwayMissedTimes(e.key, e.value))),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   // --- setup -----------------------------------------------------------------

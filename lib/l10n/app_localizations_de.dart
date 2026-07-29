@@ -9088,4 +9088,15 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get trackerPadsHint =>
       'Spiele Noten mit den Fingern. Bei eingeschalteter Live-Aufnahme landen sie am Abspielkopf — ein Akkord verteilt sich auf die nächsten Kanäle.';
+
+  @override
+  String get highwayPractiseThese => 'Zum Üben';
+
+  @override
+  String highwayMissedTimes(String name, int count) {
+    return '$name ($count×)';
+  }
+
+  @override
+  String get highwayNothingMissed => 'Du hast keinen einzigen verpasst.';
 }

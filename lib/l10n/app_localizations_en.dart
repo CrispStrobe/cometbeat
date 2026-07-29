@@ -9036,4 +9036,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get trackerPadsHint =>
       'Play notes with your fingers. While live record is on they land at the playhead — a chord spreads across the next channels.';
+
+  @override
+  String get highwayPractiseThese => 'Worth practising';
+
+  @override
+  String highwayMissedTimes(String name, int count) {
+    return '$name ($count×)';
+  }
+
+  @override
+  String get highwayNothingMissed => 'You did not miss a single one.';
 }

@@ -105,7 +105,7 @@ The renderer takes lane coordinates in a unit space and projects them:
 * `perspective` — the same lanes as a receding trapezoid, blocks scaled and
   motion eased toward a vanishing point, hit line near the bottom edge. This is
   the whole of the "arcade look": **same data, one matrix**. Optional
-  glow/particle layer on hit, behind a `reduceMotion` setting.
+  glow/particle layer on hit.
 
 Both projections must be exercised by the same golden tests.
 
@@ -272,7 +272,7 @@ Each slice is independently shippable and ends green (`dart format` →
   fret/finger captions, fretboard rail, chord-grip block groups, strum/bow
   arrows. Guitar first, cello and bass reuse it.
 * **S4 — Arcade skin.** `perspective` projection, `ButtonLaneMap`, pad rail,
-  hit feedback layer behind `reduceMotion`; `DrumLaneMap` on the same rails.
+  hit feedback layer; `DrumLaneMap` on the same rails.
 * **S5 — Depth.** Polyphonic mic grading (transcription tier, model-gated),
   accessibility pass (colour-blind-safe lanes, note names, high contrast,
   reduced motion), skins, performance → Workshop take, curriculum placement.
@@ -379,7 +379,18 @@ shapes claiming the ukulele, whose lowest string is C4).
     otherwise one long note hammers the grader with something already answered.
   ⚠ It is honestly monophonic and says so in the UI: a chord is credited for
   whichever note is heard, and the piano's two hands cannot both be graded this
-  way. Polyphonic grading needs the transcription backend and is still open.
+  way.
+* **Polyphonic grading is NOT possible live, and this is now a measured fact
+  rather than a to-do.** I checked the backend before promising it: the piano
+  transcriber (`transcription/piano.dart`, Kong's onset/offset regression) runs
+  on **10-second segments with a 5-second hop** behind a ~99 MB model, and its
+  post-processing works over a whole segment. Nothing in that can answer "was
+  this chord played within ±0.2 of a beat". So the item is closed as infeasible
+  in that form. What the backend's batch shape DOES support is a different
+  feature — **record the run, transcribe it afterwards, and show the take
+  against the score** ("here is what you actually played"). That is a real
+  slice and it is NOT built; it is written down here so nobody re-opens the
+  live version and discovers the 10-second window the hard way.
 * ~~No loop-a-section.~~ **DONE 2026-07-29.** A range slider picks the bars to
   drill; the clock returns to the start of the section and re-arms it, so every
   pass is graded like the first. `HighwayChart.section` does NOT re-zero the

@@ -3472,4 +3472,9 @@
   "primerBeatHighwayKeys": "You can tap the pads, or use the number keys 1 to 5 \u2014 the number is written on each pad.",
   "primerBeatHighwayLadder": "Start at the top of the list: kick and snare only, slowly. Hats do not appear until you have those two, and you can slow any groove down further.",
   "trackerPads": "Pads",
-  "trackerPadsHint": "Play notes with your fingers. While live record is on they land at the playhead — a chord spreads across the next channels."}
+  "trackerPadsHint": "Play notes with your fingers. While live record is on they land at the playhead — a chord spreads across the next channels.",
+  "highwayPractiseThese": "Worth practising",
+  "highwayMissedTimes": "{name} ({count}\u00d7)",
+  "@highwayMissedTimes": {"placeholders": {"name": {"type": "String"}, "count": {"type": "int"}}},
+  "highwayNothingMissed": "You did not miss a single one."
+}

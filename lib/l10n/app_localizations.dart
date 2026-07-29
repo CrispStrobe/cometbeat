@@ -16411,6 +16411,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Play notes with your fingers. While live record is on they land at the playhead — a chord spreads across the next channels.'**
   String get trackerPadsHint;
+
+  /// No description provided for @highwayPractiseThese.
+  ///
+  /// In en, this message translates to:
+  /// **'Worth practising'**
+  String get highwayPractiseThese;
+
+  /// No description provided for @highwayMissedTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} ({count}×)'**
+  String highwayMissedTimes(String name, int count);
+
+  /// No description provided for @highwayNothingMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'You did not miss a single one.'**
+  String get highwayNothingMissed;
 }
 
 class _AppLocalizationsDelegate

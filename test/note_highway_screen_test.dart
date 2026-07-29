@@ -366,6 +366,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the result says what to practise, not just how it went',
+      (tester) async {
+    // Two notes, both of them the same pitch, both missed: the summary must
+    // name that pitch and count it twice.
+    const twice = HighwayChart(
+      name: 'twice',
+      bpm: 240,
+      events: [
+        HighwayEvent(startBeat: 0, beats: 1, midi: 60),
+        HighwayEvent(startBeat: 1, beats: 1, midi: 60),
+        HighwayEvent(startBeat: 2, beats: 1, midi: 67),
+      ],
+    );
+    await tester.pumpWidget(
+      _app(
+        const NoteHighwayScreen(gameId: 'note_highway_piano', chart: twice),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _tapStart(tester);
+    await tester.pump();
+    for (var i = 0; i < 45; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pumpAndSettle();
+
+    expect(find.text('Worth practising'), findsOneWidget);
+    expect(find.textContaining('(2×)'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('every instrument × skin × projection paints', (tester) async {
     for (final instrument in HighwayInstrument.values) {
       final profile = HighwayInstrumentProfile.of(instrument);
