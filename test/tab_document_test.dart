@@ -1316,4 +1316,66 @@ void main() {
       expect(writeGpFromGpif(gpif).sublist(0, 2), [0x50, 0x4B]);
     });
   });
+
+  group('barres round-trip through the document', () {
+    // ⚠ This is the SAME loss the GP readers had, one layer up: crisp_notation
+    // can now import a barre, but if TabDocument does not carry it, opening a
+    // Guitar Pro file in the Tab Editor drops it again — and the fix in the
+    // library would look like it worked.
+
+    TabDocument doc(TabColumn col) =>
+        TabDocument(tuning: Tuning.standardGuitar, columns: [col]);
+
+    test('a barre reaches the Score as a TabBarre', () {
+      final score = doc(
+        const TabColumn(
+          frets: {5: 3, 4: 5, 3: 5, 2: 4, 1: 3, 0: 3},
+          barreFret: 3,
+        ),
+      ).toScore();
+      expect(score.tabBarres, hasLength(1));
+      expect(score.tabBarres.single.fret, 3);
+    });
+
+    test('and comes back when the Score is loaded', () {
+      final original = doc(
+        const TabColumn(
+          frets: {5: 3, 4: 5, 3: 5},
+          barreFret: 3,
+          barreString: 1,
+        ),
+      );
+      final back = TabDocument.fromScore(
+        original.toScore(),
+        Tuning.standardGuitar,
+      );
+      expect(back.columns.first.barreFret, 3);
+      expect(
+        back.columns.first.barreString,
+        1,
+        reason: "GP's own string value must survive unchanged",
+      );
+    });
+
+    test('a column with no barre gains none', () {
+      final back = TabDocument.fromScore(
+        doc(const TabColumn(frets: {5: 3})).toScore(),
+        Tuning.standardGuitar,
+      );
+      expect(back.columns.first.barreFret, isNull);
+    });
+
+    test('copy() carries the barre — undo must not silently drop it', () {
+      const col = TabColumn(frets: {5: 3}, barreFret: 7, barreString: 2);
+      final c = col.copy();
+      expect(c.barreFret, 7);
+      expect(c.barreString, 2);
+    });
+
+    test('copyWith can clear a barre as distinct from leaving it alone', () {
+      const col = TabColumn(frets: {5: 3}, barreFret: 7);
+      expect(col.copyWith(barreFret: null).barreFret, isNull);
+      expect(col.copyWith().barreFret, 7);
+    });
+  });
 }

@@ -146,6 +146,18 @@ class TabColumn {
   /// entry per pitch (pitch order). Maps to `NoteElement.fingerings`.
   final List<int>? leftFingers;
 
+  /// A BARRE held for this chord: the fret one finger lies across, or null.
+  ///
+  /// ⚠ A distinct fact from [leftFingers], not a summary of it. A barre chord's
+  /// digits already read 1,1,1 — that says three fingers at one fret, which is
+  /// not what a barre is. Guitar Pro states the barre separately and so do we;
+  /// maps to `TabBarre` in `toScore`, which engraves as `CIII` over the chord.
+  final int? barreFret;
+
+  /// Guitar Pro's `BarreString` value, carried through unchanged so a GP file
+  /// round-trips. Not reinterpreted here — see `TabBarre.lowestString`.
+  final int? barreString;
+
   /// Right-hand fingering (B10): p/i/m/a/c → `TabFingering(id, finger)`.
   final RightHandFinger? rightFinger;
 
@@ -185,6 +197,8 @@ class TabColumn {
     this.arpeggio,
     this.pickStroke,
     this.leftFingers,
+    this.barreFret,
+    this.barreString,
     this.rightFinger,
     this.dynamic,
     this.hairpin,
@@ -223,71 +237,74 @@ class TabColumn {
     Object? arpeggio = _unset,
     Object? pickStroke = _unset,
     Object? leftFingers = _unset,
+    Object? barreFret = _unset,
+    Object? barreString = _unset,
     Object? rightFinger = _unset,
     Object? dynamic = _unset,
     Object? hairpin = _unset,
-  }) =>
-      TabColumn(
-        frets: frets ?? this.frets,
-        duration: duration ?? this.duration,
-        techniques: techniques ?? this.techniques,
-        chord: chord == _unset ? this.chord : chord as ChordDiagram?,
-        tieToNext: tieToNext ?? this.tieToNext,
-        tuplet: tuplet == _unset ? this.tuplet : tuplet as (int, int)?,
-        startRepeat: startRepeat ?? this.startRepeat,
-        endRepeat: endRepeat ?? this.endRepeat,
-        volta: volta == _unset ? this.volta : volta as int?,
-        navigation: navigation == _unset
-            ? this.navigation
-            : navigation as NavigationMark?,
-        section: section == _unset ? this.section : section as String?,
-        tempoChange:
-            tempoChange == _unset ? this.tempoChange : tempoChange as double?,
-        bend: bend == _unset ? this.bend : bend as List<BendPoint>?,
-        whammy: whammy == _unset ? this.whammy : whammy as List<BendPoint>?,
-        slide: slide == _unset ? this.slide : slide as SlideInOut?,
-        tap: tap ?? this.tap,
-        harmonic:
-            harmonic == _unset ? this.harmonic : harmonic as TabNoteStyle?,
-        palmMute: palmMute ?? this.palmMute,
-        letRing: letRing ?? this.letRing,
-        articulations: articulations ?? this.articulations,
-        ornament: ornament == _unset ? this.ornament : ornament as Ornament?,
-        tremolo: tremolo == _unset ? this.tremolo : tremolo as int?,
-        graceMidis:
-            graceMidis == _unset ? this.graceMidis : graceMidis as List<int>?,
-        graceStyle: graceStyle ?? this.graceStyle,
-        arpeggio: arpeggio == _unset ? this.arpeggio : arpeggio as Arpeggio?,
-        pickStroke:
-            pickStroke == _unset ? this.pickStroke : pickStroke as bool?,
-        leftFingers: leftFingers == _unset
-            ? this.leftFingers
-            : leftFingers as List<int>?,
-        rightFinger: rightFinger == _unset
-            ? this.rightFinger
-            : rightFinger as RightHandFinger?,
-        dynamic: dynamic == _unset ? this.dynamic : dynamic as DynamicLevel?,
-        hairpin: hairpin == _unset ? this.hairpin : hairpin as HairpinType?,
-      );
+  }) => TabColumn(
+    frets: frets ?? this.frets,
+    duration: duration ?? this.duration,
+    techniques: techniques ?? this.techniques,
+    chord: chord == _unset ? this.chord : chord as ChordDiagram?,
+    tieToNext: tieToNext ?? this.tieToNext,
+    tuplet: tuplet == _unset ? this.tuplet : tuplet as (int, int)?,
+    startRepeat: startRepeat ?? this.startRepeat,
+    endRepeat: endRepeat ?? this.endRepeat,
+    volta: volta == _unset ? this.volta : volta as int?,
+    navigation: navigation == _unset
+        ? this.navigation
+        : navigation as NavigationMark?,
+    section: section == _unset ? this.section : section as String?,
+    tempoChange: tempoChange == _unset
+        ? this.tempoChange
+        : tempoChange as double?,
+    bend: bend == _unset ? this.bend : bend as List<BendPoint>?,
+    whammy: whammy == _unset ? this.whammy : whammy as List<BendPoint>?,
+    slide: slide == _unset ? this.slide : slide as SlideInOut?,
+    tap: tap ?? this.tap,
+    harmonic: harmonic == _unset ? this.harmonic : harmonic as TabNoteStyle?,
+    palmMute: palmMute ?? this.palmMute,
+    letRing: letRing ?? this.letRing,
+    articulations: articulations ?? this.articulations,
+    ornament: ornament == _unset ? this.ornament : ornament as Ornament?,
+    tremolo: tremolo == _unset ? this.tremolo : tremolo as int?,
+    graceMidis: graceMidis == _unset
+        ? this.graceMidis
+        : graceMidis as List<int>?,
+    graceStyle: graceStyle ?? this.graceStyle,
+    arpeggio: arpeggio == _unset ? this.arpeggio : arpeggio as Arpeggio?,
+    pickStroke: pickStroke == _unset ? this.pickStroke : pickStroke as bool?,
+    leftFingers: leftFingers == _unset
+        ? this.leftFingers
+        : leftFingers as List<int>?,
+    barreFret: barreFret == _unset ? this.barreFret : barreFret as int?,
+    barreString: barreString == _unset ? this.barreString : barreString as int?,
+    rightFinger: rightFinger == _unset
+        ? this.rightFinger
+        : rightFinger as RightHandFinger?,
+    dynamic: dynamic == _unset ? this.dynamic : dynamic as DynamicLevel?,
+    hairpin: hairpin == _unset ? this.hairpin : hairpin as HairpinType?,
+  );
 
   TabColumn withFret(int string, int fret) =>
       copyWith(frets: {...frets, string: fret});
 
   TabColumn withoutString(int string) => copyWith(
-        frets: {
-          for (final e in frets.entries)
-            if (e.key != string) e.key: e.value,
-        },
-      );
+    frets: {
+      for (final e in frets.entries)
+        if (e.key != string) e.key: e.value,
+    },
+  );
 
   TabColumn withDuration(NoteDuration d) => copyWith(duration: d);
 
   /// Adds [t] if absent, else removes it.
   TabColumn toggleTechnique(TabTechnique t) => copyWith(
-        techniques: techniques.contains(t)
-            ? ({...techniques}..remove(t))
-            : {...techniques, t},
-      );
+    techniques: techniques.contains(t)
+        ? ({...techniques}..remove(t))
+        : {...techniques, t},
+  );
 
   /// Sets (or clears, when null) this column's chord diagram.
   TabColumn withChord(ChordDiagram? c) => copyWith(chord: c);
@@ -337,10 +354,10 @@ class TabColumn {
 
   /// Adds [a] if absent, else removes it (B6).
   TabColumn toggleArticulation(Articulation a) => copyWith(
-        articulations: articulations.contains(a)
-            ? ({...articulations}..remove(a))
-            : {...articulations, a},
-      );
+    articulations: articulations.contains(a)
+        ? ({...articulations}..remove(a))
+        : {...articulations, a},
+  );
 
   /// Sets (or clears, when null) this column's ornament (B7).
   TabColumn withOrnament(Ornament? o) => copyWith(ornament: o);
@@ -352,8 +369,7 @@ class TabColumn {
   TabColumn withGrace(
     List<int>? midis, {
     GraceStyle style = GraceStyle.acciaccatura,
-  }) =>
-      copyWith(graceMidis: midis, graceStyle: style);
+  }) => copyWith(graceMidis: midis, graceStyle: style);
 
   /// Sets (or clears, when null) this column's strum/arpeggio direction (B9).
   TabColumn withArpeggio(Arpeggio? a) => copyWith(arpeggio: a);
@@ -376,14 +392,16 @@ class TabColumn {
 
   /// A deep copy (fresh mutable collections) — for duplicating columns.
   TabColumn copy() => copyWith(
-        frets: {...frets},
-        techniques: {...techniques},
-        articulations: {...articulations},
-        bend: bend == null ? null : [...bend!],
-        whammy: whammy == null ? null : [...whammy!],
-        graceMidis: graceMidis == null ? null : [...graceMidis!],
-        leftFingers: leftFingers == null ? null : [...leftFingers!],
-      );
+    frets: {...frets},
+    techniques: {...techniques},
+    articulations: {...articulations},
+    bend: bend == null ? null : [...bend!],
+    whammy: whammy == null ? null : [...whammy!],
+    graceMidis: graceMidis == null ? null : [...graceMidis!],
+    leftFingers: leftFingers == null ? null : [...leftFingers!],
+    barreFret: barreFret,
+    barreString: barreString,
+  );
 }
 
 /// Rhythm is measured on a **32nd-note grid** so every selectable value — down
@@ -397,20 +415,30 @@ const int _kBarSteps = 32; // one 4/4 bar = a whole note = 32 thirty-seconds
 /// an arbitrary point list.
 abstract final class TabBends {
   /// Rise from pitch to [height] over the note.
-  static List<BendPoint> bend({double height = 1.0}) =>
-      [const BendPoint(0, 0), BendPoint(1, height)];
+  static List<BendPoint> bend({double height = 1.0}) => [
+    const BendPoint(0, 0),
+    BendPoint(1, height),
+  ];
 
   /// Rise to [height] then release back to pitch.
-  static List<BendPoint> bendRelease({double height = 1.0}) =>
-      [const BendPoint(0, 0), BendPoint(0.5, height), const BendPoint(1, 0)];
+  static List<BendPoint> bendRelease({double height = 1.0}) => [
+    const BendPoint(0, 0),
+    BendPoint(0.5, height),
+    const BendPoint(1, 0),
+  ];
 
   /// Struck already bent to [height] (a prebend), then held.
-  static List<BendPoint> prebend({double height = 1.0}) =>
-      [BendPoint(0, height), BendPoint(1, height)];
+  static List<BendPoint> prebend({double height = 1.0}) => [
+    BendPoint(0, height),
+    BendPoint(1, height),
+  ];
 
   /// Struck prebent to [height], then released to pitch.
-  static List<BendPoint> prebendRelease({double height = 1.0}) =>
-      [BendPoint(0, height), BendPoint(0.5, height), const BendPoint(1, 0)];
+  static List<BendPoint> prebendRelease({double height = 1.0}) => [
+    BendPoint(0, height),
+    BendPoint(0.5, height),
+    const BendPoint(1, 0),
+  ];
 }
 
 /// The selectable note durations, each with its length in 32nd-note steps.
@@ -450,18 +478,18 @@ double _scaledStepsOf(TabColumn c) {
 /// The MIDI note-on velocity (0..127) a dynamic level maps to (C1) — a standard
 /// ppp→ffff ramp; the sudden/accent marks (sf/sfz/…) read as a firm accent.
 int velocityOf(DynamicLevel d) => switch (d) {
-      DynamicLevel.pppp => 8,
-      DynamicLevel.ppp => 16,
-      DynamicLevel.pp => 33,
-      DynamicLevel.p => 49,
-      DynamicLevel.mp => 64,
-      DynamicLevel.mf => 80,
-      DynamicLevel.f => 96,
-      DynamicLevel.ff => 112,
-      DynamicLevel.fff => 120,
-      DynamicLevel.ffff => 127,
-      _ => 104, // sf/sfz/sffz/fz/fp/rf — a firm accent
-    };
+  DynamicLevel.pppp => 8,
+  DynamicLevel.ppp => 16,
+  DynamicLevel.pp => 33,
+  DynamicLevel.p => 49,
+  DynamicLevel.mp => 64,
+  DynamicLevel.mf => 80,
+  DynamicLevel.f => 96,
+  DynamicLevel.ff => 112,
+  DynamicLevel.fff => 120,
+  DynamicLevel.ffff => 127,
+  _ => 104, // sf/sfz/sffz/fz/fp/rf — a firm accent
+};
 
 /// The ramp levels a raw MIDI velocity quantises to (pppp…ffff), nearest by
 /// [velocityOf] — so a MIDI/GP import that carries only note velocities still
@@ -711,8 +739,8 @@ class TabDocument {
     this.timeSignature = TimeSignature.fourFour,
     this.keySignature = const KeySignature(0),
     List<TabColumn>? voice2,
-  })  : columns = columns ?? <TabColumn>[],
-        voice2 = voice2 ?? <TabColumn>[];
+  }) : columns = columns ?? <TabColumn>[],
+       voice2 = voice2 ?? <TabColumn>[];
 
   /// A blank document with [initialColumns] empty columns.
   factory TabDocument.blank(Tuning tuning, {int initialColumns = 8}) =>
@@ -1006,6 +1034,7 @@ class TabDocument {
     final slideInOuts = <TabSlide>[];
     final taps = <Tap>[];
     final palmMutes = <PalmMute>[];
+    final barres = <TabBarre>[];
     final letRings = <LetRing>[];
     final pickStrokes = <PickStroke>[];
     final tabFingerings = <TabFingering>[];
@@ -1084,8 +1113,9 @@ class TabDocument {
     void flushBar() {
       closeTuplet(bar.length);
       if (bar.isNotEmpty) {
-        final first =
-            barFirstCol < columns.length ? columns[barFirstCol] : null;
+        final first = barFirstCol < columns.length
+            ? columns[barFirstCol]
+            : null;
         measures.add(
           Measure(
             bar,
@@ -1095,8 +1125,9 @@ class TabDocument {
             endRepeat: first?.endRepeat ?? false,
             volta: first?.volta,
             navigation: first?.navigation,
-            tempoChange:
-                first?.tempoChange == null ? null : Tempo(first!.tempoChange!),
+            tempoChange: first?.tempoChange == null
+                ? null
+                : Tempo(first!.tempoChange!),
           ),
         );
         measIdx++;
@@ -1156,8 +1187,9 @@ class TabDocument {
             graceStyle: col.graceStyle, // B8
             arpeggio: col.arpeggio, // B9 strum roll
             fingerings: col.leftFingers ?? const [], // B10 left hand
-            velocity:
-                col.dynamic == null ? null : velocityOf(col.dynamic!), // C1
+            velocity: col.dynamic == null
+                ? null
+                : velocityOf(col.dynamic!), // C1
           ),
         );
         voicings.add(TabVoicing(id, [for (final e in entries) e.key]));
@@ -1175,6 +1207,11 @@ class TabDocument {
         if (col.tap) taps.add(Tap(id));
         if (col.harmonic != null) marks.add(TabNoteMark(id, col.harmonic!));
         if (col.palmMute) palmMutes.add(PalmMute(id, id)); // self-span
+        if (col.barreFret != null) {
+          barres.add(
+            TabBarre(id, col.barreFret!, lowestString: col.barreString),
+          );
+        }
         if (col.letRing) letRings.add(LetRing(id, id));
         if (col.pickStroke != null) {
           pickStrokes.add(PickStroke(id, up: col.pickStroke!));
@@ -1247,6 +1284,7 @@ class TabDocument {
       slideInOuts: slideInOuts,
       taps: taps,
       palmMutes: palmMutes,
+      tabBarres: barres,
       letRings: letRings,
       pickStrokes: pickStrokes,
       tabFingerings: tabFingerings,
@@ -1343,11 +1381,10 @@ class TabDocument {
     }
 
     List<int> midis(TabColumn c) => [
-          for (final e
-              in (c.frets.entries.toList()
-                ..sort((a, b) => a.key.compareTo(b.key))))
-            tuning.strings[e.key].midiNumber + e.value + capo,
-        ];
+      for (final e
+          in (c.frets.entries.toList()..sort((a, b) => a.key.compareTo(b.key))))
+        tuning.strings[e.key].midiNumber + e.value + capo,
+    ];
     final start0 = from.clamp(0, columns.length);
     final end0 = (to ?? columns.length).clamp(start0, columns.length);
     // Pre-roll the tempo state so a range starting mid-song plays at the tempo
@@ -1437,6 +1474,8 @@ class TabDocument {
     }
     // B4 — right-hand taps.
     final tapIds = {for (final t in score.taps) t.noteId};
+    // The barre held for a chord (a GP import carries these).
+    final barreById = {for (final b in score.tabBarres) b.noteId: b};
     // B9/B10 — pick-stroke + right-hand fingering (score-level, by note id).
     final pickStrokeById = {for (final p in score.pickStrokes) p.noteId: p.up};
     final rightFingerById = {
@@ -1502,7 +1541,7 @@ class TabDocument {
             if (el.graceNotes.isNotEmpty) {
               graceById[eid] = (
                 [for (final p in el.graceNotes) p.midiNumber],
-                el.graceStyle
+                el.graceStyle,
               );
             }
             if (el.arpeggio != null) arpById[eid] = el.arpeggio!;
@@ -1629,10 +1668,12 @@ class TabDocument {
       return out;
     }
 
-    final palmMuteRows =
-        spanRows(score.palmMutes.map((p) => (p.startId, p.endId)));
-    final letRingRows =
-        spanRows(score.letRings.map((l) => (l.startId, l.endId)));
+    final palmMuteRows = spanRows(
+      score.palmMutes.map((p) => (p.startId, p.endId)),
+    );
+    final letRingRows = spanRows(
+      score.letRings.map((l) => (l.startId, l.endId)),
+    );
     final arranged = arrangeTab(midiCols, tuning, capo: capo);
     return TabDocument(
       tuning: tuning,
@@ -1661,23 +1702,29 @@ class TabDocument {
             harmonic: ids[i] == null ? null : harmonicById[ids[i]],
             palmMute: palmMuteRows.contains(i),
             letRing: letRingRows.contains(i),
-            articulations:
-                ids[i] == null ? const {} : (artById[ids[i]] ?? const {}),
+            articulations: ids[i] == null
+                ? const {}
+                : (artById[ids[i]] ?? const {}),
             ornament: ids[i] == null ? null : ornById[ids[i]],
             tremolo: ids[i] == null ? null : tremById[ids[i]],
             graceMidis: ids[i] == null ? null : graceById[ids[i]]?.$1,
-            graceStyle: (ids[i] == null ? null : graceById[ids[i]]?.$2) ??
+            graceStyle:
+                (ids[i] == null ? null : graceById[ids[i]]?.$2) ??
                 GraceStyle.acciaccatura,
             arpeggio: ids[i] == null ? null : arpById[ids[i]],
             pickStroke: ids[i] == null ? null : pickStrokeById[ids[i]],
             leftFingers: ids[i] == null ? null : leftFingersById[ids[i]],
+            barreFret: ids[i] == null ? null : barreById[ids[i]]?.fret,
+            barreString: ids[i] == null
+                ? null
+                : barreById[ids[i]]?.lowestString,
             rightFinger: ids[i] == null ? null : rightFingerById[ids[i]],
             dynamic: ids[i] == null
                 ? null
                 : (dynamicById[ids[i]] ??
-                    (velById[ids[i]] != null
-                        ? nearestDynamic(velById[ids[i]]!)
-                        : null)),
+                      (velById[ids[i]] != null
+                          ? nearestDynamic(velById[ids[i]]!)
+                          : null)),
             hairpin: ids[i] == null ? null : hairpinById[ids[i]],
           ),
       ],
