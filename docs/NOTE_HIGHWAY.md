@@ -379,9 +379,17 @@ shapes claiming the ukulele, whose lowest string is C4).
   `kDrumPresets` rather than beats authored twice, so a preset added there shows
   up here too and the groove a child builds in the Drum Kit is the same music
   that falls here.
-* **No chord-grip blocks or strum arrows,
-  no engraved-notation strip** (the strip is chart-driven; an engraved staff
-  needs the Song Book path above).
+* ~~No engraved-notation strip.~~ **DONE 2026-07-29.** A song opened from the
+  Song Book now carries its `Score` through, and the strip shows the REAL BAR
+  being played — a `StaffView` of that one measure, its notes lit as they
+  sound. One bar at a time, rebuilt only when the bar changes: a whole score in
+  a 76-pixel strip is unreadable and engraving every frame would be absurd.
+  During the count-in it shows the bar that is COMING, because that is exactly
+  when a learner is looking at it. Without a score behind the chart (the
+  built-in library, a drum groove) it falls back to the name chips rather than
+  going blank. This is the pedagogical argument for the whole feature made
+  concrete: the same music, as blocks and as symbols, at the same moment.
+* **No chord-grip blocks or strum arrows.**
 * ~~Not profiled.~~ **MEASURED 2026-07-29** (`test/highway_performance_test.dart`,
   relative assertions so it cannot flake on a loaded box). A 4,000-note piece
   (four minutes, two hands) costs the same per frame as a 128-note exercise —

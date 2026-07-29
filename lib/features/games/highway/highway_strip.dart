@@ -21,10 +21,23 @@
 import 'package:comet_beat/core/games/highway/highway_chart.dart';
 import 'package:comet_beat/core/games/highway/highway_lanes.dart';
 import 'package:comet_beat/features/games/highway/highway_theme.dart';
+import 'package:crisp_notation/crisp_notation.dart' show Score, StaffView;
 import 'package:flutter/material.dart';
 
 /// What the strip shows.
-enum HighwayStripMode { tab, names }
+enum HighwayStripMode {
+  /// String lines with fret numbers, for the fretted and bowed instruments.
+  tab,
+
+  /// A row of note-name chips, coloured by hand, for keys and pads.
+  names,
+
+  /// The real engraved bar, lit as it plays — only possible when the chart came
+  /// from a score, which is the whole argument for a falling-note view living
+  /// inside a notation app: the same music, as blocks and as symbols, at the
+  /// same moment.
+  notation,
+}
 
 class HighwayReadingStrip extends StatelessWidget {
   const HighwayReadingStrip({
@@ -35,6 +48,7 @@ class HighwayReadingStrip extends StatelessWidget {
     required this.palette,
     required this.mode,
     this.noteNameOf,
+    this.score,
     this.visibleBeats = 8,
     this.height = 76,
   });
@@ -45,11 +59,59 @@ class HighwayReadingStrip extends StatelessWidget {
   final HighwayPalette palette;
   final HighwayStripMode mode;
   final String Function(int midi)? noteNameOf;
+
+  /// The engraved source, for [HighwayStripMode.notation].
+  final Score? score;
+
   final double visibleBeats;
   final double height;
 
+  /// The one bar being played, as its own little score. Rebuilt only when the
+  /// bar changes — engraving every frame would be absurd, and a whole score in
+  /// a 76-pixel strip is unreadable anyway.
+  Score? _currentBar() {
+    final source = score;
+    if (source == null) return null;
+    final index = chart.measureAt(beat);
+    if (index == null || index < 0 || index >= source.measures.length) {
+      return null;
+    }
+    return Score(
+      clef: source.clef,
+      keySignature: source.keySignature,
+      timeSignature: source.timeSignature,
+      measures: [source.measures[index]],
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) {
+    if (mode == HighwayStripMode.notation) {
+      final bar = _currentBar();
+      if (bar != null) {
+        return SizedBox(
+          height: height,
+          width: double.infinity,
+          child: ColoredBox(
+            color: palette.backdropBottom.withValues(alpha: 0.55),
+            child: Center(
+              child: StaffView(
+                score: bar,
+                staffSpace: 8,
+                highlightedIds: {
+                  for (final e in chart.eventsAt(beat))
+                    if (e.elementId != null) e.elementId!,
+                },
+              ),
+            ),
+          ),
+        );
+      }
+    }
+    return _scrollingStrip();
+  }
+
+  Widget _scrollingStrip() => SizedBox(
         height: height,
         width: double.infinity,
         child: CustomPaint(
@@ -104,7 +166,11 @@ class _StripPainter extends CustomPainter {
     switch (mode) {
       case HighwayStripMode.tab:
         _paintTab(canvas, size, xOf);
+      // `notation` is drawn by a real StaffView, not here; it falls back to the
+      // name chips when the chart has no score behind it (the built-in library,
+      // a drum groove), which is better than an empty strip.
       case HighwayStripMode.names:
+      case HighwayStripMode.notation:
         _paintNames(canvas, size, xOf);
     }
 

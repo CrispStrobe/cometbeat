@@ -179,6 +179,34 @@ void main() {
     });
   });
 
+  group('measureAt (which bar to engrave)', () {
+    test('follows the playhead and holds through a rest', () {
+      final chart = highwayChartFromScore(_twoVoiceScore(), name: 'x');
+      expect(chart.measureAt(0), 0);
+      // Nothing starts at beat 3.5, but the strip must not go blank.
+      expect(chart.measureAt(3.5), 0);
+    });
+
+    test('shows the COMING bar during the count-in', () {
+      final chart = highwayChartFromScore(_twoVoiceScore(), name: 'x');
+      expect(
+        chart.measureAt(-4),
+        0,
+        reason: 'blanking the strip for four beats is exactly when a learner '
+            'is looking at it to get ready',
+      );
+    });
+
+    test('a chart with no score behind it has no bar to engrave', () {
+      const groove = HighwayChart(
+        name: 'beat',
+        bpm: 100,
+        events: [HighwayEvent(startBeat: 0, beats: 1, lane: 0)],
+      );
+      expect(groove.measureAt(0), isNull);
+    });
+  });
+
   group('sections (drilling a few bars)', () {
     const piece = HighwayChart(
       name: 'four bars',

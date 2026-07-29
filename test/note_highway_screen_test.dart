@@ -17,6 +17,7 @@ import 'package:comet_beat/features/games/highway/highway_theme.dart';
 import 'package:comet_beat/features/games/highway/highway_view.dart';
 import 'package:comet_beat/features/games/highway/note_highway_screen.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:crisp_notation/crisp_notation.dart' show Score, StaffView;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -245,6 +246,53 @@ void main() {
     await tester.tap(find.text('Drums'));
     await tester.pumpAndSettle();
     expect(find.text('Your instrument'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('with a score behind it, the strip engraves the bar being played',
+      (tester) async {
+    // Two bars, so there is a bar change to follow.
+    final score = Score.simple(notes: 'c4:q d4:q e4:q f4:q g4:w');
+    final chart = highwayChartFromScore(score, name: 'scale');
+    await tester.pumpWidget(
+      _app(
+        NoteHighwayScreen(
+          gameId: 'note_highway_piano',
+          chart: chart,
+          score: score,
+          title: 'Scale',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _tapStart(tester);
+    await tester.pump();
+    // Past the four-beat count-in and into the music.
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // A real engraved staff, not the chip fallback.
+    expect(find.byType(StaffView), findsOneWidget);
+    final shown = tester.widget<StaffView>(find.byType(StaffView));
+    expect(
+      shown.score.measures.length,
+      1,
+      reason: 'one BAR at a time — a whole score in a 76px strip is unreadable',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('without a score the strip falls back rather than going blank',
+      (tester) async {
+    await tester.pumpWidget(
+      _app(const NoteHighwayScreen(gameId: 'note_highway_piano')),
+    );
+    await tester.pumpAndSettle();
+    await _tapStart(tester);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(StaffView), findsNothing);
+    expect(find.byType(HighwayReadingStrip), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -31,6 +31,7 @@ class HighwayEvent {
     this.lane,
     this.caption,
     this.elementId,
+    this.measureIndex,
   });
 
   /// Onset in quarter-note beats from the start of the performance.
@@ -61,6 +62,11 @@ class HighwayEvent {
   /// highlight the same note the block represents.
   final String? elementId;
 
+  /// Which measure of the source score this came from — what an engraved strip
+  /// needs to show the bar being played. Null for charts with no score behind
+  /// them (the built-in library, a drum groove).
+  final int? measureIndex;
+
   double get endBeat => startBeat + beats;
 
   HighwayEvent copyWith({
@@ -71,6 +77,7 @@ class HighwayEvent {
     int? lane,
     String? caption,
     String? elementId,
+    int? measureIndex,
   }) =>
       HighwayEvent(
         startBeat: startBeat ?? this.startBeat,
@@ -80,6 +87,7 @@ class HighwayEvent {
         lane: lane ?? this.lane,
         caption: caption ?? this.caption,
         elementId: elementId ?? this.elementId,
+        measureIndex: measureIndex ?? this.measureIndex,
       );
 
   @override
@@ -217,6 +225,25 @@ class HighwayChart {
     );
   }
 
+  /// The measure being played at [beat] — the bar an engraved strip should
+  /// show. Falls back to the last measure started, so the strip does not go
+  /// blank in a rest. Null when nothing in the chart came from a score.
+  int? measureAt(double beat) {
+    int? current;
+    for (final e in events) {
+      if (e.startBeat > beat) break; // events are drawn in time order
+      if (e.measureIndex != null) current = e.measureIndex;
+    }
+    if (current != null) return current;
+    // Before the first note — the count-in — show the bar that is COMING.
+    // Falling back to nothing would blank the strip for four beats at exactly
+    // the moment a learner is looking at it to get ready.
+    for (final e in events) {
+      if (e.measureIndex != null) return e.measureIndex;
+    }
+    return null;
+  }
+
   /// The events sounding at [beat] (used for key-lighting).
   ///
   /// ⚠ Also O(n). Measured at ~1–2% of a 60 fps frame budget for a 4,000-note
@@ -332,6 +359,7 @@ HighwayChart highwayChartFromScore(
           midi: midi,
           voice: n.voice + voiceOffset,
           elementId: n.elementId,
+          measureIndex: n.measureIndex,
         ),
       );
     }

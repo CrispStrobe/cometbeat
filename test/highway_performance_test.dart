@@ -125,42 +125,42 @@ void main() {
     );
   });
 
-  test('advancing the clock scans the active window, not the whole piece', () {
-    const frames = 600; // ten seconds at 60 fps
-    int cost(int bars) {
+  test('advancing the clock looks at the live window, not the whole piece', () {
+    // Counted, not timed — for the same reason as the tap below. At a few
+    // microseconds a frame, a ratio between two timings is a measurement of how
+    // busy the machine is: this assertion passed alone and failed beside nine
+    // other test files, while the algorithm was identical.
+    int scannedAt(int bars) {
       final chart = _piece(bars);
       final grader = HighwayGrader(
         chart: chart,
         rules: HighwayRules.of(HighwayDifficulty.medium),
         laneMap: KeyboardLaneMap.forRange(48, 84),
       );
-      // Hoisted: `totalBeats` walks every event, so leaving it in the loop
-      // measures the getter instead of the thing under test. (That is not a
-      // hypothetical — it read 289 µs/frame here and sent me looking for a bug
-      // in the grader that was not there.)
       final total = chart.totalBeats;
-      final watch = Stopwatch()..start();
-      for (var f = 0; f < frames; f++) {
-        grader.advanceTo(total * f / frames);
+      var worst = 0;
+      for (var f = 0; f < 600; f++) {
+        grader.advanceTo(total * f / 600);
+        final scanned = grader.lastAdvanceScanned;
+        if (scanned > worst) {
+          worst = scanned;
+        }
       }
-      watch.stop();
-      return watch.elapsedMicroseconds;
+      return worst;
     }
 
-    final small = cost(16);
-    final large = cost(500);
+    final small = scannedAt(16);
+    final large = scannedAt(500);
     // ignore: avoid_print
     print(
-      'advanceTo: 128 notes ${(small / frames).toStringAsFixed(1)} µs/frame · '
-      '4000 notes ${(large / frames).toStringAsFixed(1)} µs/frame',
+      'advance scanned (worst frame): 128 notes $small · 4000 notes $large',
     );
     expect(
       large,
-      lessThan(small * 6),
-      reason:
-          'a per-frame scan of every note in the piece is what makes a long '
-          'song stutter; the grader must only look at notes that are live',
+      lessThan(40),
+      reason: 'the clock must look at what is live, not at a four-minute piece',
     );
+    expect(large, lessThanOrEqualTo(small * 3 + 8));
   });
 
   test('a tap looks at the live window, not at the whole piece', () {

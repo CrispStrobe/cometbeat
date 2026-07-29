@@ -53,6 +53,7 @@ import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:crisp_notation/crisp_notation.dart' show Score;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
@@ -79,6 +80,7 @@ class NoteHighwayScreen extends StatefulWidget {
     this.instrument = HighwayInstrument.piano,
     required this.gameId,
     this.chart,
+    this.score,
     this.title,
   });
 
@@ -91,6 +93,11 @@ class NoteHighwayScreen extends StatefulWidget {
   /// An external piece (a Song Book song, a Workshop score) instead of the
   /// built-in library. When set, the piece picker is hidden.
   final HighwayChart? chart;
+
+  /// The engraved source behind [chart], when there is one. Its only job is the
+  /// reading strip: with a score the strip shows the REAL BAR, lit as it plays,
+  /// instead of note-name chips.
+  final Score? score;
 
   final String? title;
 
@@ -840,9 +847,14 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
             laneMap: laneMap,
             beat: _beat,
             palette: palette,
-            mode: _profile.isStringed
-                ? HighwayStripMode.tab
-                : HighwayStripMode.names,
+            mode: switch (_instrument) {
+              _ when _profile.isStringed => HighwayStripMode.tab,
+              // A score behind the chart earns the engraved bar; without one
+              // the chips are the honest fallback.
+              _ when widget.score != null => HighwayStripMode.notation,
+              _ => HighwayStripMode.names,
+            },
+            score: widget.score,
             noteNameOf: noteName,
           ),
         Expanded(

@@ -260,7 +260,9 @@ class HighwayGrader {
     // hit window reaches — the list is sorted, so the first note beyond it
     // ends the scan.
     _retire();
+    var scanned = 0;
     for (var i = _cursor; i < _graded.length; i++) {
+      scanned++;
       final n = _graded[i];
       if (n.event.startBeat + rules.hitWindowBeats >= beat) break;
       if (!n.isPending) continue;
@@ -268,6 +270,7 @@ class HighwayGrader {
       _misses++;
       _streak = 0;
     }
+    lastAdvanceScanned = scanned;
     // …and again AFTER, because that scan is what resolved them. Retiring only
     // beforehand leaves the cursor pinned at 0 for the whole run whenever the
     // clock arrives in one jump (a seek, a loop restart, a slow first frame),
@@ -287,6 +290,10 @@ class HighwayGrader {
   /// pure Dart on purpose (it has to run headless). A doc line costs nothing
   /// and does not drag Flutter into the core.
   int lastTapScanned = 0;
+
+  /// How many notes the last [advanceTo] looked at — the same question as
+  /// [lastTapScanned], for the clock.
+  int lastAdvanceScanned = 0;
 
   /// Drops the head of the graded list past everything already answered.
   void _retire() {

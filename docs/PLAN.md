@@ -105,6 +105,19 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — the ENGRAVED reading strip.**
+  A Song Book song carries its `Score` into the highway, and the strip shows the
+  real bar being played (a `StaffView` of that one measure, notes lit as they
+  sound) instead of note-name chips. One bar, rebuilt on bar change; the coming
+  bar during the count-in; chips as the fallback when no score is behind the
+  chart. `HighwayEvent.measureIndex` is the new thread. Touched
+  `songs/song_screen.dart` again (one argument) — still no other agent's file.
+  ⚠️ **Testing lesson, applied twice now:** the `advanceTo` benchmark passed
+  alone and failed beside nine other files, exactly like the tap one before it —
+  at microsecond scale a timing RATIO measures the machine, not the code. Both
+  now assert COUNTED work (`lastTapScanned` / `lastAdvanceScanned`), which is
+  deterministic anywhere. If you write a perf test in this repo, count.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — MICROPHONE input on the
   highway tiles (monophonic).** Play the real instrument instead of tapping:
   new `HighwayLaneMap.keyForMidi` ("what the mic heard, as a rail key" — a

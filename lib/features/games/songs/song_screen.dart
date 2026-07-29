@@ -201,6 +201,9 @@ class _SongScreenState extends State<SongScreen> {
           MaterialPageRoute<void>(
             builder: (_) => NoteHighwayScreen(
               chart: _highwayChart,
+              // With the score in hand the reading strip shows the real
+              // engraved bar, lit as it plays, rather than note-name chips.
+              score: widget.score,
               title: widget.title,
               gameId: 'note_highway_piano',
             ),
