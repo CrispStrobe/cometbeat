@@ -376,9 +376,27 @@ is recorded in [HISTORY.md](HISTORY.md).
     extending a map: `DurationBase` runs `whole → sixtyFourth` plus `breve`, and
     **`denominator => 1 << index` is keyed to the enum's index ORDER** with
     `breve` special-cased — inserting values silently renumbers `denominator`
-    for every existing duration. For the `.ly` gap, the gitignored notes list
-    the NINE hypotheses I tested and ruled out (BOM, `\paper`, `\header`,
-    Scheme, comments, …) plus the localisation; `tool/music_db_ly_probe.dart`
+    for every existing duration.
+  - 🔍 **`.ly` ROOT CAUSE FOUND, deliberately NOT fixed — read before trying.**
+    `lilypond_lexer.dart` (~line 78) emits a bare `\` and advances ONE char for
+    non-alphabetic escapes, so **`\<` leaves a `<` that lexes as the
+    CHORD-OPENER** and swallows the rest of the part. Repro:
+    `Sop = \relative c' { c4\< d e\! }` → 0 notes; with `\>` → 3 notes (`\>`
+    hid it — a stray `>` just closes a chord nobody opened). ⚠️ It also
+    **SILENTLY TRUNCATES**: fixing it locally showed **15 files that "parsed
+    fine" were dropping notes**, +1,735 recovered, one going 111 → 584. Treat
+    any pre-fix `.ly` note count as suspect.
+    ⚠️ **I tried two fixes (command token / two-char symbol token) and BOTH
+    regressed the SAME 8 files to zero** — files carrying
+    `\keepWithTag #'Vocalist \expressiveMarks` where `expressiveMarks` is a
+    spacer-only `\new Dynamics`. The chord-swallow had been accidentally
+    deleting that block so the walk reached the real staves; parse it properly
+    and the reader picks the spacer voice. **The real fix is TWO changes
+    together** — lexer + making the reader skip Dynamics-context music reached
+    through a variable reference / `\keepWithTag` (the type is invisible to
+    `_staffLeafTypes` there). I reverted rather than ship a net −8. The
+    gitignored notes also list the nine dead ends already ruled out (BOM,
+    `\paper`, `\header`, Scheme, comments, …); `tool/music_db_ly_probe.dart`
     is the harness. Don't retrace those.
   - ✅ **Catalog re-emitted on the VPS: 35,321 → 37,578 items** (score shard
     34,852 → 37,109 = exactly the 2,257 CPDL rows). Tiers verified in the
