@@ -98,6 +98,30 @@ abstract class AppLocalizations {
     Locale('en')
   ];
 
+  /// Inspector heading for bow direction
+  ///
+  /// In en, this message translates to:
+  /// **'Bowing'**
+  String get workshopBowing;
+
+  /// A pulled bow stroke
+  ///
+  /// In en, this message translates to:
+  /// **'Down-bow'**
+  String get workshopBowDown;
+
+  /// A pushed bow stroke
+  ///
+  /// In en, this message translates to:
+  /// **'Up-bow'**
+  String get workshopBowUp;
+
+  /// Let the rules choose the stroke again
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get workshopBowAuto;
+
   /// Notes lower than the instrument's lowest string
   ///
   /// In en, this message translates to:

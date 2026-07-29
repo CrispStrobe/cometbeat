@@ -30,7 +30,7 @@ import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/bowed_arranger.dart'
     show BowedInstrument, BowedSkill;
 import 'package:comet_beat/core/notation/bowed_score_fingering.dart'
-    show scoreWithBowedFingerings;
+    show scoreWithBowedFingerings, scoreWithBowing;
 import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
     show scoreWithGuitarFingerings;
 import 'package:comet_beat/core/notation/multi_part_export.dart'
@@ -563,6 +563,12 @@ abstract interface class CompositionWorkshopTester {
 
   /// Test seam: return the current MusicXML export without opening a save picker.
   String debugMusicXmlExport();
+
+  /// SE-C4 test seam: the active part's element ids in reading order, a way to
+  /// select one, and the bow pattern as 'D'/'U'/'.' per note.
+  List<String> get debugElementIds;
+  void debugSelect(String id);
+  List<String> get debugBowPattern;
 }
 
 class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
@@ -680,6 +686,23 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   /// check the range alone — a partial answer rather than one built on a
   /// default the user never picked.
   final Map<int, BowedSkill> _partSkill = {};
+
+  /// SE-C4: strokes the player has decided — part index → ELEMENT POSITION →
+  /// direction.
+  ///
+  /// Kept OUT of the document on purpose. A lock is an instruction about how to
+  /// compute the bowing, not a mark on the page — the mark it produces is
+  /// already in the score. Storing it as an articulation would make "the player
+  /// chose this" and "the rules produced this" indistinguishable, and the next
+  /// re-flow could not tell which to keep.
+  ///
+  /// ⚠ Keyed by POSITION, not by element id. The re-flow reloads the document,
+  /// which RE-ISSUES ids — so an id-keyed lock map is stale the moment it is
+  /// first used. That failed silently and plausibly: the second stroke you set
+  /// dropped the first, and since a dropped lock just means "the rules decide",
+  /// the result still looked like a bowing. Only marking two strokes and
+  /// checking both survived showed it.
+  final Map<int, Map<int, Articulation>> _bowLocks = {};
   bool _inspect = false; // 🔍 Looking Glass: tap a note to see what it is
   // Studio: an opt-in selection-driven inspector panel (Cause 3). Off by default,
   // so the kid Sandbox surface is unchanged; when on it docks to the right and
@@ -841,6 +864,27 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   @override
   int get activePartIndex => _mpd.active;
+
+  @override
+  List<String> get debugElementIds => [
+        for (final e in _doc.elements)
+          if (!e.isRest) e.id,
+      ];
+
+  @override
+  void debugSelect(String id) => setState(() => _doc.selectByIds([id]));
+
+  @override
+  List<String> get debugBowPattern => [
+        for (final measure in _doc.buildScore().measures)
+          for (final element in measure.elements)
+            if (element is NoteElement)
+              element.articulations.contains(Articulation.downBow)
+                  ? 'D'
+                  : element.articulations.contains(Articulation.upBow)
+                      ? 'U'
+                      : '.',
+      ];
 
   @override
   Future<(Uint8List?, String?)> debugGenerateExport(String ext) =>
@@ -1478,6 +1522,72 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         part.loadScore(fingered, clefOverride: _mpd.clefOf(i));
         _partSkill[i] = skill;
       });
+
+  /// SE-C4: pin the selected notes' bow to [direction] and RE-FLOW the part.
+  ///
+  /// The re-flow is the feature. A bowing is a chain — one stroke decides the
+  /// next — so simply editing a mark leaves every following note contradicting
+  /// it, and the part becomes unplayable in a way that looks fine. Locking says
+  /// "this one is mine, now redo the rest", which is what a teacher does with a
+  /// red pen.
+  ///
+  /// One undo step: `loadScore` snapshots, so ⌘Z takes back the whole re-flow.
+  void _lockBow(Articulation direction) => setState(() {
+        final i = _mpd.active;
+        final selected = _doc.selectedIndices;
+        if (selected.isEmpty) return;
+        final locks = _bowLocks.putIfAbsent(i, () => <int, Articulation>{});
+        for (final at in selected) {
+          locks[at] = direction;
+        }
+        _reloadPreservingSelection(i, locks);
+      });
+
+  /// Forget the selected notes' locks and let the rules have them back.
+  void _clearBowLocks() => setState(() {
+        final i = _mpd.active;
+        final locks = _bowLocks[i];
+        if (locks == null || locks.isEmpty) return;
+        final selected = _doc.selectedIndices.toSet();
+        locks.removeWhere((at, _) => selected.contains(at));
+        _reloadPreservingSelection(i, locks);
+      });
+
+  /// Re-flow part [i]'s bowing and put the SELECTION BACK.
+  ///
+  /// ⚠ `loadScore` rebuilds the document from scratch, which drops the
+  /// selection — and with nothing selected the inspector falls back to its
+  /// empty state, so the bow controls disappear the instant you use one. You
+  /// could set a stroke exactly once and then had to re-select the note to
+  /// change your mind. Restoring the selection is what makes it an editing
+  /// control rather than a one-shot.
+  void _reloadPreservingSelection(int i, Map<int, Articulation> locks) {
+    final part = _mpd.parts[i];
+    // ⚠ Both the selection and the locks are held by INDEX, and are translated
+    // to ids only here, against the document as it stands right now. loadScore
+    // re-issues ids, so anything remembered by id would not survive the call
+    // below.
+    final selected = part.selectedIndices.toList();
+    final elements = part.elements;
+    final byId = <String, Articulation>{
+      for (final entry in locks.entries)
+        if (entry.key >= 0 && entry.key < elements.length)
+          elements[entry.key].id: entry.value,
+    };
+    part.loadScore(
+      scoreWithBowing(part.buildScore(), locked: byId),
+      clefOverride: _mpd.clefOf(i),
+    );
+    part.selectByIndices(selected);
+  }
+
+  /// True when every selected note is locked to [direction].
+  bool _bowLockedTo(Articulation direction) {
+    final locks = _bowLocks[_mpd.active];
+    final selected = _doc.selectedIndices;
+    if (locks == null || selected.isEmpty) return false;
+    return selected.every((at) => locks[at] == direction);
+  }
 
   /// The arranger profile for part [i], resolved from its instrument NAME, or
   /// null when the part is not a bowed instrument the arranger models.
@@ -2988,6 +3098,36 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                   label: Text(l10n.workshopTie),
                   selected: allHave((e) => e.tieToNext),
                   onSelected: (_) => setState(() => _doc.toggleTieOfSelected()),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // SE-C4. Separate from the articulation chips above because a bow
+            // direction is not an independent decoration: the strokes form a
+            // chain, so choosing one RE-FLOWS the rest of the part. Putting it
+            // among the toggles would imply it behaves like them.
+            Text(l10n.workshopBowing, style: theme.textTheme.labelMedium),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                FilterChip(
+                  key: const ValueKey<String>('workshop-bow-down'),
+                  label: Text('\u2293  ${l10n.workshopBowDown}'),
+                  selected: _bowLockedTo(Articulation.downBow),
+                  onSelected: (_) => _lockBow(Articulation.downBow),
+                ),
+                FilterChip(
+                  key: const ValueKey<String>('workshop-bow-up'),
+                  label: Text('\u2228  ${l10n.workshopBowUp}'),
+                  selected: _bowLockedTo(Articulation.upBow),
+                  onSelected: (_) => _lockBow(Articulation.upBow),
+                ),
+                ActionChip(
+                  key: const ValueKey<String>('workshop-bow-auto'),
+                  label: Text(l10n.workshopBowAuto),
+                  onPressed: _clearBowLocks,
                 ),
               ],
             ),

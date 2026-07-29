@@ -105,6 +105,36 @@ Future<void> _enterStudio(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// The inspector is a ListView — the bow chips sit below the fold on a short
+/// surface, so scroll them into view before tapping.
+Future<void> _tapInInspector(WidgetTester tester, String key) async {
+  final finder = find.byKey(ValueKey<String>(key));
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
+/// Four notes (default bowing D U D U) with the Studio inspector open.
+Future<CompositionWorkshopTester> _fourNotesWithInspector(
+  WidgetTester tester,
+) async {
+  await tester.binding.setSurfaceSize(const Size(1000, 1600));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(_app());
+  for (var i = 0; i < 4; i++) {
+    await tester.tap(_pianoKeyAt(16 + i));
+    await tester.pumpAndSettle();
+  }
+  await _enterStudio(tester);
+  final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+  await tester.tap(find.byIcon(Icons.more_vert));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(l10n.workshopInspector).last);
+  await tester.pumpAndSettle();
+  return _editor(tester);
+}
+
 void main() {
   group('WS-X1 — Score holds a live project link', () {
     Future<CompositionWorkshopTester> pumpWith(
@@ -2188,6 +2218,67 @@ void main() {
         find.byKey(const ValueKey<String>('workshop-play-below')),
         findsOneWidget,
         reason: 'and it must be on screen, not merely in the model',
+      );
+    });
+  });
+
+  group('SE-C4 bowing is editable, and the rest re-flows', () {
+    testWidgets('locking a stroke rewrites the part from that choice',
+        (tester) async {
+      // Select the SECOND note and demand a down-bow there. Plain alternation
+      // would have given it an up-bow, so this is a real correction — and every
+      // note after it has to move.
+      final editor = await _fourNotesWithInspector(tester);
+      final ids = editor.debugElementIds;
+      expect(ids.length, greaterThanOrEqualTo(4));
+      editor.debugSelect(ids[1]);
+      await tester.pumpAndSettle();
+
+      await _tapInInspector(tester, 'workshop-bow-down');
+
+      final bows = editor.debugBowPattern;
+      expect(
+        bows.take(4).toList(),
+        ['D', 'D', 'U', 'D'],
+        reason: 'the locked stroke is obeyed and the rest re-flows from it',
+      );
+    });
+
+    testWidgets('a SECOND lock keeps the first — the locks survive a re-flow',
+        (tester) async {
+      // ⚠ The re-flow reloads the document, which RE-ISSUES element ids (that
+      // is why the selection is restored by index). The lock map is keyed by
+      // id, so this is the test that says whether those keys still mean
+      // anything on the second pass — a teacher marks up a part stroke by
+      // stroke, and each mark silently undoing the last would be worse than
+      // no feature.
+      final editor = await _fourNotesWithInspector(tester);
+      editor.debugSelect(editor.debugElementIds[1]);
+      await tester.pumpAndSettle();
+      await _tapInInspector(tester, 'workshop-bow-down');
+      expect(editor.debugBowPattern.take(4).toList(), ['D', 'D', 'U', 'D']);
+
+      editor.debugSelect(editor.debugElementIds[3]);
+      await tester.pumpAndSettle();
+      await _tapInInspector(tester, 'workshop-bow-up');
+      expect(
+        editor.debugBowPattern.take(4).toList(),
+        ['D', 'D', 'U', 'U'],
+        reason: 'note 1 stays down (the first lock) and note 3 is now up',
+      );
+    });
+
+    testWidgets('Auto hands the stroke back to the rules', (tester) async {
+      final editor = await _fourNotesWithInspector(tester);
+      editor.debugSelect(editor.debugElementIds[1]);
+      await tester.pumpAndSettle();
+      await _tapInInspector(tester, 'workshop-bow-down');
+      expect(editor.debugBowPattern.take(4).toList(), ['D', 'D', 'U', 'D']);
+      await _tapInInspector(tester, 'workshop-bow-auto');
+      expect(
+        editor.debugBowPattern.take(4).toList(),
+        ['D', 'U', 'D', 'U'],
+        reason: 'releasing the lock restores the rules\' own answer',
       );
     });
   });

@@ -458,6 +458,23 @@ class ScoreDocument {
   }
 
   bool get hasSelection => _selectedIndices.isNotEmpty;
+
+  /// The selection as POSITIONS, and a way to restore it from them.
+  ///
+  /// ⚠ Needed because [loadScore] rebuilds the document and re-issues element
+  /// ids, so a selection remembered by id does not survive a reload — it comes
+  /// back empty and silently. Positions do survive, as long as the reload keeps
+  /// the same elements in the same order (a re-marking pass, not an edit).
+  List<int> get selectedIndices => _selectedIndices;
+
+  void selectByIndices(Iterable<int> indices) {
+    final ids = <String>[
+      for (final i in indices)
+        if (i >= 0 && i < _elements.length) _elements[i].id,
+    ];
+    if (ids.isNotEmpty) selectByIds(ids);
+  }
+
   bool get hasRange => _selectedIndices.length > 1;
 
   /// Lowest / highest selected index (the range the selection spans). For

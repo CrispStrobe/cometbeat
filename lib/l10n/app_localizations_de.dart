@@ -9,6 +9,18 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get workshopBowing => 'Bogenführung';
+
+  @override
+  String get workshopBowDown => 'Abstrich';
+
+  @override
+  String get workshopBowUp => 'Aufstrich';
+
+  @override
+  String get workshopBowAuto => 'Automatisch';
+
+  @override
   String workshopPlayBelowRange(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

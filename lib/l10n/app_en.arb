@@ -1,4 +1,20 @@
 {
+  "workshopBowing": "Bowing",
+  "@workshopBowing": {
+    "description": "Inspector heading for bow direction"
+  },
+  "workshopBowDown": "Down-bow",
+  "@workshopBowDown": {
+    "description": "A pulled bow stroke"
+  },
+  "workshopBowUp": "Up-bow",
+  "@workshopBowUp": {
+    "description": "A pushed bow stroke"
+  },
+  "workshopBowAuto": "Auto",
+  "@workshopBowAuto": {
+    "description": "Let the rules choose the stroke again"
+  },
   "workshopPlayBelowRange": "{count,plural, =1{1 note below the range}other{{count} notes below the range}}",
   "@workshopPlayBelowRange": {
     "description": "Notes lower than the instrument's lowest string",

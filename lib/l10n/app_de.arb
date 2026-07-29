@@ -1,4 +1,8 @@
 {
+  "workshopBowing": "Bogenführung",
+  "workshopBowDown": "Abstrich",
+  "workshopBowUp": "Aufstrich",
+  "workshopBowAuto": "Automatisch",
   "workshopPlayBelowRange": "{count,plural, =1{1 Note unter dem Tonumfang}other{{count} Noten unter dem Tonumfang}}",
   "workshopPlayAboveRange": "{count,plural, =1{1 Note über dem Tonumfang}other{{count} Noten über dem Tonumfang}}",
   "workshopPlayOutOfReach": "{count,plural, =1{1 Note über diesem Niveau}other{{count} Noten über diesem Niveau}}",

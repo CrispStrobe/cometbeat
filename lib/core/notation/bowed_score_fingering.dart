@@ -122,6 +122,9 @@ Map<String, List<int>> bowedFingeringDigits(
 /// (see [bowedStringMarks]); with [markBowing], each note gets its bow direction
 /// (see [bowingFor]). Together they are what an edited part carries.
 ///
+/// [lockedBowing] pins strokes the player chose; the rest of the part re-flows
+/// around them instead of contradicting them. See [bowingFor].
+///
 /// Returns a copy; [score] is untouched, because a fingering is our reading of the
 /// piece rather than an edit to it.
 Score scoreWithBowedFingerings(
@@ -132,6 +135,7 @@ Score scoreWithBowedFingerings(
   BowedPositionModel? model,
   bool markStrings = false,
   bool markBowing = false,
+  Map<String, Articulation> lockedBowing = const {},
 }) {
   final marks = fingerBowedScore(
     score,
@@ -142,7 +146,9 @@ Score scoreWithBowedFingerings(
   );
   if (marks.isEmpty) return score;
   // The other hand. Rules, not search — see bowing.dart.
-  final bows = markBowing ? bowingFor(score) : const <String, Articulation>{};
+  final bows = markBowing
+      ? bowingFor(score, locked: lockedBowing)
+      : const <String, Articulation>{};
   final strings = markStrings
       ? bowedStringMarks(
           score,
@@ -165,9 +171,13 @@ Score scoreWithBowedFingerings(
               if (element is NoteElement && marks[element.id] != null)
                 element.copyWith(
                   fingerings: [for (final f in marks[element.id]!) f.finger],
+                  // ⚠ REPLACE the bow mark, never add to it. A second pass
+                  // over an already-bowed part would otherwise leave both
+                  // downBow and upBow on the same note — which renders as
+                  // nonsense and is exactly what a re-flow does.
                   articulations: bows[element.id] == null
                       ? null
-                      : {...element.articulations, bows[element.id]!},
+                      : {..._withoutBowMarks(element), bows[element.id]!},
                 )
               else
                 element,
@@ -219,4 +229,46 @@ Map<String, String> bowedStringMarks(
     }
   }
   return out;
+}
+
+/// [element]'s articulations with any existing bow direction removed.
+Set<Articulation> _withoutBowMarks(NoteElement element) => {
+      for (final a in element.articulations)
+        if (a != Articulation.downBow && a != Articulation.upBow) a,
+    };
+
+/// [score] with ONLY its bow directions rewritten — fingerings, string numerals
+/// and every other mark left exactly as they are.
+///
+/// This is the re-flow (SE-C4): the player pins a stroke in [locked] and the
+/// rest of the part follows from it. Separate from [scoreWithBowedFingerings]
+/// because flipping a bow must not silently re-run the LEFT hand — a re-fingered
+/// passage is not what anyone asked for by clicking an up-bow, and the fingering
+/// may well have been corrected by hand since.
+Score scoreWithBowing(
+  Score score, {
+  Map<String, Articulation> locked = const {},
+}) {
+  final bows = bowingFor(score, locked: locked);
+  return score.copyWith(
+    measures: [
+      for (final measure in score.measures)
+        measure.copyWith(
+          elements: [
+            for (final element in measure.elements)
+              if (element is NoteElement)
+                element.copyWith(
+                  articulations: bows[element.id] == null
+                      // A note the rules give no mark (mid-slur) must LOSE any
+                      // stale one, or an old mark survives the re-flow and
+                      // contradicts the slur it now sits under.
+                      ? _withoutBowMarks(element)
+                      : {..._withoutBowMarks(element), bows[element.id]!},
+                )
+              else
+                element,
+          ],
+        ),
+    ],
+  );
 }

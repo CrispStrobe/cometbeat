@@ -35,7 +35,26 @@ import 'package:crisp_notation_core/crisp_notation_core.dart'
 ///
 /// Only voice 1 is bowed — a second voice on the same staff is another player's
 /// line, and its bowing is their business.
-Map<String, Articulation> bowingFor(Score score) {
+///
+/// [locked] pins strokes the player has decided for themselves: a note listed
+/// there takes the given direction whatever the rules would have said, and
+/// **everything after it re-flows from that choice** rather than the alternation
+/// carrying on regardless.
+///
+/// That re-flow is the whole point of the parameter, and it is why locking is
+/// not the same as simply editing the mark afterwards. A bowing is a CHAIN — one
+/// stroke determines the next — so changing a single mark by hand leaves every
+/// following note contradicting it. Locking says "this one is mine, now redo the
+/// rest", which is what a teacher does with a red pen and what a player needs in
+/// order to read the part.
+///
+/// ⚠ A lock on a note in the MIDDLE of a slur is ignored: those notes take no
+/// mark of their own because the slur already says "same stroke". Lock the note
+/// that STARTS the slur instead — that is the stroke there is to choose.
+Map<String, Articulation> bowingFor(
+  Score score, {
+  Map<String, Articulation> locked = const {},
+}) {
   // Notes under a slur share one stroke, so map every slurred note to the id of
   // the note that STARTS its stroke.
   final index = <String, (int measure, int position)>{};
@@ -93,7 +112,13 @@ Map<String, Articulation> bowingFor(Score score) {
         continue;
       }
       var direction = next;
-      if (firstInBar && direction == Articulation.upBow) {
+      final pinned = locked[element.id!];
+      if (pinned != null) {
+        // The player has decided this one. It outranks BOTH the alternation and
+        // the rule of the down-bow — a retake forced onto a stroke someone chose
+        // deliberately would silently undo their decision.
+        direction = pinned;
+      } else if (firstInBar && direction == Articulation.upBow) {
         // Rule 4: the retake. Start the bar down instead, and pay for it by
         // taking two down-bows in a row.
         direction = Articulation.downBow;
