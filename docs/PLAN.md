@@ -1547,7 +1547,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T6 pattern-level time signature
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-X5 STEP 1 ONLY — the MIDI-in seam.
+  Not the whole card.** Premise verified: `MidiDevice` is 0 hits and there is no
+  MIDI package in `pubspec.yaml`, so this really is from nothing.
+  ⚠️ **What I am deliberately NOT doing, and why.** The full card wants a
+  platform binding as well. That means a new dependency wired across macOS, iOS,
+  Android, Windows/Linux and web, with permissions on two of them — a call with
+  weight that belongs to the maintainer, not to me mid-session. Picking a
+  package quietly and threading it through five build configs is exactly the
+  kind of decision that is hard to walk back.
+  So: the **seam** — a pure-Dart `MidiMessage` + `MidiInput` contract, a test
+  double, and the held-note tracking every record path needs — with the binding
+  left as an explicitly-scoped follow-up any surface can adopt without changing.
+  Same shape as WS-T3, which unblocked two cards by extracting the contract
+  first. **This unblocks WS-T7.**
+  Previously: ✅ **WS-T6 pattern-level time signature
   SHIPPED** (groove templates deliberately left open — they change WHEN notes
   play, not how the grid is drawn).
   `tracker_meter.dart` = one `TrackerMeter` the grid and the roll both read, +
