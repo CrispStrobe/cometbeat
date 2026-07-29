@@ -105,6 +105,16 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · 🚧 **CLAIMING — the Song Book entry to the Note
+  Highway** (doc §7's biggest open item: `highwayChartFromScore` is written and
+  tested but nothing calls it, so the highway can only play its 9 built-in
+  pieces while the rights-cleared corpus sits right there). Branch
+  `feature/note-highway`, worktree `../mus-highway`. HOT SHARED FILES I am in:
+  **`features/games/songs/song_screen.dart`** (one more button in the existing
+  Wrap next to Sing along / Play along — no existing action touched) and
+  **`app_en.arb`/`app_de.arb`** + generated `app_localizations*` (append-only).
+  Still NOT touching `playalong/play_along_screen.dart`.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the Note Highway first cut**
   (falling-note play-along; scope + what is NOT in it in
   [NOTE_HIGHWAY.md](NOTE_HIGHWAY.md) §7). Branch `feature/note-highway`,
@@ -118,6 +128,14 @@ is recorded in [HISTORY.md](HISTORY.md).
   `playalong/play_along_screen.dart`** — it still owns its own private
   painters; folding it onto the shared view is an open follow-up, so whoever
   works there is not colliding with me.
+  - ⚠️ **Lesson for anyone adding a tile: a `GameInfo` is not done until its id
+    is also placed in `core/curriculum/concept_map.dart`.**
+    `curriculum_coverage_test` asserts `orphanGames` is empty ("every game
+    should be placed"). I merged on a targeted gate that omitted that file and
+    shipped three orphans; fixed in `94177ff5`. The gate for a tile is
+    `live_flow` (registry smoke) + `consistency` + `curriculum_coverage` +
+    `score_to_stars` + `layout_audit`. ⚠️ The whole suite is ~649 files / ~60 min
+    here and gets killed before it finishes in one background task — batch it.
 
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Internet Jukebox ingested:
   31 rows from 24 cleared items, 180 held.** `db.json` **42,596 → 42,627**,
