@@ -55,20 +55,16 @@ const int kGuitarHandSpan = 4;
 /// are the ones the PLAYER TYPED: re-arranging them there would silently rewrite
 /// the user's own fretting, so that path must be able to name fingers for the
 /// shapes as given and change nothing else.
-List<List<int>> fingerFrettings(
-  List<Map<int, int>> shapes, {
-  int handSpan = kGuitarHandSpan,
-}) {
-  final out = <List<int>>[];
-  int? position; // lowest fret currently under the index finger
-
+/// Where the hand sits for each shape, or null when nothing is stopped yet.
+///
+/// ⚠ ONE walk, used by both [fingerFrettings] and [barresFor]. They must agree
+/// about where the hand is — a barre is only a barre because the index is at
+/// that fret — and two copies of this loop would drift apart the first time
+/// either was tuned.
+List<int?> _handPositions(List<Map<int, int>> shapes, int handSpan) {
+  final out = <int?>[];
+  int? position;
   for (final shape in shapes) {
-    if (shape.isEmpty) {
-      out.add(const []);
-      continue;
-    }
-    // Frets that actually need a finger. Open strings are position-independent,
-    // so they neither move the hand nor constrain where it sits.
     final fretted = shape.values.where((f) => f > 0).toList()..sort();
     if (fretted.isNotEmpty) {
       final lo = fretted.first;
@@ -80,6 +76,57 @@ List<List<int>> fingerFrettings(
           position != null && lo >= position && hi <= position + handSpan - 1;
       if (!fits) position = lo;
     }
+    out.add(position);
+  }
+  return out;
+}
+
+/// Where a BARRE is needed for each shape — the fret one finger lies across, or
+/// null when no finger has to.
+///
+/// Derived from the same hand the digits come from, and it must be: a barre is
+/// not a separate decision, it is what the index finger is already doing when
+/// two or more strings are stopped at the hand's own fret. That is why
+/// [fingerFrettings] already gives them all finger `1` — this only names the
+/// thing those repeated 1s are.
+///
+/// ⚠ Two strings at one fret CAN be taken with two fingers, and a player
+/// sometimes does. The barre is reported because the index is already at that
+/// fret and covering both with it is the standard economy — but it is a
+/// suggestion about the easiest hand, not a claim about what the player must
+/// do. Nothing here overrides a barre already written in the file.
+///
+/// ⚠ Open strings never count: no finger stops them, so they neither create a
+/// barre nor extend one.
+List<int?> barresFor(
+  List<Map<int, int>> shapes, {
+  int handSpan = kGuitarHandSpan,
+}) {
+  final positions = _handPositions(shapes, handSpan);
+  return [
+    for (var i = 0; i < shapes.length; i++)
+      if (positions[i] case final int at
+          when shapes[i].values.where((f) => f == at).length >= 2)
+        at
+      else
+        null,
+  ];
+}
+
+List<List<int>> fingerFrettings(
+  List<Map<int, int>> shapes, {
+  int handSpan = kGuitarHandSpan,
+}) {
+  final out = <List<int>>[];
+  final positions = _handPositions(shapes, handSpan);
+
+  for (var i = 0; i < shapes.length; i++) {
+    final shape = shapes[i];
+    if (shape.isEmpty) {
+      out.add(const []);
+      continue;
+    }
+    final position = positions[i];
     // Digits follow PITCH order (low → high), not string index, so digit i
     // belongs to pitch i. String 0 is the highest-sounding string, so that is
     // descending string index.

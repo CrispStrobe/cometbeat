@@ -18,7 +18,7 @@ import 'package:comet_beat/core/audio/wav_io.dart'
     show readWavPcm16, wavToMonoFloat;
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
-    show fingerFrettings;
+    show barresFor, fingerFrettings;
 import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
@@ -339,12 +339,21 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
   void addLeftFingerings() {
     final cols = _doc.columns;
     if (cols.every((c) => c.frets.isEmpty)) return;
-    final fingers = fingerFrettings([for (final c in cols) c.frets]);
+    final shapes = [for (final c in cols) c.frets];
+    final fingers = fingerFrettings(shapes);
+    // A barre is not a second decision — it is what the index is already doing
+    // when the digits come out 1,1,1 at one fret. Naming it is the difference
+    // between "three fingers there" and what a player actually reads.
+    final barres = barresFor(shapes);
     setState(() {
       _snapshot();
       for (var i = 0; i < cols.length && i < fingers.length; i++) {
         cols[i] = cols[i].copyWith(
           leftFingers: fingers[i].isEmpty ? null : fingers[i],
+          // ⚠ Never overwrite a barre the FILE stated. An imported Guitar Pro
+          // barre is the engraver's, and a suggestion must not silently replace
+          // a fact.
+          barreFret: cols[i].barreFret ?? barres[i],
         );
       }
     });

@@ -159,4 +159,55 @@ void main() {
       expect(fingers.every((f) => f == 1), isTrue);
     });
   });
+
+  group('naming the barre', () {
+    // Shapes are `string index → fret`; string 5 is the low E. Hoisted to
+    // constants because an inline map inside a list argument is reformatted
+    // into a shape the trailing-comma lint then rejects.
+    const fMajor = {5: 1, 4: 3, 3: 3, 2: 2, 1: 1, 0: 1};
+    const bMinor = {4: 2, 3: 4, 2: 4, 1: 3, 0: 2};
+    const allDifferent = {5: 1, 4: 2, 3: 3};
+    const single = {5: 5};
+    const twoOpen = {1: 0, 0: 0};
+    const twoFrettedPlusOpen = {5: 3, 4: 3, 1: 0, 0: 0};
+    const empty = <int, int>{};
+
+    test('F major is a barre at the first fret', () {
+      expect(barresFor([fMajor]), [1]);
+    });
+
+    test('B minor is a barre at the second', () {
+      expect(barresFor([bMinor]), [2]);
+    });
+
+    test('a chord with every note on a different fret needs no barre', () {
+      expect(barresFor([allDifferent]), [null]);
+    });
+
+    test('a single note is never a barre', () {
+      expect(barresFor([single]), [null]);
+    });
+
+    test('open strings do not make a barre', () {
+      // Two open strings are stopped by nothing at all.
+      expect(barresFor([twoOpen]), [null]);
+      // …and they do not extend one either: only the fretted notes count.
+      expect(barresFor([twoFrettedPlusOpen]), [3]);
+    });
+
+    test('an empty column has no barre', () {
+      expect(barresFor([empty]), [null]);
+    });
+
+    test('the barre agrees with the digits — it names the repeated 1s', () {
+      final fingers = fingerFrettings([fMajor]).single;
+      final barre = barresFor([fMajor]).single;
+      expect(barre, 1);
+      // Every string the barre covers is exactly the ones the digits call 1.
+      final byString = fMajor.keys.toList()..sort((a, b) => b.compareTo(a));
+      for (var i = 0; i < byString.length; i++) {
+        if (fMajor[byString[i]] == barre) expect(fingers[i], 1);
+      }
+    });
+  });
 }
