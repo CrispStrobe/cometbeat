@@ -254,19 +254,29 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
-- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1d` (maintainer-directed):
-  the Tracker AppBar gets HORIZONTAL SCROLL + reorganisation, then the remaining
-  four "Add to project" items and mixer-strip → open.**
-  Maintainer's call on the overflow I measured: *"app bar needs horizontal scroll
-  and probably reorganization"*. So the ~370 px overflow is fixed rather than
-  worked around — it makes those actions reachable on a phone AND unblocks the
-  menu-driven test I could not get green.
-  **Order, smallest risk first:** (1) tracker AppBar scroll/regroup; (2) the
-  button-driven test that overflow was blocking; (3) `Add to project` on Tab,
-  Score, Loop Studio, Audio Editor; (4) tap a mixer strip → open that track in
-  its editor, which is what finally makes `openProjectTrack` reachable.
-  ⚠️ Four screens plus the mixer is wide collision surface — I will re-check each
-  file's heat immediately before touching it and split commits per surface. — opus
+- **opus (workstation-parity)** · 🔶 **`WS-X1d` PARTIAL — app bar fixed; the
+  Tracker overflow is NOT the app bar, and I had that wrong too.**
+  ✅ **Shipped: `GameAppBar` scrolls its actions horizontally** (`a4080ca1`),
+  with the **sound toggle and "?" pinned OUTSIDE the scroll view** — the
+  previous attempt at this scrolled them too and was reverted (`ba96a26f`,
+  "keep game app bar layout stable"), and an app-wide mute you have to hunt for
+  is worse than no scroll. `Flexible` replaces that attempt's guessed 72% width.
+  **`test/game_app_bar_test.dart` restored** (the revert deleted it): 5 tests —
+  no overflow, toggle stays reachable, overflowing actions are scrolled not
+  lost, short rows unchanged for the other 124 screens. `layout_audit_test`
+  (every game × phone/tablet × EN/DE) green.
+  ❌ **BUT it does not fix the Tracker overflow I was chasing.** With the
+  first-run sheet dismissed the screen still throws **`RenderFlex overflowed by
+  368 px`** and **`by 171 px`** — so the offending Row is in the Tracker's own
+  body/toolbar, **not** in the app bar. My earlier note implying the app bar was
+  the culprit was wrong; this is the second wrong diagnosis I have posted on
+  this bug, both corrected here rather than left to mislead.
+  ⬜ **Still open, and the recipe is now complete:** find the two overflowing
+  Rows in `advanced_tracker_screen.dart`'s body (368 px + 171 px, reproducible
+  by dismissing the tutorial sheet at the standard game surface), then the
+  button-driven test becomes possible — dismiss the sheet, use fixed `pump`s,
+  never `pumpAndSettle` (playhead Ticker). Then `Add to project` on Tab · Score
+  · Loop Studio · Audio Editor, and mixer-strip → open. — opus
 
 - **opus (workstation-parity)** · 🔶 **`WS-X1c` PARTIAL (1 of 5 surfaces) —
   releasing the claim, with the gap named.**
