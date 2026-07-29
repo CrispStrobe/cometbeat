@@ -105,6 +105,32 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (assets/mp3)** · ✅ **SHIPPED (idle) — MP3 samples decoded ~23 ms LATE;
+  `mp3Decode` now honours the LAME gapless header.** Touched **only**
+  `lib/core/audio/mp3/mp3_decoder.dart` + new `test/mp3_gapless_test.dart`
+  (staged by name, never `git add -A` — see the clobber lesson above).
+  - **The bug:** the decoder skipped the Xing/Info frame as metadata but never
+    read its gapless fields, so every MP3 the app loads began `delay+529`
+    samples late and ran a granule long. Measured through `loadSfz` on one bell
+    sample in both formats: WAV onset 35 / MP3 onset 1141 (**+1106 frames =
+    23.0 ms**), length delta +1152. Uniform, so an all-MP3 instrument alone
+    sounds fine — it **flams against WAV/SF2 voices** and smears a percussive
+    attack. Not fixable in the SFZ (the loader ignores `offset`), and
+    pre-trimming before encoding would destroy the attack transient.
+  - **After:** onset 36 vs 35, length delta **0**. Trim applied ONLY when a tag
+    supplies the numbers, so tagless streams keep old behaviour — that is what
+    keeps the encoder round-trip tests valid. 62 MP3+SFZ tests green.
+  - 🛑 **Heads-up for whoever ships a release: payload format is coupled to the
+    app build.** An MP3 payload served to an app WITHOUT this fix still plays
+    late. Our catalog therefore still ships **WAV**; switching (Ze Bellas
+    514 MB → 8.9 MB) is safe only after a release carrying this fix has drained
+    old builds. Not a quality question — a scheduling one.
+  - Also this session (no app code, VPS/HF only): 9 CC0 Shortcircuit XT
+    instruments added to `db.json` (42,627→42,636) and published to the HF
+    catalog (instrument shard 223→232). `bin/merge_db.py` extra-tuple gained
+    `"scxt"` — **one word, backed up, `ast.parse`-checked**; the builder's owner
+    may want to glance at it.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — chord grips + strum arrows,
   and a REWRITE of the Beat Highway after maintainer feedback.** ⚠️ **The
   feedback is worth inheriting: "unplayable, much too fast at 100%, rhythm
