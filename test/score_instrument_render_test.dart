@@ -141,4 +141,103 @@ void main() {
     final (lc, rc) = panPartsToStereo([loud]);
     expect(_peak(lc), closeTo(_peak(rc), 1e-9));
   });
+
+  group('SE-C5: the render follows what is notated', () {
+    // ⚠ No "count the attacks" helper here, and the reason is worth recording:
+    // my first version counted the signal rising past a threshold, which on a
+    // 220 Hz sine counts ZERO CROSSINGS — it reported 20 attacks for one note
+    // and 80 for four. Re-attacks of a continuous tone also butt together with
+    // no gap, so an envelope would not separate them either. So these assert
+    // things this signal genuinely can support: exact equivalence where the
+    // notation defines one, and difference where it must exist.
+
+    Score one(NoteElement note) => Score(
+          clef: Clef.treble,
+          measures: [
+            Measure([note]),
+          ],
+        );
+
+    NoteElement plainNote(NoteDuration d, {int? tremolo, Ornament? ornament}) =>
+        NoteElement(
+          pitches: [Pitch.fromMidi(60)],
+          duration: d,
+          tremolo: tremolo,
+          ornament: ornament,
+          id: 'n0',
+        );
+
+    test('a TIE sounds exactly like the single longer note it means', () {
+      // The strongest statement available: two tied quarters must render
+      // BYTE-IDENTICALLY to one half note. It used to re-articulate.
+      final tied = Score(
+        clef: Clef.treble,
+        measures: [
+          Measure([
+            NoteElement(
+              pitches: [Pitch.fromMidi(60)],
+              duration: NoteDuration.quarter,
+              tieToNext: true,
+              id: 'n0',
+            ),
+            NoteElement(
+              pitches: [Pitch.fromMidi(60)],
+              duration: NoteDuration.quarter,
+              id: 'n1',
+            ),
+          ]),
+        ],
+      );
+      final asHalf = one(plainNote(NoteDuration.half));
+      expect(
+        renderScoreWithInstrument(tied, _voice()),
+        renderScoreWithInstrument(asHalf, _voice()),
+      );
+    });
+
+    test('a tremolo differs from the plain note but occupies the same time',
+        () {
+      final plain = renderScoreWithInstrument(
+        one(plainNote(NoteDuration.whole)),
+        _voice(),
+      );
+      final trem = renderScoreWithInstrument(
+        one(plainNote(NoteDuration.whole, tremolo: 2)),
+        _voice(),
+      );
+      expect(trem, isNot(plain), reason: 'it used to render as one long note');
+      // Within a sample: partitioning the note into repeats rounds each edge.
+      expect(
+        trem.length,
+        closeTo(plain.length, 2),
+        reason: 'and it must not steal time',
+      );
+    });
+
+    test('an ornament is audible and does not shorten the music', () {
+      final plain = renderScoreWithInstrument(
+        one(plainNote(NoteDuration.half)),
+        _voice(),
+      );
+      final turned = renderScoreWithInstrument(
+        one(plainNote(NoteDuration.half, ornament: Ornament.turn)),
+        _voice(),
+      );
+      expect(turned, isNot(plain));
+      expect(turned.length, greaterThanOrEqualTo(plain.length));
+    });
+
+    test('a plain score is untouched — same length, still non-silent', () {
+      final pcm = renderScoreWithInstrument(
+        Score.simple(notes: 'c4:q d4 e4 f4'),
+        _voice(),
+      );
+      expect(_peak(pcm), greaterThan(0.01));
+      // Four quarters at 120 bpm = 2 s of notes, plus the last note's sample
+      // tail — the render runs a little past the written end and always has.
+      // The claim is that nothing in this score asks for extra time.
+      expect(pcm.length, greaterThanOrEqualTo(2 * 44100));
+      expect(pcm.length, lessThan((2.5 * 44100).round()));
+    });
+  });
 }

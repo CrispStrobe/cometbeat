@@ -10,8 +10,10 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:comet_beat/core/audio/score_performance.dart';
 import 'package:comet_beat/core/audio/synth.dart' show kSampleRate;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+
 // The Flutter-free notation core (a dependency_override, re-exported via
 // crisp_notation) — import it directly so this stays usable under plain
 // `dart run` (the CLI bin/rendersong.dart), matching bin/notaconv.dart.
@@ -114,13 +116,25 @@ void _placeVoice(
   void Function(int end) grow, {
   required Map<String, DynamicLevel> dynByElement,
   required bool expressive,
+  int fifths = 0,
 }) {
   var cursorMs = 0;
   var currentVel = 80; // mf until a dynamic says otherwise
+  // SE-C5: a tie means two noteheads and ONE attack, so a tied-from note is
+  // skipped as a sounding event and its length is added to the note that
+  // started the chain. Without this the preview re-articulated every tie —
+  // audibly wrong, and wrong in the one place a beginner is listening hardest.
+  var carriedMs = 0; // length lent forward by ties
+  int? carriedStart; // where the tied chain BEGAN, in samples
   for (final e in elements) {
     if (e is NoteElement) {
-      final durMs = _durMs(e.duration, quarterMs);
-      final startSample = (cursorMs * sampleRate / 1000).round();
+      final ownMs = _durMs(e.duration, quarterMs);
+      final durMs = ownMs + carriedMs;
+      // ⚠ A tied chain sounds from where it BEGAN, not from the last notehead
+      // of the chain. Attaching the sound to the final note put it a whole
+      // note-length late and left silence in its place.
+      final startSample =
+          carriedStart ?? (cursorMs * sampleRate / 1000).round();
 
       // A per-note gain (and staccato shortening) from the note's loudness:
       // an explicit performed velocity (a MIDI import) wins; else notated
@@ -155,13 +169,45 @@ void _placeVoice(
         }
       }
 
-      for (final p in e.pitches) {
-        final pcm = _renderNote(inst, p.midiNumber, playMs, gain: gain);
-        out.add((startSample, pcm));
-        grow(startSample + pcm.length);
+      // Look ahead: if THIS note ties into the next, it does not sound yet —
+      // it lends its length forward. (Chords tie as a unit here; a partial
+      // chord tie is not modelled and would need per-pitch tie data.)
+      if (e.tieToNext) {
+        carriedStart ??= startSample;
+        carriedMs = durMs; // accumulates across a chain of three or more
+        cursorMs += ownMs;
+        continue;
       }
-      cursorMs += durMs;
+
+      {
+        // SE-C5: one notehead is not always one attack. Tremolo repeats it,
+        // an ornament expands it into a figure; a plain note yields exactly
+        // one attack of the full length, so ordinary scores are unchanged.
+        final attacks =
+            attacksFor(e, playMs, quarterMs: quarterMs, fifths: fifths);
+        final transpose = e.pitches.first.midiNumber;
+        for (final p in e.pitches) {
+          // Chord notes follow the same figure, moved to their own pitch: an
+          // ornament on a chord decorates every voice of it.
+          final offset = p.midiNumber - transpose;
+          for (final a in attacks) {
+            final at = startSample + (a.atMs * sampleRate / 1000).round();
+            final pcm =
+                _renderNote(inst, a.midi + offset, a.lengthMs, gain: gain);
+            out.add((at, pcm));
+            grow(at + pcm.length);
+          }
+        }
+      }
+      carriedMs = 0;
+      carriedStart = null;
+      // ⚠ The cursor advances by this notehead's OWN written length. Advancing
+      // by the accumulated length would count a tied note twice and drag
+      // everything after it out of time.
+      cursorMs += ownMs;
     } else if (e is RestElement) {
+      carriedMs = 0;
+      carriedStart = null;
       cursorMs += _durMs(e.duration, quarterMs);
     }
   }
@@ -201,6 +247,9 @@ Float64List renderScoreWithInstrument(
         grow,
         dynByElement: dynByElement,
         expressive: expressive,
+        // The key decides an ornament's diatonic neighbours; without it a
+        // trill in G major would alternate with F natural.
+        fifths: score.keySignature.fifths,
       );
     }
   }
