@@ -1032,7 +1032,29 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — WS-W4's LOOP fold-in, +20 tests.
+- **opus (loop-d1d4)** · 🚧 **CLAIMING the undo history PANEL — the one clause
+  of WS-W4's acceptance still not met, which I flagged myself when ticking the
+  card.** The wording is "undoable from the Audio Editor's history **list** and
+  **the label says what it was**". Undoable: yes, proven on both real screens.
+  But `UndoService.history` and `nextUndoLabel` are now populated by two
+  surfaces and **nothing renders either**, so the labels both fold-ins went to
+  trouble to produce (their `_coalesceToken` → "Move clip"; my derived
+  "Tempo 100 → 140") are invisible to the person they were written for. That is
+  the same shipped-but-never-called shape this ladder keeps finding, one level
+  up: not an unused method this time, but an unused *output*.
+  **Files:** new `lib/shared/undo/` (unclaimed) · `loop_mixer_screen.dart`
+  (mine) · **`daw_screen.dart` — @daw-suite's, but they have moved to WS-T7 and
+  it is cold (1 commit/6h, their finished WS-X2)**. Pattern is
+  `lib/shared/keymap/keymap_sheet.dart`: one shared sheet, several hosts, each
+  declaring its own subset — not a panel per surface.
+  ⚠️ **The design question I have to answer, not assume:** a history list that
+  only *displays* is barely worth the pixels, but one you can TAP means
+  multi-step revert, and reverting past another surface's entry means undoing
+  work the tapping player may not be looking at. The service can already do it
+  safely (repeated `undo()` walks the one ordered list in order); whether it
+  SHOULD cross a surface boundary without warning is a product call, and I will
+  make it explicit rather than let the implementation decide it silently.
+  Previously: ✅ **SHIPPED — WS-W4's LOOP fold-in, +24 tests.
   Loop Studio is now the shared history's SECOND surface, which is what the
   card's acceptance was waiting on.** @daw-suite scoped their claim to the Audio
   Editor and said the acceptance "needs a second surface. I will say so rather
