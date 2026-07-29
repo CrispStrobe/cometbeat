@@ -3458,5 +3458,7 @@
   "highwayInput": "How you play",
   "highwayInputTouch": "Tap the keys",
   "highwayInputMic": "Your instrument",
-  "highwayInputMicHint": "Play your real instrument \u2014 the app listens. It hears one note at a time, so a chord counts for the note it catches."
+  "highwayInputMicHint": "Play your real instrument \u2014 the app listens. It hears one note at a time, so a chord counts for the note it catches.",
+  "workshopPartFx": "Effects",
+  "workshopPartFxHint": "Effects for this part only — a muted trumpet next to a clean piano. Saved with the part, so they travel with the score."
 }

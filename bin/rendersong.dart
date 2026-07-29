@@ -47,6 +47,7 @@ import 'package:comet_beat/core/audio/gm_song_render.dart';
 import 'package:comet_beat/core/audio/midi_render.dart'
     show ReverbAlgo, renderMidiFile;
 import 'package:comet_beat/core/audio/mp3/mp3_encoder.dart';
+import 'package:comet_beat/core/audio/score_fx.dart';
 import 'package:comet_beat/core/audio/score_instrument_render.dart';
 import 'package:comet_beat/core/audio/sf2/sf2.dart' show VorbisDecode;
 import 'package:comet_beat/core/audio/sf2/sfz.dart' show loadSfz;
@@ -218,9 +219,15 @@ Future<void> main(List<String> args) async {
       stderr
           .writeln("no --sf2 given → built-in voice '${voiceName ?? 'piano'}'");
     }
+    // WS-X3: a part can carry its OWN effect chain in its metadata (the Score
+    // Workshop's rack writes it there, MusicXML carries it per part). Rendering
+    // through `..WithScoreFx` is what makes a chain authored in the app audible
+    // from the command line — and identical, sample for sample, when there is
+    // none.
+    _reportScoreFx(parts);
     mono = loaded is MultiPartScore
-        ? renderMultiPartWithInstrument(loaded, voice, quarterMs: qms)
-        : renderScoreWithInstrument(loaded as Score, voice, quarterMs: qms);
+        ? renderMultiPartWithScoreFx(loaded, voice, quarterMs: qms)
+        : renderScoreWithScoreFx(loaded as Score, voice, quarterMs: qms);
   }
 
   // Mix down → soft-knee master → write. Stereo (panned) for a GM band of ≥2
@@ -473,7 +480,35 @@ List<Float64List> _renderGmParts(
     final label = p.name.isEmpty ? 'track' : p.name;
     stderr.writeln('  part "$label" → ${soundFontPresetLabel(preset)}');
   }
-  return renderPartsSeparate(voiced, quarterMs: quarterMs);
+  _reportScoreFx([for (final p in parts) p.score]);
+  return [
+    for (var i = 0; i < voiced.length; i++)
+      applyScoreFx(
+        renderPartsSeparate([voiced[i]], quarterMs: quarterMs).single,
+        parts[i].score.metadata,
+      ),
+  ];
+}
+
+/// Say which parts carry an effect chain.
+///
+/// A chain lives in the file's metadata, where nothing on a terminal would show
+/// it — so a render that sounds unexpectedly filtered would look like a bug in
+/// the synth. One line each, on stderr, next to the voice assignments.
+///
+/// ⚠️ Measured while wiring this: the master stage below normalises the mix to
+/// a peak of 0.9, which **exactly cancels a chain that only changes LEVEL** — a
+/// `gain` chain renders byte-identical here (it was, in my test). Everything
+/// with a shape to it (filters, delay, distortion) comes through; a level-only
+/// chain is heard in the app, where there is no such normalisation, and in the
+/// balance between parts, but not in this file's overall loudness.
+void _reportScoreFx(List<Score> parts) {
+  for (var i = 0; i < parts.length; i++) {
+    final chain = scoreFxChainString(parts[i].metadata);
+    if (chain == null) continue;
+    final name = parts[i].metadata.instrument ?? 'part ${i + 1}';
+    stderr.writeln('  "$name" effects → $chain');
+  }
 }
 
 /// A native Vorbis decoder for `.sf3`, if `GLINT_LIB` points at the glint

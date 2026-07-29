@@ -16327,6 +16327,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Play your real instrument — the app listens. It hears one note at a time, so a chord counts for the note it catches.'**
   String get highwayInputMicHint;
+
+  /// No description provided for @workshopPartFx.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects'**
+  String get workshopPartFx;
+
+  /// No description provided for @workshopPartFxHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects for this part only — a muted trumpet next to a clean piano. Saved with the part, so they travel with the score.'**
+  String get workshopPartFxHint;
 }
 
 class _AppLocalizationsDelegate

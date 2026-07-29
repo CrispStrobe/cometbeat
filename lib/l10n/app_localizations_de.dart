@@ -9036,4 +9036,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get highwayInputMicHint =>
       'Spiel dein echtes Instrument — die App hört zu. Sie hört einen Ton auf einmal, ein Akkord zählt also für den Ton, den sie erwischt.';
+
+  @override
+  String get workshopPartFx => 'Effekte';
+
+  @override
+  String get workshopPartFxHint =>
+      'Effekte nur für diese Stimme — eine gedämpfte Trompete neben einem klaren Klavier. Wird mit der Stimme gespeichert und reist mit der Partitur mit.';
 }

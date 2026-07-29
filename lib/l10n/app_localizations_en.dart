@@ -8984,4 +8984,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get highwayInputMicHint =>
       'Play your real instrument — the app listens. It hears one note at a time, so a chord counts for the note it catches.';
+
+  @override
+  String get workshopPartFx => 'Effects';
+
+  @override
+  String get workshopPartFxHint =>
+      'Effects for this part only — a muted trumpet next to a clean piano. Saved with the part, so they travel with the score.';
 }

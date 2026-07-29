@@ -3036,5 +3036,7 @@
   "highwayInput": "Wie du spielst",
   "highwayInputTouch": "Tasten antippen",
   "highwayInputMic": "Dein Instrument",
-  "highwayInputMicHint": "Spiel dein echtes Instrument \u2014 die App h\u00f6rt zu. Sie h\u00f6rt einen Ton auf einmal, ein Akkord z\u00e4hlt also f\u00fcr den Ton, den sie erwischt."
+  "highwayInputMicHint": "Spiel dein echtes Instrument \u2014 die App h\u00f6rt zu. Sie h\u00f6rt einen Ton auf einmal, ein Akkord z\u00e4hlt also f\u00fcr den Ton, den sie erwischt.",
+  "workshopPartFx": "Effekte",
+  "workshopPartFxHint": "Effekte nur für diese Stimme — eine gedämpfte Trompete neben einem klaren Klavier. Wird mit der Stimme gespeichert und reist mit der Partitur mit."
 }

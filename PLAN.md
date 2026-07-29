@@ -1425,27 +1425,19 @@ prefix.
     shape is in `loop_mixer_screen`'s `_saveGrooveSlot` and `_renameTrack`**
     (mine), latent there because those dialogs do not rebuild on the way out.
 
-- 🔶 **WS-X3 — the shared FX rack in the LAST mode.** `S` (after the library
-  change) · ✅ **UNBLOCKED — the maintainer chose ROUTE 1 on 2026-07-29: add an
-  `extras`/`fx` field to `ScoreMetadata` in crisp_notation, so the chain travels
-  WITH the part.** Route 2 (app-side prefs) is explicitly NOT the answer — it
-  would let someone mark this done while failing its own acceptance sentence;
-  route 3 (reusing `copyright`) stays rejected as data smuggling.
-  **Order: the library change FIRST, as its own small commit**, then X3 is the
-  few-line host it looks like. ⚠️ Per CLAUDE.md the shared `../crisp_notation`
-  clone must stay on `main` — do the model change in its own
-  `../crisp_notation-<topic>` worktree, merge, then come back. The MusicXML /
-  LilyPond writers need a deliberate call on whether to emit the field.
-  **Narrowed by the audit: this is four-fifths done.** `shared/widgets/fx_rack.dart` is already
-  hosted by Loop Studio, the Tab Workshop and the Tracker, and the Audio Editor
-  has the equivalent through its own `DawClipEffectType` editor (68 sites). The
-  one mode with **no** effect surface at all is **Score** — nothing in
-  `composition_workshop_screen.dart` touches `FxRack` or `FxSpec`. Host the
-  rack there, with the **chain string** as the interchange format so a chain
-  travels with the part. (`AUDIO_EDITOR_SUITE.md` C7.)
-  ⚠️ Worth a deliberate call while you are in there: the Audio Editor's own
-  enum and the shared `FxSpec` are two vocabularies for one rack. Unifying them
-  is a bigger job than this task and should not be smuggled into it.
+- ✅ **WS-X3 — the shared FX rack in the LAST mode. SHIPPED 2026-07-29** (opus,
+  daw-suite), route 1 as the maintainer chose. `lib/core/audio/score_fx.dart` +
+  the rack in the Workshop's per-part menu + `bin/rendersong.dart`; the chain
+  lives in `ScoreMetadata.extras` (crisp_notation `ee7dbc9`), which MusicXML
+  carries per part in `<miscellaneous-field>`. 16 tests.
+  ⚠️ **The card's premise did not hold, in two places** — the library neither
+  read nor wrote `<miscellaneous-field>`, and `multiPartToMusicXml` discarded
+  metadata outright, so the field alone would have been a no-op end to end. Both
+  closed first; the card was an `S` only after that. Details, plus two measured
+  caveats (CLI normalisation cancels a level-only chain; an effect tail is cut
+  at the part's end, app-wide) and one hole left open (`midiProgram`/
+  `isPercussion` never reach MusicXML at all), on the board in `docs/PLAN.md`.
+  ⚠️ Also fixed there: a multi-part export was dropping its whole header.
 
 > ✅ **WS-X4 SHIPPED** — `DawService.trackSend`/`setTrackSend` (plus
 > `setTrackSendForTracks` for a multi-selection) send a whole lane to a bus, and

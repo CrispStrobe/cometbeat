@@ -16,10 +16,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
+import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart'
     show LoopTiming, PatternCell, kPatternSteps;
-import 'package:comet_beat/core/audio/score_instrument_render.dart'
-    show renderMultiPartWithInstrument;
+import 'package:comet_beat/core/audio/score_fx.dart';
 import 'package:comet_beat/core/audio/synth.dart' show wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
@@ -64,6 +64,7 @@ import 'package:comet_beat/shared/music/music_picker.dart'
 import 'package:comet_beat/shared/music_io/file_delivery.dart';
 import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/score_theme.dart';
+import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/music_glyph.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart';
@@ -520,6 +521,11 @@ abstract interface class CompositionWorkshopTester {
   int get partCount;
   int get activePartIndex;
 
+  /// WS-X3 test seam: give part [index] an effect chain, as the rack's sheet
+  /// does. The rack widget itself is covered by `fx_rack_test`; what is new
+  /// here is that the chain reaches the DOCUMENT, and from there the export.
+  void setPartFxChain(int index, List<FxSpec> chain);
+
   /// Test seam: render the export for [ext] (bytes for binary formats, text
   /// otherwise) — so a test can prove multi-part MIDI/ABC carry every part.
   Future<(Uint8List?, String?)> debugGenerateExport(String ext);
@@ -659,15 +665,17 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
       return t.isEmpty ? null : t;
     }
 
+    // ⚠️ Hand-copied field by field until now, which is precisely how a new
+    // field gets silently dropped — and one just arrived (`extras`, where the
+    // part's effect chain lives), so typing a title would have wiped it.
+    // `copyWith` keeps everything this method is not about; the explicit nulls
+    // are only for the three fields it IS about, since a cleared text box has
+    // to be able to clear the value.
     _doc.setMetadata(
-      ScoreMetadata(
+      old.copyWith(
         title: title != null ? norm(title) : old.title,
         composer: composer != null ? norm(composer) : old.composer,
         lyricist: lyricist != null ? norm(lyricist) : old.lyricist,
-        copyright: old.copyright,
-        instrument: old.instrument,
-        midiProgram: old.midiProgram,
-        isPercussion: old.isPercussion,
       ),
     );
   }
@@ -1905,6 +1913,18 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               checked: _mpd.hasBarlineBreakAfter(i),
               child: Text(l10n.workshopBreakBarlineBelow),
             ),
+          const PopupMenuDivider(),
+          PopupMenuItem<void Function()>(
+            key: const ValueKey('workshop-part-fx'),
+            value: () => _editPartFx(i),
+            child: Row(
+              children: [
+                const Icon(Icons.graphic_eq, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.workshopPartFx),
+              ],
+            ),
+          ),
           if (_mpd.partCount > 1) ...[
             const PopupMenuDivider(),
             CheckedPopupMenuItem<void Function()>(
@@ -1928,6 +1948,69 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
             ),
         ],
       );
+
+  /// WS-X3 — the shared FX rack, for one PART of the score.
+  ///
+  /// Score was the last mode without an effect surface. The reason was never
+  /// the widget — it was that a score part had nowhere to keep a chain: the
+  /// Workshop saves as MusicXML text, so anything held beside the score would
+  /// be gone on the next open. The chain now lives in the part's own metadata
+  /// (`score_fx.dart`), which MusicXML carries per part, so it survives a save,
+  /// an export, and a copy into another project.
+  ///
+  /// Per part rather than per document because that is what a score is: a
+  /// muted-trumpet part and a clean piano part are the point.
+  Future<void> _editPartFx(int index) async {
+    final l10n = AppLocalizations.of(context)!;
+    final part = _mpd.parts[index];
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_mpd.nameOf(index)} — ${l10n.workshopPartFx}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.workshopPartFxHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 380),
+                  child: SingleChildScrollView(
+                    child: FxRack(
+                      key: const ValueKey('workshop-part-fx-rack'),
+                      chain: scoreFxChain(part.metadata),
+                      dense: true,
+                      onChanged: (next) {
+                        setPartFxChain(index, next);
+                        setSheetState(() {});
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void setPartFxChain(int index, List<FxSpec> chain) {
+    final part = _mpd.parts[index];
+    setState(() => part.setMetadata(withScoreFxChain(part.metadata, chain)));
+  }
 
   /// Marquee result: select every note the rubber-band rect enclosed (C7).
   void _applyMarquee(Rect rect) => setState(() {
@@ -2160,7 +2243,9 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
   void _renderAndPlayWith(TrackerInstrument inst) {
     final bpm = _doc.tempo?.quarterBpm ?? 100;
     final quarterMs = (60000 / (bpm <= 0 ? 100 : bpm)).round();
-    final pcm = renderMultiPartWithInstrument(
+    // Through `renderMultiPartWithScoreFx`, so each part's own chain is heard
+    // (WS-X3). Identical, sample for sample, for a score with no chains.
+    final pcm = renderMultiPartWithScoreFx(
       _mpd.buildMultiPart(),
       inst,
       quarterMs: quarterMs,

@@ -1953,30 +1953,48 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **`WS-X3` — LIBRARY HALF SHIPPED, now on the app half.**
-  ⚠️ **Now editing `lib/features/workshop/screens/composition_workshop_screen.dart`**
-  (the Score screen — note the card's path was wrong, it is under
-  `features/workshop/screens/`, not `features/games/composition/`), plus a new
-  `lib/core/audio/score_fx.dart` and `bin/rendersong.dart`. Shout if you are in
-  the workshop screen.
-  ✅ **crisp_notation `ee7dbc9` (merged to its `main`): `ScoreMetadata.extras`.**
-  A verification pass BEFORE building found the card's premise **did not hold**,
-  in two places: MusicXML `<miscellaneous-field>` was neither read nor written
-  anywhere in the library, and `multiPartToMusicXml` passed
-  `const ScoreMetadata()`, so a field alone would have been a no-op end to end.
-  Both closed. Extras are per-PART but MusicXML has ONE `<identification>`, so
-  keys are scoped by part id — otherwise every part reads back holding every
-  other part's settings.
-  ➕ **Two things worth knowing regardless of X3:**
+- **opus (daw-suite)** · ✅ **DONE (idle) — `WS-X3` SHIPPED: Score has an FX
+  rack, and it was never the widget that was missing.** Every other mode had one
+  because a tracker channel and a tab track are app objects with app JSON around
+  them. A score part is a `Score` from crisp_notation and the Workshop's only
+  save IS its export (MusicXML text — the Song Book stores that string, the
+  project codec wraps the same string), so a chain kept beside the score would
+  vanish on the next open. **So the chain travels IN the part.**
+  * **crisp_notation `ee7dbc9` (on its `main`): `ScoreMetadata.extras`**, carried
+    in MusicXML's own `<miscellaneous-field>` — the slot the format defines for
+    unnamed data, so this is not the smuggling route 3 was rejected for. Scoped
+    per part id, or every part reads back holding every other part's settings.
+  * **App: `lib/core/audio/score_fx.dart`** (key, both conversions, per-part
+    render) + the rack in the per-part ⚙ menu + `bin/rendersong.dart` honours a
+    stored chain. Tests: `score_fx_test` (13) · `workshop_part_fx_test` (3).
+  * ⚠️ **I verified the card's premise BEFORE building, and it did not hold** —
+    twice. `<miscellaneous-field>` was neither read nor written anywhere in the
+    library, and `multiPartToMusicXml` passed `const ScoreMetadata()`, so the
+    field alone would have been a no-op end to end. Both closed. This is the
+    ladder's recurring lesson again, and the reason the card sized as `S`.
+  ➕ **Found on the way, useful beyond X3:**
   * **A multi-part export was dropping its whole header** — title, composer,
-    lyricist, rights — which the single-part path has always kept. Same
+    lyricist, rights — which single-part export has always kept. Same
     `const ScoreMetadata()` line. Fixed and pinned.
-  * **`midiProgram`/`isPercussion` still never reach MusicXML at all** (the
-    reader reads them, the writer never writes them). Left alone as out of
-    scope, but that is a real hole in every score save — whoever owns the
-    MusicXML writer may want it.
-  Previously: ✅ WS-W4's Audio Editor fold-in.
-
+  * **`_setDocumentMetadata` hand-copied all seven metadata fields**, which is
+    exactly how a new one gets dropped: typing a title would have wiped the
+    part's chain. Now `copyWith`.
+  * ⬜ **`midiProgram`/`isPercussion` still never reach MusicXML at all** — the
+    reader reads them, the writer never writes them, so every score save loses
+    them today. Out of scope here; left for whoever owns that writer.
+  ⚠️ **Two measured caveats, stated rather than discovered later:**
+  * **`rendersong` normalises to peak 0.9, which exactly cancels a level-only
+    chain** — a `gain` chain renders byte-identical from the CLI. Filters,
+    delay and distortion come through (verified: lowpass moved the RMS
+    7928 → 6242). The app has no such normalisation.
+  * **A reverb/delay TAIL is cut at the part's end** — every effect in
+    `applyFxChain` returns a same-length buffer. App-wide (the Tracker, Tab and
+    Loop racks share the engine), not Score-specific. I expected the opposite
+    and wrote a test that failed; the test now records the truth.
+  ⬜ **Left open deliberately:** authoring a chain from the CLI (`--fx`) — the
+  CLI honours and PRINTS a stored chain, but `fxproc` already owns
+  chain-authoring, and a second syntax surface is a worse trade than a
+  documented one.
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-W4's AUDIO EDITOR fold-in
   SHIPPED.** `DawService({UndoService? history})`, private by default.
   **The evidence is what did not change: @workstation-parity's 17 service tests
