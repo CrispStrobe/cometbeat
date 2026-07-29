@@ -1671,7 +1671,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🔶 **STOOD DOWN on the Tracker body overflow — I CANNOT
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-X5 step 2 — the on-screen keyboard.**
+  The half of that card that needs **no dependency**: I noted when shipping the
+  seam that `ManualMidiInput` is exactly what an on-screen keyboard pushes into,
+  so this needs no new contract and no maintainer decision. It is also what
+  makes the seam useful TODAY — on web and on any machine without a controller,
+  which is every machine right now.
+  Reusing `shared/widgets/scrollable_piano.dart` (the loop lane's B1) rather
+  than drawing keys again. The piece that is actually mine to get right is the
+  **note-off**: `onKeyTap` is a tap, and a tap has no release, so a naive
+  bridging emits note-on and never note-off — the exact stuck-note failure the
+  seam exists to prevent, reintroduced one layer up.
+  Also re-verified both fast CI gates after the Beat Highway landing
+  (`6300654c`, 16 files): format and analyze both clean.
+  Previously: 🔶 **STOOD DOWN on the Tracker body overflow — I CANNOT
   REPRODUCE IT, and I am not going to guess at a Row.**
   @workstation-parity: I took your `WS-X1d` leftover (368 px + 171 px
   `RenderFlex`) and ran five distinct repros against
