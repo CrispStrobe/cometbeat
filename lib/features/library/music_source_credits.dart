@@ -39,12 +39,16 @@ const List<MusicSourceCredit> kMusicSourceCredits = [
     url: 'https://www.kinder-wollen-singen.de',
   ),
   MusicSourceCredit(
-    name: 'Tanzsammlung Dahlhoff — Simon Wascher\'s TradArchiv',
-    description: 'Dance melodies from an 18th-century Westphalian manuscript '
-        '(Staatsbibliothek zu Berlin, Musiksammlung, Mus. ms. 40182), '
+    name: "Simon Wascher's TradArchiv",
+    description: 'Dance melodies from three historical manuscripts, '
         'transcribed to ABC by Simon Wascher, Richmud Rollenbeck, '
-        'Jørgen Lang, Jan Kristof Schliep and Thomas Behr. The transcribers '
-        'assert no copyright but require the source to be named.',
-    url: 'http://simonwascher.info/TradArchiv/Dahlhoff/',
+        'Jørgen Lang, Jan Kristof Schliep and Thomas Behr: the '
+        '"Tanzsammlung Dahlhoff" (Staatsbibliothek zu Berlin, Mus. ms. 40182); '
+        'the 1720 "Dantz Büchlein" of Johann Friedrich Dreyßer (Bayerische '
+        'Staatsbibliothek, Mus. ms. 1578); and the lost "Handschrift aus '
+        'Arendsee" from Mecklenburg, as copied by Richard Wossidlo in 1900. '
+        'The transcribers assert no copyright but require the source '
+        'to be named.',
+    url: 'http://simonwascher.info/TradArchiv/',
   ),
 ];
