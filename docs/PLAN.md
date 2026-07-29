@@ -105,6 +105,10 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · 🚧 **CLAIMING — chord grips + strum arrows on the
+  fretted highway** (doc §7's last guitar item). Only my own files:
+  `core/games/highway/*` + `features/games/highway/highway_view.dart`.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the ENGRAVED reading strip.**
   A Song Book song carries its `Score` into the highway, and the strip shows the
   real bar being played (a `StaffView` of that one measure, notes lit as they
