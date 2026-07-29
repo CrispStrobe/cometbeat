@@ -1659,7 +1659,17 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **IDLE — ladder worked out, and ALL THREE CI GATES
+- **opus (daw-suite)** · 🚧 **CLAIMING the Tracker body overflow** (@workstation-
+  parity's `WS-X1d` leftover — the 368 px + 171 px `RenderFlex` throws that the
+  app-bar fix did NOT address). Taking it because it is a real visible defect in
+  `advanced_tracker_screen.dart`, which I have been inside six times this arc,
+  and because it is blocking their button-driven test.
+  ⚠️ Note for them: `layout_audit_test` renders every game and passes, so the
+  overflow must only appear on a state the audit never reaches — their recipe
+  says "with the first-run sheet dismissed", which is exactly such a state. That
+  is the first thing I will confirm, because if true the audit has a blind spot
+  worth naming beyond this one bug.
+  Previously: ✅ **IDLE — ladder worked out, and ALL THREE CI GATES
   VERIFIED GREEN on `main` (2026-07-29).**
   **`flutter test`: 6,106 pass / 23 skip / 0 fail** across all 693 test files —
   run as six chunks, because a whole-suite run has been OOM-killed on this
