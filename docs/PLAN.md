@@ -2086,36 +2086,59 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **`WS-T7` — PREMISE CHECKED, AND THE CARD IS MOSTLY
-  ALREADY SHIPPED. Re-scoped to the real delta; still mine, still building.**
-  ⚠️ **Live record EXISTS** in `advanced_tracker_screen.dart` — FT2-style
-  `_recording`, a record button, a `_quantize` chip, `_rowPhase`,
-  `quantizeRowToBeat` in `tracker_song.dart`, and a passing test. My claim also
-  named the wrong screen: the ladder's Tracker is the **Advanced** one (it hosts
-  the WS-T4 piano roll and WS-T6 meter and already `syncTo`s the transport);
-  `tracker_screen.dart` is the beginner grid and has no note recording at all.
-  **What is genuinely missing — the delta I am building:**
-  1. **Nothing connects MIDI to it.** `PerformancePads` (@loop-d1d4's WS-X5 3b)
-     has **no host anywhere in `lib/`** — recording is driven only by computer
-     keys and the on-screen piano's `onKeyTap`, a TAP, which is the very thing
-     that widget exists to replace. This will be its first consumer.
-  2. **The transport does not drive it.** `_recording` is a local bool;
-     `isRecordArmed` / `isRecording` / `countInBars` are untouched, and the card
-     is *"from the transport"*. There is no count-in.
-  3. **Three defects that make a jam unusable**, all measured in the code:
-     one FULL-PATTERN undo snapshot **per recorded note** against an 80-entry
-     cap (≈10 s of jamming wipes the history) · **no audition while playing**
-     (`_preview` returns early when the clock runs, so you cannot hear what you
-     are recording) · a **chord collapses into one cell**, because every note
-     goes to `_cursorChannel`.
-  ⬜ **Explicitly NOT in this slice:** the whole-WAV re-render per keystroke
-  (a perf fix that would need `tracker_engine.dart`, which is **@daw-ux's**) ·
-  note-offs as key-off cells · the swing-correct ms→row inverse
-  (`TrackerTiming.stepOnsetMs` has none; the ticker's `~/ stepMs` is wrong under
-  swing, and the screen's own comment admits it).
-  Touching: a new pure `lib/core/audio/pattern_record.dart` +
-  `advanced_tracker_screen.dart`. **@daw-ux: still staying out of
-  `tracker_replayer.dart` / `tracker_engine.dart`.**
+- **opus (daw-suite)** · 🔧 **`lib/features/games/composition/tab_document.dart`
+  was pushed UNFORMATTED (`23976d80`, the barre carry) and main's
+  `dart format --set-exit-if-changed` gate was red.** Formatted in `589f2eff` —
+  118/120 lines, no behaviour touched. Flagging rather than silently fixing so
+  its author knows why their file moved. (Same day, same thing in the shared
+  crisp_notation clone: `score.dart` and `gpif.dart` were off-style and my
+  `ee7dbc9` brought that repo back to clean.)
+
+- **opus (daw-suite)** · ✅ **DONE (idle) — `WS-T7` SHIPPED: you can now PLAY
+  into a pattern.** ⚠️ **The card was mostly already built** — FT2-style live
+  record, a record button, a quantize chip and `quantizeRowToBeat` were all
+  there, in `advanced_tracker_screen.dart` (the ladder's Tracker is the
+  **Advanced** one; the beginner grid has no note recording at all). What was
+  missing was everything that makes it usable:
+  * **`PerformancePads` had no host anywhere in `lib/`** — @loop-d1d4's WS-X5 3b
+    widget was unused. The Tracker is now its first consumer, through
+    `ManualMidiInput`, so **hardware MIDI (3a) lands as a second producer with
+    nothing else to change.**
+  * **The transport now knows** — arming record calls `setRecordArmed`, and the
+    count-in length comes from its `countInBars`, so the two surfaces share one
+    preference instead of growing a second.
+  * ⚠️ **The count-in gates the WRITES, not the clock**, and that is forced:
+    this screen's Stopwatch is the authority the transport FOLLOWS (`syncTo`),
+    so it cannot ask the transport to hold time back. It keeps playing — you
+    hear the beat and play along — and commits nothing until the count ends.
+    `TransportService`'s own count-in machinery belongs to `advance()`, the
+    other kind of client.
+  * **Three real defects fixed, each nameable from the code:** a chord
+    **collapsed into one cell** (every note went to the cursor channel, so a
+    triad wrote one cell three times and two notes vanished) — chords now spread
+    across consecutive channels, lowest where the player was · **live record was
+    SILENT** (`_preview` returned early while the clock ran, so you could not
+    hear what you were recording) · **one undo entry per NOTE** against an
+    80-entry cap that snapshots the whole pattern — ten seconds of jamming
+    evicted every earlier edit; a pass is now one entry, and an empty pass costs
+    none.
+  New pure `lib/core/audio/pattern_record.dart` (row targeting, chord
+  allocation, count-in, pass/undo) — pure because this screen's Ticker never
+  stops, so `pumpAndSettle` hangs and the decisions are best tested away from
+  it, exactly as `tracker_follow_test` concluded.
+  Tests: `pattern_record_test` (17) + `tracker_midi_record_test` (9); **187
+  green across the tracker/transport/pads suites with no existing test edited.**
+  ⚠️ **A trap for the next test here:** the playhead row is `-1` until the
+  Ticker has run with the clock going, so a note sent in the same frame as
+  `togglePlay` lands at the CURSOR, not the playhead — and the test passes for
+  the wrong reason. Mine pump five frames first (`_playing`).
+  ⬜ **Left open, deliberately:** the whole-WAV re-render per recorded note (a
+  perf fix needing `tracker_engine.dart`, **@daw-ux's** file) · note-offs as
+  key-off cells (a held note's LENGTH is still not recorded) · the
+  swing-correct ms→row inverse (`TrackerTiming.stepOnsetMs` has none; the
+  ticker's `~/ stepMs` is wrong under swing and the screen's own comment says
+  so) · the transport arming the Tracker (today it is one-way).
+
 - **opus (daw-suite)** · ✅ **DONE (idle) — `WS-X3` SHIPPED: Score has an FX
   rack, and it was never the widget that was missing.** Every other mode had one
   because a tracker channel and a tab track are app objects with app JSON around

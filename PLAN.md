@@ -1838,8 +1838,21 @@ prefix.
     everything above changes only how the grid is drawn. Conflating them is how
     a display change turns into a playback change nobody asked for. Still open.
   Tests: `tracker_meter_test` (12).
-- ⬜ **WS-T7 — record into a pattern from the transport.** `M` ·
-  Depends WS-W2, WS-X5.
+- ✅ **WS-T7 — record into a pattern from the transport. SHIPPED 2026-07-29**
+  (opus, daw-suite). ⚠️ **Mostly already built when the card was pulled** —
+  FT2 live record, the record button, the quantize chip and `quantizeRowToBeat`
+  all existed in `advanced_tracker_screen.dart`. The delta that shipped:
+  `PerformancePads` finally has a host (its first anywhere), so notes can be
+  PLAYED in through `ManualMidiInput` — hardware MIDI (X5 3a) will land as a
+  second producer with nothing else to change; record-arm reaches the shared
+  transport and the count-in length comes from `countInBars`; and three defects
+  are gone — a chord collapsed into one cell, live record was silent, and every
+  recorded note cost a full-pattern undo snapshot against an 80-entry cap.
+  New pure `lib/core/audio/pattern_record.dart`; 26 tests.
+  ⬜ **Still open:** the WAV re-render per note (needs `tracker_engine.dart`,
+  another lane's file) · note LENGTH (note-offs are not recorded as key-off
+  cells) · the swing-correct ms→row inverse · the transport arming the Tracker
+  (today it is one-way).
 
 ### Phase 6 — reach
 
