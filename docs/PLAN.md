@@ -466,6 +466,20 @@ is recorded in [HISTORY.md](HISTORY.md).
     ship `.ly` natively and the app reads it at load time. No `db.json` change
     needed — the files were always fine, the reader was wrong — they come right
     as soon as `../crisp_notation` is pulled.
+  - 🤝 **NEW BUG, unclaimed — the LilyPond reader SILENTLY DROPS `\\` voice 2.**
+    Found by asking why the round-trip matrix missed the `\<` bug. Two answers:
+    (a) **LilyPond is not in `roundtrip_property_test.dart` at all** (matrix is
+    MusicXML/MEI/kern/ABC/MuseScore); (b) **even if it were, it could not have
+    caught it** — a round-trip only exercises what OUR WRITER emits, and our
+    LilyPond writer never emits `\<`, so reader-only syntax is structurally
+    invisible to it. Adding LilyPond to the matrix then fails at seed 1
+    (45 notes → 32) because of this voice-2 drop. Minimal repro:
+    `\score { \new Staff { << { c'4 d'4 e'4 f'4 } \\ { g4 a4 b4 c'4 } >> } }`
+    → voice1=4, **voice2=0**, although `Score.voice2` exists and
+    MusicXML/kern/MuseScore preserve it. `_processNodes`' `LySimultaneous`
+    branch sets `mainVoice=false` after `\\` and then runs only LYRICS
+    commands. **Fixing it is the precondition for adding LilyPond to the
+    matrix** — I reverted my matrix edit rather than leave a red test.
   - ⚠️ **ONE known regression, shipped knowingly:** `Lotti Vere languores.ly`
     157 → 0. Its voices are `\transpose bes aes { … }` and the **PARSER**
     attaches no args to `\transpose` (`\transpose(0)`), leaving the pitches
