@@ -3477,6 +3477,29 @@ the anchor, because a table can be right where it is checked and drift at the
 extremes, which is exactly where a held slide ends up. Verified to have teeth:
 changing one period by a single unit fails it.
 
+**And the EXPENSIVE half turned out not to be expensive.** It was parked as
+"author the same content with an external tool", and the tooling was never
+confirmed to exist. It is not needed: a MOD is a documented byte layout, so the
+file can be assembled BY HAND from the spec inside the test.
+`mod_foreign_file_test.dart` builds one — title, 31 sample headers, order table,
+`M.K.`, 64 x 4 x 4-byte cells, signed PCM — and asks our reader to read a module
+it did not write. **It also found nothing: the reader is correct.**
+
+What it now pins is the part of the format most likely to be got wrong: the
+sample number is FOUR BITS IN BYTE 0 AND FOUR IN BYTE 2, so the fixture sounds
+sample **17**, not just sample 1. A reader taking only the low nibble reports 1
+and plays the wrong instrument in every module with more than fifteen samples.
+Also pinned: lengths and loop points are stored in WORDS (the same shape as the
+XM 16-bit loop-unit bug this audit found in our own writer), and PCM is SIGNED —
+read unsigned, a ramp from −128 becomes a DC-offset click that no structural
+check would notice. Verified to have teeth: dropping the high nibble fails it.
+
+⚠️ Two clean negatives in a row is worth saying plainly — the note table and the
+foreign-file reader were both already right. The value is not the bugs found, it
+is that five of this audit's bugs were **reader and writer agreeing with each
+other**, and these are the only two checks in the suite that cannot be satisfied
+that way.
+
 **Still open, in the order I would take them:**
 
   * ⬜ **Fixture independence.** `fx/musical.mod` and `fx/effects.mod` are
