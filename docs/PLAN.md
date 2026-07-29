@@ -1585,212 +1585,25 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-X5 STEP 1 (the MIDI-in seam)
-  SHIPPED. The binding is NOT done and is a maintainer decision.**
-  `lib/core/midi/midi_input.dart`: `MidiMessage`, the `MidiInput` interface,
-  `NullMidiInput`, `ManualMidiInput`, `HeldNotes`. Pure Dart, **no dependency
-  added**.
-  ⚠️ **The fact this seam exists for, and that every future record path would
-  otherwise have to rediscover: in MIDI a note-on with velocity 0 IS a
-  note-off.** It is in the standard, most controllers rely on it, and missing it
-  leaves notes stuck on forever. `HeldNotes` handles it once, along with
-  same-pitch-on-two-channels, duplicate note-ons, and a `clear()` for
-  disconnect (the note-offs for held notes never arrive).
-  ⛔ **I did not add a MIDI package.** That is a dependency across five targets
-  with permissions on two — not a call to make quietly mid-session. `NullMidiInput`
-  is the honest current answer and remains the answer on web, so consumers can
-  be written now and will not change when hardware lands.
-  `midi_input_test` (21). **WS-T7 is unblocked on the contract side**; the
-  binding + on-screen keyboard remain, and are pullable.
-  Previously: ✅ **WS-T6 pattern-level time signature
-  SHIPPED** (groove templates deliberately left open — they change WHEN notes
-  play, not how the grid is drawn).
-  `tracker_meter.dart` = one `TrackerMeter` the grid and the roll both read, +
-  a "Beats and bars" picker. **Three bugs behind the card's one line:**
-  beats-per-bar was hardcoded to 4 so a 3/4 pattern was barred as common time;
-  `_highlightEvery` was declared, read once and **assigned nowhere**, so the
-  configurable spacing never was; and my own WS-T4 roll hardcoded 4/16 and
-  disagreed with the grid.
-  ⚠️ **Inheritable detail: every bar row is also a beat row**, so a painter must
-  test `isBar` FIRST — beat-first draws every bar as a beat and the meter reads
-  as 4/4 whatever it is. Pinned as a property over every offered meter.
-  Display-only by design, so it lives screen-side rather than in
-  `TrackerTiming` — which also keeps it out of the replay lane's engine files.
-  `tracker_meter_test` (12); 127 green across the tracker suites + layout audit.
-  Previously: ✅ **WS-T4 piano roll SHIPPED
-  (read-only).** `tracker_piano_roll.dart` = `rollNotesFor` (pure) + a painted
-  roll for the cursor's channel. The app had no continuous roll anywhere
-  (verified: `pianoRoll` 0 hits) and the tracker grid is exact-but-unreadable,
-  so this is a legibility view BESIDE the grid, not a replacement.
-  The whole logic is where a note ENDS — a cell says a note starts and never
-  says it stops — so a run ends at the next note (monophonic channel), a
-  key-off, or the pattern edge; that last is a stated simplification, since a
-  held note really does sound into the next pattern.
-  ⛔ **Read-only on purpose. An editable roll that silently disagreed with the
-  grid would be worse than no roll** — making the two agree is its own card, and
-  I have left it rather than half-doing it.
-  `tracker_piano_roll_test` (14); 115 green across the tracker suites + layout
-  audit; analyze clean.
-  Previously: ✅ **WS-T2 pattern overview +
-  drag-to-reorder SHIPPED.** A "Song overview" sheet over the order list, and a
-  real drag: the strip's move buttons SWAP with a neighbour, which is sixty
-  presses to move a slot to the end and displaces something every time.
-  The cursor follows the SLOT rather than the index (both crossing directions
-  pinned, and mutation-checked). ⚠️ `ReorderableListView.onReorder` is
-  deprecated for `onReorderItem`, which **already** adjusts for the removed
-  item — the familiar `to > from ? to - 1 : to` correction is an off-by-one
-  there. `tracker_order_overview_test` (8); 116 green across the tracker suites
-  + layout audit; analyze clean.
-  Previously: ✅ **WS-T1 eased playhead follow SHIPPED.**
-  `followScrollOffset` (pure) + a follow toggle that did not exist.
-  ⚠️ **Three things the card did not know.** (1) The SONG branch never called the
-  follow at all — it worked auditioning one pattern and did nothing when playing
-  the song. (2) `_followPlay` was hardcoded `true` and toggled nowhere, so
-  following could not be turned off; that matters more now it glides
-  continuously, hence the toolbar switch. (3) The sub-row field is `_rowPhase`,
-  not `_playFrac`.
-  ⚠️ **Test-methodology warning worth inheriting, from two failures of my own.**
-  A widget test of this guarded on `maxScrollExtent <= 0`; on the shared
-  **1400x2400** game surface the tracker grid never overflows, so it returned
-  early and **passed while asserting nothing** — I only caught it by printing
-  the extent. The replacement measured a per-frame scroll delta and flaked under
-  `--concurrency`, because it was measuring how much time the harness delivers
-  per pump. Both are gone: the easing is a pure function now and the tests are
-  arithmetic. If you test scroll-following anywhere, do the same.
-  🧹 Also fixed a stray `require_trailing_commas` in
-  `test/guitar_score_fingering_test.dart` (from `82b67748`, @score lane) that
-  was making whole-project `flutter analyze` non-clean for everyone — one comma,
-  their test still green.
-  Previously: ✅ **WS-X6 shipped on the Audio Editor;
-  the other surfaces are a drop-in.** One door (`shared/music_io/export_sheet
-  .dart`) grouped Sound · Notes · Project · Share, listing only what the surface
-  can really produce; it knows how to BUILD nothing, which is what keeps it a
-  door rather than a fourth exporter.
-  ⚠️ **The card's premise was half stale** — `showAudioExportSheet` was already
-  shared by 8 screens. The real gap was two separate doors + no archive anywhere,
-  so that is what I built to.
-  ⚠️ **Wording bug my own test caught, worth inheriting:** "these clips are
-  audio" is FALSE for a drum project — a drum clip is symbolic and still yields
-  no score, because `ProjectBridge` tracker→score returns **null** for a
-  percussion-only song. If you rely on that conversion anywhere, know it does not
-  exist. The reason now states the outcome instead.
-  Six `daw_screen_test` cases correctly failed on the re-routed button and were
-  updated to go through the door. `export_sheet_test` (8); 113 green across
-  export/DAW/keyboard/interop + both smoke suites; analyze clean.
-  ✅ **Finished across the Tracker and Loop Studio too** — leaving a shared door
-  wired into ONE screen would have been the exact problem it was built to fix.
-  The Tracker's five sibling rows are one door (its **module** export, the format
-  it is native to, sat unremarked between MusicXML and audio); Loop's **share
-  code** was under "copy" and is now an export in its own right.
-  ⚠️ **I walked into the trap I had just documented:** `pumpAndSettle` after
-  opening a sheet on the Tracker/Loop hangs forever — continuous tickers. Two
-  test runs timed out at 10 minutes before I recognised my own note. Use
-  explicit pumps. Both screens gained a `debugOpenExportDoor` seam, since a
-  PopupMenu cannot be driven from a widget test without the route.
-  ⛔ **Workshop: deliberately NOT wrapped — WS-X6 closed.** I went to do it and
-  stopped. It is already one door; all 13 formats are symbolic, so the grouping
-  buys nothing — and its dialog already warns, per format and in red, which ones
-  can carry only the ACTIVE part. That is more useful than a category heading and
-  my `ExportOption` cannot express it. Wrapping it would have been a downgrade
-  dressed as consistency.
-  Previously: ✅ **WS-A3 SHIPPED · WS-L1 stood down to @loop-d1d4.
-  ✅ **WS-A3** — split (Ctrl+S) · trim to range (Ctrl+T) · nudge (`,`/`.`) ·
-  marker jump (`[`/`]`) · mute/solo (M/S), through the shared keymap. Every verb
-  acts on the SELECTION and does nothing without one; mute/solo refuse a
-  selection spanning two lanes rather than picking one. `daw_keyboard_test` (11)
-  + new `DawTester.selectClip`.
-  ⚠️ **Finding for anyone touching the shared table: plain M and S are NOTE KEYS
-  in the Tracker** (classic QWERTY piano layout). I found this by writing the
-  test, not by reading the code. Binding them for the Audio Editor is safe ONLY
-  because the Tracker does not dispatch those intents, so an unhandled intent
-  falls through to note entry — recorded at the binding site and pinned by the
-  characterization suite. If the Tracker ever handles mute/solo, move them.
-  🤝 **WS-L1 — STOOD DOWN, it is @loop-d1d4's.** We claimed it within the hour;
-  they got there in the board's history and it is their lane, so I yielded on
-  the rebase and kept their claim line. My sizing finding is handed to them ON
-  the card rather than kept here.
-  🔶 **What I found before standing down: WS-L1 is MIS-SIZED at `S`.** Its
-  transport half already shipped with WS-T3 (Space/undo/redo — the screen had no
-  keyboard at all before). Its grid half asks for "arrows move the cell cursor,
-  digits = velocity", but **Loop Studio has no cell cursor**: `cursor` matches
-  zero times in `loop_mixer_screen.dart` and the step grids are tap-only. That
-  is introducing a cursor concept plus per-cell velocity — `M`–`L`, not `S`.
-  Re-scoped on the card rather than half-built under an `S` label.
-  Previously: ✅ **WS-T3 COMPLETE: the keymap is
-  shared, hosted by three surfaces, rebindable and discoverable.**
-  `lib/shared/keymap/` (intents · table · service · sheet); hosted by the
-  Tracker, the Audio Editor and Loop Studio, each declaring the subset it
-  handles. **Loop Studio had no keyboard at all** — not even space-to-play — and
-  has one now purely by hosting the table.
-  ⚠️ **For anyone writing a keyboard test here — two traps that make one LIE:**
-  `pumpAndSettle` never completes on the tracker (continuous ticker), and a
-  screen's `autofocus: true` does NOT win against the route's focus scope in the
-  test binding, so every key press is silently swallowed and the suite passes
-  vacuously. Claim the FocusNode directly; the DAW and Loop `Focus` widgets now
-  carry explicit disposed nodes so a test can.
-  ⚠️ **The card's acceptance leaned on a regression suite that did not exist**
-  (zero `LogicalKeyboardKey` across every tracker test) — I wrote it first
-  (13 tests), then extracted; it and the tracker's own 112 pass unchanged.
-  Persistence stores only the DIFFERENCE from the defaults, so a later release
-  that improves a binding still reaches anyone who rebound something else.
-  Tests: `keymap_test` (18) · `keymap_hosting_test` (12) ·
-  `tracker_keymap_characterization_test` (13). Analyze clean; 260 tests green
-  across tracker/DAW/loop plus both broad smoke suites.
-  **➡️ This unblocks WS-A3 (Audio Editor keyboard) and WS-L1 (Loop Studio
-  keyboard) — both now about WHICH intents to handle, not plumbing. I am not
-  claiming either; they are pullable.**
-  Previously: ✅ WS-A1 clip edge handles SHIPPED.
-· WS-A7 (clip warp) · WS-A5 (loudness
-  view) — and the A/B/C/D/F ladder in the Audio Editor section.
-  Previously: WS-A7 clip warp; WS-A5 loudness view. `Clip.warp`/`nativeBpm`, an optional
-  `TempoMap` on both render paths (null = byte-identical to before), WSOLA so
-  pitch does not move, and a "Follow project tempo" toggle that ASKS a recording
-  for its tempo (the case warp exists for) and reads a symbolic clip's own grid.
-  Refuses rather than guesses: no stated tempo, or an absurd factor, leaves the
-  audio alone. A clip crossing a tempo change ends exactly where the map says,
-  so nothing after it drifts. `daw_warp_test` (20). Touched
-  `daw_timeline.dart`/`daw_project.dart`/`daw_service.dart`/`daw_screen.dart`
-  additively — **@daw-ux: the `daw_timeline.dart` change is two `Clip` fields +
-  one optional render param + one private helper; no DSP dispatch moved.**
-  **Remaining in the Audio Editor: WS-A9 (time-stretch quality knob) only, and
-  it is unclaimed.**
-  Previously: WS-A5 loudness metering as a view. `core/audio/loudness_advice.dart` (pure, testable judgement) + a
-  **Loudness** toolbar button and sheet in `daw_screen.dart`; measures the mix
-  or the marked range, against a streaming/broadcast/none target. The
-  substantive design call: the *judgement* is out of the widget, because the
-  claim worth testing is "it says the right thing about a mix", not "a sheet
-  opened" — and one judgement in particular is inverted in most meters, namely
-  that **quieter than target is good, not a fault**. Tests:
-  `loudness_advice_test` (17, incl. widget half); the layout audit (every game,
-  phone+tablet, EN/DE) is green with the new toolbar button. Touched only
-  `daw_screen.dart` + two new files — no tracker/loop/registry/crisp_notation.
-  **WS-A7 (clip warp) and WS-A9 (stretch-quality knob) remain unclaimed and
-  pullable.**
-  Previously: ✅ **DONE — Audio Editor → swiss-army knife; the
-  whole ladder is on `origin/main`.**
-  🤝 **Coordinated with @workstation-parity** (`b8725cf8`): they re-audited the
-  WS ladder against the code while this branch was unpushed, left a collision
-  heads-up on the root `PLAN.md` Audio block, and asked me to prefer THEIR
-  version of it and re-check one line. Done exactly that — theirs is better
-  evidenced than mine (it names the symbols it checked), so I took it whole and
-  discharged only the "built but NOT on main" caveat, which this push settles.
-  Their **O16 correction stands and mine deferred to it**: export is
-  `{wav, mp3, opus, aac}`, not WAV/MP3 — the real remainder is FLAC and
-  Ogg-Vorbis *encoders*. Verified their two board entries survived my ~960-line
-  move out of this file (a removal that big is exactly how another agent's work
-  disappears quietly).
-  **Gate:** the whole-suite run was OOM-killed twice at ~4,200 tests under a
-  loaded machine, so it ran as **six bounded chunks → 5,475 pass / ~20 skip /
-  0 fail**, plus format + analyze clean and a post-rebase re-run of every
-  touched area. Last two slices: **D5 take lanes +
-  comping** (`20b7063e`) and **A6 band-limited rate conversion** (`b2e2551d`),
-  the latter fixing a real shipping bug — every downsampled export was folding
-  content above the new Nyquist back into the music. Files touched in this pass:
-  `daw_timeline.dart` · `daw_project.dart` · `daw_service.dart` ·
-  `daw_screen.dart` · `crisp_dsp/resample.dart` · `music_io/audio_export.dart` ·
-  `bin/dawedit.dart`. Nothing else is claimed; the one remaining 🔶 is
-  time-stretch quality tiers (a different algorithm — phase vocoder / WSOLA —
-  not a resampler setting), unclaimed.
+- **opus (daw-suite)** · ✅ **IDLE — the workstation ladder is worked out for
+  this lane.** Twelve WS cards shipped (WS-A1/A3/A5/A7/A9 · T1/T2/T3/T4/T6 ·
+  X5 step 1 · X6). **Full record → [HISTORY.md](HISTORY.md) → "Workstation
+  ladder — the daw-suite lane"**, including the test-methodology warnings, which
+  are the part most worth inheriting.
+  **Nothing left that is both unblocked and mine:** WS-X2 waits on @loop's
+  WS-X1, WS-L2 is the Loop lane, WS-T7 needs the MIDI *binding* — and that
+  binding is a maintainer call I deliberately did not make (a dependency across
+  five targets, permissions on two). WS-X5's seam is done so a consumer can be
+  written against it today.
+  ⚠️ **One standing note for @daw-ux:** I have been in
+  `advanced_tracker_screen.dart` six times this arc (keymap · follow · order
+  overview · piano roll · meter · export door), always screen-side and never in
+  the replayer/engine, and flagged each time. If that ever collides, the
+  screen-side pieces are all additive and easy to unpick.
+  ⚠️ **And one recurring finding:** nearly every card in this ladder was partly
+  wrong about the code, always in the same direction — a feature looked present
+  because a FIELD existed (`_followPlay`, `_highlightEvery`, a regression suite
+  that was not there). **Verify the premise before building to the card.**
 - **opus (tracker→editors)** · ✅ **DONE (idle) — cross-mode interop COMPLETE
   (maintainer directive, 2026-07-27).** Took over the C-series from `daw-suite`
   (handoff note above); the whole arc is now shipped. **Shipped:** (1) **"Open &
