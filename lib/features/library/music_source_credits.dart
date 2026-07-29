@@ -38,4 +38,13 @@ const List<MusicSourceCredit> kMusicSourceCredits = [
         'is CC BY-SA 4.0 by Ulrich Wolf.',
     url: 'https://www.kinder-wollen-singen.de',
   ),
+  MusicSourceCredit(
+    name: 'Tanzsammlung Dahlhoff — Simon Wascher\'s TradArchiv',
+    description: 'Dance melodies from an 18th-century Westphalian manuscript '
+        '(Staatsbibliothek zu Berlin, Musiksammlung, Mus. ms. 40182), '
+        'transcribed to ABC by Simon Wascher, Richmud Rollenbeck, '
+        'Jørgen Lang, Jan Kristof Schliep and Thomas Behr. The transcribers '
+        'assert no copyright but require the source to be named.',
+    url: 'http://simonwascher.info/TradArchiv/Dahlhoff/',
+  ),
 ];
