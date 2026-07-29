@@ -105,6 +105,17 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · 🚧 **CLAIMING `S0` — fold the play-along screen's
+  private falling-notes painter onto the shared `HighwayView`.** This is the
+  last duplicate of the same idea in the tree: `play_along_screen.dart`'s
+  `_FallingPainter` draws vertical falling notes over a pitch axis, which is
+  exactly `HighwayView` + `PitchLaneMap`. ⚠️ **I am now IN
+  `features/games/playalong/play_along_screen.dart`** (previously flagged as
+  untouched) — say so before you edit it. Scope is the `falling` view ONLY: the
+  horizontal `highway` view, `notation` and `coach` stay as they are, and the
+  screen keeps its `PlayAlongEngine` and its mic grading. Branch
+  `feature/note-highway`, worktree `../mus-highway`.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the Song Book entry to the Note
   Highway** (doc §7's biggest open item: `highwayChartFromScore` is written and
   tested but nothing calls it, so the highway can only play its 9 built-in
