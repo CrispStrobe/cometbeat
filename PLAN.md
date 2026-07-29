@@ -4315,18 +4315,25 @@ writer, so a writer bug is baked into every A/B that uses them. Author the same
 content with NodMOD and confirm both files render identically; any difference
 is our writer, not our replay.
 
-🔶 **X9 — Extend the A/B to XM/S3M/IT. MOSTLY DONE.** It paid seven times over:
-the IT hex break row, XM channel polyphony, XM 16-bit loop units, S3M/IT fine
-porta and fine volume slides, IT/XM linear slides, **tremor's free-running
-counter**, and **XM's tremor/key-off effect numbering**. Flow fixtures ship in
+✅ **X9 — Extend the A/B to XM/S3M/IT. DONE.** It paid NINE times over: the IT
+hex break row · XM channel polyphony · XM 16-bit loop units · S3M/IT fine porta
+· S3M/IT fine volume slides · IT/XM linear slides · **tremor's free-running
+counter** · **XM's tremor/key-off effect numbering** · **XM `15h`, which is set-
+envelope-position and not a panbrello waveform** — the last of those caught
+BEFORE it reached a file, by the numbering table rather than by accident. Flow fixtures ship in
 all four formats and `fmt/` covers the S3M/IT letter commands MOD has no
 encoding for. **Envelopes are measured now too** — volume/fadeout were already
 sound, and panning was lost twice (an unreachable render path, and IT's SIGNED
 pan envelope read as unsigned). **NNA is measured and fixed too** — and it had
 never RUN, because the dispatch reached the polyphonic renderer only when a
-pattern carried a per-tick effect. ⬜ Still open: interpolation quality and
-stereo samples (X10), FT2's degenerate `T00`, and the `TrackerCell.volume`
-split, which is a decision about the model rather than a bug.
+pattern carried a per-tick effect. **Stereo samples and the volume column are
+done too**, and interpolation quality was never open — `interpolation_quality_
+test.dart` has covered it (cubic vs linear error, integer reads, loop-seam
+continuity, the anti-click ramps) since before this audit began; I listed it as
+backlog twice without checking. ⬜ Still open: FT2's degenerate `T00`, where the
+one plausible explanation has been TESTED AND REJECTED, and the
+`TrackerCell.volume` split, which needs a format version bump to be worth its
+migration.
 Original scope: `convertToXm`/`convertToS3m`/`convertToIt`
 already exist, so the same musical content can be emitted in all four formats.
 ⚠️ Expect DIFFERENT failure modes, not the same one four times: XM/S3M/IT store
@@ -4335,11 +4342,14 @@ what these probe is envelopes, NNA, volume/pan models and effect semantics.
 IT is thinnest on oracles (libopenmpt + libxmp only) and richest in features,
 so it carries the most risk.
 
-🔶 **X10 — Sample-playback layer. MOSTLY DONE.** Forward wrap, ping-pong, a
+✅ **X10 — Sample-playback layer. DONE.** Forward wrap, ping-pong, a
 short loop inside a longer sample, one-shot-past-the-end and 16-bit loop UNITS
-are all verified against the references at 0.999+. ⬜ Still open: interpolation
-quality and stereo samples — though every sample fixture already reads 0.999,
-which is weak evidence that interpolation is not a problem at these levels.
+are all verified against the references at 0.999+. **Stereo samples are measured
+now** (IT hard-left/hard-right/mono-control, gap 0.00) — and measuring them
+exposed that the pan gate needed pan TRAVEL, so a hard-panned sample that never
+moves was judged by nothing at all. **Interpolation was never open**:
+`interpolation_quality_test.dart` covers cubic-vs-linear error, integer reads,
+loop-seam continuity and the anti-click ramps. X10 is COMPLETE.
 Original scope: Interpolation, loop wrap (see the one-sample
 rescale bug already fixed), 8- vs 16-bit and stereo sample paths, `9xx` offset
 clamping, ping-pong loops. Oracle: single-note fixtures per case.

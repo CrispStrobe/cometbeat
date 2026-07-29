@@ -107,11 +107,10 @@ double _envelopeDynamicRange(Float64List pcm) {
 /// fixed, so an exemption announces its own obsolescence rather than quietly
 /// outliving the bug. It has already retired four entries that way.
 const _kKnownOpenDefects = <String>{
-  // ⚠️ **The pan column REPORTS but does not GATE.** `offenders` below takes
-  // spectral and envelope gaps only, so a pan row marked `<-- OUTSIDE` is
-  // information, not a failure. That is deliberate for now and worth knowing
-  // before reading the output: 26 MOD rows currently show a pan gap of ~0.16,
-  // and it is one finding, not 26 — see below.
+  // ⚠️ **The pan column GATES now** — `offenders` takes it alongside spectral
+  // and envelope, so a `<-- OUTSIDE (pan)` row FAILS this sweep. It reported
+  // without gating for most of this audit, which made it decoration: both pan
+  // bugs found here were caught by a human reading the column.
   //
   // ⬜ **MOD stereo SEPARATION is an open preference, not a bug.** ProTracker
   // pans channels hard LRRL, and every player softens that by taste because
