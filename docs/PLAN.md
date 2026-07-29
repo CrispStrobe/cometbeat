@@ -1048,6 +1048,24 @@ is recorded in [HISTORY.md](HISTORY.md).
      limit; strip read-only first, editor soon.** ✅ **ALL THREE SHIPPED** — see
      the entry below. — opus
 
+- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-X5` 3b — the on-screen keyboard / pad
+  board.** The maintainer said **GO** on 3b (and deferred 3a, the hardware
+  binding); it was unclaimed. Branch `feature/mixer-d1d4`, claim before code.
+  ⚠️ **Re-audit finding that reshapes the task: the app already has two on-screen
+  keyboards, and NEITHER can do this.** `shared/widgets/piano_keyboard.dart` and
+  `scrollable_piano.dart` both emit **`onKeyTap(int midi)`** — a TAP. A tap can
+  never produce a HELD note, so `HeldNotes` — the whole reason the WS-X5 seam
+  exists — would have nothing to track, and `note-on with velocity 0 IS a
+  note-off` would never come up. Those two are quiz widgets, where a tap is an
+  ANSWER; this needs a PERFORMANCE input, where a press and a release are two
+  different events.
+  **So 3b is a new widget, not a wiring job:** press → `noteOn`, release →
+  `noteOff`, several fingers at once, feeding a `ManualMidiInput`. That is
+  exactly what the seam was built to receive, and it needs **no new dependency
+  and no new contract**, which is why 3b was separable from 3a in the first
+  place.
+  **Files:** one new `lib/shared/widgets/` file + its test. Nothing else. — opus
+
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — the `WS-L2` (b) EDITOR — the maintainer
   already sequenced it ("read-only now, then soon editor"), so no new decision
   is needed.** Branch `feature/mixer-d1d4`. Claim pushed before any code.
