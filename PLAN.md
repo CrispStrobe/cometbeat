@@ -1305,12 +1305,24 @@ prefix.
   * the conversion runs ONCE and is handed back: the report IS the conversion's
     output, so a preview cannot be free, and the commit must not run it again
     and risk a different answer.
-  * ⛔ **the drop targets are NOT done, on purpose.** They belong on the
+  * ✅ **the first drop TARGET is wired: the Audio Editor's timeline.** A lane
+    accepts a dragged document, shows what a release would do while the finger
+    is down, confirms BEFORE committing when the conversion costs something,
+    and does nothing at all if the user declines.
+  * ⚠️ **wiring that first consumer exposed a real gap in the protocol, which
+    the contract alone hid: not every drop target is a MODE.** The timeline is
+    a CONTAINER — it holds `ScoreSource`/`TrackerSource`/`GrooveSource` clips
+    as they are. Asking `ProjectBridge` to convert a score "to audio" answers
+    *unsupported*, correctly (a bounce is one-way), and would have refused a
+    drop the timeline handles natively. `acceptsDirectly` names the kinds a
+    container holds; empty by default, so pure mode targets are unchanged. It
+    is a whitelist, not a bypass — an unlisted kind is still refused.
+  * ⛔ **the other three drop targets are NOT done, on purpose.** They belong on the
     Tracker, the Tab editor, Loop Studio and the timeline — four hot files that
     three other lanes were shipping in this hour (WS-L2's arrangement editor,
     the SE-C ladder, WS-X1 2b). Each is now a few lines over this protocol,
     adoptable by whoever owns the file when they are not mid-flight.
-  Tests: `drag_payload_test` (13).
+  Tests: `drag_payload_test` (17).
 
 
 ### Phase 4 — the console

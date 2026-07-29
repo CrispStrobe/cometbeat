@@ -248,4 +248,61 @@ void main() {
       expect(identical(decision.document, song), isTrue);
     });
   });
+
+  group('a CONTAINER target holds kinds directly', () {
+    // Found on wiring the first consumer, and it is a real gap the protocol
+    // alone hid: not every drop target is a mode. The Audio Editor's timeline
+    // HOLDS ScoreSource/TrackerSource/GrooveSource clips, so asking the bridge
+    // to convert a score "to audio" answers unsupported — correctly, a bounce
+    // is one-way — and would refuse a drop the timeline handles natively.
+    const holds = {AppMode.score, AppMode.tracker, AppMode.loop};
+
+    test('an accepted kind lands exactly, with no conversion', () {
+      final score = _score();
+      final decision = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.score, document: score),
+        AppMode.audio,
+        acceptsDirectly: holds,
+      );
+      expect(decision.outcome, DropOutcome.exact);
+      expect(identical(decision.document, score), isTrue);
+      expect(decision.needsConfirmation, isFalse);
+    });
+
+    test('WITHOUT the set, the same drop is refused — the gap itself', () {
+      // Kept as a test so the reason the parameter exists cannot be forgotten
+      // and quietly removed.
+      final decision = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.score, document: _score()),
+        AppMode.audio,
+      );
+      expect(decision.canDrop, isFalse);
+    });
+
+    test('a kind the container does NOT list is still refused', () {
+      // The set is a whitelist, not a bypass: a container must not silently
+      // accept something it cannot hold.
+      final decision = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.tab, document: _score()),
+        AppMode.audio,
+        acceptsDirectly: const {AppMode.score},
+      );
+      expect(decision.canDrop, isFalse);
+    });
+
+    test('an unrelated container set leaves mode targets alone', () {
+      // Every existing caller keeps pure mode semantics: a set that does not
+      // name the payload's kind must not change the answer.
+      final plain = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.score, document: _score()),
+        AppMode.tracker,
+      );
+      final withOtherKinds = dropDecisionFor(
+        MusicDragPayload(kind: AppMode.score, document: _score()),
+        AppMode.tracker,
+        acceptsDirectly: const {AppMode.loop},
+      );
+      expect(withOtherKinds.outcome, plain.outcome);
+    });
+  });
 }

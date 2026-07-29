@@ -98,7 +98,31 @@ class DropDecision {
 /// the loss report IS the conversion's output, so there is no way to tell the
 /// user what a drop will cost without performing it. The result is handed back
 /// so the commit does not run it twice.
-DropDecision dropDecisionFor(MusicDragPayload payload, AppMode target) {
+/// [acceptsDirectly] names kinds the target can HOLD without converting.
+///
+/// ⚠️ Needed because not every drop target is a mode. The Audio Editor's
+/// timeline is a CONTAINER: it holds `ScoreSource`, `TrackerSource`,
+/// `DrumSource` and `GrooveSource` clips as they are. Asking the bridge to
+/// convert a score "to audio" correctly answers *unsupported* — a bounce is
+/// one-way — but that is the wrong question for a container, and answering it
+/// would refuse a drop the timeline handles natively.
+///
+/// I only found this on wiring the first consumer; the protocol alone looked
+/// complete. Empty by default, so a pure mode target behaves exactly as before.
+DropDecision dropDecisionFor(
+  MusicDragPayload payload,
+  AppMode target, {
+  Set<AppMode> acceptsDirectly = const {},
+}) {
+  // Held as-is by a container target: no conversion, nothing to lose.
+  if (acceptsDirectly.contains(payload.kind)) {
+    return DropDecision(
+      outcome: DropOutcome.exact,
+      target: target,
+      document: payload.document,
+    );
+  }
+
   // Same kind: no conversion at all. This is the WS-X1 rule — a bridge round
   // trip on a same-kind drop would introduce loss that the drop did not need,
   // which is exactly the copy-instead-of-link bug in another shape.

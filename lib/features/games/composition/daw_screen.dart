@@ -49,6 +49,7 @@ import 'package:comet_beat/core/audio/tracker_song.dart' show TrackerSong;
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart'
     show transcribePcmToScore;
 import 'package:comet_beat/core/audio/voice_clip_recorder.dart';
+import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/interop/project_bridge.dart'
     show AppMode, ProjectBridge;
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -6129,21 +6130,116 @@ class _DawScreenState extends State<DawScreen>
     );
   }
 
+  /// WS-X2 — the kinds this timeline HOLDS, as clips, without converting.
+  ///
+  /// The Audio Editor is a container, not a mode: asking `ProjectBridge` to
+  /// convert a score "to audio" correctly answers *unsupported* (a bounce is
+  /// one-way), but that is the wrong question here — a score dropped on a lane
+  /// becomes a `ScoreSource` clip and stays editable.
+  static const Set<AppMode> kTimelineHolds = {
+    AppMode.score,
+    AppMode.tracker,
+    AppMode.loop,
+  };
+
+  /// What dropping [payload] on this timeline would do — asked in three places
+  /// (will-accept, the drag-over hint, the drop itself), so it is named once.
+  DropDecision _dropDecision(MusicDragPayload payload) => dropDecisionFor(
+        payload,
+        AppMode.audio,
+        acceptsDirectly: kTimelineHolds,
+      );
+
   Widget _lane(DawService daw, int i, ColorScheme scheme, double laneWidth) {
     final clips = daw.timeline.tracks[i].clips;
-    return Container(
-      width: laneWidth,
-      height: _laneHeight,
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: Stack(
-        children: [
-          for (var j = 0; j < clips.length; j++) _clipBox(daw, i, j, scheme),
-        ],
+    // WS-X2 — a lane is a drop target for music dragged from another surface.
+    return DragTarget<MusicDragPayload>(
+      onWillAcceptWithDetails: (details) => _dropDecision(details.data).canDrop,
+      onAcceptWithDetails: (details) => _dropOnLane(details.data, i),
+      builder: (context, candidate, rejected) => Container(
+        width: laneWidth,
+        height: _laneHeight,
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+          // Say what a release would do, while the finger is still down.
+          color: candidate.isEmpty
+              ? null
+              : scheme.primaryContainer.withValues(alpha: 0.25),
+        ),
+        child: Stack(
+          children: [
+            for (var j = 0; j < clips.length; j++) _clipBox(daw, i, j, scheme),
+            if (candidate.isNotEmpty && candidate.first != null)
+              Positioned(
+                left: 8,
+                top: 6,
+                child: Text(
+                  dropSummary(_dropDecision(candidate.first!)),
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
+
+  /// Land a dragged document on lane [track], at the playhead.
+  ///
+  /// Confirms FIRST when the conversion costs something — the card's "show the
+  /// loss report on drop" — and does nothing at all if the user declines. A
+  /// drop that silently converted lossily would be the worst version of this.
+  Future<void> _dropOnLane(MusicDragPayload payload, int track) async {
+    final decision = _dropDecision(payload);
+    if (!decision.canDrop || decision.document == null) return;
+
+    if (decision.needsConfirmation) {
+      final report = decision.report!;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('This conversion loses something'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final lost in report.lost) Text('• $lost'),
+              for (final near in report.approximated) Text('~ $near'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Drop anyway'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return;
+    }
+
+    final source = _sourceForDropped(payload.kind, decision.document!);
+    if (source == null) return;
+    _daw.addClip(source, track: track);
+    final index = _daw.timeline.tracks[track].clips.length - 1;
+    _daw.moveClip(track, index, playheadMs);
+    _daw.endCoalescedEdit();
+  }
+
+  /// The clip a dropped document becomes. Null for a kind the timeline cannot
+  /// hold — which `kTimelineHolds` should already have refused, so this is the
+  /// belt to that braces.
+  ClipSource? _sourceForDropped(AppMode kind, Object document) =>
+      switch (kind) {
+        AppMode.score when document is MultiPartScore => ScoreSource(document),
+        AppMode.tracker when document is TrackerSong => TrackerSource(document),
+        AppMode.loop when document is GrooveSpec => GrooveSource(document),
+        _ => null,
+      };
 
   Widget _clipBox(DawService daw, int i, int j, ColorScheme scheme) {
     final clip = daw.timeline.tracks[i].clips[j];

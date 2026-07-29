@@ -1849,9 +1849,16 @@ is recorded in [HISTORY.md](HISTORY.md).
   needed — the copy-instead-of-link bug WS-X1 fixed, in another shape. Pinned by
   identity. And only a LOSSY drop confirms: a dialog on every drop is how people
   learn to dismiss the one that mattered.
-  ⛔ Targets deliberately not built: Tracker, Tab, Loop and the timeline were all
-  being shipped in by three other lanes this hour. Each is a few lines over this
-  protocol now. `drag_payload_test` (13).
+  ✅ **First target wired: the Audio Editor's timeline** — drag onto a lane, see
+  what a release would do, confirm before a lossy commit, decline and nothing
+  happens.
+  ⚠️ **That wiring exposed a gap the contract alone hid: not every drop target
+  is a MODE.** The timeline is a CONTAINER holding symbolic clips as they are,
+  so `ProjectBridge`'s correct "cannot convert to audio" would have refused a
+  drop it handles natively. `acceptsDirectly` fixes it — a whitelist, empty by
+  default, so mode targets are unchanged. Worth knowing before wiring Tracker /
+  Tab / Loop, which are still deliberately left to their file owners.
+  `drag_payload_test` (17).
   Previously: ✅ **WS-X5 step 2 (on-screen keyboard)
   SHIPPED.** `core/midi/on_screen_midi.dart` — taps and presses become MIDI
   through the same seam, so a consumer cannot tell it from hardware. Still **no
