@@ -17,9 +17,13 @@
 // Plus the trap a game screen has and a long-lived editor does not: its undo
 // closures capture the State, and it gets popped.
 
+import 'dart:typed_data';
+
+import 'package:comet_beat/core/audio/daw_timeline.dart';
 import 'package:comet_beat/core/audio/groove_change_label.dart';
 import 'package:comet_beat/core/audio/loop_automation.dart';
 import 'package:comet_beat/core/audio/loop_engine.dart';
+import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/features/games/composition/loop_mixer_screen.dart';
 import 'package:flutter/material.dart';
@@ -318,6 +322,114 @@ void main() {
       expect(undo.history.map((e) => e.scope), ['daw']);
       undo.undo();
       expect(log, ['undo:Move clip'], reason: 'still perfectly usable');
+    });
+  });
+
+  group('the acceptance, with the REAL Audio Editor on the other end', () {
+    // Everything above pairs this screen against a hand-made `'daw'`-scoped
+    // entry, because when it was written the DAW's own fold-in was still in
+    // flight. It has since landed (`cc099d96`), so the card's acceptance can
+    // stop being approximated: a real `DawService` and the real Loop Studio,
+    // sharing one history. Both halves' authors declined to tick the card
+    // because neither could demonstrate this alone. These are the tests that
+    // do, and they are worth more than either surface's own — a scope boundary
+    // is only real once something is on the other side of it.
+
+    testWidgets('an edit in Loop Studio is undoable from the Audio Editor',
+        (tester) async {
+      final shared = UndoService();
+      final daw = DawService(history: shared);
+      final (game, _) = await _open(tester, undo: shared);
+
+      game.setTempo(140);
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // The Audio Editor can SEE it — the visible half of the feature.
+      expect(shared.history.map((e) => e.label), ['Tempo 100 → 140']);
+      // And a plain Cmd-Z, which takes the most recent edit in ANY surface,
+      // reverses it without knowing what Loop Studio is.
+      shared.undo();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.tempoBpm, 100);
+
+      // The Audio Editor's OWN button, however, must not have offered to:
+      // that edit was never its to undo.
+      expect(daw.canUndo, isFalse);
+    });
+
+    testWidgets('and neither surface can rewind the other with its own button',
+        (tester) async {
+      final shared = UndoService();
+      final daw = DawService(history: shared)
+        ..addClip(SampleSource(Float64List(4410)));
+      final (game, _) = await _open(tester, undo: shared);
+
+      daw.renameTrack(0, 'Vocals');
+      game.setTempo(140);
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Loop's edit is the most recent, so a GLOBAL undo would take it.
+      daw.undo();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(
+        game.tempoBpm,
+        140,
+        reason: "the Audio Editor's undo must not reach into Loop Studio",
+      );
+      expect(daw.trackName(0), isNot('Vocals'));
+
+      game.undo();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.tempoBpm, 100);
+    });
+
+    testWidgets('nor replay it — the redo branch respects the boundary too',
+        (tester) async {
+      // The asymmetry both fold-ins independently hit: with only a global
+      // redo(), this sequence replays the OTHER surface's edit.
+      final shared = UndoService();
+      final daw = DawService(history: shared)
+        ..addClip(SampleSource(Float64List(4410)));
+      final (game, _) = await _open(tester, undo: shared);
+
+      game.setTempo(140);
+      await tester.pump(const Duration(milliseconds: 50));
+      daw.renameTrack(0, 'Vocals');
+      daw.undo();
+      game.undo();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      game.redo();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.tempoBpm, 140);
+      expect(
+        daw.trackName(0),
+        isNot('Vocals'),
+        reason: "Loop's redo must not resurrect the Audio Editor's rename",
+      );
+    });
+
+    testWidgets('leaving Loop Studio leaves the Audio Editor fully usable',
+        (tester) async {
+      // The trap on this side only: Loop's entries close over a State that is
+      // about to die, while the DAW's service outlives everything.
+      final shared = UndoService();
+      final daw = DawService(history: shared)
+        ..addClip(SampleSource(Float64List(4410)));
+      final (game, _) = await _open(tester, undo: shared);
+
+      daw.renameTrack(0, 'Vocals');
+      game.setTempo(140);
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(shared.canUndoScope(kLoopUndoScope), isFalse);
+      expect(daw.canUndo, isTrue);
+      daw.undo();
+      expect(daw.trackName(0), isNot('Vocals'));
+      expect(tester.takeException(), isNull);
     });
   });
 

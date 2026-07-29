@@ -1028,8 +1028,10 @@ prefix.
   - The mixer passes `showRecord: false`: arming a record here would imply a
     capture path this screen does not have.
 
-- 🔶 **WS-W4 — one undo history.** `M` · **SERVICE SHIPPED 2026-07-28**
-  (opus, workstation-parity), **fold-in still open.** `lib/core/services/
+- ✅ **WS-W4 — one undo history.** `M` · **SERVICE SHIPPED 2026-07-28**
+  (opus, workstation-parity); **TWO SURFACES FOLDED IN AND THE ACCEPTANCE
+  DISCHARGED 2026-07-29** (Audio Editor: opus, daw-suite · Loop Studio: opus,
+  loop-d1d4). `lib/core/services/
   undo_service.dart`, 17 tests. **PHASE 1 IS NOW COMPLETE as services** — W1
   Project · W2 TransportService · W3 transport bar · W4 undo history all exist.
   What shipped, and what it deliberately does not do:
@@ -1049,12 +1051,22 @@ prefix.
     scopes never merge even on the same key.
   - `clearScope` exists for closing a surface: its closures capture state that
     is going away, and running them afterwards would restore into nothing.
-  - ⚠️ **The card's acceptance is STILL not fully discharged** (one surface
-    folded in is not two). It is worded at the
-    screen level ("an edit made in Loop Studio is undoable from the Audio
-    Editor's history list"). No screen is migrated, so that is proven headlessly
-    with two adapters sharing one history. **The screen-level assertion lands
-    with the migrations** — do not tick this card until then.
+  - ✅ **The acceptance IS discharged now, on the real screens** (2026-07-29,
+    loop-d1d4). It is worded at the screen level — "an edit made in Loop Studio
+    is undoable from the Audio Editor's history list" — and neither earlier
+    author would tick it, correctly: @workstation-parity had no screen migrated
+    and proved it headlessly with two adapters; @daw-suite had one, and one
+    folded-in surface cannot demonstrate a boundary. With Loop Studio folded in
+    there are two, so `loop_shared_undo_test`'s last four cases run a **real
+    `DawService` and the real Loop Studio screen against one `UndoService`**: an
+    edit made in Loop Studio appears in the shared history and is reversed by a
+    `Cmd-Z` that knows nothing about Loop Studio; neither surface's own button
+    reaches into the other; the redo branch holds the same line; and leaving
+    Loop Studio leaves the Audio Editor's history fully usable.
+    ⚠️ Still NOT built, and deliberately not blocking this tick: **nothing
+    RENDERS the list.** `UndoService.history` is populated by two surfaces and
+    has no viewer. The acceptance says the edit is *undoable from* the Audio
+    Editor, which it is; a history PANEL is a separate, unclaimed piece of UI.
   - ✅ **Fold-in — the AUDIO EDITOR is done (opus, daw-suite).**
     `DawService({UndoService? history})`; omit it and the surface keeps a
     private one, so every existing caller behaves exactly as before. The
@@ -1073,8 +1085,52 @@ prefix.
     * `loadProject` calls `clearScope`, not `clear`: its closures capture state
       that is going away, but another surface's entries are still good.
     Tests: `daw_shared_undo_test` (10).
-  - ⬜ **Fold-in still open:** `loop_record.dart` (`LoopStack`) and the tracker
-    screen's block history — left to their lanes. `maxEntries` defaults to 50 to match `DawService._maxUndo`, so that
+  - ✅ **Fold-in — LOOP STUDIO is done (opus, loop-d1d4).** `loop_mixer_screen`
+    no longer owns a stack; capture and restore are unchanged (`_engine.spec` →
+    `_applyHistory`), and the evidence is again what did NOT change — **all 105
+    existing `loop_mixer_test` cases pass unedited.**
+    * **Labels are DERIVED, not set per call site** (`groove_change_label.dart`,
+      new). Every Loop edit funnels through ONE hook that knows the groove
+      changed but not what changed — which is why one hook could cover them all.
+      The label is diffed out of the two snapshots' canonical `toJson()`, the
+      same view `cacheKey` already uses to decide there was anything to record.
+      Setting a label at ~20 sites would be this ladder's recurring inert seam:
+      the site that forgets does not fail, it files its edit under the wrong
+      name. A new `GrooveSpec` field falls through to a generic label — missing,
+      never wrong. (The DAW got labels free from `_coalesceToken`; Loop had no
+      equivalent token, hence the diff.)
+    * ⚠️ **THE TRAP THE DAW DOES NOT HAVE, and the tracker WILL.** Loop Studio
+      is a GAME SCREEN — pushed and popped — while the service outlives it, and
+      every entry closes over the `State`. An undo pressed elsewhere afterwards
+      would `setState` on a dead screen. `clearScope` in `dispose` (what this
+      card provides it for) plus a `mounted` guard in the restore path.
+      **Anything the games registry mounts inherits this.**
+    * ⚠️ **`redoScope` was written TWICE, independently, within the hour** — by
+      daw-suite (above) and by loop-d1d4, same semantics, from opposite ends of
+      the service. Theirs landed first and mine was deleted in favour of it. Two
+      agents on adjacent cards converge on the same gap even when both announce
+      it on the board first; announcing it is still what kept the collision to a
+      comment-level conflict.
+    * A screen with NO service in scope keeps a private `UndoService` rather
+      than not recording: the registry and most of this screen's own tests mount
+      it bare, and undo has worked there since it shipped. One code path either
+      way. Tests: `loop_shared_undo_test` (24).
+  - ⬜ **Fold-in still open: the tracker screen's block history** — left to its
+    lane, and it inherits Loop Studio's dispose trap (see above), not the DAW's
+    clean case.
+  - ⚠️ **This card's own premise mislabels the third stack, and whoever takes it
+    should decide rather than assume.** The header says "three surfaces, three
+    private stacks: `DawService` … `LoopStack` holds loop state … the tracker".
+    But `loop_record.dart`'s `LoopStack<T>` is **not an edit history** — it is a
+    live looper's ORDERED OVERDUB LAYER STACK with per-layer mute, where `undo`
+    means "drop the take I just recorded", a performance action taken while
+    playing. Loop Studio's edit history was a different structure entirely
+    (`GrooveSpec` snapshots in `loop_mixer_screen`), and that is what was folded
+    in. Folding the take stack into a shared *edit* history is a real question,
+    not a chore: it would put "remove my last overdub" in the same list as
+    "changed the tempo", and a `Cmd-Z` from another surface would silently
+    delete a recording. **My read is that it should stay out**, but it is the
+    next agent's call and it should be made deliberately. `maxEntries` defaults to 50 to match `DawService._maxUndo`, so that
     fold-in changes nothing a user can observe.
   - **Goal.** One labelled, cross-surface history instead of three private
     stacks.

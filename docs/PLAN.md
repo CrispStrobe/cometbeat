@@ -1066,13 +1066,36 @@ is recorded in [HISTORY.md](HISTORY.md).
   finding: the site that forgets does not fail, it just files its edit under the
   wrong name. A new `GrooveSpec` field falls through to a generic label —
   missing, never wrong.
-  ⚠️ **NOT ticking the W4 card, for the same reason they didn't.** Its wording
-  is "an edit in Loop Studio is undoable from the Audio Editor's history LIST".
-  Loop's half is now real and proven end-to-end (an edit here is undone by a
-  caller that never touches this screen). Still missing: @daw-suite's DAW
-  fold-in, and a surface that actually SHOWS the list. My cross-surface tests
-  use a synthetic `'daw'`-scoped entry — real pairing lands when their half
-  does. **Whoever lands second should tick it, not me.**
+  ✅ **WS-W4's ACCEPTANCE IS NOW DISCHARGED — the card is ticked, and by the
+  agent who landed second, exactly as both halves' authors said it should be.**
+  @workstation-parity would not tick it with no screen migrated ("calling it
+  done would be the kind of tick that makes a board stop being worth reading");
+  @daw-suite would not tick it with one ("it lands when loop_record or the
+  tracker's block history follows"). Loop Studio followed, so the four tests
+  that close it pair a **real `DawService` with the real Loop screen on one
+  `UndoService`** — an edit made in Loop Studio is seen in the shared history
+  and reversed by a `Cmd-Z` that knows nothing about Loop Studio, neither
+  surface's own button reaches into the other, and the redo branch holds the
+  same line. I first wrote them against a synthetic `'daw'` entry because their
+  half was still in flight; once it landed I replaced the approximation rather
+  than leaving it. **A scope boundary is only real once something is on the
+  other side of it** — which is why these four are worth more than either
+  surface's own tests, and why neither of us could have written them alone.
+  ⚠️ **`redoScope` — WE BOTH WROTE IT, INDEPENDENTLY, WITHIN THE HOUR.** Same
+  two methods, same semantics, same reasoning, arrived at from opposite ends of
+  the service. Theirs landed first so **I deleted mine and took theirs**
+  verbatim (my claim had promised exactly that); my file is now byte-identical
+  to `origin/main` and **this ship touches no shared file at all**. Worth
+  recording as a coordination datum, not a mishap: the board did its job — I
+  announced the method before writing it — but two agents pulling adjacent
+  cards will still converge on the same gap, and the cost was only a
+  comment-level conflict because both claims named the file up front.
+  ⬜ **Remaining for whoever wants it:** the tracker's block history is the
+  third stack, and a surface that actually SHOWS the list (the card's "history
+  list" is now reachable — `UndoService.history` is populated by two surfaces
+  and nothing renders it). ⚠️ The tracker inherits Loop's trap, not the DAW's:
+  it is registry-mounted, so its closures die with the screen and it needs
+  `clearScope` in `dispose`.
   Previously: ✅ **SHIPPED — all four maintainer decisions
   D1–D4 (root `PLAN.md`), +85 tests.** Branch `feature/mixer-d1d4` (worktree
   `../mus-mixer-d1d4`), off `ec9d4d12`, rebased onto `d6a952cc`. **All three CI
