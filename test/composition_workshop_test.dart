@@ -15,6 +15,7 @@ import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
+import 'package:comet_beat/features/games/highway/note_highway_screen.dart';
 import 'package:comet_beat/features/games/songs/user_songs_service.dart';
 import 'package:comet_beat/features/workshop/screens/composition_workshop_screen.dart';
 import 'package:comet_beat/features/workshop/widgets/multi_part_canvas.dart';
@@ -2337,5 +2338,39 @@ void main() {
         reason: 'releasing the lock restores the rules\' own answer',
       );
     });
+  });
+  testWidgets('the Workshop hands the score to the Note Highway',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+
+    // Nothing written yet: there is nothing to play, so the hand-off is off.
+    final button = find.widgetWithIcon(IconButton, Icons.piano);
+    expect(button, findsOneWidget);
+    expect(tester.widget<IconButton>(button).onPressed, isNull);
+
+    // Write four notes on the piano keyboard, as the other tests here do.
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(_pianoKeyAt(16 + i));
+      await tester.pumpAndSettle();
+    }
+    expect(
+      tester.widget<IconButton>(button).onPressed,
+      isNotNull,
+      reason: 'with music written, the score can be played on the highway',
+    );
+
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    final screen =
+        tester.widget<NoteHighwayScreen>(find.byType(NoteHighwayScreen));
+    expect(screen.chart, isNotNull);
+    expect(screen.chart!.events.length, 4);
+    // The score travels with it, so the strip can engrave the bar.
+    expect(screen.score, isNotNull);
+    expect(tester.takeException(), isNull);
   });
 }

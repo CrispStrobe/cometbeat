@@ -25,6 +25,8 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/transcription/transcription_service.dart'
     show transcribeRecording;
+import 'package:comet_beat/core/games/highway/highway_chart.dart'
+    show highwayChartFromScore;
 import 'package:comet_beat/core/interop/app_mode.dart';
 import 'package:comet_beat/core/licensing/license_obligations.dart';
 import 'package:comet_beat/core/notation/bowed_arranger.dart'
@@ -46,6 +48,7 @@ import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/tab_gp_plan.dart'
     show gpFretPlanFor;
+import 'package:comet_beat/features/games/highway/note_highway_screen.dart';
 import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:comet_beat/features/games/songs/import/omr_import.dart'
     show recognizeSheetMusic;
@@ -2573,6 +2576,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
               enabled: _hasPlayableContent || _isPlaying,
               onTap: () => Navigator.of(ctx).pop('play'),
             ),
+            ListTile(
+              leading: const Icon(Icons.piano),
+              title: Text(l10n.gameNoteHighway),
+              enabled: _hasPlayableContent,
+              onTap: () => Navigator.of(ctx).pop('highway'),
+            ),
           ],
         ),
       ),
@@ -2591,7 +2600,34 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
         setState(_doc.redo);
       case 'play':
         _togglePlay();
+      case 'highway':
+        _openNoteHighway();
     }
+  }
+
+  /// Plays what is written on the Note Highway: the score falls as blocks onto
+  /// the instrument, with the engraved bar lit above it. A hand-off, not a
+  /// conversion — nothing is edited and nothing is lost, so unlike "Open in…"
+  /// it needs no report.
+  void _openNoteHighway() {
+    final score = _doc.buildScore();
+    final chart = highwayChartFromScore(
+      score,
+      name: _scoreTitle.isEmpty
+          ? AppLocalizations.of(context)!.myMelodyDefaultName
+          : _scoreTitle,
+    );
+    if (chart.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoteHighwayScreen(
+          chart: chart,
+          score: score,
+          title: chart.name,
+          gameId: 'note_highway_piano',
+        ),
+      ),
+    );
   }
 
   Future<void> _setScoreTitle() async {
@@ -4563,6 +4599,12 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                             ),
                           ),
                         ),
+                      IconButton(
+                        icon: const Icon(Icons.piano),
+                        tooltip: l10n.gameNoteHighway,
+                        onPressed:
+                            _hasPlayableContent ? _openNoteHighway : null,
+                      ),
                       IconButton(
                         icon: const Icon(Icons.undo),
                         tooltip: l10n.myMelodyUndo,

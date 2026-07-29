@@ -360,9 +360,11 @@ shapes claiming the ukulele, whose lowest string is C4).
   multi-part one through `highwayChartFromParts`, which gives each PART its own
   colour — the case that view exists for. Both are disabled while the karaoke
   preview runs and for a song with nothing to play, matching the play-along
-  launchers beside them. Still open on this axis: the Workshop has no such
-  action, and an engraved-notation reading strip still needs the score threaded
-  through (the strip is chart-driven today).
+  launchers beside them. **The Workshop joined on 2026-07-29** — one app-bar
+  action (and one row in the narrow sheet) that plays what is written, score and
+  all, disabled while the score is empty. It is a HAND-OFF, not a conversion:
+  nothing is edited and nothing is lost, so unlike "Open in…" it needs no
+  conversion report.
 * ~~No microphone grading.~~ **DONE 2026-07-29 (monophonic).** The setup offers
   *Tap the keys* or *Your instrument*; choosing the microphone turns the rail
   into a picture rather than a control, because letting you tap it while
