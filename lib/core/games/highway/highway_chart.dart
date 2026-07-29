@@ -21,6 +21,9 @@
 import 'package:crisp_notation_core/crisp_notation_core.dart'
     show NoteElement, Score, playbackTimeline;
 
+/// Which way the hand crosses the strings on a strummed chord.
+enum HighwayStrum { none, down, up }
+
 /// One falling block: a note in musical time on one lane.
 class HighwayEvent {
   const HighwayEvent({
@@ -32,6 +35,7 @@ class HighwayEvent {
     this.caption,
     this.elementId,
     this.measureIndex,
+    this.strum = HighwayStrum.none,
   });
 
   /// Onset in quarter-note beats from the start of the performance.
@@ -67,6 +71,12 @@ class HighwayEvent {
   /// them (the built-in library, a drum groove).
   final int? measureIndex;
 
+  /// Set on every note of a STRUMMED chord (three or more strings at once), so
+  /// the view can draw it as one shape to grab with an arrow for the hand,
+  /// instead of six notes that happen to coincide. [HighwayStrum.none]
+  /// everywhere else.
+  final HighwayStrum strum;
+
   double get endBeat => startBeat + beats;
 
   HighwayEvent copyWith({
@@ -78,6 +88,7 @@ class HighwayEvent {
     String? caption,
     String? elementId,
     int? measureIndex,
+    HighwayStrum? strum,
   }) =>
       HighwayEvent(
         startBeat: startBeat ?? this.startBeat,
@@ -88,6 +99,7 @@ class HighwayEvent {
         caption: caption ?? this.caption,
         elementId: elementId ?? this.elementId,
         measureIndex: measureIndex ?? this.measureIndex,
+        strum: strum ?? this.strum,
       );
 
   @override

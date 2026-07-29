@@ -72,6 +72,47 @@ void main() {
       expect(lanes.length, 6, reason: 'six notes must use six strings');
     });
 
+    test('a strummed chord is tagged as one, with the hand direction', () {
+      // Four beats of the same open chord: down on the beat, up off it — the
+      // alternation is half of learning a strumming pattern, so it is DATA,
+      // not something the view invents.
+      const strummed = HighwayChart(
+        name: 'strum',
+        bpm: 90,
+        events: [
+          HighwayEvent(startBeat: 0, beats: 0.9, midi: 40),
+          HighwayEvent(startBeat: 0, beats: 0.9, midi: 47),
+          HighwayEvent(startBeat: 0, beats: 0.9, midi: 52),
+          HighwayEvent(startBeat: 0.5, beats: 0.4, midi: 40),
+          HighwayEvent(startBeat: 0.5, beats: 0.4, midi: 47),
+          HighwayEvent(startBeat: 0.5, beats: 0.4, midi: 52),
+        ],
+      );
+      final prepared = profile.prepare(strummed);
+      final onBeat =
+          prepared.events.where((e) => e.startBeat == 0).map((e) => e.strum);
+      final offBeat =
+          prepared.events.where((e) => e.startBeat == 0.5).map((e) => e.strum);
+      expect(onBeat, everyElement(HighwayStrum.down));
+      expect(offBeat, everyElement(HighwayStrum.up));
+    });
+
+    test('two notes together are a double stop, not a strum', () {
+      const dyad = HighwayChart(
+        name: 'dyad',
+        bpm: 90,
+        events: [
+          HighwayEvent(startBeat: 0, beats: 1, midi: 52),
+          HighwayEvent(startBeat: 0, beats: 1, midi: 59),
+        ],
+      );
+      expect(
+        profile.prepare(dyad).events.map((e) => e.strum),
+        everyElement(HighwayStrum.none),
+        reason: 'an arrow over every two-note shape would be noise',
+      );
+    });
+
     test('a pitch the instrument cannot reach keeps its note but gets no lane',
         () {
       const tooLow = HighwayChart(

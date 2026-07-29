@@ -238,6 +238,16 @@ class HighwayInstrumentProfile {
           byString[i].key: digits[i],
       };
 
+      // Three or more strings at once is a strum, not six coincidences. The
+      // hand alternates: down on the beat, up on the off-beat — which is how
+      // it is taught and how it is actually played, and knowing WHICH way is
+      // half of learning a strumming pattern.
+      final strum = columns[c].length >= 3
+          ? ((columns[c].first.startBeat * 2).round().isEven
+              ? HighwayStrum.down
+              : HighwayStrum.up)
+          : HighwayStrum.none;
+
       for (final event in columns[c]) {
         final midi = event.midi;
         if (midi == null) {
@@ -265,6 +275,7 @@ class HighwayInstrumentProfile {
             caption: captionStyle == HighwayCaptionStyle.finger
                 ? '${finger ?? 0}'
                 : '$fret',
+            strum: strum,
           ),
         );
       }

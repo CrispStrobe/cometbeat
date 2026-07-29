@@ -331,6 +331,7 @@ class _HighwayPainter extends CustomPainter {
     _paintLaneTints(canvas, size);
     _paintBeatGrid(canvas, size);
     _paintLaneLines(canvas, size);
+    _paintGrips(canvas, size);
     _paintBlocks(canvas, size);
     _paintFarFade(canvas, size);
     _paintHitLine(canvas, size);
@@ -419,6 +420,100 @@ class _HighwayPainter extends CustomPainter {
         );
       }
     }
+  }
+
+  /// A strummed chord is ONE thing to play, so it is drawn as one: a panel
+  /// behind its blocks spanning the strings it crosses, with an arrow for the
+  /// hand. Six separate rectangles arriving together read as six problems.
+  void _paintGrips(Canvas canvas, Size size) {
+    final g = geometry;
+    final lead = rules.leadBeats;
+    // Group the visible strummed notes by onset. Only the visible ones, so this
+    // stays proportional to what is on screen like everything else here.
+    final byBeat = <double, List<HighwayNote>>{};
+    for (final note in notes) {
+      if (note.event.strum == HighwayStrum.none) continue;
+      if (note.event.endBeat < beat - 0.35 ||
+          note.event.startBeat > beat + lead) {
+        continue;
+      }
+      (byBeat[note.event.startBeat] ??= []).add(note);
+    }
+
+    for (final group in byBeat.values) {
+      double? left, right;
+      for (final note in group) {
+        final slot = laneMap.slotFor(note.event);
+        if (slot == null) continue;
+        left = left == null ? slot.left : math.min(left, slot.left);
+        right = right == null ? slot.right : math.max(right, slot.right);
+      }
+      if (left == null || right == null) continue;
+
+      final event = group.first.event;
+      final uTop = ((event.endBeat - beat) / lead).clamp(0.0, 1.0);
+      final uBottom = ((event.startBeat - beat) / lead).clamp(-0.35, 1.0);
+      final yTop = g.yFor(uTop);
+      final yBottom = g.yFor(uBottom);
+      final colour = palette.voiceColor(event.voice);
+
+      final path = Path()
+        ..moveTo(g.xFor(left, uTop), yTop)
+        ..lineTo(g.xFor(right, uTop), yTop)
+        ..lineTo(g.xFor(right, uBottom), yBottom)
+        ..lineTo(g.xFor(left, uBottom), yBottom)
+        ..close();
+      canvas.drawPath(path, Paint()..color = colour.withValues(alpha: 0.16));
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..color = colour.withValues(alpha: 0.5),
+      );
+
+      _paintStrumArrow(
+        canvas,
+        event.strum,
+        Offset(g.xFor((left + right) / 2, uBottom), yBottom),
+        g.widthFor(right - left, uBottom),
+        colour,
+      );
+    }
+  }
+
+  /// The hand's direction, drawn once per chord at its near edge.
+  void _paintStrumArrow(
+    Canvas canvas,
+    HighwayStrum strum,
+    Offset at,
+    double width,
+    Color colour,
+  ) {
+    final size = math.min(width * 0.18, 14.0);
+    if (size < 5) return; // no room — better nothing than a smudge
+    final down = strum == HighwayStrum.down;
+    final paint = Paint()
+      ..color = colour
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final tipY = at.dy + (down ? size : -size);
+    canvas.drawLine(
+      Offset(at.dx, at.dy - (down ? size : -size)),
+      Offset(at.dx, tipY),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(at.dx - size * 0.5, tipY - (down ? size * 0.5 : -size * 0.5)),
+      Offset(at.dx, tipY),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(at.dx + size * 0.5, tipY - (down ? size * 0.5 : -size * 0.5)),
+      Offset(at.dx, tipY),
+      paint,
+    );
   }
 
   void _paintBlocks(Canvas canvas, Size size) {
