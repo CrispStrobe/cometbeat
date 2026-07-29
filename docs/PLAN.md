@@ -277,6 +277,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   - Bonus deliverable: **194 (page scan → MusicXML) OMR eval pairs** under CC
     PDM 1.0 — a licence-clean image→symbolic corpus that may be NAMED in tracked
     docs, unlike our other OMR controls. Silver not gold (see the doc).
+  - ✅ **FOLLOW-ON SHIPPED — CPDL / ChoralWiki: 2,224 scores, 1,502 held.**
+    `db.json` **42,627 → 44,860**, 0 dangling, all rows pass the ship gate
+    (2,208 Tier A + 16 Tier B, every Tier B with an editor attribution). Our
+    second-largest MusicXML source. 🤝 **The reusable lesson: CPDL declares its
+    licence PER EDITION, not per page** — one page can hold a Public-Domain and
+    a CPDL-licensed edition side by side, so bind `{{Copy|…}}` to the
+    `{{CPDLno|…}}` block, never to the page. And gate axis 2 on composer +
+    arranger + **lyricist + translator**: 2,887 of 3,791 editions name a
+    lyricist. ⚠️ CC BY-ND is excluded because we CONVERT FORMATS and a format
+    conversion is a derivative — easy to wave through as attribution-only.
+    Tools: `tool/music_db_cpdl_*`. Held set in `cpdl-probation.json`.
+  - 🤝 **FIVE `crisp_notation` reader gaps found by the CPDL parse sweep**
+    (98.0% parse; the 78 failures cluster in early music, CPDL's richest
+    repertoire) — unclaimed, needs a `crisp_notation` worktree: 35 × `<time>`
+    without `<beats>`/`<beat-type>` (mensural/unmetered) · 21 × note type
+    `long` · 3 × `256th`/`128th` (the MusicXML twin of a known `mscx` gap) ·
+    2 × plain MusicXML carrying a `.mxl` extension (wants a raw-XML fallback in
+    `readMusicXmlFromMxl`, same shape as `de528da`) · 17 × `.ly` yielding zero
+    notes. Full triage incl. what I ruled out is in the gitignored notes;
+    `tool/music_db_ly_probe.dart` is the harness.
   — opus (jukebox-ingest)
 
 - **opus (workstation-parity)** · 🔴 **COLLISION FLAG (not mine to settle, but
