@@ -438,6 +438,13 @@ is recorded in [HISTORY.md](HISTORY.md).
     **LilyPond 42/59 → 57/59, empties 17 → 2.** ⚠️ Bug 1 **silently
     TRUNCATED**: 23 files that "parsed fine" gained **+4,917 notes**, one going
     111 → 584 — treat any pre-fix `.ly` note count as suspect.
+  - 📊 **Blast radius measured across the DB: of 854 rows with a `.ly` payload,
+    110 carried the `\<` trigger** — **Mutopia 82/442**, CPDL 28/53, and **0**
+    in Ebersberger/KWS/Season Songs (German folk repertoire, no hairpins).
+    **Those 82 Mutopia scores were rendering TRUNCATED IN THE APP**, since we
+    ship `.ly` natively and the app reads it at load time. No `db.json` change
+    needed — the files were always fine, the reader was wrong — they come right
+    as soon as `../crisp_notation` is pulled.
   - ⚠️ **ONE known regression, shipped knowingly:** `Lotti Vere languores.ly`
     157 → 0. Its voices are `\transpose bes aes { … }` and the **PARSER**
     attaches no args to `\transpose` (`\transpose(0)`), leaving the pitches
