@@ -202,7 +202,8 @@ void main() {
       expect(middle.events.map((e) => e.midi), [62, 64]);
     });
 
-    test('does NOT re-zero the timing — a section stays in the piece’s own '
+    test(
+        'does NOT re-zero the timing — a section stays in the piece’s own '
         'coordinates so it still lines up with the whole', () {
       final middle = piece.section(2, 3);
       expect(middle.events.first.startBeat, 4);
