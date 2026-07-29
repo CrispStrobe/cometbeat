@@ -1418,12 +1418,41 @@ prefix.
     drop the timeline handles natively. `acceptsDirectly` names the kinds a
     container holds; empty by default, so pure mode targets are unchanged. It
     is a whitelist, not a bypass — an unlisted kind is still refused.
-  * ⛔ **the other three drop targets are NOT done, on purpose.** They belong on the
-    Tracker, the Tab editor, Loop Studio and the timeline — four hot files that
-    three other lanes were shipping in this hour (WS-L2's arrangement editor,
-    the SE-C ladder, WS-X1 2b). Each is now a few lines over this protocol,
-    adoptable by whoever owns the file when they are not mid-flight.
-  Tests: `drag_payload_test` (17).
+  * ✅ **the second drop target is wired: LOOP STUDIO** (2026-07-29, loop-d1d4).
+    A drag onto the mixer surface shows what a release would do, confirms when
+    it costs something, and lands as one undoable edit.
+    ⚠️ **"a few lines over this protocol" was wrong, and the reason is worth
+    reading before wiring the remaining two.** The protocol is sound; what it
+    does not carry is the target's own constraints, and each of the three below
+    was found only by wiring a real surface — the same way `acceptsDirectly` was.
+    1. **`kind` does NOT determine the document type.** `AppMode.loop` travels
+       as a **`GrooveSpec`** when Loop Studio produced it and as a
+       **`List<PatternCell>`** when the bridge converted INTO loop. Same-kind
+       never consults the bridge, so `dropDecisionFor` answers *exact* for both
+       and the hint reads "Moves here unchanged" either way. **A handler keyed
+       on `payload.kind` hands a cell list to `applySpec` and loses it
+       silently.** Switch on the document TYPE. Every mode that both produces
+       and receives a document should be assumed to have this shape.
+    2. **The target can lose something the REPORT cannot know about.** Loop
+       Studio plays a two-bar grid; a longer melody has to be trimmed, and that
+       happens *after* the conversion the bridge reported on. Landing the head
+       and dropping the tail silently is exactly the lossy-drop-that-did-not-ask
+       the protocol exists to prevent — so the trim is added to the same
+       confirmation, and declining leaves the groove untouched.
+    3. **A foreign document can violate an invariant every existing caller
+       happened to satisfy.** `MelodicPattern.render` ASSERTS its cells fill the
+       grid exactly. Nothing had ever handed it a melody from elsewhere — a
+       capture is recorded against the grid — so the first drop crashed the
+       render. Cells are now fitted (`takeSteps` + `tileCellsTo`). Also:
+       `setUserTrack` creates the track but does not ENABLE it, which every
+       other caller in that file pairs by hand; without it a dropped melody
+       lands silent and looks like a failed drop.
+    📌 Consistent with `openProjectTrack` refusing a converted document: that
+    refusal was because *opening* hid the cost, and a drop does not hide it.
+  * ⛔ **two drop targets remain, on purpose:** the Tracker and the Tab editor,
+    both other lanes' hot files. Still adoptable by their owners — but budget
+    for the three findings above rather than for "a few lines".
+  Tests: `drag_payload_test` (17) · `loop_drop_target_test` (11).
 
 
 ### Phase 4 — the console

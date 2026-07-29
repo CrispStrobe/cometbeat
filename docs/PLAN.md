@@ -1218,7 +1218,24 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING WS-X2's LOOP STUDIO drop target.** The
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — WS-X2's LOOP STUDIO drop target,
+  +11 tests. Only `loop_mixer_screen.dart`; the protocol is untouched.**
+  ⚠️ **The card promised "a few lines over this protocol" for each remaining
+  target. That was optimistic, and the three reasons are on the card in root
+  `PLAN.md` — READ THEM before wiring the Tracker or the Tab editor.** In
+  short: `kind` does not determine the document type (`AppMode.loop` carries
+  both a `GrooveSpec` and a cell list, and same-kind never consults the bridge,
+  so both answer *exact*); the target can lose something the bridge's report
+  cannot know about (a two-bar grid trims a longer melody, *after* the
+  conversion was reported on); and a foreign document can violate an invariant
+  every existing caller happened to satisfy (`MelodicPattern.render` asserts its
+  cells fill the grid — nothing had ever handed it a melody from elsewhere, so
+  the first drop crashed the render).
+  **All three were found by wiring a real surface, none by reading the
+  protocol** — which is the same way `acceptsDirectly` was found on the first
+  target. A contract that looks complete keeps being incomplete in the one
+  direction its author could not see from inside it.
+  Previously: 🚧 **CLAIMED WS-X2's LOOP STUDIO drop target.** The
   card leaves the remaining three "adoptable by whoever owns the file when they
   are not mid-flight" — Loop Studio is mine and is cold (I was the one in it,
   and I am done). Only `loop_mixer_screen.dart`; the protocol itself is not

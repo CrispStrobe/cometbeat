@@ -59,6 +59,7 @@ import 'package:comet_beat/core/audio/tracker_engine.dart'
     show TrackerInstrument;
 import 'package:comet_beat/core/audio/wav_io.dart';
 import 'package:comet_beat/core/interop/app_mode.dart';
+import 'package:comet_beat/core/interop/drag_payload.dart';
 import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/beat_bridge.dart';
@@ -5966,12 +5967,149 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                 child: _actionBar(l10n),
               ),
               const Divider(height: 1),
-              Expanded(child: _mixerLayout(l10n)),
+              Expanded(child: _dropZone(child: _mixerLayout(l10n))),
             ],
           ),
         ),
       ),
     );
+  }
+
+  // --- WS-X2 — music dragged in from another surface ------------------------
+
+  /// What dropping [payload] here would do. Asked in three places (will-accept,
+  /// the drag-over hint, the drop itself), so it is named once.
+  ///
+  /// `acceptsDirectly` is deliberately EMPTY: the Audio Editor's timeline is a
+  /// container that holds foreign clips as they are, and Loop Studio is not —
+  /// it is one groove played by a band. Anything arriving from another mode has
+  /// to become groove material, so the bridge is the right question here.
+  DropDecision _dropDecision(MusicDragPayload payload) =>
+      dropDecisionFor(payload, AppMode.loop);
+
+  Widget _dropZone({required Widget child}) {
+    return DragTarget<MusicDragPayload>(
+      onWillAcceptWithDetails: (d) => _dropDecision(d.data).canDrop,
+      onAcceptWithDetails: (d) => unawaited(_dropHere(d.data)),
+      builder: (context, candidate, rejected) => Stack(
+        children: [
+          child,
+          if (candidate.isNotEmpty && candidate.first != null)
+            Positioned(
+              left: 12,
+              top: 8,
+              child: Material(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  // Say what a release would do, while the finger is down.
+                  child: Text(
+                    dropSummary(_dropDecision(candidate.first!)),
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Land a dragged document on this surface.
+  ///
+  /// ⚠️ **Switches on the document TYPE, not on `payload.kind`, and that is not
+  /// defensive coding — it is required.** `AppMode.loop` carries two different
+  /// shapes: a whole `GrooveSpec` when Loop Studio itself produced it
+  /// (`addToProject`), and a `List<PatternCell>` when `ProjectBridge` converted
+  /// something INTO loop. Same-kind never consults the bridge, so
+  /// `dropDecisionFor` answers *exact* for both — a handler keyed on `kind`
+  /// alone would hand a cell list to `applySpec`, which drops it silently.
+  ///
+  /// Both land through the ordinary edit path, so the drop is one undoable
+  /// entry in the shared history (WS-W4). That is what makes replacing the
+  /// groove an acceptable thing for a drop to do at all.
+  Future<void> _dropHere(MusicDragPayload payload) async {
+    final decision = _dropDecision(payload);
+    final document = decision.document;
+    if (!decision.canDrop || document == null) return;
+
+    // ⚠️ A loss the bridge's report CANNOT know about, because it happens after
+    // the conversion: this surface plays a two-bar grid, and a melody longer
+    // than that has to be trimmed to land. The bridge answered honestly for the
+    // conversion it did; the trim is ours. Silently dropping the tail here
+    // would be exactly the "lossy drop that did not ask" the protocol exists to
+    // prevent, so it is added to the same confirmation.
+    final overflow = document is List<PatternCell>
+        ? document.fold<int>(0, (sum, c) => sum + c.steps) - kPatternSteps
+        : 0;
+    final lines = <String>[
+      if (decision.report case final report?) ...[
+        for (final lost in report.lost) '• $lost',
+        for (final near in report.approximated) '~ $near',
+      ],
+      if (overflow > 0)
+        '• only the first two bars fit here — $overflow steps are trimmed',
+    ];
+
+    if (decision.needsConfirmation || overflow > 0) {
+      // Only a LOSSY drop asks. Making people dismiss a dialog on every drop is
+      // how they learn to dismiss the one that mattered.
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('This conversion loses something'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [for (final line in lines) Text(line)],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Drop anyway'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return;
+    }
+
+    switch (document) {
+      // A whole groove replaces the band — it IS what this screen edits.
+      case final GrooveSpec spec:
+        _discardSolo();
+        setState(() => _engine.applySpec(spec));
+      // A single melodic line becomes the user track: the slot that already
+      // means "a melody you brought in", rather than overwriting the band with
+      // one line.
+      case final List<PatternCell> cells when cells.isNotEmpty:
+        setState(() {
+          // Fitted to the grid, or `MelodicPattern.render` asserts: it requires
+          // the cells to fill exactly two bars. Every existing caller feeds it
+          // cells that already do (a capture is recorded against the grid); a
+          // converted melody has no reason to, which is the whole hazard of
+          // accepting one from another surface.
+          _engine.setUserTrack(
+            tileCellsTo(takeSteps(cells, kPatternSteps), kPatternSteps),
+          );
+          // `setUserTrack` creates the track but does NOT enable it — every
+          // other caller in this file pairs the two, and without it a dropped
+          // melody lands silent and looks like the drop failed.
+          _engine.enabled.add(LoopEngine.userTrackId);
+        });
+      default:
+        return;
+    }
+    _syncPlayback();
+    _checkCombo();
   }
 
   /// WS-T3 — Loop Studio's first keyboard support, resolved through the shared
