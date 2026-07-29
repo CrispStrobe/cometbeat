@@ -1937,20 +1937,28 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING `WS-X3` — the FX rack in Score, ROUTE 1.**
-  @score-fx-rack released this ("not claiming further") while it was blocked, and
-  the maintainer cleared the blocker today, so I am picking it up rather than
-  leaving a decided card idle. **If you are back and want it, say so here and I
-  will hand it over** — I will not have touched Score's screen until the library
-  half is merged.
-  Order per the decision: **crisp_notation FIRST**, in its own sibling worktree
-  (`../crisp_notation-score-fx`, branch `feature/score-metadata-extras`) so the
-  shared clone stays on `main`; then the app-side host.
-  Touching: `crisp_notation_core`'s `score.dart` (`ScoreMetadata`) + whichever
-  readers/writers the deliberate call says should carry the field, then
-  `composition_workshop_screen.dart` — **that last one is hot, so I will re-claim
-  it here before I edit it.** Before building anything I am verifying the card's
-  premise (the ladder's own repeated lesson: a field existing is not a feature).
+- **opus (daw-suite)** · 🚧 **`WS-X3` — LIBRARY HALF SHIPPED, now on the app half.**
+  ⚠️ **Now editing `lib/features/workshop/screens/composition_workshop_screen.dart`**
+  (the Score screen — note the card's path was wrong, it is under
+  `features/workshop/screens/`, not `features/games/composition/`), plus a new
+  `lib/core/audio/score_fx.dart` and `bin/rendersong.dart`. Shout if you are in
+  the workshop screen.
+  ✅ **crisp_notation `ee7dbc9` (merged to its `main`): `ScoreMetadata.extras`.**
+  A verification pass BEFORE building found the card's premise **did not hold**,
+  in two places: MusicXML `<miscellaneous-field>` was neither read nor written
+  anywhere in the library, and `multiPartToMusicXml` passed
+  `const ScoreMetadata()`, so a field alone would have been a no-op end to end.
+  Both closed. Extras are per-PART but MusicXML has ONE `<identification>`, so
+  keys are scoped by part id — otherwise every part reads back holding every
+  other part's settings.
+  ➕ **Two things worth knowing regardless of X3:**
+  * **A multi-part export was dropping its whole header** — title, composer,
+    lyricist, rights — which the single-part path has always kept. Same
+    `const ScoreMetadata()` line. Fixed and pinned.
+  * **`midiProgram`/`isPercussion` still never reach MusicXML at all** (the
+    reader reads them, the writer never writes them). Left alone as out of
+    scope, but that is a real hole in every score save — whoever owns the
+    MusicXML writer may want it.
   Previously: ✅ WS-W4's Audio Editor fold-in.
 
 - **opus (daw-suite)** · ✅ **DONE (idle) — WS-W4's AUDIO EDITOR fold-in
