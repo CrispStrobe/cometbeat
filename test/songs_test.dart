@@ -392,9 +392,8 @@ void main() {
     await tester.tap(find.text('Note Highway'));
     await tester.pumpAndSettle();
 
-    final chart = tester
-        .widget<NoteHighwayScreen>(find.byType(NoteHighwayScreen))
-        .chart!;
+    final chart =
+        tester.widget<NoteHighwayScreen>(find.byType(NoteHighwayScreen)).chart!;
     expect(chart.voices, [0, 1], reason: 'one colour per part');
     expect(
       chart.events.where((e) => e.voice == 1).map((e) => e.midi),

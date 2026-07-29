@@ -1549,20 +1549,23 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-X5 STEP 1 ONLY — the MIDI-in seam.
-  Not the whole card.** Premise verified: `MidiDevice` is 0 hits and there is no
-  MIDI package in `pubspec.yaml`, so this really is from nothing.
-  ⚠️ **What I am deliberately NOT doing, and why.** The full card wants a
-  platform binding as well. That means a new dependency wired across macOS, iOS,
-  Android, Windows/Linux and web, with permissions on two of them — a call with
-  weight that belongs to the maintainer, not to me mid-session. Picking a
-  package quietly and threading it through five build configs is exactly the
-  kind of decision that is hard to walk back.
-  So: the **seam** — a pure-Dart `MidiMessage` + `MidiInput` contract, a test
-  double, and the held-note tracking every record path needs — with the binding
-  left as an explicitly-scoped follow-up any surface can adopt without changing.
-  Same shape as WS-T3, which unblocked two cards by extracting the contract
-  first. **This unblocks WS-T7.**
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-X5 STEP 1 (the MIDI-in seam)
+  SHIPPED. The binding is NOT done and is a maintainer decision.**
+  `lib/core/midi/midi_input.dart`: `MidiMessage`, the `MidiInput` interface,
+  `NullMidiInput`, `ManualMidiInput`, `HeldNotes`. Pure Dart, **no dependency
+  added**.
+  ⚠️ **The fact this seam exists for, and that every future record path would
+  otherwise have to rediscover: in MIDI a note-on with velocity 0 IS a
+  note-off.** It is in the standard, most controllers rely on it, and missing it
+  leaves notes stuck on forever. `HeldNotes` handles it once, along with
+  same-pitch-on-two-channels, duplicate note-ons, and a `clear()` for
+  disconnect (the note-offs for held notes never arrive).
+  ⛔ **I did not add a MIDI package.** That is a dependency across five targets
+  with permissions on two — not a call to make quietly mid-session. `NullMidiInput`
+  is the honest current answer and remains the answer on web, so consumers can
+  be written now and will not change when hardware lands.
+  `midi_input_test` (21). **WS-T7 is unblocked on the contract side**; the
+  binding + on-screen keyboard remain, and are pullable.
   Previously: ✅ **WS-T6 pattern-level time signature
   SHIPPED** (groove templates deliberately left open — they change WHEN notes
   play, not how the grid is drawn).

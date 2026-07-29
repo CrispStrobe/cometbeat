@@ -1691,57 +1691,33 @@ prefix.
 
 ### Phase 6 — reach
 
-- ⬜ **WS-X5 — MIDI and controller input.** `L` — no MIDI input exists
-  (`MidiDevice`: 0 hits). One MIDI-in seam feeding **any** surface's record
-  path, plus a shared on-screen keyboard/pad widget for platforms without
-  hardware. Prerequisite for WS-T7 and for D-RT option B.
-- ✅ **WS-X6 — one export sheet — SHIPPED (Audio Editor; other surfaces are a
-  drop-in).** `shared/music_io/export_sheet.dart` — one door, grouped by what
-  you are trying to do (Sound · Notes · Project · Share), listing only what THIS
-  surface can really produce.
-  * ⚠️ **the card's premise was half stale.** "Every mode exports differently"
-    was true when written; by now `showAudioExportSheet` was already shared by
-    **eight** screens and `showMusicExportSheet` by the notation ones. Redoing
-    format unification would have been churn. The gap that was really left is
-    **discoverability**: they were two separate doors, so someone in the Audio
-    Editor was offered a WAV and never learned their arrangement could leave as
-    MusicXML — and the project ARCHIVE appeared in no export UI at all.
-  * this file knows how to build nothing. A surface passes the options it has;
-    that is what keeps it a door rather than a fourth exporter.
-  * an unavailable option **states its reason** in place of its detail — greyed
-    out with no explanation reads as broken software rather than as a fact
-    about the project.
-  * ⚠️ **a wording bug the test caught:** my first disabled reason said "these
-    clips are audio", which is FALSE for a drum project — a drum clip is
-    symbolic and still yields nothing, because the tracker→score bridge returns
-    null for a percussion-only song. The reason now states the outcome
-    ("nothing here can be written as notes yet"), which is true either way, and
-    the drum case is pinned by its own test.
-  * six existing `daw_screen_test` cases correctly failed on the re-routed
-    button and now go through the door — a real behaviour change, acknowledged
-    rather than papered over.
-  Tests: `export_sheet_test` (8).
-  ✅ **Now on three surfaces.** The **Tracker**'s five sibling menu rows (audio ·
-  module · MusicXML · MIDI · ABC) became one door — the **module** export in
-  particular is the format that editor is native to and it sat unremarked
-  between MusicXML and audio. **Loop Studio**'s went the same way, and its
-  **share code** — the thing people there actually pass to each other — was
-  under "copy", where nothing suggested it was a way of getting the music out;
-  it is now an export in its own right. A drums-only groove refuses notation
-  with a reason, exactly as the Audio Editor does.
-  ⛔ **The Workshop deliberately keeps its own sheet — WS-X6 is CLOSED.** I went
-  to wrap it and stopped: it is *already* one door, all 13 of its formats are
-  symbolic (no audio, no share token; project-save is correctly a separate menu
-  row, since saving is not exporting), so the grouping this door adds would buy
-  nothing there. Worse, its dialog already tells you **which formats can carry
-  only the ACTIVE part** — per-format, in red — which is more useful than a
-  category heading and which my generic `ExportOption` has no way to express.
-  Wrapping it would have been a downgrade dressed as consistency.
-- ⬜ **WS-W7 — session ⇄ arrangement.** `L` · Depends WS-W1, WS-W5, WS-L3.
-  Loop Studio's
-  scenes are already a session grid and the Audio Editor is already a linear
-  arrangement; make them two views of one project, and record scene launches
-  into the arrangement.
+- 🔶 **WS-X5 — MIDI and controller input.** **Step 1 (the seam) SHIPPED; the
+  binding is deliberately NOT done and is the maintainer's call.**
+  * ✅ `lib/core/midi/midi_input.dart` — `MidiMessage` (parse + note/CC/bend),
+    the `MidiInput` interface, `NullMidiInput`, `ManualMidiInput`, and
+    `HeldNotes`. Pure Dart, Flutter-free, no dependency added.
+  * ⚠️ **the seam exists because of one bug in particular.** In MIDI, **a
+    note-on with velocity 0 IS a note-off** — it is in the standard and most
+    controllers rely on it. Anything that treats note-on as "start sounding"
+    leaves notes stuck on forever, and every surface that grows a record path
+    would have had to get that right independently. `HeldNotes` gets it right
+    once. Its neighbours are pinned too: the same pitch on two channels is two
+    notes (a controller sends drums on ch10), a repeat at the same velocity is
+    not a change, and `clear()` exists because on disconnect the note-offs for
+    anything held will never arrive.
+  * ⛔ **the platform binding is NOT step 1, and I did not sneak it in.** It
+    means a new dependency wired across macOS, iOS, Android, desktop and web,
+    with permissions on two — a decision with weight that belongs to whoever
+    owns the dependency list. `NullMidiInput` is the honest current answer
+    (and stays the answer on web regardless), so nothing is blocked on it:
+    a surface written against `MidiInput` will not change when hardware lands.
+  * `ManualMidiInput` is what the card's "on-screen keyboard/pad widget" would
+    push into, so that half needs no new contract either.
+  Tests: `midi_input_test` (21).
+  ⬜ **Remaining:** the platform binding (dependency call), the on-screen
+  keyboard widget, and wiring a surface's record path — which is **WS-T7**, now
+  unblocked on the contract side.
+
 
 ### The decision that gates part of this ladder
 
