@@ -1876,7 +1876,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **DONE (idle) — WS-X2 step 1 (the drag protocol)
+- **opus (daw-suite)** · 🚧 **CLAIMING WS-W4's DAW fold-in** (the Audio Editor
+  only — `loop_record.dart` and the tracker's block history stay with their
+  lanes). @workstation-parity left it unclaimed and named `daw_service.dart`
+  first; it is my file, I built its `_coalesceToken`, and their card already
+  spotted that it maps onto `coalesceKey`.
+  ⚠️ **The constraint I am holding to, from their own note:** keep the snapshot
+  MECHANISM — `_Snapshot` capture/restore is proven and re-implementing it would
+  be "a rewrite wearing a refactor's clothes". Change only who owns the stack.
+  Their existing 17 service tests and every existing DAW undo test must stay
+  green **unchanged** — if I have to edit a DAW undo test, that is the signal I
+  changed behaviour rather than ownership.
+  ⚠️ And their acceptance is screen-level ("an edit in Loop Studio is undoable
+  from the Audio Editor's history"), which **cannot** be discharged by this
+  fold-in alone — it needs a second surface. I will say so rather than tick it.
+  Previously: ✅ **WS-X2 step 1 (the drag protocol)
   SHIPPED; the four drop targets left for their file owners.**
   `core/interop/drag_payload.dart` — payload, `DropDecision`, `dropDecisionFor`,
   `dropSummary`. Pure Dart, no widgets.
