@@ -9,11 +9,14 @@ import 'dart:async';
 
 import 'package:comet_beat/core/audio/daw_sources.dart' show ScoreSource;
 import 'package:comet_beat/core/audio/play_along.dart' show PlayAlongChart;
+import 'package:comet_beat/core/games/highway/highway_chart.dart'
+    show HighwayChart, highwayChartFromScore;
 import 'package:comet_beat/core/notation/bowed_arranger.dart';
 import 'package:comet_beat/core/notation/bowed_score_fingering.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/features/games/composition/music_inspect.dart';
 import 'package:comet_beat/features/games/composition/score_analysis_view.dart';
+import 'package:comet_beat/features/games/highway/note_highway_screen.dart';
 import 'package:comet_beat/features/games/playalong/play_along_screen.dart';
 import 'package:comet_beat/features/games/songs/chord_sheet_screen.dart';
 import 'package:comet_beat/features/games/songs/import/chordpro.dart';
@@ -120,6 +123,13 @@ class _SongScreenState extends State<SongScreen> {
     octaveAgnostic: false,
   );
 
+  // The SAME song as falling blocks. Unlike the two play-along charts above —
+  // which are one melodic line for a monophonic pitch stream — this keeps every
+  // pitch of every chord and both written voices, because the highway draws the
+  // whole texture.
+  late final HighwayChart _highwayChart =
+      highwayChartFromScore(widget.score, name: widget.title);
+
   late final Map<String, int> _midiById = {
     for (final measure in widget.score.measures)
       for (final element in measure.elements)
@@ -177,6 +187,22 @@ class _SongScreenState extends State<SongScreen> {
               gameId: gameId,
               sriPrefix: sriPrefix,
               scaleStarsToLength: true,
+            ),
+          ),
+        );
+  }
+
+  /// Opens the song on the Note Highway. Disabled for the same reasons as the
+  /// play-along launchers: not while the preview is playing, and not for a song
+  /// with nothing to play.
+  VoidCallback? _highwayLauncher() {
+    if (_playing || _highwayChart.isEmpty) return null;
+    return () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => NoteHighwayScreen(
+              chart: _highwayChart,
+              title: widget.title,
+              gameId: 'note_highway_piano',
             ),
           ),
         );
@@ -389,6 +415,13 @@ class _SongScreenState extends State<SongScreen> {
                     ),
                     icon: const Icon(Icons.moving),
                     label: Text(l10n.gamePlayAlong),
+                  ),
+                  // …and the same song as falling blocks on the instrument
+                  // itself — polyphonic, so a two-hand song really shows both.
+                  OutlinedButton.icon(
+                    onPressed: _highwayLauncher(),
+                    icon: const Icon(Icons.piano),
+                    label: Text(l10n.gameNoteHighway),
                   ),
                 ],
               ),

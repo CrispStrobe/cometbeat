@@ -4,9 +4,15 @@
 // plays them together via AudioService.playMixedTimedChords. Used for the
 // built-in ensemble songs AND for imported/transcribed multi-part songs (which
 // the single-voice SongScreen would otherwise flatten to their first part).
-// Read-only: SongScreen stays the karaoke/play-along/analysis surface.
+// Read-only: SongScreen stays the karaoke/play-along/analysis surface. The one
+// thing it launches is the Note Highway, because a multi-part piece is exactly
+// what `highwayChartFromParts` is for — a colour per part, all falling at once,
+// which no other view here shows.
 
+import 'package:comet_beat/core/games/highway/highway_chart.dart'
+    show HighwayChart, highwayChartFromParts;
 import 'package:comet_beat/core/services/audio_service.dart';
+import 'package:comet_beat/features/games/highway/note_highway_screen.dart';
 import 'package:comet_beat/features/games/songs/song_book.dart'
     show ensembleVoicePlayback;
 import 'package:comet_beat/l10n/app_localizations.dart';
@@ -40,6 +46,13 @@ class MultiPartSongScreen extends StatefulWidget {
 class _MultiPartSongScreenState extends State<MultiPartSongScreen> {
   bool _playing = false;
   int _token = 0;
+
+  /// Every part as falling blocks, one voice (and so one colour) per part.
+  late final HighwayChart _highwayChart = highwayChartFromParts(
+    widget.score.parts,
+    name: widget.title,
+    bpmOverride: 60000 / widget.quarterMs,
+  );
 
   Future<void> _play() async {
     final audio = context.read<AudioService>();
@@ -99,6 +112,21 @@ class _MultiPartSongScreenState extends State<MultiPartSongScreen> {
                     icon: const Icon(Icons.stop),
                     label: Text(l10n.songStop),
                   ),
+                OutlinedButton.icon(
+                  onPressed: _playing || _highwayChart.isEmpty
+                      ? null
+                      : () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => NoteHighwayScreen(
+                                chart: _highwayChart,
+                                title: widget.title,
+                                gameId: 'note_highway_piano',
+                              ),
+                            ),
+                          ),
+                  icon: const Icon(Icons.piano),
+                  label: Text(l10n.gameNoteHighway),
+                ),
               ],
             ),
             const SizedBox(height: 8),

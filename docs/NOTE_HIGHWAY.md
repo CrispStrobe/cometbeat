@@ -1,7 +1,8 @@
 # Note Highway — falling-note play-along, one engine, many instruments
 
-**Status:** first cut SHIPPED 2026-07-28 (`feature/note-highway`) — see §8 for
-exactly what is in and what is not. Owner: idle.
+**Status:** first cut SHIPPED 2026-07-28, Song Book entry 2026-07-29
+(`feature/note-highway`) — see §7 for exactly what is in and what is not.
+Owner: idle.
 **Short version:** we already ship a falling-note view; it is a private
 `CustomPainter` inside one screen, monophonic, and pitch-axis only. This scopes
 extracting it into a reusable **Note Highway** layer, then adding the two views
@@ -331,10 +332,17 @@ shapes claiming the ukulele, whose lowest string is C4).
   `_HighwayPainter`/`_FallingPainter`. The new layer was built alongside it
   rather than under it, so nothing shipped regressed; pointing the play-along
   screen at `HighwayView` is now a follow-up, not a prerequisite.
-* **No Song Book entry yet.** `highwayChartFromScore` exists and is tested, but
-  no screen passes a real score in — the tiles play the built-in library. Wiring
-  a "play this on the highway" action into the Song Book/Workshop is the next
-  obvious slice, and the screen already takes a `chart` for it.
+* ~~No Song Book entry yet.~~ **DONE 2026-07-29.** `SongScreen` and
+  `MultiPartSongScreen` each carry a *Note Highway* action next to their
+  existing ones, so the highway now plays the whole rights-cleared corpus and
+  not just its nine built-in pieces. A single-part song goes through
+  `highwayChartFromScore` (every pitch of every chord, both written voices); a
+  multi-part one through `highwayChartFromParts`, which gives each PART its own
+  colour — the case that view exists for. Both are disabled while the karaoke
+  preview runs and for a song with nothing to play, matching the play-along
+  launchers beside them. Still open on this axis: the Workshop has no such
+  action, and an engraved-notation reading strip still needs the score threaded
+  through (the strip is chart-driven today).
 * **No microphone grading.** Touch only. The mic path is the play-along
   engine's, and joining them is S5.
 * **No drum-kit map, no loop-a-section, no chord-grip blocks or strum arrows,

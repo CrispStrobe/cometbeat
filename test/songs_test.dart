@@ -6,6 +6,7 @@ import 'package:comet_beat/core/services/daw_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
+import 'package:comet_beat/features/games/highway/note_highway_screen.dart';
 import 'package:comet_beat/features/games/songs/chord_sheet_screen.dart';
 import 'package:comet_beat/features/games/songs/import/chordpro.dart';
 import 'package:comet_beat/features/games/songs/import_screen.dart';
@@ -335,6 +336,72 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Play'), findsOneWidget); // finished, reset to Play
+  });
+
+  testWidgets('song screen: Note Highway opens the SONG on the highway',
+      (tester) async {
+    // The point of the Song Book entry: the highway plays the rights-cleared
+    // corpus, not just its own built-in pieces. So the chart it opens with must
+    // be THIS song's notes.
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    const song =
+        Song(id: 't', title: 'Test', dsl: 'c4:q e4:q g4:h', lyrics: '');
+    await tester.pumpWidget(_wrap(SongScreen(song: song), sri));
+    await tester.pump();
+
+    await tester.ensureVisible(find.text('Note Highway'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Note Highway'));
+    await tester.pumpAndSettle();
+
+    final screen = tester.widget<NoteHighwayScreen>(
+      find.byType(NoteHighwayScreen),
+    );
+    expect(screen.chart, isNotNull);
+    expect(screen.title, 'Test');
+    expect(
+      screen.chart!.events.map((e) => e.midi),
+      [60, 64, 67],
+      reason: 'the song, not a built-in piece',
+    );
+    // A chart from a score carries the song's own tempo/meter grid.
+    expect(screen.chart!.beatsPerBar, 4);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('multi-part song: the highway gives each PART its own voice',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final sri = SriService(getNow: () => DateTime(2026, 7, 11));
+    final score = MultiPartScore([
+      Score.simple(notes: 'c4:q d4:q'),
+      Score.simple(notes: 'c3:q g3:q'),
+    ]);
+    await tester.pumpWidget(
+      _wrap(MultiPartSongScreen(title: 'Duo', score: score), sri),
+    );
+    await tester.pump();
+
+    await tester.ensureVisible(find.text('Note Highway'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Note Highway'));
+    await tester.pumpAndSettle();
+
+    final chart = tester
+        .widget<NoteHighwayScreen>(find.byType(NoteHighwayScreen))
+        .chart!;
+    expect(chart.voices, [0, 1], reason: 'one colour per part');
+    expect(
+      chart.events.where((e) => e.voice == 1).map((e) => e.midi),
+      [48, 55],
+      reason: 'the lower part keeps its own pitches',
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('song screen: the fingering toggle marks the score up for cello',
