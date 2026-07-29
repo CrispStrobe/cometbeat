@@ -32,6 +32,7 @@ import 'package:comet_beat/core/audio/crisp_dsp/resample.dart' show resampleHq;
 import 'package:comet_beat/core/audio/daw_sources.dart' show GrooveSource;
 import 'package:comet_beat/core/audio/fx/fx_spec.dart';
 import 'package:comet_beat/core/audio/groove_capture.dart';
+import 'package:comet_beat/core/audio/groove_change_label.dart';
 import 'package:comet_beat/core/audio/loop_audio_fit.dart'
     show audioFitIsSubtle;
 import 'package:comet_beat/core/audio/loop_automation.dart';
@@ -65,6 +66,7 @@ import 'package:comet_beat/core/services/gapless_loop_player.dart';
 import 'package:comet_beat/core/services/melody_bridge.dart';
 import 'package:comet_beat/core/services/project_service.dart';
 import 'package:comet_beat/core/services/transport_service.dart';
+import 'package:comet_beat/core/services/undo_service.dart';
 import 'package:comet_beat/features/games/composition/advanced_tracker_screen.dart';
 import 'package:comet_beat/features/games/composition/custom_progressions.dart';
 import 'package:comet_beat/features/games/composition/groove_notation.dart';
@@ -134,6 +136,14 @@ const int kLoopSectionSlots = 8;
 
 /// WS-T3 — what Loop Studio actually does, so its keymap sheet lists only
 /// shortcuts that work here.
+/// This surface's name in the shared undo history (WS-W4).
+///
+/// Public because it is a contract, not a detail: a history panel showing rows
+/// from several surfaces has to be able to say which one a row came from, and
+/// Loop Studio's own Undo button uses it to avoid rewinding somebody else's
+/// edit.
+const String kLoopUndoScope = 'loop';
+
 const Set<AppIntent> kLoopIntents = {
   AppIntent.transportToggle,
   AppIntent.transportStop,
@@ -603,10 +613,28 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// progression and captured tracks are all covered. The Loop Studio is a
   /// sandbox — a kid needs to take an edit back. Capped so it never grows without
   /// bound. `_historyBase` is the last recorded state (the point undo reverts to).
-  final List<GrooveSpec> _undoStack = [];
-  final List<GrooveSpec> _redoStack = [];
+  ///
+  /// WS-W4 — the SNAPSHOTS are unchanged; only the STACK moved. Capture and
+  /// restore are still `_engine.spec` and [_applyHistory], because those are
+  /// proven and re-implementing them would be a rewrite wearing a refactor's
+  /// clothes. What changed is who holds the list: an [UndoService], so an edit
+  /// made here is visible — and reversible — from the Audio Editor's history.
   GrooveSpec? _historyBase;
   static const int _maxHistory = 60;
+
+  /// The history this screen owns when no shared one is in scope.
+  ///
+  /// A fallback rather than "record only when a service is provided": this
+  /// screen is a GAME, mounted by the registry and by most of its own tests
+  /// with no providers at all, and undo has worked there since it shipped.
+  /// Making the shared case the only recording case would have deleted a
+  /// working feature for every player who never opens a project. One code path
+  /// either way — the only difference is whether anyone else can see the
+  /// entries.
+  final UndoService _ownUndo = UndoService(maxEntries: _maxHistory);
+  UndoService? _sharedUndo;
+
+  UndoService get _undo => _sharedUndo ?? _ownUndo;
 
   @override
   void initState() {
@@ -661,6 +689,32 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     } on ProviderNotFoundException {
       _projects = null;
     }
+    UndoService? shared;
+    try {
+      shared = Provider.of<UndoService>(context, listen: false);
+    } on ProviderNotFoundException {
+      shared = null;
+    }
+    // `!_historyWired` is not redundant with the comparison: on the first call
+    // with no service in scope, `shared` and `_sharedUndo` are BOTH null, and a
+    // comparison alone would skip the wiring and leave the own history's
+    // buttons never refreshing.
+    if (!_historyWired || shared != _sharedUndo) {
+      // Listened to rather than watched: the buttons must also refresh when
+      // ANOTHER surface undoes something, which is the whole point of a shared
+      // history — and `didChangeDependencies` can run more than once, so the
+      // old subscription goes before the new one arrives.
+      _undo.removeListener(_onHistoryChanged);
+      _sharedUndo = shared;
+      _undo.addListener(_onHistoryChanged);
+      _historyWired = true;
+    }
+  }
+
+  bool _historyWired = false;
+
+  void _onHistoryChanged() {
+    if (mounted) setState(() {});
   }
 
   // --- WS-X1 live project links ---------------------------------------------
@@ -736,6 +790,18 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   @override
   void dispose() {
+    // WS-W4 — the trap a cross-surface history has and a private stack does
+    // not. Every entry this screen pushed closes over THIS State, and the
+    // shared service outlives the screen: a player who leaves Loop Studio and
+    // then presses Undo in the Audio Editor would run a restore into a dead
+    // screen. The service anticipated this and documents `clearScope` for
+    // exactly it — "its closures capture state that is going away".
+    //
+    // Only the SHARED one is cleared: the private fallback dies with the
+    // screen anyway, and clearing it would be busywork.
+    _undo.removeListener(_onHistoryChanged);
+    _sharedUndo?.clearScope(kLoopUndoScope);
+    _ownUndo.dispose();
     _keyFocus.dispose();
     _ticker.dispose();
     _step.dispose();
@@ -3809,17 +3875,36 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final base = _historyBase;
     if (base != null && current.cacheKey == base.cacheKey) return;
     if (base != null) {
-      _undoStack.add(base);
-      if (_undoStack.length > _maxHistory) _undoStack.removeAt(0);
-      _redoStack.clear();
+      _undo.push(
+        UndoEntry(
+          // Derived from the two snapshots rather than set at each edit site:
+          // every edit here funnels through ONE hook, which is why one hook
+          // could cover them all — and a label each of twenty call sites had to
+          // remember to set is a label that drifts.
+          label: describeGrooveChange(base, current),
+          scope: kLoopUndoScope,
+          undo: () => _applyHistory(base),
+          redo: () => _applyHistory(current),
+        ),
+      );
     }
     _historyBase = current;
   }
 
-  bool get _canUndo => _undoStack.isNotEmpty;
-  bool get _canRedo => _redoStack.isNotEmpty;
+  // Scoped rather than global: pressing Undo HERE must not rewind an edit
+  // somebody made in the Audio Editor. The shared history still SHOWS both —
+  // seeing another surface's work and silently reversing it with your own
+  // button are different things.
+  bool get _canUndo => _undo.canUndoScope(kLoopUndoScope);
+  bool get _canRedo => _undo.canRedoScope(kLoopUndoScope);
 
   void _applyHistory(GrooveSpec target) {
+    // These closures outlive the screen: an entry pushed here sits in a service
+    // that the Audio Editor keeps, and this is a game screen — pushed and
+    // popped. `dispose` drops this scope for exactly that reason, so reaching
+    // here unmounted should be impossible; it is guarded anyway, because the
+    // failure mode is a `setState` on a dead State inside somebody else's undo.
+    if (!mounted) return;
     // Solo is a transient screen mode layered over `enabled`; drop it so the
     // restored enabled-set isn't immediately overwritten by the solo re-assert.
     _discardSolo();
@@ -3831,17 +3916,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _checkCombo();
   }
 
-  void _undoEdit() {
-    if (_undoStack.isEmpty) return;
-    _redoStack.add(_engine.spec);
-    _applyHistory(_undoStack.removeLast());
-  }
+  // The entries carry their own restore closures, so these only pick WHICH one
+  // — the service moves it between past and future.
+  void _undoEdit() => _undo.undoScope(kLoopUndoScope);
 
-  void _redoEdit() {
-    if (_redoStack.isEmpty) return;
-    _undoStack.add(_engine.spec);
-    _applyHistory(_redoStack.removeLast());
-  }
+  void _redoEdit() => _undo.redoScope(kLoopUndoScope);
 
   /// Removes a captured (sung / beatboxed) track. Built-in cards can't be
   /// removed — they are the band. No-op for unknown/built-in ids.

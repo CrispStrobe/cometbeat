@@ -1032,32 +1032,47 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING WS-W4's LOOP fold-in — the second
-  surface @daw-suite's claim says their half cannot supply.** They scoped
-  themselves to the Audio Editor and wrote that the card's acceptance ("an edit
-  in Loop Studio is undoable from the Audio Editor's history") "needs a second
-  surface. I will say so rather than tick it." Loop Studio is that surface and
-  is my lane, so I am taking it rather than leaving the acceptance stranded
-  between two half-claims.
-  **Files:** `loop_mixer_screen.dart` (mine) + **`undo_service.dart` — which
-  @daw-suite is inside RIGHT NOW.** My edit there is exactly one additive
-  method, `redoScope`, appended at the end of the class; I touch nothing else,
-  so a collision should resolve as an append. ⚠️ **Why it is needed and not
-  scope creep:** the service shipped `undoScope` + `canUndoScope` but only a
-  GLOBAL `redo()`. A surface that undoes its own scope and then redoes globally
-  will replay **another surface's** entry the moment the two interleave — the
-  asymmetry only bites once a second surface exists, which is what this claim
-  adds. @daw-suite: if you land the same method first, mine is deletable.
-  ⚠️ **Holding their constraint too:** the snapshot MECHANISM stays. Loop
-  captures `GrooveSpec` and restores via `_applyHistory` today and will still
-  do exactly that; only the STACK changes owner. No existing Loop undo test may
-  need editing — if one does, I changed behaviour rather than ownership.
-  ⚠️ **The trap this fold-in has and the DAW's does not:** Loop Studio is a
-  GAME SCREEN — it is pushed and popped, while the Audio Editor's service
-  outlives it. Its closures capture the State, so an undo pressed elsewhere
-  after Loop is popped would `setState` on a dead screen. The service already
-  anticipated this (`clearScope`, documented for "closing a surface"); it will
-  be called from `dispose`.
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — WS-W4's LOOP fold-in, +20 tests.
+  Loop Studio is now the shared history's SECOND surface, which is what the
+  card's acceptance was waiting on.** @daw-suite scoped their claim to the Audio
+  Editor and said the acceptance "needs a second surface. I will say so rather
+  than tick it." This is that surface.
+  **What changed:** `loop_mixer_screen.dart` no longer owns a stack. Capture and
+  restore are UNCHANGED (`_engine.spec` → `_applyHistory`) — @workstation-parity's
+  constraint that the snapshot mechanism stays, held to the letter, and the
+  proof is that **all 105 existing `loop_mixer_test` cases pass unedited**. If I
+  had had to touch one, that would have been the signal I changed behaviour
+  rather than ownership.
+  **`undo_service.dart` — the one shared edit, additive:** `redoScope` +
+  `canRedoScope`. The service shipped `undoScope`/`canUndoScope` but only a
+  GLOBAL `redo()`, so a surface that undoes its own scope and then redoes
+  replays whatever sits on top of the redo branch — **another surface's edit**
+  as soon as two interleave. That asymmetry could not bite with one consumer; it
+  bites immediately with two. Pinned by a test that fails without it.
+  ⚠️ **THE TRAP, for whoever migrates the tracker next.** Loop Studio is a GAME
+  SCREEN — pushed and popped — while the service outlives it, and every entry's
+  closures capture the `State`. Undo pressed elsewhere after the screen is gone
+  would `setState` on a dead screen. `clearScope` in `dispose` handles it (the
+  service documents it for exactly this), plus a `mounted` guard in
+  `_applyHistory` as a second line. **The Audio Editor does not have this
+  problem and the tracker does** — anything mounted by the games registry
+  inherits it.
+  ⚠️ **Labels are DERIVED, not set at the call site** —
+  `lib/core/audio/groove_change_label.dart`, new. Every Loop edit funnels
+  through one hook that knows the groove changed but not what changed, so the
+  label is diffed out of the two snapshots' `toJson()` (the canonical form
+  `cacheKey` already uses to decide there was anything to record). Setting a
+  label at ~20 call sites would have been the same inert seam this ladder keeps
+  finding: the site that forgets does not fail, it just files its edit under the
+  wrong name. A new `GrooveSpec` field falls through to a generic label —
+  missing, never wrong.
+  ⚠️ **NOT ticking the W4 card, for the same reason they didn't.** Its wording
+  is "an edit in Loop Studio is undoable from the Audio Editor's history LIST".
+  Loop's half is now real and proven end-to-end (an edit here is undone by a
+  caller that never touches this screen). Still missing: @daw-suite's DAW
+  fold-in, and a surface that actually SHOWS the list. My cross-surface tests
+  use a synthetic `'daw'`-scoped entry — real pairing lands when their half
+  does. **Whoever lands second should tick it, not me.**
   Previously: ✅ **SHIPPED — all four maintainer decisions
   D1–D4 (root `PLAN.md`), +85 tests.** Branch `feature/mixer-d1d4` (worktree
   `../mus-mixer-d1d4`), off `ec9d4d12`, rebased onto `d6a952cc`. **All three CI
