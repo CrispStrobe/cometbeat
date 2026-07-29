@@ -50,6 +50,10 @@ import 'support/reference_players.dart';
 const _abRaw = String.fromEnvironment('OPENMPT_AB');
 final _ab = _abRaw.isNotEmpty && _abRaw != '0';
 
+/// A reference sitting at least this far from centre is making a PAN claim,
+/// even if it never moves — see the note at the gate.
+const double _kPanOffCentreFloor = 0.2;
+
 /// How far past the references' own disagreement we allow ourselves to sit.
 ///
 /// A deliberate constant, and the honest way to read it is "the gate rides the
@@ -103,6 +107,22 @@ double _envelopeDynamicRange(Float64List pcm) {
 /// fixed, so an exemption announces its own obsolescence rather than quietly
 /// outliving the bug. It has already retired four entries that way.
 const _kKnownOpenDefects = <String>{
+  // ⚠️ **The pan column REPORTS but does not GATE.** `offenders` below takes
+  // spectral and envelope gaps only, so a pan row marked `<-- OUTSIDE` is
+  // information, not a failure. That is deliberate for now and worth knowing
+  // before reading the output: 26 MOD rows currently show a pan gap of ~0.16,
+  // and it is one finding, not 26 — see below.
+  //
+  // ⬜ **MOD stereo SEPARATION is an open preference, not a bug.** ProTracker
+  // pans channels hard LRRL, and every player softens that by taste because
+  // hard panning is fatiguing on headphones. Measured on `fx/vibrato.mod`:
+  // openmpt renders channel 0 at −0.500 and we render it at −0.661, and the two
+  // references AGREE with each other (spread ±0.00). So we are outside a
+  // consensus, on a number that is a listening choice rather than a
+  // correctness one — the same shape as `authenticSlides`. Deciding it (match
+  // the references, keep ours, or expose it) is an owner's call; until then the
+  // pan column will show ~0.16 on every MOD row.
+  //
   // (The four volume-column fixtures lived here. A cell's volume became
   // `noteVolume`, a 0..1 per-note multiplier, while `Axy` slid the 0..64
   // CHANNEL volume still sitting at its default 64 — so a slide UP from a quiet
@@ -238,7 +258,11 @@ void main() {
   // `nna/` is IT new-note actions — cut/continue/off/fade, the part of the IT
   // model that makes a channel polyphonic. IT only: XM has no NNA and MOD/S3M
   // have no instruments, so this is the one set with only two references.
-  for (final name in ['fx', 'flow', 'sample', 'fmt', 'env', 'nna']) {
+  // `stereo/` is IT stereo SAMPLES — the last unmeasured thing in the sample
+  // layer, and the one a mono downmix is structurally blind to. Hard-left and
+  // hard-right fixtures plus a mono control, so a dropped payload reads as
+  // "identical to the control" rather than as a subtle difference.
+  for (final name in ['fx', 'flow', 'sample', 'fmt', 'env', 'nna', 'stereo']) {
     final dir = Directory('test/fixtures/$name');
     if (!dir.existsSync()) continue;
     fixtures.addAll(
@@ -323,8 +347,23 @@ void main() {
         final panTravelled = refStereo.isEmpty
             ? 0.0
             : panTravel(refStereo.first.left, refStereo.first.right);
-        final panGated =
-            refStereo.length >= 2 && panTravelled >= _kPanTravelFloor;
+        // ⚠️ A signal that SITS hard to one side is as much a pan claim as one
+        // that MOVES, and gating on travel alone missed it. The stereo-sample
+        // fixtures are hard left and hard right from their first sample, so
+        // their travel is zero — they sailed through on nothing but the
+        // spectral comparison, which downmixes to mono and is amplitude-
+        // invariant, i.e. it cannot tell "tone left, silence right" from a mono
+        // tone at all. Three fixtures built to be unmissable, and the gate
+        // missed them. (The `setpan` fixtures gate because their note starts
+        // CENTRED and then moves — which is why this went unnoticed.)
+        final refOffCentre = refStereo.isEmpty
+            ? 0.0
+            : refStereo
+                .map((r) => meanPanPosition(r.left, r.right).abs())
+                .reduce(math.max);
+        final panGated = refStereo.length >= 2 &&
+            (panTravelled >= _kPanTravelFloor ||
+                refOffCentre >= _kPanOffCentreFloor);
 
         // MEAN POSITION is what the gate actually rides on. Correlation
         // degenerates on anything near-constant — two references measuring the
