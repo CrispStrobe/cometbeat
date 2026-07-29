@@ -3478,5 +3478,8 @@
   "highwayPractiseThese": "Worth practising",
   "highwayMissedTimes": "{name} ({count}\u00d7)",
   "@highwayMissedTimes": {"placeholders": {"name": {"type": "String"}, "count": {"type": "int"}}},
-  "highwayNothingMissed": "You did not miss a single one."
+  "highwayNothingMissed": "You did not miss a single one.",
+  "highwayInputReview": "Record and review",
+  "highwayInputReviewHint": "Play the whole piece on your instrument. Nothing is graded while you play \u2014 the recording is listened to afterwards, so chords count too.",
+  "highwayReviewListening": "Listening to your take\u2026"
 }

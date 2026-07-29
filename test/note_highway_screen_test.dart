@@ -428,6 +428,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('record-and-review is offered where it can hear, and explained',
+      (tester) async {
+    await tester.pumpWidget(
+      _app(const NoteHighwayScreen(gameId: 'note_highway_piano')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Record and review'), findsOneWidget);
+    await tester.tap(find.text('Record and review'));
+    await tester.pumpAndSettle();
+    // It must say plainly that nothing is graded while you play — otherwise a
+    // silent playfield reads as broken.
+    expect(find.textContaining('afterwards'), findsOneWidget);
+
+    // Drums have no pitch to transcribe, so it is not offered there.
+    await tester.tap(find.text('Drums'));
+    await tester.pumpAndSettle();
+    expect(find.text('Record and review'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('every instrument × skin × projection paints', (tester) async {
     for (final instrument in HighwayInstrument.values) {
       final profile = HighwayInstrumentProfile.of(instrument);

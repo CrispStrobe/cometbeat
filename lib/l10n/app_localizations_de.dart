@@ -9105,4 +9105,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get highwayNothingMissed => 'Du hast keinen einzigen verpasst.';
+
+  @override
+  String get highwayInputReview => 'Aufnehmen und anhören';
+
+  @override
+  String get highwayInputReviewHint =>
+      'Spiel das ganze Stück auf deinem Instrument. Während des Spielens wird nichts bewertet — die Aufnahme wird danach angehört, so zählen auch Akkorde.';
+
+  @override
+  String get highwayReviewListening => 'Deine Aufnahme wird angehört…';
 }

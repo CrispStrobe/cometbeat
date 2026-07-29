@@ -380,8 +380,28 @@ shapes claiming the ukulele, whose lowest string is C4).
   ⚠ It is honestly monophonic and says so in the UI: a chord is credited for
   whichever note is heard, and the piano's two hands cannot both be graded this
   way.
-* **Polyphonic grading is NOT possible live, and this is now a measured fact
-  rather than a to-do.** I checked the backend before promising it: the piano
+* **Polyphonic grading is not possible LIVE — so it is done afterwards.**
+  ~~Closed as infeasible~~ → **BUILT 2026-07-29 as record-and-review**, a third
+  input beside touch and the live microphone: play the whole piece, and the
+  RECORDING is transcribed and matched against the score. It is the only mode
+  that grades two hands, or a chord, by ear.
+  - ⚠️ **It needs no model download.** `transcribeAuto` defaults to the
+    pure-Dart monophonic engine, so review works offline and on the web today;
+    an installed neural model simply makes it hear more. An earlier note here
+    said this feature was gated on a ~99 MB download — that was wrong twice
+    over: the app already provisions that model on demand
+    (`PianoModelStore.load()`, as the Transcribe screen and the Workshop
+    already do), and the fallback path needs nothing at all.
+  - The matching is a pure function (`highway_review.dart`, 8 tests, no mic and
+    no model needed): a heard note claims at most one written note and vice
+    versa — the same judged-once rule as tapping — and **extra notes are
+    ignored rather than penalised**, because a transcriber hears the room, the
+    pedal and the neighbour's television, and a take should not be marked down
+    for what the microphone found.
+  - Nothing is scored until the take has been listened to; the screen says so
+    while it works, because a result screen showing zero mid-transcription
+    would be a lie.
+  - The measured reason it cannot be live, kept for whoever wonders: I checked the backend before promising it: the piano
   transcriber (`transcription/piano.dart`, Kong's onset/offset regression) runs
   on **10-second segments with a 5-second hop** behind a ~99 MB model, and its
   post-processing works over a whole segment. Nothing in that can answer "was

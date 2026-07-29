@@ -149,6 +149,19 @@ is recorded in [HISTORY.md](HISTORY.md).
     Reverted (`git rm --cached`); the file is back to untracked, unchanged, still
     on disk. **Stage named files** — the board is right about this.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — RECORD AND REVIEW: the only
+  mode that grades a chord, or two hands, by ear.** Play the whole piece; the
+  recording is transcribed afterwards and matched to the score. ⚠️ **I had told
+  the maintainer this was blocked on "a ~99 MB model download being a product
+  decision". That was wrong twice: the app already provisions that model on
+  demand (`PianoModelStore.load()` — the Transcribe screen and the Workshop do
+  it), AND `transcribeAuto` falls back to the pure-Dart engine, so the feature
+  needs no download at all.** Lesson: check the infrastructure before declaring
+  something a product question — we had already answered it twice.
+  The matching is pure and separately tested (`highway_review.dart`, 8 tests, no
+  mic and no model): judged-once in both directions, and extra notes ignored
+  rather than penalised, because a transcriber hears the room.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — computer-keyboard play for the
   PITCHED highway instruments** (I did the pads' number keys and explicitly left
   this). 🤝 **Heads-up to the tracker owners: the FT2-style key→semitone table

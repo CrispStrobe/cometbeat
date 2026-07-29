@@ -16441,6 +16441,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You did not miss a single one.'**
   String get highwayNothingMissed;
+
+  /// No description provided for @highwayInputReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Record and review'**
+  String get highwayInputReview;
+
+  /// No description provided for @highwayInputReviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the whole piece on your instrument. Nothing is graded while you play — the recording is listened to afterwards, so chords count too.'**
+  String get highwayInputReviewHint;
+
+  /// No description provided for @highwayReviewListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening to your take…'**
+  String get highwayReviewListening;
 }
 
 class _AppLocalizationsDelegate

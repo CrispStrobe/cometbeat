@@ -3056,5 +3056,8 @@
   "highwayPractiseThese": "Zum \u00dcben",
   "highwayMissedTimes": "{name} ({count}\u00d7)",
   "@highwayMissedTimes": {"placeholders": {"name": {"type": "String"}, "count": {"type": "int"}}},
-  "highwayNothingMissed": "Du hast keinen einzigen verpasst."
+  "highwayNothingMissed": "Du hast keinen einzigen verpasst.",
+  "highwayInputReview": "Aufnehmen und anh\u00f6ren",
+  "highwayInputReviewHint": "Spiel das ganze St\u00fcck auf deinem Instrument. W\u00e4hrend des Spielens wird nichts bewertet \u2014 die Aufnahme wird danach angeh\u00f6rt, so z\u00e4hlen auch Akkorde.",
+  "highwayReviewListening": "Deine Aufnahme wird angeh\u00f6rt\u2026"
 }

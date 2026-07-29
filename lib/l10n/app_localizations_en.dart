@@ -9053,4 +9053,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get highwayNothingMissed => 'You did not miss a single one.';
+
+  @override
+  String get highwayInputReview => 'Record and review';
+
+  @override
+  String get highwayInputReviewHint =>
+      'Play the whole piece on your instrument. Nothing is graded while you play — the recording is listened to afterwards, so chords count too.';
+
+  @override
+  String get highwayReviewListening => 'Listening to your take…';
 }

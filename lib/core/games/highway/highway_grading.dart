@@ -295,6 +295,42 @@ class HighwayGrader {
   /// [lastTapScanned], for the clock.
   int lastAdvanceScanned = 0;
 
+  /// Applies a REVIEW verdict: the graded notes whose index is in [played] are
+  /// hits, the rest are misses. Used by the record-and-review path, where the
+  /// whole take is judged at once from a recording rather than note by note as
+  /// it passes.
+  ///
+  /// Indices are into [gradedNotes], which is the list the review matched
+  /// against — the caller must use that, not [notes], or a chart with an
+  /// ungraded hand will attribute the wrong verdicts.
+  void applyReview(Set<int> played) {
+    _hits = 0;
+    _misses = 0;
+    _streak = 0;
+    _bestStreak = 0;
+    _score = 0;
+    for (var i = 0; i < _graded.length; i++) {
+      final hit = played.contains(i);
+      _graded[i]
+        ..state = hit ? HighwayNoteState.hit : HighwayNoteState.missed
+        ..quality = hit ? HighwayHitQuality.good : null;
+      if (hit) {
+        _hits++;
+        _streak++;
+        if (_streak > _bestStreak) _bestStreak = _streak;
+        _score += 60;
+      } else {
+        _misses++;
+        _streak = 0;
+      }
+    }
+    _cursor = _graded.length;
+  }
+
+  /// The notes the player is responsible for, in the order [applyReview]
+  /// indexes them.
+  List<HighwayNote> get gradedNotes => List.unmodifiable(_graded);
+
   /// Drops the head of the graded list past everything already answered.
   void _retire() {
     while (_cursor < _graded.length && !_graded[_cursor].isPending) {

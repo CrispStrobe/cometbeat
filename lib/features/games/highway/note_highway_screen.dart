@@ -37,11 +37,16 @@ import 'package:comet_beat/core/audio/synth.dart'
         renderDrumPattern,
         renderWav,
         wavBytes;
+import 'package:comet_beat/core/audio/transcription/route.dart'
+    show transcribeAuto;
+import 'package:comet_beat/core/audio/voice_clip_recorder.dart'
+    show VoiceClipRecorder;
 import 'package:comet_beat/core/games/highway/highway_chart.dart';
 import 'package:comet_beat/core/games/highway/highway_grading.dart';
 import 'package:comet_beat/core/games/highway/highway_instrument.dart';
 import 'package:comet_beat/core/games/highway/highway_lanes.dart';
 import 'package:comet_beat/core/games/highway/highway_library.dart';
+import 'package:comet_beat/core/games/highway/highway_review.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
 import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
@@ -77,6 +82,12 @@ enum HighwayInput {
   /// notes is heard, and the piano's two hands cannot both be graded this way.
   /// Being honest about that in the UI matters more than hiding it.
   microphone,
+
+  /// Play the whole piece; the RECORDING is transcribed afterwards and matched
+  /// against the score. Nothing is graded as you play, which is the point: a
+  /// transcriber can hear a chord, it just cannot answer inside a hit window.
+  /// This is the only mode that grades two hands by ear.
+  review,
 }
 
 class NoteHighwayScreen extends StatefulWidget {
@@ -172,6 +183,14 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   /// The live pitch, for the marker on the pitch-axis view.
   double? _livePitch;
 
+  // --- record & review -------------------------------------------------------
+  final VoiceClipRecorder _recorder = VoiceClipRecorder();
+
+  /// True while the take is being transcribed — the run is over but the verdict
+  /// is not in yet, and a screen that showed a score of zero in the meantime
+  /// would be lying.
+  bool _reviewing = false;
+
   static const double _countInBeats = 4;
 
   @override
@@ -186,6 +205,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   @override
   void dispose() {
     _keyFocus.dispose();
+    unawaited(_recorder.dispose());
     _ticker.dispose();
     unawaited(_micSub?.cancel());
     _mic.dispose();
@@ -316,6 +336,61 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
       ..stop()
       ..start();
     if (_usingMic) unawaited(_startMic());
+    if (_usingReview) unawaited(_recordTake());
+  }
+
+  /// Records the whole run. The recorder stops itself after the piece's length
+  /// plus a little, so a last note that rings past the final beat is still in
+  /// the take.
+  Future<void> _recordTake() async {
+    final chart = _chart;
+    if (chart == null) return;
+    final ms = (_countInBeats + _totalBeats + 2) * chart.beatMs;
+    try {
+      final take = await _recorder.record(
+        maxDuration: Duration(milliseconds: ms.round()),
+      );
+      if (!mounted || take.isEmpty) return;
+      await _judgeTake(take);
+    } on StateError catch (e) {
+      if (mounted) {
+        setState(() {
+          _reviewing = false;
+          _micError = (
+            reason: PitchCaptureError.permissionDenied,
+            detail: e.message,
+          );
+        });
+      }
+    }
+  }
+
+  /// Transcribes the take and marks the score from it.
+  ///
+  /// No model is required: `transcribeAuto` defaults to the pure-Dart engine,
+  /// so this works offline and on the web. A neural model, when one is
+  /// installed, simply makes it hear more.
+  Future<void> _judgeTake(Float64List take) async {
+    final chart = _chart;
+    final grader = _grader;
+    if (chart == null || grader == null) return;
+    setState(() => _reviewing = true);
+    // The recorder captures at kSampleRate, which is also transcribeAuto's
+    // default — stated here rather than passed, since the analyzer is right
+    // that it is redundant, but the coupling is worth a sentence.
+    final routed = await transcribeAuto(take);
+    if (!mounted) return;
+    final played = matchHeardToChart(
+      events: [for (final n in grader.gradedNotes) n.event],
+      heard: routed.notes,
+      beatMs: chart.beatMs,
+      // The recording starts with the count-in, so the music begins there.
+      startOffsetMs: _countInBeats * chart.beatMs,
+      windowMs: _rules.hitWindowBeats * chart.beatMs,
+    );
+    grader.applyReview(played);
+    setState(() => _reviewing = false);
+    _recordResult(grader);
   }
 
   /// Microphone input is only actually in use when the player asked for it, the
@@ -324,6 +399,14 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
       _input == HighwayInput.microphone &&
       _micUsable &&
       _mode == HighwayMode.play;
+
+  /// Record-and-review needs a real instrument and a whole take, so it is off
+  /// for watch mode and for a looped section (which never ends).
+  bool get _usingReview =>
+      _input == HighwayInput.review &&
+      _micUsable &&
+      _mode == HighwayMode.play &&
+      _loopBars == null;
 
   /// The beat the clock starts (and, when looping, returns) to.
   double get _loopStartBeat {
@@ -365,6 +448,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     _ticker.stop();
     context.read<AudioService>().stop();
     unawaited(_stopMic());
+    unawaited(_recorder.stop());
     setState(() => _running = false);
   }
 
@@ -431,6 +515,14 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
         grader.total == 0) {
       return; // watching and drilling a section are not scored runs
     }
+    // In review the verdict is not in yet — the recording has still to be
+    // listened to, and scoring now would record a zero for a take that has not
+    // been judged.
+    if (_usingReview) return;
+    _recordResult(grader);
+  }
+
+  void _recordResult(HighwayGrader grader) {
     context.read<ProgressService>().recordResult(
           widget.gameId,
           score: grader.hits,
@@ -591,7 +683,8 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     if (!_running || laneMap == null || _mode == HighwayMode.watch) {
       return KeyEventResult.ignored;
     }
-    if (_usingMic) return KeyEventResult.ignored; // the instrument is answering
+    // The instrument is answering, not the keyboard.
+    if (_usingMic || _usingReview) return KeyEventResult.ignored;
 
     // Pads and drums: the number row IS the instrument.
     final lane = _laneForKey(event.logicalKey);
@@ -666,6 +759,18 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   }
 
   Widget _body(BuildContext context, AppLocalizations l) {
+    if (_reviewing) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(l.highwayReviewListening),
+          ],
+        ),
+      );
+    }
     if (_finished &&
         _mode == HighwayMode.play &&
         _loopBars == null &&
@@ -791,9 +896,11 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
           _chips<HighwayInput>(
             values: HighwayInput.values,
             selected: _input,
-            label: (i) => i == HighwayInput.touch
-                ? l.highwayInputTouch
-                : l.highwayInputMic,
+            label: (i) => switch (i) {
+              HighwayInput.touch => l.highwayInputTouch,
+              HighwayInput.microphone => l.highwayInputMic,
+              HighwayInput.review => l.highwayInputReview,
+            },
             onSelect: (i) => setState(() => _input = i),
           ),
           if (_input == HighwayInput.microphone)
@@ -801,6 +908,14 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
               padding: const EdgeInsets.only(top: 6),
               child: Text(
                 l.highwayInputMicHint,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          if (_input == HighwayInput.review)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                l.highwayInputReviewHint,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
