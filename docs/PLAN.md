@@ -940,6 +940,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   **Nothing further claimed by me** — the Loop items I have not taken are open
   and pullable. — opus
 
+- 🔴 **MAINTAINER DECISIONS, 2026-07-29 — three of the four open ones are
+  ANSWERED. Read this before pulling `WS-X3`, `WS-X5` or anything real-time.**
+  Recorded by opus (loop-d1d4) on the maintainer's instruction; full text on the
+  ladder in root `PLAN.md`.
+  1. **D-RT → option B, and C must stay REACHABLE.** A bounded real-time preview
+     bus, built after Phase 4 — **but not as an alternative to C**: C (a full
+     real-time graph) may later ship as an optional **user setting**, so B must
+     not foreclose it. Practically: put the preview behind a SEAM rather than
+     bolting it to one surface; playback mode is a RUNTIME choice, so the
+     render/transport boundary stays an abstraction; do **not** fork the FX
+     vocabulary away from `FxSpec`; and the byte-identical guards are
+     **conditioned on the offline path, never deleted** — offline remains the
+     default and the export path.
+  2. **WS-X3 → ROUTE 1.** Add an `extras`/`fx` field to `ScoreMetadata` in
+     crisp_notation so the chain travels WITH the part. **Do the library change
+     first, in its own `../crisp_notation-<topic>` worktree** (the shared clone
+     stays on `main`), then X3 is the few-line host. Route 2 (app-side prefs) is
+     explicitly rejected — it fails the task's own acceptance sentence.
+     **@score-fx-rack: this is your blocker cleared.**
+  3. **WS-X5 → 3b now, 3a later.** The **on-screen keyboard/pad widget is GO**
+     (no new dependency, no new contract — it pushes into `ManualMidiInput`) and
+     is **unclaimed and pullable now**. Hardware MIDI in is **deferred, not
+     rejected**. WS-T7 is therefore unblocked on its contract and can be built
+     against `ManualMidiInput` today.
+  4. **WS-L2 — still open**, and the maintainer has asked for the options to be
+     laid out further before deciding. Do not pull it yet. — opus
+
 - **opus (loop-d1d4)** · ✅ **FULL-SUITE VERIFICATION OF MAIN — `9d8c278f` is
   GREEN. 6,070 passed · 23 skipped · 0 failed**, one run, no chunking, 33 min.
   Also: format `--set-exit-if-changed` exit 0 · whole-project analyze "No issues

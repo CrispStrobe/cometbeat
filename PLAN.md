@@ -1376,8 +1376,18 @@ prefix.
     shape is in `loop_mixer_screen`'s `_saveGrooveSlot` and `_renameTrack`**
     (mine), latent there because those dialogs do not rebuild on the way out.
 
-- 🔶 **WS-X3 — the shared FX rack in the LAST mode.** `S` · **Narrowed by the
-  audit: this is four-fifths done.** `shared/widgets/fx_rack.dart` is already
+- 🔶 **WS-X3 — the shared FX rack in the LAST mode.** `S` (after the library
+  change) · ✅ **UNBLOCKED — the maintainer chose ROUTE 1 on 2026-07-29: add an
+  `extras`/`fx` field to `ScoreMetadata` in crisp_notation, so the chain travels
+  WITH the part.** Route 2 (app-side prefs) is explicitly NOT the answer — it
+  would let someone mark this done while failing its own acceptance sentence;
+  route 3 (reusing `copyright`) stays rejected as data smuggling.
+  **Order: the library change FIRST, as its own small commit**, then X3 is the
+  few-line host it looks like. ⚠️ Per CLAUDE.md the shared `../crisp_notation`
+  clone must stay on `main` — do the model change in its own
+  `../crisp_notation-<topic>` worktree, merge, then come back. The MusicXML /
+  LilyPond writers need a deliberate call on whether to emit the field.
+  **Narrowed by the audit: this is four-fifths done.** `shared/widgets/fx_rack.dart` is already
   hosted by Loop Studio, the Tab Workshop and the Tracker, and the Audio Editor
   has the equivalent through its own `DawClipEffectType` editor (68 sites). The
   one mode with **no** effect surface at all is **Score** — nothing in
@@ -1691,8 +1701,19 @@ prefix.
 
 ### Phase 6 — reach
 
-- 🔶 **WS-X5 — MIDI and controller input.** **Step 1 (the seam) SHIPPED; the
-  binding is deliberately NOT done and is the maintainer's call.**
+- 🔶 **WS-X5 — MIDI and controller input.** **Step 1 (the seam) SHIPPED.**
+  ✅ **DECIDED 2026-07-29: build 3b NOW, defer 3a.**
+  * ✅ **3b — the on-screen keyboard / pad widget: GO.** It pushes into
+    `ManualMidiInput`, so it needs **no new dependency and no new contract**,
+    and it is the half of the user-visible value that carries none of the
+    platform weight. **Unclaimed — pullable now.**
+  * ⏸️ **3a — hardware MIDI in: DEFERRED, not rejected.** A new dependency
+    across macOS · iOS · Android · desktop, with permissions on two. Nothing is
+    blocked meanwhile: `NullMidiInput` is the honest answer today (and stays the
+    answer on web regardless), and a surface written against `MidiInput` will
+    not change when hardware lands.
+  * ⚠️ **WS-T7 is therefore unblocked on its CONTRACT but not on hardware** — it
+    can be built and tested against `ManualMidiInput` today.
   * ✅ `lib/core/midi/midi_input.dart` — `MidiMessage` (parse + note/CC/bend),
     the `MidiInput` interface, `NullMidiInput`, `ManualMidiInput`, and
     `HeldNotes`. Pure Dart, Flutter-free, no dependency added.
@@ -1721,8 +1742,33 @@ prefix.
 
 ### The decision that gates part of this ladder
 
-- 🔶 **D-RT — do we add a bounded real-time *preview bus*?** **Needs the
-  maintainer.** Full reasoning and the three-option table are in
+- ✅ **D-RT — DECIDED by the maintainer 2026-07-29: build B, and keep C
+  REACHABLE.** Not "B instead of C" — **B now, with C later as an optional USER
+  SETTING**, so the architecture must not foreclose it.
+  **What that constraint means concretely, because "keep it open" is otherwise a
+  slogan:**
+  1. **Put the preview behind a SEAM, not a special case.** B is one audio path
+     today; C is a different implementation of the same idea. If B is bolted
+     onto one surface, C is a rewrite. If B implements an interface, C is a
+     second implementation of it.
+  2. **Playback mode becomes a RUNTIME choice, not a build-time one.** A user
+     setting means offline and real-time must coexist in one binary, so the
+     render/transport boundary has to be an abstraction from the start —
+     `TransportService` schedules, it does not render, which is already the
+     right shape.
+  3. **Do NOT fork the FX vocabulary.** B's "subset of FX" must stay `FxSpec`;
+     a second vocabulary would force C to write a third.
+  4. **The byte-identical guards stay — CONDITIONED, never deleted.** They are
+     assertions about the OFFLINE path, and that path remains the default and
+     the export path. A test that is removed because a second mode exists is a
+     guarantee quietly dropped.
+  Mixing and export stay offline and exact under B; C, if it ever ships, is an
+  opt-in preview mode, not a replacement for the render.
+  Original card and the three-option table: `docs/WORKSTATION_PARITY.md` §8.
+  **Build after Phase 4.**
+
+- 🔶 *(superseded, kept for the reasoning)* **D-RT — do we add a bounded
+  real-time *preview bus*?** **Needs the maintainer.** Full reasoning and the three-option table are in
   `docs/WORKSTATION_PARITY.md` §8. Short version: playback is offline
   render-then-play by design, which buys byte-identical renders, headless CLI
   tests and web parity — and costs input monitoring, play-in-context and live
