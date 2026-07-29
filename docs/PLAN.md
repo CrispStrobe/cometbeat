@@ -1024,7 +1024,7 @@ is recorded in [HISTORY.md](HISTORY.md).
      limit; strip read-only first, editor soon.** ✅ **ALL THREE SHIPPED** — see
      the entry below. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING the `WS-L2` (b) EDITOR — the maintainer
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — the `WS-L2` (b) EDITOR — the maintainer
   already sequenced it ("read-only now, then soon editor"), so no new decision
   is needed.** Branch `feature/mixer-d1d4`. Claim pushed before any code.
   **Heat check:** only the highway area is moving (note_highway 3 commits/2h);
@@ -1040,8 +1040,29 @@ is recorded in [HISTORY.md](HISTORY.md).
   walk slot order too. If the strip reorders and those do not follow, the
   exported file plays a different song from the screen — the same class of bug
   the code already guards against for repeats ("a section that plays four times
-  on screen and twice in the export would be a bug"). Order is the same
-  promise. — opus
+  on screen and twice in the export would be a bug"). Order is the same promise.
+
+  ✅ **DELIVERED — drag a block to change the song, +6 tests (17 in the file).**
+  The order is now an explicit `_chainOrder` over SLOTS, and **`_songSlots` is
+  the single definition of "the song"** — the chain advance, the bounce and the
+  strip all read it. That was the point: with two possible orders, a second walk
+  of the slot array is a second answer, and the export would play a different
+  song from the screen. **Asserted directly** — reorder two sections and the
+  rendered arrangement changes.
+  ⚠️ **Empty slots keep their place in the order** rather than being dropped.
+  If the list meant "the song", capturing into slot 1 later would have nowhere
+  to go and would land at the end; keeping them means it lands between 0 and 2,
+  where its pad says it is.
+  ⚠️ **`onReorder` is DEPRECATED after 3.41** in favour of `onReorderItem`,
+  which reports the destination in the POST-removal list. That is exactly the
+  silent off-by-one every hand-built reorder has (a forward drag lands one place
+  short) — I had hand-coded the correction, then deleted it when the analyzer
+  pointed at the newer callback. Worth knowing for any other reorder UI here.
+  ⚠️ Slots are where sections LIVE; the song is the order they play in.
+  Reordering deliberately does not renumber anybody's section — the pads and the
+  session grid still say A, B, C in their own places.
+  Gates: format exit 0 · analyze "No issues found" · `flutter test`
+  **6,202 passed / 23 skipped / 0 failed** (clean run, 10m32s). — opus
 
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L2` (a) + (b) + the section
   lift, 11 tests.**

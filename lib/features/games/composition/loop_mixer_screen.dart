@@ -436,6 +436,11 @@ abstract interface class LoopMixerTester {
   /// `(trackId, step)`, or null before a key has moved it.
   (String, int)? get laneCursor;
 
+  /// WS-L2 — the song: the non-empty sections in PLAY order, and a way to move
+  /// one. Positions are into the song, as the strip draws it.
+  List<int> get songOrder;
+  void reorderSong(int from, int to);
+
   /// A track's swing, whether it has its OWN, and a way to step it.
   double trackSwingOf(String id);
   bool hasOwnSwing(String id);
@@ -1281,6 +1286,34 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   bool _chaining = false;
   int _chainIndex = 0;
 
+  /// The order the chain plays sections in, as slot indices.
+  ///
+  /// WS-L2 — the order used to be IMPLICIT: `_advanceChain` walked the slot
+  /// array and skipped the empties, so "the song" was whatever order the
+  /// sections happened to be captured in, and it could not be changed. Making
+  /// the arrangement strip an editor means the order has to be a thing that
+  /// exists before it can be a thing you drag.
+  ///
+  /// Slots that are empty stay in this list. Removing them would make the list
+  /// mean "the song" rather than "the order of the slots", and then capturing
+  /// into a slot later would have nowhere to put it. Everything that consumes
+  /// this filters empties at the point of use, exactly as the old slot walk did.
+  final List<int> _chainOrder = [
+    for (var i = 0; i < kLoopSectionSlots; i++) i,
+  ];
+
+  /// The non-empty sections, in play order — the one definition of "the song".
+  ///
+  /// ⚠️ Everything that answers "what plays next" or "what gets bounced" MUST
+  /// go through this. The screen and the export used to walk slot order
+  /// separately, which was correct only because there was one order; with two
+  /// possible orders, a second walk is a second answer, and the exported file
+  /// would play a different song from the screen.
+  List<int> get _songSlots => [
+        for (final i in _chainOrder)
+          if (i < _scenes.length && _scenes[i] != null) i,
+      ];
+
   // Band challenges (§E-2): a gentle, no-score prompt at a time.
   int _challengeIndex = 0;
   BandChallenge get _challenge =>
@@ -1366,6 +1399,11 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   double audioStretchOf(String id) => _engine.audioStretchOf(id);
   @override
   int get debugLoopSamples => _engine.timing.totalSamples;
+  @override
+  List<int> get songOrder => _songSlots;
+  @override
+  void reorderSong(int from, int to) => _reorderSong(from, to);
+
   @override
   (String, int)? get laneCursor {
     final id = _cursorTrackId;
@@ -3255,11 +3293,10 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     setState(() => _chaining = !_chaining);
   }
 
-  /// Repeats for [_capturedScenes], in the same order — empty slots are skipped
-  /// in both, so the two lists stay aligned.
+  /// Repeats for [_capturedScenes], in the same order — both walk [_songSlots],
+  /// so the two lists stay aligned AND follow a reordered arrangement.
   List<int> _capturedRepeats() => [
-        for (var i = 0; i < _scenes.length; i++)
-          if (_scenes[i] != null) _sceneRepeats[i],
+        for (final i in _songSlots) _sceneRepeats[i],
       ];
 
   /// Steps section [i]'s repeat count: 1 → 2 → 4 → 8 → 1.
@@ -3272,10 +3309,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     });
   }
 
-  // The captured scenes, in A→D order (skipping empty slots).
+  /// The captured scenes in PLAY order (skipping empty slots).
+  ///
+  /// Was "A→D order", i.e. the slot array. It follows [_songSlots] now, which
+  /// is what keeps the bounce playing the same song as the screen once the
+  /// arrangement can be reordered.
   List<GrooveScene> _capturedScenes() => [
-        for (final s in _scenes)
-          if (s != null) s,
+        for (final i in _songSlots) _scenes[i]!,
       ];
 
   // Bake the section chain into one arranged track and offer WAV/MP3 export.
@@ -3293,8 +3333,16 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     _chainPass++;
     if (_chainPass < _sceneRepeats[_chainIndex]) return;
     _chainPass = 0;
-    for (var step = 1; step <= _scenes.length; step++) {
-      final next = (_chainIndex + step) % _scenes.length;
+    final song = _songSlots;
+    if (song.isEmpty) return;
+    // Walk the ARRANGEMENT, not the slot array: after a reorder those are two
+    // different songs, and the slot array is no longer the one anybody asked
+    // for. A section whose slot is not in the song (it was emptied) restarts
+    // from the top rather than hunting for a neighbour that may not exist.
+    final at = song.indexOf(_chainIndex);
+    for (var step = 1; step <= song.length; step++) {
+      final next =
+          song[at < 0 ? step % song.length : (at + step) % song.length];
       if (_scenes[next] != null) {
         setState(() {
           _discardSolo();
@@ -5415,11 +5463,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// section in time — a block that played four times drawn the same size as
   /// one that played once would be a picture of the wrong thing.
   Widget _arrangementStrip(AppLocalizations l10n) {
-    final blocks = [
-      for (var i = 0; i < _scenes.length; i++)
-        if (_scenes[i] != null) (i, _sceneRepeats[i]),
-    ];
-    if (blocks.isEmpty) return const SizedBox.shrink();
+    final song = _songSlots;
+    if (song.isEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -5432,13 +5477,26 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             style: Theme.of(context).textTheme.labelSmall,
           ),
           const SizedBox(height: 4),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final (index, repeats) in blocks)
-                  Padding(
+          // WS-L2 — the strip became an EDITOR here. Drag a block to change the
+          // order the song plays in. `ReorderableListView` rather than a
+          // hand-rolled drag: it handles the press-and-hold, the gap and the
+          // drop animation that make a reorder feel like moving a thing rather
+          // than issuing a command, and getting those wrong is most of what
+          // makes a custom one feel broken.
+          SizedBox(
+            height: 34,
+            child: ReorderableListView.builder(
+              scrollDirection: Axis.horizontal,
+              buildDefaultDragHandles: false,
+              itemCount: song.length,
+              onReorderItem: _reorderSong,
+              itemBuilder: (context, position) {
+                final index = song[position];
+                final repeats = _sceneRepeats[index];
+                return ReorderableDragStartListener(
+                  key: ValueKey('arrange-$index'),
+                  index: position,
+                  child: Padding(
                     padding: const EdgeInsets.only(right: 3),
                     child: Container(
                       key: Key('loop-arrange-$index'),
@@ -5469,12 +5527,58 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                       ),
                     ),
                   ),
-              ],
+                );
+              },
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Moves the section at [from] to [to] in the play order.
+  ///
+  /// The indices are positions in the SONG (the non-empty sections), which is
+  /// what the strip draws; they are translated back to slot indices here,
+  /// because the order list is over slots and keeps its empty ones. Doing that
+  /// translation in the drag callback rather than storing a second list is what
+  /// keeps "the song" a derived value with exactly one definition.
+  void _reorderSong(int from, int to) {
+    final song = _songSlots;
+    if (from < 0 || from >= song.length) return;
+    // `onReorderItem` rather than the deprecated `onReorder`: it reports the
+    // destination in the POST-removal list, which is the off-by-one that every
+    // hand-built reorder gets wrong silently — the block lands one place short
+    // on a forward drag. Letting the framework own it is the point of using it.
+    final target = to.clamp(0, song.length - 1);
+    if (target == from) return;
+
+    // The new song, stated directly rather than derived: remove the dragged
+    // section, put it back where it was dropped.
+    final reordered = [...song]
+      ..removeAt(from)
+      ..insert(target, song[from]);
+
+    // Now write that back over the NON-EMPTY positions of the slot order,
+    // leaving empty slots exactly where they sit. That is what lets slot 1 stay
+    // between 0 and 2 while it is empty, so capturing into it later lands in
+    // the middle of the song rather than at the end.
+    var next = 0;
+    final rebuilt = [
+      for (final slot in _chainOrder)
+        if (slot < _scenes.length && _scenes[slot] != null)
+          reordered[next++]
+        else
+          slot,
+    ];
+    setState(() {
+      _chainOrder
+        ..clear()
+        ..addAll(rebuilt);
+      // Mid-song: keep playing the section that is sounding rather than
+      // jumping, so a reorder during playback is not also a skip.
+      _chainPass = 0;
+    });
   }
 
   /// WS-L5 — puts one track's pattern onto another.

@@ -1512,9 +1512,17 @@ prefix.
     UNCHANGED — so an edit past step 16 did nothing at all, silently, and only
     on long loops. Editing now EXTENDS a short lane by tiling it first, which is
     what it already sounded like since `at()` wraps.
-  * ✅ **(b) SHIPPED, read-only** — section blocks along time, width
+  * ✅ **(b) SHIPPED, and now EDITABLE** — section blocks along time, width
     proportional to repeats, the playing one highlighted, empty slots closed up
-    (the song is what PLAYS, not the slot array). Editing is the next step.
+    (the song is what PLAYS, not the slot array), and **drag to reorder**.
+    ⚠️ The order used to be IMPLICIT in the slot array; it is now an explicit
+    `_chainOrder`, and **`_songSlots` is the single definition of "the song"** —
+    chain advance, bounce and strip all read it, because two walks of the slot
+    array would be two answers and the export would play a different song from
+    the screen. Asserted directly.
+    ⚠️ `ReorderableListView.onReorder` is **deprecated after 3.41**; use
+    `onReorderItem`, which reports the destination POST-removal — the silent
+    off-by-one every hand-built reorder has.
   * ✅ **Section limit lifted** — `kLoopSectionSlots = 8`, and it is now a
     LAYOUT budget rather than a model limit: the pads row and the session grid
     both scroll, so raising it again is a one-line change. ⚠️ Raising it was

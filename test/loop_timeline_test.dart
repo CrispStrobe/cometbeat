@@ -184,6 +184,107 @@ void main() {
     });
   });
 
+  group('the arrangement is EDITABLE — the order is a thing now', () {
+    testWidgets('the song starts in slot order', (tester) async {
+      final game = await _open(tester);
+      game.captureScene(0);
+      game.captureScene(1);
+      game.captureScene(2);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.songOrder, [0, 1, 2]);
+    });
+
+    testWidgets('moving a section changes the song, not the slots',
+        (tester) async {
+      // The slots are where sections LIVE; the song is the order they play in.
+      // Reordering must not renumber anybody's section — the pads and the
+      // session grid still say A, B, C in their own places.
+      final game = await _open(tester);
+      for (var i = 0; i < 3; i++) {
+        game.captureScene(i);
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+
+      game.reorderSong(0, 2);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.songOrder, [1, 2, 0]);
+      expect(game.sceneIsEmpty(0), isFalse, reason: 'slot 0 still holds it');
+      expect(find.byKey(const Key('loop-arrange-0')), findsOneWidget);
+    });
+
+    testWidgets('a backward move lands where it was dropped', (tester) async {
+      final game = await _open(tester);
+      for (var i = 0; i < 3; i++) {
+        game.captureScene(i);
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+      game.reorderSong(2, 0);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.songOrder, [2, 0, 1]);
+    });
+
+    testWidgets('the BOUNCE follows the new order — the invariant',
+        (tester) async {
+      // The one that matters. `_capturedScenes` feeds renderArrangement, i.e.
+      // the exported file. If the strip reorders and the bounce does not, the
+      // export plays a different song from the screen — the same promise the
+      // code already keeps for repeat counts.
+      final game = await _open(tester);
+      game.toggleTrack('drums');
+      await tester.pump(const Duration(milliseconds: 50));
+      game.captureScene(0);
+      game.toggleTrack('drums');
+      game.toggleTrack('bass');
+      await tester.pump(const Duration(milliseconds: 50));
+      game.captureScene(1);
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final before = game.debugRenderArrangement();
+      game.reorderSong(0, 1);
+      await tester.pump(const Duration(milliseconds: 50));
+      final after = game.debugRenderArrangement();
+
+      expect(after.length, before.length, reason: 'same song, same length');
+      var differs = false;
+      for (var i = 0; i < before.length && !differs; i++) {
+        if ((before[i] - after[i]).abs() > 1e-9) differs = true;
+      }
+      expect(
+        differs,
+        isTrue,
+        reason: 'the two sections swapped, so the rendered song must change',
+      );
+    });
+
+    testWidgets('an empty slot keeps its place for later captures',
+        (tester) async {
+      // The order list holds every slot, including empty ones: dropping them
+      // would make it mean "the song", and then capturing into slot 1 later
+      // would have nowhere to go.
+      final game = await _open(tester);
+      game.captureScene(0);
+      game.captureScene(2);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.songOrder, [0, 2]);
+
+      game.captureScene(1);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.songOrder, [0, 1, 2]);
+    });
+
+    testWidgets('a nonsense move is refused rather than corrupting the song',
+        (tester) async {
+      final game = await _open(tester);
+      game.captureScene(0);
+      await tester.pump(const Duration(milliseconds: 50));
+      game.reorderSong(5, 0);
+      game.reorderSong(-1, 0);
+      game.reorderSong(0, 0);
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(game.songOrder, [0]);
+    });
+  });
+
   group('the section limit is lifted', () {
     testWidgets('there are more slots than the old four', (tester) async {
       expect(kLoopSectionSlots, greaterThan(4));
