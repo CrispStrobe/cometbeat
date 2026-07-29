@@ -222,12 +222,19 @@ class _Snapshot {
     this.elements2,
     this.activeVoice,
     this.annotations,
+    this.tabVoicings,
+    this.tabBarres,
   );
   final List<EditorElement> elements;
 
   /// Staff text anchored to an element (string numerals, pizz./arco …),
   /// captured for undo.
   final Map<String, String> annotations;
+
+  /// Tab facts anchored to an element — the per-pitch string choice and any
+  /// barre — captured for undo.
+  final Map<String, List<int>> tabVoicings;
+  final Map<String, TabBarre> tabBarres;
 
   /// The voice-2 element stream and which voice was active, captured for undo.
   final List<EditorElement> elements2;
@@ -363,6 +370,17 @@ class ScoreDocument {
   // into a Score, and thrown away one line later. Anything the editor round
   // trips through Score must have a home here or it does not survive.
   final Map<String, String> _annotations = {};
+
+  // TAB facts that belong to a note but are not properties of it: the string
+  // each pitch is played on, and a barre held for the chord.
+  //
+  // ⚠ The Score Editor imports .gp/.gpx, and without these a Guitar Pro file
+  // opened here lost BOTH — silently — and the editor's own .gp export could
+  // not put them back. The string choice is a human's fretting decision that an
+  // arranger cannot reproduce; the barre is a left-hand instruction the
+  // fingering digits cannot state. Same shape as the annotations loss above.
+  final Map<String, List<int>> _tabVoicings = {};
+  final Map<String, TabBarre> _tabBarres = {};
 
   // Mid-score clef / key changes, anchored to an element id: the change takes
   // effect at the start of the bar that element lands in. Anchoring to the id
@@ -602,6 +620,8 @@ class ScoreDocument {
         List.of(_v2),
         _activeVoice,
         Map.of(_annotations),
+        {for (final e in _tabVoicings.entries) e.key: List.of(e.value)},
+        Map.of(_tabBarres),
       );
 
   void _snapshot() {
@@ -634,6 +654,13 @@ class ScoreDocument {
     _annotations
       ..clear()
       ..addAll(s.annotations);
+    _tabVoicings.clear();
+    for (final e in s.tabVoicings.entries) {
+      _tabVoicings[e.key] = List.of(e.value);
+    }
+    _tabBarres
+      ..clear()
+      ..addAll(s.tabBarres);
     pickup = s.pickup;
     _clefChanges
       ..clear()
@@ -1026,6 +1053,8 @@ class ScoreDocument {
     );
     _lyrics.removeWhere((id, _) => !ids.contains(id));
     _annotations.removeWhere((id, _) => !ids.contains(id));
+    _tabVoicings.removeWhere((id, _) => !ids.contains(id));
+    _tabBarres.removeWhere((id, _) => !ids.contains(id));
   }
 
   /// Set the anacrusis length (null clears it). The first bar then holds only
@@ -1189,6 +1218,8 @@ class ScoreDocument {
     _hairpins.clear();
     _lyrics.clear();
     _annotations.clear();
+    _tabVoicings.clear();
+    _tabBarres.clear();
     _clefChanges.clear();
     _keyChanges.clear();
     _tempoChanges.clear();
@@ -1229,6 +1260,8 @@ class ScoreDocument {
     _hairpins.clear();
     _lyrics.clear();
     _annotations.clear();
+    _tabVoicings.clear();
+    _tabBarres.clear();
     _clefChanges.clear();
     _keyChanges.clear();
     _tempoChanges.clear();
@@ -1376,6 +1409,18 @@ class ScoreDocument {
     for (final a in score.annotations) {
       final id = remap[a.elementId];
       if (id != null && a.text.isNotEmpty) _annotations[id] = a.text;
+    }
+    for (final v in score.tabVoicings) {
+      final id = remap[v.noteId];
+      if (id != null && v.strings.isNotEmpty) {
+        _tabVoicings[id] = List.of(v.strings);
+      }
+    }
+    for (final b in score.tabBarres) {
+      final id = remap[b.noteId];
+      if (id != null) {
+        _tabBarres[id] = TabBarre(id, b.fret, lowestString: b.lowestString);
+      }
     }
     clearSelection();
   }
@@ -1651,6 +1696,15 @@ class ScoreDocument {
       annotations: [
         for (final e in [..._v1, ..._v2])
           if (_annotations[e.id] case final String text) Annotation(e.id, text),
+      ],
+      tabVoicings: [
+        for (final e in [..._v1, ..._v2])
+          if (_tabVoicings[e.id] case final List<int> strings)
+            TabVoicing(e.id, strings),
+      ],
+      tabBarres: [
+        for (final e in [..._v1, ..._v2])
+          if (_tabBarres[e.id] case final TabBarre b) b,
       ],
     );
   }

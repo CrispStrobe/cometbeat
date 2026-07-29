@@ -123,4 +123,51 @@ void main() {
     final mps = importBekern('\n  **kern <b> 4 c <b> *-  \n');
     expect(mps.parts, hasLength(1));
   });
+
+  test('a Guitar Pro file keeps its barre and string choices END TO END', () {
+    // The claim that matters, through the real path: build a .gp carrying a
+    // barre and a deliberate string choice, import it as the Score Editor does,
+    // put it through the document, and export .gp again. Every one of those
+    // steps used to drop both facts, and each looked fine on its own.
+    final source = Score(
+      clef: Clef.treble,
+      measures: [
+        Measure([
+          NoteElement(
+            pitches: [Pitch.fromMidi(64)],
+            duration: NoteDuration.quarter,
+            id: 'n0',
+          ),
+        ]),
+      ],
+      // E4 voiced on string 1 fret 5, not the open high e — a real choice.
+      tabVoicings: const [
+        TabVoicing('n0', [1]),
+      ],
+      tabBarres: const [TabBarre('n0', 5)],
+    );
+    final gp = writeGpFromGpif(
+      scoreToGpif(source, tuning: Tuning.standardGuitar),
+    );
+
+    final imported = importScore('riff.gp', gp);
+    expect(imported.tabBarres, hasLength(1), reason: 'import kept the barre');
+    expect(imported.tabVoicings, hasLength(1));
+
+    final doc = ScoreDocument()..loadScore(imported);
+    final rebuilt = doc.buildScore();
+    expect(
+      rebuilt.tabBarres.single.fret,
+      5,
+      reason: 'the document kept it — this is the step that used to lose it',
+    );
+
+    final out = scoreFromGpif(
+      readGpifFromGp(
+        writeGpFromGpif(scoreToGpif(rebuilt, tuning: Tuning.standardGuitar)),
+      ),
+    );
+    expect(out.tabBarres.single.fret, 5, reason: 'and the export carries it');
+    expect(out.tabVoicings.single.strings, [1]);
+  });
 }

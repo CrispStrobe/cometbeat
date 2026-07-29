@@ -504,4 +504,76 @@ void main() {
       expectSame(src, reopened);
     });
   });
+
+  group('tab facts survive a Guitar Pro import (barres + string choices)', () {
+    // ⚠ The Score Editor imports .gp/.gpx and can export .gp back out. Without
+    // these two, a Guitar Pro file opened here lost its barres AND the human's
+    // per-pitch string choices — silently — and the export could not restore
+    // them. Same shape as the annotations loss: a fact that belongs to a note
+    // but is not a property OF the note.
+
+    Score gpLike() => Score(
+          clef: Clef.treble,
+          measures: [
+            Measure([
+              NoteElement(
+                pitches: [Pitch.fromMidi(53), Pitch.fromMidi(60)],
+                duration: NoteDuration.quarter,
+                id: 'g0',
+              ),
+              NoteElement(
+                pitches: [Pitch.fromMidi(64)],
+                duration: NoteDuration.quarter,
+                id: 'g1',
+              ),
+            ]),
+          ],
+          tabVoicings: const [
+            TabVoicing('g0', [5, 3]),
+            TabVoicing('g1', [1]),
+          ],
+          tabBarres: const [TabBarre('g0', 3, lowestString: 1)],
+        );
+
+    test('they reach the document and come back out of buildScore', () {
+      final doc = ScoreDocument()..loadScore(gpLike());
+      final back = doc.buildScore();
+
+      expect(back.tabBarres, hasLength(1));
+      expect(back.tabBarres.single.fret, 3);
+      expect(
+        back.tabBarres.single.lowestString,
+        1,
+        reason: "GP's own string value must not be reinterpreted here either",
+      );
+      expect(back.tabVoicings, hasLength(2));
+      // Ids are re-issued on load, so match by position, not by the source id.
+      final notes = back.measures
+          .expand((m) => m.elements)
+          .whereType<NoteElement>()
+          .toList();
+      final byId = {for (final v in back.tabVoicings) v.noteId: v.strings};
+      expect(byId[notes[0].id], [5, 3]);
+      expect(byId[notes[1].id], [1]);
+      expect(back.tabBarres.single.noteId, notes[0].id);
+    });
+
+    test('a score without them gains none', () {
+      final doc = ScoreDocument()..loadScore(Score.simple(notes: 'c4:q d4 e4'));
+      final back = doc.buildScore();
+      expect(back.tabBarres, isEmpty);
+      expect(back.tabVoicings, isEmpty);
+    });
+
+    test('deleting the note takes its tab facts with it', () {
+      // Otherwise a barre outlives its chord and buildScore emits a dangling
+      // reference — the same stale-anchor problem the other maps have.
+      final doc = ScoreDocument()..loadScore(gpLike());
+      doc.selectIndex(0);
+      doc.deleteSelected();
+      final back = doc.buildScore();
+      expect(back.tabBarres, isEmpty);
+      expect(back.tabVoicings, hasLength(1));
+    });
+  });
 }
