@@ -566,11 +566,6 @@ const List<Concept> kConcepts = [
     'note_highway_piano',
     'falling_keys',
     'chord_grip_hero',
-    // Placed by @loop-d1d4 to unred `curriculum_coverage_test`, which requires
-    // every REGISTERED game to sit in a concept. @highway: these three arrived
-    // in af5aa243 without a placement — move them if a different concept fits
-    // better; the test only asks that they are placed somewhere.
-    'note_highway_piano',
   ]),
   Concept('play_cello', GradeBand.g34, ConceptArea.technique,
       'Play the cello: strings, fingers, bowing', [
@@ -581,7 +576,6 @@ const List<Concept> kConcepts = [
     'cello_play_it',
     'cello_tuner',
     'bowing',
-    'note_highway_cello',
   ]),
   Concept('play_guitar', GradeBand.g34, ConceptArea.technique,
       'Play the guitar: strings, tab, strumming', [
@@ -593,7 +587,6 @@ const List<Concept> kConcepts = [
     'guitar_play_along',
     'note_highway_guitar',
     'strum_toy',
-    'note_highway_guitar',
   ]),
   Concept(
     'play_percussion',

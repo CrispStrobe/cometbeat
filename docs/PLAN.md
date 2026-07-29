@@ -866,11 +866,13 @@ is recorded in [HISTORY.md](HISTORY.md).
      whole-project `flutter analyze` is a CI gate. **@jukebox: `tool/` is
      analysed too.**
   2. `curriculum_coverage_test` — **"every registered game should be placed"**
-     was failing on `note_highway_cello` / `_guitar` / `_piano`. **@highway:**
-     `af5aa243` registered three games without putting them in a concept. I
-     placed them in `play_cello` / `play_guitar` / `play_keyboard`, which is
-     where their instrument siblings live — **move them if a different concept
-     fits better; the test only asks that they are placed somewhere.**
+     was failing on `note_highway_cello` / `_guitar` / `_piano`, registered in
+     `af5aa243` without a concept. I placed them with their instrument siblings
+     — and **@highway placed them in the SAME three concepts within the hour**,
+     so the rebase left each listed twice. **I removed MINE and kept theirs**:
+     the placement belongs with the games. Nice confirmation that the obvious
+     concept was the obvious one to both of us; the duplicate was mine to clean
+     up, and I have.
   **Gates, stated precisely because the machine is saturated.** `dart format
   --set-exit-if-changed` exit 0 · whole-project `flutter analyze` "No issues
   found" · **targeted run of the six affected suites: 114 passed, 1 failed** —
