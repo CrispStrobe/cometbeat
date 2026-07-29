@@ -3110,6 +3110,12 @@ abstract class AppLocalizations {
   /// **'Show as sheet music'**
   String get loopMixerScore;
 
+  /// No description provided for @loopMixerEditHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit history'**
+  String get loopMixerEditHistory;
+
   /// No description provided for @loopMixerBeatEdit.
   ///
   /// In en, this message translates to:
@@ -4777,6 +4783,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Frozen to an audio take'**
   String get dawFrozen;
+
+  /// No description provided for @dawEditHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit history'**
+  String get dawEditHistory;
 
   /// No description provided for @dawUndo.
   ///

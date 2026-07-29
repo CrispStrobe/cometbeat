@@ -1677,6 +1677,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerScore => 'Show as sheet music';
 
   @override
+  String get loopMixerEditHistory => 'Edit history';
+
+  @override
   String get loopMixerBeatEdit => 'Edit the beat';
 
   @override
@@ -2569,6 +2572,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dawFrozen => 'Frozen to an audio take';
+
+  @override
+  String get dawEditHistory => 'Edit history';
 
   @override
   String get dawUndo => 'Undo';

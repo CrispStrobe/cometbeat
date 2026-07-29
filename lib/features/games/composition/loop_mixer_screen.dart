@@ -100,6 +100,7 @@ import 'package:comet_beat/shared/score_theme.dart';
 import 'package:comet_beat/shared/tutorial/primers.dart' show loopMixerPrimer;
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart'
     show showTutorial;
+import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
 import 'package:comet_beat/shared/widgets/fx_rack.dart';
 import 'package:comet_beat/shared/widgets/step_grid.dart';
 import 'package:crisp_notation/crisp_notation.dart'
@@ -639,6 +640,12 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   void initState() {
     super.initState();
+    // So a shared-history row says "Loop Studio" and not "loop". Registered
+    // from the surface rather than baked into the shared sheet, which would
+    // otherwise have to import every feature to reach their scope constants.
+    // Safe to do here: a scope only ever HAS entries while its screen is alive
+    // (dispose calls `clearScope`), so registering on mount is always in time.
+    registerUndoScopeName(kLoopUndoScope, 'Loop Studio');
     if (widget.initialSpec != null) _engine.applySpec(widget.initialSpec!);
     // Anchor undo history at the opening state so the very first edit is
     // reversible (without this, base seeds on the first change and loses it).
@@ -4104,6 +4111,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         switch (v) {
           case 'score':
             toggleScorePanel();
+          case 'history':
+            unawaited(showUndoHistorySheet(context, history: _undo));
           case 'infinite':
             toggleInfinite();
           case 'quantize':
@@ -4136,6 +4145,13 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           value: 'score',
           checked: _showScore,
           child: Text(l10n.loopMixerScore),
+        ),
+        // In the MENU rather than the toolbar: that Row has five fixed icon
+        // buttons before its scrollable region and has overflowed twice
+        // already. A secondary action does not get to be the sixth.
+        PopupMenuItem<String>(
+          value: 'history',
+          child: Text(l10n.loopMixerEditHistory),
         ),
         const PopupMenuDivider(),
         _menuSectionHeader(l10n.loopMixerGroupPerform),

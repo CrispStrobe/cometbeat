@@ -1138,7 +1138,27 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING the undo history PANEL — the one clause
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — the undo history PANEL, +17
+  tests. WS-W4's acceptance is now met IN FULL, last clause included.**
+  `lib/shared/undo/undo_history_sheet.dart`, hosted by the Audio Editor and Loop
+  Studio. **Touches no shared file.** Details on the card in root `PLAN.md`;
+  the three things worth reading here:
+  (1) **tapping a row reverts to it, and that is a product call I wrote down
+  rather than let the implementation make** — crossing another surface's entries
+  is unavoidable in one ordered list, and is safe only because it is itself
+  reversible, so each row states how many edits its tap takes back and names its
+  surface, instead of a confirm dialog;
+  (2) **scope names are a registry, not a baked-in map** (`project_codec.dart`'s
+  pattern) — a shared widget that hard-coded every surface would sit in
+  `shared/` importing half the feature tree;
+  (3) **the redo BRANCH is deliberately not listed** — the service has no
+  accessor for the future queue, and adding one to a file two agents were
+  folding into, for a nice-to-have, was not worth the collision.
+  ⚠️ **Loop Studio's toolbar Row is now effectively FULL** — five fixed icon
+  buttons before its scrollable region, and it has overflowed by 23px twice.
+  The history went in the overflow MENU for that reason. Anyone adding a
+  toolbar action there should assume it will overflow and use the menu.
+  Previously: 🚧 **CLAIMED the undo history PANEL — the one clause
   of WS-W4's acceptance still not met, which I flagged myself when ticking the
   card.** The wording is "undoable from the Audio Editor's history **list** and
   **the label says what it was**". Undoable: yes, proven on both real screens.

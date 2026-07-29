@@ -1681,6 +1681,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerScore => 'Als Noten zeigen';
 
   @override
+  String get loopMixerEditHistory => 'Änderungsverlauf';
+
+  @override
   String get loopMixerBeatEdit => 'Beat bearbeiten';
 
   @override
@@ -2581,6 +2584,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dawFrozen => 'In eine Audiospur umgewandelt';
+
+  @override
+  String get dawEditHistory => 'Änderungsverlauf';
 
   @override
   String get dawUndo => 'Rückgängig';

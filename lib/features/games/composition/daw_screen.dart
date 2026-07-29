@@ -91,6 +91,7 @@ import 'package:comet_beat/shared/music_io/audio_import.dart'
 import 'package:comet_beat/shared/music_io/export_sheet.dart';
 import 'package:comet_beat/shared/music_io/music_export.dart'
     show showMusicExportSheet;
+import 'package:comet_beat/shared/undo/undo_history_sheet.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart' show OpenInMenu;
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -448,6 +449,10 @@ class _DawScreenState extends State<DawScreen>
   @override
   void initState() {
     super.initState();
+    // So a shared-history row reads "Audio Editor" rather than "audio".
+    // Registered from the surface that owns the scope, so the shared sheet does
+    // not have to import every feature to learn their names.
+    registerUndoScopeName(DawService.kUndoScope, 'Audio Editor');
     _ticker = createTicker(_onTick);
   }
 
@@ -5278,6 +5283,16 @@ class _DawScreenState extends State<DawScreen>
         icon: Icons.delete_outline,
         label: l10n.trackerClear,
         onPressed: daw.clipCount == 0 ? null : clear,
+        active: false,
+      ),
+      // WS-W4's last clause. In `secondary` rather than `primary` because this
+      // list is already width-aware — it collapses into the "more" menu on a
+      // narrow window — so adding here cannot overflow the app bar by
+      // construction.
+      (
+        icon: Icons.history,
+        label: l10n.dawEditHistory,
+        onPressed: () => showUndoHistorySheet(context, history: daw.history),
         active: false,
       ),
     ];

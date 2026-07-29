@@ -1063,10 +1063,38 @@ prefix.
     `Cmd-Z` that knows nothing about Loop Studio; neither surface's own button
     reaches into the other; the redo branch holds the same line; and leaving
     Loop Studio leaves the Audio Editor's history fully usable.
-    ⚠️ Still NOT built, and deliberately not blocking this tick: **nothing
-    RENDERS the list.** `UndoService.history` is populated by two surfaces and
-    has no viewer. The acceptance says the edit is *undoable from* the Audio
-    Editor, which it is; a history PANEL is a separate, unclaimed piece of UI.
+    ✅ **AND THE LIST IS BUILT — the acceptance is met in full** (2026-07-29,
+    loop-d1d4). `lib/shared/undo/undo_history_sheet.dart`, hosted by BOTH the
+    Audio Editor (its width-aware `secondary` toolbar list) and Loop Studio (its
+    overflow menu — that toolbar Row has five fixed icon buttons before its
+    scrollable region and has overflowed twice, so a secondary action does not
+    get to be the sixth). Until this, `history` and `nextUndoLabel` had **no
+    viewer at all**: both fold-ins produced careful labels — the DAW's free from
+    its coalesce token, Loop's derived by diffing snapshots — and nobody could
+    read a single one. **An output with no reader is this ladder's recurring
+    defect one level up from the usual unused method, and much harder to see,
+    because every test passes and the data is genuinely correct.**
+    * **Tapping a row reverts to it**, which was a product call and is written
+      down as one. A history you cannot navigate is a log. Crossing another
+      surface's entries is *unavoidable* rather than chosen — one ordered list,
+      and an entry's closure assumes everything after it is already undone — and
+      it is safe because it is itself reversible. So no confirm dialog; instead
+      each row states how many edits its tap takes back, and every row names its
+      surface.
+    * **Scope names are a REGISTRY** (`registerUndoScopeName`), following
+      `project_codec.dart`: a shared widget hard-coding every surface's scope
+      would sit in `shared/` importing half the feature tree. Each surface
+      registers on mount, which is always in time — a scope only has entries
+      while its screen lives.
+    * ⚠️ **The redo BRANCH is not listed, deliberately.** `UndoService` exposes
+      `history` and `nextRedoLabel` but no accessor for the future queue, and
+      adding one to a file two agents were folding into, for a nice-to-have, was
+      not worth the collision. A labelled Redo action ("Redo Move clip") meets
+      "the label says what it was" for the entry that matters. **This ship
+      touches no shared file.** Tests: `undo_history_sheet_test` (17), both
+      hosts driven through their real UI rather than by calling the function —
+      a sheet nobody can open would be the same defect wearing the fix's
+      clothes.
   - ✅ **Fold-in — the AUDIO EDITOR is done (opus, daw-suite).**
     `DawService({UndoService? history})`; omit it and the surface keeps a
     private one, so every existing caller behaves exactly as before. The

@@ -681,6 +681,7 @@
     "description": "Tooltip for the dice button that randomizes the Loop Mixer groove."
   },
   "loopMixerScore": "Show as sheet music",
+  "loopMixerEditHistory": "Edit history",
   "loopMixerBeatEdit": "Edit the beat",
   "loopMixerBeatEditHint": "Tap the grid to build a beat — hold a hit to make it a soft ghost note.",
   "loopMixerTuneEdit": "Edit the tune",
@@ -1038,6 +1039,7 @@
   "dawFaster": "Faster",
   "dawFreeze": "Freeze to audio",
   "dawFrozen": "Frozen to an audio take",
+  "dawEditHistory": "Edit history",
   "dawUndo": "Undo",
   "dawRedo": "Redo",
   "dawGain": "Volume",
