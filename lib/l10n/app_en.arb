@@ -3438,5 +3438,8 @@
   "highwayLoopWhole": "Whole piece",
   "highwayLoopBars": "Bars {from}\u2013{to}",
   "@highwayLoopBars": {"placeholders": {"from": {"type": "int"}, "to": {"type": "int"}}},
-  "highwayLoopHint": "The section repeats until you stop it. Practice isn\u2019t scored \u2014 eight bars twenty times isn\u2019t the piece."
+  "highwayLoopHint": "The section repeats until you stop it. Practice isn\u2019t scored \u2014 eight bars twenty times isn\u2019t the piece.",
+  "highwayInstrumentDrums": "Drums",
+  "gameBeatHighway": "Beat Highway",
+  "gameBeatHighwaySubtitle": "Hits fall onto the kit \u2014 play the groove"
 }

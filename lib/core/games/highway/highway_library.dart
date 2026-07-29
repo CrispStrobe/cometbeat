@@ -12,6 +12,7 @@
 // hands — so a piano piece really does fall in two colours like a two-hand
 // score, instead of being a melody with a label on it.
 
+import 'package:comet_beat/core/audio/drum_presets.dart' show kDrumPresets;
 import 'package:comet_beat/core/games/highway/highway_chart.dart';
 import 'package:comet_beat/core/games/highway/highway_instrument.dart';
 
@@ -209,11 +210,31 @@ final _dArpeggio = _line([
   (62, 12, 1), (59, 13, 1), (55, 14, 2),
 ]);
 
+/// The Drum Kit's own starter grooves, on the highway. Reusing `kDrumPresets`
+/// rather than authoring beats again means the groove a child builds in the
+/// Drum Kit and the one falling here are the same music, and a new preset shows
+/// up in both places at once.
+List<HighwayPiece> _drumPieces() => [
+      for (var i = 0; i < kDrumPresets.length && i < 4; i++)
+        HighwayPiece(
+          id: 'highway_beat_${kDrumPresets[i].name.toLowerCase()}',
+          level: i + 1,
+          instruments: const {HighwayInstrument.drums},
+          chart: highwayChartFromDrumRows(
+            kDrumPresets[i].pattern.rows,
+            lanes: kHighwayDrumLanes,
+            name: kDrumPresets[i].name,
+            bpm: 92,
+          ),
+        ),
+    ];
+
 /// The built-in repertoire, grouped by what it is playable on.
 class HighwayLibrary {
   const HighwayLibrary._();
 
   static final List<HighwayPiece> pieces = [
+    ..._drumPieces(),
     HighwayPiece(
       id: 'highway_parallel_scale',
       instruments: const {HighwayInstrument.piano, HighwayInstrument.pads},

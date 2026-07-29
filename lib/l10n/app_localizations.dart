@@ -16261,6 +16261,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The section repeats until you stop it. Practice isn’t scored — eight bars twenty times isn’t the piece.'**
   String get highwayLoopHint;
+
+  /// No description provided for @highwayInstrumentDrums.
+  ///
+  /// In en, this message translates to:
+  /// **'Drums'**
+  String get highwayInstrumentDrums;
+
+  /// No description provided for @gameBeatHighway.
+  ///
+  /// In en, this message translates to:
+  /// **'Beat Highway'**
+  String get gameBeatHighway;
+
+  /// No description provided for @gameBeatHighwaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hits fall onto the kit — play the groove'**
+  String get gameBeatHighwaySubtitle;
 }
 
 class _AppLocalizationsDelegate

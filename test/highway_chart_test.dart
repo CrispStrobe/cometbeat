@@ -232,6 +232,53 @@ void main() {
     });
   });
 
+  group('drum grooves', () {
+    test('a row per kit piece becomes a lane per kit piece', () {
+      final chart = highwayChartFromDrumRows(
+        {
+          'kick': [true, false, false, false],
+          'snare': [false, false, true, false],
+        },
+        lanes: ['kick', 'snare'],
+        name: 'two',
+        bpm: 100,
+        repeats: 1,
+      );
+      expect(chart.events.length, 2);
+      expect(chart.events.first.lane, 0);
+      expect(chart.events.first.midi, isNull, reason: 'a drum has no pitch');
+      expect(chart.events.last.lane, 1);
+      // One EIGHTH per step: the snare on step 2 lands on beat 1.
+      expect(chart.events.last.startBeat, 1.0);
+    });
+
+    test('repeats tile the groove end to end', () {
+      final chart = highwayChartFromDrumRows(
+        {
+          'kick': [true, false, false, false],
+        },
+        lanes: ['kick'],
+        name: 'one',
+        bpm: 100,
+        repeats: 3,
+      );
+      expect(chart.events.map((e) => e.startBeat), [0, 2, 4]);
+    });
+
+    test('a lane the pattern does not mention simply has no blocks', () {
+      final chart = highwayChartFromDrumRows(
+        {
+          'kick': [true],
+        },
+        lanes: ['kick', 'snare', 'hat'],
+        name: 'sparse',
+        bpm: 100,
+        repeats: 1,
+      );
+      expect(chart.events.single.lane, 0);
+    });
+  });
+
   group('highwayChartFromParts', () {
     test('gives each part its own voice, so the colours separate', () {
       const part = Score(

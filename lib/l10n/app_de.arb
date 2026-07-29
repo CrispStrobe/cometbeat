@@ -3025,5 +3025,8 @@
   "highwayLoopWhole": "Ganzes St\u00fcck",
   "highwayLoopBars": "Takte {from}\u2013{to}",
   "@highwayLoopBars": {"placeholders": {"from": {"type": "int"}, "to": {"type": "int"}}},
-  "highwayLoopHint": "Der Abschnitt wiederholt sich, bis du stoppst. \u00dcben z\u00e4hlt nicht f\u00fcr Sterne \u2014 acht Takte zwanzigmal sind nicht das St\u00fcck."
+  "highwayLoopHint": "Der Abschnitt wiederholt sich, bis du stoppst. \u00dcben z\u00e4hlt nicht f\u00fcr Sterne \u2014 acht Takte zwanzigmal sind nicht das St\u00fcck.",
+  "highwayInstrumentDrums": "Schlagzeug",
+  "gameBeatHighway": "Beat-Bahn",
+  "gameBeatHighwaySubtitle": "Schl\u00e4ge fallen auf das Set \u2014 spiel den Groove"
 }

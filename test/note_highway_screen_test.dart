@@ -159,9 +159,16 @@ void main() {
     await tester.pumpAndSettle();
 
     // Drag the range slider's right thumb down to make a short section.
-    expect(find.text('Practise a section'), findsOneWidget);
-    await tester.ensureVisible(find.byType(RangeSlider));
+    // The setup list is lazy, so the control has to be scrolled into existence
+    // before it can be found at all — adding one more instrument chip was
+    // enough to push it out of the built window.
+    await tester.scrollUntilVisible(
+      find.byType(RangeSlider),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
+    expect(find.text('Practise a section'), findsOneWidget);
     final slider = tester.getRect(find.byType(RangeSlider));
     await tester.dragFrom(
       Offset(slider.right - 8, slider.center.dy),
@@ -183,6 +190,39 @@ void main() {
     );
     // …and drilling is practice, so nothing is recorded.
     expect(progress.starsFor('note_highway_piano'), 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the drum highway opens on its own grooves and pads',
+      (tester) async {
+    await tester.pumpWidget(
+      _app(
+        const NoteHighwayScreen(
+          instrument: HighwayInstrument.drums,
+          gameId: 'beat_highway',
+          title: 'Beat Highway',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The kit's own starter grooves, not a piano piece.
+    expect(find.text('Rock'), findsOneWidget);
+    expect(find.text('Ode to Joy'), findsNothing);
+
+    await _tapStart(tester);
+    await tester.pump();
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 80));
+    }
+    final view = tester.widget<HighwayView>(find.byType(HighwayView));
+    expect(view.laneMap, isA<PadLaneMap>());
+    expect(view.laneMap.laneCount, kHighwayDrumLanes.length);
+    // Every block is a lane, not a pitch.
+    expect(
+      view.chart.events.every((e) => e.midi == null && e.lane != null),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 

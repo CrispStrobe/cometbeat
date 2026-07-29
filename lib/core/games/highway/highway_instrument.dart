@@ -20,7 +20,7 @@
 // Pure Dart, unit-tested in test/highway_instrument_test.dart.
 
 import 'package:comet_beat/core/audio/synth.dart'
-    show Instrument, Timbre, timbreFor;
+    show Drum, Instrument, Timbre, timbreFor;
 import 'package:comet_beat/core/games/highway/highway_chart.dart';
 import 'package:comet_beat/core/games/highway/highway_lanes.dart';
 import 'package:comet_beat/core/notation/bowed_arranger.dart'
@@ -33,7 +33,7 @@ import 'package:crisp_notation_core/crisp_notation_core.dart'
     show Pitch, Tuning;
 
 /// The instruments the highway can be played on.
-enum HighwayInstrument { piano, guitar, bass, ukulele, cello, pads }
+enum HighwayInstrument { piano, guitar, bass, ukulele, cello, pads, drums }
 
 /// What a block says about how to play it.
 enum HighwayCaptionStyle {
@@ -87,6 +87,16 @@ const Timbre _kPadTimbre = Timbre(
   attackMs: 2,
   decay: 5.5,
 );
+
+/// The kit pieces the drum highway lanes, left to right — low to high, the way
+/// a kit is written on a staff and the way a player sits behind it.
+const List<Drum> kHighwayDrumLanes = [
+  Drum.kick,
+  Drum.snare,
+  Drum.tom,
+  Drum.hat,
+  Drum.crash,
+];
 
 /// Everything the highway needs to know about one instrument.
 class HighwayInstrumentProfile {
@@ -147,6 +157,13 @@ class HighwayInstrumentProfile {
             timbre: _kPadTimbre,
             captionStyle: HighwayCaptionStyle.none,
           ),
+        // Drums carry no pitch at all: the lane IS the instruction, and the
+        // sound comes from `renderDrum`, not from a timbre.
+        HighwayInstrument.drums => HighwayInstrumentProfile(
+            instrument: instrument,
+            timbre: _kPadTimbre,
+            captionStyle: HighwayCaptionStyle.none,
+          ),
       };
 
   /// The lane map for [chart] on this instrument.
@@ -164,6 +181,11 @@ class HighwayInstrumentProfile {
         return StringLaneMap(tuning!);
       case HighwayInstrument.pads:
         return PadLaneMap.forChart(chart, laneCount: padLanes);
+      case HighwayInstrument.drums:
+        return PadLaneMap(
+          laneCount: kHighwayDrumLanes.length,
+          labels: const ['Kick', 'Snare', 'Tom', 'Hat', 'Crash'],
+        );
     }
   }
 
@@ -177,7 +199,10 @@ class HighwayInstrumentProfile {
   HighwayChart prepare(HighwayChart chart) {
     if (chart.isEmpty) return chart;
     return switch (instrument) {
-      HighwayInstrument.piano || HighwayInstrument.pads => chart,
+      HighwayInstrument.piano ||
+      HighwayInstrument.pads ||
+      HighwayInstrument.drums =>
+        chart,
       HighwayInstrument.cello => _prepareBowed(chart),
       _ => _prepareFretted(chart),
     };

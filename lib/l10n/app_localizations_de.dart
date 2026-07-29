@@ -9001,4 +9001,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get highwayLoopHint =>
       'Der Abschnitt wiederholt sich, bis du stoppst. Üben zählt nicht für Sterne — acht Takte zwanzigmal sind nicht das Stück.';
+
+  @override
+  String get highwayInstrumentDrums => 'Schlagzeug';
+
+  @override
+  String get gameBeatHighway => 'Beat-Bahn';
+
+  @override
+  String get gameBeatHighwaySubtitle =>
+      'Schläge fallen auf das Set — spiel den Groove';
 }

@@ -413,3 +413,52 @@ HighwayChart highwayChartFromTargets(
           ),
       ]..sort((a, b) => a.startBeat.compareTo(b.startBeat)),
     );
+
+/// A drum groove as highway blocks — one lane per kit piece.
+///
+/// [rows] is the Drum Kit / Loop Mixer grid: a row of on/off steps per piece,
+/// one EIGHTH per step. The lanes are indexed by [lanes] (the order they are
+/// drawn in, low to high), and the events carry a `lane` and no pitch: a drum
+/// is answered by hitting the right pad, not the right note.
+///
+/// [repeats] tiles the pattern, because a two-bar groove is a four-second
+/// exercise otherwise.
+HighwayChart highwayChartFromDrumRows<T>(
+  Map<T, List<bool>> rows, {
+  required List<T> lanes,
+  required String name,
+  required double bpm,
+  int repeats = 4,
+  double beatsPerBar = 4,
+}) {
+  final events = <HighwayEvent>[];
+  var steps = 0;
+  for (final row in rows.values) {
+    if (row.length > steps) steps = row.length;
+  }
+  for (var pass = 0; pass < repeats; pass++) {
+    final offset = pass * steps * 0.5; // one eighth per step
+    for (var lane = 0; lane < lanes.length; lane++) {
+      final row = rows[lanes[lane]];
+      if (row == null) continue;
+      for (var step = 0; step < row.length; step++) {
+        if (!row[step]) continue;
+        events.add(
+          HighwayEvent(
+            startBeat: offset + step * 0.5,
+            beats: 0.45, // a hit, not a held note
+            lane: lane,
+            voice: lane,
+          ),
+        );
+      }
+    }
+  }
+  events.sort((a, b) => a.startBeat.compareTo(b.startBeat));
+  return HighwayChart(
+    name: name,
+    bpm: bpm,
+    events: events,
+    beatsPerBar: beatsPerBar,
+  );
+}

@@ -105,6 +105,18 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — DRUMS on the highway**
+  (`beat_highway`, 4th tile, drums module). One lane per kit piece, no pitch —
+  the lane is the instruction — with real `renderDrum` one-shots on tap and a
+  `renderDrumPattern` backing. Grooves come from the Drum Kit's own
+  `kDrumPresets`, so a new preset appears in both places and nobody authors the
+  same beat twice. Wiring is additive: `game_registry` (1 tile), `tuning`
+  (1 bracket), `concept_map` (placed under `play_percussion` — the gate I got
+  wrong the first time), ARBs append-only. ⚠️ **I stayed OUT of
+  `composition_workshop_screen.dart`** — two agents hold ACTIVE claims there, so
+  the Workshop→highway entry is deliberately NOT done and stays open for
+  whoever owns that file.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — loop-a-section on the highway** (doc
   §7: the practice control a learn-an-instrument tool lives or dies on — drill
   bars 9–16 until they are right). Only my own files:

@@ -1651,6 +1651,18 @@ final Map<String, List<GameInfo>> kGamesByModule = {
     ),
   ],
   'drums': [
+    // The kit's own grooves as falling hits — one lane per piece.
+    GameInfo(
+      id: 'beat_highway',
+      icon: Icons.graphic_eq,
+      title: (l) => l.gameBeatHighway,
+      subtitle: (l) => l.gameBeatHighwaySubtitle,
+      builder: (ctx) => NoteHighwayScreen(
+        instrument: HighwayInstrument.drums,
+        gameId: 'beat_highway',
+        title: AppLocalizations.of(ctx)!.gameBeatHighway,
+      ),
+    ),
     GameInfo(
       id: 'drum_read',
       icon: Icons.album,

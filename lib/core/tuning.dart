@@ -53,6 +53,7 @@ const Map<String, List<int>> kStarThresholds = {
   'note_highway_piano': [1, 2, 3],
   'note_highway_guitar': [1, 2, 3],
   'note_highway_cello': [1, 2, 3],
+  'beat_highway': [1, 2, 3],
   // 10 rounds x 100 points, first-try answers only.
   'note_value_quiz': [100, 600, 900],
   'duration_duel': [100, 600, 900],

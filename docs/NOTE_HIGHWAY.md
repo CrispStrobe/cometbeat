@@ -359,7 +359,14 @@ shapes claiming the ukulele, whose lowest string is C4).
   backing still line up with the whole. **A loop is practice and records no
   score**: eight bars twenty times is not the piece, and counting it would make
   stars measure patience.
-* **No drum-kit map, no chord-grip blocks or strum arrows,
+* ~~No drum-kit map.~~ **DONE 2026-07-29** — a fourth tile, *Beat Highway*
+  (`beat_highway`, under the drums module). One lane per kit piece, hits with no
+  pitch at all (the lane IS the instruction), real `renderDrum` one-shots under
+  the pads and a `renderDrumPattern` backing. The grooves are the Drum Kit's own
+  `kDrumPresets` rather than beats authored twice, so a preset added there shows
+  up here too and the groove a child builds in the Drum Kit is the same music
+  that falls here.
+* **No chord-grip blocks or strum arrows,
   no engraved-notation strip** (the strip is chart-driven; an engraved staff
   needs the Song Book path above).
 * ~~Not profiled.~~ **MEASURED 2026-07-29** (`test/highway_performance_test.dart`,

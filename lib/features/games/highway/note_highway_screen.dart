@@ -23,11 +23,18 @@
 
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:typed_data' show Uint8List;
+import 'dart:typed_data' show Float64List, Int16List, Uint8List;
 
 import 'package:comet_beat/core/audio/play_along.dart' show scaledStarScore;
 import 'package:comet_beat/core/audio/synth.dart'
-    show Segment, midiToFrequency, renderWav;
+    show
+        Drum,
+        Segment,
+        midiToFrequency,
+        renderDrum,
+        renderDrumPattern,
+        renderWav,
+        wavBytes;
 import 'package:comet_beat/core/games/highway/highway_chart.dart';
 import 'package:comet_beat/core/games/highway/highway_grading.dart';
 import 'package:comet_beat/core/games/highway/highway_instrument.dart';
@@ -318,9 +325,25 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   }
 
   /// The backing rendered with THIS instrument's voice — a guitar highway must
-  /// not sound like a piano.
+  /// not sound like a piano, and a drum groove is not a chord at all.
   Uint8List _renderBacking() {
     final chart = _chart!;
+    if (_instrument == HighwayInstrument.drums) {
+      final beatMs = chart.beatMs;
+      final hits = <(int, Drum)>[
+        for (final e in chart.events)
+          if (e.lane != null && e.lane! < kHighwayDrumLanes.length)
+            ((e.startBeat * beatMs).round(), kHighwayDrumLanes[e.lane!]),
+      ];
+      return wavBytes(
+        _pcm16(
+          renderDrumPattern(
+            hits,
+            totalMs: ((_totalBeats + 1) * beatMs).round(),
+          ),
+        ),
+      );
+    }
     final keep = _backingVoices;
     final events = chart.timedChords(keep: keep.isEmpty ? null : keep);
     final segments = <Segment>[
@@ -329,6 +352,27 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
           (freqs: [for (final m in midis) midiToFrequency(m)], ms: ms),
     ];
     return renderWav(segments, timbre: _profile.timbre);
+  }
+
+  Int16List _pcm16(Float64List pcm) {
+    final out = Int16List(pcm.length);
+    for (var i = 0; i < pcm.length; i++) {
+      out[i] = (pcm[i].clamp(-1.0, 1.0) * 32767).round();
+    }
+    return out;
+  }
+
+  /// A kit piece, played the moment its pad is hit. Drums have no pitch, so
+  /// this is a different path from [_playTapSound] rather than a special case
+  /// of it.
+  void _playDrum(int lane) {
+    if (_backingWanted) return; // the backing owns the single player
+    if (lane < 0 || lane >= kHighwayDrumLanes.length) return;
+    unawaited(
+      context
+          .read<AudioService>()
+          .playWavBytes(wavBytes(_pcm16(renderDrum(kHighwayDrumLanes[lane])))),
+    );
   }
 
   void _playTapSound(int midi) {
@@ -350,8 +394,12 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     if (!_running || grader == null || _mode == HighwayMode.watch) return;
     if (_beat < -_rules.hitWindowBeats) return; // still counting in
     final result = grader.tap(key, _beat);
-    final midi = result.note?.event.midi ?? key.midi;
-    if (midi != null) _playTapSound(midi);
+    if (_instrument == HighwayInstrument.drums) {
+      _playDrum(key.lane);
+    } else {
+      final midi = result.note?.event.midi ?? key.midi;
+      if (midi != null) _playTapSound(midi);
+    }
     setState(() {
       _flashes.add(
         HighwayFlash(
@@ -730,6 +778,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
         HighwayInstrument.ukulele => l.highwayInstrumentUkulele,
         HighwayInstrument.cello => l.highwayInstrumentCello,
         HighwayInstrument.pads => l.highwayInstrumentPads,
+        HighwayInstrument.drums => l.highwayInstrumentDrums,
       };
 
   String _difficultyName(AppLocalizations l, HighwayDifficulty d) =>

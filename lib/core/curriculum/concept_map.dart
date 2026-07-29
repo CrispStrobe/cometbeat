@@ -596,7 +596,7 @@ const List<Concept> kConcepts = [
     GradeBand.g34,
     ConceptArea.technique,
     'Read and play a drum rhythm',
-    ['drum_read'],
+    ['drum_read', 'beat_highway'],
   ),
   Concept(
     'compose',
