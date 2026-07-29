@@ -1011,6 +1011,25 @@ is recorded in [HISTORY.md](HISTORY.md).
      limit; strip read-only first, editor soon.** ✅ **ALL THREE SHIPPED** — see
      the entry below. — opus
 
+- **opus (loop-d1d4)** · 🚧 **CLAIMING the `WS-L2` (b) EDITOR — the maintainer
+  already sequenced it ("read-only now, then soon editor"), so no new decision
+  is needed.** Branch `feature/mixer-d1d4`. Claim pushed before any code.
+  **Heat check:** only the highway area is moving (note_highway 3 commits/2h);
+  `loop_mixer_screen`, `daw_screen`, `advanced_tracker_screen` and
+  `composition_workshop_screen` are all cold.
+  ⚠️ **This one is NOT pure UI, and the strip's read-only version was.** The
+  chain plays sections in **slot order** — `_advanceChain` walks
+  `(_chainIndex + step) % _scenes.length` and skips empties — so "order" is
+  implicit in the array. Making the strip an editor means an explicit chain
+  order, which is a (screen-level) model addition, not a drag handler.
+  ⚠️ **The invariant that must not break:** `_capturedScenes()` /
+  `_capturedRepeats()` feed `renderArrangement`, i.e. the BOUNCE. They currently
+  walk slot order too. If the strip reorders and those do not follow, the
+  exported file plays a different song from the screen — the same class of bug
+  the code already guards against for repeats ("a section that plays four times
+  on screen and twice in the export would be a bug"). Order is the same
+  promise. — opus
+
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L2` (a) + (b) + the section
   lift, 11 tests.**
   **(a)** The lane strip drew a hard-coded 16 steps while polymeter makes the
