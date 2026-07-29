@@ -104,6 +104,18 @@ abstract class HighwayLaneMap {
   /// The rail, in draw order (raised keys last, so they sit on top).
   List<HighwayRailKey> railKeys();
 
+  /// The rail key a HEARD pitch corresponds to — the microphone's twin of
+  /// [hitTest]. Null when the pitch is not on this instrument at all.
+  ///
+  /// It is a separate question from [slotForMidi] on purpose: a fretted
+  /// instrument answers "which string", and several pitches share a lane.
+  HighwayRailKey? keyForMidi(int midi) {
+    for (final key in railKeys()) {
+      if (key.midi == midi) return key;
+    }
+    return null;
+  }
+
   /// Which rail key a tap at unit ([x], [yFrac]) hits. [yFrac] is 0 at the top
   /// of the rail and 1 at the bottom, so a piano can tell a black key from the
   /// white key below it.
@@ -369,6 +381,18 @@ class StringLaneMap extends HighwayLaneMap {
       ];
 
   @override
+  HighwayRailKey? keyForMidi(int midi) {
+    final s = _stringForMidi(midi);
+    if (s == null) return null;
+    return HighwayRailKey(
+      slot: _slotOfLane(_xLaneOf(s)),
+      lane: s,
+      midi: tuning.strings[s].midiNumber,
+      label: tuning.strings[s].step.name.toUpperCase(),
+    );
+  }
+
+  @override
   HighwayRailKey? hitTest(double x, double yFrac) {
     final xLane = (x * tuning.stringCount).floor();
     if (xLane < 0 || xLane >= tuning.stringCount) return null;
@@ -460,6 +484,17 @@ class PadLaneMap extends HighwayLaneMap {
             label: i < labels.length ? labels[i] : null,
           ),
       ];
+
+  @override
+  HighwayRailKey? keyForMidi(int midi) {
+    final lane = _laneOf(HighwayEvent(startBeat: 0, beats: 1, midi: midi));
+    if (lane == null) return null;
+    return HighwayRailKey(
+      slot: _slotOfLane(lane),
+      lane: lane,
+      label: lane < labels.length ? labels[lane] : null,
+    );
+  }
 
   @override
   HighwayRailKey? hitTest(double x, double yFrac) {

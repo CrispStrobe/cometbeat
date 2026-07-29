@@ -311,7 +311,17 @@ class HighwayGrader {
 
   /// The player hit [key] at [beat]. Claims the closest matching pending note
   /// inside the window; scores it; returns what happened.
-  HighwayTapResult tap(HighwayRailKey key, double beat) {
+  ///
+  /// [breaksStreak] is false for MICROPHONE input. A tap is a decision — the
+  /// wrong key is a mistake and should cost the run. A microphone is a
+  /// measurement: it hears string noise, a neighbour's television and the
+  /// player thinking out loud, and zeroing the streak on all of that would
+  /// punish someone for the room they are in.
+  HighwayTapResult tap(
+    HighwayRailKey key,
+    double beat, {
+    bool breaksStreak = true,
+  }) {
     HighwayNote? best;
     var bestDelta = double.infinity;
     var scanned = 0;
@@ -332,7 +342,7 @@ class HighwayGrader {
     }
     lastTapScanned = scanned;
     if (best == null) {
-      _streak = 0; // a wrong key breaks the run, but never costs a note
+      if (breaksStreak) _streak = 0; // a wrong key never costs a NOTE, though
       return const HighwayTapResult(note: null, quality: null);
     }
     if (identical(best, _graded[_cursor])) _retire();

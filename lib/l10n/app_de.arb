@@ -3031,5 +3031,9 @@
   "highwayLoopHint": "Der Abschnitt wiederholt sich, bis du stoppst. \u00dcben z\u00e4hlt nicht f\u00fcr Sterne \u2014 acht Takte zwanzigmal sind nicht das St\u00fcck.",
   "highwayInstrumentDrums": "Schlagzeug",
   "gameBeatHighway": "Beat-Bahn",
-  "gameBeatHighwaySubtitle": "Schl\u00e4ge fallen auf das Set \u2014 spiel den Groove"
+  "gameBeatHighwaySubtitle": "Schl\u00e4ge fallen auf das Set \u2014 spiel den Groove",
+  "highwayInput": "Wie du spielst",
+  "highwayInputTouch": "Tasten antippen",
+  "highwayInputMic": "Dein Instrument",
+  "highwayInputMicHint": "Spiel dein echtes Instrument \u2014 die App h\u00f6rt zu. Sie h\u00f6rt einen Ton auf einmal, ein Akkord z\u00e4hlt also f\u00fcr den Ton, den sie erwischt."
 }

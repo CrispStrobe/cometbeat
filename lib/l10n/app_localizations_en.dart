@@ -8968,4 +8968,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get gameBeatHighwaySubtitle =>
       'Hits fall onto the kit — play the groove';
+
+  @override
+  String get highwayInput => 'How you play';
+
+  @override
+  String get highwayInputTouch => 'Tap the keys';
+
+  @override
+  String get highwayInputMic => 'Your instrument';
+
+  @override
+  String get highwayInputMicHint =>
+      'Play your real instrument — the app listens. It hears one note at a time, so a chord counts for the note it catches.';
 }

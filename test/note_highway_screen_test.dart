@@ -226,6 +226,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the microphone is offered where it can hear, and not elsewhere',
+      (tester) async {
+    await tester.pumpWidget(
+      _app(const NoteHighwayScreen(gameId: 'note_highway_piano')),
+    );
+    await tester.pumpAndSettle();
+
+    // A pitched instrument can be played for real.
+    expect(find.text('Your instrument'), findsOneWidget);
+    await tester.tap(find.text('Your instrument'));
+    await tester.pumpAndSettle();
+    // …and the screen says plainly what it can and cannot hear.
+    expect(find.textContaining('one note at a time'), findsOneWidget);
+
+    // Drums have no pitch to hear, so the choice is not offered at all rather
+    // than offered and then quietly ignored.
+    await tester.tap(find.text('Drums'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your instrument'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('every instrument × skin × projection paints', (tester) async {
     for (final instrument in HighwayInstrument.values) {
       final profile = HighwayInstrumentProfile.of(instrument);

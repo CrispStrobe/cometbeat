@@ -126,6 +126,30 @@ void main() {
     });
   });
 
+  group('keyForMidi (what the microphone heard)', () {
+    test('a keyboard answers with that very key', () {
+      final map = KeyboardLaneMap(lowMidi: 60, highMidi: 71);
+      expect(map.keyForMidi(64)?.midi, 64);
+      expect(map.keyForMidi(61)?.midi, 61); // black keys too
+      expect(map.keyForMidi(90), isNull); // not on this keyboard
+    });
+
+    test('a fretted instrument answers with the STRING it is played on', () {
+      final map = StringLaneMap(Tuning.standardGuitar);
+      // E4 is the open high E — string 0.
+      expect(map.keyForMidi(64)?.lane, 0);
+      // G3 sits on the D string at the 5th fret for a first-position hand.
+      expect(map.keyForMidi(55)?.lane, isNotNull);
+      expect(map.keyForMidi(20), isNull, reason: 'below the instrument');
+    });
+
+    test('grading accepts what keyForMidi returned', () {
+      final map = StringLaneMap(Tuning.standardGuitar);
+      final key = map.keyForMidi(64)!;
+      expect(map.matches(_note(64, lane: 0), key), isTrue);
+    });
+  });
+
   group('PadLaneMap', () {
     test('collapses a melody onto lanes by contour', () {
       const chart = HighwayChart(

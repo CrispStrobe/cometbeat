@@ -16297,6 +16297,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hits fall onto the kit — play the groove'**
   String get gameBeatHighwaySubtitle;
+
+  /// No description provided for @highwayInput.
+  ///
+  /// In en, this message translates to:
+  /// **'How you play'**
+  String get highwayInput;
+
+  /// No description provided for @highwayInputTouch.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the keys'**
+  String get highwayInputTouch;
+
+  /// No description provided for @highwayInputMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Your instrument'**
+  String get highwayInputMic;
+
+  /// No description provided for @highwayInputMicHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Play your real instrument — the app listens. It hears one note at a time, so a chord counts for the note it catches.'**
+  String get highwayInputMicHint;
 }
 
 class _AppLocalizationsDelegate

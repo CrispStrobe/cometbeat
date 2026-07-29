@@ -3453,5 +3453,9 @@
   "highwayLoopHint": "The section repeats until you stop it. Practice isn\u2019t scored \u2014 eight bars twenty times isn\u2019t the piece.",
   "highwayInstrumentDrums": "Drums",
   "gameBeatHighway": "Beat Highway",
-  "gameBeatHighwaySubtitle": "Hits fall onto the kit \u2014 play the groove"
+  "gameBeatHighwaySubtitle": "Hits fall onto the kit \u2014 play the groove",
+  "highwayInput": "How you play",
+  "highwayInputTouch": "Tap the keys",
+  "highwayInputMic": "Your instrument",
+  "highwayInputMicHint": "Play your real instrument \u2014 the app listens. It hears one note at a time, so a chord counts for the note it catches."
 }

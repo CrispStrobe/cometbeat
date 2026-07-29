@@ -105,6 +105,18 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — MICROPHONE input on the
+  highway tiles (monophonic).** Play the real instrument instead of tapping:
+  new `HighwayLaneMap.keyForMidi` ("what the mic heard, as a rail key" — a
+  fretted map answers with the STRING, which is what its grading compares),
+  onset gating so a held note is fed once rather than every frame, and the rail
+  stops taking taps while the mic is answering. **`tap(breaksStreak:)`** is the
+  one grading change: a heard wrong note costs nothing (a mic hears the room),
+  a tapped one still costs the streak. Honestly monophonic and the UI says so —
+  a chord is credited for the note it catches, and two hands cannot both be
+  graded this way. Polyphonic needs the transcription backend and stays open.
+  Only my own files + append-only ARBs.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — DRUMS on the highway**
   (`beat_highway`, 4th tile, drums module). One lane per kit piece, no pitch —
   the lane is the instruction — with real `renderDrum` one-shots on tap and a

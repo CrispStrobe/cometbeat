@@ -25,6 +25,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data' show Float64List, Int16List, Uint8List;
 
+import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
+import 'package:comet_beat/core/audio/pitch_analysis.dart' show PitchReading;
 import 'package:comet_beat/core/audio/play_along.dart' show scaledStarScore;
 import 'package:comet_beat/core/audio/synth.dart'
     show
@@ -57,6 +59,19 @@ import 'package:provider/provider.dart';
 
 /// Watch the piece play, or play it yourself.
 enum HighwayMode { watch, play }
+
+/// How the player answers the blocks.
+enum HighwayInput {
+  /// The instrument rail under the hit line. Works everywhere, needs no
+  /// permission, and is what a phone is actually good at.
+  touch,
+
+  /// A real instrument, heard through the microphone. MONOPHONIC — the detector
+  /// tracks one pitch at a time, so a chord is credited for whichever of its
+  /// notes is heard, and the piano's two hands cannot both be graded this way.
+  /// Being honest about that in the UI matters more than hiding it.
+  microphone,
+}
 
 class NoteHighwayScreen extends StatefulWidget {
   const NoteHighwayScreen({
@@ -92,6 +107,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   HighwaySkin _skin = HighwaySkin.midnight;
   HighwayProjection _projection = HighwayProjection.flat;
   HighwayMode _mode = HighwayMode.play;
+  HighwayInput _input = HighwayInput.touch;
   bool _showStrip = true;
   bool _backing = false;
   double _tempoScale = 1;
@@ -123,6 +139,20 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   HighwayGrader? _grader;
   final List<HighwayFlash> _flashes = [];
 
+  // --- microphone ------------------------------------------------------------
+  final MicrophonePitchService _mic = MicrophonePitchService();
+  StreamSubscription<PitchReading>? _micSub;
+  ({PitchCaptureError reason, String? detail})? _micError;
+
+  /// The pitch last fed to the grader. A detector reports the SAME note on
+  /// every frame it is held, and feeding each frame would hammer the grader
+  /// with a note it has already answered; a new note only counts once the
+  /// heard pitch changes.
+  int? _lastHeardMidi;
+
+  /// The live pitch, for the marker on the pitch-axis view.
+  double? _livePitch;
+
   static const double _countInBeats = 4;
 
   @override
@@ -137,7 +167,83 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   @override
   void dispose() {
     _ticker.dispose();
+    unawaited(_micSub?.cancel());
+    _mic.dispose();
     super.dispose();
+  }
+
+  /// True when this instrument can be graded by ear at all. The detector is
+  /// monophonic, so the pad/drum maps (no pitch to hear) are excluded.
+  bool get _micUsable =>
+      _instrument != HighwayInstrument.drums &&
+      _instrument != HighwayInstrument.pads;
+
+  Future<void> _startMic() async {
+    setState(() => _micError = null);
+    try {
+      _micSub = _mic.readings.listen(
+        _onHeard,
+        onError: (Object e) {
+          if (mounted) {
+            setState(
+              () => _micError = (
+                reason: PitchCaptureError.unknown,
+                detail: '$e',
+              ),
+            );
+          }
+        },
+      );
+      await _mic.start();
+    } on PitchCaptureException catch (e) {
+      await _micSub?.cancel();
+      _micSub = null;
+      if (mounted) {
+        setState(() => _micError = (reason: e.reason, detail: e.detail));
+      }
+    }
+  }
+
+  Future<void> _stopMic() async {
+    await _micSub?.cancel();
+    _micSub = null;
+    await _mic.stop();
+    _lastHeardMidi = null;
+    _livePitch = null;
+    // The mic can leave the mobile audio session on the quiet earpiece; put
+    // playback back on the speaker or the rest of the app goes silent.
+    if (mounted) await context.read<AudioService>().configurePlaybackRoute();
+  }
+
+  /// One analysed window from the microphone.
+  void _onHeard(PitchReading reading) {
+    if (!mounted || !_running) return;
+    _livePitch = reading.hasPitch ? reading.midi : null;
+    final grader = _grader;
+    if (grader == null || _mode == HighwayMode.watch) return;
+    if (!reading.hasPitch) {
+      _lastHeardMidi = null; // silence re-arms the next note
+      return;
+    }
+    final midi = reading.nearestMidi;
+    if (midi == _lastHeardMidi) return; // still the same note being held
+    _lastHeardMidi = midi;
+    if (_beat < -_rules.hitWindowBeats) return; // still counting in
+
+    final key = _laneMap?.keyForMidi(midi);
+    if (key == null) return;
+    final result = grader.tap(key, _beat, breaksStreak: false);
+    // Heard something the chart did not ask for: noise, not a mistake.
+    if (!result.isHit) return;
+    setState(() {
+      _flashes.add(
+        HighwayFlash(
+          unitX: key.slot.center,
+          beat: _beat,
+          perfect: result.quality == HighwayHitQuality.perfect,
+        ),
+      );
+    });
   }
 
   HighwayInstrumentProfile get _profile =>
@@ -189,7 +295,15 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     _ticker
       ..stop()
       ..start();
+    if (_usingMic) unawaited(_startMic());
   }
+
+  /// Microphone input is only actually in use when the player asked for it, the
+  /// instrument can be heard, and they are playing rather than watching.
+  bool get _usingMic =>
+      _input == HighwayInput.microphone &&
+      _micUsable &&
+      _mode == HighwayMode.play;
 
   /// The beat the clock starts (and, when looping, returns) to.
   double get _loopStartBeat {
@@ -230,6 +344,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   void _stop() {
     _ticker.stop();
     context.read<AudioService>().stop();
+    unawaited(_stopMic());
     setState(() => _running = false);
   }
 
@@ -284,6 +399,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
 
   void _finish() {
     _ticker.stop();
+    unawaited(_stopMic());
     final grader = _grader;
     setState(() {
       _running = false;
@@ -494,6 +610,33 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
               m == HighwayMode.watch ? l.highwayModeWatch : l.highwayModePlay,
           onSelect: (m) => setState(() => _mode = m),
         ),
+        if (_micUsable && _mode == HighwayMode.play) ...[
+          _sectionLabel(l.highwayInput),
+          _chips<HighwayInput>(
+            values: HighwayInput.values,
+            selected: _input,
+            label: (i) => i == HighwayInput.touch
+                ? l.highwayInputTouch
+                : l.highwayInputMic,
+            onSelect: (i) => setState(() => _input = i),
+          ),
+          if (_input == HighwayInput.microphone)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                l.highwayInputMicHint,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          if (_micError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                _micErrorText(l),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+        ],
         _sectionLabel(l.highwayDifficulty),
         _chips<HighwayDifficulty>(
           values: HighwayDifficulty.values,
@@ -716,7 +859,12 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
             litLanes: litLanes,
             noteNameOf: noteName,
             energy: (grader.multiplier - 1) / 3,
-            onRailTap: _mode == HighwayMode.play ? _onRailTap : null,
+            livePitch: _livePitch,
+            // With the microphone answering, the rail is a picture of the
+            // instrument, not a control: tapping it would let you "play" the
+            // piece with your thumbs while claiming to play it for real.
+            onRailTap:
+                _mode == HighwayMode.play && !_usingMic ? _onRailTap : null,
           ),
         ),
         _hud(context, l, grader),
@@ -769,6 +917,12 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   }
 
   // --- names -----------------------------------------------------------------
+
+  String _micErrorText(AppLocalizations l) => switch (_micError!.reason) {
+        PitchCaptureError.permissionDenied => l.micPermissionDenied,
+        PitchCaptureError.unsupported => l.micUnsupported,
+        _ => l.micStartFailed(_micError!.detail ?? _micError!.reason.name),
+      };
 
   String _instrumentName(AppLocalizations l, HighwayInstrument i) =>
       switch (i) {

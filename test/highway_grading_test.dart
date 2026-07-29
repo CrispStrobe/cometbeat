@@ -200,6 +200,28 @@ void main() {
     });
   });
 
+  group('heard, not tapped', () {
+    test('a note the chart did not ask for costs nothing when it is HEARD', () {
+      // A microphone is a measurement, not a decision: string noise and the
+      // room must not zero a run the way a wrong key press does.
+      final g = _grader()..tap(_key(60), 0);
+      expect(g.streak, 1);
+      final result = g.tap(_key(61), 0.05, breaksStreak: false);
+      expect(result.isHit, isFalse);
+      expect(g.streak, 1, reason: 'the run survives what the room contributes');
+      // The same thing TAPPED is a mistake and does cost the streak.
+      g.tap(_key(61), 0.05);
+      expect(g.streak, 0);
+    });
+
+    test('a heard pitch still claims its note exactly once', () {
+      final g = _grader();
+      expect(g.tap(_key(60), 0, breaksStreak: false).isHit, isTrue);
+      expect(g.tap(_key(60), 0.02, breaksStreak: false).isHit, isFalse);
+      expect(g.hits, 1);
+    });
+  });
+
   group('hands separate', () {
     test('the hand you did not take on plays itself and is never scored', () {
       final g = _grader(voices: {0});

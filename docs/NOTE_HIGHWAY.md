@@ -350,8 +350,21 @@ shapes claiming the ukulele, whose lowest string is C4).
   launchers beside them. Still open on this axis: the Workshop has no such
   action, and an engraved-notation reading strip still needs the score threaded
   through (the strip is chart-driven today).
-* **No microphone grading.** Touch only. The mic path is the play-along
-  engine's, and joining them is S5.
+* ~~No microphone grading.~~ **DONE 2026-07-29 (monophonic).** The setup offers
+  *Tap the keys* or *Your instrument*; choosing the microphone turns the rail
+  into a picture rather than a control, because letting you tap it while
+  claiming to play for real would make the score a lie. Two decisions worth
+  keeping:
+  - **A heard wrong note does NOT break the streak, a tapped one does.** A tap
+    is a decision; a microphone is a measurement that also picks up string
+    noise, the room and the player thinking out loud. `tap(breaksStreak:)`
+    carries that distinction, and it is tested both ways.
+  - **A held note is fed once.** The detector reports the same pitch on every
+    frame it sounds, so a new note only counts when the heard pitch changes —
+    otherwise one long note hammers the grader with something already answered.
+  ⚠ It is honestly monophonic and says so in the UI: a chord is credited for
+  whichever note is heard, and the piano's two hands cannot both be graded this
+  way. Polyphonic grading needs the transcription backend and is still open.
 * ~~No loop-a-section.~~ **DONE 2026-07-29.** A range slider picks the bars to
   drill; the clock returns to the start of the section and re-arms it, so every
   pass is graded like the first. `HighwayChart.section` does NOT re-zero the
