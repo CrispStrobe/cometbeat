@@ -423,27 +423,27 @@ is recorded in [HISTORY.md](HISTORY.md).
     **`denominator => 1 << index` is keyed to the enum's index ORDER** with
     `breve` special-cased — inserting values silently renumbers `denominator`
     for every existing duration.
-  - 🔍 **`.ly` ROOT CAUSE FOUND, deliberately NOT fixed — read before trying.**
-    `lilypond_lexer.dart` (~line 78) emits a bare `\` and advances ONE char for
-    non-alphabetic escapes, so **`\<` leaves a `<` that lexes as the
-    CHORD-OPENER** and swallows the rest of the part. Repro:
-    `Sop = \relative c' { c4\< d e\! }` → 0 notes; with `\>` → 3 notes (`\>`
-    hid it — a stray `>` just closes a chord nobody opened). ⚠️ It also
-    **SILENTLY TRUNCATES**: fixing it locally showed **15 files that "parsed
-    fine" were dropping notes**, +1,735 recovered, one going 111 → 584. Treat
-    any pre-fix `.ly` note count as suspect.
-    ⚠️ **I tried two fixes (command token / two-char symbol token) and BOTH
-    regressed the SAME 8 files to zero** — files carrying
-    `\keepWithTag #'Vocalist \expressiveMarks` where `expressiveMarks` is a
-    spacer-only `\new Dynamics`. The chord-swallow had been accidentally
-    deleting that block so the walk reached the real staves; parse it properly
-    and the reader picks the spacer voice. **The real fix is TWO changes
-    together** — lexer + making the reader skip Dynamics-context music reached
-    through a variable reference / `\keepWithTag` (the type is invisible to
-    `_staffLeafTypes` there). I reverted rather than ship a net −8. The
-    gitignored notes also list the nine dead ends already ruled out (BOM,
-    `\paper`, `\header`, Scheme, comments, …); `tool/music_db_ly_probe.dart`
-    is the harness. Don't retrace those.
+  - ✅ **ALL THREE `.ly` BUGS FIXED + SHIPPED** (crisp_notation `68b8e6c`;
+    suite green 1849 + 6 new tests). It was never one bug — the first was
+    MASKING the other two, which is why fixing it alone looked like a
+    regression:
+    1. **lexer:** `\<` lexed as a bare `\` plus `<`, and `<` is the
+       chord-opener — the chord never closed and swallowed the rest of the
+       part. `\>` hid it (a stray `>` just closes a chord nobody opened).
+    2. **`_contextType`:** `\new Staff = "vocalist" << … >>` parses type+name
+       as an ASSIGNMENT, so the staff was never recognised → fell back to the
+       single-staff path, which reads `{ … }` but returns nothing for `<< … >>`.
+    3. **`_processCommand`:** `case 'new'` forwarded only `LyBlock`, never
+       `LySimultaneous`, and there was no `case 'context'` at all.
+    **LilyPond 42/59 → 57/59, empties 17 → 2.** ⚠️ Bug 1 **silently
+    TRUNCATED**: 23 files that "parsed fine" gained **+4,917 notes**, one going
+    111 → 584 — treat any pre-fix `.ly` note count as suspect.
+  - ⚠️ **ONE known regression, shipped knowingly:** `Lotti Vere languores.ly`
+    157 → 0. Its voices are `\transpose bes aes { … }` and the **PARSER**
+    attaches no args to `\transpose` (`\transpose(0)`), leaving the pitches
+    and music block as siblings — unreachable once staves are correctly
+    collected. A reader-side case is dead code; the fix belongs in
+    `lilypond_parser.dart`. Unclaimed.
   - ✅ **Catalog re-emitted on the VPS: 35,321 → 37,578 items** (score shard
     34,852 → 37,109 = exactly the 2,257 CPDL rows). Tiers verified in the
     emitted shard: 2,241 A + 16 B, and every Tier B carries the **EDITOR** as
