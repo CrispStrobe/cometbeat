@@ -491,7 +491,20 @@ is recorded in [HISTORY.md](HISTORY.md).
     `python3 << "PYEOF"` heredoc), and **`music_db_cpdl_parse_sweep.dart`
     counted only `m.elements`**, so it was blind to voice 2 and reported "0
     gains" from this very fix. Both fixed.
-  - 🤝 **Still unclaimed — LilyPond is NOT in the round-trip matrix.**
+  - ✅ **LilyPond is now IN the round-trip matrix** (crisp_notation `901fe82`,
+    suite 1899; 0 regressions + 0 note-count changes over the 3,791-edition CPDL
+    corpus). Getting it there took two MORE bugs, both DURATION errors that a
+    note-count check structurally cannot see: the **writer** gave voice 1 every
+    span in the bar (so a voice-2 span wrapped voice-1 notes and, its endIndex
+    being out of range, never closed its brace — malformed output that would not
+    parse back), and the **reader** dropped any tuplet whose bar filled
+    mid-group (`startIndex` in the old measure, `endIndex` in the new one → the
+    guard failed → every note counted at FULL value). Repro:
+    `\time 2/4 c'4 d'8 \tuplet 3/2 { e'8 f'8 g'8 }` summed 3/4, not 5/8.
+    ⚠️ The matrix now carries a comment stating what it CANNOT do: it only
+    exercises what our own writer emits, so it is blind to read-only syntax — no
+    round-trip could ever have caught the `\<` chord-swallow.
+  - 🤝 **Old note, now resolved:** LilyPond was absent from the matrix.
     Found by asking why the round-trip matrix missed the `\<` bug. Two answers:
     (a) **LilyPond is not in `roundtrip_property_test.dart` at all** (matrix is
     MusicXML/MEI/kern/ABC/MuseScore); (b) **even if it were, it could not have
