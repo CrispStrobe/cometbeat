@@ -1071,6 +1071,22 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     return true;
   }
 
+  /// WS-X1c — the menu action. `addSongToProject` existed for two slices with
+  /// no caller, which meant a user could never put a track in a project at all
+  /// and the mixer was permanently empty for them.
+  void _addToProjectFromMenu() {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    // Null only when no ProjectService is provided, which the real app always
+    // does. Saying nothing beats inventing a message for a state a user cannot
+    // reach — and beats borrowing an unrelated string for it, which is what I
+    // did first.
+    if (addSongToProject() == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.projectAdded)));
+  }
+
   @override
   bool get hasLiveProjectLink => _projectLink?.live ?? false;
 
@@ -5493,6 +5509,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     _applyStarterBeat();
                   case 'soundLibrary':
                     _showSoundLibrary();
+                  case 'addToProject':
+                    _addToProjectFromMenu();
                   case 'shareSong':
                     _shareSong();
                   case 'loadSong':
@@ -5547,6 +5565,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                   'saveSong',
                   Icons.bookmark_add_outlined,
                   l10n.trackerSaveSong,
+                ),
+                _menuRow(
+                  'addToProject',
+                  Icons.playlist_add,
+                  l10n.projectAddTrack,
                 ),
                 _menuRow('shareSong', Icons.ios_share, l10n.trackerShareSong),
                 _menuRow(

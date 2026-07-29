@@ -3415,5 +3415,7 @@
   "highwayCountIn": "Get ready\u2026",
   "highwayWaiting": "Waiting for you\u2026",
   "highwayHits": "Hit",
-  "highwayStreak": "Streak"
+  "highwayStreak": "Streak",
+  "projectAddTrack": "Add to project",
+  "projectAdded": "Added to the project"
 }

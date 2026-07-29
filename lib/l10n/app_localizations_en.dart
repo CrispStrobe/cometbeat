@@ -8916,4 +8916,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get highwayStreak => 'Streak';
+
+  @override
+  String get projectAddTrack => 'Add to project';
+
+  @override
+  String get projectAdded => 'Added to the project';
 }

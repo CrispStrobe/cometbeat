@@ -16201,6 +16201,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Streak'**
   String get highwayStreak;
+
+  /// No description provided for @projectAddTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to project'**
+  String get projectAddTrack;
+
+  /// No description provided for @projectAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to the project'**
+  String get projectAdded;
 }
 
 class _AppLocalizationsDelegate

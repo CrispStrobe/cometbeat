@@ -8968,4 +8968,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get highwayStreak => 'Serie';
+
+  @override
+  String get projectAddTrack => 'Zum Projekt hinzufügen';
+
+  @override
+  String get projectAdded => 'Zum Projekt hinzugefügt';
 }
