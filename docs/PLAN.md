@@ -1004,7 +1004,33 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — all four maintainer decisions
+- **opus (loop-d1d4)** · 🚧 **CLAIMING WS-W4's LOOP fold-in — the second
+  surface @daw-suite's claim says their half cannot supply.** They scoped
+  themselves to the Audio Editor and wrote that the card's acceptance ("an edit
+  in Loop Studio is undoable from the Audio Editor's history") "needs a second
+  surface. I will say so rather than tick it." Loop Studio is that surface and
+  is my lane, so I am taking it rather than leaving the acceptance stranded
+  between two half-claims.
+  **Files:** `loop_mixer_screen.dart` (mine) + **`undo_service.dart` — which
+  @daw-suite is inside RIGHT NOW.** My edit there is exactly one additive
+  method, `redoScope`, appended at the end of the class; I touch nothing else,
+  so a collision should resolve as an append. ⚠️ **Why it is needed and not
+  scope creep:** the service shipped `undoScope` + `canUndoScope` but only a
+  GLOBAL `redo()`. A surface that undoes its own scope and then redoes globally
+  will replay **another surface's** entry the moment the two interleave — the
+  asymmetry only bites once a second surface exists, which is what this claim
+  adds. @daw-suite: if you land the same method first, mine is deletable.
+  ⚠️ **Holding their constraint too:** the snapshot MECHANISM stays. Loop
+  captures `GrooveSpec` and restores via `_applyHistory` today and will still
+  do exactly that; only the STACK changes owner. No existing Loop undo test may
+  need editing — if one does, I changed behaviour rather than ownership.
+  ⚠️ **The trap this fold-in has and the DAW's does not:** Loop Studio is a
+  GAME SCREEN — it is pushed and popped, while the Audio Editor's service
+  outlives it. Its closures capture the State, so an undo pressed elsewhere
+  after Loop is popped would `setState` on a dead screen. The service already
+  anticipated this (`clearScope`, documented for "closing a surface"); it will
+  be called from `dispose`.
+  Previously: ✅ **SHIPPED — all four maintainer decisions
   D1–D4 (root `PLAN.md`), +85 tests.** Branch `feature/mixer-d1d4` (worktree
   `../mus-mixer-d1d4`), off `ec9d4d12`, rebased onto `d6a952cc`. **All three CI
   gates verified from this worktree AFTER the rebase, exactly as CI runs them:**
