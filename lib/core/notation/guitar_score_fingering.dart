@@ -150,6 +150,30 @@ List<List<int>> fingerFrettings(
 ///
 /// Keyed by [NoteElement.id], so — exactly like the bowed side — a score whose
 /// elements have null ids yields nothing. Builders must assign ids.
+/// The notes of [score] in reading order and the fret shape chosen for each.
+///
+/// ⚠ ONE arrangement, shared by everything score-level here. `arrangeTab` is the
+/// expensive half and, more importantly, the DECIDING half: fingerings and
+/// barres must describe the same fretting, and running it twice invites two
+/// answers the moment anything about it becomes non-deterministic.
+(List<NoteElement>, List<Map<int, int>>) _arrangeScore(
+  Score score,
+  Tuning tuning, {
+  required int capo,
+  required int maxFret,
+}) {
+  final notes = <NoteElement>[
+    for (final m in score.measures)
+      for (final e in m.elements)
+        if (e is NoteElement) e,
+  ];
+  if (notes.isEmpty) return (const [], const []);
+  final columns = [
+    for (final n in notes) [for (final p in n.pitches) p.midiNumber],
+  ];
+  return (notes, arrangeTab(columns, tuning, capo: capo, maxFret: maxFret));
+}
+
 Map<String, List<int>> fingerGuitarScore(
   Score score,
   Tuning tuning, {
@@ -157,17 +181,9 @@ Map<String, List<int>> fingerGuitarScore(
   int maxFret = 24,
   int handSpan = kGuitarHandSpan,
 }) {
-  final notes = <NoteElement>[
-    for (final m in score.measures)
-      for (final e in m.elements)
-        if (e is NoteElement) e,
-  ];
+  final (notes, frettings) =
+      _arrangeScore(score, tuning, capo: capo, maxFret: maxFret);
   if (notes.isEmpty) return const {};
-
-  final columns = [
-    for (final n in notes) [for (final p in n.pitches) p.midiNumber],
-  ];
-  final frettings = arrangeTab(columns, tuning, capo: capo, maxFret: maxFret);
 
   // ⚠ The hand is threaded through the WHOLE piece, so the digits must be
   // computed in one pass over every shape — not per note. A note is skipped for
@@ -181,6 +197,28 @@ Map<String, List<int>> fingerGuitarScore(
     out[id] = fingers[i];
   }
   return out;
+}
+
+/// Where a barre is needed in [score], keyed by note-element id.
+///
+/// The score-level twin of [barresFor], off the same arrangement the fingerings
+/// come from — so the barre always describes the fretting the digits describe.
+Map<String, int> guitarBarresForScore(
+  Score score,
+  Tuning tuning, {
+  int capo = 0,
+  int maxFret = 24,
+  int handSpan = kGuitarHandSpan,
+}) {
+  final (notes, frettings) =
+      _arrangeScore(score, tuning, capo: capo, maxFret: maxFret);
+  if (notes.isEmpty) return const {};
+  final barres = barresFor(frettings, handSpan: handSpan);
+  return {
+    for (var i = 0; i < notes.length && i < barres.length; i++)
+      if (notes[i].id case final String id)
+        if (barres[i] case final int fret) id: fret,
+  };
 }
 
 /// [score] with guitar left-hand fingerings written INTO the notes, as
@@ -201,8 +239,24 @@ Score scoreWithGuitarFingerings(
     handSpan: handSpan,
   );
   if (marks.isEmpty) return score;
+  // The barre comes from the same arrangement, and is a distinct statement from
+  // the digits: 1,1,1 says three fingers at one fret, which is not a barre.
+  // A barre already on the score is left alone — it may be an engraver's.
+  final existing = {for (final b in score.tabBarres) b.noteId};
+  final barres = guitarBarresForScore(
+    score,
+    tuning,
+    capo: capo,
+    maxFret: maxFret,
+    handSpan: handSpan,
+  );
 
   return score.copyWith(
+    tabBarres: [
+      ...score.tabBarres,
+      for (final e in barres.entries)
+        if (!existing.contains(e.key)) TabBarre(e.key, e.value),
+    ],
     measures: [
       for (final measure in score.measures)
         measure.copyWith(

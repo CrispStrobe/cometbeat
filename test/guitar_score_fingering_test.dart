@@ -210,4 +210,95 @@ void main() {
       }
     });
   });
+
+  group('barres at score level', () {
+    // ⚠ The chord matters. My first version of these tests used a 4-note
+    // F (F2 A2 C3 F3), and it asserted nothing: that voicing is genuinely
+    // UNPLAYABLE — F2 needs the low E string, and then A2 and C3 both need the
+    // A string — so arrangeTab correctly returns no shape, the model names no
+    // barre, and a "lengths match" assertion passed on two empty lists. The
+    // full six-string F is the chord a guitarist actually barres.
+    const fBarre = [41, 48, 53, 57, 60, 65]; // F2 C3 F3 A3 C4 F4
+
+    /// A score of chords, ids `c0`, `c1`, …
+    Score chords(List<List<int>> midi) {
+      var n = 0;
+      return Score(
+        clef: Clef.treble,
+        measures: [
+          Measure([
+            for (final ms in midi)
+              NoteElement(
+                pitches: [for (final m in ms) Pitch.fromMidi(m)],
+                duration: NoteDuration.quarter,
+                id: 'c${n++}',
+              ),
+          ]),
+        ],
+      );
+    }
+
+    test('a barre chord puts a barre ON the score, where it can engrave', () {
+      final fingered = scoreWithGuitarFingerings(
+        chords([fBarre]),
+        Tuning.standardGuitar,
+      );
+      expect(fingered.tabBarres, hasLength(1));
+      expect(fingered.tabBarres.single.fret, 1);
+      expect(fingered.tabBarres.single.noteId, 'c0');
+    });
+
+    test('a single-note line gets no barre', () {
+      final fingered = scoreWithGuitarFingerings(
+        chords([
+          [41],
+          [43],
+          [45],
+        ]),
+        Tuning.standardGuitar,
+      );
+      expect(fingered.tabBarres, isEmpty);
+    });
+
+    test('a barre already on the score is not duplicated or replaced', () {
+      final withOwn = chords([fBarre]).copyWith(
+        tabBarres: const [TabBarre('c0', 9)],
+      );
+      final fingered =
+          scoreWithGuitarFingerings(withOwn, Tuning.standardGuitar);
+      final forC0 = fingered.tabBarres.where((b) => b.noteId == 'c0').toList();
+      expect(forC0, hasLength(1), reason: 'no duplicate anchor');
+      expect(
+        forC0.single.fret,
+        9,
+        reason: "an engraver's barre outranks a suggestion",
+      );
+    });
+
+    test('the barre and the digits describe ONE fretting', () {
+      // Both come off a single arrangeTab run; two runs could describe two
+      // different frettings and nothing downstream would notice.
+      final score = chords([fBarre]);
+      final barres = guitarBarresForScore(score, Tuning.standardGuitar);
+      final fingers = fingerGuitarScore(score, Tuning.standardGuitar);
+      expect(barres, isNotEmpty);
+      for (final id in barres.keys) {
+        expect(
+          fingers[id],
+          contains(1),
+          reason: 'a barred chord must have an index finger in its digits',
+        );
+      }
+    });
+
+    test('an unplayable chord yields neither digits nor a barre', () {
+      // F2 A2 C3 F3 cannot be voiced on six strings; the arranger refuses
+      // rather than inventing a shape, and nothing downstream invents a barre.
+      final score = chords([
+        [41, 45, 48, 53],
+      ]);
+      expect(fingerGuitarScore(score, Tuning.standardGuitar), isEmpty);
+      expect(guitarBarresForScore(score, Tuning.standardGuitar), isEmpty);
+    });
+  });
 }
