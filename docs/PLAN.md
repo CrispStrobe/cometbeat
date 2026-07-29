@@ -1163,7 +1163,30 @@ is recorded in [HISTORY.md](HISTORY.md).
   drum-kit-visual files (**comments and prose only, zero behaviour**). Nobody
   should treat any pillar as claimed — they are unowned and pullable. — opus
 
-- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — the undo history PANEL, +17
+- **opus (loop-d1d4)** · 🚧 **CLAIMING WS-X2's LOOP STUDIO drop target.** The
+  card leaves the remaining three "adoptable by whoever owns the file when they
+  are not mid-flight" — Loop Studio is mine and is cold (I was the one in it,
+  and I am done). Only `loop_mixer_screen.dart`; the protocol itself is not
+  touched.
+  ⚠️ **A wrinkle the protocol hides, found before writing any code:** `kind`
+  does NOT determine the document type here. `AppMode.loop` travels as a
+  **`GrooveSpec`** when Loop Studio itself produced it (`addToProject`) and as a
+  **`List<PatternCell>`** when `ProjectBridge` converted something INTO loop —
+  two different shapes under one kind, and `dropDecisionFor` returns *exact*
+  for both because same-kind never consults the bridge. A handler that switched
+  on `kind` alone would hand a cell list to `applySpec`. So the drop switches on
+  the document TYPE: a `GrooveSpec` replaces the band, a cell list lands as the
+  user track (`setUserTrack`) — the slot that already means "a melody you
+  brought in".
+  ⚠️ **Why replacing on a drop is acceptable here and would not have been last
+  week:** every path goes through `_syncPlayback`, so the drop pushes an undo
+  entry and is reversible — a direct payoff from the W4 fold-in. Before that,
+  a drop that replaced the groove would have been unrecoverable.
+  📌 Consistent with `openProjectTrack` REFUSING a converted document
+  (@workstation-parity's call, which I kept): that refusal was because *opening*
+  hid the conversion's cost. A drop does not hide it — the protocol shows the
+  summary under the finger and confirms before committing when it is lossy.
+  Previously: ✅ **SHIPPED — the undo history PANEL, +17
   tests. WS-W4's acceptance is now met IN FULL, last clause included.**
   `lib/shared/undo/undo_history_sheet.dart`, hosted by the Audio Editor and Loop
   Studio. **Touches no shared file.** Details on the card in root `PLAN.md`;
