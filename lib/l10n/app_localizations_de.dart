@@ -1847,6 +1847,15 @@ class AppLocalizationsDe extends AppLocalizations {
       'tippen für eine Kopie dieser Spur samt aller Einstellungen';
 
   @override
+  String get loopMixerAddToProject => 'Diesen Groove zum Projekt hinzufügen';
+
+  @override
+  String get loopMixerInProject => 'Im Projekt — Änderungen gehen zurück';
+
+  @override
+  String get loopMixerAddedToProject => 'Zum Projekt hinzugefügt';
+
+  @override
   String get loopMixerAddTrack => 'Neue Spur hinzufügen';
 
   @override

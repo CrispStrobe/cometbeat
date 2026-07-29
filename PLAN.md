@@ -1276,6 +1276,16 @@ prefix.
       timeline of clips rather than one document, so `addToProject` takes a
       **snapshot**; calling it live would promise a write-back that does not
       exist.
+  - ⚠️ **Shipping a link is not shipping the feature (2026-07-28).** Loop
+    Studio's link landed with `addToProject` reachable only from the TEST
+    interface — no player could create a link — and `writeBackToProject`
+    declared, defined and **called from nowhere**, so a live link existed and
+    edits never reached the track. Both wired since, and asserted from the
+    outside (a tap, and an ordinary edit) rather than by calling the methods,
+    because "the method works" was already true while the feature did not.
+    **Worth checking on the other three surfaces**: the same two halves are easy
+    to leave out, and neither shows up in a passing unit test of the linker.
+
 - ⬜ **WS-X2 — drag between surfaces.** `M` · Depends WS-W1, WS-X1.
   One `DragTarget` protocol carrying `(kind, document)`: drag a tracker pattern
   onto the timeline, a loop track into the Tab editor, an instrument from the

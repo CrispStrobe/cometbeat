@@ -3410,6 +3410,24 @@ abstract class AppLocalizations {
   /// **'tap to add a copy of this track, with all its settings'**
   String get loopMixerDuplicateTrackHint;
 
+  /// No description provided for @loopMixerAddToProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Add this groove to the project'**
+  String get loopMixerAddToProject;
+
+  /// No description provided for @loopMixerInProject.
+  ///
+  /// In en, this message translates to:
+  /// **'In the project — edits go back'**
+  String get loopMixerInProject;
+
+  /// No description provided for @loopMixerAddedToProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to the project'**
+  String get loopMixerAddedToProject;
+
   /// No description provided for @loopMixerAddTrack.
   ///
   /// In en, this message translates to:

@@ -3797,6 +3797,14 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
 
   void _syncPlayback() {
     _recordHistory();
+    // WS-X1 follow-up — a live link that nothing ever writes to is an inert
+    // link: `writeBackToProject` shipped with the link but had no caller, so
+    // edits made here never reached the project track. Hooked HERE rather than
+    // to the screen's exit because this surface has no single exit — it is
+    // popped, backgrounded, or left running while another surface opens the
+    // same track — and "write back on close" loses the edit in two of those
+    // three. A no-op unless a live link exists.
+    writeBackToProject();
     if (_soloTrack case final id?) {
       // Editors and capture callbacks can add tracks directly to the engine;
       // reassert solo at the shared audio boundary.
@@ -4390,6 +4398,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           l10n.loopMixerSwingPerTrack,
           _trackSwingRow(l10n),
         ),
+        _projectRow(l10n),
         _inspectorSection(
           l10n.loopMixerAddTrack,
           _addTrackRow(l10n),
@@ -4967,6 +4976,40 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     if (copy == null) return;
     setState(() {});
     _syncPlayback();
+  }
+
+  /// WS-X1 follow-up — the button that puts this groove in the project.
+  ///
+  /// `addToProject` shipped with the live link and was reachable only from the
+  /// test interface, so no player could ever create the link the rest of the
+  /// feature depends on. Hidden entirely when no project is in scope, which is
+  /// every test that mounts this screen alone and the games registry: a dead
+  /// button that explains itself only by doing nothing is worse than none.
+  Widget _projectRow(AppLocalizations l10n) {
+    if (_projects == null) return const SizedBox.shrink();
+    final linked = hasLiveProjectLink;
+    return _inspectorSection(
+      l10n.projectBrowser,
+      Align(
+        alignment: Alignment.centerLeft,
+        child: FilledButton.tonalIcon(
+          key: const Key('loop-add-to-project'),
+          onPressed: linked ? null : () => _addGrooveToProjectFromUi(l10n),
+          icon: Icon(linked ? Icons.link : Icons.playlist_add, size: 18),
+          label: Text(
+            linked ? l10n.loopMixerInProject : l10n.loopMixerAddToProject,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addGrooveToProjectFromUi(AppLocalizations l10n) {
+    if (addToProject() == null) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.loopMixerAddedToProject)),
+    );
   }
 
   /// One chip per track: tap to add a copy of it.

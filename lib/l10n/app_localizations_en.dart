@@ -1841,6 +1841,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'tap to add a copy of this track, with all its settings';
 
   @override
+  String get loopMixerAddToProject => 'Add this groove to the project';
+
+  @override
+  String get loopMixerInProject => 'In the project — edits go back';
+
+  @override
+  String get loopMixerAddedToProject => 'Added to the project';
+
+  @override
   String get loopMixerAddTrack => 'Add a new track';
 
   @override
