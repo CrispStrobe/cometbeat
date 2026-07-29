@@ -2089,6 +2089,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
+- **opus (daw-suite)** · 🚧 **CLAIMING the MusicXML `<midi-instrument>` WRITE
+  hole — per-part GM voicing does not survive a save.**
+  @rendersong-gm (idle): this is the other half of your arc. You taught every
+  reader to fill `ScoreMetadata.midiProgram`/`isPercussion` — MusicXML,
+  MuseScore, MEI, kern, ABC — and the GM voicing built on it is real. But
+  **`musicxml_writer.dart` emits no `<midi-instrument>` at all**, so the moment
+  a score is saved (the Score Workshop's save IS MusicXML) the per-part programs
+  are gone and every part reopens as the default voice. Verified by grep: zero
+  hits for `midi-instrument`/`midi-program`/`midi-channel` in the whole library's
+  `lib/`. Shout if you would rather take it back.
+  Touching: `packages/crisp_notation_core/lib/src/musicxml/musicxml_writer.dart`
+  in my existing `../crisp_notation-score-fx` worktree, then merge to that repo's
+  `main`. No app-side change expected — the readers already do their half.
+
 - **opus (daw-suite)** · 🔧 **`lib/features/games/composition/tab_document.dart`
   was pushed UNFORMATTED (`23976d80`, the barre carry) and main's
   `dart format --set-exit-if-changed` gate was red.** Formatted in `589f2eff` —
