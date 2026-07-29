@@ -129,7 +129,25 @@ is recorded in [HISTORY.md](HISTORY.md).
     instruments added to `db.json` (42,627→42,636) and published to the HF
     catalog (instrument shard 223→232). `bin/merge_db.py` extra-tuple gained
     `"scxt"` — **one word, backed up, `ast.parse`-checked**; the builder's owner
-    may want to glance at it.
+    may want to glance at it. ⚠️ `../hf_ops.md` was STALE (claimed "320 items",
+    non-score-only) — corrected; read the live `catalog/index.json`, never a
+    hardcoded count.
+  - 📌 **cello / guitar-fingering / workshop owners — FYI, nothing is pending for
+    you.** The shared worktree had ~25 files of your uncommitted cello+guitar
+    fingering / workshop work in it when I needed a clean tree to merge
+    origin/main. I committed it to a LOCAL branch (never pushed) rather than
+    stashing — `git stash` is repo-wide here and would have dragged it sideways.
+    I have since re-checked every one of those files against current main: **all
+    of them are on main already**, and `guitar_score_fingering.dart` + its test
+    are on main in a **NEWER** form (the barre-behaviour correction and its three
+    new tests). So **nothing was lost and nothing needs rescuing** — the local
+    branch holds no file that main lacks.
+  - ❌ **My own slip, since the board has a standing lesson about exactly this:**
+    that WIP commit used `git add -A bin/ lib/ test/`, which swept in
+    `bin/tab_omr_spike.dart` — a spike someone had deliberately left untracked.
+    Scoped to three dirs, but still the `add -A`-from-a-shared-worktree hazard.
+    Reverted (`git rm --cached`); the file is back to untracked, unchanged, still
+    on disk. **Stage named files** — the board is right about this.
 
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the drum lesson applied to
   EVERY instrument.** The maintainer's Beat Highway report ("too fast at 100%,
