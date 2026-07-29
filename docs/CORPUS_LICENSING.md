@@ -393,6 +393,48 @@ Every line here is a *licence/coverage* statement; detail per source follows.
   — least of all for the engine that produced it, which would measure
   self-consistency rather than accuracy. Registry: `jukebox-omr-eval.json`.
 
+- **CPDL / ChoralWiki — 2,224 scores INGESTED, 1,502 held (2026-07-29).** The
+  largest single addition since PDMX, and now our second-largest MusicXML source.
+  Choral repertoire: early-American singing-school (William Billings 212, Oliver
+  Holden 194, Daniel Read 132, Samuel Holyoke 120) plus Renaissance polyphony
+  (Marenzio 79). 218 distinct composers, 1,608 rows carrying a lyricist.
+  - ⚠️ **LICENCE IS PER EDITION, NOT PER PAGE — this is the whole game.** A CPDL
+    page hosts one edition per contributor, each with its own `{{Copy|…}}`.
+    *10 catches (Henry Purcell)* carries a **Public Domain** edition
+    (`Purcell_10Catches.mxl`) AND a **CPDL-licensed** one (`Purc-sweet.mxl`).
+    A per-page filter would either ship the CPDL file or drop the PD one; ours
+    binds each `{{CPDLno|…}}` block's licence to the `[[Media:…]]` links inside
+    that block. Verified after ingest: the PD file is in `db.json`, the
+    CPDL-licensed sibling is not.
+  - **Licence distribution over 54,372 editions:** CPDL(GPL-derived) 31,521 ·
+    Personal 11,050 · **Public Domain 5,662** · CC BY-NC 2,168 · CC BY-NC-ND 784
+    · CC BY-SA 527 · Religious 430 · GnuGPL 163 · CC BY-ND 154 · Free Art 107 ·
+    **CC BY 102** · CC0. Shippable = 5,769 → 3,791 after dropping PDF-only
+    editions and 91 files absent from the dump.
+  - ⚠️ **CC BY-ND is excluded specifically because WE CONVERT FORMATS.** ND
+    forbids derivatives and a format conversion is one. Easy to wave through as
+    "attribution-only"; it is not.
+  - **Axis 2 gates on composer, arranger, lyricist AND translator.** CPDL records
+    all four and **2,887 of the 3,791** name a lyricist — this is choral music,
+    nearly every page has a text. Gating on composer alone would repeat the
+    Internet Jukebox songbook mistake at ten times the scale. Result: 2,289
+    cleared (2,279 via Wikidata life+70, 10 anonymous pre-1900), 1,502 held
+    (1,333 unresolvable names, 148 died after 1955, 21 anonymous without a
+    pre-1900 date).
+  - **Parse-validated before ingest: 3,713/3,791 (98.0%)** through
+    `crisp_notation`; the manifest additionally drops the 65 that fail or read
+    empty, so every shipped row is known-readable. `.mxl`/`.mscz` are unwrapped
+    with the pure-Dart zip readers — no MuseScore or LilyPond binary anywhere.
+  - **Tiering is mixed, unlike previous sources:** 2,208 Tier A (Public Domain /
+    CC0, no attribution owed) + 16 Tier B (CC BY, attribution = the *editor*,
+    who made the engraving the licence covers — not the long-dead composer). All
+    16 carry attribution, so none are silently dropped by the ship gate.
+  - The other **31,521 editions under the CPDL licence** (GPL-derived copyleft)
+    are Tier C → local-only under the current `emit_catalog` gate, which ships
+    A|B. A large reserve if Tier C is ever revisited.
+  - Held editions live only in `cpdl-probation.json`, never in `db.json`, so a
+    later pass can widen the set without a rebuild.
+
 ### Safely reachable next — clean, identified, not yet ingested
 
 - **OpenScore Lieder — the rest of the CC0 set** beyond the 1,350 shipped, as the
