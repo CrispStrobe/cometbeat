@@ -2609,6 +2609,33 @@ class _TabWorkshopScreenState extends State<TabWorkshopScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // The barre row, above the chord names — where an engraver puts it.
+          // Shown ONLY when something in this track has a barre, so a tab that
+          // never barres does not carry an empty band down the page.
+          if (_doc.columns.any((c) => c.barreFret != null))
+            Row(
+              children: [
+                const SizedBox(width: 40),
+                for (int c = 0; c < _doc.columns.length; c++)
+                  SizedBox(
+                    width: 34,
+                    child: Text(
+                      // The SAME printed form the engraver uses — TabBarre owns
+                      // it, so the grid and the staff can never disagree.
+                      _doc.columns[c].barreFret == null
+                          ? ''
+                          : 'C${TabBarre('', _doc.columns[c].barreFret!).roman}',
+                      key: ValueKey<String>('tab-barre-$c'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.tertiary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           // Chord-name header aligned above the columns.
           Row(
             children: [

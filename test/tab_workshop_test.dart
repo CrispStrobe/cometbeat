@@ -1000,6 +1000,45 @@ void main() {
       expect(tester.widget<Text>(digit).data, '1');
     });
 
+    testWidgets('a barre is NAMED and SHOWN when the fingering pass runs',
+        (tester) async {
+      await pumpGame(tester, const TabWorkshopScreen());
+      final tab = _tab(tester);
+
+      // An F barre shape on the first column: strings 5..0 at frets
+      // 1,3,3,2,1,1 — three notes share fret 1, which IS the barre.
+      for (final (string, fret) in const [
+        (5, 1),
+        (4, 3),
+        (3, 3),
+        (2, 2),
+        (1, 1),
+        (0, 1),
+      ]) {
+        tab.selectCell(0, string);
+        await tester.pump();
+        tab.enterFret(fret);
+        await tester.pump();
+      }
+
+      expect(
+        find.byKey(const ValueKey<String>('tab-barre-0')),
+        findsNothing,
+        reason: 'no barre row until something has a barre',
+      );
+
+      tab.addLeftFingerings();
+      await tester.pumpAndSettle();
+
+      final mark = find.byKey(const ValueKey<String>('tab-barre-0'));
+      expect(mark, findsOneWidget);
+      expect(
+        tester.widget<Text>(mark).data,
+        'CI',
+        reason: 'the barre lies at the first fret, printed as an engraver does',
+      );
+    });
+
     testWidgets('an open string shows no digit — a 0 beside a 0 fret is noise',
         (tester) async {
       await pumpGame(tester, const TabWorkshopScreen());
