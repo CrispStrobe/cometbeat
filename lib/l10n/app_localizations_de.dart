@@ -1774,6 +1774,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loopMixerTempo => 'Tempo';
 
   @override
+  String get loopMixerArrangementStrip => 'Dein Song bisher';
+
+  @override
   String get loopMixerArrange => 'Abschnitte';
 
   @override

@@ -1483,7 +1483,24 @@ prefix.
   (loop-d1d4).** Four options were laid out; the call is **(a) then (b), defer
   (c) and (d)**, plus **lift the 4-section limit**, and the arrangement strip is
   **read-only now, an editor soon**.
-  * ⬜ **(a) Fix the scale mismatch in the grids that exist.** The lane strip
+  * ✅ **(a) SHIPPED.** The strip draws `timing.totalSteps` — the number the
+    engine already had and the UI was ignoring — sharing the width at the 2-bar
+    default (so every existing lane test still taps the same cells) and
+    scrolling at a fixed cell width when polymeter makes the loop longer.
+    ⚠️ **The real bug was not the drawing.** A 16-step lane on a 48-step loop
+    made `withStep(20, …)` out of range, and `withStep` returns the lane
+    UNCHANGED — so an edit past step 16 did nothing at all, silently, and only
+    on long loops. Editing now EXTENDS a short lane by tiling it first, which is
+    what it already sounded like since `at()` wraps.
+  * ✅ **(b) SHIPPED, read-only** — section blocks along time, width
+    proportional to repeats, the playing one highlighted, empty slots closed up
+    (the song is what PLAYS, not the slot array). Editing is the next step.
+  * ✅ **Section limit lifted** — `kLoopSectionSlots = 8`, and it is now a
+    LAYOUT budget rather than a model limit: the pads row and the session grid
+    both scroll, so raising it again is a one-line change. ⚠️ Raising it was
+    what made the session grid overflow by 93px — the scrolling is not
+    decoration, it is what the lift required.
+  * *(original scoping below)* ⬜ **(a) Fix the scale mismatch in the grids that exist.** The lane strip
     renders a hard-coded `kPatternSteps` (16) — but polymeter makes the loop
     `lcm(16, trackLengths)`, i.e. **up to 48**. Lanes tile, so nothing is wrong,
     but the back two-thirds of a polymetric loop cannot be seen or edited. A

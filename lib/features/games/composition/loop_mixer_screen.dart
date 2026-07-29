@@ -122,6 +122,16 @@ import 'package:flutter/services.dart'
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// How many sections (scenes) a groove can hold.
+///
+/// WS-L2 — was a hard-coded 4, which made any song view four blocks long. The
+/// maintainer lifted it. Eight rather than unbounded because these are SLOTS,
+/// not a growable list: the pads row and the session grid draw one column each,
+/// and a row that scrolls forever is a worse answer than a row that ends. Both
+/// of those now scroll, so raising this again is a one-line change — the number
+/// is a layout budget, not a model limit.
+const int kLoopSectionSlots = 8;
+
 /// WS-T3 — what Loop Studio actually does, so its keymap sheet lists only
 /// shortcuts that work here.
 const Set<AppIntent> kLoopIntents = {
@@ -290,6 +300,10 @@ abstract interface class LoopMixerTester {
   /// This track's loop length in steps, and the whole loop's — so a test can
   /// prove the badge changed what actually plays, not just what is drawn.
   int trackSteps(String id);
+
+  /// Steps [id] through the allowed pattern lengths — the badge's action, and
+  /// the only way to make the loop polymetric from outside.
+  void cycleTrackSteps(String id);
   int get loopSteps;
 
   /// The "Sound & Feel" inspector (holds tempo/style/harmony/key/scale/kit/
@@ -864,6 +878,8 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   @override
   int trackSteps(String id) => _engine.trackSteps(id);
   @override
+  void cycleTrackSteps(String id) => _cycleTrackSteps(id);
+  @override
   int get loopSteps => _engine.timing.totalSteps;
 
   @override
@@ -1251,16 +1267,17 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   /// section. The export has always used 2, and that difference stays until
   /// someone sets a value here, at which point BOTH follow it — a section that
   /// plays four times on screen and twice in the export would be a bug.
-  final List<int> _sceneRepeats = List<int>.filled(4, 1);
+  final List<int> _sceneRepeats = List<int>.filled(kLoopSectionSlots, 1);
 
   /// Passes completed on the current section.
   int _chainPass = 0;
   String? _soloTrack;
   Set<String>? _enabledBeforeSolo;
 
-  // Section/scene grid (§G-1): 4 snapshot slots of the live layer set. Tap a
+  // Section/scene grid (§G-1): snapshot slots of the live layer set. Tap a
   // filled scene to relaunch it; a chain plays them in sequence at each seam.
-  final List<GrooveScene?> _scenes = List<GrooveScene?>.filled(4, null);
+  final List<GrooveScene?> _scenes =
+      List<GrooveScene?>.filled(kLoopSectionSlots, null);
   bool _chaining = false;
   int _chainIndex = 0;
 
@@ -4440,6 +4457,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _sceneRow(l10n),
+              _arrangementStrip(l10n),
               _sceneGrid(l10n),
             ],
           ),
@@ -4480,18 +4498,78 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final track in _engine.tracks)
+      // WS-L2 — ONE scroll view around the whole grid rather than one per row.
+      // Per-row scrolling would let the rows drift out of step, and a session
+      // grid whose columns do not line up is worse than one you cannot see all
+      // of. The section count is a layout budget now (`kLoopSectionSlots`), so
+      // this is what lets that number be raised again without a redesign.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final track in _engine.tracks)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 64,
+                      child: Text(
+                        _trackLabel(l10n, track.id),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                    for (var i = 0; i < _scenes.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        child: GestureDetector(
+                          key: Key('loop-cell-${track.id}-$i'),
+                          onTap: _scenes[i] == null
+                              ? null
+                              : () => _toggleSceneTrack(i, track.id),
+                          child: Container(
+                            width: 30,
+                            height: 18,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _sceneHasTrack(i, track.id)
+                                  ? _colorFor(track.id)
+                                  : scheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: _sceneHasTrack(i, track.id)
+                                ? Text(
+                                    String.fromCharCode(
+                                      65 +
+                                          (_scenes[i]!.variants[track.id] ?? 0),
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            // Repeats: how many times each section plays before the chain moves
+            // on. Only meaningful once sections are chained, but shown always so
+            // it is discoverable before you turn chaining on.
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 1),
+              padding: const EdgeInsets.only(top: 4),
               child: Row(
                 children: [
                   SizedBox(
                     width: 64,
                     child: Text(
-                      _trackLabel(l10n, track.id),
+                      l10n.loopMixerRepeats,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelSmall,
@@ -4501,78 +4579,27 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 3),
                       child: GestureDetector(
-                        key: Key('loop-cell-${track.id}-$i'),
+                        key: Key('loop-repeats-$i'),
                         onTap: _scenes[i] == null
                             ? null
-                            : () => _toggleSceneTrack(i, track.id),
-                        child: Container(
+                            : () => _cycleSceneRepeats(i),
+                        child: SizedBox(
                           width: 30,
-                          height: 18,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: _sceneHasTrack(i, track.id)
-                                ? _colorFor(track.id)
-                                : scheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(4),
+                          height: 16,
+                          child: Center(
+                            child: Text(
+                              _scenes[i] == null ? '' : '×${_sceneRepeats[i]}',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
                           ),
-                          child: _sceneHasTrack(i, track.id)
-                              ? Text(
-                                  String.fromCharCode(
-                                    65 + (_scenes[i]!.variants[track.id] ?? 0),
-                                  ),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : null,
                         ),
                       ),
                     ),
                 ],
               ),
             ),
-          // Repeats: how many times each section plays before the chain moves
-          // on. Only meaningful once sections are chained, but shown always so
-          // it is discoverable before you turn chaining on.
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 64,
-                  child: Text(
-                    l10n.loopMixerRepeats,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                ),
-                for (var i = 0; i < _scenes.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: GestureDetector(
-                      key: Key('loop-repeats-$i'),
-                      onTap: _scenes[i] == null
-                          ? null
-                          : () => _cycleSceneRepeats(i),
-                      child: SizedBox(
-                        width: 30,
-                        height: 16,
-                        child: Center(
-                          child: Text(
-                            _scenes[i] == null ? '' : '×${_sceneRepeats[i]}',
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -4596,6 +4623,33 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     // Off, then darker and darker, then thinner and thinner.
     AutomationParam.filter: [0.5, 0.25, 0.0, 0.75, 1.0],
   };
+
+  /// How many steps the lane strip draws: the loop's ACTUAL length.
+  ///
+  /// WS-L2 (a). This was a hard-coded `kPatternSteps`, i.e. always 16 — but
+  /// polymeter makes the rendered loop `lcm(16, trackLengths)`, up to 48. Lanes
+  /// tile, so nothing SOUNDED wrong; the back two-thirds of a polymetric loop
+  /// simply could not be seen or edited. `timing.totalSteps` already carried
+  /// the right number and the strip was ignoring it.
+  int get _stripSteps {
+    final steps = _engine.timing.totalSteps;
+    return steps < kPatternSteps ? kPatternSteps : steps;
+  }
+
+  /// [id]'s lane for [param], ready to have [step] written into it.
+  ///
+  /// Extends a short lane to the strip's length FIRST, by tiling it — which is
+  /// exactly what it already sounds like, since `AutomationLane.at` wraps.
+  /// Without this, editing step 20 of a 48-step loop on a 16-step lane calls
+  /// `withStep` out of range, which returns the lane UNCHANGED: the tap would
+  /// do nothing at all, silently, and only on long loops.
+  AutomationLane _laneForEdit(String id, AutomationParam param) {
+    final steps = _stripSteps;
+    final existing = _engine.automationFor(id, param);
+    if (existing == null) return AutomationLane.neutral(param, steps);
+    if (existing.values.length >= steps) return existing;
+    return AutomationLane([for (var i = 0; i < steps; i++) existing.at(i)]);
+  }
 
   /// Which parameter the one strip is currently editing.
   ///
@@ -4622,8 +4676,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
   void _cycleAutomationStep(String id, int step, [AutomationParam? param]) {
     final p = param ?? _autoParam;
     final ladder = _ladders[p]!;
-    final existing = _engine.automationFor(id, p) ??
-        AutomationLane.neutral(p, kPatternSteps);
+    final existing = _laneForEdit(id, p);
     final current = existing.at(step);
     var i = ladder.indexWhere((v) => (v - current).abs() < 1e-6);
     if (i < 0) i = 0;
@@ -4664,7 +4717,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final step = (_cursorStep ?? 0) + (_cursorStep == null ? 0 : dStep);
     setState(() {
       _cursorTrack = track.clamp(0, tracks.length - 1);
-      _cursorStep = step.clamp(0, kPatternSteps - 1);
+      _cursorStep = step.clamp(0, _stripSteps - 1);
     });
     return true;
   }
@@ -4688,9 +4741,7 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
     final step = _cursorStep;
     if (id == null || step == null) return false;
     final value = (digit / 9).clamp(0.0, 1.0);
-    final existing = _engine.automationFor(id, _autoParam) ??
-        AutomationLane.neutral(_autoParam, kPatternSteps);
-    final next = existing.withStep(step, value);
+    final next = _laneForEdit(id, _autoParam).withStep(step, value);
     setState(() {
       // The same drop-when-neutral rule the tap path uses — "no lane" has to
       // stay distinguishable from "a flat lane", or an un-automated groove
@@ -4788,50 +4839,77 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
                       ),
                     ),
                   ),
-                  for (var s = 0; s < kPatternSteps; s++)
+                  // WS-L2 (a) — the strip draws the loop's REAL length. At the
+                  // 2-bar default that is 16 and the cells share the width, as
+                  // before; a polymetric loop is up to 48, which cannot be
+                  // shared legibly, so those scroll at a fixed cell width. The
+                  // default case is deliberately unchanged rather than
+                  // "scrolling always" — every existing lane test taps cells by
+                  // key and a horizontally scrolled strip would move them.
+                  if (_stripSteps > kPatternSteps)
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 1),
-                        child: GestureDetector(
-                          key: Key('loop-auto-${track.id}-$s'),
-                          onTap: () {
-                            // A tap moves the cursor too, so the keyboard
-                            // carries on from wherever the finger left off
-                            // rather than from some remembered other cell.
-                            _cursorTrack = _engine.tracks.indexOf(track);
-                            _cursorStep = s;
-                            _cycleAutomationStep(track.id, s);
-                          },
-                          child: SizedBox(
-                            height: 18,
-                            child: _cursorTrack ==
-                                        _engine.tracks.indexOf(track) &&
-                                    _cursorStep == s
-                                ? DecoratedBox(
-                                    // An outline rather than a fill: the cell
-                                    // already uses colour to say what its VALUE
-                                    // is, and a second colour on top would be
-                                    // two meanings in one square.
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        width: 2,
-                                      ),
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                    child: _autoCell(track.id, s),
-                                  )
-                                : _autoCell(track.id, s),
-                          ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (var s = 0; s < _stripSteps; s++)
+                              SizedBox(
+                                width: 16,
+                                child: _autoCellSlot(l10n, track, s),
+                              ),
+                          ],
                         ),
                       ),
-                    ),
+                    )
+                  else
+                    for (var s = 0; s < _stripSteps; s++)
+                      Expanded(child: _autoCellSlot(l10n, track, s)),
                 ],
               ),
             ),
         ],
+      );
+
+  /// One tappable cell of the lane strip.
+  ///
+  /// Pulled out of the row so the strip can lay itself out two ways — shared
+  /// width when the loop fits, fixed width and scrolling when it does not —
+  /// without the cell itself being written twice.
+  Widget _autoCellSlot(AppLocalizations l10n, LoopTrack track, int s) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        child: GestureDetector(
+          key: Key('loop-auto-${track.id}-$s'),
+          onTap: () {
+            // A tap moves the cursor too, so the keyboard
+            // carries on from wherever the finger left off
+            // rather than from some remembered other cell.
+            _cursorTrack = _engine.tracks.indexOf(track);
+            _cursorStep = s;
+            _cycleAutomationStep(track.id, s);
+          },
+          child: SizedBox(
+            height: 18,
+            child: _cursorTrack == _engine.tracks.indexOf(track) &&
+                    _cursorStep == s
+                ? DecoratedBox(
+                    // An outline rather than a fill: the cell
+                    // already uses colour to say what its VALUE
+                    // is, and a second colour on top would be
+                    // two meanings in one square.
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: _autoCell(track.id, s),
+                  )
+                : _autoCell(track.id, s),
+          ),
+        ),
       );
 
   /// One lane cell, drawn the way its parameter actually behaves.
@@ -5322,6 +5400,83 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
         ],
       );
 
+  /// WS-L2 (b) — the arrangement, as a picture of time.
+  ///
+  /// The data has been here since sections shipped: which sections exist, in
+  /// what order the chain plays them, and how many passes each gets. It was
+  /// only ever readable as a row of lettered pads and a matrix, so a player
+  /// could build a song and never see its SHAPE.
+  ///
+  /// READ-ONLY on purpose (the maintainer's call): this is the cheapest way to
+  /// find out whether a song-level view is the right idea before it becomes an
+  /// editor. Drag-to-reorder is the next step, not this one.
+  ///
+  /// Width is proportional to repeats, because that IS the length of the
+  /// section in time — a block that played four times drawn the same size as
+  /// one that played once would be a picture of the wrong thing.
+  Widget _arrangementStrip(AppLocalizations l10n) {
+    final blocks = [
+      for (var i = 0; i < _scenes.length; i++)
+        if (_scenes[i] != null) (i, _sceneRepeats[i]),
+    ];
+    if (blocks.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.loopMixerArrangementStrip,
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(height: 4),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final (index, repeats) in blocks)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: Container(
+                      key: Key('loop-arrange-$index'),
+                      // 18px per pass: a section that plays four times is four
+                      // times as wide, and the shortest is still readable.
+                      width: 18.0 * repeats + 10,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        // The section PLAYING now is the one a player is
+                        // looking for; everything else is context.
+                        color: _chaining && _chainIndex == index
+                            ? scheme.primary
+                            : scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        repeats > 1
+                            ? '${String.fromCharCode(65 + index)}×$repeats'
+                            : String.fromCharCode(65 + index),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: _chaining && _chainIndex == index
+                              ? scheme.onPrimary
+                              : scheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// WS-L5 — puts one track's pattern onto another.
   ///
   /// Two taps: the track you want to copy FROM, then the track to put it on.
@@ -5480,47 +5635,60 @@ class _LoopMixerScreenState extends State<LoopMixerScreen>
           ),
         ),
         const SizedBox(width: 8),
-        for (var i = 0; i < _scenes.length; i++)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: Tooltip(
-              message: l10n.loopMixerScenesHint,
-              child: GestureDetector(
-                onTap: () => _launchScene(i),
-                onLongPress: () => _captureScene(i),
-                // A rounded square (NOT a CircleAvatar) so these scene letters
-                // stay distinct from the variant badges in widget finders.
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: _scenes[i] == null
-                        ? scheme.surfaceContainerHighest
-                        : (_chaining && _chainIndex == i
-                            ? scheme.primary
-                            : scheme.primaryContainer),
-                    borderRadius: BorderRadius.circular(8),
-                    // Armed for the next seam — the same amber the track cards
-                    // use, so "waiting for the beat" reads the same everywhere.
-                    border: _pendingScene == i
-                        ? Border.all(color: Colors.amber, width: 3)
-                        : null,
-                  ),
-                  child: Text(
-                    String.fromCharCode(65 + i),
-                    style: TextStyle(
-                      color: _scenes[i] == null
-                          ? scheme.outline
-                          : scheme.onPrimaryContainer,
-                      fontWeight: FontWeight.bold,
+        // WS-L2 — the pads scroll rather than being capped by what fits. The
+        // label stays put: it is the row's meaning, and a heading that scrolls
+        // away leaves a strip of unlabelled squares.
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            reverse: true,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < _scenes.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: Tooltip(
+                      message: l10n.loopMixerScenesHint,
+                      child: GestureDetector(
+                        onTap: () => _launchScene(i),
+                        onLongPress: () => _captureScene(i),
+                        // A rounded square (NOT a CircleAvatar) so these scene letters
+                        // stay distinct from the variant badges in widget finders.
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: _scenes[i] == null
+                                ? scheme.surfaceContainerHighest
+                                : (_chaining && _chainIndex == i
+                                    ? scheme.primary
+                                    : scheme.primaryContainer),
+                            borderRadius: BorderRadius.circular(8),
+                            // Armed for the next seam — the same amber the track cards
+                            // use, so "waiting for the beat" reads the same everywhere.
+                            border: _pendingScene == i
+                                ? Border.all(color: Colors.amber, width: 3)
+                                : null,
+                          ),
+                          child: Text(
+                            String.fromCharCode(65 + i),
+                            style: TextStyle(
+                              color: _scenes[i] == null
+                                  ? scheme.outline
+                                  : scheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
+              ],
             ),
           ),
-        const Spacer(),
+        ),
         IconButton(
           icon: Icon(
             Icons.repeat,

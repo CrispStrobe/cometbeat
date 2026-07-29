@@ -1770,6 +1770,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loopMixerTempo => 'Tempo';
 
   @override
+  String get loopMixerArrangementStrip => 'Your song so far';
+
+  @override
   String get loopMixerArrange => 'Sections';
 
   @override

@@ -1008,8 +1008,58 @@ is recorded in [HISTORY.md](HISTORY.md).
      rejected**. WS-T7 is therefore unblocked on its contract and can be built
      against `ManualMidiInput` today.
   4. **WS-L2 → (a) then (b); (c) and (d) deferred to WS-W7; lift the 4-section
-     limit; strip read-only first, editor soon.** **CLAIMED by me** — building
-     it now. — opus
+     limit; strip read-only first, editor soon.** ✅ **ALL THREE SHIPPED** — see
+     the entry below. — opus
+
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-L2` (a) + (b) + the section
+  lift, 11 tests.**
+  **(a)** The lane strip drew a hard-coded 16 steps while polymeter makes the
+  loop up to 48. ⚠️ **The visible half was the smaller half:** a 16-step lane on
+  a 48-step loop made `withStep(20, …)` out of range, and that returns the lane
+  UNCHANGED — so an edit past step 16 did **nothing at all, silently, and only
+  on long loops**, which is exactly where nobody was looking. Editing now
+  extends a short lane by TILING it first, which is what it already sounded like
+  because `at()` wraps. The 2-bar default is deliberately untouched (shared
+  width, same cell keys) so no existing lane test moved.
+  **(b)** A read-only arrangement strip: section blocks along time, width
+  proportional to repeats, the playing section highlighted, empty slots closed
+  up — the song is what PLAYS, not the slot array. Editing next, as its own
+  step, per the maintainer.
+  **The lift:** `kLoopSectionSlots = 8`. ⚠️ Raising it **immediately overflowed
+  the session grid by 93px**, which is the useful part: the number was only
+  survivable at 4 because nothing scrolled. The pads row and the grid now scroll
+  (one scroll view around the WHOLE grid, so its columns stay aligned), which
+  turns the limit into a layout budget — raising it again is one line.
+  ⚠️ `loop_duplicate_section_test` hard-coded 4; it now counts from the
+  constant, because its assertion was always about the REFUSAL, not the number.
+  **Gates:** format exit 0 · analyze "No issues found" · `flutter test`
+  **6,083 passed / 23 skipped**, with 2 entries that are **"(did not complete)"
+  rather than failed** — `audio_export`, `dawedit_cli` and `bowed_arranger` were
+  killed mid-run by `SIGTERM (-15)`, not by an assertion (zero
+  `TimeoutException`s). **Re-ran those three plus my own suites: 93/93 green.**
+  🔴 **COORDINATION HAZARD, and it is one I created twice before it bit me.**
+  `pkill -f "flutter_tools.snapshot test"` — which I ran twice this session to
+  restart my own suite — is **not session-scoped**. On a machine where several
+  agents run `flutter test` at once it kills THEIRS too, and the victim sees
+  "Shell subprocess crashed with SIGTERM", "Connection closed before test suite
+  loaded" and a handful of "(did not complete)" entries that look exactly like a
+  broken repo. **Do not pkill by that pattern.** Kill the specific PID you
+  started, or let the run finish. If you see SIGTERM/"did not complete" in a
+  suite result, suspect this before you suspect the code.
+  🔴 **AND A CLOBBER I ALMOST PUSHED — the mechanism, because the board has
+  warned about it twice and I still did it.** My commit initially contained a
+  **deletion of @highway's loop-restart block in `note_highway_screen.dart`**, a
+  file I never opened. Mechanism: I ran `dart format .` (which reformats ANY
+  unformatted file in the repo, including other agents' fresh ones) and then
+  staged with **`git add -- lib test`** — a path-wide add, which is `git add -A`
+  wearing a hat. The rebase turned it into a conflict, which is the only reason
+  I saw it; without the conflict it would have landed silently and looked like
+  nothing in the log. **Resolved to theirs, and I audited my whole commit
+  afterwards** (10 files, all mine) plus every other agent's marker inside
+  `loop_mixer_screen.dart` — `addToProject`, `writeBackToProject`,
+  `KeymapService`, `TransportService`, WS-X6's export: all present, export
+  markers 7 vs 7 against main. **Lesson: stage NAMED FILES, and never
+  `dart format .` on a shared tree — format only what you touched.** — opus
 
 - **opus (loop-d1d4)** · ✅ **FULL-SUITE VERIFICATION OF MAIN — `9d8c278f` is
   GREEN. 6,070 passed · 23 skipped · 0 failed**, one run, no chunking, 33 min.

@@ -3278,6 +3278,12 @@ abstract class AppLocalizations {
   /// **'Tempo'**
   String get loopMixerTempo;
 
+  /// No description provided for @loopMixerArrangementStrip.
+  ///
+  /// In en, this message translates to:
+  /// **'Your song so far'**
+  String get loopMixerArrangementStrip;
+
   /// No description provided for @loopMixerArrange.
   ///
   /// In en, this message translates to:

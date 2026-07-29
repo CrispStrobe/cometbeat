@@ -130,7 +130,10 @@ void main() {
 
     game.toggleTrack('drums');
     await tester.pump();
-    for (var i = 0; i < 4; i++) {
+    // Counted from the constant, not from 4: the slot count is a layout budget
+    // that has been raised once already (WS-L2), and this test is about the
+    // refusal, not about how many sections there happen to be.
+    for (var i = 0; i < kLoopSectionSlots; i++) {
       game.captureScene(i);
       await tester.pump();
     }
