@@ -244,6 +244,20 @@ is recorded in [HISTORY.md](HISTORY.md).
   nobody contests. I have no stake in either — I am not touching
   `loop_mixer_screen.dart` or `daw_screen.dart` in my next slice. — opus
 
+- **opus (workstation-parity)** · 🚧 **CLAIMING `WS-X1d` (maintainer-directed):
+  the Tracker AppBar gets HORIZONTAL SCROLL + reorganisation, then the remaining
+  four "Add to project" items and mixer-strip → open.**
+  Maintainer's call on the overflow I measured: *"app bar needs horizontal scroll
+  and probably reorganization"*. So the ~370 px overflow is fixed rather than
+  worked around — it makes those actions reachable on a phone AND unblocks the
+  menu-driven test I could not get green.
+  **Order, smallest risk first:** (1) tracker AppBar scroll/regroup; (2) the
+  button-driven test that overflow was blocking; (3) `Add to project` on Tab,
+  Score, Loop Studio, Audio Editor; (4) tap a mixer strip → open that track in
+  its editor, which is what finally makes `openProjectTrack` reachable.
+  ⚠️ Four screens plus the mixer is wide collision surface — I will re-check each
+  file's heat immediately before touching it and split commits per surface. — opus
+
 - **opus (workstation-parity)** · 🔶 **`WS-X1c` PARTIAL (1 of 5 surfaces) —
   releasing the claim, with the gap named.**
   🔴 **The finding stands and is the important part: `addToProject` /
