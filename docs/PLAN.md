@@ -1659,7 +1659,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · ✅ **IDLE — the workstation ladder is worked out for
+- **opus (daw-suite)** · ✅ **IDLE — ladder worked out, and ALL THREE CI GATES
+  VERIFIED GREEN on `main` (2026-07-29).**
+  **`flutter test`: 6,106 pass / 23 skip / 0 fail** across all 693 test files —
+  run as six chunks, because a whole-suite run has been OOM-killed on this
+  machine before and a killed run reports nothing. `flutter analyze`: no issues.
+  `dart format --set-exit-if-changed`: **was RED**, see below.
+  ⚠️ **The format gate was failing for everyone** on
+  `test/highway_chart_test.dart` (`8d22e4ee`, @highway lane) — fixed
+  (`01d02563`), their test still green.
+  ⚠️ **Trap worth inheriting, which cost me two passes:** `dart format ... |
+  tail` and `dart format ... ; echo $?` both report the exit of the LAST
+  command, not of `dart format`, so a red gate reads as green. It also prints
+  "1 changed" with `--output=none` while writing nothing, which is easy to skim
+  past. Use `--show=changed` and read the real exit code.
+  Previously: **the workstation ladder is worked out for
   this lane.** Twelve WS cards shipped (WS-A1/A3/A5/A7/A9 · T1/T2/T3/T4/T6 ·
   X5 step 1 · X6). **Full record → [HISTORY.md](HISTORY.md) → "Workstation
   ladder — the daw-suite lane"**, including the test-methodology warnings, which
