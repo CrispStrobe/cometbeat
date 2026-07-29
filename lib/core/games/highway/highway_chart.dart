@@ -345,3 +345,30 @@ HighwayChart highwayChartFromParts(
     beatsPerBar: first.beatsPerBar,
   );
 }
+
+/// A play-along chart as highway blocks — the bridge that lets the play-along
+/// screen draw its falling view with the shared [HighwayView] instead of a
+/// painter of its own.
+///
+/// A [PlayAlongChart] is one melodic line (it grades a monophonic pitch
+/// stream), so every event lands on voice 0 and carries no lane: the pitch axis
+/// IS the position, which is what a singer or a fretless player needs to see.
+HighwayChart highwayChartFromTargets(
+  List<({double startBeat, double beats, int midi})> notes, {
+  required String name,
+  required double bpm,
+  double beatsPerBar = 4,
+}) =>
+    HighwayChart(
+      name: name,
+      bpm: bpm,
+      beatsPerBar: beatsPerBar,
+      events: [
+        for (final n in notes)
+          HighwayEvent(
+            startBeat: n.startBeat,
+            beats: n.beats,
+            midi: n.midi,
+          ),
+      ]..sort((a, b) => a.startBeat.compareTo(b.startBeat)),
+    );

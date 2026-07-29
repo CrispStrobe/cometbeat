@@ -4,7 +4,10 @@
 // PlayAlongEngine; this screen drives the clock (a Ticker), feeds it the mic's
 // readings, and draws the score in one of four switchable views:
 //   • highway  — piano-roll: notes scroll past a fixed "now" line (pitch on Y)
-//   • falling  — vertical: notes fall toward a hit-line (like Falling Notes)
+//   • falling  — vertical: notes fall toward a hit-line. This one is now the
+//                SHARED HighwayView (pitch lane map) rather than a painter of
+//                its own — same widget the Note Highway tiles use, so a fix to
+//                the geometry or the skins lands in both places at once.
 //   • notation — a real engraved staff (crisp_notation) with a moving cursor
 //   • coach    — minimal: the current + next note, huge, for beginners
 //
@@ -22,6 +25,12 @@ import 'package:comet_beat/core/audio/metronome.dart';
 import 'package:comet_beat/core/audio/microphone_pitch_service.dart';
 import 'package:comet_beat/core/audio/pitch_analysis.dart';
 import 'package:comet_beat/core/audio/play_along.dart';
+import 'package:comet_beat/core/games/highway/highway_chart.dart'
+    show HighwayChart, highwayChartFromTargets;
+import 'package:comet_beat/core/games/highway/highway_grading.dart'
+    show HighwayDifficulty, HighwayNote, HighwayNoteState, HighwayRules;
+import 'package:comet_beat/core/games/highway/highway_lanes.dart'
+    show PitchLaneMap;
 import 'package:comet_beat/core/notation/bowed_arranger.dart';
 import 'package:comet_beat/core/notation/bowed_score_fingering.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -29,6 +38,10 @@ import 'package:comet_beat/core/services/progress_service.dart';
 import 'package:comet_beat/core/services/settings_service.dart';
 import 'package:comet_beat/core/services/sri_service.dart';
 import 'package:comet_beat/core/tuning.dart';
+import 'package:comet_beat/features/games/highway/highway_theme.dart'
+    show HighwayPalette, HighwaySkin;
+import 'package:comet_beat/features/games/highway/highway_view.dart'
+    show HighwayView;
 import 'package:comet_beat/features/games/note_reading/note_names.dart';
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
@@ -156,6 +169,51 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
   // there, since the whole point of the cello chart is to learn the fingering.
   bool _showFingerings = true;
   ({PitchCaptureError reason, String? detail})? _error;
+
+  /// The same targets as highway blocks, rebuilt when the tempo changes (beats
+  /// are tempo-independent, so only the bpm moves).
+  HighwayChart get _highwayChart => highwayChartFromTargets(
+        [
+          for (final n in _chart.notes)
+            (startBeat: n.startBeat, beats: n.beats, midi: n.midi),
+        ],
+        name: _chart.name,
+        bpm: _chart.bpm.toDouble(),
+      );
+
+  /// Difficulty maps across for the LOOK only (how much music is visible) —
+  /// the grading here stays the mic-based [PlayAlongEngine], whose windows are
+  /// in cents, not beats.
+  ///
+  /// ⚠ Note names are forced ON regardless of tier. The highway tiers drop them
+  /// as a difficulty scaffold, but this screen has always drawn them (it calls
+  /// these "the labelled highway / falling views"), and its default tier is
+  /// medium — so inheriting that rule would have silently removed the labels
+  /// from a shipped view for most users.
+  HighwayRules get _highwayRules => HighwayRules.of(
+        switch (_difficulty) {
+          PlayAlongDifficulty.easy => HighwayDifficulty.easy,
+          PlayAlongDifficulty.medium => HighwayDifficulty.medium,
+          PlayAlongDifficulty.hard => HighwayDifficulty.hard,
+        },
+      ).copyWith(showNoteNames: true);
+
+  /// The engine's per-note verdicts as highway note states, so the shared view
+  /// colours hit/missed/pending exactly as the play-along always did.
+  List<HighwayNote> _highwayNotes() {
+    final events = _highwayChart.events;
+    final out = <HighwayNote>[];
+    for (var i = 0; i < events.length && i < _engine.notes.length; i++) {
+      final note = HighwayNote(events[i]);
+      note.state = switch (_engine.notes[i].result) {
+        NoteResult.hit => HighwayNoteState.hit,
+        NoteResult.missed => HighwayNoteState.missed,
+        NoteResult.pending => HighwayNoteState.pending,
+      };
+      out.add(note);
+    }
+    return out;
+  }
 
   /// The chart rendered as engraved notation — built once (id 'n<i>' per note).
   late final Score _score = _buildScore();
@@ -626,15 +684,22 @@ class _PlayAlongScreenState extends State<PlayAlongScreen>
           child: const SizedBox.expand(),
         );
       case PlayAlongView.falling:
-        return CustomPaint(
-          painter: _FallingPainter(
-            engine: _engine,
-            liveMidi: liveMidi,
-            onPitch: onPitch,
-            scheme: scheme,
-            label: noteLabel,
+        return HighwayView(
+          chart: _highwayChart,
+          laneMap: PitchLaneMap.forChart(_highwayChart),
+          notes: _highwayNotes(),
+          beat: _engine.currentBeat,
+          rules: _highwayRules,
+          palette: HighwayPalette.of(
+            Theme.of(context).brightness == Brightness.dark
+                ? HighwaySkin.midnight
+                : HighwaySkin.sunrise,
           ),
-          child: const SizedBox.expand(),
+          // No rail: this view is graded by the MICROPHONE, so a tappable
+          // instrument at the hit line would be a lie about how it is played.
+          showRail: false,
+          livePitch: liveMidi,
+          noteNameOf: noteLabel,
         );
       case PlayAlongView.coach:
         return _CoachView(
@@ -786,109 +851,6 @@ class _HighwayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_HighwayPainter old) => true; // driven by the ticker
-}
-
-/// Vertical "falling notes": notes fall from the top toward a hit-line near the
-/// bottom; pitch runs left→right, time top→bottom.
-class _FallingPainter extends CustomPainter {
-  _FallingPainter({
-    required this.engine,
-    required this.liveMidi,
-    required this.onPitch,
-    required this.scheme,
-    required this.label,
-  });
-
-  final PlayAlongEngine engine;
-  final double? liveMidi;
-  final bool onPitch;
-  final ColorScheme scheme;
-  final String Function(int midi) label;
-
-  static const double _beatsVisible = 6;
-  static const double _hitFrac = 0.82;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final notes = engine.chart.notes;
-    if (notes.isEmpty) return;
-
-    var lo = notes.first.midi, hi = notes.first.midi;
-    for (final n in notes) {
-      lo = n.midi < lo ? n.midi : lo;
-      hi = n.midi > hi ? n.midi : hi;
-    }
-    lo -= 3;
-    hi += 3;
-    final span = (hi - lo).toDouble();
-    double x(num midi) => (midi - lo) / span * size.width;
-
-    final hitY = size.height * _hitFrac;
-    final pxPerBeat = hitY / _beatsVisible;
-    final beat = engine.currentBeat;
-    double y(double b) => hitY - (b - beat) * pxPerBeat;
-    final laneW = size.width / span;
-    final noteW = (laneW * 0.7).clamp(8.0, 44.0);
-
-    final lane = Paint()..color = scheme.onSurface.withValues(alpha: 0.06);
-    for (var m = lo - (lo % 12); m <= hi; m += 12) {
-      canvas.drawRect(Rect.fromLTWH(x(m) - 0.5, 0, 1, size.height), lane);
-    }
-
-    for (final ns in engine.notes) {
-      final n = ns.note;
-      final top = y(n.endBeat);
-      final bottom = y(n.startBeat);
-      if (bottom < 0 || top > size.height) continue;
-      final color = switch (ns.result) {
-        NoteResult.hit => Colors.green,
-        NoteResult.missed => scheme.error,
-        NoteResult.pending => ns == engine.activeNote
-            ? scheme.primary
-            : scheme.primary.withValues(alpha: 0.45),
-      };
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTRB(
-          x(n.midi) - noteW / 2,
-          top + 1,
-          x(n.midi) + noteW / 2,
-          bottom - 1,
-        ),
-        const Radius.circular(5),
-      );
-      canvas.drawRRect(rect, Paint()..color = color);
-      // Centre the note's name on the falling block.
-      _paintNoteLabel(
-        canvas,
-        label(n.midi),
-        Offset(x(n.midi), (top + bottom) / 2),
-        noteW * 0.5,
-        centerX: true,
-      );
-    }
-
-    canvas.drawLine(
-      Offset(0, hitY),
-      Offset(size.width, hitY),
-      Paint()
-        ..color = scheme.onSurface.withValues(alpha: 0.35)
-        ..strokeWidth = 2,
-    );
-
-    if (liveMidi != null) {
-      final lx = x(liveMidi!.clamp(lo.toDouble(), hi.toDouble()));
-      final p = Paint()..color = onPitch ? Colors.green : Colors.amber;
-      canvas.drawCircle(Offset(lx, hitY), 9, p);
-      canvas.drawCircle(
-        Offset(lx, hitY),
-        13,
-        Paint()..color = p.color.withValues(alpha: 0.25),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_FallingPainter old) => true;
 }
 
 /// Minimal "coach" view for beginners: the current target note big, the next

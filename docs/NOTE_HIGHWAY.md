@@ -328,10 +328,17 @@ shapes claiming the ukulele, whose lowest string is C4).
 
 **Deliberately NOT in this cut** — the honest list:
 
-* **S0 was not done.** `play_along_screen.dart` still owns its private
-  `_HighwayPainter`/`_FallingPainter`. The new layer was built alongside it
-  rather than under it, so nothing shipped regressed; pointing the play-along
-  screen at `HighwayView` is now a follow-up, not a prerequisite.
+* **S0 half done (2026-07-29).** `play_along_screen.dart`'s vertical
+  `_FallingPainter` is GONE — that view is now the shared `HighwayView` with a
+  `PitchLaneMap` (no rail: the view is mic-graded, so a tappable instrument at
+  the hit line would misrepresent how it is played), and the screen keeps its
+  `PlayAlongEngine`, its cents-based grading and its other three views. −102
+  lines of duplicate painter. ⚠ One deliberate non-inheritance: the highway
+  tiers drop note names as a difficulty scaffold, but this screen has always
+  drawn them and defaults to medium, so `showNoteNames` is forced on rather
+  than silently removing labels from a shipped view. Still private here: the
+  HORIZONTAL `_HighwayPainter` (time on X, pitch on Y) — a different geometry
+  the lane maps do not model yet.
 * ~~No Song Book entry yet.~~ **DONE 2026-07-29.** `SongScreen` and
   `MultiPartSongScreen` each carry a *Note Highway* action next to their
   existing ones, so the highway now plays the whole rights-cleared corpus and
