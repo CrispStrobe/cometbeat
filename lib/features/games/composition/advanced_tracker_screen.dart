@@ -92,6 +92,7 @@ import 'package:comet_beat/features/games/composition/oscilloscope_widget.dart';
 import 'package:comet_beat/features/games/composition/sample_waveform_widget.dart';
 import 'package:comet_beat/features/games/composition/tab_document.dart';
 import 'package:comet_beat/features/games/composition/tab_workshop_screen.dart';
+import 'package:comet_beat/features/games/composition/tracker_meter.dart';
 import 'package:comet_beat/features/games/composition/tracker_notation.dart';
 import 'package:comet_beat/features/games/composition/tracker_piano_roll.dart';
 import 'package:comet_beat/features/games/composition/tracker_screen.dart';
@@ -608,6 +609,11 @@ abstract interface class AdvancedTrackerTester {
   /// WS-T4 — open the piano roll for the cursor's channel.
   Future<void> openPianoRoll();
 
+  /// WS-T6 — the meter used to DRAW beat and bar lines. Null = follow the
+  /// pattern's own steps-per-beat at four beats to the bar.
+  TrackerMeter? get meterOverride;
+  void setMeterOverride(TrackerMeter? meter);
+
   /// Which order slot is selected.
   int get orderCursor;
   void setOrderCursor(int index);
@@ -826,9 +832,22 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// hex into vol/fx edits that column directly; Tab / ←→ move between fields.
   _CellField _field = _CellField.note;
 
-  /// The number of rows between highlighted "beat" lines in the grid (FT2's
-  /// row-highlight spacing; default = the beat, i.e. stepsPerBeat).
-  int? _highlightEvery;
+  /// WS-T6 — how rows group into beats and bars, for DRAWING.
+  ///
+  /// Was `int? _highlightEvery`, which was declared, read once, and assigned
+  /// nowhere — the "configurable" row-highlight spacing had never been
+  /// configurable. And the bar line was computed as `highlight * 4`, so
+  /// beats-per-bar was hardcoded: a pattern in 3/4 got its bars in the wrong
+  /// place regardless.
+  ///
+  /// Null means "follow the pattern", i.e. `stepsPerBeat` rows to the beat and
+  /// four beats to the bar. Display only — this changes no playback, which is
+  /// why it is here and not in `TrackerTiming`.
+  TrackerMeter? _meterOverride;
+
+  /// The meter in force, given the pattern's own steps-per-beat.
+  TrackerMeter _meterFor(int stepsPerBeat) =>
+      _meterOverride ?? TrackerMeter(rowsPerBeat: stepsPerBeat);
 
   /// The selected position in the order list (for reorder/insert/delete).
   int _orderCursor = 0;
@@ -1237,6 +1256,66 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void _addEmptyPattern() => addPattern();
   void _clonePattern() => addPattern(clone: true);
 
+  /// WS-T6 — choose how rows group into beats and bars.
+  ///
+  /// Display only, and the sheet says so: someone changing this is asking the
+  /// grid to be readable, not asking the song to play differently, and a
+  /// control that looked like it re-barred the music would be a lie.
+  Future<void> _pickMeter() async {
+    final current = _meterFor(_song.timing.stepsPerBeat);
+    final chosen = await showModalBottomSheet<TrackerMeter?>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            Text(
+              'Beats and bars',
+              style: Theme.of(sheetCtx).textTheme.titleMedium,
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Where the grid draws its beat and bar lines. This changes how '
+                'the pattern READS — it does not change how it plays.',
+              ),
+            ),
+            ListTile(
+              leading: Icon(
+                _meterOverride == null
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+              ),
+              title: const Text('Follow the pattern'),
+              subtitle: Text(
+                '${_song.timing.stepsPerBeat} rows a beat, 4 beats a bar',
+              ),
+              onTap: () => Navigator.of(sheetCtx).pop(),
+            ),
+            const Divider(),
+            for (final meter in kCommonMeters)
+              ListTile(
+                leading: Icon(
+                  _meterOverride == meter
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(meter.label),
+                onTap: () => Navigator.of(sheetCtx).pop(meter),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    // A null result is ambiguous — dismissed, or "follow the pattern" chosen —
+    // so both land on the same, harmless outcome rather than guessing.
+    setState(() => _meterOverride = chosen);
+    if (chosen != null && chosen != current) _syncPlayback();
+  }
+
   /// WS-T4 — the cursor's channel as a piano roll.
   ///
   /// A view beside the grid, not a replacement for it: the grid is exact and
@@ -1286,6 +1365,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                           _song.engine.cellAt(channel, r),
                       ],
                       playingRow: _clock.isRunning ? row : null,
+                      meter: _meterFor(_song.timing.stepsPerBeat),
                       rowHeight: 10,
                     ),
                   ),
@@ -3296,6 +3376,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   Future<void> openPianoRoll() => _showPianoRoll();
+
+  @override
+  TrackerMeter? get meterOverride => _meterOverride;
+
+  @override
+  void setMeterOverride(TrackerMeter? meter) =>
+      setState(() => _meterOverride = meter);
   @override
   void selectOrderSlot(int i) => setState(() => _orderCursor = i);
   @override
@@ -6252,6 +6339,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                           tooltip: 'Piano roll',
                           onPressed: _showPianoRoll,
                         ),
+                        // WS-T6 — where the bar lines go. Previously not
+                        // settable at all, and hardcoded to four beats.
+                        IconButton(
+                          icon: const Icon(Icons.straighten, size: 18),
+                          tooltip: 'Beats and bars',
+                          onPressed: _pickMeter,
+                        ),
                         IconButton(
                           icon: const Icon(Icons.expand_more, size: 18),
                           tooltip: l10n.trackerOrderPrevPat,
@@ -6638,9 +6732,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     ColorScheme scheme,
   ) {
     final isActive = row == activeRow;
-    final hl = _highlightEvery ?? stepsPerBeat;
-    final isBeat = row % hl == 0;
-    final isMeasure = row % (hl * 4) == 0;
+    final meter = _meterFor(stepsPerBeat);
+    // Bar before beat: every bar row is also a beat row.
+    final isMeasure = meter.isBar(row);
+    final isBeat = meter.isBeat(row);
     final Color? rowBg;
     if (_classic) {
       rowBg = isActive

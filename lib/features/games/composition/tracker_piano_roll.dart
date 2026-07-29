@@ -17,6 +17,7 @@
 // but obvious in a test.
 
 import 'package:comet_beat/core/audio/tracker_engine.dart';
+import 'package:comet_beat/features/games/composition/tracker_meter.dart';
 import 'package:flutter/material.dart';
 
 /// One sounding note: rows `[startRow, endRow)` at [midi].
@@ -98,6 +99,7 @@ class TrackerPianoRoll extends StatelessWidget {
     required this.cells,
     this.playingRow,
     this.rowHeight = 6,
+    this.meter = const TrackerMeter(),
   });
 
   final List<TrackerCell> cells;
@@ -107,6 +109,11 @@ class TrackerPianoRoll extends StatelessWidget {
 
   /// Vertical pixels per pattern row.
   final double rowHeight;
+
+  /// WS-T6 — where the beat and bar lines go. Shared with the tracker grid so
+  /// the two views cannot disagree; this used to be hardcoded to 4 and 16 here,
+  /// which was wrong for any pattern that is not 4/4 at 4 rows a beat.
+  final TrackerMeter meter;
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +142,7 @@ class TrackerPianoRoll extends StatelessWidget {
           range: range,
           rowHeight: rowHeight,
           playingRow: playingRow,
+          meter: meter,
           noteColor: scheme.primary,
           gridColor: scheme.outlineVariant,
           barColor: scheme.outline,
@@ -152,6 +160,7 @@ class _RollPainter extends CustomPainter {
     required this.range,
     required this.rowHeight,
     required this.playingRow,
+    required this.meter,
     required this.noteColor,
     required this.gridColor,
     required this.barColor,
@@ -163,6 +172,7 @@ class _RollPainter extends CustomPainter {
   final ({int lowMidi, int highMidi}) range;
   final double rowHeight;
   final int? playingRow;
+  final TrackerMeter meter;
   final Color noteColor;
   final Color gridColor;
   final Color barColor;
@@ -174,15 +184,18 @@ class _RollPainter extends CustomPainter {
     if (pitches <= 0 || rows <= 0) return;
     final laneWidth = size.width / pitches;
 
-    // Every fourth row gets a stronger line: that is the tracker's beat, and
-    // without it the roll is a field of blocks with no rhythm to read against.
+    // Beat and bar lines, from the SHARED meter — without them the roll is a
+    // field of blocks with no rhythm to read against, and with the wrong ones
+    // it reads as a different piece of music.
     final grid = Paint()..color = gridColor;
     final bar = Paint()..color = barColor;
-    for (var row = 0; row <= rows; row += 4) {
-      final y = row * rowHeight;
+    for (var row = 0; row <= rows; row += meter.rowsPerBeat) {
+      // Bar first: every bar row is also a beat row, so testing the beat first
+      // would draw every bar as a beat and the meter would read as 4/4.
+      final isBar = meter.isBar(row);
       canvas.drawRect(
-        Rect.fromLTWH(0, y, size.width, row % 16 == 0 ? 1.2 : 0.6),
-        row % 16 == 0 ? bar : grid,
+        Rect.fromLTWH(0, row * rowHeight, size.width, isBar ? 1.2 : 0.6),
+        isBar ? bar : grid,
       );
     }
 
@@ -214,5 +227,6 @@ class _RollPainter extends CustomPainter {
       old.notes != notes ||
       old.playingRow != playingRow ||
       old.range != range ||
-      old.rowHeight != rowHeight;
+      old.rowHeight != rowHeight ||
+      old.meter != meter;
 }

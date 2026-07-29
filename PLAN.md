@@ -1659,7 +1659,33 @@ prefix.
     its own piece of work and should be its own card.
   Tests: `tracker_piano_roll_test` (14) — arithmetic over the pure function,
   plus the two doors.
-- ⬜ **WS-T6 — pattern-level time signature / groove templates.** `M`.
+- ✅ **WS-T6 — pattern-level time signature — SHIPPED** (groove templates
+  deliberately NOT, see below). `tracker_meter.dart`: one `TrackerMeter` the
+  tracker grid AND the piano roll both read, and a "Beats and bars" picker.
+  * ⚠️ **beats-per-bar was hardcoded to 4.** The grid drew its bar line at
+    `row % (highlightEvery * 4)`, so a pattern in **3/4 was barred as common
+    time** — a waltz drawn as 4/4. That is what the card's one line was really
+    about.
+  * ⚠️ **`_highlightEvery` was DEAD**: declared, read once as
+    `_highlightEvery ?? stepsPerBeat`, **assigned nowhere in `lib/`**. The
+    "configurable" row-highlight spacing had never been configurable — the same
+    shape as `_followPlay` in WS-T1. It is a real, settable meter now.
+  * ⚠️ **and one of the three was mine**: the WS-T4 roll hardcoded `% 4` / `% 16`
+    and read no beat at all, so it disagreed with the grid for any pattern that
+    is not 4 rows to the beat. Both views now share one value and cannot drift.
+  * the load-bearing detail: **every bar row is also a beat row**, so a painter
+    must test `isBar` FIRST — test the beat first and every bar draws as a beat
+    and the meter reads as 4/4 whatever it is. Pinned as a property across all
+    the offered meters.
+  * **display only, and the sheet says so.** This changes where a line is drawn,
+    not when a note sounds, which is why it lives screen-side rather than in
+    `TrackerTiming` — putting it in the engine's timing model would imply the
+    replayer cared, and it does not. (That also keeps it out of the replay
+    lane's files.)
+  * ⛔ **groove templates are NOT in this card.** They change WHEN notes play;
+    everything above changes only how the grid is drawn. Conflating them is how
+    a display change turns into a playback change nobody asked for. Still open.
+  Tests: `tracker_meter_test` (12).
 - ⬜ **WS-T7 — record into a pattern from the transport.** `M` ·
   Depends WS-W2, WS-X5.
 

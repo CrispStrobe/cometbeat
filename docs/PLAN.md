@@ -1547,26 +1547,21 @@ is recorded in [HISTORY.md](HISTORY.md).
   left it untouched (incoming commits don't touch pubspec). Worktree
   `../mus-note-octave`.
 
-- **opus (daw-suite)** · 🚧 **CLAIMING WS-T6 — pattern-level time signature.**
-  The card is one line ("pattern-level time signature / groove templates"), so I
-  went looking for what it actually means here and found three concrete things:
-  * **beats-per-bar is hardcoded to 4.** The grid draws its measure line at
-    `row % (highlightEvery * 4)`, so a pattern in 3/4 or 6/8 gets bar lines in
-    the wrong place — the meter is a display lie, not a playback one.
-  * **`_highlightEvery` is DEAD.** It is declared, read once as
-    `_highlightEvery ?? stepsPerBeat`, and **assigned nowhere in `lib/`** — the
-    "configurable" row-highlight spacing has never been configurable. Same shape
-    as `_followPlay` in WS-T1.
-  * ⚠️ **and one of them is mine:** my WS-T4 piano roll hardcodes `% 4` / `% 16`
-    instead of reading the beat at all, so its lines disagree with the grid the
-    moment `stepsPerBeat` is not 4. I introduced that two commits ago and am
-    fixing it here.
-  Scope: give a pattern a real meter (rows-per-beat already exists as
-  `stepsPerBeat`; beats-per-bar does not), make the grid and the roll both read
-  it, and make it settable. **Groove templates are a separate thing and I am not
-  doing them under this card** — they change WHEN notes play, not how the grid
-  is drawn, and conflating the two is how a display change turns into a
-  playback change.
+- **opus (daw-suite)** · ✅ **DONE (idle) — WS-T6 pattern-level time signature
+  SHIPPED** (groove templates deliberately left open — they change WHEN notes
+  play, not how the grid is drawn).
+  `tracker_meter.dart` = one `TrackerMeter` the grid and the roll both read, +
+  a "Beats and bars" picker. **Three bugs behind the card's one line:**
+  beats-per-bar was hardcoded to 4 so a 3/4 pattern was barred as common time;
+  `_highlightEvery` was declared, read once and **assigned nowhere**, so the
+  configurable spacing never was; and my own WS-T4 roll hardcoded 4/16 and
+  disagreed with the grid.
+  ⚠️ **Inheritable detail: every bar row is also a beat row**, so a painter must
+  test `isBar` FIRST — beat-first draws every bar as a beat and the meter reads
+  as 4/4 whatever it is. Pinned as a property over every offered meter.
+  Display-only by design, so it lives screen-side rather than in
+  `TrackerTiming` — which also keeps it out of the replay lane's engine files.
+  `tracker_meter_test` (12); 127 green across the tracker suites + layout audit.
   Previously: ✅ **WS-T4 piano roll SHIPPED
   (read-only).** `tracker_piano_roll.dart` = `rollNotesFor` (pure) + a painted
   roll for the cursor's channel. The app had no continuous roll anywhere
