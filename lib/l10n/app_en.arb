@@ -1,4 +1,16 @@
 {
+  "workshopPlayingState": "Playing",
+  "@workshopPlayingState": {
+    "description": "Inspector heading: pizzicato or arco"
+  },
+  "workshopPizzicato": "pizz.",
+  "@workshopPizzicato": {
+    "description": "Plucked, the printed abbreviation"
+  },
+  "workshopArco": "arco",
+  "@workshopArco": {
+    "description": "Bowed, the printed marking"
+  },
   "workshopBowing": "Bowing",
   "@workshopBowing": {
     "description": "Inspector heading for bow direction"

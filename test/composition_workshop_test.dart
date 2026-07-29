@@ -2149,6 +2149,19 @@ void main() {
       isTrue,
       reason: 'fingerings must be written into the score, not just displayed',
     );
+
+    // ⚠ REGRESSION. The same pass writes ROMAN STRING NUMERALS, as
+    // Score.annotations — and the Workshop document had no home for
+    // annotations at all, so loadScore dropped every one of them a line after
+    // they were computed. The fingerings survived (they live on the note) and
+    // the numerals did not, which is why nobody noticed. Same shape as the
+    // EditorElement.fingerings loss before it.
+    expect(
+      afterXml.contains('<words'),
+      isTrue,
+      reason: 'the string numerals are part of the marking too, and they were '
+          'silently discarded until the document could hold annotations',
+    );
   });
   testWidgets('guitar fingerings also reach the exported score',
       (tester) async {
@@ -2219,6 +2232,49 @@ void main() {
         findsOneWidget,
         reason: 'and it must be on screen, not merely in the model',
       );
+    });
+  });
+
+  group('SE-C1 pizzicato / arco', () {
+    testWidgets('marking pizz. holds from that note on, and reaches the export',
+        (tester) async {
+      final editor = await _fourNotesWithInspector(tester);
+      editor.debugSelect(editor.debugElementIds[1]);
+      await tester.pumpAndSettle();
+
+      await _tapInInspector(tester, 'workshop-playing-pizzicato');
+
+      final xml = editor.debugMusicXmlExport();
+      expect(
+        xml,
+        contains('pizz.'),
+        reason: 'a playing state that does not survive export is not a mark '
+            'on the score, it is a mood in the editor',
+      );
+      // It is a STATE: one mark, and the rest of the part is plucked.
+      expect(editor.debugPlayingStates.skip(1).every((s) => s == 'P'), isTrue);
+      expect(editor.debugPlayingStates.first, 'A');
+    });
+
+    testWidgets('arco takes it back, and the chips show what is in force',
+        (tester) async {
+      final editor = await _fourNotesWithInspector(tester);
+      editor.debugSelect(editor.debugElementIds[0]);
+      await tester.pumpAndSettle();
+      await _tapInInspector(tester, 'workshop-playing-pizzicato');
+      expect(editor.debugPlayingStates, ['P', 'P', 'P', 'P']);
+
+      editor.debugSelect(editor.debugElementIds[2]);
+      await tester.pumpAndSettle();
+      await _tapInInspector(tester, 'workshop-playing-arco');
+      expect(editor.debugPlayingStates, ['P', 'P', 'A', 'A']);
+
+      // The chip reflects the state IN FORCE at the selection, which is the
+      // difference between a state and a per-note toggle.
+      final arco = tester.widget<FilterChip>(
+        find.byKey(const ValueKey<String>('workshop-playing-arco')),
+      );
+      expect(arco.selected, isTrue);
     });
   });
 

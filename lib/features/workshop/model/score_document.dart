@@ -221,8 +221,13 @@ class _Snapshot {
     this.inlineClefs,
     this.elements2,
     this.activeVoice,
+    this.annotations,
   );
   final List<EditorElement> elements;
+
+  /// Staff text anchored to an element (string numerals, pizz./arco …),
+  /// captured for undo.
+  final Map<String, String> annotations;
 
   /// The voice-2 element stream and which voice was active, captured for undo.
   final List<EditorElement> elements2;
@@ -349,6 +354,15 @@ class ScoreDocument {
 
   // Per-note lyric syllables: element id → verse number (1-based) → syllable.
   final Map<String, Map<int, String>> _lyrics = {};
+
+  // Staff text anchored to an element: element id → text.
+  //
+  // ⚠ Added late, and its absence was a silent data loss: `Score.annotations`
+  // is where the cello pass puts its ROMAN STRING NUMERALS and where pizz./arco
+  // lives, and loadScore simply dropped them — the marks were computed, written
+  // into a Score, and thrown away one line later. Anything the editor round
+  // trips through Score must have a home here or it does not survive.
+  final Map<String, String> _annotations = {};
 
   // Mid-score clef / key changes, anchored to an element id: the change takes
   // effect at the start of the bar that element lands in. Anchoring to the id
@@ -587,6 +601,7 @@ class ScoreDocument {
         Map.of(_inlineClefs),
         List.of(_v2),
         _activeVoice,
+        Map.of(_annotations),
       );
 
   void _snapshot() {
@@ -616,6 +631,9 @@ class ScoreDocument {
     for (final e in s.lyrics.entries) {
       _lyrics[e.key] = Map.of(e.value);
     }
+    _annotations
+      ..clear()
+      ..addAll(s.annotations);
     pickup = s.pickup;
     _clefChanges
       ..clear()
@@ -1007,6 +1025,7 @@ class ScoreDocument {
       (h) => !ids.contains(h.startId) || !ids.contains(h.endId),
     );
     _lyrics.removeWhere((id, _) => !ids.contains(id));
+    _annotations.removeWhere((id, _) => !ids.contains(id));
   }
 
   /// Set the anacrusis length (null clears it). The first bar then holds only
@@ -1169,6 +1188,7 @@ class ScoreDocument {
     _slurs.clear();
     _hairpins.clear();
     _lyrics.clear();
+    _annotations.clear();
     _clefChanges.clear();
     _keyChanges.clear();
     _tempoChanges.clear();
@@ -1208,6 +1228,7 @@ class ScoreDocument {
     _slurs.clear();
     _hairpins.clear();
     _lyrics.clear();
+    _annotations.clear();
     _clefChanges.clear();
     _keyChanges.clear();
     _tempoChanges.clear();
@@ -1351,6 +1372,10 @@ class ScoreDocument {
       if (id != null && ly.text.isNotEmpty) {
         (_lyrics[id] ??= {})[ly.verse] = ly.text;
       }
+    }
+    for (final a in score.annotations) {
+      final id = remap[a.elementId];
+      if (id != null && a.text.isNotEmpty) _annotations[id] = a.text;
     }
     clearSelection();
   }
@@ -1622,6 +1647,10 @@ class ScoreDocument {
           if (_lyrics[e.id] != null)
             for (final v in _lyrics[e.id]!.entries)
               Lyric(e.id, v.value, verse: v.key),
+      ],
+      annotations: [
+        for (final e in [..._v1, ..._v2])
+          if (_annotations[e.id] case final String text) Annotation(e.id, text),
       ],
     );
   }

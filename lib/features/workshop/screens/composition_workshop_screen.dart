@@ -36,6 +36,7 @@ import 'package:comet_beat/core/notation/guitar_score_fingering.dart'
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/notation/playability.dart';
+import 'package:comet_beat/core/notation/playing_state.dart';
 import 'package:comet_beat/core/note_naming.dart';
 import 'package:comet_beat/core/project/project_link.dart';
 import 'package:comet_beat/core/services/audio_service.dart';
@@ -569,6 +570,9 @@ abstract interface class CompositionWorkshopTester {
   List<String> get debugElementIds;
   void debugSelect(String id);
   List<String> get debugBowPattern;
+
+  /// SE-C1 test seam: 'P'/'A' per note of the active part.
+  List<String> get debugPlayingStates;
 }
 
 class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
@@ -873,6 +877,18 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
 
   @override
   void debugSelect(String id) => setState(() => _doc.selectByIds([id]));
+
+  @override
+  List<String> get debugPlayingStates {
+    final score = _doc.buildScore();
+    final states = playingStates(score);
+    return [
+      for (final measure in score.measures)
+        for (final element in measure.elements)
+          if (element is NoteElement && element.id != null)
+            states[element.id] == PlayingState.pizzicato ? 'P' : 'A',
+    ];
+  }
 
   @override
   List<String> get debugBowPattern => [
@@ -1587,6 +1603,51 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
     final selected = _doc.selectedIndices;
     if (locks == null || selected.isEmpty) return false;
     return selected.every((at) => locks[at] == direction);
+  }
+
+  /// SE-C1: declare pizzicato or arco from the selected note onward.
+  ///
+  /// A playing state is not a per-note decoration — it holds until something
+  /// countermands it, which is how it is printed and how a player reads it. So
+  /// this marks the CHANGE POINT and the model resolves the rest.
+  ///
+  /// ⚠ Notation only, deliberately. Nothing here changes what playback sounds
+  /// like: a plucked cello is a different instrument from a bowed one, we have
+  /// no plucked sample, and faking one with a generic pluck would make the
+  /// preview disagree with the page. `playingStates()` is the seam for a
+  /// renderer that has something worth playing.
+  void _setPlayingState(PlayingState state) => setState(() {
+        final i = _mpd.active;
+        final part = _mpd.parts[i];
+        final selected = part.selectedIndices;
+        if (selected.isEmpty) return;
+        final elements = part.elements;
+        final at = selected.first;
+        if (at < 0 || at >= elements.length) return;
+        // Same reload hazard as the bowing re-flow: hold the selection by
+        // POSITION, because loadScore re-issues the ids.
+        final keep = selected.toList();
+        part.loadScore(
+          scoreWithPlayingState(
+            part.buildScore(),
+            fromElementId: elements[at].id,
+            state: state,
+          ),
+          clefOverride: _mpd.clefOf(i),
+        );
+        part.selectByIndices(keep);
+      });
+
+  /// The playing state in force at the first selected note.
+  PlayingState _playingStateAtSelection() {
+    final part = _mpd.parts[_mpd.active];
+    final selected = part.selectedIndices;
+    if (selected.isEmpty) return PlayingState.arco;
+    final elements = part.elements;
+    final at = selected.first;
+    if (at < 0 || at >= elements.length) return PlayingState.arco;
+    return playingStates(part.buildScore())[elements[at].id] ??
+        PlayingState.arco;
   }
 
   /// The arranger profile for part [i], resolved from its instrument NAME, or
@@ -3129,6 +3190,29 @@ class _CompositionWorkshopScreenState extends State<CompositionWorkshopScreen>
                   label: Text(l10n.workshopBowAuto),
                   onPressed: _clearBowLocks,
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // SE-C1. Also a STATE rather than a toggle: it holds from here
+            // until countermanded, so the chips show what is in force at the
+            // selection, not what this note "has".
+            Text(l10n.workshopPlayingState, style: theme.textTheme.labelMedium),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final s in PlayingState.values)
+                  FilterChip(
+                    key: ValueKey<String>('workshop-playing-${s.name}'),
+                    label: Text(
+                      s == PlayingState.pizzicato
+                          ? l10n.workshopPizzicato
+                          : l10n.workshopArco,
+                    ),
+                    selected: _playingStateAtSelection() == s,
+                    onSelected: (_) => _setPlayingState(s),
+                  ),
               ],
             ),
             const SizedBox(height: 12),

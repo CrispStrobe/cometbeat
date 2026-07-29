@@ -98,6 +98,24 @@ abstract class AppLocalizations {
     Locale('en')
   ];
 
+  /// Inspector heading: pizzicato or arco
+  ///
+  /// In en, this message translates to:
+  /// **'Playing'**
+  String get workshopPlayingState;
+
+  /// Plucked, the printed abbreviation
+  ///
+  /// In en, this message translates to:
+  /// **'pizz.'**
+  String get workshopPizzicato;
+
+  /// Bowed, the printed marking
+  ///
+  /// In en, this message translates to:
+  /// **'arco'**
+  String get workshopArco;
+
   /// Inspector heading for bow direction
   ///
   /// In en, this message translates to:

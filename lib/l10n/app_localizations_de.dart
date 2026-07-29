@@ -9,6 +9,15 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get workshopPlayingState => 'Spielweise';
+
+  @override
+  String get workshopPizzicato => 'pizz.';
+
+  @override
+  String get workshopArco => 'arco';
+
+  @override
   String get workshopBowing => 'Bogenführung';
 
   @override
