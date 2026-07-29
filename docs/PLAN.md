@@ -256,14 +256,26 @@ is recorded in [HISTORY.md](HISTORY.md).
   ✅ **Shipped: the TRACKER's "Add to project" menu item** (+ `projectAddTrack` /
   `projectAdded` l10n, both locales, append-only). 83 tracker tests green;
   format + whole-project analyze clean.
-  ⚠️ **HONEST GAP — no test drives the BUTTON.** I tried and failed: this screen
-  runs a playhead `Ticker` forever so `pumpAndSettle` never returns, and pumping
-  the popup's route animation frame-by-frame still never built the item
-  (`skipOffstage: false` finds 0). I am **not** substituting a seam-level test
-  and calling it covered — that substitution is precisely what let the whole arc
-  ship invisible. **Whoever picks this up: solving the popup-menu-under-a-running-
-  Ticker problem once is worth more than the four remaining menu items**, because
-  every one of those screens has the same Ticker.
+  ❌ **I DIAGNOSED THIS WRONG FIRST, and the correction is the useful part.** I
+  blamed the playhead `Ticker` and told you to go solve
+  "popup-menu-under-a-running-Ticker". **That was wrong.** A probe found
+  `find.byIcon(Icons.more_vert).hitTestable()` = **0** with **`BottomSheet` = 1
+  and `ModalBarrier` = 2**: the screen's **first-run tutorial opens a modal sheet
+  over everything**, so every AppBar control is untappable and taps land on
+  nothing. Dismiss it (`Navigator.pop`) and the menu opens immediately —
+  `hitTestable` 1, 21 items, the new entry found. **The Ticker only means you
+  must use fixed `pump`s instead of `pumpAndSettle`; it is not the blocker.**
+  🔴 **A REAL BUG found on the way, worth someone's time:** with the sheet
+  dismissed, this screen's **AppBar action row overflows by ~370 px** (a second
+  Flex by ~171 px) at the standard game surface — `A RenderFlex overflowed`
+  thrown during layout. On a phone those actions are simply unreachable. That is
+  a product bug, not a test artefact.
+  ⚠️ **STILL NO TEST DRIVES THE BUTTON.** I got as far as menu-opens-and-item-is-
+  found but not to a green test, because of the overflow above, and I removed my
+  attempt rather than leave main red. I am **not** substituting a seam-level test
+  and calling it covered — that substitution is exactly what let this arc ship
+  invisible. **The recipe for whoever finishes it:** dismiss the tutorial sheet,
+  use fixed `pump`s, and either fix the overflow or size the view around it.
   ⬜ **Remaining, unclaimed:** the same item on **Tab · Score · Loop Studio ·
   Audio Editor** (each screen's overflow menu has a different idiom — the
   Tracker's is `_menuRow(value, icon, label)`), and **tap a mixer strip to open
