@@ -105,15 +105,19 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
-- **opus (note-highway)** · 🚧 **CLAIMING — the Song Book entry to the Note
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — the Song Book entry to the Note
   Highway** (doc §7's biggest open item: `highwayChartFromScore` is written and
   tested but nothing calls it, so the highway can only play its 9 built-in
   pieces while the rights-cleared corpus sits right there). Branch
   `feature/note-highway`, worktree `../mus-highway`. HOT SHARED FILES I am in:
   **`features/games/songs/song_screen.dart`** (one more button in the existing
   Wrap next to Sing along / Play along — no existing action touched) and
-  **`app_en.arb`/`app_de.arb`** + generated `app_localizations*` (append-only).
-  Still NOT touching `playalong/play_along_screen.dart`.
+  **`app_en.arb`/`app_de.arb`** (in the end no new key was needed — the tiles'
+  `gameNoteHighway` label serves the button, so the ARBs were NOT touched).
+  Both surfaces now launch it: `SongScreen` via `highwayChartFromScore`, and
+  `MultiPartSongScreen` via `highwayChartFromParts` (a colour per part). Still
+  NOT touching `playalong/play_along_screen.dart` — folding it onto the shared
+  view remains open, and unclaimed.
 
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — the Note Highway first cut**
   (falling-note play-along; scope + what is NOT in it in
