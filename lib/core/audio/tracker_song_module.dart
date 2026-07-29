@@ -230,14 +230,26 @@ double _channelGain(ModuleDoc doc, int channelCount, int channel) {
 /// multi-channel variants. Real hardware is panned fully hard; that is
 /// exhausting on headphones, so trackers soften it, and this follows the de
 /// facto reference (openmpt123 renders 0.75/0.25, a 3:1 split) rather than
-/// inventing a third convention. In this file's LINEAR pan law — near side
-/// stays 1.0, far side becomes `1 - |pan|` — a 3:1 split is |pan| = 2/3.
+/// inventing a third convention.
 ///
 /// Not cosmetic: without it a MOD is rendered mono-in-stereo, losing the wide
 /// ping-pong image that is one of the format's defining sounds. It is also why
 /// we measured **+4.0 dB** hotter than OpenMPT on every module — full amplitude
 /// was going into BOTH channels instead of being split across them.
-const double _kAmigaPanSeparation = 2 / 3;
+///
+/// ⚠️ **This constant is only meaningful together with the PAN LAW, and it was
+/// silently invalidated when the law changed.** It was derived as `2/3` for the
+/// law this file used to apply — near side 1.0, far side `1 - |pan|` — under
+/// which `2/3` does give the 3:1 split. `PanLaw.linear` (measured against both
+/// references, `setpan_*_Xxx.it`) is `L = (1-p)/2, R = (1+p)/2`, and under THAT
+/// law the rendered balance is simply `p`. So `2/3` started rendering −0.667
+/// where the intent was −0.500, and the separation drifted away from the
+/// reference the rest of the audit had just aligned everything else to.
+///
+/// Measured on `fx/vibrato.mod`: openmpt −0.500, libxmp agreeing (spread
+/// ±0.00), ours −0.661 before this and −0.500 after. If the pan law is ever
+/// changed again, re-derive this number rather than carrying it across.
+const double _kAmigaPanSeparation = 0.5;
 
 double _protrackerPan(int channel) => switch (channel % 4) {
       0 || 3 => -_kAmigaPanSeparation,

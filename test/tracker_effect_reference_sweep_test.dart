@@ -135,6 +135,25 @@ const _kKnownOpenDefects = <String>{
   // / 0.95 envelope now. ⚠️ The field still means two things — the honest split
   // changes `TrackerCell`, which is ON-DISK — so this buys the behaviour
   // without a migration and leaves the split for a format version bump.)
+  // ⚠️ **One hypothesis has been TESTED AND REJECTED here — do not retry it
+  // without reading this.** libxmp remarks that "Tremor likely just overwrites
+  // the channel volume in FT2", and the observation fits: openmpt's last
+  // audible tick is 148, the command's last row is 24 (ticks 144-149), and the
+  // rest of the pattern is silence — exactly what you would get if tremor WROTE
+  // the channel volume and the command happened to stop on an off-tick, leaving
+  // nothing to restore it.
+  //
+  // Implemented that way (hold the pre-tremor volume, write 0 on off-ticks,
+  // write the held value back on on-ticks) it made both fixtures WORSE:
+  // `tremor_I00.xm` 0.978 -> 0.853 (envelope 0.58 -> 0.43) and, decisively,
+  // `tremor_Ixy.xm` REGRESSED from a passing 0.997 to 0.968. A change that
+  // breaks a fixture which was already right is refuted, whatever its
+  // provenance. Reverted rather than patched: the model is wrong, not the
+  // arithmetic on top of it.
+  //
+  // So the remaining gap is still unexplained, and the plausible-sounding
+  // explanation is now ruled out, which is worth more than the exemption.
+  //
   // FT2 `T00` — a tremor with BOTH nibbles zero — eventually kills the channel
   // in FastTracker II, and we keep playing.
   //
@@ -442,6 +461,19 @@ void main() {
           offenders.add('$name (gap ${gap.toStringAsFixed(3)})');
         } else if (envOver && !exempt) {
           offenders.add('$name (ENVELOPE gap ${envGap.toStringAsFixed(3)})');
+        } else if (panOver && !exempt) {
+          // ⚠️ PAN GATES NOW. It used to be printed and never asserted on, so
+          // the column was decoration: both pan bugs this audit found were
+          // caught by a human READING it, which requires someone to look. A
+          // metric that cannot fail does not defend anything.
+          //
+          // It was left reporting-only while MOD's stereo SEPARATION sat
+          // outside the references (ours −0.661 against their −0.500), because
+          // turning it on then would have reddened 26 MOD rows on day one from
+          // a single known cause — and a gate that is red by default is a gate
+          // people learn to ignore. That cause is fixed, so the gate is
+          // meaningful the day it goes on rather than noisy.
+          offenders.add('$name (PAN gap ${panGap.toStringAsFixed(3)})');
         }
       }
       print('');
