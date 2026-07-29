@@ -105,6 +105,18 @@ is recorded in [HISTORY.md](HISTORY.md).
 > [PLAN.md](../PLAN.md) (repo root). Only genuinely-active claims remain below;
 > mark yours idle here and push before/after touching hot shared files.
 
+- **opus (note-highway)** · ✅ **SHIPPED (idle) — the highway's PERFORMANCE risk
+  is measured and the algorithmic half fixed.** New
+  `test/highway_performance_test.dart` (relative assertions — an absolute ms bar
+  would flake on a loaded box and say nothing about the algorithm). A 4,000-note
+  four-minute piece now costs the same per frame as a 128-note exercise. Two
+  real findings: the grader scanned EVERY note per frame AND per tap (windowed
+  now — a tap late in a long piece 493 µs → 140 µs), and `totalBeats` is O(n) and
+  was read every tick by the screen (hoisted). ⚠️ **Trap worth inheriting: my
+  first benchmark measured `chart.totalBeats` inside its own timed loop and
+  reported 289 µs/frame for a function that costs 3.7 — I went looking for a bug
+  in the grader that was not there.** Hoist O(n) getters out of anything timed.
+
 - **opus (note-highway)** · ✅ **SHIPPED (idle) — `S0`: the play-along screen's
   private falling-notes painter is folded onto the shared `HighwayView`.** This is the
   last duplicate of the same idea in the tree: `play_along_screen.dart`'s

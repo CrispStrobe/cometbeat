@@ -355,14 +355,23 @@ shapes claiming the ukulele, whose lowest string is C4).
 * **No drum-kit map, no loop-a-section, no chord-grip blocks or strum arrows,
   no engraved-notation strip** (the strip is chart-driven; an engraved staff
   needs the Song Book path above).
-* **Not profiled on a low-end device** — the risk below stands unmeasured.
+* ~~Not profiled.~~ **MEASURED 2026-07-29** (`test/highway_performance_test.dart`,
+  relative assertions so it cannot flake on a loaded box). A 4,000-note piece
+  (four minutes, two hands) costs the same per frame as a 128-note exercise —
+  paint 5.7 vs 5.2 ms/frame headless, `advanceTo` 3.7 vs 3.4 µs/frame — because
+  both now scan only what is live. Two real findings, both fixed: the grader
+  scanned EVERY note on every frame and on every tap (a tap late in a long piece
+  cost 493 µs → 140 µs), and `HighwayChart.totalBeats` is O(n) and was being read
+  every tick by the screen. Still unmeasured: an actual low-end phone with the
+  audio engine running — these numbers are a headless VM.
 
 ## 8. Risks / open questions
 
-* **Performance.** A dense piano piece is hundreds of visible blocks at 60 fps
-  on a phone, plus the audio engine. Cull to the visible beat window, avoid
-  per-frame allocation in `paint`, and profile on a low-end Android before S2
-  locks the design. Consider a static-layer + moving-transform split if needed.
+* **Performance — measured, and the algorithmic half is closed** (see §7).
+  Cost is now flat in the length of the piece for both paint and grading. What
+  is still unknown is the constant on a real low-end phone with audio running;
+  if it bites, the next lever is a static-layer + moving-transform split rather
+  than more culling.
 * **Keyboard range on a phone.** 88 keys will not fit legibly. Auto-range to the
   piece (with a stable, non-jittery window) and let the rail scroll; decide the
   auto-follow behaviour in S1, it is the main UX unknown.

@@ -178,10 +178,19 @@ class HighwayGrader {
     required this.laneMap,
     this.gradedVoices,
   }) : notes = [for (final e in chart.events) HighwayNote(e)] {
+    // Both working lists are kept in TIME order, and each carries a cursor, so
+    // the per-frame work is proportional to what is live rather than to the
+    // length of the piece. Without this a four-minute song pays for every note
+    // it has already played, on every frame and on every tap. (A chart written
+    // one voice after another is not in time order — see HighwayChart.events.)
     _graded = [
       for (final n in notes)
         if (isGraded(n.event)) n,
-    ];
+    ]..sort((a, b) => a.event.startBeat.compareTo(b.event.startBeat));
+    _auto = [
+      for (final n in notes)
+        if (!isGraded(n.event)) n,
+    ]..sort((a, b) => a.event.startBeat.compareTo(b.event.startBeat));
   }
 
   final HighwayChart chart;
@@ -197,6 +206,14 @@ class HighwayGrader {
   final Set<int>? gradedVoices;
 
   late final List<HighwayNote> _graded;
+  late final List<HighwayNote> _auto;
+
+  /// Everything before this index in [_graded] is answered, so no scan needs to
+  /// look at it again.
+  int _cursor = 0;
+
+  /// Everything before this index in [_auto] has already played itself.
+  int _autoCursor = 0;
 
   bool isGraded(HighwayEvent event) =>
       gradedVoices == null || gradedVoices!.contains(event.voice);
@@ -229,20 +246,29 @@ class HighwayGrader {
   /// closes, and notes they do not own play themselves as they arrive.
   void advanceTo(double beat) {
     _beat = beat;
-    for (final n in notes) {
+
+    // The other hand simply plays itself, strictly in time order.
+    while (_autoCursor < _auto.length &&
+        beat >= _auto[_autoCursor].event.startBeat) {
+      _auto[_autoCursor]
+        ..state = HighwayNoteState.hit
+        ..quality = HighwayHitQuality.perfect;
+      _autoCursor++;
+    }
+
+    // Retire answered notes at the head, then look only as far ahead as the
+    // hit window reaches — the list is sorted, so the first note beyond it
+    // ends the scan.
+    while (_cursor < _graded.length && !_graded[_cursor].isPending) {
+      _cursor++;
+    }
+    for (var i = _cursor; i < _graded.length; i++) {
+      final n = _graded[i];
+      if (n.event.startBeat + rules.hitWindowBeats >= beat) break;
       if (!n.isPending) continue;
-      if (!isGraded(n.event)) {
-        if (beat >= n.event.startBeat) {
-          n.state = HighwayNoteState.hit;
-          n.quality = HighwayHitQuality.perfect;
-        }
-        continue;
-      }
-      if (beat > n.event.startBeat + rules.hitWindowBeats) {
-        n.state = HighwayNoteState.missed;
-        _misses++;
-        _streak = 0;
-      }
+      n.state = HighwayNoteState.missed;
+      _misses++;
+      _streak = 0;
     }
   }
 
@@ -254,13 +280,10 @@ class HighwayGrader {
   /// first entry would let the clock run past the other hand's notes.
   double? get holdBeat {
     if (!rules.waitForMe) return null;
-    double? earliest;
-    for (final n in _graded) {
-      if (!n.isPending) continue;
-      final start = n.event.startBeat;
-      if (earliest == null || start < earliest) earliest = start;
+    for (var i = _cursor; i < _graded.length; i++) {
+      if (_graded[i].isPending) return _graded[i].event.startBeat;
     }
-    return earliest;
+    return null;
   }
 
   /// The player hit [key] at [beat]. Claims the closest matching pending note
@@ -268,9 +291,13 @@ class HighwayGrader {
   HighwayTapResult tap(HighwayRailKey key, double beat) {
     HighwayNote? best;
     var bestDelta = double.infinity;
-    for (final n in _graded) {
-      if (!n.isPending) continue;
+    // Same window as the clock: start where the unanswered notes begin and
+    // stop at the first note too far in the future to be claimed.
+    for (var i = _cursor; i < _graded.length; i++) {
+      final n = _graded[i];
       final delta = beat - n.event.startBeat;
+      if (-delta > rules.hitWindowBeats) break;
+      if (!n.isPending) continue;
       if (delta.abs() > rules.hitWindowBeats) continue;
       if (!laneMap.matches(n.event, key)) continue;
       if (delta.abs() < bestDelta) {

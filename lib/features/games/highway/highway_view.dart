@@ -227,6 +227,36 @@ class _HighwayViewState extends State<HighwayView> {
       );
 }
 
+/// The painter, for the performance harness only. The widget is the API; this
+/// exists so `test/highway_performance_test.dart` can time `paint()` directly
+/// against a recording canvas, without a widget tree in the measurement.
+@visibleForTesting
+CustomPainter highwayPainterForTest({
+  required HighwayChart chart,
+  required HighwayLaneMap laneMap,
+  required List<HighwayNote> notes,
+  required double beat,
+  required HighwayRules rules,
+  required HighwayPalette palette,
+  required HighwayGeometry geometry,
+}) =>
+    _HighwayPainter(
+      chart: chart,
+      laneMap: laneMap,
+      notes: notes,
+      beat: beat,
+      rules: rules,
+      palette: palette,
+      geometry: geometry,
+      flashes: const [],
+      litMidi: const {},
+      litLanes: const {},
+      showRail: true,
+      noteNameOf: null,
+      livePitch: null,
+      energy: 0,
+    );
+
 class _HighwayPainter extends CustomPainter {
   _HighwayPainter({
     required this.chart,

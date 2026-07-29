@@ -100,6 +100,9 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
   int _lastClick = -99;
 
   HighwayChart? _chart;
+  /// The chart's length, resolved ONCE per run — `totalBeats` walks every event
+  /// and this is read on every tick.
+  double _totalBeats = 0;
   HighwayLaneMap? _laneMap;
   HighwayGrader? _grader;
   final List<HighwayFlash> _flashes = [];
@@ -149,6 +152,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
 
     setState(() {
       _chart = prepared;
+      _totalBeats = prepared.totalBeats;
       _laneMap = laneMap;
       _grader = HighwayGrader(
         chart: prepared,
@@ -201,7 +205,7 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     grader.advanceTo(_beat);
     _flashes.removeWhere((f) => _beat - f.beat > 1.0);
 
-    if (_beat > chart.totalBeats + 1.2 ||
+    if (_beat > _totalBeats + 1.2 ||
         (grader.total > 0 && grader.finished)) {
       _finish();
       return;
