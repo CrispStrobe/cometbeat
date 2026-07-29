@@ -3048,5 +3048,6 @@
   "primerBeatHighwayTitle": "So funktioniert die Beat-Bahn",
   "primerBeatHighwayLanes": "Eine Spur pro Trommel: Bass, Snare, Tom, Hi-Hat, Becken \u2014 von links nach rechts. Das Pad unten leuchtet in derselben Farbe wie die Schl\u00e4ge, die darauf zufallen.",
   "primerBeatHighwayKeys": "Du kannst die Pads antippen oder die Zahlentasten 1 bis 5 benutzen \u2014 die Zahl steht auf jedem Pad.",
-  "primerBeatHighwayLadder": "Fang oben in der Liste an: nur Bass und Snare, langsam. Hi-Hats kommen erst, wenn die beiden sitzen, und jeden Groove kannst du noch langsamer stellen."
-}
+  "primerBeatHighwayLadder": "Fang oben in der Liste an: nur Bass und Snare, langsam. Hi-Hats kommen erst, wenn die beiden sitzen, und jeden Groove kannst du noch langsamer stellen.",
+  "trackerPads": "Pads",
+  "trackerPadsHint": "Spiele Noten mit den Fingern. Bei eingeschalteter Live-Aufnahme landen sie am Abspielkopf — ein Akkord verteilt sich auf die nächsten Kanäle."}

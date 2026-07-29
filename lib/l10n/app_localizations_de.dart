@@ -9081,4 +9081,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get primerBeatHighwayLadder =>
       'Fang oben in der Liste an: nur Bass und Snare, langsam. Hi-Hats kommen erst, wenn die beiden sitzen, und jeden Groove kannst du noch langsamer stellen.';
+
+  @override
+  String get trackerPads => 'Pads';
+
+  @override
+  String get trackerPadsHint =>
+      'Spiele Noten mit den Fingern. Bei eingeschalteter Live-Aufnahme landen sie am Abspielkopf — ein Akkord verteilt sich auf die nächsten Kanäle.';
 }

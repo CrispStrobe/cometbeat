@@ -9029,4 +9029,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get primerBeatHighwayLadder =>
       'Start at the top of the list: kick and snare only, slowly. Hats do not appear until you have those two, and you can slow any groove down further.';
+
+  @override
+  String get trackerPads => 'Pads';
+
+  @override
+  String get trackerPadsHint =>
+      'Play notes with your fingers. While live record is on they land at the playhead — a chord spreads across the next channels.';
 }

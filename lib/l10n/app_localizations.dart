@@ -16399,6 +16399,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start at the top of the list: kick and snare only, slowly. Hats do not appear until you have those two, and you can slow any groove down further.'**
   String get primerBeatHighwayLadder;
+
+  /// No description provided for @trackerPads.
+  ///
+  /// In en, this message translates to:
+  /// **'Pads'**
+  String get trackerPads;
+
+  /// No description provided for @trackerPadsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Play notes with your fingers. While live record is on they land at the playhead — a chord spreads across the next channels.'**
+  String get trackerPadsHint;
 }
 
 class _AppLocalizationsDelegate

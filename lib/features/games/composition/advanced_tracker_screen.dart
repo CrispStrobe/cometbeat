@@ -50,6 +50,7 @@ import 'package:comet_beat/core/audio/mod/module_doc.dart' show ModuleFormat;
 import 'package:comet_beat/core/audio/mod/module_export_report.dart'
     show moduleExportLossReport;
 import 'package:comet_beat/core/audio/mod/module_flow_timeline.dart';
+import 'package:comet_beat/core/audio/pattern_record.dart';
 import 'package:comet_beat/core/audio/sample_pitch.dart';
 import 'package:comet_beat/core/audio/synth.dart' show Drum, wavBytes;
 import 'package:comet_beat/core/audio/tracker_engine.dart';
@@ -76,6 +77,7 @@ import 'package:comet_beat/core/audio/wav_io.dart'
     show readWavPcm16, wavToMonoFloat;
 import 'package:comet_beat/core/interop/project_bridge.dart';
 import 'package:comet_beat/core/licensing/license_obligations.dart';
+import 'package:comet_beat/core/midi/midi_input.dart';
 import 'package:comet_beat/core/notation/multi_part_export.dart'
     show multiPartToAbc, multiPartToMidi, multiTrackMidiToMultiPart;
 import 'package:comet_beat/core/project/project_link.dart';
@@ -121,6 +123,7 @@ import 'package:comet_beat/shared/music_io/license_gate.dart';
 import 'package:comet_beat/shared/tutorial/tutorial.dart';
 import 'package:comet_beat/shared/tutorial/tutorial_sheet.dart';
 import 'package:comet_beat/shared/widgets/open_in_menu.dart';
+import 'package:comet_beat/shared/widgets/performance_pads.dart';
 import 'package:comet_beat/shared/widgets/piano_keyboard.dart';
 import 'package:crisp_notation/crisp_notation.dart'
     show
@@ -639,6 +642,17 @@ abstract interface class AdvancedTrackerTester {
   /// The MIDI note at a cell (null = empty).
   int? noteAt(int channel, int row);
 
+  /// WS-T7 test seam: the MIDI input the pads push into.
+  ///
+  /// A test sends real `MidiMessage`s rather than tapping pads, because what is
+  /// under test is the RECORD path — the pads themselves have their own suite,
+  /// and driving them through a modal sheet on a screen whose Ticker never
+  /// settles would test the sheet instead.
+  ManualMidiInput get debugMidiInput;
+
+  /// Whether a count-in is still running (nothing is being committed yet).
+  bool get isCountingIn;
+
   /// Per-pattern length: set the CURRENT pattern's rows only, and read any
   /// pattern's rows — so patterns can differ in length (tracker-style).
   void setPatternLength(int rows);
@@ -828,6 +842,23 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// (the playhead) instead of the edit cursor — jam straight into the pattern.
   bool _recording = false;
 
+  /// WS-T7 — the pass currently being recorded, or null when not recording.
+  ///
+  /// It owns two things the old per-note path could not: the count-in gate (a
+  /// note played during the count is heard but not kept) and the "one undo
+  /// entry per pass" rule. Created on arming, dropped on disarming.
+  RecordPass? _pass;
+
+  /// Notes held on the pads/MIDI right now, so a chord recorded together is
+  /// written together rather than one cell at a time.
+  final _held = HeldNotes();
+
+  /// The MIDI input the on-screen pads push into. Owned here so the pads sheet
+  /// can come and go without losing the subscription — and so hardware MIDI
+  /// (WS-X5 3a) lands as a second producer with nothing else to change.
+  final _midi = ManualMidiInput(devices: const ['On-screen pads']);
+  StreamSubscription<MidiMessage>? _midiSub;
+
   /// Which sub-column the cursor edits in-grid (FT2 note/vol/fx columns). Typing
   /// hex into vol/fx edits that column directly; Tab / ←→ move between fields.
   _CellField _field = _CellField.note;
@@ -936,6 +967,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   void initState() {
     super.initState();
+    // WS-T7 — one subscription for the whole screen's lifetime, so the pads
+    // sheet can open and close without notes being lost or doubled, and so
+    // hardware MIDI (WS-X5 3a) lands as a second producer with nothing here to
+    // change.
+    _midiSub = _midi.messages.listen(_onMidi);
     _ticker = createTicker((_) {
       if (_paused) return; // freeze the playhead where it is
       if (!_clock.isRunning) {
@@ -1102,6 +1138,8 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   void dispose() {
+    _midiSub?.cancel();
+    _midi.dispose();
     _ticker.dispose();
     _row.dispose();
     _progress.dispose();
@@ -1678,8 +1716,16 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   /// Plays a short one-shot of [midi] so you HEAR a note as you place it (FT2
   /// preview). Skipped while playing — the loop already sounds the pattern.
+  /// Sound a note the player just triggered.
+  ///
+  /// ⚠️ This used to return early while the clock was running, which meant live
+  /// record was SILENT: you played, and heard nothing until the loop re-rendered
+  /// and came round again. You cannot perform into something you cannot hear, so
+  /// a note now auditions whether or not the pattern is playing. (The early
+  /// return was right for its original job — auditioning a note you TYPED, where
+  /// the pattern's own voice would double it — but that job is the non-recording
+  /// branch, which still gets the same call.)
   void _preview(int midi) {
-    if (_clock.isRunning) return;
     final audio = context.read<AudioService>();
     if (audio.soundOn) audio.playMidiNote(midi, ms: 350);
   }
@@ -1690,29 +1736,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// jam straight into the pattern.
   void _enterNoteAtCursor(int midi) {
     _preview(midi);
-    _pushUndo();
-    if (_recording && _clock.isRunning && _row.value >= 0) {
-      final row = _quantize
-          ? quantizeRowToBeat(
-              _row.value,
-              _rowPhase,
-              _song.timing.stepsPerBeat,
-              _song.rows,
-            )
-          : _row.value;
-      final cur = _song.engine.cellAt(_cursorChannel, row);
-      _song.engine.setCell(
-        _cursorChannel,
-        row,
-        cur.copyWith(
-          midi: midi,
-          instrument: _activeInstrument,
-        ),
-      );
-      setState(() {});
-      _syncPlayback();
+    if (_isLiveRecording) {
+      _recordNotes([midi]);
       return;
     }
+    _pushUndo();
     _song.engine.setCell(
       _cursorChannel,
       _cursorRow,
@@ -1721,6 +1749,162 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     setState(() => _cursorRow = (_cursorRow + _editStep) % _song.rows);
     _ensureCursorVisible();
     _syncPlayback();
+  }
+
+  /// Whether a played note should land at the playhead rather than the cursor.
+  bool get _isLiveRecording =>
+      _recording && _clock.isRunning && _row.value >= 0;
+
+  /// WS-T7 — commit [notes] played together at the sounding row.
+  ///
+  /// Everything that makes this different from typing lives in
+  /// `pattern_record.dart`, deliberately: the screen cannot be unit-tested at
+  /// speed (its playhead Ticker never stops, so `pumpAndSettle` hangs), and
+  /// these are the parts worth testing.
+  ///   * the count-in **gates the writes, not the clock** — the pattern keeps
+  ///     playing through the count so you can play along, and nothing is kept
+  ///     until it ends;
+  ///   * a chord **spreads across consecutive channels** — every note used to
+  ///     go to the cursor channel, so a triad became one cell and two notes
+  ///     vanished;
+  ///   * the whole pass is **one undo entry**. It used to be one per note, and
+  ///     each entry snapshots the entire pattern against an 80-entry cap, so
+  ///     ten seconds of jamming pushed every earlier edit off the end.
+  void _recordNotes(List<int> notes) {
+    final pass = _pass;
+    if (pass == null || notes.isEmpty) return;
+    final commit = pass.commit(_elapsedMs.toDouble());
+    if (commit == null) return; // still counting in — heard, not kept
+    if (commit.needsSnapshot) _pushUndo();
+
+    final row = recordRow(
+      row: _row.value,
+      phase: _rowPhase,
+      quantize: _quantize,
+      stepsPerBeat: _song.timing.stepsPerBeat,
+      totalRows: _song.rows,
+    );
+    for (final note in allocateChord(
+      notes: notes,
+      row: row,
+      startChannel: _cursorChannel,
+      channelCount: _song.channelCount,
+    )) {
+      // copyWith, not a fresh cell: an existing volume or effect on that row is
+      // the arrangement, and a jam should not silently strip it.
+      final cur = _song.engine.cellAt(note.channel, note.row);
+      _song.engine.setCell(
+        note.channel,
+        note.row,
+        cur.copyWith(midi: note.midi, instrument: _activeInstrument),
+      );
+    }
+    setState(() {});
+    _syncPlayback();
+  }
+
+  /// WS-T7 — the pads, which are the first thing in the app to play REAL notes.
+  ///
+  /// Not the on-screen piano this screen already has: that emits `onKeyTap`, a
+  /// TAP, and a tap has no duration, so it can never produce a held note or a
+  /// chord held together. These press and release, into the same
+  /// `ManualMidiInput` a hardware keyboard will push into once WS-X5 3a lands —
+  /// so recording is written against MIDI once, not twice.
+  Future<void> _showPads() async {
+    final l10n = AppLocalizations.of(context)!;
+    final padsKey = GlobalKey<PerformancePadsState>();
+    await showModalBottomSheet<void>(
+      context: context,
+      // The pattern has to stay visible and audible: you are playing ALONG with
+      // it, and a sheet that covers the grid hides the playhead you are aiming
+      // at.
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.trackerPads,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                l10n.trackerPadsHint,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              PerformancePads(
+                key: padsKey,
+                pads: chromaticPads((_octave + 1) * 12, 12),
+                input: _midi,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    // A finger still down when the sheet is dismissed never sends its release,
+    // and a note whose release never arrives sounds forever.
+    padsKey.currentState?.releaseAll();
+    _held.clear();
+  }
+
+  /// Arm or disarm live record, and tell the shared transport.
+  ///
+  /// The transport is told rather than asked because this screen's Stopwatch is
+  /// the clock the transport follows (`syncTo`) — so record-arm belongs to the
+  /// same direction of travel. A count-in is taken from
+  /// `TransportService.countInBars`, so the two surfaces share one preference
+  /// instead of growing a second one.
+  void _setRecording(bool value) {
+    setState(() {
+      _recording = value;
+      if (value) {
+        final bars = _transport?.countInBars ?? 0;
+        _pass = RecordPass(
+          countIn: bars > 0 && _clock.isRunning
+              ? RecordCountIn(
+                  startedAtMs: _elapsedMs.toDouble(),
+                  bars: bars,
+                  // The meter the GRID is drawn to, not a hard-coded 4 — a
+                  // count-in that disagrees with the bar lines counts the
+                  // wrong length.
+                  barMs: (_song.timing.beatMs *
+                          _meterFor(_song.timing.stepsPerBeat).beatsPerBar)
+                      .toDouble(),
+                )
+              : RecordCountIn.none,
+        );
+      } else {
+        _pass = null;
+        _held.clear();
+      }
+    });
+    _transport?.setRecordArmed(value);
+  }
+
+  /// Notes arriving from the pads (and, when WS-X5 3a lands, from hardware).
+  ///
+  /// Held notes are tracked through `HeldNotes` rather than counted here,
+  /// because a note-on with velocity 0 IS a note-off — the standard's most
+  /// common trap, and the reason that class exists.
+  void _onMidi(MidiMessage message) {
+    if (!message.isNoteOn && !message.isNoteOff) return;
+    _held.apply(message);
+    if (!message.isNoteOn) return;
+    if (_isLiveRecording) {
+      _preview(message.note);
+      // Everything currently down, so a chord struck together lands together.
+      // `notesOn` is sorted and includes the note just applied.
+      _recordNotes(_held.notesOn());
+    } else {
+      // Not recording: the pads are an instrument, and a played note goes in at
+      // the cursor exactly as a typed one does (which auditions it).
+      _enterNoteAtCursor(message.note);
+    }
   }
 
   void _clearAtCursorAndAdvance() {
@@ -3312,7 +3496,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   @override
   bool get isRecording => _recording;
   @override
-  void toggleRecord() => setState(() => _recording = !_recording);
+  void toggleRecord() => _setRecording(!_recording);
   @override
   bool get isQuantize => _quantize;
   @override
@@ -3443,6 +3627,11 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
 
   @override
   int? noteAt(int channel, int row) => _song.engine.cellAt(channel, row).midi;
+  @override
+  ManualMidiInput get debugMidiInput => _midi;
+  @override
+  bool get isCountingIn =>
+      _pass != null && !_pass!.countIn.commits(_elapsedMs.toDouble());
   @override
   void setPatternLength(int rows) => _setPatternLength(rows);
   @override
@@ -5846,7 +6035,13 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
                     icon: const Icon(Icons.fiber_manual_record),
                     color: _recording ? scheme.error : null,
                     tooltip: l10n.trackerRecordLive,
-                    onPressed: () => setState(() => _recording = !_recording),
+                    onPressed: () => _setRecording(!_recording),
+                  ),
+                  IconButton(
+                    key: const ValueKey('tracker-pads'),
+                    icon: const Icon(Icons.grid_view),
+                    tooltip: l10n.trackerPads,
+                    onPressed: _showPads,
                   ),
                   IconButton(
                     icon: const Icon(Icons.playlist_play),
