@@ -595,6 +595,8 @@ OpenEWLD 103 · Mutopia 510 · EGSet12 12.
 | **GregoBase** ✅ **IN HAND** | GABC → Score (**reader built** — crisp_notation `scoreFromGabc`) | **CC0** (all transcriptions; 33 copyright-flagged rows excluded) | **18,711 chants downloaded** to the VPS (`gabc-corpus/gregobase`, from the CC0 SQL dump); ancient-PD melodies → both axes clean. Clean-room GABC reader (spec-derived, gabctk-oracle-validated 98.9%); **99.7% parse / 0 crash** on a 1.5k sample. |
 | **Library of Plainsong** | GABC | **CC0** (site statement) | Nascent placeholder site — no accessible corpus yet; bookmark. |
 | **IMSLP "Marieh" guitar transcriptions** | PDF (tab + notation) | **CC0** (arranger's explicit dedication) | 235 tablature + 259 standard-notation PDFs; underlying composers PD 19th-c. (Giuliani d.1829, Viñas d.1888, Sor…) → both axes clean. Dual use: **OMR test input** + clean guitar score/tab. Per-work composer death-check prudent. |
+| **Tanzsammlung Dahlhoff** (TradArchiv) ✅ **IN HAND** | ABC | **No copyright asserted** by the transcribers; **attribution to the source required** → Tier B | 18th-c. Westphalian dance manuscript (Staatsbibliothek zu Berlin, Mus. ms. 40182), 754 distinct pieces / 1,541 notations. Axis 2 spotless — source dated before 1767; the named composers that appear are Telemann d.1767, Hasse d.1783, Jommelli d.1774, Campra d.1744. Per-file `C:Urheber:` makes the death-check mechanical. |
+| **Project Gutenberg Sheet Music** ✅ **IN HAND** | MusicXML / LilyPond / MIDI | **US public domain**, "no warnings or restrictions of any kind" → Tier A | 7 Beethoven string quartets (Opp. 18/3–6, 74, 127, 132) + a Handel overture. ⚠ The often-repeated "30+ scores in MusicXML" is **wrong** — the other 25 items are Finale `.MUS` only, which stays opaque. |
 
 **Detail worth keeping:**
 
@@ -754,6 +756,105 @@ finding. So the shippable *tab* corpus is exactly this shippable *score* corpus.
 | German folk-song sites (4) | — | volksliederarchiv.de (private/non-commercial, notation walled off in robots.txt); lieder-archiv.de (copyright on its Notensätze; commercial/DB/republish forbidden — but offers a PAID licence); liederlexikon.de (all-rights-reserved, NOT CC, named living engraver + in-copyright 20th-c. works); ZPKM Freiburg (catalogues only). |
 | **Essen Folksong Collection** (ccarh/essen-folksong-collection) | krn ✅ | **CCARH MuseData licence** (license.txt, verbatim): *"this license does not authorize the use of the enclosed MuseData files in the production of derivative editions intended for commercial distribution, nor for public performance (including broadcast), nor for sound recording."* NC + no-recording → dev/test only. ~20k folk melodies, German-relevant, but blocked. |
 | **Battle of the Bits** (battleofthebits.com) | .xm/.it/.mod + rendered | **CC BY-NC-SA** to third parties (BotB CC License, verified) — NC. Original chiptune/tracker compo entries (axis-2 clean), but the NC axis-1 blocks it. Control/eval only. *Corrects an earlier "BotB is clean" note.* |
+| **SymbTr** (Turkish makam, MTG/UPF) | MusicXML/MIDI/mu2 | **CC BY-NC-SA 4.0** — NC. 2,200 pieces; repertoire we have nothing comparable to, which makes the NC especially costly. |
+| **ASAP** (Aligned Scores and Performances) | MusicXML/MIDI | **CC BY-NC-SA 4.0** — NC. 222 scores / 1,068 performances. |
+| **SEILS** (Il Lauro Secco, 16th-c. madrigals) | .ly/.xml/kern/MEI/mens | **CC BY-NC-SA 4.0** (LICENSE.txt) — NC. Would otherwise be excellent mensural-notation material. |
+| **DCMLab/schema_annotation_data** (18 Mozart sonatas) | MusicXML/mscz | **No LICENSE file** → no grant, fails closed. Consistent with the DCML house licence (BY-NC-SA) noted above. |
+| **Werner Icking Music Archive** | PDF (+ some source) | **NC**, and it is a trap worth naming: PD composers throughout, but the archive imposes its own restriction on the engravings — *"free for non-commercial usage… you may not sell the files or printed copies."* |
+| **Hymnary.org** | MusicXML/MIDI/PDF | No bulk grant; per-item — *"Some texts, tunes, images… are in the public domain and some are copyrighted with rights reserved."* Axis-2 compounds it: the tune is usually PD but the **hymnal harmonization inside the file** is the protected layer. |
+| **Musopen** | PDF (mostly), some MIDI/LilyPond | Uploaders merely *"represent and warrant that content uploaded to the site is in the public domain"* — the uploader-asserted provenance model that already failed us elsewhere. 100k+ items are PDF; the symbolic slice largely mirrors Mutopia, which we hold directly. |
+| **NWC Scriptorium** | .nwc | **Private-use / non-commercial**, verbatim: *"These pieces are for private use only… You may not market them for monetary gain."* Files are PD *or used with the copyright holders' permission* — permission granted to them, not transferable. No per-file licence field, so no filterable clean subset. 14,173 files. Format was never the blocker (open `.nwc` converters exist); the licence is. |
+| **UCLA Contemporary Music Score Collection** | PDF | **CC BY-NC-ND**. NC blocks us and **ND blocks us independently — we transform formats, and a conversion is a derivative.** Living composers. |
+| **NMA Online / Digital Mozart Edition** | images (+ MEI) | *"Wholesale downloading or reuse of the contents of this website is prohibited under all circumstances, whether commercial or otherwise."* Personal study only. |
+| **CCARH scores / MuseData** | MuseData/kern | Editions are **under copyright** with named editors, access requires registration; Creative Commons' own directory records the licence as "copyright" and open/free as "no". Same licence family as the Essen entry above. |
+| **Gallica (BnF)** | images | *"La réutilisation commerciale de ces contenus est payante et fait l'objet d'une licence."* Effectively NC for us — PD works, but the BnF asserts a paid licence over its own scans. |
+| **traditionalmusic.co.uk** | ABC/MIDI/tab | *"Entire site (C) Traditional Music Library. All rights reserved."* Acknowledges the underlying content is "mainly public domain category" but grants nothing, and exposes no per-file licence field to filter on. |
+
+---
+
+## Aggregator guides — swept 2026-07-29, don't re-survey
+
+Eight "free/public-domain sheet music" link lists were worked end-to-end
+(a conservatory library guide, two university library guides, a MusicXML
+vendor's own list, a public-domain reference site, and four German
+children's-song lists). Combined they name ~130 resources. **Net new material:
+two sources, both now in hand.** Recording the sweep so the next pass starts
+from the residue, not from zero.
+
+Two gates account for essentially every rejection:
+
+1. **It is page images, not symbolic data.** The library guides are ~85%
+   digitized facsimiles. Our DB is symbolic-only, so a scan collection is not
+   corpus material at all — it is input to a transcription pipeline, which is a
+   different decision with a different cost. This is why a librarian's
+   discovery guide has near-zero yield for us: it is optimised for *reading*
+   scores, not for *reusing* them.
+2. **The digitization layer carries its own restriction**, even when the
+   underlying work is spotless PD. See Gallica and WIMA in the rejected table.
+
+⚠️ **Correction to a natural assumption: US institutions do NOT uniformly
+release PD scans freely.** Measured per collection — **Duke HASM** ("personal,
+research, or educational use only"), **Indiana University** ("noncommercial,
+personal, or research use only"), **NYPL** (commercial use "strictly
+prohibited", usage fee), and **U. Chicago Chopin Early Editions** (commercial
+reproduction requires permission and a fee) all impose restrictions.
+**Levy/JHU** ("There are no restrictions on the public domain works") and
+**UCLA APAM** ("You may use the public domain sheet music as you like") do not.
+So the terms must be read per collection; do not generalise from one.
+
+**If transcription ever becomes the strategy**, the best-licensed inputs found
+were: Levy/JHU, UCLA APAM, Library of Congress *Music for the Nation*, and the
+**HathiTrust Women Composers Collection** (~3,000 works by 700+ women
+composers, which would fill a genuine repertoire gap). HathiTrust restricts
+bulk download, so that one needs its own approach.
+
+**Already-held sources these guides re-list** (no action, but they keep
+resurfacing): IMSLP, CPDL, Mutopia, OpenScore, MuseScore.com/PDMX.
+**OpenScore's CC0 grant was re-confirmed this pass** — *"These scores are
+released under Creative Commons Zero (CC0)"* — and the Lieder corpus has grown
+past 1,200 songs, so our snapshot is worth refreshing.
+
+**Unresolved, worth one retry** (infrastructure failures, not rejections):
+**NEUMA** (`neuma.huma-num.fr`, HTTP 502 — a Huma-Num research library of
+French 17th–19th-c. corpora, plausibly open) and **Folkoteca Galega** (TLS
+certificate failure on both domains — collaborative traditional Galician music
+in MusicXML). **Free Music Editions** (Christoph Dalitz, three-part choir) is
+CC BY *or* CC BY-SA per edition — Tier B/C, small, format not yet confirmed.
+
+### German children's-song lists — four swept, **zero new sources**
+
+A useful negative result: the German kids'/folk-song discovery channels all
+circle back to material we already hold. Every one of the four lists is a blog
+post, forum thread or link page — none is itself a corpus, and **none of them
+surfaces a single MusicXML/LilyPond/MuseScore file.**
+
+- Two of the four point straight at **corpora already in `db.json`** —
+  *Kinder wollen singen* (155 rows) and the Musikpiraten Christmas songbook
+  (52 rows). That is the strongest available evidence that our German
+  children's-song coverage has reached the practical ceiling for this channel.
+- The rest were already assessed here: Mutopia, CPDL, IMSLP (held);
+  free-scores.com, volksliederarchiv.de (rejected above).
+- **Das Liederprojekt** (SWR + Carus-Verlag, 600+ folk/children's/lullaby
+  songs) is the only substantial new name, and it is **rejected**: no licence
+  or terms-of-use statement anywhere, so default all-rights-reserved by a
+  commercial publisher. An OER project that catalogued it reached the same
+  conclusion independently — "not OER-compliant, requires explicit permission."
+- Smaller names, all out on the symbolic-only rule or on licence:
+  **kitalieder.de** (MP3 only), **BabyDuda** (PDF + MP3, no licence stated),
+  **labbe.de/liederbaum** (commercial publisher).
+
+⚠️ "GEMA-frei" is **not** a licence and does not mean reusable. It only says no
+performing-rights society collects on it. A GEMA-free song can still be fully
+in copyright, and the *engraving* is a separate layer again. Several of these
+pages use the phrase as if it settled the question; it settles nothing for us.
+
+**One informal grant, pending confirmation:** a classical-guitar arranger
+publishing his own arrangements of PD Renaissance/Baroque works states
+*"Make use of anything you find here, but please mention this site if you
+do."* That is the author's own dedication on his own site — the same standard
+that cleared individual contributors elsewhere in this doc — but it is not an
+SPDX licence and is silent on commercial use. One email would settle it into a
+grant row; until then it stays out of `db.json`.
 
 ---
 

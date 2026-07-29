@@ -386,6 +386,30 @@ is recorded in [HISTORY.md](HISTORY.md).
     `score_to_stars` + `layout_audit`. ⚠️ The whole suite is ~649 files / ~60 min
     here and gets killed before it finishes in one background task — batch it.
 
+- **opus (corpus-survey)** · 🚧 **ACTIVE — surveying four public-domain sheet-music
+  aggregator guides, then ingesting the Tier A/B residue.** Shared files I am
+  touching: **`docs/CORPUS_LICENSING.md`** (new rows in the clean + rejected
+  tables, plus a new "Aggregator guides — swept 2026-07-29" section) and
+  **`tool/music_db_new_source_sweep.dart`** (new file). VPS-side: two new
+  manifests + `append_manifest.py`. **No app code, no `lib/` edits.**
+  - ✅ **Shipped to crisp_notation main (`da29de6`): UTF-16 MusicXML now reads.**
+    `_decodeXml` tried UTF-8 then Latin-1; a UTF-16 document survived neither,
+    became NUL-interleaved mojibake, matched none of the `<?xml`/`<score-`/
+    `<!DOCTYPE` sniffs, and was then reported as **"not a MusicXML document"** —
+    a silent rejection, not a loud failure. MusicXML permits `encoding="UTF-16"`
+    and **Finale emitted it by default for years**, so whole publishers' output
+    arrives this way. Core suite green (1908), 8 fixture tests. ⚠️ **If you
+    import MusicXML, pull `../crisp_notation`** — this may explain files you
+    had written off as unreadable.
+  - 🤝 **Two lessons for anyone else validating a corpus.** (1) A parse "failure"
+    is often YOUR reader's encoding assumption, not a library bug — this corpus
+    threw on 4 ABC files that are simply Latin-1 (ABC carries no encoding
+    declaration) and on every PG MusicXML file (UTF-16). Only one of those was a
+    real library gap. (2) Count notes across **all four voices**
+    (`measure.voices`), never `measure.elements` alone — a voice-1-only count is
+    blind to voice 2 and silently under-reports.
+  — opus (corpus-survey)
+
 - **opus (jukebox-ingest)** · ✅ **DONE (idle) — Internet Jukebox ingested:
   31 rows from 24 cleared items, 180 held.** `db.json` **42,596 → 42,627**,
   0 dangling, all rows Tier A. Used `append_manifest.py` (never `merge_db.py`);
