@@ -43,7 +43,31 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
       // the app-bar row on a narrow phone (e.g. the Tracker on an iPhone SE).
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       actions: [
-        ...actions,
+        // Screen actions SCROLL horizontally; the sound toggle and "?" do NOT.
+        //
+        // ⚠️ History worth knowing before touching this again: a previous
+        // version wrapped EVERYTHING — actions, sound toggle and "?" — in a
+        // `ConstrainedBox(maxWidth: 72% of screen)` plus a scroll view, and was
+        // reverted (`ba96a26f`, "keep game app bar layout stable"). Two things
+        // are deliberately different here:
+        //   • the sound toggle and "?" stay OUTSIDE the scroll view, so they can
+        //     never scroll out of reach — they are app-wide controls, not
+        //     screen ones, and a mute button you have to go looking for is
+        //     worse than no scroll at all;
+        //   • `Flexible` replaces the guessed 72%, so the row takes exactly the
+        //     space the title leaves rather than a fraction that is wrong on
+        //     most widths.
+        //
+        // Without this the Tracker's action row overflows by ~370px on a phone
+        // and those actions are simply unreachable — an overflowing Flex also
+        // throws during layout, which is how it was found.
+        if (actions.isNotEmpty)
+          Flexible(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(mainAxisSize: MainAxisSize.min, children: actions),
+            ),
+          ),
         const SoundToggle(),
         if (tutorial != null) TutorialButton(builder: tutorial!),
       ],
