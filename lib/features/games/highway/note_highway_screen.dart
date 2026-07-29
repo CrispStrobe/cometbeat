@@ -56,6 +56,7 @@ import 'package:comet_beat/features/games/playalong/play_along_screen.dart'
 import 'package:comet_beat/features/games/widgets/game_app_bar.dart';
 import 'package:comet_beat/features/games/widgets/game_widgets.dart';
 import 'package:comet_beat/l10n/app_localizations.dart';
+import 'package:comet_beat/shared/keyboard_notes.dart';
 import 'package:crisp_notation/crisp_notation.dart' show Score;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -574,6 +575,14 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     return null;
   }
 
+  /// The octave the computer keyboard is anchored at: the one the PIECE lives
+  /// in, so `Z` lands on a note that actually falls. Anchoring at a fixed C4
+  /// would make the keyboard useless for a bass line or a cello part.
+  int get _keyboardOctave {
+    final low = _chart?.lowMidi ?? _sourceChart?.lowMidi ?? 60;
+    return (low ~/ 12 - 1).clamp(0, 8);
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     // Only key DOWN: a repeat would machine-gun the lane, and a key-up would
     // double every hit.
@@ -582,14 +591,28 @@ class _NoteHighwayScreenState extends State<NoteHighwayScreen>
     if (!_running || laneMap == null || _mode == HighwayMode.watch) {
       return KeyEventResult.ignored;
     }
+    if (_usingMic) return KeyEventResult.ignored; // the instrument is answering
+
+    // Pads and drums: the number row IS the instrument.
     final lane = _laneForKey(event.logicalKey);
-    if (lane == null || lane >= laneMap.laneCount) {
-      return KeyEventResult.ignored;
+    if (lane != null && lane < laneMap.laneCount) {
+      final key = laneMap.railKeys().firstWhere(
+            (k) => k.lane == lane,
+            orElse: () => laneMap.railKeys().first,
+          );
+      _onRailTap(key);
+      return KeyEventResult.handled;
     }
-    final key = laneMap.railKeys().firstWhere(
-          (k) => k.lane == lane,
-          orElse: () => laneMap.railKeys().first,
-        );
+
+    // Pitched instruments: the keyboard is a piano, in the layout every tracker
+    // and most DAWs use — so a player who types notes anywhere else in this app
+    // already knows this one.
+    final character = event.character;
+    if (character == null || character.isEmpty) return KeyEventResult.ignored;
+    final midi = midiForKey(character, baseOctave: _keyboardOctave);
+    if (midi == null) return KeyEventResult.ignored;
+    final key = laneMap.keyForMidi(midi);
+    if (key == null) return KeyEventResult.ignored;
     _onRailTap(key);
     return KeyEventResult.handled;
   }

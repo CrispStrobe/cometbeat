@@ -397,6 +397,37 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the keyboard plays the pitched instruments too', (tester) async {
+    // A piece around C4, so the keyboard anchors where the music is.
+    const tune = HighwayChart(
+      name: 'keys',
+      bpm: 120,
+      events: [
+        HighwayEvent(startBeat: 0, beats: 1, midi: 60),
+        HighwayEvent(startBeat: 1, beats: 1, midi: 62),
+        HighwayEvent(startBeat: 2, beats: 1, midi: 64),
+      ],
+    );
+    await tester.pumpWidget(
+      _app(const NoteHighwayScreen(gameId: 'note_highway_piano', chart: tune)),
+    );
+    await tester.pumpAndSettle();
+    await _tapStart(tester);
+    await tester.pump();
+    // Through the count-in and onto the first note.
+    for (var i = 0; i < 22; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    // 'Z' is C in the tracker layout the whole app uses.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+    await tester.pump(const Duration(milliseconds: 30));
+    // A key with no note behind it is ignored, not a crash.
+    await tester.sendKeyEvent(LogicalKeyboardKey.slash);
+    await tester.pump(const Duration(milliseconds: 30));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('every instrument × skin × projection paints', (tester) async {
     for (final instrument in HighwayInstrument.values) {
       final profile = HighwayInstrumentProfile.of(instrument);

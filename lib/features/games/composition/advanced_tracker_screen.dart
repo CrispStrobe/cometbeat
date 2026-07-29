@@ -110,6 +110,7 @@ import 'package:comet_beat/features/workshop/screens/composition_workshop_screen
     show CompositionWorkshopScreen;
 import 'package:comet_beat/l10n/app_localizations.dart';
 import 'package:comet_beat/shared/daw/send_to_daw.dart';
+import 'package:comet_beat/shared/keyboard_notes.dart';
 import 'package:comet_beat/shared/keymap/intents.dart';
 import 'package:comet_beat/shared/keymap/keymap.dart';
 import 'package:comet_beat/shared/keymap/keymap_service.dart';
@@ -248,17 +249,11 @@ enum _NoteEntry {
 /// columns). Typing digits into [volume]/[effect] edits that column directly.
 enum _CellField { note, volume, effect, instrument }
 
-/// FastTracker-2 style computer-keyboard piano map: the typed character ->
-/// semitone offset from the current base octave. Two rows span ~two octaves
-/// (the lower ZXCV… row + the upper QWERTY… row).
-const _kKeyToSemitone = <String, int>{
-  // Lower octave.
-  'z': 0, 's': 1, 'x': 2, 'd': 3, 'c': 4, 'v': 5,
-  'g': 6, 'b': 7, 'h': 8, 'n': 9, 'j': 10, 'm': 11, ',': 12,
-  // Upper octave.
-  'q': 12, '2': 13, 'w': 14, '3': 15, 'e': 16, 'r': 17,
-  '5': 18, 't': 19, '6': 20, 'y': 21, '7': 22, 'u': 23, 'i': 24,
-};
+/// FastTracker-2 style computer-keyboard piano map, now SHARED with the Note
+/// Highway (`lib/shared/keyboard_notes.dart`) — two surfaces disagreeing about
+/// which key plays a D# is exactly the drift that copying it would cause. The
+/// mapping is unchanged.
+const _kKeyToSemitone = kKeyToSemitone;
 
 /// How far down the viewport the playing row sits.
 const double kFollowMarginPx = 120;
