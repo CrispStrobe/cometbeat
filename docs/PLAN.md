@@ -1073,8 +1073,8 @@ is recorded in [HISTORY.md](HISTORY.md).
      limit; strip read-only first, editor soon.** ✅ **ALL THREE SHIPPED** — see
      the entry below. — opus
 
-- **opus (loop-d1d4)** · 🚧 **CLAIMING `WS-X5` 3b — the on-screen keyboard / pad
-  board.** The maintainer said **GO** on 3b (and deferred 3a, the hardware
+- **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — `WS-X5` 3b: the on-screen
+  keyboard / pad board.** The maintainer said **GO** on 3b (and deferred 3a, the hardware
   binding); it was unclaimed. Branch `feature/mixer-d1d4`, claim before code.
   ⚠️ **Re-audit finding that reshapes the task: the app already has two on-screen
   keyboards, and NEITHER can do this.** `shared/widgets/piano_keyboard.dart` and
@@ -1089,7 +1089,31 @@ is recorded in [HISTORY.md](HISTORY.md).
   exactly what the seam was built to receive, and it needs **no new dependency
   and no new contract**, which is why 3b was separable from 3a in the first
   place.
-  **Files:** one new `lib/shared/widgets/` file + its test. Nothing else. — opus
+  **Files:** one new `lib/shared/widgets/` file + its test. Nothing else.
+
+  ✅ **DELIVERED — `shared/widgets/performance_pads.dart`, 11 tests.** Press →
+  `noteOn`, release → `noteOff`, several fingers at once, straight into a
+  `ManualMidiInput`, so a consumer written against `MidiInput` cannot tell it
+  from hardware. **WS-T7 can now be built and tested end-to-end today**, without
+  the deferred 3a.
+  ⚠️ **Most of the tests are about the RELEASE, because that is what a stuck
+  note is made of** and none of it is visible on screen: a finger lifted, a
+  finger SLID onto another pad, a gesture the framework CANCELLED, and the
+  widget disposed mid-press. Only the first is `onPointerUp`. All four are
+  covered, through `HeldNotes` rather than by inspecting the widget.
+  ⚠️ **`Listener`, not `GestureDetector`.** A gesture recognizer can lose an
+  arena and swallow the down/up pair the note depends on — that is how a
+  performance surface ends up with stuck notes the moment something scrolls.
+  ⚠️ **A trap for anyone building a pad grid here:**
+  `context.findRenderObject() as RenderBox` inside a sliver's `itemBuilder` is
+  NOT a RenderBox, and the cast throws *while dispatching the pointer event* —
+  so it surfaces as a `_TypeError` in the gesture system, nowhere near the code
+  that caused it. `LayoutBuilder` gives the size and cannot lie.
+  Velocity comes from where the pad was pressed (lower is harder — the hardware
+  convention), and a caller can turn that off, because for a young audience a
+  note whose loudness depends on exactly where a finger landed is a bug report.
+  Gates: format exit 0 · analyze "No issues found" · `flutter test`
+  **6,231 passed / 23 skipped / 0 failed**. — opus
 
 - **opus (loop-d1d4)** · ✅ **SHIPPED (idle) — the `WS-L2` (b) EDITOR — the maintainer
   already sequenced it ("read-only now, then soon editor"), so no new decision

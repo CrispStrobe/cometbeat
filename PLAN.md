@@ -1780,17 +1780,24 @@ prefix.
 
 - 🔶 **WS-X5 — MIDI and controller input.** **Step 1 (the seam) SHIPPED.**
   ✅ **DECIDED 2026-07-29: build 3b NOW, defer 3a.**
-  * ✅ **3b — the on-screen keyboard / pad widget: GO.** It pushes into
-    `ManualMidiInput`, so it needs **no new dependency and no new contract**,
-    and it is the half of the user-visible value that carries none of the
-    platform weight. **Unclaimed — pullable now.**
+  * ✅ **3b SHIPPED 2026-07-29** (opus, loop-d1d4) —
+    `shared/widgets/performance_pads.dart` + 11 tests. Press → `noteOn`,
+    release → `noteOff`, multi-touch, into a `ManualMidiInput`.
+    ⚠️ **The app's two existing keyboards could NOT serve** — `piano_keyboard`
+    and `scrollable_piano` both emit `onKeyTap(int midi)`, a TAP, which has no
+    duration and so can never produce a held note. They are quiz widgets, where
+    a tap is an ANSWER; this is a performance input, where press and release are
+    two events.
+    ⚠️ Most of its tests are about the RELEASE — lifted, slid away, cancelled,
+    disposed mid-press. Only the first is `onPointerUp`, and a missing release
+    is a note that sounds forever with nothing wrong on screen.
   * ⏸️ **3a — hardware MIDI in: DEFERRED, not rejected.** A new dependency
     across macOS · iOS · Android · desktop, with permissions on two. Nothing is
     blocked meanwhile: `NullMidiInput` is the honest answer today (and stays the
     answer on web regardless), and a surface written against `MidiInput` will
     not change when hardware lands.
-  * ⚠️ **WS-T7 is therefore unblocked on its CONTRACT but not on hardware** — it
-    can be built and tested against `ManualMidiInput` today.
+  * ✅ **WS-T7 is now fully buildable today** — `PerformancePads` gives it a real
+    input to record from, so it needs neither the hardware binding nor a stub.
   * ✅ `lib/core/midi/midi_input.dart` — `MidiMessage` (parse + note/CC/bend),
     the `MidiInput` interface, `NullMidiInput`, `ManualMidiInput`, and
     `HeldNotes`. Pure Dart, Flutter-free, no dependency added.
