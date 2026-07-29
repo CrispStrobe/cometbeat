@@ -103,19 +103,18 @@ double _envelopeDynamicRange(Float64List pcm) {
 /// fixed, so an exemption announces its own obsolescence rather than quietly
 /// outliving the bug. It has already retired four entries that way.
 const _kKnownOpenDefects = <String>{
-  // The VOLUME COLUMN does not set the channel volume. A cell's volume becomes
-  // `noteVolume`, a 0..1 per-note multiplier, while `Axy` slides `volume`, the
-  // 0..64 CHANNEL volume still sitting at its default 64 — so a slide UP from a
-  // quiet note starts already clamped and does nothing. Diagnosed by the
-  // asymmetry: the DOWN fixtures start at 64, the default, and pass.
+  // (The four volume-column fixtures lived here. A cell's volume became
+  // `noteVolume`, a 0..1 per-note multiplier, while `Axy` slid the 0..64
+  // CHANNEL volume still sitting at its default 64 — so a slide UP from a quiet
+  // note began already clamped and did nothing, which is why only the UP
+  // fixtures failed while the DOWN ones, starting at the default, passed.
   //
-  // Not fixed here because `TrackerCell.volume` is shared with the app's own
-  // authoring (Loop Mixer ghost notes use it as a multiplier), so making it set
-  // the channel volume changes song semantics, not just import. PLAN.md §6.
-  'volslide_up_Dx0.s3m',
-  'volslide_up_Dx0.it',
-  'fine_volslide_up_DxF.s3m',
-  'fine_volslide_up_DxF.it',
+  // Fixed by routing the column to the channel volume under tracker profiles
+  // and leaving our own authoring on the multiplier
+  // (`ReplayProfile.volumeColumnIsChannelVolume`). All four read 1.000 spectral
+  // / 0.95 envelope now. ⚠️ The field still means two things — the honest split
+  // changes `TrackerCell`, which is ON-DISK — so this buys the behaviour
+  // without a migration and leaves the split for a format version bump.)
   // FT2 `T00` — a tremor with BOTH nibbles zero — eventually kills the channel
   // in FastTracker II, and we keep playing.
   //

@@ -208,6 +208,7 @@ class ReplayProfile {
     required this.volumeSlideOnTick0,
     required this.tremor,
     required this.trackerRelease,
+    required this.volumeColumnIsChannelVolume,
     required this.panLaw,
   });
 
@@ -264,6 +265,32 @@ class ReplayProfile {
   /// behaviour rather than an approximation of anything.
   final bool trackerRelease;
 
+  /// Whether a cell's volume column sets the CHANNEL volume (0..64) rather than
+  /// scaling the note.
+  ///
+  /// `TrackerCell.volume` means two different things, and this field is which
+  /// one is in force rather than a fix for the ambiguity:
+  ///
+  ///   * to a **tracker**, the volume column IS the channel volume — the same
+  ///     0..64 register `Axy`/`Dxy` slide and `Cxx` sets;
+  ///   * to **our own authoring**, it is a 0..1 per-note gain, which is what a
+  ///     Loop Mixer ghost note uses it for.
+  ///
+  /// Reading an imported column as a note gain left the channel volume at its
+  /// default 64, so a slide UP from a quiet note began already clamped and did
+  /// nothing at all. **Diagnosed by asymmetry**: the DOWN fixtures start at the
+  /// default and passed, only the UP ones failed — a rate error would have hit
+  /// both. `volslide_up_Dx0` and `fine_volslide_up_DxF` measured 0.58–0.71
+  /// envelope against references agreeing at 1.00.
+  ///
+  /// ⚠️ This does NOT un-conflate the field — one name still carries two
+  /// meanings, and splitting it properly would change `TrackerCell`, which is
+  /// ON-DISK, so every saved song would need migrating. Routing by profile buys
+  /// the correct behaviour for imports at no cost to anything already saved.
+  /// The honest split stays open, and belongs with a format version bump rather
+  /// than on its own.
+  final bool volumeColumnIsChannelVolume;
+
   /// How a pan position becomes channel gains. Every tracker is [PanLaw.linear];
   /// our own songs keep [PanLaw.constantPower], which sounds better and is not
   /// what a module playback is trying to be.
@@ -290,6 +317,7 @@ class ReplayProfile {
         volumeSlideOnTick0: volumeSlideOnTick0,
         tremor: tremor,
         trackerRelease: trackerRelease,
+        volumeColumnIsChannelVolume: volumeColumnIsChannelVolume,
         panLaw: panLaw,
       );
 
@@ -302,6 +330,7 @@ class ReplayProfile {
     volumeSlideOnTick0: false,
     tremor: TremorModel.impulse,
     trackerRelease: false,
+    volumeColumnIsChannelVolume: true,
     panLaw: PanLaw.linear,
   );
 
@@ -314,6 +343,7 @@ class ReplayProfile {
     volumeSlideOnTick0: false,
     tremor: TremorModel.fastTracker,
     trackerRelease: false,
+    volumeColumnIsChannelVolume: true,
     panLaw: PanLaw.linear,
   );
 
@@ -327,6 +357,7 @@ class ReplayProfile {
     volumeSlideOnTick0: true,
     tremor: TremorModel.screamTracker,
     trackerRelease: false,
+    volumeColumnIsChannelVolume: true,
     panLaw: PanLaw.linear,
   );
 
@@ -339,6 +370,7 @@ class ReplayProfile {
     volumeSlideOnTick0: true,
     tremor: TremorModel.impulse,
     trackerRelease: true,
+    volumeColumnIsChannelVolume: true,
     panLaw: PanLaw.linear,
   );
 
@@ -362,6 +394,7 @@ class ReplayProfile {
     // linear law the trackers actually used.
     tremor: TremorModel.impulse,
     trackerRelease: false,
+    volumeColumnIsChannelVolume: false,
     panLaw: PanLaw.constantPower,
   );
 }

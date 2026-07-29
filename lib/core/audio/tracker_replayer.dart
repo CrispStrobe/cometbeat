@@ -967,7 +967,8 @@ class ReplayVoice {
         active = true;
         released = false;
         _retriggered = true;
-        noteVolume = cell.volume ?? 1.0;
+        noteVolume =
+            profile.volumeColumnIsChannelVolume ? 1.0 : (cell.volume ?? 1.0);
         // A note that names a SAMPLE restores the channel volume, exactly as
         // ProTracker reloads `n_volume` from the sample; a note without one
         // keeps whatever volume is in force. Without this, `ECx`'s persistent
@@ -975,13 +976,27 @@ class ReplayVoice {
         // the song instead of just the cut note — which is what the first cut
         // of that fix did, halving the level of everything after it.
         if (cell.instrument > 0) volume = kMaxVolume;
+        // …and the volume COLUMN overrides that default, so it has to land
+        // after the reload rather than before it. To a tracker this column is
+        // the channel volume itself — the same register `Axy`/`Dxy` slide — so
+        // scaling the note instead left `volume` at 64 and a slide up began
+        // already clamped. See [ReplayProfile.volumeColumnIsChannelVolume].
+        if (profile.volumeColumnIsChannelVolume && cell.volume != null) {
+          volume = (cell.volume! * kMaxVolume).round().clamp(0, kMaxVolume);
+        }
         _retriggerLfos();
         _retriggerTremor();
       }
     } else if (cell.volume != null) {
       // A volume-column-only cell (no note) sets the RINGING note's volume — a
-      // mid-note change, like a set-volume, without re-triggering.
-      noteVolume = cell.volume!;
+      // mid-note change, like a set-volume, without re-triggering. Under
+      // tracker rules that is the CHANNEL volume, which is also what makes a
+      // later `Axy` continue from it rather than from 64.
+      if (profile.volumeColumnIsChannelVolume) {
+        volume = (cell.volume! * kMaxVolume).round().clamp(0, kMaxVolume);
+      } else {
+        noteVolume = cell.volume!;
+      }
     }
 
     // Arm the note-on soft-start on a REAL (re)trigger only — a tone-porta tie

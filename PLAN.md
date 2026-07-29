@@ -3397,6 +3397,59 @@ each other — they disagree about what a one-shot does after its end (fade vs
 hard stop). We sit inside that spread at 0.974, so nothing is wrong, but it is
 another case where there is no single right answer to gate on.
 
+#### §6 — where the ladder stands, and what is left (2026-07-29)
+
+**The audit is complete: every layer has been measured.** Pitch domain, effect
+memory, the LFOs, flow/timing, the sample layer, per-format effects, panning,
+envelopes, NNA, and the format numbering itself. What follows is the remaining
+backlog with its trade-offs written down, so it can be judged rather than
+re-derived.
+
+**DONE this pass — the volume column (was the one item needing an owner's
+decision).** `TrackerCell.volume` means two things: to a tracker it IS the 0..64
+channel volume that `Axy`/`Dxy` slide; to our own authoring it is a 0..1
+per-note gain (Loop Mixer ghost notes). Reading an imported column as a gain
+left the channel volume at 64, so a slide UP from a quiet note began already
+clamped. Three options were on the table:
+
+  * **A1 — split the field** into `volume` (0..64) + `gain` (0..1). The honest
+    model, and it ends the conflation. But `TrackerCell` is **on-disk**
+    (`tracker_song_codec`), so it needs a migration and changes semantics for
+    every saved song.
+  * **A2 — route by profile**: an imported module's column sets the channel
+    volume, `native` keeps the multiplier. No on-disk change, no migration, app
+    authoring untouched, and it is the same shape as `PitchDomain`,
+    `TremorModel` and `trackerRelease` — per-format replay rules living in the
+    profile.
+  * **A3 — leave it exempt.** Zero risk, but a measured-wrong family stays
+    wrong and the exemption list is where things go to be forgotten.
+
+**A2 was taken** (`ReplayProfile.volumeColumnIsChannelVolume`). All four
+fixtures went from 0.58–0.71 envelope to 1.000 spectral / 0.95 against
+references agreeing at 1.00, and the exemptions are deleted. ⚠️ **This does not
+un-conflate the field** — one name still carries two meanings. A1 remains the
+right model and belongs with a format version bump, not on its own.
+
+**Still open, in the order I would take them:**
+
+  * ⬜ **Fixture independence.** `fx/musical.mod` and `fx/effects.mod` are
+    written by OUR writer, so a writer bug is baked into every A/B that uses
+    them — and five both-directions bugs turned up in this audit, which makes
+    that less theoretical than it sounded. Two versions: authoring the same
+    content with an EXTERNAL tool (expensive, and the tooling is unconfirmed),
+    or checking that the references' reading of the existing fixtures matches
+    the authored intent ARITHMETICALLY (cheap, and it is exactly what caught the
+    silent-IT-fixture bug in the envelope pass). The numbering table already
+    closed the effect-byte half of this risk.
+  * ⬜ **X10 interpolation quality and stereo samples.** Low expected yield:
+    every sample fixture already reads 0.999, which is weak evidence that
+    interpolation is not a problem at these levels.
+  * ⬜ **FT2's degenerate `T00`.** Would close the last sweep exemption, but the
+    parameter barely occurs in real modules. Completionism rather than value.
+
+**A1 (the field split) is the only item that still wants an owner's call**, and
+only if a format version bump is on the cards for other reasons.
+
 #### X9 continued (2026-07-28) — the numbering table, and a FIFTH both-directions bug
 
 Four bugs of one shape turned up in this audit — IT's hex pattern-break row,
