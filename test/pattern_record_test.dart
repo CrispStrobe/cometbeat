@@ -129,6 +129,33 @@ void main() {
     });
   });
 
+  group('how LONG a note was held', () {
+    // Without a length every recorded note runs until the next one on its
+    // channel, so a staccato stab and a held pad come out identical.
+    test('released three rows later, the cut is three rows later', () {
+      expect(releaseRowFor(startRow: 4, releaseRow: 7, totalRows: 16), 7);
+    });
+
+    test('released in its own row, it is cut on the NEXT one', () {
+      // A key-off in the row the note starts in cancels it before it sounds.
+      expect(releaseRowFor(startRow: 4, releaseRow: 4, totalRows: 16), 5);
+    });
+
+    test('the cut wraps with the pattern', () {
+      expect(releaseRowFor(startRow: 14, releaseRow: 2, totalRows: 16), 2);
+    });
+
+    test('an empty pattern has nowhere to put one', () {
+      expect(releaseRowFor(startRow: 0, releaseRow: 2, totalRows: 0), isNull);
+    });
+
+    test('rows outside the pattern are wrapped, not trusted', () {
+      // The playhead of a SONG counts through the order list, so a row can
+      // arrive already past the end of one pattern.
+      expect(releaseRowFor(startRow: 20, releaseRow: 23, totalRows: 16), 7);
+    });
+  });
+
   group('the count-in gates the WRITES, not the clock', () {
     // The Tracker's Stopwatch is the authority the transport follows, so a
     // count-in cannot hold time back. It keeps playing and refuses to commit —

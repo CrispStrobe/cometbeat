@@ -103,6 +103,44 @@ List<RecordedNote> allocateChord({
   return out;
 }
 
+/// Where the key-off goes for a note started at [startRow] and released while
+/// [releaseRow] is sounding.
+///
+/// Without this a recorded performance has no note LENGTHS: every note runs
+/// until the next one on its channel, so a staccato stab and a held pad come out
+/// identical. A tracker writes the difference as a key-off cell, and `cellRuns`
+/// already turns that into a release — so this is a real length, not a marking.
+///
+/// ⚠️ It takes the PLAYHEAD row rather than a held duration in milliseconds, and
+/// that is a correction rather than a preference: the first version measured
+/// wall-clock time between the press and the release, which double-counts what
+/// the playhead already knows and disagrees with it the moment a frame is
+/// dropped. Where the playhead was when you let go IS where the key-off belongs,
+/// which is also what hardware trackers write.
+///
+/// A note always occupies at least one row: releasing inside the row the note
+/// started in is recorded as a one-row note, because a key-off in that row would
+/// cancel the note before it sounded.
+///
+/// Consequence worth knowing: a note held for a whole lap or more comes back as
+/// one row, because a row number alone cannot say how many times the pattern
+/// went round. Ending where the playhead is, is the same thing a tracker does.
+int? releaseRowFor({
+  required int startRow,
+  required int releaseRow,
+  required int totalRows,
+}) {
+  if (totalRows <= 0) return null;
+  final start = startRow % totalRows;
+  final release = releaseRow % totalRows;
+  // Dart's % is non-negative for a positive modulus, so a release that wrapped
+  // past the end of the pattern needs no special case. A span of 0 means the
+  // release landed in the note's own row: one row, not none.
+  var span = (release - start) % totalRows;
+  if (span == 0) span = 1;
+  return (start + span) % totalRows;
+}
+
 /// A count-in for a surface whose own clock is the authority.
 ///
 /// `TransportService` has count-in machinery, but it belongs to `advance()` —

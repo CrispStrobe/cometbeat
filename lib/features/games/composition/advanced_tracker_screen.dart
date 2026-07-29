@@ -645,6 +645,9 @@ abstract interface class AdvancedTrackerTester {
   /// settles would test the sheet instead.
   ManualMidiInput get debugMidiInput;
 
+  /// Whether the cell at [channel]/[row] is a key-off (a recorded release).
+  bool isNoteCutAt(int channel, int row);
+
   /// Whether a count-in is still running (nothing is being committed yet).
   bool get isCountingIn;
 
@@ -847,6 +850,14 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   /// Notes held on the pads/MIDI right now, so a chord recorded together is
   /// written together rather than one cell at a time.
   final _held = HeldNotes();
+
+  /// Where each sounding note was written, so its RELEASE can be recorded too.
+  ///
+  /// A tracker stores a note's length as a key-off cell further down the
+  /// channel, so the release needs to know which channel and row the note-on
+  /// landed on — and a chord spreads across channels, so that is per note, not
+  /// per pass.
+  final _sounding = <int, ({int channel, int row})>{};
 
   /// The MIDI input the on-screen pads push into. Owned here so the pads sheet
   /// can come and go without losing the subscription — and so hardware MIDI
@@ -1793,6 +1804,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
         note.row,
         cur.copyWith(midi: note.midi, instrument: _activeInstrument),
       );
+      _sounding[note.midi] = (channel: note.channel, row: note.row);
     }
     setState(() {});
     _syncPlayback();
@@ -1847,6 +1859,35 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
     _held.clear();
   }
 
+  /// WS-T7 — record how LONG a note was held, as a key-off cell.
+  ///
+  /// Without this a performance has no note lengths: every note runs until the
+  /// next one on its channel, so a staccato stab and a held pad come out
+  /// identical. `cellRuns` already reads a key-off as a release, so this is a
+  /// real length rather than a marking.
+  ///
+  /// It never overwrites a cell that has a NOTE in it: by the time you let go,
+  /// the next note may already be recorded there, and cutting it would delete a
+  /// note you played to end one you had finished.
+  void _recordRelease(int midi) {
+    final start = _sounding.remove(midi);
+    if (start == null || !_isLiveRecording) return;
+    // The row that is SOUNDING as you let go — not a wall-clock duration. The
+    // playhead already knows where we are, and a measured duration disagrees
+    // with it the moment a frame is dropped.
+    final cut = releaseRowFor(
+      startRow: start.row,
+      releaseRow: _row.value,
+      totalRows: _song.rows,
+    );
+    if (cut == null) return;
+    final cell = _song.engine.cellAt(start.channel, cut);
+    if (cell.midi != null) return;
+    _song.engine.setCell(start.channel, cut, TrackerCell.noteCut);
+    setState(() {});
+    _syncPlayback();
+  }
+
   /// Arm or disarm live record, and tell the shared transport.
   ///
   /// The transport is told rather than asked because this screen's Stopwatch is
@@ -1876,6 +1917,7 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
       } else {
         _pass = null;
         _held.clear();
+        _sounding.clear();
       }
     });
     _transport?.setRecordArmed(value);
@@ -1889,7 +1931,10 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   void _onMidi(MidiMessage message) {
     if (!message.isNoteOn && !message.isNoteOff) return;
     _held.apply(message);
-    if (!message.isNoteOn) return;
+    if (message.isNoteOff) {
+      _recordRelease(message.note);
+      return;
+    }
     if (_isLiveRecording) {
       _preview(message.note);
       // Everything currently down, so a chord struck together lands together.
@@ -3624,6 +3669,9 @@ class _AdvancedTrackerScreenState extends State<AdvancedTrackerScreen>
   int? noteAt(int channel, int row) => _song.engine.cellAt(channel, row).midi;
   @override
   ManualMidiInput get debugMidiInput => _midi;
+  @override
+  bool isNoteCutAt(int channel, int row) =>
+      _song.engine.cellAt(channel, row).isNoteCut;
   @override
   bool get isCountingIn =>
       _pass != null && !_pass!.countIn.commits(_elapsedMs.toDouble());

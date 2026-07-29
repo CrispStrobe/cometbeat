@@ -132,6 +132,95 @@ void main() {
     expect(game.noteCount, before);
   });
 
+  group('how long a note was held', () {
+    testWidgets('releasing writes a key-off, so the note has a LENGTH', (
+      tester,
+    ) async {
+      // Without it every recorded note runs until the next one on its channel,
+      // and a staccato stab is indistinguishable from a held pad.
+      await pumpGame(tester, const AdvancedTrackerScreen());
+      final game = _game(tester);
+      game.setNote(0, 0, 48);
+      game.togglePlay();
+      game.toggleRecord();
+      game.moveCursor(1, 0);
+      await _playing(tester);
+
+      _noteOn(game, 60);
+      await _settle(tester);
+      final row = [
+        for (var r = 0; r < game.rows; r++)
+          if (game.noteAt(1, r) == 60) r,
+      ].single;
+
+      _noteOff(game, 60);
+      await _settle(tester);
+      game.stop();
+      await tester.pump();
+
+      final cuts = [
+        for (var r = 0; r < game.rows; r++)
+          if (game.isNoteCutAt(1, r)) r,
+      ];
+      expect(cuts, isNotEmpty, reason: 'the release was recorded');
+      expect(
+        cuts.single,
+        isNot(row),
+        reason:
+            'a key-off in the note own row would cancel it before it sounds',
+      );
+    });
+
+    testWidgets('a release does not delete a note played after it', (
+      tester,
+    ) async {
+      // By the time you let go, the next note may already be recorded where the
+      // cut would land — cutting there would delete a note you played to end
+      // one you had already finished.
+      await pumpGame(tester, const AdvancedTrackerScreen());
+      final game = _game(tester);
+      game.setNote(0, 0, 48);
+      game.togglePlay();
+      game.toggleRecord();
+      game.moveCursor(1, 0);
+      await _playing(tester);
+
+      _noteOn(game, 60);
+      await _settle(tester);
+      // Fill every row of the channel, so wherever the cut would go there is a
+      // note already.
+      for (var r = 0; r < game.rows; r++) {
+        game.setNote(1, r, 72);
+      }
+      _noteOff(game, 60);
+      await _settle(tester);
+      game.stop();
+      await tester.pump();
+
+      for (var r = 0; r < game.rows; r++) {
+        expect(game.noteAt(1, r), 72, reason: 'row $r survived');
+        expect(game.isNoteCutAt(1, r), isFalse);
+      }
+    });
+
+    testWidgets('a release outside a record pass writes nothing', (
+      tester,
+    ) async {
+      // Letting go after you stopped recording must not edit the pattern.
+      await pumpGame(tester, const AdvancedTrackerScreen());
+      final game = _game(tester);
+      _noteOn(game, 60);
+      await _settle(tester);
+      final before = game.noteCount;
+      _noteOff(game, 60);
+      await _settle(tester);
+      expect(game.noteCount, before);
+      for (var r = 0; r < game.rows; r++) {
+        expect(game.isNoteCutAt(0, r), isFalse);
+      }
+    });
+  });
+
   testWidgets('a whole record pass is ONE undo', (tester) async {
     // It used to be one per note, and each entry snapshots the entire pattern
     // against an 80-entry cap — so a short jam evicted every earlier edit.
